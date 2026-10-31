@@ -24,7 +24,8 @@
 //! prices it passes it (`Prices`). #2565 prices them for a unit on either field and a backrow card
 //! the seat can read on either side too (R2565000), `unit_worth` reading them. #2564 prices a unit's
 //! Activate by one use (R2564000): the root plays each (`activation_prices`) and `unit_worth` reads the
-//! prices it passes it (`Prices`). It reads only what the seat may know or what a determinization
+//! prices it passes it (`Prices`); #2603 prices a face-up backrow card's the same way, a Field Spell's,
+//! `material` reading them (R2603000). It reads only what the seat may know or what a determinization
 //! sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
@@ -278,8 +279,8 @@ fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights, pric
     }
 }
 
-/// R2564000: what one use of a unit's Activate gives its controller, as a decision's root priced it
-/// (`activation_prices`), and the card it prices: its definition, its face and its controller, so the
+/// R2564000, R2603000: what one use of a card's Activate gives its controller, as a decision's root priced
+/// it (`activation_prices`), and the card it prices: its definition, its face and its controller, so the
 /// same card the search moves or makes later reads the same price. The controller is in the key since
 /// each copy aims at a different board: the seat's Cannon shoots the enemy's units, the enemy's the
 /// seat's.
@@ -307,8 +308,8 @@ impl ActivationPrice {
     }
 }
 
-/// R2564000: what one use of `unit`'s Activate gives its controller, by `prices`, while it has an
-/// ability to use (`abilities_of`: a Vanilla unit has none). 0 with `Prices::NONE`, for a card its root
+/// R2564000, R2603000: what one use of `unit`'s Activate gives its controller, by `prices`, while it has
+/// an ability to use (`abilities_of`: a Vanilla card has none). 0 with `Prices::NONE`, for a card its root
 /// did not price, and at a zero `activation` weight (no reading).
 fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     if w.activation == 0.0 {
@@ -758,6 +759,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 // priced it. R2565000: either side's, since a card the seat can read is one it may price; a
                 // face-down card is not here, and is never priced.
                 value += w.turn_hook * turn_hook_price(state, card, w, prices);
+                // R2603000: what one use of its Activate gives its controller, as the decision's root priced
+                // it, inside its Brittle share as a unit's is (R2564000): a card that crumbles takes its
+                // coming uses with it. Either side's; an enemy face-down card is not here.
+                value += brittle_share(card, w) * w.activation * activation_price(state, card, w, prices);
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share), with stats (R2280000).
                 if w.animated_share != 0.0 && animated_with_stats(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w, prices);
@@ -1519,11 +1524,12 @@ fn use_price(turn: &GameState, after: &GameState, unit: &CardInstance) -> Option
     (price > 0.0).then_some(price)
 }
 
-/// R2564000: prices into `priced` the best use of each of `controller`'s units with an Activate on
-/// `turn`, the start of its turn: the uses `legal_actions` lists for the unit, tried as the opponent's
-/// reply tries them (`visible_activation`: only a card acting face-up that is none of `hidden`, at most
+/// R2564000, R2603000: prices into `priced` the best use of each of `controller`'s cards with an Activate
+/// on `turn`, the start of its turn (`activate_sources`: its units, then its face-up backrow cards): the
+/// uses `legal_actions` lists for the card, tried as the opponent's reply tries them
+/// (`visible_activation`: only a card acting face-up that is none of `hidden`, at most
 /// `AI_REPLY.visible_activations` of them, the best by the controller's own evaluation when it beats
-/// standing still), and priced by `use_price`. A unit the same as one already tried (`tried`,
+/// standing still), and priced by `use_price`. A card the same as one already tried (`tried`,
 /// `ActivationPrice::is_for`) is not tried again. `false` when the counter is spent.
 fn price_uses(
     turn: &GameState,
@@ -1534,7 +1540,7 @@ fn price_uses(
     priced: &mut Vec<ActivationPrice>,
 ) -> bool {
     let legal = legal_actions(turn, controller);
-    for unit in active_units_of(turn, controller) {
+    for unit in activate_sources(turn, controller) {
         if hidden.contains(&unit.id)
             || tried.iter().any(|key| key.is_for(unit))
             || subsystems::abilities_of(turn, unit).is_empty()
@@ -1566,18 +1572,34 @@ fn price_uses(
     true
 }
 
-/// R2564000: whether any unit acting on `player`'s field (`active_units_of`: never a Dormant card) has
-/// an ability to use (`abilities_of`).
-fn has_activate_unit(world: &GameState, player: PlayerId) -> bool {
-    active_units_of(world, player)
-        .into_iter()
-        .any(|unit| !subsystems::abilities_of(world, unit).is_empty())
+/// R2564000, R2603000: the cards of `player`'s whose Activates the probes try, in this order: each unit
+/// acting on its field (`active_units_of`: never a Dormant card), then each card acting face-up in its
+/// backrow (`is_acting_on_field`: never a face-down card), a Field Spell among them, but for a Unit
+/// standing there, which is one of its units already (R1081000).
+fn activate_sources(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let mut cards = active_units_of(state, player);
+    cards.extend(
+        state.players[player]
+            .backrow
+            .iter()
+            .flatten()
+            .filter(|card| !is_standing_unit(state, card) && subsystems::is_acting_on_field(state, card)),
+    );
+    cards
 }
 
-/// R2564000: `activation_prices`' two turns on `start`: `seat` ends its turn and the enemy's units are
-/// priced at the start of the enemy's (`price_uses`); then, when `own` (a unit of the seat's has an
-/// Activate), the enemy ends that turn with nothing used and the seat's units are priced at the start
-/// of its next one. A turn the pass does not reach prices nothing, and nor does any turn after it.
+/// R2564000, R2603000: whether any card the probes would try for `player` (`activate_sources`) has an
+/// ability to use (`abilities_of`).
+fn has_activate_card(world: &GameState, player: PlayerId) -> bool {
+    activate_sources(world, player)
+        .into_iter()
+        .any(|card| !subsystems::abilities_of(world, card).is_empty())
+}
+
+/// R2564000, R2603000: `activation_prices`' two turns on `start`: `seat` ends its turn and the enemy's
+/// cards are priced at the start of the enemy's (`price_uses`); then, when `own` (a card of the seat's
+/// has an Activate), the enemy ends that turn with nothing used and the seat's cards are priced at the
+/// start of its next one. A turn the pass does not reach prices nothing, and nor does any turn after it.
 fn probe_turns(
     start: &GameState,
     seat: PlayerId,
@@ -1599,18 +1621,19 @@ fn probe_turns(
     priced
 }
 
-/// R2564000: the activation prices a decision of `seat`'s passes (`Prices`), probed on
+/// R2564000, R2603000: the activation prices a decision of `seat`'s passes (`Prices`), probed on
 /// `world`, its probe world (a function of what the seat sees, R185): one use of the Activate of each
-/// unit acting on either field (`active_units_of`, so never a Dormant card, a face-down backrow card or
-/// a hand card), each card once (`ActivationPrice::is_for`). The enemy's units are tried at the start
-/// of the enemy's next turn and the seat's own at the start of the seat's next one (`probe_turns`), so
-/// a use the seat already spent this turn hides nothing, and each use is tried as the opponent's reply
-/// tries one (`visible_activation`). It runs on a copy with both players' automatic turn end off
-/// (R345), so no step ends a turn the probe did not end, and with no price passed (`Prices::NONE`), so a
-/// probe reads none, a Death and a turn-hook price included. The probes draw at most `AI_ACTIVATION_PROBE_NODES` nodes
-/// from `counter`; the units left when they run out are not priced. Nothing is priced, and no node is
-/// spent, when no unit on either field has an Activate, while a prompt is open, once the game is over,
-/// outside the seat's own main phase, or at a zero `AI_EVAL.activation`.
+/// unit acting on either field and of each card acting face-up in either backrow (`activate_sources`, so
+/// never a Dormant card, a face-down card or a hand card), each card once (`ActivationPrice::is_for`).
+/// The enemy's cards are tried at the start of the enemy's next turn and the seat's own at the start of
+/// the seat's next one (`probe_turns`), so a use the seat already spent this turn hides nothing, and
+/// each use is tried as the opponent's reply tries one (`visible_activation`). It runs on a copy with
+/// both players' automatic turn end off (R345), so no step ends a turn the probe did not end, and with no
+/// price passed (`Prices::NONE`), so a probe reads none, a Death and a turn-hook price included. The
+/// probes draw at most `AI_ACTIVATION_PROBE_NODES` nodes from `counter`; the cards left when they run out
+/// are not priced. Nothing is priced, and no node is spent, when no unit on either field and no face-up
+/// backrow card has an Activate, while a prompt is open, once the game is over, outside the seat's own
+/// main phase, or at a zero `AI_EVAL.activation`.
 pub fn activation_prices(
     world: &GameState,
     seat: PlayerId,
@@ -1624,8 +1647,8 @@ pub fn activation_prices(
     {
         return Vec::new();
     }
-    let own = has_activate_unit(world, seat);
-    if !own && !has_activate_unit(world, seat.opponent()) {
+    let own = has_activate_card(world, seat);
+    if !own && !has_activate_card(world, seat.opponent()) {
         return Vec::new();
     }
     let mut start = world.clone();

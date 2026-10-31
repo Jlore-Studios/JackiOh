@@ -18,6 +18,10 @@
 //! Cry; Voidwalker (classic-050), (2) 6/3, "Aura: Cards that would go to a graveyard are exiled
 //! instead"; Midrange Menace (core-019), (3) 9/9 Taunt; Mr. Vanilla (core-008), a (1) 4/4 with no
 //! text; and the (1) Traps Sheepish (core-041) and My Pawn (core-096).
+//!
+//! R2603000 prices a face-up backrow card's Activate the same way, a Field Spell's: The Power to Punish
+//! (classic-020), a (3) Field Spell, "Activate: Choose one: Deal 2 Pierce damage; your opponent discards
+//! 1 random card; or choose a Unit, which is destroyed at the start of your next turn", once a turn.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -34,6 +38,7 @@ const MENACE: &str = "core-019";
 const VANILLA: &str = "core-008";
 const SHEEPISH: &str = "core-041";
 const MY_PAWN: &str = "core-096";
+const PUNISH: &str = "classic-020";
 const LIBRARY: &[&str] = &[VANILLA, VANILLA, VANILLA, VANILLA];
 
 /// The AI's turn with the AI's side `p1` and the human's `p2`, each with `LIBRARY` added.
@@ -323,5 +328,78 @@ fn r2564000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
         unit_worth(&state, cannon, &AI_EVAL, Prices::NONE),
         before,
         "a decision leaves no price behind"
+    );
+}
+
+#[test]
+fn r2603000_an_own_power_to_punish_raises_the_evaluation_by_its_price() {
+    let state = board(
+        "ai-activation-field-spell-own",
+        json!({ "backrow": [PUNISH] }),
+        json!({ "hand": [VANILLA], "field": [SORCERER] }),
+    );
+    let unpriced = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
+    let (prices, used) = priced(&state);
+    let price = price_of(&prices, PUNISH, AI);
+    assert!(price > 0.0, "a use punishes the enemy: {price}");
+    assert!(
+        (3..=AI_ACTIVATION_PROBE_NODES).contains(&used),
+        "two turn ends and a use at least: {used}"
+    );
+    let prices = prices_of(prices);
+    let eval = evaluate_priced(&state, AI, NextSwing::Enemy, &AI_EVAL, &prices);
+    assert!(
+        (eval - (unpriced + AI_EVAL.activation * price)).abs() < 1e-9,
+        "{eval} against {unpriced} and {price}"
+    );
+    assert_eq!(
+        evaluate_priced(&state, AI, NextSwing::Enemy, &GREEDY_EVAL, &prices),
+        evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL),
+        "the frozen baseline reads no price"
+    );
+}
+
+#[test]
+fn r2603000_an_enemy_power_to_punish_lowers_the_evaluation_by_its_price() {
+    let state = board(
+        "ai-activation-field-spell-enemy",
+        json!({ "hand": [VANILLA], "field": [SORCERER] }),
+        json!({ "backrow": [PUNISH] }),
+    );
+    let unpriced = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
+    let (prices, _) = priced(&state);
+    let price = price_of(&prices, PUNISH, HUMAN);
+    assert!(price > 0.0, "a use punishes the AI: {price}");
+    let eval = evaluate_priced(&state, AI, NextSwing::Enemy, &AI_EVAL, &prices_of(prices));
+    assert!(
+        (eval - (unpriced - AI_EVAL.activation * price)).abs() < 1e-9,
+        "{eval} against {unpriced} and {price}"
+    );
+}
+
+#[test]
+fn r2603000_an_enemy_face_down_card_is_never_probed_and_changes_no_price() {
+    let a = board(
+        "ai-activation-field-spell-hidden",
+        json!({ "backrow": [PUNISH] }),
+        json!({ "hand": [VANILLA], "field": [SORCERER], "backrow": [SHEEPISH] }),
+    );
+    let mut b = a.clone();
+    b.players[HUMAN]
+        .backrow
+        .iter_mut()
+        .flatten()
+        .next()
+        .expect("the enemy's Trap is set")
+        .def_id = MY_PAWN.to_string();
+    let (on_a, on_b) = (priced(&a), priced(&b));
+    assert!(price_of(&on_a.0, PUNISH, AI) > 0.0);
+    assert!(
+        on_a.0.iter().all(|entry| entry.controller == AI),
+        "only the AI's Power to Punish is priced: {on_a:?}"
+    );
+    assert_eq!(
+        on_a, on_b,
+        "the enemy's face-down Trap changes no price and no node"
     );
 }
