@@ -11716,15 +11716,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/README.md"
+          ],
+          "from": "0708849afb89330a4c7ae738a8ce2f1c3599062b",
+          "main": "e1885c18dfc6b4283e101a6a074262be54878ae9"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41178494573",
+            "run": "41182548876",
             "tier": "strong"
           }
         ],
-        "sha": "0708849afb89330a4c7ae738a8ce2f1c3599062b",
+        "sha": "14b0c49f803c45229059d90d8104b8a403f5d4eb",
         "tiers": {
           "claude": "strong"
         }
