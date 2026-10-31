@@ -2,9 +2,10 @@
 //! checked it, on a seed it issued (`POST /api/practice/seeds`, `POST /api/practice/claims`).
 //!
 //! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a
-//! forged result, a forged AI move, another seed's log, an unfinished log, a sandbox tool, a seed
-//! claimed before, a lapsed seed and a pruned one pay nothing and say why (R1303000–R1303003, whose
-//! proving tests live here). A seed given back frees its place, and only the caller's unclaimed seed can be (R2379000). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
+//! forged result, an AI move the engine refuses, another seed's log, an unfinished log, a sandbox
+//! tool, a seed claimed before, a lapsed seed and a pruned one pay nothing and say why
+//! (R1303000–R1303003, whose proving tests live here), while a log that folds to its result pays
+//! even when an AI move in it is not the AI's own choice (R2560000). A seed given back frees its place, and only the caller's unclaimed seed can be (R2379000). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
 //! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
 //! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
 //! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000). A pay the store fails is
@@ -14,8 +15,8 @@
 //! swept, and a shutdown waits for a claim whose caller has gone (R2422000).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
-//! `economy::practice`'s own `opening` and `ai_action`, so each AI move in a log is the one the
-//! server re-runs; the fixture test plays one the browser's worker recorded instead. Every amount
+//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI (the server no
+//! longer re-runs it, R2560000); the fixture test plays one the browser's worker recorded instead. Every amount
 //! is read through its constant and the hook's own math, so the tests hold whatever #1333 sets.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -25,11 +26,13 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use jackioh_ai::{AiOptions, ai_to_act, decide};
 use jackioh_engine::wire::newest_shipped_set;
 use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, Rng, SandboxOp};
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::api::practice::{Swept, sweep_unsettled};
 use jackioh_server::app::{App, now_ms, serve_until};
+use jackioh_server::bots::seat::r188_forbidden;
 use jackioh_server::config::{
     JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS,
     PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
@@ -200,8 +203,46 @@ enum Human {
     Ai,
 }
 
+/// The action the practice AI takes in `state` from `seat` under `nonce`, as the worker's `aiStep`
+/// takes it: `decide`'s choice, unless R188 forbids it or the engine refuses it, else the first
+/// legal action the engine accepts, `endTurn` first; `None` when the AI owes nothing. `rng` is the
+/// AI's stream, left where the decision left it. The server does not run this on a claim
+/// (R2560000): it plays the games these tests claim.
+fn ai_move(
+    pinned: Pinned,
+    state: &GameState,
+    seat: PlayerId,
+    nonce: &str,
+    rng: &mut Rng,
+) -> Option<ActionBody> {
+    let accepted = |body: &ActionBody| {
+        !r188_forbidden(body)
+            && !matches!(body, ActionBody::Sandbox { .. })
+            && engine::reduce(pinned, state, &Action::new(body.clone(), seat, nonce))
+                .error
+                .is_none()
+    };
+    let chosen = pinned.run(|| {
+        if !ai_to_act(state, seat) {
+            return None;
+        }
+        let mut options = AiOptions::new(rng.clone());
+        let decision = decide(state, seat, &mut options);
+        *rng = options.rng;
+        Some(decision.map(|decision| decision.action))
+    })?;
+    if let Some(body) = chosen.filter(|body| accepted(body)) {
+        return Some(body);
+    }
+    let legal = engine::legal_actions(pinned, state, seat);
+    let (end_turn, rest): (Vec<ActionBody>, Vec<ActionBody>) = legal
+        .into_iter()
+        .partition(|body| matches!(body, ActionBody::EndTurn));
+    end_turn.into_iter().chain(rest).find(|body| accepted(body))
+}
+
 /// A practice game played out from `setup` on `seed` as the worker plays it: the AI moves whenever
-/// it owes one, through `practice::ai_action`, and the human otherwise, each under its own nonces
+/// it owes one, through `ai_move`, and the human otherwise, each under its own nonces
 /// from the seat it plays then (R677). The log, the human's result and the final state.
 fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, ClaimedResult, GameState) {
     let pinned = pinned();
@@ -218,7 +259,7 @@ fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, Claime
         );
         let ai_seat = engine::seat_played_by(&state, ai_home);
         let ai_nonce = format!("a{ais}");
-        let action = match practice::ai_action(pinned, &state, ai_seat, &ai_nonce, &mut ai_rng) {
+        let action = match ai_move(pinned, &state, ai_seat, &ai_nonce, &mut ai_rng) {
             Some(body) => {
                 ais += 1;
                 Action::new(body, ai_seat, ai_nonce)
@@ -228,7 +269,7 @@ fn play(seed: &str, setup: &PracticeSetup, human: Human) -> (Vec<Action>, Claime
                 let nonce = format!("h{humans}");
                 let body = match human {
                     Human::Concede => ActionBody::Concede,
-                    Human::Ai => practice::ai_action(pinned, &state, seat, &nonce, &mut human_rng)
+                    Human::Ai => ai_move(pinned, &state, seat, &nonce, &mut human_rng)
                         .expect("the human owes an action whenever the AI owes none"),
                 };
                 humans += 1;
@@ -680,25 +721,42 @@ async fn a_forged_result_pays_nothing() {
 }
 
 #[tokio::test]
-async fn r1303002_a_forged_ai_move_pays_nothing() {
+async fn r1303002_r2560000_an_ai_move_the_engine_refuses_pays_nothing() {
     let (app, token) = authed().await;
     let (seed, _) = issue(&app, &token).await;
     let (mut log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
-    // The AI's first move swapped for one it never makes: an End turn it did not take, or (when it
-    // did) a concede, which R188 forbids it.
+    // The AI's first move swapped for an answer to a draw offer nobody made, which the engine
+    // refuses in every state: the log no longer folds, and no AI move is re-run to say so.
     let first = log
         .iter_mut()
         .find(|action| action.nonce.starts_with('a'))
         .expect("the AI moved");
-    first.body = match first.body {
-        ActionBody::EndTurn => ActionBody::Concede,
-        _ => ActionBody::EndTurn,
-    };
+    first.body = ActionBody::AnswerDraw { accept: false };
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        refusal("ai_mismatch")
+        refusal("does_not_fold")
     );
     assert_unpaid(&app).await;
+}
+
+#[tokio::test]
+async fn r2560000_an_ai_move_the_ai_never_makes_still_pays() {
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let setup = kept_setup(&app, &seed).await;
+    // The AI's seat concedes at its first move, which the practice AI never does (R188): the log
+    // folds to the human's win, and no AI move is re-run to refuse it.
+    let log = [Action::new(
+        ActionBody::Concede,
+        setup.human_seat.opponent(),
+        "a0",
+    )];
+    let xp = game_xp(GameMode::Practice, human_actions(&log), true);
+    assert_eq!(
+        claim(&app, &token, &seed, "win", &log).await,
+        first_paid(JLORE_PRACTICE_WIN, xp, false)
+    );
+    assert_paid(&app, &seed, JLORE_PRACTICE_WIN, xp).await;
 }
 
 #[tokio::test]
@@ -708,8 +766,10 @@ async fn a_log_from_another_seed_pays_nothing() {
     let other = format!("{seed}-other");
     insert(&app, &other, setup, now_ms()).await;
     let answer = claim(&app, &token, &other, "win", log).await;
+    assert_eq!(answer["paid"], json!(false), "{answer}");
     assert!(
-        answer == refusal("does_not_fold") || answer == refusal("ai_mismatch"),
+        ["does_not_fold", "not_finished", "result_mismatch"]
+            .contains(&answer["reason"].as_str().unwrap_or("")),
         "{answer}"
     );
     assert_unpaid(&app).await;
@@ -1616,7 +1676,7 @@ struct Fixture {
 }
 
 #[tokio::test]
-async fn r1303002_the_ai_rerun_matches_the_game_the_worker_played() {
+async fn r1303002_r2560000_the_game_the_worker_played_folds_and_pays() {
     let fixture: Fixture = serde_json::from_str(include_str!("../fixtures/practice-claim.json"))
         .expect("the fixture is a practice claim");
     let setup = PracticeSetup {
@@ -1626,7 +1686,7 @@ async fn r1303002_the_ai_rerun_matches_the_game_the_worker_played() {
         last_board: Vec::new(),
         catalog_version: catalog_version().to_string(),
     };
-    let rerecord = "the worker's game no longer re-runs here: after an AI, card or engine change, record \
+    let rerecord = "the worker's game no longer folds here: after a card or engine change, record \
                     it again with `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run \
                     src/practice/claim.test.ts`";
 

@@ -966,7 +966,7 @@ jobs:
   # slowest took vitest 195 s, and the first, with promote-production.test.ts after it, the job to
   # 8m 1s, #2223). The audio and fx layers and the asset tests (the recorded voice and music, the
   # card art convention) run in super.yml instead: cosmetic, large, and broken on Linux by every new
-  # card until its assets are rendered (docs/v0.3.0/research/D-ci-spec.md §2.4).
+  # card until its assets are rendered.
   # promote-production.test.ts runs in `web (promote-production)` below. The tests that sweep many
   # games (the tutorial lessons' other deals and random players) play their first game here and the
   # rest daily (src/test/daily.ts).

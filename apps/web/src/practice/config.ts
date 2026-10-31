@@ -37,13 +37,6 @@ export const PRACTICE_PACING_FAST: PracticePacing = { firstActionMs: 0, actionGa
 export const PRACTICE_AI_CLOCK_MS = 1500;
 
 /**
- * R2208000: the cap for one decision of a game on a server seed (`earning: true`), whose claim the
- * server re-runs at the full node budget with no clock (R1303002). Only a backstop for a stuck
- * worker: a slow device lets each decision finish.
- */
-export const PRACTICE_EARNING_AI_CLOCK_MS = 30_000;
-
-/**
  * R2102000: wall-clock cap for the lethal hint's check, which every snapshot of the human's turn
  * waits for: a check still running past it gives no hint, so a board whose lines are slow to play
  * out never holds a click's answer back for long.

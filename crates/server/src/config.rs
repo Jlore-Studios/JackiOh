@@ -2699,7 +2699,7 @@ pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
 /// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
 pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
-/// game's log and a re-run of every AI move off the runtime (`economy::practice`). A claim past it
+/// game's log off the runtime (`economy::practice`, R2560000). A claim past it
 /// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
 /// the blocking pool free for the live matches' folds.
 pub const PRACTICE_VERIFY_CONCURRENCY: usize = 2;

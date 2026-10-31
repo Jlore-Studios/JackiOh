@@ -18,6 +18,7 @@ import { EMPTY_LOG } from "../stats/model.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
 import { expectEmptyState } from "../test/empty.ts";
+import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at } from "../test/stubServer.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -1228,6 +1229,51 @@ describe("the card drill-down dialog", () => {
     behind.focus();
     press("Tab", { shiftKey: true });
     expect(retry).toHaveFocus();
+  });
+
+  it("R2127000 Back closes the breakdown, gives the focus back to its row and keeps /stats with its tab and filters, a filter changed while it was open among them; with none open Back leaves", async () => {
+    at("/decks");
+    window.history.pushState(null, "", "/stats?set=core");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const row = screen.getByText("Spark Pup").closest("tr");
+    if (row === null) throw new Error("no row");
+
+    fireEvent.click(row);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get("card")).toBe("core-001");
+    // A filter changed under the open breakdown replaces the address, over the entry Back is held by.
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "Spark" } });
+    expect(new URLSearchParams(window.location.search).get("search")).toBe("Spark");
+
+    await pressBack();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(row).toHaveFocus();
+    expect(window.location.pathname).toBe(paths.stats);
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("set")).toBe("core");
+    expect(params.get("search")).toBe("Spark");
+    expect(params.has("card")).toBe(false);
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.searchInput)).toHaveValue("Spark");
+
+    // With none open, Back leaves the page as it did.
+    await pressBack();
+    expect(window.location.pathname).toBe("/decks");
+  });
+
+  it("R2127000 with the breakdown closed by its Close, one Back still leaves /stats", async () => {
+    at("/decks");
+    window.history.pushState(null, "", "/stats");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    fireEvent.click(screen.getByText("Spark Pup"));
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await pressBack();
+    expect(window.location.pathname).toBe("/decks");
   });
 });
 

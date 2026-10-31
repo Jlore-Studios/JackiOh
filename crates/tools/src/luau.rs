@@ -368,7 +368,7 @@ fn cpu_model() -> Option<String> {
         .map(|(_, model)| model.trim().to_string())
 }
 
-/// What `--record` writes (part 4 or part 7 makes `docs/v0.4.0/perf.json` of it at the branch point).
+/// What `--record` writes (part 7 took `docs/v0.4.0`'s baseline from it at the branch point).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchRecord {

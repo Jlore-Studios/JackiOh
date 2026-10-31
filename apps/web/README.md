@@ -94,7 +94,7 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView` and `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -608,8 +608,8 @@ src/practice/
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, the clock mark (R2208000), in IndexedDB `jackioh.practice`
-                      (memory in jsdom), and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
+                      PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
@@ -633,7 +633,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
-- A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
+- A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the

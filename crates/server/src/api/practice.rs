@@ -12,10 +12,11 @@
 //! - **A release** (DELETE /api/practice/seeds/:seed) deletes the caller's unclaimed seed under the economy lock, so a game left without saving gives its place back ([[R2379000]]).
 //! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once
 //!   it is over. Its seed is burned first, in a transaction of its own, so it pays once whatever
-//!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log and re-runs
-//!   the AI off the runtime, at most `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait
-//!   for a permit, and none is dropped); then a claim that passed pays through the reward hook at
-//!   practice rates (held to the day's Jlore cap, [[R1483000]]), moving the account's quests as a
+//!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log to the
+//!   claimed result off the runtime, re-running no AI move ([[R2560000]]), at most
+//!   `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait for a permit, and none is
+//!   dropped); then a claim that passed pays through the reward hook at practice rates (held to
+//!   the day's Jlore cap, [[R1483000]]), moving the account's quests as a
 //!   ladder game does ([[R1304001]]), and keeps the board it ended on, in a task of its own that
 //!   finishes even when the caller stops waiting.
 //!   The pay is one transaction, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store
