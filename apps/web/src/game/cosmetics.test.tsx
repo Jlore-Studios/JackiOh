@@ -286,7 +286,7 @@ describe("R1655000 the board's cards and the picks of each card", () => {
     expect(document.querySelectorAll(".cf[data-frame]")).toHaveLength(0);
   });
 
-  it("R1655000 the hover preview and the touch sheet of the viewer's own card wear its picks; the opponent's copy's do not", () => {
+  it("R1655000 the hover preview and the sheet of the viewer's own card wear its picks; the opponent's copy's do not", () => {
     vi.useFakeTimers();
     writeCardPick(OWN, "border", CARD_BORDER);
     render(<Board view={picksView()} wearCosmetics />);
@@ -301,10 +301,8 @@ describe("R1655000 the board's cards and the picks of each card", () => {
     fireEvent.pointerLeave(hand, { pointerType: "mouse" });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
 
-    fireEvent.pointerDown(hand, { pointerType: "touch", clientX: 10, clientY: 10 });
-    act(() => {
-      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
-    });
+    // The I key opens the sheet (a touch hold shows the preview, R2617000).
+    fireEvent.keyDown(hand, { key: "i" });
     expect(screen.getByTestId(INSPECT_SHEET).querySelector(".cf")?.getAttribute("data-frame")).toBe(CARD_BORDER);
     cleanup();
     closeInspect();

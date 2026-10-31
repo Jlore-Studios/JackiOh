@@ -199,11 +199,14 @@ describe("B16: a face-down card is a back and nothing else", () => {
     fireEvent.pointerLeave(bigot, { pointerType: "mouse" });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
 
+    // R2617000: the hold is the hover, open while the finger is down.
     fireEvent.pointerDown(bigot, { pointerType: "touch", clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
-    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+    fireEvent.pointerUp(bigot, { pointerType: "touch", clientX: 10, clientY: 10 });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
   });
 
   it("B16 CardBack alone is span.cf-back plus span.card-back-mark, with no text, no <text> or <title>", () => {
