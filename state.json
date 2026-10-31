@@ -11101,7 +11101,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-31T07:05:59Z",
+      "feedback_since": "2026-10-31T11:37:09Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-31T11:29:42Z",
@@ -11118,6 +11118,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-31T08:49:47Z",
       "review_floor": "",
       "review_notes": "",
@@ -11125,11 +11126,11 @@
       "run_id": "41197608988",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-31T11:37:09Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gemini"
