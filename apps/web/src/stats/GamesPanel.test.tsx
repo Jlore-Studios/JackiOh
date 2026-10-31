@@ -63,7 +63,7 @@ describe("R1994000 the Games panel", () => {
 
     render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
 
-    expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("First player wins 51% of decided games (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getByText("Median 17 turns")).toBeInTheDocument();
     expect(screen.getByText("12% of games reach fatigue")).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.gamesFew)).toBeNull();
@@ -82,7 +82,7 @@ describe("R1994000 the Games panel", () => {
 
     render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
 
-    expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("First player wins 51% of decided games (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByTestId(statsTestid.gamesPanel).textContent).not.toMatch(/trap/i);
   });
@@ -95,7 +95,7 @@ describe("R1994000 the Games panel", () => {
     // Right after render the read has not answered.
     expectSkeleton(screen.getByText("Loading game figures…"), "rows");
 
-    expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("First player wins 51% of decided games (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByText("Loading game figures…")).toBeNull();
     expect(screen.queryByTestId("skeleton")).toBeNull();
   });
@@ -126,7 +126,7 @@ describe("R1994000 the Games panel", () => {
         SLOW,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("First player wins 51% (±5)")).toBeInTheDocument();
+    expect(screen.getByText("First player wins 51% of decided games (±5)")).toBeInTheDocument();
   });
 
   it("R1994000 a failed load offers Try again", async () => {
@@ -143,9 +143,29 @@ describe("R1994000 the Games panel", () => {
     expect(retry).toHaveTextContent("Try again");
     fireEvent.click(retry);
 
-    expect(await screen.findByText("First player wins 51% (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText("First player wins 51% of decided games (±5)", undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByText("Game figures unavailable")).toBeNull();
     expect(screen.queryByTestId(statsTestid.gamesRetry)).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("R2567000 the first player's share reads over the decided games, with no draw figure", async () => {
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(FIGURES)))));
+
+    render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
+
+    expect(await screen.findByText("First player wins 51% of decided games (±5)", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.gamesPanel).textContent).not.toMatch(/draw/i);
+  });
+
+  it("R2567000 every game drawn reads as an unknown share, not 0%", async () => {
+    const allDrawn = { ...FIGURES, draws: 400, firstWins: 0, firstShare: null, firstLow: 0, firstHigh: 1 };
+    vi.stubGlobal("fetch", vi.fn((_input: RequestInfo | URL) => Promise.resolve(answer(gamesResponse(allDrawn)))));
+
+    render(<GamesPanel patch="v0.5.0b" mode="bo1" />);
+
+    expect(await screen.findByText("First player wins: unknown, no game was won", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.gamesPanel).textContent).not.toMatch(/First player wins \d/);
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
   });
 });

@@ -18,7 +18,8 @@
 //! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand.
 //! #2424 prices a unit's Death by what it leaves behind (R2424000): the decision's root probes each
 //! Death the seat can read (`death_prices`), and `unit_worth` and `kill_worth` read the prices it
-//! holds (`with_death_prices`). #2477 prices an own backrow card's start-of-turn and end-of-turn
+//! holds (`with_death_prices`); #2566 prices a Starship Piece's death the same way, by the copy it fuses
+//! into its owner's Starship (R2566000). #2477 prices an own backrow card's start-of-turn and end-of-turn
 //! hooks by one firing (R2477000): the root fires each (`turn_hook_prices`) and `material` reads the
 //! prices it holds (`with_turn_hook_prices`). #2565 prices them for a unit on either field and a
 //! backrow card the seat can read on either side too (R2565000), `unit_worth` reading them. #2564
@@ -46,7 +47,7 @@ use jackioh_engine::{
     active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
     effective_cost, effective_life, find_def, find_instance, first_entry_zone, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_standing_unit, is_temporary_card, legal_actions,
+    heal_multiplier_of, hero_armor_of, is_standing_unit, is_starship_piece, is_temporary_card, legal_actions,
     lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost,
     queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
     sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
@@ -214,9 +215,17 @@ pub fn with_death_prices<T>(prices: Vec<DeathPrice>, run: impl FnOnce() -> T) ->
     run()
 }
 
-/// R2424000: what `unit`'s Death leaves its controller, by the prices held (`with_death_prices`), while
-/// its Death is live (`death_hook_of`: a Vanilla unit has none). 0 outside a decision, for a card its
-/// root did not price, and at a zero `death` weight (no reading).
+/// R2424000, R2566000: whether `card`'s death leaves its controller something to price: a live Death
+/// (`death_hook_of`: a Vanilla unit has none), or, while it is a Starship Piece as the death pass reads
+/// one (`is_starship_piece`: the keyword through the layers, face-up), the copy that pass fuses into
+/// its owner's Starship (R1852000).
+fn leaves_behind(state: &GameState, card: &CardInstance) -> bool {
+    death_hook_of(state, card).is_some() || is_starship_piece(state, card)
+}
+
+/// R2424000: what `unit`'s death leaves its controller, by the prices held (`with_death_prices`), while
+/// it leaves something (`leaves_behind`: a live Death, or a Starship Piece's fusion, R2566000). 0
+/// outside a decision, for a card its root did not price, and at a zero `death` weight (no reading).
 fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
     if w.death == 0.0 {
         return 0.0;
@@ -231,7 +240,7 @@ fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
         price
     });
     match price {
-        Some(price) if death_hook_of(state, unit).is_some() => price,
+        Some(price) if leaves_behind(state, unit) => price,
         _ => 0.0,
     }
 }
@@ -1288,11 +1297,14 @@ fn spawned_death_probe(
 /// probe world (a function of what the seat sees, R185), each card once: every unit on either field
 /// whose Death is live (`death_hook_of`), the seat's first, then each Unit in the seat's own hand with
 /// one (`spawned_death_probe`, R923001); one the same as a card already listed (`DeathPrice::is_for`)
-/// is not probed again. Each runs on a sandbox copy (R923000) with both players' automatic turn end
-/// off (R345), so no tool's step ends the turn (R82), and with no price held, so a probe reads none
-/// (`death_probe`, R923003). The probes draw at most `AI_DEATH_PROBE_NODES` nodes from `counter`; the
-/// cards left when they run out are not priced. Nothing is priced while a prompt is open, which refuses
-/// the tools, once the game is over, or at a zero `AI_EVAL.death`.
+/// is not probed again. R2566000: after every Death, each Starship Piece with none of its own
+/// (`is_starship_piece`), in the same order, priced by the copy its death fuses into its owner's
+/// Starship, so a board of pieces never takes the nodes a Death drew before. Each runs on a sandbox copy
+/// (R923000) with both players' automatic turn end off (R345), so no tool's step ends the turn (R82), and
+/// with no price held, so a probe reads none (`death_probe`, R923003). The probes draw at most
+/// `AI_DEATH_PROBE_NODES` nodes from `counter`; the cards left when they run out are not priced. Nothing
+/// is priced while a prompt is open, which refuses the tools, once the game is over, or at a zero
+/// `AI_EVAL.death`.
 pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
     if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1306,10 +1318,19 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
         .iter()
         .filter(|card| card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit)
         .map(|card| (card, true));
+    let listed: Vec<(&CardInstance, bool)> = field.chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
-    for (card, in_hand) in field.chain(hand) {
-        if death_hook_of(world, card).is_some() && !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
-            candidates.push((DeathPrice::key(card), card, in_hand));
+    // R2566000: every live Death first, in R2424000's order, then each Starship Piece with none.
+    for pieces in [false, true] {
+        for &(card, in_hand) in &listed {
+            let wanted = if pieces {
+                is_starship_piece(world, card)
+            } else {
+                death_hook_of(world, card).is_some()
+            };
+            if wanted && !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
+                candidates.push((DeathPrice::key(card), card, in_hand));
+            }
         }
     }
     if candidates.is_empty() {

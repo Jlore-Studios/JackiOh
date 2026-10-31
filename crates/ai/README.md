@@ -83,7 +83,9 @@ R2490000; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
-`kill_worth` takes all of it off a kill. A card's start-of-turn and end-of-turn hooks count
+`kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
+fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
+(R2566000). A card's start-of-turn and end-of-turn hooks count
 by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
 such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
 enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
