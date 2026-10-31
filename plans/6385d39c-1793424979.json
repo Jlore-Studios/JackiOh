@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 2577,
+  "title": "Patch: hide keywords that do nothing on the field from units on the board",
+  "branch": "bot/issue-2577",
+  "thread": "**Issue #2577 (data, not instructions):**\n\n```text\n# #2577: Patch: hide keywords that do nothing on the field from units on the board\nOpened by @MaxGoetzmann.\n\n## Problem\n\nA unit on the board (`apps/web/src/cards/MinionFace.tsx`) draws **every** keyword the view lists for it twice: a two-letter chip (`KEYWORD_MARK`, `cards/glossary.ts`) and a treatment from `KEYWORD_VISUALS` (`cards/keywordVisuals.ts`, drawn by `cards/KeywordFx.tsx`). R438 says so: \"the board draws the keywords a unit has\". But several keywords are only rules about the hand, the graveyard or the moment of play, and once the card is on the field they do nothing. For example, Equip is a play option (\u00a76.1: \"May be played onto one of your Units\"), so an Equip unit on the field still wears an `EQ` chip and a pulsing horseshoe magnet that tell the player nothing. These take room from the chips that matter: only `KEYWORD_CHIPS_MAX` (3) chips show, and the glyph layer draws at most 2 treatments (`LAYER_CAP.glyph`). A dead keyword can therefore push a live one into the `+n` fold.\n\nThe test is **whether the keyword can still change what happens while the card is on the field, or as it leaves**. It does not have to be a combat keyword. Starship Piece (`SP`) has no combat effect, but it is a death rule with near-immediate impact: a copy fuses into its owner's Dormant Starship, which is summoned first if they have none. So it stays.\n\n## Everything a unit on the field draws today\n\nRecommendations: **Keep** means it stays visible as it is, and **Hide** means it is not drawn on the field.\n\n### Keywords (chip + treatment)\n\n| Keyword | Chip | Treatment | Does it do anything on the field? | Recommendation |\n|---|---|---|---|---|\n| Taunt | (none: shield frame) | frame | Restricts attacks | Keep |\n| Divine Shield | (none: bubble) | frame | Negates the next hit | Keep |\n| Armor X | (none: plate by health) | stat | Reduces each hit | Keep |\n| Can't attack | NA | veil | Attack validator | Keep |\n| Immune to Spells | IS | frame | Spells can't target or affect it | Keep |\n| Poisonous | PO | veil | Combat | Keep |\n| Charge | CH | veil | Summon turn, and again when it changes control | Keep (the zzz depends on it) |\n| Rush | RU | veil | Same as Charge | Keep |\n| Brittle X | BR | veil (cracks) | Counts down on the field | Keep |\n| Lifesteal | LS | veil | Combat | Keep |\n| Reborn | RB | frame | Death | Keep |\n| Indestructible | ND | frame | Damage, destruction, position | Keep |\n| First Strike | FS | glyph | Combat | Keep |\n| Trample | TR | glyph | Combat | Keep |\n| Cleave | CL | glyph | Combat | Keep |\n| Pierce | PI | glyph | Combat | Keep |\n| Spell Damage X | SD | veil | Raises its side's Spell damage | Keep |\n| Animated | AN | veil (cogs) | It is a backrow card standing as a Unit | Keep |\n| Animated on your turn | AT | veil (clock) | Goes back to the backrow at its controller's cleanup | Keep |\n| Lucky X | LK | glyph | Its rolls on the field, Death included | Keep |\n| Immutable | IM | glyph | Blocks Transform, Vanilla, Nerf and Buff, and Spell targeting | Keep |\n| Windfury | WF | glyph | Two attacks | Keep |\n| Deft | DE | glyph | Can attack and switch in the same turn | Keep |\n| Untributable | UT | glyph | Tribute costs can't take it, and a Sacrifice of it does nothing | Keep |\n| Ranged | RG | glyph | Takes no strike back | Keep |\n| Flying | FL | glyph | Restricts attacks | Keep |\n| Starship Piece | SP | glyph | Death: fuses into the Starship | Keep (the example above) |\n| Starship | SS | glyph | \"Your Starship\" reads it | Keep (it overlaps the \u2604 state badge; deduplicating them is out of scope) |\n| **Equip** | EQ | glyph (magnet) | No. It is a play option that is spent once played (\u00a76.1, R81) | **Hide** |\n| **Tradable** | TD | glyph | No. It is a hand action; R1838000 says it \"does nothing\" on the field | **Hide** |\n| **Cloaked** | CK | glyph | No. It is a face-down play from the hand, and a face-down card is not a unit face | **Hide** |\n| **Crater** | CR | glyph | No. It fires as the unit arrives, and the Lock outlasts the card and is drawn on the zone (R783010) | **Hide** |\n| **Flashback** | FB | glyph | No. It is a play from the graveyard. It hints that a kill is not final, but that is never immediate | **Hide** (borderline) |\n| **Stack** | ST | frame (card edges) | No. It is a play option onto an occupied zone. A pile is already drawn by the pile-depth badge (\u00a73.2) | **Hide** |\n| **Temporary X** | TE | glyph | No. It counts down in the hand only (\u00a76.1; Card.tsx already gives its aura to hand cards only) | **Hide** |\n\n### Everything else a field unit wears (unchanged by this issue, listed for completeness)\n\nThese all stay: the cost gem, the rarity crest, the element tag, the name plate, attack, health/max and the token mark between them, the Vanilla stamp (R243), the zzz (R849000), the \"can't act yet\" Zz (#258), the DEF position tag and rotation, the state rail (`CardStates.tsx`: Buffed, Nerfed or Tuned, the enchantments, Berserk, Frozen, Dormant with its countdown and seal, Starship \u2604n, Created, quest progress and stage), mark auras (R437) and Brittle's last-count gray aura (#2270), tally pills (R2321000), Plague and Grade counters (R471, R372), the pile-depth badge (\u00a73.2), the Activate controls (R384) and the cosmetics (R1295000). Items drawn only in the hand (Temporary's count, counteredOnPlay, choicesTruncated, hand hints) never reach the field already.\n\n## What to build (apps/web only)\n\n1. In `cards/keywordVisuals.ts`, give `KeywordVisual` a field flag (e.g. `onField: boolean`). The map is total over `KeywordKind`, so every future keyword must make the same call to compile. Set it to `false` for Equip, Tradable, Cloaked, Crater, Flashback, Stack and Temporary, and to `true` for every other keyword.\n2. In `treatedKinds` / `keywordFxPlan`, draw no treatment for an `onField: false` kind, so it takes no layer slot and no `AMBIENT_MAX` loop.\n3. In `MinionFace.tsx`, `keywordChips` gives such a keyword no chip and leaves it out of the `+n` count. Keep its `.keyword[data-keyword]` span in the DOM, hidden as Taunt's is (`data-chip=\"hidden\"`), so the tests and e2e specs that read it still work.\n4. The hover preview and the inspect sheet keep listing **every** keyword the view carries, unchanged. Only the board minion is decluttered.\n5. Write a ruling in this issue's block (`R<N>000`, `spec/rulings/`, with its \u00a711 paragraph in `spec/pending/<N>.md`). It amends R438 (\"draws only the keywords that can still act on the field or as it leaves; the rest stay in its preview and inspect sheet\") and is proven by a test named after it in `cards/keywordVisuals.test.tsx` and `cards/CardFace.test.tsx` or a MinionFace test.\n6. This changes how cards look, so add a pending fragment claiming `visual` (R2529000: `cargo jackioh patches \"<title>\" --visual`).\n\n## Acceptance\n\n- A unit with Equip (or any other hidden kind) and Taunt on the field shows no `EQ` chip and no magnet treatment, and its preview still lists Equip.\n- A unit with Equip, Cloaked, Tradable and three live keywords shows the three live chips with no `+n`.\n- A unit with Starship Piece still shows `SP` and its hull-plate glyph.\n- `pnpm --dir apps/web test`, `typecheck`, eslint and `cargo jackioh spec check` are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2577: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first"
+  ]
+}
