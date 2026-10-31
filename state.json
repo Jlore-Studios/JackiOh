@@ -11094,15 +11094,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/09-architecture.md"
+          ],
+          "from": "3dd1b1fbdb1bcdb1207e476d8b33fbb30be32199",
+          "main": "3c5c7a81ee081c735f41d811027c97eebb6f6e20"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41161731255",
+            "run": "41170672443",
             "tier": "strong"
           }
         ],
-        "sha": "3dd1b1fbdb1bcdb1207e476d8b33fbb30be32199",
+        "sha": "6231d3c9768ee1005241d9c7ee2154bf5d91c105",
         "tiers": {
           "claude": "strong"
         }
