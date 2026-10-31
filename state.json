@@ -11822,12 +11822,8 @@
     "what": "build #2610 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-31T20:35:06Z",
-    "notes": [
-      "delivered build #2610 on claude-1 (run 41239044080): interrupted",
-      "started build #2610 on claude-8 (run 41239684498)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-31T20:43:09Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
