@@ -557,15 +557,20 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // of Field Spells game 3 brings it to four crystals once through another card's discount, so no
     // run of games from game 1 holds it drawn and never affordable. The Easy check is GIGA Glowy Jelly
     // Bean's again (7, only Float brings it down): game 2 draws it, never at four crystals.
+    //
+    // Re-pinned for issue #2490 (R2490000), when the AI's single pricing of a backrow Unit moved the
+    // play: Easy's game 1 now draws GIGA Glowy Jelly Bean and Floats bring it to four crystals, so no
+    // run of games from game 1 holds it never affordable. The Easy check is Ceaseless Void's (100):
+    // game 1 draws it, never at four crystals.
 
-    /// R186 GIGA Glowy Jelly Bean (7 mana) is unswept at Easy's four crystals
+    /// R186 Ceaseless Void (100 mana) is unswept at Easy's four crystals
     #[test]
-    fn r186_giga_glowy_jelly_bean_7_mana_is_unswept_at_easys_four_crystals() {
+    fn r186_ceaseless_void_100_mana_is_unswept_at_easys_four_crystals() {
         jackioh_cards::register_all();
         let easy = js(sweep_card(
-            "core-029",
+            "core-100",
             &SweepOptions {
-                seeds: Some(2),
+                seeds: Some(1),
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Easy),
