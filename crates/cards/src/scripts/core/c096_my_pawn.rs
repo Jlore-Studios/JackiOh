@@ -443,9 +443,7 @@ mod tests {
     // crates/cards/tests/cross/my_pawn.rs, and spec 07 in a browser. The radiant face's addition is
     // proved below.
 
-    // -------------------------------------------------------------------------------------------
     // Radiant: "cancel it, destroy the attacker, and an AI plays the rest of their turn" (R283)
-    // -------------------------------------------------------------------------------------------
 
     /// #68, a 5/5 with nothing that fires in combat: the plain lethal swing at a 5-health hero.
     const SORCERER: &str = "core-068";

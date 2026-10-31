@@ -6,11 +6,8 @@
 //! R67  its cost never changes what it deals. R25 the index clamps at 11. R280 the preview is the
 //!      damage it would deal now, off the same `damage_for` as the Cry (§10.8).
 //! The return is an `end_of_turn` hook on a Spell in the graveyard (§5.1, R68), one-shot by the turn
-//! log; it raises the card's own cost (R65) by 1, never above (4).
-//! R429, R766: only the climb survives the graveyard (R766 takes every price off a card reaching it):
-//! the return gives back the climb earlier returns gave (`return_price_of`) plus (1), capped at (4).
-//! Any other price change stays gone, and a #31 that reaches its graveyard any other way (discarded,
-//! burned, countered) was never flagged for a return, so nothing is noted for it.
+//! log, raising its own cost (R65) by 1 up to (4). R766 takes every price off a card reaching the
+//! graveyard, so the return gives back only the climb earlier returns gave (`return_price_of`).
 
 use jackioh_engine::prelude::*;
 
@@ -93,9 +90,8 @@ fn own_cost(state: &GameState, self_: &CardInstance, carried: i32) -> i32 {
 }
 
 /// "End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)." Only on the turn
-/// it was played: the spell stays in the graveyard when its hand is full (`bounce` burns it back,
-/// §2.4), and a card that is still there on a later turn is no longer returning, so the turn log —
-/// which `startTurn` clears — is the gate.
+/// it was played: a card still in the graveyard on a later turn (a full hand burned it back, §2.4) is
+/// not returning, so the turn log, which `startTurn` clears, is the gate.
 fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let Some(self_) = ctx.live_self().cloned() else {
         return vec![];
@@ -106,16 +102,14 @@ fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if !was_played_this_turn(ctx.state, self_.owner, &self_) {
         return vec![];
     }
-    // R429, R766: the climb its earlier returns gave it, which the graveyard took off it and its return
-    // gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
-    // R429: never above (4), so at (4) the +1 adds nothing and the climb it had is all it gets.
+    // R429, R766: the climb its earlier returns gave it (noted as its play landed it, `return_price_of`),
+    // plus the return's +1, never above (4).
     let carried = return_price_of(&self_);
     let raise = RETURN_COST_STEP
         .min(RETURN_COST_CAP - own_cost(ctx.state, &self_, carried))
         .max(0);
-    // R78: the price rides on the instance in the hand, until a graveyard takes it off again (R766). It
-    // lands only on a card that reached the hand: a full hand burns the card back to the graveyard
-    // (§2.4, R4), which is no return. `returnPrice` notes it as the climb beside the `costMod`, so the
+    // R78: the price rides the instance in hand until a graveyard takes it off again (R766); a full hand
+    // burns the card back (§2.4, R4), which is no return. `returnPrice` notes it as the climb, so the
     // next return gives back this and nothing else.
     let price = carried + raise;
     let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
@@ -195,7 +189,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `{ targets: [{ pick: "hero", player: "p2" }] }`: every play here aims at the enemy hero.
     fn at_enemy_hero() -> Value {
         json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
     }
@@ -245,9 +238,8 @@ mod tests {
         s
     }
 
-    /// R429, R766: one turn of the climb — p1 plays `equation` at the enemy hero with mana to spare,
-    /// the turn ends (its return), and p2's turn passes. The mana the play took, and what the equation
-    /// costs back in hand.
+    /// R429, R766: one turn of the climb (the play, its return, p2's turn): the mana the play took, and
+    /// what the equation costs back in hand.
     fn climb_once(s: &mut Scenario, equation: &CardInstance) -> (i32, i32) {
         s.state_mut().players.p1.mana.current = 10;
         s.play(equation, at_enemy_hero());
@@ -378,8 +370,6 @@ mod tests {
         #[test]
         fn r429_r766_the_return_never_lifts_its_cost_above_4_from_3_it_reaches_4_and_at_4_it_adds_nothing() {
             crate::register_all();
-            // R429, R766: two real climbs take the equation to (3); its next return reaches (4), and the
-            // one after that adds nothing (the cap stops the +1).
             let mut s = board(BoardOptions::default());
             let equation = s.card("31").clone();
             climb_once(&mut s, &equation);

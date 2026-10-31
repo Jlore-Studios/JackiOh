@@ -5,26 +5,18 @@
 //!   Radiant: "Shuffle {cards|random Radiant KY card|random Radiant KY cards} into your deck." — cards 3
 //!
 //! The whole card is one `shuffleRandomFromCatalog` (R1828002): `cards` independent picks (repeats
-//! allowed, R60) from the KY cards, each Radiant on the Radiant face, shuffled into the caster's deck at
-//! uniformly random places, R80's cap turning the rest away. The pool is the text's "KY card", which
-//! names no token, so §5.1 keeps the KY tokens out: this card, KY's Gift, Knowledge Breaker Prime and
-//! Lil' Kenny.
-//!
-//! Being a token is data (§7): §5.1's one query keeps Token-tagged cards out of every random pool
-//! unless the card names the pool itself; the tests prove it against `crates/cards/src/query.rs`.
+//! allowed, R60) from the KY cards, Radiant on the Radiant face, R80's cap turning the rest away.
+//! Being a token is data (§7) and the text names no token, so §5.1 keeps the KY tokens out of the pool.
 //! R11: a SPELL token goes to the GY like any spell (§3.2), so Discover can find it (R50, #72 Reminisce).
 //!
-//! Through v0.4.9 it was "Draw {draw}." (1, and 2 on the Radiant face); `script_v0_4_9` keeps that for
-//! those versions' replays (R767000).
+//! Through v0.4.9 it was "Draw {draw}."; `script_v0_4_9` keeps that for those versions' replays (R767000).
 
 use jackioh_engine::effects::shuffle_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-051-1";
 
-/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `run_hook`. R1828002: the
-/// declared number `cards` (R386) of random non-token KY cards (§5.1), Radiant on the Radiant face, into
-/// the caster's deck.
+/// A spell's script is its `cry` hook (§10.9). R1828002: `cards` (R386) random KY cards into the deck.
 fn notebook() -> Script {
     Script {
         cry: Some(hook(|ctx| {
@@ -38,8 +30,7 @@ fn notebook() -> Script {
     }
 }
 
-/// Through v0.4.9: base draws 1, radiant draws 2, the declared number `draw` read off the face that is
-/// running.
+/// Through v0.4.9: draws `draw`, 1 on the base face and 2 on the Radiant.
 fn notebook_v0_4_9() -> Script {
     Script {
         cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
@@ -207,8 +198,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.4.9 and before, which drew 1, or 2 on the Radiant
-    /// face.
+    /// R767000: the script kept for the replays of v0.4.9 and before.
     mod v0_4_9 {
         use super::*;
 
@@ -243,11 +233,8 @@ mod tests {
         {
             crate::register_all();
             // The pool #57 Conjure KY generates from: the KY tag of every set (R380), minus tokens, minus
-            // the generator. Re-pinned for v0.3.5: the Meditative set joins the pool (§8.8 #34 高考,
-            // #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY, #87 Tatches the Totem); and for
-            // v0.3.15 (Meditative+ ships, #1187): §8.9 #20 KY's Competition and #25 KY's Intuition join
-            // it, while its token #20.1 Lil' Kenny stays out; and for the Stinkyscape release (#1884):
-            // §8.10 #25 KY's Tricknology joins it, while its token #4.2 KY's Last Exam stays out.
+            // the generator: §8.8 #34, #38, #45, #79, #87; §8.9 (#1187) #20 and #25 but not its token #20.1;
+            // §8.10 (#1884) #25 but not its token #4.2.
             assert_eq!(
                 ids(crate::query::pool("core-057", &json_as(json!({ "tags": ["KY"] })))),
                 vec![

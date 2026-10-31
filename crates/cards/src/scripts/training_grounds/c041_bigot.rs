@@ -10,14 +10,9 @@
 //! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
 //! the radiant form declares no target at all.
 //!
-//! Engine cell: a targeted Cry with a tag filter. The pick is a play-time choice, not a prompt: it
-//! travels in the `play` action and never pauses resolution (R81), the engine checks it against this
-//! declaration and against the board (R90), and a board with no legal enemy non-Human still allows
-//! the play — the unit enters and the Cry fizzles (§8 Conventions, R90).
-//!
-//! The radiant sweep is `destroy_all` (engine/src/effects/destroy.rs) over the enemy's non-Human
-//! units. It marks every match exactly as `destroy` does, so they are all collected in one state
-//! check (R59) and nothing dies between the marks.
+//! The pick travels in the `play` action, never a prompt (R81), checked against this declaration and
+//! the board (R90); with no legal target the unit still enters and the Cry fizzles (§8 Conventions).
+//! `destroy_all` marks every match as `destroy` does, so all die in one state check (R59).
 
 use jackioh_engine::effects::{destroy, destroy_all};
 use jackioh_engine::prelude::*;
@@ -143,7 +138,7 @@ mod tests {
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-002, on both faces: the Cry destroys the chosen non-Human, or every one on the Radiant face.
+    /// R2195003: the snapshot plays exactly as core-002, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_002() {
         for radiant in [false, true] {
