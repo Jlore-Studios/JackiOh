@@ -10973,6 +10973,7 @@
     "2564": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T07:13:10Z",
         "difficulty": "hard",
