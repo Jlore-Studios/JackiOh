@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2569,
+  "title": "Patch: web and e2e tests turn the automatic turn end off instead of pinning seeds that deal a turn-one play",
+  "branch": "bot/issue-2569",
+  "thread": "**Issue #2569 (data, not instructions):**\n\n```text\n# #2569: Patch: web and e2e tests turn the automatic turn end off instead of pinning seeds that deal a turn-one play\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSeveral of the web client's tests need a game's first turn to stay open long enough to look at it. The game ends a turn by itself when the player has nothing to play, so these tests use a hand-picked game seed that happens to deal a playable card. Each time cards change, the deals change and these tests fail for no real reason. Whoever made the card change then has to hunt for a new seed: one test's comment lists five such moves, another file's lists seven. After this change, the tests turn the automatic turn end off, as one end-to-end test already does, or find a fitting seed by themselves. A card change then stops breaking them.\n\n## Why\n- Pinned seeds and their histories:\n  - `apps/web/src/practice/core.test.ts:590-597`: R265's seeds moved for R186, twice for v0.1.1, and for #2278, #2454 and #2521.\n  - `apps/web/src/game/hotseat.test.ts:569-570`: re-pinned for v0.3.5 and for v0.3.10.\n  - `e2e/cypress/e2e/06-room-code.cy.ts:134-135`: re-pinned for R2368000's three-card opener.\n  - `apps/web/src/test/replay.ts:14-31`: seven re-pins of one seed.\n- R345: `setAutoEndTurn {enabled}` \"is accepted from either seat at any moment of a live game, the mulligans and an open prompt included; it emits nothing\".\n- Commit `5aaf4f39c` (#2554) already fixed `e2e/cypress/e2e/20-mulligan-concede-draw.cy.ts` this way: \"The browser turns R82's automatic turn end off (R345), so turn 1 stays open whatever the seed deals it\".\n- The Rust tests have a seed search (`crates/engine/src/testkit/seed_search.rs`, `seed_where`). The web tests have none.\n\n## Proposal\n- Where a test pins a seed only so a human seat's turn 1 holds a play, turn that seat's automatic turn end off before the mulligan ends (the setting in the browser, the action in the driver), and give the seed a fixed name.\n- Where the seat is the AI's, or the test needs a property of the whole game (the hands at the end in `replay.ts`), add `seedWhere(prefix, accept)` in `apps/web/src/test/`, with its bound a named constant, mirroring the Rust `seed_where`.\n- Drop the re-pin histories from the comments these changes make moot.\n\n## Where it lands\n`apps/web/src/practice/core.test.ts`, `apps/web/src/game/hotseat.test.ts`, `apps/web/src/test/replay.ts` with a new helper beside it, `e2e/cypress/e2e/06-room-code.cy.ts`, and any other test whose comment says it was re-pinned because R82 ended a turn (grep for \"Re-pinned\").\n\n## Acceptance criteria\n- [ ] No web or e2e test names a seed whose only purpose is a turn-one play.\n- [ ] Each converted test still asserts what it did. For example, the R265 tests still prove the AI answers its mulligan first and the human's picker stays open.\n- [ ] `seedWhere` fails with a message naming its prefix and bound when no seed fits.\n- [ ] `pnpm --dir apps/web test` and the touched Cypress specs pass.\n\n## Size and risks\nSmall: about five test files, no rules change. A test that is about the automatic turn end itself (R82's, R345's) keeps it on. A search at run time costs a little time each run, so its bound stays small and its accept check cheap.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:36:43Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2569: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
