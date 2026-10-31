@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2565,
+  "title": "Patch: the AI prices the Start of turn and End of turn effects of Units on the board, on both sides",
+  "branch": "bot/issue-2565",
+  "thread": "**Issue #2565 (data, not instructions):**\n\n```text\n# #2565: Patch: the AI prices the Start of turn and End of turn effects of Units on the board, on both sides\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome Units do something at the start or end of every turn. One grows and hits the enemy hero each turn; another hands its owner a card every turn. Since the last AI patch, the computer opponent counts this for its own backrow cards, but not for Units on the board, whether its own or the other player's. So it leaves a growing enemy engine alone to hit a plain body of the same size, and trades its own engines away as if they were blank. After this change, the AI counts one turn of such a Unit's effect on both sides of the board.\n\n## Why\n- R2477000's \"What is not priced\" list names \"A unit's turn hooks\" (`spec/rulings/R2477000.md:16`). It also leaves \"probing the enemy's face-up Field Spells too, left for a later issue\" (`:20`).\n- `turn_hook_prices` keeps only backrow holders, `.filter(|holder| holder.zone == TriggerZone::Backrow)` (`crates/ai/src/evaluate.rs:1354`). The price is added only on the AI's own side, `if player == seat` (`evaluate.rs:724`).\n- Real cards affected:\n  - Gatling Pea (`crates/cards/src/scripts/meditative/c013_gatling_pea.rs`): \"End of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}.\"\n  - Gravedigger (`core/c037_gravedigger.rs`): \"Start of turn: add a random card from your GY to your hand\".\n- `training/improve.md:100-101` names this as the loss the AI's training notes trace again and again: \"an engine, a unit that grows or makes value every turn, priced at its body today and left unanswered\".\n- The learned weights (`crates/ai/src/learned/weights.json`, catalog v0.3.17) know none of the newer sets' cards, so the hand evaluation's price is the only one for them.\n\n## Proposal\n- Let `turn_hook_prices` probe field holders as well as backrow ones. Spawn hand Units into the sandbox first, as the Death probes do.\n- Price the enemy's face-up holders from the enemy's view, on the enemy's own hook (its Start and End of turn).\n- Add the `turn_hook` share of the price inside `unit_worth`, so a Unit's worth carries it wherever it is counted.\n- Raise or split `AI_TURN_HOOK_PROBE_NODES` as measured.\n- A new ruling in the issue's block amends R2477000's \"What is not priced\".\n\n## Where it lands\n`crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/tests/ai/turn_hooks.rs`, `crates/ai/README.md`, and `spec/rulings/R<n>.md` with its \u00a711 paragraph in `spec/pending/<issue>.md` (\u00a79.9).\n\n## Acceptance criteria\n- [ ] Given one removal and two targets, an enemy Gatling Pea and an enemy vanilla Unit with equal or slightly better stats, the AI removes the Gatling Pea.\n- [ ] With its own Gravedigger and a same-cost vanilla Unit on the board, the AI trades the vanilla first.\n- [ ] Hidden cards are never probed (R185), and a hook that harms its holder prices below zero, as R2477000's do.\n- [ ] `cargo jackioh gate` passes at smoke size, and the perf gate's decision time holds.\n\n## Size and risks\nMedium, and hard (AI). More probes per decision, bounded by the node constant. The Hard-vs-Easy gate must still pass, so the weight may need screening. Practice fixtures that pin the AI's moves may need re-recording.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:38:23Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2565: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
