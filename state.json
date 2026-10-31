@@ -10637,7 +10637,8 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
-          "gemini"
+          "gemini",
+          "claude"
         ],
         "builder": "gemini",
         "rejections": [],
@@ -10646,10 +10647,16 @@
             "family": "gemini",
             "run": "41149198326",
             "tier": "medium"
+          },
+          {
+            "family": "claude",
+            "run": "41158765000",
+            "tier": "strong"
           }
         ],
         "sha": "9e6ea06b2bc4999c1839f220c8f366b20d4a625e",
         "tiers": {
+          "claude": "strong",
           "gemini": "medium"
         }
       }
