@@ -11985,6 +11985,14 @@
           "claude": "strong"
         }
       }
+    },
+    "2639": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-31T20:18:53Z",
+      "issue": 2611,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
