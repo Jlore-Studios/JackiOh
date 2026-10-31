@@ -22,7 +22,6 @@ const DEV_ONLY = import.meta.env.MODE !== "production";
 
 // The wire, restated structurally
 
-/** The server's `MatchClocks`, restated across the deployable boundary. */
 export type MatchClocks = {
   /** Epoch ms the active player's turn clock expires, or null while it is paused. */
   turnDeadline: number | null;
@@ -39,14 +38,10 @@ export type PromptFrame =
   | { forYou: true; pendingFor: PlayerId; choiceId: string; kind: PromptKind; deadline: number | null }
   | { forYou: false; pendingFor: PlayerId; deadline: number | null };
 
-/**
- * A `clock` frame plus the monotonic reading when it landed; deadline calculations never use wall time.
- */
+/** A `clock` frame plus the monotonic reading when it landed; deadline calculations never use wall time. */
 export type ClockReading = { now: number; clocks: MatchClocks; receivedAt: number };
 
-/**
- * Milliseconds left on an absolute server deadline, or null when there is none.
- */
+/** Milliseconds left on an absolute server deadline, or null when there is none. */
 export function remainingMs(
   deadline: number | null | undefined,
   clock: Pick<ClockReading, "now" | "receivedAt"> | null,
@@ -67,9 +62,7 @@ export function defaultMonotonic(): number {
 
 // The socket seam
 
-/**
- * The WebSocket subset used here, for frame-level tests.
- */
+/** The WebSocket subset used here, for frame-level tests. */
 export type SocketLike = {
   readonly readyState: number;
   send: (data: string) => void;
@@ -89,14 +82,10 @@ export function browserSocket(url: string, protocols: string[]): SocketLike {
   return new WebSocket(url, protocols) as unknown as SocketLike;
 }
 
-/**
- * Refusal close codes; retrying one would loop against a settled server answer.
- */
+/** Refusal close codes; retrying one would loop against a settled server answer. */
 export const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 
-/**
- * R679: a voided match has no socket to reconnect to.
- */
+/** R679: a voided match has no socket to reconnect to. */
 export const VOIDED_CLOSE_CODE = 4410;
 
 /**
@@ -261,9 +250,7 @@ const isString = (value: unknown): value is string => typeof value === "string";
 const isNumberOrNull = (value: unknown): value is number | null =>
   value === null || typeof value === "number";
 
-/**
- * Deliberately shallow (§9.3): validation here would duplicate the engine's action union.
- */
+/** Deliberately shallow (§9.3): validation here would duplicate the engine's action union. */
 function parseLegal(value: unknown): readonly ActionBody[] | null {
   if (!Array.isArray(value)) return null;
   const out: ActionBody[] = [];
@@ -320,9 +307,7 @@ export type ServerFrame =
   /** R1834003: the picks of one seat's cards the view before it newly showed. */
   | { type: "cardLoadouts"; cards: CardLoadouts };
 
-/**
- * Parse one text frame; unknown frames must not take the board down.
- */
+/** Parse one text frame; unknown frames must not take the board down. */
 export function parseServerFrame(text: string): ServerFrame | null {
   let parsed: unknown;
   try {
@@ -445,14 +430,11 @@ export type ConnectionState =
   /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679): the match is gone, and nothing reopens it until `connect()`. */
   | "closed";
 
-/**
- * `"none"` leaves the board read-only until a server view provides legal actions.
- */
+/** `"none"` leaves the board read-only until a server view provides legal actions. */
 export type LegalSource = "none" | "view";
 
 export type MatchSnapshot = {
   connection: ConnectionState;
-  /** The last `PlayerView` pushed, or null before the first one. */
   view: PlayerView | null;
   /** Empty until a server sends one; never computed here (CLAUDE.md rule 7, BUILD M5-T2). */
   legal: readonly ActionBody[];
@@ -471,7 +453,6 @@ export type MatchSnapshot = {
   error: string | null;
   /** The last `error` frame's code, for a caller that wants to branch without parsing prose. */
   errorCode: string | null;
-  /** The last `clock` frame with the monotonic reading it landed at. */
   clock: ClockReading | null;
   /** The last `prompt` frame. The board renders `view.pending`; this carries R79's deadline. */
   prompt: PromptFrame | null;
@@ -928,9 +909,7 @@ export type NetDevHandle = {
 /** The networked counterpart to the hotseat `window.__jackioh` handle. */
 type DevWindow = { __jackioh?: unknown };
 
-/**
- * Publish outside production; teardown avoids clobbering the hotseat handle.
- */
+/** Publish outside production; teardown avoids clobbering the hotseat handle. */
 export function installDevHandle(handle: NetDevHandle): () => void {
   if (!DEV_ONLY || typeof window === "undefined") return () => {};
   const host = window as unknown as DevWindow;
@@ -962,9 +941,7 @@ export type UseMatchResult = MatchSnapshot & {
   url: string;
 };
 
-/**
- * One socket per match; snapshots use `useSyncExternalStore`. R194 tokens apply on the next handshake.
- */
+/** One socket per match; snapshots use `useSyncExternalStore`. R194 tokens apply on the next handshake. */
 export function useMatch(options: UseMatchOptions): UseMatchResult {
   const { matchId, token, baseUrl, socketFactory, timers, monotonic } = options;
   // Later tokens reach the client through `setToken`.

@@ -1,42 +1,35 @@
 // A hero: health, armor and the Heroic Power (SPEC §3, BUILD M5-T1).
 //
-// The hero is a click target like any card — `hero-<side>` — so an attack can land on it, by a
-// click or by a pointer drag the DragLayer resolves through the same testid. Whether it may be
-// attacked is `props.highlight.legal`, and whether it glows green is `props.highlight.glow`;
+// The hero is a click target like any card, `hero-<side>`, for a click or a DragLayer drag. Whether
+// it may be attacked is `props.highlight.legal`, and whether it glows green `props.highlight.glow`;
 // Taunt lives in the engine.
 //
-// The modifier badges come from `SideView.modifiers`, which R169 put in the view — `{ id, label }`
-// per §10.1 modifier, on both seats. The list is rendered here and nowhere else, so
-// `modifiers-<side>` (the testid the M5-T4 animation table resolves `modifierChanged` to) has
-// exactly one element per seat.
+// The modifier badges come from `SideView.modifiers`, which R169 put in the view (`{ id, label }`
+// per §10.1 modifier, on both seats), rendered here and nowhere else, so `modifiers-<side>` (M5-T4's
+// testid for `modifierChanged`) has exactly one element per seat. Nothing is derived: the label, the
+// order and what is drawn are the view's. A badge rebuilt from the event window, the last N events
+// (§10.8), could appear and never leave.
 //
-// Nothing is derived here: the label is the view's, the order is the view's, and a modifier the
-// view does not carry is not drawn. Reconstructing badges from the event window would be a guess —
-// it is the last N events (§10.8), so a badge could appear and never leave.
+// The Heroic Powers (R43, R384, R510, R752), each separately once per turn. Each of the viewer's own
+// is a button that reports `{ on: "activate", instanceId }`, as every Activate control does
+// (ActivateControl.tsx), so `actions.ts` builds a power as any activation. The first keeps the
+// `power` testid the e2e specs press; any further one is `power-<instanceId>`. The opponent's are
+// tags. A button is live by `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power
+// flashes on the `activated` row, which plays on its card (`card-<instanceId>`).
 //
-// The Heroic Powers (R43, R384, R510, R752). The view carries every Heroic Power a player controls,
-// each separately once per turn. Each of the viewer's own is a button that reports
-// `{ on: "activate", instanceId }`, the click every Activate control reports (ActivateControl.tsx),
-// so `actions.ts` builds a power exactly as it builds any activation. The first keeps the `power`
-// testid the e2e specs press; any further one is `power-<instanceId>`. The opponent's powers are
-// tags. Whether a button is live is `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed.
-// A power flashes on the `activated` row, which plays on its card (`card-<instanceId>`).
-//
-// The portrait has two presses (R1449). A click on the hero when it is not a legal target, or Enter
-// or Space on the portrait's own button (a control named for the hero, laid over the art and given
-// no testid, so a drag or a click still resolves to `hero-<side>`), toggles the emote menu hung off
-// the portrait: your picker, or the opponent's one-item mute (R643). A hold on the portrait, a
-// right-click, or the context-menu key or Shift+F10 on its button opens the hero's inspect view
-// instead (`emotes/HeroInspect.tsx`, R1330). A target is still a target first.
+// The portrait has two presses (R1449). A click on a hero that is not a legal target, or Enter or
+// Space on the portrait's own button (laid over the art with no testid, so a drag or a click still
+// resolves to `hero-<side>`), toggles the emote menu on the portrait: your picker, or the opponent's
+// one-item mute (R643). A hold, a right-click, or the context-menu key or Shift+F10 on the button
+// opens the hero's inspect view (`emotes/HeroInspect.tsx`, R1330). A target is still a target first.
 //
 // R847: a side whose Temporal Rift turn is granted (`SideView.riftExtraTurn`) wears "Rift turn used"
 // on both seats; owed extra turns are the engine's own modifier badge (R846).
 //
-// R1840005: a seat's Credits, a public count on both seats, which the Marketplace spends (R1853003)
-// and a Resource played or discarded from the hand earns (R2250001), are a pill beside the Jade
-// Counter's, `market-credits-<side>`. Unlike the Jade Counter's, a count of 0 still shows, since a
-// seat that spent down to 0 still has Credits. A Resource is a hand card since #2250 (R2250000), so
-// the hand draws it.
+// R1840005: a seat's Credits, public on both seats, which the Marketplace spends (R1853003) and a
+// Resource played or discarded from the hand earns (R2250001), are a pill, `market-credits-<side>`.
+// Unlike the Jade Counter's, 0 still shows: a seat that spent down to 0 still has Credits. A Resource
+// is a hand card (#2250, R2250000), so the hand draws it.
 
 import type { ReactElement } from "react";
 
@@ -118,12 +111,11 @@ export default function Hero(props: HeroProps): ReactElement {
   const osReduces = useOsReducedMotion();
   const reacting = usePortraitReaction(menu !== null, panelReduces || osReduces);
   // R1449: a touch or a mouse held on the portrait opens the view, unless the hero is a target (a
-  // hold there is the player aiming). Hover is off: a portrait has nothing to preview. The
-  // trigger's capture swallows the click that lifting the finger or the button sends, which would
-  // otherwise toggle the menu on the portrait as well. The menus stop their own pointerdowns, so a
-  // press held on a menu item is no hold on the portrait. A right-click is the mouse's twin of the
-  // hold, and the context-menu key's and Shift+F10's on the button; Game ignores all three while
-  // anything is being targeted, which is when the drag layer takes the right-click to cancel.
+  // hold there is the player aiming). No hover: a portrait has nothing to preview. The trigger's
+  // capture swallows the click a lift sends, which would also toggle the menu; the menus stop their
+  // own pointerdowns, so a press held on a menu item is no hold. A right-click, the context-menu key
+  // and Shift+F10 are the hold's twins; Game ignores all three while anything is being targeted,
+  // when the drag layer takes the right-click to cancel.
   const press = useInspectTrigger(
     emotes === undefined ? null : { key: `hero-portrait-${side}`, render: NO_OVERLAY },
     {

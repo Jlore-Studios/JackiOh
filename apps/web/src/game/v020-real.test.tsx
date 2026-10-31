@@ -1,5 +1,4 @@
-// The v0.2.0 controls against the REAL engine. The fixture tests (ActivateControl, activate,
-// PromptE18) pin each control's behavior; here the view and the legal list are `viewFor` and
+// The v0.2.0 controls against the REAL engine: the view and the legal list are `viewFor` and
 // `legalActions` of real states built through the web's own engine seam (the WebAssembly module,
 // `../wasm`, docs/v0.3.0/SURFACE.md §10.3), so a field the engine renames or a body it shapes
 // differently fails here, not in production. Every action a control sends must be one the engine
@@ -21,14 +20,11 @@ import Game from "./Game.tsx";
 const lookup = lookupFromDefs(CATALOG);
 const el = (id: string): HTMLElement => screen.getByTestId(id);
 
-// The boards. Each case sets the board the cards' test harness set for it (BUILD M4-T3), and sets
-// it the same way: `createGame` deals two filler decks, both libraries are emptied and the instance
-// ids start again at c1, the clock is turn 9 in p1's main phase (both sides at MAX_MANA), and each
-// side's cards are laid out in the harness's order — hand, field and backrow, library, graveyard —
-// so the ids follow the setup literal. The state is plain JSON (SURFACE §5.1), so the layout is
-// written into it here, and every card laid out is a copy of one the engine dealt, so it carries
-// every field the engine gives a new card. Nothing here decides a rule: the engine plays, lists and
-// views every step.
+// The boards. Each case sets the board the cards' test harness set for it (BUILD M4-T3), the same
+// way: each side's cards are laid out in the harness's order — hand, field and backrow, library,
+// graveyard — so the ids follow the setup literal. The state is plain JSON (SURFACE §5.1), so the
+// layout is written into it here. Nothing here decides a rule: the engine plays, lists and views
+// every step.
 
 type GameState = Parameters<typeof reduce>[0];
 

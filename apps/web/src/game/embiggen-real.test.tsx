@@ -1,15 +1,13 @@
 // #492: every Embiggen card asks whether to pay its embiggen price, against the REAL engine.
 //
 // The engine lists a play of an "A embiggen B" card with `embiggen: false` and, once B is affordable,
-// the same play with `embiggen: true` (R81), for every zone the card may take. The client builds the
-// play from those (CLAUDE.md rule 7): with both forms listed it opens the embiggen picker, two cards
-// in the middle of the screen, and sends the form picked; with only the normal form listed it asks
-// nothing about the price. Here the view and the legal list are `viewFor` and `legalActions` of real
-// states (the WebAssembly module, docs/v0.3.0/SURFACE.md §10.3), the board is `<Game/>`, and the play
-// is made the two ways a player makes it, click-click and drag to play. The Embiggened card shows the
-// view's `embiggenCost`, the engine's price for that play under every cost change (a discount R363's
-// "(4)+ Cost" threshold gives the embiggen price alone included), and the play then pays it. Every
-// Embiggen card in the catalog is driven, on both faces, so a new one is covered the day it is added.
+// the same play with `embiggen: true` (R81). The client builds the play from those (CLAUDE.md rule 7):
+// with both forms listed it opens the embiggen picker and sends the form picked; with only the normal
+// form listed it asks nothing about the price. The view and the legal list are real states' (the
+// WebAssembly module, docs/v0.3.0/SURFACE.md §10.3). The Embiggened card shows the view's
+// `embiggenCost`, the engine's price under every cost change (a discount R363's "(4)+ Cost" threshold
+// gives the embiggen price alone included). Every Embiggen card in the catalog is driven, on both
+// faces, so a new one is covered the day it is added.
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -122,7 +120,6 @@ function rowOf(def: CardDef): "units" | "backrow" {
   return def.type === "Unit" ? "units" : "backrow";
 }
 
-/** The open picker's kind, if one is open. */
 function promptKind(): string | null | undefined {
   return screen.queryByTestId("prompt-modal")?.getAttribute("data-prompt-kind");
 }

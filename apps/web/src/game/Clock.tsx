@@ -272,7 +272,6 @@ const GRACE_LABEL: Readonly<Record<ClockSide, string>> = {
   opponent: "Opponent reconnecting",
 };
 
-/** The grace line's accessible name: "Opponent reconnecting, 45 seconds left". */
 function graceAccessibleName(side: ClockSide, seconds: number): string {
   const count = String(seconds);
   if (side === "you") {
@@ -436,7 +435,6 @@ export default function Clock(props: ClockProps) {
 
   const elapsed = anchor.current === null ? 0 : Math.max(0, monotonic() - anchor.current.at);
   const readout = readClock(props, elapsed);
-  // R439: the turn clock's final stretch, recomputed on every repaint.
   const urgency = readUrgency(readout);
   const turnRemaining = readout.turn?.remainingMs ?? null;
   // R439, R506: the viewer's own running turn clock beats in its last 30 seconds (audio/clockAlarm.ts).

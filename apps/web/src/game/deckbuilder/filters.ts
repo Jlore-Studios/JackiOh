@@ -1,22 +1,16 @@
 // The deck builder's browse semantics: which pool cards a filter keeps, the order a sort puts them
 // in, the mana curve of a deck and the order its list tiles are drawn in.
 //
-// PURE, AND THE ONLY PLACE THESE LIVE. The components render what this module returns and decide
-// nothing themselves, so a filter or a sort is proved here without mounting anything
-// (docs/polish/6-cards.md, Surface D).
+// PURE, AND THE ONLY PLACE THESE LIVE: the components decide nothing, so a filter or a sort is
+// proved here without mounting anything (docs/polish/6-cards.md, Surface D). NO RULE LIVES HERE
+// EITHER: ownership is `poolFrom`'s (which drops Tokens, since L3 bans them from a deck) and a
+// deck's legality `@jackioh/validator`'s alone; a filter only hides cards, never refuses one. The
+// workshop keeps its filter and sort per device (`savedBrowse.ts`, #263).
 //
-// NO RULE LIVES HERE EITHER. Ownership comes from `poolFrom` (which already drops Tokens, since L3
-// bans them from a deck), and whether a deck is legal is `@jackioh/validator`'s alone. A filter only
-// hides cards from view; it never refuses one. The workshop keeps its filter and sort per device
-// (`savedBrowse.ts`, #263).
-//
-// The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
-// catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
-// builds none.
-//
-// Both lists of chips follow what ships (R1380, R1381): a tag chip shows only while a card of a
-// shipped set carries its tag (`shippedTags`), so a set's chip and its tags' arrive with the set and
-// never before.
+// The Card Almanac (R630) browses with the same filter and sort over every catalog card, tokens
+// included (`almanacPool`), since L3's reason for hiding them is a deck's. Both lists of chips
+// follow what ships (R1380, R1381): a tag chip shows only while a card of a shipped set carries its
+// tag (`shippedTags`), so a set's chip and its tags' arrive with the set and never before.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -39,10 +33,8 @@ import { DEFAULT_LOCALE, getLocale } from "../../i18n/i18n.ts";
 import { poolFrom } from "./loadout.ts";
 import { almanacShelf } from "./shelf.ts";
 
-/**
- * Cost filter chips and mana-curve buckets. Core tops out at 6, plus the 100-cost Ceaseless Void, and
- * Classic+ #64 Mulch Muncher costs 10: every price from 6 up shares "6+".
- */
+/** Cost filter chips and mana-curve buckets: every price from 6 up (Classic+ #64's 10, Ceaseless
+ *  Void's 100) shares "6+". */
 export type CostBucket = "0" | "1" | "2" | "3" | "4" | "5" | "6+" | "X";
 
 export const COST_BUCKETS: readonly CostBucket[] = ["0", "1", "2", "3", "4", "5", "6+", "X"];
@@ -63,41 +55,32 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Quickdraw",
   // R278: Core #13 and #14's, and Classic+ #48, #51 and #52's.
   "Jlockeed",
-  // Every "Book of …" card, and Classic+ #12 and #13. "AI" is left out with "Token": only the ten
-  // AI tokens carry it, and the pool never offers a Token.
+  // Every "Book of …" card, and Classic+ #12 and #13. "AI" is left out: only the AI tokens carry it.
   "Book",
   "Pancake",
   "Plague",
-  // Classic+ #38 Solarius and #46 Felinor Flagbearer, and Classic #80 BOOM! Big Max and Classic+
-  // #37 Wardrum. "Prime" is left out with "AI": only the Prime tokens carry it.
+  // Classic+ #37, #38 and #46, and Classic #80. "Prime" is left out: only the Prime tokens carry it.
   "Catalyst",
   "Acclaimed",
-  // The Meditative set's (R1381): #8 Reach the Summit and #20 Aestheticize the Game, which win the
-  // game another way (R1420's set).
+  // The Meditative set's (R1381): #8 and #20, which win the game another way (R1420's set).
   "Wincon",
-  // The Meditative+ set's (R1178000): M+ #11, #12 and #13, the Living Potions, and the potions M+
-  // #16 Jazakus and #16.1 Jazakus Prime craft.
+  // The Meditative+ set's (R1178000): M+ #11 to #13, the Living Potions, and the potions #16 crafts.
   "Potion",
-  // R1837000: Core #100 Ceaseless Void, Classic #90 In Too Deep, Classic+ #32 Otherworldly Removal
-  // and Core #26 to #29, the Glowy Jelly Beans. "Other-Origins" is left out with "Prime": only
-  // Otherworldly Removal's three tokens carry it.
+  // R1837000: Core #100, Classic #90, Classic+ #32 and Core #26 to #29, the Jelly Beans.
+  // "Other-Origins" is left out: only Classic+ #32's three tokens carry it.
   "Terminus",
   "Quest",
   "Otherworldly",
   "Jelly Bean",
-  // The Stinkyscape set's (R1857000, R1883000): #27 to #36 the Drone Cores, the weapon rack's Weapons
-  // and #91 and #92 the Propagation's Swarm. "War Doctrine" is left out with "Prime": only #137's four
-  // Doctrines carry it.
+  // The Stinkyscape set's (R1857000, R1883000): #27 to #36 the Drone Cores, the Weapons and #91 and
+  // #92 the Swarm. "War Doctrine" is left out: only #137's four Doctrines carry it.
   "Drone Core",
   "Weapon",
   "Swarm",
 ];
 
-/**
- * The almanac's tag chips (R630): the deck builder's, then the five only tokens carry, "Prime" (the
- * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000),
- * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000) and "Token", since the almanac shows tokens.
- */
+/** The almanac's tag chips (R630): the deck builder's, then the five only tokens carry ("Prime" is
+ *  R1421's), since the almanac shows tokens. */
 export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
@@ -221,10 +204,9 @@ function haystackOf(def: CardDef): string {
 }
 
 /**
- * The query is trimmed and split on whitespace; every term has to occur, case-insensitively, in the
- * card's name, type, tags, rarity, base or radiant text, or the keyword kinds printed on either face,
- * or, for a reader of Chinese, any of these in the Chinese card tables (R711000).
- * An empty query keeps everything.
+ * Every term has to occur, case-insensitively, in the card's name, type, tags, rarity, either
+ * face's text or keywords, or, for a reader of Chinese, in the Chinese card tables (R711000). An
+ * empty query keeps everything.
  */
 export function searchMatches(def: CardDef, query: string): boolean {
   const terms = query
@@ -269,7 +251,6 @@ function compareNames(left: CardDef, right: CardDef): number {
   return readerName(left).localeCompare(readerName(right), collationTag(), { sensitivity: "base" });
 }
 
-/** The ascending comparison of one sort key. */
 function comparePrimary(key: "cost" | "name" | "rarity" | "type", left: CardDef, right: CardDef): number {
   switch (key) {
     case "cost":
@@ -362,9 +343,9 @@ export function visiblePool(
 }
 
 /**
- * What the almanac's grid shows (R630): every catalog card, tokens included, Glitch excepted (R674)
- * and the cards of a set that has not shipped (R1420), filtered, then sorted.
- * There is no collection, so `filter.ownedOnly` is not read.
+ * What the almanac's grid shows (R630): every catalog card, tokens included, but Glitch (R674) and
+ * a set not shipped (R1420), filtered, then sorted. There is no collection, so `filter.ownedOnly`
+ * is not read.
  */
 export function almanacPool(
   catalog: CatalogSnapshot,

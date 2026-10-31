@@ -1,19 +1,16 @@
 // Turning clicks into actions — and nothing else (CLAUDE.md rule 7, BUILD M5-T2, SPEC §10.2).
 //
 // THE ONE RULE OF THIS FILE IS THAT IT HAS NO RULES. Every question of the form "may I?" is
-// answered by searching the `ActionBody[]` that `legalActions(state, player)` handed us. There is
-// no `cost <= mana`, no `keywords.includes("Taunt")`, no "a zone is open when it is null" and no
-// summoning-sickness check anywhere below. The yellow glow is not decided here at all: it is
-// `CardView.conditionActive`, which the engine computes (R195). The engine decides; this module
-// narrows a list it was given.
+// answered by searching the `ActionBody[]` that `legalActions(state, player)` handed us: no
+// `cost <= mana`, no `keywords.includes("Taunt")`, no summoning-sickness check. The yellow glow is
+// `CardView.conditionActive`, which the engine computes (R195).
 //
-// R81: zone, X, embiggen, Tribute and a card's declared targets and modes are NOT prompts. They
-// travel inside the `play` action, and `legalActions` enumerates them; so does a play's new payment,
-// the Plague Counters that pay part of a graveyard play's price (`plague`, Classic #74) — while a
-// targeting cost's discards (Classic #89) are random at pay time (R682) and travel nowhere. R384: an
-// activation is built the same way, so a play and an activation are one "build" here (`BuildBody`).
-// Everything chosen during resolution arrives as a `PendingChoice` and is answered with an `answer`
-// action (or, for the mulligan, its own `mulligan` action).
+// R81: zone, X, embiggen, Tribute, a card's declared targets and modes, and the `plague` payment
+// (Classic #74) are NOT prompts: they travel inside the `play` action, and `legalActions`
+// enumerates them. A targeting cost's discards (Classic #89) are random at pay time (R682) and
+// travel nowhere. R384: an activation is built the same way, so a play and an activation are one
+// "build" here (`BuildBody`). Everything chosen during resolution arrives as a `PendingChoice`,
+// answered with an `answer` action (or, for the mulligan, its own `mulligan` action).
 //
 // R391 (B4.5): a Tribute may pay for its own zone, and `legalActions` pairs each zone with the
 // Tribute sets that leave it open. Narrowing keeps whole candidates, never a field on its own, so a
@@ -64,10 +61,7 @@ export type PlagueSpend = NonNullable<PlayBody["plague"]>;
 /** A plague payment as the player picks it: tokens off a card, or none (the whole price in mana). */
 export type PlagueChoice = PlagueSpend | "none";
 
-/**
- * ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or face-down as a Trap revealing
- * at the chosen timing.
- */
+/** ME-ALTPLAY (R1040, R1044): face-up, or face-down as a Trap revealing at the chosen timing. */
 export type FaceDownChoice = RevealAt | "up";
 
 /** The R81 play-time choices (and an activation's), as the client accumulates them. */
@@ -204,9 +198,8 @@ function attacksBy(legal: readonly ActionBody[], attackerId: string): AttackBody
 }
 
 /**
- * R384: the activations an Activate control stands for. A control that names an ability (a card
- * listing several) takes that ability's `activate`s; one that names none takes every `activate` of
- * the card and, for a Heroic Power, its `activatePower` (R43's alias, B3.2 rule 10).
+ * R384: the activations an Activate control stands for: a named ability's `activate`s, or with none
+ * named every `activate` of the card and its `activatePower` (R43's alias, B3.2 rule 10).
  */
 export function activationsFor(legal: readonly ActionBody[], instanceId: string, ability?: string): ActivationBody[] {
   return legal.filter(isActivation).filter((body) => {
@@ -217,10 +210,9 @@ export function activationsFor(legal: readonly ActionBody[], instanceId: string,
 }
 
 /**
- * How an `attack` names a hero: the literal string `hero-<playerId>`, e.g. `"hero-p2"`;
- * `crates/engine/src/damage.rs`'s `target_id()` builds the same id for the `damage` and `healed`
- * events. There is no exported helper in `@jackioh/shared` for it, so this is the client's copy of
- * that one string.
+ * How an `attack` names a hero: `hero-<playerId>`. `@jackioh/shared` exports no helper for it, so
+ * this is the client's copy of the id `crates/engine/src/damage.rs`'s `target_id()` builds for the
+ * `damage` and `healed` events.
  */
 export function heroTargetId(player: PlayerId): string {
   return `hero-${player}`;
@@ -266,9 +258,8 @@ function inOwnGraveyard(view: PlayerView, instanceId: string): boolean {
 }
 
 /**
- * The element a `play` is started from: the hand card (a Resource among them, R2250000) or the "Play"
- * on a card in the viewer's graveyard pile (B5 E11). A card the view places nowhere is taken for a
- * hand card.
+ * The element a `play` is started from: the hand card (a Resource among them, R2250000), else the
+ * "Play" on a card in the viewer's graveyard pile (B5 E11).
  */
 export function playSourceTestid(view: PlayerView, instanceId: string): string {
   return inOwnGraveyard(view, instanceId) ? testid.pilePlay(instanceId) : testid.handCard(instanceId);
@@ -355,8 +346,7 @@ function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   if (picked.embiggen !== undefined && fixed.embiggen !== undefined && fixed.embiggen !== picked.embiggen) {
     return false;
   }
-  // R1086: a picked Equip answer keeps only the plays that fuse, and a plain answer only those
-  // that do not. A play with `equip: false` is a plain play.
+  // R1086: Equip or plain, as picked; a play with `equip: false` is a plain play.
   if (picked.equip !== undefined && (fixed.equip === true) !== picked.equip) return false;
   if (picked.tributes !== undefined && fixed.tributes !== undefined) {
     if (!containsAll(fixed.tributes, picked.tributes)) return false;
@@ -435,12 +425,10 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
 }
 
 /**
- * The next choice the build still needs, or null when the candidates agree on everything. Derived
+ * The next choice the build still needs, or null when the candidates agree on everything, derived
  * purely from the candidate array. Asked in cost order (X, embiggen and the Plague Counters change
  * what is paid), then the Tribute, the targets, the modes, and the board-driven zone last so a zone
- * click finishes the play — except that the modes come before the targets when some candidate
- * wants no target at all: a target-first order would force a target pick and strand the targetless
- * mode where no click can reach it (Classic #20's Discard).
+ * click finishes the play; the modes come before the targets when some candidate wants no target.
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
@@ -506,9 +494,8 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
     };
   }
 
-  // Classic #20: when a targetless candidate shares the build with targeted ones, the modes
-  // decide which targets even exist, so they are asked first. Otherwise the target order below
-  // stands, and a mode shared by every remaining candidate is never asked twice.
+  // Classic #20's Discard: a target-first order would force a target pick and strand the targetless
+  // mode where no click can reach it. A mode every remaining candidate shares is never asked twice.
   if (fields.some((c) => c.targets === undefined)) {
     const mixedModes = distinctBy(
       fields.flatMap((c) => (c.modes === undefined ? [] : [c.modes])),
@@ -832,10 +819,9 @@ export function highlightFor(
 // The click reducer.
 
 /**
- * Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11).
- * R979000: `legal` offers a card in hand no play; say why in the engine's words where the view
- * gives them (`CardView.playReason`, read off the viewer's own hand; a graveyard card's shows in
- * the pile's sheet instead, R1571000). Nothing is sent.
+ * Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11). R979000:
+ * when `legal` offers a hand card no play, the notice is the engine's words, `CardView.playReason`
+ * (a graveyard card's shows in the pile's sheet instead, R1571000). Nothing is sent.
  */
 function startPlay(
   legal: readonly ActionBody[],
@@ -885,9 +871,8 @@ function startActivation(
 }
 
 /**
- * Picks a unit up to attack with it: the attacks `legal` lists for it become the candidates.
- * R1200: while a Mayor acts the attack names no target, so the click sends it at once. `null` when
- * `legal` offers the unit no attack.
+ * Picks a unit up to attack with it, or `null` when `legal` offers it no attack. R1200: while a
+ * Mayor acts the attack names no target, so the click sends it at once.
  */
 function startAttack(legal: readonly ActionBody[], attackerId: string): ClickResult | null {
   const candidates = attacksBy(legal, attackerId);
@@ -978,8 +963,8 @@ export function onClickTarget(
       }
       const started = startAttack(legal, target.instanceId);
       if (started !== null) return started;
-      // R849000: legal offers this unit no attack; say why in the engine's words where the view gives
-      // them (`UnitView.attackReason`, on the viewer's own units only). Nothing is sent.
+      // R849000: no attack listed; the notice is the engine's words, `UnitView.attackReason` (on the
+      // viewer's own units only). Nothing is sent.
       const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
       return reason === undefined ? { interaction } : { interaction, notice: reason };
     }
@@ -1040,12 +1025,9 @@ function withoutPickPrefix(key: string): string {
 }
 
 /**
- * A `PendingOption` back to the `Selection` the engine stored for it.
- *
- * FINDING against SPEC §10.6 / §10.8: the engine's own `PromptOption` is `{ key, label,
- * selection }`, but the view's `PendingOption` flattens that. The `Selection` is gone, so the
- * client has to rebuild it. Carrying the `Selection` verbatim in `PendingOption` would delete this
- * function.
+ * A `PendingOption` back to the `Selection` the engine stored for it. FINDING against SPEC §10.6 /
+ * §10.8: the view's `PendingOption` flattens the engine's `PromptOption` (`{ key, label, selection }`),
+ * so the client has to rebuild the `Selection`; carrying it verbatim would delete this function.
  */
 export function selectionForOption(option: PendingOption): Selection {
   // ME-CRAFT (Meditative #17, R880): a craft preset carries its recipe; nothing else sets it.
@@ -1065,12 +1047,10 @@ export function selectionForOption(option: PendingOption): Selection {
 }
 
 /**
- * The action that answers the open prompt with the options the player picked.
- *
- * The mulligan is not an `answer`: §10.2 gives it its own `mulligan {keep[]}` action, and
- * `legalActions` enumerates it as subsets of the prompt's option keys, so the picked keys *are*
- * the kept cards. They are re-ordered into hand order so the same picks always build the same
- * action (the engine reads `keep` as a set, `crates/engine/src/setup.rs`).
+ * The action that answers the open prompt with the options the player picked. The mulligan is its
+ * own `mulligan {keep[]}` action (§10.2): the picked keys *are* the kept cards, put in hand order so
+ * the same picks always build the same action (the engine reads `keep` as a set,
+ * `crates/engine/src/setup.rs`).
  */
 export function answerAction(
   pending: Extract<PendingView, { forYou: true }>,

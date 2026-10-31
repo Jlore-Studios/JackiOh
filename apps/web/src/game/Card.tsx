@@ -20,7 +20,7 @@
 // (`MatchCardsContext`, R243) where the catalog has none.
 //
 // R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
-// would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
+// would counter it) wears a green, bubbling warning film.
 //
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them. A face-down
 // backrow card's back carries the marks its view entry lists (R33: the player who cannot read the
@@ -28,20 +28,13 @@
 //
 // #2270: a card on the field whose view gives it Brittle `BRITTLE_LAST_COUNT` crumbles at its next
 // tick (R385, R638), so it wears Allure's aura (R963, R1045000) in gray, the aura alone (CardMarks'
-// `bareAura`); a mark of its own outranks it.
+// `bareAura`); a mark of its own outranks it. #2437: a hand card whose face gives it Temporary
+// `TEMPORARY_LAST_COUNT` (the view's count left, R637, R2179001) is discarded at its owner's next end
+// of turn, so it wears the aura in fuchsia.
 //
-// #2435: a card the burst has awakened (an `awakened` event in flight on it) wears `data-awakening`,
-// which breaks its Dormant seal until the board catches up (game/awakening.ts, R1839002, R1852003).
-//
-// #2437: a face-up card in a hand whose face gives it Temporary `TEMPORARY_LAST_COUNT` (the view's
-// count left, R637, R2179001) is discarded at its owner's next end of turn, so it wears Allure's aura
-// in fuchsia, as #2270 draws Brittle's last count. Only a hand card's face carries the count
-// (faces.ts `inHand`).
-//
-// R1295000: on a board that wears cosmetics (game/wearer.ts) the viewer's own card, by its owner,
-// wears the device's card cosmetics: its face is `worn`. A stolen unit keeps its owner's look; a
-// card in the resolving strip, which names no owner, wears the defaults. R1655000: it wears the
-// picks of its own card (cards/cosmetics.ts) over the account's.
+// R1295000: a stolen unit keeps its owner's look (game/wearer.ts); a card in the resolving
+// strip, which names no owner, wears the defaults. R1655000: the viewer's own card wears the picks of
+// its own card (cards/cosmetics.ts) over the account's.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
@@ -120,11 +113,9 @@ export function legalAttr(legal: boolean): "true" | "false" {
 }
 
 // Drag-to-attack. A drop reports two clicks — the dragged source, then what it landed on — so
-// click-click and drag reach `actions.ts` through one path (BUILD M5-T2).
-//
-// The source is gated on its own `data-legal` at `dragstart`. The drop target is not: no click
-// has been dispatched yet when `drop` runs, so the target's `data-legal` still describes the
-// board *before* the source was picked up and would refuse every drag-attack.
+// click-click and drag reach `actions.ts` through one path (BUILD M5-T2). Only the source is gated,
+// on its own `data-legal` at `dragstart`: no click has been dispatched yet when `drop` runs, so the
+// target's `data-legal` still describes the board *before* the pickup and would refuse every drag.
 
 export const DRAG_MIME = "application/x-jackioh-target";
 
@@ -195,7 +186,7 @@ export type CardProps = {
   testId?: string;
   /** `null` draws a back and renders no name, no def id and no stats (SPEC §10.8). */
   card: CardView | null;
-  /** Present for a unit: stats, position, keywords, counters, Stack pile depth. */
+  /** Present for a unit. */
   unit?: UnitView | null;
   /** A face-up backrow card's type, straight off `BackrowView`. */
   type?: CardType;
@@ -208,18 +199,16 @@ export type CardProps = {
   inHandOf?: PlayerId;
   /**
    * R1297000, R1834004: the seat whose card back a back wears: the viewer's own pick on the wearer's
-   * side, the seat's loadout elsewhere. The look depends on the seat alone, so every back of a seat
-   * is the same (a back names no card, B16). Absent: the default back.
+   * side, the seat's loadout elsewhere, the same for every back of a seat (a back names no card,
+   * B16). Absent: the default back.
    */
   backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
   counters?: { plague?: number; grade?: number; gradeLetter?: string };
   /**
-   * R370: a back in the backrow, a face-down trap. `cost` is what the view says it costs, drawn on
-   * the back as a gem; `at` names its zone ("opponent-3"), which keys its inspect overlay since a
-   * back has no instance id. Absent for every other back (the opponent's hand). R437: `marks` are
-   * the marks the view puts on the face-down card, which its back carries (R33). R471: `plague` is
-   * the Plague Counters on it, public to both players.
+   * R370: a back in the backrow, a face-down trap; absent for every other back. `at` names its zone
+   * ("opponent-3"), which keys its inspect overlay since a back has no instance id. R437: `marks` are
+   * the view's on the face-down card, which its back carries (R33). R471: its Plague Counters, public.
    */
   faceDown?: { cost?: number; at: string; marks?: readonly CardMark[]; plague?: number };
   /**
@@ -286,8 +275,7 @@ export default function Card(props: CardProps): ReactElement {
   const worn = wearer !== null && (props.inOwnHand === true || owner === wearer);
   const theirs = useTheirLoadout(card === null || worn ? null : owner);
 
-  // The card in play: the unit's view when it is one, else the card's own (a hand card's stats and
-  // power, a face-up backrow card's power off the hero's list). A back has no face at all.
+  // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
   const model: FaceModel =
     shown === null
@@ -346,7 +334,8 @@ export default function Card(props: CardProps): ReactElement {
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
   // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
   const keywordLost = useKeywordLost(testId);
-  // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up (awakening.ts).
+  // #2435: an `awakened` in flight breaks the card's Dormant seal until the board catches up
+  // (awakening.ts, R1839002, R1852003).
   const awakening = useAwakening(testId);
   // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
   // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
@@ -364,10 +353,9 @@ export default function Card(props: CardProps): ReactElement {
     fire(event);
   }
 
-  // #258: I, the context-menu key or Shift+F10 opens the inspect sheet, as on the deck builder's
-  // tiles (cards/inspect/keys.ts). Every card with something to inspect takes focus for it, legal or
-  // not; Enter and Space still play or pick only a legal one. A right-click stays the board's drag
-  // cancel, so only the keys open it.
+  // #258: the inspect keys (cards/inspect/keys.ts) open the sheet; every card with something to
+  // inspect takes focus for it, legal or not; Enter and Space still play or pick only a legal one. A
+  // right-click stays the board's drag cancel, so only the keys open it.
   const keyInspect = subject !== null;
   function onInspectKey(event: KeyboardEvent<HTMLElement>): void {
     if (isInspectKey(event)) {
@@ -415,8 +403,6 @@ export default function Card(props: CardProps): ReactElement {
         </div>
       );
     }
-    // As for any card on the board, a click is the zone's (a target, say) and a resting mouse or a
-    // long-press opens the overlay; the label says the same words for a screen reader.
     // R471: the back's Plague Counters are public, so its label says them too.
     const label =
       faceDown.plague === undefined
@@ -505,9 +491,8 @@ export default function Card(props: CardProps): ReactElement {
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
       data-spent={spent ? "true" : undefined}
       // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
-      // style attribute (BUILD M5-T4 `positionSwitched`), and the scale is the lane's `--def-scale`
-      // (board.css): 1 where a lane is wider than a row is tall, less on a phone, so the turned card
-      // stays inside its lane. It is the root's only inline style; the faces put theirs on inner elements.
+      // style attribute (BUILD M5-T4 `positionSwitched`); the lane's `--def-scale` (board.css) keeps the
+      // turned card inside its lane. It is the root's only inline style.
       style={position === "DEF" ? { transform: "rotate(90deg) scale(var(--def-scale, 1))" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
@@ -532,8 +517,7 @@ export default function Card(props: CardProps): ReactElement {
       {card.counteredOnPlay === true && (
         // R667: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
         // cup) as well as color. The film takes no pointer, and a click or drag on the badge still
-        // reaches the card it sits in; under reduced motion it holds still as a plain green tint
-        // (countered.css).
+        // reaches the card it sits in (countered.css).
         <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
           <span className="countered-warning-badge" aria-hidden="true" title={t(COUNTERED_NOTE)} />
           <span className="countered-warning-sr">{t(COUNTERED_NOTE)}</span>
@@ -608,11 +592,10 @@ export default function Card(props: CardProps): ReactElement {
   );
 
   // The overlay is a sibling of the root, never its child, so the root's own click and drag
-  // handlers never see an event from inside a preview or a sheet.
-  // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
-  // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
-  // R1313000, R1655000: the viewer's own card's overlay prints the full art the card does and wears its cosmetics.
-  // R1834004: another seat's card, its face and its overlay alike, wears that seat's loadout.
+  // handlers never see an event from inside a preview or a sheet. #258: so is the switch (⟳), so its
+  // zone can give it a full 44 px target (board.css) and a DEF card's rotation never turns it.
+  // R1313000, R1655000: the viewer's own card's overlay prints the full art the card does and wears its
+  // cosmetics; R1834004: another seat's card, its face and its overlay alike, wears that seat's loadout.
   return (
     <TheirCopy loadout={theirs}>
       {root}

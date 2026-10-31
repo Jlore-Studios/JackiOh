@@ -123,7 +123,6 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   awakened: 400,
   // Issue #1838 (Tradable, R1838001).
   traded: 300,
-  // Issue #1840 (Resources and Credits).
   marketCreditsChanged: 200,
   marketBought: 250,
   marketSold: 250,
@@ -285,9 +284,8 @@ function longStream(rounds: number): GameEvent[] {
 }
 
 /**
- * The stylesheet as text. The BUILD table's Animation column is only honored if the keyframes
- * exist, so the test reads the file rather than trusting the table. Vitest stubs CSS imports
- * (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
+ * The stylesheet as text, so the keyframes the table names are checked to exist. Vitest stubs CSS
+ * imports (`test.css` defaults to false, and `?raw` comes back empty), hence `node:fs`.
  */
 const animationsCss: string = (() => {
   for (const candidate of ["src/game/animations.css", "apps/web/src/game/animations.css"]) {
@@ -535,11 +533,9 @@ describe("target resolution", () => {
   });
 
   it("drawOffered shows the toast on the opponent's seat only", () => {
-    // p1 is the viewer. p1 offering: p1's own seat shows no toast.
+    // p1 is the viewer: its own offer shows it no toast.
     expect(targetFor({ type: "drawOffered", player: "p1" }, view)).toBeNull();
-    // p2 offering: the viewer (p2's opponent) is the seat that sees the toast.
     expect(targetFor({ type: "drawOffered", player: "p2" }, view)).toBe(animTestid.drawToast);
-    // The resolution is visible to both seats.
     expect(targetFor({ type: "drawAnswered", player: "p1", accept: true }, view)).toBe(animTestid.drawToast);
     expect(targetFor({ type: "drawAnswered", player: "p2", accept: false }, view)).toBe(animTestid.drawToast);
   });
@@ -598,7 +594,6 @@ describe("target resolution", () => {
   });
 
   it("trapFired animates the trap's own card, and its zone when the viewer may not identify it", () => {
-    // The viewer's own face-up trap has an element.
     expect(
       targetFor(
         { type: "trapFired", instanceId: YOUR_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 2 },
@@ -688,17 +683,13 @@ describe("target resolution", () => {
     expect(locateInstance(view, YOUR_TRAP)).toBe(testid.card(YOUR_TRAP));
     expect(locateInstance(view, HAND_CARD)).toBe(testid.handCard(HAND_CARD));
     expect(locateInstance(view, "nope")).toBeNull();
-    // A face-down backrow slot carries no instanceId at all (SPEC §10.8), and an empty view has
-    // nothing to find.
+    // A face-down backrow slot carries no instanceId at all (SPEC §10.8).
     expect(locateInstance(baseView(), HAND_CARD)).toBeNull();
   });
 
-  // NOT THE ASSERTION THAT MATTERS. This only proves a row returns a string; it cannot prove the
-  // string names an element, because nothing here renders. A row that points at a testid no
-  // component draws passed this test for the whole of M5 — `modifierChanged` did, and #77
-  // Professor Curvature and #78 /fullsend were invisible to the player because of it. The real
-  // assertion lives in `animation-targets.test.tsx`, which renders the client and checks the
-  // element is in the document.
+  // NOT THE ASSERTION THAT MATTERS: nothing here renders, so this cannot prove a row's string names
+  // an element (`modifierChanged` passed it while #77 Professor Curvature and #78 /fullsend were
+  // invisible). The real assertion lives in `animation-targets.test.tsx`.
   it("resolves a target for every event type without throwing, and only the documented rows go dark", () => {
     // Rows that resolve to nothing on a seat that shows nothing (§10.6), plus the rows whose
     // `SAMPLES` entry names a card this fixture does not render at all.
@@ -746,8 +737,7 @@ describe("planEntries", () => {
     expect(entry.type).toBe("cardPlayed");
     // One motion, one span of time: the pair takes the `cardPlayed` duration, not the sum.
     expect(entry.durationMs).toBe(BUILD_DURATIONS.cardPlayed);
-    // The hand card reports `cardPlayed` and the landing zone reports `summoned`: the card
-    // leaving the hand and scaling into the zone are the two halves of the same motion.
+    // The card leaving the hand and scaling into the zone are two halves of the same motion.
     expect([...entry.frames]).toEqual([
       [testid.handCard("c1"), "cardPlayed"],
       [testid.zone("you", "units", 2), "summoned"],
@@ -813,8 +803,7 @@ describe("createAnimationQueue", () => {
 
     queue.enqueue(events, view);
 
-    // Everything happened inside `enqueue`: nothing is queued, nothing is in flight, nothing is
-    // animating and no timer was ever scheduled (BUILD M5-T4 acceptance).
+    // Everything happened inside `enqueue` (BUILD M5-T4 acceptance).
     expect(clock.schedule).not.toHaveBeenCalled();
     expect(queue.pending()).toBe(0);
     expect(queue.inFlight()).toBeNull();
@@ -862,8 +851,8 @@ describe("createAnimationQueue", () => {
 
   it("schedules exactly one timer per non-zero-duration entry over a long stream", () => {
     const clock = fakeClock();
-    // The burst budget is lifted here so the BUILD M5-T4 durations are the ones scheduled; what the
-    // budget does to a stream this long is pinned by the test below instead.
+    // The burst budget is lifted so the BUILD M5-T4 durations are the ones scheduled; the test
+    // below pins what it does to a stream this long.
     const queue = createAnimationQueue({
       schedule: clock.schedule,
       reducedMotion: false,
@@ -1004,7 +993,7 @@ describe("createAnimationQueue", () => {
     queue.enqueue(events, view);
     clock.flush();
 
-    // The unknown entry is skipped without a timer, like gameOver: only the known two schedule.
+    // The unknown entry is skipped without a timer, like gameOver.
     expect(clock.schedule.mock.calls.map((c) => c[1])).toEqual([
       BUILD_DURATIONS.manaChanged,
       BUILD_DURATIONS.turnStarted,
@@ -1143,7 +1132,6 @@ describe("newEventsSince", () => {
     const ended: GameEvent = { type: "turnEnded", player: "p1", turn: 5, unspentMana: 0 };
 
     expect(newEventsSince(prev, [...redacted, ended])).toEqual([ended]);
-    // And the reverse: a window that hid them, followed by one that reads them.
     expect(newEventsSince(redacted, [...again(prev), ended])).toEqual([ended]);
   });
 

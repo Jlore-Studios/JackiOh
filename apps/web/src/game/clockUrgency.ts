@@ -23,9 +23,7 @@ export type TurnClockUrgency = {
 
 export const NO_URGENCY: TurnClockUrgency = { level: "none", side: null, secondsLeft: null };
 
-/**
- * R439: a running turn clock at or under 30 seconds is "final", at or under 10 it is "last10".
- */
+/** R439: a running turn clock at or under 30 seconds is "final", at or under 10 it is "last10". */
 export function turnClockUrgency(line: ClockLine | null): TurnClockUrgencyLevel {
   if (line === null || line.kind !== "turn" || line.paused || line.remainingMs === null) return "none";
   if (line.remainingMs > TURN_CLOCK_FINAL_MS) return "none";
@@ -89,7 +87,6 @@ export function urgencyLabel(side: ClockSide): string {
   return side === "you" ? "Your turn" : "Their turn";
 }
 
-/** The urgent readout's accessible name: "Your turn ends in 12 seconds". */
 export function urgencyAccessibleName(side: ClockSide, seconds: number): string {
   const count = String(seconds);
   if (side === "you") {

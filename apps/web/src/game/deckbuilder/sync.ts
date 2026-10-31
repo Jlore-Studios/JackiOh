@@ -1,12 +1,12 @@
 // The deck workshop's store: saved decks and trios as this device holds them, and the autosave
 // that keeps the server in step (SPEC §9.4, R250, R252, R256).
 //
-// The client mints each id (`crypto.randomUUID()`), so every save is `PUT /api/decks/:id`, an
-// idempotent upsert: a save that timed out may be sent again and never makes a second deck.
+// The client mints each id, so every save is `PUT /api/decks/:id`, an idempotent upsert: a save
+// that timed out may be sent again and never makes a second deck.
 //
-// Every edit goes to a `localStorage` mirror (`jackioh.decks.v1.<profile>`) first; the next visit
-// merges it over the server's copy, and what the server never confirmed wins (R256). `localStorage`
-// is untrusted and may throw or be missing, so every access sits in try/catch.
+// Every edit goes to a `localStorage` mirror first; the next visit merges it over the server's
+// copy, and what the server never confirmed wins (R256). `localStorage` is untrusted and may throw
+// or be missing, so every access sits in try/catch.
 //
 // The server is law (rule 7): the caps, D1–D4 and T1–T3 are its to enforce. This store checks the
 // caps only so the UI can say so early, and cleans a name (`deckNameForSave`) so it saves as
@@ -15,9 +15,8 @@
 // Order of a save: decks, then trios, then deletions. A trio refused for naming an unsaved deck
 // (409 `details.unknownDeck`) waits for that deck and goes again in the same flush.
 //
-// R2119000: a deletion is held behind the workshop's undo toast before it happens here. When the
-// hold ends, the workshop calls `deleteDeck` or `deleteTrio` and then `flush`, with `keepalive` when
-// the page is going away.
+// R2119000: a deletion is held behind the workshop's undo toast; when the hold ends, the workshop
+// calls `deleteDeck` or `deleteTrio` and then `flush`, with `keepalive` when the page is going away.
 
 import { checkDeckDraft, checkImportRoom, checkTrioDraft, normalizeName } from "@jackioh/validator";
 
@@ -45,7 +44,7 @@ import { deckVersionsFrom } from "./deckHistory.ts";
 
 // The shapes
 
-/** R1297000: a deck also carries its playmat, backdrop and card back picks, each absent or null where it has none. R2097000: and the catalog version its latest save was made under: the server's stamp (R253), or this build's after an edit here; absent on a mirror entry from before #2097. */
+/** R1297000: a deck also carries its playmat, backdrop and card back picks, absent or null for none. R2097000: and the catalog version of its latest save: the server's stamp (R253), or this build's after an edit here; absent on a mirror entry from before #2097. */
 export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; catalogVersion?: string; createdAt: number; updatedAt: number } & DeckCosmeticFields;
 export type TrioItem = { id: string; name: string; deckIds: TrioSlots; createdAt: number; updatedAt: number };
 
@@ -207,7 +206,6 @@ export function mirrorKey(profileId: string): string {
   return `${DECK_MIRROR_PREFIX}${profileId}`;
 }
 
-/** `window.localStorage`, or null where reading it throws or there is none. */
 export function browserStorage(): StorageLike | null {
   try {
     if (typeof window === "undefined") return null;
@@ -277,7 +275,7 @@ function trioFrom(value: unknown): TrioItem | null {
   return { id, name, deckIds: slots, createdAt, updatedAt };
 }
 
-/** A trio's slots. `TrioSlots` is a 3-tuple, and this is its length, for the parser. */
+/** `TrioSlots`'s length, for the parser. */
 const TRIO_SLOT_COUNT = 3;
 
 function entriesFrom<T>(value: unknown, read: (raw: unknown) => T | null): MirrorEntry<T>[] {
@@ -342,15 +340,12 @@ function randomId(): string {
 /** What the status line says while a failed save waits to go again. */
 export const OFFLINE_MESSAGE = "Offline. Your changes are kept on this device.";
 
-/** R341: why an import made nothing, when the server could not be asked. */
 export const IMPORT_OFFLINE_MESSAGE = "You're offline, so nothing was imported. Try again once you're back online.";
 /** R341: why an import made nothing, when earlier edits (a deletion made to make room) have not landed. */
 export const IMPORT_UNSAVED_MESSAGE =
   "Your latest changes haven't reached the server yet, so nothing was imported. Try again once they're saved.";
 
-/** R2100000: why a deck's history is not shown, when the server could not be asked. */
 export const HISTORY_OFFLINE_MESSAGE = "You're offline, so this deck's history can't be shown. Try again once you're back online.";
-/** R2100000: why a restore changed nothing, when the server could not be asked. */
 export const RESTORE_OFFLINE_MESSAGE = "You're offline, so nothing was restored. Try again once you're back online.";
 /** R2100000: why a restore changed nothing, when the deck's latest edit has not landed (a restore would save over it). */
 export const RESTORE_UNSAVED_MESSAGE =

@@ -1,21 +1,17 @@
-// The board's game-over state (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw").
-//
-// The reason reads as a sentence from the viewer's side of the table, and the overlay comes in two
-// forms:
-//  - `panel`: a dimmed board and a panel in the middle of the screen with the outcome, why, and the
-//    route's own ways on (`actions`), plus "View the board", which folds it to the chip;
+// The board's game-over state (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw"), in two forms:
+//  - `panel`: a dimmed board and a panel with the outcome, why, and the route's own ways on
+//    (`actions`), plus "View the board", which folds it to the chip;
 //  - `chip`: one line at the foot of the screen, over nothing that matters once the game is done,
 //    with "Result" to open the panel again. Practice asks for this form from the start, because
 //    its own result dialog (PracticeResult) is the panel there.
 //
 // Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
 // its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
-// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests
-// and tools.
+// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests.
 //
-// R434: the game's end reveals both hands. When the view shows the opponent's hand (`reveal.ts`),
-// the panel lists it as "Their hand", and the chip offers "Their hand" as a button that opens the
-// same cards in the list dialog (TheirHand.tsx).
+// R434: the game's end reveals both hands. When the view shows the opponent's (`reveal.ts`), the
+// panel lists it as "Their hand", and the chip's "Their hand" button opens it in the list dialog
+// (TheirHand.tsx).
 
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -45,8 +41,8 @@ export function outcomeFor(result: Result, viewer: PlayerId): ResultOutcome {
 export const RESULT_WORD: Readonly<Record<ResultOutcome, string>> = { win: "Win", loss: "Loss", draw: "Draw" };
 
 /**
- * Why the game ended, as the viewer would say it. Every `GameOverReason` has a sentence. `winner` is
- * the result's, which tells a draw by two fleers from the other player's flight (R1843002).
+ * Why the game ended, as the viewer would say it. `winner` is the result's, which tells a draw by two
+ * fleers from the other player's flight (R1843002).
  */
 export function resultReason(outcome: ResultOutcome, reason: GameOverReason, winner: PlayerId | "draw" | null = null): string {
   switch (reason) {

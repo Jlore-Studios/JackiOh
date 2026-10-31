@@ -273,8 +273,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   drawAnswered: null,
   emoted: null,
   gameOver: null,
-  // Patch v0.2.0: the new events ride the existing recipes, each with a look of its own (fx/v020.test.ts),
-  // and `rolledBack` rewinds the whole board.
+  // These ride the existing recipes, each with a look of its own (fx/v020.test.ts).
   cardAnnounced: "cast",
   countered: "fizzle",
   stolen: "mindControl",
@@ -302,7 +301,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   translated: null,
   // R800: a discard a discard guard stopped fizzles over the hand.
   discardPrevented: "fizzle",
-  // Patch v0.3.X (MN05, R1363): a hit the Armor took whole blooms a shield.
+  // MN05, R1363: a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
   jadeChanged: null,
@@ -327,8 +326,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   // R1852000: a piece's fusion is drawn by the `fused` before it; R1852003: a launch brands.
   starshipFused: null,
   starshipLaunched: "brand",
-  // Issue #1843 (R1843000, R1843002): a vote flares its card with no effect; the agreement and the
-  // escape take the banner.
+  // Issue #1843 (R1843000, R1843002): a vote flares its card with no effect.
   voteCast: null,
   votedOut: "banner",
   fled: "banner",
@@ -379,7 +377,7 @@ const FX_RECIPES = [
   "curve",
 ];
 
-/** The pre-task table's `animation`, `durationMs` and `testid` per row, which S4 keeps byte for byte. */
+/** Each row's `animation`, `durationMs` and `testid`, which S4 keeps byte for byte. */
 const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   cardPlayed: ["jk-card-played", 400, "hand-card-<instanceId>"],
   cardResolved: ["jk-card-resolved", 150, "resolved-<instanceId>"],
@@ -392,7 +390,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   enteredGraveyard: ["jk-pile-pulse", 150, "graveyard-<side>"],
   exiled: ["jk-exile-fade", 350, "card-<instanceId>"],
   bounced: ["jk-bounce-to-hand", 350, "card-<instanceId>"],
-  // R318 made the burn the full hand's own motion, and added the two library overflows.
+  // R318: the burn is the full hand's own motion, beside the two library overflows.
   burned: ["jk-hand-full", 700, "hand-<side>"],
   fatigue: ["jk-fatigue", 600, "library-<side>"],
   libraryOverflow: ["jk-library-full", 500, "library-<side>"],

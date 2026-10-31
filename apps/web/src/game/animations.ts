@@ -1,17 +1,13 @@
-// The animation table and its event-queue runner (BUILD M5-T4, SPEC §10.10).
+// The animation table and its event-queue runner (BUILD M5-T4, SPEC §10.10). One row per member of
+// `GameEvent["type"]` (SPEC §10.3), typed as a total map so a missing row is a compile error.
 //
-// One row per member of `GameEvent["type"]` (SPEC §10.3). `ANIMATIONS` is typed as a total map over
-// `GameEventType`, so a missing row is a compile error and not merely a red test.
-//
-// No rule lives here (CLAUDE.md rule 7). The table reads event payloads and `PlayerView` and
-// emits presentation vocabulary from `contract.ts`; it never decides what is legal or what
-// happened. The runner owns timing only: it holds the event stream at one entry at a time so the
-// board can swap to the next view once the motion for that event has finished, and publishes the
-// `AnimatingMap` the board turns into `data-animating="<eventType>"`.
-//
-// The effects layer (`apps/web/src/fx`, docs/polish/1-animations.md) decorates this stream and
-// paces nothing (R200). The viewer's effects speed scales the table and the burst budget (R201), and
-// the viewer's "reduce" motion setting collapses every duration exactly as
+// No rule lives here (CLAUDE.md rule 7): the table reads event payloads and `PlayerView` and emits
+// presentation vocabulary from `contract.ts`; it never decides what is legal or what happened. The
+// runner owns timing only: it holds the stream at one entry at a time so the board can swap to the
+// next view once that motion has finished, and publishes the `AnimatingMap` the board turns into
+// `data-animating="<eventType>"`. The effects layer (`apps/web/src/fx`, docs/polish/1-animations.md)
+// decorates this stream and paces nothing (R200). The viewer's effects speed scales the table and
+// the burst budget (R201); its "reduce" motion setting collapses every duration as
 // `prefers-reduced-motion` does.
 
 import type { GameEvent, GameEventType, PlayerId, PlayerView, Zone } from "@jackioh/shared";
@@ -39,7 +35,6 @@ export const animTestid = {
   library: (side: Side): string => `library-${side}`,
   graveyard: (side: Side): string => `graveyard-${side}`,
   exile: (side: Side): string => `exile-${side}`,
-  /** The mana crystal tray. */
   mana: (side: Side): string => `mana-${side}`,
   /** The player-modifier badge list beside the hero (§6.4). */
   modifiers: (side: Side): string => `modifiers-${side}`,
@@ -47,7 +42,6 @@ export const animTestid = {
   backrow: (side: Side): string => `backrow-${side}`,
   /** The prompt modal; BUILD M5-T4 wants `data-prompt-kind` on it. */
   prompt: "prompt-modal",
-  /** The draw-offer toast. */
   drawToast: "draw-toast",
 } as const;
 
@@ -142,7 +136,6 @@ function zoneOfCard(view: PlayerView, zone: Zone, instanceId: string): string {
  * in either direction fails.
  */
 export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
-  // Card lifts from hand and lands in the zone (unit) or flashes center then to GY (spell).
   // Only the viewer's own hand renders cards, so an opponent's play animates the hand region.
   // A card set face-down took a fresh id (R227): the hand card still carries `formerId`.
   cardPlayed: {
@@ -155,8 +148,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
         ? (locateInstance(view, e.formerId ?? e.instanceId) ?? testid.handCard(e.formerId ?? e.instanceId))
         : animTestid.hand("opponent"),
   },
-  // Card scales in at the zone. Collapsed into one motion with the `cardPlayed` that precedes it
-  // for the same instance — see `planEntries`.
+  // One motion with the `cardPlayed` that precedes it for the same instance (`planEntries`).
   summoned: {
     animation: "jk-summon-scale",
     durationMs: 250,
@@ -164,7 +156,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "summon" },
     target: (e, view) => zoneTestid(view, e.player, e.row, e.lane),
   },
-  // Red number pops on the target, target shakes; a hero portrait shakes.
   damage: {
     animation: "jk-damage-shake",
     durationMs: 300,
@@ -175,7 +166,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
   },
-  // Purple number pops on the hero, no shake.
   healthLost: {
     animation: "jk-loss-pop",
     durationMs: 300,
@@ -183,7 +173,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "drain" },
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // Green number pops.
   healed: {
     animation: "jk-heal-pop",
     durationMs: 300,
@@ -194,7 +183,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
     },
   },
-  // Shield shatter.
   divineShieldLost: {
     animation: "jk-shield-shatter",
     durationMs: 250,
@@ -202,8 +190,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "shieldBreak" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Card dissolves, then slides to the GY count. A card destroyed off the board (R89 carries
-  // `owner`) has no element of its own, so the pile it lands in stands in.
+  // A card destroyed off the board (R89 carries `owner`) has no element, so its pile stands in.
   destroyed: {
     animation: "jk-dissolve",
     durationMs: 350,
@@ -212,10 +199,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     target: (e, view) =>
       instanceOrPile(view, e.instanceId, animTestid.graveyard(sideOf(view, e.owner))),
   },
-  // GY pile pulses. `owner` is the pile this card lands in (§3.4: a card goes to its owner's GY).
-  // §10.5 step 7: the card has finished resolving. A brief settle on the card itself when it is
-  // still in play, and on its graveyard pile when it has already left (R17 keys the
-  // post-resolution traps on this moment, so the cue has to be visible for both outcomes).
+  // §10.5 step 7: the card has finished resolving. R17 keys the post-resolution traps on this
+  // moment, so the cue has to be visible whether the card is still in play or in its graveyard.
   cardResolved: {
     animation: "jk-card-resolved",
     durationMs: 150,
@@ -225,13 +210,13 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
         ? (locateInstance(view, e.instanceId) ?? animTestid.graveyard(sideOf(view, e.player)))
         : animTestid.graveyard(sideOf(view, e.player)),
   },
+  // `owner` is the pile this card lands in (§3.4: a card goes to its owner's GY).
   enteredGraveyard: {
     animation: "jk-pile-pulse",
     durationMs: 150,
     testid: "graveyard-<side>",
     target: (e, view) => animTestid.graveyard(sideOf(view, e.owner)),
   },
-  // Card fades to black and shrinks, then the exile counter increments.
   exiled: {
     animation: "jk-exile-fade",
     durationMs: 350,
@@ -247,9 +232,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "bounce" },
     target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.hand(sideOf(view, e.owner))),
   },
-  // R317, R318: the full hand's event. A burned card never enters the hand, so it is never rendered
-  // as a card there: the hand region carries the motion, which the board draws as its `burn-notice`
-  // (OverflowNotices.tsx).
+  // R317, R318: a burned card never enters the hand, so the hand region carries the motion, which
+  // the board draws as its `burn-notice` (OverflowNotices.tsx).
   burned: {
     animation: "jk-hand-full",
     durationMs: 700,
@@ -257,8 +241,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "burn" },
     target: (e, view) => animTestid.hand(sideOf(view, e.owner)),
   },
-  // R315, R318: a draw from an empty library. The pile shakes and dims as it comes up empty and a
-  // "Fatigue N" badge rises from it (`pile-notice`); the `damage` row after it lands the hit.
+  // R315, R318: a draw from an empty library; a "Fatigue N" badge rises from the pile
+  // (`pile-notice`) and the `damage` row after it lands the hit.
   fatigue: {
     animation: "jk-fatigue",
     durationMs: 600,
@@ -275,7 +259,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "overflow" },
     target: (e, view) => animTestid.library(sideOf(view, e.player)),
   },
-  // Card drops from hand to GY.
   discarded: {
     animation: "jk-discard-drop",
     durationMs: 300,
@@ -283,8 +266,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "discard" },
     target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.hand(sideOf(view, e.owner))),
   },
-  // Card slides from library to hand (own) or back to the hand count (opponent). The motion
-  // starts at the library pile, which both seats render; the drawn card is not in the hand yet.
+  // The library pile, which both seats render: the drawn card is not in the hand yet.
   drawn: {
     animation: "jk-draw-slide",
     durationMs: 250,
@@ -292,7 +274,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "draw" },
     target: (e, view) => animTestid.library(sideOf(view, e.player)),
   },
-  // Card appears at the hand edge (own) or the hand count bumps (opponent).
   addedToHand: {
     animation: "jk-hand-edge",
     durationMs: 250,
@@ -300,7 +281,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "handGlint" },
     target: (e, view) => animTestid.hand(sideOf(view, e.player)),
   },
-  // Card flies into the library, library pulses.
   shuffledIn: {
     animation: "jk-shuffle-in",
     durationMs: 300,
@@ -308,7 +288,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "shuffle" },
     target: (e, view) => animTestid.library(sideOf(view, e.player)),
   },
-  // Stat numbers flash and tick to their new values.
   buffed: {
     animation: "jk-stat-tick",
     durationMs: 250,
@@ -324,7 +303,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "keyword" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Counter badge ticks.
   counterChanged: {
     animation: "jk-badge-tick",
     durationMs: 200,
@@ -332,7 +310,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "counter" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Cost gem flashes and ticks to the new value. A discount usually lands on a card in hand.
+  // A discount usually lands on a card in hand.
   costChanged: {
     animation: "jk-gem-tick",
     durationMs: 200,
@@ -340,7 +318,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "glint" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Player modifier badge appears or fades by the hero.
   modifierChanged: {
     animation: "jk-badge-fade",
     durationMs: 200,
@@ -348,7 +325,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "glint" },
     target: (e, view) => animTestid.modifiers(sideOf(view, e.player)),
   },
-  // Gold glow pulse, stats swap. The `zone` payload says where the card is standing.
+  // The `zone` payload says where the card is standing.
   radiantSet: {
     animation: "jk-radiant-pulse",
     durationMs: 400,
@@ -356,14 +333,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "radiant" },
     target: (e, view) => zoneOfCard(view, e.zone, e.instanceId),
   },
-  // The gold glow goes out, stats swap back. The `zone` payload says where the card is standing.
+  // The gold glow goes out, stats swap back.
   deradianted: {
     animation: "jk-radiant-pulse",
     durationMs: 400,
     testid: "card-<instanceId>",
     target: (e, view) => zoneOfCard(view, e.zone, e.instanceId),
   },
-  // Card spins and shows its new face. Pre-update the old instance is the one on the board.
+  // Pre-update the old instance is the one on the board.
   transformed: {
     animation: "jk-spin-face",
     durationMs: 400,
@@ -372,7 +349,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     target: (e, view) =>
       locateInstance(view, e.instanceId) ?? locateInstance(view, e.newInstanceId),
   },
-  // Two cards merge into one. The first listed instance is where the merge is drawn from.
+  // The first listed instance is where the merge is drawn from.
   fused: {
     animation: "jk-fuse-merge",
     durationMs: 500,
@@ -386,14 +363,12 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
       return locateInstance(view, e.resultInstanceId);
     },
   },
-  // Rotate 90° / back.
   positionSwitched: {
     animation: "jk-rotate-def",
     durationMs: 250,
     testid: "card-<instanceId>",
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Card slides across the center line to the new zone, which the payload names outright.
   controlChanged: {
     animation: "jk-cross-center",
     durationMs: 450,
@@ -401,21 +376,18 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "mindControl" },
     target: (e, view) => zoneTestid(view, e.controller, e.row, e.lane),
   },
-  // All cards slide one lane.
   rotated: {
     animation: "jk-lane-slide",
     durationMs: 500,
     testid: "board",
     target: () => testid.board,
   },
-  // Swapped health, boards or library counts cross the center line together.
   swapped: {
     animation: "jk-swap-cross",
     durationMs: 500,
     testid: "board",
     target: () => testid.board,
   },
-  // Chain icon closes over the zone.
   locked: {
     animation: "jk-chain-close",
     durationMs: 250,
@@ -423,11 +395,10 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "lock" },
     target: (e, view) => zoneTestid(view, e.player, e.row, e.lane),
   },
-  // Backrow card flips face-up, holds, then dissolves (or stays, for a Field Trap). R154 gives the
-  // event its `row` and `lane`, so the zone the trap stands in is the element even on the seat that
-  // may not identify the card: an opponent's face-down trap has no `instanceId` in the view (§10.8,
-  // R33). The card itself is preferred when the viewer can see it, which is the "trap name visible
-  // during the hold" the BUILD M5-T4 acceptance asks for.
+  // R154 gives the event its `row` and `lane`, so the trap's zone is the element even on a seat that
+  // may not identify the card (an opponent's face-down trap has no `instanceId` in the view, §10.8,
+  // R33). The card itself is preferred when the viewer can see it: BUILD M5-T4's "trap name visible
+  // during the hold".
   trapFired: {
     animation: "jk-trap-flip",
     durationMs: 700,
@@ -436,7 +407,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     target: (e, view) =>
       locateInstance(view, e.instanceId) ?? zoneTestid(view, e.controller, e.row, e.lane),
   },
-  // Attacker lunges toward the target and back.
   attackDeclared: {
     animation: "jk-lunge",
     durationMs: 350,
@@ -444,7 +414,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "lunge" },
     target: (e, view) => locateInstance(view, e.attackerId),
   },
-  // Attacker snaps back with a "Canceled" tag.
   attackCancelled: {
     animation: "jk-snap-back",
     durationMs: 350,
@@ -452,7 +421,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "fizzle" },
     target: (e, view) => locateInstance(view, e.attackerId),
   },
-  // Crystals fill/empty.
   manaChanged: {
     animation: "jk-crystal-fill",
     durationMs: 150,
@@ -467,7 +435,6 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "mana-<side>",
     target: (e, view) => animTestid.mana(sideOf(view, e.player)),
   },
-  // Banner "Your turn" / "Opponent's turn".
   turnStarted: {
     animation: "jk-banner",
     durationMs: 600,
@@ -475,14 +442,12 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
-  // End-turn button greys out.
   turnEnded: {
     animation: "jk-grey-out",
     durationMs: 150,
     testid: "end-turn",
     target: () => testid.endTurn,
   },
-  // Banner "No moves left — turn ended": the same banner motion as `turnStarted`.
   turnAutoEnded: {
     animation: "jk-banner",
     durationMs: 600,
@@ -490,30 +455,28 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
-  // Modal fades in. Only the seat holding the prompt has a modal; the other shows a wait notice
-  // (§10.6, M5-T2) and animates nothing, though the entry still spends its 150 ms so both seats
-  // advance through the stream in step.
+  // Only the seat holding the prompt has a modal; the other shows a wait notice (§10.6, M5-T2) and
+  // animates nothing, though the entry still spends its time so both seats advance in step.
   promptOpened: {
     animation: "jk-fade-in",
     durationMs: 150,
     testid: "prompt-modal",
     target: (e, view) => (e.player === view.viewer ? animTestid.prompt : null),
   },
-  // Modal fades out.
   promptAnswered: {
     animation: "jk-fade-out",
     durationMs: 150,
     testid: "prompt-modal",
     target: (e, view) => (e.player === view.viewer ? animTestid.prompt : null),
   },
-  // Offer toast on the opponent's seat: `player` offered, so the toast is the other seat's.
+  // `player` offered, so the toast is the other seat's.
   drawOffered: {
     animation: "jk-toast-in",
     durationMs: 150,
     testid: "draw-toast",
     target: (e, view) => (e.player === view.viewer ? null : animTestid.drawToast),
   },
-  // Toast resolves to Accepted or Declined — both seats see the resolution.
+  // Both seats see the resolution.
   drawAnswered: {
     animation: "jk-toast-resolve",
     durationMs: 300,
@@ -528,8 +491,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // Result overlay. BUILD's Duration column is "—": the overlay is terminal, nothing renders
-  // behind it and nothing waits on it, so its duration is 0 and the entry resolves instantly.
+  // BUILD's Duration column is "—": the overlay is terminal, nothing renders behind it and nothing
+  // waits on it, so its duration is 0.
   gameOver: {
     animation: "jk-result-overlay",
     durationMs: 0,
@@ -539,8 +502,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
 
   // Patch v0.2.0 (docs/classic-sets.md B3, B5)
 
-  // B5 E1: the card lifts and hangs at its hand edge while the window for a Counter is open. A card
-  // set face-down is announced by its zone only (R97), so the other seat's hand region lifts.
+  // B5 E1: the card hangs at its hand edge while the window for a Counter is open. A card set
+  // face-down is announced by its zone only (R97), so the other seat's hand region lifts.
   cardAnnounced: {
     animation: "jk-card-played",
     durationMs: 300,
@@ -679,9 +642,9 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "rewind" },
     target: () => testid.board,
   },
-  // R436: a slot-machine reveal over the board names each effect Call to Chaos rolled, one line per
-  // effect, on both seats (fx/chaos.ts); the showcase's live region says it in words, and draws it
-  // still where the effects layer draws nothing (game/showcase/ChaosBanner.tsx).
+  // R436: a reveal over the board names each effect Call to Chaos rolled, on both seats
+  // (fx/chaos.ts); the showcase's live region says it in words, and draws it still where the effects
+  // layer draws nothing (game/showcase/ChaosBanner.tsx).
   chaosRolled: {
     animation: "jk-banner",
     durationMs: 900,
@@ -756,8 +719,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "fizzle" },
     target: (e, view) => animTestid.hand(sideOf(view, e.player)),
   },
-  // R1361, R1363 (MN05): the Armor took the whole hit. The target braces with a steel glint and no
-  // number, since nothing was dealt, and the effects layer blooms a shield over it (fx/shield.ts).
+  // R1361, R1363 (MN05): the Armor took the whole hit, so no number, since nothing was dealt; the
+  // effects layer blooms a shield over the target (fx/shield.ts).
   damageAbsorbed: {
     animation: "jk-armor-absorb",
     durationMs: 300,
@@ -775,8 +738,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // ME-SECRET (MB05, R860–R864): a secret is kept, revealed or judged. The badge by the hero
-  // fades in or out — no number, no effects-layer work (FX "—"): the badge itself is the change.
+  // ME-SECRET (MB05, R860–R864): a secret is kept, revealed or judged. No effect (FX "—"): the badge
+  // by the hero is the change.
   secretChosen: {
     animation: "jk-badge-fade",
     durationMs: 300,
@@ -795,8 +758,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // R915004: a custom card's hook failed and did nothing. The card fades once where it stands, or its
-  // controller's hero when the card is nowhere the viewer sees.
+  // R915004: a custom card's hook failed and did nothing; the hero stands in for an unseen card.
   scriptFailed: {
     animation: "jk-badge-fade",
     durationMs: 400,
@@ -848,9 +810,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // R1853003: a card bought at the Marketplace reaches its buyer's hand, and a card sold leaves it: the
-  // hand's edge glints as for `addedToHand`, with no effect (FX "—"); the other seat's view names no
-  // card bought.
+  // R1853003: a card bought at the Marketplace reaches its buyer's hand, and a card sold leaves it,
+  // with no effect (FX "—"); the other seat's view names no card bought.
   marketBought: {
     animation: "jk-hand-edge",
     durationMs: 250,
@@ -911,8 +872,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
-  // R1850003: a permanent goes beneath the card that holds it, fading off the board as an exiled card
-  // does. Pre-update it is still on the board; the holder's own arrival, when it is new, is `summoned`.
+  // R1850003: a permanent goes beneath the card that holds it. Pre-update it is still on the board;
+  // the holder's own arrival, when it is new, is `summoned`.
   held: {
     animation: "jk-exile-fade",
     durationMs: 350,
@@ -931,9 +892,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
 
 /**
  * The table's row for `type`, or `undefined` for an event type this build has never seen: a tab
- * left open on an older bundle can receive one a newer patch added, when the server already runs
- * it (issue #769). The table stays a total map over `GameEventType` — a missing row for a known
- * type is still a compile error, so the widening cast lives at this lookup and nowhere else.
+ * left open on an older bundle can receive one a newer patch added (issue #769). The widening cast
+ * lives at this lookup and nowhere else, so a missing row for a known type is still a compile error.
  */
 export function animationRow(type: string): AnimationRow | undefined {
   return (ANIMATIONS as unknown as Partial<Record<string, AnimationRow>>)[type];
@@ -961,9 +921,8 @@ export function targetFor(event: GameEvent, view: PlayerView): string | null {
 
 /**
  * Issue #124: how long a cast holds the board (a card another card cast, `runs.ts`), long enough for
- * the showcase to put the cast card up and the player to read it. Each cast also gets a burst budget
- * of its own (`CAST_BUDGET_MS`), so ten casts in one action (C+ #47 Jogg's Box) play one after another
- * at a pace that can be followed, instead of seventy entries squeezed into one `BURST_BUDGET_MS`.
+ * the showcase to put the cast card up and the player to read it. Each cast gets a burst budget of
+ * its own, so ten casts in one action (C+ #47 Jogg's Box) play at a pace that can be followed.
  */
 export const CAST_ENTRY_MS = 800;
 export const CAST_BUDGET_MS = 2200;
@@ -983,10 +942,9 @@ export type AnimationEntry = {
   type: GameEventType;
   durationMs: number;
   /**
-   * Every element this entry marks, testid → the type to write into `data-animating`. The
-   * collapsed pair carries two: the hand card as `cardPlayed` and the landing zone as
-   * `summoned`, because the card leaving the hand and scaling into the zone are one motion in
-   * one span of time. Empty when this seat renders nothing for the event.
+   * Every element this entry marks, testid → the type to write into `data-animating`; the collapsed
+   * pair marks the hand card and the landing zone, one motion in one span of time. Empty when this
+   * seat renders nothing for the event.
    */
   frames: ReadonlyMap<string, GameEventType>;
   /** The view this entry was planned against: the board as it stood before its events. */
@@ -1325,12 +1283,10 @@ const EMPTY_ANIMATING: AnimatingMap = new Map<string, GameEventType>();
 
 /**
  * How long one action's animations may hold the board back, and the shortest an entry may be
- * squeezed to. BUILD M5-T4 fixes a duration per event, and an attack that kills a unit and hands
- * the turn on (R82 ends a dead turn by itself) is fifteen rows of the table back to back — five
- * seconds in which the board shows a stale view and the player cannot do anything. So a burst that
- * would run past the budget is played proportionally faster, with a floor so no event flashes past
- * unseen. A burst inside the budget keeps the table's exact durations, which is every burst the
- * M5-T4 acceptance rows describe.
+ * squeezed to. An attack that kills a unit and hands the turn on (R82) is fifteen rows back to back,
+ * five seconds of a stale board the player cannot act on, so a burst past the budget plays
+ * proportionally faster, with a floor so no event flashes past unseen. A burst inside the budget
+ * keeps the table's exact durations, which is every burst the M5-T4 acceptance rows describe.
  */
 export const BURST_BUDGET_MS = 2_400;
 export const MIN_ENTRY_MS = 120;
@@ -1346,19 +1302,15 @@ export function scaleForSpeed(durationMs: number, speed: number): number {
   return Math.max(MIN_ENTRY_MS, Math.round(durationMs / s));
 }
 
-/** R97's sentinel: what a redacted event names in place of a card (engine `viewFor.ts` `HIDDEN_ID`). */
+/** R97's sentinel: what a redacted event names in place of a card (the engine's `HIDDEN_ID`). */
 export const HIDDEN_ID = "hidden";
 
 /**
- * The fields R97 rewrites together with a card's identity when the card turns unreadable, besides
- * the ids that become the sentinel (engine `viewFor.ts` `redactEvent`): `costChanged` blanks its
- * `cost` (R177), `cardAnnounced` reads a face-down card as a Trap whatever its `cardType` (R448),
- * and `radiantSet` moves its `zone` to the owner's hand. Every one of them is rewritten only when the
- * event's own `instanceId` is the one hidden. `burned` (R317) changes nothing but its ids, and
- * `fatigue` (R315) is public.
- *
- * An event type missing here makes its two copies stop matching, `newEventsSince` finds no overlap,
- * and the runner animates the whole window again.
+ * The fields R97 rewrites with a card's identity (the engine's `view_for.rs`), besides the ids that
+ * become the sentinel, each only when the event's own `instanceId` is the one hidden: `costChanged`
+ * blanks its `cost` (R177), `cardAnnounced` reads a face-down card as a Trap (R448). `burned` (R317)
+ * changes nothing but its ids, and `fatigue` (R315) is public. A type missing here makes its two
+ * copies stop matching, so `newEventsSince` finds no overlap and animates the whole window again.
  */
 const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>> = {
   cardResolved: ["radiant"],
@@ -1381,12 +1333,10 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
 const NOTHING_REWRITTEN: readonly string[] = [];
 
 /**
- * Whether two copies of an event, from two views, are the same occurrence: every field agrees,
- * except where R97 redacted one copy and not the other. R97 judges a card by where it sits NOW, so
- * an event still in the window can change between two views. The sentinel therefore matches any
- * id, in either direction, and on an event whose `instanceId` either copy hides, the fields R97
- * rewrites with it (`REWRITTEN_WITH_IDENTITY`) are not compared. A field that is `undefined` counts
- * as absent, as it does on the wire.
+ * Whether two copies of an event, from two views, are the same occurrence. R97 judges a card by where
+ * it sits NOW, so an event still in the window can change between views: the sentinel matches any id,
+ * and where either copy hides the `instanceId`, `REWRITTEN_WITH_IDENTITY` is not compared. A field
+ * that is `undefined` counts as absent, as it does on the wire.
  */
 export function sameOccurrence(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -1408,21 +1358,16 @@ export function sameOccurrence(a: unknown, b: unknown): boolean {
 }
 
 /**
- * The events in `next` that the runner has not been given yet.
+ * The events in `next` that the runner has not been given yet. SPEC §10.8 gives a view "the last N
+ * events" (`VIEW_EVENT_LIMIT` in `crates/engine/src/view_for.rs`), a sliding WINDOW over the match,
+ * not one action's delta, so passing it whole would re-animate what already played. The window moves
+ * forward by whole actions, so the shared events are the longest suffix of `prev` that is a prefix of
+ * `next`, compared with `sameOccurrence` because R97 re-redacts the window for every view.
  *
- * SPEC §10.8 gives a view "the last N events" (`VIEW_EVENT_LIMIT`, 32, in
- * `crates/engine/src/view_for.rs`) — a sliding WINDOW over the whole match, not the delta one
- * action produced. Handing the whole window to the runner on every view would re-animate
- * everything it has already played. The window only ever moves forward by whole actions, so the
- * events the two views share are the longest suffix of `prev` that is also a prefix of `next`.
- * The two copies of a shared event are compared with `sameOccurrence`, not byte for byte, because
- * R97 re-redacts the whole window for every view.
- *
- * No rule lives here: it is bookkeeping over an array the engine handed over. When the two windows
- * have nothing in common — a reload, or more than N events since the last view — the whole of
- * `next` is new, the answer that animates too much rather than too little. It returns the very
- * objects `next` holds, so the sound director, which diffs views with this same function, can match
- * the runner's entries by identity.
+ * No rule lives here: it is bookkeeping over an array the engine handed over. Windows with nothing in
+ * common (a reload, or more than N events since the last view) make all of `next` new: too much
+ * animation rather than too little. It returns the very objects `next` holds, so the sound director,
+ * which diffs views with this same function, can match the runner's entries by identity.
  */
 export function newEventsSince(prev: readonly GameEvent[], next: readonly GameEvent[]): GameEvent[] {
   if (prev.length === 0 || next.length === 0) return [...next];
@@ -1448,9 +1393,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
   const burstBudgetMs = options.burstBudgetMs ?? BURST_BUDGET_MS;
   const castBudgetMs = options.castBudgetMs ?? CAST_BUDGET_MS;
   const minEntryMs = options.minEntryMs ?? MIN_ENTRY_MS;
-  // `options.now` is accepted for parity with the client's other injected clocks and is
-  // deliberately unread: `schedule` owns every deadline, so the runner keeps no timestamps and
-  // stays free of a clock it would have to mock.
+  // `options.now` is deliberately unread: `schedule` owns every deadline, so the runner keeps no
+  // timestamps and stays free of a clock it would have to mock.
 
   const queue: AnimationEntry[] = [];
   let current: AnimationEntry | null = null;
@@ -1503,9 +1447,8 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
 
   /**
    * Squeeze what is still waiting so the backlog fits the burst budget. Issue #124: each cast starts
-   * a segment of its own, the cast and what it does, with `castBudgetMs`; what comes before the
-   * first cast waiting (or all of it, with none) keeps `budgetMs`, or what is left of the cast's own
-   * segment when a cast is in flight.
+   * a segment of its own with `castBudgetMs`; what comes before the first cast waiting keeps
+   * `budgetMs`, or what is left of the cast's own segment when a cast is in flight.
    */
   function fitBudget(budgetMs: number, castBudgetMs: number): void {
     let start = 0;
@@ -1613,23 +1556,14 @@ export function createAnimationQueue(options: AnimationQueueOptions = {}): Anima
 
 /* FINDINGS against SPEC §10.3 / §10.8 — payloads that cannot name their own element
  *
- * 1. `damage`/`healed` carry `targetId: string` with no discriminator; a hero is encoded as the
- *    string `hero-<playerId>` by `crates/engine/src/damage.rs` and nothing in §10.3 says so. A
- *    typed target (`{ kind: "unit" | "hero" }`, as `Selection` already does for actions) would
- *    remove the string convention from the client.
- *
- * 2. Nothing in §10.3 says which view an animation is resolved against. §10.8 sends "the last N
- *    events" alongside the state *after* those events, while BUILD M5-T4 says "the state view
- *    updates after the animation for that event completes". `viewFor` never sends a pre-event
- *    view, so rows here prefer elements that exist in either view (zones, piles, heroes, the
- *    banner) and fall back to a region whenever the card element may already be gone.
- *
- * 3. `attackDeclared` must "translate >= 20 px toward target", but neither the event nor
- *    `PlayerView` says which way that is. The keyframes translate along `--lunge-dir` (see
- *    `animations.css`), which the component rendering the attacker must set to `1` when the
- *    attacker is the opponent's.
- *
- * 4. `rotated { direction }` and `swapped { what }` name no element at all, so they animate the
- *    whole `board`; the BUILD acceptance "every card's zone testid changed by one step" is a
- *    post-update assertion the animation itself cannot carry.
+ * 1. `damage`/`healed` carry an untyped `targetId`: a hero is the string `hero-<playerId>`
+ *    (`crates/engine/src/damage.rs`), which nothing in §10.3 says.
+ * 2. §10.8 sends the events with the state *after* them, while BUILD M5-T4 updates the view after
+ *    each animation completes, and no pre-event view is sent, so rows prefer elements that exist in
+ *    either view (zones, piles, heroes, the banner) and fall back to a region whenever the card
+ *    element may already be gone.
+ * 3. `attackDeclared` must "translate >= 20 px toward target", but nothing says which way. The
+ *    keyframes translate along `--lunge-dir` (`animations.css`), which the component rendering the
+ *    attacker must set to `1` when the attacker is the opponent's.
+ * 4. `rotated` and `swapped` name no element, so they animate the whole `board`.
  */

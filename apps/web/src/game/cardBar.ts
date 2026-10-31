@@ -8,8 +8,7 @@
 // pointer can reach it, and goes on Escape and on a press elsewhere; `close` takes it off after a pick.
 //
 // THE BOXES. The bar and anything else laid over the board sits at the box of the element the board
-// draws for a spot (`duos/spots.ts`), re-measured every frame while any is up, since cards move as the
-// board animates.
+// draws for a spot (`duos/spots.ts`), re-measured every frame since cards move as the board animates.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -45,9 +44,8 @@ function byTestid(id: string): string {
 }
 
 /**
- * The boxes of the elements `idsKey` names ("|"-joined testids) inside `host`, kept current every
- * animation frame while there are any: relative to `host` (`origin: "host"`, for a bar positioned
- * inside it), or to the viewport (`"viewport"`, for a fixed one).
+ * The boxes of the elements `idsKey` names ("|"-joined testids) inside `host`: relative to `host`
+ * (`origin: "host"`, for a bar positioned inside it), or to the viewport (`"viewport"`, for a fixed one).
  */
 export function useBoxes(
   host: HTMLElement | null,
@@ -135,7 +133,6 @@ export function useCardBarFocus(
       if (spot !== null) point(spot);
       else if (!touch) clearSoon();
     };
-    // A press moves the bar to its spot, or closes it.
     const down = (event: Event): void => {
       noteKind(event);
       if (onBar(event.target, barClass)) return;

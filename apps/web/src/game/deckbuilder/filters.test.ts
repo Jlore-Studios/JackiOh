@@ -1,10 +1,7 @@
 // Polish 6, slice D: the deck builder's filter and sort semantics, pure (docs/polish/6-cards.md,
-// B31–B36; the DOM half is browse.test.tsx).
-//
-// `filters.ts` is the only place these semantics live. The catalog below is built inline on
-// purpose: it has every cost shape the Surface names (0, 1, 6, 100, "X" and two embiggen cards),
-// all five types, several tags and rarities, a card with no text, a card nobody owns, a token, and
-// two cards that tie on cost and name so the index tie-break is visible.
+// B31–B36; the DOM half is browse.test.tsx). The inline catalog has every cost shape the Surface
+// names, all five types, a card with no text, a card nobody owns, a token, and two cards that tie
+// on cost and name so the index tie-break is visible.
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -213,8 +210,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Weapon",
       "Swarm",
     ]);
-    // Only the ten AI tokens carry "AI", the Prime tokens "Prime" and Otherworldly Removal's three
-    // tokens "Other-Origins" (R1837000), and the pool never offers a Token.
+    // Only tokens carry these (R1837000), and the pool never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");
     expect(FILTER_TAGS).not.toContain("Prime");
     expect(FILTER_TAGS).not.toContain("Other-Origins");
@@ -723,9 +719,8 @@ describe("the Jlockeed tag (R278)", () => {
     expect(FILTER_TAGS).toContain("Jlockeed");
     expect(filterTagId("Jlockeed")).toBe("db-filter-tag-jlockeed");
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
-    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside Core's two;
-    // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockeed's Evil Blueprints
-    // (#97.9 Jlockeed's Headquarters is a token, which the pool never offers).
+    // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside
+    // Core's two; and once the Meditative set ships (R1420), its #87 and #97 (#97.9 is a token).
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
     // Meditative+ (#1187): its #4 Supply Drop, the set's one Jlockeed card.
     const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
@@ -733,8 +728,8 @@ describe("the Jlockeed tag (R278)", () => {
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
-    // Training Grounds (#2204): its snapshots of Core #14 and #13, #45 Jlockeed's Weapons and #48
-    // Jlockeed Shredder-10, carry the tag as their Core cards do (R2195000).
+    // Training Grounds (#2204): its snapshots of Core #14 and #13, #45 and #48, carry the tag as
+    // their Core cards do (R2195000).
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
@@ -838,8 +833,7 @@ describe("the almanac's pool (R630)", () => {
 
   it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine and Token", () => {
     expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"]);
-    // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
-    // its tags when it ships.
+    // R1420, R1381: the chips are the tags the cards of the shipped sets carry.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
     expect(new Set(ALMANAC_CHIP_TAGS)).toEqual(carried);
     expect(filterTagId("Token")).toBe("db-filter-tag-token");
@@ -878,8 +872,8 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     const drone = fixture("s-27", "Stinkyscape", ["Drone Core", "Human"]);
     expect([...shippedTags(["Human", ...four], [drone])]).toEqual(["Human", "Drone Core"]);
     expect([...shippedTags(["Human", ...four], [fixture("c-1", "Core", four)])]).toEqual(four);
-    // The bundled catalog's shipped cards carry them, so their chips show: the deck builder's three
-    // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
+    // The bundled catalog's shipped cards carry them: the deck builder's three (War Doctrine is on
+    // tokens alone, which the deck builder never offers) and the Almanac's four.
     for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
     for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
   });

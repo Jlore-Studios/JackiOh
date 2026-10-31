@@ -4,11 +4,9 @@
 // `JKO<version>.` precedes an unpadded base64url body:
 // [name-byte-length] [UTF-8 name] [LEB128 card count] [LEB128 card numbers] [two-byte checksum].
 // Version 2 uses a card's set offset plus §5 index (B2.2); non-whole-number Token indices like
-// "T-AI-1" cannot be encoded (R251). Names failing D1 fall back to "Imported deck". FNV-1a detects damaged pastes.
-// Older codes are refused except Core-only version 1 (R255).
+// "T-AI-1" cannot be encoded (R251). Older codes are refused but Core-only version 1 (R255).
 //
-// Decoding is total: it rejects over-long or malformed input before resolving name (D1) and cards.
-// Trio codes share the body reader, resolver and checksum (R339, `trioCode.ts`).
+// Decoding is total. Trio codes share the body reader, resolver and checksum (R339, `trioCode.ts`).
 
 import { checkDeckDraft, normalizeName, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
@@ -346,9 +344,8 @@ export function decodeName(
 export type ResolvedDeck = Omit<Extract<DecodedDeck, { ok: true }>, "ok">;
 
 /**
- * R255: a deck body against this catalog and collection — numbers the catalog does not know,
- * Tokens, copies past `MAX_COPIES` and cards past `DECK_SIZE` dropped and listed; cards the player
- * does not own kept and flagged. `version` is the code's: a version 1 code's numbers are Core's.
+ * R255: a deck body against this catalog and collection: what a deck cannot hold is dropped and
+ * listed, cards the player does not own kept and flagged. A version 1 code's numbers are Core's.
  */
 export function resolveDeck(
   body: DeckBody,

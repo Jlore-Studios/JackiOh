@@ -1,14 +1,12 @@
 // The one seam between the hotseat client and the engine (CLAUDE.md rule 7, SPEC §10.8).
 //
-// The client never holds rules. It holds an `EnginePort`: `createGame` / `beginGame` / `reduce`
-// to advance the game, `legalActions` to learn what it is allowed to offer, and `viewFor` to get
-// the only thing it is allowed to draw. `EngineState` is opaque on purpose — it carries both
-// hands and both libraries, so a client that could read a field could leak hidden information.
-// Everything the UI needs comes back through `viewFor`.
+// The client never holds rules. It holds an `EnginePort`: `legalActions` to learn what it is
+// allowed to offer, and `viewFor` to get the only thing it is allowed to draw. `EngineState` is
+// opaque on purpose: it carries both hands and both libraries, so a client that could read a field
+// could leak hidden information.
 //
 // The real port is the Rust engine compiled to WebAssembly (`../wasm`, docs/v0.3.0/SURFACE.md
-// §10.3). The presentation layer, the action builders and the animation table compile and test
-// with no engine at all, and tests install a scripted port with `setEnginePort`.
+// §10.3); tests install a scripted port with `setEnginePort`.
 
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "@jackioh/shared";
 import type { Handicap } from "@jackioh/engine/config";
@@ -101,8 +99,7 @@ const opaque = (state: GameState): EngineState => state as unknown as EngineStat
 
 /**
  * The real port over the loaded WebAssembly module. Synchronous: call it after `loadWasm()` has
- * resolved (`loadEnginePort` does both). Nothing here decides a rule; it renames the wrapper's
- * functions onto the port.
+ * resolved (`loadEnginePort` does both). Nothing here decides a rule.
  */
 export function enginePort(): EnginePort {
   const mod = wasm as unknown as Record<string, unknown>;

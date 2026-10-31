@@ -125,7 +125,6 @@ function seat(view: PlayerView, side: Side): PlayerView["you"] {
   return side === "you" ? view.you : view.opponent;
 }
 
-/** How many cards a pile holds in `view`. */
 export function pileCount(view: PlayerView, pile: Pile): number {
   const sv = seat(view, pile.side);
   if (pile.pile === "library") return sv.libraryCount;
@@ -156,7 +155,6 @@ function shown(view: PlayerView, instanceId: string): boolean {
   return false;
 }
 
-/** The other player. */
 function otherOf(player: PlayerId): PlayerId {
   return player === "p1" ? "p2" : "p1";
 }
@@ -305,10 +303,8 @@ export function sweepAt(
 
 /**
  * #1443: one volley of non-combat damage from one source, planned as one entry so its shots start
- * together. A hit only when `events[at]` is `damage` with `combat: false` and a non-null,
- * non-sentinel `sourceId`, the run of consecutive same-`sourceId`, non-combat `damage` events has
- * length 2 or more, and the view shows the source face-up (`flavorSourceOf` non-null:
- * hidden/unknown/hero-power sources keep today's entries).
+ * together. Only when the view shows the source face-up (`flavorSourceOf` non-null):
+ * hidden/unknown/hero-power sources keep today's entries.
  */
 export function volleyAt(events: readonly GameEvent[], at: number, view: PlayerView): { length: number } | null {
   const first = events[at];

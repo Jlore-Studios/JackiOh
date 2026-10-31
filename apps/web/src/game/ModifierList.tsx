@@ -4,8 +4,8 @@
 // holds a count and a few shortened labels at most, and a badge's full text is only its `title`,
 // which a touch screen never shows. This is where the rest can be read: a chip with the count while
 // any modifier is live on either side, which opens the whole list. It reads the same
-// `SideView.modifiers` the board does, so it can show nothing the view does not (§10.8, CLAUDE.md
-// rule 7).
+// `SideView.modifiers` the board does, so it can show nothing the view does not
+// (§10.8, CLAUDE.md rule 7).
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";

@@ -38,10 +38,9 @@ export const DISCOVER_OPTION_LIMIT = 5;
 export const X_CARD_LIMIT = 4;
 
 /**
- * Lanes are 1-based, because the engine's are: `crates/engine/src/zones.rs` numbers a row's slots
- * from 1, and `e2e/support/types.ts` declares `Lane = 1 | 2 | 3 | 4 | 5`. A `ZoneChoice` inside a
- * `play` action therefore carries 1..5, so the client's zone testids must too or nothing the
- * engine blesses would ever light up.
+ * Lanes are 1-based, as the engine's are (`crates/engine/src/zones.rs`; `e2e/support/types.ts`
+ * declares `Lane = 1 | 2 | 3 | 4 | 5`): a `ZoneChoice` in a `play` action carries 1..5, so the
+ * client's zone testids must too or nothing the engine blesses would ever light up.
  */
 export const LANES: readonly number[] = [1, 2, 3, 4, 5];
 
@@ -106,10 +105,7 @@ export const testid = {
   /** R384, R510: that control's usable-count badge ("2", "∞"). */
   activateUses: (instanceId: string, ability?: string): string =>
     ability === undefined ? `activate-uses-${instanceId}` : `activate-uses-${instanceId}-${ability}`,
-  /**
-   * R43, R510: a Heroic Power after the first on the hero panel (the first is `power`): each is its
-   * own control now, as each is separately once per turn.
-   */
+  /** R43, R510: a Heroic Power after the first on the hero panel (the first is `power`), each once per turn. */
   powerOf: (instanceId: string): string => `power-${instanceId}`,
   /** B5 E11: "Play" on a card in the viewer's graveyard pile, present only while `legal` lists that play. */
   pilePlay: (instanceId: string): string => `pile-play-${instanceId}`,
@@ -155,10 +151,9 @@ export function sideView(view: PlayerView, side: Side) {
 }
 
 /**
- * #165: what a touch hold on a card opens while this view is on the board. On the viewer's own
- * turn a hold stays the inspect sheet it has always been, so reading a card can never eat the
- * press that plays it; on the opponent's turn nothing is playable anyway, so the hold is the
- * mouse-over a touch screen lacks — the hover preview, open while the finger stays down.
+ * #165: what a touch hold on a card opens. On the viewer's own turn it is the inspect sheet, so
+ * reading a card can never eat the press that plays it; on the opponent's turn nothing is playable,
+ * so the hold is the hover preview a touch screen lacks, open while the finger stays down.
  */
 export function touchHoldMode(view: PlayerView): "sheet" | "preview" {
   return view.active === view.viewer ? "sheet" : "preview";
@@ -166,10 +161,8 @@ export function touchHoldMode(view: PlayerView): "sheet" | "preview" {
 
 /**
  * Something the player clicked, dragged to, or dropped on. Never a decision, only a report.
- *
  * `activate` is an Activate control (R384): a card's own, or a Heroic Power's on the hero panel.
- * `ability` is set only when the card lists several abilities. `graveyard` is "Play" on a card in
- * the viewer's graveyard pile (B5 E11). A Resource is a hand card (R2250000).
+ * `graveyard` is "Play" on a card in the viewer's graveyard pile. A Resource is a hand card (R2250000).
  */
 export type ClickTarget =
   | { on: "hand"; instanceId: string }
@@ -199,15 +192,13 @@ export type Highlight = {
   glow?: ReadonlySet<string>;
   /**
    * MD-D5, R1121: the yellow a dragged or selected attack paints — the selected attacker's
-   * `conditionTargets` inside `glow`. A subset of `glow`, derived by `highlightFor` while
-   * attacking alone. Absent means nothing reads yellow from the drag layer.
+   * `conditionTargets` inside `glow`, derived by `highlightFor` while attacking alone.
    */
   condition?: ReadonlySet<string>;
   /**
    * #991, R583: the cards the hovered or selected hand card's preview counts, as `card-<id>` testids:
    * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Board.tsx adds
    * for the field alone (`countedTestids`, glow.ts). Never from `legalActions`; no click reads it.
-   * Absent means nothing is ringed.
    */
   counted?: ReadonlySet<string>;
 };
@@ -221,12 +212,10 @@ export type AnimatingMap = ReadonlyMap<string, GameEventType>;
 export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent[] };
 
 /**
- * The emote surface one hero carries (R643–R644, issue §1–§5): its portrait, what it is showing,
- * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
- * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
- * (the legal branch still goes to `onClick`), which toggles the menu hung off the portrait, and
- * `onPortraitHold` the hold that opens the hero's inspect view instead (R1449, R1330; issue §2:
- * targeting wins).
+ * The emote surface one hero carries (R643–R644, issue §1–§5). Game owns the state; the board only
+ * draws and reports. `onPortrait` is the click that is NOT a target pick (the legal branch still
+ * goes to `onClick`), and `onPortraitHold` the hold that opens the hero's inspect view instead
+ * (R1449, R1330; issue §2: targeting wins).
  */
 export type HeroEmotes = {
   portrait: PortraitId;
@@ -251,10 +240,9 @@ export type BoardProps = {
   animating?: AnimatingMap;
   /**
    * The animation entries the runner has started since the board last caught up (M5-T4), each one
-   * the elements it marks paired with the events it is playing. The number pops read from these
-   * rather than from `view`, for two reasons: `view` is the view the runner is still holding back,
-   * so it does not carry the event being animated at all; and one action deals several numbers,
-   * which have to stay on screen together rather than each vanishing as the next entry starts.
+   * the elements it marks paired with the events it is playing. The number pops read these, not
+   * `view`: the runner is still holding `view` back, so it lacks the event being animated; and one
+   * action's several numbers must stay on screen together, not vanish as the next entry starts.
    */
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */
@@ -282,8 +270,8 @@ export type BoardProps = {
    */
   deckCosmetics?: DeckCosmetics | null;
   /**
-   * R1834004: both seats' frozen loadouts (R1834002) on an online board: a live match's, a watched
-   * game's or a replay's. Every seat but the wearer wears its own; null or absent, they draw the defaults.
+   * R1834004: both seats' frozen loadouts (R1834002) on an online board. Every seat but the wearer
+   * wears its own; null or absent, they draw the defaults.
    */
   loadouts?: SeatLoadouts | null;
 };

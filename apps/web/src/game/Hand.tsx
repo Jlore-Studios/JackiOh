@@ -1,39 +1,35 @@
 // A hand (BUILD M5-T1).
 //
 // `SideView.hand` is `CardView[] | { count: number }` and that union is the privacy boundary
-// (SPEC §10.8): the viewer's hand is full cards with `hand-card-<instanceId>` testids, the
-// opponent's hand is a number, so it renders exactly that many identical backs — no names, no
-// def ids, no instance ids, nothing to read and nothing to click. The narrowing is
+// (SPEC §10.8): the viewer's hand is full cards (`hand-card-<instanceId>`), the opponent's a number,
+// drawn as that many identical backs with nothing to read or click. The narrowing is
 // `Array.isArray`, so there is no branch where a count could be rendered as cards.
 //
-// Polish task 7 (docs/polish/7-mobile-ux.md S6, S11, B26, B27): every card sits in a `.hand-slot`
-// carrying its index as `--i`, and `.hand-cards` carries the hand size as `--n`, so board.css can
-// lay the hand out as an overlapping fan without measuring anything. On the viewer's own hand a
-// tap lifts a card (`data-lifted="true"`) so it can be read, legal or not — the lift is a
-// capture-phase click, so it happens even when the card itself refuses the click. It is local
-// view state, not a game action. The selected hand card is always lifted. Drag to play is pointer
-// events in game/drag/DragLayer.tsx, and the card a drop has just played is marked `data-landing`
-// (drag/landing.ts), which board.css takes out of the fan while the board catches up with the play.
+// The fan (docs/polish/7-mobile-ux.md S6, S11, B26, B27): each `.hand-slot` carries its index as
+// `--i` and `.hand-cards` the hand size as `--n`, so board.css lays it out without measuring. On the
+// viewer's own hand a tap lifts a card (`data-lifted`) so it can be read, legal or not: a
+// capture-phase click, so it happens even when the card refuses the click. It is local view state,
+// not a game action; the selected card is always lifted. Drag to play is game/drag/DragLayer.tsx,
+// and the card a drop has just played is marked `data-landing` (drag/landing.ts), which board.css
+// takes out of the fan while the board catches up with the play.
 //
 // A pointer on the viewer's own hand card is reported upward (`onHover`, #991) so the board can ring
 // what its preview counts. It is view state, never an action.
 //
-// R504: an empty hand keeps its place. Either seat's hand with no cards holds one card-sized
-// outline (`hand-empty-<side>`, "Hand empty") and says `data-empty="true"`, so its row keeps the
-// height a card gives it on every layout and the board does not jump when the last card leaves.
+// R504: an empty hand, either seat's, keeps its place with one card-sized outline
+// (`hand-empty-<side>`) and `data-empty="true"`, so the board does not jump when the last card leaves.
 //
-// R434: the game's end reveals both hands. Once the view shows the opponent's hand as cards (a
-// finished game, `reveal.ts`), each back turns face up where it lay, one after another. A revealed
-// card is read, never played: it has its own testid (`revealed-hand-card-<id>`), no click and no
-// drag.
+// R434: the game's end reveals both hands. Once the view shows the opponent's hand as cards
+// (`reveal.ts`), each back turns face up where it lay; a revealed card is read, never played (its
+// own testid `revealed-hand-card-<id>`, no click, no drag).
 //
 // R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a card in a hand
 // its seat's loadout where the board carries one and the card is not the viewer's own (game/wearer.ts):
 // a revealed one, or the lower hand of a watched or replayed game.
 //
-// #2267: each of the viewer's own hand cards wears the hand hints that apply to it
-// (HandHints.tsx, the list in handHints.ts), read off the card and the view alone. The
-// opponent's backs and a revealed card (R434) wear none.
+// #2267: each of the viewer's own hand cards wears the hand hints that apply to it (HandHints.tsx,
+// the list in handHints.ts), read off the card and the view alone; the opponent's backs and a
+// revealed card (R434) wear none.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 

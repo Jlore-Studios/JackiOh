@@ -1,16 +1,9 @@
-// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): a portrait's art
-// on each seat's hero with the health and armor badges, your portrait's menu of your dealt hand, the
-// opponent's one-item mute, and every way the menu must leave — a pick, a press on the dim around
-// it, Escape, the start of a play or attack, a hotseat seat change and the end of the match.
-//
-// Issue #544 (R1330–R1331) added the hero's inspect view: the portrait large with its words, health
-// and Armor, with the same menu in it. Since R1449 a click (or Enter) on a portrait hangs its menu
-// off the portrait and a hold opens the view. The `MN02` block tests the view and the `R1449` block
-// the two presses.
-//
-// The harness is the route's own wiring: `useEmotes` is the same api `MatchHotseatRoute` and
-// `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to the test through
-// `api.receive`).
+// The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): the portrait
+// art and badges, your menu of your dealt hand, the opponent's one-item mute, and every way the menu
+// must leave. Issue #544 (R1330–R1331) added the hero's inspect view, with the same menu in it;
+// since R1449 a click (or Enter) on a portrait hangs its menu off the portrait and a hold opens the
+// view. The harness is the route's own wiring: `useEmotes` is the api `MatchHotseatRoute` and
+// `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to `api.receive`).
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -220,8 +213,7 @@ describe("your portrait's emote menu (R643)", () => {
 
   /**
    * SPEC §10.10 / issue §2: the menu "closes on a pick". The item's click is stopped inside
-   * `[data-emote-menu]` (ui.tsx) so it never reaches the hero's own onClick — which would read the
-   * hero as not-legal and reopen the just-closed menu through `emotes.onPortrait()`.
+   * `[data-emote-menu]` (ui.tsx), or the hero's own onClick would reopen the just-closed menu.
    */
   it("R643 the emote menu closes on a pick", () => {
     const api = { current: null as EmotesApi | null };
@@ -281,7 +273,6 @@ describe("your portrait's emote menu (R643)", () => {
 
     // "…or the start of any drag or targeting" (issue §2): the open menu is gone at once.
     expect(screen.queryByTestId("emote-menu")).toBeNull();
-    // And the attacker's click is only a selection — nothing was dispatched.
     expect(api.current).not.toBeNull();
   });
 
@@ -294,8 +285,8 @@ describe("your portrait's emote menu (R643)", () => {
         hand: [card({ instanceId: "c1", defId: "core-002" })],
       },
     });
-    // Two legal plays of c1 that differ only in the zone — the click picks the card and starts a
-    // build (a zone prompt), which is targeting: the menu must close and the portrait stay inert.
+    // Two plays of c1 that differ only in the zone: the click starts a build (a zone prompt), which
+    // is targeting, so the menu must close and the portrait stay inert.
     const legal: ActionBody[] = [
       { type: "play", instanceId: "c1", zone: { row: "units", lane: 1 } },
       { type: "play", instanceId: "c1", zone: { row: "units", lane: 2 } },
@@ -843,7 +834,6 @@ describe("R1449 a click opens the portrait's menu, a hold its inspect view", () 
     expect(fireEvent.keyDown(open, { key: "Enter" })).toBe(true);
     expect(fireEvent.keyDown(open, { key: " " })).toBe(true);
 
-    // Enter's native click: the menu on the portrait.
     open.focus();
     fireEvent.click(open);
     expect(within(screen.getByTestId("hero-you")).getByTestId("emote-menu")).toBeInTheDocument();

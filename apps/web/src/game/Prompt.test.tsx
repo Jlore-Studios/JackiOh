@@ -1,14 +1,9 @@
 // M5-T2 acceptance: one test per `PromptKind` (all ten), each rendering the picker, clicking an
-// option and asserting the exact action. R81 splits them in two:
-//
-//   * `discover`, `target`, `mode`, `mulligan` and `hand` answer a `PendingChoice` that has paused
-//     resolution, so they submit an `answer` (or, for the mulligan, §10.2's `mulligan` action);
-//   * `zone`, `tribute`, `direction`, `x` and `embiggen` are the card's own play choices. Nothing
-//     is paused and `view.pending` is null: they are driven by the in-flight `Interaction` and
-//     they submit a `play`.
-//
-// Plus: the other seat sees "waiting for choice" and no options at all, a disabled confirm fires
-// nothing, and `min`/`max` gate the confirm for `tribute` and `mulligan`.
+// option and asserting the exact action. R81 splits them in two: `discover`, `target`, `mode`,
+// `mulligan` and `hand` answer a `PendingChoice` that has paused resolution, so they submit an
+// `answer` (or, for the mulligan, §10.2's `mulligan` action); `zone`, `tribute`, `direction`, `x` and
+// `embiggen` are the card's own play choices, driven by the in-flight `Interaction` with
+// `view.pending` null, and submit a `play`.
 
 import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -268,7 +263,6 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
   });
 
   it("a Choose one names the card asking and says what each option does, answering with the card's own option string", () => {
-    // Integration QA: Pocket Chaos offered three bare buttons, "health", "board" and "library".
     const onAction = vi.fn();
     const view = viewWith({
       you: emptySide("p1", { hand: [card({ instanceId: "h3", defId: "core-087" })] }),
@@ -345,7 +339,6 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(screen.getByTestId("x-stepper")).toBeInTheDocument();
     expect(screen.getByTestId("x-value")).toHaveTextContent("0");
 
-    // The stepper never walks past the ends of the engine's list.
     for (let press = 0; press <= values.length; press += 1) fireEvent.click(screen.getByTestId("x-plus"));
     expect(screen.getByTestId("x-value")).toHaveTextContent(String(X_CARD_LIMIT));
 

@@ -79,7 +79,6 @@ class FakeSocket implements SocketLike {
     this.onclose?.({ code, reason, wasClean: false });
   }
 
-  /** What the client sent, parsed. */
   frames(): Record<string, unknown>[] {
     return this.sent.map((text) => JSON.parse(text) as Record<string, unknown>);
   }
@@ -555,7 +554,6 @@ describe("portraits and emotes", () => {
 // Loadouts (R1834003)
 
 describe("loadouts", () => {
-  /** The registry's first entry of `kind` that is not its default. */
   const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";
   /** A seat's six picks as the `loadouts` frame carries them: every default but those named. */
   const seat = (picks: Partial<CardCosmetics> = {}): CardCosmetics => ({ ...DEFAULT_CARD_COSMETICS, ...picks });
@@ -738,7 +736,6 @@ describe("a silent socket", () => {
     h.now(SILENCE_MS + 1);
 
     h.wake();
-    // It is asked first: a healthy socket answers with a view, and nothing else changes.
     expect(old.frames()).toEqual([HELLO, HELLO]);
     expect(h.sockets).toHaveLength(1);
 
@@ -765,7 +762,6 @@ describe("a silent socket", () => {
     h.wake();
     live.deliver({ type: "view", view: baseView({ turn: 3 }) });
 
-    // The answer canceled the probe: nothing is left to run, and the socket stays.
     expect(h.pending()).toBe(0);
     h.runTimers();
     expect(h.sockets).toHaveLength(1);
@@ -832,7 +828,6 @@ describe("a silent socket", () => {
       else Object.defineProperty(document, "visibilityState", visibility);
     }
 
-    // A client that was closed no longer listens.
     h.now(4 * SILENCE_MS);
     window.dispatchEvent(new Event("online"));
     expect(live.frames()).toHaveLength(3);

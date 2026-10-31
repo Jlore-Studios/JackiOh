@@ -15,9 +15,8 @@ import { setShips, type CardCost, type CardDef, type CardDefs, type SetName } fr
 /**
  * SPEC §2.6 L2 / L3. Re-exported from the engine's own `config` entry point rather than restated:
  * BUILD §2 keeps every rules constant in the engine's config (`crates/engine/src/config.rs`) and
- * says nothing else spells the numbers. The engine's barrel would drag in modules the client
- * excludes; `@jackioh/engine/config`, the constants generated from that config
- * (`src/wire/engineConfig.ts`), reaches them without loading the engine.
+ * says nothing else spells the numbers. `@jackioh/engine/config` (`src/wire/engineConfig.ts`)
+ * reaches them without loading the engine's barrel, which drags in modules the client excludes.
  */
 // Imported and then re-exported, not `export … from`: this module uses both constants itself
 // (`resolveDeck`, the dev decks), and a bare re-export creates no local binding.
@@ -135,22 +134,14 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
 }
 
 /**
- * Resolve one `a=` / `b=` deck id against the catalog.
- *
- * `overrides` is the E2E injection (`window.__jackiohE2E.decks`, ASSUMPTION A1 in
- * `e2e/support/types.ts`): a spec that needs a specific scenario deck hands the exact card ids
- * over and they take precedence over the registry. They are external input, so they are checked
- * against the catalog like anything else.
- *
- * `size` is how many cards the seat's deck must hold: DECK_SIZE, unless the E2E injection gave the
- * seat a handicap, whose `deckSize` rules instead (R184). The dev decks are always DECK_SIZE long, so
- * a handicapped seat plays an injected deck of its own size or none.
- *
- * `preview` is the sets the E2E injection had the engine preview (R1420): an injected deck may hold
- * their cards. The dev decks never do; they deal from what ships.
- *
- * Never throws and never invents a card id: an unknown deck id, an empty catalog or a catalog too
- * small to fill a deck all come back as `{ error }` for the route to print.
+ * Resolve one `a=` / `b=` deck id against the catalog. `overrides` is the E2E injection
+ * (`window.__jackiohE2E.decks`, ASSUMPTION A1 in `e2e/support/types.ts`): its exact card ids take
+ * precedence over the registry, and as external input they are checked against the catalog too.
+ * `size` is DECK_SIZE unless the injection gave the seat a handicap, whose `deckSize` rules (R184);
+ * the dev decks are always DECK_SIZE long, so a handicapped seat plays an injected deck of its own
+ * size or none. `preview` is the sets the injection had the engine preview (R1420), whose cards only
+ * an injected deck may hold. Never throws and never invents a card id: every failure comes back as
+ * `{ error }` for the route to print.
  */
 export function resolveDeck(
   id: string,

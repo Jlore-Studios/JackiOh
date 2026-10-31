@@ -3,14 +3,12 @@
 // a card wears is its own picks, never the account's synced foil, finish and border, which every
 // test here holds non-default.
 //
-// R1297000: the same holds for the deck slots: the playmat under the viewer's half of the field, the
-// backdrop behind it, and the back of the viewer's face-down cards and deck pile. A saved deck's
-// picks beat the account's.
+// R1297000: the same holds for the deck slots (playmat, backdrop, card back); a saved deck's picks
+// beat the account's.
 //
 // R1834004: an online board carries both seats' frozen loadouts (R1834002), and every seat whose cards
-// do not wear the device's picks wears its own: its half and its cards, by owner, each its card's own
-// picks over its kinds' defaults, under the same rarity rules. The viewer's "Show opponents'
-// cosmetics" off leaves only the seat the board is seen from dressed.
+// do not wear the device's picks wears its own, by owner, under the same rarity rules. The viewer's
+// "Show opponents' cosmetics" off leaves only the seat the board is seen from dressed.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -214,7 +212,6 @@ describe("R1297000 the board's deck slots and the device's cosmetics", () => {
 
   it("R1297000 a board that wears none draws the deck slots as today", () => {
     writeCosmetics({ table: TABLE, field: FIELD, cardBack: BACK });
-    // Neither the account's picks nor a deck's reach a board nobody wears them on.
     render(<Board view={fullBoardView()} deckCosmetics={deckCosmeticsOf({ tableCosmetic: TABLE, fieldCosmetic: FIELD, cardBackCosmetic: BACK })} />);
 
     expect(document.querySelector(".field")?.hasAttribute("data-table")).toBe(false);
@@ -239,7 +236,7 @@ describe("R1655000 the board's cards and the picks of each card", () => {
     return found.id;
   })();
 
-  /** Both sides play the same card: the viewer's copies wear its picks, the opponent's draw the defaults. */
+  /** Both sides play the same card. */
   function picksView(): PlayerView {
     resetIds();
     return baseView({
@@ -486,7 +483,6 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
     for (const back of ownBacks()) expect(back.getAttribute("data-card-back")).toBe(BACK);
     cleanup();
 
-    // A seat whose loadout is every default adds no attribute and no layer.
     render(<Board view={fullBoardView()} wearCosmetics loadouts={{ p1: loadout(), p2: loadout() }} />);
     expect(document.querySelector(".field")?.hasAttribute("data-their-table")).toBe(false);
     expect(document.querySelector(".field-their-mat")).toBeNull();
@@ -597,7 +593,6 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
     expect(fullArt(revealTestid.handCard("h8"))).toBeNull();
     cleanup();
 
-    // The result panel's "Their hand" wears the same loadout.
     render(
       <CatalogContext.Provider value={lookup}>
         <WearerProvider seat="p1" loadouts={loadouts} viewer="p1">

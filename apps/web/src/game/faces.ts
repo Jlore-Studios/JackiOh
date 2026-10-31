@@ -7,8 +7,7 @@
 //
 // The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
 // definitions the view carries beside the cards it names (R243), else from nothing: the card is
-// drawn by its id, as `Card.tsx` draws one before the catalog has loaded. The R97 sentinel names no
-// card, so it has no face, and the callers draw a back instead.
+// drawn by its id. The R97 sentinel names no card, so it has no face, and the callers draw a back.
 
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -47,10 +46,7 @@ export type LiveFacts = {
   inHand?: boolean;
 };
 
-/**
- * The face in play of a card the view lists: its live cost, and whatever else the view says about
- * it.
- */
+/** The face in play of a card the view lists: its live cost, and whatever else the view says about it. */
 export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}): FaceModel {
   const unit = isUnitView(card) ? card : undefined;
   const inPlay: InPlay = {};
@@ -112,8 +108,7 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.attackReason !== undefined) inPlay.attackReason = unit.attackReason;
   // R2321000: and the counts the field keeps on the unit.
   if (facts.tallies !== undefined && facts.tallies.length > 0) inPlay.tallies = facts.tallies;
-  // R979000: a card in hand that cannot be played says why. Only a hand card or
-  // (R1571000) a card in the viewer's own graveyard carries it.
+  // R979000: a hand card, or (R1571000) one in the viewer's own graveyard, says why it cannot be played.
   if (unit === undefined && card.playReason !== undefined) inPlay.playReason = card.playReason;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;

@@ -1,14 +1,9 @@
 // Polish 6, slice D: browsing and building in the deck editor (docs/polish/6-cards.md, B30–B41;
-// the pure half of the filter and sort rules is filters.test.ts, and the pixel half of the layout
-// is e2e/cypress/component/deckbuilder-layout.cy.tsx). Since R250 the editor is one saved deck of
-// the deck workshop, so every test mounts `DeckWorkshop` with that deck open.
-//
-// Most tests use a small inline catalog built to make each rule visible. The fixtures in
-// ./fixtures.ts are used only where the existing contract is the point (every testid on a full
-// deck, and what a save sends).
-//
-// Every validator sentence is computed with the validator, never typed: messages.test.ts fails any
-// client source, tests included, that spells one out.
+// the pure half is filters.test.ts, the pixel half e2e/cypress/component/deckbuilder-layout.cy.tsx).
+// Since R250 the editor is one saved deck of the deck workshop, so every test mounts `DeckWorkshop`.
+// A small inline catalog makes each rule visible; ./fixtures.ts serves only where its contract is
+// the point. Every validator sentence is computed with the validator, never typed: messages.test.ts
+// fails any client source, tests included, that spells one out.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -341,7 +336,6 @@ describe("the pool grid (B30)", () => {
       expect(button.tagName, id).toBe("BUTTON");
       expect(button).toHaveClass("db-card");
       expect(button).toHaveAttribute("data-card", id);
-      // The card, not only its name: cost, type and rarity, then what a click does.
       const label = button.getAttribute("aria-label") ?? "";
       expect(label.startsWith(`${def.name}, `), id).toBe(true);
       expect(label, id).toContain(def.type);
@@ -402,9 +396,8 @@ describe("the pool grid (B30)", () => {
       selector: (match[1] ?? "").trim(),
       body: match[2] ?? "",
     }));
-    // The one sticky element is the sidebar of a phone on its side (a short screen with two
-    // columns): it sticks in its own grid column, so it never lies over a pool card Cypress
-    // scrolls to the top of the viewport. The page's other layouts have nothing sticky at all.
+    // The one sticky element is the sidebar of a phone on its side, in its own grid column, so it
+    // never lies over a pool card Cypress scrolls to the top of the viewport.
     const sticky = rules.filter((rule) => /position\s*:\s*sticky/.test(rule.body));
     expect(sticky.map((rule) => rule.selector)).toEqual([".db-sidebar"]);
     const landscape = /@media \(min-width: 761px\) and \(max-height: 500px\) \{([\s\S]*?)\n\}/.exec(bare)?.[1] ?? "";
@@ -768,7 +761,7 @@ describe("sorting by win rate (B34)", () => {
   const FAIL = (): Promise<Response> => Promise.reject(new TypeError("Failed to fetch"));
 
   /** Stubs `fetch`: the nth `/api/stats/cards` call gets the nth answer (the last from then on), and
-   *  nothing else ever answers. Returns how many times the stats were asked for. */
+   *  nothing else ever answers. */
   function stubStats(...answers: (() => Promise<Response>)[]): () => number {
     let asked = 0;
     vi.stubGlobal(

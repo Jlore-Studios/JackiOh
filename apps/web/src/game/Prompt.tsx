@@ -1,36 +1,24 @@
 // The choice pickers (BUILD M5-T2, SPEC §10.6). One modal, a picker for every prompt kind, no rules.
 //
 // Two things open this modal, and telling them apart is R81:
+//  1. `view.pending` — a `PendingChoice` the engine opened during resolution, paused until it is
+//     answered by an `answer` action (or, for the mulligan, §10.2's own `mulligan` action). The
+//     opponent sees only that a prompt is open, never its options (§10.6, §10.8).
+//  2. `props.interaction` — a play the player is still building, with NO `view.pending`: nothing is
+//     paused, and it submits a `play`, never an `answer`. §10.6 keeps the `x`, `embiggen`, `zone`,
+//     `tribute` and `direction` prompt kinds for later sets, so both routes render the same picker
+//     with the same `data-prompt-kind`. An activation (R384) is built here too and submits an
+//     `activate`; so is a play's payment (Classic #74). A targeting cost's discards (Classic #89)
+//     are random at pay time (R682) and need no picker.
 //
-//  1. `view.pending` — a `PendingChoice` the engine opened during resolution. Resolution is
-//     paused until it is answered, and the answer is an `answer` action (or, for the mulligan,
-//     §10.2's own `mulligan` action). The opponent sees only that a prompt is open, never its
-//     options (§10.6, §10.8).
+// A card option is drawn as the card in play (faces.ts, SPEC §10.10). `data-prompt-source` ("engine"
+// or "play") is for layout only: prompt.css turns a play's board picks into a slim bar on a phone
+// while drag to play is on, because their answers already glow on the board. #1204: a new prompt is
+// a new `PromptModal` (its `key`), so a folded picker opens unfolded. R2211000: a replay's board
+// draws the open prompt of its step's view and sends nothing (`readOnly`).
 //
-//  2. `props.interaction` — a play the player is still building. Its pickers have to work with
-//     NO `view.pending` at all: nothing is paused, and what they submit is a `play`, never an
-//     `answer`. §10.6 keeps the `x`, `embiggen`, `zone`, `tribute` and `direction` prompt kinds
-//     for later sets, so both routes render the same picker with the same `data-prompt-kind`. An
-//     activation (R384) is built on this route too and submits an `activate`; so is a play's
-//     payment (Classic #74). A targeting cost's discards (Classic #89) are random at pay time
-//     (R682) and need no picker.
-//
-// A card option is drawn as the card in play (faces.ts, SPEC §10.10). An option that names no card
-// is its label.
-//
-// `data-prompt-source` says which route opened the modal ("engine" or "play"), for layout only:
-// prompt.css turns a play's board picks into a slim bar on a phone while drag to play is on,
-// because their answers already glow on the board.
-//
-// #1204: a card picker's "View the board" (`prompt-peek`) folds it to a bar. Presentation only: a
-// new prompt is a new `PromptModal` (its `key`), so it opens unfolded.
-//
-// R2211000: a replay's board draws the open prompt of its step's view and sends nothing (`readOnly`).
-//
-// No rule is applied here either. `min` and `max` gate the confirm button, and both came from the
-// engine — from `PendingView` on route 1 and from the candidate `play`s on route 2. The options
-// likewise: a prompt's options are the engine's, and a play's choices are read off the
-// `legalActions` array by `actions.ts`.
+// No rule is applied here either: `min`, `max` and the options came from the engine, from
+// `PendingView` on route 1 and from the `legalActions` candidates (`actions.ts`) on route 2.
 
 import {
   Fragment,
@@ -112,18 +100,14 @@ export type PromptProps = {
   animating?: string;
   /** A tutorial lesson's board: the mulligan picker keeps the engine's instruction and its count. */
   lesson?: boolean;
-  /**
-   * R2211000: a replay's board: the open prompt as offered, folded and inert; nothing it draws calls
-   * `onAction`. Absent, off.
-   */
+  /** R2211000: a replay's board: the open prompt as offered, folded and inert; nothing calls `onAction`. */
   readOnly?: boolean;
 };
 
 /**
- * The seat that is only watching gets NO `data-prompt-kind` at all: §10.8 gives that view the
- * fact that a choice is open and nothing else, and `data-prompt-kind` is the attribute M5-T4
- * animates the open picker on. It is marked with its own flag instead, so "a prompt is open for
- * me" and "somebody is choosing" never read the same in the DOM.
+ * The seat that is only watching gets NO `data-prompt-kind` (which M5-T4 animates the open picker
+ * on): §10.8 gives that view the fact that a choice is open and nothing else. Its own flag keeps "a
+ * prompt is open for me" and "somebody is choosing" from reading the same in the DOM.
  */
 const WAITING_FLAG = "waiting";
 
@@ -230,10 +214,8 @@ type Picker = {
 const CARD_CHROMES: ReadonlySet<PromptKind> = new Set(["discover", "hand", "mulligan", "pick"]);
 
 /**
- * #492: the card picker, front and center (`CardChoice`). A short "Choose one" is one (its chrome is
- * `discover`), and so are a play's embiggen price and an X from X_CARD_LIMIT values or fewer, which
- * keep their own chrome. It is `data-prompt-layout="cards"`, which prompt.css reads to keep it out of
- * the small pickers' dock beside the board.
+ * #492: the card picker, front and center (`CardChoice`). It is `data-prompt-layout="cards"`, which
+ * prompt.css reads to keep it out of the small pickers' dock beside the board.
  */
 function isCardLayout(picker: Picker): boolean {
   return picker.cards === true || CARD_CHROMES.has(picker.chrome);
@@ -384,7 +366,6 @@ function pickerForPending(
     return base;
   });
 
-  // A short "Choose one" menu is a Discover pop-up; more options keep the plain mode list.
   const chrome = pending.kind === "mode" && pending.options.length <= DISCOVER_OPTION_LIMIT ? "discover" : pending.kind;
   // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`).
   const cards = pending.kind === "embiggen" || (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT);
@@ -442,8 +423,7 @@ function isDirection(options: readonly string[]): boolean {
 /**
  * R81 puts a declared `hand` pick (#26 Glowy Jelly Bean) in the play action's `targets`, so it
  * arrives here as a `target` need — but §10.6 still names `hand` as its own prompt kind and
- * BUILD M5-T2 draws it as its own picker. Every candidate being a card in the viewer's own hand is a
- * hand pick, anything else is a target pick. Presentation only — the action built is the same `play`
+ * BUILD M5-T2 draws it as its own picker. Presentation only — the action built is the same `play`
  * either way.
  */
 function isHandPick(need: PlayNeed, view: PlayerView): boolean {
@@ -704,13 +684,11 @@ const NUMBER_OPTION = /^\d+$/;
 const UNKNOWN_PRICE = "?";
 
 /**
- * #492: an embiggen option's face at the price its form is played for. The normal form is the card
- * as the view shows it, without the embiggen price beside the gem. The embiggened form is the same
- * face at the view's `embiggenCost`: what a play at the embiggen price costs now, which the engine
- * reads with the function it charges that play by. A card view without the field (one that is not in
- * its owner's hand) falls back to the embiggen price the face shows beside its gem (`FaceCost.alt`,
- * cards/model.ts), and else to "?": the client never works out an embiggen price itself (CLAUDE.md
- * rule 7).
+ * #492: an embiggen option's face at the price its form is played for. The embiggened form is at the
+ * view's `embiggenCost`, which the engine reads with the function it charges that play by. A card view
+ * without it (one not in its owner's hand) falls back to the price the face shows beside its gem
+ * (`FaceCost.alt`, cards/model.ts), else "?": the client never works out an embiggen price itself
+ * (CLAUDE.md rule 7).
  */
 function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | undefined, def: CardDef | undefined): FaceModel {
   if (price === "normal") return { ...face, cost: { ...face.cost, alt: null } };
@@ -751,9 +729,8 @@ function nameOf(defId: string, info: { name: string; def?: CardDef }, chinese: b
   return chinese ? chineseName(defId, info.name, info.def) : info.name;
 }
 
-// A card option draws the card's face, the one the hand and the deck builder draw, with the same
-// hover preview and long-press sheet, in whatever box prompt.css gives it. An option that names no
-// card keeps its name and text.
+// A card option draws the face the hand and the deck builder draw, with the same hover preview and
+// long-press sheet, in whatever box prompt.css gives it.
 function CardOption(props: {
   item: PickerItem;
   pressed: boolean;
@@ -962,8 +939,7 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
 /**
  * A board pick's hint. On a phone held upright, with drag to play on, a play's zone, target and
  * Tribute picks fold to a bar with no options in it (prompt.css): the answers glow on the board and
- * are tapped there, and this line says so. Every other layout lists the options, and the stylesheet
- * hides it there.
+ * are tapped there, and this line says so.
  */
 const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
   zone: "Tap a highlighted zone on the board.",

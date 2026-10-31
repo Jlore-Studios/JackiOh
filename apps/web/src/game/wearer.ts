@@ -10,8 +10,8 @@
 // R1834004: an online board also carries both seats' frozen loadouts (cards/loadouts.ts, R1834002).
 // Every seat but the wearer wears its own: its cards (below a `TheirCopy`, keyed on each card's
 // owner, never its controller, so a stolen unit keeps its owner's look) and its deck slots; on a
-// watched or replayed game, where nobody wears the device's picks, both seats do. Practice, hotseat
-// and Duos carry no loadouts, so there every other seat draws the defaults.
+// watched or replayed game both seats do. Practice, hotseat and Duos carry no loadouts, so there
+// every other seat draws the defaults.
 
 import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
@@ -54,11 +54,8 @@ export function WearerProvider({
   children,
 }: {
   seat: PlayerId | null;
-  /** R1297000: the picks of the deck the viewer plays, or null where it carries none. */
   deck?: DeckCosmetics | null;
-  /** R1834004: both seats' frozen loadouts, on an online board; absent elsewhere. */
   loadouts?: SeatLoadouts | null;
-  /** R1834004: the view's viewer, the seat the board is seen from. */
   viewer?: PlayerId | null;
   children?: ReactNode;
 }): ReactElement {
