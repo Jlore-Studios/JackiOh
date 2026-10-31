@@ -10117,15 +10117,18 @@
       "asks": [],
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-8",
+      "round_tier": "",
       "run_id": "41251599267",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T23:13:15Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2518": {
       "onto": "bot/issue-2497",
