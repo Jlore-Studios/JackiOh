@@ -11710,6 +11710,13 @@
     "2611": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T20:18:13Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Line 3 (spec hot spot) fails: the three edited sentences sit in spec/ notes and cite rulings, and line 5 fails as well since play_choices.rs is in crates/engine/src/. The edit is comment-only, so it is not hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
