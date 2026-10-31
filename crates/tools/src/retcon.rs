@@ -1,31 +1,7 @@
-//! `cargo jackioh patches retcon [--dry-run] [--records <dir>...]` (#1371, part 7 of #1360,
-//! R1371000): every shipped version renamed to what the classifier would have called it.
-//!
-//! The map is computed, never written by hand. In `patches.json`'s order, each shipped version's
-//! tier is `classify::classify` over stage 1 (`classify::read_diff`) of its snapshot against the one
-//! before it, each with the sets its cards belong to (as `patches ship` reads it, R1366000), plus the
-//! card scripts its own shipping commits changed (`commits`, each against its first parent), from the
-//! Rust scripts on (v0.3.0, #306; the TypeScript scripts before them leave the snapshots, the recorded
-//! `changes`, to speak alone). A script change counts only when it shipped beside a catalog change,
-//! in the commit that shipped the patch: the mass rewrites (the Rust rewrite, the Luau port and its
-//! return) shipped in no patch, so they claim nothing. No stage 2 runs here. The names follow in order
-//! from `FIRST_VERSION`, each named after the one before it by `versions::name_by_tier`.
-//!
-//! The dry run prints the map. The write renames every version the repository stores, once:
-//! - `crates/cards/patches/`: the snapshots, `win_rates/<version>.json` and
-//!   `card_metrics/<version>.json` (R2173000) renamed, `patches.json`'s
-//!   versions with each patch's `tier` and `plays`, `shipped.json`, `index.json`, and
-//!   `aliases.json`, the map, which only readers of an unmarked file consult (R1371000);
-//! - every `CATALOG_VERSION` site (`patch::bump_sites`);
-//! - every other file that spells an old version (`rewrite_tree`): its data files whole, its code's
-//!   string literals, never its comments or its docs, which keep their old names (the map table in
-//!   `docs/issues-and-patches.md` translates them), and a file named after a version renamed;
-//! - the migration that renames every catalog version the database holds, `NNNN_version_retcon.sql`
-//!   under `crates/server/migrations/`, written from the map (`migration_sql`).
-//!
-//! A tree holding `aliases.json` was retconned already, and a second run changes nothing. `--records
-//! <dir>` rewrites the record files under a directory outside the repository (the training boxes'
-//! `~/training-out`) and marks each (`mark_record`), skipping any already marked.
+//! `cargo jackioh patches retcon`: renames shipped versions to match classifier tiering (#306, #1360, #1371, R1371000).
+//! Computes version names sequentially using `versions::name_by_tier` (R1366000).
+//! Updates patch snapshots, win rates, card metrics (R2173000), `patches.json`, `aliases.json`, and database migrations.
+//! Flag `--records <dir>` rewrites external record files. Idempotent once `aliases.json` exists.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -102,9 +78,7 @@ fn script_changes(repo_root: &Path, commits: &[String]) -> anyhow::Result<Vec<Fi
     Ok(files)
 }
 
-/// R1371000: one patch's tier and the families that play differently, from the snapshot before it
-/// (`None` for the first), its own, and its commits' script changes, which count only beside a
-/// catalog change.
+/// R1371000: computes tier and affected card families from previous snapshot and script changes.
 pub fn tier_of(
     previous: Option<&Catalog>,
     snapshot: &Catalog,
@@ -123,8 +97,7 @@ pub fn tier_of(
     (classification.tier.unwrap_or(Tier::Micro), classification.cards)
 }
 
-/// R1371000: the map, in `patches.json`'s order, from the snapshots under `dir` and, where
-/// `repo_root` holds the history, the patches' own commits.
+/// R1371000: computes map from snapshots and patch commits in `patches.json` order.
 pub fn compute_map(repo_root: &Path, dir: &Path) -> anyhow::Result<Vec<Renamed>> {
     let patches = read_patches(&dir.join("patches.json"))?;
     let mut previous: Option<Catalog> = None;
@@ -202,8 +175,7 @@ pub struct Written {
     pub migration: PathBuf,
 }
 
-/// R1371000: renames every version the repository stores through `map` (`compute_map`'s). Every
-/// text is computed before the first file is written.
+/// R1371000: renames stored versions through map, computing all changes before writing.
 pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written> {
     let dir = repo_root.join(PATCHES_REL);
     let names: IndexMap<String, String> = aliases_of(map).aliases;
@@ -420,9 +392,7 @@ pub fn read_aliases(repo_root: &Path) -> anyhow::Result<Aliases> {
 
 /* the tree */
 
-/// Paths the tree rewrite leaves alone: the patch history (rewritten field by field), the applied
-/// migrations (history the database already ran), the docs and the spec (which keep their old
-/// names), and what no agent may change (CLAUDE.md, The night bot).
+/// Paths left untouched by tree rewrite.
 const SKIP_PREFIXES: &[&str] = &[
     ".github/",
     ".harness/",
@@ -435,9 +405,7 @@ const SKIP_PREFIXES: &[&str] = &[
     "crates/server/migrations/",
 ];
 
-/// Files whose versions are not the shipped ones: fixtures that name made-up versions to test how
-/// names are read and made, and the old retcon's test, which re-runs migration 0025 over its own
-/// names (R743).
+/// Files with non-shipped version fixtures or migration tests (R743).
 const SKIP_FILES: &[&str] = &[
     "crates/cards/src/versions.rs",
     "apps/web/src/replay/retcon.test.ts",

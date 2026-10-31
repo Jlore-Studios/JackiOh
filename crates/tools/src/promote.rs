@@ -1,69 +1,8 @@
-//! `cargo jackioh promote`: the promotion gate of the AI training lanes (SURFACE §14.2;
-//! docs/v0.3.0/README.md §8; training/README.md).
-//!
-//! ```text
-//! cargo jackioh promote --lane improve|unban|learn --parent-bin <path to main's jackioh> [--dry-run] [--verify]
-//! ```
-//!
-//! The candidate is this build's AI (`self`). It plays deals against the parent, the AI on `main`
-//! (`bin:<parent-bin>`, SURFACE §14.1): deal `d`'s seed is `"<lane>:<tree>:<d>"`, where `<tree>` is
-//! `git rev-parse HEAD:crates/ai/src`, so committing `generation.json` (or the history line) does not
-//! change them, and each deal is played twice with the seats swapped (R850000), as game `2d − 1` (the
-//! candidate p1) and game `2d` (the candidate p2). Those deals are the lane's hold-out set (R850001):
-//! named for the committed AI, read only by it, and never a screen's (`arena` refuses their base).
-//! Each seat's deck is `build_ai_deck` over every set that ships minus its own
-//! AI's shadow ban (R186), with no handicap (Easy both, R180), both seats by that one rule and
-//! neither shaped (R976000). The games run on rayon's pool (`RAYON_NUM_THREADS` is respected); no
-//! result depends on the thread count.
-//!
-//! It promotes when the lane's sequential test passes (R1679000, `TRAINING_GATE`): the deals are
-//! played `batch_deals` (100) at a time and read in deal order, each as its edge for the candidate,
-//! and the test stops at the first deal from the 100th on whose log-likelihood ratio leaves its bounds
-//! (`sprt`), a pass above, a fail below; one still undecided at the 1,000th deal fails. The games it
-//! counts are those of the deals it read, and the rest of their batch is played and set aside, so
-//! where it stops never depends on the thread count. The lanes alike:
-//!
-//! | Lane      | vs parent                                  | shadow bans                      |
-//! |-----------|--------------------------------------------|----------------------------------|
-//! | `improve` | the test passes                            | —                                |
-//! | `unban`   | the test passes                            | strictly fewer than the parent's |
-//! | `learn`   | the test passes, on hold-out deals its own | —                                |
-//!
-//! and every game it counts is clean on either seat (R1489000): no refused action, throw, fallback
-//! or panic caught in an AI's search, and a log that folds back to its hash; each other game is a
-//! failure naming its seed and the candidate's seat.
-//!
-//! The `learn` lane is the learned evaluation's (#1012, R1012000): a network a script retrained, no
-//! LLM in the loop (`training/learn.md`), gated like `improve` on hold-out deals of its own.
-//!
-//! It plays no games against SPEC §10.7's random policy (R732001): the lanes dropped them once
-//! generation 9, the first AI dealt the Meditative set (issue #732), had beaten random in at least 90
-//! of 100, and a promotion's record says `"vsRandom": null`. The daily quality gates (`cargo jackioh
-//! gate --full`) still hold the AI on `main` to their floor against random.
-//!
-//! A draw is not a win, and neither is a game without a result. Without `--dry-run` or `--verify`, a
-//! pass writes `crates/ai/generation.json` and appends the same object to
-//! `training/history/<lane>.jsonl`. `--verify` (CI) recomputes and compares with the branch's
-//! `generation.json`. The report (Markdown, the lane's pull request body) goes to stdout. Exit 0 on a
-//! pass, 1 on a failed gate.
-//!
-//! Every run that plays its games, whatever its mode and whether it passes, also rewrites
-//! `$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set (the training box sets it; CI does
-//! not): the latest pass, in Markdown, which `training/loop.sh` puts at the top of the lane's draft
-//! pull request. It counts the games the candidate won against the parent, the AI on `main`, as p1,
-//! as p2 and in all, and shows each game as a square of a grid (`last_pass`).
-//!
-//! The unban lane has nothing to do while the parent keeps no card out of its decks (generation 8
-//! lifted the last shadow ban, #668, and generation 9's sweep of the Meditative set banned cards
-//! again, #732): no candidate has strictly fewer bans than none, so the gate cannot pass, and against
-//! such a parent `promote --lane unban` says so and exits 1, with any flag, before it plays a game or
-//! writes anything (`lane_done`).
-//!
-//! Because the seeds come from the committed AI, a promotion (and a verification) refuses to run on
-//! a `crates/ai/src` with uncommitted changes: they would be measured on another AI's seeds. A gate's
-//! hold-out deals are read only by the committed AI they are named for, so a dry run refuses them too
-//! (R850001, `dirty_refusal`); since every lane's gate plays paired deals (R1679000), the unban lane's
-//! dry run does as well.
+//! `cargo jackioh promote`: promotion gate for AI training lanes (SURFACE §14.1, §14.2, §14.3).
+//! Candidate plays paired deals (R850000, R850001) against main's AI (Easy difficulty, R180, shadow bans R186).
+//! Gated by SPRT sequential test (R1679000, `TRAINING_GATE`), requiring clean games without panic or fallback (R1489000).
+//! Lanes: `improve` (beats parent), `unban` (strictly fewer shadow bans, #668, #732), `learn` (retrained weights, #1012, R1012000).
+//! No games played against §10.7 random policy (R732001). Successful promotion writes `generation.json` and history.
 
 use std::path::{Path, PathBuf};
 
@@ -196,13 +135,7 @@ pub(crate) fn sprt_bounds(gate: &TrainingGate) -> (f64, f64) {
     )
 }
 
-/// R1679000: the test over `edges`, each deal's edge for the candidate in deal order
-/// (`arena::deal_edges`). After `n` deals of edges summing to `S`, the ratio is that of two normal laws
-/// with the deals' own variance `σ²` (never below `variance_floor`), means `edge_h1` and `edge_h0`:
-/// `(edge_h1 − edge_h0) · (S − n · (edge_h0 + edge_h1) / 2) / σ²`. From deal `min_deals` on it stops at
-/// the first deal whose ratio leaves the bounds (`sprt_bounds`); at none, it is `Capped` once it has read
-/// `max_deals` and `Open` before. Deals past `max_deals` are never read. The sums run in deal order, so
-/// the same edges give the same ratio to the bit.
+/// R1679000: sequential probability ratio test over deal edges between bounds.
 pub(crate) fn sprt(gate: &TrainingGate, edges: &[f64]) -> Sprt {
     let (lower, upper) = sprt_bounds(gate);
     let cap = usize::try_from(gate.max_deals).unwrap_or(0);
@@ -274,11 +207,7 @@ pub(crate) fn gate_failures(lane: Lane, counts: &GateCounts) -> Vec<String> {
     failures
 }
 
-/// The refusal to give when the lane has nothing to do, else `None`. The unban lane has nothing to do
-/// while its parent, the AI on `main`, keeps no card out of its own decks: no candidate has strictly
-/// fewer shadow bans than none, so its gate fails whatever the games say, and `run` plays none
-/// (#668). It reads the parent's list, not this build's `SHADOW_BAN`: a candidate with none against a
-/// parent with one is the promotion that emptied the table (generation 8's).
+/// Refusal when the lane has no active tasks (#668, e.g. unban when parent has empty shadow bans).
 pub(crate) fn lane_done(lane: Lane, parent: &Entrant) -> Option<String> {
     (lane == Lane::Unban && parent.shadow_ban.is_empty()).then(|| {
         format!(

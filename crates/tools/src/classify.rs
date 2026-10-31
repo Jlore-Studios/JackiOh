@@ -1,36 +1,7 @@
-//! `cargo jackioh classify --base <rev> [--head <rev>] [--parent-bin <path>] [--json]` (#1365,
-//! R1365000): what a change between two commits does to the game, read from its effect rather than
-//! its paths, so a patch number moves exactly when the cards do (#1360). It names a **kind**, the
-//! highest the change reaches of Cards, AI, App and Internal, and for Cards a **tier** (major, patch
-//! or micro) and the card families that play differently. Nothing overrides it: no flag, title or
-//! label.
-//!
-//! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
-//! player reads and no game does, every other field plays. Each card script's code, the lines
-//! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
-//! `SHIPPED_SETS` names on each side: a set that ships is a major, unless the owner wraps it into an
-//! earlier set's line (`WRAPPED_SETS`, R2204000), when it earns the tier its cards do; every card of a
-//! set that ships plays differently, and a card of a set that has not shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
-//! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
-//! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
-//! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
-//! (each side's scripts counted by `card_lists`, each side's thresholds) plays every such reader
-//! differently, so `--claims` asks for its fragment.
-//!
-//! Stage 2 (`--parent-bin`, the base's build, with this binary built from the head) asks the base
-//! build what the diff cannot say:
-//! - a card claimed only through its script keeps the claim only when its forced games diverge
-//!   between the builds (`luau diff`'s check), so a refactor claims nothing;
-//! - a change to code a card's play can rest on (`Area::PlayCode`) replays `UNFORCED_GAMES` unforced
-//!   games, and the cards each divergence touches play differently; divergences that touch no card
-//!   are a rule every game meets, and make a patch, once they reach `RULE_MIN_GAMES` of the games
-//!   (R2455000), and fewer count as no card;
-//! - a change to the AI plays the same self-play games on both builds: identical logs mean the AI
-//!   decides as it did, and the change is Internal.
-//!
-//! It stops once `PATCH_MIN_CARDS` families play differently, the tier being a patch already.
-//! Without `--parent-bin`, stage 1's answer stands, and the output names what stage 2 would have
-//! checked: script claims count unconfirmed, a change to play code counts as none.
+//! `cargo jackioh classify`: detects impact of commit diffs (#1360, #1365, R1365000).
+//! Reports kind (Cards, AI, App, Internal), tier (major, patch, micro), and playing families.
+//! Stage 1 diffs catalog wording, scripts, and sets (R1420, R2050000, R2173001, R1846000, R2204000).
+//! Stage 2 verifies script divergences, engine rule impacts (R2455000), and AI equivalence.
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -534,9 +505,7 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Stage 2
-// ---------------------------------------------------------------------------------------------
 
 /// One divergence in the parent's `golden check` report.
 #[derive(Debug, PartialEq)]
@@ -935,9 +904,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     Ok(checked)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The command
-// ---------------------------------------------------------------------------------------------
 
 /// `rev:path`'s text, or `None` where the commit has no such file.
 pub(crate) fn show(root: &Path, rev: &str, path: &str) -> Option<String> {

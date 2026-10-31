@@ -1,19 +1,7 @@
-//! `cargo jackioh think [--file F] [--at K] [--seat p1|p2] [--budget gate|full] [--json]` (issue #834):
-//! one saved game position through the AI's eyes.
+//! `cargo jackioh think` (#834): inspects a saved position through the AI's redacted view (R185).
 //!
-//! Reads `{seed, decks, log, handicaps?, …}` (`ReplayInput`: what e2e spec 13's `PracticeDebug` dumps) from
-//! `--file` or stdin, folds `log[..K]` (`--at`, default the whole log; raw entries, rejects included, so
-//! step 0 is the opening after `begin_game`), and prints what `seat` (default `seat_to_act`) sees there:
-//! both sides of the board and its own hand as `redact` leaves them (R185), the legal-action count, the
-//! `evaluate` score and `decide`'s answer: its reason, the planned line in words and the search's stats.
-//! Nothing the seat cannot see is printed (not the match seed either: R185 redacts it, and with the decks
-//! it gives back the shuffles), so the output can be pasted into an issue.
-//!
-//! The decision is the AI's at the quality gates' budget, from the stream a gate match starts the seat's
-//! AI on (`{seed}:ctl:{seat}` at cursor 0): the same position gives the same answer on every run. A
-//! match's own cursor at that decision is not in a log, so a decision inside a game may differ from
-//! this one in its determinizations. There is no `--tier`: a tier is the handicaps the input carries
-//! (R180), applied when the game is created, and the AI's budget is the same at every tier (§9.9).
+//! Folds up to step K and prints redacted boards, hand, legal action count, eval score, and decision line.
+//! Evaluates using deterministic AI streams; tier handicaps (R180) are applied with equal budget (§9.9).
 
 use std::io::Read as _;
 use std::path::PathBuf;
@@ -165,8 +153,7 @@ fn inspect(
     })
 }
 
-/// R767000: `inspect` of a game's JSON under the catalog its `catalogVersion` names, as `replay`
-/// folds it; a version this build neither is nor carries is refused before anything is folded.
+/// R767000: inspects game JSON under pinned catalog from `catalogVersion`.
 fn inspect_game(
     game: Value,
     at: Option<usize>,

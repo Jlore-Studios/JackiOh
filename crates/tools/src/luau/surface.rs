@@ -1,24 +1,8 @@
-//! `cargo jackioh luau surface [--json] [--card <id>]…` (#560, groundwork for #442's part 6, #448): the
-//! engine API every card script calls, card by card.
+//! `cargo jackioh luau surface` (#560, #442, #448): reports engine API calls in card scripts.
 //!
-//! For each card script (`crates/cards/src/scripts/<set>/<file>.rs`, above its `#[cfg(test)]`) it
-//! reports, per face: the `Script` hooks the face sets, and whether the Radiant face reuses the base
-//! face (`radiant: base.clone()`, `..base.clone()`); the effect verbs it calls (the `pub fn`s of
-//! `crates/engine/src/effects/` that return an `Effect`); the read helpers it calls (the other `pub fn`s
-//! the engine's prelude re-exports, `subsystems::…` paths, `remember` and the ctx readers); and the
-//! random pools it uses (`crates/cards/src/query.rs`). Names that appear in the file but in neither
-//! face are the card's `elsewhere`. The cards that stay in Rust (#442's L14) are marked. A summary then
-//! lists every distinct hook, verb, reader and pool with the cards that use it, the L14 cards counted
-//! apart.
-//!
-//! It reads source text, as part 6's grep would, and is not a Rust parser. Comments, string and
-//! character literals and everything from `#[cfg(test)]` on are blanked before any scan. What it follows
-//! is the shapes the scripts use: a `CardScripts { base, radiant }` literal in `script()`, faces that are
-//! `Script { … }` literals (spread `..Script::default()` or `..base.clone()`), `let` bindings and helper
-//! functions of the same file, and `base.field` borrowed into the Radiant face. A name it cannot classify
-//! is listed as unclassified, and a card it cannot read as unreadable with its reason (a card ported to
-//! Luau, #442, as one whose script is its `.luau`); neither fails the command, and nothing is dropped.
-//! Only the report is printed: no file is written, so it cannot go stale.
+//! Scans script files above `#[cfg(test)]` for hooks, effect verbs, read helpers, and pools.
+//! Flags L14 cards remaining in Rust (#442) and summarizes API surface.
+//! Treats scripts as text; classifies known syntax forms and marks unreadable entries.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;

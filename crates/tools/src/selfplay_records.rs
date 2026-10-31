@@ -1,32 +1,9 @@
-//! `cargo jackioh stats from-selfplay <log>… --out <file>`: the learn lane's self-play exports filed as
-//! development records for the card statistics (SPEC §9.11, R378; #1676, R1676000). Each game of a
-//! `selfplay` file (`selfplay.rs`, R1006001) becomes one `GameRecord` line, `source: "dev"`, `mode:
-//! "random"`, both pilots `ai`: what `cargo jackioh stats` files for a game of its own run, over the
-//! same kind of game (R258's All Random deals, the AI at the browser's budget playing both seats).
-//! `stats report`, `stats report --games` and `jackioh-server stats-import` read the file as they
-//! read a `stats --out` file.
+//! `cargo jackioh stats from-selfplay` (SPEC §9.11, R378; #1676, R1676000): converts selfplay logs (R1006001)
+//! to dev `GameRecord` lines on All Random deals (R258).
 //!
-//! A game is folded from its seed under the catalog it was played on (`catalog_for`, R767000) and its
-//! final hash and result checked, as `positions` folds it (R1006003): a game whose log no longer
-//! reaches them (an engine change since), one played on a catalog this build does not carry, one
-//! without a result and one its self-play run marked with faults (R1489000) files nothing, and is
-//! counted, never guessed at. The counts are printed at the end.
-//!
-//! The record's patch is the catalog version its game names (R1371000: as it is named now). Its build
-//! (R1367000) is the commit and the AI generation the log carries, so no git history is read and every
-//! checkout writes the same file; a log written by a binary without git (`unknown`) files no build.
-//!
-//! The id is `dev:<patch>:selfplay:<seed>`, the seed being the export's `<base>:<n>`. It never collides
-//! with a `stats` run's id (`dev:<patch>:<series>:<n>`, since `stats --series` refuses a series that
-//! begins `selfplay:`), nor with the gather lane's (`dev:<patch>:gather:<n>`: the bases `dev` and
-//! `gather` are legal for `selfplay`, and their ids stay apart through the `selfplay:` between), nor
-//! with the arena's (`dev:<patch>:arena:…`). It is not a forced run's id (R1284000), so `stats-import`
-//! takes it.
-//!
-//! The records are written in the order the files are named and the games read, so the output is
-//! byte-identical whatever the thread count, like `selfplay`'s own file.
-//!
-//! Tooling, so it may read and write files; `crates/ai` and the engine stay pure.
+//! Folds games under replay catalog (R767000) and checks hashes (R1006003), dropping faults (R1489000).
+//! Uses current version names (R1371000) and build metadata (R1367000).
+//! Generates non-colliding IDs accepted by `stats-import` (R1284000).
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -89,8 +66,7 @@ impl Counts {
     }
 }
 
-/// R1676000: `game` folded under its catalog (R767000) and, when it reaches its hash with its
-/// result, filed as the development record `dev_game_record` files.
+/// R1676000: folds `game` under its catalog (R767000) and files as development record.
 pub(crate) fn record_of(game: &SelfplayGame, build_catalog: &str) -> Result<GameRecord, Dropped> {
     let shipped = catalog_for(game.catalog_now(), build_catalog).map_err(|_| Dropped::EarlierPatch)?;
     if game.result.is_none() {

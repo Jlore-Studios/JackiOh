@@ -1,23 +1,9 @@
-//! ME-STATS (docs/meditative-set.md M5, SPEC §8.8 row 50): `cargo jackioh winrates` writes
-//! `crates/cards/data/win_rates.json`, the table M #50 CN Tech reads, from a `stats report --json`
-//! export or from JSONL game record files. The table is `{ patch, source, cards }` with R377's
-//! in-deck wins and games per card id, as `/api/stats/cards` ranks by; the build compiles it in and
-//! never reads it at run time (CLAUDE.md rule 4). Record files are counted as that endpoint counts
-//! them: every counted seat of a live game, human and bot alike (R807000's merged display), and both
-//! seats of a development game (R378).
+//! ME-STATS (SPEC §8.8, M #50): `cargo jackioh winrates` writes `crates/cards/data/win_rates.json`.
 //!
-//! Record files are read through the engine's `windowed_card_stats`, the function the server's
-//! `/api/stats/cards` calls (R1367000): each card over its own window at `--patch`, under R654's gate
-//! as amended. A report export is taken as the server counted it. The table is live when no counted
-//! record is a development game, provisional otherwise.
-//!
-//! R1368000: `cargo jackioh winrates --refresh <input>…` refreshes the table once per patch (once
-//! per X, #1360). Its input is record files or a `stats report --window <v> --json` export.
-//! - It is due when the newest patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` live games and the
-//!   table is filed under a version outside that window.
-//! - When due, it writes the table and a pending fragment that claims it, CN Tech and NA Tech
-//!   (`TABLE_READERS`) through `plays`, so `patches ship` ships it as a micro.
-//! - Otherwise it says why and writes nothing. It exits 0 either way, for a workflow to run.
+//! Compiles table statically (CLAUDE.md rule 4) with R377 wins/games per card; counts live
+//! seats (R807000) and development games (R378).
+//! Reads records via `windowed_card_stats` (R1367000) under R654's gate.
+//! R1368000: `--refresh` updates table once per patch (#1360) when live game threshold is met.
 
 use std::path::{Path, PathBuf};
 
@@ -66,11 +52,7 @@ pub enum Refresh {
     Current { table: String },
 }
 
-/// R1368000: whether the table `current` should be refreshed from `report`, the windowed report at
-/// the newest shipped version. Due the first time the window every card shares (the patch's, its
-/// X's) clears R654's gate while `current` was filed under a version outside that window; a table
-/// filed under one of the window's versions was refreshed in this patch already, so it is never due
-/// twice in one. `dev_on` says whether a version holds a development record, as `table_of` reads it.
+/// R1368000: whether `current` should be refreshed from `report` under R654's gate.
 pub fn refresh_due(
     report: &WindowedReport,
     current: &WinRateTable,
@@ -122,9 +104,7 @@ fn table_text(table: &WinRateTable) -> String {
     out
 }
 
-/// R1368000: `winrates --refresh` over `report` (and `dev_on`), against the table at `table_path`,
-/// writing the table and `pending_dir`'s fragment when due. A pending fragment that claims the
-/// table already is refused: two claims fail `patches check` (R1329000).
+/// R1368000: refreshes table when due; duplicate claims fail under R1329000.
 pub fn refresh(
     report: &WindowedReport,
     dev_on: impl Fn(&str) -> bool,
@@ -195,10 +175,7 @@ fn table_from_report(text: &str, patch: &str) -> Result<WinRateTable> {
     })
 }
 
-/// JSONL game record files as `/api/stats/cards` counts them, through the same function (R1367000,
-/// `windowed_card_stats`): each card over its own window at `patch`, every counted seat of a live
-/// game (R807000) and both seats of a development game. With the totals, whose development records
-/// say whether a window's provisional figures hold any.
+/// Windowed records via `windowed_card_stats` (R1367000, R807000).
 fn windowed_records(texts: &[String], patch: &str) -> Result<(WindowedReport, StatsTotals)> {
     let mut totals = StatsTotals::default();
     for text in texts {

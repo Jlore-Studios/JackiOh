@@ -1,15 +1,5 @@
-//! The lint (#442 L6, L7): what a script may not write, refused before it compiles. The sandbox
-//! takes some things away (L5), and the walk refuses a fraction when a hook hands one over (L6); the
-//! lint refuses, in the source, what would make a script's answer hang on something else: an order
-//! that is the hash's (`pairs`, `next`, `table.foreach`, a generic `for` over anything but
-//! `ipairs(…)`, and `ipairs` anywhere else, so no name bound over it can hand a `for` a table, L7),
-//! sorting (`table.sort`, L7), the operators and `math` functions that make fractions (L6), and the
-//! names the sandbox removed (L5). The sandbox removes the library functions among them too, so a key
-//! the lint cannot read finds nothing.
-//!
-//! A pure function over the source: a small lexer that knows Luau's comments, strings (interpolated
-//! ones included) and operators, then a pass over the tokens. A name after `.`, `:` or `::` is a
-//! field, a method or a type, never one of the names it refuses.
+//! The lint (#442 L6, L7): refuses patterns before compilation that violate purity,
+//! hash-order determinism (L7), fractions (L6), or removed globals (L5).
 
 use std::fmt;
 
@@ -112,10 +102,7 @@ fn follows_access(tokens: &[(Token<'_>, u32)], at: usize) -> bool {
 fn name_rule(name: &str, before: Option<Token<'_>>, rest: &[(Token<'_>, u32)]) -> Option<Rule> {
     let next = |k: usize| rest.get(k).map(|(token, _)| *token);
     match name {
-        // `pairs` names a `with_kill_credit` argument as a record key (`pairs = "kill_pairs"`):
-        // a key is not iteration — the sandbox removes the `pairs` global, so no key can hand a
-        // `for` the iterator — while `pairs(t)` and `for … in pairs` stay refused (#464 gap 9).
-        // `next` keeps no carve-out: no verb argument uses it.
+        // `pairs` is allowed as record key in `with_kill_credit`, but `pairs(t)` is refused (#464 gap 9).
         "pairs" if next(0) == Some(Token::Op("=")) => None,
         "pairs" => Some(Rule::Pairs),
         "next" => Some(Rule::Next),
@@ -139,12 +126,7 @@ fn name_rule(name: &str, before: Option<Token<'_>>, rest: &[(Token<'_>, u32)]) -
     }
 }
 
-/// Whether the `for` whose tokens follow is numeric (`for i = …`) or runs over `ipairs(…)` alone
-/// (`for i, x in ipairs(list) do`).
-///
-/// Only an `=` or an `in` outside brackets counts, so one inside a type annotation on a loop
-/// variable (`for k: typeof({ a = 1 }), v in t`) does not make the `for` numeric. A `for` with
-/// neither is refused (Luau refuses it too).
+/// Whether the `for` whose tokens follow is numeric (`for i = …`) or runs over `ipairs(…)` alone.
 fn for_is_numeric_or_ipairs(rest: &[(Token<'_>, u32)]) -> bool {
     let mut depth = 0i32;
     let Some(at) = rest.iter().position(|(token, _)| {

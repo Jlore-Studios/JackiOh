@@ -1,27 +1,8 @@
-//! `cargo jackioh luau diff` and `cargo jackioh luau bench` (#442's L13 and L15; groundwork for its
-//! part 7, #559), and `cargo jackioh luau surface` (groundwork for its part 6, #560), which is
-//! `surface.rs`'s.
+//! `cargo jackioh luau diff`, `bench` (#442, #559), and `surface` (#560).
 //!
-//! Both hold this build to a parent: `jackioh` built from the base commit, whatever the cards are
-//! written in. Nothing in either is specific to Luau.
-//!
-//! `diff --parent-bin <path> --cards <ids> [--games N] [--seed base]` plays N games (200 by default,
-//! seeds base..base+N-1, 1 by default, which `golden record` keeps within 1–240) with the cards forced
-//! into both decks, recorded by `golden record` on this build into a temporary file. The parent's
-//! `golden check --file` then replays the file as the oracle, and its report is printed as it is: each
-//! divergence's seed, step, which hash and the action. Exit 1 on any mismatch, with the traces kept
-//! where the error says. `--traces <path>` checks a `golden record` file instead of recording one, and
-//! never deletes it.
-//!
-//! `bench --parent-bin <path> [--record <path>]` is the performance gate (L13). It measures three
-//! numbers on the parent and then on this build, on the same machine in the same run: the wall time of
-//! `fuzz --seeds 200`; the slowest decision of `gate`'s perf gate, scaled as `gate` reports it; and the
-//! mean time of one golden step, `golden check` over this checkout's traces on one thread. It exits 1
-//! when this build's slowest decision is over `BENCH_BUDGETS.decision_ratio` times the parent's or not
-//! under `AI_GATE.max_decision_ms`, or when either other number is over its ratio times the parent's.
-//! `--record` writes the numbers, the machine and the date as JSON, whether the bench passed or not.
-//! Only `bench_failures`, a pure function of the two measurements and the budgets, is unit-tested; the
-//! timings are not.
+//! Compares this build to a parent binary built from base commit.
+//! `diff` plays games with forced cards and replays against parent oracle.
+//! `bench` compares wall time, slowest decision, and golden step time against budgets.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -124,9 +105,7 @@ pub fn run(args: Args) -> Result<()> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // diff
-// ---------------------------------------------------------------------------------------------
 
 /// A path in the temporary directory for this run's traces (`classify` records into one too).
 pub(crate) fn temp_traces() -> PathBuf {
@@ -181,9 +160,7 @@ fn run_diff(args: &DiffArgs) -> Result<()> {
     )
 }
 
-/// The parent build's `golden check --file` over `traces`: how many games diverged, and its report
-/// (each divergence's seed, step, which hash, the action and where the parent left its side's text).
-/// An error when the parent could not check the file at all. `classify` reads it too (R1365000).
+/// Parent build's `golden check --file` report over `traces` (R1365000).
 pub(crate) fn parent_check(parent_bin: &Path, traces: &Path) -> Result<(u64, String)> {
     let parent = parent_bin.display();
     let output = Process::new(parent_bin)
@@ -212,9 +189,7 @@ fn summary_counts(stdout: &str) -> Option<(u64, u64)> {
     Some((steps.parse().ok()?, diverged.parse().ok()?))
 }
 
-// ---------------------------------------------------------------------------------------------
 // bench
-// ---------------------------------------------------------------------------------------------
 
 /// What the bench measures on one build, all in milliseconds.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]

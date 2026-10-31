@@ -1,57 +1,14 @@
-//! `cargo jackioh spec check`, `spec index` and `spec fold`: the spec graph's structural checks
-//! (SURFACE §15, part 28), and the two files every ruling's branch once wrote. They replace
-//! `packages/engine/test/rulings.test.ts`'s index and `packages/engine/scripts/rulings-coverage.ts`.
+//! `cargo jackioh spec check`, `spec index` and `spec fold`: spec graph structural checks (SURFACE §15).
 //!
-//! `spec/` is the specification as notes: one per section (`spec/NN-<slug>.md`, its `## N.` and
-//! `### N.M` headings the section ids) and one per ruling (`spec/rulings/R<nnnn>.md`), whose front
-//! matter is
-//!
-//! ```text
-//! ---
-//! id: R195
-//! title: When a card glows yellow (`conditionActive`)
-//! cards: "§10.8, §10.9, #10, …"
-//! proven_in:
-//!   - crates/engine/tests/rules/condition_active.rs
-//! ---
-//! ```
-//!
-//! `check` holds eight rules:
-//!
-//! 1. every ruling note's `id` matches its file name (`R195` is `R0195.md`), and ids are unique;
-//! 2. every note lists at least one `proven_in` path, and each exists and holds a proof of the id, a
-//!    test that runs (#1718): a Rust `fn` whose name has the `_`-delimited token `r<n>`, marked
-//!    `#[test]` or `#[tokio::test]` and not `#[ignore]`d but for a `daily:` reason (super.yml runs
-//!    those), or listed in a call of a macro the same file defines to make tests (`both_stores!`), or
-//!    a `mod` so named whose body holds such a test; a TypeScript `it(`, `test(` or `describe(` whose
-//!    title has `R<n>` as a word, with no `.skip`, `.todo`, `.fixme` or `.only` on it or on a call
-//!    around it; or an SQL evidence script's `\echo '### R<n>: … ###'` heading (the heading form
-//!    `rulings.test.ts` credited; a mention in prose is not a proof);
-//! 3. every `r<n>` token of a Rust `fn` or `mod` name, and every `R<n>` cited in `crates/`,
-//!    `apps/web/src/` and `e2e/` (comments included, recursively), has a note;
-//! 4. every `[[…]]` link in `spec/` resolves: `[[R113]]` to a ruling note, `[[§10.3]]` to a section
-//!    heading, anything else to a note's file name. Links inside code are not links;
-//! 5. every ruling note's `title` and `cards` are present and not empty, and every ruling (`R113`),
-//!    section (`§10.3`) and card (`#10`, `C+ #12.1`, its set read as `cards_refs` says) its `cards`
-//!    names exists (#2047);
-//! 6. every file in `spec/pending/` is `<n>.md`, `n` the issue or pull request whose §11 paragraph
-//!    it holds, and holds text, so `fold` can place it. A branch writes its paragraph there and
-//!    never `spec/11-rulings.md`'s end or `spec/INDEX.md`, the two files every ruling's branch
-//!    conflicted on (`reviews/2026-10-22-issue-682-subscriptions.md`, finding 3). This rule used to
-//!    hold the index to the notes on every branch (#669); the daily fold keeps it now;
-//! 7. no file the third rule reads holds an unresolved-ruling marker (`UNRESOLVED_MARKERS`, in any
-//!    case, where a word starts): once a ruling exists, a comment still saying it is to be written
-//!    invites a second decision of the same point (#1243);
-//! 8. every ruling marker in the notes of §2 to §10 (`MARKED_SECTIONS`), a `(ruling)` or a
-//!    `Ruling:` in any case and its emphasis read through, links a ruling (`[[R<n>]]`) between it
-//!    and the end of its sentence (REVIEW A2.3, #2048): a marker no link follows names no note a
-//!    reader can open.
-//!
-//! It reads ids, file names, headings, test names and the references in `cards`, never the wording but rule 7's and rule 8's markers (#133): a reworded sentence
-//! fails nothing. `index` rewrites `spec/INDEX.md` from the ruling notes: id, title, note and the
-//! files that prove it, one line each. `fold` appends the pending paragraphs to
-//! `spec/11-rulings.md` in number order, deletes them and runs `index`; `spec-fold.yml` runs it on
-//! `main` daily and opens the result as a pull request that merges itself.
+//! Eight checks:
+//! 1. Ruling note id matches filename (`spec/rulings/R<nnnn>.md`).
+//! 2. Every ruling lists at least one existing test proof in `proven_in` (#1718).
+//! 3. Every `R<n>` cited in code and comments has a ruling note.
+//! 4. Every `[[...]]` link in `spec/` resolves to a note or section.
+//! 5. Ruling title and card refs exist (#2047).
+//! 6. Pending notes follow `spec/pending/<n>.md` format (#669).
+//! 7. No unresolved ruling markers in codebase (#1243).
+//! 8. Ruling markers link a ruling note before sentence end (#133, #2048, REVIEW A2.3).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;

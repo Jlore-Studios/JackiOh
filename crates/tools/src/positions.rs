@@ -1,30 +1,9 @@
-//! `cargo jackioh positions`: self-play logs folded into the learned evaluation's training rows (#466,
-//! #1006; `docs/learned-eval.md` D3, D4). Each game of a `selfplay` file is folded from its seed under
-//! the catalog it was played on (`replay::catalog_for`, R767000) and its final hash checked: a game
-//! whose log no longer reaches its hash (an engine change since) is dropped and counted, never
-//! guessed at, and so is one played on a catalog this build does not carry, one without a result
-//! (R1006003), or one its self-play run marked with faults (R1489000).
+//! `cargo jackioh positions`: self-play logs folded into training rows (#466, #1006).
 //!
-//! At each position it writes one JSON line (`PositionRow`): the game's seed, the seat, the turn, the
-//! step, `FEATURES_VERSION`, the seat's features (`features_of`, which reads only `redact`, R185), the
-//! hand eval's score for the seat and the game's outcome for that seat (1 a win, ½ a draw, 0 a loss).
-//! The hand eval is `evaluate` over the true state, with the reply's swing rule (`NextSwing::Seat`
-//! when the seat is the one to act, `Enemy` otherwise): the score the search gives the leaves the
-//! learned evaluation is to replace, which it computes on a determinized world, one the seat cannot
-//! tell from the true state. The true state is such a world, so the row's score is one the search
-//! could have given there (R1006004). The features never read it: they read only `redact`.
-//!
-//! `--every turn` (the default) writes one position per seat per turn: the seat's first decision of its
-//! own turn in the main phase, with no prompt open, about 16 a game. That is the state the search's
-//! finalists are scored at after the opponent's reply. `--every decision` writes every decision a seat
-//! makes in a main phase, about 70 a game. `--every reply` writes, at each end of a seat's turn, the
-//! position the search would score that line at: the opponent's reply as the search simulates it,
-//! played out from the true state (R1006006). The file's first line is a header naming the features
-//! (`PositionsHeader`), so a reader takes the feature length from the data.
-//!
-//! `--policy` (#1171) adds to each row of a decision the policy prior's label (`policy_label`): the keys
-//! of every move the AI considers there and which one was played, read from `redact` alone (R1171000),
-//! and the header names `POLICY_KEYS_VERSION`.
+//! Folds games under replay catalog (R767000); drops faulty runs (R1489000) or games without results (R1006003).
+//! Writes `PositionRow`s with redacted features (R185) and simulated leaf scores (R1006004).
+//! Supports `--every reply` simulating opponent replies (R1006006).
+//! `--policy` (#1171) labels candidate moves from redacted views (R1171000).
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -182,8 +161,7 @@ fn position_seat(state: &GameState, every: Every, turned: &mut Vec<(i32, PlayerI
     }
 }
 
-/// R1006004: the row for `seat` at `state`: the features over `redact(state, seat)` and the hand
-/// eval over the true state, a world the seat cannot tell from its determinizations.
+/// R1006004: features over redacted state and hand eval over true state.
 pub(crate) fn row_at(
     state: &GameState,
     seat: PlayerId,
@@ -212,14 +190,10 @@ pub(crate) fn row_at(
     }
 }
 
-/// The node budget the reply a `--every reply` row plays out may spend: more than any reply takes, so
-/// every reply is played to its end as the search plays it when its budget allows.
+/// The node budget the reply a `--every reply` row plays out may spend.
 const REPLY_NODES: usize = 2000;
 
-/// R1006006: the row for the seat whose turn just ended at `end`: the opponent's reply as the search
-/// simulates it (`simulate_reply`, the hidden cards those of the true state's opponent), then the seat's
-/// features and the hand eval there with the reply's swing rule, as `reply_score` scores a line. `None`
-/// when the reply ends the game or runs out of nodes.
+/// R1006006: row for seat whose turn ended, evaluating simulated opponent reply.
 fn reply_row(
     end: &GameState,
     seat: PlayerId,
@@ -239,8 +213,7 @@ fn reply_row(
     Ok(Some(row_at(&after, seat, step, game, outcome)))
 }
 
-/// R1006003: `game` folded under its catalog, its rows if it reaches its hash. With `policy`, a row
-/// whose seat plays the next action carries that decision's label (R1171000).
+/// R1006003: folds game under its catalog; carries policy label if requested (R1171000).
 pub(crate) fn fold_game(
     game: &SelfplayGame,
     every: Every,

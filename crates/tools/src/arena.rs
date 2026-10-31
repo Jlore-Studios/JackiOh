@@ -1,40 +1,8 @@
-//! `cargo jackioh arena`: the training arena (SURFACE §14.2; docs/v0.3.0/README.md §8). A referee
-//! holds the true state and plays seeded games between two agents, each seeing only `redact(state,
-//! seat)` (R185):
-//!
-//! - `self`: this build's AI (`agent::decide_with`, the same call `cargo jackioh agent` answers with);
-//! - `random`: SPEC §10.7's random policy (`jackioh_ai::random_action`), the quality gates' baseline;
-//! - `bin:<path>`: another build's AI, spawned as `<path> agent` and spoken to in JSON lines
-//!   (SURFACE §14.1), which is how a promotion plays the AI on `main`.
-//!
-//! Either agent may be skilled (R747000, `--a-skill`/`--b-skill`): at skill `s` an AI decision follows
-//! the agent with chance `s` and is the skill miss otherwise (R2214000, `jackioh_ai::skill_miss_action`),
-//! rolled and drawn on the seat's own stream, so the skill-to-Elo curve is measured with the arena's
-//! own games. `random` has no skill to set.
-//!
-//! Game `n`'s seed is `<base>:<n>`; agent `a` sits p1 on odd games. A paired series (`--paired`,
-//! R850000) plays each deal twice with the seats swapped: deal `d`'s seed is `<base>:<d>`, game `2d −
-//! 1` seats `a` on p1 and game `2d` seats it on p2. `--set` names a fixed seed set instead of a base,
-//! always paired: `improve-dev`, the improve lane's dev set, whose deal `d` is `improve-dev:<d>`
-//! (R850001). No base may name a training gate's own seeds (`<lane>` or `<lane>:…`, `promote`'s
-//! hold-out deals), which no screen plays. Each seat's deck is `build_ai_deck` over every set that
-//! ships minus its own agent's shadow ban (R186), with no handicap (Easy both, R180), and neither
-//! seat is shaped (R976000), so with one shadow ban on both sides a deal's two games deal the same two
-//! decks. A refused action is replaced by endTurn or the first legal answer; a controller that throws
-//! ends the game without a result. Each seat's fallbacks (a "no move", replaced by the random policy,
-//! or an AI decision off its fallback path) and the panics an AI's search caught are counted, a `bin:`
-//! agent's from its verbose answer (R1489000). So a game is a function of its seed and its two agents,
-//! whatever the thread count.
-//!
-//! Every finished game leaves one `GameRecord` (R376; `source: "dev"`, `mode: "random"`, R378) on a
-//! JSONL line: in `<--out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else on stdout.
-//! The duel lines go to stdout when the records went to a file and to stderr when they took stdout;
-//! a tally closes them: the wins, draws and games without a result, and agent `a`'s share of the
-//! games won with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`), so a series says how far its
-//! result can be trusted. A paired series adds its deals and agent `a`'s edge, the mean over deals of
-//! its wins less `b`'s, as a share of the deal's two games, with that mean's 95% interval (`deals`,
-//! `edge`, `edgeLow`, `edgeHigh`; R850000). Draws and games without a result count as games `a` did
-//! not win, as the gate counts them.
+//! `cargo jackioh arena`: training arena (SURFACE §14.1, §14.2; docs/v0.3.0/README.md §8).
+//! Referee plays seeded games between two redacted agents (R185: `self`, `random`, or `bin:<path>`).
+//! Supports skilled AI (R747000, R2214000) and paired series swapping seats on each deal (R850000, R850001).
+//! Decks built via `build_ai_deck` (R180, R186, R976000), tracking fallbacks and search panics (R1489000).
+//! Finished games output as JSONL `GameRecord`s (R376, R378) with statistical summaries and Wilson intervals.
 
 use std::cell::RefCell;
 use std::io::{BufRead, BufReader, Write};
@@ -706,12 +674,7 @@ fn told_of(answer: &Value) -> (bool, usize) {
     (fell_back, sim_panics)
 }
 
-/// One controller call (match.ts's `chooseFor`): the agent's action, `None` for "no move", or what it
-/// threw. `self` decides on `redact(state, seat)`; `random` plays on the referee's state. R747000: a
-/// skilled agent's decision that the seat's roll does not give to the AI is the skill miss's
-/// (R2214000), handed the referee's state as `random` is (it reads only its legal list there, and
-/// scores what the seat sees), drawn on the same stream; a `bin:` agent is asked only when the roll
-/// keeps it, so the protocol is the same.
+/// One controller call choosing an action; handles skill misses via random policy (R747000, R2214000).
 fn choose_for(
     live: &mut Live,
     skill: f64,

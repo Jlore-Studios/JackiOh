@@ -1,9 +1,6 @@
-//! The sandbox (#442 L5): the Luau a card script runs in. Five libraries (string, table, math, bit32
-//! and utf8), with the base library's ways out of a pure function taken away, a `require` that answers
-//! only the host's own module, Luau's own sandbox (`Lua::sandbox(true)`: every library and the
-//! globals read-only), an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts and a
-//! cap of `LUAU_MEMORY_BYTES` on what the VM holds (#843). What the lint refuses by name (L6, L7) is
-//! taken away here too, so a key the lint cannot read (`_G["pairs"]`, `math["sqrt"]`) finds nothing.
+//! The sandbox (#442 L5): Luau runtime environment for card scripts. Standard libraries
+//! restricted with globals removed (L6, L7), module access limited to `@jackioh`,
+//! interrupt budget `LUAU_HOOK_INTERRUPTS`, and memory cap `LUAU_MEMORY_BYTES` (#843).
 
 use mlua::{Error, Lua, LuaOptions, StdLib, Table, Value, VmState};
 
@@ -12,11 +9,7 @@ use crate::api;
 use crate::config::{CUSTOM_HOOK_INTERRUPTS, LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_MEMORY_BYTES};
 use crate::lint::MATH_ALLOWED;
 
-/// The base library's globals a script never sees: output, environments, loading code at run time,
-/// the collector and `newproxy`'s metatables (L5), and `xpcall`. A failure raised inside an `xpcall`
-/// message handler becomes Luau's "error in error handling", which drops whatever it was, a nested
-/// hook's panic included, so with `xpcall` a hook could catch that failure and go on. `pcall` stays:
-/// mlua's `pcall` has no handler and raises a panic again.
+/// Base library globals removed (L5): output, environments, dynamic loading, gc, metatables, xpcall.
 pub const REMOVED_GLOBALS: [&str; 9] = [
     "print",
     "getfenv",
@@ -29,36 +22,19 @@ pub const REMOVED_GLOBALS: [&str; 9] = [
     "xpcall",
 ];
 
-/// The libraries a script never sees. None of them is opened; each is cleared too, so a later mlua
-/// that opened one by default could not hand it over. `buffer`, `vector` and `integer` are named as
-/// well, since Luau's compiler calls a library's builtins (`vector.magnitude`, a square root) without
-/// reading the global, so the lint refuses their names and `compile` turns their builtins off
-/// (`DISABLED_BUILTINS`).
+/// Libraries completely absent from the sandbox.
 pub const ABSENT_LIBRARIES: [&str; 7] = ["os", "io", "debug", "coroutine", "buffer", "vector", "integer"];
 
-/// The base library's iterators in the hash's order (L7), which the lint refuses as `pairs` and
-/// `next`.
+/// Base library iterators removed (L7).
 pub const REMOVED_ITERATORS: [&str; 2] = ["pairs", "next"];
 
-/// `table`'s functions a script never sees (L7): `sort`, which is not stable, and `foreach`, which
-/// runs in the hash's order. The lint refuses both.
+/// `table` functions removed (L7): unstable or hash-ordered.
 pub const REMOVED_TABLE: [&str; 2] = ["sort", "foreach"];
 
-/// `math`'s functions L5 names: every random draw goes through the engine's `Rng` (CLAUDE.md
-/// rule 4), and `noise` is a float. `math` keeps only `lint::MATH_ALLOWED`, so these go with every
-/// other member the lint refuses (L6).
+/// `math` functions removed (L5, L6): random draws must use engine `Rng` (CLAUDE.md rule 4).
 pub const REMOVED_MATH: [&str; 3] = ["random", "randomseed", "noise"];
 
-/// The builtins Luau's compiler knows (its `Builtins.cpp`, Luau 0.740) of the libraries the sandbox
-/// takes away, in part or whole. Luau calls a builtin written `library.member(…)` straight from the
-/// bytecode (a fastcall), and folds one with constant arguments while compiling, without reading the
-/// global, so a member the sandbox removed would still run. `compile` turns each of these off (every
-/// `vector` and `buffer` builtin, and every `math` one outside `lint::MATH_ALLOWED`), so such a call
-/// reads the global and finds nothing. The lint refuses all of them by name first. `integer` has no
-/// builtin to turn off: Luau 0.740 builds its fastcalls only under the `LuauIntegerFastcalls` flag,
-/// which is off by default and which nothing here sets (a Luau that turns it on adds them here).
-/// Luau turns off a builtin, not a spelling, so `buffer.writeu8` turns off `buffer.writei8` too,
-/// and so on for each width.
+/// Builtins disabled in Luau's compiler to prevent fastcalls bypassing removed globals.
 pub const DISABLED_BUILTINS: [&str; 54] = [
     "vector.create",
     "vector.magnitude",
@@ -119,18 +95,13 @@ pub const DISABLED_BUILTINS: [&str; 54] = [
 /// The one name `require` answers.
 pub const MODULE: &str = "@jackioh";
 
-/// A sandboxed Luau and the read-only table every chunk runs in. `Lua::sandbox(true)` gives the main
-/// thread a fresh table over the globals that takes writes; `env` is the globals themselves, so a
-/// chunk loaded with it as its environment fails on any global write. `lua` is last, so it drops last.
+/// Sandboxed Luau and read-only global table.
 pub struct Sandbox {
     pub env: Table,
     pub lua: Lua,
 }
 
-/// What the hook calls in flight may still spend (L5). The outermost call starts the budget at
-/// `LUAU_HOOK_INTERRUPTS`, and every hook it runs from a reader draws on the same one, so the cap
-/// bounds all the work one engine hook call does. `calls` are the calls in flight, outermost first;
-/// the last is the one an interrupt names when it stops them.
+/// Interrupt budget for in-flight hook calls (L5).
 pub struct Budget {
     pub calls: Vec<Site>,
     pub left: u32,
@@ -145,8 +116,7 @@ impl Budget {
         }
     }
 
-    /// A call begins: the outermost one starts a full budget, a nested one goes on drawing it down.
-    /// A custom card's outermost call starts `CUSTOM_HOOK_INTERRUPTS` (R915004).
+    /// A call begins: outermost call starts full budget (R915004 for custom cards).
     pub fn enter(&mut self, site: Site) {
         if self.calls.is_empty() {
             self.left = budget_of(site);
@@ -159,16 +129,13 @@ impl Budget {
         self.calls.pop();
     }
 
-    /// Whether the calls in flight have nothing left: a call that caught its stop (`pcall`) and
-    /// returned is failed all the same.
+    /// Whether the calls in flight have nothing left.
     pub fn spent(&self) -> bool {
         self.left == 0
     }
 }
 
-/// The VM's memory cap set to a limit until this drops, then put back as it was (#843). Every hook
-/// call runs under `LUAU_MEMORY_BYTES` (`vm::BudgetGuard`), a nested one included; a reader lifts it
-/// while it builds its answer (`uncapped`).
+/// Scoped VM memory cap guard (#843).
 pub(crate) struct MemoryCap<'l> {
     lua: &'l Lua,
     previous: usize,
@@ -193,19 +160,11 @@ impl<'l> MemoryCap<'l> {
 
 impl Drop for MemoryCap<'_> {
     fn drop(&mut self) {
-        // Only a Luau in module mode has no memory control, and this host never is one.
         let _ = self.lua.set_memory_limit(self.previous);
     }
 }
 
-/// A reader's answer (`ctx`'s readers, `J.query`, `J.pool`), built by `build` with the memory cap
-/// lifted and the cap put back once it is built. Under a cap mlua runs each value the host builds
-/// through a protected call, which cost a hook call about half its time. While it builds, the VM can
-/// pass the cap by what the reader allocates, which the state it reads or the table the script hands
-/// it bounds (`ctx:rng_shuffle`'s list, which the cap held), not anything the script does meanwhile.
-/// The answer is counted all the same: a reader that leaves the VM past the cap fails as an allocation
-/// past it would, with a memory error the hook's call names (`vm::BudgetGuard`, #871), so a hook
-/// never goes on holding more than the cap, however many answers it keeps.
+/// Executes `build` with memory cap lifted, restoring and checking limits afterward (#871).
 pub(crate) fn uncapped<T>(lua: &Lua, build: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
     let cap = MemoryCap::lift(lua);
     let answer = build()?;
@@ -219,8 +178,7 @@ pub(crate) fn uncapped<T>(lua: &Lua, build: impl FnOnce() -> mlua::Result<T>) ->
     Ok(answer)
 }
 
-/// The interrupts a hook call that begins at `site` may take: a custom card's budget (R915004), or
-/// L5's.
+/// Interrupt budget for a hook starting at `site` (R915004, L5).
 pub fn budget_of(site: Site) -> u32 {
     if crate::custom::is_custom_site(site) {
         CUSTOM_HOOK_INTERRUPTS
@@ -234,8 +192,7 @@ pub fn stopped(site: Site) -> String {
     format!("{site}: stopped after {} interrupts (L5)", budget_of(site))
 }
 
-/// The error a hook call nested deeper than `LUAU_HOOK_DEPTH` fails with, naming its card, face and
-/// hook.
+/// The error a hook call nested deeper than `LUAU_HOOK_DEPTH` fails with, naming its card, face and hook.
 pub fn too_deep(site: Site) -> String {
     format!("{site}: hook calls nested deeper than {LUAU_HOOK_DEPTH} (L5)")
 }
@@ -245,17 +202,14 @@ pub fn out_of_memory(site: Site) -> String {
     format!("{site}: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)")
 }
 
-/// Whether `error` is an allocation past `LUAU_MEMORY_BYTES`, raised in the hook's own code or, under
-/// a `CallbackError`, in a reader it called.
+/// Whether `error` is an allocation past `LUAU_MEMORY_BYTES`.
 pub fn ran_out_of_memory(error: &Error) -> bool {
     error
         .chain()
         .any(|layer| matches!(layer.downcast_ref::<Error>(), Some(Error::MemoryError(_))))
 }
 
-/// A Luau with the sandbox above, the host's module behind `require`, the interrupt and the memory
-/// cap. Rust panics are not Lua errors here (`catch_rust_panics(false)`): `pcall` and `xpcall` raise
-/// a panic again, so a hook cannot catch a nested hook's failure and go on.
+/// Creates a new sandboxed Luau state with modules, interrupt handler, and memory limits.
 pub fn new_sandbox() -> mlua::Result<Sandbox> {
     let lua = Lua::new_with(
         StdLib::STRING | StdLib::TABLE | StdLib::MATH | StdLib::BIT | StdLib::UTF8,
@@ -301,8 +255,7 @@ pub fn new_sandbox() -> mlua::Result<Sandbox> {
     Ok(Sandbox { env, lua })
 }
 
-/// L5's cap: the calls in flight spend one interrupt, and the innermost is stopped, naming its card,
-/// face and hook, once they have none left. Outside a hook call nothing is counted.
+/// L5 interrupt callback decrementing budget and aborting upon exhaustion.
 fn interrupt(lua: &Lua) -> mlua::Result<VmState> {
     let Some(mut budget) = lua.app_data_mut::<Budget>() else {
         return Ok(VmState::Continue);

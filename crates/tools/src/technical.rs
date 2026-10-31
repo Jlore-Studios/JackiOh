@@ -1,40 +1,9 @@
-//! `cargo jackioh patches log <base>..<head> [--bodies <path>]` (#1369, R1369000): the technical log.
-//! A change that ships no card data never bumps the catalog version (R105); it is logged instead on the
-//! patch that was live when it reached players, the newest shipped X.
+//! `cargo jackioh patches log` (#1369, R1369000): logs technical commits to `technical.json`.
 //!
-//! Each first-parent commit of the range is classified by stage 1 of `classify` (R1365000) against its
-//! first parent. A Cards commit adds nothing, its patch records it already. An App, AI or Internal commit
-//! appends one entry to `crates/cards/patches/technical.json`, and a commit already there, under any
-//! version, adds nothing, so running a range twice is running it once. The production promotion runs it
-//! over the commits it promotes (#1370).
-//!
-//! `technical.json` is a list in the order entries were logged, each one object:
-//!
-//! ```text
-//! { "version": "v0.3.15", "commit": "<sha>", "pr": 1394, "title": "<what it does>",
-//!   "kind": "app" | "ai" | "internal", "player": "<one line>" }
-//! ```
-//!
-//! - `version`: the newest shipped X when it was logged, a version of `patches.json` (opaque, R105).
-//! - `commit`: the full sha, the entry's key.
-//! - `pr`: the number its subject ends with (`… (#1394)`), absent for a commit with none.
-//! - `title`: the subject without that number and without its convention prefix (`Architecture: `,
-//!   `Patch v0.3.Y: `, …).
-//! - `kind`: `classify`'s, lowercase.
-//! - `player`: optional, the line under a "Player note" heading (or after `Player note:`) in the pull
-//!   request's body, `--bodies`' `{ "<pr>": "<body>" }` (`gh` fills it in CI), else the commit message.
-//!   A line that breaks the note rules (R724001) is left out and named on stderr. The Patch notes page
-//!   shows the App and AI entries that have one, under their X; Internal entries are the record's only.
-//!
-//! `patches check` holds the whole file to this shape on every run (`check_technical`): each commit
-//! once, each version one of `patches.json`'s, no `cards` entry, no pull request 0, and each player
-//! line by the note rules (R724001). A file that does not parse, an unknown `kind` included, fails it.
-//!
-//! The newest shipped X is the last entry of `patches.json` whose tier is a patch or a major. An entry
-//! records its `tier` from #1366 on; one that does not is a major when it adds a card of a set no
-//! earlier entry held, a patch when `PATCH_MIN_CARDS` or more families play differently by its
-//! `changes` (added, removed, or a changed field outside `WORDING_FIELDS`), and a micro otherwise.
-//! Nothing parses a version (R105).
+//! Changes with no card data do not bump catalog version (R105); logged under current shipped X.
+//! Classifies first-parent commits (R1365000) for promotion (#1370).
+//! Entries track sha, pr (`#1394`), title, kind, and player notes adhering to note rules (R724001).
+//! Determines shipped tier (#1366) without parsing version strings (R105).
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs;
@@ -213,10 +182,7 @@ fn read_technical(path: &Path) -> Result<Vec<Entry>> {
     }
 }
 
-/// R1369000: every way the technical log breaks the shape `patches log` writes, each naming the
-/// entry's commit, or [] when it keeps it: a commit logged twice, a version `versions` (patches.json's)
-/// does not hold, a `cards` entry, a pull request numbered 0, or a player line that breaks the note
-/// rules (R724001). Pure: `patches check` reads the files and prints what this returns.
+/// R1369000: validates technical log entries and player note rules (R724001).
 pub(crate) fn check_technical(entries: &[Entry], versions: &[String]) -> Vec<String> {
     let mut problems = Vec::new();
     let mut seen = HashSet::new();

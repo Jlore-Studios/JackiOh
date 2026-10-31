@@ -1,21 +1,7 @@
-//! `cargo jackioh classify --claims` (#1370, R1370000): a pull request's pending fragments claim
-//! what it does to the cards, no more and no less. The classifier (R1365000) names the families that
-//! play differently between the base and the head; the fragments at the head claim families through
-//! their catalog `cards` and their `plays`, and a rule every game meets through `rule` (R1366000).
+//! `cargo jackioh classify --claims` (#1370, R1370000): checks pending fragment claims match gameplay changes.
 //!
-//! It fails, naming the family or the fragment:
-//! - when a family plays differently and no fragment at the head claims it, through either list;
-//! - when a fragment claims, through `plays`, a family the base build shows playing as before (only
-//!   once stage 2 ran, and only for the claims this change adds: a fragment an earlier pull request
-//!   left pending keeps the claims its own check confirmed);
-//! - when a rule every game meets (divergences no card explains in `classify`'s `RULE_MIN_GAMES` of
-//!   the unforced games, R2455000) has no fragment claiming it, or a fragment newly claims a rule and
-//!   stage 2 found none.
-//!
-//! The catalog claims are `patches check`'s (R646): this check adds only what the catalog diff
-//! cannot see, a card whose script or whose engine rule changed. CI runs it on every pull request as
-//! a piece of the `rust` check, with stage 2 against main's build of the base whenever stage 1 left
-//! something unchecked (`.github/workflows/ci.yml`, `rust (classify)`).
+//! Classifier (R1365000) identifies affected card families and rules (R1366000, R2455000).
+//! Verifies fragments claim all affected cards and rules without spurious claims (R646).
 
 use std::collections::BTreeSet;
 use std::path::Path;

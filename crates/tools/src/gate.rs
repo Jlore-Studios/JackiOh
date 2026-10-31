@@ -1,35 +1,8 @@
-//! `cargo jackioh gate [--full] [--shard k/K] [--out dir]` and `cargo jackioh gate merge [dir]`: the
-//! AI's quality gates (docs/polish/3-ai.md B28–B31, B42, SPEC §9.9). Surface contract:
-//! docs/v0.3.0/SURFACE.md §12. `jackioh_ai::gate` plays and measures the games; this file turns a run
-//! into a pass or a fail.
-//!
-//! Three matchups of seeded games, the subject alternating seats, every game folded back from its
-//! log to prove it replays (B31):
-//!
-//! - `ai-vs-random` (B28): the AI on Easy at AI_GATE_BUDGET against §10.7's random policy.
-//! - `ai-vs-greedy` (B29): the AI on Easy against the one-ply greedy baseline at equal resources.
-//! - `hard-vs-easy` (R180, B30): the same AI with Hard's handicap against itself on Easy.
-//!
-//! The subject must win at least `gateNeeded(matchup, n)` of n games (`check_gate_rule`). Only wins
-//! count: a draw at the turn cap is reported (`turnCapDraws`) and counts for nothing. Without `--full`
-//! it plays AI_GATE.smokeSeeds per matchup; `--full` (or `JACKIOH_AI_GATE=full`) plays
-//! AI_GATE.fullSeeds[matchup]. A failure names the seeds not won. Every game must be clean (B31):
-//! nothing rejected, thrown or fallen back, a real result, a log that folds to the live hash, and no
-//! panic caught in an AI's search (`MatchRecord.sim_panics`, #1429), which the summary counts and a
-//! failure names by seed, seat and first message: in the browser that panic is a trap.
-//! The perf gate (B42) then checks that a decision at the browser's budget stays under
-//! AI_GATE.maxDecisionMs, and one on each pinned position under AI_GATE.pinnedDecisionMs
-//! (`perf_gate`, #1240).
-//!
-//! CI plays the full gates in shards (.github/workflows/ci.yml). `--shard k/K` (or
-//! `JACKIOH_AI_GATE_SHARD`) plays a share of the games (`gateShardGames`). A win-rate threshold
-//! belongs to the whole run, so a shard writes its games to `--out` (or `JACKIOH_AI_GATE_OUT`,
-//! default `ai-gate-shards/`) and `gate merge` holds all shards' wins against `gateNeeded`.
-//! Games of one matchup run in parallel (rayon); a game is a pure function of matchup and number, so
-//! the verdict matches a sequential run. Output goes to stdout; a failed gate returns `Err` naming
-//! every problem (exit 1).
-//!
-//! `gate --duos [--games N]` plays the Duos gate instead (#936 B32, #1760): `duos_gate.rs`.
+//! `cargo jackioh gate`: AI quality gates (docs/polish/3-ai.md B28–B31, B42, SPEC §9.9, SURFACE §12).
+//! Evaluates three matchups: `ai-vs-random` (§10.7, B28), `ai-vs-greedy` (B29), and `hard-vs-easy` (R180, B30).
+//! Every game must be clean and replayable (B31), checking against simulation panics (#1429).
+//! Includes perf gate for decision timeouts (B42, #1240) and shard merging for CI.
+//! Subcommand `--duos` plays the Duos co-op gate (#936, B32, #1760; `duos_gate.rs`).
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -234,12 +207,7 @@ fn is_turn_cap_draw(result: &Option<jackioh_engine::GameResult>) -> bool {
     matches!(result, Some(r) if r.winner == Winner::Draw && r.reason == GameOverReason::TurnCap)
 }
 
-// Shards
-//
-// CI plays the full gates in shards (.github/workflows/ci.yml). A shard plays only its share of the
-// games, but a win-rate threshold belongs to the whole run, so it writes its games out and `gate
-// merge` judges them together. A shard keeps the whole run's allowance, not a share: one game can
-// take minutes, and the CI job's own timeout bounds a shard.
+// Shards: shards write game outputs judged together by `gate merge`.
 
 /// One shard of a gate run: shard `index` of `count`, both 1-based.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -343,12 +311,7 @@ fn write_shard(
     Ok(path)
 }
 
-// gate merge
-//
-// The full gates' verdict when CI has played them in shards. Reads every shard's files in `dir`
-// (default `ai-gate-shards/`) and holds each matchup to what one unsharded `gate --full` would:
-// every game 1..fullSeeds played exactly once, at least `gateNeeded` won. The shards already checked
-// B31 and timed every perf decision (B42). A failure names the first problem.
+// gate merge: verifies shard outputs against B31 and perf decisions (B42).
 
 /// Every `.json` file under `dir`, recursively, in a stable (sorted) order.
 fn json_files(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -907,28 +870,7 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
     problems
 }
 
-// The perf gate
-//
-// Quality gate (docs/polish/3-ai.md "Budgets", SPEC §9.9): a decision at the browser's budget stays
-// under AI_GATE.maxDecisionMs as the development machine would time it. Budgets count nodes, so the
-// node budget is asserted exactly; only speed depends on the machine.
-//
-// The clock is read against a yardstick, since a wall-clock limit failed whenever the machine was
-// busy. Each run of a decision is timed right after a fixed piece of engine work
-// (`AI_GATE.calibrationGames` random-policy games); its cost is its time over the yardstick's, times
-// the yardstick's time on the development machine (`calibrationRefMs`). Each state is decided up to
-// AI_GATE.perfRepeats times and its smallest ratio counts; runs stop at the first under
-// AI_GATE.maxDecisionMs, since later ones cannot change the verdict.
-//
-// The states are every decision the Easy AI faced in real ai-vs-greedy gate games
-// (AI_GATE.perfSmokeGames of them, AI_GATE.perfFullGames with `--full`). Two hand-built wide boards
-// are timed too, the worst case: five units a side and a hand of X-cost and targeted spells beside
-// a Lava Golem, at Hard's seven crystals and Easy's four. So are the two pinned positions (#1240),
-// decisions the improve screen of 2026-10-16 found slow, each under the tighter
-// AI_GATE.pinnedDecisionMs.
-//
-// The shadow-ban sweep times a decision its own clock found slow again with this yardstick and this
-// timer, at its own budget and limit (R977000, `sweep.rs`'s `still_slow`).
+// The perf gate (SPEC §9.9, #1240, R977000): timings normalized against calibration games.
 
 /// One decision's timing.
 #[derive(Serialize, Clone, Debug)]
@@ -1112,11 +1054,7 @@ pub(crate) fn time_decision(
     })
 }
 
-/// B42: every decision of the perf games this process times (all, or its shard's) stays within the
-/// node budget and under AI_GATE.maxDecisionMs, and so does a decision on each wide board (timed in
-/// every shard); one on each pinned position (#1240, in every shard too) stays within the node budget
-/// and under AI_GATE.pinnedDecisionMs. `judge_time` false skips the clock (the unit tests'
-/// unoptimized build). Answers the problems found.
+/// B42: checks node budgets and decision times for perf games, wide boards, and pinned positions (#1240).
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
     let games = if full {
         AI_GATE.perf_full_games

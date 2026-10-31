@@ -1,26 +1,9 @@
-//! `cargo jackioh replay` (SPEC §9.2, §9.3; SURFACE §12): folds a recorded game from scratch and prints
-//! its state hash. Replaces the TS fold that `e2e/support/tasks/replay-runner.ts` ran under tsx.
+//! `cargo jackioh replay` (SPEC §9.2, §9.3; SURFACE §12): folds recorded games on stdin and prints state hashes.
 //!
-//! Reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?, catalogVersion?}` as JSON on
-//! stdin and prints one JSON line, `{"hash": hashState(folded state), "errors": [{nonce, error}, …]}`. The
-//! setup fields are the fold's input exactly as the live `createGame` had them (R180 handicaps, R433
-//! dealt seats, R417 last boards, R678 Glitch boards); any other key (a browser's `state`, say) is
-//! ignored. A `catalogVersion` folds the game under that shipped catalog (R767000, `catalog_for` inside
-//! `with_shipped`, as `replay_open` does); one this build neither is nor carries exits 1 naming
-//! `earlier_patch` and prints no hash, and without it the game folds under this build's catalog. An
-//! input without the `versions` marker names its catalog as it was before the version retcon, and it
-//! is read through `patches/aliases.json` (R1371000). A co-op game, `{options, log}` (`DuosReplayInput`, pinned by `options.catalogVersion`), is folded by
-//! `duos_fold` and answers `{"hash": duos_hash, "refusedAt": index or null}`; its fold stops at the
-//! first refused action.
-//! The card scripts are registered first: folding without them would diverge from the browser
-//! instead of matching it, since every Cry in the log would fizzle differently (SPEC §10.9). A game
-//! with custom cards (`customCards`, R915006) folds with the card kit's host lent to the engine, as
-//! the browser's Luau module folds it (R915009), so a practice game with a custom card replays here
-//! to the browser's hash.
-//!
-//! A log may hold rejects, so a refused action is listed in `errors`, not fatal. The setup is not:
-//! a deck its seat's handicap does not allow fails loudly instead of replaying a different game
-//! (R180), and input that is not such an object exits 1.
+//! Reads setup fields matching `createGame` (R180 handicaps, R433 dealt seats, R417 last boards, R678 Glitch boards).
+//! `catalogVersion` pins shipped catalogs (R767000); unversioned inputs resolve aliases (R1371000).
+//! Registers scripts before folding (SPEC §10.9); custom cards use kit host (R915006, R915009).
+//! Refused actions collect into errors; invalid handicap decks fail immediately (R180).
 
 use std::io::Read as _;
 use std::rc::Rc;
@@ -37,11 +20,7 @@ use jackioh_luau::custom::KitHost;
 #[derive(clap::Args, Debug)]
 pub struct Args {}
 
-/// R767000: the shipped catalog `game` folds under, read off its `catalogVersion`: `None` (this
-/// build's) when it names none or this build's own version, the carried one when this build carries
-/// it, and an `earlier_patch` error, before anything is folded, for any other version. An input
-/// without the `versions` marker (`marked` false) names it as it was before the version retcon, and
-/// it is read through `patches/aliases.json` (R1371000).
+/// R767000: shipped catalog for `game`; resolves aliases if unversioned (R1371000).
 pub(crate) fn pinned_catalog(game: &Value, marked: bool) -> Result<Option<&'static ShippedCatalog>> {
     let version = match game.get("catalogVersion") {
         None | Some(Value::Null) => return Ok(None),
@@ -212,8 +191,7 @@ mod tests {
         })
     }
 
-    /// practice/decks.ts' Human Vanguard as it was before #1705: twenty distinct Core cards, which a
-    /// recorded game still folds (R1705003).
+    /// Core cards used for replay tests (#1705, R1705003).
     const VANGUARD: [&str; 20] = [
         "core-004", "core-005", "core-008", "core-011", "core-015", "core-081", "core-001", "core-016",
         "core-020", "core-045", "core-061", "core-069", "core-077", "core-030", "core-013", "core-019",

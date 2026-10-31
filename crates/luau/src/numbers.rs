@@ -1,12 +1,5 @@
-//! Integers at the boundary (#442 L6). Every value that leaves Luau passes `walk` before it becomes a
-//! Rust value: a hook's return and every argument a host function reads. The rules count in `i32`,
-//! while a Luau number is an `f64`, so a number crosses only when it is integral, finite and inside
-//! `i32`; anything else is refused, naming the value. Tables cross as JSON: a list (keys exactly
-//! `1..=n`) as an array in index order, a record (string keys only) as an object with its keys
-//! sorted, so nothing that crosses depends on Luau's hash order.
-//!
-//! `J.div` and `J.rem` (`div`, `rem`) are the only division a script has: they truncate toward zero
-//! as Rust's `/` and `%` do, where Luau's own `//` and `%` floor.
+//! Integers at boundary (#442 L6). Every value leaving Luau passes `walk` to become Rust value.
+//! `J.div` and `J.rem` truncate toward zero as Rust does.
 
 use std::fmt;
 
@@ -17,8 +10,7 @@ use serde_json::{Map, Value as Json};
 use crate::config::{LUAU_VALUE_DEPTH, LUAU_VALUE_NODES};
 use crate::{LuauError, Site};
 
-/// Why a value could not cross: a number that is not an `i32`, or a value of another kind no Rust
-/// value stands for.
+/// Why a value could not cross: non-integer or unrepresented value.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Refusal {
     Number(String),
@@ -34,9 +26,7 @@ impl fmt::Display for Refusal {
     }
 }
 
-/// A Luau number as an `i32`, or the number's text when it is not one: a fraction (`"1.5"`), `NaN`,
-/// an infinity (`"inf"`) or a value outside `i32` (`"2147483648"`). mlua hands an integral number
-/// over as `Value::Integer`, anything else as `Value::Number`.
+/// Luau number as `i32` or failure text.
 pub fn number_to_i32(value: &Value) -> Result<i32, String> {
     match value {
         Value::Integer(n) => i32::try_from(*n).map_err(|_| n.to_string()),
@@ -52,8 +42,7 @@ pub fn number_to_i32(value: &Value) -> Result<i32, String> {
     }
 }
 
-/// The walk: a value from Luau as JSON, or why it cannot cross. `nodes` counts the values and keys
-/// walked so far, against `LUAU_VALUE_NODES`.
+/// Walks Luau value to JSON, enforcing `LUAU_VALUE_DEPTH` and `LUAU_VALUE_NODES`.
 fn walk(value: &Value, depth: usize, nodes: &mut usize) -> Result<Json, Refusal> {
     if depth > LUAU_VALUE_DEPTH {
         return Err(Refusal::Value(format!(
@@ -79,7 +68,7 @@ fn walk(value: &Value, depth: usize, nodes: &mut usize) -> Result<Json, Refusal>
     }
 }
 
-/// One more value or key walked, or the refusal of a value that holds too many.
+/// One more value or key walked, or refusal if exceeding limit.
 fn count(nodes: &mut usize) -> Result<(), Refusal> {
     *nodes += 1;
     if *nodes > LUAU_VALUE_NODES {
@@ -90,11 +79,7 @@ fn count(nodes: &mut usize) -> Result<(), Refusal> {
     Ok(())
 }
 
-/// A table as a list, a record or, empty, one of the two empty shapes. An empty table that
-/// carries a metatable is one mlua serialized from a Rust sequence (`lua.to_value` attaches its
-/// array metatable to every sequence, empty included), so it walks as an empty list. An empty
-/// table with no metatable — a script's `{}` — walks as an empty record, and the typed boundary
-/// (`arg`, `typed`) coerces it to whichever empty shape the target type wants (#464 gap 1).
+/// Walks table as list or record. Empty tables without metatables walk as records (#464 gap 1).
 fn walk_table(table: &Table, depth: usize, nodes: &mut usize) -> Result<Json, Refusal> {
     let refused = |error: Error| Refusal::Value(error.to_string());
     let mut keys = Vec::new();
@@ -160,21 +145,17 @@ pub fn to_i32(value: &Value, site: Site) -> Result<i32, LuauError> {
     number_to_i32(value).map_err(|value| LuauError::Number { site, value })
 }
 
-/// A host function's argument, walked and then read as `T`. Every reader and `J` function reads its
-/// arguments through this, so they cross by the same rules as a hook's return.
+/// Host function argument walked and deserialized as `T`.
 pub fn arg<T: DeserializeOwned>(value: Value) -> mlua::Result<T> {
     let json = walk(&value, 0, &mut 0).map_err(Error::runtime)?;
     match serde_json::from_value(json.clone()) {
         Ok(val) => Ok(val),
-        // An empty table with no metatable walks as an empty record, so a script's `{}` where a
-        // list stands — or a Rust empty `Vec` that lost its metatable on the way out — reads as a
-        // map here. Retry with every empty record coerced to an empty list (#464 gap 1).
+        // Retry with empty records coerced to empty list (#464 gap 1).
         Err(first) => serde_json::from_value(coerce_empty_objects(&json)).map_err(|_| Error::runtime(first)),
     }
 }
 
-/// Every empty record as an empty list, recursively: what an empty table with no metatable means
-/// where the target type wants a list (#464 gap 1).
+/// Coerces empty records to empty lists recursively (#464 gap 1).
 pub fn coerce_empty_objects(value: &Json) -> Json {
     match value {
         Json::Object(map) if map.is_empty() => Json::Array(Vec::new()),
@@ -190,8 +171,7 @@ pub fn coerce_empty_objects(value: &Json) -> Json {
     }
 }
 
-/// `J.div`: Rust's `/`, truncating toward zero. `None` where Rust's would panic: a zero divisor, or
-/// `i32::MIN / -1`.
+/// `J.div`: Rust's `/`, truncating toward zero. `None` where Rust's would panic.
 pub fn div(a: i32, b: i32) -> Option<i32> {
     a.checked_div(b)
 }

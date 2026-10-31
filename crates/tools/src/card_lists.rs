@@ -1,9 +1,4 @@
-//! R2173000, R2173001 (R1846003's obligation): the BUSTED and complicated lists (R1846000) as the tools read
-//! them off a tree's card scripts, counted by the cards crate's own counter (`jackioh_cards::code_lines`,
-//! which `build.rs` compiles the build's lists with). `patches ship` keeps each version's in
-//! `crates/cards/patches/card_metrics/<version>.json` once a card that reads them ships, and
-//! `classify` counts a change that moves a card across a threshold as a change to how those cards
-//! play (R2173001).
+//! BUSTED and complicated card lists (R1846000, R1846003, R2173000, R2173001).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

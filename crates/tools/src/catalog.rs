@@ -1,28 +1,9 @@
-//! `cargo jackioh catalog check`, `cargo jackioh catalog loc <path>` and `cargo jackioh
-//! catalog-version` (SURFACE §12).
+//! `cargo jackioh catalog check`, `catalog loc <path>`, and `catalog-version` (SURFACE §12).
 //!
-//! `catalog check` is the port of `packages/cards/scripts/validate-catalog.ts`: structural
-//! validation of `crates/cards/catalog.json` against SPEC §5, §6.1, §7 and §8, and patch v0.2.0's
-//! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
-//!
-//! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
-//! Meditative, Meditative+, Stinkyscape, R1857000, and the held Training Grounds set, R2194000): that it holds every card and every token exactly once, that every enum value is in
-//! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
-//! B3.1, which print a whole line or none, R2280000) and nowhere else, that the rarity distribution
-//! each set prints is the one the file carries, and that the v0.2.0 fields (`printedRarity`, `params`,
-//! `loc`, a face's `type` and `xStats`) are well formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
-//! an independent transcription. The pending-fragment proof is its own command, `patches check`
-//! (TS's `pnpm validate:catalog` ran both).
-//!
-//! `catalog loc <path>` prints a card script's lines of code (SURFACE §7.5): `loc` is frozen
-//! gameplay data in `catalog.json`, so nothing recomputes it; a card added after v0.3.0 takes its
-//! number from here. A test below holds every entry to carrying a `loc`, and each one written since
-//! the newest shipped snapshot (a new entry, or a `loc` other than the snapshot's) to this count.
-//!
-//! `catalog-version` is the port of `scripts/catalog-version.mjs`: it prints the catalog version
-//! this checkout ships, the newest entry of `crates/cards/patches/patches.json` (R388). The version
-//! is read as data: the list's order is the order of versions, never a comparison of strings
-//! (R105). It fails, printing nothing on stdout, when the list names no newest version.
+//! Subcommands:
+//! - `check`: validates `catalog.json` structure, census, and fields against SPEC §5, §6.1, §7, §8 (B2, B3.1, B3.4, E36, E40, R1857000, R2194000, R2280000).
+//! - `loc`: reports lines of code for card scripts (SURFACE §7.5).
+//! - `catalog-version`: prints newest catalog version from `patches.json` (R105, R388).
 
 use std::fs;
 use std::io::Write as _;
@@ -38,11 +19,7 @@ use crate::patches::js::{self, Json, Object};
 use crate::patches::repo_root;
 use crate::spec::is_ident_char;
 
-/* ------------------------------------------------------------------------------------- unions */
-
-// TS listed each union's literals and proved every list exhaustive with an `Exhaustive` alias that
-// failed to compile when the union grew a member the list did not carry. The engine's `ALL` lists
-// are the unions themselves, in their declaration order, so they are exhaustive by construction.
+/* unions */
 
 /// `CARD_TYPES`.
 fn card_types() -> Vec<&'static str> {
@@ -198,11 +175,7 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 6),
             ],
         },
-        // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): 26 cards
-        // and the 6 tokens they define (#1.1 Base Camp, #1.2 Spa Day, and since #1563 #1.3 Garage Sale
-        // and #1.4 Leg Day, the AI generated helpers of #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil'
-        // Kenny), the rarities the designer printed and #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
-        // alone until the patch that lists it in SHIPPED_SETS (#1187).
+        // R1420, R1178000: Meditative+ set (#1173, MP2, #1563, #1187): 26 cards and 6 tokens.
         SetExpectation {
             set: "Meditative+",
             segment: "meditativeplus",
@@ -218,13 +191,7 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 2),
             ],
         },
-        // R1420, R1857000, R1857001: the Stinkyscape set (issue #1836, docs/stinkyscape-set.md ST12):
-        // 175 cards (the designer's second #21 and #122 numbered #174 and #175), the 30 tokens they
-        // define, the Dormant Starship (a card outside the numbers, the set's one shared card), and 22
-        // shared tokens: the two drones, the Drone Battleship's three layers, the six Resources,
-        // Anomaly Found! and the ten AI generated cards. Its rarities over its 176 cards: 42 Common, 50
-        // Rare, 43 Epic, 29 Legendary (the Dormant Starship one of them) and 12 Mythic. It does not
-        // ship yet, so its entries are checked for their shape alone until its release (#1884).
+        // R1420, R1857000, R1857001: Stinkyscape set (#1836, ST12, #1884): 175 cards and tokens.
         SetExpectation {
             set: "Stinkyscape",
             segment: "stinkyscape",
@@ -268,11 +235,7 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 12),
             ],
         },
-        // R1420, R2194000: the Training Grounds set (issue #2193, docs/training-grounds-set.md TG2): 60
-        // cards (#1 to #40 and the Core snapshots #41 to #60, part 2's) and the one token #39 defines,
-        // #39.1. Its rarities over its 60 cards: 26 Common, 19 Rare, 11 Epic, 3 Legendary and 1 Mythic.
-        // It does not ship yet, so its entries are checked for their shape alone until its release
-        // (#2204).
+        // R1420, R2194000: Training Grounds set (#2193, TG2, #2204): 60 cards and 1 token.
         SetExpectation {
             set: "Training Grounds",
             segment: "traininggrounds",
@@ -299,15 +262,8 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
     out
 }
 
-/// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included — a census, so a tag
-/// that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
-/// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
-/// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
-/// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
-/// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563), each of which counts once it ships (R1420),
-/// the Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
-/// from its release (#1884), and the held Training Grounds set's (docs/training-grounds-set.md TG2's census
-/// of its 61, R2194000), which counts from its release (#2204).
+/// Tag census (§5, §7, §8, B2.4, R278): counts catalog entries per tag across shipped sets
+/// (R1420, #1563, R1857000, #1884, R2194000, #2204).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
@@ -327,11 +283,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Stinkyscape #142.
         // Training Grounds #29 Oriental.
         Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
-        // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
-        // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
-        // Stinkyscape #21.
-        // Training Grounds' snapshot #59 Fig of Life.
+        // Lost by C+ #61 in v0.3.10 (#831) and C+ #63/#68 in #1837 (R1837000; #55, #59, #90, #100, #112, #122, #174, #175).
         Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         // Stinkyscape #150 and #151.
@@ -370,11 +322,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Wincon => meditative(2) + stinkyscape(2),
         // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
         Tag::Potion => meditative_plus(3),
-        // #1837, ahead of the Stinkyscape set (R1837000): Core #100 Ceaseless Void; Classic #90 In Too
-        // Deep; Classic+ #32 Otherworldly Removal; its three tokens, #32.1 Execute, #32.2 Brawl and
-        // #32.3 Blade Storm; and Core #26 to #29, the four Glowy Jelly Beans.
-        // Stinkyscape: #4.1 to #4.6 (Terminus); #7 and #112 (Quest); #10 to #12 (Otherworldly) and
-        // their nine tokens, #10.1 to #12.3 (Other-Origins).
+        // Added ahead of Stinkyscape set (#1837, R1837000).
         Tag::Terminus => 1 + stinkyscape(6),
         Tag::Quest => 1 + stinkyscape(2),
         Tag::Otherworldly => 1 + stinkyscape(3),
@@ -759,11 +707,7 @@ fn validate_face(
     }
 }
 
-/// B3.4 rule 5: `params` — distinct camelCase keys, integer values within [min, max], a direction,
-/// a positive step — each written `{key}` in at least one face's text, and every `{key}` a text
-/// writes declared. A number one face alone writes is tuned on that face only (`tunedOn`, R749),
-/// and says so (R1431, R824000); a number that belongs to a power names it by
-/// its Activate ability's id (`power`, R1430).
+/// Validates params (B3.4 rule 5): camelCase keys in `[min, max]`, step, `tunedOn` (R749, R1431, R824000), `power` (R1430).
 fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let params = value.get("params");
     let texts: Vec<String> = ["base", "radiant"]
@@ -1971,11 +1915,7 @@ fn is_require(code: &str) -> bool {
         .is_some_and(|(_, value)| value.trim_start().starts_with("require("))
 }
 
-/// SURFACE §7.5 for a Luau card script (#442): the lines that hold code once comments are removed
-/// (`--` to the line's end, `--[[ … ]]` blocks of any level, the `--!strict` directive among them),
-/// except its `require` imports, as `count_loc` leaves out `use` declarations. Strings (quoted,
-/// interpolated and long) are read as such, so a `--` inside one is code. The file is the script
-/// alone: its tests are in the `.rs` beside it.
+/// SURFACE §7.5 for Luau card scripts (#442): counts code lines excluding comments and requires.
 pub fn count_luau_loc(source: &str) -> usize {
     #[derive(Clone, Copy)]
     enum In {
@@ -2241,11 +2181,7 @@ mod tests {
     fn the_shipped_catalog_passes_every_check() {
         let report = check_catalog(&shipped_catalog());
         assert_eq!(report.failures, Vec::<String>::new());
-        // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
-        // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
-        // 26 and 4 (R1178000), 6 since #1563's #1.3 and #1.4; and from its release (#1884) the
-        // Stinkyscape set's 176 and 52 (R1857000); and from its release (#2204) the Training Grounds
-        // set's 60 and 1 (R2194000).
+        // Counts across sets (B2.1, R1420, #1187, R1178000, #1563, #1884, R1857000, #2204, R2194000).
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
             (

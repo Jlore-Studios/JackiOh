@@ -1,23 +1,9 @@
-//! `cargo jackioh selfplay`: the learned evaluation's game logs (#466, #1006; `docs/learned-eval.md`
-//! D1, D3). The AI plays itself at `AI_GATE_BUDGET`, the browser's budget, on a development run's
-//! deals (R258: `dev_game_config`'s All Random decks, nothing banned), through the arena's own play
-//! path (`arena::play_game`, each seat seeing only `redact`, R185). Game `n`'s seed is `<base>:<n>`.
+//! `cargo jackioh selfplay`: learned evaluation game logs (#466, #1006).
 //!
-//! It stores logs, not features (D3): a log replays exactly from its seed, so `cargo jackioh
-//! positions` turns the same games into any version of the features in seconds. Each game is one
-//! JSON line, in game order (`SelfplayGame`): its seed, decks, log, final hash, result and turns, the
-//! catalog version and the commit it was played on. A game is a function of its seed, so the file is
-//! byte-identical for the same base and games whatever `RAYON_NUM_THREADS` says (R1006001). Games are
-//! played and written in chunks, so a long export keeps what it has played; each chunk, and any game
-//! slower than a minute, is named on stderr. A turn that takes more than `SELFPLAY_TURN_ACTIONS`
-//! actions (an endless combo) ends its game without a result (R1006005), and so does a decision
-//! whose search runs a board to one of the engine's settle caps, at the cap's first panic (§10.3,
-//! R1006007). A game in which a seat had an action refused, fell back or caught a panic in its search
-//! is marked with `faults`, which `positions` leaves out (R1489000).
-//!
-//! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
-//! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
-//! a deal the network was fitted on (R1006002).
+//! Plays games under `AI_GATE_BUDGET` on All Random decks (R258) with redacted views (R185).
+//! Output is deterministic across thread counts (R1006001).
+//! Aborts endless turns (R1006005) or search settle cap panics (§10.3, R1006007), recording faults (R1489000).
+//! Refuses training gate hold-out bases (R850001) or dev set seeds (R1006002).
 
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -89,11 +75,7 @@ impl SelfplayGame {
     }
 }
 
-/// R1006005: the most actions one turn of a self-play game may take. A whole game takes about 60
-/// (131 at the 99th percentile of 448 games, 151 at the most), so only an endless combo reaches it:
-/// The Coin and a fused card that hands back another, played by an AI that finds each loop worth
-/// it (game 474 of `learned-dev`, #1006), which would otherwise run to `ARENA_MAX_ACTIONS` at a
-/// second a decision. Such a game ends without a result, and `positions` drops it.
+/// R1006005: most actions one turn may take before aborting endless combos (#1006).
 pub(crate) const SELFPLAY_TURN_ACTIONS: usize = 100;
 
 /// R1006002: whether a base names deals a screen or a gate plays: a training gate's hold-out deals

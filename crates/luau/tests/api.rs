@@ -145,9 +145,7 @@ mod common {
     }
 }
 
-// --------------------------------------------------------------------------------
 // Verb parity: the same card in Rust and in Luau, played in identical scenarios.
-// --------------------------------------------------------------------------------
 
 #[test]
 fn parity_damage() {
@@ -401,10 +399,8 @@ fn parity_draw_while() {
     );
 }
 
-// --------------------------------------------------------------------------------
 // Declarations: targets, modes, flags, activations, triggers, replacements,
 // target checks, resume and grants load as data and run.
-// --------------------------------------------------------------------------------
 
 mod declarations {
     use super::*;
@@ -535,9 +531,7 @@ mod declarations {
     }
 }
 
-// --------------------------------------------------------------------------------
 // Readers: the probe fixture remembers board facts; the test reads them back.
-// --------------------------------------------------------------------------------
 
 #[test]
 fn readers_probe_values() {
@@ -591,9 +585,7 @@ fn readers_probe_values() {
     assert_eq!(probe["chosen"], json!(0));
 }
 
-// --------------------------------------------------------------------------------
 // Verb kinds: every bound verb builds its effect through one shared table.
-// --------------------------------------------------------------------------------
 
 /// (verb, minimal args) pairs: each must build through `effect_of` with the
 /// verb's own kind. The parity scenarios above prove the behavior; this table
@@ -704,9 +696,7 @@ fn every_listed_verb_builds_its_kind() {
     }
 }
 
-// --------------------------------------------------------------------------------
 // Sync: the committed module names every binding, and every binding is named.
-// --------------------------------------------------------------------------------
 
 /// The committed typed module, read at compile time: rule 4 bans the disk in this
 /// crate, tests included.
@@ -778,13 +768,9 @@ fn every_ctx_reader_has_a_typed_stub() {
     assert!(missing.is_empty(), "readers without a stub: {missing:?}");
 }
 
-// --------------------------------------------------------------------------------
 // Hook adapters: every hook type over the fixture scripts.
-// --------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------
 // #464 part 28: one fixture test per API gap.
-// --------------------------------------------------------------------------------
 
 /// Runs a fixture's `cry` as `card` in a fresh scenario and returns the state with the
 /// running card's memory.

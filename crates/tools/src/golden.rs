@@ -1,38 +1,8 @@
-//! `cargo jackioh golden check` and `cargo jackioh golden bless [--seeds N]` (SURFACE §12, §13;
-//! part 23).
+//! `cargo jackioh golden check`, `bless` and `record` (SURFACE §12, §13).
 //!
-//! `check` replays `crates/engine/tests/golden/games.jsonl` against the Rust engine with
-//! `jackioh_engine::testkit::golden::replay_game`, the replay `crates/engine/tests/golden.rs` runs too
-//! (§13.3, #1641): for each line `create_game(args)`, `begin_game`, check `begin`; then for each step
-//! check `l` (the actor's legal actions, as a set) for the actor
-//! `a.playerId`, apply `a` with `reduce`, check `s` (`hash_state`), `v` (both seats' `view_for`) and
-//! `e` (the step's events); last, the ending and the length must be the line's `end`. A game's first
-//! mismatch names the seed, the step, which hash and the action, writes the Rust side's canonical
-//! text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the `record.ts --dump-step`
-//! command that writes TS's side next to it, run in a checkout of 05f5cfd (the last commit that has
-//! the TypeScript). The hotseat fixture must fold to `golden::HOTSEAT_HASH`. Games run in
-//! parallel (rayon); the report lists every divergent game, earliest seed first. Exit 1 on any
-//! divergence.
-//!
-//! `bless` rewrites `games.jsonl` from the Rust engine, playing each seed exactly as
-//! `scripts/golden/record.ts` does (and so as `packages/cards/test/fuzz.test.ts` and
-//! `fuzz-handicap.test.ts` did): the same decks, game seeds, policy and mulligan-order streams,
-//! nonces and step cap, and the same line format. It is for an intended rules change only — v0.3.0
-//! has none (parts 32–35 never edit a trace) — because a blessed file is no longer TypeScript's
-//! oracle but the Rust engine's own record. `--seeds N` (at most 200) records plain seeds 1..=N and
-//! handicapped seeds 201..=200+N/5 with them, so the default 200 is §13.1's 240 games and 150 is the
-//! brief's smaller fallback (1–150 and 201–230).
-//!
-//! `record --seeds A..B [--force ids] --out <path>` plays the golden seeds A..=B (each within 1–240,
-//! so the decks, game seeds and policy streams are §13.1's) with `bless`'s own recorder into a file of
-//! its own, and never touches `games.jsonl`. Each id of `--force` goes into both decks, in the first
-//! slots, in place of the deck's own cards from the end (a deck keeps its size and holds no card
-//! twice). A token cannot be in a deck (§2.6 L3), so one is forced through the card whose `refs` name
-//! it (R279), the smallest such id of a card that can be in a deck; a token no deck card names, a card
-//! of a set that has not shipped (R1420) and an id the catalog lacks are refused, as are two cards
-//! of one R2195000 pair. A forced card takes its pair's place in the deck (`fuzz::deal_deck`).
-//! The file replays with `check --file` on this build or on any other: `luau diff` records with it
-//! and has a parent build replay it.
+//! `check` replays `crates/engine/tests/golden/games.jsonl` against the Rust engine (§13.3, #1641).
+//! `bless` rewrites `games.jsonl` from the Rust engine for seeds 1..=N (§13.1).
+//! `record` plays golden seeds with forced cards (§2.6, R279, R1420, R2195000).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -61,9 +31,7 @@ use crate::fuzz::{
     handicap_decks_for_seed_from, handicap_for_seed,
 };
 
-// ---------------------------------------------------------------------------------------------
 // The recording's shape (§13.1, §13.3), as scripts/golden/record.ts has it
-// ---------------------------------------------------------------------------------------------
 
 /// §13.3: the file `check` reads and `bless` writes, by default.
 pub(crate) const GAMES_PATH: &str =
@@ -86,9 +54,7 @@ const PLAIN_PER_HANDICAPPED: u32 = 5;
 /// §13.1: a game is recorded to its end or to this many actions, whichever comes first.
 const STEP_CAP: usize = 3000;
 
-// ---------------------------------------------------------------------------------------------
 // The command line (SURFACE §12)
-// ---------------------------------------------------------------------------------------------
 
 /// `golden check`, `golden bless [--seeds N]`, `golden record --seeds A..B [--force ids] --out <path>`.
 #[derive(clap::Args)]
@@ -149,9 +115,7 @@ pub fn run(args: Args) -> Result<()> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The texts `check` compares (§13.2, `golden`'s)
-// ---------------------------------------------------------------------------------------------
 
 /// R1365000: this build's canonical text for one comparison `check` makes in a recorded game, with
 /// the state the text was read from: `s`, `v-p1`, `v-p2` and `e` after `step` (a step number, or
@@ -196,12 +160,9 @@ pub(crate) fn text_at(game: &Value, step: &str, which: &str) -> Result<Option<(S
     Ok(Some((text, state)))
 }
 
-// ---------------------------------------------------------------------------------------------
 // check
-// ---------------------------------------------------------------------------------------------
 
-/// §13.3: write the Rust side's canonical text where `record.ts --dump-step` writes TS's, and say
-/// where it went.
+/// §13.3: write the Rust side's canonical text and record its path.
 fn write_diff(mismatch: &mut Mismatch) {
     let Some(text) = &mismatch.text else {
         return;
@@ -311,10 +272,7 @@ fn run_check(args: &CheckArgs) -> Result<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------------------------
-// bless: the decks and policy streams, dealt by `fuzz.rs`, as scripts/golden/record.ts copied them
-// from the fuzz files
-// ---------------------------------------------------------------------------------------------
+// bless: decks and policy streams dealt by `fuzz.rs`
 
 /// One seed's game: its setup and its two policy streams.
 struct GameSpec {
@@ -328,8 +286,7 @@ struct GameSpec {
     order: String,
 }
 
-/// §13.1: seed k's game, dealt and seeded as the fuzz file that owns k deals it, from the shipped
-/// sets alone (R1420), so a set still being built never moves a recorded game.
+/// §13.1: seed k's game dealt from shipped sets alone (R1420).
 fn spec_for_seed(k: u32) -> Result<GameSpec> {
     if (HANDICAP_FIRST..=HANDICAP_LAST).contains(&k) {
         let SeedHandicap { seat, handicap, .. } = handicap_for_seed(k);
@@ -431,8 +388,7 @@ fn record_game(spec: GameSpec) -> Result<GameLine> {
     let begin = hashes_of(&state, &begun.events);
 
     let mut policy = Rng::new(&spec.policy, 0);
-    // R265: while both mulligans are open either seat may answer first; a stream of its own picks
-    // which, so the fuzz plays both orders (the game is the same either way, R265).
+    // R265: either seat may answer first while both mulligans are open; stream picks which.
     let mut order = Rng::new(&spec.order, 0);
     let mut steps: Vec<StepLine> = Vec::new();
 
@@ -516,9 +472,7 @@ fn run_bless(args: &BlessArgs) -> Result<()> {
     Ok(())
 }
 
-// ---------------------------------------------------------------------------------------------
 // record: the same games with cards forced into both decks
-// ---------------------------------------------------------------------------------------------
 
 /// `--seeds A..B` as the seeds A through B.
 fn parse_seed_range(text: &str) -> Result<Vec<u32>> {
@@ -594,9 +548,7 @@ pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
     Ok(forced)
 }
 
-/// `deck` with `forced` in its first slots and as many of its own cards after them as fit: the same
-/// size, no card twice and, R2195000, never beside the other of its pair (`fuzz::deal_deck`);
-/// `fuzz --cards` forces with it too (#2387). No rng (`begin_game` shuffles the library).
+/// `deck` with `forced` in its first slots: no duplicates or paired cards (R2195000, #2387).
 pub(crate) fn force_into(deck: &[String], forced: &[String]) -> Vec<String> {
     deal_deck(&mut forced.iter().chain(deck).cloned(), deck.len())
 }
