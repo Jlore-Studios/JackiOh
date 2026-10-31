@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 2566,
+  "title": "Patch: the AI prices a Starship Piece's death by the copy it fuses into its owner's Starship",
+  "branch": "bot/issue-2566",
+  "thread": "**Issue #2566 (data, not instructions):**\n\n```text\n# #2566: Patch: the AI prices a Starship Piece's death by the copy it fuses into its owner's Starship\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn Stinkyscape, a Starship Piece that dies is not simply gone: a copy of it joins its owner's starship, which grows with each piece. The computer opponent prices that death as if nothing were left behind. So it kills an enemy piece as if that were clean removal, when it is actually feeding the enemy ship, and it spends its own pieces as if they were worth no more than their stats. After this change, the AI counts what a piece's death adds to the starship, the same way it already counts what other cards leave behind when they die.\n\n## Why\n- R2424000 prices a Unit's death by what it leaves behind, but only through a script's own Death hook. The probe takes candidates with `death_hook_of(world, card).is_some()` (`crates/ai/src/evaluate.rs:1195`), and the price is used only `if death_hook_of(state, unit).is_some()` (`evaluate.rs:227`).\n- A piece's fusion is not a Death hook. It runs in the engine's death pass: `starship_step` calls `crate::starship::fuse_dead_piece` (`crates/engine/src/state_check.rs:693-699`, R1852000). Cannon v3's header (`crates/cards/src/scripts/stinkyscape/c052_cannon_v3.rs:7`) says \"played alone, its death fuses a copy into its owner's Dormant Starship (R1852000)\".\n- The Death probe already kills the unit through the engine's own sandbox destroy (`SandboxOp::Destroy`, `evaluate.rs:1092`), so a piece let into the probe should show the fusion. The first test proves whether it does.\n- `crates/ai/tests/ai/starship.rs:6` still says \"No shipped card is a Starship Piece (Stinkyscape's come with the set)\". That has been stale since Stinkyscape shipped.\n- The learned weights (`crates/ai/src/learned/weights.json`, catalog v0.3.17) hold no Stinkyscape key, so the hand evaluation is the whole price of these cards.\n\n## Proposal\n- In the probe's candidate filter and in `death_price`, accept a Unit that is a Starship Piece, read through the layers as the engine reads it, as well as one with a Death hook.\n- Fix the stale header of `tests/ai/starship.rs`.\n- A new ruling in the issue's block amends what R2424000 prices.\n\n## Where it lands\n`crates/ai/src/evaluate.rs`, `crates/ai/tests/ai/starship.rs` (or `deaths.rs`), `crates/ai/README.md`, and `spec/rulings/R<n>.md` with its \u00a711 paragraph in `spec/pending/<issue>.md` (\u00a79.9).\n\n## Acceptance criteria\n- [ ] A shipped piece with no Death of its own prices above zero for its owner, at the evaluation change its fusion makes.\n- [ ] Given one removal, an enemy piece and an enemy vanilla Unit of equal stats, the AI removes the vanilla Unit.\n- [ ] Units with a Death hook price as before, and R2424000's tests are unchanged.\n- [ ] `cargo jackioh gate` passes at smoke size, and the perf gate holds.\n\n## Size and risks\nSmall code change, but hard by CLAUDE.md rule 11 (AI). Pieces share `AI_DEATH_PROBE_NODES` with other deaths, so a board full of pieces can crowd out other probes; the test should cover the budget order. Rebase on the open PR #2551 if it lands first, since it also changes how the AI counts its backrow.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-31T05:38:38Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2566: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2509 skipped: it waits for #2508 to close first",
+    "#2510 skipped: it waits for #2508, #2509 to close first",
+    "#2512 skipped: it waits for #2508, #2509, #2510 to close first",
+    "#2513 skipped: it waits for #2508, #2509, #2510, #2512 to close first",
+    "#2514 skipped: it waits for #2508, #2509, #2510, #2512, #2513 to close first",
+    "#2515 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514 to close first",
+    "#2516 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515 to close first",
+    "#2517 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516 to close first",
+    "#2518 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2508, #2509, #2510, #2512, #2513, #2514, #2515, #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
