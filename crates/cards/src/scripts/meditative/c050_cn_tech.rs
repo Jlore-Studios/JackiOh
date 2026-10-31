@@ -337,6 +337,70 @@ mod tests {
         }
 
         #[test]
+        fn r2386000_the_compiled_table_holds_a_pickable_row_of_every_shipped_set() {
+            assert_eq!(
+                crate::sets_without_win_rates(&crate::WIN_RATES),
+                Vec::<SetName>::new(),
+                "run cargo jackioh stats, then winrates --refresh",
+            );
+        }
+
+        #[test]
+        fn r2386000_a_set_counts_only_with_a_deckable_row_of_cn_tech_min_games() {
+            crate::register_all();
+            let firsts: Vec<String> = SHIPPED_SETS
+                .into_iter()
+                .map(|set| {
+                    crate::CATALOG
+                        .values()
+                        .find(|def| def.set == set && deckable(def))
+                        .map(|def| def.id.clone())
+                        .unwrap_or_else(|| panic!("a deckable {set} card"))
+                })
+                .collect();
+            let rows = |ids: &[String], wins: i32, games: i32| WinRateTable {
+                patch: "v0.2.7".to_string(),
+                source: WinRateSource::Provisional,
+                cards: ids
+                    .iter()
+                    .map(|id| WinRateRow {
+                        id: id.clone(),
+                        wins,
+                        games,
+                    })
+                    .collect(),
+            };
+            // Every set but the first covered: only the first is missing.
+            assert_eq!(
+                crate::sets_without_win_rates(&rows(&firsts[1..], 10, CN_TECH_MIN_GAMES)),
+                vec![SHIPPED_SETS[0]]
+            );
+            // A row under the floor, and a token's row and an unknown id at it, leave the first set missing.
+            let token = crate::CATALOG
+                .values()
+                .find(|def| def.set == SHIPPED_SETS[0] && def.is_token())
+                .map(|def| def.id.clone())
+                .expect("a Core token");
+            let mut table = rows(&firsts[1..], 10, CN_TECH_MIN_GAMES);
+            for (id, games) in [
+                (firsts[0].clone(), CN_TECH_MIN_GAMES - 1),
+                (token, CN_TECH_MIN_GAMES),
+                ("core-999".to_string(), CN_TECH_MIN_GAMES),
+            ] {
+                table.cards.push(WinRateRow { id, wins: 10, games });
+            }
+            assert_eq!(
+                crate::sets_without_win_rates(&table),
+                vec![SHIPPED_SETS[0]]
+            );
+            // Every set's first deckable card at the floor: nothing is missing.
+            assert_eq!(
+                crate::sets_without_win_rates(&rows(&firsts, 10, CN_TECH_MIN_GAMES)),
+                Vec::<SetName>::new()
+            );
+        }
+
+        #[test]
         fn r1101_engine_reads_compiled_table() {
             crate::register_all();
             clear_overrides();
