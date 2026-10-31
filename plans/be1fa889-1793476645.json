@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2604,
+  "title": "Patch: Back closes the Marketplace and the deck builder's history, cosmetics and portrait pickers",
+  "branch": "bot/issue-2604",
+  "thread": "**Issue #2604 (data, not instructions):**\n\n```text\n# #2604: Patch: Back closes the Marketplace and the deck builder's history, cosmetics and portrait pickers\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a phone, the back gesture closes whatever panel you opened last, such as a card, the settings or the chat. Four panels were missed: the Marketplace in a match, and the deck builder's deck history, deck cosmetics and portrait picker. Today, with the Marketplace open in an online match, Back asks whether you want to leave the match. On the deck builder, Back leaves the page. Once this is built, one Back closes the panel, as Escape already does.\n\n## Why\n- R2127000 lists the overlays that Back closes. #2563 added the Collection's card view and the statistics breakdown to it. The four panels below are not on the list.\n- `apps/web/src/game/Marketplace.tsx:105-141` closes only on Escape (`setOpen(false)`) and has no `useBackLayer`.\n- `game/deckbuilder/DeckHistory.tsx:113-120`, `DeckCosmeticsPicker.tsx:47-54` and `emotes/PortraitPicker.tsx:97-111` close on Escape and on a press outside the panel, but not on Back.\n- These siblings already close on Back through `useBackLayer`: `settings/SettingsPanel.tsx:138`, `together/ChatPanel.tsx:69`, `collection/CardCosmeticsView.tsx:282`, `routes/stats.tsx:199` and `game/ConfirmConcede.tsx:35`.\n\n## Proposal\nEach of the four panels calls `useBackLayer(close)` while it is open, and closes through its own close function so the focus goes back as it does on Escape. R2127000's \"Which\" paragraph names them, edited in the same pull request and citing the issue.\n\n## Where it lands\n- `apps/web/src/game/Marketplace.tsx`\n- `apps/web/src/game/deckbuilder/DeckHistory.tsx` and `DeckCosmeticsPicker.tsx`\n- `apps/web/src/emotes/PortraitPicker.tsx`\n- their test files\n- `spec/rulings/R2127000.md` (SPEC \u00a710.10)\n\n## Acceptance criteria\n- [ ] With the Marketplace open in a live match, one Back closes it and the address stays. The leave guard (R1754000) is not asked, and a second Back meets the guard as before.\n- [ ] On `/decks`, one Back closes each of the three deck-builder panels and the page stays on `/decks`.\n- [ ] Escape still closes each panel exactly once, with nothing under it closed too.\n- [ ] R2127000 names the four panels and lists the new test files in `proven_in`, and `cargo jackioh spec check` passes.\n\n## Size and risks\nSmall to medium, about 8 files, following an existing pattern. The one risk is the Marketplace being open when a prompt opens. A prompt is never a layer, so the stack's order handles that case. A test should cover it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-31T19:55:31Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2604: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2517 skipped: it waits for #2516 to close first",
+    "#2518 skipped: it waits for #2516, #2517 to close first",
+    "#2519 skipped: it waits for #2516, #2517, #2518 to close first",
+    "#2520 skipped: it waits for #2516, #2517, #2518, #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
