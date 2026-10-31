@@ -10595,6 +10595,7 @@
     "2554": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "9e6ea06b2bc4999c1839f220c8f366b20d4a625e",
       "ci_fixes": 1,
       "ci_reruns": {
         "06be48376bdba5c89a55fe27d484ce78e874cec3": 1
@@ -10611,7 +10612,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-30T23:11:53Z",
+      "feedback_since": "2026-10-31T00:15:41Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2500,
@@ -10626,11 +10627,11 @@
       "run_id": "41149198326",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-31T00:15:41Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "claude"
