@@ -771,10 +771,11 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
         && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
-/// §2.3, R348: why this X is not one the player may choose for this card, or `Ok` when it is —
-/// "X is chosen at play time, 1 ≤ X ≤ current mana" (`MIN_CHOSEN_X`). `legal_x_values` offers exactly
-/// the values this passes and `refuse_x` refuses exactly the ones it names, so the picker and the
-/// reducer's refusal cannot disagree. `most` defaults to the player's current mana.
+/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is —
+/// "X is chosen at play time, 1 ≤ X ≤ the mana the player can spend" (`MIN_CHOSEN_X`): their current
+/// mana plus what a credit line still lends them (`credit::spendable_mana`). `legal_x_values` offers
+/// exactly the values this passes and `refuse_x` refuses exactly the ones it names, so the picker and
+/// the reducer's refusal cannot disagree. `most` defaults to the mana the player can spend.
 pub fn why_x_refused(
     state: &GameState,
     player: PlayerId,
@@ -801,8 +802,8 @@ pub fn why_x_refused(
     Ok(())
 }
 
-/// The most X a play of this card may choose: the player's current mana for an X-cost card, and for a
-/// copier with an X-cost text the mana left once its own price is paid (B5 E14, R545).
+/// The most X a play of this card may choose: the mana the player can spend for an X-cost card (R1223),
+/// and for a copier with an X-cost text what is left of it once its own price is paid (B5 E14, R545).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
     // R1223: an X may be chosen out of borrowed mana too.
     let mana = crate::credit::spendable_mana(state, player);
