@@ -268,7 +268,8 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
 mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
-(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
+(`pressBack`, `pressForward`), which need real timers; `seedSearch.ts` `seedWhere`, which finds a
+test's seed at run time instead of pinning one a card change re-deals (#2569); and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 

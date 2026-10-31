@@ -9,6 +9,12 @@
 //! base stats +3/+3"; Floodgates (traininggrounds-030), (3) 0/12 Armor 3, "Death: Destroy all your
 //! Units"; Training Dummy (traininggrounds-036), (1) 0/3, "Death: Add 1 random Radiant Training Grounds
 //! card to your hand"; and Mr. Vanilla (core-008), a (1) 4/4 with no text.
+//!
+//! R2566000: a Starship Piece's death fuses a copy of it into its owner's Dormant Starship, summoning
+//! one first (R1852000), which counts as the unit it wakes as at `slumber_waiting_share` (R2380000), so
+//! a piece with no Death of its own is priced too, after every Death. The cards: After Burner
+//! (stinkyscape-090), (2) 4/8 Starship Piece, whose one hook is a "When launched" that only a Starship
+//! fires; and Hit Job (core-016), (3) "Destroy a Unit".
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -21,6 +27,8 @@ const TRIGOR: &str = "traininggrounds-025";
 const FLOODGATES: &str = "traininggrounds-030";
 const TRAINING_DUMMY: &str = "traininggrounds-036";
 const VANILLA: &str = "core-008";
+const AFTER_BURNER: &str = "stinkyscape-090";
+const HIT_JOB: &str = "core-016";
 
 /// The AI's turn with `hand` and `field`, the human's `enemy` and a Mr. Vanilla in the human's hand.
 fn board(seed: &str, hand: Value, field: Value, enemy: Value) -> GameState {
@@ -204,5 +212,125 @@ fn r2424000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
         unit_worth(&state, trigor, &AI_EVAL),
         before,
         "a panic put the prices back too"
+    );
+}
+
+/// A Mr. Vanilla at After Burner's 4/8, by a stat override (§10.4 layer 1).
+fn vanilla_four_eight() -> Value {
+    json!({ "def": VANILLA, "statsOverride": { "attack": 4, "health": 8 } })
+}
+
+#[test]
+fn r2566000_a_starship_piece_with_no_death_is_priced_by_the_copy_it_fuses() {
+    let state = board("ai-piece-own", json!([]), json!([AFTER_BURNER]), json!([]));
+    let piece = unit(&state, AI, AFTER_BURNER);
+    assert!(
+        death_hook_of(&state, piece).is_none(),
+        "After Burner has no Death"
+    );
+    assert!(is_starship_piece(&state, piece));
+    let body = unit_worth(&state, piece, &AI_EVAL);
+    let (prices, used) = priced(&state);
+    let price = price_of(&prices, AFTER_BURNER);
+    assert!(
+        (price - AI_EVAL.slumber_waiting_share * body).abs() < 1e-9,
+        "its death leaves a Dormant Starship holding its copy, at the slumber share: {price} against {body}"
+    );
+    assert!(price > 0.0, "{price}");
+    assert!(
+        (2..=AI_DEATH_PROBE_NODES).contains(&used),
+        "a destroy and a remove at least: {used}"
+    );
+    let worth = with_death_prices(prices, || unit_worth(&state, piece, &AI_EVAL));
+    assert!((worth - (body + AI_EVAL.death * price)).abs() < 1e-9, "{worth}");
+}
+
+#[test]
+fn r2566000_killing_an_enemy_piece_is_worth_less_than_killing_a_vanilla_of_its_stats() {
+    let state = board(
+        "ai-piece-kill",
+        json!([]),
+        json!([]),
+        json!([AFTER_BURNER, vanilla_four_eight()]),
+    );
+    let piece = unit(&state, HUMAN, AFTER_BURNER);
+    let vanilla = unit(&state, HUMAN, VANILLA);
+    assert_eq!(
+        unit_worth(&state, piece, &AI_EVAL),
+        unit_worth(&state, vanilla, &AI_EVAL),
+        "unpriced, the two 4/8s are worth the same"
+    );
+    let (prices, _) = priced(&state);
+    assert!(price_of(&prices, AFTER_BURNER) > 0.0, "{prices:?}");
+    let (piece_kill, vanilla_kill) = with_death_prices(prices, || {
+        (
+            kill_worth(&state, piece, &AI_EVAL),
+            kill_worth(&state, vanilla, &AI_EVAL),
+        )
+    });
+    assert!(
+        piece_kill < vanilla_kill,
+        "the copy it fuses into its owner's Starship comes off the kill: {piece_kill} against {vanilla_kill}"
+    );
+}
+
+#[test]
+fn r2566000_given_one_removal_the_ai_destroys_the_vanilla_and_not_the_piece() {
+    register_cards();
+    let library = json!([VANILLA, VANILLA, VANILLA, VANILLA]);
+    for (at, enemy) in [
+        ("piece-first", json!([AFTER_BURNER, vanilla_four_eight()])),
+        ("vanilla-first", json!([vanilla_four_eight(), AFTER_BURNER])),
+    ] {
+        let seed = format!("ai-piece-removal-{at}");
+        let state = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [HIT_JOB], "field": [], "library": library, "mana": 3 },
+            "p2": { "hand": [VANILLA], "field": enemy, "library": library },
+        }))
+        .state()
+        .clone();
+        let vanilla = unit(&state, HUMAN, VANILLA).id.clone();
+        let decision = decide(&state, AI, &mut AiOptions::new(create_rng(&seed, 0))).expect("the AI acts");
+        assert!(
+            matches!(
+                &decision.action,
+                ActionBody::Play { targets: Some(targets), .. }
+                    if targets.first().cloned() == Some(Selection::Instance { instance_id: vanilla.clone() })
+            ),
+            "{at}: Hit Job takes the Vanilla, not the piece: {:?}",
+            decision.action
+        );
+    }
+}
+
+#[test]
+fn r2566000_every_death_is_probed_before_a_starship_piece() {
+    let state = board(
+        "ai-piece-order",
+        json!([]),
+        json!([AFTER_BURNER]),
+        json!([TRIGOR]),
+    );
+    let (prices, _) = priced(&state);
+    let order: Vec<&str> = prices.iter().map(|entry| entry.def_id.as_str()).collect();
+    assert_eq!(
+        order,
+        [TRIGOR, AFTER_BURNER],
+        "the enemy's Trigor first, though the AI's piece is listed ahead of it"
+    );
+
+    let (alone, nodes) = priced(&board("ai-piece-order", json!([]), json!([]), json!([TRIGOR])));
+    assert_eq!(alone.len(), 1, "{alone:?}");
+    let short = death_prices(&state, AI, &create_node_counter(nodes, None));
+    let order: Vec<&str> = short.iter().map(|entry| entry.def_id.as_str()).collect();
+    assert_eq!(
+        order,
+        [TRIGOR],
+        "with only the Trigor's nodes, the Trigor is priced and the piece is not"
+    );
+    assert!(
+        (price_of(&short, TRIGOR) - price_of(&prices, TRIGOR)).abs() < 1e-9,
+        "the Trigor's price is the one it reads beside the piece"
     );
 }

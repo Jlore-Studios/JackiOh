@@ -3,8 +3,8 @@
 //! prompts, which `decide` and the random policy answer; the dense features leave the two new keyword
 //! kinds out, so the compiled network's inputs keep their layout.
 //!
-//! No shipped card is a Starship Piece (Stinkyscape's come with the set), so the file installs two
-//! test-only cards on top of the real catalog: the Dormant Starship under the id the engine summons,
+//! The file installs two test-only cards on top of the real catalog (Stinkyscape's shipped pieces are
+//! priced in `deaths.rs`, R2566000): the Dormant Starship under the id the engine summons,
 //! and a 1/1 piece whose Cry deals 1 damage to a Unit. The AI's piece dies attacking the human's Mr.
 //! Vanilla (core-008, 4/4), which builds the AI a Dormant Starship.
 

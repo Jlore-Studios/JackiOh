@@ -14,17 +14,17 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-Its two thread-locals, the Death and the turn-hook prices of the decision in flight
-(`evaluate::with_death_prices`, R2424000; `evaluate::with_turn_hook_prices`, R2477000), are set for one
-decision and put back after it, a panic included (CLAUDE.md rule 4); outside a decision they price
-nothing.
+Its three thread-locals, the Death, the turn-hook and the activation prices of the decision in flight
+(`evaluate::with_death_prices`, R2424000; `evaluate::with_turn_hook_prices`, R2477000;
+`evaluate::with_activation_prices`, R2564000), are set for one decision and put back after it, a panic
+included (CLAUDE.md rule 4); outside a decision they price nothing.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
-`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES` and `AI_TURN_HOOK_PROBE_NODES`
-in `src/config.rs`, and
+`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
+and `AI_ACTIVATION_PROBE_NODES` in `src/config.rs`, and
 the deck, gate, sweep and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
 `AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
 `DUOS_GATE_WIN_FLOOR` and `DUOS_GATE_GREEDY_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
@@ -83,11 +83,18 @@ R2490000; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
-`kill_worth` takes all of it off a kill. An own backrow card's start-of-turn and end-of-turn hooks count
+`kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
+fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
+(R2566000). An own backrow card's start-of-turn and end-of-turn hooks count
 by one firing (R2477000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
 such hook of the seat's backrow and of its hand's Field Spells (set first, R923001) through the engine's
 trigger queue, and prices it as its controller's evaluation after less before, each crystal gained at
 `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it, and the enemy's backrow counts as before.
+A unit's Activate counts by one use (R2564000): at the root `activation_prices` ends the seat's turn and
+then the enemy's, within `AI_ACTIVATION_PROBE_NODES`; at the start of each player's next turn it tries
+that player's units' uses as the reply does (`visible_activation`) and prices the best as the
+controller's evaluation after less before, each crystal at `next_turn_mana`; `unit_worth` adds
+`AI_EVAL.activation` of it, for both sides' units.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

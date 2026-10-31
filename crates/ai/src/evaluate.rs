@@ -18,10 +18,13 @@
 //! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand.
 //! #2424 prices a unit's Death by what it leaves behind (R2424000): the decision's root probes each
 //! Death the seat can read (`death_prices`), and `unit_worth` and `kill_worth` read the prices it
-//! holds (`with_death_prices`). #2477 prices an own backrow card's start-of-turn and end-of-turn
+//! holds (`with_death_prices`); #2566 prices a Starship Piece's death the same way, by the copy it fuses
+//! into its owner's Starship (R2566000). #2477 prices an own backrow card's start-of-turn and end-of-turn
 //! hooks by one firing (R2477000): the root fires each (`turn_hook_prices`) and `material` reads the
-//! prices it holds (`with_turn_hook_prices`). It reads only what the seat may know or what a
-//! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
+//! prices it holds (`with_turn_hook_prices`). #2564 prices a unit's Activate by one use (R2564000):
+//! the root plays each (`activation_prices`) and `unit_worth` reads the prices it holds
+//! (`with_activation_prices`). It reads only what the seat may know or what a determinization sampled,
+//! and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -29,6 +32,7 @@
 use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
+use indexmap::IndexSet;
 use jackioh_engine::config::{
     CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
     TURN_CAP_PLAYER_TURNS,
@@ -36,24 +40,26 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
-    EngineSink, GameEvent, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind, PLAYER_IDS,
+    EngineSink, GameEvent, GameState, Grant, HookName, Keyword, KeywordKind, ModifierKind, PLAYER_IDS, Phase,
     PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone,
     Tag, TriggerHolder, TriggerZone, UnitView, ZoneName, acting_with_flag, active_brittle_count,
     active_units_of, animated_with_stats, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_at, card_keywords, card_type_of_face, credit_lapsing, death_hook_of,
     effective_cost, effective_life, find_def, find_instance, first_entry_zone, frozen_next_turn, has_keyword,
-    heal_multiplier_of, hero_armor_of, is_standing_unit, is_temporary_card, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost, queue_hook,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts,
-    takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
+    heal_multiplier_of, hero_armor_of, is_standing_unit, is_starship_piece, is_temporary_card, legal_actions,
+    lost_refreshes_left, modifier_is_live, outcome_for, owed_mana_of, own_cost, pierces, pile_at, query_cost,
+    queue_hook, reset_instance, script_of, settle, slots_of, stats_with_buffs, subsystems,
+    sync_fused_scripts, takes_strike_back, trigger_holders_with_hook, unit_has, unit_view, units_on_field_of,
     why_sandbox_refused, with_pool_hold,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EXTRA_TURN_CARDS, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_ACTIVATION_PROBE_NODES, AI_DEATH_PROBE_NODES, AI_EVAL, AI_EXTRA_TURN_CARDS, AI_TURN_HOOK_PROBE_NODES,
+    EvalWeights,
 };
+use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
 use crate::types::NodeCounter;
 
@@ -208,9 +214,17 @@ pub fn with_death_prices<T>(prices: Vec<DeathPrice>, run: impl FnOnce() -> T) ->
     run()
 }
 
-/// R2424000: what `unit`'s Death leaves its controller, by the prices held (`with_death_prices`), while
-/// its Death is live (`death_hook_of`: a Vanilla unit has none). 0 outside a decision, for a card its
-/// root did not price, and at a zero `death` weight (no reading).
+/// R2424000, R2566000: whether `card`'s death leaves its controller something to price: a live Death
+/// (`death_hook_of`: a Vanilla unit has none), or, while it is a Starship Piece as the death pass reads
+/// one (`is_starship_piece`: the keyword through the layers, face-up), the copy that pass fuses into
+/// its owner's Starship (R1852000).
+fn leaves_behind(state: &GameState, card: &CardInstance) -> bool {
+    death_hook_of(state, card).is_some() || is_starship_piece(state, card)
+}
+
+/// R2424000: what `unit`'s death leaves its controller, by the prices held (`with_death_prices`), while
+/// it leaves something (`leaves_behind`: a live Death, or a Starship Piece's fusion, R2566000). 0
+/// outside a decision, for a card its root did not price, and at a zero `death` weight (no reading).
 fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
     if w.death == 0.0 {
         return 0.0;
@@ -225,7 +239,7 @@ fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
         price
     });
     match price {
-        Some(price) if death_hook_of(state, unit).is_some() => price,
+        Some(price) if leaves_behind(state, unit) => price,
         _ => 0.0,
     }
 }
@@ -315,9 +329,92 @@ fn turn_hook_price(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     }
 }
 
+/// R2564000: what one use of a unit's Activate gives its controller, as a decision's root priced it
+/// (`activation_prices`), and the card it prices: its definition, its face and its controller, so the
+/// same card the search moves or makes later reads the same price. The controller is in the key since
+/// each copy aims at a different board: the seat's Cannon shoots the enemy's units, the enemy's the
+/// seat's.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ActivationPrice {
+    pub def_id: String,
+    pub radiant: bool,
+    pub controller: PlayerId,
+    pub price: f64,
+}
+
+impl ActivationPrice {
+    /// The price `card` would hold, at 0 until it is probed.
+    fn key(card: &CardInstance) -> Self {
+        Self {
+            def_id: card.def_id.clone(),
+            radiant: card.radiant,
+            controller: card.controller,
+            price: 0.0,
+        }
+    }
+
+    fn is_for(&self, card: &CardInstance) -> bool {
+        self.def_id == card.def_id && self.radiant == card.radiant && self.controller == card.controller
+    }
+}
+
+// CLAUDE.md rule 4's scoped exception (R2564000): the activation prices of the decision in flight on
+// this thread, held by `ActivationPricing` for that one decision and put back after it, so every
+// `unit_worth` the search makes reads them without a parameter through every scorer.
+thread_local! {
+    static ACTIVATION_PRICES: Cell<Vec<ActivationPrice>> = const { Cell::new(Vec::new()) };
+}
+
+/// R2564000: `prices` held on this thread until the guard drops, then the prices held before put back,
+/// a panic included.
+pub(crate) struct ActivationPricing(Vec<ActivationPrice>);
+
+impl ActivationPricing {
+    pub(crate) fn hold(prices: Vec<ActivationPrice>) -> Self {
+        Self(ACTIVATION_PRICES.with(|cell| cell.replace(prices)))
+    }
+}
+
+impl Drop for ActivationPricing {
+    fn drop(&mut self) {
+        let before = std::mem::take(&mut self.0);
+        ACTIVATION_PRICES.with(|cell| cell.set(before));
+    }
+}
+
+/// R2564000: `run` with `prices` held on this thread for that call alone, as a decision holds the ones
+/// its root priced. The prices held before are put back after it, a panic included.
+pub fn with_activation_prices<T>(prices: Vec<ActivationPrice>, run: impl FnOnce() -> T) -> T {
+    let _held = ActivationPricing::hold(prices);
+    run()
+}
+
+/// R2564000: what one use of `unit`'s Activate gives its controller, by the prices held
+/// (`with_activation_prices`), while it has an ability to use (`abilities_of`: a Vanilla unit has
+/// none). 0 outside a decision, for a card its root did not price, and at a zero `activation` weight
+/// (no reading).
+fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
+    if w.activation == 0.0 {
+        return 0.0;
+    }
+    let price = ACTIVATION_PRICES.with(|cell| {
+        let prices = cell.take();
+        let price = prices
+            .iter()
+            .find(|entry| entry.is_for(unit))
+            .map(|entry| entry.price);
+        cell.set(prices);
+        price
+    });
+    match price {
+        Some(price) if !subsystems::abilities_of(state, unit).is_empty() => price,
+        _ => 0.0,
+    }
+}
+
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
-/// Damage per point, all discounted by its Brittle count, and `death` of what its Death leaves behind
-/// (R2424000).
+/// Damage per point and `activation` of what one use of its Activate gives (R2564000), all discounted
+/// by its Brittle count, and `death` of what its Death leaves behind (R2424000).
 pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
     let view = unit_view(state, unit);
     let weights = &w.keyword;
@@ -364,6 +461,9 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
             }
         }
     }
+    // R2564000: what one use of its Activate gives its controller, inside the Brittle share: a card that
+    // crumbles takes its coming uses with it.
+    value += w.activation * activation_price(state, unit, w);
     // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's
     // Plague Counters are mana it already banked, not part of the body that crumbles. R2424000: so is
     // what its Death leaves, since Brittle's end is a death too.
@@ -1179,11 +1279,14 @@ fn spawned_death_probe(
 /// probe world (a function of what the seat sees, R185), each card once: every unit on either field
 /// whose Death is live (`death_hook_of`), the seat's first, then each Unit in the seat's own hand with
 /// one (`spawned_death_probe`, R923001); one the same as a card already listed (`DeathPrice::is_for`)
-/// is not probed again. Each runs on a sandbox copy (R923000) with both players' automatic turn end
-/// off (R345), so no tool's step ends the turn (R82), and with no price held, so a probe reads none
-/// (`death_probe`, R923003). The probes draw at most `AI_DEATH_PROBE_NODES` nodes from `counter`; the
-/// cards left when they run out are not priced. Nothing is priced while a prompt is open, which refuses
-/// the tools, once the game is over, or at a zero `AI_EVAL.death`.
+/// is not probed again. R2566000: after every Death, each Starship Piece with none of its own
+/// (`is_starship_piece`), in the same order, priced by the copy its death fuses into its owner's
+/// Starship, so a board of pieces never takes the nodes a Death drew before. Each runs on a sandbox copy
+/// (R923000) with both players' automatic turn end off (R345), so no tool's step ends the turn (R82), and
+/// with no price held, so a probe reads none (`death_probe`, R923003). The probes draw at most
+/// `AI_DEATH_PROBE_NODES` nodes from `counter`; the cards left when they run out are not priced. Nothing
+/// is priced while a prompt is open, which refuses the tools, once the game is over, or at a zero
+/// `AI_EVAL.death`.
 pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
     if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1197,10 +1300,19 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
         .iter()
         .filter(|card| card_type_of_face(world, &card.def_id, card.radiant) == CardType::Unit)
         .map(|card| (card, true));
+    let listed: Vec<(&CardInstance, bool)> = field.chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
-    for (card, in_hand) in field.chain(hand) {
-        if death_hook_of(world, card).is_some() && !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
-            candidates.push((DeathPrice::key(card), card, in_hand));
+    // R2566000: every live Death first, in R2424000's order, then each Starship Piece with none.
+    for pieces in [false, true] {
+        for &(card, in_hand) in &listed {
+            let wanted = if pieces {
+                is_starship_piece(world, card)
+            } else {
+                death_hook_of(world, card).is_some()
+            };
+            if wanted && !candidates.iter().any(|(key, _, _)| key.is_for(card)) {
+                candidates.push((DeathPrice::key(card), card, in_hand));
+            }
         }
     }
     if candidates.is_empty() {
@@ -1400,6 +1512,162 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
                 }
             }
             priced
+        })
+    })
+}
+
+/// R2564000: `before` after `player` ends its turn, one node of `counter` (`simulate`, which answers
+/// the other seat's prompts on the way), when that reaches the other player's main phase with no prompt
+/// open and the game on. `None` when the counter is spent; `Some(None)` when the turn end fails or
+/// reaches anything else: `player`'s own prompt, an extra turn, the game's end.
+fn next_turn(before: &GameState, player: PlayerId, counter: &dyn NodeCounter) -> Option<Option<GameState>> {
+    let Ok(next) = simulate(before, player, &ActionBody::EndTurn, counter)? else {
+        return Some(None);
+    };
+    let ready = next.pending.is_none()
+        && next.result.is_none()
+        && next.active == player.opponent()
+        && next.phase == Phase::Main;
+    Some(ready.then_some(next))
+}
+
+/// R2564000: what the use of `unit`'s Activate that took `turn` to `after` gives its controller: the
+/// controller's evaluation after it less before it, and `AI_EVAL.next_turn_mana` for each crystal it
+/// gained (less for each it spent), which the evaluation does not count. `None` when there is nothing
+/// to price: the use leaves a prompt open, ends the game, takes the card off the field, or gives
+/// nothing.
+fn use_price(turn: &GameState, after: &GameState, unit: &CardInstance) -> Option<f64> {
+    if after.pending.is_some() || after.result.is_some() {
+        return None;
+    }
+    if !find_instance(after, &unit.id).is_some_and(|card| card.zone.z() == ZoneName::Field) {
+        return None;
+    }
+    let owner = unit.controller;
+    let gained = after.players[owner].mana.current - turn.players[owner].mana.current;
+    let price = evaluate(after, owner, NextSwing::Enemy, &AI_EVAL)
+        - evaluate(turn, owner, NextSwing::Enemy, &AI_EVAL)
+        + AI_EVAL.next_turn_mana * f64::from(gained);
+    (price > 0.0).then_some(price)
+}
+
+/// R2564000: prices into `priced` the best use of each of `controller`'s units with an Activate on
+/// `turn`, the start of its turn: the uses `legal_actions` lists for the unit, tried as the opponent's
+/// reply tries them (`visible_activation`: only a card acting face-up that is none of `hidden`, at most
+/// `AI_REPLY.visible_activations` of them, the best by the controller's own evaluation when it beats
+/// standing still), and priced by `use_price`. A unit the same as one already tried (`tried`,
+/// `ActivationPrice::is_for`) is not tried again. `false` when the counter is spent.
+fn price_uses(
+    turn: &GameState,
+    controller: PlayerId,
+    hidden: &IndexSet<String>,
+    counter: &dyn NodeCounter,
+    tried: &mut Vec<ActivationPrice>,
+    priced: &mut Vec<ActivationPrice>,
+) -> bool {
+    let legal = legal_actions(turn, controller);
+    for unit in active_units_of(turn, controller) {
+        if hidden.contains(&unit.id)
+            || tried.iter().any(|key| key.is_for(unit))
+            || subsystems::abilities_of(turn, unit).is_empty()
+        {
+            continue;
+        }
+        tried.push(ActivationPrice::key(unit));
+        let uses: Vec<ActionBody> = legal
+            .iter()
+            .filter(|action| matches!(action, ActionBody::Activate { instance_id, .. } if *instance_id == unit.id))
+            .cloned()
+            .collect();
+        if uses.is_empty() {
+            continue;
+        }
+        match visible_activation(turn, controller.opponent(), &uses, hidden, counter) {
+            Known::Cut => return false,
+            Known::Nothing => {}
+            Known::Played(after) => {
+                if let Some(price) = use_price(turn, &after, unit) {
+                    priced.push(ActivationPrice {
+                        price,
+                        ..ActivationPrice::key(unit)
+                    });
+                }
+            }
+        }
+    }
+    true
+}
+
+/// R2564000: whether any unit acting on `player`'s field (`active_units_of`: never a Dormant card) has
+/// an ability to use (`abilities_of`).
+fn has_activate_unit(world: &GameState, player: PlayerId) -> bool {
+    active_units_of(world, player)
+        .into_iter()
+        .any(|unit| !subsystems::abilities_of(world, unit).is_empty())
+}
+
+/// R2564000: `activation_prices`' two turns on `start`: `seat` ends its turn and the enemy's units are
+/// priced at the start of the enemy's (`price_uses`); then, when `own` (a unit of the seat's has an
+/// Activate), the enemy ends that turn with nothing used and the seat's units are priced at the start
+/// of its next one. A turn the pass does not reach prices nothing, and nor does any turn after it.
+fn probe_turns(
+    start: &GameState,
+    seat: PlayerId,
+    own: bool,
+    counter: &dyn NodeCounter,
+) -> Vec<ActivationPrice> {
+    let hidden = hidden_card_ids(start, seat);
+    let (mut tried, mut priced) = (Vec::new(), Vec::new());
+    let enemy = seat.opponent();
+    let Some(Some(enemy_turn)) = next_turn(start, seat, counter) else {
+        return priced;
+    };
+    if !price_uses(&enemy_turn, enemy, &hidden, counter, &mut tried, &mut priced) || !own {
+        return priced;
+    }
+    if let Some(Some(own_turn)) = next_turn(&enemy_turn, enemy, counter) {
+        price_uses(&own_turn, seat, &hidden, counter, &mut tried, &mut priced);
+    }
+    priced
+}
+
+/// R2564000: the activation prices a decision of `seat`'s holds (`ActivationPricing`), probed on
+/// `world`, its probe world (a function of what the seat sees, R185): one use of the Activate of each
+/// unit acting on either field (`active_units_of`, so never a Dormant card, a face-down backrow card or
+/// a hand card), each card once (`ActivationPrice::is_for`). The enemy's units are tried at the start
+/// of the enemy's next turn and the seat's own at the start of the seat's next one (`probe_turns`), so
+/// a use the seat already spent this turn hides nothing, and each use is tried as the opponent's reply
+/// tries one (`visible_activation`). It runs on a copy with both players' automatic turn end off
+/// (R345), so no step ends a turn the probe did not end, and with no price held, so a probe reads none,
+/// a Death and a turn-hook price included. The probes draw at most `AI_ACTIVATION_PROBE_NODES` nodes
+/// from `counter`; the units left when they run out are not priced. Nothing is priced, and no node is
+/// spent, when no unit on either field has an Activate, while a prompt is open, once the game is over,
+/// outside the seat's own main phase, or at a zero `AI_EVAL.activation`.
+pub fn activation_prices(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+) -> Vec<ActivationPrice> {
+    if AI_EVAL.activation == 0.0
+        || world.pending.is_some()
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return Vec::new();
+    }
+    let own = has_activate_unit(world, seat);
+    if !own && !has_activate_unit(world, seat.opponent()) {
+        return Vec::new();
+    }
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, AI_ACTIVATION_PROBE_NODES);
+    with_death_prices(Vec::new(), || {
+        with_turn_hook_prices(Vec::new(), || {
+            with_activation_prices(Vec::new(), || probe_turns(&start, seat, own, &probes))
         })
     })
 }
