@@ -94,7 +94,6 @@ describe("R434 the game-over screen lists 'Their hand'", () => {
     expect(within(section).getByTestId(revealTestid.theirHandCard("t1")).querySelector('[data-radiant-face="true"]')).not.toBeNull();
     expect(within(section).getByTestId(revealTestid.theirHandCard("t0")).querySelector('[data-radiant-face="true"]')).toBeNull();
 
-    // A click opens the card large in the inspect sheet.
     fireEvent.click(within(section).getByTestId(revealTestid.theirHandCard("t2")));
     const sheet = screen.getByTestId(INSPECT_SHEET);
     expect(within(sheet).getByTestId(INSPECT_FACE)).toHaveTextContent(nameOf("core-055"));

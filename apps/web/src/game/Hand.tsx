@@ -9,9 +9,9 @@
 // `--i` and `.hand-cards` the hand size as `--n`, so board.css lays it out without measuring. On the
 // viewer's own hand a tap lifts a card (`data-lifted`) so it can be read, legal or not: a
 // capture-phase click, so it happens even when the card refuses the click. It is local view state,
-// not a game action; the selected card is always lifted. Drag to play is game/drag/DragLayer.tsx,
-// and the card a drop has just played is marked `data-landing` (drag/landing.ts), which board.css
-// takes out of the fan while the board catches up with the play.
+// not a game action. Drag to play is game/drag/DragLayer.tsx, and the card a drop has just played is
+// marked `data-landing` (drag/landing.ts), which board.css takes out of the fan while the board
+// catches up with the play.
 //
 // A pointer on the viewer's own hand card is reported upward (`onHover`, #991) so the board can ring
 // what its preview counts. It is view state, never an action.
@@ -46,7 +46,6 @@ import { t } from "../i18n/i18n.ts";
 
 export type HandProps = {
   side: Side;
-  /** R1834004: the seat whose hand this is, whose card back its backs and whose loadout its revealed cards wear. */
   seat?: PlayerId;
   hand: CardView[] | { count: number };
   /** R1143: this seat's hand size, once set for the rest of the game (Meditative #79). Shown beside the count. */
@@ -58,7 +57,6 @@ export type HandProps = {
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
-  /** #991: the viewer's own hand card under the pointer, or null once the pointer leaves it (Board.tsx). */
   onHover?: (instanceId: string | null) => void;
   /** R318: the card a full hand burned, drawn over the hand (OverflowNotices.tsx `BurnNotice`). */
   notice?: ReactNode;
@@ -72,10 +70,8 @@ export function handCount(hand: CardView[] | { count: number }): number {
   return Array.isArray(hand) ? hand.length : hand.count;
 }
 
-/** R504: what an empty hand's outline says. */
 export const HAND_EMPTY_TEXT = "Hand empty";
 
-/** R504: the testid of a seat's empty-hand outline. */
 export function handEmptyTestid(side: Side): string {
   return `hand-empty-${side}`;
 }
@@ -125,7 +121,6 @@ export default function Hand(props: HandProps): ReactElement {
   const { hand, side, cap, marked, view } = props;
   const count = handCount(hand);
   const yours = side === "you";
-  // R434: the opponent's hand is cards only once the game is over; it is read, never played.
   const revealed = !yours && Array.isArray(hand);
   const hoverPreviews = useSetting("hoverPreviews");
   const landing = useLanding();

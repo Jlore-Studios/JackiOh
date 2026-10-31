@@ -5,9 +5,7 @@
 // only in the view by accident are not printed: `drawn`, `addedToHand` and `shuffledIn` carry a
 // `defId` for the animation layer, so this log says "drew a card", and a redaction slip upstream
 // cannot turn into a leak on screen. A line never prints an id, and the R154 sentinel reads as "a
-// face-down trap". `cardResolved` gets no line: it is bookkeeping. A line about a card opens it in
-// the cards module's inspect, found exactly as the name was, so a line never opens a card it does
-// not print. The lines whose events have left the window come from `useLogHistory.ts` (R745).
+// face-down trap". `cardResolved` gets no line: it is bookkeeping.
 
 import { Fragment, memo, useContext, useLayoutEffect, useRef, type MouseEvent, type ReactElement } from "react";
 
@@ -30,7 +28,6 @@ import { CHAOS_TEXT } from "./showcase/constants.ts";
 import { useLogHistory, type KeptLine, type LoggedLine } from "./useLogHistory.ts";
 
 
-/** What a player is asked for, by prompt kind, in the log's words. */
 const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   discover: "a card to Discover",
   target: "a target",
@@ -51,7 +48,6 @@ const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   market: "a deal at the night market",
 };
 
-/** A number's key in words: a declared number's camelCase split ("drawLimit" is "draw limit"). */
 function keyWords(key: string): string {
   return key.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }
@@ -81,7 +77,6 @@ type Naming = {
   /** A card as `instance` names it, a hero as a seat's; null where nothing public names it (R97: never the sentinel). */
   known: (instanceId: string) => string | null;
   seat: (player: PlayerId) => string;
-  /** "your" or "the opponent's". */
   whose: (player: PlayerId) => string;
 };
 
@@ -149,7 +144,6 @@ function publicNames(events: readonly GameEvent[]): Map<string, string> {
   return names;
 }
 
-/** Each `cardPlayed` in a window → the targets its announce declared (B5 E1): see `announcedAims`. */
 type Aims = ReadonlyMap<GameEvent, readonly string[]>;
 
 /**
@@ -193,7 +187,6 @@ function defIdOfInstance(view: PlayerView, instanceId: string): string | undefin
   return undefined;
 }
 
-/** R370: the cost the view gives the face-down card in a backrow lane, while one stands there. */
 function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): number | undefined {
   const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
   const entry = seat.backrow[lane - 1];
@@ -201,7 +194,6 @@ function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): numbe
   return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
-/** R404: an open quest's words, off the quest line its card's view carries, or null once it is not open. */
 function questText(view: PlayerView, instanceId: string, quest: string): string | null {
   return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
 }
@@ -604,7 +596,6 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
   }
 }
 
-/** The words a view's lines use for cards and seats, naming a card from the board, else from `remembered`. */
 function namingFor(view: PlayerView, lookup: CardLookup | null, remembered: ReadonlyMap<string, string>): Naming {
   const def = (defId: string): string => {
     if (defId === HIDDEN_CARD) return t("a hidden card");
@@ -669,7 +660,6 @@ const REDIRECTED: Readonly<Record<Extract<GameEvent, { type: "redirected" }>["wh
   target: "a target",
 };
 
-/** The card a line is about: the one it names, by definition, and the face it wears where the view shows it. */
 type LineCard = { defId: string; radiant: boolean; instanceId?: string };
 
 /**
@@ -758,7 +748,7 @@ export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event
 
 type Line = KeptLine;
 
-/** One line; a line about a card is a button that opens it. Kept lines are the same objects from render to render, so they do not redraw. */
+/** Kept lines are the same objects from render to render, so they do not redraw. */
 const LogLine = memo(function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "preview" }): ReactElement {
   const face = line.face;
   // Lines of code is a hidden stat in matches.

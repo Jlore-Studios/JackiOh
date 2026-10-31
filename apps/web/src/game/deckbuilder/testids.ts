@@ -11,7 +11,7 @@ import type { LoadoutRule } from "@jackioh/validator";
 
 import type { CostBucket } from "./filters.ts";
 
-// The workshop: the screen, the save status, the rail of decks and trios
+// The workshop
 
 /** The workshop's root; `data-view="list|editor"` says which half a phone shows. */
 export const WORKSHOP = "workshop";
@@ -121,10 +121,7 @@ export function deckDuplicateId(deckId: string): string {
   return `deck-duplicate-${deckId}`;
 }
 
-/**
- * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
- * `/practice?deck=saved:<n>` (`practiceDeckPath`), the deck picked and no game started.
- */
+/** #1991: "Practice with this deck", on a complete deck while the workshop is saved. */
 export const DECK_TO_PRACTICE = "deck-to-practice";
 
 /**

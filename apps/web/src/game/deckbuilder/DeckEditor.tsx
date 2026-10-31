@@ -1,14 +1,10 @@
 // Deck editor: saved deck, card pool and actions (SPEC §9.4, R250–R255; docs/polish/6-cards.md, Surface D).
-//
-// Validator messages avoid a second source of truth (messages.test.ts).
-//
-// `addCard` rejects duplicates, full decks (D2, D4), and compared cards (R251); existing clashes stay visible.
-//
-// The store autosaves (R256); completing a deck saves immediately.
+// Validator messages avoid a second source of truth (messages.test.ts). `addCard` rejects duplicates,
+// full decks (D2, D4), and compared cards (R251); existing clashes stay visible. The store autosaves
+// (R256); completing a deck saves immediately.
 //
 // R915005: the account's custom cards come in the catalog the route hands it (set `Custom`), behind a
-// "Custom" set chip beside the way to the creator; a deck that names one is "Practice only", in the
-// validator's own words (L7).
+// "Custom" set chip beside the way to the creator; a deck that names one is "Practice only" (L7).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -150,7 +146,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const verdictTitleId = useId();
   const duplicateReasonId = useId();
 
-  // Timed by the words it shows, as when it held them: saying the same again leaves its timer running.
+  // Timed by the words it shows: saying the same again leaves its timer running.
   const shown = status === null ? null : status.say();
   useEffect(() => {
     if (shown === null) return undefined;
@@ -213,7 +209,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     return named;
   }, [verdict]);
   const code = useMemo(() => (codeShown ? encodeDeckCode(label, deck.cards, catalog) : ""), [codeShown, label, deck.cards, catalog]);
-  // R915005: the "Custom" chip, once the catalog holds one of the account's custom cards.
   const sets = useMemo(
     () => (Object.values(catalog.cards).some((def) => def.set === CUSTOM_SET) ? [...FILTER_SETS, CUSTOM_SET] : FILTER_SETS),
     [catalog],

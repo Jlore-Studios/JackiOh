@@ -2,20 +2,16 @@
 //
 // Two things open this modal, and telling them apart is R81:
 //  1. `view.pending` — a `PendingChoice` the engine opened during resolution, paused until it is
-//     answered by an `answer` action (or, for the mulligan, §10.2's own `mulligan` action). The
-//     opponent sees only that a prompt is open, never its options (§10.6, §10.8).
+//     answered by an `answer` action (or, for the mulligan, §10.2's own `mulligan` action).
 //  2. `props.interaction` — a play the player is still building, with NO `view.pending`: nothing is
 //     paused, and it submits a `play`, never an `answer`. §10.6 keeps the `x`, `embiggen`, `zone`,
 //     `tribute` and `direction` prompt kinds for later sets, so both routes render the same picker
-//     with the same `data-prompt-kind`. An activation (R384) is built here too and submits an
-//     `activate`; so is a play's payment (Classic #74). A targeting cost's discards (Classic #89)
-//     are random at pay time (R682) and need no picker.
+//     with the same `data-prompt-kind`. A targeting cost's discards (Classic #89) are random at pay
+//     time (R682) and need no picker.
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10). `data-prompt-source` ("engine"
-// or "play") is for layout only: prompt.css turns a play's board picks into a slim bar on a phone
-// while drag to play is on, because their answers already glow on the board. #1204: a new prompt is
-// a new `PromptModal` (its `key`), so a folded picker opens unfolded. R2211000: a replay's board
-// draws the open prompt of its step's view and sends nothing (`readOnly`).
+// or "play") is for layout only (prompt.css). #1204: a new prompt is a new `PromptModal` (its `key`),
+// so a folded picker opens unfolded.
 //
 // No rule is applied here either: `min`, `max` and the options came from the engine, from
 // `PendingView` on route 1 and from the `legalActions` candidates (`actions.ts`) on route 2.
@@ -105,9 +101,9 @@ export type PromptProps = {
 };
 
 /**
- * The seat that is only watching gets NO `data-prompt-kind` (which M5-T4 animates the open picker
- * on): §10.8 gives that view the fact that a choice is open and nothing else. Its own flag keeps "a
- * prompt is open for me" and "somebody is choosing" from reading the same in the DOM.
+ * The seat that is only watching gets NO `data-prompt-kind`: §10.8 gives that view the fact that a
+ * choice is open and nothing else. Its own flag keeps "a prompt is open for me" and "somebody is
+ * choosing" from reading the same in the DOM.
  */
 const WAITING_FLAG = "waiting";
 
@@ -140,22 +136,17 @@ const OVER_BUDGET = "Over the budget";
 type PickerItem = {
   key: string;
   label: string;
-  /** Set when the option names a card, so the picker can show its real name (`catalog.ts`). */
   defId?: string;
   radiant?: boolean;
   /** R1301: the option says the card is shown in Chinese (`PendingOption.chinese`). */
   chinese?: boolean;
-  /** The card's cost as the view carries it (`CardView.cost`), for its face's gem. */
   cost?: number;
-  /** The card as the view lists it, when it lists it: its face is then the card as it stands. */
   card?: CardView;
-  /** Where the card sits ("Enemy unit, lane 2"), which tells two copies of one card apart. */
   where?: string;
   /** The row a zone option sits in, so the zone grid can group by it without parsing keys. */
   group?: string;
   /** Which arrow a direction option draws. Never read off the key, which is the engine's. */
   arrow?: "left" | "right";
-  /** A "Choose one" option's line of detail under its label (modeText.ts). */
   detail?: string;
   /** #492: what picking a card option chooses, under its face ("Embiggened", "X = 2"). */
   caption?: string;
@@ -188,7 +179,7 @@ type Picker = {
   /**
    * #617: the card being played, as the view lists it, when the options are words rather than faces
    * (a "Choose one"): its name in the title opens its preview and long-press sheet, so the card can
-   * be read while its choice is open, on a phone too.
+   * be read while its choice is open.
    */
   sourceCard?: CardView;
   items: PickerItem[];
@@ -229,7 +220,6 @@ function refOf(card: CardView): CardRef {
   return { defId: card.defId, radiant: card.radiant, cost: card.cost, card };
 }
 
-/** Where an instance id sits in the viewer's own view, for a picker label and the option's face. */
 function cardRefFor(view: PlayerView, instanceId: string): CardRef | null {
   for (const side of [view.you, view.opponent]) {
     for (const pile of side.units) {
@@ -376,7 +366,6 @@ function pickerForPending(
     chrome,
     ...(cards ? { cards } : {}),
     ...(turnOrder ? { uncounted: true } : {}),
-    // The engine's prompt, in the reader's language where the dictionary has it.
     title: turnOrder
       ? view.active === view.viewer
         ? t("You are going first")
@@ -413,8 +402,7 @@ function pickerForPending(
   return picker;
 }
 
-// Route 2: an R81 choice of a play or an activation. Submits a `play` or an `activate`, never an
-// `answer`.
+// Route 2: an R81 choice of a play or an activation. Submits a `play` or an `activate`, never an `answer`.
 
 function isDirection(options: readonly string[]): boolean {
   return options.length > 0 && options.every((option) => DIRECTIONS.some((d) => d === option));
@@ -422,9 +410,8 @@ function isDirection(options: readonly string[]): boolean {
 
 /**
  * R81 puts a declared `hand` pick (#26 Glowy Jelly Bean) in the play action's `targets`, so it
- * arrives here as a `target` need — but §10.6 still names `hand` as its own prompt kind and
- * BUILD M5-T2 draws it as its own picker. Presentation only — the action built is the same `play`
- * either way.
+ * arrives here as a `target` need — but §10.6 still names `hand` as its own prompt kind. Presentation
+ * only — the action built is the same `play` either way.
  */
 function isHandPick(need: PlayNeed, view: PlayerView): boolean {
   if (need.kind !== "target") return false;
@@ -437,7 +424,6 @@ function isHandPick(need: PlayNeed, view: PlayerView): boolean {
   );
 }
 
-/** "Pay in mana only", "Spend 2 Plague Counters", and where they come from when several cards pay. */
 function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean): string {
   if (option === "none") return t("Pay in mana only");
   const n = String(option.tokens);
@@ -448,12 +434,10 @@ function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean
     : t("Spend {n} Plague Counters ({where})", { n, where });
 }
 
-/** The card the play (or activation) in flight is building, as the view lists it. */
 function playedRef(interaction: Interaction, view: PlayerView): CardRef | null {
   return isBuilding(interaction) ? cardRefFor(view, interaction.instanceId) : null;
 }
 
-/** #492: a card option drawn as the card being played, as the view lists it. */
 function playedFace(played: CardRef): Pick<PickerItem, "defId" | "radiant" | "cost" | "card"> {
   return { defId: played.defId, radiant: played.radiant, cost: played.cost, card: played.card };
 }
@@ -528,8 +512,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
     }
     case "embiggen": {
-      // #492: the two prices are two cards: the card being played at the price it shows in hand, and
-      // the same card at its Embiggened cost. R1563004: a card of one price has a dearer price only
+      // #492: the two prices are two cards. R1563004: a card of one price has a dearer price only
       // under Mountaintop Garden, which plays it Radiant, so its two cards are the card as it is and
       // the card Radiant.
       const played = playedRef(interaction, view);
@@ -684,11 +667,10 @@ const NUMBER_OPTION = /^\d+$/;
 const UNKNOWN_PRICE = "?";
 
 /**
- * #492: an embiggen option's face at the price its form is played for. The embiggened form is at the
- * view's `embiggenCost`, which the engine reads with the function it charges that play by. A card view
- * without it (one not in its owner's hand) falls back to the price the face shows beside its gem
- * (`FaceCost.alt`, cards/model.ts), else "?": the client never works out an embiggen price itself
- * (CLAUDE.md rule 7).
+ * #492: the embiggened form is at the view's `embiggenCost`, which the engine reads with the function
+ * it charges that play by. A card view without it (one not in its owner's hand) falls back to the
+ * price the face shows beside its gem (`FaceCost.alt`, cards/model.ts), else "?": the client never
+ * works out an embiggen price itself (CLAUDE.md rule 7).
  */
 function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | undefined, def: CardDef | undefined): FaceModel {
   if (price === "normal") return { ...face, cost: { ...face.cost, alt: null } };
@@ -719,7 +701,6 @@ function SequenceCountdown(props: { choiceId: string; streak: number }) {
   );
 }
 
-/** R1301: the view flagged the option's card Chinese, by the option or by the card it lists. */
 function isFlagged(item: PickerItem): boolean {
   return item.chinese === true || item.card?.chinese === true;
 }
@@ -729,8 +710,6 @@ function nameOf(defId: string, info: { name: string; def?: CardDef }, chinese: b
   return chinese ? chineseName(defId, info.name, info.def) : info.name;
 }
 
-// A card option draws the face the hand and the deck builder draw, with the same hover preview and
-// long-press sheet, in whatever box prompt.css gives it.
 function CardOption(props: {
   item: PickerItem;
   pressed: boolean;
@@ -753,7 +732,6 @@ function CardOption(props: {
   const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, drawnInChinese(flagged));
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
-  // The card in play: as the view lists it when it does, else a definition as the game shows it.
   const drawn =
     props.item.defId === undefined
       ? null
@@ -773,12 +751,10 @@ function CardOption(props: {
           });
   const face =
     drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price, props.item.card, info.def);
-  // #492: what this card picks, under its face; an embiggen option also says what it pays.
   const caption = face === null ? undefined : props.item.caption;
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
-  // R1183005: a code option is drawn as its code, in a block of its own, naming no card.
   const code = face === null && props.item.code === true ? props.item.label : null;
   // R831004: an option that names a set (#82 KY's Trial's first Discover) shows the set's mark (R503).
   const mark = face === null && number === null && code === null ? setMarkOf(props.item.label) : null;
@@ -913,7 +889,6 @@ function arrowFocus(columns: number) {
   };
 }
 
-/** The picker's heading: the asking card's name before it, when the picker knows the card. */
 function PickerTitle(props: { title: string; sourceDefId: string | undefined; sourceCard: CardView | undefined }) {
   const info = useCardInfo(props.sourceDefId ?? "", props.sourceCard?.radiant === true);
   const face = props.sourceCard === undefined ? null : liveFace(info, props.sourceCard);
@@ -985,16 +960,10 @@ function BoardOnlyPrompt(props: {
   );
 }
 
-/**
- * #492: the card picker (`isCardLayout`), each option a card in a row in the middle of the picker.
- * `data-choice` names the picker's chrome.
- */
 function CardChoice(props: {
   picker: Picker;
-  /** R515: what the picks so far cost together. */
   spent: number;
   pressed: (key: string) => boolean;
-  /** R515: whether adding this option keeps the picks within the budget. */
   fits: (key: string) => boolean;
   pick: (key: string) => void;
   readOnly: boolean;
@@ -1482,7 +1451,6 @@ function OpponentMulliganStatus(props: { mulligan: MulliganView }) {
   );
 }
 
-/** A hand card on the waiting panel: its face, and the stamp saying whether it stays or goes back. */
 function WaitingCard(props: { card: CardView; keep: boolean }) {
   useLocale();
   const info = useCardInfo(props.card.defId, props.card.radiant);

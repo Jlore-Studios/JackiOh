@@ -1,9 +1,8 @@
 // Dev decks for the hotseat route (BUILD M5-T3): `?a=<deckId>&b=<deckId>` → a list of card ids.
 //
-// No card id is written down here. The definitions are `crates/cards`' (compiled into the
-// WebAssembly module), and spelling "core-001" here would be a guess at SPEC §8 that goes stale the
-// day the catalog changes. A `DeckSource` is therefore a QUERY over whatever catalog the engine hands
-// the client (`EnginePort.catalog`).
+// No card id is written down here: spelling "core-001" would be a guess at SPEC §8 that goes stale
+// the day the catalog changes. A `DeckSource` is therefore a QUERY over whatever catalog the engine
+// hands the client (`EnginePort.catalog`).
 //
 // This module decides nothing about legality. `validate_deck` in `crates/engine/src/state.rs`
 // is the authority and `createGame` throws when a deck breaks §2.6 — the checks below exist only
@@ -44,9 +43,9 @@ export function printedCost(cost: CardCost): number {
 }
 
 /**
- * `validateDeck`'s L3, mirrored: not a Token (`def.token || def.tags.includes("Token")`, §2.6) and
- * not a card of a set that has not shipped (R1420), unless the engine was told to preview that set
- * (`preview`, the E2E injection's, `EnginePort.previewSets`). A deck built from anything else is refused.
+ * `validateDeck`'s L3, mirrored: not a Token and not a card of a set that has not shipped (R1420),
+ * unless the engine was told to preview that set (`preview`, the E2E injection's,
+ * `EnginePort.previewSets`). A deck built from anything else is refused.
  */
 function deckable(def: CardDef, preview: readonly SetName[] = []): boolean {
   return !def.token && !def.tags.includes("Token") && (setShips(def.set) || preview.includes(def.set));
@@ -137,11 +136,9 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
  * Resolve one `a=` / `b=` deck id against the catalog. `overrides` is the E2E injection
  * (`window.__jackiohE2E.decks`, ASSUMPTION A1 in `e2e/support/types.ts`): its exact card ids take
  * precedence over the registry, and as external input they are checked against the catalog too.
- * `size` is DECK_SIZE unless the injection gave the seat a handicap, whose `deckSize` rules (R184);
- * the dev decks are always DECK_SIZE long, so a handicapped seat plays an injected deck of its own
- * size or none. `preview` is the sets the injection had the engine preview (R1420), whose cards only
- * an injected deck may hold. Never throws and never invents a card id: every failure comes back as
- * `{ error }` for the route to print.
+ * The dev decks are always DECK_SIZE long, so a handicapped seat (R184) plays an injected deck of its
+ * own size or none. Only an injected deck may hold a `preview` set's cards (R1420). Never throws and
+ * never invents a card id: every failure comes back as `{ error }` for the route to print.
  */
 export function resolveDeck(
   id: string,
@@ -186,8 +183,7 @@ export function resolveDeck(
 
 /**
  * Both seats at once: `[p1, p2]`, or the first error either side produced. `sizes` is each seat's
- * deck size in the same order (see `resolveDeck`), DECK_SIZE for both when omitted, and `preview`
- * the sets an injected deck may draw from beyond what ships (R1420).
+ * deck size in the same order, DECK_SIZE for both when omitted.
  */
 export function resolveDecks(
   a: string,

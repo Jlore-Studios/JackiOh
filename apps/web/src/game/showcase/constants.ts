@@ -38,7 +38,6 @@ export const SHOWCASE_BURST_MS = 420;
 /** R502, R436: runner-gated entries wait through a full slow burst; every entry restarts the gate. */
 export const SHOWCASE_GATE_MAX_MS = Math.ceil(BURST_BUDGET_MS / FX_SPEED_MIN) + SHOWCASE_HOLD_MS;
 
-/** R502: the words a cast on draw is held up with. */
 export const CAST_ON_DRAW_TEXT = {
   ribbon: "Cast on draw!",
   you: "You drew",
@@ -54,7 +53,7 @@ export const MULTICAST_TEXT = {
   said: "cast",
 } as const;
 
-/** Issue #1493: the words a revealed trap is held up with. `{whose}` is the reader's seat. */
+/** Issue #1493: `{whose}` is the reader's seat. */
 export const TRAP_REVEAL_TEXT = {
   caption: "Trap revealed",
   hidden: "{whose} face-down trap fired",
@@ -65,7 +64,6 @@ export const TRAP_REVEAL_TEXT = {
   namedNumbered: "{whose} trap {card} fired ({ordinal})",
 } as const;
 
-/** R436: the words the static reveal and the live region say a roll with. */
 export const CHAOS_TEXT = { title: "Call to Chaos", said: "Call to Chaos rolled" } as const;
 
 /** Test ids avoid card prefixes (B20); e2e/support/testids.ts mirrors them. */
@@ -78,7 +76,6 @@ export const showcaseTestid = {
   /** R370: on that back, the cost the view gives a card set face down. */
   cost: "showcase-cost",
   live: "showcase-live",
-  /** R502: the "Cast on draw!" ribbon across a card cast as it was drawn. */
   ribbon: "showcase-ribbon",
   ordinal: "showcase-ordinal",
   /** R436: static Call to Chaos result, one line per effect, when effects do not draw. */

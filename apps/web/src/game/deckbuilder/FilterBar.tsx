@@ -5,11 +5,10 @@
 // filters.ts. Chips are real toggle buttons (`aria-pressed`), so a keyboard and a screen reader
 // get the same control a pointer does.
 //
-// The cost chips are always on show, as Hearthstone's mana crystals are. The set, type, tag and rarity
-// rows fold behind a "Filters" toggle wherever they would crowd the pool: a phone, and any screen
-// under about 860 px tall, where they left a 1280x720 desktop one row of cards (deckbuilder.css
-// shows the toggle and hides the folded rows only there). The fold is the one piece of state this
-// component owns: it is layout, not a filter, and the chips stay mounted either way.
+// The cost chips are always on show. The set, type, tag and rarity rows fold behind a "Filters"
+// toggle wherever they would crowd the pool: a phone, and any screen under about 860 px tall
+// (deckbuilder.css). The fold is the one piece of state this component owns: it is layout, not a
+// filter, and the chips stay mounted either way.
 
 import { useId, useState, type ReactElement, type ReactNode } from "react";
 

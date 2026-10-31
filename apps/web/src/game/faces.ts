@@ -5,9 +5,9 @@
 // never worked out — so none of it is a rule (CLAUDE.md rule 7). The collection's faces, the card as
 // printed, are the deck builder's own (`faceModel` with no `inPlay`).
 //
-// The definition comes from the public catalog (§5.1, `CatalogContext`), else from the match-made
-// definitions the view carries beside the cards it names (R243), else from nothing: the card is
-// drawn by its id. The R97 sentinel names no card, so it has no face, and the callers draw a back.
+// The definition comes from the public catalog (§5.1), else from the match-made definitions the
+// view carries (R243), else from nothing: the card is drawn by its id. The R97 sentinel names no
+// card, so it has no face, and the callers draw a back.
 
 import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -38,11 +38,11 @@ export type LiveFacts = {
   type?: CardType;
   /** The power a Heroic Power on the field rolled (`HeroView.powers`); a hand card carries its own. */
   fieldPower?: RolledPower;
-  /** B5 E14: the definition of the Spell a copier's `copies` names (`useCopiedDef`, `copiedDefOf`). */
+  /** B5 E14: the definition of the Spell a copier's `copies` names. */
   copied?: CardDef;
   /** R2321000: the counts cards on the field keep on a unit, by their keepers' names (`useTallies`). */
   tallies?: readonly NamedTally[];
-  /** #2437: the card lies in a hand (Card.tsx's `inHandOf`), so its face carries its Temporary count. */
+  /** #2437: the card lies in a hand, so its face carries its Temporary count. */
   inHand?: boolean;
 };
 
@@ -60,8 +60,7 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (power !== undefined) inPlay.power = power;
   // R2247000: the word the card shows in place of its text (Anomaly Found!'s board code).
   if (card.label !== undefined) inPlay.label = card.label;
-  // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`), and the
-  // face it draws reads it the same way a unit's does — the view is what the client renders (rule 7).
+  // R243, §6.3 Vanilla: a backrow card's text can be gone too (`BackrowView.vanilla`).
   if (unit?.vanilla === true || (unit === undefined && "vanilla" in card && card.vanilla === true)) {
     inPlay.vanilla = true;
   }
@@ -140,12 +139,11 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   });
 }
 
-/** The face-up backrow card's type, when `card` is one. */
 function backrowType(card: CardView): CardType | undefined {
   return "faceDown" in card && card.faceDown === false && "type" in card ? (card.type as CardType) : undefined;
 }
 
-/** A card the view lists (a pile, the resolving strip, the field, a hand): its face in play. */
+/** A card the view lists: its face in play. */
 export function listedFace(lookup: CardLookup | null, view: PlayerView, card: CardView): FaceModel | null {
   if (card.defId === HIDDEN_CARD || card.defId === "") return null;
   const info = infoFor(lookup, view, card.defId, card.radiant);
@@ -159,7 +157,6 @@ export function listedFace(lookup: CardLookup | null, view: PlayerView, card: Ca
   });
 }
 
-/** B5 E14: the definition of the Spell a copier has the text of, where the view says it copies one. */
 function copiedDefOf(lookup: CardLookup | null, view: PlayerView, card: CardView): CardDef | undefined {
   const copies = card.copies;
   return copies === undefined ? undefined : infoFor(lookup, view, copies.defId, copies.radiant).def;
@@ -177,8 +174,8 @@ export type NamedCard = {
 
 /**
  * The face in play of a card an event names, or null for the sentinel. A card the view still lists
- * is drawn as it stands there (`listedFace`); one it no longer lists — gone to a pile it cannot
- * name, or ceased to exist — is its definition as the game shows it, at `cost` when one is given.
+ * is drawn as it stands there (`listedFace`); one it no longer lists is its definition as the game
+ * shows it, at `cost` when one is given.
  */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
   if (named.defId === HIDDEN_CARD || named.defId === "") return null;

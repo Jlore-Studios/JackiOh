@@ -2,18 +2,12 @@
 // that keeps the server in step (SPEC §9.4, R250, R252, R256).
 //
 // The client mints each id, so every save is `PUT /api/decks/:id`, an idempotent upsert: a save
-// that timed out may be sent again and never makes a second deck.
-//
-// Every edit goes to a `localStorage` mirror first; the next visit merges it over the server's
-// copy, and what the server never confirmed wins (R256). `localStorage` is untrusted and may throw
-// or be missing, so every access sits in try/catch.
+// that timed out may be sent again and never makes a second deck. Every edit goes to a
+// `localStorage` mirror first; the next visit merges it over the server's copy (R256).
+// `localStorage` is untrusted and may throw or be missing, so every access sits in try/catch.
 //
 // The server is law (rule 7): the caps, D1–D4 and T1–T3 are its to enforce. This store checks the
-// caps only so the UI can say so early, and cleans a name (`deckNameForSave`) so it saves as
-// "Untitled deck" rather than bouncing off D1.
-//
-// Order of a save: decks, then trios, then deletions. A trio refused for naming an unsaved deck
-// (409 `details.unknownDeck`) waits for that deck and goes again in the same flush.
+// caps only so the UI can say so early. Order of a save: decks, then trios, then deletions.
 //
 // R2119000: a deletion is held behind the workshop's undo toast; when the hold ends, the workshop
 // calls `deleteDeck` or `deleteTrio` and then `flush`, with `keepalive` when the page is going away.
@@ -44,7 +38,7 @@ import { deckVersionsFrom } from "./deckHistory.ts";
 
 // The shapes
 
-/** R1297000: a deck also carries its playmat, backdrop and card back picks, absent or null for none. R2097000: and the catalog version of its latest save: the server's stamp (R253), or this build's after an edit here; absent on a mirror entry from before #2097. */
+/** R1297000: also its playmat, backdrop and card back picks, absent or null for none. R2097000: the catalog version of its latest save (R253's stamp, or this build's after an edit here); absent on a mirror entry from before #2097. */
 export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; catalogVersion?: string; createdAt: number; updatedAt: number } & DeckCosmeticFields;
 export type TrioItem = { id: string; name: string; deckIds: TrioSlots; createdAt: number; updatedAt: number };
 
@@ -72,13 +66,10 @@ export type HeldItem = { kind: "deck" | "trio"; id: string };
 /** The writes, bound to the session's token by the route (`routes/decks.tsx`). */
 export type DeckSyncApi = {
   putDeck(id: string, input: DeckInput): Promise<unknown>;
-  /** R2119000: `options.keepalive` when the page is going away. */
   deleteDeck(id: string, options?: SendOptions): Promise<unknown>;
   putTrio(id: string, input: TrioInput): Promise<unknown>;
   deleteTrio(id: string, options?: SendOptions): Promise<unknown>;
-  /** R341: a trio code's decks and the trio, all or nothing, in one request. */
   importTrio(input: TrioImportInput): Promise<unknown>;
-  /** R2100000: the deck's kept versions, newest first. */
   getDeckVersions(id: string): Promise<unknown>;
   /** R2100000: a kept version saved as the deck's current one; answers the deck and the versions. */
   restoreDeckVersion(id: string, versionId: string, catalogVersion: string): Promise<unknown>;
@@ -177,9 +168,8 @@ function truncateCodePoints(value: string, max: number): string {
 }
 
 /**
- * The name a deck PUT sends: `normalizeName`, cut to `nameLength` characters, and "Untitled deck"
- * whenever the validator's D1 would refuse what is left (empty, or a control character). The field
- * keeps what the player typed; only the save is cleaned, so D1 is met gently rather than refused.
+ * The name a deck PUT sends: "Untitled deck" whenever the validator's D1 would refuse the cleaned name.
+ * The field keeps what the player typed; only the save is cleaned, so D1 is met gently rather than refused.
  */
 export function deckNameForSave(raw: string, nameLength: number): string {
   const name = truncateCodePoints(normalizeName(raw), nameLength);
@@ -275,7 +265,6 @@ function trioFrom(value: unknown): TrioItem | null {
   return { id, name, deckIds: slots, createdAt, updatedAt };
 }
 
-/** `TrioSlots`'s length, for the parser. */
 const TRIO_SLOT_COUNT = 3;
 
 function entriesFrom<T>(value: unknown, read: (raw: unknown) => T | null): MirrorEntry<T>[] {
@@ -400,10 +389,9 @@ function sameSlots(left: TrioSlots, right: TrioSlots): boolean {
 }
 
 /**
- * R256's merge. Unsynced local edits win over the server's copy; server items the mirror does not
- * know are taken; local items the server lacks survive only while unsynced (new work made here),
- * since a synced one missing from the server was deleted elsewhere. A pending deletion stays
- * pending while the server still has the id.
+ * R256's merge. Unsynced local edits win over the server's copy; local items the server lacks
+ * survive only while unsynced, since a synced one missing from the server was deleted elsewhere.
+ * A pending deletion stays pending while the server still has the id.
  */
 function merge<T extends { id: string; createdAt: number }>(
   serverItems: readonly T[],
@@ -463,8 +451,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   const deletingDecks = mergedDecks.deleting;
   const deletingTrios = mergedTrios.deleting;
 
-  // A slot naming a deck that is not here (deleted on this device, or elsewhere) empties, as the
-  // server's foreign key empties it, and the trio is sent again so both sides agree.
+  // A slot naming a deck that is not here empties, as the server's foreign key empties it, and the
+  // trio is sent again so both sides agree.
   {
     const known = new Set(decks.map((deck) => deck.item.id));
     for (const trio of trios) {
@@ -520,7 +508,6 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     }
   }
 
-  /** Unsaved, not refused, not waiting on a deck and not hidden: something a pass would send. */
   function sendable<T extends { id: string }>(entry: Tracked<T>): boolean {
     return entry.dirty && entry.refused === null && !entry.blocked && !isHidden(entry.item.id);
   }
@@ -612,7 +599,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     return "stopped";
   }
 
-  /** One pass. Returns whether it stopped early, and whether any deck landed (for blocked trios). */
+  /** One pass, and whether any deck landed (for blocked trios). */
   async function pass(): Promise<{ end: PassEnd; deckLanded: boolean }> {
     let deckLanded = false;
 
@@ -738,7 +725,6 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     return running;
   }
 
-  /** The ids of the import last tried, so trying the same import again reuses them (R341). */
   let lastImport: { key: string; trioId: string; deckIds: readonly string[] } | null = null;
 
   function importedDeck(value: unknown, fallback: DeckItem): DeckItem {

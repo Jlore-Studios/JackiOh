@@ -1,40 +1,25 @@
 // The face of a card, and the interaction vocabulary every other board component shares
-// (BUILD M5-T1).
-//
-// A card renders `CardView` / `UnitView` and nothing else (CLAUDE.md rule 7, SPEC §10.8). When
-// `card` is `null` it draws a back: `BackrowView { faceDown: true }` and the opponent's hand
-// carry no identity at all, so there is nothing to leak and nothing to key a testid off.
+// (BUILD M5-T1). A card renders `CardView` / `UnitView` and nothing else (CLAUDE.md rule 7, SPEC
+// §10.8). When `card` is `null` it draws a back: `BackrowView { faceDown: true }` and the opponent's
+// hand carry no identity at all, so there is nothing to leak and nothing to key a testid off.
 //
 // No rule lives here. `legal` is "is my testid in `props.highlight.legal`", which came from the
-// engine's `legalActions`; the card never asks whether an attack is possible, whether a cost is
-// affordable, or whether `canAct` / `usedThisTurn` permits anything. Those fields are drawn as
-// state, never consulted as permission.
+// engine's `legalActions`; `canAct` / `usedThisTurn` are drawn as state, never consulted as permission.
 //
-// What it draws is the card presentation module's (apps/web/src/cards, docs/polish/6-cards.md).
-// This file keeps the root element and everything the tests, the e2e specs and the animation table
-// read off it; the face inside is `.cf`, which ignores the pointer, so the root and the badges drawn
-// beside it take every click.
+// What it draws is the card presentation module's (apps/web/src/cards, docs/polish/6-cards.md). The
+// face inside is `.cf`, which ignores the pointer, so the root and the badges beside it take every
+// click. The face is the card in play (faces.ts, SPEC §10.10), a hand Unit's grown stats (#89) included;
+// a match-made card reads its definition from the view (`MatchCardsContext`, R243) where the catalog has none.
 //
-// The face is the card in play (faces.ts, SPEC §10.10): what the view says it is now — a hand
-// Unit's grown stats (#89) — and a match-made card (a Fuse's) reads its definition from the view
-// (`MatchCardsContext`, R243) where the catalog has none.
-//
-// R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
-// would counter it) wears a green, bubbling warning film.
-//
-// R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them. A face-down
-// backrow card's back carries the marks its view entry lists (R33: the player who cannot read the
-// card still sees it is marked); the opponent's hand of backs carries none.
-//
-// #2270: a card on the field whose view gives it Brittle `BRITTLE_LAST_COUNT` crumbles at its next
-// tick (R385, R638), so it wears Allure's aura (R963, R1045000) in gray, the aura alone (CardMarks'
-// `bareAura`); a mark of its own outranks it. #2437: a hand card whose face gives it Temporary
-// `TEMPORARY_LAST_COUNT` (the view's count left, R637, R2179001) is discarded at its owner's next end
-// of turn, so it wears the aura in fuchsia.
-//
-// R1295000: a stolen unit keeps its owner's look (game/wearer.ts); a card in the resolving
-// strip, which names no owner, wears the defaults. R1655000: the viewer's own card wears the picks of
-// its own card (cards/cosmetics.ts) over the account's.
+// R667: the viewer's hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice would
+// counter it) wears a warning film. R437: a card wears the marks its view lists (#50 K-Pop Fanatic's
+// pending steal), a face-down back too (R33: the player who cannot read the card still sees it is
+// marked); the opponent's hand of backs carries none. #2270: a field card at Brittle
+// `BRITTLE_LAST_COUNT` crumbles at its next tick (R385, R638), so it wears Allure's aura (R963,
+// R1045000) in gray, alone; a mark of its own outranks it. #2437: a hand card at Temporary
+// `TEMPORARY_LAST_COUNT` (R637, R2179001) is discarded at its owner's next end of turn: fuchsia.
+// R1295000: a stolen unit keeps its owner's look; a card in the resolving strip, which names no owner,
+// wears the defaults. R1655000: the viewer's own card wears its own card's picks over the account's.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
@@ -112,10 +97,9 @@ export function legalAttr(legal: boolean): "true" | "false" {
   return legal ? "true" : "false";
 }
 
-// Drag-to-attack. A drop reports two clicks — the dragged source, then what it landed on — so
-// click-click and drag reach `actions.ts` through one path (BUILD M5-T2). Only the source is gated,
-// on its own `data-legal` at `dragstart`: no click has been dispatched yet when `drop` runs, so the
-// target's `data-legal` still describes the board *before* the pickup and would refuse every drag.
+// Drag-to-attack: a drop reports two clicks, the source then what it landed on, so click-click and
+// drag reach `actions.ts` through one path (BUILD M5-T2). Only the source is gated, at `dragstart`: at
+// `drop` the target's `data-legal` still describes the board *before* the pickup and would refuse it.
 
 export const DRAG_MIME = "application/x-jackioh-target";
 
@@ -163,8 +147,7 @@ export function completeDrop(
 }
 
 // Animation hooks (BUILD M5-T4). The runner owns timing; the board only owns the DOM it needs.
-// The numbers come from the events in the view that match the element the runner marked as
-// animating, so `.damage-pop` text equals the amount in the `damage` event.
+// `.damage-pop` text equals the amount in the `damage` event.
 
 export type Pops = { damage?: number; heal?: number; loss?: number };
 
@@ -198,9 +181,8 @@ export type CardProps = {
   /** R1834004: the seat whose hand the card lies in, whose loadout it wears where it is not `worn`: `CardView` names no owner. */
   inHandOf?: PlayerId;
   /**
-   * R1297000, R1834004: the seat whose card back a back wears: the viewer's own pick on the wearer's
-   * side, the seat's loadout elsewhere, the same for every back of a seat (a back names no card,
-   * B16). Absent: the default back.
+   * R1297000, R1834004: the seat whose card back a back wears, the same for every back of a seat (a
+   * back names no card, B16): the viewer's own pick on the wearer's side, the seat's loadout elsewhere.
    */
   backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
@@ -211,20 +193,14 @@ export type CardProps = {
    * the view's on the face-down card, which its back carries (R33). R471: its Plague Counters, public.
    */
   faceDown?: { cost?: number; at: string; marks?: readonly CardMark[]; plague?: number };
-  /**
-   * R371: the viewer's own face-down trap (`BackrowView.unrevealed`): its face, under a veil and a
-   * "Face down" tag, because the other player sees only its back.
-   */
+  /** R371: the viewer's own face-down trap (`BackrowView.unrevealed`), veiled: the other sees its back. */
   unrevealed?: boolean;
   /**
    * R1046: when the viewer's own face-down play reveals (`BackrowView.revealAt`). Shown beside the
    * "Face down" tag; the opponent's view never carries it, so their card shows no badge.
    */
   revealAt?: RevealAt;
-  /**
-   * #165: what a touch hold opens — the inspect sheet (default), or the hover preview while the
-   * finger stays down. The board hands it `touchHoldMode(view)` (contract.ts).
-   */
+  /** #165: what a touch hold opens: the inspect sheet (default), or the hover preview while held. */
   touchHold?: "sheet" | "preview";
   /** What a click reports. Absent means the element is not clickable and clicks bubble. */
   target?: ClickTarget | null;
@@ -292,9 +268,8 @@ export default function Card(props: CardProps): ReactElement {
   const face: FaceModel = props.type === undefined ? model : { ...model, type: props.type };
 
   // Hooks run on every render, backs included. A back in the backrow (R370) opens what the view
-  // says of it, a face-down trap and its cost; any other back has no subject and opens nothing. A
-  // full face sits in a row (the hand, the resolving strip), so its preview rises over it rather
-  // than covering the neighbour the pointer is heading for.
+  // says of it; any other back opens nothing. A full face sits in a row, so its preview rises over
+  // it rather than covering the neighbour the pointer is heading for.
   const faceDown = props.faceDown;
   const subject: InspectSubject | InspectRenderSubject | null =
     card !== null
@@ -353,9 +328,8 @@ export default function Card(props: CardProps): ReactElement {
     fire(event);
   }
 
-  // #258: the inspect keys (cards/inspect/keys.ts) open the sheet; every card with something to
-  // inspect takes focus for it, legal or not; Enter and Space still play or pick only a legal one. A
-  // right-click stays the board's drag cancel, so only the keys open it.
+  // #258: the inspect keys open the sheet; every card with something to inspect takes focus for it,
+  // legal or not; Enter and Space play or pick only a legal one. A right-click stays the drag cancel.
   const keyInspect = subject !== null;
   function onInspectKey(event: KeyboardEvent<HTMLElement>): void {
     if (isInspectKey(event)) {
@@ -387,8 +361,7 @@ export default function Card(props: CardProps): ReactElement {
   };
 
   if (card === null) {
-    // A back. No name, no def id, no instance id: the view does not have them. A face-down trap in
-    // the backrow shows the cost the view gives it (R370), and opens what the view says of it.
+    // A back: no name, def id or instance id, as the view has none. A face-down trap shows its cost.
     if (faceDown === undefined) {
       return (
         // WCAG 4.1.2 (#757): a name needs a role; a back is a picture, or a button when it is clickable.
@@ -481,9 +454,7 @@ export default function Card(props: CardProps): ReactElement {
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
       data-vanilla={unit?.vanilla === true ? "true" : undefined}
-      // R437: the marks the view lists on the card, by name.
       data-marks={marks.length > 0 ? marks.map((entry) => entry.mark).join(" ") : undefined}
-      // R371: your own face-down trap, which the other player sees only as a back.
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
@@ -491,8 +462,7 @@ export default function Card(props: CardProps): ReactElement {
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
       data-spent={spent ? "true" : undefined}
       // DEF is a sideways card: the rotation is inline so a test can read `rotate(90deg)` off the
-      // style attribute (BUILD M5-T4 `positionSwitched`); the lane's `--def-scale` (board.css) keeps the
-      // turned card inside its lane. It is the root's only inline style.
+      // style (BUILD M5-T4 `positionSwitched`); the lane's `--def-scale` (board.css) keeps it in its lane.
       style={position === "DEF" ? { transform: "rotate(90deg) scale(var(--def-scale, 1))" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
@@ -501,8 +471,7 @@ export default function Card(props: CardProps): ReactElement {
       {unit !== undefined && unit !== null ? (
         <MinionFace face={face} unit={unit} worn={worn} />
       ) : (
-        // Issue #814: a Summit in play shortens to its header and next Ascent line; the inspect
-        // overlays (which render their own CardFace from `face`) keep the whole text.
+        // Issue #814: a Summit in play shortens to its header and next Ascent line; the overlays keep it all.
         // R2098000: its terms show their rule on hover and on a long press (cards/TermTip.tsx); a tap on one still reaches this root.
         <TermTips>
           <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} worn={worn} />
@@ -515,9 +484,8 @@ export default function Card(props: CardProps): ReactElement {
       {/* R2321000: the counts cards on the field keep on the unit (Level Up!'s attacks). */}
       <Tallies tallies={tallies} instanceId={card.instanceId} />
       {card.counteredOnPlay === true && (
-        // R667: a green, bubbling "don't play this" over the face, by shape (bubbles and a crossed
-        // cup) as well as color. The film takes no pointer, and a click or drag on the badge still
-        // reaches the card it sits in (countered.css).
+        // R667: "don't play this" by shape as well as color. The film takes no pointer, and a click
+        // or drag on the badge still reaches the card it sits in (countered.css).
         <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
           <span className="countered-warning-badge" aria-hidden="true" title={t(COUNTERED_NOTE)} />
           <span className="countered-warning-sr">{t(COUNTERED_NOTE)}</span>
@@ -591,11 +559,11 @@ export default function Card(props: CardProps): ReactElement {
     </div>
   );
 
-  // The overlay is a sibling of the root, never its child, so the root's own click and drag
-  // handlers never see an event from inside a preview or a sheet. #258: so is the switch (⟳), so its
-  // zone can give it a full 44 px target (board.css) and a DEF card's rotation never turns it.
-  // R1313000, R1655000: the viewer's own card's overlay prints the full art the card does and wears its
-  // cosmetics; R1834004: another seat's card, its face and its overlay alike, wears that seat's loadout.
+  // The overlay is a sibling of the root, never its child, so the root's click and drag handlers
+  // never see an event from inside a preview or a sheet. #258: so is the switch (⟳), so it gets a full
+  // 44 px target (board.css) and a DEF card's rotation never turns it. R1313000, R1655000: the viewer's
+  // own card's overlay prints the full art the card does and wears its cosmetics; R1834004: another
+  // seat's card wears that seat's loadout.
   return (
     <TheirCopy loadout={theirs}>
       {root}

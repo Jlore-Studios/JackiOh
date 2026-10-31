@@ -1,8 +1,7 @@
 // R1400 (#552): R1420's preview reaches the browser's development module. The module the unit tests
 // load is the one scripts/build-wasm.sh builds by default, with crates/wasm's `preview` feature, so it
-// can preview a set; the dev hotseat's E2E injection is its only caller, and its readable deck
-// pre-check (decks.ts) accepts the previewed set's cards as the engine then does. Vitest gives each
-// test file its own module, so the preview here reaches no other file.
+// can preview a set, and the readable deck pre-check (decks.ts) accepts the previewed set's cards as
+// the engine then does. Vitest gives each test file its own module, so the preview here reaches no other file.
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -22,8 +21,7 @@ const SIZES: readonly [number, number] = [DECK_SIZE, DECK_SIZE];
 
 /**
  * The catalog holds no set that has not shipped, so the readable pre-check's preview is proven on a
- * fixture: Core's first cards copied into the reserved Boss set, which `SHIPPED_SETS` does not list,
- * and a Boss token beside them.
+ * fixture in the reserved Boss set, which `SHIPPED_SETS` does not list.
  */
 const BOSS_CATALOG: CardDefs = {
   ...CATALOG,

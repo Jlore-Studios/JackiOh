@@ -1,7 +1,6 @@
 // Polish 6, slice D: the deck builder's filter and sort semantics, pure (docs/polish/6-cards.md,
 // B31–B36; the DOM half is browse.test.tsx). The inline catalog has every cost shape the Surface
-// names, all five types, a card with no text, a card nobody owns, a token, and two cards that tie
-// on cost and name so the index tie-break is visible.
+// names and all five types.
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
@@ -102,7 +101,7 @@ const DEFS: CardDef[] = [
     base: { attack: 0, health: 8, keywords: [{ kind: "Armor", n: 2 }], text: "Armor 2" },
     radiant: { attack: 0, health: 16, keywords: [{ kind: "Armor", n: 4 }], text: "Armor 4" } }),
   // The twins tie on cost and (case-insensitively) on name, so the numeric index decides: 12
-  // before 100, which a string comparison of "100" and "12" would get backwards. Each carries a
+  // before 100, which a string comparison would get backwards. Each carries a
   // keyword its text never mentions: Divine Shield on the radiant face, Poisonous on the base one.
   def({ id: "x-10", index: "100", name: "Mirror Twin", type: "Unit", rarity: "Common", cost: 4,
     base: { attack: 4, health: 4, text: "Reflects light" },
@@ -176,8 +175,6 @@ const SORTED: Record<SortKey, { asc: string[]; desc: string[] }> = {
   },
 };
 
-// Constants
-
 describe("the filter vocabulary (B31, B34)", () => {
   it("B31 COST_BUCKETS runs 0 to 5, then 6+, then X, and CURVE_TOP is 6", () => {
     expect([...COST_BUCKETS]).toEqual(["0", "1", "2", "3", "4", "5", "6+", "X"]);
@@ -250,8 +247,6 @@ describe("the filter vocabulary (B31, B34)", () => {
   });
 });
 
-// costBucket and costOrder
-
 describe("costBucket and costOrder (B31)", () => {
   const BUCKETS: [CardCost, CostBucket][] = [
     [0, "0"],
@@ -285,8 +280,6 @@ describe("costBucket and costOrder (B31)", () => {
     expect(costOrder("X")).toBe(Number.POSITIVE_INFINITY);
   });
 });
-
-// matchesFilter
 
 function matching(f: PoolFilter): string[] {
   return ALL_IDS.filter((id) => matchesFilter(card(id), f));
@@ -357,8 +350,6 @@ describe("matchesFilter (B31)", () => {
     expect(matching(filter({ search: "bramble", costs: new Set<CostBucket>(["0"]) }))).toEqual([]);
   });
 });
-
-// searchMatches
 
 function found(query: string): string[] {
   return ALL_IDS.filter((id) => searchMatches(card(id), query));
@@ -435,8 +426,6 @@ describe("searchMatches (B32)", () => {
   });
 });
 
-// sortPool
-
 describe("sortPool (B34)", () => {
   for (const key of ["cost", "name", "rarity", "attack", "health", "type"] as const) {
     for (const dir of ["asc", "desc"] as const) {
@@ -449,7 +438,6 @@ describe("sortPool (B34)", () => {
   }
 
   it("B34 ties break by cost, then name, then numeric index, ascending even when the key is descending", () => {
-    // Cost 3: Grove Ward before Hollow Squire both ways. Cost 4: index 12 before index 100.
     const desc = sortPool(ALL_IDS, CATALOG, { key: "cost", dir: "desc" });
     expect(desc.indexOf("x-07")).toBeLessThan(desc.indexOf("x-08"));
     expect(desc.indexOf("x-11")).toBeLessThan(desc.indexOf("x-10"));
@@ -502,8 +490,6 @@ describe("sortPool (B34)", () => {
   });
 });
 
-// visiblePool
-
 describe("visiblePool (B31, B33, B34)", () => {
   it("B33 by default it shows the owned non-token cards, cost ascending", () => {
     expect(visiblePool(CATALOG, COLLECTION, DEFAULT_FILTER, DEFAULT_SORT)).toEqual(owned(SORTED.cost.asc));
@@ -543,8 +529,6 @@ describe("visiblePool (B31, B33, B34)", () => {
   });
 });
 
-// manaCurve
-
 describe("manaCurve (B36)", () => {
   it("B36 counts a deck's cards per bucket, embiggen under the base price", () => {
     const deck = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
@@ -565,8 +549,6 @@ describe("manaCurve (B36)", () => {
     expect(Object.keys(manaCurve(["x-01"], CATALOG)).sort()).toEqual([...COST_BUCKETS].sort());
   });
 });
-
-// deckListOrder
 
 describe("deckListOrder (B35)", () => {
   it("B35 orders tiles by cost, then name, with unknown ids last", () => {
@@ -596,8 +578,6 @@ describe("deckListOrder (B35)", () => {
     expect(deckListOrder([], CATALOG)).toEqual([]);
   });
 });
-
-// R711000: the reader's language
 
 describe("R711000 the reader's language", () => {
   afterEach(resetLocaleForTests);
@@ -664,8 +644,6 @@ describe("R711000 the reader's language", () => {
   });
 });
 
-// R278: the Jlockeed tag
-
 describe("the set chips (R380: one format, every set)", () => {
   const REAL: CatalogSnapshot = { version: "v0.2.0-test", cards: CORE_CATALOG };
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
@@ -724,7 +702,7 @@ describe("the Jlockeed tag (R278)", () => {
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
     // Meditative+ (#1187): its #4 Supply Drop, the set's one Jlockeed card.
     const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
-    // Stinkyscape (#1884): its #124 to #130, Jlockeed's space program.
+    // Stinkyscape (#1884): its #124 to #130.
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
@@ -745,8 +723,6 @@ describe("the Jlockeed tag (R278)", () => {
     ]);
   });
 });
-
-// R630: the Card Almanac's shelf and tag chips
 
 describe("the almanac's pool (R630)", () => {
   const REAL: CatalogSnapshot = { version: "almanac-test", cards: CORE_CATALOG };
@@ -840,8 +816,6 @@ describe("the almanac's pool (R630)", () => {
     expect(filterTagId("AI")).toBe("db-filter-tag-ai");
   });
 });
-
-// R1380, R1381: the chips follow what ships
 
 describe("the chips follow what ships (R1380, R1381)", () => {
   const fixture = (id: string, set: SetName, tags: Tag[]): CardDef => ({ ...def({ id, index: "1", name: id, type: "Unit", rarity: "Common", cost: 1, tags }), set });

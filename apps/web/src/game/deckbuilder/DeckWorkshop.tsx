@@ -1,10 +1,9 @@
 // `/decks` deck workshop (SPEC §9.4, R250–R256): up to ten saved decks and five trios, one open at
 // a time. On phones the mounted list and editor alternate; CSS chooses the visible half (R339–R341).
 // Server limits and validation remain authoritative (CLAUDE.md rule 7); this component only owns
-// the local store and supplied API (R256). The open deck's kept versions are its History (R2100000).
-// R2119000: Delete deck and Delete trio ask nothing. The item leaves the list at once (the store's
-// `hide`) and its DELETE waits for the undo window (`undo/hold.ts`); anything that needs it gone
-// first (a new deck, a duplicate, an import) sends the held DELETE at once.
+// the local store and supplied API (R256). R2119000: Delete deck and Delete trio ask nothing. The item
+// leaves the list at once (the store's `hide`) and its DELETE waits for the undo window
+// (`undo/hold.ts`); anything that needs it gone first sends the held DELETE at once.
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactElement, type RefObject } from "react";
 
@@ -88,7 +87,6 @@ function halvesTakeTurns(): boolean {
   }
 }
 
-/** What the main column shows. */
 export type WorkshopOpen =
   | { kind: "deck"; id: string }
   | { kind: "trio"; id: string }
@@ -547,7 +545,6 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const backToList = (): void => {
     setView("list");
     setMoveFocus("list");
-    // #2099: closing the editor ends its history.
     setHistory((current) => emptyHistory(current.deckId));
   };
 

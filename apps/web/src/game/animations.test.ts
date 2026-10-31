@@ -276,7 +276,6 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
 
-/** A long stream: one of every type, many times over, so the drain test is a real workload. */
 function longStream(rounds: number): GameEvent[] {
   const out: GameEvent[] = [];
   for (let i = 0; i < rounds; i += 1) out.push(...ALL_SAMPLES);
@@ -304,13 +303,11 @@ function fakeClock() {
   return {
     schedule,
     calls,
-    /** Fires the oldest pending callback. */
     tick(): void {
       const next = calls.shift();
       expect(next, "nothing scheduled").toBeDefined();
       next?.run();
     },
-    /** Fires callbacks until none is left. */
     flush(): void {
       let guard = 0;
       while (calls.length > 0) {

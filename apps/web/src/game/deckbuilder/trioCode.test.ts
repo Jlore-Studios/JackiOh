@@ -1,7 +1,7 @@
-// R339: trio codes. Encode and decode are proved against each other (a trio of legal decks survives
-// the round trip exactly, empty slots included) and decode is proved total (no input makes it
-// throw). The byte-level cases build payloads by hand with their own copy of the checksum, so a test
-// can write exactly the bytes it means, including ones `encodeTrioCode` would never produce.
+// R339: trio codes. Encode and decode are proved against each other and decode is proved total (no
+// input makes it throw). The byte-level cases build payloads by hand with their own copy of the
+// checksum, so a test can write exactly the bytes it means, including ones `encodeTrioCode` would
+// never produce.
 
 import { Buffer } from "node:buffer";
 
@@ -43,7 +43,7 @@ const FULL_TRIO: readonly TrioCodeSlot[] = [
   { name: "Ramp", cards: deckOf(2 * DECK_SIZE) },
 ];
 
-// --- a hand-built payload, with its own copy of the checksum -------------------------------------
+// A hand-built payload
 
 function fnv1a16(bytes: readonly number[]): number {
   let hash = 0x811c9dc5;

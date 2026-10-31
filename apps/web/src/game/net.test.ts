@@ -21,7 +21,7 @@ import {
   type Timers,
 } from "./net.ts";
 
-/** #1664: what a result's write paid the account: the track moved one level, and one quest completed. */
+/** #1664: what a result's write paid the account. */
 const ECONOMY = {
   jlore: 30,
   xp: 540,

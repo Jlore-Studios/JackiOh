@@ -39,7 +39,6 @@ export type CostBucket = "0" | "1" | "2" | "3" | "4" | "5" | "6+" | "X";
 
 export const COST_BUCKETS: readonly CostBucket[] = ["0", "1", "2", "3", "4", "5", "6+", "X"];
 
-/** The "6+" boundary: every numeric cost at or above it shares one bucket. */
 export const CURVE_TOP = 6;
 
 export const FILTER_TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
@@ -98,7 +97,6 @@ const BUNDLED: readonly CardDef[] = Object.values(CATALOG);
 /** R1381: the deck builder's tag chips, read off the bundled catalog. */
 export const DECK_CHIP_TAGS: readonly Tag[] = shippedTags(FILTER_TAGS, BUNDLED);
 
-/** R1381: the almanac's tag chips. */
 export const ALMANAC_CHIP_TAGS: readonly Tag[] = shippedTags(ALMANAC_TAGS, BUNDLED);
 
 /** The sets a deck may draw on (R380: one format, every set that ships, R1380), in catalog order. */
@@ -136,7 +134,7 @@ export type PoolSort = { key: SortKey; dir: "asc" | "desc" };
 
 export const DEFAULT_SORT: PoolSort = { key: "cost", dir: "asc" };
 
-/** Common < Rare < Epic < Legendary < Mythic. Token sorts after them (only the almanac shows one). */
+/** Token sorts last (only the almanac shows one). */
 const RARITY_ORDER: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic", "Token"];
 
 const TYPE_ORDER: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
@@ -148,7 +146,6 @@ function printedPrice(cost: CardCost): number | "X" {
   return cost.base;
 }
 
-/** n ≥ 6 → "6+" (so 100 is "6+"); an embiggen card → its base price's bucket; "X" → "X". */
 export function costBucket(cost: CardCost): CostBucket {
   const price = printedPrice(cost);
   if (price === "X") return "X";
@@ -180,7 +177,6 @@ function readerWords(def: CardDef): string[] {
   ];
 }
 
-/** Keyword kinds printed on either face, as searchable words. */
 function keywordKindsOf(def: CardDef): KeywordKind[] {
   return [...def.base.keywords, ...def.radiant.keywords].map((keyword) => keyword.kind);
 }
@@ -205,8 +201,7 @@ function haystackOf(def: CardDef): string {
 
 /**
  * Every term has to occur, case-insensitively, in the card's name, type, tags, rarity, either
- * face's text or keywords, or, for a reader of Chinese, in the Chinese card tables (R711000). An
- * empty query keeps everything.
+ * face's text or keywords, or, for a reader of Chinese, in the Chinese card tables (R711000).
  */
 export function searchMatches(def: CardDef, query: string): boolean {
   const terms = query
@@ -220,8 +215,8 @@ export function searchMatches(def: CardDef, query: string): boolean {
 }
 
 /**
- * Set, cost, type, tag, rarity and search. Chips OR within a group and AND across groups, and an
- * empty group is no constraint. Ownership is `visiblePool`'s job, not this function's.
+ * Chips OR within a group and AND across groups, and an empty group is no constraint. Ownership is
+ * `visiblePool`'s job, not this function's.
  */
 export function matchesFilter(def: CardDef, filter: PoolFilter): boolean {
   if (filter.sets.size > 0 && !filter.sets.has(def.set)) return false;
@@ -246,7 +241,6 @@ function collationTag(): string | undefined {
   return locale === DEFAULT_LOCALE ? undefined : locale;
 }
 
-/** R711000: two cards by their names as the reader reads them (`readerName`), in the reader's language. */
 function compareNames(left: CardDef, right: CardDef): number {
   return readerName(left).localeCompare(readerName(right), collationTag(), { sensitivity: "base" });
 }
@@ -274,15 +268,11 @@ function compareTies(left: CardDef, right: CardDef): number {
   return compareNumbers(Number.parseFloat(left.index), Number.parseFloat(right.index));
 }
 
-/** The base face's stat for the attack and health sorts; undefined when the card prints none. */
 function statOf(def: CardDef, key: "attack" | "health"): number | undefined {
   return key === "attack" ? def.base.attack : def.base.health;
 }
 
-/**
- * Sorts pool ids. `dir` flips only the primary key; ties then break ascending by cost, name and
- * catalog index. For attack and health, a card with no stats goes last in both directions.
- */
+/** `dir` flips only the primary key. For attack and health, a card with no stats goes last in both directions. */
 export function sortPool(
   ids: readonly string[],
   catalog: CatalogSnapshot,
@@ -394,9 +384,8 @@ export function manaCurve(
 }
 
 /**
- * The order a deck's list tiles are drawn in: cost, then name as the reader reads it, then id;
- * unknown ids last. Display only. What `save` sends is the draft in the order the player built it,
- * never this.
+ * The order a deck's list tiles are drawn in. Display only. What `save` sends is the draft in the
+ * order the player built it, never this.
  */
 export function deckListOrder(cardIds: readonly string[], catalog: CatalogSnapshot): string[] {
   return [...cardIds].sort((leftId, rightId) => {

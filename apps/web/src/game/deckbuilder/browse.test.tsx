@@ -1,9 +1,8 @@
 // Polish 6, slice D: browsing and building in the deck editor (docs/polish/6-cards.md, B30–B41;
 // the pure half is filters.test.ts, the pixel half e2e/cypress/component/deckbuilder-layout.cy.tsx).
 // Since R250 the editor is one saved deck of the deck workshop, so every test mounts `DeckWorkshop`.
-// A small inline catalog makes each rule visible; ./fixtures.ts serves only where its contract is
-// the point. Every validator sentence is computed with the validator, never typed: messages.test.ts
-// fails any client source, tests included, that spells one out.
+// Every validator sentence is computed with the validator, never typed: messages.test.ts fails any
+// client source, tests included, that spells one out.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -320,8 +319,6 @@ afterEach(() => {
   resetLocaleForTests();
 });
 
-// B30: the pool
-
 describe("the pool grid (B30)", () => {
   it("B30 the pool is a grid of div.db-item, each with the card-pool button holding the base CardFace and a sibling db-add button", () => {
     mount();
@@ -425,8 +422,6 @@ describe("the pool grid (B30)", () => {
     expect(Number(offset) + 2, "a 2px ring sits wholly inside the tile").toBeLessThanOrEqual(0);
   });
 });
-
-// B31: filters
 
 describe("filtering (B31)", () => {
   it("B31 every set, cost, type, tag and rarity chip is a toggle button with aria-pressed, inside db-filters", () => {
@@ -565,8 +560,6 @@ describe("filtering (B31)", () => {
   });
 });
 
-// B32: search
-
 describe("searching (B32)", () => {
   it("B32 every term must occur: 'field trap' finds the Field Trap only", () => {
     mount();
@@ -629,8 +622,6 @@ describe("searching (B32)", () => {
     expect(poolOrder()).toEqual(DEFAULT_ORDER);
   });
 });
-
-// B33: owned
 
 describe("the owned filter (B33)", () => {
   it("B33 is checked by default and limits the pool to owned cards", () => {
@@ -697,8 +688,6 @@ describe("the owned filter (B33)", () => {
   });
 });
 
-// B34: sorting
-
 describe("sorting (B34)", () => {
   it("B34 the default is cost ascending", () => {
     mount();
@@ -746,7 +735,6 @@ describe("sorting (B34)", () => {
 });
 
 describe("sorting by win rate (B34)", () => {
-  /** The rates the stats endpoint answers with, each card with enough games. */
   const RATES: Readonly<Record<string, number>> = { "x-04": 0.7, "x-02": 0.6, "x-08": 0.5 };
   /** By win rate, descending: the rated cards, then the rest in tie-break (cost) order. */
   const BY_RATE_DESC = ["x-04", "x-02", "x-08", ...DEFAULT_ORDER.filter((id) => !Object.hasOwn(RATES, id))];
@@ -831,8 +819,6 @@ describe("sorting by win rate (B34)", () => {
   });
 });
 
-
-// B35: the sidebar
 
 describe("the deck sidebar (B35)", () => {
   it("B35 db-sidebar holds the deck's count against DECK_SIZE and its drop region", () => {
@@ -928,8 +914,6 @@ describe("the deck sidebar (B35)", () => {
   });
 });
 
-// B36: the mana curve
-
 describe("the mana curve (B36)", () => {
   const DECK = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
 
@@ -964,8 +948,6 @@ describe("the mana curve (B36)", () => {
   });
 });
 
-// B37: where a card already is
-
 describe("held badges (B37)", () => {
   it("B37 a pool card the open deck holds shows .db-held and data-in-deck", () => {
     mount(["x-01"]);
@@ -989,8 +971,6 @@ describe("held badges (B37)", () => {
     expect(poolCard("x-06").querySelector(".db-held")).toBeNull();
   });
 });
-
-// B38: inspect in the builder
 
 describe("inspecting in the builder (B38)", () => {
   it("B38 a right-click on a pool card opens inspect-detail for it, prevents the menu and adds nothing", () => {

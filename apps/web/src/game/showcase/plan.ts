@@ -130,10 +130,7 @@ function tailOffset(fresh: readonly GameEvent[], window: readonly GameEvent[]): 
   return fresh.every((event, i) => window[offset + i] === event) ? offset : null;
 }
 
-/**
- * R502 includes both seats' casts on draw; per-viewer trackers also find chained casts (R97, R202).
- * Issue #1493 holds up every `trapFired` on both seats, in stream order with the plays.
- */
+/** Per-viewer trackers also find chained casts (R97, R202); every `trapFired` keeps stream order with the plays. */
 export function showcasePlays(
   fresh: readonly GameEvent[],
   view: PlayerView,

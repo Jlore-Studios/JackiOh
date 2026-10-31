@@ -1,9 +1,8 @@
 // The hero portraits and the emote menus (issue #75, SPEC §10.10, R641–R644, R1343): the portrait
 // art and badges, your menu of your dealt hand, the opponent's one-item mute, and every way the menu
-// must leave. Issue #544 (R1330–R1331) added the hero's inspect view, with the same menu in it;
-// since R1449 a click (or Enter) on a portrait hangs its menu off the portrait and a hold opens the
-// view. The harness is the route's own wiring: `useEmotes` is the api `MatchHotseatRoute` and
-// `PracticeRoute` hand `Game` (an `engine: null` sink, the peer's relay left to `api.receive`).
+// must leave; and the hero's inspect view, with the same menu in it (#544, R1330–R1331): a click (or
+// Enter) on a portrait hangs its menu off the portrait and a hold opens the view (R1449). The harness
+// is the route's own wiring: `useEmotes` is the api `MatchHotseatRoute` and `PracticeRoute` hand `Game`.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -45,8 +44,7 @@ function EmoteGame(props: {
     globalMute: props.globalMute,
   });
   props.apiRef.current = emotes;
-  // The wire's seam: the route sends `emotes.send`'s admitted emote off to the server. Wrap it so
-  // the test sees the (player, emote) pair while the local echo still runs the real session.
+  // Wrap `emotes.send` so the test sees the (player, emote) pair while the local echo still runs the real session.
   const send = (player: PlayerId, emote: EmoteId): boolean => {
     props.onSend?.(player, emote);
     return emotes.send(player, emote);
@@ -129,7 +127,6 @@ describe("the hero portraits (R641)", () => {
   });
 
   it("R641 the badges hang on the oval's lower corners — health right, armor left", () => {
-    // The anchoring is in emotes.css; read it the way Board.test.tsx reads board.css.
     const css = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "../emotes/emotes.css"),
       "utf8",
@@ -154,7 +151,6 @@ describe("your portrait's emote menu (R643)", () => {
     expect(menu).not.toHaveClass("emote-menu--inline");
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
     expect(within(menu).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE);
-    // The hand's voice lines arced above, its emoji in a row below (issue §2).
     const arc = menu.querySelector<HTMLElement>(".emote-voice-arc");
     const row = menu.querySelector<HTMLElement>(".emote-emoji-row");
     expect(arc).not.toBeNull();
@@ -163,7 +159,6 @@ describe("your portrait's emote menu (R643)", () => {
     expect(within(row as HTMLElement).getAllByRole("menuitem")).toHaveLength(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE);
     expect(within(arc as HTMLElement).getByRole("menuitem", { name: "Greetings" })).toBeInTheDocument();
     expect(within(row as HTMLElement).getByRole("menuitem", { name: "Party" })).toBeInTheDocument();
-    // Exactly the viewer's hand: every emote of it, and none of the pool outside it.
     for (const emote of EMOTE_IDS) {
       const held = (HANDS.p1 ?? []).includes(emote);
       expect(within(menu).queryByTestId(`emote-${emote}`) !== null, emote).toBe(held);
@@ -460,10 +455,7 @@ describe("the opponent's mute (R643)", () => {
     expect(api.current?.muted("p1")).toBe(false);
   });
 
-  /**
-   * Same bubbling guard as the picker's pick: the "Mute emotes" item's click is stopped inside
-   * `[data-emote-menu]`, so `onPortrait` never reopens the just-closed mute menu.
-   */
+  /** Same bubbling guard as the picker's pick: `onPortrait` never reopens the just-closed mute menu. */
   it("R643 the mute menu closes once the mute is set — and shows it as done next time", () => {
     const api = { current: null as EmotesApi | null };
     render(<EmoteGame view={BOARD} legal={[END_TURN]} onAction={vi.fn()} apiRef={api} />);
@@ -849,7 +841,6 @@ describe("R1449 a click opens the portrait's menu, a hold its inspect view", () 
     expect(open).toHaveFocus();
     expect(open).toHaveAttribute("aria-expanded", "false");
 
-    // The context-menu key opens it too; F10 alone does nothing.
     expect(fireEvent.keyDown(open, { key: "F10" })).toBe(true);
     expect(screen.queryByTestId("hero-inspect")).toBeNull();
     fireEvent.keyDown(open, { key: "ContextMenu" });

@@ -33,7 +33,6 @@ const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 const drawn = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "drawn", player, instanceId, defId });
 const cast = (player: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({ type: "cardPlayed", player, instanceId, defId, costPaid: 0 });
 
-/** Mounts on a first view, then gives it `view` (with `events` after TURN). */
 function mountThen(events: GameEvent[], options: { queue?: AnimationQueue; view?: PlayerView } = {}) {
   const base = options.view ?? baseView();
   const tree = (view: PlayerView) => withCatalog(<CardShowcase view={view} {...(options.queue === undefined ? {} : { queue: options.queue })} />);

@@ -30,10 +30,7 @@ const THEIR_HAND_ORDER = "As held";
 /** R434: the revealed hand and the view its cards are read in. */
 export type TheirHandProps = { view: PlayerView; cards: readonly CardView[] };
 
-/**
- * Each card's face in play (faces.ts), or a back for a card the view names by the sentinel alone,
- * wearing `back` (R1834004: the opponent's seat's card back, absent for the default).
- */
+/** Each card's face in play (faces.ts), or a back (`back`) for a card the view names by the sentinel alone. */
 export function theirHandEntries(lookup: CardLookup | null, view: PlayerView, cards: readonly CardView[], back?: string): CardListEntry[] {
   return cards.map((card) => ({ key: card.instanceId, face: listedFace(lookup, view, card), ...(back === undefined ? {} : { back }) }));
 }

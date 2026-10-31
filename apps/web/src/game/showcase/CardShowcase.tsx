@@ -1,9 +1,8 @@
 // A visual-only, redacted-event display (CLAUDE.md rule 7; R97, R202, R227), held long enough to read (R201).
 // R502: casts on draw (Hinder #21, Blood Ridden #27) appear on both seats, gated to the runner without pacing it.
-// A card another card casts (C+ #47 Jogg's Box) replaces the current display on its runner entry; per-viewer
-// `runs.ts` tracking identifies those casts. Issue #1493: a revealed trap reuses that generated-cast close-up
-// on both seats, gated to its `trapFired` runner entry. R436 announces Call to Chaos and shows it still when
-// effects do not draw.
+// A card another card casts (C+ #47 Jogg's Box) replaces the current display on its runner entry. Issue #1493:
+// a revealed trap reuses that close-up on both seats, gated to its `trapFired` runner entry. R436 announces
+// Call to Chaos and shows it still when effects do not draw.
 // Per-viewer windows let a hotseat player catch up; the portal is click-through and holds practice's AI via `data-showcase`.
 // Reduced motion preserves the information without animation.
 
@@ -92,10 +91,7 @@ function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byN
   return kind === "trap" ? t(TRAP_REVEAL_TEXT.caption) : t(CAPTION[kind]);
 }
 
-/**
- * A multicast's sentence: "Fireball cast Frostbolt (2)", with "A card" / "a card" for a name the view
- * hides. Each is one sentence for the dictionary, worded from the constants the tests read.
- */
+/** Each multicast sentence is one sentence for the dictionary, worded from the constants the tests read. */
 function multicastSaid(byName: string | undefined, name: string | undefined, ordinal: string): string {
   const said = MULTICAST_TEXT.said;
   if (byName === undefined) {
@@ -106,10 +102,6 @@ function multicastSaid(byName: string | undefined, name: string | undefined, ord
     : t(`{by} ${said} {name} ({ordinal})`, { by: byName, name, ordinal });
 }
 
-/**
- * A trap reveal's sentence: whose trap fired, the card when the view names it, and which of the
- * batch's reveals it is.
- */
 function trapSaid(play: ShowcasePlay, viewer: PlayerId, name: string | undefined): string {
   const whose = play.player === viewer ? t("your") : t("the opponent's");
   const total = play.trapReveal?.total ?? 1;
@@ -209,7 +201,6 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     [advance],
   );
 
-  /** Runner-reached casts replace the current display. */
   const replace = useCallback(
     (play: ShowcasePlay) => {
       waiting.current = [play, ...waiting.current];

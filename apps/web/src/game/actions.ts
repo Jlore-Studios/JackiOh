@@ -1,25 +1,20 @@
 // Turning clicks into actions — and nothing else (CLAUDE.md rule 7, BUILD M5-T2, SPEC §10.2).
 //
 // THE ONE RULE OF THIS FILE IS THAT IT HAS NO RULES. Every question of the form "may I?" is
-// answered by searching the `ActionBody[]` that `legalActions(state, player)` handed us: no
-// `cost <= mana`, no `keywords.includes("Taunt")`, no summoning-sickness check. The yellow glow is
-// `CardView.conditionActive`, which the engine computes (R195).
+// answered by searching the `ActionBody[]` that `legalActions(state, player)` handed us. The yellow
+// glow is `CardView.conditionActive`, which the engine computes (R195).
 //
 // R81: zone, X, embiggen, Tribute, a card's declared targets and modes, and the `plague` payment
-// (Classic #74) are NOT prompts: they travel inside the `play` action, and `legalActions`
-// enumerates them. A targeting cost's discards (Classic #89) are random at pay time (R682) and
-// travel nowhere. R384: an activation is built the same way, so a play and an activation are one
-// "build" here (`BuildBody`). Everything chosen during resolution arrives as a `PendingChoice`,
-// answered with an `answer` action (or, for the mulligan, its own `mulligan` action).
+// (Classic #74) are NOT prompts: they travel inside the `play` action. A targeting cost's discards
+// (Classic #89) are random at pay time (R682) and travel nowhere. R384: an activation is built the
+// same way (`BuildBody`). Everything chosen during resolution arrives as a `PendingChoice`.
 //
-// R391 (B4.5): a Tribute may pay for its own zone, and `legalActions` pairs each zone with the
-// Tribute sets that leave it open. Narrowing keeps whole candidates, never a field on its own, so a
-// zone and a Tribute picked in either order only ever finish a pair the engine listed.
+// R391 (B4.5): a Tribute may pay for its own zone. Narrowing keeps whole candidates, never a field on
+// its own, so a zone and a Tribute picked in either order only ever finish a pair the engine listed.
 //
 // CARRY_THROUGH: a candidate that leaves `tributes`, `targets` or `modes` unset accepts what a
-// *picker* chose for it (`pickInPlay`), validated by the engine per R90: the client reports the
-// player's pick, it does not rule on it. A *board click* is never carried through — a click no
-// candidate accounts for changes nothing, so the board can never be clicked into an illegal play.
+// *picker* chose for it (`pickInPlay`), validated by the engine per R90. A *board click* is never
+// carried through, so the board can never be clicked into an illegal play.
 
 import type {
   ActionBody,
@@ -75,9 +70,7 @@ export type PlayBuild = {
   tributes?: string[];
   targets?: Selection[];
   modes?: string[];
-  /** B5 E11, E19: how a graveyard play's price is paid in Plague Counters. */
   plague?: PlagueChoice;
-  /** ME-ALTPLAY: face-up, or the reveal timing it is set with. */
   faceDown?: FaceDownChoice;
 };
 
@@ -102,7 +95,6 @@ export type Interaction =
 
 export const IDLE: Interaction = { stage: "idle" };
 
-/** A play or an activation is being built: the stages whose choices `outstandingNeed` reads. */
 export function isBuilding(interaction: Interaction): interaction is Building {
   return interaction.stage === "playing" || interaction.stage === "activating";
 }
@@ -210,9 +202,8 @@ export function activationsFor(legal: readonly ActionBody[], instanceId: string,
 }
 
 /**
- * How an `attack` names a hero: `hero-<playerId>`. `@jackioh/shared` exports no helper for it, so
- * this is the client's copy of the id `crates/engine/src/damage.rs`'s `target_id()` builds for the
- * `damage` and `healed` events.
+ * How an `attack` names a hero: `hero-<playerId>`, the client's copy of the id
+ * `crates/engine/src/damage.rs`'s `target_id()` builds (`@jackioh/shared` exports no helper for it).
  */
 export function heroTargetId(player: PlayerId): string {
   return `hero-${player}`;
@@ -226,13 +217,11 @@ export function heroPlayerOfTargetId(view: PlayerView, targetId: string): Player
   return null;
 }
 
-/** The `data-testid` an `attack`'s `targetId` points at. */
 export function attackTargetTestid(view: PlayerView, targetId: string): string {
   const player = heroPlayerOfTargetId(view, targetId);
   return player === null ? testid.card(targetId) : testid.hero(sideOf(view, player));
 }
 
-/** Where a `Selection` lives on the board. `mode` and `none` point at nothing. */
 export function selectionTestid(view: PlayerView, selection: Selection): string | null {
   switch (selection.pick) {
     case "instance": {
@@ -313,7 +302,6 @@ type BuildFields = {
   targets?: Selection[];
   modes?: string[];
   plague?: PlagueSpend;
-  /** ME-ALTPLAY: the reveal timing a set play carries, absent face-up. */
   faceDown?: RevealAt;
 };
 
@@ -425,10 +413,9 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
 }
 
 /**
- * The next choice the build still needs, or null when the candidates agree on everything, derived
- * purely from the candidate array. Asked in cost order (X, embiggen and the Plague Counters change
- * what is paid), then the Tribute, the targets, the modes, and the board-driven zone last so a zone
- * click finishes the play; the modes come before the targets when some candidate wants no target.
+ * The next choice the build still needs, or null when the candidates agree on everything. Asked in
+ * cost order (X, embiggen and the Plague Counters change what is paid), then the Tribute, the targets,
+ * the modes, and the board-driven zone last so a zone click finishes the play.
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
@@ -558,7 +545,6 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   return null;
 }
 
-/** One legal candidate left and nothing outstanding: the build is ready to send. */
 function readyAction(interaction: Interaction): ActionBody | undefined {
   if (!isBuilding(interaction)) return undefined;
   if (outstandingNeed(interaction) !== null) return undefined;
@@ -578,7 +564,6 @@ function narrowedBy(interaction: Building, picked: Partial<PlayBuild>): Interact
   return { ...next, candidates: remaining };
 }
 
-/** Does any candidate actually fix this zone? A board click is only accepted when one does. */
 function someCandidateFixesZone(interaction: Building, zone: ZoneChoice): boolean {
   return remainingCandidates(interaction).some((c) => {
     const fixed = fieldsOf(c).zone;
@@ -586,7 +571,6 @@ function someCandidateFixesZone(interaction: Building, zone: ZoneChoice): boolea
   });
 }
 
-/** Does any candidate name this selection as one of its declared targets (R81)? */
 function someCandidateFixesTarget(interaction: Building, selection: Selection): boolean {
   const key = selectionKey(selection);
   return remainingCandidates(interaction).some((c) => {
@@ -665,20 +649,18 @@ function buildingSources(view: PlayerView, interaction: Building): string[] {
 }
 
 /**
- * Every `data-testid` the board may light up, plus the selected set. Everything in `legal` got
- * there because an `ActionBody` (or an open prompt's own option list) named it. `glow` is the green
- * (Hearthstone's "can act") and is narrower than `legal`: `switchPosition`, `offerDraw` and
- * `concede` stay clickable but never glow.
+ * Every `data-testid` the board may light up, plus the selected set. `glow` is the green (Hearthstone's
+ * "can act") and is narrower than `legal`: `switchPosition`, `offerDraw` and `concede` stay clickable
+ * but never glow.
  */
 export function highlightFor(
   view: PlayerView,
   legal: readonly ActionBody[],
   interaction: Interaction,
 ): Highlight {
-  // Nothing but concede is legal, so a selection that was in flight when the engine's answer
-  // changed under it is dropped, and the board reads as idle. This reads the engine's answer rather
-  // than checking `view.result` or whose turn it is: `legalActions` returns [] once the game is
-  // over, and only concede while the other seat holds a prompt (R211).
+  // Nothing but concede is legal, so a selection in flight is dropped and the board reads as idle.
+  // This reads the engine's answer rather than `view.result` or whose turn it is: `legalActions`
+  // returns [] once the game is over, and only concede while the other seat holds a prompt (R211).
   if (interaction.stage !== "idle" && legal.every((body) => body.type === "concede")) {
     return legal.length === 0 ? NO_HIGHLIGHT : highlightFor(view, legal, IDLE);
   }
@@ -839,10 +821,7 @@ function startPlay(
   return settle({ stage: "playing", instanceId, candidates, picked: {} });
 }
 
-/**
- * R384: an Activate control pressed. Its activations become the candidates, built exactly as a
- * play's. Pressing the control of the build in flight puts it back down.
- */
+/** R384: an Activate control pressed. Pressing the control of the build in flight puts it back down. */
 function startActivation(
   legal: readonly ActionBody[],
   interaction: Interaction,
@@ -882,10 +861,7 @@ function startAttack(legal: readonly ActionBody[], attackerId: string): ClickRes
   return { interaction: { stage: "attacking", attackerId, candidates } };
 }
 
-/**
- * One click. A click that no candidate can account for returns the interaction unchanged and no
- * action: an illegal click is simply not a move.
- */
+/** One click. A click that no candidate can account for returns the interaction unchanged and no action. */
 export function onClickTarget(
   view: PlayerView,
   legal: readonly ActionBody[],
@@ -941,8 +917,7 @@ export function onClickTarget(
               attackTargetTestid(view, candidate.targetId) === testid.card(target.instanceId),
           );
         if (action !== undefined) return { interaction: IDLE, action };
-        // The other attackers stay clickable (`highlightFor`), so a click on one switches the attack to
-        // it, as dragging it does (`planAttack`); a target of the picked attacker is read first, above.
+        // A click on another attacker switches the attack to it, as dragging it does (`planAttack`).
         return startAttack(legal, target.instanceId) ?? { interaction };
       }
       if (isBuilding(interaction)) {
@@ -1047,10 +1022,9 @@ export function selectionForOption(option: PendingOption): Selection {
 }
 
 /**
- * The action that answers the open prompt with the options the player picked. The mulligan is its
- * own `mulligan {keep[]}` action (§10.2): the picked keys *are* the kept cards, put in hand order so
- * the same picks always build the same action (the engine reads `keep` as a set,
- * `crates/engine/src/setup.rs`).
+ * The action that answers the open prompt with the options the player picked. The mulligan is its own
+ * `mulligan {keep[]}` action (§10.2): the picked keys *are* the kept cards, put in hand order so the same
+ * picks always build the same action (the engine reads `keep` as a set, `crates/engine/src/setup.rs`).
  */
 export function answerAction(
   pending: Extract<PendingView, { forYou: true }>,
@@ -1075,9 +1049,8 @@ export function answerAction(
   });
 
   // `promptAnswers` enumerates every answer the open prompt would accept, so when the caller hands
-  // the array over, the action sent is the engine's own body rather than the client's
-  // reconstruction of it — option order included. The reconstruction is the fallback for a caller
-  // that has no array, and for a prompt whose answers ran past the engine's own cap.
+  // the array over, the action sent is the engine's own body, option order included. The client's
+  // reconstruction is the fallback: no array, or a prompt whose answers ran past the engine's own cap.
   const wanted = targetsKey(selection);
   const listed = legal.find(
     (body) => body.type === "answer" && body.choiceId === pending.choiceId && targetsKey(body.selection) === wanted,
@@ -1114,8 +1087,7 @@ function hiddenOptionZone(view: PlayerView, option: PendingOption): { side: Side
 
 /**
  * A click on the board that answers the placement prompt, or null when it does not. A card is picked
- * by its id and a face-down card by the zone its back lies in. The engine's own `answer` is returned,
- * as for a list.
+ * by its id and a face-down card by the zone its back lies in.
  */
 export function answerPlaguePlacement(
   view: PlayerView,

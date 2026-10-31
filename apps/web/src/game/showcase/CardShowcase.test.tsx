@@ -33,7 +33,6 @@ function played(player: "p1" | "p2", instanceId: string, defId: string): GameEve
   return { type: "cardPlayed", player, instanceId, defId, costPaid: 2 };
 }
 
-/** The first view has no "since"; the second brings `events` after it. */
 function mountThen(events: GameEvent[], before: PlayerView = withEvents(baseView(), [TURN])): { next: (view: PlayerView) => void } {
   const { rerender } = render(withCatalog(<CardShowcase view={before} />));
   const next = (view: PlayerView): void => {

@@ -1,17 +1,15 @@
 // The board's game-over state (BUILD M5-T4 `gameOver`: "overlay text Win / Loss / Draw"), in two forms:
 //  - `panel`: a dimmed board and a panel with the outcome, why, and the route's own ways on
 //    (`actions`), plus "View the board", which folds it to the chip;
-//  - `chip`: one line at the foot of the screen, over nothing that matters once the game is done,
-//    with "Result" to open the panel again. Practice asks for this form from the start, because
-//    its own result dialog (PracticeResult) is the panel there.
+//  - `chip`: one line at the foot of the screen, with "Result" to open the panel again. Practice asks
+//    for this form from the start, because its own result dialog (PracticeResult) is the panel there.
 //
 // Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
 // its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
 // opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests.
 //
 // R434: the game's end reveals both hands. When the view shows the opponent's (`reveal.ts`), the
-// panel lists it as "Their hand", and the chip's "Their hand" button opens it in the list dialog
-// (TheirHand.tsx).
+// panel lists it as "Their hand", and the chip's button opens it in the list dialog (TheirHand.tsx).
 
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -92,8 +90,7 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason, win
 
 /**
  * How long the result waits: the effects layer replays the killing blow in at most
- * FX_LETHAL_LEAD_MAX_MS and then plays Victory / Defeat in FX_RESULT_MS. With no effects to watch
- * (reduced motion, the setting or the OS's, or effects off) it shows at once.
+ * FX_LETHAL_LEAD_MAX_MS and then plays Victory / Defeat in FX_RESULT_MS; with no effects to watch, 0.
  */
 export function resultRevealMs(): number {
   let reduced = prefersReducedMotion();

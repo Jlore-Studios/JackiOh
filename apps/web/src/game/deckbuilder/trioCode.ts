@@ -85,9 +85,7 @@ export const TRIO_CODE_MESSAGES = Object.freeze({
 const NAME_LENGTH_BYTES = 1;
 const SLOTS_BYTES = 1;
 const CHECKSUM_BYTES = 2;
-/** The trio name's length byte, the slots byte and the checksum: the smallest payload there is. */
 const MIN_PAYLOAD_BYTES = NAME_LENGTH_BYTES + SLOTS_BYTES + CHECKSUM_BYTES;
-/** Bits 0, 1 and 2 of the slots byte; anything else set is damage. */
 const SLOT_BITS = (1 << TRIO_CODE_SLOTS) - 1;
 
 /** T1, as the validator states it: whether `name` may be a saved trio's name. */
@@ -96,7 +94,6 @@ function passesT1(name: string): boolean {
   return !issues.some((issue) => issue.rule === "T1");
 }
 
-/** The trio name a code carries: stored form, at most `DECK_NAME_MAX_LENGTH` characters, T1-clean. */
 function trioNameForCode(raw: string): string {
   const cut = normalizeName([...normalizeName(raw)].slice(0, DECK_NAME_MAX_LENGTH).join(""));
   return passesT1(cut) ? cut : IMPORTED_TRIO_NAME;
@@ -104,7 +101,6 @@ function trioNameForCode(raw: string): string {
 
 // Encode
 
-/** The code for a trio: its name and its three slots, each a deck's name and cards or empty. */
 export function encodeTrioCode(name: string, slots: readonly TrioCodeSlot[], catalog: CatalogSnapshot): string {
   const payload: number[] = [];
   pushName(payload, trioNameForCode(name), IMPORTED_TRIO_NAME);

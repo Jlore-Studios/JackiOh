@@ -2,13 +2,10 @@
 // `curveDrawn` draws. Presentation only (CLAUDE.md rule 7): it reads the event's public cells and
 // decides nothing.
 //
-// The grid is the engine's (crates/engine/src/subsystems/papaya.rs, R422), from the caster's seat:
-// x the lane less one, y 0 the caster's backrow, 1 their units, 2 the opponent's units, 3 the
-// opponent's backrow. The event names every cell the curve meets, the picked ones among them, so the
-// lowest-degree polynomial through the named cells is the curve itself; it is worked out here by
-// Lagrange interpolation in exact fractions, never floating point.
-//
-// It prints as "y = −¹⁄₂x² + ⁵⁄₂x", with the minus sign (U+2212) for a negative.
+// The grid is the engine's (crates/engine/src/subsystems/papaya.rs, R422), from the caster's seat,
+// x the lane less one. The event names every cell the curve meets, so the lowest-degree polynomial
+// through the named cells is the curve itself, worked out by Lagrange interpolation in exact
+// fractions, never floating point. It prints as "y = −¹⁄₂x² + ⁵⁄₂x", with the minus sign (U+2212) for a negative.
 
 import type { PlayerId, Row, ZoneRef } from "@jackioh/shared";
 

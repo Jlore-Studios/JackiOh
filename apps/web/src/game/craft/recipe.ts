@@ -23,9 +23,7 @@ import {
 
 /** ME-CRAFT (Meditative #17, R880–R883): the block editor's pure recipe helpers. Every helper
  * returns a new recipe and leaves its argument alone, so the editor's state stays immutable.
- * Meditative+ (#1182) adds the potion frame (R1182000, R1182001) and the empty canvas
- * (R1182002); #1563 the prompt's offer (R1563007), the Spell potion (R1563008) and the retired
- * verbs (R1563009). */
+ * The potion frame and the empty canvas are #1182's (R1182001), the prompt's offer #1563's. */
 
 /** What the palette calls each effect verb, in the block table's words. */
 export const VERB_LABELS: Record<CraftVerb, string> = {
@@ -238,7 +236,6 @@ export function removeEffect(recipe: CraftRecipe, hatIndex: number, effectIndex:
   return { ...recipe, hats };
 }
 
-/** Move an effect block within its hat, or across hats. */
 export function moveEffect(
   recipe: CraftRecipe,
   from: { hat: number; effect: number },

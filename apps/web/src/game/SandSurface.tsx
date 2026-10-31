@@ -102,9 +102,9 @@ export type SandSurfaceProps = {
   field: RefObject<HTMLElement | null>;
   /** The action builder owns this signal: while it has a card lifted or targeted, sand is inert. */
   disabled: boolean;
-  /** The worn playmat (Board's data-table); absent is the default, which taps as sand. */
+  /** The worn playmat (Board's data-table). */
   table?: string;
-  /** R1834004: the opponent's playmat (Board's data-their-table), under the upper half; absent taps as sand. */
+  /** R1834004: the opponent's playmat (Board's data-their-table), under the upper half. */
   theirTable?: string;
 };
 

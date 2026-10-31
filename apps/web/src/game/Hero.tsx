@@ -1,18 +1,14 @@
 // A hero: health, armor and the Heroic Power (SPEC §3, BUILD M5-T1).
 //
 // The hero is a click target like any card, `hero-<side>`, for a click or a DragLayer drag. Whether
-// it may be attacked is `props.highlight.legal`, and whether it glows green `props.highlight.glow`;
-// Taunt lives in the engine.
+// it may be attacked is `props.highlight.legal`; Taunt lives in the engine.
 //
 // The modifier badges come from `SideView.modifiers`, which R169 put in the view (`{ id, label }`
-// per §10.1 modifier, on both seats), rendered here and nowhere else, so `modifiers-<side>` (M5-T4's
-// testid for `modifierChanged`) has exactly one element per seat. Nothing is derived: the label, the
-// order and what is drawn are the view's. A badge rebuilt from the event window, the last N events
-// (§10.8), could appear and never leave.
+// per §10.1 modifier, on both seats), rendered here and nowhere else, so `modifiers-<side>` has
+// exactly one element per seat. Nothing is derived: the label, the order and what is drawn are the
+// view's. A badge rebuilt from the event window, the last N events (§10.8), could appear and never leave.
 //
-// The Heroic Powers (R43, R384, R510, R752), each separately once per turn. Each of the viewer's own
-// is a button that reports `{ on: "activate", instanceId }`, as every Activate control does
-// (ActivateControl.tsx), so `actions.ts` builds a power as any activation. The first keeps the
+// The Heroic Powers (R43, R384, R510, R752), each separately once per turn. The first keeps the
 // `power` testid the e2e specs press; any further one is `power-<instanceId>`. The opponent's are
 // tags. A button is live by `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power
 // flashes on the `activated` row, which plays on its card (`card-<instanceId>`).
@@ -20,8 +16,8 @@
 // The portrait has two presses (R1449). A click on a hero that is not a legal target, or Enter or
 // Space on the portrait's own button (laid over the art with no testid, so a drag or a click still
 // resolves to `hero-<side>`), toggles the emote menu on the portrait: your picker, or the opponent's
-// one-item mute (R643). A hold, a right-click, or the context-menu key or Shift+F10 on the button
-// opens the hero's inspect view (`emotes/HeroInspect.tsx`, R1330). A target is still a target first.
+// one-item mute (R643). A hold opens the hero's inspect view (`emotes/HeroInspect.tsx`, R1330). A
+// target is still a target first.
 //
 // R847: a side whose Temporal Rift turn is granted (`SideView.riftExtraTurn`) wears "Rift turn used"
 // on both seats; owed extra turns are the engine's own modifier badge (R846).
@@ -334,7 +330,7 @@ export default function Hero(props: HeroProps): ReactElement {
 /**
  * R1639000: the mark a Heroic Power used this turn wears, first in its chip on either seat, so the
  * chip's clip (a flex box draws no ellipsis) never takes it. The space keeps the name "Used
- * Ranching", where a flex box draws none (Board.tsx's Pile). Drawn from the view, never obeyed.
+ * Ranching", where a flex box draws none (Board.tsx's Pile).
  */
 function UsedMark({ power }: { power: HeroPowerView }): ReactElement | null {
   if (!power.usedThisTurn) return null;
@@ -345,7 +341,6 @@ function UsedMark({ power }: { power: HeroPowerView }): ReactElement | null {
   );
 }
 
-/** R1639000: a used power's title, the same on the viewer's button and the opponent's tag. */
 function usedTitle(power: HeroPowerView): string {
   return t("{power}: used this turn", { power: t(power.title) });
 }

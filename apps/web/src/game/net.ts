@@ -1,7 +1,5 @@
 // CLAUDE.md rule 7 / SPEC §9.1: this client sends intent and renders server views; it never computes legality (BUILD M5-T2).
-// The handshake names the match in its query and offers the token as a subprotocol (SURFACE §11.3, R1379000); `hello` refreshes the view (§9.5).
 // `MatchClocks` is structural across the deployable boundary (§9.2); view frames carry legal actions (BUILD §1, M6-T4).
-// R1834003: `loadouts` and `cardLoadouts` carry both seats' frozen cosmetics (R1834002), kept merged here as `portraits` are kept.
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -41,7 +39,6 @@ export type PromptFrame =
 /** A `clock` frame plus the monotonic reading when it landed; deadline calculations never use wall time. */
 export type ClockReading = { now: number; clocks: MatchClocks; receivedAt: number };
 
-/** Milliseconds left on an absolute server deadline, or null when there is none. */
 export function remainingMs(
   deadline: number | null | undefined,
   clock: Pick<ClockReading, "now" | "receivedAt"> | null,
@@ -88,10 +85,7 @@ export const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 /** R679: a voided match has no socket to reconnect to. */
 export const VOIDED_CLOSE_CODE = 4410;
 
-/**
- * R1115000: the refusal the server sends when the handshake's token does not verify (R148). It
- * settles only for that token: a different one opens one more socket.
- */
+/** R1115000: the refusal the server sends when the handshake's token does not verify (R148). */
 export const UNAUTHORIZED_CLOSE_CODE = 4401;
 
 /** A short backoff; the last entry repeats. Spec 05 reloads the page, so a resume is a fresh boot. */
@@ -131,8 +125,7 @@ export const defaultTimers: Timers = {
 
 /**
  * R1441: calls `handler` when the page may have been asleep or offline: its tab turns visible or the
- * network comes back (as `settings/accountSync.ts` listens for). Returns the function that stops
- * listening.
+ * network comes back (as `settings/accountSync.ts` listens for).
  */
 export function pageWake(handler: () => void): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
@@ -275,14 +268,7 @@ function parseClocks(value: unknown): MatchClocks | null {
   };
 }
 
-/** Every server frame this client understands, after parsing. */
 export type ServerFrame =
-  /**
-   * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
-   * all of this account's Jlore for it; the server leaves it off a frame that has nothing to say.
-   * #1664: `economy` is what the result's write paid this account (`economy/xp.ts`), on every view of
-   * its seat from then on; absent when the frame carries none (or not a whole one).
-   */
   | {
       type: "view";
       view: PlayerView;
@@ -441,7 +427,7 @@ export type MatchSnapshot = {
   legalSource: LegalSource;
   /**
    * R1483000: whether the last view said the daily Jlore cap held back this account's Jlore for the
-   * finished match, as the server read it off its ledger; the page never works it out.
+   * finished match; the page never works it out.
    */
   jloreCapped: boolean;
   /**
@@ -497,7 +483,6 @@ export type MatchClient = {
 export type MatchClientOptions = {
   matchId: string;
   token: string;
-  /** Defaults to `matchSocketUrl()` (`apps/web/src/net/api.ts`). */
   baseUrl?: string;
   /** Test seam. Defaults to the browser's `WebSocket`. */
   socketFactory?: SocketFactory;
@@ -505,10 +490,7 @@ export type MatchClientOptions = {
   timers?: Timers;
   /** Test seam for the monotonic reading stamped on every `clock` frame. */
   monotonic?: () => number;
-  /**
-   * Test seam for what wakes a sleeping page (R1441). Defaults to the tab turning visible and the
-   * `online` event.
-   */
+  /** Test seam for what wakes a sleeping page (R1441). */
   wake?: (handler: () => void) => () => void;
   /** Test seam for the reconnect jitter (R1441), a draw in [0, 1). Defaults to `Math.random`. */
   random?: () => number;
@@ -537,8 +519,8 @@ const INITIAL: MatchSnapshot = {
 };
 
 /**
- * The address names the match only; the token is offered as a subprotocol (R1379000), since a
- * browser cannot set a WebSocket's authorization header and an address is kept by logs.
+ * The address names the match only; the token is offered as a subprotocol (SURFACE §11.3, R1379000),
+ * since a browser cannot set a WebSocket's authorization header and an address is kept by logs.
  */
 export function socketUrlFor(baseUrl: string, matchId: string): string {
   try {
@@ -559,7 +541,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   const wake = options.wake ?? pageWake;
   const random = options.random ?? Math.random;
   const base = options.baseUrl ?? matchSocketUrl();
-  /** Every subsequently opened socket carries this token. */
   let token = options.token;
 
   const listeners = new Set<() => void>();
@@ -849,10 +830,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
 // What waits on the viewer (#1792)
 
 /**
- * #1792: whether the game waits on the viewer, for the tab's title. Never once the game is over;
- * while a prompt is open, only when it is the viewer's (`pending.forYou`), the mulligan's included
- * (R265, R266: a seat that has answered sees the other seat's as `forYou: false`); otherwise on
- * `yourTurn`, the viewer's own turn unless the caller says what its turn is (the co-op round, §13.3).
+ * #1792: whether the game waits on the viewer, for the tab's title. While a prompt is open, only when
+ * it is the viewer's, the mulligan's included (R265, R266: a seat that has answered sees the other
+ * seat's as `forYou: false`); otherwise on `yourTurn`, the viewer's own turn unless the caller says
+ * what its turn is (the co-op round, §13.3).
  */
 export function awaitsYou(view: PlayerView, yourTurn: boolean = view.active === view.viewer): boolean {
   if (view.result !== null) return false;
@@ -906,7 +887,6 @@ export type NetDevHandle = {
   dispatch: (action: ActionBody & { playerId?: PlayerId }) => void;
 };
 
-/** The networked counterpart to the hotseat `window.__jackioh` handle. */
 type DevWindow = { __jackioh?: unknown };
 
 /** Publish outside production; teardown avoids clobbering the hotseat handle. */

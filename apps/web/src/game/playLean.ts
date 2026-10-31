@@ -10,19 +10,13 @@
 
 import { LEAN_NEWEST, isLeanPick, type LeanPick } from "@jackioh/shared";
 
-/** Where this device remembers the online pick. */
 export const PLAY_LEAN_SET_KEY = "jackioh.play.leanSet";
 
-/** R1372's switch, before the picker: `"true"` when it was on. Read only when no pick was written. */
 export const PLAY_LEAN_NEWEST_KEY = "jackioh.play.leanNewest";
 
 /** No lean, as stored and as the picker's `<select>` value. */
 export const NO_LEAN = "";
 
-/**
- * The online pick this device made last: a pick, or `null` for none. None in a private window, with
- * blocked storage or junk; R1372's switch, left on, is "newest".
- */
 export function readPlayLean(): LeanPick | null {
   try {
     const stored = window.localStorage.getItem(PLAY_LEAN_SET_KEY);

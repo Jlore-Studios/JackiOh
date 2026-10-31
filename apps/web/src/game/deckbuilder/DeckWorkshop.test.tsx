@@ -173,8 +173,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The list
-
 describe("the rail", () => {
   it("R250 lists every saved deck with its count and status chip, and the caps", () => {
     mount({
@@ -259,8 +257,6 @@ describe("R2108000 the workshop's empty state", () => {
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
   });
 });
-
-// Making and editing a deck
 
 describe("a deck", () => {
   it("R256 New deck makes a named deck, opens it, and saves it after the debounce", async () => {
@@ -358,8 +354,6 @@ describe("a deck", () => {
   });
 });
 
-// Practice with this deck (#1991)
-
 describe("issue #1991 Practice with this deck", () => {
   afterEach(() => {
     window.history.replaceState(null, "", "/");
@@ -425,8 +419,6 @@ describe("issue #1991 Practice with this deck", () => {
   });
 });
 
-// Comparing (R251)
-
 describe("comparing a deck with others (R251)", () => {
   const clash = TWO[0] ?? "";
 
@@ -489,8 +481,6 @@ describe("comparing a deck with others (R251)", () => {
     expect(screen.getByTestId(DECK_COUNT)).toHaveAttribute("data-count", "4");
   });
 });
-
-// The deck list marks the cards the verdict names
 
 describe("the deck list marks each card that keeps the deck from being queued", () => {
   function errorsOf(cards: readonly string[], owned: Collection) {
@@ -569,8 +559,6 @@ describe("the deck list marks each card that keeps the deck from being queued", 
     expect(verdict).toHaveTextContent("Your collection couldn");
   });
 });
-
-// Trios (R252, R253)
 
 describe("a trio", () => {
   const full = [savedDeck("a", "Aggro", ONE, 1), savedDeck("c", "Control", TWO, 2), savedDeck("m", "Midrange", THREE, 3)];
@@ -671,8 +659,6 @@ describe("a trio", () => {
     expect(server.decks.has("a")).toBe(true);
   });
 });
-
-// Undoing a deletion (R2119000)
 
 describe("undoing a deletion (R2119000)", () => {
   const full = [savedDeck("a", "Aggro", ONE, 1), savedDeck("c", "Control", TWO, 2), savedDeck("m", "Midrange", THREE, 3)];
@@ -854,8 +840,6 @@ describe("undoing a deletion (R2119000)", () => {
   });
 });
 
-// Deck codes (R255)
-
 describe("deck codes (R255)", () => {
   function stubClipboard(writeText: (text: string) => Promise<void>): void {
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -963,8 +947,6 @@ describe("deck codes (R255)", () => {
     expect(screen.getByTestId(DECK_IMPORT_CAP_REASON)).toHaveTextContent(String(MAX_SAVED_DECKS));
   });
 });
-
-// Trio codes (R339–R341)
 
 describe("trio codes (R339–R341)", () => {
   function stubClipboard(writeText: (text: string) => Promise<void>): void {
@@ -1093,8 +1075,6 @@ describe("trio codes (R339–R341)", () => {
   });
 });
 
-// The save status (R256)
-
 describe("the save status (R256)", () => {
   it("R256 offline, the edit is kept on this device, and the next visit restores it and saves it", async () => {
     const server = fakeDeckServer();
@@ -1157,13 +1137,11 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     expect([...select("field").options].map((option) => option.value)).toEqual(["", ...cosmeticsOf("field").map((cosmetic) => cosmetic.id)]);
     expect(select("field").options[0]?.textContent).toBe("As equipped in Collection");
 
-    // A pick saves with the deck, beside the cards and the portrait.
     fireEvent.change(select("field"), { target: { value: "field-rain" } });
     expect(select("field").value).toBe("field-rain");
     await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.decks.get("a")).toMatchObject({ tableCosmetic: "table-felt", fieldCosmetic: "field-rain", cardBackCosmetic: "card-back-gone" });
 
-    // The empty option clears the pick again, and the PUT leaves it out.
     fireEvent.change(select("table"), { target: { value: "" } });
     expect(select("table").value).toBe("");
     await tick(DECK_AUTOSAVE_DEBOUNCE_MS);

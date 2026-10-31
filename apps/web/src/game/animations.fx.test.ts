@@ -47,7 +47,6 @@ afterEach(() => {
 
 /* Fixtures */
 
-/** A `schedule` spy that records its calls and lets the test run the callbacks by hand. */
 function fakeClock() {
   const calls: { ms: number; run: () => void }[] = [];
   const schedule = vi.fn((fn: () => void, ms: number) => {
@@ -56,13 +55,11 @@ function fakeClock() {
   return {
     schedule,
     calls,
-    /** Fires the oldest pending callback. */
     tick(): void {
       const next = calls.shift();
       expect(next, "nothing scheduled").toBeDefined();
       next?.run();
     },
-    /** Fires callbacks until none is left. */
     flush(): void {
       let guard = 0;
       while (calls.length > 0) {
@@ -72,7 +69,6 @@ function fakeClock() {
         next?.run();
       }
     },
-    /** Every duration handed to `schedule`, in order. */
     scheduled(): number[] {
       return schedule.mock.calls.map((call) => Number(call[1]));
     },
@@ -196,7 +192,6 @@ function longStream(rounds: number): GameEvent[] {
   return out;
 }
 
-/** Runs `events` through a fresh queue at `speed` and returns every duration it scheduled. */
 function scheduledAt(speed: number, events: readonly GameEvent[]): number[] {
   const clock = fakeClock();
   const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: false, settings: at(speed) });

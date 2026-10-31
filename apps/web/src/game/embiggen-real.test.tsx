@@ -5,9 +5,8 @@
 // with both forms listed it opens the embiggen picker and sends the form picked; with only the normal
 // form listed it asks nothing about the price. The view and the legal list are real states' (the
 // WebAssembly module, docs/v0.3.0/SURFACE.md §10.3). The Embiggened card shows the view's
-// `embiggenCost`, the engine's price under every cost change (a discount R363's "(4)+ Cost" threshold
-// gives the embiggen price alone included). Every Embiggen card in the catalog is driven, on both
-// faces, so a new one is covered the day it is added.
+// `embiggenCost`, the engine's price under every cost change. Every Embiggen card in the catalog is
+// driven, on both faces, so a new one is covered the day it is added.
 
 import { CATALOG } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -35,7 +34,6 @@ const SEED = "jackioh-492";
 const TURN = 9;
 const el = (id: string): HTMLElement => screen.getByTestId(id);
 
-/** Every "A embiggen B" card in the catalog, with its two printed prices. */
 const EMBIGGEN: { def: CardDef; base: number; embiggen: number }[] = Object.values(registeredCatalog()).flatMap((def) =>
   typeof def.cost === "object" ? [{ def, base: def.cost.base, embiggen: def.cost.embiggen }] : [],
 );
@@ -52,9 +50,8 @@ function fillerDeck(): string[] {
 type CostChange = { costMod?: number; mods?: unknown[] };
 
 /**
- * p1's main phase on turn 9 with `defId` (on the face asked for) the only card in hand and `mana`
- * to spend, under `change`. The card is a copy of one the engine dealt, so it carries every field a
- * new card has.
+ * p1's main phase with `defId` the only card in hand and `mana` to spend, under `change`. The card is
+ * a copy of one the engine dealt, so it carries every field a new card has.
  */
 function board(defId: string, radiant: boolean, mana: number, change: CostChange = {}): { state: GameState; cardId: string } {
   const deck = fillerDeck();
@@ -90,15 +87,11 @@ function render492(state: GameState) {
   return { legal, onAction };
 }
 
-/** The `play`s the engine lists for the card. */
 function plays(legal: readonly ActionBody[], cardId: string): Extract<ActionBody, { type: "play" }>[] {
   return legal.flatMap((body) => (body.type === "play" && body.instanceId === cardId ? [body] : []));
 }
 
-/**
- * The one body the board sent: one the engine listed, and one it accepts. Returns the price the play
- * paid and whether it was embiggened, as the engine's `cardPlayed` says.
- */
+/** The one body the board sent: one the engine listed, and one it accepts. */
 function sent(
   state: GameState,
   legal: readonly ActionBody[],
@@ -169,7 +162,6 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
         for (const form of [true, false]) {
           const { state, cardId } = board(def.id, radiant, embiggen);
           const { legal, onAction } = render492(state);
-          // The engine lists both forms, for every zone alike.
           const listed = plays(legal, cardId);
           expect(new Set(listed.map((play) => play.embiggen))).toEqual(new Set([false, true]));
           expect(listed.filter((play) => play.embiggen === true)).toHaveLength(listed.length / 2);
