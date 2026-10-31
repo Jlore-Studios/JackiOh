@@ -10685,17 +10685,8 @@
     "what": "build #2506 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-31T00:11:43Z",
-    "notes": [
-      "delivered build #2506 on claude-7 (run 41148164803): interrupted",
-      "delivered plan #2556 on claude-1 (run 41146867161): planned",
-      "delivered revise #2493 on agy (run 41144349844): approved",
-      "delivered revise #2551 on claude-6 (run 41137753465): approved",
-      "started revise #2554 on agy (run 41149198326)",
-      "started build #2556 on claude-1 (run 41149247987)",
-      "started build #2506 on claude-6 (run 41149300011)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-31T00:23:34Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -11398,7 +11389,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T00:11:43Z",
+  "loop_tick": "2026-10-31T00:23:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
