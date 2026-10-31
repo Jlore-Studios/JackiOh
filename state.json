@@ -11561,12 +11561,8 @@
     "what": "plan #2602 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-31T14:37:22Z",
-    "notes": [
-      "delivered plan #2602 on claude-8 (run 41209641700): blocked",
-      "delivered revise #2590 on claude-6 (run 41206199518): approved",
-      "delivered revise #2598 on claude-4 (run 41205106867): approved"
-    ],
+    "at": "2026-10-31T14:45:44Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12271,7 +12267,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-31T14:37:22Z",
+  "loop_tick": "2026-10-31T14:45:44Z",
   "machine_disk": {
     "issue": null,
     "reading": {
