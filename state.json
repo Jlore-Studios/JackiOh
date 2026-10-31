@@ -10906,7 +10906,7 @@
       "provider": "claude-2",
       "queued_at": "2026-10-31T05:29:22Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:8fcd920f-1793424556",
+      "run_id": "41172793100",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T05:29:27Z",
       "stop_requested": false,
