@@ -117,7 +117,7 @@ Scripts in `crates/cards/src/scripts/training_grounds/cNNN_slug.rs` (`c039_1_tra
 
 **Names.** One name names one card ([[R381]], [[R739]]): none of the 41 names of #1–#40 and #39.1 is a shipped or held
 card's (checked against all 710 entries). #39 shares the bare "Call to Chaos" with the five editions, by design (R279's
-parenthesis rule). The snapshots share their Core cards' names by the owner's decision: P2 adds the one exception (TG4).
+parenthesis rule). The snapshots shared their Core cards' names by the owner's decision of 2026-10-28 (P2's one exception, TG4); since issue #2511 they are the Legacy cards, each named `Legacy: <its Core card's name>`, so no name is shared (R2511000).
 Near names, none a clash: TG #5 Midlane Menace and Core #19 Midrange Menace (also TG #47), TG #12 Fortify and M #22.1
 Fortify Mind (TG5 #12's R279 note), TG #26 Path of Exile and C #10 Exile, TG #35 Corpse Recycler and Core #89 Corpse
 Eater. The designer's casing is kept ("Group leader", "In a hurry", "Dino-size"), as Core's "Right-house defender" is.
@@ -127,7 +127,7 @@ Eater. The designer's casing is kept ("Group leader", "In a hurry", "Dino-size")
 (#10–#12, #15, #26, #27, #34, #37, #39, #40), **2 Traps** (#13, #14), **4 Field Spells** (#19, #20, #31, #35), **1 Field
 Trap** (#24); the token #39.1 a Unit. The snapshots: 9 Units, 9 Spells, 2 Field Spells, as their Core cards.
 
-**Tags.** The designer's; the set adds **no tag** (every one is in the `Tag` union: Human, Felinor, CN, Jelly Bean, Call
+**Tags.** The designer's; the set added **no tag** until issue #2511 gave the snapshots **Legacy** (R2511000; the census below is the one before it, and Legacy adds 20) (every other one is in the `Tag` union: Human, Felinor, CN, Jelly Bean, Call
 to Chaos, Quickdraw; and the snapshots' Jlockeed and Fruit). #39.1 carries Token. Census of #1–#40 and #39.1: Human 11
 (#1, #2, #3, #5, #8, #9, #18, #25, #28, #32, #38), Felinor 4 (#17, #22, #23, #33), CN 1 (#29), Jelly Bean 1 (#27), Call
 to Chaos 1 (#39), Quickdraw 1 (#40), Token 1 (#39.1). The snapshots add Human 4, Felinor 2, Jlockeed 2, Jelly Bean 1,
@@ -858,7 +858,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   ([[R980]]) and Meditative #14 Prime Time read its own number, so "plays exactly as" holds for the card's own
   behaviour, not for what other cards read off its number.
 
-#### Training Grounds #41 · Bigot
+#### Training Grounds #41 · Legacy: Bigot
 `traininggrounds-041` · (2) Unit, Human · Common (Core Common) · 4/1 → 8/2 · built by P2 (#2195)
 
 > **Designer:** 1 Bigot
@@ -871,7 +871,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-002 at the foundation's commit; (2) destroys a chosen enemy non-Human; (3) a Human is not targetable; (4) with no legal target it enters anyway; (5) radiant destroys every enemy non-Human, Humans survive, no target declared. R275: Meets (radiant-audit, stats doubled, one target → all). Typos: none. ⚠ designer: none.
 - **Class:** A.
 
-#### Training Grounds #42 · Stockpile
+#### Training Grounds #42 · Legacy: Stockpile
 `traininggrounds-042` · (1) Spell · Common (Core Common) · built by P2 (#2195)
 
 > **Designer:** 2 Stockpile
@@ -884,7 +884,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-005 at the foundation's commit; (2) draws 2; (3) heals its hero 2, past 30; (4) a full hand burns the overflow; (5) radiant draws 4, heals 4. R275: Meets (2×). Typos: none.
 - **Class:** A.
 
-#### Training Grounds #43 · Mr. Vanilla
+#### Training Grounds #43 · Legacy: Mr. Vanilla
 `traininggrounds-043` · (1) Unit, Human · Common (Core Common) · 4/4 → 12/12 · built by P2 (#2195)
 
 > **Designer:** 3 Mr vanilla
@@ -897,7 +897,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-008 at the foundation's commit; (2) a 4/4 with no text that Sheepish transforms like any Unit; (3) radiant a 12/12 with no text, made Radiant on the field it takes 12/12 at once keeping its damage. R275: the designer's patch v0.1.1 verdict (stats tripled, no text). Typos: "Mr vanilla" → "Mr. Vanilla".
 - **Class:** A.
 
-#### Training Grounds #44 · Duplicating Felinors
+#### Training Grounds #44 · Legacy: Duplicating Felinors
 `traininggrounds-044` · (2) Unit, Felinor · Rare (Core Rare) · 3/4 → 6/8 · built by P2 (#2195)
 
 > **Designer:** 4 Duplicating felinors
@@ -910,7 +910,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-012 at the foundation's commit; (2) the copy is a snapshot (`traininggrounds-044`) in the leftmost free zone; (3) its Cry does not fire; (4) buffs copied, damage not; (5) full board → no copy; (6) radiant 6/8 and its copy a Radiant 6/8. R275: Meets (raised in v0.3.10). Typos: "felinors" → "Felinors".
 - **Class:** A.
 
-#### Training Grounds #45 · Jlockeed's Weapons
+#### Training Grounds #45 · Legacy: Jlockeed's Weapons
 `traininggrounds-045` · (4) Field Spell, Jlockeed · Common (Core Common) · built by P2 (#2195)
 
 > **Designer:** 5 Jlockheed weapons
@@ -923,7 +923,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-014 at the foundation's commit; (2) your Units +3 Attack, Rush, First Strike while it is on the field; (3) Units summoned later get it; (4) gone when it is destroyed; (5) radiant +6. R275: Meets (2×). Typos: "Jlockheed weapons" → "Jlockeed's Weapons" (R381: the faction is spelt Jlockeed).
 - **Class:** A.
 
-#### Training Grounds #46 · Hit Job
+#### Training Grounds #46 · Legacy: Hit Job
 `traininggrounds-046` · (3) Spell · Common (Core Common) · built by P2 (#2195)
 
 > **Designer:** 6 Hit job
@@ -936,7 +936,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-016 at the foundation's commit; (2) the target is destroyed; (3) an Indestructible target survives; (4) radiant also destroys its same-side neighbours, never across the centre line. R275: Meets. Typos: "Hit job" → "Hit Job".
 - **Class:** A.
 
-#### Training Grounds #47 · Midrange Menace
+#### Training Grounds #47 · Legacy: Midrange Menace
 `traininggrounds-047` · (3) Unit · Common (Core Common) · 9/9 → 18/18 · built by P2 (#2195)
 
 > **Designer:** 7 Midranges menace
@@ -949,7 +949,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-019 at the foundation's commit; (2) Taunt enforced; (3) heals to full at its controller's end of turn, not the opponent's; (4) radiant Immutable refuses Sheepish. R275: Meets. Typos: "Midranges menace" → "Midrange Menace". ⚠ designer: TG #5 is "Midlane Menace" — distinct name, one letter-group apart; both stay.
 - **Class:** A.
 
-#### Training Grounds #48 · Jlockeed Shredder-10
+#### Training Grounds #48 · Legacy: Jlockeed Shredder-10
 `traininggrounds-048` · (3) Unit, Jlockeed · Common (Core Common) · 6/10 → 12/20 · built by P2 (#2195)
 
 > **Designer:** 8 Jlockheed shredder
@@ -962,7 +962,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-013 at the foundation's commit; (2) at its controller's end of turn 2 to each enemy Unit and the enemy hero, one instance each; (3) Units it kills die after every hit lands; (4) not at the opponent's end of turn; (5) radiant 4. R275: Meets. Typos: "Jlockheed shredder" → "Jlockeed Shredder-10" (the Core name, R381's spelling).
 - **Class:** A.
 
-#### Training Grounds #49 · Reoccurring Dream
+#### Training Grounds #49 · Legacy: Reoccurring Dream
 `traininggrounds-049` · (1) Spell · Rare (Core Rare) · built by P2 (#2195)
 
 > **Designer:** 9 Reoccuring dream
@@ -975,7 +975,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-023 at the foundation's commit (its current script, not v0.4.4b's); (2) a seeded 30% roll makes one non-Radiant hand card Radiant; (3) returns from the graveyard to hand at the end of the turn it was played; (4) a full hand burns it; (5) radiant two rolls at 40% keeping a success. R275: Meets. Typos: "Reoccuring dream" → "Reoccurring Dream".
 - **Class:** B.
 
-#### Training Grounds #50 · Glowy Jelly Bean
+#### Training Grounds #50 · Legacy: Glowy Jelly Bean
 `traininggrounds-050` · (3) Spell, Jelly Bean · Rare (Core Rare) · built by P2 (#2195)
 
 > **Designer:** 10 Glowy Jelly Bean
@@ -988,7 +988,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-026 at the foundation's commit; (2) the chosen hand card becomes Radiant, picked with the play, never a prompt; (3) never itself; (4) radiant chooses 2, or the one card there is. R275: Meets (1 → 2). Typos: none.
 - **Class:** A.
 
-#### Training Grounds #51 · Big Felinor
+#### Training Grounds #51 · Legacy: Big Felinor
 `traininggrounds-051` · (4) Unit, Felinor · Rare (Core Rare) · 3/10 → 6/20 · built by P2 (#2195)
 
 > **Designer:** 11 Big felinor
@@ -1001,7 +1001,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-043 at the foundation's commit; (2) every non-Felinor Unit on both sides destroyed in one state check; (3) Felinors and itself survive; (4) radiant the enemy side only. R275: Meets. Typos: "felinor" → "Felinor".
 - **Class:** A.
 
-#### Training Grounds #52 · Snom Bunny Mind Control
+#### Training Grounds #52 · Legacy: Snom Bunny Mind Control
 `traininggrounds-052` · (4) Spell · Rare (Core Rare) · built by P2 (#2195)
 
 > **Designer:** 12 Snom bunny mind control
@@ -1014,7 +1014,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-049 at the foundation's commit (its current script, Units only, not v0.3.7b's); (2) targets an enemy Unit only, never a Field Spell or Trap; (3) placement per R15 (same lane, else first free, else stays); (4) `owner` never moves; (5) radiant the stolen Unit becomes Radiant. R275: Meets. Typos: "Snom bunny mind control" → "Snom Bunny Mind Control".
 - **Class:** A.
 
-#### Training Grounds #53 · Prejudiced Postdoc
+#### Training Grounds #53 · Legacy: Prejudiced Postdoc
 `traininggrounds-053` · (2) Unit, Human · Rare (Core Rare) · 2/4 → 4/8 · built by P2 (#2195)
 
 > **Designer:** 13 prejudice post doc
@@ -1027,7 +1027,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-061 at the foundation's commit; (2) the Vanilla copy of a Human keeps its form at printed stats, no buffs, keywords, text or damage; (3) auras apply afresh; (4) an Immutable target is legal; (5) radiant any Unit. R275: Meets. Typos: "prejudice post doc" → "Prejudiced Postdoc".
 - **Class:** A.
 
-#### Training Grounds #54 · The Rock
+#### Training Grounds #54 · Legacy: The Rock
 `traininggrounds-054` · (4) Unit, Human · Common (Core Common) · 10/10 → 20/20 · built by P2 (#2195)
 
 > **Designer:** 14 the rock
@@ -1040,7 +1040,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-066 at the foundation's commit; (2) play refused without a tribute; (3) a Sheep Token pays it; (4) Indestructible under damage and a destroy mark, dies at 0 max health; (5) radiant also Immutable. R275: Meets. Typos: "the rock" → "The Rock".
 - **Class:** A.
 
-#### Training Grounds #55 · Reminisce
+#### Training Grounds #55 · Legacy: Reminisce
 `traininggrounds-055` · (1) Spell · Rare (Core Rare) · built by P2 (#2195)
 
 > **Designer:** 15 reminisce
@@ -1053,7 +1053,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-072 at the foundation's commit; (2) Discovers from the actual graveyard, spell tokens included; (3) the pick costs 1 less; (4) Reminisce is exiled; (5) an empty graveyard opens nothing and it is still exiled; (6) radiant the pick costs 0. R275: Meets. Typos: "reminisce" → "Reminisce".
 - **Class:** B.
 
-#### Training Grounds #56 · Corpse Eater
+#### Training Grounds #56 · Legacy: Corpse Eater
 `traininggrounds-056` · (4) Unit · Epic (Core Epic) · 2/2 → 4/4 · built by P2 (#2195)
 
 > **Designer:** 16 corpse eater
@@ -1066,7 +1066,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-089 at the foundation's commit; (2) in hand it gains each dying Unit's current attack and max health, either side; (3) tokens excluded; (4) stops once on the field; (5) radiant double. R275: Meets. Typos: "corpse eater" → "Corpse Eater".
 - **Class:** B.
 
-#### Training Grounds #57 · Recycling Initiative
+#### Training Grounds #57 · Legacy: Recycling Initiative
 `traininggrounds-057` · (0) Spell · Epic (Core Epic) · built by P2 (#2195)
 
 > **Designer:** 17 recycling initiative
@@ -1079,7 +1079,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-039 at the foundation's commit; (2) exiled on play; (3) at end of turn a copy of every other card played this turn, later plays included, each id once; (4) vanished instances skipped; (5) radiant copies are Radiant and cost 1 less. R275: Meets (raised). Typos: "recycling initiative" → "Recycling Initiative".
 - **Class:** B.
 
-#### Training Grounds #58 · True Strike
+#### Training Grounds #58 · Legacy: True Strike
 `traininggrounds-058` · (1) Spell · Common (Core Common) · built by P2 (#2195)
 
 > **Designer:** 18 true strike
@@ -1092,7 +1092,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-044 at the foundation's commit; (2) 4 damage through Armor; (3) Divine Shield still blocks; (4) exiled; (5) radiant 8. R275: Meets (2×). Typos: "true strike" → "True Strike".
 - **Class:** A.
 
-#### Training Grounds #59 · Fig of Life
+#### Training Grounds #59 · Legacy: Fig of Life
 `traininggrounds-059` · (3) Spell, Fruit · Common (Core Common) · built by P2 (#2195)
 
 > **Designer:** 19 fig of life
@@ -1105,7 +1105,7 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
 - **Check:** (1) plays exactly as core-047 at the foundation's commit; (2) heals a Unit up to its max; (3) heals a hero with no cap; (4) any Unit or hero, either side; (5) radiant 40. R275: Meets (2×). Typos: "fig of life" → "Fig of Life".
 - **Class:** A.
 
-#### Training Grounds #60 · Rush Token Farm
+#### Training Grounds #60 · Legacy: Rush Token Farm
 `traininggrounds-060` · (2) Field Spell · Common (Core Common) · built by P2 (#2195)
 
 > **Designer:** 20 Rush token farm

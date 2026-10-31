@@ -1,0 +1,44 @@
+{
+  "title": "Training Grounds #41–#60 become Legacy cards, named, tagged and decked apart from their Core cards",
+  "sources": "#2511",
+  "notes": "Training Grounds #41–#60 are renamed Legacy: <Core name> and tagged Legacy (R2511000); each is its own card, so a deck may hold it beside its Core card and a Discover may offer both (R2511001). Cost, stats, text, rarity, set and picture are unchanged.",
+  "player": {
+    "title": "Training Grounds' Core copies become Legacy cards",
+    "new": [
+      "A new tag, Legacy, on the twenty Training Grounds copies of Core cards. The deck builder and the Almanac can filter on it."
+    ],
+    "balance": [],
+    "changes": [
+      "The twenty Training Grounds copies of Core cards are now the Legacy cards, each its own card: a deck may hold a Legacy card beside the Core card it copies.",
+      "A Discover may offer a Core card and its Legacy card together."
+    ],
+    "text": [
+      "Each Legacy card is named Legacy: and its Core card's name, for example Legacy: Bigot. Its cost, stats, text, rarity and picture are unchanged."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "traininggrounds-041",
+    "traininggrounds-042",
+    "traininggrounds-043",
+    "traininggrounds-044",
+    "traininggrounds-045",
+    "traininggrounds-046",
+    "traininggrounds-047",
+    "traininggrounds-048",
+    "traininggrounds-049",
+    "traininggrounds-050",
+    "traininggrounds-051",
+    "traininggrounds-052",
+    "traininggrounds-053",
+    "traininggrounds-054",
+    "traininggrounds-055",
+    "traininggrounds-056",
+    "traininggrounds-057",
+    "traininggrounds-058",
+    "traininggrounds-059",
+    "traininggrounds-060"
+  ],
+  "rule": true,
+  "visual": true
+}

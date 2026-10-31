@@ -17,39 +17,39 @@ export const lesson: TutorialLesson = {
   poolHold: true,
   humanDeck: [
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-007", // Chosen by the Moon, Common
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-002", // Personal Trainer, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-022", // Right-Hand Felinor, Rare
     "traininggrounds-011", // Thwomp, Common
-    "traininggrounds-046", // Hit Job, Common
+    "traininggrounds-046", // Legacy: Hit Job, Common
     "traininggrounds-026", // Path of Exile, Rare
-    "traininggrounds-058", // True Strike, Common
+    "traininggrounds-058", // Legacy: True Strike, Common
     "traininggrounds-010", // Fan of Knives, Common
     "traininggrounds-012", // Fortify, Common
-    "traininggrounds-042", // Stockpile, Common
-    "traininggrounds-059", // Fig of Life, Common
+    "traininggrounds-042", // Legacy: Stockpile, Common
+    "traininggrounds-059", // Legacy: Fig of Life, Common
     "traininggrounds-034", // Dino-size, Epic
     "traininggrounds-015", // In a hurry, Common
   ],
   aiDeck: [
-    "traininggrounds-043", // Mr. Vanilla, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
     "traininggrounds-033", // Guerilla Felinor, Epic
     "traininggrounds-011", // Thwomp, Common
-    "traininggrounds-058", // True Strike, Common
+    "traininggrounds-058", // Legacy: True Strike, Common
     "traininggrounds-010", // Fan of Knives, Common
     "traininggrounds-015", // In a hurry, Common
-    "traininggrounds-042", // Stockpile, Common
+    "traininggrounds-042", // Legacy: Stockpile, Common
   ],
   retryTip: "Save a removal spell for a unit you can't beat in a fight, and keep your units attacking.",
 };

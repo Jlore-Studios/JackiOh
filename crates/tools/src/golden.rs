@@ -29,8 +29,9 @@
 //! slots, in place of the deck's own cards from the end (a deck keeps its size and holds no card
 //! twice). A token cannot be in a deck (§2.6 L3), so one is forced through the card whose `refs` name
 //! it (R279), the smallest such id of a card that can be in a deck; a token no deck card names, a card
-//! of a set that has not shipped (R1420) and an id the catalog lacks are refused, as are two cards
-//! of one R2195000 pair. A forced card takes its pair's place in the deck (`fuzz::deal_deck`).
+//! of a set that has not shipped (R1420) and an id the catalog lacks are refused. A forced card the
+//! deck already holds takes its own place (`fuzz::deal_deck`); a Core card and its Legacy card are
+//! two cards, forced together (R2511001).
 //! The file replays with `check --file` on this build or on any other: `luau diff` records with it
 //! and has a parent build replay it.
 
@@ -53,7 +54,7 @@ use jackioh_engine::testkit::golden::{
 };
 use jackioh_engine::{
     Action, CardDef, CreateGameArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, Winner,
-    begin_game, create_game, deckable, hash_state, pair_key, reduce,
+    begin_game, create_game, deckable, hash_state, reduce,
 };
 
 use crate::fuzz::{
@@ -570,15 +571,8 @@ pub(crate) fn resolve_forced(id: &str) -> Result<String> {
     carrier_of(id, def)
 }
 
-/// R2195000: the card a deck holds one of for `id` (`pair_key`), or the id itself for one the catalog lacks.
-fn pair_of(id: &str) -> String {
-    CATALOG
-        .get(id)
-        .map_or_else(|| id.to_string(), |def| pair_key(def).to_string())
-}
-
-/// What `--force` puts in a deck: each id as `resolve_forced` reads it; no id twice, never both of
-/// an R2195000 pair, in the order given.
+/// What `--force` puts in a deck: each id as `resolve_forced` reads it; no id twice, in the order
+/// given (a Core card and its Legacy card are two, R2511001).
 pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
     let mut forced: Vec<String> = Vec::new();
     for id in ids {
@@ -586,16 +580,13 @@ pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
         if forced.contains(&resolved) {
             continue;
         }
-        if let Some(other) = forced.iter().find(|held| pair_of(held) == pair_of(&resolved)) {
-            bail!("{resolved} and {other} are one card for a deck (R2195000): force one of them");
-        }
         forced.push(resolved);
     }
     Ok(forced)
 }
 
 /// `deck` with `forced` in its first slots and as many of its own cards after them as fit: the same
-/// size, no card twice and, R2195000, never beside the other of its pair (`fuzz::deal_deck`);
+/// size and no card twice (`fuzz::deal_deck`);
 /// `fuzz --cards` forces with it too (#2387). No rng (`begin_game` shuffles the library).
 pub(crate) fn force_into(deck: &[String], forced: &[String]) -> Vec<String> {
     deal_deck(&mut forced.iter().chain(deck).cloned(), deck.len())
@@ -691,18 +682,23 @@ mod tests {
     }
 
     #[test]
-    fn a_forced_card_takes_its_pair_s_place_and_two_of_a_pair_are_refused() {
-        // Traininggrounds-041's `snapshotOf` is core-002 (R2195000), so forcing core-002 beside it
-        // takes its place instead.
+    fn r2511001_a_forced_card_the_deck_holds_takes_its_own_place_and_a_legacy_card_goes_beside_its_core_card()
+    {
+        assert_eq!(
+            force_into(&ids(&["core-002", "core-001", "core-003"]), &ids(&["core-002"])),
+            ids(&["core-002", "core-001", "core-003"])
+        );
         assert_eq!(
             force_into(
                 &ids(&["traininggrounds-041", "core-001", "core-003"]),
                 &ids(&["core-002"])
             ),
-            ids(&["core-002", "core-001", "core-003"])
+            ids(&["core-002", "traininggrounds-041", "core-001"])
         );
-        let refused = resolve_force(&ids(&["core-002", "traininggrounds-041"])).unwrap_err();
-        assert!(refused.to_string().contains("R2195000"), "{refused:?}");
+        assert_eq!(
+            resolve_force(&ids(&["core-002", "traininggrounds-041"])).unwrap(),
+            ids(&["core-002", "traininggrounds-041"])
+        );
     }
 
     #[test]

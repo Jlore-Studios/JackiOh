@@ -92,9 +92,11 @@ ingredients?: Array<FusedIngredient>,
  */
 craft?: CraftRecipe, 
 /**
- * R2195000: the Core card this Training Grounds snapshot copies (#41–#60, "core-002" for #41),
- * so a deck holds one of the two, never both (§2.6 L3), and their shared name names one card
- * (R2195001). Absent on every other card, a fused or crafted definition included, so a state
- * that never holds a snapshot serializes, hashes and replays as before (TG4 D11).
+ * R2195000, R2511001: the Core card a Training Grounds snapshot copied, in the catalogs shipped
+ * from v0.5.5 to v0.5.7 ("core-002" for #41), where one Discover offered at most one of the two
+ * (R2204001). The build's catalog sets it on no card, since a Legacy card is its own card
+ * (R2511001); a replay of a game from those versions folds under its carried catalog (R767000),
+ * which still sets it, so the game's offers are the same. Absent on every other card, so a state
+ * that never holds one serializes, hashes and replays as before (TG4 D11).
  */
 snapshotOf?: string, base: CardFace, radiant: CardFace, };

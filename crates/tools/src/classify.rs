@@ -873,8 +873,15 @@ const PARENT_REFUSED_DECKS: &str = "cards (§2.6 L2), got ";
 /// panics on them (it catches no unwind), so `parent_check` fails with the panic's text in its
 /// stderr: the change moved what every game is dealt, a rule.
 fn refuses_decks(error: &anyhow::Error) -> bool {
-    format!("{error:#}").contains(PARENT_REFUSED_DECKS)
+    let text = format!("{error:#}");
+    text.contains(PARENT_REFUSED_DECKS) || text.contains(PARENT_REFUSED_PAIR)
 }
+
+/// R2511001: the text of a parent's refusal of a deck holding a Core card beside its Training Grounds
+/// snapshot, which builds from before issue #2511 word as "… a deck holds one of the two (§2.6 L3,
+/// R2195000)". The head lifted that part of §2.6 L3, so it deals decks the parent refuses: a deck
+/// rule, read as R1705004 reads a refused deck size.
+const PARENT_REFUSED_PAIR: &str = "a deck holds one of the two (§2.6 L3, R2195000)";
 
 /// R1884002: the text of the parent's refusal of a card of a set it does not ship (§2.6 L3, R1420),
 /// which `validate_setup` words as "\"<id>\" is a card of <set>, which has not shipped yet".
@@ -1772,6 +1779,19 @@ mod tests {
         assert!(!refuses_decks(&other));
         let handicap = anyhow::anyhow!("p2: handicap.manaCap must be a non-negative integer (R180)");
         assert!(!refuses_decks(&handicap));
+    }
+
+    #[test]
+    fn r2511001_a_base_build_refusing_a_core_card_beside_its_legacy_card_is_a_rule() {
+        // `parent_check`'s failure when a build from before #2511 panics in `create_game` on a deck
+        // holding core-026 beside traininggrounds-050.
+        let refused = anyhow::anyhow!(
+            "/tmp/main-jackioh could not check /tmp/traces.jsonl: thread '<unnamed>' panicked at \
+             crates/engine/src/state.rs:2585:9:\np2: \"traininggrounds-050\" and \"core-026\" are a Core \
+             card and its Training Grounds snapshot; a deck holds one of the two (§2.6 L3, R2195000)"
+        );
+        assert!(refuses_decks(&refused));
+        assert!(read_refusal(refused, false).expect("a rule"));
     }
 
     // R2455000: divergences that touch no card are a rule every game meets only once they hold a

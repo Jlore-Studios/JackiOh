@@ -3046,82 +3046,82 @@
     "traininggrounds-040": { // Goetzmann Game Design
       cast: { voice: "prof" },
     },
-    "traininggrounds-041": { // Bigot
+    "traininggrounds-041": { // Legacy: Bigot
       play: { voice: "snob" },
       attack: { voice: "snob" },
       death: { voice: "snob" },
     },
-    "traininggrounds-042": { // Stockpile
+    "traininggrounds-042": { // Legacy: Stockpile
       cast: { voice: "narrator" },
     },
-    "traininggrounds-043": { // Mr. Vanilla
+    "traininggrounds-043": { // Legacy: Mr. Vanilla
       play: { voice: "plain" },
       attack: { voice: "plain" },
       death: { voice: "plain" },
     },
-    "traininggrounds-044": { // Duplicating Felinors
+    "traininggrounds-044": { // Legacy: Duplicating Felinors
       play: { voice: "cat" },
       attack: { voice: "cat", effect: "catChirp" },
       death: { voice: "cat" },
     },
-    "traininggrounds-045": { // Jlockeed's Weapons
+    "traininggrounds-045": { // Legacy: Jlockeed's Weapons
       cast: { voice: "robot", effect: "metalClank" },
     },
-    "traininggrounds-046": { // Hit Job
+    "traininggrounds-046": { // Legacy: Hit Job
       cast: { voice: "hustler-hitman", effect: "sharpCrack" },
     },
-    "traininggrounds-047": { // Midrange Menace
+    "traininggrounds-047": { // Legacy: Midrange Menace
       play: { voice: "brute" },
       attack: { voice: "brute" },
       death: { voice: "brute" },
     },
-    "traininggrounds-048": { // Jlockeed Shredder-10
+    "traininggrounds-048": { // Legacy: Jlockeed Shredder-10
       play: { voice: "robot", effect: "engineRev" },
       attack: { voice: "robot", effect: "servoWhirr" },
       death: { voice: "robot", effect: "powerDown" },
     },
-    "traininggrounds-049": { // Reoccurring Dream
+    "traininggrounds-049": { // Legacy: Reoccurring Dream
       cast: { voice: "whisper" },
     },
-    "traininggrounds-050": { // Glowy Jelly Bean
+    "traininggrounds-050": { // Legacy: Glowy Jelly Bean
       cast: { voice: "wobble" },
     },
-    "traininggrounds-051": { // Big Felinor
+    "traininggrounds-051": { // Legacy: Big Felinor
       play: { voice: "cat" },
       attack: { voice: "cat", effect: "bigCatPounce" },
       death: { voice: "cat" },
     },
-    "traininggrounds-052": { // Snom Bunny Mind Control
+    "traininggrounds-052": { // Legacy: Snom Bunny Mind Control
       cast: { voice: "posh" },
     },
-    "traininggrounds-053": { // Prejudiced Postdoc
+    "traininggrounds-053": { // Legacy: Prejudiced Postdoc
       play: { voice: "snob" },
       attack: { voice: "snob" },
       death: { voice: "snob" },
     },
-    "traininggrounds-054": { // The Rock
+    "traininggrounds-054": { // Legacy: The Rock
       play: { voice: "brute", effect: "stoneThud" },
       attack: { voice: "brute", effect: "rumble" },
       death: { voice: "brute", effect: "crumble" },
     },
-    "traininggrounds-055": { // Reminisce
+    "traininggrounds-055": { // Legacy: Reminisce
       cast: { voice: "storyteller" },
     },
-    "traininggrounds-056": { // Corpse Eater
+    "traininggrounds-056": { // Legacy: Corpse Eater
       play: { voice: "alien" },
       attack: { voice: "alien", effect: "squelch" },
       death: { voice: "alien" },
     },
-    "traininggrounds-057": { // Recycling Initiative
+    "traininggrounds-057": { // Legacy: Recycling Initiative
       cast: { voice: "zoomer" },
     },
-    "traininggrounds-058": { // True Strike
+    "traininggrounds-058": { // Legacy: True Strike
       cast: { voice: "hero", effect: "zip" },
     },
-    "traininggrounds-059": { // Fig of Life
+    "traininggrounds-059": { // Legacy: Fig of Life
       cast: { voice: "storyteller", effect: "squelch" },
     },
-    "traininggrounds-060": { // Rush Token Farm
+    "traininggrounds-060": { // Legacy: Rush Token Farm
       cast: { voice: "elder" },
     },
   },
