@@ -11047,6 +11047,13 @@
     "2566": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-31T07:26:48Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "the rule rates anything in crates/ai/src/ hard, and this changes crates/ai/src/evaluate.rs; the change itself is small and was checked on a scratch copy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
