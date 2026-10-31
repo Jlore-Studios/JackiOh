@@ -32,7 +32,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{CHINESE_TAG, HAND_CAP};
+use crate::config::{CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
 use crate::damage::DamageTarget;
 use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
@@ -135,10 +135,26 @@ pub fn zone_count(state: &GameState, player: PlayerId, zone: OffFieldZone) -> i3
 }
 
 /// §2.4, R4, R1143: the most cards this player's hand holds before a card arriving is burned —
-/// `HAND_CAP`, or the hand size an effect set for the rest of the game (Meditative #79). Every rule
-/// that reads the hand cap reads it here: draws, adds, steals, "fill your hand". Public (§10.8).
+/// `HAND_CAP`, or the hand size an effect set for the rest of the game (Meditative #79). Whether the
+/// hand has room is `room_in`'s question, not this one's. Public (§10.8).
 pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hand_cap.unwrap_or(HAND_CAP)
+}
+
+/// §2.4, R4, R80, R1143: how many more cards this player's `pile` takes before the next one is burned
+/// (a hand, at its `hand_cap_of`) or turned away (a library, at `LIBRARY_CAP`). It is the one test
+/// of a full pile: the two arrivals that enforce the caps (`draw::add_to_hand`, the library's
+/// shuffle-in) and every rule that asks first — "fill your hand", "your hand is full", a buy, a pass,
+/// a Trade — read it here. Never below 0: a hand already above a lowered cap keeps its cards and has
+/// no room (R1143). A graveyard or an exile pile has no cap, so it always has room (`i32::MAX`).
+/// Public (§10.8).
+pub fn room_in(state: &GameState, player: PlayerId, pile: OffFieldZone) -> i32 {
+    let cap = match pile {
+        OffFieldZone::Hand => hand_cap_of(state, player),
+        OffFieldZone::Library => LIBRARY_CAP,
+        OffFieldZone::Graveyard | OffFieldZone::Exile => return i32::MAX,
+    };
+    (cap - zone_count(state, player, pile)).max(0)
 }
 
 /// R2250000: whether this player's hand holds a card of one of these definitions ("if you have a

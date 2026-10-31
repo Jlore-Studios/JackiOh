@@ -19,9 +19,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{
-    CAST_ON_DRAW_ACTION_CAP, CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, LIBRARY_CAP, SETUP_TURN,
-};
+use crate::config::{CAST_ON_DRAW_ACTION_CAP, CAST_ON_DRAW_CHAIN_CAP, FATIGUE_DAMAGE, SETUP_TURN};
 use crate::script::{DrawLimit, DrawLimitPlayer, EngineSink, HookArgs};
 use crate::state::{CardInstance, DrawCount, GameState, Resume, WorkItem, find_instance_mut, new_instance};
 use crate::wire::{
@@ -88,10 +86,11 @@ pub enum AddToHandOutcome {
 }
 
 /// §2.4, R4: a card entering a full hand is burned to the graveyard; unit tokens vanish (R11). Full is
-/// the owner's hand cap, `HAND_CAP` or the hand size an effect set (R1143).
+/// `query::room_in`'s, the owner's hand cap: `HAND_CAP` or the hand size an effect set (R1143). Every
+/// card that reaches a hand comes through here, so a caller reads where it went from the outcome
+/// rather than testing the hand again.
 pub fn add_to_hand(sink: &mut EngineSink, instance: &mut CardInstance) -> AddToHandOutcome {
-    let full = sink.state.players[instance.owner].hand.len() as i32
-        >= crate::query::hand_cap_of(sink.state, instance.owner);
+    let full = crate::query::room_in(sink.state, instance.owner, crate::zones::OffFieldZone::Hand) == 0;
     if full {
         let landed = crate::zones::move_to_zone(
             sink.state,
@@ -154,8 +153,10 @@ fn library_overflow(
     }
 }
 
-/// R80: a library holds at most LIBRARY_CAP cards, so copies stop being created at the cap, and an
-/// existing card goes to its owner's graveyard instead (a unit-token card ceases to exist, R11).
+/// R80: a library holds at most LIBRARY_CAP cards (`query::room_in`), so copies stop being created at
+/// the cap, and an existing card goes to its owner's graveyard instead (a unit-token card ceases to
+/// exist, R11). One already in its owner's graveyard stays there, with no second move and no second
+/// `enteredGraveyard`, since it never left (C #30 Recycle's, `effects/shuffle_card.rs`).
 ///
 /// R316: whichever it is, the refusal is reported by `libraryOverflow`, so the board can show the
 /// full library turning the card away. Nothing else reported a copy that was never made, and an
@@ -192,11 +193,22 @@ fn into_library(
     end: Option<crate::ownership::LibraryEnd>,
 ) -> ShuffleInOutcome {
     let library_len = sink.state.players[instance.owner].library.len() as i32;
-    if library_len >= LIBRARY_CAP {
+    if crate::query::room_in(sink.state, instance.owner, crate::zones::OffFieldZone::Library) == 0 {
         if !existing {
             sink.events.push(library_overflow(
                 instance,
                 LibraryOverflowOutcome::NotCreated,
+                copy_of,
+            ));
+            return ShuffleInOutcome::Dropped;
+        }
+        let owner = instance.owner;
+        let in_own_graveyard = crate::state::find_instance(sink.state, &instance.id)
+            .is_some_and(|live| matches!(live.zone, Zone::Graveyard { player } if player == owner));
+        if in_own_graveyard {
+            sink.events.push(library_overflow(
+                instance,
+                LibraryOverflowOutcome::Graveyard,
                 copy_of,
             ));
             return ShuffleInOutcome::Dropped;
