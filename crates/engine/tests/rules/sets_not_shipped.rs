@@ -969,28 +969,28 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
 }
 
 /// Issue #2521: Resource (the six Stinkyscape Resources, Reknite to Red Narcor, every one a token)
-/// and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162) follow the Stinkyscape
-/// set's four in the union, ahead of Token. Family tags that name no tribe (R1424), whose pools take
+/// and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162) follow Legacy (R2511000),
+/// itself after the Stinkyscape set's four, in the union, ahead of Token. Family tags that name no tribe (R1424), whose pools take
 /// no token unless they ask for tokens, as every tag outside `POOL_TOKEN_TAGS` (R382). Fixture cards
 /// only; the real cards' tags are `crates/cards/tests/cross/catalog.rs`'s.
-mod issue_2521_resource_and_faction_follow_swarm {
+mod issue_2521_resource_and_faction_follow_legacy {
     use super::*;
 
     /// The two tags, as written, in the union's order.
     const TAGS: [(Tag, &str); 2] = [(Tag::Resource, "Resource"), (Tag::Faction, "Faction")];
 
     #[test]
-    fn the_two_parse_as_written_follow_swarm_and_name_no_tribe() {
+    fn the_two_parse_as_written_follow_legacy_and_name_no_tribe() {
         let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
-        let swarm = at(Tag::Swarm).expect("Swarm is in the union");
+        let legacy = at(Tag::Legacy).expect("Legacy is in the union");
         for (offset, (tag, text)) in TAGS.iter().enumerate() {
             assert_eq!(tag.as_str(), *text);
             assert_eq!(json_as::<Tag>(json!(text)), *tag);
-            assert_eq!(at(*tag), Some(swarm + 1 + offset), "{tag}");
+            assert_eq!(at(*tag), Some(legacy + 1 + offset), "{tag}");
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        assert_eq!(at(Tag::Token), Some(swarm + 1 + TAGS.len()));
+        assert_eq!(at(Tag::Token), Some(legacy + 1 + TAGS.len()));
         assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 
