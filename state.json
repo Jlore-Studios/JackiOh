@@ -10593,7 +10593,7 @@
       }
     },
     "2554": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_fixed_head": "9e6ea06b2bc4999c1839f220c8f366b20d4a625e",
       "ci_fixes": 1,
@@ -10616,19 +10616,19 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2500,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "agy",
+      "provider": "claude-4",
       "question": "",
       "queued_at": "2026-10-31T01:15:28Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "41149198326",
-      "runs_on": "night-vm-agy",
+      "run_id": "pending:387c6511-1793412596",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-31T00:15:41Z",
+      "started_at": "2026-10-31T02:10:18Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -10684,9 +10684,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-10-31T01:16:12Z",
+    "at": "2026-10-31T02:10:18Z",
     "url": "",
-    "what": "revise #2551 on agy"
+    "what": "review #2554 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-31T01:56:57Z",
