@@ -75,7 +75,7 @@ enum Command {
     Stats(stats::Args),
     /// The compiled card win-rate table for M #50 CN Tech (part 17, ME-STATS).
     Winrates(winrates::Args),
-    /// Golden traces: `golden check`, `golden bless`, `golden record` (part 23).
+    /// Golden traces: `golden check`, `golden record` (part 23; `bless` retired in #2578).
     Golden(golden::Args),
     /// Two builds compared: `luau diff`, `luau bench`; and `luau surface`, the card scripts' API (v0.4.0, #442).
     Luau(luau::Args),

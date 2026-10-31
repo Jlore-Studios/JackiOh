@@ -59,7 +59,7 @@
 //! `crates/engine/src/config.rs` as `CODE_BLOCK_MAX_LINES` is. Each is sorted by id, and computed
 //! anew on every build, so both lists grow with the catalog; `register_all` hands them to the engine.
 //! Beside them, `LIST_READERS`: the ids whose script reads the two lists (`reads_card_lists`, R2173000),
-//! which the golden replay's list test keeps out of its shard (R1846003).
+//! which the engine's golden binary holds its committed logs free of (R1846003).
 //!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.

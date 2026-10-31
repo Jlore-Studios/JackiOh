@@ -149,8 +149,8 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Deleting your account or getting a copy",
       "<p>You can delete your account yourself: sign in, open your Account page, and choose " +
         "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
-        "custom cards, your tutorial progress, the records of how you played, and the record of your age " +
-        "check and of the terms you agreed to. Finished matches and their results stay in " +
+        "custom cards, your tutorial progress, your player statistics, the records of how you played, and " +
+        "the record of your age check and of the terms you agreed to. Finished matches and their results stay in " +
         "the other player&rsquo;s history, with your account removed from them, and so does a finished " +
         "co-op game in your teammate&rsquo;s, its moves and its result included. You can&rsquo;t delete " +
         "your account during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.</p>" +
@@ -208,7 +208,20 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "any message a friend sends you. We review reports, and abuse in chat can get an account suspended or " +
         "banned.</p>",
     ) +
-    section("Ranked play", "<p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>"),
+    section(
+      "AI opponents",
+      "<p>If no one near your rating is free to play after a short wait, ranked may pair you with an AI " +
+        "opponent that our server plays, so you still get a game. It can happen at any rank, in Best of 1, " +
+        "All Random and Conquest.</p>" +
+        "<ul><li>An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, " +
+        "as a player does, though never in Jlorious.</li>" +
+        "<li>It plays at a person&rsquo;s pace, and may emote, concede, answer a draw offer, let a turn run " +
+        "out or offer a rematch.</li>" +
+        "<li>Nothing in the game marks which opponents are AI.</li>" +
+        "<li>It sees only what a player in its seat could see.</li>" +
+        "<li>A game against one counts toward your rank and rating like any other ranked game.</li></ul>" +
+        "<p>A challenge you send to a friend, or accept from one, is always played against that friend.</p>",
+    ),
   [paths.copyright]:
     section(
       "Reporting content that infringes your copyright",
