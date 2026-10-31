@@ -11793,19 +11793,30 @@
     "2591": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-31T07:05:59Z",
       "issue": 2574,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new `tradable: true` key changes `view_for` output for every live hand that holds a Tradable card, so the golden replay's per-step `v` hashes no longer match and `cargo test` (the required `rust` check) goes red; the traces were not re-blessed.",
+          "evidence": "`testkit/golden.rs::view_texts` hashes both seats' serialized `view_for` and strips only `createdBy`. 82 of the 240 games in `games.jsonl` have meditative-053/098 or stinkyscape-164/165 in their decks; seed jackioh-fuzz-2 (281 steps) records a `trade` action, so a Tradable card was in hand during a live step. The diff does not touch `games.jsonl`, and the PR's test list leaves out `cargo test --workspace` and `golden check`. The earlier view-field PR of the same kind, the Tribute pip (b955a2ab7, #2341), had to rewrite 338 lines of `games.jsonl`.",
+          "severity": "blocking",
+          "where": "crates/engine/tests/golden/games.jsonl"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
-      "queued_at": "2026-10-31T08:41:57Z",
+      "queued_at": "2026-10-31T08:49:47Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "41185701535",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-31T08:42:31Z",
       "stop_requested": false,
       "taken_asks": [],
