@@ -74,6 +74,9 @@ describe("R2722001 a readable Mythic's entrance holds its entry for the takeover
     // The same card again (its summoned after a prompt) makes no second entrance; the next action's Mythic holds again.
     expect(plan([summon("spell-mythic", "a")], p1, { seen })[0]?.entrance).toBeUndefined();
     expect(holds(plan([play("spell-mythic", "c")], p1, { seen }))).toEqual([TAKEOVER_HOLD_MS]);
+    // A card bounced to its hand keeps its id (only a set takes a fresh one, R227): played again, it enters again.
+    expect(holds(plan([play("unit-mythic", "u"), summon("unit-mythic", "u")], p1, { seen }))).toEqual([TAKEOVER_HOLD_MS]);
+    expect(holds(plan([play("unit-mythic", "u"), summon("unit-mythic", "u")], p1, { seen }))).toEqual([TAKEOVER_HOLD_MS]);
     expect(holds(plan([play("spell-mythic")], p1, { speed: 2 }))).toEqual([scaleForSpeed(TAKEOVER_HOLD_MS, 2)]);
     expect(holds(plan([play("spell-mythic")], p1, { reduced: true }))).toEqual([0]);
 

@@ -1177,8 +1177,8 @@ function entranceAt(event: GameEvent, viewer: PlayerId, resolve: EntranceResolve
 
 /**
  * R2722001: gives each entry where a readable Legendary or Mythic card makes its entrance its
- * `entrance`, once per card (`seen`, kept by the queue across actions, so a played Unit's `summoned`
- * or a batch after a prompt adds none). The first Mythic of the call (one action) also takes the
+ * `entrance`, once per play or reveal (`seen`, kept by the queue across actions, so a played Unit's
+ * `summoned` in a batch after a prompt adds none, while its next play enters again). The first Mythic of the call (one action) also takes the
  * takeover's hold, added to its entry and pinned against the burst budget; every other takes none.
  * A Cloaked card's reveal on the other seat centres on the zone its firing flips.
  */
@@ -1191,7 +1191,9 @@ export function entranceEntries(
   return entries.map((entry, at) => {
     for (const event of entry.events) {
       const card = entranceAt(event, entry.view.viewer, resolve);
-      if (card === null || opts.seen.has(card.instanceId)) continue;
+      // A face-up play is always a fresh entrance, as its intro is (R1350): a card bounced and played
+      // again keeps its id but enters again. Its own `summoned`, a reveal or a firing enter once.
+      if (card === null || (event.type !== "cardPlayed" && opts.seen.has(card.instanceId))) continue;
       const rarity = resolve(card.defId)?.rarity;
       if (rarity !== "Legendary" && rarity !== "Mythic") continue;
       opts.seen.add(card.instanceId);
