@@ -13,10 +13,11 @@
 
 use std::ops::ControlFlow;
 
-use crate::query::hand_cap_of;
+use crate::query::{hand_cap_of, room_in};
 use crate::reduce::{each_legal_action, legal_actions};
 use crate::state::EngineError;
 use crate::wire::{ActionBody, ActionType, DUOS_SEATS, DuosActionBody, DuosSeat, Phase};
+use crate::zones::OffFieldZone;
 
 use super::state::DuosState;
 
@@ -182,8 +183,8 @@ pub(super) fn why_pass_refused(
     }
     let mate = seat.teammate();
     let theirs = &state.duels[mate.duel()];
-    let cap = hand_cap_of(theirs, mate.player());
-    if theirs.players[mate.player()].hand.len() as i32 >= cap {
+    if room_in(theirs, mate.player(), OffFieldZone::Hand) == 0 {
+        let cap = hand_cap_of(theirs, mate.player());
         return Err(EngineError::new(format!(
             "your teammate's hand is full ({cap} cards)"
         )));

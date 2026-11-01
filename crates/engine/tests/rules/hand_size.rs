@@ -1,8 +1,8 @@
 //! ME-HANDCAP, R1143 (docs/meditative-set.md M5, Group E's systems; Meditative #79 Touched by KY): a
 //! player's hand size for the rest of the game. `PlayerState.handCap` is absent until an effect sets it
 //! (`set_hand_cap`), so a game that never sets one serializes and hashes as before (D14), and every
-//! reader of the hand cap asks `hand_cap_of` instead of `HAND_CAP`: a draw, an add, a take from the
-//! other player's hand. The setting is the latest one, at most `HAND_CAP_MAX`; a hand above a lowered
+//! reader of the hand cap asks `hand_cap_of` instead of `HAND_CAP`, and every test of a full hand asks
+//! `room_in`: a draw, an add, a take from the other player's hand. The setting is the latest one, at most `HAND_CAP_MAX`; a hand above a lowered
 //! one keeps its cards, and both views show it.
 
 use jackioh_engine::effects::{add_to_hand, give_from_hand, set_hand_cap};
@@ -135,6 +135,25 @@ mod r1143_a_hand_size_for_the_rest_of_the_game {
         let events = draws(&mut state, P1, 1);
         assert_eq!(state.players[P1].hand.len() as i32, HAND_CAP);
         assert_eq!(events_of_type(&events, GameEventType::Burned).len(), 1);
+    }
+
+    #[test]
+    fn r1143_room_in_is_the_cap_less_the_hand_and_none_above_a_lowered_cap() {
+        let mut state = board("hand-size-room");
+        state.players[P1].hand.clear();
+        assert_eq!(room_in(&state, P1, OffFieldZone::Hand), HAND_CAP);
+        in_hand(&mut state, &plain.id, P1, 3);
+        assert_eq!(room_in(&state, P1, OffFieldZone::Hand), HAND_CAP - 3);
+        run(&mut state, sets(12), P1);
+        assert_eq!(room_in(&state, P1, OffFieldZone::Hand), 12 - 3);
+        // A hand above a lowered cap keeps its cards and has no room, never less than none.
+        in_hand(&mut state, &plain.id, P1, 7);
+        run(&mut state, sets(8), P1);
+        assert_eq!(state.players[P1].hand.len(), 10);
+        assert_eq!(room_in(&state, P1, OffFieldZone::Hand), 0);
+        // A graveyard and an exile pile have no cap.
+        assert_eq!(room_in(&state, P1, OffFieldZone::Graveyard), i32::MAX);
+        assert_eq!(room_in(&state, P1, OffFieldZone::Exile), i32::MAX);
     }
 
     #[test]

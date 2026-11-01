@@ -37,8 +37,7 @@ pub fn script() -> CardScripts {
     };
     let radiant = Script {
         cry: Some(hook(|ctx| {
-            let room = hand_cap_of(ctx.state, ctx.controller) - zone_count(ctx.state, ctx.controller, OffFieldZone::Hand);
-            (0..room.max(0))
+            (0..room_in(ctx.state, ctx.controller, OffFieldZone::Hand))
                 .map(|_| add_to_hand(json_as(json!({ "defId": BIGOT }))))
                 .collect()
         })),

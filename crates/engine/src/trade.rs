@@ -178,7 +178,7 @@ pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str)
             "a Trade costs {TRADE_COST} mana and you have {mana}"
         )));
     }
-    if side.library.len() as i32 >= LIBRARY_CAP {
+    if crate::query::room_in(state, player, crate::zones::OffFieldZone::Library) == 0 {
         return Err(EngineError::new(format!(
             "your deck is full ({LIBRARY_CAP} cards)"
         )));

@@ -266,8 +266,7 @@ pub fn ky_test_script_with(bank: &[KyTestProblem], easy: KyTestEasy) -> KyTestSc
         };
         let count = match reward.count {
             KyTestRewardCount::Fill => {
-                crate::query::hand_cap_of(ctx.sink.state, ctx.controller)
-                    - ctx.sink.state.players[ctx.controller].hand.len() as i32
+                crate::query::room_in(ctx.sink.state, ctx.controller, crate::zones::OffFieldZone::Hand)
             }
             KyTestRewardCount::N(n) => n,
         };
