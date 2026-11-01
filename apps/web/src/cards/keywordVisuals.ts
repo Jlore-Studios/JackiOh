@@ -369,6 +369,15 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     numbered: false,
     onField: true,
   },
+  // R2657000: Can't Defend, never in Defense Position, a shield split in two whose halves drift apart.
+  "Can't Defend": {
+    layer: "glyph",
+    priority: 36,
+    shape: "a shield split down the middle, its halves drifting apart",
+    motion: { keyframes: "kw-cant-defend-split", when: "always" },
+    numbered: false,
+    onField: true,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

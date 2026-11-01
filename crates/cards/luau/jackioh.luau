@@ -1221,6 +1221,7 @@ defId: string,
 controller: PlayerId,
 row: Row,
 lane: number,
+again: boolean?,
 } | {
 ["type"]: "attackDeclared",
 attackerId: string,
@@ -1755,9 +1756,11 @@ n: number?,
 ["kind"]: "Starship Piece",
 } | {
 ["kind"]: "Starship",
+} | {
+["kind"]: "Can't Defend",
 }
 
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship"
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship" | "Can't Defend"
 
 export type LaneSpec = number | TargetSpec
 
@@ -1803,6 +1806,7 @@ export type ManaSpentFor = "play" | "activate"
 export type MayAttackAgainArgs = {
 target: TargetSpec,
 keepSick: boolean?,
+liftSick: boolean?,
 }
 
 export type ModeDecl = {
@@ -1845,6 +1849,10 @@ key: NumberedKey,
 } | {
 ["kind"]: "param",
 key: string,
+} | {
+["kind"]: "temporary",
+} | {
+["kind"]: "plague",
 }
 
 export type NumberWhich = NumberRef | string

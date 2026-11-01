@@ -15,6 +15,7 @@ import {
   animTestid,
   createAnimationQueue,
   durationFor,
+  firesAgain,
   HIDDEN_ID,
   locateInstance,
   newEventsSince,
@@ -816,6 +817,28 @@ describe("planEntries", () => {
     for (const entry of planEntries(longStream(2), view, true)) {
       expect(entry.durationMs, entry.type).toBe(0);
     }
+  });
+
+  it("R2657001 a Field Trap firing again plays no reveal: an activation's flare on its card, where a first firing flips", () => {
+    // The fixture's face-up Field Trap stands in the viewer's backrow lane 1; core-018 is Bread and Butter, a Field Trap.
+    const trap = must(faceUpBackrowIds(view)[1], "the viewer's face-up Field Trap");
+    const first: GameEvent = { type: "trapFired", instanceId: trap, defId: "core-018", controller: "p1", row: "backrow", lane: 1 };
+    const again: GameEvent = { ...first, again: true };
+    expect(firesAgain(first)).toBe(false);
+    expect(firesAgain(again)).toBe(true);
+
+    const [flip, flare] = planEntries([first, again], view, false);
+    // The first firing is the reveal: the flip and its hold on the card.
+    expect(flip?.type).toBe("trapFired");
+    expect(flip?.durationMs).toBe(BUILD_DURATIONS.trapFired);
+    expect([...(flip?.frames ?? [])]).toEqual([[testid.card(trap), "trapFired"]]);
+    // The second reveals nothing: the card flares as an activated one does, for an activation's time.
+    expect(flare?.events).toEqual([again]);
+    expect(flare?.type).toBe("activated");
+    expect(flare?.durationMs).toBe(BUILD_DURATIONS.activated);
+    expect([...(flare?.frames ?? [])]).toEqual([[testid.card(trap), "activated"]]);
+    // Reduced motion zeroes it like any other entry.
+    expect(planEntries([again], view, true)[0]?.durationMs).toBe(0);
   });
 });
 

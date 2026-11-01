@@ -464,7 +464,7 @@ mod tests {
                     matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id)
                 });
                 assert_eq!(killer_of(death), Some(bot.id.clone()));
-                s.expect_stats(&bot, json!({ "attack": 8 }));
+                s.expect_stats(&bot, json!({ "attack": 7 }));
                 assert_eq!(s.card(&bot).berserk, None);
             }
 

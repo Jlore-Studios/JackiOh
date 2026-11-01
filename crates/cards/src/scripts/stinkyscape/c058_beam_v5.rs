@@ -1,8 +1,8 @@
 //! Stinkyscape #58 Beam v5 (SPEC §8.10 row 58). Unit 0/8 → 0/16, Weapon, cost 4, Legendary.
 //!   Base:    "Starship Piece, Equip
 //!            Activate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn
-//!            cooldown." — damage 12
-//!   Radiant: the same text — damage 24
+//!            cooldown." — damage 11 (12 until #2657)
+//!   Radiant: the same text — damage 22 (24 until #2657)
 //!
 //! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
@@ -133,11 +133,11 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #58 Beam v5 — SPEC §8.10 row 58, BUILD M12 row S 58: its Activate deals 12 to a chosen
-// enemy Unit and 12 to each Unit beside it, through Armor (Pierce); the enemy hero is never offered as
+// Stinkyscape #58 Beam v5 — SPEC §8.10 row 58, BUILD M12 row S 58: its Activate deals 11 to a chosen
+// enemy Unit and 11 to each Unit beside it, through Armor (Pierce); the enemy hero is never offered as
 // its target, and aiming at it is refused; once a turn, a second use refused; refused on its user's next
 // turn and usable the turn after, a bounce clearing it (R1841000, R78); equipped onto a Unit, the host
-// takes the Activate; damage reads through `param()`; radiant 0/16, 24 damage.
+// takes the Activate; damage reads through `param()`; radiant 0/16, 22 damage.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,9 +151,9 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FLOOD: &str = "core-017"; // (4) Spell: "Bounce all Units."
 
-    /// The printed `damage`, and the Radiant face's, and its Radiant health.
-    const DAMAGE: i32 = 12;
-    const RADIANT_DAMAGE: i32 = 24;
+    /// The printed `damage`, and the Radiant face's (12 and 24 until #2657), and its Radiant health.
+    const DAMAGE: i32 = 11;
+    const RADIANT_DAMAGE: i32 = 22;
     const RADIANT_HEALTH: i32 = 16;
 
     fn at(target: &str) -> Value {

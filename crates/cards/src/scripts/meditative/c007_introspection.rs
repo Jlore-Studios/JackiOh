@@ -71,7 +71,8 @@ pub fn script() -> CardScripts {
 // M #7 Introspection — SPEC §8.8 row 7, BUILD M10 row M 7: "At your end of turn: heal your hero and
 // each of your Units, draw, discount the whole hand (the drawn card included), then hit every enemy
 // (R59); an X card keeps its cost (R65); nothing fires at the opponent's end of turn; radiant heals
-// 6, discounts 2, hits 4 and still draws 1; its tuned numbers read through `param()` (R386)".
+// 2, discounts 2, hits 2 and draws 2 (6, 2, 4 and 1 until #2657); its tuned numbers read through
+// `param()` (R386)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,17 +114,17 @@ mod tests {
 
             s.end_turn();
 
-            // Heal 3: the hero from 20, Genn from 10.
-            s.expect_health(P1, 23);
-            s.expect_stats(GENN, json!({ "health": 13 }));
+            // Heal 1 (3 until #2657): the hero from 20, Genn from 10.
+            s.expect_health(P1, 21);
+            s.expect_stats(GENN, json!({ "health": 11 }));
             // Draw 1, then discount 1 on the whole hand, the drawn card included.
             assert_eq!(s.hand(P1).len(), 3);
             for card in s.hand(P1) {
                 assert_eq!(card.cost_mod, -1);
             }
-            // Deal 2 to each enemy: the 1/1 dies, the hero drops to 28.
+            // Deal 1 to each enemy (2 until #2657): the 1/1 dies, the hero drops to 29.
             s.expect_in_zone(FODDER, "graveyard");
-            s.expect_health(P2, HERO_HEALTH - 2);
+            s.expect_health(P2, HERO_HEALTH - 1);
         }
 
         #[test]
@@ -160,12 +161,12 @@ mod tests {
             let mut s = setup(false);
 
             s.end_turn(); // p1's end: Introspection fires.
-            s.expect_health(P1, 23);
+            s.expect_health(P1, 21);
             let hand = s.hand(P1).len();
             s.end_turn(); // p2's end: nothing of p1's fires; p1 draws for its new turn.
 
             assert_eq!(s.hand(P1).len(), hand + 1);
-            s.expect_health(P1, 23);
+            s.expect_health(P1, 21);
             assert!(
                 !s.last_events()
                     .iter()
@@ -184,31 +185,31 @@ mod tests {
 
             s.end_turn();
 
-            // Heal 3 + 2, two draws, discount 2, damage 3.
-            s.expect_health(P1, 25);
+            // Heal 1 + 1, two draws, discount 2, damage 2.
+            s.expect_health(P1, 22);
             assert_eq!(s.hand(P1).len(), 4);
             for card in s.hand(P1) {
                 assert_eq!(card.cost_mod, -2);
             }
-            s.expect_health(P2, HERO_HEALTH - 3);
+            s.expect_health(P2, HERO_HEALTH - 2);
         }
 
         #[test]
-        fn radiant_heals_6_discounts_2_hits_4_draws_1() {
+        fn radiant_heals_2_discounts_2_hits_2_draws_2() {
             crate::register_all();
             let mut s = setup(true);
 
             s.end_turn();
 
-            s.expect_health(P1, 26);
-            // Genn's 4 damage is healed past full, capped at 14.
-            s.expect_stats(GENN, json!({ "health": 14 }));
-            assert_eq!(s.hand(P1).len(), 3);
+            s.expect_health(P1, 22);
+            // Genn's 4 damage, 2 of it healed.
+            s.expect_stats(GENN, json!({ "health": 12 }));
+            assert_eq!(s.hand(P1).len(), 4);
             for card in s.hand(P1) {
                 assert_eq!(card.cost_mod, -2);
             }
             s.expect_in_zone(FODDER, "graveyard");
-            s.expect_health(P2, HERO_HEALTH - 4);
+            s.expect_health(P2, HERO_HEALTH - 2);
         }
     }
 }

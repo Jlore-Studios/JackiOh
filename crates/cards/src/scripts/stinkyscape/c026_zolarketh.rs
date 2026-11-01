@@ -1,23 +1,23 @@
 //! S #26 ZolarKeth (SPEC §8.10 row 26): (4) Unit, Human, Acclaimed, Legendary, 2/9 → 4/18, of the
 //! Stinkyscape set.
-//!   Base:    "Cry: Summon a University. It can't use its own Activate. / Activate: Choose one: summon a
-//!            random Starship Piece, or Activate your Universities. / A University can be Activated at
-//!            most once each turn."
-//!   Radiant: "Cry: Summon a University. It can't use its own Activate. / Activate: Summon a random
-//!            Radiant Starship Piece, then Activate your Universities. / A University can be Activated at
-//!            most once each turn."
-//! Engine: Cry (R1): an M #97.6 University summoned on its base face from either face (R64, R2521003),
-//! whose own Activate is then refused (`refuse_own_activate`, R1876000): no zone is Locked, and a full
-//! unit row summons nothing. Activate (R384, once a turn): the base face declares two modes (R81): a
+//!   Base:    "Cry: Choose one: summon a University, or this gains 'Activate: Summon a random Starship
+//!            Piece.'"
+//!   Radiant: "Cry: Choose one: summon a Radiant University, or this gains 'Activate: Summon a random
+//!            Radiant Starship Piece.'"
+//! Engine since #2657: the Cry's two modes are declared at play (R81, R1). `university` summons an
+//! M #97.6 University (R64), Radiant from the Radiant face, whose own Activate is its own to use; a full
+//! unit row summons nothing. `piece` has ZolarKeth remember its new ability (`memory`), so the Activate
+//! is its own from then on, once a turn (R384), while it stays on the field (R78 resets the memory): a
 //! random non-token Starship Piece Unit summoned (`query::starship_pieces()`, R1878000, narrowed to
-//! Units, R380), or each University of its controller's acting on the field, in board order, runs its
-//! Activate's effect (Buff each of its other permanents N times) as an ability of this card, the refused
-//! one included (`run_activation`, R1876001). "At most once each turn": a University that has been
-//! Activated this turn is passed by, and a run spends every use it has this turn, a Buff's extra ones
-//! included (`spendUse`, R2521003), so one that used its own Activate, or that another ZolarKeth ran,
-//! runs no more this turn. The Radiant
-//! face does both in order, the piece Radiant. Through v0.5.11 its Cry summoned a Radiant University and
-//! its runs spent no use, which `script_v0_5_11` keeps (R767000).
+//! Units, R380), Radiant from the Radiant face.
+//!
+//! Through v0.5.9f (`script_v0_5_9f`, kept, R767000) its Cry summoned a base University that couldn't
+//! use its own Activate (`refuse_own_activate`, R1876000), and its own Activate chose between a random
+//! Starship Piece and "Activate your Universities": each University of its controller's acting on the
+//! field, in board order, ran its Activate's effect as an ability of this card, the refused one
+//! included (`run_activation`, R1876001), at most once each turn (`spendUse`, R2521003); the Radiant
+//! face did both in order, the piece Radiant. Through v0.5.11 its Cry summoned a Radiant University and
+//! its runs spent no use, which `script_v0_5_11` keeps.
 
 use jackioh_engine::prelude::*;
 
@@ -27,9 +27,14 @@ pub const ID: &str = "stinkyscape-026";
 const UNIVERSITY: &str = "meditative-097-6";
 /// §8.10: "Activate" is once a turn.
 const USES: i32 = 1;
-/// The base face's two modes, in the order the card prints them (R81).
+/// v0.5.9f's Activate's two modes, in the order the card printed them (R81).
 const PIECE: &str = "piece";
 const UNIVERSITIES: &str = "universities";
+/// #2657: the Cry's two modes, in the order the card prints them (R81).
+const CRY_UNIVERSITY: &str = "university";
+const CRY_PIECE: &str = "piece";
+/// #2657: what ZolarKeth remembers once its Cry gave it the Activate.
+const GAINED_KEY: &str = "gainedPieceActivate";
 
 /// R1876000: the Universities this Cry summoned.
 fn summoned_universities(ctx: &mut EffectContext<'_>) -> Vec<String> {
@@ -115,7 +120,7 @@ fn ability(radiant: bool, current: bool) -> ActivationDecl {
     }
 }
 
-/// `current`: issue #2521's text (R2521003); `false` builds the scripts v0.5.11 ran.
+/// v0.5.9f's face: `current` is issue #2521's text (R2521003); `false` builds the scripts v0.5.11 ran.
 fn zolarketh(radiant: bool, current: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
@@ -144,7 +149,60 @@ fn zolarketh(radiant: bool, current: bool) -> Script {
     }
 }
 
+/// #2657: "Activate: Summon a random Starship Piece", ZolarKeth's once its Cry chose it.
+fn gained_ability(radiant: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: "piece".to_string(),
+        label: if radiant {
+            "Summon a random Radiant Starship Piece".to_string()
+        } else {
+            "Summon a random Starship Piece".to_string()
+        },
+        uses: ActivationUses::Count(USES),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: Some(read_hook(|args| {
+            args.self_.memory.get(GAINED_KEY).and_then(Value::as_bool) == Some(true)
+        })),
+        run: hook(move |_ctx| vec![summon_piece(radiant)]),
+    }
+}
+
+/// #2657: "Cry: Choose one: summon a University, or this gains 'Activate: …'".
+fn chooses(radiant: bool) -> Script {
+    Script {
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: vec![CRY_UNIVERSITY.to_string(), CRY_PIECE.to_string()],
+        }],
+        cry: Some(hook(move |ctx| match ctx.modes.first().map(String::as_str) {
+            Some(CRY_UNIVERSITY) => {
+                vec![summon(json_as(json!({ "defId": UNIVERSITY, "radiant": radiant })))]
+            }
+            Some(CRY_PIECE) => vec![remember(RememberArgs {
+                key: GAINED_KEY.to_string(),
+                value: json!(true),
+            })],
+            _ => vec![],
+        })),
+        activations: vec![gained_ability(radiant)],
+        ..Script::default()
+    }
+}
+
 pub fn script() -> CardScripts {
+    CardScripts {
+        base: chooses(false),
+        radiant: chooses(true),
+    }
+}
+
+/// R767000: through v0.5.9f its Cry summoned a base University that couldn't use its own Activate, and
+/// its own Activate summoned a random Starship Piece or ran its Universities, each at most once a turn
+/// (R2521003); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: zolarketh(false, true),
         radiant: zolarketh(true, true),
@@ -160,10 +218,10 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26: "Cry (played): a base University summoned,
-// its own Activate refused; Activate mode 1: a random Starship Piece summoned; mode 2: each University of
-// yours not Activated this turn buffs your other permanents as its Activate does, spending its uses;
-// radiant 4/18, both modes in order, the piece Radiant, the University base".
+// S #26 ZolarKeth — SPEC §8.10 row 26, BUILD M12 row S 26: "Cry (played), choose one: a University
+// summoned (Radiant from the Radiant face), its own Activate its own; or ZolarKeth gains 'Activate: a
+// random Starship Piece summoned', once a turn (Radiant: a Radiant piece); without that choice it has no
+// Activate; radiant 4/18". The tests of v0.5.9f's University runs fold under the kept script.
 //
 // A Buff is counted by the `upgraded` events naming each card. A University never Buffs itself, so one
 // no other University stands beside keeps its printed `times` (2) and its one use (R386's Buffs could
@@ -174,7 +232,7 @@ mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
-    use super::{ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_11};
+    use super::{CRY_PIECE, CRY_UNIVERSITY, ID, PIECE, UNIVERSITIES, UNIVERSITY, script_v0_5_11, script_v0_5_9f};
     use crate::{filler, scenario};
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
@@ -223,127 +281,190 @@ mod tests {
     }
 
     #[test]
-    fn r2521003_r1876000_its_cry_summons_a_base_university_that_cannot_use_its_own_activate() {
-        let mut s = board(false, json!([]));
-        s.play(ID, json!({ "zone": 1 }));
+    fn its_cry_summons_a_university_its_own_activate_its_own() {
+        let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
+        s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
         let uni = university(&s);
         assert!(!uni.radiant, "a base University");
-        s.expect_stats(&uni, json!({ "attack": 0, "health": 12 }));
-        s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");
-        s.expect_stats(ID, json!({ "attack": 2, "health": 9 }));
+        s.activate(&uni, json!({}));
+        assert_eq!(buffs(&s, &s.unit_at(P1, 5)), BASE_TIMES);
+        s.expect_refused(|s| s.activate(ID, json!({})));
     }
 
     #[test]
-    fn r1876001_activate_your_universities_runs_their_buffs_as_this_cards_effect() {
-        let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
-        s.play(ID, json!({ "zone": 1 }));
-        let uni = university(&s);
-        s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
-        let vanilla = s.unit_at(P1, 5);
-        let zolar = s.unit_at(P1, 1);
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-        assert_eq!(buffs(&s, &zolar), BASE_TIMES);
-        assert_eq!(buffs(&s, &uni), 0, "never itself");
-        assert_eq!(buffs(&s, &s.unit_at(P2, 1)), 0, "never an enemy's");
-    }
-
-    #[test]
-    fn r384_its_activate_is_once_a_turn() {
+    fn its_cry_may_give_it_an_activate_that_summons_a_random_starship_piece_once_a_turn() {
         let mut s = board(false, json!([]));
-        s.play(ID, json!({ "zone": 1 }));
-        s.activate(ID, json!({ "modes": [PIECE] }));
-        s.expect_refused(|s| s.activate(ID, json!({ "modes": [PIECE] })));
-    }
-
-    #[test]
-    fn r2521003_a_university_it_ran_has_spent_its_own_use_this_turn() {
-        // ZolarKeth already on the field (no Cry), its one University free to activate.
-        let field = json!([
-            { "def": ID, "lane": 1 },
-            { "def": UNIVERSITY, "lane": 4 },
-            { "def": VANILLA, "lane": 5 },
-        ]);
-        let mut s = board(false, field);
-        let zolar = s.unit_at(P1, 1);
-        let free = s.unit_at(P1, 4);
-        let vanilla = s.unit_at(P1, 5);
-        s.activate(&zolar, json!({ "modes": [UNIVERSITIES] }));
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-        s.expect_refused_with(|s| s.activate(&free, json!({})), "already been used this turn");
-    }
-
-    #[test]
-    fn r2521003_a_university_that_activated_itself_is_skipped() {
-        // The free University (lane 2) runs before the Cry's (lane 3): no Buff of the Cry's reaches it first.
-        let mut s = board(false, json!([{ "def": UNIVERSITY, "lane": 2 }, { "def": VANILLA, "lane": 5 }]));
-        let free = s.unit_at(P1, 2);
-        let vanilla = s.unit_at(P1, 5);
-        s.activate(&free, json!({}));
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-        s.play(ID, json!({ "zone": 1 }));
-        let cry = s.unit_at(P1, 3);
-        assert_eq!(cry.def_id, UNIVERSITY, "the Cry's University");
-        s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
-        // Only the Cry's University ran: its Buffs, none from the spent one (which would reach the Cry's).
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-        assert_eq!(buffs(&s, &free), BASE_TIMES);
-        assert_eq!(buffs(&s, &cry), 0, "the spent University ran nothing");
-    }
-
-    #[test]
-    fn r2521003_two_zolarketh_the_same_turn_buff_once_per_university() {
-        let mut s = board(false, json!([{ "def": ID, "lane": 3 }, { "def": VANILLA, "lane": 5 }]));
-        s.play(ID, json!({ "zone": 1 }));
-        let first = s.unit_at(P1, 1);
-        let second = s.unit_at(P1, 3);
-        let vanilla = s.unit_at(P1, 5);
-        assert_eq!(university(&s).id, s.unit_at(P1, 2).id, "the Cry's University");
-        s.activate(&first, json!({ "modes": [UNIVERSITIES] }));
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-        s.activate(&second, json!({ "modes": [UNIVERSITIES] }));
-        assert_eq!(buffs(&s, &vanilla), 0, "the University spent its one use on the first");
-        assert_eq!(buffs(&s, &first), 0);
-    }
-
-    #[test]
-    fn r2521003_next_turn_it_runs_its_universities_again() {
-        let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
-        s.play(ID, json!({ "zone": 1 }));
-        let vanilla = s.unit_at(P1, 5);
-        s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-        s.end_turn();
-        s.end_turn();
-        assert_eq!(s.state().active, P1);
-        s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
-        assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
-    }
-
-    #[test]
-    fn r1878000_the_other_mode_summons_a_random_starship_piece() {
-        let mut s = board(false, json!([]));
-        s.play(ID, json!({ "zone": 1 }));
-        s.activate(ID, json!({ "modes": [PIECE] }));
+        s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
+        assert!((1..=5).filter_map(|lane| s.unit(P1, lane)).all(|unit| unit.def_id != UNIVERSITY));
+        s.activate(ID, json!({}));
         let pieces = pieces(&s);
         assert_eq!(pieces.len(), 1);
         assert!(!pieces[0].radiant);
-        assert!(s.last_events().iter().all(|event| !matches!(event, GameEvent::Upgraded { .. })));
+        s.expect_refused(|s| s.activate(ID, json!({})));
     }
 
     #[test]
-    fn r275_r2521003_radiant_4_18_a_base_university_then_a_radiant_piece_and_your_universities() {
+    fn without_the_cry_it_has_no_activate() {
+        let mut s = board(false, json!([{ "def": ID, "lane": 1 }]));
+        let zolar = s.unit_at(P1, 1);
+        s.expect_refused(|s| s.activate(&zolar, json!({})));
+    }
+
+    #[test]
+    fn r275_radiant_4_18_a_radiant_university_or_a_radiant_piece() {
         let mut s = board(true, json!([]));
-        s.play(ID, json!({ "zone": 1 }));
+        s.play(ID, json!({ "zone": 1, "modes": [CRY_UNIVERSITY] }));
         s.expect_stats(ID, json!({ "attack": 4, "health": 18 }));
-        let uni = university(&s);
-        assert!(!uni.radiant, "a base University from the Radiant face too");
-        s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");
+        assert!(university(&s).radiant, "a Radiant University");
+
+        let mut s = board(true, json!([]));
+        s.play(ID, json!({ "zone": 1, "modes": [CRY_PIECE] }));
         s.activate(ID, json!({}));
         let pieces = pieces(&s);
         assert_eq!(pieces.len(), 1);
         assert!(pieces[0].radiant);
-        // The piece arrived first, so the University Buffs it too.
-        assert_eq!(buffs(&s, &pieces[0]), BASE_TIMES);
+    }
+
+    #[test]
+    fn r2521003_r1876000_its_cry_summons_a_base_university_that_cannot_use_its_own_activate() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(false, json!([]));
+            s.play(ID, json!({ "zone": 1 }));
+            let uni = university(&s);
+            assert!(!uni.radiant, "a base University");
+            s.expect_stats(&uni, json!({ "attack": 0, "health": 12 }));
+            s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");
+            s.expect_stats(ID, json!({ "attack": 2, "health": 9 }));
+        });
+    }
+
+    #[test]
+    fn r1876001_activate_your_universities_runs_their_buffs_as_this_cards_effect() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
+            s.play(ID, json!({ "zone": 1 }));
+            let uni = university(&s);
+            s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
+            let vanilla = s.unit_at(P1, 5);
+            let zolar = s.unit_at(P1, 1);
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+            assert_eq!(buffs(&s, &zolar), BASE_TIMES);
+            assert_eq!(buffs(&s, &uni), 0, "never itself");
+            assert_eq!(buffs(&s, &s.unit_at(P2, 1)), 0, "never an enemy's");
+        });
+    }
+
+    #[test]
+    fn r384_its_activate_is_once_a_turn() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(false, json!([]));
+            s.play(ID, json!({ "zone": 1 }));
+            s.activate(ID, json!({ "modes": [PIECE] }));
+            s.expect_refused(|s| s.activate(ID, json!({ "modes": [PIECE] })));
+        });
+    }
+
+    #[test]
+    fn r2521003_a_university_it_ran_has_spent_its_own_use_this_turn() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            // ZolarKeth already on the field (no Cry), its one University free to activate.
+            let field = json!([
+                { "def": ID, "lane": 1 },
+                { "def": UNIVERSITY, "lane": 4 },
+                { "def": VANILLA, "lane": 5 },
+            ]);
+            let mut s = board(false, field);
+            let zolar = s.unit_at(P1, 1);
+            let free = s.unit_at(P1, 4);
+            let vanilla = s.unit_at(P1, 5);
+            s.activate(&zolar, json!({ "modes": [UNIVERSITIES] }));
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+            s.expect_refused_with(|s| s.activate(&free, json!({})), "already been used this turn");
+        });
+    }
+
+    #[test]
+    fn r2521003_a_university_that_activated_itself_is_skipped() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            // The free University (lane 2) runs before the Cry's (lane 3): no Buff of the Cry's reaches it first.
+            let mut s = board(false, json!([{ "def": UNIVERSITY, "lane": 2 }, { "def": VANILLA, "lane": 5 }]));
+            let free = s.unit_at(P1, 2);
+            let vanilla = s.unit_at(P1, 5);
+            s.activate(&free, json!({}));
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+            s.play(ID, json!({ "zone": 1 }));
+            let cry = s.unit_at(P1, 3);
+            assert_eq!(cry.def_id, UNIVERSITY, "the Cry's University");
+            s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
+            // Only the Cry's University ran: its Buffs, none from the spent one (which would reach the Cry's).
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+            assert_eq!(buffs(&s, &free), BASE_TIMES);
+            assert_eq!(buffs(&s, &cry), 0, "the spent University ran nothing");
+        });
+    }
+
+    #[test]
+    fn r2521003_two_zolarketh_the_same_turn_buff_once_per_university() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(false, json!([{ "def": ID, "lane": 3 }, { "def": VANILLA, "lane": 5 }]));
+            s.play(ID, json!({ "zone": 1 }));
+            let first = s.unit_at(P1, 1);
+            let second = s.unit_at(P1, 3);
+            let vanilla = s.unit_at(P1, 5);
+            assert_eq!(university(&s).id, s.unit_at(P1, 2).id, "the Cry's University");
+            s.activate(&first, json!({ "modes": [UNIVERSITIES] }));
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+            s.activate(&second, json!({ "modes": [UNIVERSITIES] }));
+            assert_eq!(buffs(&s, &vanilla), 0, "the University spent its one use on the first");
+            assert_eq!(buffs(&s, &first), 0);
+        });
+    }
+
+    #[test]
+    fn r2521003_next_turn_it_runs_its_universities_again() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(false, json!([{ "def": VANILLA, "lane": 5 }]));
+            s.play(ID, json!({ "zone": 1 }));
+            let vanilla = s.unit_at(P1, 5);
+            s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
+            s.activate(ID, json!({ "modes": [UNIVERSITIES] }));
+            assert_eq!(buffs(&s, &vanilla), BASE_TIMES);
+        });
+    }
+
+    #[test]
+    fn r1878000_the_other_mode_summons_a_random_starship_piece() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(false, json!([]));
+            s.play(ID, json!({ "zone": 1 }));
+            s.activate(ID, json!({ "modes": [PIECE] }));
+            let pieces = pieces(&s);
+            assert_eq!(pieces.len(), 1);
+            assert!(!pieces[0].radiant);
+            assert!(s.last_events().iter().all(|event| !matches!(event, GameEvent::Upgraded { .. })));
+        });
+    }
+
+    #[test]
+    fn r275_r2521003_radiant_4_18_a_base_university_then_a_radiant_piece_and_your_universities() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let mut s = board(true, json!([]));
+            s.play(ID, json!({ "zone": 1 }));
+            s.expect_stats(ID, json!({ "attack": 4, "health": 18 }));
+            let uni = university(&s);
+            assert!(!uni.radiant, "a base University from the Radiant face too");
+            s.expect_refused_with(|s| s.activate(&uni, json!({})), "its own Activate");
+            s.activate(ID, json!({}));
+            let pieces = pieces(&s);
+            assert_eq!(pieces.len(), 1);
+            assert!(pieces[0].radiant);
+            // The piece arrived first, so the University Buffs it too.
+            assert_eq!(buffs(&s, &pieces[0]), BASE_TIMES);
+        });
     }
 
     /// R767000: the script kept for the replays of v0.5.11 and before: a Radiant University, and runs

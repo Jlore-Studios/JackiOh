@@ -3,4 +3,4 @@
 /**
  * `Keyword["kind"]`.
  */
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship";
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship" | "Can't Defend";

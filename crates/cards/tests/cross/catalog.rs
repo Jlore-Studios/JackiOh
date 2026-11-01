@@ -398,7 +398,7 @@ const CORE: &[SpecRow] = &[
     row(
         "28",
         "Knockoff Temu Glowy Jelly Bean",
-        c(2),
+        c(1),
         T::Spell,
         &[G::JellyBean],
         R::Rare,
@@ -408,7 +408,7 @@ const CORE: &[SpecRow] = &[
     row(
         "29",
         "GIGA Glowy Jelly Bean",
-        c(7),
+        c(6),
         T::Spell,
         &[G::JellyBean],
         R::Rare,
@@ -1020,7 +1020,7 @@ const CORE: &[SpecRow] = &[
     row(
         "90",
         "CN-Viral Injection",
-        c(2),
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Rare,
@@ -2529,7 +2529,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "35",
         "Rollback",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Legendary,
@@ -3386,7 +3386,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "19.1",
         "Temporal Rift",
-        c(0),
+        c(1),
         T::Spell,
         &[G::Token],
         R::Token,
@@ -3786,7 +3786,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "49.1",
         "YileGPT Prime",
-        c(10),
+        c(8),
         T::Unit,
         &[G::Cn, G::Acclaimed, G::Prime, G::Token],
         R::Token,
@@ -4506,7 +4506,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "1",
         "Bob's Plan",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Quickdraw],
         R::Mythic,
@@ -5057,7 +5057,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12",
         "Otherworldly Nightmare",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5147,7 +5147,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "18",
         "Imitated Instrumentality",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Legendary,
@@ -5428,7 +5428,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "44",
         "Great Replacement Theory",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Quickdraw],
         R::Mythic,
@@ -5458,7 +5458,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "47",
         "Circadian Fullcycler",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5732,8 +5732,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(10, 10),
         st(20, 20),
     ),
-    row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(2, 2), st(4, 4)),
-    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
+    row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
+    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
     row("83", "Halo", c(4), T::Unit, &[], R::Epic, st(2, 2), st(4, 4)),
     row(
         "84",
@@ -5823,8 +5823,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Rare,
-        st(4, 4),
-        st(8, 8),
+        st(3, 4),
+        st(6, 8),
     ),
     row(
         "93",
@@ -6432,7 +6432,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "148",
         "Alteran Reach",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[G::Wincon, G::Quickdraw],
         R::Mythic,
@@ -6552,7 +6552,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "158",
         "Stratos Swarm",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Rare,
@@ -6612,7 +6612,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "164",
         "The Syndicate",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -6622,7 +6622,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "165",
         "The Trade Union",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -6702,7 +6702,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "173",
         "Abandoned Spice Tower",
-        c(3),
+        c(2),
         T::Unit,
         &[],
         R::Rare,

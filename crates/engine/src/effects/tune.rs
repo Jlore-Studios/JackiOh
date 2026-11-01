@@ -50,9 +50,10 @@ use serde_json::{Value, json};
 
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
-    TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS,
-    TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
-    TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
+    TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_REMOVES, TUNE_COST_CAP, TUNE_COST_FLOOR,
+    TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS, TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS,
+    TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE, TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL,
+    TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
@@ -146,14 +147,17 @@ enum MenuApply {
     /// A split drawn as it applies, floored by the stats the card had (`attack`, `health`).
     /// R1160: `total` is the split's size (`TUNE_STAT_TOTAL` times the multiplier).
     Stats { attack: i32, health: i32, total: i32 },
-    /// A Degrade's keyword: `count` of `kinds` drawn, `own` naming the keyword the event shows.
-    RemoveKeyword {
+    /// A keyword row: `count` keywords drawn, each removed (`remove`, `own` naming the keyword the event
+    /// shows) or added (`add`). A Degrade removes what it may and adds a harmful one (R2657005's Crater in
+    /// a hand); an Upgrade adds what it may and removes a harmful one (R2657005's Can't attack and Can't
+    /// Defend). The first draw is over both lists, `remove` first; any later one (R1160) keeps to the
+    /// first's way, so a row with one list draws as the two rows it replaced did.
+    Keyword {
         own: Vec<Keyword>,
-        kinds: Vec<KeywordKind>,
+        remove: Vec<KeywordKind>,
+        add: Vec<Keyword>,
         count: i32,
     },
-    /// An Upgrade's keyword: `count` of `candidates` drawn and added.
-    AddKeyword { candidates: Vec<Keyword>, count: i32 },
     /// One of the X row's items drawn and written.
     X { items: Vec<XItem> },
     /// One declared number drawn and stepped: `(key, steps, delta)` per item.
@@ -269,60 +273,91 @@ const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 
 /// B3.4 rule 3, keyword. A Degrade removes one keyword the card has of its own — printed (as tuning
 /// leaves it) or granted, never one an aura or its position lends it, and never a harmful one (Can't
-/// attack, Brittle): every entry of the kind goes, a printed one by `tuning.removeKeywords`, an added
-/// one out of `tuning.addKeywords`, a granted one off the instance. An Upgrade adds one R21 keyword a
-/// Unit lacks (`tuning.addKeywords`), and R1748001 one a Spell or a Field Spell lacks of its own
-/// (`non_unit_candidates`); a Vanilla card's text is gone, and an added keyword would be text, so
-/// nothing is added to one.
+/// attack, Brittle, Untributable, Can't Defend, Crater): every entry of the kind goes, a printed one by
+/// `tuning.removeKeywords`, an added one out of `tuning.addKeywords`, a granted one off the instance. Or,
+/// R2657005, it adds Crater to a Unit, a Field Spell, a Trap or a Field Trap in a hand that lacks it
+/// (`TUNE_NERF_HAND_KEYWORDS`). An Upgrade adds one R21 keyword a Unit lacks (`tuning.addKeywords`),
+/// R1748001 one a Spell or a Field Spell lacks of its own (`non_unit_candidates`), and R2657005 Flashback
+/// to any card that lacks it (`TUNE_BUFF_ANY_KEYWORDS`); or it removes Can't attack or Can't Defend
+/// the card has of its own (`TUNE_BUFF_REMOVES`). A Vanilla card's text is gone, and an added keyword
+/// would be text, so nothing is added to one.
 fn keyword_row(
     state: &GameState,
     card: &CardInstance,
     direction: TuneDirection,
     times: i32,
 ) -> Option<MenuRow> {
-    if direction == TuneDirection::Degrade {
+    let (own, add): (Vec<Keyword>, Vec<Keyword>) = if direction == TuneDirection::Degrade {
         let own: Vec<Keyword> = card_keywords(state, card)
             .into_iter()
             .filter(|keyword| !HARMFUL.contains(&keyword.kind()))
             .collect();
-        let kinds: Vec<KeywordKind> = own
-            .iter()
-            .map(|keyword| keyword.kind())
-            .collect::<IndexSet<KeywordKind>>()
-            .into_iter()
-            .collect();
-        if kinds.is_empty() {
-            return None;
-        }
-        return Some(MenuRow {
-            row: TuneRow::Keyword,
-            apply: MenuApply::RemoveKeyword {
-                own,
-                kinds,
-                count: times,
-            },
-        });
-    }
-    if card.vanilla {
-        return None;
-    }
-    let held = keywords_now(state, card);
-    let candidates: Vec<Keyword> = if card_type_of(state, card) == CardType::Unit {
-        // R21, R781004: a keyword it lacks from the combat keyword pool, never Taunt beside Indestructible.
-        candidates_beside(&held)
+        (own, nerf_candidates(state, card))
     } else {
-        non_unit_candidates(state, card, &held)
+        let own: Vec<Keyword> = card_keywords(state, card)
+            .into_iter()
+            .filter(|keyword| TUNE_BUFF_REMOVES.contains(&keyword.kind()))
+            .collect();
+        let add = if card.vanilla {
+            Vec::new()
+        } else {
+            let held = keywords_now(state, card);
+            let mut add: Vec<Keyword> = if card_type_of(state, card) == CardType::Unit {
+                // R21, R781004: a keyword it lacks from the combat keyword pool, never Taunt beside
+                // Indestructible.
+                candidates_beside(&held)
+            } else {
+                non_unit_candidates(state, card, &held)
+            };
+            add.extend(lacking(&held, TUNE_BUFF_ANY_KEYWORDS));
+            add
+        };
+        (own, add)
     };
-    if candidates.is_empty() {
+    let remove: Vec<KeywordKind> = own
+        .iter()
+        .map(|keyword| keyword.kind())
+        .collect::<IndexSet<KeywordKind>>()
+        .into_iter()
+        .collect();
+    if remove.is_empty() && add.is_empty() {
         return None;
     }
     Some(MenuRow {
         row: TuneRow::Keyword,
-        apply: MenuApply::AddKeyword {
-            candidates,
+        apply: MenuApply::Keyword {
+            own,
+            remove,
+            add,
             count: times,
         },
     })
+}
+
+/// The keywords of `kinds` that `held` lacks, in `kinds`' order, each as its keyword.
+fn lacking(held: &[Keyword], kinds: &[KeywordKind]) -> Vec<Keyword> {
+    kinds
+        .iter()
+        .filter(|kind| !has_keyword(held, **kind))
+        .map(|kind| Keyword::of_kind(*kind, 0))
+        .collect()
+}
+
+/// R2657005: the harmful keywords a Nerf may add — Crater, to a Unit, a Field Spell, a Trap or a Field
+/// Trap while it is in a hand and lacks it (`TUNE_NERF_HAND_KEYWORDS`). Never Can't attack or Can't
+/// Defend, and nothing to a Vanilla card, whose text is gone.
+fn nerf_candidates(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
+    if card.vanilla || !matches!(card.zone, crate::wire::Zone::Hand { .. }) {
+        return Vec::new();
+    }
+    let card_type = card_type_of(state, card);
+    if !matches!(
+        card_type,
+        CardType::Unit | CardType::FieldSpell | CardType::Trap | CardType::FieldTrap
+    ) {
+        return Vec::new();
+    }
+    lacking(&keywords_now(state, card), TUNE_NERF_HAND_KEYWORDS)
 }
 
 /// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: Indestructible and
@@ -618,55 +653,51 @@ fn apply_row(
             }
             TuningChange::Stats { attack, health }
         }
-        MenuApply::RemoveKeyword { own, kinds, count } => {
-            // R1160: one draw per pick, distinct kinds, today's write each time.
-            let mut left: Vec<KeywordKind> = kinds.clone();
-            let mut picked: Vec<Keyword> = Vec::new();
-            for _ in 0..(*count).max(1) {
-                if left.is_empty() {
-                    break;
-                }
-                let kind = *pick_one(ctx, &left);
-                left.retain(|kept| *kept != kind);
-                picked.push(
-                    own.iter()
-                        .find(|keyword| keyword.kind() == kind)
+        MenuApply::Keyword {
+            own,
+            remove,
+            add,
+            count,
+        } => {
+            // R1160: one draw per pick, distinct kinds, today's write each time; the first pick is over
+            // both ways (R2657005), the rest keep to its way.
+            let mut left: Vec<(bool, Keyword)> = remove
+                .iter()
+                .map(|kind| {
+                    let shown = own
+                        .iter()
+                        .find(|keyword| keyword.kind() == *kind)
                         .cloned()
-                        .unwrap_or_else(|| Keyword::of_kind(kind, 0)),
-                );
-                remove_kind(ctx.state, card_id, kind);
-            }
-            let mut moved = picked.into_iter();
-            let first = moved.next().expect("a keyword row always moves one");
-            let also: Vec<Keyword> = moved.collect();
-            TuningChange::Keyword {
-                keyword: first,
-                added: false,
-                also: if also.is_empty() { None } else { Some(also) },
-            }
-        }
-        MenuApply::AddKeyword { candidates, count } => {
-            // R1160: one draw per pick, distinct kinds, today's write each time.
-            let mut left: Vec<Keyword> = candidates.clone();
+                        .unwrap_or_else(|| Keyword::of_kind(*kind, 0));
+                    (false, shown)
+                })
+                .chain(add.iter().map(|keyword| (true, keyword.clone())))
+                .collect();
             let mut picked: Vec<Keyword> = Vec::new();
+            let mut way: Option<bool> = None;
             for _ in 0..(*count).max(1) {
                 if left.is_empty() {
                     break;
                 }
-                let keyword = pick_one(ctx, &left).clone();
-                left.retain(|kept| kept.kind() != keyword.kind());
-                if let Some(card) = find_instance_mut(ctx.state, card_id) {
-                    let tuning = tuning_of(card);
-                    let mut added = tuning.add_keywords.clone().unwrap_or_default();
-                    added.push(keyword.clone());
-                    tuning.add_keywords = Some(added);
-                    // §10.4: a keyword the card gains anew is up, as a granted one is (`buff::grant_to`).
-                    if keyword.kind() == KeywordKind::DivineShield {
-                        card.divine_shield_spent = None;
+                let (added, keyword) = pick_one(ctx, &left).clone();
+                way.get_or_insert(added);
+                left.retain(|(kept_way, kept)| *kept_way == added && kept.kind() != keyword.kind());
+                if added {
+                    if let Some(card) = find_instance_mut(ctx.state, card_id) {
+                        let tuning = tuning_of(card);
+                        let mut gained = tuning.add_keywords.clone().unwrap_or_default();
+                        gained.push(keyword.clone());
+                        tuning.add_keywords = Some(gained);
+                        // §10.4: a keyword the card gains anew is up, as a granted one is (`buff::grant_to`).
+                        if keyword.kind() == KeywordKind::DivineShield {
+                            card.divine_shield_spent = None;
+                        }
+                        if keyword.kind() == KeywordKind::Reborn {
+                            card.reborn_spent = None;
+                        }
                     }
-                    if keyword.kind() == KeywordKind::Reborn {
-                        card.reborn_spent = None;
-                    }
+                } else {
+                    remove_kind(ctx.state, card_id, keyword.kind());
                 }
                 picked.push(keyword);
             }
@@ -675,7 +706,7 @@ fn apply_row(
             let also: Vec<Keyword> = moved.collect();
             TuningChange::Keyword {
                 keyword: first,
-                added: true,
+                added: way == Some(true),
                 also: if also.is_empty() { None } else { Some(also) },
             }
         }
@@ -978,6 +1009,26 @@ fn write_number(ctx: &mut EffectContext<'_>, card_id: &str, number: &NumberRef, 
             if let Some(live) = find_instance_mut(ctx.state, card_id) {
                 set_param(live, key, value);
             }
+        }
+        // R2657006: the count left (R2179001), never below 1, so the card stays Temporary.
+        NumberRef::Temporary => {
+            if let Some(live) = find_instance_mut(ctx.state, card_id) {
+                live.temporary = Some(value.max(TUNED_FLOOR));
+            }
+        }
+        // R2657006: the Plague Counters set outright, a set and no placement (R471), reported as any
+        // change of the count is.
+        NumberRef::Plague => {
+            let count = value.max(0);
+            if let Some(live) = find_instance_mut(ctx.state, card_id) {
+                live.counters.plague = if count == 0 { None } else { Some(count) };
+            }
+            ctx.events.push(GameEvent::CounterChanged {
+                instance_id: card_id.to_string(),
+                counter: crate::wire::CounterKind::Plague,
+                value: count,
+                placed: None,
+            });
         }
         NumberRef::Keyword { key } => {
             let key: &str = key.as_str();

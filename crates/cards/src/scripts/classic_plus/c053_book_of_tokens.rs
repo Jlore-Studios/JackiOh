@@ -5,8 +5,9 @@
 //!
 //! One laneless `summon` per token: each takes the leftmost empty, unlocked, unreserved unit zone (R64)
 //! and fizzles silently on a full row (§3.2), as Core #15's do. The token's stats are its own (§7).
-//! The count is one draw from the match rng (1 or 2), so the curve stays near a single 1-cost token
-//! summon; a tuned count would be a param, and there is none. Lucky X (§6.1) rolls X more times and
+//! The count is one draw from the match rng: 1 token `ONE_TOKEN_CHANCE` (60%) of the time and 2 the
+//! rest, since #2657 (50/50 through v0.5.9f, `script_v0_5_9f`, kept, R767000), so the curve stays near a
+//! single 1-cost token summon; a tuned count would be a param, and there is none. Lucky X (§6.1) rolls X more times and
 //! keeps the most tokens: the Radiant face prints Lucky 1, and the Lucky read is the running card's
 //! own, so a Degrade or an Upgrade of that number moves it (B3.4), as Two Grapes reads its Lucky.
 
@@ -21,6 +22,8 @@ const RUSH_TOKEN: &str = "core-t-rush";
 /// The printed "1-2": the fewest and most tokens one cast summons.
 const MIN_TOKENS: i32 = 1;
 const MAX_TOKENS: i32 = 2;
+/// #2657: the percent chance a roll comes to `MIN_TOKENS`, `MAX_TOKENS` the rest, 10 points over even.
+const ONE_TOKEN_CHANCE: i32 = 60;
 
 /// §6.1: the Lucky X the running card has now, printed plus given (R1438; its Radiant face prints
 /// Lucky 1).
@@ -28,10 +31,22 @@ fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
     ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
 }
 
-fn book_of_tokens(radiant: bool) -> Script {
+/// One roll of the count: `ONE_TOKEN_CHANCE` percent `MIN_TOKENS`, else `MAX_TOKENS`; with `even`, as
+/// v0.5.9f rolled it, one even pick of the two.
+fn roll_of(rng: &mut Rng, even: bool) -> i32 {
+    if even {
+        MIN_TOKENS + rng.int(MAX_TOKENS - MIN_TOKENS + 1)
+    } else if rng.int(PERCENT) < ONE_TOKEN_CHANCE {
+        MIN_TOKENS
+    } else {
+        MAX_TOKENS
+    }
+}
+
+fn book_of_tokens(radiant: bool, even: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let roll = |rng: &mut Rng| -> i32 { MIN_TOKENS + rng.int(MAX_TOKENS - MIN_TOKENS + 1) };
+            let roll = |rng: &mut Rng| -> i32 { roll_of(rng, even) };
             // R987: the controller's Luck rolls extra times beside the card's own Lucky.
             let lucky = lucky_of(ctx) + luck_of(&*ctx.state, ctx.controller);
             let count = if lucky > 0 {
@@ -49,13 +64,22 @@ fn book_of_tokens(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: book_of_tokens(false),
-        radiant: book_of_tokens(true),
+        base: book_of_tokens(false, false),
+        radiant: book_of_tokens(true, false),
+    }
+}
+
+/// R767000: through v0.5.9f the count was an even pick of 1 and 2; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    CardScripts {
+        base: book_of_tokens(false, true),
+        radiant: book_of_tokens(true, true),
     }
 }
 
 // C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53: "Summons 1-2 Rush Tokens (3/3
-// Rush), the count random, into your leftmost open zones, one on a nearly full board, none on a full
+// Rush), the count random, 1 at 60% and 2 at 40%, into your leftmost open zones, one on a nearly full board, none on a full
 // one; the count is no declared number, so tuning moves nothing; radiant 1-2 Radiant Rush Tokens
 // (6/6 Rush, Cleave)".
 #[cfg(test)]
@@ -104,6 +128,36 @@ mod tests {
 
     mod base {
         use super::*;
+
+        #[test]
+        fn one_token_comes_up_60_percent_of_the_time_two_40() {
+            crate::register_all();
+            let mut ones = 0;
+            for n in 0..400 {
+                let mut s = book(false, json!([]), Some(&format!("book-of-tokens-odds-{n}")));
+                s.play(BOOK, json!({}));
+                if tokens(&s).len() == 1 {
+                    ones += 1;
+                }
+            }
+            // 240 expected of 400; the band is about four standard deviations wide.
+            assert!((200..=280).contains(&ones), "{ones} of 400 summoned one");
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_9f_rolls_an_even_count() {
+            crate::under_kept(BOOK, super::super::script_v0_5_9f(), || {
+                let mut ones = 0;
+                for n in 0..400 {
+                    let mut s = book(false, json!([]), Some(&format!("book-of-tokens-even-{n}")));
+                    s.play(BOOK, json!({}));
+                    if tokens(&s).len() == 1 {
+                        ones += 1;
+                    }
+                }
+                assert!((160..=240).contains(&ones), "{ones} of 400 summoned one");
+            });
+        }
 
         #[test]
         fn r987_feng_shui_s_luck_adds_a_roll() {
