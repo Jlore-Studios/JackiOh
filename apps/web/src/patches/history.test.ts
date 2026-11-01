@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import {
   cardHistory,
+  countsLine,
   currentDef,
   nameMatches,
   newestFirst,
@@ -17,7 +18,6 @@ import {
   versionBefore,
   versionsForCard,
 } from "./history.ts";
-import { countsLine } from "./PatchNotes.tsx";
 import { realPatchSource, type Patch, type Snapshot } from "./source.ts";
 
 function patch(patches: readonly Patch[], version: string): Patch {

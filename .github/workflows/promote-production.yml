@@ -39,7 +39,8 @@
 # The promote branch, its pull request and the merge go out with the bot's token (BOT_GITHUB_TOKEN),
 # because GitHub refuses the Actions token any update to production that carries a change to
 # .github/workflows. Nothing loops: a pull request's CI never starts this workflow (only a green push
-# to main does), and no workflow runs on a push to a promote branch or to production. The countdown
+# to main does), no workflow runs on a push to a promote branch, and the one that runs on a push to
+# production, releases.yml (when it brings patches.json), writes only GitHub releases. The countdown
 # issue stays on the Actions token, whose writes start no workflow.
 #
 # Once production has moved, `technical-log` logs what went live (#1360, part 5's `cargo jackioh
