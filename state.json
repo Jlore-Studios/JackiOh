@@ -8753,7 +8753,6 @@
     },
     "2422": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T04:40:21Z",
@@ -8766,7 +8765,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T04:40:24Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -8774,7 +8772,6 @@
       "planned_tier": "strong",
       "pr": 2584,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-31T04:08:20Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -8782,9 +8779,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T04:42:41Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2424": {
@@ -9978,233 +9973,193 @@
     },
     "2510": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "1bd7dc6699468428cbcd85f9862f01c0b085d6e6",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "agy",
-      "question": "",
       "run_id": "41192040055",
       "runs_on": "night-vm-agy",
       "started_at": "2026-10-31T10:15:52Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2512": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "0717c7e8520303f54b9a725a33f50b3d35b00250",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "round_tier": "",
       "run_id": "41203035826",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T12:52:34Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2513": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "39e3ae54b5c57b55ac787999516ba2b6f953b6cd",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "agy",
-      "question": "",
       "run_id": "41206236393",
       "runs_on": "night-vm-agy",
       "started_at": "2026-10-31T13:35:05Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2514": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "d22d08f409180a7635396b7659944dba66d42f38",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "agy",
-      "question": "",
       "run_id": "41214777905",
       "runs_on": "night-vm-agy",
       "started_at": "2026-10-31T15:25:18Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2515": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "fcd654203fe4abadb288c58421f8c8782ca06dee",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "agy",
-      "question": "",
       "run_id": "41223689537",
       "runs_on": "night-vm-agy",
       "started_at": "2026-10-31T17:16:01Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2516": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "b2af648a8772e5005067acb99866d5f3ae6969df",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "",
       "run_id": "41248924657",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T22:36:01Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2517": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "4f849c6c4b0f42e68db5399aaffe382664082f1b",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "",
       "run_id": "41254991164",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T00:02:28Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2518": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "4ad6c18072acfa44c79b954ef718a391298c7974",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "",
       "run_id": "41261524463",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T01:32:43Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2519": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "676cfd615652ca3cfa096de1fd3c0d5226e91e3f",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "",
       "run_id": "41292468038",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T09:17:15Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2520": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "53a48b2013fee742e063f9d63d417228a91ca88e",
-      "last_findings": [],
       "onto": "bot/issue-2497",
       "parked_on": "",
       "part_of": 2497,
       "pending_request": false,
       "provider": "gpt",
-      "question": "",
       "run_id": "41295190508",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T09:55:19Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2528": {
       "action": "plan",
@@ -10284,22 +10239,12 @@
     },
     "2540": {
       "action": "plan",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-30T19:42:58Z",
         "difficulty": "medium",
         "provider": "claude-7",
         "tier": "strong",
         "why": "rule 6 fails outright (every edit is under .github/), and nothing touches crates/engine or crates/ai, so it is not hard"
-      },
-      "handoff": {
-        "at": "2026-10-30T19:35:52Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Plan (opus, strong)\n\n**Human required:** every change is under `.github/` (`.github/workflows/ci.yml`, `.github/actions/e2e-shard/action.yml`, one comment in `.github/workflows/super.yml`), which the night bot may not edit. A person makes the edits below in a pull request and reads its CI timings.\n\n## Goal\n\n`rust (release build)` (7m 53s in run 41098729540) becomes two matrix legs that run side by side, `rust (release build jackioh)` and `rust (release build jackioh-server)`. Each leg builds one binary, and that binary's own crate is at opt-level 0, so each job finishes well under the 5-minute target. The engine, the cards and the AI stay at Cargo.toml's opt-level 3, so the checks, fuzz 200, the classifier's self-play and e2e smoke get binaries that play exactly as before. Nothing moves to `super.yml`, because e2e smoke needs both binaries on every pull request.\n\nWhat I measured on a 4-core runner like CI's, with the dependencies built and the workspace crates cleaned (what rust-cache restores on a pull request), `CARGO_PROFILE_RELEASE_LTO=false`:\n\n| Build | Wall | CPU (user) |\n|---|---|---|\n| today: `-p jackioh-server -p jackioh-tools` | 338 s | 1236 s (365%: CPU-bound) |\n| `-p jackioh-server` alone | 277 s | 1033 s |\n| \u2026 + `jackioh-server` opt-level 1 | 232 s | 790 s |\n| **\u2026 + `jackioh-server` opt-level 0** | **152 s** | 498 s |\n| `-p jackioh-tools` alone | 227 s | \u2014 |\n| \u2026 + `jackioh-tools` opt-level 1 | 216 s | 731 s |\n| **\u2026 + `jackioh-tools` and `jackioh-luau` opt-level 0** | **159 s** | 500 s |\n| engine, cards and AI at opt-level 2 instead of 3 | no gain (232 s / 219 s) | \u2014 |\n\n- The server library's codegen was most of the old tail: 219 s at opt-level 3, 71 s at 0.\n- The `jackioh` built with tools and luau at opt-level 0 plays at the same speed. `fuzz --seeds 200` took 37.1 s against 34.3 s at opt-level 3. `selfplay --games 8 --seed classify` (the classifier's stage 2) took 99.8 s against 103.5 s, and its log was byte-for-byte the same (`cmp`).\n\n## Files to touch\n\n| Path | Kind | What changes |\n|---|---|---|\n| `.github/workflows/ci.yml` | change | The header comment (lines 14\u201315, 35\u201337). The `rust-build` job becomes a two-leg matrix with per-leg cache key, opt-level flags and artifact. The `rust-checks` and `rust-classify` download and unpack steps switch to `rust-release-jackioh`. |\n| `.github/actions/e2e-shard/action.yml` | change | The header comment (lines 8\u201311). The rust download takes `pattern: rust-release*` with `merge-multiple: true`, and the unpack step loops over the tarballs. |\n| `.github/workflows/super.yml` | change | The header comment at lines 31\u201332 only (its build stays one job). |\n\nDo not touch:\n- `Cargo.toml` (its `[profile.release]` is production's: `crates/server/Dockerfile` builds with it).\n- `scripts/ci-scope.sh` (`rust-build` runs on `full`, which has no scope line).\n- Anything in `crates/`, `apps/`, `e2e/` or `bot/`.\n\nNo spec section or ruling governs this. The rules that do are CLAUDE.md's CI section and `ci-duration.yml`'s 5-minute target.\n\n## Steps\n\n1. **`.github/workflows/ci.yml`, header.** Make two comment edits:\n   - Line 14: replace `the release build of jackioh and jackioh-server, made once for the` with `the release builds of jackioh and jackioh-server, side by side, each made once for the`.\n   - Line 36: replace `` (`rust-release`, `web-wasm` `` with `` (`rust-release-jackioh` and `rust-release-jackioh-server`, `web-wasm` ``. Re-wrap the paragraph to the file's ~100 columns.\n\n2. **`.github/workflows/ci.yml`, job `rust-build`.** Replace everything from the comment line `# The release binaries, built once for the run: ...` (line 461) through the job's last line `key: jackioh-main-${{ github.sha }}` (line 500) with this block:\n\n```yaml\n  # The release binaries, built once for the run, each in a job of its own and side by side\n  # (#2540): `jackioh` (the CLI the checks and the classifier run, and e2e spec 01's and 13's replay\n  # check) and `jackioh-server` (which e2e smoke boots). In one job they took it to 7m 53s with every\n  # core busy: on four, the dependencies cached, the two compiled in 338 s, the server's library 219\n  # of them. Apart, each compiles only what its binary links, with that binary's own crate at\n  # opt-level 0, as its `cargo test` groups build it (and jackioh-luau, which only a custom card\n  # reaches): `jackioh` in 159 s, `jackioh-server` in 152. The engine, the cards and the AI keep\n  # Cargo.toml's opt-level 3, so every game played on these binaries runs as fast as before: fuzz\n  # 200 took 37 s against 34, the classifier's 8 self-play games 100 s against 103, their logs byte\n  # for byte the same. The server alone builds the engine without `testkit`, as Render's image does;\n  # that feature adds only test seams, which nothing sets outside a test. Each binary keeps a Rust\n  # cache of its own (`cache-key`), or the two would share one entry that the first to finish\n  # writes. The checks run on `jackioh` in their own job, so a failed check never keeps the binaries\n  # from e2e smoke. Without Cargo.toml's thin LTO: these binaries serve e2e and the checks, never\n  # production (Render builds the server's image from crates/server/Dockerfile), and the link-time\n  # pass over every dependency was most of a minute. Each `--config` stays one unquoted word: the\n  # build step splits BUILD on spaces.\n  rust-build:\n    name: rust (release build ${{ matrix.binary }})\n    needs: changes\n    if: ${{ needs.changes.outputs.full == 'true' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n    env:\n      CARGO_PROFILE_RELEASE_LTO: \"false\"\n    strategy:\n      fail-fast: false\n      matrix:\n        include:\n          - binary: jackioh\n            build: -p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0 --config profile.release.package.jackioh-luau.opt-level=0\n          - binary: jackioh-server\n            build: -p jackioh-server --config profile.release.package.jackioh-server.opt-level=0\n    steps:\n      - uses: actions/checkout@v4\n      - uses: ./.github/actions/setup\n        with:\n          node: \"false\"\n          cache-key: release-${{ matrix.binary }}\n      - name: ${{ matrix.binary }}\n        env:\n          BUILD: ${{ matrix.build }}\n        run: |\n          # shellcheck disable=SC2086 # BUILD is several arguments on purpose.\n          cargo build --release $BUILD\n      # A tarball keeps the executable bit an artifact would drop.\n      - name: pack it\n        env:\n          BINARY: ${{ matrix.binary }}\n        run: tar -czf \"$RUNNER_TEMP/rust-release-$BINARY.tgz\" \"target/release/$BINARY\"\n      - uses: actions/upload-artifact@v4\n        with:\n          name: rust-release-${{ matrix.binary }}\n          path: ${{ runner.temp }}/rust-release-${{ matrix.binary }}.tgz\n          if-no-files-found: error\n          retention-days: 1\n      # main's jackioh, one cache entry per commit (about 12 MB packed), for `rust (classify)`: a\n      # pull request's stage 2 runs against the build of its base, so it builds only its own head.\n      # Saved from main alone; a pull request only restores it.\n      - name: keep main's jackioh for the classifier\n        if: ${{ matrix.binary == 'jackioh' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n        run: mkdir -p \"$RUNNER_TEMP/main-jackioh\" && cp target/release/jackioh \"$RUNNER_TEMP/main-jackioh/jackioh\"\n      - if: ${{ matrix.binary == 'jackioh' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}\n        uses: actions/cache/save@v4\n        with:\n          path: ${{ runner.temp }}/main-jackioh\n          key: jackioh-main-${{ github.sha }}\n```\n\n   The job id stays `rust-build`. Every `needs: rust-build` and the `rust` summary's `needs.rust-build.result` (success only when both legs pass) keep working unchanged.\n\n3. **`.github/workflows/ci.yml`, jobs `rust-checks` (lines 511\u2013516) and `rust-classify` (lines 635\u2013640).** The same six lines appear in both jobs. In each, replace\n\n```yaml\n      - uses: actions/d",
-        "provider": "claude-7",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "ards -p jackioh-ai -p jackioh-luau -p jackioh-server -p jackioh-tools\\\"; export CARGO_PROFILE_RELEASE_LTO=false; cargo clean --release $W 2>&1 | tail -1\u2026\n- Bash: {\"command\": \"grep -n \\\"AI_\\\\|_MS\\\\b\\\\|think\\\" crates/server/src/config.rs | head -40\", \"description\": \"Look for AI timing constants in the server config\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^exit= /tmp/t1.log 2>/dev/null; do sleep 5; done'; for f in /tmp/s1.log /tmp/t1.log; do grep -E \\\"wall=|exit=|Timing\\\" $f; done\", \"description\": \"Wait \u2026\n- Bash: {\"command\": \"/tmp/units.sh /home/runner/work/JackiOh/JackiOh/target/cargo-timings/cargo-timing-20261030T190255957Z-c229d21ef8243b72.html; echo; /tmp/units.sh /home/runner/work/JackiOh/JackiOh/target/\u2026\n- Bash: {\"command\": \"W=\\\"-p jackioh-engine -p jackioh-cards -p jackioh-ai -p jackioh-luau -p jackioh-server -p jackioh-tools\\\"; export CARGO_PROFILE_RELEASE_LTO=false; G=\\\"--config profile.release.package.ja\u2026\n- Bash: {\"command\": \"sed -n 86,96p crates/tools/src/classify.rs; sed -n 823,837p crates/tools/src/classify.rs\", \"description\": \"Read classify's selfplay constants\"}\n- Bash: {\"command\": \"grep -rn \\\"ci.yml\\\" crates/tools/tests/*.rs apps/web/src/net/*.test.ts e2e/scripts 2>/dev/null | head -20\", \"description\": \"Find tests that read ci.yml\"}\n- Bash: {\"command\": \"sed -n 368,420p crates/tools/tests/acceptance.rs; sed -n 40,75p apps/web/src/net/ci-scope.test.ts\", \"description\": \"Check how tests parse ci.yml rust-test groups\"}\n- Bash: {\"command\": \"sed -n 555,585p crates/tools/tests/acceptance.rs\", \"description\": \"See how acceptance.rs parses ci.yml scope lines\"}\n- Bash: {\"command\": \"sed -n 205,216p apps/web/src/net/ci-scope.test.ts; sed -n 312,340p apps/web/src/net/ci-scope.test.ts\", \"description\": \"Check ci-scope test's reads of ci.yml\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^exit= /tmp/t2.log 2>/dev/null; do sleep 5; done'; for f in /tmp/s2.log /tmp/t2.log; do grep -E \\\"wall=|exit=|Timing\\\" $f; done\", \"description\": \"Wait \u2026\n- Bash: {\"command\": \"grep -n \\\"2498\\\" crates/engine/src/wire/codes.rs | head -5\", \"description\": \"See the 2498 mention in codes.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"pub const AI_BUDGET\\\" -A6 crates/ai/src/ | head -20\", \"description\": \"Check the AI budget definition\"}\n- Bash: {\"command\": \"W=\\\"-p jackioh-engine -p jackioh-cards -p jackioh-ai -p jackioh-luau -p jackioh-server -p jackioh-tools\\\"; export CARGO_PROFILE_RELEASE_LTO=false; cargo clean --release $W 2>&1 | tail -1\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2540/.bot-plan.md\", \"old_string\": \"- Server alone builds\", \"new_string\": \"- Warm, server alone: 277 s (user 1033); tools alone: \u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q ^exit= /tmp/s0.log 2>/dev/null; do sleep 5; done'; grep -E \\\"wall=|exit=|Timing\\\" /tmp/s0.log\", \"description\": \"Wait for server opt-level 0 build\", \"ti\u2026\n- Bash: {\"command\": \"/tmp/units.sh /home/runner/work/JackiOh/JackiOh/target/cargo-timings/cargo-timing-20261030T191949753Z-c229d21ef8243b72.html\", \"description\": \"Summarize server opt-0 unit timings\"}\n- Bash: {\"command\": \"W=\\\"-p jackioh-engine -p jackioh-cards -p jackioh-ai -p jackioh-luau -p jackioh-server -p jackioh-tools\\\"; export CARGO_PROFILE_RELEASE_LTO=false; T=/home/runner/work/JackiOh/JackiOh/tar\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2540/.bot-plan.md\", \"old_string\": \"- Server alone builds\", \"new_string\": \"- **Warm, server alone + jackioh-server opt-level=0: 1\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"^exit=\\\" /tmp/t0.log 2>/dev/null; do sleep 5; done'; grep -E \\\"wall=|exit=|Timing\\\" /tmp/t0.log; /tmp/units.sh $(grep -o '/home[^ ]*\\\\.html' /tmp/t0.\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"selfplay wall=\\\" /tmp/t0-sp.log 2>/dev/null; do sleep 5; done'; tail -1 /tmp/t0-fuzz.log; tail -3 /tmp/t0-sp.log; du -sh /tmp/sp-t0; ls -la /tmp/sp-t\u2026\n- Bash: {\"command\": \"W=\\\"-p jackioh-engine -p jackioh-cards -p jackioh-ai -p jackioh-luau -p jackioh-server -p jackioh-tools\\\"; export CARGO_PROFILE_RELEASE_LTO=false; T=/home/runner/work/JackiOh/JackiOh/tar\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2540/.bot-plan.md\", \"old_string\": \"- Server alone builds\", \"new_string\": \"- **Warm, tools alone + jackioh-tools opt 0 + jackioh-\u2026\n- Bash: {\"command\": \"grep -rn \\\"e2e-shard\\\\|rust-release\\\\|download-artifact\\\" bot/go apps/web/src e2e/scripts crates/tools/tests 2>/dev/null | head\", \"description\": \"Check tests that read the e2e-shard acti\u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'until grep -q \\\"selfplay wall=\\\" /tmp/t3-sp.log 2>/dev/null; do sleep 5; done'; tail -2 /tmp/t3.log; tail -2 /tmp/t3-sp.log; cmp /tmp/sp-t0/selfplay-classify-1-8.jso\u2026\n- Bash: {\"command\": \"export CARGO_PROFILE_RELEASE_LTO=false; T=/home/runner/work/JackiOh/JackiOh/target/release; cargo build --release -p jackioh-server --config profile.release.package.jackioh-server.opt-le\u2026\n- tool error: Permission to use Bash with command export CARGO_PROFILE_RELEASE_LTO=false; T=/home/runner/work/JackiOh/JackiOh/target/release; cargo build --release -p jackioh-server --config profile.release.packag\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2540/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"rule 6 fails outright (every edit is under .github/), and nothing to\u2026\n- Bash: {\"command\": \"sed -n 31,32p .github/workflows/super.yml; sed -n 7,11p .github/actions/e2e-shard/action.yml; git status --porcelain\", \"description\": \"Verify quoted comment lines and clean tree\"}\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words in the plan draft\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"rule 6 fails outright (every edit is under .github/), and nothing touches crates/engine or crates/ai, so it is not hard\"} --> **Human required:** every change is under `.github/` (`.github/workflows/ci.yml`, `.github/actions/e2e-shard/action.yml`, one comm\u2026"
       },
       "kind": "build",
       "pending_request": false,
@@ -10308,12 +10253,10 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "question": "every change is under `.github/` (`.github/workflows/ci.yml`, `.github/actions/e2e-shard/action.yml`, one comment in `.github/workflows/super.yml`), which the night bot may not edit. A person makes the edits below in a pull request and reads its CI timings.",
       "run_id": "41108111735",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-30T18:34:34Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2542": {
       "cleared": {
@@ -10550,7 +10493,6 @@
     },
     "2564": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T07:13:10Z",
@@ -10563,7 +10505,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T07:13:12Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -10571,7 +10512,6 @@
       "planned_tier": "strong",
       "pr": 2595,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-31T05:39:34Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -10579,15 +10519,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T08:04:20Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2565": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T07:04:41Z",
@@ -10600,7 +10537,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T07:04:43Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -10608,7 +10544,6 @@
       "planned_tier": "medium",
       "pr": 2600,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-31T05:38:46Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -10616,15 +10551,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T09:27:58Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2566": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T07:26:48Z",
@@ -10637,7 +10569,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T07:26:50Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -10645,7 +10576,6 @@
       "planned_tier": "strong",
       "pr": 2597,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-31T05:39:01Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -10653,15 +10583,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T08:03:55Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2567": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T06:46:04Z",
@@ -10674,7 +10601,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T06:46:05Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -10682,7 +10608,6 @@
       "planned_tier": "strong",
       "pr": 2601,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-31T05:38:21Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -10690,15 +10615,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T09:01:42Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2568": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T06:38:04Z",
@@ -10711,7 +10633,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T06:38:06Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -10719,7 +10640,6 @@
       "planned_tier": "medium",
       "pr": 2599,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-31T05:37:35Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -10727,15 +10647,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T09:01:19Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2569": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T06:18:16Z",
@@ -10748,7 +10665,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T06:18:18Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -10756,7 +10672,6 @@
       "planned_tier": "strong",
       "pr": 2596,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-31T05:37:09Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -10764,10 +10679,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T08:34:35Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2570": {
@@ -10867,13 +10780,11 @@
     },
     "2574": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T06:19:13Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -10881,7 +10792,6 @@
       "planned_tier": "medium",
       "pr": 2591,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-31T05:23:12Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -10889,25 +10799,13 @@
       "runs_on": "night-vm-agy",
       "started_at": "2026-10-31T07:05:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2575": {
       "action": "plan",
-      "asks": [],
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-31T06:47:36Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Plan (opus, strong)\n\n**Human required:** The issue's stop rule applies, so the owner has to decide before anything is built. With `AI_BUDGET` at 1200/300, `cargo jackioh gate` fails the timing gate on the pinned position improve-dev-200: one decision takes 1,420 ms and 725 nodes, against an `AI_GATE.pinned_decision_ms` limit of 1,000. At today's 600/150 on the same machine, the same decision takes 320 ms and 317 nodes, and the gate passes. On issue #2575, pick option **A** or **B** under **Open questions** (or close the issue), then queue it again. The plan below is the build after that choice.\n\n## Goal\n\nWhen done:\n- `AI_BUDGET` is 1200/300 with the rest of its shape unchanged (3/4/20/6/8/3). `AI_GATE_BUDGET` and `LETHAL_HINT_NODES` follow it.\n- `PRACTICE_AI_CLOCK_MS` is 3000.\n- `BOT_STRENGTHS[2]`, `BOT_STRENGTHS[3]` and the Duos AI seats keep 600/150/3/4/20/6/8/3, on two named server constants.\n- The owner's option (A or B) makes `cargo jackioh gate` pass.\n- R2575000 (note, tests, pending paragraph), \u00a79.9, \u00a713.7 and the docs record the change.\n- The 800-game screen and the gate output are in the report.\n\n## Files to touch\n\n| Path | new/change | What |\n|---|---|---|\n| `crates/ai/src/config.rs` | change | `AI_BUDGET` 1200/300 and its doc; option B only: `AiSearch.fat_budget_nodes` and its value in `AI_SEARCH` |\n| `crates/ai/src/decide.rs` | change | option B only: `scaled_budget` |\n| `crates/ai/src/gate.rs` | change | option A only: `AI_GATE.pinned_decision_ms` and its doc |\n| `crates/ai/tests/ai/budget.rs` | new | R2575000 tests |\n| `crates/ai/tests/ai/mod.rs` | change | `pub mod budget;` |\n| `crates/ai/tests/ai/pinned.rs` | change | option B only: two R2575000 tests |\n| `crates/server/src/config.rs` | change | `BOT_MID_STRENGTH_BUDGET`, `DUOS_AI_BUDGET`, `BOT_STRENGTHS[2]`/`[3]`, the Duos section header |\n| `crates/server/src/duos/actor.rs` | change | `AiJob::ask` uses `DUOS_AI_BUDGET`; imports |\n| `crates/server/tests/bots/budget.rs` | new | R2575000 tests |\n| `crates/server/tests/bots/mod.rs` | change | `pub mod budget;` |\n| `crates/server/README.md` | change | names the two constants (lines 358, 622) |\n| `apps/web/src/practice/config.ts` | change | `PRACTICE_AI_CLOCK_MS` 3000 and its doc |\n| `apps/web/src/practice/config.test.ts` | new | R2575000 web test |\n| `spec/rulings/R2575000.md` | new | the ruling |\n| `spec/pending/2575.md` | new | its \u00a711 paragraph |\n| `spec/09-architecture.md` | change | \u00a79.9 **Budgets** bullet (line 159) |\n| `spec/13-duos.md` | change | \u00a713.7, first paragraph (line 108) |\n| `docs/learned-eval.md` | change | line 49; the \"A bigger `AI_BUDGET`\" row (line 101) |\n| `docs/polish/3-ai.md` | change | the quoted `AI_BUDGET` (lines 292\u2013293) and `PRACTICE_AI_CLOCK_MS` (line 1065) |\n| `crates/server/tests/fixtures/practice-claim.json` | change | only if step 15 says to record it again |\n\nDo not touch:\n- `.github/`, `.harness/`, `.squishy/`, `bot/`, `crates/ai/generation.json`\n- `crates/ai/src/shadow_ban.rs` (its sweep records are history)\n- `crates/server/src/economy/practice.rs` (its claim re-run must follow `AI_BUDGET`, and does, through `AiOptions::new`)\n- `apps/web/src/wire/` (the browser reads the budget from the WASM `constants()` at run time)\n- `training/*.md` and `AI_GATE.max_decision_ms`\n\nGoverning: \u00a79.9, \u00a79.12, \u00a713.7, R180, R186, R748000, R1303002, R2102000, R2208000.\n\n## Steps\n\n1. **Pre-checks.** Read the owner's choice on #2575. If `apps/web/src/practice/config.ts` still defines `PRACTICE_EARNING_AI_CLOCK_MS`, leave it alone. If #2560 has removed it, there is nothing to do for it.\n2. **`crates/ai/src/config.rs`, `AI_BUDGET` (line 42).** Set `nodes: 1200,` and `lethal_nodes: 300,`. Replace the doc on line 41 with:\n   ```rust\n   /// The practice AI's budget (SPEC \u00a79.9): the same at every difficulty (R180). R2575000: 1200 nodes\n   /// and 300 lethal nodes since the owner doubled them (issue #2575), in the search shape of before;\n   /// the server's ladder bots' middle strengths and its Duos seats keep the 600 and 150 of before\n   /// (`BOT_MID_STRENGTH_BUDGET`, `DUOS_AI_BUDGET` in `crates/server/src/config.rs`).\n   ```\n3. **Apply the owner's option.**\n   - **A.** In `crates/ai/src/gate.rs`, set `pinned_decision_ms:` (line 150) to the value the owner names. Append to that field's doc (lines 116\u2013121): `R2575000: raised from 1000 ms by the owner's call, when the doubled budget timed improve-dev:200 at about 1.42 s.`\n   - **B.**\n     - In `crates/ai/src/config.rs`, `struct AiSearch`, add this after `pub fat_min_lethal: i32,` (line 159):\n       ```rust\n       /// R2575000: the most nodes a fat state's allowance is scaled from: the practice budget before\n       /// issue #2575 doubled it, so a state whose every step costs the most spends what it did.\n       pub fat_budget_nodes: i32,\n       ```\n     - In `AI_SEARCH`, add `fat_budget_nodes: 600,` after `fat_min_lethal: 60,` (line 200).\n     - In `crates/ai/src/decide.rs`, `scaled_budget` (line 237), replace `budget.nodes * reference / fat` with `budget.nodes.min(AI_SEARCH.fat_budget_nodes.max(0) as usize) * reference / fat`.\n     - In that function's doc (line 228), replace ``: `nodes` in inverse proportion`` with ``: `nodes`, at most `fat_budget_nodes` (R2575000), in inverse proportion``.\n4. **Gate.** Run `cargo jackioh gate`.\n   - If the output contains `the gate failed:`, stop. Restore every file you changed and delete the new ones, so that `git status --porcelain` is empty. Report the full gate output with `\"human_required\": true`.\n   - If it passes, keep every `[gate \u2026]` line for the report.\n5. **Start the screen.** It prints nothing until every game has ended, so run it detached, from the worktree root:\n   ```sh\n   rm -rf /tmp/parent-src /tmp/screen-2575 && mkdir -p /tmp/parent-src /tmp/screen-2575\n   git archive origin/main | tar -x -C /tmp/parent-src\n   (cd /tmp/parent-src && CARGO_TARGET_DIR=/tmp/parent-target cargo build --release -p jackioh-tools)\n   cp /tmp/parent-target/release/jackioh /tmp/parent-jackioh\n   cargo build --release -p jackioh-tools && cp \"${CARGO_TARGET_DIR:-target}/release/jackioh\" /tmp/self-jackioh\n   setsid nohup /tmp/self-jackioh arena --a self --b bin:/tmp/parent-jackioh --set improve-dev --games 800 --out /tmp/screen-2575 > /tmp/screen-2575.log 2>&1 &\n   ```\n   - `CARGO_TARGET_DIR` is shared on the bot's runner, so the parent gets its own target directory; otherwise it would overwrite the branch's binary.\n   - Wait with a background `until grep -q '\"edgeHigh\"' /tmp/screen-2575.log; do sleep 60; done`, re-armed whenever it times out.\n   - While it runs, do steps 6\u201313, which are edits only. Run no cargo, pnpm or test command meanwhile, because the screen times decisions.\n   - Never stop, extend or replay the screen.\n6. **`crates/server/src/config.rs`.**\n   - Before `/// R1454, R1452: the strengths a new bot is drawn from` (line 1194), add `pub const BOT_MID_STRENGTH_BUDGET: jackioh_ai::SearchBudget` with `nodes: 600, lethal_nodes: 150, determinizations: 3, beam_width: 4, root_branching: 20, branching: 6, max_depth: 8, finalists: 3`. Its doc: `/// R2575000: the search budget of BOT_STRENGTHS[2] and [3]: the practice AI's AI_BUDGET before issue #2575 doubled it, kept so that BOT_SEED_RATINGS, calibrated on it (R748000), still hold. Raising it is a person's call, with a calibration after it.`\n   - In those two rows (lines 1230 and 1237), write `budget: BOT_MID_STRENGTH_BUDGET,`.\n   - After `DUOS_AI_STEP_DELAY_MS` (line 2422), add `pub const DUOS_AI_BUDGET` with the same values. Its doc: `/// R2575000: the search budget of each AI-played Duos seat (duos::actor, cut short at BOT_DECISION_DEADLINE_MS): the practice AI's before issue #2575 doubled it, so the server's work per AI step does not double. Raising it is a person's call. Only the server reads it.`\n   - In the Duos section header (line 2407), replace `Every one is` with `Every one but DUOS_AI_BUDGET is`.\n7. **`crates/server/src/duos/actor.rs`.**\n   - Line 57 becomes `use jackioh_ai::{AiOptio",
-        "provider": "claude-2",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "s/ai/src/decide.rs crates/ai/src/search.rs | head -20\", \"description\": \"See how the decision splits its node budget\"}\n- Bash: {\"command\": \"sed -n 215,255p crates/ai/src/decide.rs\", \"description\": \"Read the fat-state budget scaling\"}\n- Bash: {\"command\": \"grep -n \\\"pinned_decision_ms:\\\\|max_decision_ms:\\\" -B3 crates/ai/src/gate.rs | head -20; grep -n \\\"fat_reference\\\\|fat_min_nodes\\\\|fat_min_lethal\\\" crates/ai/src/config.rs | head\", \"desc\u2026\n- Bash: {\"command\": \"sed -n 140,180p crates/ai/src/config.rs | grep -n \\\"fat\\\" ; grep -n \\\" fat_reference:\\\\| fat_min_nodes:\\\\| fat_min_lethal:\\\" -B8 crates/ai/src/config.rs | head -40\", \"description\": \"Read\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/exp-2575-gate-1200-150.log; do sleep 20; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/exp-2575-gate-1200-150.log | grep \\\"gate pinned\\\\|gate perf\\\\|failed\\\\|^perf\u2026\n- Bash: {\"command\": \"cd /tmp/exp-2575 && sed -i 's/ lethal_nodes: 150,/ lethal_nodes: 300,/' crates/ai/src/config.rs && python3 - <<'EOF'\\np='crates/ai/src/decide.rs'\\ns=open(p).read()\\nold=\\\"(budget.nodes *\u2026\n- Bash: {\"command\": \"cd /tmp/exp-2575 && (cargo run --release -p jackioh-tools -- gate) > /tmp/exp-2575-gate-fatcap.log 2>&1; echo \\\"exit $?\\\" >> /tmp/exp-2575-gate-fatcap.log; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /t\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-2575/.bot-plan.md <<'EOF'\\n- BASELINE gate at 600 (this worktree, base 3c5c7a81e): PASSED. perf slowest 76.2 ms/335 nodes; pinned\\n improve-dev-1\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/exp-2575-gate-fatcap.log; do sleep 20; done; sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/exp-2575-gate-fatcap.log | grep \\\"gate pinned\\\\|gate perf\\\\|failed\\\\|^perf\\\\|^\u2026\n- Bash: {\"command\": \"cd /tmp/exp-2575 && sed -i 's/budget.nodes.min(600) \\\\* reference/budget.nodes * reference/' crates/ai/src/decide.rs && sed -i 's/ nodes: 1200,\\\\n lethal_nodes: 300,//' crates/ai/src/con\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-2575/.bot-plan.md <<'EOF'\\n- FAT-CAP probe (1200/300 + scaled_budget uses budget.nodes.min(600) for fat states): PASSED.\\n perf slowest 107.0 ms/\u2026\n- Bash: {\"command\": \"sed 's/\\\\x1b\\\\[[0-9;]*m//g' /tmp/exp-2575-gate-900.log | grep \\\"gate pinned\\\\|gate perf\\\\|failed\\\\|^perf\\\\|^exit\\\\|wins and\\\"; sed -n 42,45p /tmp/exp-2575/crates/ai/src/config.rs\", \"desc\u2026\n- Bash: {\"command\": \"set -e; cargo build --release -p jackioh-tools 2>&1 | tail -1; cp \\\"$CARGO_TARGET_DIR/release/jackioh\\\" /tmp/parent-jackioh; cd /tmp/exp-2575 && python3 - <<'EOF'\\np='crates/ai/src/confi\u2026\n- Bash: {\"command\": \"cd /tmp/exp-2575 && mkdir -p /tmp/probe-2575-out && (time /tmp/self-jackioh arena --a self --b bin:/tmp/parent-jackioh --seed probe-2575 --paired --games 16 --out /tmp/probe-2575-out) > \u2026\n- Bash: {\"command\": \"grep -rn \\\"fat_min_lethal\\\\|fatMinLethal\\\\|fat_min_nodes\\\" --include=*.rs --include=*.ts --include=*.md . 2>/dev/null | grep -v \\\"^./target\\\" | head\", \"description\": \"Find every use of t\u2026\n- Bash: {\"command\": \"sed -n 150,160p crates/ai/src/config.rs; grep -rn \\\"fn scaled_budget\\\\|scaled_budget(\\\" crates/ai/src | head; grep -rln \\\"scaled_budget\\\\|fat_width\\\\|fat state\\\" crates/ai/tests spec/rul\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-2575/.bot-plan.md <<'EOF'\\n- 900/225 probe (no cap): FAILS: improve-dev-200 1153.0 ms/561 nodes; perf slowest 89.7/443; 154 199.8/900.\\n => a sma\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit \\\" /tmp/probe-2575.log; do sleep 15; done; grep -v '^{\\\"n\\\"' /tmp/probe-2575.log | tail -8; grep -o '\\\"msP95\\\":[0-9]*' /tmp/probe-2575.log | sort -t: -k2 -n | tail \u2026\n- Bash: {\"command\": \"cargo build --release -p jackioh-tools 2>&1 | tail -1; git status --porcelain | head\", \"description\": \"Rebuild the worktree's own release tools binary\", \"timeout\": 1800000, \"run_in_backg\u2026\n- Bash: {\"command\": \"sed -n 30,92p crates/ai/tests/ai/pinned.rs\", \"description\": \"Read pinned fixture loading helpers\"}\n- Bash: {\"command\": \"sed -n 2405,2409p crates/server/src/config.rs; sed -n 226,232p crates/ai/src/decide.rs\", \"description\": \"Read exact header and doc lines to quote\"}\n- said: Now writing the full plan into the draft.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2575/.bot-plan.md\", \"content\": \"**Human required:** The issue's own stop rule holds, so the owner has to decide before anything is built. With `AI_BUD\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2575/.bot-plan.md\", \"limit\": 5}\n- Bash: {\"command\": \"cp /home/runner/work/_temp/work/item-2575/.bot-plan.md /tmp/bot-plan-notes-2575.md; wc -w /tmp/bot-plan-notes-2575.md\", \"description\": \"Keep a copy of the planner notes\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2575/.bot-plan.md\", \"content\": \"**Human required:** The issue's own stop rule holds, so the owner has to decide before anything is built. With `AI_BUD\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md; git status --porcelain; cat /tmp/claude-1001/-home-runner-work--temp-work-item-2575/b3e0a7ee-822e-48ed-92cc-b7ece4555ea7/tasks/bhkz0yi2q.output | \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-2575/.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"Do not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`, `crates/ai/generatio\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/home/runner/work/_temp/work/item-2575/.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"The practice AI searches at `AI_BUDGET` = 1200 nodes / 300 lethal nodes, with th\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-2575/.bot-plan.md\"}\n- said: **Human required:** The issue's stop rule applies, so the owner has to decide before anything is built. With `AI_BUDGET` at 1200/300, `cargo jackioh gate` fails the timing gate on the pinned position improve-dev-200: one decision takes 1,420 ms and 725 nodes, against an `AI_GATE.pinned_decision_ms`\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
@@ -10916,29 +10814,17 @@
       "planned_by_id": "claude-2",
       "planned_tier": "strong",
       "provider": "claude-2",
-      "question": "The issue's stop rule applies, so the owner has to decide before anything is built. With `AI_BUDGET` at 1200/300, `cargo jackioh gate` fails the timing gate on the pinned position improve-dev-200: one decision takes 1,420 ms and 725 nodes, against an `AI_GATE.pinned_decision_ms` limit of 1,000. At today's 600/150 on the same machine, the same decision takes 320 ms and 317 nodes, and the gate passes. On issue #2575, pick option **A** or **B** under **Open questions** (or close the issue), then queue it again. The plan below is the build after that choice.",
       "queued_at": "2026-10-31T05:29:22Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "41172793100",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T05:29:27Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2576": {
       "action": "plan",
-      "asks": [],
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-31T05:44:02Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Plan (opus, strong)\n\n**Human required:** a person with a GitHub login and a few free hours on a machine (the owner's PC, the learn lane's runner, plays about 2,500 games an hour) runs `training/ml/retrain_policy.sh`, and the gate if it passes, by the steps below. The bot cannot do it. The newest learn export's artifacts need a token to download (`gh run download`), and the bot holds none. Its fallback, 5,000 self-play games, takes 3\u20134 h on four vCPUs before the 800-game screen and a gate of up to 2,000 games. That is past the bot's 150-minute builder call and 330-minute job (`.harness/config.json`: `call_timeout_minutes`, `job_budget_minutes`), and nothing is kept between its jobs. Measured on this planner's runner (four vCPUs): one release build of `jackioh-tools` took 3 min 50 s; `selfplay --games 24` took 2 min 8 s (one game alone took 78 s); `positions --every decision --policy` over those 24 games took 1.4 s and wrote 1,674 rows (2.9 MB).\n\n## Goal\n\nThe learned move ordering (#1171) is fitted once, on the newest learn-lane export or on 5,000 games of its own, and screened once on 800 paired `improve-dev` games against `main`'s AI. There are two ways to close the issue:\n\n- **(a) Not stronger.** The fit's `decision.gain \u2264 0`, the screen's `edgeLow \u2264 0`, the gate fails, or a \"Beyond the gate\" test fails. A comment on #2576 then gives the fit's report and `summary.json` (and the gate's report or the failing test, where there is one), and `main` stays unchanged.\n- **(b) Stronger.** One pull request titled `AI gen <N> (learn): learned move ordering on`. It carries:\n  - the fitted `crates/ai/src/policy/weights.json`, its `keysVersion` equal to `POLICY_KEYS_VERSION` (1);\n  - `AI_MOVE_ORDER = MoveOrder::Learned`;\n  - the gate's `generation.json` and history line, and the practice-claim fixture recorded again;\n  - the docs saying the ordering is on;\n  - in its body, the fit's report, the screen's tally and the gate's table.\n\n## Files to touch\n\nOnly in outcome (b):\n\n| Path | Kind | What changes |\n|---|---|---|\n| `crates/ai/src/policy/weights.json` | change | the fitted table (`retrain_policy.sh` writes it) |\n| `crates/ai/src/config.rs` | change | `AI_MOVE_ORDER` set to `MoveOrder::Learned` (the script's `sed`) |\n| `crates/ai/src/policy.rs` | change | module doc, line 5: drop \", the default,\" |\n| `crates/ai/generation.json` | change | written by `promote` |\n| `training/history/learn.jsonl` | change | one line appended by `promote` |\n| `crates/server/tests/fixtures/practice-claim.json` | change | recorded again (R1303002) |\n| `docs/learned-eval.md` | change | the move-ordering row of \"How it ranks\", line 100 |\n| `crates/ai/README.md` | change | \"The policy prior (#1171)\": line 352's comment and the first bullet |\n| `training/ml/README.md` | change | the last sentence of the `retrain_policy.sh` paragraph (lines 104\u2013105) |\n| `spec/rulings/R1171001.md` | change | body: \"With `Heuristic`, the default,\" now reads as history |\n\nTouch nothing else. That rules out:\n\n- `retrain_policy.sh`, `policy_fit.py` and `.github/workflows/learn.yml`;\n- every test file, `crates/engine`, `crates/cards`;\n- `spec/11-rulings.md`, `spec/INDEX.md` and `spec/pending/`. No new ruling is needed.\n\nGoverning rules: SPEC \u00a79.9; R1171000 and R1171001 (the prior); R850000, R850001 and R1679000 (the paired gate, its hold-out deals, its sequential test); R1012000 (the learn lane); R1006002 (seed bases); R1303002 (the fixture). Also `training/README.md` (The gate, What a lane may change), `training/improve.md` (How you measure, Beyond the gate) and `training/ml/learn-promote.sh`, the pattern for steps 5\u20138.\n\n## Steps\n\n1. **Tools and branch.**\n   - `uv --version` works; if not, run `pipx install uv`. `gh auth status` is logged in. Rust, pnpm and `jq` are installed.\n   - From a clean checkout: `git fetch origin && git switch -c policy/issue-2576 origin/main`.\n   - Do not name it `ai/<anything>`: CI's `rust (training gate)` fails on an `ai/` branch other than a lane's.\n2. **The data.**\n   - Take the newest `learn.yml` run whose export finished: `gh run list --repo Jlore-Studios/JackiOh --workflow learn.yml --limit 10`.\n   - List its artifacts: `gh api repos/Jlore-Studios/JackiOh/actions/runs/<run>/artifacts --paginate --jq '.artifacts[].name'`. The shards are named `selfplay-<base>-<from>`.\n   - Download the five lowest `<from>` (5,000 games each, so 25,000 games) into an empty folder, with one `-n` per name: `gh run download <run> --repo Jlore-Studios/JackiOh --dir ~/policy-2576/logs -n selfplay-<base>-1 -n \u2026`.\n   - Why only five: the fit reads at most `MAX_GAMES` = 20,000 training games plus a held-out tenth. Its loader holds every row in memory, and `--policy` rows are about 120 KB a game (about 3 GB for 25,000 games), so the whole 100,000-game export only costs disk and memory.\n   - With no export younger than 30 days, use the fallback in step 3.\n3. **Run the script once:**\n   - With the export: `training/ml/retrain_policy.sh --out ~/policy-2576/out --logs ~/policy-2576/logs`.\n   - Fallback: `training/ml/retrain_policy.sh --out ~/policy-2576/out --games 5000 --seed policy-2576`.\n   - Leave `--parent-bin` out: the script builds the parent from `origin/main` in a worktree of its own.\n   - Watch `~/policy-2576/out/positions.json` as it appears. If its `replayed` count is under 5,000, the export is thinner than the fallback. In that case stop the script before the screen starts, `rm -rf ~/policy-2576/out`, restore the two files (as in step 4) and use the fallback instead.\n   - Never pass `--screen-games`, and never run the screen again.\n4. **If the script exits 1** (the fit's gain \u2264 0, or the screen's `edgeLow \u2264 0`): outcome (a).\n   - Run `git checkout -- crates/ai/src/policy/weights.json crates/ai/src/config.rs`.\n   - Comment on #2576 with `gh issue comment 2576 --repo Jlore-Studios/JackiOh --body-file <file>`. The file holds `out/fit/report.md` (the table: top1, within6, within20 and mean rank, prior beside heuristic) and `out/summary.json` in a `json` block.\n   - Open no pull request, then close the issue. Stop here.\n5. **If it exits 0**, edit `crates/ai/src/policy.rs` line 5:\n   - before: `` //! - **Where.** `AI_MOVE_ORDER` (`config.rs`) chooses. With `MoveOrder::Heuristic`, the default, ``\n   - after: `` //! - **Where.** `AI_MOVE_ORDER` (`config.rs`) chooses. With `MoveOrder::Heuristic` ``\n   - Keep line 6 as it is. Run `cargo fmt --check`.\n   - Then commit everything under `crates/ai/src` now, before the gate. The gate's seeds are `learn:<HEAD:crates/ai/src>:<d>`, so any later edit there breaks `--verify`.\n   - The commit: `git add crates/ai/src/policy/weights.json crates/ai/src/config.rs crates/ai/src/policy.rs && git commit -m \"Stack (learn): learned move ordering on (#2576)\" -m \"$(cat ~/policy-2576/out/summary.json)\"`.\n   - Check `jq .keysVersion crates/ai/src/policy/weights.json` prints `1`.\n6. **The gate, once:** `cargo jackioh promote --lane learn --parent-bin ~/policy-2576/out/parent-jackioh > ~/policy-2576/out/promote.md; echo $?`.\n   - **Exit 1:** this is outcome (a). Comment with `report.md`, `summary.json` and `promote.md`, then delete the branch (`git switch main && git branch -D policy/issue-2576`). Stop here.\n   - **Exit 0:** run `git add crates/ai/generation.json training/history/learn.jsonl && git commit -m \"AI gen $(jq -r .generation crates/ai/generation.json) (learn): learned move ordering on (#2576)\" -m \"$(cat ~/policy-2576/out/promote.md)\"`.\n7. **The practice-claim fixture**, as `learn-promote.sh` does:\n   - `JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh`\n   - `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`\n   - `pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`\n   - `cargo test -p jackioh-server --test server r1303002`\n   - Then `git add crates/server/tests/fixtures/practice-claim.json && git commit -m \"The practice-claim fixture, recorded again by AI gen <N> (#2576)\"`.\n8. **Beyond the gate:** `pnpm --dir apps",
-        "provider": "claude-4",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "arget/release/ 2>/dev/null | head\", \"description\": \"Check pipx and build progress\"}\n- Bash: {\"command\": \"ls .harness/; grep -n \\\"runs_on\\\" -r .harness/ bot/README.md | head -20\", \"description\": \"Check providers runs_on\"}\n- Bash: {\"command\": \"grep -rn \\\"CallTimeout\\\\|call_timeout\\\" bot/go/internal --include=*.go | grep -v _test | head -15; grep -n \\\"vCPU\\\\|cores\\\\|CPU\\\" bot/machine/README.md | head -10\", \"description\": \"Check\u2026\n- Grep: {\"pattern\": \"AI_MOVE_ORDER|POLICY_PRIOR|moveOrder|MoveOrder::Learned\", \"output_mode\": \"content\", \"glob\": \"!crates/ai/src/**\"}\n- Bash: {\"command\": \"sed -n 360,440p crates/ai/build.rs; sed -n 185,215p crates/ai/tests/ai/policy.rs\", \"description\": \"Read build.rs table check and policy test\"}\n- Bash: {\"command\": \"cat spec/rulings/R1171001.md | cut -c1-1500; cat /tmp/plan-build.log\", \"description\": \"Read R1171001 and check build\"}\n- Bash: {\"command\": \"sleep 60; cat /tmp/plan-build.log; ls target/release/jackioh 2>&1\", \"description\": \"Wait briefly and check build\"}\n- tool error: <tool_use_error>Blocked: sleep 60 followed by: cat /tmp/plan-build.log ls target/release/jackioh. To wait for a condition, use Monitor with an until-loop (e.g. `until <check>; do sleep 2; done`). To \u2026\n- Bash: {\"command\": \"sed -n 85,130p training/ml/README.md\", \"description\": \"Read ML README on policy retrain\"}\n- Bash: {\"command\": \"sed -n 1,50p crates/tools/src/selfplay.rs | cut -c1-200\", \"description\": \"Read selfplay header\"}\n- Bash: {\"command\": \"grep -n \\\"func PlanNeeds\\\" -A40 bot/go/internal/human/human.go\", \"description\": \"Read PlanNeeds parsing\"}\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/plan-build.log; do sleep 5; done; cat /tmp/plan-build.log\", \"description\": \"Wait for the release build to finish\", \"timeout\": 1800000, \"run_in_background\": t\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2576/.bot-plan.md\", \"old_string\": \"## TODO\", \"new_string\": \"- CI training-gate (promote --verify) runs only for ai/* head refs -\u2026\n- Bash: {\"command\": \"ls apps/web/src/practice/ apps/web/src/tutorial/scripts/ | head -40; grep -rln \\\"practice-claim\\\" crates/server/tests apps/web/src | head\", \"description\": \"List practice and tutorial tes\u2026\n- Bash: {\"command\": \"grep -n \\\"practice-claim\\\\|fn \\\\|R1303002\\\" crates/server/tests/api/practice.rs | head -20; sed -n 1,40p apps/web/src/practice/claim.test.ts\", \"description\": \"Read practice-claim test bi\u2026\n- Bash: {\"command\": \"sed -n 1,34p crates/tools/src/positions.rs | cut -c1-220\", \"description\": \"Read positions header\"}\n- Bash: {\"command\": \"until grep -q \\\"^exit\\\" /tmp/plan-build.log; do sleep 5; done; cat /tmp/plan-build.log\", \"description\": \"Wait for release build to finish\", \"timeout\": 1500000}\n- Bash: {\"command\": \"mkdir -p /tmp/plan-sp && cd /tmp && ( time /home/runner/work/_temp/work/item-2576/target/release/jackioh selfplay --games 24 --seed plantiming-2576 --out /tmp/plan-sp/logs ) > /tmp/plan-\u2026\n- Bash: {\"command\": \"echo \\\"$CARGO_TARGET_DIR\\\"; ls -d target 2>&1; cargo metadata --format-version 1 --no-deps 2>/dev/null | python3 -c \\\"import json,sys; print(json.load(sys.stdin)['target_directory'])\\\"\",\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/plan-sp && ( time \\\"$CARGO_TARGET_DIR/release/jackioh\\\" selfplay --games 24 --seed plantiming-2576 --out /tmp/plan-sp/logs ) > /tmp/plan-sp/run.txt 2>&1; tail -8 /tmp/plan-\u2026\n- Bash: {\"command\": \"( time \\\"$CARGO_TARGET_DIR/release/jackioh\\\" positions /tmp/plan-sp/logs/selfplay-plantiming-2576-1-24.jsonl --out /tmp/plan-sp/positions.jsonl --every decision --policy ) 2>&1 | tail -5\u2026\n- Bash: {\"command\": \"rm -rf /tmp/plan-sp; grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head -20; ls crates/server/tests/; grep -rn \\\"r1303002_the_ai_rerun\\\" crates/server/tests | head -3\", \"de\u2026\n- Bash: {\"command\": \"grep -n -i \\\"smoke\\\" e2e/README.md | head -8; ls e2e/cypress/e2e | grep \\\"^13\\\"\", \"description\": \"Check e2e smoke set and spec 13\"}\n- Bash: {\"command\": \"ls .github/hygiene 2>/dev/null; grep -rn \\\"branch\\\" .github/hygiene/*.py 2>/dev/null | grep -i \\\"prefix\\\\|allowed\\\\|pattern\\\\|re\\\\.compile\\\" | head -10\", \"description\": \"Check hygiene br\u2026\n- Bash: {\"command\": \"sed -n 1,40p .github/hygiene/branches.py\", \"description\": \"Read hygiene branches rule header\"}\n- Bash: {\"command\": \"grep -n \\\"MAX_GAMES\\\\|def load\\\\|def read\\\\|open(\\\" training/ml/jackioh_ml/policy_fit.py | head; grep -n \\\"artifact\\\\|name: selfplay-\\\\|upload-artifact\\\" -A2 .github/workflows/selfplay.y\u2026\n- Bash: {\"command\": \"grep -n \\\"name:\\\" .github/workflows/selfplay-shards.yml | head -20; grep -n \\\"upload-artifact\\\" -A4 .github/workflows/selfplay-shards.yml\", \"description\": \"Find shard artifact names\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A2 crates/ai/Cargo.toml; ls crates/ai/tests/; grep -n \\\"^fn r1171\\\\|^ fn r1171\\\\|fn r1171\\\" crates/ai/tests/ai/*.rs | head\", \"description\": \"Find AI test ta\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2576/.bot-plan.md\", \"content\": \"**Human required:** a person with a GitHub login and a few free hours on a machine (the owner's PC, the learn lane's r\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"max_decision_ms\\\" crates/ai/src/config.rs | head -3; sed -n 5,6p crates/ai/src/policy.rs\", \"description\": \"Check plan length and two cited facts\"}\n- Bash: {\"command\": \"grep -rn \\\"max_decision_ms\\\" crates/ai/src/*.rs crates/engine/src/config.rs | head -5\", \"description\": \"Find max_decision_ms constant\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-2576/.bot-plan.md\", \"old_string\": \" - before: `` - **Where.** `AI_MOVE_ORDER` (`config.rs`) chooses. With `MoveOrder::Heuristic`\u2026\n- said: **Human required:** a person with a GitHub login and a few free hours on a machine (the owner's PC, the learn lane's runner, plays about 2,500 games an hour) runs `training/ml/retrain_policy.sh`, and the gate if it passes, by the steps below. The bot cannot do it. The newest learn export's artifact\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
@@ -10947,14 +10833,12 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "question": "a person with a GitHub login and a few free hours on a machine (the owner's PC, the learn lane's runner, plays about 2,500 games an hour) runs `training/ml/retrain_policy.sh`, and the gate if it passes, by the steps below. The bot cannot do it. The newest learn export's artifacts need a token to download (`gh run download`), and the bot holds none. Its fallback, 5,000 self-play games, takes 3\u20134 h on four vCPUs before the 800-game screen and a gate of up to 2,000 games. That is past the bot's 150-minute builder call and 330-minute job (`.harness/config.json`: `call_timeout_minutes`, `job_budget_minutes`), and nothing is kept between its jobs. Measured on this planner's runner (four vCPUs): one release build of `jackioh-tools` took 3 min 50 s; `selfplay --games 24` took 2 min 8 s (one game alone took 78 s); `positions --every decision --policy` over those 24 games took 1.4 s and wrote 1,674 rows (2.9 MB).",
       "queued_at": "2026-10-31T05:29:43Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "41172816064",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T05:29:50Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2577": {
       "action": "build",
@@ -10982,13 +10866,11 @@
     },
     "2578": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T06:18:43Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -10996,7 +10878,6 @@
       "planned_tier": "strong",
       "pr": 2590,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-31T05:44:21Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -11004,9 +10885,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T06:31:17Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2579": {
@@ -11045,13 +10924,11 @@
     },
     "2582": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T06:38:32Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -11059,7 +10936,6 @@
       "planned_tier": "strong",
       "pr": 2598,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-31T06:00:59Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -11067,14 +10943,11 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T08:11:48Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2584": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-31T08:34:02Z",
         "by": "`claude` (strong)",
@@ -11089,39 +10962,17 @@
       "interruptions": 0,
       "issue": 2422,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-31T06:30:45Z",
       "round_tier": "strong",
       "run_id": "41180672796",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-31T07:27:24Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41180672796",
-            "tier": "strong"
-          }
-        ],
-        "sha": "cfe46eb94f4608c396c336530b75b91712e33074",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2585": {
       "cleared": {
@@ -11197,7 +11048,6 @@
     },
     "2590": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-31T14:38:51Z",
         "by": "`claude` (strong)",
@@ -11214,51 +11064,20 @@
       "interruptions": 0,
       "issue": 2578,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-31T13:34:24Z",
       "round_tier": "strong",
       "run_id": "41206199518",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-31T13:34:39Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl"
-          ],
-          "from": "e2dd30022816b55d4dc546f421556fc8c7a450b2",
-          "main": "eeb32c3e3a35263a85a415cfcd99eaf6d7ef6169"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41206199518",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6ef009cac6aa9ff4faf7dc12098463cb198850d2",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2591": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-31T13:07:28Z",
@@ -11275,41 +11094,19 @@
       "interruptions": 0,
       "issue": 2574,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-31T08:49:47Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "41197608988",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-31T11:37:09Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41197608988",
-            "tier": "strong"
-          }
-        ],
-        "sha": "28b0d1379138fc3ff0e5c2624653ad5973778f62",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2592": {
       "cleared": {
@@ -11351,26 +11148,7 @@
       "feedback_since": "2026-10-31T08:04:20Z",
       "issue": 2564,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41183089972",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ccdacde251212c01e619126f1efe7cd30c2b97a8",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2596": {
       "cleared": {
@@ -11384,30 +11162,10 @@
       "feedback_since": "2026-10-31T08:34:35Z",
       "issue": 2569,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41185172520",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ed7caca9c0b6b8ef50053d7dd2be8cba5b40d91e",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2597": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-31T11:16:15Z",
         "by": "`claude` (strong)",
@@ -11424,52 +11182,20 @@
       "interruptions": 0,
       "issue": 2566,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-31T10:29:34Z",
       "round_tier": "strong",
       "run_id": "41192973681",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-31T10:29:46Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/ai/src/evaluate.rs",
-            "spec/09-architecture.md"
-          ],
-          "from": "b9745f5886c2830c8d09621f05fb4a0417981825",
-          "main": "11f83582b169b679af46c1519683a7d285652b1d"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41192973681",
-            "tier": "strong"
-          }
-        ],
-        "sha": "40f1e26519567ae8e219dd3545e13cdd814080da",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "2598": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-31T14:39:30Z",
         "by": "`claude` (strong)",
@@ -11484,39 +11210,17 @@
       "interruptions": 0,
       "issue": 2582,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-31T13:19:57Z",
       "round_tier": "strong",
       "run_id": "41205106867",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-31T13:20:12Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41205106867",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d4e708e95b42c1c44653119041a1e0a2d3ad4704",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 3
     },
     "2599": {
       "cleared": {
@@ -11530,30 +11234,10 @@
       "feedback_since": "2026-10-31T09:01:19Z",
       "issue": 2568,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41186942593",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b0d2641339d4d1d206c1be20e4b574d3f1332b11",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2600": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-31T13:00:00Z",
         "by": "`claude` (strong)",
@@ -11570,48 +11254,17 @@
       "interruptions": 0,
       "issue": 2565,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-31T12:04:51Z",
       "round_tier": "medium",
       "run_id": "41199578435",
       "runs_on": "ubuntu-latest",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-31T12:05:41Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/ai/README.md",
-            "spec/09-architecture.md"
-          ],
-          "from": "ff8dc3e300921cc53557a17269df00ee0fa3a3bc",
-          "main": "f51e05a0fe134393854489fee10fa0a02271495f"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41199578435",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c3652a74a1f02ee2b63e8d4b0f64751ac32e6f76",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "2601": {
       "cleared": {
@@ -11625,45 +11278,16 @@
       "feedback_since": "2026-10-31T09:01:42Z",
       "issue": 2567,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41186971884",
-            "tier": "strong"
-          }
-        ],
-        "sha": "aa1040b96e05b4b2b7cb14191324727be4707c68",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2602": {
       "action": "plan",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-31T14:38:03Z",
         "difficulty": "medium",
         "provider": "claude-8",
         "tier": "strong",
         "why": "rule line 7/8: the six missing files can only be rendered by the voice workflow on GitHub's macOS and Windows runners, which no builder can run, so it is human required whatever the size"
-      },
-      "handoff": {
-        "at": "2026-10-31T14:34:28Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Plan (opus, strong)\n\n**Human required:** a person runs the `voice` workflow (Actions \u2192 voice \u2192 Run workflow, or `gh workflow run voice.yml --ref <branch>`) on a branch cut from `main`, then opens that branch's pull request. The six missing voice lines need macOS `say` (voice `diva`) and Windows SAPI (voice `sapi-announcer`). No Linux builder has either (`docs/ADDING_CARDS.md` \u00a77), and the bot cannot push a `[gen:voice]` commit or dispatch a workflow.\n\n## Goal\n\nMake super.yml's `web (audio, fx, asset and daily tests)` job pass on `main` again. Its only failure is `apps/web/src/audio/voice-assets.test.ts`: 24 of its 28 tests fail, because two cards became Units without their voice files being rendered:\n\n- **AI Girlfriend**, `meditative-049-3`: became a Unit in #2309 (f61b0336e).\n- **Megabase**, `stinkyscape-116`: became a Unit in #2310 (bot/issue-2278).\n\nBoth merged on 2026-10-30. Their `card-audio.json5` and `voice-text.json` entries already list play, attack and death lines. But `apps/web/public/audio/voice/` and `voice-manifest.json` still hold the old Spell `cast` line. Done looks like this:\n\n- the six Unit lines are rendered and in the manifest;\n- the two orphan `cast` files and their manifest entries are gone;\n- `gen-voice.mjs --check` exits 0;\n- the job's command passes all 57 files.\n\n**Reproduced locally at eeb32c3e3.** Command: `JACKIOH_DAILY=1 pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts src/net/promote-production.test.ts src/tutorial/scripts/`.\n- Result: `Test Files 1 failed | 56 passed (57)`, `Tests 24 failed | 1353 passed | 5 skipped`, every failure in `voice-assets.test.ts`.\n- `gen-voice.mjs --check` (via B37) reports 16 problems:\n  - \"missing file\" and \"missing from the manifest\" for `meditative-049-3-{play,attack,death}` and `stinkyscape-116-{play,attack,death}`;\n  - \"orphan file\" and \"orphan manifest entry\" for `meditative-049-3-cast` and `stinkyscape-116-cast`.\n\n## Files to touch\n\n| Path | new/change | What |\n|---|---|---|\n| `apps/web/public/audio/voice/meditative-049-3-play.m4a` | new | rendered by macOS `say` (`diva`): \"Fight for my amusement, darlings.\" |\n| `apps/web/public/audio/voice/meditative-049-3-attack.m4a` | new | `say` (`diva`): \"For me? You shouldn't.\" |\n| `apps/web/public/audio/voice/meditative-049-3-death.m4a` | new | `say` (`diva`): \"We are so over.\" |\n| `apps/web/public/audio/voice/stinkyscape-116-play.m4a` | new | Windows SAPI (`sapi-announcer`): \"Megabase online. Credits for everyone!\" |\n| `apps/web/public/audio/voice/stinkyscape-116-attack.m4a` | new | SAPI (`sapi-announcer`): \"Launch the fleet!\" |\n| `apps/web/public/audio/voice/stinkyscape-116-death.m4a` | new | SAPI (`sapi-announcer`): \"The base has fallen.\" |\n| `apps/web/public/audio/voice/meditative-049-3-cast.m4a` | delete | orphan, removed by `gen-voice.mjs` |\n| `apps/web/public/audio/voice/stinkyscape-116-cast.m4a` | delete | orphan, removed by `gen-voice.mjs` |\n| `apps/web/src/audio/voice-manifest.json` | change | `files`: six entries added (`hash`, `bytes`), the two `-cast` entries dropped; written by `gen-voice.mjs`, never by hand |\n\n**Do not touch:**\n- `apps/web/src/audio/card-audio.json5`, `apps/web/src/audio/voice-text.json` and `crates/cards/card-text.yaml`: already correct, and an edit changes the hashes;\n- `crates/cards/catalog.json` and `crates/cards/patches/`;\n- `apps/web/scripts/gen-voice.mjs` and `apps/web/src/audio/voice-assets.test.ts`;\n- `.github/` and `bot/`.\n\n**What governs it:**\n- SPEC \u00a710.11: a Unit has a play, an attack and a death line; anything else has a cast line.\n- Rulings: R501 (the SAPI backend), R655 (card-audio.json5), R1420 (unshipped sets owe no file), R1448 (attack lines, the voice workflow) and R1884000 (the 16 MiB budget).\n- No new ruling.\n\n## Steps\n\n1. **Cut a branch from current `main`.** Any name but `main` or `production` (voice.yml ignores those). For example:\n   ```\n   git fetch origin && git switch -c voice/issue-2602 origin/main && git push -u origin voice/issue-2602\n   ```\n2. **Render on GitHub's runners.** Run `gh workflow run voice.yml --ref voice/issue-2602` (or use Actions \u2192 voice \u2192 Run workflow with that branch), then `gh run watch`. The three jobs, in order:\n   - `render the say lines (macOS)` renders the three `meditative-049-3-*` lines, removes both orphan `-cast` files and their manifest entries, and pushes \"Voice: the lines macOS say renders (the voice workflow, R1448)\".\n   - `render the SAPI lines (Windows)` renders the three `stinkyscape-116-*` lines and pushes \"Voice: the lines Windows SAPI renders (the voice workflow, R1448)\". Both render steps may exit 1 on purpose; only the next job decides.\n   - `gen-voice --check` must pass and print `gen-voice: ok, <n> files, <bytes> bytes`.\n\n   If `check` fails, read the key it names. A file over 4 s or over the budget is a real problem; report it on #2602 rather than editing the manifest.\n3. **Pull and inspect.** Run `git pull`, then `git diff --stat origin/main...HEAD`. It must list exactly the nine paths in the table. Then run `node apps/web/scripts/gen-voice.mjs --check` and expect exit 0.\n4. **Start CI.** The workflow's commits start no CI (GitHub's rule, voice.yml's header), so push one more commit:\n   ```\n   git commit --allow-empty -m \"Start CI after the voice renders (#2602)\" && git push\n   ```\n5. **Open the pull request.**\n   - Title: `Patch: AI Girlfriend's and Megabase's Unit voice lines, rendered`.\n   - Body: \"Refs #2602\". Name the job it makes pass (`web (audio, fx, asset and daily tests)`) and how it was checked (step 6). Do not write \"Closes\": the next green super run closes the issue.\n6. **Prove the daily job.** Run `gh workflow run super.yml --ref voice/issue-2602` and confirm that its `web (audio, fx, asset and daily tests)` job is green. Alternatively, run the Tests commands below locally. Then merge through the queue once the five required checks pass.\n\n## Tests\n\nNo new test. The existing B35, B36, B37 and R655 cases in `apps/web/src/audio/voice-assets.test.ts` fail without the six files and pass with them, so they already prove the fix.\n- **Rejected:** a new per-pull-request test. ci.yml leaves the asset tests out of pull requests on purpose (its `web-unit` comment), so a pull request's checks cannot prove this anyway.\n\nCommands, from the repository root, after `pnpm install --frozen-lockfile` and `sh scripts/build-wasm.sh` (`src/test/setup.ts` loads the WASM module for every file):\n- `node apps/web/scripts/gen-voice.mjs --check`: exit 0.\n- `JACKIOH_DAILY=1 pnpm exec vitest run --project web src/audio/voice-assets.test.ts`: all 28 pass.\n- The job's full command, `JACKIOH_DAILY=1 pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts src/net/promote-production.test.ts src/tutorial/scripts/`: `Test Files 57 passed (57)`.\n\n## Done when\n\n- [ ] Six `.m4a` files exist for `meditative-049-3-{play,attack,death}` and `stinkyscape-116-{play,attack,death}`, rendered by the `voice` workflow.\n- [ ] Both `-cast` files and their manifest entries are gone.\n- [ ] voice.yml's `gen-voice --check` job is green on the branch, and `node apps/web/scripts/gen-voice.mjs --check` exits 0 locally.\n- [ ] The diff against `main` is exactly the nine paths above.\n- [ ] `voice-assets.test.ts` passes 28/28, and the job's command passes 57/57 files.\n- [ ] The pull request is open with the body from step 5, its five required checks (`rust`, `web`, `e2e smoke`, `db`, `bot selftest`) are green after the extra push, and super.yml's `web (audio, fx, asset and daily tests)` is green on the branch.\n\n## Risks\n\n- **Fake assets.** A placeholder or silent `.m4a` with an `ftyp`/`M4A ` header, plus hand-written `hash` and `bytes`, would pass every check while shipping no voice. Never do that. Only `gen-voice.mjs` on the workflow's runners writes these files and the manifest.\n- **Hash drift.** Touching `card-audio.json5`'s `diva`/`sapi-announcer` voices or `voice-text.json` re-hashes every line in those voices ",
-        "provider": "claude-8",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "ates/cards/patches/v0.5.9c.json crates/cards/patches/v0.5.9b.json crates/cards/patches/v0.5.9.json | head; python3 -I -c \\\"\\nimport json\\\u2026\n- Bash: {\"command\": \"git log --format='%h %ad %s' --date=short -S'stinkyscape-116' -- crates/cards/catalog.json apps/web/src/audio | head; git log --format='%h %ad %s' --date=short -5 -- apps/web/public/audi\u2026\n- Bash: {\"command\": \"git show --stat c31780975 | head -40; git show --stat f61b0336e | head -40\", \"description\": \"Inspect the two commits that turned cards into Units\"}\n- Bash: {\"command\": \"sed -n 1,120p apps/web/src/audio/voice-assets.test.ts\", \"description\": \"Read the top of voice-assets.test.ts\"}\n- Bash: {\"command\": \"grep -n -i \\\"voice\\\" docs/ADDING_CARDS.md | head -60; ls .github/workflows | grep -i voice\", \"description\": \"Read the voice guidance in ADDING_CARDS.md\"}\n- Bash: {\"command\": \"sed -n 240,300p docs/ADDING_CARDS.md; sed -n 1,80p .github/workflows/voice.yml\", \"description\": \"Read the voice rendering docs and workflow\"}\n- Bash: {\"command\": \"grep -n '\\\"meditative-049-3\\\"\\\\|meditative-049-3:\\\\|stinkyscape-116' -A12 apps/web/src/audio/card-audio.json5 | head -50; grep -n \\\"meditative-049-3\\\\|stinkyscape-116\\\" apps/web/src/audi\u2026\n- Bash: {\"command\": \"grep -rn \\\"gen:voice\\\" bot/ .harness/ 2>/dev/null | head -20\", \"description\": \"Search the harness for gen:voice handling\"}\n- Bash: {\"command\": \"git log --format='%h %ad %s' --date=iso -G'stinkyscape-116.*Megabase' -- apps/web/src/audio/card-audio.json5 | head; git log -3 --format='%h %ad %s' --date=iso -G'\\\"stinkyscape-116\\\"' --\u2026\n- Bash: {\"command\": \"for c in $(git log --format=%h -n 40 -- apps/web/src/audio/card-audio.json5); do echo \\\"$c $(git show $c:apps/web/src/audio/card-audio.json5 2>/dev/null | grep -A1 '\\\"stinkyscape-116\\\"' \u2026\n- Bash: {\"command\": \"grep -rn -i \\\"voice\\\" bot/README.md bot/go --include=*.go --include=*.md --include=*.json 2>/dev/null | head -20; grep -rn -i \\\"voice\\\" .harness 2>/dev/null | head\", \"description\": \"Sear\u2026\n- Bash: {\"command\": \"grep -rln -i \\\"gen.voice\\\\|voice.yml\\\\|\\\\[gen\\\" bot/go --include=*.go | head; grep -rn \\\"gen:voice\\\\|genvoice\\\\|GenVoice\\\" bot/go --include=*.go | head\", \"description\": \"Search Go harnes\u2026\n- Bash: {\"command\": \"grep -n -i \\\"orphan\\\\|unlink\\\\|rmSync\\\\|delete\\\" apps/web/scripts/gen-voice.mjs | head -30\", \"description\": \"Check whether gen-voice prunes orphans\"}\n- Bash: {\"command\": \"sed -n 1,80p apps/web/scripts/gen-voice.mjs; sed -n 700,800p apps/web/scripts/gen-voice.mjs\", \"description\": \"Read gen-voice.mjs header and render loop\"}\n- Bash: {\"command\": \"grep -rn '\\\"bot: \\\\|bot: %s pass\\\\|pass %d for' bot/go --include=*.go | grep -v _test | head -10; tail -c 1500 /tmp/vitest.log\", \"description\": \"Find harness commit message format and ch\u2026\n- Bash: {\"command\": \"for c in $(git log --first-parent --format=%h -n 60 main -- apps/web/src/audio/card-audio.json5); do echo \\\"$c $(git log -1 --format='%ad %s' --date=iso $c | cut -c1-110) | $(git show $c\u2026\n- said: The run is still going (tutorial sweeps). Writing the draft now with what I've found.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2602/.bot-plan.md\", \"content\": \"# Draft plan for #2602 (planner notes)\\n\\n## Findings so far\\n- Reproduced super.yml `web-extra` locally: `JACKIOH_DAI\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"grep -c \\\"\\u2713\\\\|\\u276f |web|\\\" /tmp/vitest.log; grep \\\"\\u276f |web|\\\\|\\u2713 |web|\\\" /tmp/vitest.log | grep -v \\\"voice-assets\\\" | head -40; ps aux | grep -c vitest\", \"description\": \"S\u2026\n- Bash: {\"command\": \"sed -n 80,160p .github/workflows/voice.yml\", \"description\": \"Read the rest of the voice workflow\"}\n- Bash: {\"command\": \"grep -n '^\\\\s*diva:\\\\|^\\\\s*\\\"diva\\\"\\\\|sapi-announcer\\\"\\\\?:' -A3 apps/web/src/audio/card-audio.json5 | head -12; grep -n '\\\"meditative-049-3\\\"\\\\|\\\"stinkyscape-116\\\"' -A4 apps/web/src/audi\u2026\n- Bash: {\"command\": \"until grep -q \\\"^exit=\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-2602/711f6aac-e6ca-4991-89b2-6398b035c688/tasks/buj0j3ik0.output 2>/dev/null || grep -q \\\"Test Files\\\" /tmp/vi\u2026\n- Bash: {\"command\": \"grep -n -i \\\"title\\\" docs/issues-and-patches.md | head -20\", \"description\": \"Check PR title rules\"}\n- Monitor: {\"command\": \"until grep -q \\\"Test Files\\\" /tmp/vitest.log; do sleep 10; done; grep -n \\\"Test Files\\\\|Tests \\\\|Duration\\\" /tmp/vitest.log\", \"description\": \"daily web vitest run finishing\", \"timeout_ms\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q \"Test Files\" /tmp/vitest.log, grep -n \"Test Files\\|Tests \\|Duration\" /tmp/vitest.log\n- Bash: {\"command\": \"grep -n \\\"FAIL \\\\|\\u276f |web|\\\\|\\u2713 |web|\\\" /tmp/vitest.log | grep -v \\\"voice-assets\\\" | head -30; tail -8 /tmp/vitest.log\", \"description\": \"List any failures outside voice-assets\"}\n- Bash: {\"command\": \"grep -n \\\"gen-voice\\\\|voice\\\" .github/workflows/ci.yml scripts/ci-scope.sh | head -20\", \"description\": \"Check whether per-PR CI runs gen-voice --check\"}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-2602/711f6aac-e6ca-4991-89b2-6398b035c688/tasks/b6aoeco6h.output; grep -n \\\"Test Files\\\\|Tests \\\\|Duration\\\\|exit=\\\" /tmp/vitest.lo\u2026\n- said: The whole job reproduces locally: 1 failed file (`voice-assets.test.ts`, 24 tests), 56 passed. The only cause is the six unrendered voice lines. Checking ci.yml's web job so I can suggest a guard.\n- Bash: {\"command\": \"sed -n 955,1010p .github/workflows/ci.yml\", \"description\": \"Read ci.yml's web unit job\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-2602/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"rule line 7/8: the six missing files can only be rendered by the voi\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"rule line 7/8: the six missing files can only be rendered by the voice workflow on GitHub's macOS and Windows runners, which no builder can run, so it is human required whatever the size\"} --> **Human required:** a person runs the `voice` workflow (Actions\u2026"
       },
       "kind": "build",
       "pending_request": false,
@@ -11672,16 +11296,13 @@
       "planned_by_id": "claude-8",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "question": "a person runs the `voice` workflow (Actions \u2192 voice \u2192 Run workflow, or `gh workflow run voice.yml --ref <branch>`) on a branch cut from `main`, then opens that branch's pull request. The six missing voice lines need macOS `say` (voice `diva`) and Windows SAPI (voice `sapi-announcer`). No Linux builder has either (`docs/ADDING_CARDS.md` \u00a77), and the bot cannot push a `[gen:voice]` commit or dispatch a workflow.",
       "run_id": "41209641700",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T14:20:03Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "2603": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T20:47:10Z",
@@ -11694,7 +11315,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T20:47:12Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -11702,7 +11322,6 @@
       "planned_tier": "strong",
       "pr": 2638,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-31T19:55:27Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -11710,15 +11329,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:47:50Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2604": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T20:08:51Z",
@@ -11731,7 +11347,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T20:08:53Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -11739,7 +11354,6 @@
       "planned_tier": "strong",
       "pr": 2633,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-31T19:55:53Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -11747,15 +11361,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:11:10Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2607": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T20:25:59Z",
@@ -11768,7 +11379,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T20:26:01Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -11776,7 +11386,6 @@
       "planned_tier": "strong",
       "pr": 2632,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-31T20:01:51Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -11784,15 +11393,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:28:36Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2609": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T20:27:03Z",
@@ -11805,7 +11411,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T20:27:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -11813,7 +11418,6 @@
       "planned_tier": "strong",
       "pr": 2634,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-31T20:02:15Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -11821,15 +11425,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:27:44Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2610": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T20:26:32Z",
@@ -11842,7 +11443,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T20:26:34Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -11850,7 +11450,6 @@
       "planned_tier": "strong",
       "pr": 2635,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-31T20:04:28Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -11858,15 +11457,12 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:36:13Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2611": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-31T20:18:13Z",
@@ -11879,7 +11475,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-31T20:18:15Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -11887,7 +11482,6 @@
       "planned_tier": "strong",
       "pr": 2639,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-31T20:04:36Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -11895,10 +11489,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-31T20:18:53Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2632": {
@@ -11913,26 +11505,7 @@
       "feedback_since": "2026-10-31T20:28:36Z",
       "issue": 2607,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41239077644",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2aaf876165937bfcc9e66834962ac73dee38f412",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2633": {
       "cleared": {
@@ -11946,26 +11519,7 @@
       "feedback_since": "2026-10-31T20:11:10Z",
       "issue": 2604,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41237712296",
-            "tier": "strong"
-          }
-        ],
-        "sha": "dc570e88e9ff4631a0271cdc98c09685c8c3d5a0",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2634": {
       "cleared": {
@@ -11979,26 +11533,7 @@
       "feedback_since": "2026-10-31T20:27:44Z",
       "issue": 2609,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41239014321",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2d6e9a92f6d01bcca12269e000dd37bfb84686d9",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2635": {
       "cleared": {
@@ -12012,26 +11547,7 @@
       "feedback_since": "2026-10-31T20:36:13Z",
       "issue": 2610,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41239684498",
-            "tier": "strong"
-          }
-        ],
-        "sha": "a1f89256d4f47017221917497dcd3bb83b207301",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2638": {
       "cleared": {
@@ -12045,26 +11561,7 @@
       "feedback_since": "2026-10-31T20:47:50Z",
       "issue": 2603,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41240572597",
-            "tier": "strong"
-          }
-        ],
-        "sha": "04760d630495c4b9543f8ee3b42bc9f0682504cb",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2639": {
       "cleared": {
@@ -12078,26 +11575,7 @@
       "feedback_since": "2026-10-31T20:18:53Z",
       "issue": 2611,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41238325282",
-            "tier": "strong"
-          }
-        ],
-        "sha": "93358b122c6e964bcc868691144aab9258274987",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2644": {
       "action": "build",
@@ -12126,13 +11604,11 @@
     },
     "2645": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T03:04:39Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
@@ -12140,7 +11616,6 @@
       "planned_tier": "strong",
       "pr": 2661,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-11-01T02:36:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -12148,9 +11623,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T05:56:47Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2646": {
@@ -12182,13 +11655,11 @@
     },
     "2647": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T03:27:29Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
@@ -12196,7 +11667,6 @@
       "planned_tier": "strong",
       "pr": 2667,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-11-01T02:39:44Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -12204,20 +11674,16 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T06:37:09Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2648": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T06:29:03Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -12225,7 +11691,6 @@
       "planned_tier": "strong",
       "pr": 2664,
       "provider": "claude-2",
-      "question": "",
       "queued_at": "2026-11-01T02:58:06Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -12233,9 +11698,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T06:37:33Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2649": {
@@ -12270,7 +11733,6 @@
     },
     "2651": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-01T06:53:46Z",
@@ -12283,7 +11745,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T06:53:47Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -12291,15 +11752,12 @@
       "planned_tier": "strong",
       "pr": 2663,
       "provider": "claude-1",
-      "question": "",
       "round_tier": "medium",
       "run_id": "41282662555",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T06:54:21Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2652": {
@@ -12337,13 +11795,11 @@
     },
     "2653": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T06:36:15Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -12351,7 +11807,6 @@
       "planned_tier": "strong",
       "pr": 2666,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-11-01T03:59:45Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -12359,9 +11814,7 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T07:01:47Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "2655": {
@@ -12459,26 +11912,7 @@
       "feedback_since": "2026-11-01T05:56:47Z",
       "issue": 2645,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41278844711",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b10e4179f91e49bfa7723fa7ace9e1653f3f82b6",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2663": {
       "cleared": {
@@ -12492,26 +11926,7 @@
       "feedback_since": "2026-11-01T06:54:21Z",
       "issue": 2651,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41282662555",
-            "tier": "strong"
-          }
-        ],
-        "sha": "777864b1200ff223f0b729387bf0ad2834690fc1",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2664": {
       "cleared": {
@@ -12525,26 +11940,7 @@
       "feedback_since": "2026-11-01T06:37:33Z",
       "issue": 2648,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41281591111",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ab3477b67b23600a16d7ae836351eae0669af49f",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2665": {
       "cleared": {
@@ -12589,26 +11985,7 @@
       "feedback_since": "2026-11-01T07:01:47Z",
       "issue": 2653,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41283135161",
-            "tier": "strong"
-          }
-        ],
-        "sha": "4a2e5ed3b0ba1d68088c75f41ed31902783c31a4",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2667": {
       "cleared": {
@@ -12622,26 +11999,7 @@
       "feedback_since": "2026-11-01T06:37:09Z",
       "issue": 2647,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "41281563758",
-            "tier": "strong"
-          }
-        ],
-        "sha": "f16ad0dfc49b24054fe27102c9b07f635757232d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "2668": {
       "cleared": {
@@ -23213,9 +22571,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-31T10:14:11Z",
+    "at": "2026-11-01T10:38:29Z",
     "dropped": 0,
-    "shed": 62
+    "shed": 56
   },
   "rate_limited_until": null,
   "runners_explained": {
