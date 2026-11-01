@@ -26,19 +26,15 @@
 
 import type { PreviewValue } from "@jackioh/shared";
 
-/** Meditative #8 Reach the Summit, whose face in play prints only the next Ascent line. */
+/** Meditative #8 Reach the Summit. */
 export const SUMMIT_DEF_ID = "meditative-008";
 
-/** R280: the label the engine's preview carries the Summit's Ascent level under. */
 export const ASCENT_LABEL = "Ascent level";
 
-/** One "Ascent N:" line of the Summit's text. */
 const ASCENT_LINE = /^Ascent (\d+):/;
 
-/** What a face over the limit prints: its first n lines, up to its first colon, or its text clamped. */
 export type ShortForm = number | "colon" | "clamp";
 
-/** Issue #1017: every face over FACE_TEXT_LIMIT after the cut, by card and face. */
 export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: ShortForm }>> = {
   "core-093": { base: 2, radiant: 2 },
   "core-095": { base: "colon", radiant: "colon" },
@@ -137,16 +133,15 @@ export const LONG_FACES: readonly string[] = [
   "traininggrounds-039 radiant",
 ];
 
-/** What ends a short form, in place of its last full stop or colon: the text goes on in the extended description. */
+/** What ends a short form: the text goes on in the extended description. */
 export const MORE = "…";
 
 /** A colon, English or Chinese (R1302), for the "colon" form. */
 const COLON = /[:：]/;
 
-/** The stop a short form's "…" takes the place of: a full stop or a colon, English or Chinese. */
 const LAST_STOP = /[.:。：]$/;
 
-/** `cut` ending in "…", which replaces its last full stop or colon: "…take all three penalties…". */
+/** `cut` ending in "…", which replaces its last full stop or colon. */
 function trailOff(cut: string): string {
   return `${cut.trimEnd().replace(LAST_STOP, "")}${MORE}`;
 }
@@ -158,8 +153,7 @@ export function shortFormOf(defId: string, radiant: boolean): ShortForm | null {
 }
 
 /**
- * The words a `n` or "colon" short form prints: the text's first n lines, or the text up to its
- * first colon, ending in "…" in place of the full stop or colon (`trailOff`). Null when there is
+ * The words a `n` or "colon" short form prints, ending in "…" (`trailOff`). Null when there is
  * nothing to cut (a text no longer than its form, or one without a colon) and for "clamp", which
  * prints the whole text.
  */
@@ -184,9 +178,8 @@ export function ascentLevelOf(values: readonly PreviewValue[]): number | null {
 
 /**
  * What a Summit face in play prints for `level`: the header (every line before the first
- * "Ascent N:" line) and only the level's own line. Null when there is nothing to shorten to —
- * another card, no level, text with no Ascent lines (a translated face parses none, so it takes
- * its short form instead), or a level past the printed lines.
+ * "Ascent N:" line) and only the level's own line. Null when there is nothing to shorten to (a
+ * translated face parses no Ascent lines, so it takes its short form instead).
  */
 export function summitShortText(defId: string, full: string, level: number | null | undefined): string | null {
   if (defId !== SUMMIT_DEF_ID || level === null || level === undefined) return null;
@@ -222,7 +215,6 @@ export function faceLines(text: string, charsPerLine: number): number {
   return count;
 }
 
-/** Whether `text` runs past `limit`. */
 export function overLimit(text: string, limit: TextLimit): boolean {
   return faceLines(text, limit.charsPerLine) > limit.lines;
 }

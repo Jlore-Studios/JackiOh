@@ -41,7 +41,6 @@ const CARD_TYPES_NOTE = join(SPEC_DIR, "05-card-types.md");
 type TableSection = "§6.1" | "§6.2" | "§6.3";
 const TABLE_SECTIONS: readonly TableSection[] = ["§6.1", "§6.2", "§6.3"];
 
-/** The `### N.M` heading ids of a spec note. */
 function headingIds(note: string): string[] {
   return readFileSync(note, "utf8")
     .split("\n")
@@ -198,7 +197,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
   ],
 };
 
-/** The name of an entry's spec row. */
 function rowOf(entry: GlossaryEntry): string {
   return entry.row ?? entry.id;
 }
@@ -618,7 +616,6 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Recruit.rule).toBe("Summon from deck, scanning top down");
     expect(GLOSSARY.Radiant.rule).toContain("In hand or deck");
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
-    // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
     // Backrow zone reads backrow, and the retired turn-trigger prose reads label-style.
     expect(GLOSSARY["Animated on your turn"].rule).toBe("A Unit on your turn; back in its backrow on your opponent's");
@@ -758,7 +755,6 @@ function played(id: string, face: "base" | "radiant" = "base"): string {
   return fillParams(card, face);
 }
 
-/** Every catalog face's text as a player reads it. */
 const PLAYED_TEXTS: readonly { where: string; text: string }[] = Object.values(CATALOG).flatMap((card) => [
   { where: `${card.id} base`, text: fillParams(card, "base") },
   { where: `${card.id} radiant`, text: fillParams(card, "radiant") },
@@ -908,7 +904,6 @@ describe("R1384: the glossary's rows for the Meditative cards' words", () => {
 });
 
 describe("R910000: a trigger or verb bolds wherever a card uses it, in every case and inflection", () => {
-  /** Where each term token stands in `text`. */
   function termRanges(text: string): { start: number; end: number; term: GlossaryTermId }[] {
     const ranges: { start: number; end: number; term: GlossaryTermId }[] = [];
     let at = 0;
@@ -919,7 +914,6 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
     return ranges;
   }
 
-  /** Where each plain spelling stands in `text`. */
   function plainRanges(text: string): { start: number; end: number }[] {
     return PLAIN_SPELLINGS.flatMap((spelling) => {
       const ranges: { start: number; end: number }[] = [];

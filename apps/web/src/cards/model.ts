@@ -12,8 +12,7 @@
 //
 // ME-CN, R1301: a card the view says is Chinese, or any card for a reader of Chinese, prints the Chinese
 // table's words (chinese.ts) with the same numbers; a Radiant face's gold diff compares the two Chinese
-// faces (R1302). The English name and text ride along, never printed: the art's motif and the
-// glossary's terms are read from them.
+// faces (R1302). The English name and text ride along, never printed.
 
 import {
   fillParams,
@@ -53,7 +52,7 @@ import type { NamedTally } from "./tallies.ts";
 
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
 export type FaceCost = {
-  /** What the gem shows: the view's live number whenever there is one, "X" for an X card, else the printed price (an embiggen card's base). */
+  /** What the gem shows (costOf). */
   text: string;
   /** `data-cost`: the live number when there is one (CardView.cost), else `text`. */
   value: string;
@@ -101,10 +100,7 @@ export type FaceModel = {
   cost: FaceCost;
   /** Units only: live when `live` was given, else the printed face; null for non-units and unknown stats. */
   stats: FaceStats | null;
-  /**
-   * The face's catalog text whole, a Radiant face's changes marked (R277); a fused definition's is its
-   * ingredients' texts line by line (R102). In play it is what the card in play says (inPlay.ts).
-   */
+  /** On a fused definition, its ingredients' texts line by line (R102); in play, what the card in play says (inPlay.ts). */
   text: FaceText;
   /** R279: the cards and tokens this card's text names (`CardDef.refs`), linked where their names stand in `text.full`. */
   refs: readonly string[];
@@ -112,14 +108,10 @@ export type FaceModel = {
   values: readonly PreviewValue[];
   /** Live keywords when `live` was given, a hand card's as the view gives them (`InPlay.handKeywords`), else the printed face's. */
   keywords: readonly Keyword[];
-  /** A face in a game (`FaceSource.inPlay` given) rather than the collection's. */
   inPlay: boolean;
   /** R243, §6.3 Vanilla: the unit's text is gone, and the rules box says so. */
   vanilla: boolean;
-  /**
-   * Keywords the card has now that its printed face does not print, which the face prints after its
-   * text. Lucky is one entry at its sum whenever the sum is not the printed one (R1438). Empty outside play.
-   */
+  /** Keywords the card has now that its printed face does not print (gainedKeywords), printed after its text; none outside play. */
   gained: readonly Keyword[];
   /** ME-GRANT, R1107: the Death abilities other cards granted the unit, each on its own line after the gained keywords. Empty outside play. */
   grants: readonly string[];
@@ -264,12 +256,8 @@ export type FaceSource = {
   fixedX?: number;
   /** UnitView's current numbers. */
   live?: { attack: number; health: number; maxHealth: number; keywords: readonly Keyword[] };
-  /** Set on every face drawn in a game, absent in the collection (see the header). */
   inPlay?: InPlay;
-  /**
-   * ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`); its words are the table's,
-   * whatever the reader's language. A reader who reads Chinese has every face drawn so (R711000).
-   */
+  /** ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`), whatever the reader's language. */
   chinese?: boolean;
   /** MD-B15, R923: the view's tags where they differ from the definition's (a granted tag). */
   tags?: readonly Tag[];
@@ -297,10 +285,8 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   const inPlay = source.inPlay;
   const vanilla = inPlay?.vanilla === true;
   const printedText = textOf(def, source.radiant);
-  // B3.4: in play a card's numbers are the ones the view says it has now (a Degrade, an Upgrade).
   const ownText = inPlay?.params === undefined ? printedText : textOf(def, source.radiant, inPlay.params);
-  // B5 E14, R511: a copier's own words are the copied Spell's text, filled with the numbers it reads
-  // (in Chinese on a Chinese copier, R1301).
+  // B5 E14, R511: a copier's own words are the copied Spell's text (in Chinese on a Chinese copier, R1301).
   const viewCopies = inPlay?.copies;
   const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
@@ -509,10 +495,7 @@ function printedValues(def: CardDef, radiant: boolean): Record<string, number> {
   return Object.fromEntries((def.params ?? []).map((param) => [param.key, radiant ? param.radiant : param.base]));
 }
 
-/**
- * The rarity a face's frame is drawn in (R503): a token's printed rarity when it has one, else the
- * card's own. Display only; nothing reads it as the card's rarity.
- */
+/** R503: the rarity a face's frame is drawn in. Display only; nothing reads it as the card's rarity. */
 export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): Rarity | null {
   return face.printedRarity ?? face.rarity;
 }
@@ -521,9 +504,8 @@ export function frameRarity(face: Pick<FaceModel, "rarity" | "printedRarity">): 
 export const ALL_TRIBES = "All Tribes";
 
 /**
- * R1382, R1162: the tags the frame prints, `ALL_TRIBES` in place of every tribal tag (`TRIBAL_TAGS`,
- * R1424). The Token tag is never a chip (R1177001): a token's type line says it ("Token Unit"), where no
- * crowded tag row can cut it.
+ * The tags the frame prints, `ALL_TRIBES` in place of every tribal tag. The Token tag is never a chip
+ * (R1177001): a token's type line says it ("Token Unit"), where no crowded tag row can cut it.
  */
 export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
   const printed: readonly Tag[] = tags.filter((tag) => tag !== "Token");
@@ -531,10 +513,7 @@ export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIB
   return [ALL_TRIBES, ...printed.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
 
-/**
- * `data-foil` on `.cf`: Mythic cards and radiant faces carry foil, animated while the `animatedFoil`
- * setting is on. The CSS never animates it under `prefers-reduced-motion: reduce` whatever this says.
- */
+/** `data-foil` on `.cf`. The CSS never animates it under `prefers-reduced-motion: reduce` whatever this says. */
 export function foilFor(face: FaceModel, animatedFoil: boolean): "animated" | "static" | "none" {
   if (face.rarity !== "Mythic" && !face.radiant) return "none";
   return animatedFoil ? "animated" : "static";

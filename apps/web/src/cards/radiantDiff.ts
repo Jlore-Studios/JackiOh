@@ -8,10 +8,8 @@
 // never starts or ends on one, so the underline reads as one phrase.
 //
 // A Chinese face (ME-CN, R1302, MD-B13) is compared character by character: Chinese puts no space
-// between words, and its punctuation `，；：。（）、` is a separator. A fused definition's texts are its
-// ingredients' one per line (R102); with as many lines on both faces, each line is diffed against its
-// own. The same diff marks what a patch changed (R388, patches/diff.ts): `wordDiff` returns the words
-// the newer text adds and those the older one loses, which the patch history strikes through.
+// between words, and its punctuation `，；：。（）、` is a separator. The same diff (`wordDiff`) marks
+// what a patch changed (R388, patches/diff.ts), striking through the words the older text loses.
 
 /** A stretch of a printed text, by UTF-16 offsets: `start` inclusive, `end` exclusive. */
 export type TextRange = { readonly start: number; readonly end: number };
@@ -30,10 +28,7 @@ const SEPARATORS = ",;:.()，；：。（）、";
  * the Unified Ideographs, and the full-width forms.
  */
 const CJK = "\\u3000-\\u303F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uFF00-\\uFFEF";
-/**
- * A separator alone, a CJK character alone, or a run of anything that is neither a space, a
- * separator nor a CJK character.
- */
+/** A separator alone, a CJK character alone, or a run of anything that is none of those nor a space. */
 const TOKEN = new RegExp(`[${SEPARATORS}]|[${CJK}]|[^\\s${SEPARATORS}${CJK}]+`, "g");
 /** R102: a fused definition's text is its ingredients' texts, one per line. */
 const LINE_BREAK = "\n";
@@ -118,10 +113,9 @@ function lineDiff(before: string, after: string, beforeOffset: number, afterOffs
 }
 
 /**
- * A word-level diff of two texts, by R277's rules: `added` are the stretches of `after` that
- * `before` does not have, `removed` the stretches of `before` that `after` does not have, each in
- * order and never overlapping. When both texts have the same number of lines, and more than one,
- * each line is diffed against the line of the same place (a fused text's ingredients, R102).
+ * A word-level diff of two texts (WordDiff), by R277's rules, each side's stretches in order and never
+ * overlapping. When both texts have the same number of lines, and more than one, each line is diffed
+ * against the line of the same place (a fused text's ingredients, R102).
  */
 export function wordDiff(before: string, after: string): WordDiff {
   const beforeLines = before.split(LINE_BREAK);
@@ -144,10 +138,7 @@ export function wordDiff(before: string, after: string): WordDiff {
   return lineDiff(before, after, 0, 0);
 }
 
-/**
- * R277: the stretches of `radiant` that `base` does not have, in order and never overlapping. A
- * Radiant text equal to its base marks nothing; an empty base marks every word of the Radiant text.
- */
+/** R277: the stretches of `radiant` that `base` does not have. */
 export function radiantMarks(base: string, radiant: string): TextRange[] {
   return wordDiff(base, radiant).added;
 }

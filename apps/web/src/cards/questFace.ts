@@ -130,7 +130,6 @@ function stagePieces(lines: readonly StageLine[], quest: QuestView | null): Piec
   return [{ words: title + line.stop + goals + line.stop }, { from: line.reward, to: line.end }];
 }
 
-/** In Too Deep's tree on the field: a line per open quest with the rewards it offers, or "Quest complete", then its auras. */
 function treeWords(quest: QuestView): string {
   const quests = quest.open.map((one) =>
     one.rewards.length === 0
@@ -142,9 +141,8 @@ function treeWords(quest: QuestView): string {
 }
 
 /**
- * R2450000: what a Quest card's rules box prints — a staged Quest's one stage, In Too Deep's text
- * and its open quests on the field — or null for every other face, and for In Too Deep off the field
- * (and a staged face the view names no printed stage of), which print their text as it is.
+ * R2450000: what a Quest card's rules box prints, or null for a face that prints its text as it is
+ * (every other face, In Too Deep off the field, a staged face the view names no printed stage of).
  */
 export function questFaceText(face: FaceModel): QuestFace | null {
   if (!face.tags.includes(QUEST_TAG)) return null;

@@ -44,7 +44,6 @@ export type StateBadge = {
 /** E21: what a pile's depth badge says, a backrow pile's as a unit pile's (game/Card.tsx). */
 export const PILE_WORDS = "Cards buried under this pile";
 
-/** R385: "Brittle 2: crumbles at 0". */
 export function brittleWords(count: number): string {
   return t("Brittle {n}: crumbles at 0", { n: count });
 }
@@ -58,7 +57,6 @@ export function temporaryWords(count: number): string {
   return t("Temporary 1: discarded at the end of its owner's turn");
 }
 
-/** R404: an open quest's progress against its goal, "1/2". */
 export function questProgress(quest: QuestView["open"][number]): string {
   return `${String(quest.progress)}/${String(quest.goal)}`;
 }
@@ -174,7 +172,6 @@ export function animatedWords(animated: { home?: number }, type: CardType): stri
   return t("Animated on your turn: back to its backrow (lane {lane}) at the end of its controller's turn", { lane: animated.home });
 }
 
-/** The enchantments a face shows, each distinct one once, in the order the view lists them. */
 export function distinctEnchantments(list: readonly Enchantment[] | undefined): Enchantment[] {
   const seen = new Set<string>();
   const out: Enchantment[] = [];

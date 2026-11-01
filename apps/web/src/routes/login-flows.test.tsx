@@ -1113,8 +1113,6 @@ describe("R193 B30 recovery and error links", () => {
   });
 });
 
-// R323, R324: PKCE links (a one-time code in the query, exchanged with the verifier kept here)
-
 describe("R323 R324 PKCE links", () => {
   /** A GoTrue auth code: a UUID. */
   const CODE = "3f9c6c1e-5a6b-4c2d-9e8f-0a1b2c3d4e5f";
@@ -1790,8 +1788,7 @@ describe("R192 the mail interval, wherever it started", () => {
     setField(loginTestid.email, EMAIL);
     expect(screen.getByTestId(loginTestid.submit)).toBeEnabled();
     submitForm();
-    // The PKCE challenge (R323) is hashed on a later turn of the event loop: wait for the page's answer,
-    // not a fixed number of microtasks.
+    // R323's PKCE hash lands on a later turn of the event loop: wait for the answer, not microtasks.
     await waitFor(() => {
       expect(bodyText()).toContain(AUTH_NOTICES.resetSent);
     });

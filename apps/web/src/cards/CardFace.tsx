@@ -12,17 +12,14 @@
 // is a line per ingredient (R102). RulesText marks in gold what a Radiant face adds (R277), links
 // its `refs` (R279) and prints in play the values its formula comes to (R280).
 // SPEC §10.8: a face in play wears the view's states on a rail of badges (CardStates.tsx: R385,
-// R386, E39, R383); a tuned card also marks what changed in its text, stats and keywords. An
-// Animated Field Spell or Trap shows the stats of the Unit it becomes (B3.1).
+// R386, E39, R383); a tuned card also marks what changed in its text, stats and keywords.
 //
-// R503: a face with a set shows its set mark (setMark.ts), and a token that prints a rarity (B2.5)
-// wears that rarity's frame, for display only. The art gets the card's name, which picks its motif.
 // ME-CN, R1301: a Chinese face prints the model's name and text and chinese.ts's words; its art
 // keeps the English name's motif, so the picture is the same card's.
 // R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" for the five.
 // R1177001: a token says so on every face, in its type line ("Token Unit"), where no crowded tag
-// row can cut the word, or where the type line hides, in a token mark (TokenMark, which the board
-// minion wears too). Glitch stays blank (R674): its every word is corrupted, so it wears neither.
+// row can cut the word, or where the type line hides, in a token mark (TokenMark). Glitch stays
+// blank (R674): its every word is corrupted, so it wears neither.
 //
 // R1017001: a hero portrait's card (fullArt.ts) prints only its art on its full face; the Full-art
 // cards setting turns it off, and so does a tutorial lesson's board (R1108000).
@@ -67,13 +64,10 @@ export type CardFaceProps = {
    */
   lazyArt?: boolean;
   /**
-   * Issue #814: the Summit's Ascent level as the view gives it, in a game. A Summit face with a
-   * level prints its header and only the level's own line (shortText.ts); every other face, and
-   * a Summit without one (the Almanac, the deck builder, the inspect overlays), prints the whole
-   * text.
+   * Issue #814: the Summit's Ascent level as the view gives it, in a game (faceText); a Summit without
+   * one (the Almanac, the deck builder, the inspect overlays) prints the whole text.
    */
   ascentLevel?: number | null;
-  /** R1295000: the viewer's own card in a game wears the device's cosmetics (cosmetics.ts). */
   worn?: boolean;
 };
 
@@ -138,8 +132,7 @@ export function typeLine(face: FaceModel): string {
 
 /**
  * R1177001: the token mark, where a face shows no type line (a small face, a full-art face, the
- * board minion): a slot at the foot holding a pill, the word or, where the slot is too narrow for
- * it, its one letter (cards.css), with "Token" as its name.
+ * board minion): a slot at the foot holding a pill, the word or its one letter (TOKEN_GLYPH).
  */
 export function TokenMark({ face }: { face: FaceModel }): ReactElement | null {
   if (face.token !== true || isGlitch(face.defId)) return null;
@@ -185,11 +178,10 @@ export type RulesBox = {
 };
 
 /**
- * What the rules box prints. A Summit in play given its level prints its header and the next Ascent
- * line; a Quest card (R1837000) the stage it stands at (questFace.ts, R2450000); a face printing its
- * catalog text takes its short form (shortText.ts SHORT_FORMS); a face in play past the hover
- * preview's limit (a fused card, a heavily Buffed one) clamps. Each of these prints less than its
- * whole text, which the hover preview prints on the face's left.
+ * A Summit in play given its level prints its header and the next Ascent line; a Quest card (R1837000)
+ * the stage it stands at (questFace.ts, R2450000); a face printing its catalog text its short form
+ * (shortText.ts SHORT_FORMS); a face in play past the hover preview's limit clamps. Each prints less
+ * than its whole text, which the hover preview prints on the face's left.
  * `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the setting decides.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
@@ -314,7 +306,6 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
-  // R503: the frame's rarity, a token's printed one included.
   const rarity = frameRarity(face);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
   // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.

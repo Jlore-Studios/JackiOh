@@ -6,8 +6,6 @@
 // Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
 // Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
 // Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
-// Sign-up asks the month and year of birth and for the unticked terms box before the provider is called, refuses
-// an answer under the minimum on this device for good, and holds a passing one for the first sign-in (R757000, R757001).
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -86,7 +84,6 @@ export { loginTestid };
 export const signUpPrivacyTestid = "login-sign-up-privacy";
 
 /**
- * `claimReset`: a recovery link asked for elsewhere, waiting for the player to type their address.
  * `emailCode`: the email sign-in link and code (R664). `mfa`: a session waiting for the code from
  * the account's authenticator app (R665).
  */
@@ -162,7 +159,6 @@ async function exchangedFactor(state: LinkState): Promise<string | null> {
   return exchange?.kind === "session" ? exchange.secondFactor : null;
 }
 
-/** The link's session is not kept: revoke it. */
 function revokeLink(state: LinkState): void {
   const session = state.session;
   state.session = null;
@@ -396,8 +392,7 @@ export default function LoginRoute(): ReactElement {
   }, []);
 
   // Act on an emailed link once mounted: renew it (spending the copy in history), then act only on
-  // what the server says the renewed token is (R193). StrictMode's two runs share one renewal, and
-  // the first run's answer is dropped.
+  // what the server says the renewed token is (R193). StrictMode's first run's answer is dropped.
   useEffect(() => {
     const pending = entry.link;
     const state = linkState.current;
@@ -560,7 +555,6 @@ export default function LoginRoute(): ReactElement {
     if (step !== null && step.then === "signIn") void revokeSignedOutSession(step.session);
   }
 
-  /** Keep a session as this browser's own and go on, as a password sign-in does. */
   function keepSession(session: Session): void {
     // Replaces (and revokes) any other session this browser held (R194).
     adoptSession(session);
@@ -655,7 +649,6 @@ export default function LoginRoute(): ReactElement {
       });
   }
 
-  /** R664: the typed sign-in code. */
   function submitEmailCode(address: string): void {
     const problem = requiredProblem(code, "code");
     setCodeError(problem);

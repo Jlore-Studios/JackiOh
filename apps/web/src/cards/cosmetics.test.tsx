@@ -155,14 +155,12 @@ function face(defId: string, radiant = false): FaceModel {
   return faceModel({ defId, def: CATALOG[defId], radiant });
 }
 
-/** Every pick other than its kind's default: the registry's first non-default entry. */
 function firstItem(kind: CosmeticKind): CosmeticId {
   const item = cosmeticsOf(kind).find((cosmetic) => !cosmetic.default);
   if (item === undefined) throw new Error(`no ${kind} item`);
   return item.id;
 }
 
-/** The registry's second entry of `kind` that is not its default. */
 function secondItem(kind: CosmeticKind): CosmeticId {
   const item = cosmeticsOf(kind).filter((cosmetic) => !cosmetic.default)[1];
   if (item === undefined) throw new Error(`no second ${kind} item`);
@@ -779,7 +777,6 @@ describe("R1655000 the picks of each card", () => {
 });
 
 describe("R1956000 R1956001 picks across tabs, and a Created card's generator", () => {
-  /** A card with picks of its own, and a second border apart from the account's `PICKS.border`. */
   const OWN = "core-004";
   const CARD_BORDER = secondItem("border");
   const TABLE = firstItem("table");
@@ -1078,7 +1075,6 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
     return gatedRules(css).some((rule) => rule.selector.startsWith(`${GATE}${selector}`) && /animation\s*:/.test(rule.body));
   }
 
-  /** The `data-cosmetic-motion` of the face `element` draws. */
   function motion(element: ReactElement): string | null {
     const found = render(element).container.querySelector(".cf")?.getAttribute("data-cosmetic-motion") ?? null;
     cleanup();

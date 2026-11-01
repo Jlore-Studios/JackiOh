@@ -7,7 +7,6 @@
 // `legalActions` for this socket's own seat on the `view` frame (`ViewMessage` in
 // `crates/server/src/actor/protocol.rs`). When it has never arrived (`net.ts` reports it) this file
 // shows a loud notice, since prompts would still work and nothing else would: a silently dead board.
-// Nothing here papers over it with a client-side legality check.
 //
 // THE CATALOG. A `CardView` carries no name (§10.8), and the specs find cards by name, so the board's
 // `CatalogContext` is the catalog the client ships (`game/currentCatalog.ts`, §9.4, #1378), which asks
@@ -65,13 +64,11 @@ export function promptHolderOf(pending: PlayerView["pending"], viewer: PlayerId)
 export const matchTestid = {
   /** The connection line in a player's words; the raw state rides on its `data-connection`. */
   status: "match-status",
-  /** The notice that stands in for the missing legal-action frame. */
   missingLegal: "missing-legal-frame",
   /** The panel shown before the first `view` frame lands. */
   connecting: "match-connecting",
-  /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
-  /** #1599, #1899: the sentence that stands in for a socket closed for good (a voided match): the panel's before any view, the board's notice once it is up. */
+  /** #1599, #1899: the sentence that stands in for a socket closed for good (a voided match). */
   gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
@@ -87,7 +84,6 @@ export const matchTestid = {
   watchers: "match-watchers",
 } as const;
 
-/** A connection state in a player's words, for the match bar and the wait before the board. */
 export function connectionWords(state: ConnectionState): string {
   switch (state) {
     case "open":
@@ -103,7 +99,6 @@ export function connectionWords(state: ConnectionState): string {
   }
 }
 
-/** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
 function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReconnect: () => void }): ReactElement {
   return (
     <>

@@ -52,10 +52,7 @@ afterEach(() => {
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const XHTML = "http://www.w3.org/1999/xhtml";
 const UNKNOWN_ID = "core-999";
-/**
- * The sweeps below render both faces of all 317 catalog entries (v0.2.0's Core, Classic and
- * Classic+), which outruns vitest's 5 s default on a loaded machine.
- */
+/** The catalog sweeps below outrun vitest's 5 s default on a loaded machine. */
 const CATALOG_SWEEP_TIMEOUT_MS = 60_000;
 
 /** vitest stubs CSS imports, so the set mark's stylesheet is read as text. */
@@ -96,10 +93,8 @@ function gemText(gem: Element): string {
 }
 
 /**
- * Everything B12 and the "Forbidden inside a face" list rule out, as a list of findings. A face
- * must sit inside a `<button>`, so its HTML is span, strong and img only. The Surface also gives
- * the icons as "aria-hidden SVG, no <text>", so SVG content is accepted only inside an
- * `svg[aria-hidden="true"]` and never as `<text>` or `<title>`.
+ * Everything B12 and the "Forbidden inside a face" list rule out. A face must sit inside a `<button>`,
+ * so its HTML is span, strong and img only; the Surface gives the icons as "aria-hidden SVG, no <text>".
  */
 function faceProblems(cf: Element): string[] {
   const problems: string[] = [];
@@ -698,8 +693,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-052", true, "l"],
       ["core-051", false, "l"],
       ["core-051", true, "l"],
-      // A short form is what the face prints: Combo-Index's two header lines, Call to Chaos's "Three
-      // different random effects, resolved in the order listed…" (#1017).
+      // A short form is what the face prints (#1017).
       ["core-093", false, "l"],
       ["core-095", true, "m"],
       ["meditative-022-1", false, "l"],
@@ -1115,7 +1109,6 @@ describe("R1177001: every token says Token, on every layout", () => {
     cleanup();
     const unitFace = minionFace("core-t-rush", { chinese: true });
     expect(one(unitFace, ".cf-token-word").textContent).toBe(token);
-    // A Chinese card that is no token prints the table's type alone.
     expect(typeLine(faceModel({ defId: "core-011", def: def("core-011"), radiant: false, chinese: true }))).toBe(CHINESE_TERMS.types.Unit);
   });
 

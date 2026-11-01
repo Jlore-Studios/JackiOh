@@ -35,7 +35,6 @@ import { MODE_WORDS, Named } from "./words.tsx";
 
 import "./together.css";
 
-/** The player's saved decks and trios as the toast read them, or that it could not. */
 type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
 
 /** Adds `id` to a set without changing the one React holds. */
@@ -45,7 +44,6 @@ function including(ids: ReadonlySet<string>, id: string): ReadonlySet<string> {
   return next;
 }
 
-/** Where a join answered with a game puts the player: the match, else the series, else the lobby. */
 function gameAfterJoin(answer: { matchId: string | null; seriesId: string | null }): string {
   if (typeof answer.matchId === "string" && answer.matchId.length > 0) return paths.match(answer.matchId);
   if (typeof answer.seriesId === "string" && answer.seriesId.length > 0) return paths.series(answer.seriesId);
@@ -63,7 +61,7 @@ export function ChallengeToast(): ReactElement {
   const [refusedId, setRefusedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [found, setFound] = useState<LiveGame | null>(null);
-  /** The player's decks and trios, read while a challenge that needs one is shown; null until read. */
+  /** The player's decks and trios; null until read. */
   const [saved, setSaved] = useState<Saved | "failed" | null>(null);
   /** The deck or trio picked in a toast, by challenge; until then the one last used. */
   const [picks, setPicks] = useState<Readonly<Record<string, string>>>({});
@@ -150,7 +148,7 @@ export function ChallengeToast(): ReactElement {
     return chosen === undefined ? readPlayLean() : chosen;
   };
 
-  /** Joins the room by its code with `choice`, which accepts the challenge, and takes the player to its game (R1831000). */
+  /** Joins with `choice` and takes the player to its game (R1831000). */
   const join = (challenge: Challenge, choice: ModeChoice): void => {
     if (joining !== null) return;
     setJoining(challenge.challengeId);
@@ -285,7 +283,7 @@ export function ChallengeToast(): ReactElement {
                     disabled={busy}
                     aria-busy={joining === id}
                     onClick={() => {
-                      // R1754000: a page holding unsaved work may hold the join, and with it the move; until the player goes, the toast stays.
+                      // R1754000: unsaved work may hold the join; until the player goes, the toast stays.
                       leaveFirst(() => {
                         join(challenge, choice);
                       });

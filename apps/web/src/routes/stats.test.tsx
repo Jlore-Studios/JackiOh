@@ -1,4 +1,4 @@
-// Tests for the public statistics page (SPEC §9.11, R654).
+// The public statistics page (SPEC §9.11, R654).
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -1280,7 +1280,6 @@ describe("the drill-down's card preview", () => {
 });
 
 describe("R1966000 the Sets tab", () => {
-  /** A card row: `wins` of `games`, in `set`. */
   function row(id: string, name: string, set: string, wins: number, games: number) {
     return {
       ...MOCK_CARD_STATS_PROVISIONAL.cards[0]!,
@@ -1658,7 +1657,6 @@ describe("R2089000 the Created cards", () => {
     // The 8 Radiant seats are below R654's floor: no 75%.
     expect(within(row).queryByText("75%")).toBeNull();
 
-    // The deck table has no row for it.
     const deck = screen.getByTestId(statsTestid.cardsTable);
     expect(within(deck).queryByText("Rush Token")).toBeNull();
     expect(deck.querySelector('[data-card-id="core-t-rush"]')).toBeNull();
@@ -1725,7 +1723,6 @@ describe("R2370000 the Tokens toggle", () => {
   /** A Created copy of a deck card: no token. */
   const COPY = created("core-001", "Spark Pup", 30, 0.5, 0, null);
 
-  /** Answers the card statistics with `body`, and anything else with nothing. */
   function serveCards(body: unknown): void {
     vi.stubGlobal(
       "fetch",

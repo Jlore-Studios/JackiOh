@@ -1,8 +1,7 @@
 // R1313000: the cosmetics the signed-in viewer owns, read from `GET /api/cosmetics` once per session
 // and mounted over a gated screen (main.tsx `Gated`) as `FullArtOwned`; R1655000: every per-card
 // cosmetic the ledger lists, not the full arts alone (cosmetics.ts). Read only while ownership decides
-// (`FULL_ART_GATED`); while pending or failed, nothing counts as owned past the defaults and starters.
-// The answer is the caller's own, keyed on its token; nobody else's is read (CLAUDE.md rule 7).
+// (`FULL_ART_GATED`). The answer is the caller's own, keyed on its token; nobody else's is read (CLAUDE.md rule 7).
 //
 // R1833000: the same answer's account list is mounted as `AccountCosmeticsOwned`
 // (`ViewerAccountCosmetics`) for the playmat, backdrop and card-back pickers and the viewer's side.
@@ -15,7 +14,7 @@ import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { AccountCosmeticsOwned, CARD_SLOT_KINDS, type OwnedByCard } from "./cosmetics.ts";
 import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "./fullArt.ts";
 
-/** The kinds a card carries: the three slots and the full art. The account's kinds are no card's. */
+/** The kinds a card carries; the account's kinds are no card's. */
 const PER_CARD_KINDS: ReadonlySet<string> = new Set([...CARD_SLOT_KINDS, "fullArt"]);
 
 /**
@@ -57,7 +56,7 @@ function sessionOf(token: string): string {
 
 let cached: { session: string; read: Promise<OwnedCosmeticsResponse> } | null = null;
 
-/** R1955000: how many times the session's answer was dropped; a mounted `ViewerFullArt` or `ViewerAccountCosmetics` reads again on each. */
+/** How many times the session's answer was dropped; a mounted provider reads again on each. */
 let forgotten = 0;
 const forgottenListeners = new Set<() => void>();
 
@@ -99,7 +98,6 @@ export function readOwnedFullArt(
   return readOwnedCosmetics(token, fetchOwned).then(ownedCardCosmetics);
 }
 
-/** R1833000: the account cosmetics `token`'s account owns, from the session's one read. */
 export function readOwnedAccountCosmetics(
   token: string,
   fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse> = getOwnedCosmetics,
@@ -194,7 +192,6 @@ export function ViewerAccountCosmetics({
       current = false;
     };
   }, [gated, token, read, forgets]);
-  // Another session's answer is never this one's.
   const ids = owned !== null && owned.session === session ? owned.ids : NO_ACCOUNT_COSMETICS;
   return createElement(AccountCosmeticsOwned, { owned: gated ? ids : "every" }, children);
 }

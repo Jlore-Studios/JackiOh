@@ -16,25 +16,20 @@ import type { Tag } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 
-/** §8 #98, the one card whose text in play is the power it rolled. */
 export const HEROIC_POWER_ID = "core-098";
 
 /** §5: the tag whose cards read {@link CONCEALED_TEXT} in play (#95 Call to Chaos). */
 export const CONCEALED_TAG: Tag = "Call to Chaos";
 
-/** What a concealed card's rules box reads in play. */
 export const CONCEALED_TEXT = "???";
 
-/** Classic+ #73's and Meditative #95's Radiant faces in play. */
 export const CONCEALED_TEXT_LOUD = "!!!";
 
-/** The concealed faces that read something other than {@link CONCEALED_TEXT}, by id and face. */
 const CONCEALED_OVERRIDES: Readonly<Record<string, { radiant?: string }>> = {
   "classicplus-073": { radiant: CONCEALED_TEXT_LOUD },
   "meditative-095": { radiant: CONCEALED_TEXT_LOUD },
 };
 
-/** What a concealed card's face reads in play: "???", or its own override. */
 export function concealedText(defId: string, radiant: boolean): string {
   const override = CONCEALED_OVERRIDES[defId];
   return (radiant ? override?.radiant : undefined) ?? CONCEALED_TEXT;
@@ -111,11 +106,10 @@ export function powerTitle(power: RolledPower, radiant: boolean): string {
 }
 
 /**
- * A Heroic Power's text in play (R752): its keyword line, then the rolled power's name and, on a line
- * of its own, its Activate, X and words (R366's layout), numbers (`{shot}`, …) filled from `values`.
- * Null for a name this table does not know, which leaves the printed text in place.
- * `translate` (R711000): the power's name and words in the reader's language, for a face drawn in it;
- * the English is what the glossary's terms are found in, so it is never translated.
+ * A Heroic Power's text in play (R752, R366's layout): its keyword line, the rolled power's name, then on
+ * its own line its Activate, X and words, `{…}` numbers filled from `values`. Null for a name this table
+ * does not know, which leaves the printed text in place. `translate` (R711000): name and words in the
+ * reader's language; the English is what the glossary's terms are found in, so it is never translated.
  */
 export function powerText(
   power: RolledPower,
@@ -138,7 +132,6 @@ export function powerText(
   return keywordLine === "" ? clause : `${keywordLine}\n${clause}`;
 }
 
-/** Whether a card with these tags reads {@link CONCEALED_TEXT} in play. */
 export function concealedInPlay(tags: readonly Tag[]): boolean {
   return tags.includes(CONCEALED_TAG);
 }

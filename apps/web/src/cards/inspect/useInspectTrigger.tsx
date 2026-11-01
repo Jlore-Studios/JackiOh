@@ -29,7 +29,7 @@ export type InspectOptions = {
   hover?: boolean;
   /** Default true: a touch long-press opens the sheet, or calls onLongPress when given. */
   longPress?: boolean;
-  /** A mouse's or pen's main button held as long counts as a long-press too (the hero portrait, R1449). */
+  /** Default false. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
   holdAnyPointer?: boolean;
   onLongPress?: () => void;
   /** Without `onLongPress`, a hold opens the default sheet or a settings-gated preview; disabled previews leave a plain tap. */
@@ -37,7 +37,7 @@ export type InspectOptions = {
   /** A mouse right-click calls it and prevents the native menu (the deck builder's, the hero portrait's
       while nothing is targeted): the board's cards leave right-click to the drag cancel. */
   onContextMenu?: () => void;
-  /** Which side the hover preview tries first (placement.ts, B27). */
+  /** Which side the hover preview tries first; "beside" (B27's order) by default. */
   prefer?: PreviewPrefer;
   /** Default true: overlays show lines of code (E36); matches pass false because it is hidden. */
   showLoc?: boolean;

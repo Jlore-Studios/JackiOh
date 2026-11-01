@@ -33,13 +33,12 @@ export type KeywordVisual = {
   priority: number;
   /** The shape it reads by, in words (it never rests on color alone). */
   shape: string;
-  /** The loop, or `null` for a mark that holds still (Taunt's shield, the Divine Shield bubble, Armor's plate). */
+  /** The loop, or `null` for a mark that holds still. */
   motion: KeywordMotion | null;
-  /** Whether the treatment prints the keyword's number. */
   numbered: boolean;
 };
 
-/** How many treatments each layer draws on one unit. `stat` is Armor's plate, which is always drawn. */
+/** `stat` is Armor's plate, which is always drawn. */
 export const LAYER_CAP: Readonly<Record<KeywordLayer, number>> = { frame: 4, veil: 2, glyph: 2, stat: 1 };
 
 /** How many treatments on one unit loop at once; the rest hold their still mark. */
@@ -289,7 +288,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-trade-swap", when: "always" },
     numbered: false,
   },
-  // R1852000: Stinkyscape's Starship Piece, a riveted hull plate that glints.
+  // R1852000: Stinkyscape's Starship Piece.
   "Starship Piece": {
     layer: "glyph",
     priority: 34,
@@ -297,7 +296,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-starship-piece-glint", when: "always" },
     numbered: false,
   },
-  // R1852003: a launched Starship, a rocket nose up over its flame, riding its thrust.
+  // R1852003: a launched Starship.
   Starship: {
     layer: "glyph",
     priority: 35,
@@ -307,7 +306,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
   },
 };
 
-/** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */
+/** One treatment a unit gets. */
 export type KeywordFxPlan = {
   kind: KeywordKind;
   visual: KeywordVisual;
@@ -319,7 +318,6 @@ export type KeywordFxPlan = {
   stage?: number;
 };
 
-/** What of a unit's view the treatments read. */
 export type KeywordFxSource = Pick<UnitView, "keywords" | "canAct" | "armor"> &
   Partial<Pick<UnitView, "vanilla" | "animated" | "brittle">>;
 
@@ -332,7 +330,6 @@ function numberOf(kind: KeywordKind, keywords: readonly Keyword[], source: Keywo
   return keywords.reduce((sum, keyword) => (keyword.kind === kind && "n" in keyword ? sum + (keyword.n ?? 0) : sum), 0);
 }
 
-/** R385's cracks: one at BRITTLE_CRACK_STAGES or more, the full web at 1. */
 export function brittleStage(count: number): number {
   return Math.min(BRITTLE_CRACK_STAGES, Math.max(1, BRITTLE_CRACK_STAGES + 1 - count));
 }
@@ -360,8 +357,7 @@ export function temporaryLeft(keywords: readonly Keyword[]): number | null {
 export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
   for (const keyword of source.keywords) if (!kinds.includes(keyword.kind)) kinds.push(keyword.kind);
-  // R385: a Brittle count the view gives (one an effect gave, "Give Brittle N") is Brittle whether or
-  // not the keyword list names it, a Vanilla unit's included (a Vanilla keeps a given count, §6.1).
+  // R385: a given Brittle count ("Give Brittle N") is Brittle even unnamed; a Vanilla keeps one (§6.1).
   if (source.brittle !== undefined && !kinds.includes("Brittle")) kinds.push("Brittle");
   if (source.vanilla !== true && source.animated !== undefined && !kinds.includes("Animated") && !kinds.includes("Animated on your turn")) {
     // `home` is the lane an "Animated on your turn" card goes back to at its controller's cleanup.

@@ -44,14 +44,13 @@ export const MARK_PALETTES = {
 
 export type MarkColor = keyof typeof MARK_PALETTES;
 
-/** What an unknown color key is drawn in: the corruption purple of the `steal` mark. */
+/** The corruption purple of the `steal` mark. */
 export const DEFAULT_MARK_COLOR: MarkColor = "purple";
 
 function isMarkColor(color: string): color is MarkColor {
   return Object.prototype.hasOwnProperty.call(MARK_PALETTES, color);
 }
 
-/** The color key a mark is actually drawn in: its own when the table has it, else the default. */
 export function markColorOf(color: string): MarkColor {
   return isMarkColor(color) ? color : DEFAULT_MARK_COLOR;
 }
