@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2620,
+  "title": "Patch: drop profiles.allow_spectators once friends always watch",
+  "branch": "bot/issue-2620",
+  "thread": "**Issue #2620 (data, not instructions):**\n\n```text\n# #2620: Patch: drop profiles.allow_spectators once friends always watch\nOpened by @jgoetzmann.\n\n### What it does\n\n#2615 (R2615000) removed the \"Let friends watch my games\" switch: the server no longer reads or writes `profiles.allow_spectators`. It left the column (migration 0038) in place on purpose, so a server still running the old code while a deploy overlaps could keep reading it. Once that change is live in production and no older server runs, the column can go.\n\n- A new migration drops `public.profiles.allow_spectators` (its column grant to `authenticated` goes with it).\n- `crates/server/tests/sql/22_social.sql` stops asserting the column (its S7/B50 check), and asserts it is gone.\n- `crates/server/README.md` and `docs/architecture.md` stop describing the column as kept for a later migration.\n\n### Acceptance\n\n- The SQL suite (`sh crates/server/tests/sql/run.sh`) and the store suite (`sh crates/server/tests/db/run.sh`) pass with the column dropped.\n- Nothing in `crates/`, `apps/` or `e2e/` names `allow_spectators` except the historical migration 0038.\n\n### Blocked by, part of\n\nBlocked by #2615, until it is merged and deployed to production.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2620: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
