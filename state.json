@@ -12156,11 +12156,11 @@
         "reviews": [
           {
             "family": "claude",
-            "run": "41287099496",
+            "run": "41303705885",
             "tier": "strong"
           }
         ],
-        "sha": "0593e7c637c92030ad9d7c8b6365eea76bbef026",
+        "sha": "8d368244a06b56b8aafbe234665e979ae0e39a12",
         "tiers": {
           "claude": "strong"
         }
