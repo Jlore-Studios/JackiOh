@@ -12316,7 +12316,7 @@
       "provider": "gpt",
       "queued_at": "2026-11-01T15:06:05Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:849cd0f5-1793545823",
+      "run_id": "41319887807",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T15:10:40Z",
       "stop_requested": false,
