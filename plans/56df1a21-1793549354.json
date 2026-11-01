@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2691,
+  "title": "Patch: the AI reads its own deck as its owner was shown it, so a card turned Radiant inside the deck stays unknown to it",
+  "branch": "bot/issue-2691",
+  "thread": "**Issue #2691 (data, not instructions):**\n\n```text\n# #2691: Patch: the AI reads its own deck as its owner was shown it, so a card turned Radiant inside the deck stays unknown to it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nEugenics gives each card left in your deck a 30% chance to become Radiant, and Knockoff Temu Glowy Jelly Bean can turn cards in your deck Radiant at random. A person who plays them is not told which cards changed until they draw them: the deck list keeps showing the cards as they went in. The practice AI, though, keeps the true cards in its own deck when it imagines the game ahead, so it knows exactly how many of its coming draws are Radiant and plans with that. Once built, the AI sees its own deck as a person in its seat would, the cards as they went in.\n\n## Why\n- R311: \u201cA change made inside a library, where nobody reads it, does not show: a card #28 picks or #42 rolls Radiant there is listed with the face it went in with until it leaves\u201d; R386: \u201cits owner does not see a change made inside a deck until the card leaves it\u201d. CLAUDE.md, Architecture: in `crates/ai`, hidden cards never change a decision.\n- `crates/ai/src/observe.rs:222-236` hides one of the seat's own library cards only when the opponent's deck minted it or it has no `known_as` (R312). Step 3 (`:572-602`) turns only hidden cards into placeholders, so every other library card keeps its true `radiant`, `cost_mod` and the rest, and `crates/ai/src/determinize.rs:448-454` only shuffles the library. The evaluation then prices a drawn card by its Radiant face (`radiant_in_hand`, `crates/ai/src/evaluate.rs:459-473`).\n- The siblings keep the rule: the owner's library list reads only `known_as` (`crates/engine/src/own_library.rs:88-126`); the dry run hides the viewer's own library whole (`crates/engine/src/subsystems/scorer.rs:703-706`); and `redact` already forgets hidden Nerfs \u201cso no seat's decision hangs on it\u201d (R1845000, `observe.rs:611-613`).\n\n## Proposal\n- In `redact`'s step 3, rebuild each of the seat's own library cards that has `known_as` and was not hidden as its owner was shown it: reset it as `to_placeholder` would, then set `def_id` and `radiant` from `known_as` (keeping the id, `known_as` itself and anything R311 says is shown, such as a Created mark).\n- A ruling in this issue's block extending R312 to the seat's known cards, with `spec/pending/<issue>.md`; rejected alternative to record: hiding the whole own library as the dry run does, which would also throw away what the owner was legitimately shown.\n- Re-run `cargo jackioh gate`, since it changes what the AI plans with.\n\n## Where it lands\n- `crates/ai/src/observe.rs`; tests in `crates/ai/tests/ai/observe.rs` beside the r312 test\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a79.9, \u00a710.8; R311, R312\n\n## Acceptance criteria\n- [ ] Two states that differ only in whether a card in the AI's own library turned Radiant after it went in redact to the same state for that seat (same hash), as the r312 test does for unshown cards.\n- [ ] A card shown Radiant as it went in (a Radiant copy shuffled in openly) still reads Radiant.\n- [ ] The AI's choice on a fixed seed after Eugenics resolves is the same whatever the roll's outcome.\n- [ ] Tests named after the new ruling, listed in its `proven_in`; `cargo test -p jackioh-ai`, clippy, `cargo jackioh gate` and `cargo jackioh spec check` pass.\n\n## Size and risks\nSmall (hard by label, the AI): about 15 lines and two tests. Risk: low; the AI plans with slightly less, exactly what R311 says its seat knows. Check that the lethal hint (`crates/ai/src/lethal.rs:508`), which builds on the same redacted copy, still passes its tests.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fairness` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:09:13Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2691: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
