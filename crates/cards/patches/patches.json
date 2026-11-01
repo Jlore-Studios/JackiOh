@@ -20331,5 +20331,77 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.5.10b",
+    "date": "2026-11-01",
+    "title": "Patch: show coin flip and dice roll results, with a suspense animation",
+    "source": "#2652",
+    "notes": "Every coin flip and die roll of Gary the Gambler, Ace in the Hole, Mid Loser and Dice of Doom is reported as a `rolled` batch, one per verb call or hook, holding each coin or die in draw order with every face Lucky and Luck drew and the one kept (R2652001). The draws, the rng cursor and every state hash are unchanged: the report is answered by nothing and takes no number in R68's order. A batch a face-down trap made reaches its controller alone unless the trap fires in the same action (R2652000). The other families classify names are cards whose games hold such a roll in the same action: cards that make or copy one (InfiniScepter's copies, Gachaholic's luck-based cards and the like) and the cards a fused or crafted card holding one of these four texts is made of (House Party, Warp Disruptor II, Otherworldly Removal and Level Up! with Dice of Doom's; Withering Storm with Gary's). Their own play is unchanged.",
+    "player": {
+      "title": "See how every coin and die lands",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "When Gary the Gambler, Mid Loser, Ace in the Hole or Dice of Doom flips coins or rolls dice, both players now watch every coin spin and every die tumble at once.",
+        "Each lands on its result before the buff, keyword or cards it decides, with Lucky's extra rolls shown beside it.",
+        "The game log says each result in words, such as \"Gary the Gambler flipped 5 coins: 3 heads, 2 tails\".",
+        "A face-down Ace in the Hole's flip stays hidden from your opponent unless it lands heads and the trap fires."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "70cc5d9cbc35867157ff3c9c1a99ea73522a9859"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-007",
+      "classic-015",
+      "classic-065",
+      "classic-074",
+      "classic-083",
+      "classicplus-008",
+      "classicplus-019",
+      "classicplus-032",
+      "classicplus-062",
+      "core-004",
+      "meditative-056",
+      "meditative-101",
+      "meditativeplus-007",
+      "stinkyscape-024",
+      "stinkyscape-154",
+      "traininggrounds-031"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10c",
+    "date": "2026-11-01",
+    "title": "Patch: Legendary (animated) and Mythic (signed) full-art tiers, and fifteen more iconic cards join the full-art club",
+    "source": "#2655",
+    "notes": "Every full-art card now has three full arts: the Epic still face, a Legendary that moves (the art drifts and a light sweeps over it) and a Mythic that also signs the card's English name across the art (R2655000, R2655003). The Legendary and Mythic are chases, granted to no account, earned from a duplicate's roll, a cosmetic pack or the Chase Shard bar; no token buys them. The cosmetics registry is now the list of full-art cards (R2655001): fifteen more cards of every type join the six portrait cards, and the tokens of five of them wear their parent's full art (R2655002). A card's full-art pick chooses off, Epic, Legendary or Mythic among the tiers owned, checked by the server and frozen into a match's loadout; migration 0072 keeps the pick's id. Reduced motion and Animated foil off hold every tier still. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Animated and signed full arts, and fifteen more full-art cards",
+      "new": [
+        "Every full-art card has two new chase versions: an animated Legendary full art, and a Mythic one that also signs the card's name. Earn them from duplicates, cosmetic packs and the Chase Shard bar.",
+        "Fifteen more cards print full art, among them League of Losers, Bread and Butter, The Mother Pancake and In Too Deep, each in a still, an animated and a signed version.",
+        "Some of those cards' tokens print full art with them."
+      ],
+      "balance": [],
+      "changes": [
+        "A card's cosmetics in the Collection now let you pick which full art it wears: none, or any version you own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "68eba27ca9f002f81e36cee2e3f0967830b2c53b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]
