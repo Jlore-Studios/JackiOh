@@ -13650,10 +13650,14 @@
       "votes": {
         "approvals": [],
         "builder": "gpt",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "fcbb7191ae0ecde71d932e3a766385a9a578a00b",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "2738": {
