@@ -1,6 +1,7 @@
 // The Friends button (#1831): at the top right of every screen a signed-in account has, beside the
 // language button and the settings gear (`placement="nav"` in `routes/nav.tsx`'s top bar and the
-// landing's corner, `"game"` in a board's control bar), so friends are one press away wherever the
+// landing's corner, `"game"` in a board's control bar, `"menu"` as a labeled row of a phone's match menu,
+// #2645), so friends are one press away wherever the
 // player is, a match included. It is badged with what waits for the player: friend requests (as the
 // friends list was last read), challenges and unread messages. The badge reads what the shell's one poll
 // published (`socialPoll.ts`), so the button adds no request of its own.
@@ -260,7 +261,7 @@ function FriendsIcon(): ReactElement {
   );
 }
 
-export function FriendsButton({ placement }: { placement: "game" | "nav" }): ReactElement | null {
+export function FriendsButton({ placement }: { placement: "game" | "nav" | "menu" }): ReactElement | null {
   useLocale();
   const reads = useSocialReads();
   const panelId = useId();
@@ -272,7 +273,12 @@ export function FriendsButton({ placement }: { placement: "game" | "nav" }): Rea
   /** Gives the focus back to the button, as a modal should leave it (WAI-ARIA APG; `SettingsButton.tsx`). */
   const refocus = useCallback((): void => {
     const element = button.current;
-    if (element !== null && element.isConnected) element.focus({ preventScroll: true });
+    if (element === null || !element.isConnected) return;
+    // #2645: in a phone's match menu, closed by now (the press that opened the panel closed it): the
+    // control that opens that menu is the one to land on.
+    const closed = element.closest<HTMLElement>("[hidden]");
+    const opener = closed === null || closed.id === "" ? null : document.querySelector<HTMLElement>(`[aria-controls="${closed.id}"]`);
+    (opener ?? element).focus({ preventScroll: true });
   }, []);
 
   const closePanel = useCallback((): void => {
@@ -321,6 +327,7 @@ export function FriendsButton({ placement }: { placement: "game" | "nav" }): Rea
         <span aria-hidden="true" className="friends-button__icon">
           <FriendsIcon />
         </span>
+        {placement === "menu" ? <span className="friends-button__label">{t("Friends")}</span> : null}
         {count > 0 ? (
           <span className="together-badge friends-button__badge" data-testid={friendsTestid.badge} aria-hidden="true">
             {count}
