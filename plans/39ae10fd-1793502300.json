@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2647,
+  "title": "Patch: drop the at-a-glance Token and Created marks, keep them in the hover preview",
+  "branch": "bot/issue-2647",
+  "thread": "**Issue #2647 (data, not instructions):**\n\n```text\n# #2647: Patch: drop the at-a-glance Token and Created marks, keep them in the hover preview\nOpened by @MaxGoetzmann.\n\n## What it does\n\nA card's **Token** and **Created** status almost never matters in combat, yet both show on the card at a glance: the \"T\" / \"Token\" plate (R1177001) and the \"Created\" pill (R943). They clutter the board, the hand and the backrow. This patch takes both off the card faces and keeps them in the **hover preview** (the inspect popup), where a player who wants to know can still find out.\n\n**What goes:**\n- **The token mark** (`TokenMark`, `.cf-token`, `apps/web/src/cards/CardFace.tsx`): the \"T\" or \"Token\" plate a face wears where its type line doesn't show (a small face, the phone, most face-up backrow cards, a full-art face), and the one the board minion wears between attack and health (`apps/web/src/cards/MinionFace.tsx`, the `<TokenMark face={face} />` in its stats row).\n- **The Created pill** (`kind: \"created\"` in `stateBadges`, `apps/web/src/cards/cardState.ts`), drawn on faces by `CardStates` (`apps/web/src/cards/CardStates.tsx`) and styled in `apps/web/src/cards/cardstate.css` (`.cf-state[data-state=\"created\"]`).\n\n**What stays:**\n- The hover preview still says both. A full face's type line keeps \"Token Unit\" / \"Token Spell\" (on a Chinese face \u884d\u751f\u7269\u2026). The inspect state notes (`apps/web/src/cards/inspect/StateNotes.tsx`, which list `stateBadges`) keep the \"Created: made during the game\" line.\n- `created` and `token` stay in the wire and the views exactly as they are. This patch only changes what the client draws. No engine, card or catalog change.\n- Wherever else the full-word label is part of a full face (the Almanac's \"Token, printed Legendary\", the collection's full face), it stays. Only the small at-a-glance marks go.\n\n**Rulings to amend in this PR (CLAUDE.md rule 3):**\n- **R1177001** says that where the type line doesn't show, the face wears a token mark, and the board minion wears it too. That changes: no mark on those faces, and the hover preview's full face and type line carry the word.\n- **R943** ends \"The client shows it as a small 'Created' mark.\" That changes: the client shows it only in the hover preview's state notes.\n- Add a new ruling in this issue's block (R<N>000) that says this and why: the status is rarely relevant in combat, so it lives in the hover preview. Cite it from the changed code and the amended notes, with its \u00a711 paragraph in `spec/pending/<N>.md`. Run `cargo jackioh spec check`.\n\n## Acceptance\n\n- [ ] A token on the board (`MinionFace`) renders no `.cf-token` / `[data-token=\"true\"]` element and no \"T\" between its attack and health.\n- [ ] A small, full-art or compact token face with no type line renders no token mark.\n- [ ] A full token face (the hover preview's) still reads \"Token Unit\" / \"Token Spell\" in its type line, including the Chinese form.\n- [ ] A Created card's face (board, hand, backrow) renders no `.cf-state[data-state=\"created\"]` badge.\n- [ ] The inspect state notes for a Created card still list the Created line (`data-state=\"created\"`).\n- [ ] Glitch is unchanged (it already wore neither, R674).\n- [ ] Update or remove the tests that assert the old marks (`CardFace.test.tsx`, `cardState.test.tsx`, `almanac.test.tsx` and any others that find them), with a test named after the new ruling that proves the marks are gone from the faces and still in the hover preview.\n- [ ] Remove the unused CSS (`.cf-token*` and the created pill rules) and any constants that only served them (`TOKEN_GLYPH`, etc.) if nothing else reads them.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `cargo jackioh spec check` pass. If an e2e spec looks for the marks, update it as well.\n\n## Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2647: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2520 skipped: it waits for #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2649 skipped: it waits for #2648 to close first"
+  ]
+}
