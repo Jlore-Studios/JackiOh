@@ -2844,6 +2844,19 @@ pub(crate) fn withheld_rolls(state: &GameState, viewer: PlayerId) -> IndexSet<us
     withheld
 }
 
+/// R2652000: how many of the newest `fresh` events of `state.applied` `viewer`'s view carries, all but
+/// the face-down rolls `withheld_rolls` leaves out, so a host that slices the view's events by a step's
+/// count (the server's bot personas, R645) still reads that step's events and no older one.
+pub fn viewed_of_newest(state: &GameState, viewer: PlayerId, fresh: usize) -> usize {
+    let total: usize = state.applied.iter().map(|entry| entry.events.len()).sum();
+    let from = total.saturating_sub(fresh);
+    let withheld = withheld_rolls(state, viewer)
+        .iter()
+        .filter(|at| **at >= from)
+        .count();
+    (total - from) - withheld
+}
+
 /// §10.8: "the last N events for animation". `state.applied` is the only event history a state
 /// carries (§9.3's nonce dedupe), oldest action first, so flattening it in order and taking the tail
 /// is the stream — and it is bounded by `NONCE_HISTORY` already.

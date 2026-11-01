@@ -370,6 +370,34 @@ mod tests {
                 assert!(!js(&s.view(P2)).to_string().contains(ACE));
             }
 
+            /// R2652000, R645: a host that slices a view by the step's event count (the server's bot
+            /// personas) is told the opponent's view holds one event fewer, so it reads exactly the
+            /// step's events the view carries, the flip's controller every one of them.
+            #[test]
+            fn r2652000_a_host_slicing_a_view_by_the_step_reads_the_step_alone() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({}));
+                s.end_turn();
+                let fresh = s.last_events().len();
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P1, fresh), fresh);
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P2, fresh), fresh - 1);
+                let theirs = s.view(P2).events;
+                let step: Vec<GameEvent> = s
+                    .last_events()
+                    .iter()
+                    .filter(|event| event.event_type() != GameEventType::Rolled)
+                    .cloned()
+                    .collect();
+                let seen = &theirs[theirs.len() - jackioh_engine::viewed_of_newest(s.state(), P2, fresh)..];
+                assert_eq!(
+                    seen.iter().map(GameEvent::event_type).collect::<Vec<_>>(),
+                    step.iter().map(GameEvent::event_type).collect::<Vec<_>>()
+                );
+                // Asked for more than the log holds, it counts what there is.
+                let total: usize = s.state().applied.iter().map(|entry| entry.events.len()).sum();
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P1, total + 5), total);
+            }
+
             /// R2652000: on heads the trap fires in the same action, so the opponent sees the flip too,
             /// naming the card as its graveyard does, before the `trapFired` it caused.
             #[test]
