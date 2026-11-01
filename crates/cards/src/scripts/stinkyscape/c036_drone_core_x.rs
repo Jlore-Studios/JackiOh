@@ -1,7 +1,7 @@
 //! S #36 Drone Core X (SPEC §8.10 row 36): (8) Spell, Drone Core, Mythic, a card of the Stinkyscape set.
 //!   Base:    "Float reduces cost.\nSummon the Drone Battleship."
 //!   Radiant: "Float reduces cost.\nSummon a Radiant Drone Battleship."
-//! Engine: "Float reduces cost" as S #34 (R1563000): a hand trigger on its owner's Float (a deck trigger too through v0.5.9e, R2657002), a
+//! Engine: "Float reduces cost" as S #34 (R1563000): a hand trigger on its owner's Float (a deck trigger too through v0.5.9f, R2657002), a
 //!   `costMod` kept until a graveyard or exile (R766). The Drone Battleship is its three layer tokens
 //!   summoned as one pile (`summon_pile`, R1842000) into one unit zone, bottom first: the Meltdown Layer,
 //!   then the Propagation Layer, then the Shield Layer on top, so the Shield Layer is fought first and acts
@@ -18,7 +18,7 @@ const MELTDOWN: &str = "stinkyscape-t-meltdown-layer";
 const PROPAGATION: &str = "stinkyscape-t-propagation-layer";
 const SHIELD: &str = "stinkyscape-t-shield-layer";
 
-/// One face. `deck` adds the Float deck trigger it had through v0.5.9e (R2657002).
+/// One face. `deck` adds the Float deck trigger it had through v0.5.9f (R2657002).
 fn face(radiant: bool, deck: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
@@ -44,9 +44,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// R767000: through v0.5.9f a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: face(false, true),
         radiant: face(true, true),

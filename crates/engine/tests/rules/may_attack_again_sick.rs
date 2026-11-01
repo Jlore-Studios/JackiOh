@@ -3,7 +3,7 @@
 //! Rush unit that kills on its summon turn may attack again a Unit only, the hero neither offered nor
 //! allowed (§6.1), and one that entered on an earlier turn may hit the hero. R2657004 (issue #2657): so
 //! does every refresh, `keepSick` or not; only `liftSick`, the older reading a kept script asks for
-//! (C+ #73.1 Classic Golem's v0.5.9e, R767000), lifts the sickness for the turn.
+//! (C+ #73.1 Classic Golem's v0.5.9f, R767000), lifts the sickness for the turn.
 //!
 //! Fixtures are this file's own: `fx-` defs indexed from 25210 (BUILD §0).
 
@@ -27,7 +27,7 @@ fn keeper() -> CardDef {
 }
 
 /// The same with the verb's old reading, the kill lifting its sickness (Classic Golem's shape through
-/// v0.5.9e, `liftSick`).
+/// v0.5.9f, `liftSick`).
 fn lifter() -> CardDef {
     unit_def(
         25211,

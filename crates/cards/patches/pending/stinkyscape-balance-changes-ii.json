@@ -1,7 +1,7 @@
 {
   "title": "Patch: Stinkyscape balance changes II",
   "sources": "#2657",
-  "notes": "The owner's second Stinkyscape balance pass (R2657000-R2657006). Can't Defend is a keyword in place of the static flag \"Can't be in Defense Position\". A Field Trap reveals only on its first firing (trapFired.again). Float triggers only from the hand. A Trade never draws its own card back unless the deck holds no other. Summoning sickness persists through a refreshed attack. A Buff may add Flashback or remove Can't attack and Can't Defend; a Nerf may add Crater in a hand and never adds either. KY's Constant reads a Temporary count, Plague Counters and newly declared Unit and Trap amounts. Cost, stat and text changes to about forty cards; every changed script keeps its v0.5.9e version for replays (R767000).",
+  "notes": "The owner's second Stinkyscape balance pass (R2657000-R2657006). Can't Defend is a keyword in place of the static flag \"Can't be in Defense Position\". A Field Trap reveals only on its first firing (trapFired.again). Float triggers only from the hand. A Trade never draws its own card back unless the deck holds no other. Summoning sickness persists through a refreshed attack. A Buff may add Flashback or remove Can't attack and Can't Defend; a Nerf may add Crater in a hand and never adds either. KY's Constant reads a Temporary count, Plague Counters and newly declared Unit and Trap amounts. Cost, stat and text changes to about forty cards; every changed script keeps its v0.5.9f version for replays (R767000).",
   "player": {
     "title": "Stinkyscape Balance Changes II",
     "new": [

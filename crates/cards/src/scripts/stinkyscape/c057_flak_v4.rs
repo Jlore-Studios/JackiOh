@@ -9,7 +9,7 @@
 //! (R1852001); played alone, its death fuses its base version into its owner's Dormant Starship
 //! (R1852000, R2521000).
 //! #2657: "each enemy Unit" is every enemy Unit and no hero (every enemy Unit and then the enemy hero,
-//! R1862001's "each enemy", through v0.5.9e, `script_v0_5_9e`), one hit each before one state
+//! R1862001's "each enemy", through v0.5.9f, `script_v0_5_9f`), one hit each before one state
 //! check (`damage_all`, R59), and "twice" is two such rounds, the second after the first's check, so a
 //! Unit the first destroyed is not hit again. R2521001: each
 //! hit of each round is its own roll, made just before it lands, so the second round rolls every
@@ -48,7 +48,7 @@ fn odds(least: i32, most: i32) -> Vec<DamageOdds> {
 /// R1862001, R2521001: `left` rounds of "deal a random `least` to `most` damage to each enemy", each
 /// after the last one's check, every target rolling its own each round, `lucky` more kept at the
 /// highest.
-/// `heroes`: the enemy hero too, as through v0.5.9e; each enemy Unit alone since #2657.
+/// `heroes`: the enemy hero too, as through v0.5.9f; each enemy Unit alone since #2657.
 fn rounds(least: i32, most: i32, lucky: i32, left: i32, heroes: bool) -> Vec<Effect> {
     let mut round = vec![damage_all(json_as(json!({
         "amount": least.min(most),
@@ -101,9 +101,9 @@ pub fn script() -> CardScripts {
     scripts(false)
 }
 
-/// R767000: through v0.5.9e its rolls hit the enemy hero too, after each enemy Unit; `KEPT_SCRIPTS`
+/// R767000: through v0.5.9f its rolls hit the enemy hero too, after each enemy Unit; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     scripts(true)
 }
 
@@ -268,11 +268,11 @@ mod tests {
     mod base {
         use super::*;
 
-        /// R767000: the script kept for the replays of v0.5.9e and before rolls for the enemy hero too,
+        /// R767000: the script kept for the replays of v0.5.9f and before rolls for the enemy hero too,
         /// after each enemy Unit.
         #[test]
-        fn r767000_the_script_kept_for_v0_5_9e_hits_the_enemy_hero_too() {
-            crate::under_kept(ID, script_v0_5_9e(), || {
+        fn r767000_the_script_kept_for_v0_5_9f_hits_the_enemy_hero_too() {
+            crate::under_kept(ID, script_v0_5_9f(), || {
                 let mut s = flak_on(false, "s005-kept-9e", json!({ "field": [wall()] }));
                 let target = s.unit_at(P2, 1).id;
                 s.activate(ID, json!({}));

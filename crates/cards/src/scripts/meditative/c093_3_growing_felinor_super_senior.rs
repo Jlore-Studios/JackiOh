@@ -5,7 +5,7 @@
 //! Radiant: "Divine Shield, Rush
 //!           Can't be in Defense Position."
 //! Engine: keywords and the flag only, the end of the Growing Felinor chain (R1180).
-//! - **Can't Defend** (R2657000, the static flag `never_defense` through v0.5.9e), as #65.1 Spikey Pillow: `reduce.rs` refuses the switch
+//! - **Can't Defend** (R2657000, the static flag `never_defense` through v0.5.9f), as #65.1 Spikey Pillow: `reduce.rs` refuses the switch
 //!   and `legal_actions` leaves it out, and `combat.rs` checks a switch made as an effect (§6.1).
 //! - **No Death:** a unit token vanishes when it leaves the field (R11), and nothing follows it.
 
@@ -21,9 +21,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on both
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
 /// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
@@ -32,7 +32,7 @@ pub fn script_v0_5_9e() -> CardScripts {
 // Rush".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script_v0_5_9e};
+    use super::{ID, script_v0_5_9f};
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::testkit::*;
 
@@ -74,8 +74,8 @@ mod tests {
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(8), Some(8)]);
             assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]);
-            // R767000: the script kept for v0.5.9e carries the flag the keyword took over from.
-            let scripts = script_v0_5_9e();
+            // R767000: the script kept for v0.5.9f carries the flag the keyword took over from.
+            let scripts = script_v0_5_9f();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.never_defense),
                 Some(true)

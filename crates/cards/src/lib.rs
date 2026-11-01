@@ -212,9 +212,9 @@ pub fn register_all() {
 }
 
 /// R767000, R2657000: `scripts` with "Can't be in Defense Position" as the static flag `never_defense`
-/// it was through v0.5.9e, on the faces that printed it (`base`, `radiant`): the kept script of each card
+/// it was through v0.5.9f, on the faces that printed it (`base`, `radiant`): the kept script of each card
 /// that prints Can't Defend since #2657. It builds on the card's script as it stands, which differs from
-/// v0.5.9e's in that flag alone; a later change to one of those scripts keeps v0.5.9e's whole first.
+/// v0.5.9f's in that flag alone; a later change to one of those scripts keeps v0.5.9f's whole first.
 pub(crate) fn never_defense_kept(mut scripts: CardScripts, base: bool, radiant: bool) -> CardScripts {
     for (face, printed) in [(&mut scripts.base, base), (&mut scripts.radiant, radiant)] {
         if printed {

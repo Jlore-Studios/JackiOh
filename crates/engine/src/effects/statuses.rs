@@ -65,7 +65,7 @@ pub struct MayAttackAgainArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub keep_sick: Option<bool>,
     /// R767000: the sickness lifted for the rest of the turn, as every refresh did before R2657004 —
-    /// only the scripts kept for those versions' replays (Classic+ #73.1 Classic Golem's v0.5.9e) say
+    /// only the scripts kept for those versions' replays (Classic+ #73.1 Classic Golem's v0.5.9f) say
     /// so. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lift_sick: Option<bool>,

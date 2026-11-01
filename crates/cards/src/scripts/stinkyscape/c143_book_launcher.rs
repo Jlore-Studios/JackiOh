@@ -15,8 +15,8 @@
 //! target. R1862004: `cast_random_at` casts one of the list, free and counted as played by its
 //! controller (R70, R452), aimed at the chosen target for its first target where it may take it
 //! (R946), and with `targetEnemies` (R656) a pick the Book makes itself goes to the enemy when it harms
-//! and to your side when it helps. Radiant: the Book is cast Radiant. Through v0.5.9e it had two
-//! Activates, one for each side, counted apart (`script_v0_5_9e`, kept, R767000).
+//! and to your side when it helps. Radiant: the Book is cast Radiant. Through v0.5.9f it had two
+//! Activates, one for each side, counted apart (`script_v0_5_9f`, kept, R767000).
 
 use jackioh_engine::effects::cast_random_at;
 use jackioh_engine::prelude::*;
@@ -91,8 +91,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: one of v0.5.9e's two Activates: "Cast a random `books` Book on" a target of `target`.
-fn launch_v0_5_9e(
+/// R767000: one of v0.5.9f's two Activates: "Cast a random `books` Book on" a target of `target`.
+fn launch_v0_5_9f(
     id: &str,
     label: &str,
     target: TargetDecl,
@@ -112,7 +112,7 @@ fn launch_v0_5_9e(
     }
 }
 
-fn launcher_v0_5_9e(radiant: bool) -> Script {
+fn launcher_v0_5_9f(radiant: bool) -> Script {
     let harmful = TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "hero"] }));
     let helpful = TargetDecl {
         aim: Some(TargetAim::Help),
@@ -120,14 +120,14 @@ fn launcher_v0_5_9e(radiant: bool) -> Script {
     };
     Script {
         activations: vec![
-            launch_v0_5_9e(
+            launch_v0_5_9f(
                 "harmfulBook",
                 "Cast a random harmful Book on an enemy",
                 harmful,
                 &HARMFUL_BOOKS,
                 radiant,
             ),
-            launch_v0_5_9e(
+            launch_v0_5_9f(
                 "helpfulBook",
                 "Cast a random helpful Book on an ally",
                 helpful,
@@ -139,12 +139,12 @@ fn launcher_v0_5_9e(radiant: bool) -> Script {
     }
 }
 
-/// R767000: through v0.5.9e it had two Activates, a harmful Book at an enemy and a helpful one at an
+/// R767000: through v0.5.9f it had two Activates, a harmful Book at an enemy and a helpful one at an
 /// ally, each once a turn and counted apart; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
-        base: launcher_v0_5_9e(false),
-        radiant: launcher_v0_5_9e(true),
+        base: launcher_v0_5_9f(false),
+        radiant: launcher_v0_5_9f(true),
     }
 }
 
@@ -267,8 +267,8 @@ mod tests {
         }
 
         #[test]
-        fn r1751000_the_two_activates_kept_for_v0_5_9e_are_counted_apart() {
-            crate::under_kept(ID, script_v0_5_9e(), || {
+        fn r1751000_the_two_activates_kept_for_v0_5_9f_are_counted_apart() {
+            crate::under_kept(ID, script_v0_5_9f(), || {
                 let mut s = board("s143-apart", false);
                 let mine = s.unit_at(P1, 2).id;
                 let theirs = s.unit_at(P2, 1).id;

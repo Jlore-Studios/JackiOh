@@ -2,7 +2,7 @@
 //! Cry: draw 1", radiant "Your hero can't take more than 3 damage in one instance. Your hero has
 //! Armor 1. Cry: draw 2" (§8's cell "Cap 3; your hero has Armor 1; Cry: draw 2", R275: the cap is
 //! tightened, the hero armoured AND the Cry draws twice as many). The cap was 5 and the Radiant face
-//! gave no Armor through v0.5.9e (`script_v0_5_9e`, kept, R767000).
+//! gave no Armor through v0.5.9f (`script_v0_5_9f`, kept, R767000).
 //!
 //! The cap is not an effect or an aura: it is step 3 of the §4.4 damage pipeline, so the card only
 //! contributes a static flag. `damage.rs hero_damage_cap` reads `static_flags.anti_oneshot` on the
@@ -46,9 +46,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e its Radiant face gave its hero no Armor; `KEPT_SCRIPTS` folds those
+/// R767000: through v0.5.9f its Radiant face gave its hero no Armor; `KEPT_SCRIPTS` folds those
 /// replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     let base = anti_oneshot_armor(false);
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -221,7 +221,7 @@ mod tests {
                 "p2": { "hand": ["core-005"] },
             }));
             assert_eq!(jackioh_engine::damage::hero_armor_of(base.state(), P1), 0);
-            crate::under_kept("core-073", super::super::script_v0_5_9e(), || {
+            crate::under_kept("core-073", super::super::script_v0_5_9f(), || {
                 let kept = setup(json!({
                     "p1": { "backrow": [{ "def": "core-073", "radiant": true }], "hand": ["core-005"] },
                     "p2": { "hand": ["core-005"] },
@@ -229,7 +229,7 @@ mod tests {
                 assert_eq!(
                     jackioh_engine::damage::hero_armor_of(kept.state(), P1),
                     0,
-                    "v0.5.9e's Radiant face gave none"
+                    "v0.5.9f's Radiant face gave none"
                 );
             });
         }

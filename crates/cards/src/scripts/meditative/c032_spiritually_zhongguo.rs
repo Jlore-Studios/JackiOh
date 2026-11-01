@@ -1,8 +1,8 @@
 //! M #32 Spiritually 中国 (SPEC §8.8 row 32): (4) Spell, CN, Epic ((3) through v0.5.2).
 //!
 //! Base:    "Get ready to learn Chinese! Transform every card in your hand into the same random CN
-//!           card, which costs (1). Summon {units} random CN Units." ((0) through v0.5.9e, kept as
-//!           `script_v0_5_9e`, R767000)
+//!           card, which costs (1). Summon {units} random CN Units." ((0) through v0.5.9f, kept as
+//!           `script_v0_5_9f`, R767000)
 //! Radiant: "… the same random Radiant CN card … Summon {units} random Radiant CN Units." Printed in
 //!           English since issue #2179 (in Chinese before, MD-B13).
 //! Engine:
@@ -29,7 +29,7 @@ const EFFECTS: i32 = 3;
 
 /// "which costs (1)": what the new hand cards cost since #2657, (0) before.
 const CN_CARD_COST: i32 = 1;
-/// R767000: what they cost through v0.5.9e.
+/// R767000: what they cost through v0.5.9f.
 const CN_CARD_COST_V0_5_9E: i32 = 0;
 
 /// One of the three: 0 the learning, 1 the hand, 2 the summon; the hand's cards cost `cost`.
@@ -99,8 +99,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.9e the new hand cards cost (0); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+/// R767000: through v0.5.9f the new hand cards cost (0); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: spiritually(false, CN_CARD_COST_V0_5_9E),
         radiant: spiritually(true, CN_CARD_COST_V0_5_9E),
@@ -322,13 +322,13 @@ mod tests {
             }
         }
 
-        /// R767000: the script kept for the replays of v0.5.9e and before, whose hand cards cost (0).
-        mod v0_5_9e {
+        /// R767000: the script kept for the replays of v0.5.9f and before, whose hand cards cost (0).
+        mod v0_5_9f {
             use super::*;
 
             #[test]
-            fn r767000_a_game_on_v0_5_9e_makes_the_hand_cost_0() {
-                crate::under_kept(SPIRITUALLY, script_v0_5_9e(), || {
+            fn r767000_a_game_on_v0_5_9f_makes_the_hand_cost_0() {
+                crate::under_kept(SPIRITUALLY, script_v0_5_9f(), || {
                     let mut s = casting("spiritually-kept-9e", false);
                     s.play(SPIRITUALLY, json!({}));
                     assert!(!s.hand(P1).is_empty());

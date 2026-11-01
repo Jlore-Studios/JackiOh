@@ -96,9 +96,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on both
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
 /// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 

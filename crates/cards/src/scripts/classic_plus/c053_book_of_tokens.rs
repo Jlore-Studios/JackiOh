@@ -6,7 +6,7 @@
 //! One laneless `summon` per token: each takes the leftmost empty, unlocked, unreserved unit zone (R64)
 //! and fizzles silently on a full row (§3.2), as Core #15's do. The token's stats are its own (§7).
 //! The count is one draw from the match rng: 1 token `ONE_TOKEN_CHANCE` (60%) of the time and 2 the
-//! rest, since #2657 (50/50 through v0.5.9e, `script_v0_5_9e`, kept, R767000), so the curve stays near a
+//! rest, since #2657 (50/50 through v0.5.9f, `script_v0_5_9f`, kept, R767000), so the curve stays near a
 //! single 1-cost token summon; a tuned count would be a param, and there is none. Lucky X (§6.1) rolls X more times and
 //! keeps the most tokens: the Radiant face prints Lucky 1, and the Lucky read is the running card's
 //! own, so a Degrade or an Upgrade of that number moves it (B3.4), as Two Grapes reads its Lucky.
@@ -32,7 +32,7 @@ fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
 }
 
 /// One roll of the count: `ONE_TOKEN_CHANCE` percent `MIN_TOKENS`, else `MAX_TOKENS`; with `even`, as
-/// v0.5.9e rolled it, one even pick of the two.
+/// v0.5.9f rolled it, one even pick of the two.
 fn roll_of(rng: &mut Rng, even: bool) -> i32 {
     if even {
         MIN_TOKENS + rng.int(MAX_TOKENS - MIN_TOKENS + 1)
@@ -69,9 +69,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e the count was an even pick of 1 and 2; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.5.9f the count was an even pick of 1 and 2; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: book_of_tokens(false, true),
         radiant: book_of_tokens(true, true),
@@ -145,8 +145,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_5_9e_rolls_an_even_count() {
-            crate::under_kept(BOOK, super::super::script_v0_5_9e(), || {
+        fn r767000_the_script_kept_for_v0_5_9f_rolls_an_even_count() {
+            crate::under_kept(BOOK, super::super::script_v0_5_9f(), || {
                 let mut ones = 0;
                 for n in 0..400 {
                     let mut s = book(false, json!([]), Some(&format!("book-of-tokens-even-{n}")));

@@ -13,7 +13,7 @@
 //! "If this destroys it" is its `after_attack` hook, run only for a Golem that survived the combat
 //! (R2285001): when the attacked Unit is among the ones it destroyed (R42), it may attack again. R2657004:
 //! a Golem that entered this turn stays summoning sick through that second attack, so its Rush keeps it
-//! off the hero; through v0.5.9e the refresh lifted the sickness (`script_v0_5_9e`, kept, R767000).
+//! off the hero; through v0.5.9f the refresh lifted the sickness (`script_v0_5_9f`, kept, R767000).
 
 use jackioh_engine::effects::{may_attack_again, transform_random};
 use jackioh_engine::prelude::*;
@@ -42,7 +42,7 @@ fn when_it_attacks(radiant: bool) -> Hook {
     })
 }
 
-/// "If it dies, this may attack again." `lift_sick` is v0.5.9e's refresh, which lifted summoning
+/// "If it dies, this may attack again." `lift_sick` is v0.5.9f's refresh, which lifted summoning
 /// sickness for the turn (R2657004).
 fn after_it_attacks(lift_sick: bool) -> Hook {
     hook(move |ctx| {
@@ -81,9 +81,9 @@ pub fn script() -> CardScripts {
     scripts(false)
 }
 
-/// R767000: through v0.5.9e its second attack lifted its summoning sickness, so a Golem played that
+/// R767000: through v0.5.9f its second attack lifted its summoning sickness, so a Golem played that
 /// turn could hit the hero after a kill, before R2657004; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     scripts(true)
 }
 

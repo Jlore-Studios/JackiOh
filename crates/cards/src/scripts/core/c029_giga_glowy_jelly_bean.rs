@@ -16,8 +16,8 @@
 //! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464)
 //! since R2657002: each Float of its owner's lowers its cost by that much while it is in their hand,
 //! kept until a graveyard or exile (R766). Until #1563 it had no such trigger (`script_v0_4_0f`, kept
-//! for the replays of v0.4.0f and before, R767000), and through v0.5.9e a deck trigger too
-//! (`script_v0_5_9e`).
+//! for the replays of v0.4.0f and before, R767000), and through v0.5.9f a deck trigger too
+//! (`script_v0_5_9f`).
 
 use jackioh_engine::prelude::*;
 
@@ -54,7 +54,7 @@ fn make_radiant(cards: &[String]) -> Vec<Effect> {
         .collect()
 }
 
-/// Where "Float reduces cost" works: nowhere before #1563, hand and deck through v0.5.9e, and the hand
+/// Where "Float reduces cost" works: nowhere before #1563, hand and deck through v0.5.9f, and the hand
 /// alone since R2657002.
 #[derive(Clone, Copy)]
 enum Float {
@@ -103,9 +103,9 @@ pub fn script_v0_4_0f() -> CardScripts {
     giga(Float::None)
 }
 
-/// R767000: through v0.5.9e a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// R767000: through v0.5.9f a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     giga(Float::HandAndDeck)
 }
 

@@ -328,14 +328,14 @@ fn activations_listed(s: &Scenario, card: &CardInstance) -> usize {
         .count()
 }
 
-/// R767000: `run` folding under the build's catalog with ZolarKeth's script kept for v0.5.9e, the one
+/// R767000: `run` folding under the build's catalog with ZolarKeth's script kept for v0.5.9f, the one
 /// #2521's B23 and B24 test: #2657 gave it a Cry of two modes and no Universities to run.
-fn under_v0_5_9e<T>(run: impl FnOnce() -> T) -> T {
+fn under_v0_5_9f<T>(run: impl FnOnce() -> T) -> T {
     register_all();
     let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
         .iter()
-        .find(|(id, version, _)| *id == ZOLARKETH && *version == "v0.5.9e")
-        .expect("ZolarKeth's v0.5.9e script is kept");
+        .find(|(id, version, _)| *id == ZOLARKETH && *version == "v0.5.9f")
+        .expect("ZolarKeth's v0.5.9f script is kept");
     let shipped: &'static jackioh_engine::ShippedCatalog =
         Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
             "kept",
@@ -359,7 +359,7 @@ fn zolarketh_played(seed: &str, radiant: bool) -> (Scenario, CardInstance) {
 
 #[test]
 fn b23_zolarketh_summons_a_university_on_its_base_face_from_both_faces() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         for radiant in [false, true] {
             let (s, university) = zolarketh_played("b23-face", radiant);
             assert_eq!(university.controller, P1);
@@ -373,7 +373,7 @@ fn b23_zolarketh_summons_a_university_on_its_base_face_from_both_faces() {
 
 #[test]
 fn b23_the_summoned_university_is_refused_its_own_activate_now_and_on_a_later_turn() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         for radiant in [false, true] {
             let (mut s, university) = zolarketh_played("b23-refused", radiant);
             assert_eq!(
@@ -463,7 +463,7 @@ fn ran(events: &[GameEvent], first: &CardInstance, second: &CardInstance) -> (bo
 
 #[test]
 fn b24_zolarketh_activates_each_university_with_a_use_left() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         for radiant in [false, true] {
             let Campus {
                 mut s,
@@ -484,7 +484,7 @@ fn b24_zolarketh_activates_each_university_with_a_use_left() {
 
 #[test]
 fn b24_a_university_zolarketh_ran_has_spent_its_use_and_is_refused_its_own_activate() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         for radiant in [false, true] {
             let Campus {
                 mut s,
@@ -508,7 +508,7 @@ fn b24_a_university_zolarketh_ran_has_spent_its_use_and_is_refused_its_own_activ
 
 #[test]
 fn b24_a_university_that_activated_itself_this_turn_is_skipped() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         let Campus {
             mut s,
             zolars,
@@ -534,7 +534,7 @@ fn b24_a_university_that_activated_itself_this_turn_is_skipped() {
 
 #[test]
 fn b24_a_second_zolarketh_skips_the_universities_the_first_one_ran() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         let Campus {
             mut s,
             zolars,
@@ -557,7 +557,7 @@ fn b24_a_second_zolarketh_skips_the_universities_the_first_one_ran() {
 
 #[test]
 fn b24_a_new_turn_gives_each_university_its_use_back() {
-    under_v0_5_9e(|| {
+    under_v0_5_9f(|| {
         let Campus {
             mut s,
             zolars,

@@ -3,7 +3,7 @@
 //!   Base:    "Float reduces cost.\nSummon {corvettes|Drone Corvette|Drone Corvettes}." — corvettes 3
 //!   Radiant: "Float reduces cost.\nSummon {corvettes|Radiant Drone Corvette|Radiant Drone Corvettes}."
 //!            — corvettes 3
-//! Engine: "Float reduces cost" as S #34 (R1563000): a hand trigger on its owner's Float (a deck trigger too through v0.5.9e, R2657002), a
+//! Engine: "Float reduces cost" as S #34 (R1563000): a hand trigger on its owner's Float (a deck trigger too through v0.5.9f, R2657002), a
 //!   `costMod` kept until a graveyard or exile (R766). Then one summon per Corvette, each into the caster's
 //!   leftmost open unit zone in turn (R64), then the backrow's once the unit row is full, where each stands
 //!   (R2248000), no Cry (R1), as many as fit; the count is the declared
@@ -17,7 +17,7 @@ pub const ID: &str = "stinkyscape-035";
 /// The Drone Corvette token (§8.10 T-drone-corvette).
 const CORVETTE: &str = "stinkyscape-t-drone-corvette";
 
-/// One face. `deck` adds the Float deck trigger it had through v0.5.9e (R2657002).
+/// One face. `deck` adds the Float deck trigger it had through v0.5.9f (R2657002).
 fn face(radiant: bool, deck: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -42,9 +42,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// R767000: through v0.5.9f a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: face(false, true),
         radiant: face(true, true),

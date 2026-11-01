@@ -2,8 +2,8 @@
 //!   Base:    "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant
 //!            Call to Chaos to your hand."
 //!   Radiant: "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random
-//!            Radiant Call to Chaos to your hand. It costs (0)." (through v0.5.9e "Add a random Radiant
-//!            Call to Chaos to your hand.", `script_v0_5_9e`, kept, R767000)
+//!            Radiant Call to Chaos to your hand. It costs (0)." (through v0.5.9f "Add a random Radiant
+//!            Call to Chaos to your hand.", `script_v0_5_9f`, kept, R767000)
 //!
 //! Two independent picks (R60, R1882000) from the Call to Chaos pool, the cards tagged Call to Chaos of
 //! the sets that ship (R380; the set's own two join it as it ships, R1420): the first a fresh card of the
@@ -64,9 +64,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e the Radiant face added only its caster's Radiant Call to Chaos, at its
+/// R767000: through v0.5.9f the Radiant face added only its caster's Radiant Call to Chaos, at its
 /// printed cost; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     let radiant = Script {
         cry: Some(hook(|_ctx| vec![add_own(None)])),
         ..Script::default()
@@ -212,8 +212,8 @@ mod tests {
     }
 
     #[test]
-    fn r767000_the_script_kept_for_v0_5_9e_adds_only_its_caster_s_radiant_call_to_chaos() {
-        crate::under_kept(ID, script_v0_5_9e(), || {
+    fn r767000_the_script_kept_for_v0_5_9f_adds_only_its_caster_s_radiant_call_to_chaos() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
             let s = wildar_at(0, true);
             assert!(gained(&s, P2).is_empty());
             let mine = gained(&s, P1);

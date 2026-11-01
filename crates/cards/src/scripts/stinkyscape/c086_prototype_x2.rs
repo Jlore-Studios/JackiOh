@@ -8,7 +8,7 @@
 //!
 //! Tribute 5 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
 //! Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand (in hand or deck
-//! through v0.5.9e, R2657002), never below 0 (`float_lowers_tribute`, R1841003). R1862002: the Cry is `equip_picks` (R1841002), 3 Discovers of three in
+//! through v0.5.9f, R2657002), never below 0 (`float_lowers_tribute`, R1841003). R1862002: the Cry is `equip_picks` (R1841002), 3 Discovers of three in
 //! turn from the Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them
 //! whether or not the set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused
 //! into this with its Activate (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the
@@ -29,7 +29,7 @@ const TRIBUTE: i32 = 5;
 const PICKS: i32 = 3;
 
 /// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
-/// One face; `deck` adds the Float deck trigger it had through v0.5.9e (R2657002).
+/// One face; `deck` adds the Float deck trigger it had through v0.5.9f (R2657002).
 fn arm(rarity: Rarity, deck: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -60,9 +60,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e a Float lowered its Tribute in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// R767000: through v0.5.9f a Float lowered its Tribute in the deck too, before R2657002; `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: arm(Rarity::Epic, true),
         radiant: arm(Rarity::Legendary, true),

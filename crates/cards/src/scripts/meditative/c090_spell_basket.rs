@@ -8,7 +8,7 @@
 //! card (R387), repeats allowed (R60), each on its base face at its printed cost; the Radiant face's
 //! are Radiant (§5.2). The hand cap burns the rest (§2.4). Since #2657 each takes Temporary
 //! {temporary} (R2179001) as it reaches the hand, C+ #23 Dropshipping's way, so a card the cap burns
-//! takes none; through v0.5.9e they took nothing (`script_v0_5_9e`, kept, R767000).
+//! takes none; through v0.5.9f they took nothing (`script_v0_5_9f`, kept, R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -41,9 +41,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e the Spells it added were not Temporary; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.5.9f the Spells it added were not Temporary; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: spell_basket(false, false),
         radiant: spell_basket(true, false),
@@ -160,8 +160,8 @@ mod tests {
             }
 
             #[test]
-            fn r767000_the_script_kept_for_v0_5_9e_adds_them_with_no_temporary() {
-                crate::under_kept(ID, super::super::super::script_v0_5_9e(), || {
+            fn r767000_the_script_kept_for_v0_5_9f_adds_them_with_no_temporary() {
+                crate::under_kept(ID, super::super::super::script_v0_5_9f(), || {
                     let mut s = holding("spell-basket-kept", false, 1);
                     s.play(ID, json!({}));
                     assert_eq!(temporaries(&s, 1), vec![None; 3]);

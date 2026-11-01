@@ -224,7 +224,7 @@ mod tests {
     const DUELIST: &str = "core-045";
     const ROCK: &str = "core-066";
     /// A (0) Spell its holder could still play, so a turn here never ends by itself (R82): through
-    /// v0.5.9e the Fanatic's own switch to Defense Position kept it open, which Can't Defend took away
+    /// v0.5.9f the Fanatic's own switch to Defense Position kept it open, which Can't Defend took away
     /// (R2657000).
     const FILLER: &str = "core-010";
     const MENACE: &str = "core-019";

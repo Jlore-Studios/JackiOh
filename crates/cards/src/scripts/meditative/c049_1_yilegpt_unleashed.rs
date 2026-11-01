@@ -1,20 +1,20 @@
 //! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (8) Unit, CN, Acclaimed, Prime, Token (printed
-//! Mythic), 8/20 → 16/40 (Radiant: Armor 5). YileGPT Unleashed until #1563. Through v0.5.9e it cost
+//! Mythic), 8/20 → 16/40 (Radiant: Armor 5). YileGPT Unleashed until #1563. Through v0.5.9f it cost
 //! (10), had Can't attack and "Start of turn: Make [a random permanent / {radiants} random permanents]
-//! of yours Radiant" (`script_v0_5_9e`, kept for those replays, R767000).
+//! of yours Radiant" (`script_v0_5_9f`, kept for those replays, R767000).
 //!
 //! "Float reduces cost." plus "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …"
 //! Engine:
 //! - "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464)
 //!   on its owner's `turnEnded`: the event's `unspentMana`, the Float, becomes a `costMod` of minus
 //!   that (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile (R766), and the
-//!   price floors at 0. Through v0.5.9e it was a deck trigger too (R2657002). Until #1563 the face
+//!   price floors at 0. Through v0.5.9f it was a deck trigger too (R2657002). Until #1563 the face
 //!   printed it as "Whenever your turn ends with unspent mana, this costs that much less", the same
 //!   rule.
 //! - The Cry is ME-PICK-N (MD-C23) over the five entries below: the base face does `picks` different
 //!   ones by the match rng, named to both players and resolved in list order; the Radiant face does
 //!   all five in order, with two Radiant Viruses for the opponent in place of the fill (MD-C24).
-//! - Through v0.5.9e, start of turn: `set_radiant_random` among your non-Radiant permanents on the
+//! - Through v0.5.9f, start of turn: `set_radiant_random` among your non-Radiant permanents on the
 //!   field (R60, R242), this one included.
 
 use jackioh_engine::effects::{
@@ -117,9 +117,9 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
     ]
 }
 
-/// One face. `v0_5_9e` builds the face v0.5.9e shipped: its start-of-turn Radiant and its Float deck
+/// One face. `v0_5_9f` builds the face v0.5.9f shipped: its start-of-turn Radiant and its Float deck
 /// trigger, both gone since #2657.
-fn unleashed(radiant: bool, v0_5_9e: bool) -> Script {
+fn unleashed(radiant: bool, v0_5_9f: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             if radiant {
@@ -135,7 +135,7 @@ fn unleashed(radiant: bool, v0_5_9e: bool) -> Script {
                 })]
             }
         })),
-        start_of_turn: v0_5_9e.then(|| {
+        start_of_turn: v0_5_9f.then(|| {
             hook(move |ctx| {
                 vec![set_radiant_random(json_as(json!({
                     "zones": "field",
@@ -146,7 +146,7 @@ fn unleashed(radiant: bool, v0_5_9e: bool) -> Script {
         // "Float reduces cost" (R1563000), its trigger ids kept from before the keyword; in the hand
         // alone since R2657002.
         hand_triggers: vec![float_reduces_cost("unleashed-discount-hand")],
-        deck_triggers: if v0_5_9e {
+        deck_triggers: if v0_5_9f {
             vec![float_reduces_cost("unleashed-discount-deck")]
         } else {
             vec![]
@@ -162,9 +162,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e it made permanents Radiant at the start of its controller's turn and a
+/// R767000: through v0.5.9f it made permanents Radiant at the start of its controller's turn and a
 /// Float lowered its cost in the deck too; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
         base: unleashed(false, true),
         radiant: unleashed(true, true),

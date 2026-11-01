@@ -3,7 +3,7 @@
 //!   Base:    "Can't be in Defense Position. / Death: Add {cards|random Radiant Training Grounds card|random
 //!            Radiant Training Grounds cards} to your hand." — cards 1
 //!   Radiant: "Death: Add {cards|…} to your hand." — cards 2
-//! Engine: C+ #48 Jlockeed's Lobbyist line for line. The restriction is Can't Defend (R2657000; C+ #65.1's `neverDefense` flag through v0.5.9e),
+//! Engine: C+ #48 Jlockeed's Lobbyist line for line. The restriction is Can't Defend (R2657000; C+ #65.1's `neverDefense` flag through v0.5.9f),
 //!   which the switch action, `legalActions` and a switch made as an effect all honor (R20); the Radiant
 //!   face drops it. The Death's pool names the set (`{ "set": "Training Grounds" }`), so it works while
 //!   the set is held (R2194001): every non-token card of the set but this one (R387), each Radiant, one
@@ -34,10 +34,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on its
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on its
 /// base face, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under
 /// it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, false)
 }
 

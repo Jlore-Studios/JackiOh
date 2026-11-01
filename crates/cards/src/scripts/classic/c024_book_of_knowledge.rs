@@ -11,7 +11,7 @@
 //! Since #2657 the count is rolled as the Spell resolves: `least`, plus one coin flip of the match rng
 //! for each card between `least` and `most`, so 2 or 3 at 50/50 and 4, 5 or 6 at 25/50/25. Both ends
 //! are declared numbers (R386), read through `param`, and a Nerf that crossed them rolls between the
-//! two. Through v0.5.9e it drew its declared `draw`, 3 or 6, with no roll (`script_v0_5_9e`, kept,
+//! two. Through v0.5.9f it drew its declared `draw`, 3 or 6, with no roll (`script_v0_5_9f`, kept,
 //! R767000). Both faces run one script.
 
 use jackioh_engine::effects::draw;
@@ -40,9 +40,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.9e it drew its declared `draw`, 3 or 6, with no roll; `KEPT_SCRIPTS` folds
+/// R767000: through v0.5.9f it drew its declared `draw`, 3 or 6, with no roll; `KEPT_SCRIPTS` folds
 /// those replays under it, the definitions they carry declaring `draw`.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
@@ -269,15 +269,15 @@ mod tests {
             }
 
             #[test]
-            fn r767000_the_script_kept_for_v0_5_9e_draws_its_declared_draw_with_no_roll() {
+            fn r767000_the_script_kept_for_v0_5_9f_draws_its_declared_draw_with_no_roll() {
                 let old = |def: &mut CardDef| {
                     let declared: Vec<Param> = serde_json::from_value(json!([{
                         "key": "draw", "base": 3, "radiant": 6, "better": "up", "step": 1, "min": 1
                     }]))
-                    .expect("v0.5.9e's draw");
+                    .expect("v0.5.9f's draw");
                     def.params.get_or_insert_with(Vec::new).extend(declared);
                 };
-                crate::under_kept_as(BOOK, script_v0_5_9e(), old, || {
+                crate::under_kept_as(BOOK, script_v0_5_9f(), old, || {
                     let mut s = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C, D] }, "p2": { "hand": [FILLER] } }));
                     let cursor = s.state().rng_cursor;
                     s.play(BOOK, json!({}));

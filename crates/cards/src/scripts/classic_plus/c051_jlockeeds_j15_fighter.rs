@@ -1,8 +1,8 @@
 //! C+ #51 Jlockeed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
 //!   Base:    "Ranged, Flying, Rush. Can't be attacked."
 //!   Radiant: "Ranged, Flying, Rush, Divine Shield" and the same.
-//!   Through v0.5.9e: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
-//!   be attacked." (`script_v0_5_9e`, kept, R767000)
+//!   Through v0.5.9f: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
+//!   be attacked." (`script_v0_5_9f`, kept, R767000)
 //!   Engine:  "Can't be attacked (§6.1, §4.2 step 2): no attack may name it, a forced one included (a
 //!            forced attack on it does not happen, and "a random enemy" never draws it); it is still
 //!            targeted by effects and hit by "all" effects. A Taunt it gains binds nobody, since it
@@ -28,9 +28,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on both
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
 /// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
@@ -99,8 +99,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_5_9e_refuses_defense_position() {
-            crate::under_kept(J15, super::super::script_v0_5_9e(), || {
+        fn r767000_the_script_kept_for_v0_5_9f_refuses_defense_position() {
+            crate::under_kept(J15, super::super::script_v0_5_9f(), || {
                 let mut s = scenario(json!({ "p1": { "field": [J15], "hand": [FILLER] } }));
                 s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
             });

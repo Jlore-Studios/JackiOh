@@ -39,7 +39,7 @@ fn tradable() -> CardDef {
     spell_def(26574, json!({ "base": face, "radiant": face }))
 }
 
-/// A 2/2 whose script sets the legacy flag `never_defense`, as the scripts kept for v0.5.9e do.
+/// A 2/2 whose script sets the legacy flag `never_defense`, as the scripts kept for v0.5.9f do.
 fn flagged() -> CardDef {
     unit_def(26576, json!({}))
 }
@@ -161,7 +161,7 @@ mod r2657000_cant_defend {
 
     #[test]
     fn r2657000_the_legacy_flag_still_holds_a_unit_out_of_defense() {
-        // R767000: the scripts kept for v0.5.9e set `never_defense`, the flag the keyword took over from.
+        // R767000: the scripts kept for v0.5.9f set `never_defense`, the flag the keyword took over from.
         let mut s = board("r2657000-flag", json!({ "field": [flagged().id] }));
         let held = s.unit_at(P1, 1).id;
         s.expect_refused_with(|s| s.switch_position(held.as_str()), "Defense Position");

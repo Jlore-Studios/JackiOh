@@ -82,11 +82,11 @@ core-006: # Mana Well
     base: 回合开始时：获得{mana}点法力值。
     radiant: 回合开始时：获得{mana}点法力值。
 core-007: # Jewelosco Scarab
-  flavour: Found in the dairy aisle, guarding a discount nobody asked for.
+  flavour: Just a scarab. It clicks, it chitters, and it rolls whatever it finds into a very neat ball.
   voice:
-    play: Clean up on aisle you!
-    attack: Cleanup time!
-    death: Price check... on death.
+    play: Chitter chitter, click!
+    attack: Buzz buzz!
+    death: Click... click...
   zh:
     name: 宝市甲虫
     base: 战吼：发现一张法力值消耗为(2)的牌。
@@ -314,11 +314,11 @@ core-031: # KY's Math Equation
       Fib(times played + 1): 斐波那契数列第(打出次数+1)项
       Fib(times played + 3): 斐波那契数列第(打出次数+3)项
 core-032: # Prem Panther
-  flavour: "Premium plan. Premium claws. Premium refund policy: none."
+  flavour: Black as midnight, quiet as velvet, and gone before the grass stops moving.
   voice:
-    play: Premium predator. No ads.
-    attack: Premium pounce.
-    death: Subscription cancelled.
+    play: Silent paws. Sharp claws.
+    attack: From the shadows!
+    death: Back to the shadows...
   zh:
     name: 顶级黑豹
     base: "突袭\n每当此单位攻击后，该次攻击每消灭一个单位，抽{draw}张牌。"
@@ -413,7 +413,7 @@ core-042: # Eugenics
     base: 放逐你牌库中所有法力值消耗为(2)或更低的牌。你牌库中剩余的每张牌都有{chance}%的几率变为光辉。
     radiant: 放逐你牌库中所有法力值消耗为(2)或更低的牌。你牌库中剩余的每张牌都变为光辉。
 core-043: # Big Felinor
-  flavour: He loves every cat. He has opinions about everything else.
+  flavour: He loves every Felinor. He has opinions about everyone else.
   voice:
     play: Big cat. Bigger problems.
     attack: Big cat pounce!
@@ -519,11 +519,11 @@ core-053: # Reno
     base: 战吼：为你的英雄恢复生命值，最多恢复至{health}点生命值。
     radiant: 战吼：为你的英雄恢复生命值，最多恢复至{health}点生命值。
 core-054: # Straaza
-  flavour: She's been to every shop and haggled with every clerk.
+  flavour: Mother of a hundred hatchlings. She'll lend you two, and burn down anyone who's mean to them.
   voice:
-    play: Shopping spree! On the house!
-    attack: Everything must go!
-    death: Out of stock.
+    play: Come here, my little ones.
+    attack: Away from my brood!
+    death: Look after them for me...
   zh:
     name: 丝塔萨
     base: 战吼：将{cards}张法力值消耗为(3)的随机单位牌置入你的手牌。它们的法力值消耗为({setCost})。
@@ -591,9 +591,9 @@ core-061: # Prejudiced Postdoc
     base: 战吼：选择场上的一个人类单位。召唤一个该单位的白板化复制。
     radiant: 战吼：选择场上的任意一个单位。召唤一个该单位的白板化复制。
 core-062: # Friend of Felinors
-  flavour: Every cat in the neighbourhood comes when called. They all bring friends.
+  flavour: Throw one party for the Felinors and the whole clan turns up. They all bring friends.
   voice:
-    cast: Here kitty kitty kitty!
+    cast: Everyone's invited! Bring your friends!
   zh:
     name: 猫族之友
     base: 用猫族衍生物填满你的单位区。
@@ -705,9 +705,9 @@ core-073: # Anti-oneshot Armor
     base: "你的英雄每次受到的伤害不会超过{cap}点。\n战吼：抽{draw}张牌。"
     radiant: "你的英雄每次受到的伤害不会超过{cap}点。\n你的英雄拥有护甲{armor}。\n战吼：抽{draw}张牌。"
 core-074: # Adaptive UI
-  flavour: It resized itself to fit your wallet.
+  flavour: The U stands for Ultimate. The I stands for Infestation. The X stands for however much you've got.
   voice:
-    cast: Now responsive on all devices!
+    cast: Unleash the ultimate infestation!
   zh:
     name: 自适应界面
     base: 造成X点伤害。为你的英雄恢复X点生命值。抽X张牌。召唤一个X/X的食尸鬼衍生物。
@@ -869,11 +869,11 @@ core-091: # Fed Fauci
     previews:
       "+{mana} mana per Plague Counter": 每有一个瘟疫指示物，便+{mana}点法力值
 core-092: # Felinor Fiender
-  flavour: He counts every cat on the field, and then he becomes them.
+  flavour: He knows every Felinor's name, favourite song and which window is theirs. Not one of them told him.
   voice:
-    play: Cats. I need more cats.
-    attack: Sic 'em, kitties!
-    death: Who feeds them now?
+    play: More! I need more cats!
+    attack: For my lovelies!
+    death: They were going to love me...
   zh:
     name: 猫族恶友
     base: "堆叠\n还拥有你的所有猫族的属性，包括堆叠在下方的猫族。"
@@ -924,9 +924,9 @@ core-095-1: # Chaos Golem
     base: 突袭，吸血，圣盾，先攻
     radiant: 冲锋，吸血，圣盾，先攻
 core-096: # My Pawn
-  flavour: Not today. Not like this. Maybe never, actually.
+  flavour: He never raised his voice. You made every move yourself, exactly the way he planned it.
   voice:
-    cast: Checkmate, puppet.
+    cast: Go on. Play your part.
   zh:
     name: 我的棋子
     base: 当你的对手宣言一次对你的英雄致命的攻击时揭示：取消该攻击。其回合的剩余部分将随机进行。

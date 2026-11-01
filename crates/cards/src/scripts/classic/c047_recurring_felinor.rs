@@ -23,7 +23,7 @@ const ANCIENT_ACQUISITION: &str = "classic-034";
 type ReturnCost = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
 
 /// The return. `reveals_only` (R2657001) leaves out a Field Trap's later firings, which reveal nothing;
-/// the script v0.5.9e shipped answered every firing.
+/// the script v0.5.9f shipped answered every firing.
 fn recur(cost_override: Option<ReturnCost>, reveals_only: bool) -> TriggerDef {
     TriggerDef::new("recurring-felinor", &[GameEventType::TrapFired], move |ctx, event| {
         let GameEvent::TrapFired { controller, again, .. } = event else {
@@ -76,9 +76,9 @@ pub fn script() -> CardScripts {
     scripts(true)
 }
 
-/// R767000: through v0.5.9e every firing of one of your Traps returned it, a Field Trap's later ones
+/// R767000: through v0.5.9f every firing of one of your Traps returned it, a Field Trap's later ones
 /// included, before R2657001 made those plain triggers; `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     scripts(false)
 }
 

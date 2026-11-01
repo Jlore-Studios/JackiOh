@@ -16,8 +16,8 @@
 //! R55's counter, the hand cap, the cast-on-draw path. The base face's is a random one, one uniform pick
 //! of the match rng over the library's Spells (R60; one Spell draws nothing, R129), since #2657; the
 //! Radiant face's the one of the highest current cost, as #30 Archivist draws its highest card (R24:
-//! R65's costs, ties to the card nearest the top), as both faces did through v0.5.9e
-//! (`script_v0_5_9e`). A library with no Spell draws nothing. Through v0.5.2 it had one price and no
+//! R65's costs, ties to the card nearest the top), as both faces did through v0.5.9f
+//! (`script_v0_5_9f`). A library with no Spell draws nothing. Through v0.5.2 it had one price and no
 //! draw, which `script_v0_5_2` keeps (R767000).
 
 use jackioh_engine::effects::{add_player_modifier, draw_from_library};
@@ -109,9 +109,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.5.9e both faces drew the highest cost Spell; `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.5.9f both faces drew the highest cost Spell; `KEPT_SCRIPTS` folds those replays
 /// under it.
-pub fn script_v0_5_9e() -> CardScripts {
+pub fn script_v0_5_9f() -> CardScripts {
     let base = prep(Draws::Highest);
     CardScripts { radiant: base.clone(), base }
 }
@@ -463,11 +463,11 @@ mod tests {
             assert_eq!(paid_for(&s, FLOOD), vec![0]);
         }
 
-        /// R767000: the script kept for the replays of v0.5.9e and before, whose base face drew the
+        /// R767000: the script kept for the replays of v0.5.9f and before, whose base face drew the
         /// highest cost Spell.
         #[test]
-        fn r767000_a_game_on_v0_5_9e_draws_the_highest_cost_spell_on_the_base_face() {
-            crate::under_kept(PREP, crate::scripts::classic::c035_prep::script_v0_5_9e(), || {
+        fn r767000_a_game_on_v0_5_9f_draws_the_highest_cost_spell_on_the_base_face() {
+            crate::under_kept(PREP, crate::scripts::classic::c035_prep::script_v0_5_9f(), || {
                 let mut s = scenario(json!({
                     "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
                     "p2": { "hand": [ANCHOR] },
