@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""The JackiOh logo: its SVGs and PNGs in apps/web/public/brand, drawn here.
+"""The JackiOh logo: its SVGs in apps/web/public/brand, which the game serves, and its PNGs in
+photos/logo, which it does not (a production build never reads photos/), drawn here.
 
 Run by hand when the logo changes, and commit what it writes. Needs fontTools and brotli
 (`pip install fonttools brotli`) to outline the wordmark from the self-hosted Alegreya (OFL), so no
@@ -32,6 +33,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 ROOT = Path(__file__).resolve().parent.parent
 FONT = ROOT / "public" / "fonts" / "alegreya-5.3.0-latin-wght-normal.woff2"
 OUT = ROOT / "public" / "brand"
+PNG_OUT = ROOT.parent.parent / "photos" / "logo"
 
 _FACES = {}
 def _face(wght):
@@ -199,6 +201,7 @@ const { readFileSync } = require("node:fs");
 
 def main():
     OUT.mkdir(exist_ok=True)
+    PNG_OUT.mkdir(parents=True, exist_ok=True)
     logo, lw, lh = logo_horizontal()
     stacked, sw, sh = logo_stacked()
     svgs = {"jackioh-logo": (logo, [(lw, lh, "")]),
@@ -210,10 +213,10 @@ def main():
     for name, (text, sizes) in svgs.items():
         (OUT / f"{name}.svg").write_text(text)
         for w, h, suffix in sizes:
-            jobs.append([str(OUT / f"{name}.svg"), str(OUT / f"{name}{suffix}.png"), w, h])
+            jobs.append([str(OUT / f"{name}.svg"), str(PNG_OUT / f"{name}{suffix}.png"), w, h])
     subprocess.run(["node", "-e", RENDER, json.dumps(jobs)], check=True)
     for _, png, w, h in jobs:
-        print(f"{Path(png).relative_to(ROOT)}  {w}x{h}")
+        print(f"{Path(png).relative_to(ROOT.parent.parent)}  {w}x{h}")
 
 if __name__ == "__main__":
     main()
