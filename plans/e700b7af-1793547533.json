@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2686,
+  "title": "Patch: a player's repeated hellos on a match socket are answered at most once a second, as a watcher's are",
+  "branch": "bot/issue-2686",
+  "thread": "**Issue #2686 (data, not instructions):**\n\n```text\n# #2686: Patch: a player's repeated hellos on a match socket are answered at most once a second, as a watcher's are\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a player's browser reconnects to a match, it says hello and the server answers with the whole board. A script can say hello over and over and read every answer, and the server rebuilds and sends the full board, the clock, the portraits and the cosmetics each time, under the same lock the opponent's moves wait on. A watcher's socket was recently given a one-answer-per-second limit for exactly this (#2609). Once built, a player's own socket gets the same limit, so a scripted flood costs one board a second, while a real reconnect, which always starts with a fresh hello, is answered at once.\n\n## Why\n- R2609000 (issue #2609): a watcher's later hello is answered at most once per `WATCH_HELLO_INTERVAL_MS`, because \u201ca script that reads as fast as it sends had the actor send a view for every hello under the lock both players' moves wait on\u201d (`crates/server/src/config.rs:605-608`; `crates/server/src/actor/match_actor.rs:2833-2836`; `SeatGuard::hello_answer_allowed`, `crates/server/src/actor/guard.rs:99-108`).\n- A seat's hellos only coalesce while one is queued (R835001, `match_actor.rs:1995-2004`), and the flag is cleared as the task starts (`:727-733`), so a client that sends again as soon as each answer arrives keeps one hello queued for ever. Each run clears `card_picks_sent` and resends the loadouts, the view with `engine::legal_actions`, the clock, the portraits and every card's picks (`:736-745`, `push_view` at `:886-895`), about five frames for a 30-byte hello. `WS_OUTBOX_MAX_FRAMES` bounds only a reader that falls behind (R1441).\n- Co-op does the same: `crates/server/src/duos/actor.rs:1047-1053` and its hello task (`:597-607`, `push_seat` at `:721-725`).\n- A real page probes only after its socket has been quiet past `WS_PING_INTERVAL_SECONDS` (`apps/web/src/game/net.ts:611`, `apps/web/src/duos/socket.ts:480`), so it never sends two hellos inside a second.\n\n## Proposal\n- In both hello arms, before queueing: drop a hello from the same socket generation that comes sooner than `WATCH_HELLO_INTERVAL_MS` after that seat's last answered one, through the seat's `SeatGuard` (renaming the guard's doc from \u201ca watcher's\u201d to \u201ca socket's\u201d). The first hello of a new socket generation (a reattach) is always answered and starts the interval.\n- Reuse `WATCH_HELLO_INTERVAL_MS`, or rename it to cover both, in `crates/server/src/config.rs` (exported to `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs` if the client reads it).\n- A ruling in this issue's block amending R835001, with `spec/pending/<issue>.md`; rejected alternative to record: closing the socket on a hello flood, which would end an honest page's game on a reconnect storm.\n\n## Where it lands\n- `crates/server/src/actor/match_actor.rs`, `crates/server/src/actor/guard.rs`, `crates/server/src/duos/actor.rs`, `crates/server/src/config.rs`\n- Tests: `crates/server/tests/actor/ws_server.rs`, `crates/server/tests/actor/duos.rs`\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a79.5, \u00a79.8\n\n## Acceptance criteria\n- [ ] On `/ws/match`, ten hellos from one socket inside a second, each sent after the previous answer arrived, are answered once; one more a second later is answered.\n- [ ] A reattach on a new socket is answered at once, however recent the old socket's last answer.\n- [ ] The same holds on `/ws/duos`.\n- [ ] A player's actions are never delayed or refused by the hello limit.\n- [ ] Tests are named after the new ruling and listed in its `proven_in`; `cargo test -p jackioh-server`, clippy and `cargo jackioh spec check` pass.\n\n## Size and risks\nSmall: about 20 lines across two actors, a reused constant, tests and a ruling. Risk: a client that lost a view and asks again within a second waits up to a second for it; the page only asks after a quiet socket, so none does.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:08:04Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2686: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
