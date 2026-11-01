@@ -473,12 +473,13 @@ fn tokens(name: &str) -> Vec<String> {
     out
 }
 
-/// R1433: whether the light filter refuses an NFKC name. The token list is matched against the
+/// R1433: whether the light filter refuses an NFKC name, or a chat message's NFKC word (B53, SPEC
+/// §9.5: chat masks what the usernames' filter catches). The token list is matched against the
 /// tokens of the name with its digits read back both ways ([`read_back_digits`], [`ReadBack`]), so
 /// `a55`, `d1ck` and `Dick1` are each refused and `Tit4n` is not. A token without a letter is never
 /// matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
 /// innocent `Bob_455`.
-fn is_blocked(name: &str) -> bool {
+pub(crate) fn is_blocked(name: &str) -> bool {
     let folded = fold(name);
     if words(BLOCKLIST_ANYWHERE).any(|word| folded.contains(word)) {
         return true;
