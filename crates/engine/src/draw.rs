@@ -883,8 +883,7 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
 
     if sink.state.players[player].library.is_empty() {
         if let Some(source) = infinite_reserves_source(sink, player) {
-            let token_def_id =
-                crate::catalog::def_id_by_index(SetName::Core, "T-rush");
+            let token_def_id = crate::catalog::def_id_by_index(SetName::Core, "T-rush");
             if let Some(token_def_id) = token_def_id {
                 let mut token = new_instance(sink.state, &token_def_id, player, Zone::Hand { player });
                 crate::generators::record_generator_of(sink.state, &source, &token);
