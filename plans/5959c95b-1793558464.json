@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2728,
+  "title": "Patch: cosmetic token cycle Rare, Epic, Legendary, Rare, Epic, Cosmetic Pack, each step its own bar size",
+  "branch": "bot/issue-2728",
+  "thread": "**Issue #2728 (data, not instructions):**\n\n```text\n# #2728: Patch: cosmetic token cycle Rare, Epic, Legendary, Rare, Epic, Cosmetic Pack, each step its own bar size\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRework the cosmetic token bar (SPEC \u00a714.5) so it pays a new cycle and each step costs its own number of bar points. Today the card and cosmetic bars are both 200 points and take the same points per slot, so they fill on the same openings. Different costs per step stagger them apart.\n\n**The cycle** (`COSMETIC_TOKEN_CYCLE`, `crates/server/src/config.rs`) changes from Rare, Epic, Rare, Epic, Rare, Cosmetic Pack to:\n\n**Rare \u2192 Epic \u2192 Legendary \u2192 Rare \u2192 Epic \u2192 Cosmetic Pack**, then the same again. Each account keeps its place in the cycle (the `cosmetic_token_cycle` counter).\n\n**Each step's cost.** The single 200-point `COSMETIC_TOKEN_BAR_SIZE` becomes one size per step, each a named constant (CLAUDE.md rule 9):\n\n| Step | Bar points to earn it |\n|---|---|\n| Rare cosmetic token | 50 |\n| Epic cosmetic token | 75 |\n| Legendary cosmetic token | 100 |\n| Cosmetic Pack | 100 |\n\nThe card token bar stays as it is (`CARD_TOKEN_BAR_SIZE` 200), and so do the points each slot adds (`TOKEN_BAR_POINTS_BY_CARD_RARITY`, `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY`).\n\n**A Legendary cosmetic token is new.** It buys any cosmetic at Legendary or below that the account does not own. Legendary cosmetics are chases (\u00a714.2, R1333000), so this token can buy a Legendary chase. Mythic is still out of reach of every token. This reverses part of R1305003 (\"No token reaches Legendary or Mythic\") and \u00a714.2's \"No token pays for one\". Both are amended by a new ruling, below.\n\n**What this changes in practice:** one cosmetic cycle now costs 450 points, down from 1,200. With about 8.65 points per card pack (`economy/math.rs`), the cosmetic bar pays roughly every 6 / 9 / 12 packs (Rare / Epic / Legendary or pack), where it paid every 23. Cosmetic rewards come about 2.7\u00d7 as often as before. The card bar still pays every 23 packs. This is intended (the owner set these numbers). `COSMETIC_TOKEN_BAR_TARGET_PACKS` and its check in `economy/math.rs` become one target per step, or are retired, as the builder rules.\n\n**Overflow.** A bar that fills keeps its leftover points (R1305000), but the next step now has a different size. `settle_bar` must pay step by step, comparing the points against the current step's size, then the next step's, and so on, so a large gain can pay several steps with sizes that differ. The dev tool's \"fill the cosmetic bar\" (\u00a714.10, R1310003, `crates/server/src/api/dev.rs`) fills to the current step's size.\n\n### Where it lands\n\n- `crates/server/src/config.rs`: `CosmeticTokenStep::Legendary`, the new cycle, one size per step (replacing or deriving `COSMETIC_TOKEN_BAR_SIZE`), the targets. `tests/export_config.rs` regenerates `apps/web/src/wire/serverConfig.ts` (commit the diff).\n- `crates/server/src/economy/tokens.rs`: settling against the step's size, the Legendary token's redemption (at-or-below, chases up to Legendary allowed, Mythic refused), `read_tokens` answering the **current step's** size as the cosmetic bar's `size` and `cosmeticLegendary` among the tokens held (R1305004's shape).\n- `crates/server/src/economy/packs.rs`, `math.rs` and `api/dev.rs`, as above. No migration is needed: `0045_economy.sql` already allows a `cosmetic_token` keyed `Legendary`.\n- `apps/web`: `economy/bars.ts` (`fillReward` maps a `legendary` step to a Legendary token, and the bar's size comes from the answer, per step), the collection's token offer and `WalletPanel` (a held Legendary token is offered on locked Legendary cosmetics, chases included), the Shop and `/purchases` where they show tokens or the cycle, and their tests.\n- `e2e/cypress/e2e/45-economy-loop.cy.ts` and the component specs that show the bars.\n- SPEC \u00a714.5 (the cycle, the per-step sizes, the Legendary token), \u00a714.2 (chases: a Legendary token can buy a Legendary one, Mythic stays token-free), \u00a714's constants table, and amendments to R1305003 and R1305004.\n\n### Acceptance\n\n- `COSMETIC_TOKEN_CYCLE` is Rare, Epic, Legendary, Rare, Epic, Cosmetic Pack, and a test walks two full cycles across openings, paying each step in order.\n- The cosmetic bar pays a Rare token at 50 points, an Epic at 75, a Legendary at 100 and a Cosmetic Pack at 100, each a named constant. A test pins each one.\n- Overflow carries into the next step against that step's size, and a single gain that crosses more than one step pays each of them in order (a pure `settle`-style test plus an opening test).\n- A Legendary token buys an unowned Common, Rare, Epic or Legendary cosmetic, a Legendary chase included, per-card or account. It refuses a Mythic, one already owned, and a per-card one on an unowned card, each with 409 and spending nothing.\n- `GET /api/tokens` answers the cosmetic bar's size for the current step, the next step (`legendary` among them) and `cosmeticLegendary` held.\n- The card token bar's size, points and payouts are unchanged (an existing test still passes as it is).\n- The web's opening bars fly into a bar sized per step and reveal a Legendary token on a Legendary step. The collection offers a held Legendary token on a locked Legendary cosmetic. Vitest covers both.\n- A new ruling in this issue's block (`spec/rulings/R<issue\u00d71000>.md`, its \u00a711 paragraph in `spec/pending/<issue>.md`) states the cycle, the per-step sizes, the overflow rule and the Legendary token's reach. It amends R1305003 and R1305004, and its proving tests are named after it (CLAUDE.md rule 3). `cargo jackioh spec check` passes.\n- `serverConfig.ts` is regenerated and committed, and every required check (`rust`, `web`, `e2e smoke`, `db`, `bot selftest`) is green.\n\n### Blocked by, part of\n\nPart of the economy (#1294). Builds on #1305 (token bars), #1953 and #1999 (bar points). If #2725 (a deeper rarity ladder) lands first, keep this cycle on the cosmetic scale it leaves.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2728: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
