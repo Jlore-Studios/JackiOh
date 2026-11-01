@@ -21760,9 +21760,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-01T06:20:00Z",
-          "utilization": 0.86
+          "utilization": 0.87
         },
-        "observed_at": "2026-11-01T01:39:35Z",
+        "observed_at": "2026-11-01T05:35:05Z",
         "status": "allowed"
       }
     },
