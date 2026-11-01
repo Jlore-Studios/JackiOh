@@ -13140,13 +13140,25 @@
           "claude": "strong"
         }
       }
+    },
+    "2733": {
+      "action": "plan",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "claude-2",
+      "run_id": "pending:38a9b413-1793557565",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-01T18:26:27Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T18:25:51Z",
+    "at": "2026-11-01T18:26:27Z",
     "url": "",
-    "what": "plan #2722 on claude-4"
+    "what": "plan #2733 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-01T18:13:38Z",
