@@ -12913,12 +12913,16 @@
     },
     "2715": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6561629936"
+      ],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "pending_request": false,
+      "pending_at": "2026-11-01T17:53:45Z",
+      "pending_by": "jgoetzmann",
+      "pending_request": true,
       "provider": "claude-3",
       "queued_at": "2026-11-01T17:46:10Z",
       "requested_by": "jgoetzmann",
