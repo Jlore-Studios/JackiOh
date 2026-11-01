@@ -12577,6 +12577,13 @@
     "2688": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T16:06:59Z",
+        "difficulty": "hard",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The hard rule applies because this changes crates/ai/src root probing and search evaluation, with bounded simulations that must preserve hidden-information and node-budget contracts."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
