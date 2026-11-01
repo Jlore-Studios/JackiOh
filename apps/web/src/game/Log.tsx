@@ -422,8 +422,10 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       return t("{whose} {zone} was locked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "trapFired":
       // R154: the other seat reads the sentinel, and a sentinel is not a name.
-      return event.defId === HIDDEN_CARD
-        ? t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) })
+      if (event.defId === HIDDEN_CARD) return t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) });
+      // R2657001: a face-up Field Trap firing again reveals nothing, so its line says only that it triggered.
+      return event.again === true
+        ? t("{whose} {card} triggered", { whose: capitalised(name.whose(event.controller)), card: name.def(event.defId) })
         : t("{whose} trap {card} fired", { whose: capitalised(name.whose(event.controller)), card: name.def(event.defId) });
     case "attackDeclared": {
       const attack = { attacker: capitalised(name.instance(event.attackerId)), target: name.instance(event.targetId) };

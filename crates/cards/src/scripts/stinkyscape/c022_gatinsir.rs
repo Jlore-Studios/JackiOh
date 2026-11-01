@@ -11,7 +11,7 @@
 //! its card fires that card's Cry (R411): each Phalanx that arrived then runs its Cry for Gatinsir's
 //! controller, in the order they arrived (R2176000; a Warp Disruptor prints none). The attack then goes
 //! on as declared (ST9's AMBUSH, R1875002). The Warp Disruptors' aura acts at once.
-//! Radiant: all of them Radiant (Phalanx 8/8). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
+//! Radiant: all of them Radiant (Phalanx 6/6). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
 //! phalanxes 2 ↑.
 
 use jackioh_engine::effects::summon;
@@ -101,7 +101,7 @@ pub fn script() -> CardScripts {
 // roll under 30 and not on one above (a seed of each); on a miss it stays set and no event is seen;
 // revealed, two Warp Disruptors and then two Phalanxes arrive for its controller before the combat,
 // which goes on to its declared target; with one open unit zone one Phalanx arrives; chance, disruptors
-// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 8/8)". Each Phalanx it
+// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 6/6)". Each Phalanx it
 // summons runs its Cry (R411, R2176000), and a forced attack rolls nothing (R1875002).
 #[cfg(test)]
 mod tests {
@@ -364,8 +364,8 @@ mod tests {
                 vec![(PHALANX.to_string(), true), (PHALANX.to_string(), true)]
             );
             let phalanx = s.unit_at(P2, 1);
-            // A Phalanx 8/8, with the two Disruptors' +2 each, before its Cry arms it.
-            s.expect_stats(&phalanx, json!({ "attack": 8 + 2 + 2, "health": 8 }));
+            // A Phalanx 6/6 (8/8 until #2657), with the two Disruptors' +2 each, before its Cry arms it.
+            s.expect_stats(&phalanx, json!({ "attack": 6 + 2 + 2, "health": 6 }));
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
         }
 

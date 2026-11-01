@@ -8,7 +8,7 @@
 //!            cap burns it (§2.4). The Defense restriction is a position validator flag (as #65.1's),
 //!            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
 //!
-//! The restriction is #65.1's `neverDefense` flag, which the switch action, `legalActions` and a switch
+//! The restriction is Can't Defend (R2657000; #65.1's `neverDefense` flag through v0.5.9f), which the switch action, `legalActions` and a switch
 //! made as an effect all honor (R20). The Death's pool is one tag (R278); `addRandomFromCatalog` leaves
 //! out the card running the hook by its def id (R387), and puts the (0) price on a card only once it is
 //! in the hand, so a burned one keeps none (§2.4, R4).
@@ -20,10 +20,6 @@ pub const ID: &str = "classicplus-048";
 
 pub fn script() -> CardScripts {
     let base = Script {
-        static_flags: Some(StaticFlags {
-            never_defense: Some(true),
-            ..StaticFlags::default()
-        }),
         // "It costs (0)": the declared number `setCost` (R386), on both faces.
         death: Some(hook(|ctx| {
             vec![add_random_from_catalog(json_as(json!({
@@ -46,6 +42,13 @@ pub fn script() -> CardScripts {
     };
 
     CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on its
+/// base face, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under
+/// it.
+pub fn script_v0_5_9f() -> CardScripts {
+    crate::never_defense_kept(script(), true, false)
 }
 
 // C+ #48 Jlockeed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: 0/3, never in Defense

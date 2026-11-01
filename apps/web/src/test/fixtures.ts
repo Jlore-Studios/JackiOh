@@ -145,6 +145,8 @@ const ALL_KEYWORDS: Keyword[] = [
   // Stinkyscape's Starship keywords (R1852000, R1852003).
   { kind: "Starship Piece" },
   { kind: "Starship" },
+  // Issue #2657's keyword (R2657000).
+  { kind: "Can't Defend" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

@@ -1648,20 +1648,20 @@ mod stinkyscape {
         );
     }
 
-    /// R1862000, R2521001: a Flak weapon hits every enemy, the hero among them, `times` times, each hit
-    /// a roll of its own between its declared least and most.
+    /// R1862000, R2521001: a Flak weapon hits every enemy Unit, never the hero since #2657, `times` times,
+    /// each hit a roll of its own between its declared least and most.
     fn shoots_all(def: &str, radiant: bool, times: usize) {
         let mut s = armed(def, radiant);
         let events = activate_listed(&mut s, def, any);
         let rolls = printed(def, "least", radiant)..=printed(def, "most", radiant);
-        for target in ["hero-p2".to_string(), s.card(MENACE).id.clone()] {
-            let hits = hits_on(&events, &target);
-            assert_eq!(hits.len(), times, "{def} on {target}: {hits:?}");
-            assert!(
-                hits.iter().all(|hit| rolls.contains(hit)),
-                "{def} on {target}: {hits:?} not in {rolls:?}"
-            );
-        }
+        let menace = s.card(MENACE).id.clone();
+        let hits = hits_on(&events, &menace);
+        assert_eq!(hits.len(), times, "{def} on {menace}: {hits:?}");
+        assert!(
+            hits.iter().all(|hit| rolls.contains(hit)),
+            "{def} on {menace}: {hits:?} not in {rolls:?}"
+        );
+        assert!(hits_on(&events, "hero-p2").is_empty(), "{def} hit the hero");
     }
 
     /// R1840000, R2250000: a Miner gains its controller a Resource into their hand.
@@ -1872,9 +1872,11 @@ mod stinkyscape {
             "p1": { "field": [on("stinkyscape-026", radiant)], "hand": [STOCKPILE], "library": [X, X] },
             "p2": { "hand": [FILLER], "library": [X, X] },
         }));
-        let events = activate_listed(&mut s, "stinkyscape-026", |action| {
-            radiant || modes_of(action) == vec!["piece".to_string()]
-        });
+        // #2657: its Activate is its own once its Cry chose it, which it remembers.
+        s.card_mut("stinkyscape-026")
+            .memory
+            .insert("gainedPieceActivate".to_string(), json!(true));
+        let events = activate_listed(&mut s, "stinkyscape-026", |_| true);
         let pieces = summoned_defs(&events);
         assert_eq!(pieces.len(), 1, "{events:?}");
         assert!(

@@ -5,7 +5,7 @@
 //!   Radiant: "… Death: Gain {resources|random Radiant Stinkyscape Resource|…}.\nActivate: Tribute
 //!            this." (0/20; 5)
 //!
-//! A mining node (R1840006): Can't attack is printed, and `StaticFlags.never_defense` keeps it out of
+//! A mining node (R1840006): Can't attack is printed, and Can't Defend (R2657000) keeps it out of
 //! Defense Position (§4.1). Activate (§6.2, R384), once a turn: its controller's hero takes `selfDamage`
 //! (§4.4), then a Sacrifice of it (§6.3), a death, so its Death runs: `gain_resources` of `resources`
 //! random Resources into its controller's hand (R1840000, R1840002). Any other death pays too; an exile
@@ -54,10 +54,6 @@ fn mine(radiant: bool) -> ActivationDecl {
 
 fn face(radiant: bool) -> Script {
     Script {
-        static_flags: Some(StaticFlags {
-            never_defense: Some(true),
-            ..StaticFlags::default()
-        }),
         activations: vec![mine(radiant)],
         death: Some(hook(move |ctx| {
             vec![gain_resources(json_as(
@@ -74,6 +70,12 @@ pub fn script() -> CardScripts {
         base: face(false),
         radiant: face(true),
     }
+}
+
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
 }
 
 // S 172 Huge Asteroid — SPEC §8.10 row 172, BUILD M12 row S 172: "its Activate deals 5 damage to its

@@ -120,8 +120,9 @@ describe("R277 the word diff", () => {
     // Kill's (its Radiant face does not end the turn either). Meditative+ #11 Living Mana Potion's is the
     // designer's: its base text less the Tribute it activates with; its doubled stats carry its marks.
     // So are #12 Living Armor Potion's and #13 Living Health Potion's. The Stinkyscape set's #9
-    // Ticketed's Radiant face is the designer's base text less Brittle 3, and #149 Wildar's less the
-    // Call to Chaos it gives the opponent (R1857000): fourteen silent faces in all.
+    // Ticketed's Radiant face is the designer's base text less Brittle 3 (R1857000): thirteen silent
+    // faces in all, #149 Wildar's marked since #2657, when its Radiant face kept the opponent's Call to
+    // Chaos and made its own cost (0) too.
     expect(silent).toEqual([
       "core-055",
       "classic-028",
@@ -136,7 +137,6 @@ describe("R277 the word diff", () => {
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
-      "stinkyscape-149",
     ]);
   });
 });

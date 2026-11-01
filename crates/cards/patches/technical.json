@@ -3739,5 +3739,92 @@
     "pr": 2641,
     "title": "patches ship: v0.5.9e",
     "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "1a7ccc3a2cbe75a185f860205d3e3167eeb304cb",
+    "pr": 2643,
+    "title": "patches log: 5ffe4ec..19fea97",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "672e81c227e9cb37345a3912376f4b3aa1f330b8",
+    "pr": 2628,
+    "title": "the practice AI thinks twice as long, CI's release build splits in two, and AI Girlfriend's and Megabase's Unit voice lines",
+    "kind": "ai",
+    "player": "The practice AI thinks twice as long before each move."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "618524b9cbf75a34476d5dba9b010a76aec93f46",
+    "pr": 2636,
+    "title": "open a gated screen without waiting on what the page already knows",
+    "kind": "app",
+    "player": "Screens open faster: moving between screens no longer waits to check your account again, and the game starts loading while it does."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "203a1cd9cfc85b4c05557dd3f5cc4edd6c99dac5",
+    "pr": 2637,
+    "title": "/ai says how JackiOh uses AI, and the voice lines' provenance",
+    "kind": "app",
+    "player": "A new page, How JackiOh uses AI, linked from the footer, says where the game uses AI and what it never does with your data."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "9d721f425da570d239755929e81126afdbc86a12",
+    "pr": 2654,
+    "title": "every shipped patch is a GitHub release, and a pre-release while only staging has it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a35bc60ae05ee2be9c04ccaa7d5dd2b2a204c244",
+    "pr": 2656,
+    "title": "the releases go out with the bot's token, since GitHub refuses the Actions token a tag on a commit that holds a workflow",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "0518f07a3892a7655db3eae807b32c5b422cec40",
+    "pr": 2659,
+    "title": "the bot's Go harness stops deferring to the deleted Python (PORTING.md, PARITY.md)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e030907ab81123c84df6535edaa3ce5d4801be5d",
+    "pr": 2661,
+    "title": "the phone's match controls stay on one row, with the Marketplace inside a match menu",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "400b1df32e276def1bf7d2ca8f77e314b5fd8126",
+    "pr": 2663,
+    "title": "a job ran over 7 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "98b5f9ffc2bac6f78072c8bb5f33d9778a5cb4f0",
+    "pr": 2664,
+    "title": "Your Table's stats name the right kind of card (Spells are never Unbreakable)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "813e0f049a0ad8114cfd21d2d8887811afefb219",
+    "pr": 2666,
+    "title": "true flavour and voice lines for six Core cards and the Felinors",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e121aa8de007e51b503d24233377d5923e89eea6",
+    "pr": 2669,
+    "title": "patches ship: v0.5.9f",
+    "kind": "app"
   }
 ]

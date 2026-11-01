@@ -289,11 +289,13 @@ pub fn why_cannot_switch_in(
     if spend_exertion && !has_exertion_in(auras, unit, ExertionKind::Switch) {
         return Err(EngineError::new("that unit has already acted this turn"));
     }
-    // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect, nor can
-    // any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor an
-    // Indestructible one, whatever made it so (R2179000).
+    // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
+    // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it
+    // through v0.5.9f), nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23
+    // Warp Disruptor), nor an Indestructible one, whatever made it so (R2179000).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
+            || auras.unit_has(unit, KeywordKind::CantDefend)
             || crate::restrictions::defense_barred(auras.state())
             || auras.unit_has(unit, KeywordKind::Indestructible))
     {

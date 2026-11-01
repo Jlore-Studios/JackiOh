@@ -400,7 +400,8 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
-        assert_eq!(shipped.len(), 15, "{shipped:#?}");
+        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board).
+        assert_eq!(shipped.len(), 16, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
@@ -484,9 +485,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                     || entry.starts_with("traininggrounds-")
             })
             .count();
+        // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
+        // M #49.1's `radiants`, gone with its start-of-turn text.
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (42, 24),
+            (43, 23),
             "{radiant_only:#?}"
         );
     }
