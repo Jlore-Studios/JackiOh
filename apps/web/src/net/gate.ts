@@ -2,6 +2,8 @@
 // to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401; refusal
 // ends a session as `expired`, and transient failure leaves it retryable. R632 re-reads a tab-owned
 // session after storage or back/forward-cache changes; background reads keep a ready screen when safe.
+// R2630000: a new screen's gate starts from the page's last answer for an active account that owes
+// nothing (kept with the menus' answers, `readCache.ts`) and reads again behind it.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -12,6 +14,7 @@ import {
 import { sessionIdFromToken, subjectFromToken } from "../auth/redirect.ts";
 import { ApiRequestError, getMe, retryAfterMsOf, type MeResponse } from "./api.ts";
 import { AuthError, authConfig, refreshSession, revokeSession, sessionNearExpiry } from "./auth.ts";
+import { cachedRead, forgetRead, rememberRead } from "./readCache.ts";
 import {
   E2E_SESSION_STORAGE_KEY,
   SESSION_STORAGE_KEY,
@@ -135,6 +138,31 @@ async function renew(stale: Session, refreshToken: string, retry: () => void): P
 }
 
 /** The account a session and its `/api/auth/me` answer make. */
+/** R2630000: the path the gate's last answer is kept under, among the menus' (`readCache.ts`). */
+const ME_PATH = "/api/auth/me";
+
+/**
+ * R2630000: an answer a new screen may open on before the server answers again: an active account
+ * that owes nothing. A redirect (pending, anonymous), the banned panel and the consent and username
+ * prompts always wait for the read, so none of them ever rests on a kept answer.
+ */
+function opensAtOnce(me: MeResponse): boolean {
+  return (
+    me.profile.status === "active" &&
+    me.ageCheckOwed !== true &&
+    me.termsOwed !== true &&
+    me.username?.promptOwed !== true
+  );
+}
+
+/** R2630000: what a gate starts from: the page's last answer for this tab's session, or `loading`. */
+function startingAccount(): Account {
+  const session = readSession();
+  if (session === null) return { kind: "loading" };
+  const me = cachedRead<MeResponse>(session.accessToken, ME_PATH);
+  return me !== undefined && opensAtOnce(me) ? readyAccount(session, me) : { kind: "loading" };
+}
+
 function readyAccount(session: Session, me: MeResponse): Account {
   return {
     kind: "ready",
@@ -192,6 +220,8 @@ const ACCOUNT_CHANGED = "jackioh:account-changed";
  */
 export function announceAccountChange(): void {
   if (typeof window === "undefined") return;
+  // R2630000: the next screen's gate waits for the account as it now is.
+  forgetRead(readSession()?.accessToken ?? null, ME_PATH);
   window.dispatchEvent(new Event(ACCOUNT_CHANGED));
 }
 
@@ -373,12 +403,17 @@ function useRenewalBeforeExpiry(account: Account, reread: () => void): void {
 /** Reads and, when needed, renews the session before `/api/auth/me`. */
 export function useAccount(): Account {
   const [attempt, setAttempt] = useState(0);
-  const [account, setAccount] = useState<Account>({ kind: "loading" });
+  const [account, setAccount] = useState<Account>(startingAccount);
   const [reread] = useState(() => (): void => {
     setAttempt((count) => count + 1);
   });
 
   useRenewalBeforeExpiry(account, reread);
+
+  // R2630000: each answer is kept for the next screen's gate, by account, in the tab's memory.
+  useEffect(() => {
+    if (account.kind === "ready") rememberRead(account.token, ME_PATH, account.me);
+  }, [account]);
 
   useEffect(() => {
     let canceled = false;

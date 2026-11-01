@@ -4,6 +4,7 @@
 // An entry is keyed by its path (query included) and its account (the token's `sub`, so a renewal keeps it).
 // Sign-out and an account switch empty the cache; a mutating answer that carries a new value updates its entry.
 // Never kept: a match's, a series', a duos room's, a watch's or a replay's reads, and anything that isn't a `GET`.
+// R2630000: the gate keeps its `/api/auth/me` answer here too, for the next screen to open on.
 // CLAUDE.md rule 7: only this account's own answers from the server are kept; nothing here predicts, enforces
 // or reveals game state.
 
@@ -50,6 +51,11 @@ export function rememberRead(token: string | null, path: string, value: unknown)
 export function updateCachedRead<T>(token: string | null, path: string, update: (before: T) => T): void {
   const before = cachedRead<T>(token, path);
   if (before !== undefined) rememberRead(token, path, update(before));
+}
+
+/** Drops `token`'s account's kept answer for `path` (R2630000: the gate's, when the account changes). */
+export function forgetRead(token: string | null, path: string): void {
+  entries.delete(`${accountOf(token)}\n${path}`);
 }
 
 /** Sign-out (`net/session.ts`) and every test (`test/setup.ts`). */
