@@ -14923,12 +14923,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-01T06:30:00Z",
-          "utilization": 0.86
+          "utilization": 0.98
         },
-        "observed_at": "2026-11-01T03:34:29Z",
+        "observed_at": "2026-11-01T04:15:24Z",
         "seven_day": {
           "resets_at": "2026-11-07T05:00:00Z",
-          "utilization": 0.33
+          "utilization": 0.35
         },
         "status": "allowed_warning"
       }
