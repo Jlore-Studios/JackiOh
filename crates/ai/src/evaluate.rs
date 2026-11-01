@@ -2,37 +2,14 @@
 //! hero armor, board stats and keywords through §10.4's layers (a Defense-Position unit's attack at
 //! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
 //! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
-//! Patch v0.2.0's mechanics through the engine's own readers: a unit the engine bars from attacking
-//! (E35) counts no attack, Spell Damage (E6) and Immune to Spells are worth something, a Brittle count
-//! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
-//! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
-//! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
-//! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
-//! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
-//! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
-//! next-turn rider (§2.3). #1506 weighs the cards dormant under a side's Stack piles (§3.2, R13):
-//! the seat's own unit piles card by card, every other pile by its count (R447). #1602 prices three
-//! facts both seats see: the cost an enemy face-down card shows (R351), the fatigue draws a side has
-//! taken (§2.4) and Windfury (R636). #1722 prices what a side holds in its player modifiers, public on
-//! both seats (R169): its rest-of-game start-of-turn effects (R458) and its closest alternative win
-//! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand.
-//! #2424 prices a unit's Death by what it leaves behind (R2424000): the decision's root probes each
-//! Death the seat can read (`death_prices`), and `unit_worth` and `kill_worth` read the prices it
-//! passes them (`Prices`); #2566 prices a Starship Piece's death the same way, by the copy it fuses
-//! into its owner's Starship (R2566000). #2477 prices an own backrow card's start-of-turn and end-of-turn
-//! hooks by one firing (R2477000): the root fires each (`turn_hook_prices`) and `material` reads the
-//! prices it passes it (`Prices`). #2565 prices them for a unit on either field and a backrow card
-//! the seat can read on either side too (R2565000), `unit_worth` reading them. #2564 prices a unit's
-//! Activate by one use (R2564000): the root plays each (`activation_prices`) and `unit_worth` reads the
-//! prices it passes it (`Prices`); #2603 prices a face-up backrow card's the same way, a Field Spell's,
-//! `material` reading them (R2603000). #2688 prices a unit's "when this attacks" and "after this attacks"
-//! hooks by its next attack against its hookless twin's (R2688000): the root plays each
-//! (`attack_hook_prices`) and `unit_worth` reads the prices it passes it (`Prices`). It reads only what
+//! #1086 prices what a side has banked in public state, #1224 what its coming refreshes will or will
+//! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see. The
+//! decision's root prices each Death the seat can read by what it leaves behind (#2424; a Starship
+//! Piece's by the copy it fuses into, #2566), each turn hook by one firing (#2477, #2565), each
+//! Activate by one use (#2564; a face-up backrow card's, #2603) and each attack hook by the unit's next
+//! attack against its hookless twin's (#2688), and the rest read them (`Prices`). It reads only what
 //! the seat may know or what a determinization sampled, and nothing here reads a handicap or a
 //! difficulty (R180).
-//!
-//! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
-//! are passed explicitly.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -388,9 +365,8 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     let mut value = w.health * f64::from(view.health) + w.armor_point * f64::from(view.armor);
     let swings = can_swing(state, unit, &view);
     if swings {
-        // §4.1: a Defense-Position unit cannot attack until it spends a turn's exertion switching back,
-        // though it still strikes back in full, so only part of its attack counts. With
-        // `deftDefenseAttacks` a Deft unit keeps it all: it can switch back and attack in one turn (R49).
+        // §4.1: a Defense-Position unit strikes back in full but cannot attack until a switch spends its
+        // exertion, so only part of its attack counts; a Deft unit keeps it all (R49, `deftDefenseAttacks`).
         let deft = w.deft_defense_attacks && deft_in_defense(&view);
         let share = if view.position == Position::Def && !deft {
             w.defense_attack_share
@@ -429,15 +405,13 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     // R2564000: what one use of its Activate gives, inside the Brittle share: a crumbled card has no
     // coming uses.
     value += w.activation * activation_price(state, unit, w, prices);
-    // R2688000: what its next attack's own text gives its controller, inside the Brittle share too, and
-    // only while it may attack at all.
+    // R2688000: what its attack hooks give, inside the Brittle share too, and only while it may attack.
     if swings {
         value += w.attack_hook * attack_hook_price(state, unit, w, prices);
     }
-    // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's
-    // Plague Counters are mana it already banked, not part of the body that crumbles. R2424000: so is
-    // what its Death leaves, since Brittle's end is a death too. R2565000: and what one firing of its
-    // turn hooks gives, a growing or a card-making engine, a firing that harms it a debt.
+    // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's Plague
+    // Counters are mana it already banked. R2424000: so is what its Death leaves, since Brittle's end is a
+    // death too. R2565000: and what one firing of its turn hooks gives, a firing that harms it a debt.
     value * brittle_share(unit, w)
         + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
         + w.death * death_price(state, unit, w, prices)
@@ -1595,18 +1569,15 @@ fn has_activate_card(world: &GameState, player: PlayerId) -> bool {
         .any(|card| !subsystems::abilities_of(world, card).is_empty())
 }
 
-/// R2564000, R2688000: how `probe_turns` prices a player's cards at the start of its turn
-/// (`price_uses`, `price_attacks`): the turn, the player, the cards the seat cannot see, the counter,
-/// the cards already tried and the prices so far; `false` when the counter is spent.
+/// R2564000, R2688000: how `probe_turns` prices a player's cards at the start of its turn (`price_uses`,
+/// `price_attacks`); `false` when the counter is spent.
 type PriceTurn<P> =
     fn(&GameState, PlayerId, &IndexSet<String>, &dyn NodeCounter, &mut Vec<P>, &mut Vec<P>) -> bool;
 
-/// R2564000, R2603000: `activation_prices`' two turns on `start`: `seat` ends its turn and the enemy's
-/// cards are priced at the start of the enemy's (`price`: `price_uses`); then, when `own` (a card of the
-/// seat's has an Activate), the enemy ends that turn with nothing used and the seat's cards are priced at
-/// the start of its next one. A turn the pass does not reach prices nothing, and nor does any turn after
-/// it. R2688000: `attack_hook_prices` walks the same two turns, its `price` `price_attacks`, `own` when a
-/// unit of the seat's has an attack hook, the enemy ending its turn with no attack made.
+/// R2564000, R2603000, R2688000: the two turns `activation_prices` and `attack_hook_prices` walk on
+/// `start`: `seat` ends its turn and `price` prices the enemy's cards at the start of the enemy's; then,
+/// when `own` (the seat has a card to price), the enemy ends that turn and the seat's are priced at the
+/// start of its next one. A turn the pass does not reach prices nothing, and nor does any turn after it.
 fn probe_turns<P>(
     start: &GameState,
     seat: PlayerId,
@@ -1710,13 +1681,11 @@ fn probe_attack(legal: &[ActionBody], unit: &CardInstance) -> Option<ActionBody>
 }
 
 /// R2688000: what `unit`'s `attack` on `turn`, the start of its controller's turn, gives its controller
-/// through its attack hooks: the controller's evaluation after the attack less after the same attack by
-/// its hookless twin (`hookless_twin`, its text given back before scoring, `with_text_back`), and
-/// `AI_EVAL.next_turn_mana` for each crystal the one gained over the other, which the evaluation does not
-/// count. Signed: a hook that costs its controller is a debt. Two attacks, each a node of `counter` at
-/// least (`simulate`, which answers the other seat's prompts on the way, with no price passed). `None`
-/// when the counter is spent; `Some(None)` when there is nothing to price: either attack is refused, or
-/// leaves a prompt open or the game over, which the probe neither answers nor prices.
+/// through its attack hooks: the controller's evaluation after it less after the same attack by its
+/// hookless twin (its text given back before scoring, `with_text_back`), plus `AI_EVAL.next_turn_mana`
+/// per crystal gained over the twin, which the evaluation does not count. Signed: a costly hook is a
+/// debt. `None` when the counter is spent; `Some(None)` when either attack is refused or leaves a prompt
+/// open or the game over.
 fn attack_hook_probe(
     turn: &GameState,
     unit: &CardInstance,
@@ -1748,10 +1717,9 @@ fn attack_hook_probe(
 }
 
 /// R2688000: prices into `priced` the next attack of each of `controller`'s units with an attack hook
-/// on `turn`, the start of its turn (`active_units_of`: never a Dormant card), but none of `hidden`: the
-/// attack `probe_attack` picks, priced by `attack_hook_probe`, the price kept signed and kept at 0 too.
-/// A unit the same as one already tried (`tried`, `AttackHookPrice::is_for`) is not tried again, nor is
-/// one with no legal attack. `false` when the counter is spent.
+/// on `turn`, the start of its turn, but none of `hidden`, each card once (`tried`): the attack
+/// `probe_attack` picks, priced by `attack_hook_probe` and kept signed, 0 included. `false` when the
+/// counter is spent.
 fn price_attacks(
     turn: &GameState,
     controller: PlayerId,
@@ -1792,17 +1760,12 @@ fn has_attack_hook_unit(world: &GameState, player: PlayerId) -> bool {
 }
 
 /// R2688000: the attack-hook prices a decision of `seat`'s passes (`Prices`), probed on `world`, its
-/// probe world (a function of what the seat sees, R185): one attack of each unit acting on either field
-/// with a "when this attacks" or an "after this attacks" hook (`has_attack_hook`, so never a Dormant
-/// card, a face-down card or a hand card), each card once (`AttackHookPrice::is_for`), priced against
-/// the same attack by its hookless twin (`attack_hook_probe`). The enemy's units attack at the start of
-/// the enemy's next turn and the seat's own at the start of the seat's next one (`probe_turns`, as
-/// `activation_prices` walks them), so an attack the seat already made this turn hides nothing. It runs on a copy with both players' automatic
-/// turn end off (R345), so no step ends a turn the probe did not end, and with no price passed
-/// (`Prices::NONE`), so a probe reads none. The probes draw at most `AI_ATTACK_HOOK_PROBE_NODES` nodes
-/// from `counter`; the units left when they run out are not priced. Nothing is priced, and no node is
-/// spent, when no unit on either field has an attack hook, while a prompt is open, once the game is
-/// over, outside the seat's own main phase, or at a zero `AI_EVAL.attack_hook`.
+/// probe world (R185): one attack of each unit acting on either field with an attack hook (never a
+/// Dormant, face-down or hand card), each once, against the same attack by its hookless twin. The enemy's
+/// attack at the start of its next turn, the seat's at the start of its own (`probe_turns`), so an attack
+/// already made this turn hides nothing. Automatic turn end off (R345), no price passed, at most
+/// `AI_ATTACK_HOOK_PROBE_NODES` nodes from `counter`; none spent when no unit has an attack hook or
+/// outside the seat's own main phase.
 pub fn attack_hook_prices(
     world: &GameState,
     seat: PlayerId,

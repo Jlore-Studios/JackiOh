@@ -1,32 +1,7 @@
-//! Rematch offers after a finished non-series match (SPEC §9.5, R672):
-//! `POST`/`GET /api/matches/:matchId/rematch` (`src/api/rematch.rs`), the rating move a
-//! double-or-nothing rematch makes (`src/api/ranked.rs`, `src/api/results.rs`), and the presence
-//! the registry reports off the live actor's sockets (`src/actor/registry.rs`,
-//! `src/actor/match_actor.rs`).
-//!
-//!  - **R672**: a double-or-nothing rematch is ranked-only and doubles each side's Glicko rating
-//!    delta, with deviation and volatility from the single update.
-//!  - Equal stakes from both seats create exactly one match with the finished decks, a fresh seed
-//!    and the same seats; mismatched stakes create nothing.
-//!  - A non-seat learns nothing (404); a live match (422), a series game (422) and a double from
-//!    an unranked match (422) are refused.
-//!  - Stale offers are ignored past `REMATCH_OFFER_TTL_MS`; `opponentHere` follows the opponent's
-//!    socket, false once it closes or the actor is gone.
-//!  - **R2685000**: an offer is taken only within `REMATCH_OFFER_TTL_MS` of the match's end, so a
-//!    seat's mismatched offers cannot keep an older one alive; a late one records nothing, though an
-//!    entry that made a game still answers its id.
-//!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
-//!    status names the mode the rematch plays.
-//!  - **R924000**: each seat's latest offer picks the set its deck leans on.
-//!  - **R1638000**: a match played on an earlier catalog offers no rematch: every offer, a ladder
-//!    bot's too, is 409 `update_required`, and nothing is kept or made.
-//!
-//! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
-//! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
-//! reached for real (sockets on a live actor; the order of the store's calls).
-//!
-//! The offers are held per app (`App::rematch_offers`), so a test's sweep reaches only its own
-//! offers; each test still names its own profiles and matches.
+//! Rematch offers after finished non-series matches (SPEC §9.5, R672).
+//! Rulings: R672 (double-or-nothing Glicko delta), R1372/R924000 (All Random lean),
+//! R1638000 (stale catalog rejects rematch with 409), R2685000 (an offer is taken only within
+//! `REMATCH_OFFER_TTL_MS` of the match's end).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};

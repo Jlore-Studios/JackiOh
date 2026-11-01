@@ -236,11 +236,9 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     #[test]
     fn r215_r28_r87_a_call_to_chaos_cast_at_the_end_of_a_chain_taken_back_from_the_graveyard_and_played_starts_a_chain_of_its_own()
      {
-        // The played #95 stands in for the 19th link of a chain, as 095's own tests pin R28's counter. Its
-        // roll casts the 20th link, which R87 sends to the graveyard as it resolves, and #72 Reminisce takes
-        // it back. Played from hand it is a new play, a new chain from nothing, so its "cast a random Call
-        // to Chaos" casts one where the old link at the cap cast nothing.
-        // The seed is arbitrary: each play's cursor is searched for a roll that casts #95 itself.
+        // The played #95 stands in for the 19th link (R28's counter); its roll casts the 20th, which R87 sends
+        // to the graveyard and #72 Reminisce takes back. Played from hand it starts a chain of its own, so its
+        // recast casts one where the link at the cap cast nothing. Any seed: the cursor is searched.
         let seed = "inv-r5-chaos-chain";
         let at_cap = |cursor: u32| {
             let mut s = scenario(
@@ -319,10 +317,9 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
     #[test]
     fn r155_r70_a_return_spell_cast_on_the_opponents_turn_does_not_come_back_at_the_end_of_its_casters_next_turn_5_1_6_2()
      {
-        // attack it; the Panther kills it and survives, so p1 draws 2 on p2's turn (R426). The top card is a
-        // cast-on-draw Spell with #23 Reoccurring Dream's "End of turn: returns from the GY to your hand"
-        // (the flag R155 writes), so p1 casts it on p2's turn (§2.4, R70). A cast on draw is no play
-        // (R2179002), so cleanup finds its flag in the graveyard rather than in a turn log.
+        // p2's #9 Moths makes the Panther attack and kill it, so p1 draws 2 on p2's turn (R426): a cast-on-draw
+        // Spell with #23's end-of-turn return (R155's flag), cast on p2's turn (§2.4, R70). A cast on draw is
+        // no play (R2179002), so cleanup finds its flag in the graveyard rather than in a turn log.
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
@@ -365,8 +362,7 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
         ));
         s.expect_in_zone(&cod.id, "graveyard");
 
-        // p2's turn ends. §5.1: the Spell returns "at the end of that turn", and R155's cleanup clears
-        // the flag "at the end of that turn" — whichever reading, nothing of that return is left once
+        // §5.1 and R155: whichever reading of "at the end of that turn", nothing of the return is left once
         // the turn it was played on is over.
         s.end_turn();
         assert_eq!(s.state().active, P1);

@@ -4,13 +4,9 @@
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
-//! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce, the action, card and
-//! effect helpers, the sink bench (`Bench`), `sink_for`, `ids_of`, `types_of` and `hand_ids` from here
-//! rather than a copy (#1777, #1997, #2024; crates/tools/tests/acceptance.rs refuses a copy, a local
-//! `static NONCE` and a local struct of just `events` and `rng`). The runs several files had copied
-//! word for word (`run_as_p1`, `run_with_options`, `run_with_targets`, `apply_now`, `run_on_sink`) and
-//! the game past both mulligans (`past_the_mulligans`) are here too (#2160); a file that calls one
-//! `run` or `playing` imports it under that name.
+//! The rules tests take these helpers from here rather than a copy (#1777, #1997, #2024, #2160;
+//! crates/tools/tests/acceptance.rs refuses a copy, a local `static NONCE` and a local struct of just
+//! `events` and `rng`); a file that calls one `run` or `playing` imports it under that name.
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -271,8 +267,8 @@ pub fn run_as_p1(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, PlayerId::P1)
 }
 
-/// One effect applied straight through its `apply` under `options`, as `resolve.ts` does, with no
-/// card of its own and no settle, the rng's cursor written back; the events it emitted.
+/// One effect applied straight through its `apply` under `options`, with no card of its own and no
+/// settle, the rng's cursor written back; the events it emitted.
 pub fn run_with_options(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events = Vec::new();
@@ -285,8 +281,7 @@ pub fn run_with_options(state: &mut GameState, effect: Effect, options: HookOpti
     events
 }
 
-/// TS `run(state, effect, self, targets, controller)`: one effect on a sink over `state`, the rng
-/// cursor written back; its events.
+/// One effect on a sink over `state`, the rng cursor written back; its events.
 pub fn run_with_targets(
     state: &mut GameState,
     effect: Effect,
@@ -335,7 +330,7 @@ pub fn apply_now(state: &mut GameState, effect: Effect) {
     state.rng_cursor = rng.cursor();
 }
 
-/// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
+/// Run `f` on a sink over `state` and hand back what it emitted.
 pub fn run_on_sink<R>(
     state: &mut GameState,
     f: impl FnOnce(&mut EngineSink<'_>) -> R,

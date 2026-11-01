@@ -1,16 +1,8 @@
 //! `/ws/match` over a real listener and a real WebSocket client: what one client can cost the
 //! process before its token is even checked (§9.8), and how a client hands over its token.
 //!
-//!  - a frame over `MAX_FRAME_BYTES` is refused with 1009, so it is never buffered whole (the
-//!    library's default ceiling is far larger);
-//!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
-//!    included;
-//!  - the token travels as an offered `jackioh.bearer.` subprotocol (R1379000), and only
-//!    `WS_SUBPROTOCOL` is echoed;
-//!  - each upgrade counts against its account's R109 budget; one past it closes with 4429 before any
-//!    store call (R2478000);
-//!  - a seat's later hellos on one socket are answered once per `WATCH_HELLO_INTERVAL_MS`, a new
-//!    socket's first at once, and actions never wait on it (R2686000).
+//! A frame over `MAX_FRAME_BYTES` is refused with 1009, so it is never buffered whole (the library's
+//! default ceiling is far larger).
 //!
 //! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
 //! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
@@ -961,10 +953,8 @@ mod r2686000_player_hello_limit {
 
     /// A script's burst of hellos on one socket, each sent after the previous reply had arrived.
     const HELLO_BURST: usize = 10;
-    /// How long the socket is silent before a reply is taken as whole. It outlasts the actor
-    /// running a hello's task, so each of the burst would have been answered, one view each, were
-    /// only R835001's coalescing of queued hellos holding it; and it keeps the burst inside the
-    /// interval.
+    /// The silence that ends a reply: longer than a hello's task, so each of the burst would get a
+    /// view were only R835001's coalescing holding it, and short enough to keep the burst in one interval.
     const HELLO_SETTLE: Duration = Duration::from_millis(25);
 
     fn hello() -> String {

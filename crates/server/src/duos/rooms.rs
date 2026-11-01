@@ -1,34 +1,16 @@
 //! Duos co-op rooms (fullsend SPEC S6, B33, B34, B42): `POST /api/duos/rooms`, `GET` and `DELETE`
-//! `/api/duos/rooms/:code`, `POST /api/duos/rooms/:code/join` and `GET /api/duos/live`, every one
+//! `/api/duos/rooms/:code`, `POST /api/duos/rooms/:code/join` and `GET /api/duos/live`, all
 //! `AuthLevel::Active`.
 //!
-//! A room is the 1v1 room's twin (`actor/rooms.rs`): a code of `ROOM_CODE_LENGTH` from the room-code
-//! alphabet (R79, R104), minted by retrying a bounded number of times (R149), the host's deck or
-//! random choice frozen when it is made (R253, through the queue's own `freeze_choice`), and a join
-//! that claims it in one statement, so the loser of a race is told the room is full and never gets a
-//! second match. The join starts the match: the host is a1 and the guest a2, the AI plays b1 and b2
-//! (`duos::engine::match_options`), the row and the claim are written in one transaction, and the
-//! actor starts on the begun state (`duos::registry`). Both people learn the match id: the guest from
-//! the join, the host from the room (or `GET /api/duos/live`).
+//! A room uses a `ROOM_CODE_LENGTH` code (R79, R104, R149). The host's deck or random choice is
+//! frozen when made (R253). Players must be free to play (R1065000); join reserves both seats
+//! (R1523000), claims the room in one statement (a race's loser is told it is full) and starts the
+//! match with the host as a1 and guest as a2. Co-op matches are unranked; the result lives on the
+//! match row (B40).
 //!
-//! A person in a 1v1 match, a Conquest series that is not over or a live co-op match can neither make
-//! nor join a room, and a join is refused while the host is in one: the same `assert_free_to_play`
-//! and refusals (`api::decks`, R1065000) every 1v1 door answers, and the join reserves both people's
-//! seats in the seat ledger before it claims the room (R1523000). The join's claim cancels both
-//! people's open tickets, as a series' start does. Co-op games are unranked: no rating moves and no
-//! results row is written; the result lives on the match's own row (B40).
-//!
-//! A code is no key past a block (§9.4, §13.9): to an account the host has blocked, or that has
-//! blocked the host, the room answers as an unknown code does, to read and to join. The join's claim
-//! checks the block again, so one made while a join is under way stops it too. Once joined, a room
-//! answers its host and its guest alone; anyone else reads it as unknown (a join still says it is
-//! full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join under
-//! another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is refused at
-//! every door into a match), and the match is pinned to the catalog it is dealt from (R767000,
-//! `DuosMatchOptions::catalog_version`).
-//!
-//! S6's two join refusals keep the error body every route answers with, the code being S6's:
-//! `409 { "error": { "code": "full" | "own_room", "message" } }`, as `social::refused` writes them.
+//! Blocks (§9.4, §13.9) make rooms appear unknown. A joined room shows only to members.
+//! Stale catalogs return `409 update_required` (§9.4); matches are pinned to their catalog (R767000).
+//! Join refusals return `409` with code `full` or `own_room` (S6), as `social::refused` writes them.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex};

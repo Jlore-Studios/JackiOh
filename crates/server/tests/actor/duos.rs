@@ -416,9 +416,7 @@ impl WsClient {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Accounts and requests
-// ---------------------------------------------------------------------------------------------
 
 pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
@@ -2042,9 +2040,7 @@ mod hello_coalescing {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2686000 — a person's later hellos are answered once per interval, as a watcher's are
-// ---------------------------------------------------------------------------------------------
 
 mod r2686000_player_hello_limit {
     use super::*;
@@ -2122,9 +2118,7 @@ mod r2686000_player_hello_limit {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B40, §9.1 — a rebuild, and none for a socket that holds no seat
-// ---------------------------------------------------------------------------------------------
 
 mod b40_the_rebuild {
     use super::*;

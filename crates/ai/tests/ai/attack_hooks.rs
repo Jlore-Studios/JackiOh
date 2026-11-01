@@ -1,13 +1,8 @@
-//! A unit's "when this attacks" and "after this attacks" text in the AI's evaluation (R2688000): at a
-//! decision's root the AI ends its own turn and then the enemy's on a copy, plays each visible unit's
-//! attack at the start of its controller's next turn, on the enemy hero where it may and else on the
-//! first target the rules allow, beside the same attack by the unit's hookless twin (Vanilla, its
-//! printed keywords granted, its text given back before scoring), and prices the hooks as the
-//! controller's evaluation after the one attack less after the other; `unit_worth` adds
-//! `AI_EVAL.attack_hook` of the price, while the unit may attack, for the seat's units and the enemy's
-//! alike, so a Wasp that copies itself each attack is worth more than its body to keep and to remove.
-//! A face-down or hand card is never probed, hidden cards change no decision (R185), and a zero weight,
-//! the frozen baseline's, reads no price.
+//! A unit's "when this attacks" and "after this attacks" text in the AI's evaluation (R2688000): the
+//! decision's root plays each visible unit's next attack beside the same attack by its hookless twin
+//! (`attack_hook_prices`), and `unit_worth` adds `AI_EVAL.attack_hook` of the difference while the unit
+//! may attack, for either side's units alike. A face-down or hand card is never probed, hidden cards
+//! change no decision (R185), and a zero weight, the frozen baseline's, reads no price.
 //!
 //! The cards: The Propagation's Wasp (stinkyscape-091), (1) 3/3, "After this attacks, summon a copy of
 //! this, then evolve. / Evolve: Gain Flying."; The Propagation's Hornet (stinkyscape-092), (2) 3/4, Rush

@@ -6,9 +6,8 @@
 //! Prime tokens) and R1422 (`anyTags`), the pool pieces the set's cards share, and R1371 (the newest
 //! shipped set, which a preview never moves).
 //! The Meditative (issue #496), Meditative+ (R1178000, issue #1173), Stinkyscape (R1857000) and
-//! Training Grounds (R2194000, the newest) sets were held and have shipped, so their fixture cards here
-//! draw, deal and lean like Core's. Meditative+'s Potion tag names no tribe, nor do Stinkyscape's four
-//! tags, nor the two issue #2521 adds after them (Resource and Faction).
+//! Training Grounds (R2194000, the newest) sets have shipped, so their fixture cards here draw, deal and
+//! lean like Core's. Their tags (Potion, Stinkyscape's four, #2521's Resource and Faction) name no tribe.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};
@@ -369,8 +368,8 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
     use super::*;
 
     /// Meditative+ is the fifth set of the catalog order, right after Meditative, and ships (#1187):
-    /// it is open and a lean names it. It was the newest set until the Stinkyscape set shipped after it
-    /// (#1884, R1857000). The reserved Boss set, which does not ship, has no lean.
+    /// it is open and a lean names it, as Stinkyscape's after it (#1884, R1857000). The reserved Boss
+    /// set, which does not ship, has no lean.
     #[test]
     fn r1178000_meditative_plus_follows_meditative_in_the_catalog_order_and_ships_as_the_newest_set() {
         assert_eq!(SetName::MeditativePlus.as_str(), "Meditative+");
@@ -795,8 +794,8 @@ mod r2511000_the_legacy_tag {
 
 /// R1857000: the Stinkyscape set (issue #1836) was the third set R1420's gate held, as R1178000 said
 /// of Meditative+: sixth in the catalog order, right after Meditative+, and in no pool that names no
-/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Since then it ships
-/// as the newest set. Its four tags are family tags that no rule reads (R1424).
+/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Its four tags are
+/// family tags that no rule reads (R1424).
 mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
     use super::*;
 
@@ -950,9 +949,9 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
 
 /// Issue #2521: Resource (the six Stinkyscape Resources, Reknite to Red Narcor, every one a token)
 /// and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162) follow Legacy (R2511000),
-/// itself after the Stinkyscape set's four, in the union, ahead of Token. Family tags that name no tribe (R1424), whose pools take
-/// no token unless they ask for tokens, as every tag outside `POOL_TOKEN_TAGS` (R382). Fixture cards
-/// only; the real cards' tags are `crates/cards/tests/cross/catalog.rs`'s.
+/// itself after the Stinkyscape set's four, in the union, ahead of Token. Family tags that name no tribe
+/// (R1424), whose pools take no token unless they ask for tokens, as every tag outside `POOL_TOKEN_TAGS`
+/// (R382).
 mod issue_2521_resource_and_faction_follow_legacy {
     use super::*;
 
