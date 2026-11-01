@@ -12090,7 +12090,7 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "claude-1",
-      "run_id": "pending:5bb69b79-1793499130",
+      "run_id": "41264214476",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T02:12:20Z",
       "stop_requested": false,
