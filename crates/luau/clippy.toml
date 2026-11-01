@@ -1,5 +1,5 @@
 # The pure crates' purity lint (CLAUDE.md rule 4). The same file sits in crates/engine, crates/cards,
-# crates/ai and crates/luau: crates/tools/tests/acceptance.rs holds the four byte for byte the same and
+# crates/ai, crates/luau and crates/run: crates/tools/tests/acceptance.rs holds the five byte for byte the same and
 # runs clippy over crates/tools/tests/fixtures/purity.rs, one use of each entry, so each one fires.
 # Left free on purpose: Cell and thread::LocalKey (the engine's and luau's declared seams), OnceLock
 # and LazyLock (statics set once), mpsc (the tests' channels) and the atomics of the tests' nonces.

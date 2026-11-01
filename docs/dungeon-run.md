@@ -6,7 +6,7 @@ Goetzmann, with Maximoose Goetzmann)
 > **Status: the plan of record, not yet the spec.** SPEC is still the only source of rules (CLAUDE.md):
 > the mode gets its own spec section and rulings when it is built. A name marked _placeholder_ is to be
 > replaced, and a number marked _strawman_ is to be tuned. What is still open is in
-> [DR13](#dr13-open-questions).
+> [DR13](#dr13-open-questions). M1, the run's core, is built in `crates/run` (its README is the contract).
 
 ## Contents
 
@@ -45,8 +45,8 @@ A single-player run in the style of Slay the Spire, played against the AI.
 The dungeon run screen offers two ways to play:
 
 - **Sandbox.** Offline, no account, open to anyone. A run plays in the browser as a practice game does and
-  never touches the server. Custom cards are allowed and many limits are lifted, for fun. It earns nothing,
-  and its stats and leaderboards stay on the device.
+  never touches the server. You can make custom cards and play with them, and they join the run's card
+  pools. It earns nothing, and its stats and leaderboards stay on the device.
 - **Campaign.** Signed in. The account holds the unlocks, the permanent currency and the slots' levels. A
   finished run is checked by the server before it pays, as practice games already are (§14.8, R1303000),
   and its stats feed the leaderboards. The server is involved at a run's start and end, and for ghosts, not
@@ -71,26 +71,30 @@ An extracted card goes into a Campaign starting deck only if the account owns it
 | Slot | Takes |
 | --- | --- |
 | Common | a Common |
-| Rare | a Common or a Rare |
-| Epic | a Common, a Rare or an Epic |
-| Anything | any card |
+| Rare | a Rare or lower |
+| Epic | an Epic or lower |
+| Legendary | a Legendary or lower |
+| Mythic | a Mythic or lower |
+| Anything | any card, a boss card you extracted included |
 
 The slots get better with the starting deck's level, bought with the permanent currency: Rare slots become
-Epic slots, Common slots become Anything slots, and so on. The deck never grows past 10. A strawman ladder,
-to be tuned (DR13):
+Epic slots, Common slots give way to Anything slots, and so on. The deck never grows past 10. A strawman
+ladder, to be tuned (`RUN_SLOT_LADDER`):
 
-| Level | Common | Rare | Epic | Anything |
-| --- | --- | --- | --- | --- |
-| 1 | 5 | 4 | 0 | 1 |
-| 2 | 4 | 4 | 1 | 1 |
-| 3 | 3 | 4 | 2 | 1 |
-| 4 | 2 | 3 | 3 | 2 |
-| 5 | 1 | 2 | 4 | 3 |
+| Level | Common | Rare | Epic | Legendary | Mythic | Anything |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 4 | 0 | 0 | 0 | 1 |
+| 2 | 4 | 4 | 1 | 0 | 0 | 1 |
+| 3 | 3 | 4 | 2 | 0 | 0 | 1 |
+| 4 | 2 | 3 | 3 | 1 | 0 | 1 |
+| 5 | 1 | 2 | 3 | 2 | 1 | 1 |
+| 6 | 0 | 2 | 3 | 2 | 1 | 2 |
 
 The cards a starting deck may hold are about 20 unlocked at the start (the simplest Training Grounds
 Commons and Rares, placeholders until the designer's list) and every card extracted since.
 
-**Artifacts.** Up to 8 points of them. An artifact's tier is its strength and its price:
+**Artifacts.** At most 3 of them, worth at most 8 points together. An artifact's tier is its strength and
+its price:
 
 | Tier | Points |
 | --- | --- |
@@ -140,7 +144,8 @@ Strawman enemy hero health: normal 20, elite 30, mini-boss 40, final boss 50.
 ## DR7. The tiles
 
 - **Shop:** cards and artifacts for Coins; upgrades for Tickets; removing a card.
-- **Campfire:** one of: heal, make a card Radiant, remove 2 cards, or buff a card.
+- **Campfire:** one of: heal, make a card Radiant, remove 2 cards, or buff a card (the Buff keyword; a
+  shop buffs one for Tickets too).
 - **Event:** a short story with choices. Placeholders for now.
 - **Chest:** Coins, Tickets, sometimes an artifact.
 - **Shrine** (a monastery or a statue): a god offers a blessing for the rest of the run.
@@ -165,8 +170,11 @@ future Roblox version can call them differently.
 
 Embers are earned only by playing: a run pays them from its score.
 
-**Score**, a strawman: points for each floor reached, each elite and boss beaten and for beating the final
-boss, times (100 + the curse points)%. Turn count and time are reported beside it, not in it.
+**Score**, built to make killing bosses pay: points for each row of the map reached, for each fight won
+(more for an elite, a ghost, a mini-boss and the final boss), and for the damage dealt, healing done and
+cards drawn in the fights; then times 1.5 for each mini-boss beaten, times 2 for the final boss, and 10%
+more for each curse point. The weights are strawmen in `crates/run/src/config.rs`. Time and turns are
+reported beside the score, not in it.
 
 **Leaderboards:** the deepest floor, the most curse points, the top score and the fastest win, with a timer
 on screen. Sandbox boards stay on the device; Campaign boards hold checked runs.
@@ -177,16 +185,19 @@ taken and upgraded; blessings taken; events seen; chests opened; the time and th
 
 ## DR10. The extended campaign
 
-After the final boss, the run goes on into the next world, where every enemy is harder. You keep all your
-artifacts. Your deck becomes 10 cards again: 5 you choose from the run's deck and 5 of the 10 you started
-with.
+After the final boss, the run goes on into the next world, and the worlds never end.
+
+- Every enemy carries a prestige artifact, the designer's and deliberately busted, so each world is
+  harder than the last.
+- You keep all your artifacts and your curses. HP resets.
+- Your deck becomes 10 cards again: 5 you choose from the run's deck and 5 of the 10 you started with.
 
 ## DR11. Where it lives
 
 - **The run's rules: pure Rust,** seeded like the engine. The map, the states, the packs, extraction, the
   slots, curses, the score and the stats. A run folds back from its seed and its log, so the server can
-  check a Campaign run by replaying it, as it checks practice games. It goes in a new pure crate,
-  `crates/run`, or a module of the engine beside `duos`, which already wraps plain games (DR13).
+  check a Campaign run by replaying it, as it checks practice games. It is a new pure crate, `crates/run`
+  (CLAUDE.md rule 4).
 - **The fights:** practice games whose setup the run writes: the carried HP, the enemy's handicap and its
   deck, and the run's Radiant and buffed cards (a new setup field in the engine).
 - **The client:** the dungeon run screen (Sandbox, Campaign), the map, the tiles, the packs, the artifact
@@ -200,7 +211,7 @@ Each line is one issue; the first playable run is M1 to M3, in the Sandbox.
 
 | # | Issue | After |
 | --- | --- | --- |
-| M1 | The run's core, offline: seeds, the map, the states, the packs, extraction, the slots, artifact points, curse tiers, the score and the stats, on placeholder content | — |
+| M1 | The run's core, offline: seeds, the map, the states, the packs, extraction, the slots, artifact points, curse tiers, the score and the stats, on placeholder content. **Built:** `crates/run` | — |
 | M2 | Run fights: the carried HP, Looming and Overwhelming Presence, Radiant and buffed run cards in a game's setup | M1 |
 | M3 | The Sandbox screen: the map, the tiles, the packs, the artifact tray, the timer, local leaderboards | M1, M2 |
 | M4 | Artifacts in fights (Combat) and on the map (Economic) | M2, M3 |
@@ -212,17 +223,15 @@ Each line is one issue; the first playable run is M1 to M3, in the Sandbox.
 
 ## DR13. Open questions
 
-1. **The slots at level 1** and how the ladder climbs (DR3's table is a strawman).
-2. **Artifacts:** 8 points and also at most 3 artifacts, or 8 points alone?
-3. **Sandbox limits:** which are lifted? Every card and artifact unlocked? Does the Sandbox keep its own
-   unlocks on the device, apart from the Campaign's?
-4. **"Buff a card"** at a campfire: what buff? +1/+1, a keyword, something else? Is that what Tickets'
-   "enchantment" upgrades are?
-5. **The score:** what each part is worth.
-6. **The extended campaign:** does HP reset between worlds? Do curses stay? Do the worlds go on forever? Do
-   they look different?
-7. **The mode's name.** _Dungeon Run_ until then.
-8. **Where the code goes:** a new crate, `crates/run`, or a module of the engine.
+1. **Copies in a run deck.** A run deck holds one copy of each card for now, as every JackiOh deck does.
+   With 3 cards kept a fight, should a pack offer a card you already have, for a second copy?
+2. **The Buff:** how much one campfire or shop buff gives (+1/+1?), and whether a card takes it more than
+   once.
+3. **The starting 20 cards and the starter artifacts:** the designer's lists (placeholders until then).
+4. **The prestige artifacts:** the designer's list.
+5. **Ghost snapshots:** when one is taken (at a death, at a mini-boss, mid-game online) and how friends'
+   are shared.
+6. **Tuning:** the slot ladder, the prices, the enemies' health and the score's weights.
 
 ## Appendix: what the codebase already gives
 

@@ -1,10 +1,10 @@
 //! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own
 //! tests held, read off the repository itself:
 //!
-//!  - V2: the pure crates (engine, cards, ai, luau) link nothing but serde, serde_json, indexmap and
+//!  - V2: the pure crates (engine, cards, ai, luau, run) link nothing but serde, serde_json, indexmap and
 //!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), and the
 //!    engine's and `jackioh-luau`'s ts-rs only behind their optional `ts` features (CLAUDE.md rule 4;
-//!    each crate's `clippy.toml` holds the rest of the rule, the four byte for byte the same and every
+//!    each crate's `clippy.toml` holds the rest of the rule, the five byte for byte the same and every
 //!    entry shown to fire on `tests/fixtures/purity.rs`);
 //!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose, part 28's grep
 //!    (`readFileSync(…md`, `include_str!(…md`, `read_to_string(…md`) as a test. The two structural
@@ -113,8 +113,9 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
         "jackioh-cards",
         "jackioh-ai",
         "jackioh-luau",
+        "jackioh-run",
     ];
-    for crate_dir in ["engine", "cards", "ai", "luau"] {
+    for crate_dir in ["engine", "cards", "ai", "luau", "run"] {
         let path = repo().join("crates").join(crate_dir).join("Cargo.toml");
         let manifest =
             fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
@@ -181,7 +182,7 @@ fn diverging(files: &[(&str, String)]) -> Vec<String> {
 
 #[test]
 fn v2_the_pure_crates_share_one_clippy_toml() {
-    let files: Vec<(&str, String)> = ["engine", "cards", "ai", "luau"]
+    let files: Vec<(&str, String)> = ["engine", "cards", "ai", "luau", "run"]
         .into_iter()
         .map(|crate_dir| {
             let path = repo().join("crates").join(crate_dir).join("clippy.toml");
@@ -193,7 +194,7 @@ fn v2_the_pure_crates_share_one_clippy_toml() {
     let diverging = diverging(&files);
     assert!(
         diverging.is_empty(),
-        "these differ from crates/engine/clippy.toml; make one edit to all four pure crates' files (CLAUDE.md rule 4): {diverging:?}"
+        "these differ from crates/engine/clippy.toml; make one edit to all five pure crates' files (CLAUDE.md rule 4): {diverging:?}"
     );
 }
 
