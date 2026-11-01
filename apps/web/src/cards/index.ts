@@ -23,6 +23,7 @@ export { FACE_ASPECT } from "./constants.ts";
 export { PileDepth } from "./CardStates.tsx";
 
 export { CardFace, faceText } from "./CardFace.tsx";
+export { RulesText } from "./RulesText.tsx";
 export { MinionFace } from "./MinionFace.tsx";
 export { CardBack } from "./CardBack.tsx";
 export { Icon } from "./icons.tsx";

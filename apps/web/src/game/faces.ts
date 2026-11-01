@@ -18,13 +18,12 @@
 // drawn by its id, as `Card.tsx` draws one before the catalog has loaded. The R97 sentinel names no
 // card, so it has no face, and the callers draw a back instead.
 
-import type { CardDef, CardType, CardView, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
+import type { CardDef, CardType, CardView, PlayerView, UnitView } from "@jackioh/shared";
 
 import { marksOf } from "../cards/marks.ts";
 import { faceModel, type FaceModel, type InPlay, type RolledPower } from "../cards/index.ts";
 import type { NamedTally } from "../cards/tallies.ts";
 import { lookupFromDefs, matchCardsOf, unknownCard, type CardInfo, type CardLookup } from "./catalog.ts";
-import { sideOf } from "./contract.ts";
 
 /** R97: the id and definition an event or a prompt carries in place of a card the viewer may not read. */
 export const HIDDEN_CARD = "hidden";
@@ -209,14 +208,6 @@ export function namedFace(lookup: CardLookup | null, view: PlayerView, named: Na
     ...(named.cost === undefined ? {} : { liveCost: named.cost }),
     inPlay: {},
   });
-}
-
-/** R370: the cost the view gives the face-down card in `player`'s backrow `lane`, while one stands there. */
-export function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): number | undefined {
-  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
-  const entry = seat.backrow[lane - 1];
-  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
-  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
 /**

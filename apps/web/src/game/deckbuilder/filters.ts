@@ -176,11 +176,6 @@ export function printedPrice(cost: CardCost): number | "X" {
   return cost.base;
 }
 
-/** A deck tile's gem: the printed price, as the card's full face shows it; blank for a card the catalog lacks. */
-export function tileCost(cost: CardCost | undefined): string {
-  return cost === undefined ? "" : String(printedPrice(cost));
-}
-
 /** n ≥ 6 → "6+" (so 100 is "6+"); an embiggen card → its base price's bucket; "X" → "X". */
 export function costBucket(cost: CardCost): CostBucket {
   const price = printedPrice(cost);
