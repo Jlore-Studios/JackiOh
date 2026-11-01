@@ -170,7 +170,7 @@ pub fn clear_radiant(args: RadiantTarget) -> Effect {
         else {
             return;
         };
-        let card = crate::zones::live_or(ctx.state, card);
+        let card = crate::zones::live_or(ctx.state, &card);
         if !card.radiant {
             return;
         }

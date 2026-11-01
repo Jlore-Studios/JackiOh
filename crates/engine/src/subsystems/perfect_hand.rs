@@ -96,7 +96,7 @@ pub fn replace_hand_with_perfect(args: ReplaceHandWithPerfectArgs) -> Effect {
                 crate::zones::OffFieldZone::Graveyard,
                 Default::default(),
             );
-            let landed = crate::zones::live_or(ctx.sink.state, card);
+            let landed = crate::zones::live_or(ctx.sink.state, &card);
             crate::zones::report_graveyard_landing(&mut ctx.sink, &landed, result);
         }
         for scored in picks.iter().take(hand.len()) {
