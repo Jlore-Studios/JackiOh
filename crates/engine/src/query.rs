@@ -632,13 +632,6 @@ pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
     multiple
 }
 
-/// R1180000, R1180001: the player's Spell Damage, the one sum §4.4 step 0 raises each hit of their
-/// Spells by (`damage::spell_damage_of`): their Units' Spell Damage, the Spell Damage auras that reach
-/// them and their "Spell Damage +N this turn". What a card's text or the view reads.
-pub fn player_spell_damage(state: &GameState, player: PlayerId) -> i32 {
-    crate::damage::spell_damage_of(state, player)
-}
-
 /// R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
 /// permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
 /// (R23). The types are the trap's to match when a permanent is played.
