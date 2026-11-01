@@ -311,8 +311,11 @@ What the actor holds, each with a test named after it:
   swap (R677).
 - The only per-player payload is `view_for`; no frame carries a `GameState`.
 - Each home seat keeps an `actor::guard::SeatGuard`: its action window (`MATCH_ACTIONS_PER_SECOND`,
-  R137), the count of its refusals that raises `match.rejections.unusual` once (R835000) and its
-  malformed-frame budget, past which its socket is closed with 1008 (R835002).
+  R137), the count of its refusals that raises `match.rejections.unusual` once (R835000), its
+  malformed-frame budget, past which its socket is closed with 1008 (R835002), and the socket
+  generation and time of its last answered `hello`: a later hello of the same socket sooner than
+  `WATCH_HELLO_INTERVAL_MS` is dropped unanswered, and a reattach's first hello is always answered
+  (R2686000).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
   R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
@@ -368,7 +371,9 @@ holds, with four seats:
   for both humans; every engine call runs under the catalog version the match was dealt from
   (`DuosMatchOptions::catalog_version`, R767000);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
-  while one from the same socket is still queued is absorbed (R835001's rule);
+  while one from the same socket is still queued is absorbed (R835001's rule); one that finds none
+  queued is dropped unanswered when it comes less than `WATCH_HELLO_INTERVAL_MS` after the socket's
+  last answered one, while a reattach's first hello is answered at once (R2686000);
 - each human seat keeps the same `actor::guard::SeatGuard` as a 1v1 seat: `MATCH_ACTIONS_PER_SECOND`
   (R137, the overflow answered `rate_limited`), the malformed-frame budget and its 1008 close (R835002),
   and the count of refusals, the flood's included, that raises `match.rejections.unusual` once per
