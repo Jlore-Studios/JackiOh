@@ -962,10 +962,11 @@ mod tests {
 
             s.end_turn();
 
-            assert_eq!(damage_to(&s, "hero-p2"), vec![5]);
-            assert_eq!(healed_on(&s, "hero-p1"), vec![5]);
-            s.expect_health(P2, 25);
-            s.expect_health(P1, 25);
+            // The cap is 4 since #2657.
+            assert_eq!(damage_to(&s, "hero-p2"), vec![4]);
+            assert_eq!(healed_on(&s, "hero-p1"), vec![4]);
+            s.expect_health(P2, 26);
+            s.expect_health(P1, 24);
         }
     }
 

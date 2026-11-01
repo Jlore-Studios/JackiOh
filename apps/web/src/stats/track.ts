@@ -90,7 +90,8 @@ export function countEvent(log: GameLog, event: GameEvent, viewer: PlayerView["v
     }
     return next;
   }
-  // R1582000: a Trap the viewer controlled fired; another's reads as the sentinel to them (R97).
+  // R1582000: a Trap the viewer controlled fired; another's reads as the sentinel to them (R97). A
+  // face-up Field Trap firing again reveals nothing (R2657001) but still fires, so it counts each time.
   if (event.type === "trapFired") {
     const id = readable(event.defId);
     if (id === null || event.controller !== viewer) return log;

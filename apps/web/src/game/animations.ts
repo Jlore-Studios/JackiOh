@@ -446,7 +446,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   // may not identify the card: an opponent's face-down trap has no `instanceId` in the view (§10.8,
   // R33) and so no `card-<instanceId>` to animate, but its zone is always on screen. The card
   // itself is preferred when the viewer can see it, which is the "trap name visible during the
-  // hold" the BUILD M5-T4 acceptance asks for.
+  // hold" the BUILD M5-T4 acceptance asks for. A Field Trap firing again reveals nothing and plays the
+  // `activated` row instead (`firesAgain`, R2657001).
   trapFired: {
     animation: "jk-trap-flip",
     durationMs: 700,
@@ -1278,18 +1279,30 @@ export function planEntries(
       i += 2;
       continue;
     }
-    const frames = frameMap([[frameFor(event, view, plays), event.type]]);
+    // R2657001: a face-up Field Trap firing again reveals nothing, so it plays as an activation does
+    // (the `activated` row's time and its flare, fx/cues.ts), never the reveal's flip and hold.
+    const shown = firesAgain(event) ? "activated" : event.type;
+    const frames = frameMap([[frameFor(event, view, plays), shown]]);
     take(i, 1);
     out.push({
       events: [event],
-      type: event.type,
-      durationMs: durationFor(event.type, reducedMotion),
+      type: shown,
+      durationMs: durationFor(shown, reducedMotion),
       frames,
       view,
     });
     i += 1;
   }
   return out;
+}
+
+/**
+ * R2657001: a `trapFired` for a face-up Field Trap firing again (`again`), which reveals nothing: a
+ * Field Trap reveals once, the first time it fires. Its entry, its effect and its sound are a plain
+ * trigger's, and no showcase holds it up.
+ */
+export function firesAgain(event: GameEvent): boolean {
+  return event.type === "trapFired" && event.again === true;
 }
 
 /* ------------------------------------------------------------------------------------------- *

@@ -1,8 +1,9 @@
 //! R2521002 (issue #2521): `mayAttackAgain` with `keepSick` (S #94 Tmack Trav's "After this destroys a
 //! Unit, it may attack again") gives the fresh exertion and leaves summoning sickness as it is (§4.1): a
 //! Rush unit that kills on its summon turn may attack again a Unit only, the hero neither offered nor
-//! allowed (§6.1), and one that entered on an earlier turn may hit the hero. Without it the verb lifts
-//! the sickness for the turn as ever (B5 E35, C+ #73.1 Classic Golem).
+//! allowed (§6.1), and one that entered on an earlier turn may hit the hero. R2657004 (issue #2657): so
+//! does every refresh, `keepSick` or not; only `liftSick`, the older reading a kept script asks for
+//! (C+ #73.1 Classic Golem's v0.5.9f, R767000), lifts the sickness for the turn.
 //!
 //! Fixtures are this file's own: `fx-` defs indexed from 25210 (BUILD §0).
 
@@ -25,7 +26,8 @@ fn keeper() -> CardDef {
     )
 }
 
-/// The same with the verb's old reading, the kill lifting its sickness (Classic Golem's shape).
+/// The same with the verb's old reading, the kill lifting its sickness (Classic Golem's shape through
+/// v0.5.9f, `liftSick`).
 fn lifter() -> CardDef {
     unit_def(
         25211,
@@ -33,13 +35,29 @@ fn lifter() -> CardDef {
     )
 }
 
+/// The same with neither flag (Classic Golem's shape since #2657).
+fn plain() -> CardDef {
+    unit_def(
+        25213,
+        json!({ "attack": STRIKER_ATTACK, "health": 9, "keywords": [{ "kind": "Rush" }] }),
+    )
+}
+
+/// Which flag the refresh carries.
+#[derive(Clone, Copy)]
+enum Sick {
+    Keep,
+    Plain,
+    Lift,
+}
+
 /// A 1/1 to kill.
 fn fodder() -> CardDef {
     unit_def(25212, json!({ "attack": 1, "health": 1 }))
 }
 
-/// After a kill of the Unit it attacked, `mayAttackAgain` on itself, `keepSick` when `keep_sick`.
-fn again_after_a_kill(keep_sick: bool) -> Script {
+/// After a kill of the Unit it attacked, `mayAttackAgain` on itself with the flag `sick` names.
+fn again_after_a_kill(sick: Sick) -> Script {
     Script {
         after_attack: Some(hook(move |ctx| {
             let Some(combat) = after_attack_of(ctx) else {
@@ -52,8 +70,10 @@ fn again_after_a_kill(keep_sick: bool) -> Script {
                 return Vec::new();
             }
             let mut args = json!({ "target": { "of": "self" } });
-            if keep_sick {
-                args["keepSick"] = json!(true);
+            match sick {
+                Sick::Keep => args["keepSick"] = json!(true),
+                Sick::Lift => args["liftSick"] = json!(true),
+                Sick::Plain => {}
             }
             vec![effects::may_attack_again(json_as(args))]
         })),
@@ -64,13 +84,14 @@ fn again_after_a_kill(keep_sick: bool) -> Script {
 fn register() {
     setup_catalog();
     let mut catalog = registered_catalog().clone();
-    for def in [keeper(), lifter(), fodder()] {
+    for def in [keeper(), lifter(), plain(), fodder()] {
         catalog.insert(def.id.clone(), def);
     }
     register_catalog(catalog);
     let mut scripts = registered_scripts();
-    scripts.insert(keeper().id, both(again_after_a_kill(true)));
-    scripts.insert(lifter().id, both(again_after_a_kill(false)));
+    scripts.insert(keeper().id, both(again_after_a_kill(Sick::Keep)));
+    scripts.insert(lifter().id, both(again_after_a_kill(Sick::Lift)));
+    scripts.insert(plain().id, both(again_after_a_kill(Sick::Plain)));
     register_scripts(scripts);
 }
 
@@ -158,7 +179,30 @@ mod r2521002_may_attack_again_keeps_summoning_sickness {
     }
 
     #[test]
-    fn r2521002_without_keep_sick_the_kill_lifts_the_sickness_for_the_turn_as_ever() {
+    fn r2657004_without_keep_sick_the_kill_still_leaves_the_sickness_the_hero_out_of_reach() {
+        let hand = json!([plain().id, fodder().id]);
+        let mut s = board("r2657004-plain", hand, json!([]));
+        s.play(plain().id.as_str(), json!({ "zone": 1 }));
+        let striker = s.unit_at(P1, 1).id;
+        s.attack(striker.as_str(), s.unit_at(P2, 1));
+        assert_eq!(
+            s.card(striker.as_str()).summoned_turn,
+            Some(s.state().turn),
+            "still summoning sick"
+        );
+        assert!(
+            offers(&s, &striker, &s.unit_at(P2, 2).id),
+            "a Unit, as Rush allows"
+        );
+        assert!(
+            !offers(&s, &striker, ENEMY_HERO),
+            "never the hero on its summon turn"
+        );
+        s.expect_refused(|s| s.attack(striker.as_str(), "hero"));
+    }
+
+    #[test]
+    fn r2657004_lift_sick_the_kept_scripts_reading_lifts_the_sickness_for_the_turn() {
         let hand = json!([lifter().id, fodder().id]);
         let mut s = board("r2521002-lifted", hand, json!([]));
         s.play(lifter().id.as_str(), json!({ "zone": 1 }));

@@ -169,7 +169,26 @@ pub fn shuffle_into_library(
     existing: bool,
     copy_of: Option<&str>,
 ) -> ShuffleInOutcome {
-    into_library(sink, instance, existing, copy_of, None)
+    into_library(sink, instance, existing, copy_of, Placement::Random)
+}
+
+/// R2657003: a Traded card shuffled in anywhere but the top, so the draw that follows never brings it
+/// back while the deck holds another card; into an empty deck it is the top and only card. One rng draw
+/// over the positions below the top, otherwise as `shuffle_into_library`.
+pub fn shuffle_into_library_below_top(
+    sink: &mut EngineSink,
+    instance: &mut CardInstance,
+) -> ShuffleInOutcome {
+    into_library(sink, instance, true, None, Placement::BelowTop)
+}
+
+/// Where `into_library` puts a card: a random slot (a shuffle-in), a named end (ME-DECK-BOTTOM), or a
+/// random slot under the top card (R2657003's Trade).
+#[derive(Clone, Copy)]
+enum Placement {
+    Random,
+    End(crate::ownership::LibraryEnd),
+    BelowTop,
 }
 
 /// A fresh card put at a named end of its owner's library (Meditative #49's bottom, ME-DECK-BOTTOM):
@@ -182,7 +201,7 @@ pub fn put_into_library(
     copy_of: Option<&str>,
     end: crate::ownership::LibraryEnd,
 ) -> ShuffleInOutcome {
-    into_library(sink, instance, existing, copy_of, Some(end))
+    into_library(sink, instance, existing, copy_of, Placement::End(end))
 }
 
 fn into_library(
@@ -190,7 +209,7 @@ fn into_library(
     instance: &mut CardInstance,
     existing: bool,
     copy_of: Option<&str>,
-    end: Option<crate::ownership::LibraryEnd>,
+    end: Placement,
 ) -> ShuffleInOutcome {
     let library_len = sink.state.players[instance.owner].library.len() as i32;
     if crate::query::room_in(sink.state, instance.owner, crate::zones::OffFieldZone::Library) == 0 {
@@ -244,9 +263,12 @@ fn into_library(
     // ME-DECK-BOTTOM: a named end is placed, not drawn — the bottom is the last card, with no
     // rng draw (R80's cap still refuses a full library, above).
     let position = match end {
-        None => sink.rng.int(library_len + 1),
-        Some(crate::ownership::LibraryEnd::Top) => 0,
-        Some(crate::ownership::LibraryEnd::Bottom) => library_len,
+        Placement::Random => sink.rng.int(library_len + 1),
+        Placement::End(crate::ownership::LibraryEnd::Top) => 0,
+        Placement::End(crate::ownership::LibraryEnd::Bottom) => library_len,
+        // R2657003: a random slot under the top card, or the top of an empty deck.
+        Placement::BelowTop if library_len == 0 => 0,
+        Placement::BelowTop => 1 + sink.rng.int(library_len),
     };
     crate::zones::move_to_zone(
         sink.state,

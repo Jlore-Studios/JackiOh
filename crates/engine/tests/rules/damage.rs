@@ -226,7 +226,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
                 .position = Some(Position::Def);
             assert_eq!(unit_view(sink.state, &live(sink.state, &target.id)).armor, 8);
             assert_eq!(hit(sink, Some(&source.id), on_unit(&target.id), 7, None), 7);
-            // The hero's Armor 5 is skipped too, and step 3's cap still clamps the 9 to 5.
+            // The hero's Armor 5 is skipped too, and step 3's cap still clamps the 9 to its cap (4).
             assert_eq!(
                 hit(sink, Some(&source.id), on_hero(P2), 9, None),
                 ANTI_ONESHOT_CAP.base
@@ -251,7 +251,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 
     #[test]
-    fn step_3_the_hero_cap_clamps_12_to_5_3_when_radiant_and_applies_to_a_hero_only() {
+    fn step_3_the_hero_cap_clamps_12_to_4_3_when_radiant_and_applies_to_a_hero_only() {
         let mut state = game();
         put(
             &mut state,
@@ -262,7 +262,10 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         let own = put(&mut state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         with_sink(&mut state, |sink| {
             assert_eq!(hit(sink, None, on_hero(P1), 12, None), ANTI_ONESHOT_CAP.base);
-            assert_eq!(sink.state.players[P1].hero.health, HERO_HEALTH - 5);
+            assert_eq!(
+                sink.state.players[P1].hero.health,
+                HERO_HEALTH - ANTI_ONESHOT_CAP.base
+            );
 
             // A unit behind the same Anti-oneshot Armor takes the whole hit.
             assert_eq!(hit(sink, None, on_unit(&own.id), 12, None), 12);
@@ -748,7 +751,10 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
 
             // The same 12 as damage loses 5 to Armor and is then clamped by the cap.
             assert_eq!(hit(sink, None, on_hero(P1), 12, None), ANTI_ONESHOT_CAP.base);
-            assert_eq!(sink.state.players[P1].hero.health, HERO_HEALTH - 17);
+            assert_eq!(
+                sink.state.players[P1].hero.health,
+                HERO_HEALTH - 12 - ANTI_ONESHOT_CAP.base
+            );
         });
     }
 }
