@@ -21,9 +21,8 @@
 // Each opens from a tap on the card in hand as the same sheet, under the same checks; its options are
 // words, so the card is read from its name in the title, and a hold there shows its preview.
 //
-// The Created mark (ME-CREATED, R943) on a card in hand at both phone sizes: on the face, inside the
-// card, clear of its name and cost gem; a hold on the card shows its preview, which says it was made
-// during the game.
+// The Created status (ME-CREATED, R943) of a card in hand at both phone sizes: no mark on its face
+// (R2647000), and a hold on the card shows its preview, which says it was made during the game.
 //
 // The mount is mobile-ux.cy.tsx's (`Game` inside `.app-shell.app-shell--wide`, the narrowest box the
 // board is ever given), with the real catalog, since the market draws its lots from it. The block
@@ -298,37 +297,23 @@ function createdView(): PlayerView {
   });
 }
 
-/** Every way the Created mark on the hand card fails, as readable lines. */
+/** R2647000: every way a hand card still wears the Created mark, as readable lines. */
 function createdProblems(doc: Document, label: string): string[] {
   const root = doc.querySelector<HTMLElement>(ts(testid.handCard(CREATED)));
   if (root === null) return [`${label}: no created hand card`];
-  const mark = root.querySelector<HTMLElement>('.cf-state[data-state="created"]');
-  if (mark === null || !shown(mark)) return [`${label}: no Created mark on the created card`];
+  if (root.querySelector(".cf") === null) return [`${label}: no face`];
   const problems: string[] = [];
-  const own = rectOf(mark);
-  const face = root.querySelector<HTMLElement>(".cf");
-  if (face === null) return [`${label}: no face`];
-  const box = rectOf(face);
-  if (own.left < box.left - EPSILON || own.right > box.right + EPSILON || own.top < box.top - EPSILON || own.bottom > box.bottom + EPSILON) {
-    problems.push(`${label}: the Created mark runs off the card`);
-  }
-  for (const part of [".card-name", ".cost-gem"]) {
-    const other = face.querySelector<HTMLElement>(part);
-    if (other === null || !shown(other)) continue;
-    const them = rectOf(other);
-    const overlaps = own.left < them.right - EPSILON && own.right > them.left + EPSILON && own.top < them.bottom - EPSILON && own.bottom > them.top + EPSILON;
-    if (overlaps) problems.push(`${label}: the Created mark covers ${part}`);
-  }
+  if (root.querySelector('.cf-state[data-state="created"]') !== null) problems.push(`${label}: the created card wears a Created mark on its face`);
   const dealt = doc.querySelector<HTMLElement>(ts(testid.handCard(DEALT)));
   if (dealt?.querySelector('.cf-state[data-state="created"]') !== null) problems.push(`${label}: a dealt card carries the Created mark`);
   return problems;
 }
 
-describe("MN09: the Created mark at phone width, with a touch hold", () => {
+describe("MN09 R2647000: a created card at phone width wears no Created mark, and a hold's preview says it", () => {
   for (const phone of PHONES) {
-    const label = `the Created mark at ${String(phone.width)}x${String(phone.height)}`;
+    const label = `a created card at ${String(phone.width)}x${String(phone.height)}`;
 
-    it(`MN09 ${label} sits on the created card in hand, inside it and clear of its name and cost`, () => {
+    it(`MN09 R2647000 ${label} wears no Created mark on its face in hand`, () => {
       cy.viewport(phone.width, phone.height);
       mount(createdView());
       cy.get(ts(testid.handCard(CREATED))).should("be.visible");

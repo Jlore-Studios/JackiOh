@@ -68,6 +68,17 @@ describe("R1584000 the stage's beats", () => {
     }
   });
 
+  it("R2648000 cast plays the board's cardPlayed entry on the stage card, on either side", () => {
+    for (const side of SIDES) {
+      const script = stageScript("cast", CARD, side);
+      expect(script.beats.map((beat) => beat.entry.type)).toEqual(["cardPlayed"]);
+      expect([...script.beats[0]!.entry.frames]).toEqual([[testid.card(STAGE_INSTANCE_ID), "cardPlayed"]]);
+      expect(script.beats[0]!.side).toBe(side);
+      expect(script.returns).toBe(false);
+      expect(kinds("cast", side, 0)).toEqual(expect.arrayContaining(["burst", "ring"]));
+    }
+  });
+
   it("R1584000 the stage plays the board's own effects for each beat", () => {
     expect(kinds("death", "opponent", 0)).toContain("crack");
     expect(kinds("allure", "you", 0)).toContain("brand");

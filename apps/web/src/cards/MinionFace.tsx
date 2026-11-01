@@ -51,9 +51,8 @@
 // the seal breaks (game/animations.css) and stays broken until the board catches up
 // (game/awakening.ts's `data-awakening`).
 //
-// R1177001: a token unit wears the token mark (CardFace.tsx's TokenMark, `.cf-token`) in its stats
-// row, in the room between attack and health, as its full face says "Token Unit": the board is where
-// a token is met most. The row's tests read its stats by their own classes, never its whole text.
+// R2647000: a token unit wears no mark of it, its stats row holding only its numbers; its hover preview's
+// full face says "Token Unit" (R1177001). No Created badge either (CardStates.tsx).
 //
 // R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics as its full
 // face does (CardFace.tsx, cosmetics.ts): the border as a rim inside its panel, the finish and the
@@ -66,7 +65,7 @@ import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/sh
 import { CardArt } from "./art/index.ts";
 import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
-import { TokenMark, costDigits, hasCrest } from "./CardFace.tsx";
+import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
@@ -230,8 +229,6 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
           <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone} data-tuned={face.tuning?.attack}>
             {unit.attack}
           </span>
-          {/* R1177001: a token unit says so between its numbers, as its full face's type line does. */}
-          <TokenMark face={face} />
           <span
             className="stat stat-health"
             data-health={unit.health}

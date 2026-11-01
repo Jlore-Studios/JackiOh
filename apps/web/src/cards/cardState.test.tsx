@@ -814,22 +814,27 @@ describe("R1852000 the Starship: a comet badge with its pieces on a Dormant Star
 
 /* ----------------------------------------------------------------------------- MD-B6 R943 Created */
 
-describe("MD-B6 R943: a Created mark on a created card", () => {
-  it("R943 shows a Created mark on a created card", () => {
+describe("MD-B6 R943 R2647000: a Created card says so in its hover preview, not on its face", () => {
+  it("R943 R2647000 a Created card wears no Created mark on the board, in hand or in the backrow; its preview's state notes say it", () => {
     vi.useFakeTimers();
     renderBoard(
       baseView({
         you: emptySide("p1", {
           units: [unit("p1", { instanceId: "u1", defId: "classicplus-019-5", created: true }), unit("p1", { instanceId: "u2", defId: "classicplus-019-5" }), null, null, null],
+          hand: [card({ instanceId: "h1", defId: "core-004", cost: 1, created: true })],
+          backrow: [faceUpBackrow("p1", { instanceId: "b1", created: true }), null, null, null, null],
         }),
       }),
     );
-    const root = screen.getByTestId(testid.card("u1"));
-    expect(root.querySelector('.cf-state[data-state="created"]')?.getAttribute("aria-label")).toBe(
-      "Created: made during the game",
-    );
-    expect(root.querySelector('.cf-state[data-state="created"]')?.getAttribute("data-created")).toBe("true");
-    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="created"]')).toBeNull();
+    for (const root of [screen.getByTestId(testid.card("u1")), screen.getByTestId(testid.card("u2")), handRoot(), screen.getByTestId(testid.card("b1"))]) {
+      faceOf(root);
+      expect(root.querySelector('.cf-state[data-state="created"]')).toBeNull();
+    }
+    expect(stateBadges(inPlay("classicplus-019-5", { created: true })).map((badge) => badge.kind)).toContain("created");
+    const preview = hover(handRoot());
+    expect(preview.querySelector('.cf-state[data-state="created"]')).toBeNull();
+    const line = must(within(preview).getByTestId(INSPECT_STATES).querySelector<HTMLElement>('.inspect-state[data-state="created"]'), "the Created line");
+    expect(line.textContent).toContain("Created: made during the game");
   });
 });
 

@@ -10,6 +10,8 @@
 // It decides no rule and keeps no state (CLAUDE.md rule 7): the events are made here, for show, and
 // nothing reads them back. `planStage` (fx/stage.ts) is left out: it acts on the board's elements,
 // and the landing has none.
+//
+// R2648000: `cast` is the board's `cardPlayed` entry (`jk-card-played`), for a Spell's lunge stat.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerId, PlayerView, SideView, UnitView } from "@jackioh/shared";
@@ -39,7 +41,7 @@ export const OPPONENT_LUNGE_DIR = 1;
 const LOOKUP = lookupFromDefs(CATALOG);
 
 /** The board animations a stat can ask for. */
-export const STAGE_ANIMATIONS = ["death", "allure", "trap", "entrance", "lunge", "radiant", "shield"] as const;
+export const STAGE_ANIMATIONS = ["death", "allure", "trap", "entrance", "lunge", "radiant", "shield", "cast"] as const;
 export type StageAnimation = (typeof STAGE_ANIMATIONS)[number];
 
 /** One animation of a stat's card: the board's entry, and the side whose zone holds the card while it plays. */
@@ -128,6 +130,10 @@ function stageEvents(animation: StageAnimation, defId: string, side: Side): read
       return [[{ type: "radiantSet", instanceId: id, defId, zone: { z: "field", player: p, row: "units", lane: STAGE_LANE } }, side]];
     case "shield":
       return [[{ type: "divineShieldLost", instanceId: id }, side]];
+    case "cast":
+      // R2648000: the viewer's seat plays it on either side, so the board's target (the card where the
+      // view shows it, `locateInstance`) is the stage's card, never a hand the stage does not draw.
+      return [[{ type: "cardPlayed", player: STAGE_PLAYERS.you, instanceId: id, defId, costPaid: 0 }, side]];
   }
 }
 
