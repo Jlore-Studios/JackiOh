@@ -13015,6 +13015,7 @@
     "2723": {
       "action": "build",
       "asks": [],
+      "interruptions": 1,
       "kind": "build",
       "pending_at": "2026-11-01T18:22:31Z",
       "pending_by": "jgoetzmann",
