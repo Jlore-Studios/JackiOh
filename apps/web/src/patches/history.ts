@@ -3,6 +3,7 @@
 import { SHIPPED_SETS, type CardDef, type SetName } from "@jackioh/shared";
 
 import { isGlitch } from "../cards/glitch.ts";
+import { t } from "../i18n/i18n.ts";
 import { dataOnly, diffCard, type CardDelta } from "./diff.ts";
 import type { HistoryIndex, Patch, Snapshot } from "./source.ts";
 
@@ -67,6 +68,27 @@ export function nameMatches(name: string, query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter((word) => word.length > 0);
   const haystack = name.toLowerCase();
   return words.every((word) => haystack.includes(word));
+}
+
+/** "1 card", "{n} cards": how the page counts a patch's cards. */
+export function cardCount(count: number): string {
+  return count === 1 ? t("1 card") : t("{n} cards", { n: count });
+}
+
+/** A patch's counts, "2 cards added · 1 card changed"; empty when it changed no card. */
+export function countsLine(patch: Patch): string {
+  // R674: Glitch is not counted, as it is not listed (`patchCards`).
+  const count = (kind: Patch["changes"][number]["kind"]): number =>
+    patch.changes.filter((change) => change.kind === kind && !isGlitch(change.id)).length;
+  const parts = [
+    [count("added"), (n: number) => t("{cards} added", { cards: cardCount(n) })],
+    [count("changed"), (n: number) => t("{cards} changed", { cards: cardCount(n) })],
+    [count("removed"), (n: number) => t("{cards} removed", { cards: cardCount(n) })],
+  ] as const;
+  return parts
+    .filter(([n]) => n > 0)
+    .map(([n, line]) => line(n))
+    .join(" · ");
 }
 
 export type HistoryEntry = {

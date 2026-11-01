@@ -273,6 +273,11 @@ test's seed at run time instead of pinning one a card change re-deals (#2569); a
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
 
+`scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
+the Patch notes page as Markdown, a pre-release while only staging has the version), which
+`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
+
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
