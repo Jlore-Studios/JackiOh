@@ -333,14 +333,6 @@ pub fn record_matches(record: &GameRecord, filter: &CardStatsFilter) -> bool {
         && filter.patch.as_ref().is_none_or(|patch| record.patch == *patch)
 }
 
-/// The seats of a record the pilot filter counts, in seat order.
-pub fn seats_counted(record: &GameRecord, pilot: PilotFilter) -> Vec<PlayerId> {
-    PLAYER_IDS
-        .into_iter()
-        .filter(|seat| pilot == PilotFilter::Unified || record.pilots[*seat].as_str() == pilot.as_str())
-        .collect()
-}
-
 // ---------------------------------------------------------------------------
 // The breakdowns (R377)
 // ---------------------------------------------------------------------------
@@ -2677,6 +2669,15 @@ mod tests {
     /// was so the totals are measured against it.
     mod totals {
         use super::*;
+
+        /// The seats of a record the pilot filter counts, in seat order: the record-by-record
+        /// reference the totals are held to.
+        fn seats_counted(record: &GameRecord, pilot: PilotFilter) -> Vec<PlayerId> {
+            PLAYER_IDS
+                .into_iter()
+                .filter(|seat| pilot_counts(pilot, record.pilots[*seat]))
+                .collect()
+        }
 
         /// `card_stats` as it counted the records themselves.
         fn reference_card_stats(records: &[GameRecord], filter: &CardStatsFilter) -> CardStatsReport {
