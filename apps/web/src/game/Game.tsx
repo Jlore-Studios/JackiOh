@@ -18,7 +18,8 @@
 // R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), R1838000's Trade
 // control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx),
 // and R1853003's Marketplace shop, its buys and sales live exactly as `legal` lists them
-// (Marketplace.tsx).
+// (Marketplace.tsx, which the board draws in its control bar, #2645: `market` hands it `legal` and
+// `dispatch`).
 //
 // `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
 // While the runner holds it back (the AI's last attack still playing out, say), the board draws the
@@ -50,7 +51,6 @@ import { useMarkBoardShown } from "./boardShown.ts";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import { TradeBar } from "./TradeControl.tsx";
-import Marketplace from "./Marketplace.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
@@ -590,7 +590,13 @@ export default function Game({
   const concedeOpen = concedeFor !== null && concedeFor === view.viewer && view.result === null;
   /** Back to the control that opened the dialog, as a dialog should leave the focus (WAI-ARIA APG). */
   const refocusConcede = useCallback(() => {
-    root.current?.querySelector<HTMLElement>(`[data-testid="${testid.concede}"]`)?.focus({ preventScroll: true });
+    const concede = root.current?.querySelector<HTMLElement>(`[data-testid="${testid.concede}"]`) ?? null;
+    // #2645: on a phone Concede is a row of the match menu, closed by now: back to its ⋯.
+    const target =
+      concede === null || concede.closest("[hidden]") !== null
+        ? (root.current?.querySelector<HTMLElement>(`[data-testid="${testid.matchMenu}"]`) ?? null)
+        : concede;
+    target?.focus({ preventScroll: true });
   }, []);
   const cancelConcede = useCallback(() => {
     setConcedeFor(null);
@@ -719,6 +725,7 @@ export default function Game({
         turnClock={turnClock}
         matchStatus={matchStatus}
         boardRail={boardRail}
+        market={replay ? undefined : { legal, onAction: dispatch }}
         boardNotices={
           <>
             {error != null && error !== "" ? (
@@ -792,8 +799,6 @@ export default function Game({
       )}
 
       {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
-      {/* R1853003: the Marketplace's shop, once the view carries it. */}
-      {replay ? null : <Marketplace view={shown} legal={legal} onAction={dispatch} />}
 
       {/* R1834004: the opponent's revealed hand (R434) wears their seat's loadout, as their side does. */}
       {shown.result !== null ? (
