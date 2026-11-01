@@ -4061,7 +4061,8 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
     }
 
     #[test]
-    fn r154_r2734000_carries_the_traps_row_and_lane_on_trapfired_and_names_it_to_both_seats_in_its_graveyard() {
+    fn r154_r2734000_carries_the_traps_row_and_lane_on_trapfired_and_names_it_to_both_seats_in_its_graveyard()
+    {
         let mut state = game("r154-trap-lane");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
         let mut sink = Bench::new(&state);
@@ -4147,10 +4148,7 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
     #[test]
     fn r2734000_an_opponents_trap_fired_into_its_graveyard_reads_to_the_other_seat_as_the_event_itself() {
         let (state, trap, raw) = fired_bare_trap("r2734000-graveyard");
-        assert!(matches!(
-            live(&state, &trap).zone,
-            Zone::Graveyard { player: P1 }
-        ));
+        assert!(matches!(live(&state, &trap).zone, Zone::Graveyard { player: P1 }));
         // The raw event names the trap, its controller and the zone it flipped in, and reveals it.
         assert!(matches!(
             &raw,
@@ -4235,10 +4233,7 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
             OffFieldZone::Hand,
             MoveToZoneOptions::default(),
         );
-        assert!(matches!(
-            live(&state, &trap).zone,
-            Zone::Hand { player: P1 }
-        ));
+        assert!(matches!(live(&state, &trap).zone, Zone::Hand { player: P1 }));
         // R763 by R97's zone rule: a hand is its player's alone, for the event that announced the flip too.
         assert_eq!(
             seen_by(&view_for::view_for(&state, P1)),
