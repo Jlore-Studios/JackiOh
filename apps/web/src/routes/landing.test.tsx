@@ -649,7 +649,7 @@ describe("R639 your table", () => {
   });
 
   it("R639 R1584000 R1743000 the floor shows the device's stats one at a time in a random order, a click moving on", async () => {
-    withGames(4, { "core-004": { seen: 4, played: 9 } });
+    withGames(4, { "core-004": { seen: 4, played: 9, playedInWin: 4 } });
     render(<LandingRoute random={seeded(5)} />);
     await act(async () => {
       await vi.dynamicImportSettled();
