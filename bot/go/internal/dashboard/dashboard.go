@@ -436,17 +436,6 @@ var Legend = "🟢 working · ▶️ takes queued work at the next run · ⚪ id
 	"after a run that could not work (a login or the CLI) · ⚫ off or suspended. Usage is " +
 	"the last reading (5h: the 5-hour session, 7d: the week), against its cap now."
 
-// Account is _account: a subscription with no run going, as its box's style and why it is not
-// working, by usage and hours alone (`waiting.held_by`): `idle` when it may start a build, a
-// revision or a plan. The queue and the lanes say more (`waiting.subscriptions`).
-func Account(ctx *hctx.Context, state *pyjson.Object, provider *providers.Provider) (string, string) {
-	held := waiting.HeldBy(ctx, state, provider, false, true)
-	if held == nil {
-		return "idle", "⚪ idle"
-	}
-	return lookup(Style, held.Kind), held.Text
-}
-
 // miniUsage is _mini_usage: a box's usage lines: `5h ▰▰▱▱▱ 42% · cap 40%`, one per window with a
 // reading or a cap.
 func miniUsage(ctx *hctx.Context, provider *providers.Provider, entry *pyjson.Object) []string {
