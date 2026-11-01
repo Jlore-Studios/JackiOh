@@ -14803,9 +14803,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-01T16:50:00Z",
-          "utilization": 0.32
+          "utilization": 0.41
         },
-        "observed_at": "2026-11-01T14:42:44Z",
+        "observed_at": "2026-11-01T14:54:14Z",
         "status": "allowed"
       }
     },
