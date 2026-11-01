@@ -13877,11 +13877,13 @@
         "by": "`claude` (strong)",
         "sha": "7d298c66cda7467bb07666e21c6671501031f289"
       },
+      "closed_at": "2026-11-01T23:16:00Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-01T21:16:25Z",
       "issue": 2733,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
