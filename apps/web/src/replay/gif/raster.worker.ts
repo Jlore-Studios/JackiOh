@@ -9,7 +9,6 @@
 
 import { canvasContext, rasterize } from "./raster.ts";
 import type { RasterAnswer, RasterRequest } from "./raster.ts";
-import { messageOf } from "../../net/errors.ts";
 
 type RasterWorkerScope = {
   onmessage: ((event: MessageEvent<RasterRequest>) => void) | null;
@@ -37,7 +36,7 @@ scope.onmessage = (event) => {
       else scope.postMessage({ type: "done", bytes }, [bytes.buffer]);
     },
     (cause: unknown) => {
-      scope.postMessage({ type: "failed", message: messageOf(cause) });
+      scope.postMessage({ type: "failed", message: cause instanceof Error ? cause.message : String(cause) });
     },
   );
 };
