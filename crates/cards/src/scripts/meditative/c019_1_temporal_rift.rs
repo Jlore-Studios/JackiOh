@@ -1,5 +1,5 @@
-//! Meditative #19.1 Temporal Rift (SPEC §8.8 row 19.1, SPEC §7). (0) Spell, Token (printed Epic); it
-//! cost (2) until patch v0.3.13 (#1194).
+//! Meditative #19.1 Temporal Rift (SPEC §8.8 row 19.1, SPEC §7). (1) Spell, Token (printed Epic); it
+//! cost (2) until patch v0.3.13 (#1194) and (0) until #2657.
 //!   Base:    "Take an extra turn after this one. You can take only one extra turn from Temporal Rift
 //!             each game."
 //!   Radiant: "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw
@@ -34,7 +34,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1: it costs (0);
+// Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1: it costs (1);
 // after the turn's cleanup the turn starts again — a whole turn, the turn count and max mana up, its refresh,
 // Brittle tick, start-of-turn triggers and draw, Units no longer summoning sick; the 60-turn cap
 // counts it; cast on the opponent's turn the extra turn follows the next one; a second Rift that
@@ -77,12 +77,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn costs_0_and_a_play_spends_nothing() {
+        fn costs_1_and_a_play_spends_1() {
             crate::register_all();
-            assert_eq!(crate::card_def(RIFT).cost, CardCost::Fixed(0));
+            assert_eq!(crate::card_def(RIFT).cost, CardCost::Fixed(1));
             let mut s = board(json!([RIFT, FILLER]));
             s.play(RIFT, json!({}));
-            s.expect_mana(P1, 10);
+            s.expect_mana(P1, 9);
         }
 
         #[test]
@@ -217,9 +217,9 @@ mod tests {
             let library = s.state().players.p1.library.len();
             s.play(&shiny.id, json!({}));
             assert_eq!(s.state().players.p1.extra_turns, Some(1), "no second grant");
-            // Its riders still resolve: 2 drawn, 2 mana gained (10 - 0 - 0 + 2).
+            // Its riders still resolve: 2 drawn, 2 mana gained (10 - 1 - 1 + 2).
             assert_eq!(s.state().players.p1.library.len(), library - 2);
-            assert_eq!(s.state().players.p1.mana.current, 12);
+            assert_eq!(s.state().players.p1.mana.current, 10);
             s.end_turn();
             assert_eq!(s.state().active, P1);
             s.end_turn();
@@ -267,8 +267,8 @@ mod tests {
             s.state_mut().players.p1.mana.current = 2;
             let hand = s.hand(P1).len();
             s.play(RIFT, json!({}));
-            // Free, then 2 now and 2 drawn, the Rift itself leaving the hand.
-            assert_eq!(s.state().players.p1.mana.current, 4);
+            // (1), then 2 now and 2 drawn, the Rift itself leaving the hand.
+            assert_eq!(s.state().players.p1.mana.current, 3);
             assert_eq!(s.hand(P1).len(), hand + 2 - 1);
             // The next-turn 2 lands on the extra turn's refresh.
             s.end_turn();
@@ -286,7 +286,7 @@ mod tests {
             }
             let hand = s.hand(P1).len();
             s.play(RIFT, json!({}));
-            assert_eq!(s.state().players.p1.mana.current, 5);
+            assert_eq!(s.state().players.p1.mana.current, 4);
             assert_eq!(s.hand(P1).len(), hand + 3 - 1);
             s.end_turn();
             assert_eq!(s.state().active, P1);

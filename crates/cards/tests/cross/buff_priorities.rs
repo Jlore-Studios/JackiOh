@@ -220,7 +220,9 @@ fn r1748001_a_damage_spell_may_gain_pierce_or_lifesteal_and_its_lifesteal_heals(
         "p2": { "hand": [FILLER] },
     }));
     assert!(rows(&s, ECLIPSE, TuneDirection::Upgrade).contains(&TuneRow::Keyword));
-    assert!(!rows(&s, FIELD_OF_DREAMS, TuneDirection::Upgrade).contains(&TuneRow::Keyword));
+    // A Spell that deals no damage still has a keyword row since #2657: Flashback, which a Buff may give
+    // any card (R2657005), and never Pierce or Lifesteal.
+    assert!(rows(&s, FIELD_OF_DREAMS, TuneDirection::Upgrade).contains(&TuneRow::Keyword));
 
     // A Buff draws one of the two; given Lifesteal, its 3 damage heals its caster 3.
     let mut s = scenario(json!({
@@ -301,16 +303,16 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
             .collect()
     };
 
-    // Unbuffed, the Unit's Armor 7 takes the whole of its 2 damage.
+    // Unbuffed, the Unit's Armor 7 takes the whole of its 1 damage (2 until #2657).
     let s = introspection_at_armored(false);
     assert_eq!(s.stats(ARMORED).health, 7);
     assert!(unit_hits(&s).is_empty());
     assert_eq!(count(&s, GameEventType::DamageAbsorbed), 1);
 
-    // Given Pierce, both land and the Armor takes nothing.
+    // Given Pierce, it lands and the Armor takes nothing.
     let s = introspection_at_armored(true);
-    assert_eq!(s.stats(ARMORED).health, 5);
-    assert_eq!(unit_hits(&s), [(2, 0)]);
+    assert_eq!(s.stats(ARMORED).health, 6);
+    assert_eq!(unit_hits(&s), [(1, 0)]);
     assert_eq!(count(&s, GameEventType::DamageAbsorbed), 0);
 }
 

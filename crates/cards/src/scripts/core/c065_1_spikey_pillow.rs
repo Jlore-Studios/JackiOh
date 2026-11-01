@@ -40,26 +40,23 @@ fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
     })
 }
 
-fn never_defense() -> StaticFlags {
-    StaticFlags {
-        never_defense: Some(true),
-        ..StaticFlags::default()
-    }
-}
-
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
-            static_flags: Some(never_defense()),
             aura: Some(attack_drain_aura(false)),
             ..Script::default()
         },
         radiant: Script {
-            static_flags: Some(never_defense()),
             aura: Some(attack_drain_aura(true)),
             ..Script::default()
         },
     }
+}
+
+/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
 }
 
 // #65.1 Spikey Pillow — SPEC §8.3, §4.1, §10.4, BUILD M4-T4 row 65.1.

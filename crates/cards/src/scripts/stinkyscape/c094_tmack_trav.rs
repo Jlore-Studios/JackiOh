@@ -32,10 +32,13 @@ fn tmack(keep_sick: bool) -> Script {
             if !killed {
                 return Vec::new();
             }
-            // R2521002: it may attack again, still summoning sick if it entered this turn.
+            // R2521002: it may attack again, still summoning sick if it entered this turn; v0.5.11's lifted
+            // the sickness, which a refresh does only when it says so since R2657004 (`liftSick`).
             let mut args = json!({ "target": { "of": "self" } });
             if keep_sick {
                 args["keepSick"] = json!(true);
+            } else {
+                args["liftSick"] = json!(true);
             }
             vec![may_attack_again(json_as(args))]
         })),

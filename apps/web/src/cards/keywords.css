@@ -49,6 +49,7 @@
   --kw-period-rewind: 3s;
   --kw-period-plate: 3.2s;
   --kw-period-launch: 1.6s;
+  --kw-period-split: 2.8s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -441,6 +442,11 @@
   animation: kw-starship-thrust var(--kw-period-launch) ease-in-out infinite;
 }
 
+/* R2657000: Can't Defend's split shield, its halves easing apart and back. */
+.cf .kw-fx[data-keyword-fx="Can't Defend"][data-kw-motion="on"] .kw-anim {
+  animation: kw-cant-defend-split var(--kw-period-split) ease-in-out infinite alternate;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -746,6 +752,15 @@
   }
   50% {
     transform: translateY(-4%);
+  }
+}
+
+@keyframes kw-cant-defend-split {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(1.12);
   }
 }
 

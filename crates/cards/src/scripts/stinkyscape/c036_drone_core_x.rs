@@ -1,7 +1,7 @@
 //! S #36 Drone Core X (SPEC §8.10 row 36): (8) Spell, Drone Core, Mythic, a card of the Stinkyscape set.
 //!   Base:    "Float reduces cost.\nSummon the Drone Battleship."
 //!   Radiant: "Float reduces cost.\nSummon a Radiant Drone Battleship."
-//! Engine: "Float reduces cost" as S #34 (R1563000): a hand and a deck trigger on its owner's Float, a
+//! Engine: "Float reduces cost" as S #34 (R1563000): a hand trigger on its owner's Float (a deck trigger too through v0.5.9e, R2657002), a
 //!   `costMod` kept until a graveyard or exile (R766). The Drone Battleship is its three layer tokens
 //!   summoned as one pile (`summon_pile`, R1842000) into one unit zone, bottom first: the Meltdown Layer,
 //!   then the Propagation Layer, then the Shield Layer on top, so the Shield Layer is fought first and acts
@@ -18,7 +18,8 @@ const MELTDOWN: &str = "stinkyscape-t-meltdown-layer";
 const PROPAGATION: &str = "stinkyscape-t-propagation-layer";
 const SHIELD: &str = "stinkyscape-t-shield-layer";
 
-fn face(radiant: bool) -> Script {
+/// One face. `deck` adds the Float deck trigger it had through v0.5.9e (R2657002).
+fn face(radiant: bool, deck: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
             vec![summon_pile(json_as(json!({
@@ -27,15 +28,28 @@ fn face(radiant: bool) -> Script {
             })))]
         })),
         hand_triggers: vec![float_reduces_cost("drone-core-x-float-hand")],
-        deck_triggers: vec![float_reduces_cost("drone-core-x-float-deck")],
+        deck_triggers: if deck {
+            vec![float_reduces_cost("drone-core-x-float-deck")]
+        } else {
+            vec![]
+        },
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(false),
-        radiant: face(true),
+        base: face(false, false),
+        radiant: face(true, false),
+    }
+}
+
+/// R767000: through v0.5.9e a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    CardScripts {
+        base: face(false, true),
+        radiant: face(true, true),
     }
 }
 
@@ -120,12 +134,12 @@ mod tests {
     }
 
     #[test]
-    fn r1563000_a_float_of_2_makes_it_cost_two_less_in_hand_and_deck() {
+    fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
         for radiant in [false, true] {
             let (mut s, hand, deck) = floating(2, radiant);
             s.end_turn();
             assert_eq!(s.card(hand.as_str()).cost_mod, -2, "radiant {radiant}");
-            assert_eq!(s.card(deck.as_str()).cost_mod, -2, "radiant {radiant}");
+            assert_eq!(s.card(deck.as_str()).cost_mod, 0, "radiant {radiant}");
             assert_eq!(price_of(&s, &hand), 6, "radiant {radiant}");
         }
     }

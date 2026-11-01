@@ -10,13 +10,14 @@
 //! pile, since cards under a Stack are not on the field (R13, §3.2); control, not ownership, decides
 //! what is yours (R12). A permanent converts in place, the Cry not re-firing (§5.2, R22).
 //!
-//! Cost 7 is catalog data (6 until #1563). MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95)
+//! Cost 6 is catalog data (6 until #1563, then 7 until #2657). MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95)
 //! or Floats; §2.3 lets current mana exceed max.
 //!
-//! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a deck
-//! trigger (R464): each Float of its owner's lowers its cost by that much, kept until a graveyard or
-//! exile (R766). Until #1563 it had no such trigger (`script_v0_4_0f`, kept for the replays of v0.4.0f
-//! and before, R767000).
+//! "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464)
+//! since R2657002: each Float of its owner's lowers its cost by that much while it is in their hand,
+//! kept until a graveyard or exile (R766). Until #1563 it had no such trigger (`script_v0_4_0f`, kept
+//! for the replays of v0.4.0f and before, R767000), and through v0.5.9e a deck trigger too
+//! (`script_v0_5_9e`).
 
 use jackioh_engine::prelude::*;
 
@@ -53,15 +54,24 @@ fn make_radiant(cards: &[String]) -> Vec<Effect> {
         .collect()
 }
 
-/// The two faces; `float` adds "Float reduces cost", which the card printed from #1563 on.
-fn giga(float: bool) -> CardScripts {
-    let (hand_triggers, deck_triggers) = if float {
-        (
-            vec![float_reduces_cost("giga-float-hand")],
-            vec![float_reduces_cost("giga-float-deck")],
-        )
-    } else {
-        (vec![], vec![])
+/// Where "Float reduces cost" works: nowhere before #1563, hand and deck through v0.5.9e, and the hand
+/// alone since R2657002.
+#[derive(Clone, Copy)]
+enum Float {
+    None,
+    HandAndDeck,
+    Hand,
+}
+
+/// The two faces, with "Float reduces cost" where `float` says.
+fn giga(float: Float) -> CardScripts {
+    let hand_triggers = match float {
+        Float::None => vec![],
+        Float::HandAndDeck | Float::Hand => vec![float_reduces_cost("giga-float-hand")],
+    };
+    let deck_triggers = match float {
+        Float::HandAndDeck => vec![float_reduces_cost("giga-float-deck")],
+        Float::None | Float::Hand => vec![],
     };
     let base = Script {
         cry: Some(hook(|ctx| make_radiant(&hand_of(ctx)))),
@@ -85,17 +95,23 @@ fn giga(float: bool) -> CardScripts {
 }
 
 pub fn script() -> CardScripts {
-    giga(true)
+    giga(Float::Hand)
 }
 
 /// R767000: GIGA Glowy Jelly Bean through v0.4.0f, with no Float discount.
 pub fn script_v0_4_0f() -> CardScripts {
-    giga(false)
+    giga(Float::None)
 }
 
-// #29 GIGA Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 29): "Uncastable at 4 mana, castable at 7
+/// R767000: through v0.5.9e a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    giga(Float::HandAndDeck)
+}
+
+// #29 GIGA Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 29): "Uncastable at 4 mana, castable at 6
 // after gains; whole hand radiant; radiant also permanents; each Float of its owner's lowers its cost in
-// hand and deck (R1563000)".
+// hand, never in the deck (R1563000, R2657002)".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -139,21 +155,21 @@ mod tests {
         use super::*;
 
         #[test]
-        fn costs_7_so_a_mana_refresh_alone_can_never_cast_it_max_mana_is_4() {
+        fn costs_6_so_a_mana_refresh_alone_can_never_cast_it_max_mana_is_4() {
             crate::register_all();
             assert_eq!(MAX_MANA, 4);
             let mut s = giga(4, false);
 
-            s.expect_refused_with(|s| s.play("core-029", json!({})), "7");
+            s.expect_refused_with(|s| s.play("core-029", json!({})), "6");
             // Nothing happened: no card played, no flag set.
             assert!(!s.state().players.p1.hand.iter().any(|card| card.radiant));
             assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
         }
 
         #[test]
-        fn is_castable_at_7_once_mana_gains_take_current_above_max_s2_3() {
+        fn is_castable_at_6_once_mana_gains_take_current_above_max_s2_3() {
             crate::register_all();
-            let mut s = giga(7, false);
+            let mut s = giga(6, false);
 
             s.play("core-029", json!({}));
 
@@ -164,7 +180,7 @@ mod tests {
         #[test]
         fn flags_every_card_in_your_hand_and_nothing_in_any_other_zone() {
             crate::register_all();
-            let mut s = giga(7, false);
+            let mut s = giga(6, false);
             let hand_ids = other_hand_ids(s.state());
             let permanent_ids: Vec<String> = permanents_of(s.state()).into_iter().map(|card| card.id).collect();
 
@@ -193,7 +209,7 @@ mod tests {
         #[test]
         fn s10_5_never_flags_itself_the_card_is_in_the_resolving_zone_while_its_script_runs() {
             crate::register_all();
-            let mut s = giga(7, false);
+            let mut s = giga(6, false);
             let self_id = s
                 .state()
                 .players
@@ -216,7 +232,7 @@ mod tests {
         #[test]
         fn flags_your_hand_and_all_your_permanents_units_and_backrow_alike() {
             crate::register_all();
-            let mut s = giga(7, true);
+            let mut s = giga(6, true);
             let hand_ids = other_hand_ids(s.state());
             let permanent_ids: Vec<String> = permanents_of(s.state()).into_iter().map(|card| card.id).collect();
             assert_eq!(permanent_ids.len(), 3); // two units plus a Field Spell in the backrow
@@ -240,7 +256,7 @@ mod tests {
         #[test]
         fn r22_a_permanent_swaps_its_base_stats_in_place_keeping_the_damage_it_has_taken() {
             crate::register_all();
-            let mut s = giga(7, true);
+            let mut s = giga(6, true);
             let unit_id = s.unit(P1, 1).map(|card| card.id.clone()).unwrap_or_default();
             s.expect_stats(&unit_id, json!({ "attack": 6, "maxHealth": 10, "health": 8 }));
 
@@ -261,7 +277,7 @@ mod tests {
         #[test]
         fn r13_leaves_a_card_under_a_stack_pile_alone_it_is_not_on_the_field() {
             crate::register_all();
-            let mut s = giga(7, true);
+            let mut s = giga(6, true);
             assert!(s.state().players.p1.units[0].is_some());
             let Some(dormant_id) = s.state().players.p1.units[0]
                 .as_ref()
@@ -314,13 +330,13 @@ mod tests {
         }
 
         #[test]
-        fn r1563000_a_float_lowers_its_cost_in_hand_and_deck() {
+        fn r1563000_r2657002_a_float_lowers_its_cost_in_hand_never_in_the_deck() {
             for radiant in [false, true] {
                 let (mut s, hand, deck) = floating(3, radiant);
                 s.end_turn();
                 assert_eq!(s.card(hand.as_str()).cost_mod, -3, "radiant {radiant}");
-                assert_eq!(s.card(deck.as_str()).cost_mod, -3, "radiant {radiant}");
-                assert_eq!(price_of(&s, &hand), 4, "radiant {radiant}");
+                assert_eq!(s.card(deck.as_str()).cost_mod, 0, "radiant {radiant}");
+                assert_eq!(price_of(&s, &hand), 3, "radiant {radiant}");
             }
         }
 

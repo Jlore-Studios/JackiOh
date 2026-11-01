@@ -1,9 +1,10 @@
 //! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R46, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282,
 //! R437, R767000, R1045000).
 //!   (2) Unit, Human, Epic, 1/1 → 2/2.
-//!   Base:    "Cry: Allure an enemy permanent."
-//!   Radiant: "Divine Shield; Cry: Allure an enemy permanent. Make it Radiant when you steal it."
-//!            (R275; "Divine Shield" is printed in `catalog.json`).
+//!   Base:    "Can't Defend; Cry: Allure an enemy permanent."
+//!   Radiant: "Divine Shield, Can't Defend; Cry: Allure an enemy permanent. Make it Radiant when you steal
+//!            it." (R275; "Divine Shield" and, since #2657, Can't Defend, R2657000, are printed in
+//!            `catalog.json`).
 //!
 //! Allure (§6.3, R963, R1045000) is a delayed steal that destroys a target with no open zone in its row
 //! (`otherwise: destroy`, R46), as Jade Beauty's does; the card Allures the one permanent it declares.
@@ -222,7 +223,10 @@ mod tests {
     const SEVEN_SEVEN: &str = "core-025";
     const DUELIST: &str = "core-045";
     const ROCK: &str = "core-066";
-    const FILLER: &str = "core-016";
+    /// A (0) Spell its holder could still play, so a turn here never ends by itself (R82): through
+    /// v0.5.9e the Fanatic's own switch to Defense Position kept it open, which Can't Defend took away
+    /// (R2657000).
+    const FILLER: &str = "core-010";
     const MENACE: &str = "core-019";
     const LIBRARY: [&str; 3] = [SEVEN_SEVEN, "core-008", "core-020"];
 
@@ -585,9 +589,10 @@ mod tests {
             assert_eq!(def.cost, CardCost::Fixed(2));
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
             assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
-            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions).
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield]);
-            assert!(def.base.keywords.is_empty());
+            // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions), with
+            // Can't Defend on both faces since #2657 (R2657000).
+            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::CantDefend]);
+            assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
 
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }]);
             assert_eq!(serde_json::to_value(&base.targets).unwrap(), decl);
@@ -1128,10 +1133,10 @@ mod tests {
             let old_base = "Cry: Choose an enemy permanent. At the start of your next turn, steal it.";
             let old_radiant = "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant.";
 
-            assert_eq!(def.base.text, "Cry: Allure an enemy permanent.");
+            assert_eq!(def.base.text, "Can't Defend\nCry: Allure an enemy permanent.");
             assert_eq!(
                 def.radiant.text,
-                "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+                "Divine Shield, Can't Defend\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
             );
             assert!(def.base.text.len() < old_base.len());
             assert!(def.radiant.text.len() < old_radiant.len());

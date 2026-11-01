@@ -480,8 +480,8 @@ core-050: # K-Pop Fanatic
     death: Tell my bias goodbye.
   zh:
     name: 韩流狂热粉
-    base: 战吼：迷惑一个敌方永久物。
-    radiant: "圣盾\n战吼：迷惑一个敌方永久物。当你夺取它时，使其变为光辉。"
+    base: "无法守备\n战吼：迷惑一个敌方永久物。"
+    radiant: "圣盾，无法守备\n战吼：迷惑一个敌方永久物。当你夺取它时，使其变为光辉。"
 core-051: # KY's Private Tutor
   flavour: Tutoring available in every subject except humility.
   voice:
@@ -526,8 +526,8 @@ core-054: # Straaza
     death: Out of stock.
   zh:
     name: 丝塔萨
-    base: 战吼：将2张法力值消耗为(3)的随机单位牌置入你的手牌。它们的法力值消耗为({setCost})。
-    radiant: 战吼：将2张法力值消耗为(3)的随机光辉单位牌置入你的手牌。它们的法力值消耗为({setCost})。
+    base: 战吼：将{cards}张法力值消耗为(3)的随机单位牌置入你的手牌。它们的法力值消耗为({setCost})。
+    radiant: 战吼：将{cards}张法力值消耗为(3)的随机光辉单位牌置入你的手牌。它们的法力值消耗为({setCost})。
 core-055: # Lava Golem
   flavour: Built from three volunteers and one complaint form.
   voice:
@@ -578,7 +578,7 @@ core-060: # Bear Honeypot
     cast: Mmm, honey. Oh no. Bears.
   zh:
     name: 诱熊蜜罐
-    base: 当你的对手打出一张法力值消耗为({costLimit})或更低的牌，且你有空的单位区时揭示：召唤2个突袭衍生物。如果那张牌是单位，它们攻击该单位。
+    base: 当你的对手打出一张法力值消耗为({costLimit})或更低的牌，且你有空的单位区时揭示：召唤{tokens}个突袭衍生物。如果那张牌是单位，它们攻击该单位。
     radiant: 当你的对手打出一张牌，且你有空的单位区时揭示：用突袭衍生物填满你的单位区。如果那张牌是单位，它们攻击该单位。
 core-061: # Prejudiced Postdoc
   flavour: Six years of research and one strongly held belief about who counts.
@@ -630,8 +630,8 @@ core-065-1: # Spikey Pillow
     death: Pop.
   zh:
     name: 尖刺枕头
-    base: "无法成为守备表示。\n光环：你的单位拥有−{drain}攻击力。"
-    radiant: "无法成为守备表示。\n光环：你的除尖刺枕头以外的单位拥有−{drain}攻击力。"
+    base: "无法守备\n光环：你的单位拥有−{drain}攻击力。"
+    radiant: "无法守备\n光环：你的除尖刺枕头以外的单位拥有−{drain}攻击力。"
 core-066: # The Rock
   flavour: Can you smell what he is cooking? It's nothing. He's a rock.
   voice:
@@ -703,7 +703,7 @@ core-073: # Anti-oneshot Armor
   zh:
     name: 防秒杀护甲
     base: "你的英雄每次受到的伤害不会超过{cap}点。\n战吼：抽{draw}张牌。"
-    radiant: "你的英雄每次受到的伤害不会超过{cap}点。\n战吼：抽{draw}张牌。"
+    radiant: "你的英雄每次受到的伤害不会超过{cap}点。\n你的英雄拥有护甲{armor}。\n战吼：抽{draw}张牌。"
 core-074: # Adaptive UI
   flavour: It resized itself to fit your wallet.
   voice:
@@ -1236,8 +1236,8 @@ classic-024: # Book of Knowledge
     cast: Knowledge is power. Read on.
   zh:
     name: 知识之书
-    base: 抽{draw}张牌。
-    radiant: 抽{draw}张牌。
+    base: 抽{least}-{most}张牌。
+    radiant: 抽{least}-{most}张牌。
 classic-025: # Lag in the System
   flavour: Hold on, it's buffering. The cheap stuff is gone.
   voice:
@@ -1330,7 +1330,7 @@ classic-035: # Prep
     cast: Stretch, plan, prepare. Go time.
   zh:
     name: 伺机
-    base: "在本回合中，你的下一张法术的法力值消耗减少({discount})点。\n加码(2)：并从你的牌库中抽取法力值消耗最高的法术。"
+    base: "在本回合中，你的下一张法术的法力值消耗减少({discount})点。\n加码(2)：并从你的牌库中随机抽取一张法术。"
     radiant: "在本回合中，你的下一张法术的法力值消耗减少({discount})点。\n加码(2)：并从你的牌库中抽取法力值消耗最高的法术。"
 classic-036: # Burn
   flavour: Everything burns. Some things burn and pay you back.
@@ -2086,8 +2086,8 @@ classicplus-019-1: # Top Loser
     death: Ganked again?
   zh:
     name: 上路菜鸡
-    base: "护甲3\n无法成为守备表示。只有这一纵列的单位可以攻击这个单位。"
-    radiant: "护甲6，法术免疫\n无法成为守备表示。只有这一纵列的单位可以攻击这个单位。"
+    base: "护甲2，无法守备\n只有这一纵列的单位可以攻击这个单位。"
+    radiant: "护甲4，法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
 classicplus-019-2: # Jungle Loser
   flavour: He ganks when he feels like it, which is rarely.
   voice:
@@ -2453,7 +2453,7 @@ classicplus-048: # Jlockeed's Lobbyist
     death: Contract, terminated.
   zh:
     name: Jlockeed的说客
-    base: "无法成为守备表示。\n亡语：将一张随机Jlockeed牌置入你的手牌。其法力值消耗为({setCost})。"
+    base: "无法守备\n亡语：将一张随机Jlockeed牌置入你的手牌。其法力值消耗为({setCost})。"
     radiant: 亡语：将一张随机光辉Jlockeed牌置入你的手牌。其法力值消耗为({setCost})。
 classicplus-049: # Jay Fungus
   flavour: The fungus is friendly, and it gives discounts.
@@ -2481,8 +2481,8 @@ classicplus-051: # Jlockeed's J15 Fighter
     death: Mayday, mayday!
   zh:
     name: Jlockeed的歼15战斗机
-    base: "先攻，突袭\n无法成为守备表示。无法被攻击。"
-    radiant: "先攻，突袭，圣盾\n无法成为守备表示。无法被攻击。"
+    base: "远程，飞行，突袭\n无法被攻击。"
+    radiant: "远程，飞行，突袭，圣盾\n无法被攻击。"
 classicplus-052: # Jlockeed's Permanent Defense Contract
   flavour: A contract for life, with free shipping every morning.
   voice:
@@ -3182,8 +3182,8 @@ meditative-032: # Spiritually 中国
     cast: Lesson one. Repeat after me.
   zh:
     name: 精神中国人
-    base: 准备好学中文！将你手牌中的每张牌变形为同一张随机的中国牌，它们的法力值消耗为(0)。召唤{units}个随机的中国单位。
-    radiant: 准备好学中文！将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)。召唤{units}个随机的光辉中国单位。
+    base: 准备好学中文！将你手牌中的每张牌变形为同一张随机的中国牌，它们的法力值消耗为(1)。召唤{units}个随机的中国单位。
+    radiant: 准备好学中文！将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(1)。召唤{units}个随机的光辉中国单位。
 meditative-033: # First Day of 学校
   flavour: New backpack, new pencils, new alphabet.
   voice:
@@ -3393,8 +3393,8 @@ meditative-049-1: # YileGPT Prime
     death: You cannot uninstall me.
   zh:
     name: 至尊YileGPT
-    base: "无法攻击\n回合开始时：使你的一个随机永久物变为光辉。\n结余减费。\n战吼：随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
-    radiant: "无法攻击，护甲5\n回合开始时：使你的{radiants}个随机永久物变为光辉。\n结余减费。\n战吼：召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    base: "结余减费。\n战吼：随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    radiant: "护甲5\n结余减费。\n战吼：召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
 meditative-049-2: # Yile's Virus
   flavour: Have you tried turning it off and on?
   voice:
@@ -3597,8 +3597,8 @@ meditative-069: # The Maestro
     death: Encore? Never.
   zh:
     name: 指挥大师
-    base: "每当你花费法力值时，在此单位上放置1个瘟疫指示物。\n激活：移除({price})个瘟疫指示物：从你对手的场上、手牌、牌库和墓地中各放逐{exiles}张随机敌方牌。"
-    radiant: "每当你花费法力值时，在此单位上放置1个瘟疫指示物。\n激活：移除({price})个瘟疫指示物：从你对手的场上、手牌、牌库和墓地中各放逐{exiles}张随机敌方牌。"
+    base: "每当你花费法力值时，在此单位上放置{counters}个瘟疫指示物。\n激活：移除({price})个瘟疫指示物：从你对手的场上、手牌、牌库和墓地中各放逐{exiles}张随机敌方牌。"
+    radiant: "每当你花费法力值时，在此单位上放置{counters}个瘟疫指示物。\n激活：移除({price})个瘟疫指示物：从你对手的场上、手牌、牌库和墓地中各放逐{exiles}张随机敌方牌。"
 meditative-070: # I'M WILL BE YOUR DOOM
   flavour: Grammar was never part of the prophecy.
   voice:
@@ -3807,8 +3807,8 @@ meditative-090: # Spell Basket
     cast: A basket full of spells!
   zh:
     name: 法术篮
-    base: 将{cards}张随机法术置入你的手牌。
-    radiant: 将{cards}张随机光辉法术置入你的手牌。
+    base: 将{cards}张随机法术置入你的手牌。使每张牌获得临时{temporary}。
+    radiant: 将{cards}张随机光辉法术置入你的手牌。使每张牌获得临时{temporary}。
 meditative-091: # Windfast
   flavour: It never swings first. It just knows who will.
   voice:
@@ -3847,8 +3847,8 @@ meditative-093: # Growing Felinor
     death: Next time, I'll be bigger.
   zh:
     name: 成长猫族
-    base: "无法成为守备表示。\n亡语：召唤一个成长猫族学长。"
-    radiant: "圣盾，突袭\n无法成为守备表示。\n亡语：召唤一个光辉成长猫族学长。"
+    base: "无法守备\n亡语：召唤一个成长猫族学长。"
+    radiant: "圣盾，突袭，无法守备\n亡语：召唤一个光辉成长猫族学长。"
 meditative-093-1: # Growing Felinor Sr
   flavour: Promoted for showing up.
   voice:
@@ -3857,8 +3857,8 @@ meditative-093-1: # Growing Felinor Sr
     death: Back soon. Even bigger.
   zh:
     name: 成长猫族学长
-    base: "无法成为守备表示。\n亡语：召唤一个成长猫族学长学长。"
-    radiant: "圣盾，突袭\n无法成为守备表示。\n亡语：召唤一个光辉成长猫族学长学长。"
+    base: "无法守备\n亡语：召唤一个成长猫族学长学长。"
+    radiant: "圣盾，突袭，无法守备\n亡语：召唤一个光辉成长猫族学长学长。"
 meditative-093-2: # Growing Felinor Sr Sr
   flavour: Held back a year, on purpose.
   voice:
@@ -3867,8 +3867,8 @@ meditative-093-2: # Growing Felinor Sr Sr
     death: One last growth spurt!
   zh:
     name: 成长猫族学长学长
-    base: "无法成为守备表示。\n亡语：召唤一个成长猫族超级学长。"
-    radiant: "圣盾，突袭\n无法成为守备表示。\n亡语：召唤一个光辉成长猫族超级学长。"
+    base: "无法守备\n亡语：召唤一个成长猫族超级学长。"
+    radiant: "圣盾，突袭，无法守备\n亡语：召唤一个光辉成长猫族超级学长。"
 meditative-093-3: # Growing Felinor Super Senior
   flavour: Graduated. Refuses to leave campus.
   voice:
@@ -3877,8 +3877,8 @@ meditative-093-3: # Growing Felinor Super Senior
     death: Retired at last.
   zh:
     name: 成长猫族超级学长
-    base: 无法成为守备表示。
-    radiant: "圣盾，突袭\n无法成为守备表示。"
+    base: 无法守备
+    radiant: 圣盾，突袭，无法守备
 meditative-094: # Shrinking Felinor
   flavour: It was a lot more cat yesterday.
   voice:
@@ -4739,8 +4739,8 @@ stinkyscape-026: # ZolarKeth
     death: Office hours are over.
   zh:
     name: ZolarKeth
-    base: "战吼：召唤一个大学。它无法使用自身的激活。\n激活：抉择：随机召唤一个星舰部件；或激活你的所有大学。\n每个大学每回合至多被激活一次。"
-    radiant: "战吼：召唤一个大学。它无法使用自身的激活。\n激活：随机召唤一个光辉星舰部件，然后激活你的所有大学。\n每个大学每回合至多被激活一次。"
+    base: 战吼：抉择：召唤一个大学；或此单位获得“激活：随机召唤一个星舰部件。”
+    radiant: 战吼：抉择：召唤一个光辉大学；或此单位获得“激活：随机召唤一个光辉星舰部件。”
 stinkyscape-027: # Drone Core I
   flavour: The cheapest core on the market. It eats a card, but the drone works fine.
   voice:
@@ -4919,8 +4919,8 @@ stinkyscape-047: # Circadian Fullcycler
     cast: Full cycle engaged. Go back to sleep.
   zh:
     name: 昼夜全循环器
-    base: "易碎5\n光环：你的每个回合都由AI代为进行。\n回合结束时：召唤一艘无人护卫舰。"
-    radiant: "易碎5\n光环：你的每个回合都由AI代为进行。\n回合结束时：召唤一艘光辉无人护卫舰。"
+    base: "易碎3\n光环：你的每个回合都由AI代为进行。\n回合结束时：召唤一艘无人护卫舰。"
+    radiant: "易碎3\n光环：你的每个回合都由AI代为进行。\n回合结束时：召唤一艘光辉无人护卫舰。"
 stinkyscape-048: # Ultralight Chassis
   flavour: Half the weight, twice the speed, and absolutely no cup holders.
   voice:
@@ -4979,8 +4979,8 @@ stinkyscape-053: # Flak v3
     death: Battery silent.
   zh:
     name: 高射炮v3
-    base: "星舰部件，装备\n激活：对每个敌人造成随机{least}到{most}点伤害，由低到高的概率依次为60%、30%、10%。"
-    radiant: "星舰部件，装备，幸运1\n激活：对每个敌人造成随机{least}到{most}点伤害，由低到高的概率依次为60%、30%、10%。"
+    base: "星舰部件，装备\n激活：对每个敌方单位造成随机{least}到{most}点伤害。"
+    radiant: "星舰部件，装备，幸运1\n激活：对每个敌方单位造成随机{least}到{most}点伤害。"
 stinkyscape-054: # Beam v4
   flavour: The fourth model. The first three are in a museum, and so is the museum.
   voice:
@@ -5019,8 +5019,8 @@ stinkyscape-057: # Flak v4
     death: Guns cold.
   zh:
     name: 高射炮v4
-    base: "星舰部件，装备\n激活：对每个敌人造成随机{least}到{most}点伤害，由低到高的概率依次为60%、30%、10%，重复两次。"
-    radiant: "星舰部件，装备，幸运1\n激活：对每个敌人造成随机{least}到{most}点伤害，由低到高的概率依次为60%、30%、10%，重复两次。"
+    base: "星舰部件，装备\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复两次。"
+    radiant: "星舰部件，装备，幸运1\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复两次。"
 stinkyscape-058: # Beam v5
   flavour: Takes a full day to cool. Takes a full fleet to survive.
   voice:
@@ -5059,8 +5059,8 @@ stinkyscape-061: # Flak v5
     death: Last volley spent.
   zh:
     name: 高射炮v5
-    base: "星舰部件，装备\n激活：对每个敌人造成随机{least}到{most}点伤害，由低到高的概率依次为60%、30%、10%，重复三次。"
-    radiant: "星舰部件，装备，幸运1\n激活3：对每个敌人造成随机{least}到{most}点伤害，由低到高的概率依次为60%、30%、10%，重复三次。"
+    base: "星舰部件，装备\n激活：对每个敌方单位造成随机{least}到{most}点伤害，重复三次。"
+    radiant: "星舰部件，装备，幸运1\n激活3：对每个敌方单位造成随机{least}到{most}点伤害，重复三次。"
 stinkyscape-062: # Miner v1
   flavour: Pocket-sized, solar-powered, and convinced every rock is worth something.
   voice:
@@ -5259,8 +5259,8 @@ stinkyscape-081: # Radix
     death: Frame buckled.
   zh:
     name: 拉迪克斯
-    base: 战吼：发现2张稀有武器牌，并将它们装备到此单位上。
-    radiant: 战吼：发现2张史诗武器牌，并将它们装备到此单位上。
+    base: 战吼：发现{weapons}张稀有武器牌，并将它们装备到此单位上。
+    radiant: 战吼：发现{weapons}张史诗武器牌，并将它们装备到此单位上。
 stinkyscape-082: # Phalanx
   flavour: Plated like a tortoise, armed like a porcupine, and about as friendly as either.
   voice:
@@ -5269,8 +5269,8 @@ stinkyscape-082: # Phalanx
     death: The line is broken.
   zh:
     name: 方阵
-    base: "护甲3\n战吼：发现2张稀有武器牌，并将它们装备到此单位上。"
-    radiant: "护甲6\n战吼：发现2张史诗武器牌，并将它们装备到此单位上。"
+    base: "护甲2\n战吼：发现{weapons}张稀有武器牌，并将它们装备到此单位上。"
+    radiant: "护甲4\n战吼：发现{weapons}张史诗武器牌，并将它们装备到此单位上。"
 stinkyscape-083: # Halo
   flavour: A ring of guns around a very nervous pilot.
   voice:
@@ -5279,8 +5279,8 @@ stinkyscape-083: # Halo
     death: Ring shattered.
   zh:
     name: 光晕
-    base: 战吼：发现3张稀有武器牌，并将它们装备到此单位上。
-    radiant: 战吼：发现3张史诗武器牌，并将它们装备到此单位上。
+    base: 战吼：发现{weapons}张稀有武器牌，并将它们装备到此单位上。
+    radiant: 战吼：发现{weapons}张史诗武器牌，并将它们装备到此单位上。
 stinkyscape-084: # Power Cell
   flavour: Fully powered, and leaking scrap from every seam.
   voice:
@@ -5305,8 +5305,8 @@ stinkyscape-085: # Prototype-X1
     death: Back to the lab.
   zh:
     name: 原型机-X1
-    base: "献祭2\n战吼：发现2张史诗武器牌，并将它们装备到此单位上。"
-    radiant: "献祭2\n战吼：发现2张传说武器牌，并将它们装备到此单位上。"
+    base: "献祭2\n战吼：发现{weapons}张史诗武器牌，并将它们装备到此单位上。"
+    radiant: "献祭2\n战吼：发现{weapons}张传说武器牌，并将它们装备到此单位上。"
 stinkyscape-086: # Prototype-X2
   flavour: Five ships went into it. One ship came out, and it is very angry about the other four.
   voice:
@@ -5315,8 +5315,8 @@ stinkyscape-086: # Prototype-X2
     death: Catastrophic failure.
   zh:
     name: 原型机-X2
-    base: "献祭5\n结余使献祭需求减少1。\n战吼：发现3张史诗武器牌，并将它们装备到此单位上。"
-    radiant: "献祭5\n结余使献祭需求减少1。\n战吼：发现3张传说武器牌，并将它们装备到此单位上。"
+    base: "献祭5\n结余使献祭需求减少1。\n战吼：发现{weapons}张史诗武器牌，并将它们装备到此单位上。"
+    radiant: "献祭5\n结余使献祭需求减少1。\n战吼：发现{weapons}张传说武器牌，并将它们装备到此单位上。"
 stinkyscape-087: # Siva 1
   flavour: Fame is a leash, and Siva holds the other end.
   voice:
@@ -5615,8 +5615,8 @@ stinkyscape-116: # Megabase
     death: The base has fallen.
   zh:
     name: 巨型基地
-    base: "无法攻击，法术免疫，不可变，不可献祭，护甲15\n无法成为守备表示。\n激活：抉择：双方玩家各获得5、10或15信用点。\n亡语：双方玩家各获得100信用点。"
-    radiant: "无法攻击，法术免疫，不可变，不可献祭，护甲30\n无法成为守备表示。\n激活：抉择：你获得5、10或15信用点，你的对手获得的信用点比你少5。\n亡语：双方玩家各获得200信用点。"
+    base: "无法攻击，法术免疫，不可变，不可献祭，护甲15，无法守备\n激活：抉择：双方玩家各获得5、10或15信用点。\n亡语：双方玩家各获得100信用点。"
+    radiant: "无法攻击，法术免疫，不可变，不可献祭，护甲30，无法守备\n激活：抉择：你获得5、10或15信用点，你的对手获得的信用点比你少5。\n亡语：双方玩家各获得200信用点。"
 stinkyscape-117: # Core System
   flavour: Full system reset. Please save your work. You didn't.
   voice:
@@ -5903,8 +5903,8 @@ stinkyscape-143: # Book Launcher
     death: Out of print.
   zh:
     name: 书本发射器
-    base: "星舰部件，装备\n激活：对一个敌人施放一张随机有害的书牌。\n激活：对一个友方角色施放一张随机有益的书牌。"
-    radiant: "星舰部件，装备\n激活：对一个敌人施放一张随机光辉有害书牌。\n激活：对一个友方角色施放一张随机光辉有益书牌。"
+    base: "星舰部件，装备\n激活：选择一个目标。如果它是敌人，施放一张随机有害的书牌，可行时以其为目标。如果它是友方，施放一张随机有益的书牌，可行时以其为目标。"
+    radiant: "星舰部件，装备\n激活：选择一个目标。如果它是敌人，施放一张随机光辉有害书牌，可行时以其为目标。如果它是友方，施放一张随机光辉有益书牌，可行时以其为目标。"
 stinkyscape-144: # Prepare For Liftoff
   flavour: Fuel the rockets, kiss the dog, and never read the waiver.
   voice:
@@ -5980,7 +5980,7 @@ stinkyscape-149: # Wildar
   zh:
     name: 怀尔达
     base: 将一张随机混沌召唤置入你对手的手牌，其法力值消耗为(0)。然后将一张随机光辉混沌召唤置入你的手牌。
-    radiant: 将一张随机光辉混沌召唤置入你的手牌。
+    radiant: 将一张随机混沌召唤置入你对手的手牌，其法力值消耗为(0)。然后将一张随机光辉混沌召唤置入你的手牌，其法力值消耗为(0)。
 stinkyscape-150: # Call to Chaos (Stinky Edition)
   flavour: The stinkiest roll in the known universe, and somehow the luckiest.
   voice:
@@ -6159,8 +6159,8 @@ stinkyscape-169: # Tiny Asteroid
     death: Crumbled into loot.
   zh:
     name: 微型小行星
-    base: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
-    radiant: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
+    base: "无法攻击，无法守备\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
+    radiant: "无法攻击，无法守备\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
     previews:
       random Stinkyscape Resource: 随机臭臭星景资源
       random Radiant Stinkyscape Resource: 随机光辉臭臭星景资源
@@ -6172,8 +6172,8 @@ stinkyscape-170: # Medium Asteroid
     death: Cracked open. Take it.
   zh:
     name: 中型小行星
-    base: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
-    radiant: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
+    base: "无法攻击，无法守备\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
+    radiant: "无法攻击，无法守备\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
     previews:
       random Stinkyscape Resource: 随机臭臭星景资源
       random Radiant Stinkyscape Resource: 随机光辉臭臭星景资源
@@ -6185,8 +6185,8 @@ stinkyscape-171: # Large Asteroid
     death: Split wide open.
   zh:
     name: 大型小行星
-    base: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
-    radiant: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
+    base: "无法攻击，无法守备\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
+    radiant: "无法攻击，无法守备\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
     previews:
       random Stinkyscape Resource: 随机臭臭星景资源
       random Radiant Stinkyscape Resource: 随机光辉臭臭星景资源
@@ -6198,8 +6198,8 @@ stinkyscape-172: # Huge Asteroid
     death: Shattered into a fortune.
   zh:
     name: 巨型小行星
-    base: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
-    radiant: "无法攻击\n无法成为守备表示。\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
+    base: "无法攻击，无法守备\n亡语：获得{resources}个随机臭臭星景资源。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
+    radiant: "无法攻击，无法守备\n亡语：获得{resources}个随机光辉臭臭星景资源。\n激活：献祭这张牌。"
     previews:
       random Stinkyscape Resource: 随机臭臭星景资源
       random Radiant Stinkyscape Resource: 随机光辉臭臭星景资源
@@ -6211,8 +6211,8 @@ stinkyscape-173: # Abandoned Spice Tower
     death: The last spice spills out.
   zh:
     name: 废弃香料塔
-    base: "无法攻击\n无法成为守备表示。\n亡语：将{spices}张香料置入你的手牌。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
-    radiant: "无法攻击\n无法成为守备表示。\n亡语：将{spices}张光辉香料置入你的手牌。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
+    base: "无法攻击，无法守备\n亡语：将{spices}张香料置入你的手牌。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
+    radiant: "无法攻击，无法守备\n亡语：将{spices}张光辉香料置入你的手牌。\n激活：受到{selfDamage}点伤害。献祭这张牌。"
 stinkyscape-174: # Aerelret
   flavour: A fleet folded into a single card, waiting for someone to swing first.
   voice:
@@ -6783,7 +6783,7 @@ traininggrounds-036: # Training Dummy
     death: Lesson learned!
   zh:
     name: 训练假人
-    base: "无法成为守备表示。\n亡语：将{cards}张随机光辉训练场牌置入你的手牌。"
+    base: "无法守备\n亡语：将{cards}张随机光辉训练场牌置入你的手牌。"
     radiant: 亡语：将{cards}张随机光辉训练场牌置入你的手牌。
 traininggrounds-037: # Seance
   flavour: The spirits answer, and they come back exactly as they left.

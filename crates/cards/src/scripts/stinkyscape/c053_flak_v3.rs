@@ -1,7 +1,6 @@
 //! Stinkyscape #53 Flak v3 (SPEC §8.10 row 53; R2521001). Unit 0/4 → 0/8, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece, Equip
-//!            Activate: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest
-//!            first)." — 1 to 3
+//!            Activate: Deal a random {least} to {most} damage to each enemy Unit." — 1 to 3
 //!   Radiant: "Starship Piece, Equip, Lucky 1
 //!            Activate: …the same…" — 2 to 4
 //!
@@ -9,8 +8,9 @@
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses its base version into its owner's Dormant Starship
 //! (R1852000, R2521000).
-//! R1862001: "each enemy" is every enemy Unit and then the enemy hero, one hit each before one state
-//! check (`damage_all`, R59); no half damage, the hero's hit is whole. R2521001: each of those hits is
+//! #2657: "each enemy Unit" is every enemy Unit and no hero (every enemy Unit and then the enemy hero,
+//! R1862001's "each enemy", through v0.5.9e, `script_v0_5_9e`), one hit each before one state
+//! check (`damage_all`, R59). R2521001: each of those hits is
 //! its own roll, made just before it lands: `ODDS` laid over `least..=most` from the low end (a value
 //! past the third weighted as the third, the two swapped if a Nerf crossed them). Lucky is the card's
 //! Lucky now plus its controller's Luck, as S #145 Fortify Flesh reads it (R1438, R987): the Radiant
@@ -42,42 +42,57 @@ fn odds(least: i32, most: i32) -> Vec<DamageOdds> {
 
 /// R1862001, R2521001: "deal a random `least` to `most` damage to each enemy", each target rolling
 /// its own, `lucky` more times kept at the highest.
-fn round(least: i32, most: i32, lucky: i32) -> Vec<Effect> {
+/// `heroes`: the enemy hero too, as through v0.5.9e; each enemy Unit alone since #2657.
+fn round(least: i32, most: i32, lucky: i32, heroes: bool) -> Vec<Effect> {
     vec![damage_all(json_as(json!({
         "amount": least.min(most),
         "odds": odds(least, most),
         "lucky": lucky,
         "side": "enemy",
-        "heroes": true,
+        "heroes": heroes,
     })))]
 }
 
-fn flak() -> ActivationDecl {
+fn flak(heroes: bool) -> ActivationDecl {
     ActivationDecl {
         id: "flak".into(),
-        label: "Deal random damage to each enemy".into(),
+        label: if heroes {
+            "Deal random damage to each enemy".into()
+        } else {
+            "Deal random damage to each enemy Unit".into()
+        },
         uses: ActivationUses::Count(1),
         cost: None,
         targets: vec![],
         modes: vec![],
         can_activate: None,
         has: None,
-        run: hook(|ctx| {
+        run: hook(move |ctx| {
             let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me))
                 + luck_of(&*ctx.state, ctx.controller);
-            round(param(&*ctx, "least"), param(&*ctx, "most"), lucky)
+            round(param(&*ctx, "least"), param(&*ctx, "most"), lucky, heroes)
         }),
     }
 }
 
-pub fn script() -> CardScripts {
+fn scripts(heroes: bool) -> CardScripts {
     let base = Script {
-        activations: vec![flak()],
+        activations: vec![flak(heroes)],
         ..Script::default()
     };
     // The same script: the Radiant face's range and its printed Lucky 1 are its catalog data.
     let radiant = base.clone();
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(false)
+}
+
+/// R767000: through v0.5.9e its rolls hit the enemy hero too, after each enemy Unit; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    scripts(true)
 }
 
 /// R767000: "deal `amount` damage to all enemies" as v0.5.11 ran it: its declared `damage`, no roll.
@@ -115,7 +130,7 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // Stinkyscape #53 Flak v3 — SPEC §8.10 row 53, BUILD M12 row S 53: its Activate deals each enemy Unit
-// and then the enemy hero its own random 1 to 3 (60%, 30%, 10%), the hero's hit whole; two enemies can
+// its own random 1 to 3 (60%, 30%, 10%), and the enemy hero nothing (#2657); two enemies can
 // take different amounts; once a turn, a second use refused; equipped onto a Unit, the host takes the
 // Activate; least and most read through `param()`, a value past the third weighted as the third;
 // given Lucky keeps the higher roll; radiant 0/8, 2 to 4 with Lucky 1: two rolls per target, the
@@ -177,14 +192,13 @@ mod tests {
     }
 
     /// Activates `card` and holds its hits to the rolls a copy of the match rng gives: each enemy Unit
-    /// in lane order and then the enemy hero, round after round, each its own roll over `range` with
-    /// `lucky` more kept at the higher, and no other draw; the hero's hits come off its health whole.
+    /// in lane order, round after round, each its own roll over `range` with `lucky` more kept at the
+    /// higher, and no other draw; the enemy hero takes nothing (#2657).
     fn fire(s: &mut Scenario, card: &str, range: (i32, i32), lucky: i32) -> Vec<(String, i32)> {
-        let mut targets: Vec<String> = (1..=UNIT_ZONES)
+        let targets: Vec<String> = (1..=UNIT_ZONES)
             .filter_map(|lane| s.unit(P2, lane))
             .map(|unit| unit.id)
             .collect();
-        targets.push("hero-p2".to_string());
         let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
         let health = s.state().players.p2.hero.health;
         s.activate(card, json!({}));
@@ -198,12 +212,8 @@ mod tests {
         let got = hits(s.last_events());
         assert_eq!(got, expected, "one roll per target and round");
         assert_eq!(s.state().rng_cursor, rng.cursor(), "1 + Lucky draws per hit, no other");
-        let to_hero: i32 = got
-            .iter()
-            .filter(|(target, _)| target == "hero-p2")
-            .map(|(_, amount)| amount)
-            .sum();
-        s.expect_health(P2, health - to_hero);
+        assert!(got.iter().all(|(target, _)| target != "hero-p2"), "no hero hit since #2657");
+        s.expect_health(P2, health);
         s.expect_health(P1, HERO_HEALTH);
         got
     }
@@ -226,6 +236,22 @@ mod tests {
 
     mod base {
         use super::*;
+
+        /// R767000: the script kept for the replays of v0.5.9e and before rolls for the enemy hero too,
+        /// after each enemy Unit.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_9e_hits_the_enemy_hero_too() {
+            crate::under_kept(ID, script_v0_5_9e(), || {
+                let mut s = flak_on(false, "s005-kept-9e", json!({ "field": [wall()] }));
+                let target = s.unit_at(P2, 1).id;
+                s.activate(ID, json!({}));
+                let got = hits(s.last_events());
+                let round: Vec<String> = vec![target, "hero-p2".to_string()];
+                let expected: Vec<String> = (0..ROUNDS).flat_map(|_| round.clone()).collect();
+                let targets: Vec<String> = got.into_iter().map(|(target, _)| target).collect();
+                assert_eq!(targets, expected);
+            });
+        }
 
         /// R767000: the script kept for the replays of v0.5.11 and before, under that version's declared
         /// `damage`, dealt it to each enemy Unit and then the enemy hero, round after round, rolling
@@ -254,7 +280,7 @@ mod tests {
         }
 
         #[test]
-        fn r1862001_r2521001_each_enemy_unit_then_the_hero_takes_its_own_1_to_3() {
+        fn r1862001_r2521001_each_enemy_unit_takes_its_own_1_to_3_and_the_hero_none() {
             let (counts, differed) = over_the_seeds(false, BASE_RANGE, 0);
             assert!(differed, "two enemies can take different amounts");
             let (lo, hi) = BASE_RANGE;

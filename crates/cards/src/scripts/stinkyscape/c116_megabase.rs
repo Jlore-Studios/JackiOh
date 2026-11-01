@@ -9,7 +9,7 @@
 //! faces): it starts in the opening hand. Its printed keywords are the engine's: Can't attack;
 //! Immune to Spells; Immutable, so nothing tunes it and its numbers are
 //! printed constants here rather than declared (R386); Untributable, so no Tribute takes it (R1220);
-//! Armor 15. `StaticFlags.never_defense` keeps it out of Defense Position (§4.1). Activate (§6.2, R384),
+//! Armor 15. Can't Defend (R2657000) keeps it out of Defense Position (§4.1). Activate (§6.2, R384),
 //! once a turn, three declared modes (R81): each player `gain_market_credits` the chosen 5, 10 or 15
 //! (R1840005), the first gain opening the Marketplace (R1853000). Death (§6.2): each player gains 100.
 //! Radiant: its Activate gives its controller N and the opponent N − 5; its Death 200 each.
@@ -74,7 +74,6 @@ fn face(radiant: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
-            never_defense: Some(true),
             ..StaticFlags::default()
         }),
         activations: vec![credits(radiant)],
@@ -95,6 +94,12 @@ pub fn script() -> CardScripts {
         base: face(false),
         radiant: face(true),
     }
+}
+
+/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
 }
 
 // S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116: "played as a Unit from hand into an open
@@ -231,7 +236,10 @@ mod tests {
         for face in [&scripts.base, &scripts.radiant] {
             let flags = face.static_flags.as_ref();
             assert_eq!(flags.and_then(|flags| flags.quickdraw), Some(true));
-            assert_eq!(flags.and_then(|flags| flags.never_defense), Some(true));
+        }
+        // R2657000: Can't Defend, the keyword that took over from the flag.
+        for face in [&crate::card_def(ID).base, &crate::card_def(ID).radiant] {
+            assert!(has_keyword(&face.keywords, KeywordKind::CantDefend));
         }
         assert!(crate::card_def(ID).tags.contains(&Tag::Quickdraw));
 

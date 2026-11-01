@@ -1,13 +1,15 @@
 //! C+ #51 Jlockeed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
-//!   Base:    "First Strike, Rush. Can't be in Defense Position. Can't be attacked."
-//!   Radiant: "First Strike, Rush, Divine Shield" and the same.
+//!   Base:    "Ranged, Flying, Rush. Can't be attacked."
+//!   Radiant: "Ranged, Flying, Rush, Divine Shield" and the same.
+//!   Through v0.5.9e: "First Strike, Rush (Radiant: and Divine Shield). Can't be in Defense Position. Can't
+//!   be attacked." (`script_v0_5_9e`, kept, R767000)
 //!   Engine:  "Can't be attacked (§6.1, §4.2 step 2): no attack may name it, a forced one included (a
 //!            forced attack on it does not happen, and "a random enemy" never draws it); it is still
 //!            targeted by effects and hit by "all" effects. A Taunt it gains binds nobody, since it
-//!            cannot be attacked. The Defense restriction is a position validator flag. Tunes: none."
+//!            cannot be attacked. Tunes: none."
 //!
-//! Both restrictions are static flags the engine reads everywhere (`restrictions.cannotBeAttacked`,
-//! #65.1's `neverDefense`); the keywords are the catalog's. Nothing else to do.
+//! "Can't be attacked" is a static flag the engine reads everywhere (`restrictions.cannotBeAttacked`); the
+//! keywords are the catalog's. Nothing else to do.
 
 use jackioh_engine::prelude::*;
 
@@ -16,7 +18,6 @@ pub const ID: &str = "classicplus-051";
 pub fn script() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
-            never_defense: Some(true),
             cant_be_attacked: Some(true),
             ..StaticFlags::default()
         }),
@@ -27,10 +28,17 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "First Strike, Rush;
-// cannot be in Defense Position; can't be attacked: never the target of a declared or forced attack (a
+/// R767000: through v0.5.9e "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
+}
+
+// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "Ranged, Flying, Rush;
+// can't be attacked: never the target of a declared or forced attack (a
 // random-enemy forced attack never draws it), while effects still target it and "all" effects hit it;
-// a Taunt given to it binds no attacker; radiant 14/4 with Divine Shield too".
+// a Taunt given to it binds no attacker; radiant 14/4 with Divine Shield too". Since #2657 it may be in
+// Defense Position.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -72,19 +80,30 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s6_1_7_2_with_first_strike_and_rush() {
+        fn s6_1_7_2_with_ranged_flying_and_rush() {
             let mut s = defended(false, &[]);
             s.expect_stats(J15, json!({ "attack": 7, "health": 2 }));
             let found = kinds(&s, J15);
-            assert!(found.contains(&"First Strike".to_string()));
-            assert!(found.contains(&"Rush".to_string()));
+            for kind in ["Ranged", "Flying", "Rush"] {
+                assert!(found.contains(&kind.to_string()), "{kind} in {found:?}");
+            }
+            assert!(!found.contains(&"First Strike".to_string()));
             assert!(!found.contains(&"Divine Shield".to_string()));
         }
 
         #[test]
-        fn s4_1_a_switch_to_defense_position_is_refused() {
+        fn s4_1_it_may_switch_to_defense_position_since_2657() {
             let mut s = scenario(json!({ "p1": { "field": [J15], "hand": [FILLER] } }));
-            s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
+            s.switch_position(J15);
+            assert_eq!(s.card(J15).position, Some(Position::Def));
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_9e_refuses_defense_position() {
+            crate::under_kept(J15, super::super::script_v0_5_9e(), || {
+                let mut s = scenario(json!({ "p1": { "field": [J15], "hand": [FILLER] } }));
+                s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
+            });
         }
 
         #[test]
@@ -172,20 +191,21 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s5_2_14_4_with_first_strike_rush_and_divine_shield_still_never_attacked() {
+        fn s5_2_14_4_with_ranged_flying_rush_and_divine_shield_still_never_attacked() {
             let mut s = defended(true, &[]);
             s.expect_stats(J15, json!({ "attack": 14, "health": 4 }));
             let found = kinds(&s, J15);
-            for kind in ["First Strike", "Rush", "Divine Shield"] {
+            for kind in ["Ranged", "Flying", "Rush", "Divine Shield"] {
                 assert!(found.contains(&kind.to_string()), "{kind} in {found:?}");
             }
             s.expect_refused_with(|s| s.attack(VANILLA, J15), "cannot be attacked");
         }
 
         #[test]
-        fn s4_1_the_radiant_face_still_refuses_defense_position() {
+        fn s4_1_the_radiant_face_may_switch_to_defense_position_too() {
             let mut s = scenario(json!({ "p1": { "field": [{ "def": J15, "radiant": true }], "hand": [FILLER] } }));
-            s.expect_refused_with(|s| s.switch_position(J15), "Defense Position");
+            s.switch_position(J15);
+            assert_eq!(s.card(J15).position, Some(Position::Def));
         }
     }
 }

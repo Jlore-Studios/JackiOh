@@ -11,7 +11,9 @@
 //! Cry (R1) and type kept (R35): on its Radiant face for the base Golem, on its base face for the
 //! Radiant one, whose Radiant faces have the higher stats. The attack goes on against the new Unit.
 //! "If this destroys it" is its `after_attack` hook, run only for a Golem that survived the combat
-//! (R2285001): when the attacked Unit is among the ones it destroyed (R42), it may attack again.
+//! (R2285001): when the attacked Unit is among the ones it destroyed (R42), it may attack again. R2657004:
+//! a Golem that entered this turn stays summoning sick through that second attack, so its Rush keeps it
+//! off the hero; through v0.5.9e the refresh lifted the sickness (`script_v0_5_9e`, kept, R767000).
 
 use jackioh_engine::effects::{may_attack_again, transform_random};
 use jackioh_engine::prelude::*;
@@ -40,34 +42,49 @@ fn when_it_attacks(radiant: bool) -> Hook {
     })
 }
 
-/// "If it dies, this may attack again."
-fn after_it_attacks() -> Hook {
-    hook(|ctx| {
+/// "If it dies, this may attack again." `lift_sick` is v0.5.9e's refresh, which lifted summoning
+/// sickness for the turn (R2657004).
+fn after_it_attacks(lift_sick: bool) -> Hook {
+    hook(move |ctx| {
         let Some(combat) = after_attack_of(ctx) else {
             return Vec::new();
         };
         if combat.target_id.starts_with(HERO_TARGET) || !combat.destroyed_ids.contains(&combat.target_id) {
             return Vec::new();
         }
-        vec![may_attack_again(json_as(json!({ "target": { "of": "self" } })))]
+        let mut args = json!({ "target": { "of": "self" } });
+        if lift_sick {
+            args["liftSick"] = json!(true);
+        }
+        vec![may_attack_again(json_as(args))]
     })
 }
 
-pub fn script() -> CardScripts {
+fn scripts(lift_sick: bool) -> CardScripts {
     let base = Script {
         when_attacks: Some(when_it_attacks(true)),
-        after_attack: Some(after_it_attacks()),
+        after_attack: Some(after_it_attacks(lift_sick)),
         ..Script::default()
     };
 
     // The Radiant face transforms into a base-face Unit; its 20/20 and keywords are its catalog face.
     let radiant = Script {
         when_attacks: Some(when_it_attacks(false)),
-        after_attack: Some(after_it_attacks()),
+        after_attack: Some(after_it_attacks(lift_sick)),
         ..Script::default()
     };
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(false)
+}
+
+/// R767000: through v0.5.9e its second attack lifted its summoning sickness, so a Golem played that
+/// turn could hit the hero after a kill, before R2657004; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    scripts(true)
 }
 
 // BUILD M9 Classic+ row C+ 73.1: when it attacks a Unit, declared or forced, before any damage
@@ -250,6 +267,41 @@ mod tests {
             assert!(may_attack(&s, &it));
             s.attack(GOLEM, "hero");
             assert_eq!(types_of(&s).iter().filter(|kind| **kind == "attackDeclared").count(), 2);
+        }
+
+        #[test]
+        fn r2657004_played_this_turn_its_second_attack_after_a_kill_may_hit_a_unit_never_the_hero() {
+            crate::register_all();
+            let played = |seed: &str| {
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": { "hand": [GOLEM, VANILLA], "library": [VANILLA], "mana": 4 },
+                    "p2": { "hand": [VANILLA], "field": [VANILLA, VANILLA], "library": [VANILLA] }
+                }));
+                s.play(GOLEM, json!({ "zone": 1 }));
+                attack_with(&mut s);
+                s
+            };
+            let seed = seed_where("golem-played", |seed| {
+                let s = played(seed);
+                s.unit(P1, 1).is_some_and(|unit| unit.def_id == GOLEM)
+                    && s.unit(P2, 1).is_none()
+                    && s.unit(P2, 2).is_some()
+            });
+            let mut s = played(&seed);
+            let it = s.card(GOLEM).id.clone();
+            assert_eq!(s.card(GOLEM).summoned_turn, Some(s.state().turn), "still summoning sick");
+            let second = s.unit(P2, 2).expect("the other Vanilla").id;
+            let offered = |s: &Scenario, target: &str| {
+                legal_actions(s.state(), P1).iter().map(js).any(|action| {
+                    action["type"] == json!("attack")
+                        && action["attackerId"] == json!(it)
+                        && action["targetId"] == json!(target)
+                })
+            };
+            assert!(offered(&s, &second), "Rush lets it attack a Unit");
+            assert!(!offered(&s, "hero-p2"), "never the hero on the turn it is played");
+            s.expect_refused(|s| s.attack(GOLEM, "hero"));
         }
 
         #[test]

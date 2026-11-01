@@ -2,8 +2,8 @@
 //! Stinkyscape set.
 //!   Base:    "Float reduces cost.\nFill your board with Drone Interceptors."
 //!   Radiant: "Float reduces cost.\nFill your board with Radiant Drone Interceptors."
-//! Engine: "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a
-//!   deck trigger (R464): each Float of its owner's lowers its cost by that much, a `costMod` kept until a
+//! Engine: "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger
+//!   (R464), a deck trigger too through v0.5.9e (R2657002): each Float of its owner's lowers its cost by that much, a `costMod` kept until a
 //!   graveyard or exile (R766), so at (6), past `MAX_MANA`, it is played only so or with mana gained. The
 //!   fill is §7's `fill_board` with the Drone Interceptor: one into each of the caster's empty unit zones
 //!   (R64), then, as it flies, one into each empty backrow zone, where it stands (R2248000); each
@@ -16,26 +16,40 @@ pub const ID: &str = "stinkyscape-034";
 /// The Drone Interceptor token (§8.10 T-drone-interceptor).
 const INTERCEPTOR: &str = "stinkyscape-t-drone-interceptor";
 
-fn face(radiant: bool) -> Script {
+/// One face. `deck` adds the Float deck trigger it had through v0.5.9e (R2657002).
+fn face(radiant: bool, deck: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
             vec![fill_board(json_as(json!({ "defId": INTERCEPTOR, "radiant": radiant })))]
         })),
         hand_triggers: vec![float_reduces_cost("drone-core-viii-float-hand")],
-        deck_triggers: vec![float_reduces_cost("drone-core-viii-float-deck")],
+        deck_triggers: if deck {
+            vec![float_reduces_cost("drone-core-viii-float-deck")]
+        } else {
+            vec![]
+        },
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(false),
-        radiant: face(true),
+        base: face(false, false),
+        radiant: face(true, false),
+    }
+}
+
+/// R767000: through v0.5.9e a Float lowered its cost in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    CardScripts {
+        base: face(false, true),
+        radiant: face(true, true),
     }
 }
 
 // S #34 Drone Core VIII — SPEC §8.10 row 34, BUILD M12 row S 34: "a Float of 2 at its owner's end of turn
-// makes it cost (4) in hand and deck, the opponent's Float nothing (R1563000); played, it summons an
+// makes it cost (4) in hand, never in the deck (R2657002), the opponent's Float nothing (R1563000); played, it summons an
 // Interceptor into every empty unit zone of its caster, then every empty backrow zone (R2248000); radiant
 // Radiant ones".
 #[cfg(test)]
@@ -94,12 +108,12 @@ mod tests {
     }
 
     #[test]
-    fn r1563000_a_float_of_2_makes_it_cost_two_less_in_hand_and_deck() {
+    fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
         for radiant in [false, true] {
             let (mut s, hand, deck) = floating(2, radiant);
             s.end_turn();
             assert_eq!(s.card(hand.as_str()).cost_mod, -2, "radiant {radiant}");
-            assert_eq!(s.card(deck.as_str()).cost_mod, -2, "radiant {radiant}");
+            assert_eq!(s.card(deck.as_str()).cost_mod, 0, "radiant {radiant}");
             assert_eq!(price_of(&s, &hand), 4, "radiant {radiant}");
         }
     }

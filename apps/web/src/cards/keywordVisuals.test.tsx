@@ -539,7 +539,7 @@ describe("#2437 temporaryLeft: the count a card's Temporary keywords give it", (
 describe("R2577000 a unit on the field draws only the keywords that can still act there", () => {
   it("R2577000 Equip, Tradable, Cloaked, Crater, Flashback, Stack and Temporary are the kinds off the field", () => {
     expect([...OFF_FIELD_KINDS].sort()).toEqual(["Cloaked", "Crater", "Equip", "Flashback", "Stack", "Temporary", "Tradable"]);
-    for (const kind of ["Starship Piece", "Starship", "Charge", "Rush", "Brittle"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
+    for (const kind of ["Starship Piece", "Starship", "Can't Defend", "Charge", "Rush", "Brittle"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
   });
 
   for (const kind of OFF_FIELD_KINDS) {
@@ -584,5 +584,14 @@ describe("R2577000 a unit on the field draws only the keywords that can still ac
     expect(chip?.textContent).toBe("SP");
     expect(fxOf(cf, "Starship Piece")?.querySelector(".kw-starship-piece")).not.toBeNull();
     expect(fxOf(cf, "Equip")).toBeNull();
+  });
+
+  it("R2657000 a Can't Defend unit shows CD and its split-shield glyph: it still acts on the field", () => {
+    const cf = renderUnit({ keywords: [{ kind: "Can't Defend" }] });
+    const chip = cf.querySelector<HTMLElement>(`.keywords > [data-keyword="Can't Defend"]`);
+    expect(chip?.hasAttribute("data-chip")).toBe(false);
+    expect(chip?.textContent).toBe("CD");
+    expect(fxOf(cf, "Can't Defend")?.getAttribute("data-kw-layer")).toBe("glyph");
+    expect(fxOf(cf, "Can't Defend")?.querySelector(".kw-split-shield")).not.toBeNull();
   });
 });

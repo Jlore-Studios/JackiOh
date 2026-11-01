@@ -328,6 +328,23 @@ fn activations_listed(s: &Scenario, card: &CardInstance) -> usize {
         .count()
 }
 
+/// R767000: `run` folding under the build's catalog with ZolarKeth's script kept for v0.5.9e, the one
+/// #2521's B23 and B24 test: #2657 gave it a Cry of two modes and no Universities to run.
+fn under_v0_5_9e<T>(run: impl FnOnce() -> T) -> T {
+    register_all();
+    let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
+        .iter()
+        .find(|(id, version, _)| *id == ZOLARKETH && *version == "v0.5.9e")
+        .expect("ZolarKeth's v0.5.9e script is kept");
+    let shipped: &'static jackioh_engine::ShippedCatalog =
+        Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+            "kept",
+            CATALOG.clone(),
+            IndexMap::from([(ZOLARKETH.to_string(), kept())]),
+        )));
+    jackioh_engine::with_shipped(Some(shipped), run)
+}
+
 fn zolarketh_played(seed: &str, radiant: bool) -> (Scenario, CardInstance) {
     let mut s = board(
         seed,
@@ -342,35 +359,39 @@ fn zolarketh_played(seed: &str, radiant: bool) -> (Scenario, CardInstance) {
 
 #[test]
 fn b23_zolarketh_summons_a_university_on_its_base_face_from_both_faces() {
-    for radiant in [false, true] {
-        let (s, university) = zolarketh_played("b23-face", radiant);
-        assert_eq!(university.controller, P1);
-        assert!(
-            !s.card(&university).radiant,
-            "ZolarKeth (radiant {radiant}) summons a base-face University"
-        );
-    }
+    under_v0_5_9e(|| {
+        for radiant in [false, true] {
+            let (s, university) = zolarketh_played("b23-face", radiant);
+            assert_eq!(university.controller, P1);
+            assert!(
+                !s.card(&university).radiant,
+                "ZolarKeth (radiant {radiant}) summons a base-face University"
+            );
+        }
+    });
 }
 
 #[test]
 fn b23_the_summoned_university_is_refused_its_own_activate_now_and_on_a_later_turn() {
-    for radiant in [false, true] {
-        let (mut s, university) = zolarketh_played("b23-refused", radiant);
-        assert_eq!(
-            activations_listed(&s, &university),
-            0,
-            "none of its abilities is listed"
-        );
-        s.expect_refused(|s| s.activate(&university, json!({})));
-        s.end_turn().end_turn();
-        assert_eq!(s.state().active, P1);
-        assert_eq!(
-            activations_listed(&s, &university),
-            0,
-            "still none on a later turn"
-        );
-        s.expect_refused(|s| s.activate(&university, json!({})));
-    }
+    under_v0_5_9e(|| {
+        for radiant in [false, true] {
+            let (mut s, university) = zolarketh_played("b23-refused", radiant);
+            assert_eq!(
+                activations_listed(&s, &university),
+                0,
+                "none of its abilities is listed"
+            );
+            s.expect_refused(|s| s.activate(&university, json!({})));
+            s.end_turn().end_turn();
+            assert_eq!(s.state().active, P1);
+            assert_eq!(
+                activations_listed(&s, &university),
+                0,
+                "still none on a later turn"
+            );
+            s.expect_refused(|s| s.activate(&university, json!({})));
+        }
+    });
 }
 
 /// p1's ZolarKeths (on the faces given) from lane 1 on, then two Universities, both already on the
@@ -442,109 +463,119 @@ fn ran(events: &[GameEvent], first: &CardInstance, second: &CardInstance) -> (bo
 
 #[test]
 fn b24_zolarketh_activates_each_university_with_a_use_left() {
-    for radiant in [false, true] {
-        let Campus {
-            mut s,
-            zolars,
-            first,
-            second,
-        } = campus("b24-both", &[radiant]);
-        let action = universities_action(&s, &zolars[0]);
-        s.act(action, P1, "ZolarKeth activates the Universities");
-        assert_eq!(
-            ran(s.last_events(), &first, &second),
-            (true, true),
-            "radiant {radiant}: both Universities ran"
-        );
-    }
+    under_v0_5_9e(|| {
+        for radiant in [false, true] {
+            let Campus {
+                mut s,
+                zolars,
+                first,
+                second,
+            } = campus("b24-both", &[radiant]);
+            let action = universities_action(&s, &zolars[0]);
+            s.act(action, P1, "ZolarKeth activates the Universities");
+            assert_eq!(
+                ran(s.last_events(), &first, &second),
+                (true, true),
+                "radiant {radiant}: both Universities ran"
+            );
+        }
+    });
 }
 
 #[test]
 fn b24_a_university_zolarketh_ran_has_spent_its_use_and_is_refused_its_own_activate() {
-    for radiant in [false, true] {
+    under_v0_5_9e(|| {
+        for radiant in [false, true] {
+            let Campus {
+                mut s,
+                zolars,
+                first,
+                second,
+            } = campus("b24-spent", &[radiant]);
+            let action = universities_action(&s, &zolars[0]);
+            s.act(action, P1, "ZolarKeth activates the Universities");
+            for university in [&first, &second] {
+                assert_eq!(
+                    activations_listed(&s, university),
+                    0,
+                    "radiant {radiant}: its use is spent"
+                );
+                s.expect_refused(|s| s.activate(university, json!({})));
+            }
+        }
+    });
+}
+
+#[test]
+fn b24_a_university_that_activated_itself_this_turn_is_skipped() {
+    under_v0_5_9e(|| {
         let Campus {
             mut s,
             zolars,
             first,
             second,
-        } = campus("b24-spent", &[radiant]);
+        } = campus("b24-skipped", &[false]);
+        s.activate(&first, json!({}));
+        assert_eq!(
+            ran(s.last_events(), &first, &second),
+            (true, false),
+            "the first activated itself"
+        );
         let action = universities_action(&s, &zolars[0]);
         s.act(action, P1, "ZolarKeth activates the Universities");
-        for university in [&first, &second] {
-            assert_eq!(
-                activations_listed(&s, university),
-                0,
-                "radiant {radiant}: its use is spent"
-            );
-            s.expect_refused(|s| s.activate(university, json!({})));
-        }
-    }
-}
-
-#[test]
-fn b24_a_university_that_activated_itself_this_turn_is_skipped() {
-    let Campus {
-        mut s,
-        zolars,
-        first,
-        second,
-    } = campus("b24-skipped", &[false]);
-    s.activate(&first, json!({}));
-    assert_eq!(
-        ran(s.last_events(), &first, &second),
-        (true, false),
-        "the first activated itself"
-    );
-    let action = universities_action(&s, &zolars[0]);
-    s.act(action, P1, "ZolarKeth activates the Universities");
-    assert_eq!(
-        ran(s.last_events(), &first, &second),
-        (false, true),
-        "ZolarKeth runs only the University with a use left"
-    );
-    s.expect_refused(|s| s.activate(&second, json!({})));
+        assert_eq!(
+            ran(s.last_events(), &first, &second),
+            (false, true),
+            "ZolarKeth runs only the University with a use left"
+        );
+        s.expect_refused(|s| s.activate(&second, json!({})));
+    });
 }
 
 #[test]
 fn b24_a_second_zolarketh_skips_the_universities_the_first_one_ran() {
-    let Campus {
-        mut s,
-        zolars,
-        first,
-        second,
-    } = campus("b24-second", &[false, false]);
-    // The second ZolarKeth's ability as the client would send it, read while it is listed.
-    let later = universities_action(&s, &zolars[1]);
-    let action = universities_action(&s, &zolars[0]);
-    s.act(action, P1, "the first ZolarKeth activates the Universities");
-    assert_eq!(ran(s.last_events(), &first, &second), (true, true));
-    s.act(later, P1, "the second ZolarKeth activates the Universities");
-    assert_eq!(
-        ran(s.last_events(), &first, &second),
-        (false, false),
-        "no University runs twice in a turn"
-    );
+    under_v0_5_9e(|| {
+        let Campus {
+            mut s,
+            zolars,
+            first,
+            second,
+        } = campus("b24-second", &[false, false]);
+        // The second ZolarKeth's ability as the client would send it, read while it is listed.
+        let later = universities_action(&s, &zolars[1]);
+        let action = universities_action(&s, &zolars[0]);
+        s.act(action, P1, "the first ZolarKeth activates the Universities");
+        assert_eq!(ran(s.last_events(), &first, &second), (true, true));
+        s.act(later, P1, "the second ZolarKeth activates the Universities");
+        assert_eq!(
+            ran(s.last_events(), &first, &second),
+            (false, false),
+            "no University runs twice in a turn"
+        );
+    });
 }
 
 #[test]
 fn b24_a_new_turn_gives_each_university_its_use_back() {
-    let Campus {
-        mut s,
-        zolars,
-        first,
-        second,
-    } = campus("b24-new-turn", &[false]);
-    let action = universities_action(&s, &zolars[0]);
-    s.act(action, P1, "ZolarKeth activates the Universities");
-    s.expect_refused(|s| s.activate(&first, json!({})));
-    s.end_turn().end_turn();
-    assert_eq!(s.state().active, P1);
-    s.activate(&first, json!({}));
-    assert_eq!(
-        ran(s.last_events(), &first, &second),
-        (true, false),
-        "its use came back with the turn"
-    );
+    under_v0_5_9e(|| {
+        let Campus {
+            mut s,
+            zolars,
+            first,
+            second,
+        } = campus("b24-new-turn", &[false]);
+        let action = universities_action(&s, &zolars[0]);
+        s.act(action, P1, "ZolarKeth activates the Universities");
+        s.expect_refused(|s| s.activate(&first, json!({})));
+        s.end_turn().end_turn();
+        assert_eq!(s.state().active, P1);
+        s.activate(&first, json!({}));
+        assert_eq!(
+            ran(s.last_events(), &first, &second),
+            (true, false),
+            "its use came back with the turn"
+        );
+    });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -605,7 +636,8 @@ fn b25_aluneth_is_not_dealt_into_the_opening_hand() {
 const COSTS: [(&str, bool, i32); 5] = [
     (OTHERWORLDLY_MAGIC, false, 2),
     (THE_NARCOR_PROJECT, false, 3),
-    (THE_SYNDICATE, false, 1),
+    // #2657 took The Syndicate to (0).
+    (THE_SYNDICATE, false, 0),
     (SWEAR_LOYALITIES, false, 0),
     (MEMORY_LEAK, true, 2),
 ];

@@ -20,35 +20,43 @@ use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
     c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
-    c023_devils_pact, c027_pestilent_slime, c032_felinor_feelings, c035_prep, c039_outbreak,
-    c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
+    c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime, c032_felinor_feelings, c035_prep,
+    c039_outbreak, c047_recurring_felinor, c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad,
+    c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
-    c007_the_house, c011_anime_armor, c023_dropshipping, c030_felinor_fuser, c033_ivory_tower,
-    c040_appropriations, c042_kys_test, c043_ai_slop, c062_kys_papaya, c071_book_of_buff,
-    c078_claudes_datacenter,
+    c007_the_house, c011_anime_armor, c019_1_top_loser, c023_dropshipping, c030_felinor_fuser,
+    c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c048_jlockeeds_lobbyist,
+    c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff,
+    c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
     c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
-    c069_call_to_arms, c075_infinite_reserves, c080_zao_gao, c081_radiant_saintess, c083_transmogulate,
-    c084_going_long,
+    c065_1_spikey_pillow, c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c080_zao_gao,
+    c081_radiant_saintess, c083_transmogulate, c084_going_long,
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
     c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer,
-    c045_knowledge_breaker, c048_tranquility, c049_3_ai_girlfriend, c049_yilegpt_tamed, c053_prestige,
-    c054_money_machine, c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor,
-    c095_1_cn_golem, c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
+    c045_knowledge_breaker, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
+    c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant, c080_aluneth, c085_playtester,
+    c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
+    c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
+    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
 };
 use crate::scripts::stinkyscape::{
-    c026_zolarketh, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4,
-    c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5,
-    c061_flak_v5, c074_paragon_x, c094_tmack_trav, c163_swear_loyalities, t_narcor, t_red_narcor,
+    c026_zolarketh, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c050_beam_v3,
+    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
+    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
+    c086_prototype_x2, c094_tmack_trav, c116_megabase, c143_book_launcher, c149_wildar,
+    c163_swear_loyalities, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_narcor, t_red_narcor,
 };
+use crate::scripts::training_grounds::c036_training_dummy;
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -105,7 +113,16 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// for half, the Repeaters at Activate 4, 6 and 6; the Flaks dealt their declared damage, not a random
 /// range; Paragon-X carried Immune to Spell Damage as a flag; Tmack Trav's kill lifted its summoning
 /// sickness; Swear Loyalities exiled the other four Faction cards alone, from the graveyard too; Narcor
-/// added a Rare card; and Red Narcor added a Legendary or Mythic card at a discount.
+/// added a Rare card; and Red Narcor added a Legendary or Mythic card at a discount. #2657's
+/// thirty-five ran theirs through v0.5.9e: the sixteen that printed "Can't be in Defense Position" had it
+/// as the static flag, before the keyword Can't Defend (R2657000, `never_defense_kept`); GIGA Glowy Jelly
+/// Bean, YileGPT Prime, Drone Core VIII to X and Prototype-X2 Floated in the deck too (R2657002), and
+/// YileGPT Prime made permanents Radiant; Recurring Felinor answered a Field Trap's every firing
+/// (R2657001); Classic Golem's second attack lifted its summoning sickness (R2657004); the Flaks hit the
+/// enemy hero; Book Launcher had two Activates; Spiritually 中国's hand cost (0); Spell Basket's Spells were
+/// not Temporary; Book of Knowledge drew 3 or 6; Anti-oneshot Armor's Radiant face gave no Armor; Wildar's
+/// Radiant face gave the opponent nothing; Prep's base face drew the highest cost Spell; Book of Tokens
+/// rolled 1 or 2 evenly; and ZolarKeth ran its Universities.
 /// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -364,6 +381,149 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     (t_narcor::ID, "v0.5.7", t_narcor::script_v0_5_11),
     (t_red_narcor::ID, "v0.5.7", t_red_narcor::script_v0_5_11),
+    (
+        c024_book_of_knowledge::ID,
+        "v0.5.9e",
+        c024_book_of_knowledge::script_v0_5_9e,
+    ),
+    (c035_prep::ID, "v0.5.9e", c035_prep::script_v0_5_9e),
+    (
+        c047_recurring_felinor::ID,
+        "v0.5.9e",
+        c047_recurring_felinor::script_v0_5_9e,
+    ),
+    (c019_1_top_loser::ID, "v0.5.9e", c019_1_top_loser::script_v0_5_9e),
+    (
+        c048_jlockeeds_lobbyist::ID,
+        "v0.5.9e",
+        c048_jlockeeds_lobbyist::script_v0_5_9e,
+    ),
+    (
+        c051_jlockeeds_j15_fighter::ID,
+        "v0.5.9e",
+        c051_jlockeeds_j15_fighter::script_v0_5_9e,
+    ),
+    (
+        c053_book_of_tokens::ID,
+        "v0.5.9e",
+        c053_book_of_tokens::script_v0_5_9e,
+    ),
+    (
+        c073_1_classic_golem::ID,
+        "v0.5.9e",
+        c073_1_classic_golem::script_v0_5_9e,
+    ),
+    (
+        c029_giga_glowy_jelly_bean::ID,
+        "v0.5.9e",
+        c029_giga_glowy_jelly_bean::script_v0_5_9e,
+    ),
+    (
+        c065_1_spikey_pillow::ID,
+        "v0.5.9e",
+        c065_1_spikey_pillow::script_v0_5_9e,
+    ),
+    (
+        c073_anti_oneshot_armor::ID,
+        "v0.5.9e",
+        c073_anti_oneshot_armor::script_v0_5_9e,
+    ),
+    (
+        c032_spiritually_zhongguo::ID,
+        "v0.5.9e",
+        c032_spiritually_zhongguo::script_v0_5_9e,
+    ),
+    (
+        c049_1_yilegpt_unleashed::ID,
+        "v0.5.9e",
+        c049_1_yilegpt_unleashed::script_v0_5_9e,
+    ),
+    (
+        c090_spell_basket::ID,
+        "v0.5.9e",
+        c090_spell_basket::script_v0_5_9e,
+    ),
+    (
+        c093_1_growing_felinor_sr::ID,
+        "v0.5.9e",
+        c093_1_growing_felinor_sr::script_v0_5_9e,
+    ),
+    (
+        c093_2_growing_felinor_sr_sr::ID,
+        "v0.5.9e",
+        c093_2_growing_felinor_sr_sr::script_v0_5_9e,
+    ),
+    (
+        c093_3_growing_felinor_super_senior::ID,
+        "v0.5.9e",
+        c093_3_growing_felinor_super_senior::script_v0_5_9e,
+    ),
+    (
+        c093_growing_felinor::ID,
+        "v0.5.9e",
+        c093_growing_felinor::script_v0_5_9e,
+    ),
+    (c026_zolarketh::ID, "v0.5.9e", c026_zolarketh::script_v0_5_9e),
+    (
+        c034_drone_core_viii::ID,
+        "v0.5.9e",
+        c034_drone_core_viii::script_v0_5_9e,
+    ),
+    (
+        c035_drone_core_ix::ID,
+        "v0.5.9e",
+        c035_drone_core_ix::script_v0_5_9e,
+    ),
+    (
+        c036_drone_core_x::ID,
+        "v0.5.9e",
+        c036_drone_core_x::script_v0_5_9e,
+    ),
+    (c053_flak_v3::ID, "v0.5.9e", c053_flak_v3::script_v0_5_9e),
+    (c057_flak_v4::ID, "v0.5.9e", c057_flak_v4::script_v0_5_9e),
+    (c061_flak_v5::ID, "v0.5.9e", c061_flak_v5::script_v0_5_9e),
+    (
+        c086_prototype_x2::ID,
+        "v0.5.9e",
+        c086_prototype_x2::script_v0_5_9e,
+    ),
+    (c116_megabase::ID, "v0.5.9e", c116_megabase::script_v0_5_9e),
+    (
+        c143_book_launcher::ID,
+        "v0.5.9e",
+        c143_book_launcher::script_v0_5_9e,
+    ),
+    (c149_wildar::ID, "v0.5.9e", c149_wildar::script_v0_5_9e),
+    (
+        c169_tiny_asteroid::ID,
+        "v0.5.9e",
+        c169_tiny_asteroid::script_v0_5_9e,
+    ),
+    (
+        c170_medium_asteroid::ID,
+        "v0.5.9e",
+        c170_medium_asteroid::script_v0_5_9e,
+    ),
+    (
+        c171_large_asteroid::ID,
+        "v0.5.9e",
+        c171_large_asteroid::script_v0_5_9e,
+    ),
+    (
+        c172_huge_asteroid::ID,
+        "v0.5.9e",
+        c172_huge_asteroid::script_v0_5_9e,
+    ),
+    (
+        c173_abandoned_spice_tower::ID,
+        "v0.5.9e",
+        c173_abandoned_spice_tower::script_v0_5_9e,
+    ),
+    (
+        c036_training_dummy::ID,
+        "v0.5.9e",
+        c036_training_dummy::script_v0_5_9e,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

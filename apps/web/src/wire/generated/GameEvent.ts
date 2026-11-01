@@ -136,7 +136,14 @@ emptied?: true, } | { "type": "addedToHand", player: PlayerId, instanceId: strin
  * knock-down takes for the rest of the turn, which a unit already in Attack Position would
  * otherwise lose with no event (§10.3, R91). Absent on a grant. Only ever `Some(true)`.
  */
-lost?: true, } | { "type": "counterChanged", instanceId: string, counter: CounterKind, value: number, placed?: number, } | { "type": "costChanged", instanceId: string, cost: number, hiddenFrom?: Array<PlayerId>, } | { "type": "modifierChanged", player: PlayerId, modifierId: string, added: boolean, } | { "type": "radiantSet", instanceId: string, defId: string, zone: Zone, } | { "type": "transformed", instanceId: string, fromDefId: string, toDefId: string, newInstanceId: string, hiddenFrom?: Array<PlayerId>, creator?: PlayerId, } | { "type": "fused", instanceIds: Array<string>, resultInstanceId: string, defId: string, } | { "type": "positionSwitched", instanceId: string, position: Position, } | { "type": "controlChanged", instanceId: string, controller: PlayerId, row: Row, lane: number, formerId?: string, how?: ControlHow, } | { "type": "rotated", direction: RotationDirection, } | { "type": "swapped", what: SwapWhat, } | { "type": "locked", player: PlayerId, row: Row, lane: number, } | { "type": "trapFired", instanceId: string, defId: string, controller: PlayerId, row: Row, lane: number, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
+lost?: true, } | { "type": "counterChanged", instanceId: string, counter: CounterKind, value: number, placed?: number, } | { "type": "costChanged", instanceId: string, cost: number, hiddenFrom?: Array<PlayerId>, } | { "type": "modifierChanged", player: PlayerId, modifierId: string, added: boolean, } | { "type": "radiantSet", instanceId: string, defId: string, zone: Zone, } | { "type": "transformed", instanceId: string, fromDefId: string, toDefId: string, newInstanceId: string, hiddenFrom?: Array<PlayerId>, creator?: PlayerId, } | { "type": "fused", instanceIds: Array<string>, resultInstanceId: string, defId: string, } | { "type": "positionSwitched", instanceId: string, position: Position, } | { "type": "controlChanged", instanceId: string, controller: PlayerId, row: Row, lane: number, formerId?: string, how?: ControlHow, } | { "type": "rotated", direction: RotationDirection, } | { "type": "swapped", what: SwapWhat, } | { "type": "locked", player: PlayerId, row: Row, lane: number, } | { "type": "trapFired", instanceId: string, defId: string, controller: PlayerId, row: Row, lane: number, 
+/**
+ * R2657001: a face-up Field Trap firing again, which reveals nothing: a Field Trap reveals
+ * once, the first time it fires, and each later firing is a plain trigger, so the client
+ * plays no reveal and "when one of your Traps reveals" does not answer it. Only ever
+ * `Some(true)`, so a first firing serializes and hashes as it did.
+ */
+again?: boolean, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
 /**
  * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
  * when a summoned substitute makes it. Absent otherwise.

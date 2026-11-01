@@ -211,6 +211,21 @@ pub fn register_all() {
     });
 }
 
+/// R767000, R2657000: `scripts` with "Can't be in Defense Position" as the static flag `never_defense`
+/// it was through v0.5.9e, on the faces that printed it (`base`, `radiant`): the kept script of each card
+/// that prints Can't Defend since #2657. It builds on the card's script as it stands, which differs from
+/// v0.5.9e's in that flag alone; a later change to one of those scripts keeps v0.5.9e's whole first.
+pub(crate) fn never_defense_kept(mut scripts: CardScripts, base: bool, radiant: bool) -> CardScripts {
+    for (face, printed) in [(&mut scripts.base, base), (&mut scripts.radiant, radiant)] {
+        if printed {
+            let mut flags = face.static_flags.clone().unwrap_or_default();
+            flags.never_defense = Some(true);
+            face.static_flags = Some(flags);
+        }
+    }
+    scripts
+}
+
 /// The card files' tests' `scenario()`: the shipped cards registered first (TS's vitest globalSetup,
 /// which the engine's testkit cannot do: it cannot name this crate), then the testkit's harness.
 #[cfg(test)]

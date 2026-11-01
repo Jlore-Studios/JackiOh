@@ -1,25 +1,34 @@
 //! M #90 Spell Basket (SPEC §8.8 row 90): (1) Spell, Common.
 //!
-//! Base:    "Add {cards|random Spell|random Spells} to your hand."
-//! Radiant: "Add {cards|random Radiant Spell|random Radiant Spells} to your hand."
+//! Base:    "Add {cards|random Spell|random Spells} to your hand. Give each Temporary {temporary}."
+//! Radiant: "Add {cards|random Radiant Spell|random Radiant Spells} to your hand. Give each Temporary
+//!          {temporary}."
 //! Engine: `add_random_from_catalog` over `{ type: "Spell" }`: the Spell type, never a Field Spell, as
 //! C+ #38.1's random Spells are; non-token Spells of every set that ships (R380, R1420), never this
 //! card (R387), repeats allowed (R60), each on its base face at its printed cost; the Radiant face's
-//! are Radiant (§5.2). The hand cap burns the rest (§2.4).
+//! are Radiant (§5.2). The hand cap burns the rest (§2.4). Since #2657 each takes Temporary
+//! {temporary} (R2179001) as it reaches the hand, C+ #23 Dropshipping's way, so a card the cap burns
+//! takes none; through v0.5.9e they took nothing (`script_v0_5_9e`, kept, R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-090";
 
-fn spell_basket(radiant: bool) -> Script {
+/// One face; `temporary` gives each added Spell its Temporary {temporary} (R2179001), as it has since
+/// #2657.
+fn spell_basket(radiant: bool, temporary: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            vec![add_random_from_catalog(json_as(json!({
+            let mut add = json!({
                 "query": { "type": "Spell" },
                 "count": param(&*ctx, "cards"),
                 "radiant": radiant,
-            })))]
+            });
+            if temporary {
+                add["keywords"] = json!([{ "kind": "Temporary", "n": param(&*ctx, "temporary") }]);
+            }
+            vec![add_random_from_catalog(json_as(add))]
         })),
         ..Script::default()
     }
@@ -27,14 +36,24 @@ fn spell_basket(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: spell_basket(false),
-        radiant: spell_basket(true),
+        base: spell_basket(false, true),
+        radiant: spell_basket(true, true),
+    }
+}
+
+/// R767000: through v0.5.9e the Spells it added were not Temporary; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_5_9e() -> CardScripts {
+    CardScripts {
+        base: spell_basket(false, false),
+        radiant: spell_basket(true, false),
     }
 }
 
 // M #90 Spell Basket — SPEC §8.8 row 90, BUILD M10 row M 90: "Adds three random non-token Spells (the
-// Spell type only, never a Field Spell) of any set, never itself, at their printed costs, hidden; the
-// hand cap burns the rest; cards reads through `param()`; radiant they are Radiant".
+// Spell type only, never a Field Spell) of any set, never itself, at their printed costs, hidden, each
+// Temporary 2; the hand cap burns the rest; cards and temporary read through `param()`; radiant they are
+// Radiant".
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -57,6 +76,19 @@ mod tests {
 
     fn added(s: &Scenario, kept: usize) -> Vec<CardInstance> {
         s.hand(P1).into_iter().skip(kept).collect()
+    }
+
+    /// The Temporary count each added card carries, as its keywords show it (R2179001).
+    fn temporaries(s: &Scenario, kept: usize) -> Vec<Option<i32>> {
+        added(s, kept)
+            .iter()
+            .map(|card| {
+                card_keywords(s.state(), card).iter().find_map(|keyword| match keyword {
+                    Keyword::Temporary { n } => Some(n.unwrap_or(1)),
+                    _ => None,
+                })
+            })
+            .collect()
     }
 
     mod m90_spell_basket {
@@ -104,6 +136,36 @@ mod tests {
                 assert_eq!(s.hand(P1).len() as i32, HAND_CAP);
                 let burned = s.events().iter().filter(|event| event.event_type() == GameEventType::Burned).count();
                 assert_eq!(burned, 2);
+            }
+
+            #[test]
+            fn r2179001_each_added_spell_is_temporary_2_and_leaves_after_two_of_your_ends_of_turn() {
+                let mut s = holding("spell-basket-temporary", false, 1);
+                s.play(ID, json!({}));
+                assert_eq!(temporaries(&s, 1), vec![Some(2); 3]);
+                let ids: Vec<String> = added(&s, 1).into_iter().map(|card| card.id).collect();
+                s.end_turn();
+                s.end_turn();
+                assert!(ids.iter().all(|id| s.hand(P1).iter().any(|card| card.id == *id)), "one left");
+                s.end_turn();
+                assert!(!ids.iter().any(|id| s.hand(P1).iter().any(|card| card.id == *id)), "discarded");
+            }
+
+            #[test]
+            fn temporary_reads_through_param() {
+                let mut s = holding("spell-basket-temporary-param", false, 1);
+                set_param(s.card_mut(ID), "temporary", 4);
+                s.play(ID, json!({}));
+                assert_eq!(temporaries(&s, 1), vec![Some(4); 3]);
+            }
+
+            #[test]
+            fn r767000_the_script_kept_for_v0_5_9e_adds_them_with_no_temporary() {
+                crate::under_kept(ID, super::super::super::script_v0_5_9e(), || {
+                    let mut s = holding("spell-basket-kept", false, 1);
+                    s.play(ID, json!({}));
+                    assert_eq!(temporaries(&s, 1), vec![None; 3]);
+                });
             }
 
             #[test]
