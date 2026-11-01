@@ -12231,7 +12231,7 @@
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-6",
-      "run_id": "pending:216b9510-1793539353",
+      "run_id": "41310990802",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T13:22:55Z",
       "stop_requested": false,
