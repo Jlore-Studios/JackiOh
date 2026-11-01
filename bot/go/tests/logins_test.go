@@ -129,17 +129,16 @@ func TestLogins_ARotatedLoginIsSealedAndUsedNextTime(t *testing.T) {
 	sealed := logins.Seal(login)
 	assertTrue(t, vault.LooksSealed(sealed))
 	again := logins.Prepare(w.codex, secret, sealed, filepath.Join(w.home, "two"))
-	assertEqual(t, again.Source, "vault")
 	auth := loadsObject(t, readText(t, filepath.Join(again.Env["CODEX_HOME"], "auth.json")))
 	assertEqual(t, auth.Obj("tokens").Get("refresh_token"), "ref-"+strings.Repeat("z", 40))
 	// A vault under another secret is ignored: a freshly pasted login wins.
-	other := logins.Prepare(w.codex, pyjson.Dumps(loginsCodexAuth().Set("x", 1)), sealed,
-		filepath.Join(w.home, "three"))
-	assertEqual(t, other.Source, "secret")
+	pasted := pyjson.Dumps(loginsCodexAuth().Set("x", 1))
+	other := logins.Prepare(w.codex, pasted, sealed, filepath.Join(w.home, "three"))
+	assertEqual(t, readText(t, other.Files.Str("auth.json")), pasted)
 	// And so is one sealed for another provider, even under the same secret.
 	foreign := loginsSeal(t, pyjson.New("provider", "muse", "files", pyjson.New("auth.json", "{}")), secret)
 	mismatch := logins.Prepare(w.codex, secret, foreign, filepath.Join(w.home, "four"))
-	assertEqual(t, mismatch.Source, "secret")
+	assertEqual(t, readText(t, mismatch.Files.Str("auth.json")), secret)
 }
 
 func TestLogins_AMachineLoginWritesNothingAndLeavesTheCLIItsOwnHome(t *testing.T) {
@@ -148,7 +147,7 @@ func TestLogins_AMachineLoginWritesNothingAndLeavesTheCLIItsOwnHome(t *testing.T
 		provider := w.pool.Get(name)
 		assertEqual(t, provider.Login, "machine")
 		login := logins.Prepare(provider, "", "a vault it must not open", filepath.Join(w.home, name))
-		assertEqual(t, []any{login.Source, login.Files.Len()}, []any{"machine", 0})
+		assertEqual(t, login.Files.Len(), 0)
 		_, err := os.Stat(filepath.Join(w.home, name))
 		assertTrue(t, os.IsNotExist(err))
 		for _, key := range []string{"CODEX_HOME", "XDG_CONFIG_HOME", "CLAUDE_CONFIG_DIR", "META_API_KEY"} {
@@ -176,8 +175,7 @@ func TestLogins_MuseTakesALoginFileOrFallsBackToAnAPIKey(t *testing.T) {
 	assertNotIn(t, "META_API_KEY", login.Env)
 	assertEqual(t, login.Env["MUSE_NO_AUTO_UPDATE"], "1")
 	keyed := logins.Prepare(w.muse, "meta-key-"+strings.Repeat("k", 30), "", filepath.Join(w.home, "b"))
-	assertEqual(t, []any{keyed.Env["META_API_KEY"], keyed.Source},
-		[]any{"meta-key-" + strings.Repeat("k", 30), "api key"})
+	assertEqual(t, keyed.Env["META_API_KEY"], "meta-key-"+strings.Repeat("k", 30))
 }
 
 func TestLogins_TheTokensInsideALoginFileAreRedacted(t *testing.T) {

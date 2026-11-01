@@ -7,7 +7,10 @@
 //! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce, the action, card and
 //! effect helpers, the sink bench (`Bench`), `sink_for`, `ids_of`, `types_of` and `hand_ids` from here
 //! rather than a copy (#1777, #1997, #2024; crates/tools/tests/acceptance.rs refuses a copy, a local
-//! `static NONCE` and a local struct of just `events` and `rng`).
+//! `static NONCE` and a local struct of just `events` and `rng`). The runs several files had copied
+//! word for word (`run_as_p1`, `run_with_options`, `run_with_targets`, `apply_now`, `run_on_sink`) and
+//! the game past both mulligans (`past_the_mulligans`) are here too (#2160); a file that calls one
+//! `run` or `playing` imports it under that name.
 
 use std::borrow::Borrow;
 use std::cell::Cell;
@@ -276,6 +279,104 @@ pub fn run_effect(state: &mut GameState, effect: Effect, controller: PlayerId) -
     }
     state.rng_cursor = rng.cursor();
     events
+}
+
+/// `run_effect` as p1's: the effect applied for p1 on a sink over `state`, the rng cursor written
+/// back; its events.
+pub fn run_as_p1(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
+    run_effect(state, effect, PlayerId::P1)
+}
+
+/// One effect applied straight through its `apply` under `options`, as `resolve.ts` does, with no
+/// card of its own and no settle, the rng's cursor written back; the events it emitted.
+pub fn run_with_options(state: &mut GameState, effect: Effect, options: HookOptions) -> Vec<GameEvent> {
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    let mut events = Vec::new();
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, None, options);
+        (effect.apply)(&mut ctx);
+    }
+    state.rng_cursor = rng.cursor();
+    events
+}
+
+/// TS `run(state, effect, self, targets, controller)`: one effect on a sink over `state`, the rng
+/// cursor written back; its events.
+pub fn run_with_targets(
+    state: &mut GameState,
+    effect: Effect,
+    self_: Option<&CardInstance>,
+    targets: Vec<Selection>,
+    controller: PlayerId,
+) -> Vec<GameEvent> {
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(
+            &mut sink,
+            self_,
+            HookOptions {
+                controller: Some(controller),
+                targets: Some(targets),
+                ..Default::default()
+            },
+        );
+        (effect.apply)(&mut ctx);
+    }
+    state.rng_cursor = rng.cursor();
+    events
+}
+
+/// Apply one effect for p1 and settle, as a resolving card's would.
+pub fn apply_now(state: &mut GameState, effect: Effect) {
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        {
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    ..Default::default()
+                },
+            );
+            (effect.apply)(&mut ctx);
+        }
+        settle(&mut sink, SettleOptions::default());
+    }
+    state.rng_cursor = rng.cursor();
+}
+
+/// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
+pub fn run_on_sink<R>(
+    state: &mut GameState,
+    f: impl FnOnce(&mut EngineSink<'_>) -> R,
+) -> (R, Vec<GameEvent>) {
+    let mut sink = sink_for(state);
+    let out = f(&mut sink);
+    let events = sink.events.clone();
+    (out, events)
+}
+
+/// Past the mulligans, both hands kept, in the main phase of p1's first turn.
+pub fn past_the_mulligans(seed: &str) -> GameState {
+    let mut state = begin_game(&new_game(seed, None)).state;
+    for player in [PlayerId::P1, PlayerId::P2] {
+        let keep: Vec<String> = state.players[player]
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        state = act(
+            &state,
+            json_as::<ActionInput>(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
+        );
+    }
+    state
 }
 
 #[derive(Clone, Debug)]

@@ -9,24 +9,13 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_effect, set_library, slot};
-use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game, stoic, translator};
+use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_as_p1 as run, set_library, slot};
+use crate::rules::fixtures::instance_data::{
+    body, brittle_trap, instance_main_phase as game, stoic, translator,
+};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-
-fn game(seed: &str) -> GameState {
-    let mut state = instance_game(seed, None);
-    state.turn = 5;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state
-}
-
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
-}
 
 fn translate_id(id: &str) -> Effect {
     translate(json_as(json!({ "instanceId": id })))

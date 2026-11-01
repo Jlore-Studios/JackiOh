@@ -8,7 +8,9 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, first_striker, moths, plain, taunter, trampler};
-use crate::rules::fixtures::harness::{events_of_type, live, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, live, new_game, put, run_on_sink as run, sink_for, slot,
+};
 
 /// p1's main phase on turn 4, so nothing placed with `put` is summoning sick (§4.1).
 fn board(seed: &str) -> GameState {
@@ -83,14 +85,6 @@ fn attack_declared(events: &[GameEvent]) -> Vec<(String, String, bool)> {
             _ => None,
         })
         .collect()
-}
-
-/// TS `sinkFor(state, events)`: run `f` on a sink over `state` and hand back what it emitted.
-fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
-    let mut sink = sink_for(state);
-    let out = f(&mut sink);
-    let events = sink.events.clone();
-    (out, events)
 }
 
 /// `declareAttack(sink, attacker, target)` with the attacker and a unit target read live off the sink.

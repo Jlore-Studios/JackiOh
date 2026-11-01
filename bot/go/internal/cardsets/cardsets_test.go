@@ -78,7 +78,7 @@ func TestReadWalksBackToTheLastThreePatches(t *testing.T) {
 	patches, minSample, oldest := Read(api.fetch, API)
 	var read []any
 	for _, p := range patches {
-		read = append(read, []any{p.Name, p.Version, p.Live, p.Games})
+		read = append(read, []any{p.Name, p.Live, p.Games})
 	}
 	if !pyjson.Equal(read, g.Get("read")) || minSample != g.Int("min_sample") || oldest != g.Str("oldest") {
 		t.Fatalf("read %v, %d, %q", read, minSample, oldest)
