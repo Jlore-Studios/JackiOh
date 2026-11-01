@@ -217,9 +217,11 @@ fn create_duel(
         dealt,
         last_boards: None,
         glitch_boards: None,
-        // A co-op game is never a sandbox (R923000) and holds no custom card (R915005).
+        // A co-op game is never a sandbox (R923000), holds no custom card (R915005) nor a deck mark
+        // (R2702000).
         sandbox: None,
         custom_cards: None,
+        deck_marks: None,
     };
     let mut game = match kind {
         SetupKind::New => create_game(&duel_options),

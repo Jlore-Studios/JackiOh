@@ -163,6 +163,8 @@ pub fn reset_match(sink: &mut EngineSink<'_>) {
         } else {
             Some(old.custom_cards.values().cloned().collect())
         },
+        // R2702000: the reset deals the marked cards again.
+        deck_marks: opening.deck_marks.clone(),
         ..CreateGameOptions::default()
     };
     let mut fresh = create_game_for_reset(&options, old.next_id, resets);

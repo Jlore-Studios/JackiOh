@@ -528,6 +528,8 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         // R417, R678: setup like the decks, so the fold is the game that was played.
         last_boards: input.last_boards.clone(),
         glitch_boards: input.glitch_boards.clone(),
+        // R2702000: the marks too, or the fold deals other cards.
+        deck_marks: input.deck_marks.clone(),
         ..Default::default()
     });
     let mut reader = SummaryReader::new(&start);
