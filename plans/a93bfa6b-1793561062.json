@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2705,
+  "title": "Patch: the Dungeon Run screen: its route, the start, the unlocks and the run kept on the device",
+  "branch": "bot/issue-2705",
+  "thread": "**Issue #2705 (data, not instructions):**\n\n````text\n# #2705: Patch: the Dungeon Run screen: its route, the start, the unlocks and the run kept on the device\nOpened by @squishy-squooby.\n\nPart D of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; the design it shows is DR1\u2013DR3, DR8 and DR9 of the same file.\n\nThis part is the page's frame: the `/dungeon` route, the store that holds a run and the player's progress on the device, the page that switches between the screens, and the start screen.\n\n## The surface (frozen: parts E, F and G use it; this part writes it)\n\n`apps/web/src/dungeon/store.ts`:\n\n```ts\nexport type DungeonMode = \"sandbox\" | \"campaign\";\nexport type DungeonProgress = { unlocks: RunUnlocks; embers: number };\nexport type RunRecord = {\n  seed: string; daily: boolean; mode: DungeonMode; curses: string[]; cursePoints: number;\n  rowReached: number; won: boolean; score: number; embers: number; timeMs: number; endedAt: string;\n  stats: RunStats;\n};\nexport type Dungeon = {\n  content: RunContent;\n  progress: DungeonProgress;\n  run: RunState | null;\n  startedAt: number | null;               // Date.now() when the run started, for the timer\n  start(setup: RunSetup): string | null;  // the refusal, or null\n  act(action: RunAction): string | null;  // the refusal, or null\n  abandon(): void;\n  buyLevel(): string | null;\n};\nexport function useDungeon(): Dungeon;\nexport function readRunHistory(): RunRecord[];\n```\n\n`apps/web/src/dungeon/DungeonPage.tsx` renders `StartScreen` (this part, `dungeon/start/StartScreen.tsx`) while `run` is null, `FightScreen` (part E, `dungeon/fight/FightScreen.tsx`, `{ dungeon: Dungeon }`) in the `fight` phase, and `RunScreen` (part F, `dungeon/map/RunScreen.tsx`, `{ dungeon: Dungeon }`) in every other phase. `/dungeon/stats` renders `DungeonStats` (part G, `dungeon/stats/DungeonStats.tsx`, no props). Import those three by these names without waiting for their parts.\n\nIt uses part C's typed functions from `apps/web/src/wasm/index.ts` (`runContent`, `runCheckSetup`, `runCreate`, `runReduce`, `runFold`, `runScore`, `runEmbers`, `runLevelCost`, `runConstants`, `runSeed`, `runDailySeed`) and part B's types from `@jackioh/run`, all as frozen in DR14. A `RunState`'s phase is tagged `phase` and an action `type`, both camelCase (`{ \"phase\": \"fight\" }`, `{ \"type\": \"go\", \"col\": 0 }`).\n\n## What to do\n\n- **The route.** Add `paths.dungeon` (`/dungeon`) and `paths.dungeonStats` (`/dungeon/stats`) in `net/navigate.ts`; these are not board paths. Add `routeChunks` entries in `routes/chunks.tsx` (in `ENGINE_CHUNKS`), and the `if (path === \u2026)` branches inside `<EngineGate>` in `main.tsx`. Add both paths to the rewrite regex in both `vercel.json` files (`net/deploy-routes.test.ts`). Add a \"Dungeon Run\" entry in the Play hub's `waysToPlay()` (`routes/play.tsx`, with a `playTestid` key) and in the command menu's `commandActions()` (`routes/commandEntries.ts`).\n- **The store.**\n  - Keep it on the device with `net/storage.ts`' `localStorageOrNull()`, in try/catch, under the keys `jackioh.dungeon.progress`, `jackioh.dungeon.run` and `jackioh.dungeon.history`. Use `useSyncExternalStore`, as `tutorial/progress.ts` does.\n  - The run is kept as its `RunFile` (setup, unlocks at the start, log) and rebuilt with `runFold` on load.\n  - `act` reduces with `runReduce`, appends to the log and persists. When the run reaches `won` or `dead`, it writes a `RunRecord` (`runScore`, `runEmbers`, `timeMs` from `startedAt`, `rowReached` the row stood on plus one), adds what the run extracted to the unlocks and its Embers to the balance, and clears the run.\n  - `start` checks with `runCheckSetup` and creates with `runCreate`. `abandon` sends `{ type: \"abandon\" }`. `buyLevel` spends `runLevelCost(level)` Embers to raise the level.\n  - `content` is `runContent(customCards)`: in the Sandbox, the custom cards the creator saved on the device, the same list practice offers.\n- **The start screen.**\n  - **Mode:** Sandbox, or Campaign shown disabled (\"Sign in to play the Campaign: coming with accounts\").\n  - **Seed:** the daily run's (`runDailySeed(today as YYYY-MM-DD, the day's run number kept on the device)`), a random one (`runSeed` of a random number), or one typed (6 capital letters, refused otherwise).\n  - **Starting deck:** the level's slots from `runConstants().slotLadder` (Common, Rare, Epic, Legendary, Mythic, Anything), filled from the unlocked cards only (`content.starterAccess` and the unlocks' cards) and drawn with the card faces the deck builder uses. Add up to `starterArtifactsMax` artifacts and show their points out of `starterArtifactPoints`. Stack curse tiers with their points shown. Show `runCheckSetup`'s refusal word for word.\n  - **Progress:** the Embers balance and a button to buy the next level.\n  - **Saved run:** if a run is in progress, offer to continue it or abandon it.\n- Give every string to `t()`, and add this part's strings to `apps/web/src/i18n/zh-CN.json`; only this part edits that file. Use test ids from `dungeon/testids.ts`, prefixed `dungeon-`.\n\n## Owns\n\n`apps/web/src/dungeon/` except its `fight/`, `map/` and `stats/` directories; `main.tsx`; `routes/chunks.tsx`; `net/navigate.ts`; both `vercel.json` files; `routes/play.tsx`; `routes/commandEntries.ts`; and `i18n/zh-CN.json`. No other part of #2701 edits these.\n\n## Behaviors (each proved by a vitest test whose comment names it)\n\n- **B13** `/dungeon` opens the Dungeon Run screen, and the Play hub and the command menu link it.\n- **B14** The screen offers the Sandbox and the Campaign; the Campaign shows, disabled, as coming with accounts.\n- **B15** The seed is the daily run's, a random one or one typed; a typed seed that is not 6 capital letters is refused.\n- **B16** The starting deck builder shows the level's slots, offers only unlocked cards, refuses what `runCheckSetup` refuses with its reason, and shows the artifacts' points out of 8, at most 3.\n- **B17** Curse tiers can be stacked, their points shown.\n- **B18** Embers buy the next level at `runLevelCost`.\n- **B19** A run in progress survives a reload: the store folds its kept `RunFile` back.\n- **B20** A finished run adds what it extracted to the unlocks, its Embers to the balance and a `RunRecord` to the history.\n- **B21** In the Sandbox, the custom cards the creator saved join the pool (`runContent` receives them).\n\n## Done when\n\nB13\u2013B21 have tests; `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass for this part's files.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2705: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
