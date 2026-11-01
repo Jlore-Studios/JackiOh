@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2731,
+  "title": "Patch: drop the Owned list from the Collection's Cosmetics section",
+  "branch": "bot/issue-2731",
+  "thread": "**Issue #2731 (data, not instructions):**\n\n```text\n# #2731: Patch: drop the Owned list from the Collection's Cosmetics section\nOpened by @MaxGoetzmann.\n\n## What it does\n\n`/collection?section=cosmetics` shows an **Equipped** section (the account tiles, `AccountCosmeticTiles.tsx`) followed by an **Owned** section: a plain text list of every cosmetic the account owns, one row per cosmetic and one per card for per-card ones (`CosmeticsPanel.tsx`, rendered by `CosmeticsSection` in `apps/web/src/routes/collection.tsx`). An account that has opened a few packs gets a list far too long to be useful. The tiles already show what is owned (locked versus unlocked), and per-card cosmetics are picked on the card in the Cards section (R1655000), so the list is redundant. Remove it.\n\nScope (client only, no server or engine change):\n\n- `apps/web/src/routes/collection.tsx`: drop the `<Section part=\"cosmetics\" title={t(\"Owned\")} \u2026>` and the `useRead(token, getOwnedCosmetics, keptOwned)` it needs, plus `keptOwned` and the `getOwnedCosmetics` import if nothing else there uses them. Keep `GET /api/cosmetics` itself: `AccountCosmeticTiles`, `ownedFullArt.ts`, the deck builder and the shop still read it.\n- Delete `apps/web/src/collection/CosmeticsPanel.tsx`. In `collection.ts`, remove `ownedCosmetics` and `collectionTestid.ownedCosmetic`, and remove `cardNameOf` only if nothing still uses it. `CosmeticPacks.tsx` uses it, so it probably stays.\n- Remove any strings left unused in the i18n catalogs (`\"Owned\"` is still used by `CardCosmeticsView.tsx`, so keep it; check `\"Loading your cosmetics\u2026\"`).\n- Tests: remove or rewrite the tests of the list in `apps/web/src/collection/collection.test.tsx` (the `OwnedCosmetics` renders, `R1579000 ownedCosmetics lists\u2026`, `R1827000 ownedCosmetics lists owned portraits\u2026`), in `apps/web/src/routes/collection.test.tsx` (the `T.ownedCosmetic` assertions and the `getOwnedCosmetics` call-count expectations that came from the list), and in `e2e/cypress/component/collection-screen.cy.tsx` (line ~134). Do not leave a ruling without a proving test: keep or add tests so R1579000 and R1827000 still have one in each file their `proven_in` lists, or remove a file from `proven_in` when it no longer proves the ruling.\n- Spec: R1579000's **The owned list** paragraph and R1827000's sentence \"The Collection's owned cosmetics (R1579000) list the portraits the account owns\u2026\" describe the list. Add a new ruling note, `spec/rulings/R2731000.md` (this issue's block), with its \u00a711 paragraph in `spec/pending/2731.md`, that amends both, and update those two notes so they point to it (CLAUDE.md rule 3; `docs/issues-and-patches.md`, Ruling numbers).\n\n## Acceptance\n\n- `/collection?section=cosmetics` shows the Equipped heading, its text and the account tiles, and no Owned section or list. A test titled with `R2731000` checks that no `collection-list` or owned-cosmetic row renders there.\n- `cargo jackioh spec check` passes.\n- No dead exports are left behind (`CosmeticsPanel.tsx` and `ownedCosmetics` are gone). `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and the collection component spec pass.\n\n## Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2731: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
