@@ -12942,6 +12942,7 @@
     "2703": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -12955,7 +12956,10 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "687d62e67816207fd5b0d6095ba6410f02d28922",
+      "last_findings": [],
       "onto": "bot/issue-2701",
+      "parked_on": "",
       "part_of": 2701,
       "pending_request": false,
       "planned_at": "2026-11-01T19:42:15Z",
@@ -12963,6 +12967,7 @@
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-5",
+      "question": "",
       "queued_at": "2026-11-01T18:44:26Z",
       "requested_by": "squishy-squooby",
       "run_id": "41360438936",
