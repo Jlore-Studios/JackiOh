@@ -27,8 +27,8 @@ use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
 
 pub use crate::actor::protocol::encode;
 use crate::actor::protocol::{
-    ClientMessage, MAX_FRAME_BYTES, MAX_NONCE_LENGTH, MalformedMessage, SERVER_NONCE_PREFIX, SocketErrorCode,
-    is_int, is_player_id, parse_client_message,
+    ClientMessage, MAX_FRAME_BYTES, MalformedMessage, SocketErrorCode, client_nonce, is_int, is_player_id,
+    parse_client_message,
 };
 use crate::economy::rewards::GameEconomy;
 
@@ -168,20 +168,10 @@ fn parse_target(value: &Value) -> Option<PingTarget> {
     })
 }
 
-/// R270 and §9.8's nonce rules, as the 1v1 parser holds them, and the Duos wrapper's own namespace.
+/// R270 and §9.8's nonce rules, the 1v1 parser's own (`client_nonce`), and the Duos wrapper's own
+/// namespace.
 fn check_nonce(value: Option<&Value>) -> Result<String, MalformedMessage> {
-    let nonce = match value.and_then(Value::as_str) {
-        Some(nonce) if !nonce.is_empty() => nonce,
-        _ => return Err(malformed("every action carries a client nonce (SPEC §9.3)")),
-    };
-    if nonce.encode_utf16().count() > MAX_NONCE_LENGTH {
-        return Err(malformed("that nonce is too long"));
-    }
-    if nonce.starts_with(SERVER_NONCE_PREFIX) {
-        return Err(malformed(format!(
-            r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
-        )));
-    }
+    let nonce = client_nonce(value)?;
     if nonce.starts_with(DUOS_NONCE_PREFIX) {
         return Err(malformed(format!(
             r#"a nonce starting "{DUOS_NONCE_PREFIX}" is the round's own"#
@@ -351,6 +341,8 @@ pub fn error_message(code: SocketErrorCode, message: &str, nonce: Option<&str>) 
 mod tests {
     use jackioh_engine::ActionBody;
 
+    use crate::actor::protocol::MAX_NONCE_LENGTH;
+
     use super::*;
 
     #[test]
@@ -400,6 +392,45 @@ mod tests {
         ] {
             let frame = format!(r#"{{"type":"action","nonce":"n3","body":{{"kind":"duel","body":{body}}}}}"#);
             assert!(parse_duos_message(&frame).is_err(), "{frame}");
+        }
+    }
+
+    #[test]
+    fn the_co_op_parser_holds_the_1v1_parsers_client_nonce_rules() {
+        let one_v_one = |nonce: &Value| {
+            parse_client_message(
+                &json!({ "type": "action", "action": { "type": "endTurn", "nonce": nonce } }).to_string(),
+            )
+            .err()
+            .map(|refused| refused.reason)
+        };
+        let co_op = |nonce: &Value| {
+            parse_duos_message(
+                &json!({ "type": "action", "nonce": nonce, "body": { "kind": "concede" } }).to_string(),
+            )
+            .err()
+            .map(|refused| refused.reason)
+        };
+        let missing = "every action carries a client nonce (SPEC §9.3)";
+        let too_long = "that nonce is too long";
+        // §9.8's bound counts UTF-16 units, as TS's `length` does: one emoji is two.
+        let half = MAX_NONCE_LENGTH / 2;
+        for (nonce, refused) in [
+            (Value::Null, Some(missing)),
+            (json!(""), Some(missing)),
+            (json!(7), Some(missing)),
+            (json!("n".repeat(MAX_NONCE_LENGTH)), None),
+            (json!("n".repeat(MAX_NONCE_LENGTH + 1)), Some(too_long)),
+            (json!("😀".repeat(half)), None),
+            (json!("😀".repeat(half + 1)), Some(too_long)),
+            (
+                json!("srv-1"),
+                Some(r#"a nonce starting "srv-" is the server's own (R270)"#),
+            ),
+        ] {
+            let refused = refused.map(str::to_string);
+            assert_eq!(one_v_one(&nonce), refused, "1v1: {nonce}");
+            assert_eq!(co_op(&nonce), refused, "co-op: {nonce}");
         }
     }
 

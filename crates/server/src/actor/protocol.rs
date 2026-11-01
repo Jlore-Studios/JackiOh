@@ -752,6 +752,25 @@ pub const MAX_NONCE_LENGTH: usize = 128;
 /// other seat's mulligan, until the ceiling.
 pub const SERVER_NONCE_PREFIX: &str = "srv-";
 
+/// SPEC §9.3, §9.8 and R270's rules for a client's nonce: a non-empty string of at most
+/// `MAX_NONCE_LENGTH`, outside the server's own namespace. The co-op parser holds them too, and its
+/// round's namespace on top (`duos::protocol`).
+pub(crate) fn client_nonce(value: Option<&Value>) -> Result<&str, MalformedMessage> {
+    let nonce = match is_string(value) {
+        Some(nonce) if !nonce.is_empty() => nonce,
+        _ => return Err(malformed("every action carries a client nonce (SPEC §9.3)")),
+    };
+    if nonce.encode_utf16().count() > MAX_NONCE_LENGTH {
+        return Err(malformed("that nonce is too long"));
+    }
+    if nonce.starts_with(SERVER_NONCE_PREFIX) {
+        return Err(malformed(format!(
+            r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
+        )));
+    }
+    Ok(nonce)
+}
+
 /// A frame larger than this is rejected before it is parsed (§9.8). The transport closes a larger
 /// frame with 1009 (SURFACE §11.3, `ws_server.rs`); this check is the same bound, held again here
 /// so the parser stays total on its own.
@@ -808,18 +827,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
                 return Err(malformed(r#""action" must be an object"#));
             };
             // SURFACE §11.3: the nonce is read inside `action` only (the client's form).
-            let nonce = match is_string(raw.get("nonce")) {
-                Some(nonce) if !nonce.is_empty() => nonce,
-                _ => return Err(malformed("every action carries a client nonce (SPEC §9.3)")),
-            };
-            if nonce.encode_utf16().count() > MAX_NONCE_LENGTH {
-                return Err(malformed("that nonce is too long"));
-            }
-            if nonce.starts_with(SERVER_NONCE_PREFIX) {
-                return Err(malformed(format!(
-                    r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
-                )));
-            }
+            let nonce = client_nonce(raw.get("nonce"))?;
             let body = parse_action_body(raw)?;
             Ok(ClientMessage::Action(ActionMessage {
                 nonce: nonce.to_string(),
