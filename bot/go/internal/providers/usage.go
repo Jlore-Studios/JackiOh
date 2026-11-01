@@ -221,7 +221,7 @@ func Duration(text string) time.Duration {
 // time zone, outside its window its `off_hours` caps hold too, and its late week's and its last
 // hour's (`Provider.caps_at`, which takes `last_hour`). `starting` (a build, a revision or a plan
 // about to start) leaves `start_headroom` under each cap; a run going on stops at the cap
-// itself.
+// itself, or `HardCapMargin` under it where that is its hard cap (`hard_cap`).
 func Refusal(provider *Provider, entry *pyjson.Object, at time.Time, zoneName string /* = None */, starting bool /* = False */, lastHour time.Time /* = None */) string {
 	until := clock.ParseISOValue(entry.Get("refused_until"))
 	if !until.IsZero() && until.After(at) {
@@ -234,8 +234,12 @@ func Refusal(provider *Provider, entry *pyjson.Object, at time.Time, zoneName st
 	for _, window := range caps.Keys() {
 		limit := caps.Float(window)
 		stop := limit
+		hard := provider.HardCap != nil && limit >= *provider.HardCap
+		if hard {
+			stop = limit - HardCapMargin // so the call it stops ends at the cap at most
+		}
 		if starting {
-			stop = StartUnder(provider, window, limit)
+			stop = pyMin(stop, StartUnder(provider, window, limit))
 		}
 		reading, ok := mapping(usage.Get(window))
 		if !ok {
@@ -254,13 +258,19 @@ func Refusal(provider *Provider, entry *pyjson.Object, at time.Time, zoneName st
 			if outside {
 				where = " outside its hours"
 			}
-			if stop < limit {
+			if hard && !starting && utilization < limit {
+				return fmt.Sprintf("%s usage is %s, within %s of its %s hard cap%s, where a run stops "+
+					"so that no call passes it; it resets at %s", WindowNames[window],
+					py.Percent(utilization, 0), py.Percent(HardCapMargin, 0), py.Percent(limit, 0), where,
+					clock.ISO(resets))
+			}
+			if starting && stop < limit {
 				return fmt.Sprintf("%s usage is %s, too close to its %s cap%s to start a long run "+
 					"(it starts under %s); it resets at %s", WindowNames[window], py.Percent(utilization, 0),
 					py.Percent(limit, 0), where, py.Percent(stop, 0), clock.ISO(resets))
 			}
 			return fmt.Sprintf("%s usage is %s, at or over its %s cap%s; it resets at %s",
-				WindowNames[window], py.Percent(utilization, 0), py.Percent(stop, 0), where, clock.ISO(resets))
+				WindowNames[window], py.Percent(utilization, 0), py.Percent(limit, 0), where, clock.ISO(resets))
 		}
 	}
 	budgets := provider.Limits.Budgets()
@@ -351,7 +361,7 @@ func LastHourOf(provider *Provider, usage any, at time.Time, zoneName string) ti
 	}
 	held, hasCap := provider.HeldCaps(at, zoneName, usage).Lookup("five_hour")
 	reading, ok := mapping(obj.Get("five_hour"))
-	if !hasCap || held == nil || py.MustFloat(held) >= 1.0 || !ok {
+	if !hasCap || held == nil || py.MustFloat(held) >= provider.ceiling() || !ok { // nothing to lift
 		return time.Time{}
 	}
 	limit := py.MustFloat(held)

@@ -1,7 +1,9 @@
 //! A ladder bot's end-of-game habits (SPEC §9.12, R639000; #639): whether it concedes, answers a
 //! draw offer, lets its turn clock run out, offers or meets a rematch, and how long its aim arrow
 //! shows before a targeted move, each drawn from `crate::config`'s fitted rows (R1442's telemetry,
-//! printed by `jackioh-server timing-fit`) as a person's would be.
+//! printed by `jackioh-server timing-fit`) as a person's would be; and whether it offers a draw, at
+//! `BOT_DRAW_OFFER`'s hand-set chance (R2660001). Since R2660000 a concession also needs a lethal the
+//! bot cannot stop, which the caller proves (`jackioh_ai::unstoppable_lethal`).
 //!
 //! Every roll draws on its own stream, `Rng::new("{seed}:bot-…:{home}…", 0)`, from the match seed and
 //! the seat the bot began in, apart from the match rng (`state.rng`), the search's and the think
@@ -15,7 +17,8 @@ use jackioh_engine::{GameState, PlayerId, Rng};
 
 use crate::config::{
     BOT_AIM_LEAD_MAX_MS, BOT_AIM_LEAD_MIN_MS, BOT_REMATCH_DELAY_MAX_MS, BOT_REMATCH_DELAY_MIN_MS,
-    BOT_REMATCH_LINGER_MAX_MS, BOT_REMATCH_LINGER_MIN_MS, ConcedeFit, DrawAnswerFit, RematchFit, TimeoutFit,
+    BOT_REMATCH_LINGER_MAX_MS, BOT_REMATCH_LINGER_MIN_MS, ConcedeFit, DrawAnswerFit, DrawOfferRule,
+    RematchFit, TimeoutFit,
 };
 
 /// One draw of the standard normal (Box–Muller, two draws of `rng`).
@@ -71,16 +74,25 @@ fn uniform_ms(rng: &mut Rng, min: i64, max: i64) -> i64 {
     (min as f64 + rng.next() * (max - min) as f64).round() as i64
 }
 
-/// R639000: whether the bot that began in `home` concedes now, at the start of its own turn `turn`,
-/// standing as `standing` says. Its temper is drawn once a match: whether it is one who concedes at
-/// all (`share`), and the deficit it gives up at (normal, `deficit_mu` and `deficit_sigma`). It
-/// never concedes before `min_turn`, nor while it is not behind its opponent, whatever its
-/// threshold drew.
-pub fn concedes(seed: &str, home: PlayerId, turn: i32, standing: &Standing, fit: &ConcedeFit) -> bool {
+/// R639000, R2660000: whether the bot that began in `home` concedes now, at the start of its own
+/// turn. Its temper is drawn once a match, on the stream `{seed}:bot-concede:{home}`: whether it is
+/// one who concedes at all (`share`). One who is concedes only when `doomed` holds: the caller's
+/// proof that a lethal shows on the opponent's board that nothing the bot does this turn stops (its
+/// seat's `jackioh_ai::unstoppable_lethal`). `doomed` runs a search, so it is called for a conceder
+/// alone. The fit's `min_turn` and deficit are no longer read.
+pub fn concedes(seed: &str, home: PlayerId, doomed: impl FnOnce() -> bool, fit: &ConcedeFit) -> bool {
     let mut rng = Rng::new(&format!("{seed}:bot-concede:{home}"), 0);
-    let conceder = rng.next() < fit.share;
-    let threshold = fit.deficit_mu + fit.deficit_sigma * standard_normal(&mut rng);
-    conceder && turn >= fit.min_turn && standing.behind > 0.0 && standing.deficit >= threshold
+    rng.next() < fit.share && doomed()
+}
+
+/// R2660001: whether the bot that began in `home` offers a draw at the start of its own turn `turn`,
+/// standing as `standing` says: only while it trails its opponent by at least `rule.min_behind`, and
+/// then with the chance `rule.chance_per_turn`, on the turn's own stream
+/// `{seed}:bot-offer-draw:{home}:{turn}`, so every later look at the same turn answers the same.
+/// Whether an offer is legal at all is still R36's, which the caller asks the engine.
+pub fn offers_draw(seed: &str, home: PlayerId, turn: i32, standing: &Standing, rule: &DrawOfferRule) -> bool {
+    let mut rng = Rng::new(&format!("{seed}:bot-offer-draw:{home}:{turn}"), 0);
+    standing.behind >= rule.min_behind && rng.next() < rule.chance_per_turn
 }
 
 /// R639000: whether the bot that began in `home` accepts the draw offered in turn `turn`. Only a

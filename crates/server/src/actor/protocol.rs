@@ -154,8 +154,6 @@ pub enum SocketErrorCode {
     Forbidden,
     /// §9.8: the per-match action rate limit.
     RateLimited,
-    /// A protocol message this endpoint does not serve.
-    Unsupported,
     /// The match already has a result; no further action will be applied.
     MatchOver,
     Internal,

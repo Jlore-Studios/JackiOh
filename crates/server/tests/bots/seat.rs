@@ -8,6 +8,11 @@
 //! start and answers a draw offer by the bot's own roll, reading where it stands through a
 //! determinized world (a face-down enemy card included) centered on the even board.
 //!
+//! R2660000: `play` concedes, at its turn start and by its temper, only facing a lethal on the
+//! opponent's board it cannot stop (`unstoppable_lethal`), however far behind it stands otherwise.
+//! R2660001: a bot well behind that does not concede offers a draw at its turn start by its own
+//! roll, once a turn as R36 has it, and the actor plays the offer: an emote is all it never plays.
+//!
 //! R747000: the strength's skill is the chance each decision follows the AI, the rest the skill miss
 //! rolled on the bot's own AI stream; a full skill takes no draw and decides as it did before the
 //! knob, and the table's seed ratings are what the skill-to-Elo curve gives their skills.
@@ -22,8 +27,9 @@
 use jackioh_ai::{
     AI_SKILL_MAX, AI_SKILL_MIN, AiOptions, AiStyle, DeterminizeOptions, GREEDY_EVAL, NextSwing,
     candidate_set, decide_styled, determinize, evaluate, one_ply_scores, plays_best, random_action, redact,
-    skill_miss_action,
+    skill_miss_action, unstoppable_lethal,
 };
+use jackioh_engine::testkit::{Value, json, scenario};
 use jackioh_engine::wire::PLAYER_IDS;
 use jackioh_engine::{
     Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
@@ -35,12 +41,12 @@ use jackioh_server::bots::seat::{
     BotJob, THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, fallback_action, never_played, play,
     r188_forbidden, think_ms,
 };
-use jackioh_server::bots::signals::{accepts_draw, concedes, standard_normal, standing};
+use jackioh_server::bots::signals::{accepts_draw, concedes, offers_draw, standard_normal, standing};
 use jackioh_server::config::{
-    BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS,
-    BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, BotStrength,
-    ConcedeFit, DrawAnswerFit, SKILL_ELO_ANCHOR, SKILL_ELO_TABLE, THINK_COMPLEXITY_SLOPE, THINK_TIME_FITS,
-    ThinkTimeFit, ThinkTimePrior, expected_elo_for_skill,
+    BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS, BOT_DRAW_ANSWER_FIT, BOT_DRAW_OFFER,
+    BOT_STRENGTHS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS,
+    BotStrength, DrawAnswerFit, DrawOfferRule, SKILL_ELO_ANCHOR, SKILL_ELO_TABLE, THINK_COMPLEXITY_SLOPE,
+    THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior, expected_elo_for_skill,
 };
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.
@@ -323,17 +329,14 @@ fn r639000_a_mulligan_draws_the_mulligan_prior() {
 }
 
 #[test]
-fn r639000_never_played_is_only_offers_and_emotes() {
+fn r2660001_never_played_is_only_an_emote() {
+    assert!(never_played(&ActionBody::Emote {
+        emote: jackioh_engine::wire::EmoteId::Greetings,
+    }));
+    // A ladder bot's concession, its draw answer either way (R639000) and its draw offer (R2660001) are
+    // played.
     for body in [
         ActionBody::OfferDraw,
-        ActionBody::Emote {
-            emote: jackioh_engine::wire::EmoteId::Greetings,
-        },
-    ] {
-        assert!(never_played(&body), "{body:?}");
-    }
-    // A ladder bot's concession and its draw answer, either way, are played (R639000).
-    for body in [
         ActionBody::Concede,
         ActionBody::AnswerDraw { accept: true },
         ActionBody::AnswerDraw { accept: false },
@@ -416,31 +419,34 @@ fn seed_where(prefix: &str, wanted: impl Fn(&str) -> bool) -> String {
         .unwrap_or_else(|| panic!("no {prefix} seed"))
 }
 
-#[tokio::test(start_paused = true)]
-async fn r639000_a_bot_far_behind_concedes_at_its_turn_start_and_only_then() {
-    let mut state = opened_at("seed-play-concede", BOT_CONCEDE_FIT.min_turn);
-    let bot = state.active;
-    // A hero on its last point, late in the game.
-    state.players[bot].hero.health = 1;
-    let behind = standing(&state, bot, "premise", bot).behind;
-    assert!(behind > 0.0, "PREMISE: the bot stands behind ({behind})");
-    let conceding = |seed: &str| {
-        concedes(
-            seed,
-            bot,
-            state.turn,
-            &standing(&state, bot, seed, bot),
-            &BOT_CONCEDE_FIT,
-        )
-    };
-    let gives_up = seed_where("concede", conceding);
-    let plays_on = seed_where("stay", |seed| !conceding(seed));
+/// A scenario on the real cards with the bot, p1, on its own turn as `p1`, facing `p2`.
+fn facing(p1: Value, p2: Value) -> GameState {
+    jackioh_cards::register_all();
+    scenario(json!({ "seed": "facing", "active": "p1", "p1": p1, "p2": p2 }))
+        .state()
+        .clone()
+}
 
-    // At its turn's start, the bot whose temper gives up here concedes, without a search.
+#[tokio::test(start_paused = true)]
+async fn r2660000_a_bot_facing_an_unstoppable_lethal_concedes_at_its_turn_start_and_only_then() {
+    // A Tempo Timmy 3/3 and a Mr. Vanilla 4/4 swing for 7 at a bot on 6 with nothing to stop them.
+    let bot = PlayerId::P1;
+    let state = facing(
+        json!({ "health": 6 }),
+        json!({ "field": ["core-011", "core-008"] }),
+    );
+    assert!(
+        unstoppable_lethal(&state, bot, None),
+        "PREMISE: the lethal is unstoppable"
+    );
+    let gives_up = seed_where("concede", |seed| concedes(seed, bot, || true, &BOT_CONCEDE_FIT));
+    let plays_on = seed_where("stay", |seed| !concedes(seed, bot, || true, &BOT_CONCEDE_FIT));
+
+    // At its turn's start, the bot whose temper gives up concedes, without a search.
     let conceded = play(job(&state, bot, &gives_up, true)).await;
     assert_eq!(conceded.body, Some(ActionBody::Concede));
     assert_eq!(conceded.ai_cursor, 0, "no search ran");
-    // Past its turn's start it plays on, and so does one whose temper does not give up yet.
+    // Past its turn's start it plays on, and so does one whose temper never gives up.
     for (seed, own_turn_start) in [(&gives_up, false), (&plays_on, true)] {
         let played = play(job(&state, bot, seed, own_turn_start)).await;
         assert!(
@@ -448,8 +454,91 @@ async fn r639000_a_bot_far_behind_concedes_at_its_turn_start_and_only_then() {
             "{seed} at turn start {own_turn_start}: {:?}",
             played.body
         );
-        assert!(played.ai_cursor > 0, "the search ran");
     }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2660000_a_bot_far_behind_with_no_unstoppable_lethal_plays_on() {
+    // A conceder by its temper, on its last points: before R2660000 it gave up on the deficit alone.
+    let bot = PlayerId::P1;
+    let gives_up = seed_where("concede", |seed| concedes(seed, bot, || true, &BOT_CONCEDE_FIT));
+    for (p1, p2) in [
+        // Nothing on the opponent's board to kill it.
+        (json!({ "health": 1 }), json!({})),
+        // A 4/4 that Midrange Menace's Taunt walls.
+        (
+            json!({ "health": 3, "field": ["core-019"] }),
+            json!({ "field": ["core-008"] }),
+        ),
+    ] {
+        let state = facing(p1.clone(), p2.clone());
+        let behind = standing(&state, bot, &gives_up, bot).behind;
+        assert!(behind > 0.0, "PREMISE: {p1} {p2} stands behind ({behind})");
+        assert!(
+            !unstoppable_lethal(&state, bot, None),
+            "PREMISE: {p1} {p2} faces no unstoppable lethal"
+        );
+        let played = play(job(&state, bot, &gives_up, true)).await;
+        assert!(
+            played.body.is_some() && played.body != Some(ActionBody::Concede),
+            "{p1} {p2}: {:?}",
+            played.body
+        );
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2660001_a_bot_well_behind_offers_a_draw_at_its_turn_start_by_its_own_roll() {
+    // A card to play keeps the turn open past the offer, which R82 would otherwise end (R36).
+    let bot = PlayerId::P1;
+    let state = facing(json!({ "health": 5, "hand": ["core-008"] }), json!({}));
+    let behind = standing(&state, bot, "premise", bot).behind;
+    assert!(
+        behind >= BOT_DRAW_OFFER.min_behind,
+        "PREMISE: the bot stands well behind ({behind})"
+    );
+    assert!(
+        legal_actions(Pinned::default(), &state, bot).contains(&ActionBody::OfferDraw),
+        "PREMISE: R36 lets the bot offer"
+    );
+    let offering = |seed: &str| {
+        offers_draw(
+            seed,
+            bot,
+            state.turn,
+            &standing(&state, bot, seed, bot),
+            &BOT_DRAW_OFFER,
+        )
+    };
+    let offers = seed_where("offer", offering);
+    let holds = seed_where("hold", |seed| !offering(seed));
+
+    // At its turn's start, the bot whose roll offers offers, without a search.
+    let offered = play(job(&state, bot, &offers, true)).await;
+    assert_eq!(offered.body, Some(ActionBody::OfferDraw));
+    assert_eq!(offered.ai_cursor, 0, "no search ran");
+    // Past its turn's start it plays on, and so does one whose roll holds.
+    for (seed, own_turn_start) in [(&offers, false), (&holds, true)] {
+        let played = play(job(&state, bot, seed, own_turn_start)).await;
+        assert!(
+            played.body.is_some() && played.body != Some(ActionBody::OfferDraw),
+            "{seed} at turn start {own_turn_start}: {:?}",
+            played.body
+        );
+    }
+    // R36: one offer a turn. Once the engine has the bot's offer, the same roll offers no second.
+    let after = reduce(
+        Pinned::default(),
+        &state,
+        &Action::new(ActionBody::OfferDraw, bot, "bot-offer".to_string()),
+    );
+    assert!(after.error.is_none(), "{:?}", after.error);
+    let again = play(job(&after.state, bot, &offers, true)).await;
+    assert!(
+        again.body.is_some() && again.body != Some(ActionBody::OfferDraw),
+        "{:?}",
+        again.body
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -601,7 +690,7 @@ async fn r639000_a_face_down_enemy_card_stops_neither_the_standing_read_nor_the_
 }
 
 #[test]
-fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
+fn r639000_r2660001_an_even_board_reads_level_though_its_deficit_does_not() {
     // Both seats have only ended their turns: no board, both heroes whole. The seed is the first
     // whose seats cast nothing on draw by then (Core #27 Blood Ridden Glowy Jelly Bean costs its
     // hero health, R58), so nothing has hurt a hero or reached a graveyard.
@@ -620,20 +709,17 @@ fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
     assert!(read.deficit > 20.0, "PREMISE: {read:?}");
     assert!(read.behind.abs() < 6.0, "{read:?}");
 
-    // A bot whose threshold any deficit meets concedes only while it trails its opponent: never
-    // with the opponent on its last point, and at once with its own hero there.
-    let any_deficit = ConcedeFit {
-        samples: 0,
-        share: 1.0,
-        min_turn: 0,
-        deficit_mu: f64::MIN,
-        deficit_sigma: 0.0,
+    // A bot that offers a draw at any lead the opponent holds offers only while it trails its
+    // opponent: never with the opponent on its last point, and at once with its own hero there.
+    let any_lead = DrawOfferRule {
+        chance_per_turn: 1.0,
+        min_behind: f64::MIN_POSITIVE,
     };
     let mut winning = state.clone();
     winning.players[bot.opponent()].hero.health = 1;
     let ahead = standing(&winning, bot, "even", bot);
     assert!(ahead.behind < 0.0, "{ahead:?}");
-    assert!(!concedes("even", bot, state.turn, &ahead, &any_deficit));
+    assert!(!offers_draw("even", bot, state.turn, &ahead, &any_lead));
     assert!(!accepts_draw(
         "even",
         bot,
@@ -648,7 +734,7 @@ fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
     losing.players[bot].hero.health = 1;
     let trailing = standing(&losing, bot, "even", bot);
     assert!(trailing.behind > 0.0, "{trailing:?}");
-    assert!(concedes("even", bot, losing.turn, &trailing, &any_deficit));
+    assert!(offers_draw("even", bot, losing.turn, &trailing, &any_lead));
 }
 
 /// The AI stream `job_at` gives the bot on `seed`.

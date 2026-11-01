@@ -156,7 +156,7 @@
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
 //!
-//! Port of `packages/cards/test/_invariants.ts` (SURFACE §8: `testkit::invariants::Monitor`). The
+//! Port of `packages/cards/test/_invariants.ts` (SURFACE §8: `testkit::invariants::InvariantMonitor`). The
 //! JSON a check walks is serde's, whose objects iterate in key order where TS's iterated in insertion
 //! order, so where one needle sits at two paths the path a message names may be the other one; which
 //! needles are found is the same.
@@ -1579,9 +1579,6 @@ pub struct InvariantMonitor {
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
 }
-
-/// SURFACE §8's name for the monitor (`testkit::invariants::Monitor`).
-pub type Monitor = InvariantMonitor;
 
 pub fn create_invariant_monitor(start: &GameState) -> InvariantMonitor {
     InvariantMonitor::new(start)
