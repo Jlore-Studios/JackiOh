@@ -12320,6 +12320,13 @@
     "2682": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:17:49Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "Easy rule 3 fails because the existing spec/rulings/R2127000.md note changes; no hard engine, AI, cross-crate design, or migration category applies."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
