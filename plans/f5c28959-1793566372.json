@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2720,
+  "title": "Patch: every finish shows on a full-art card",
+  "branch": "bot/issue-2720",
+  "thread": "**Issue #2720 (data, not instructions):**\n\n```text\n# #2720: Patch: every finish shows on a full-art card\nOpened by @jgoetzmann.\n\n## What it does\n\nA finish (\u00a714.2, R1295000) is the print of a card's face. Most of the finishes do their work on the face's **panel**, which a full-art face (R1017001) covers with its art, so on a full-art card they show little or nothing:\n\n- Matte black ink, Brushed steel and Velvet recolour `--cf-frame`.\n- Obsidian and Starlit paint `.cf-scale`.\n\nOnly the overlays on `.cf[data-finish]::before` reach the picture (`apps/web/src/cards/cosmetics.css`), and Stained glass alone has a full-art rule (`.cf:is([data-layout=\"minion\"], [data-full-art=\"true\"])[data-finish=\"finish-stained-glass\"]::before`). A player who owns both a finish and a full art on a card therefore can't see the finish while the full art is worn.\n\nMake every finish read clearly on a full-art face. For example, a finish that colours the panel can instead colour the full art's edge, the name banner's and the gems' plates, or lay its texture lightly over the picture, as Stained glass does. It must never hide the art, the Mythic's signature, the cost gem or a Unit's stats. This applies:\n\n- to every non-default finish: `finish-parchment`, `finish-linen`, `finish-brushed-steel`, `finish-velvet`, `finish-matte-black-ink`, `finish-stained-glass`, `finish-gilded-edge`, `finish-obsidian` and `finish-starlit`;\n- at every full-art tier (the Epic, Legendary and Mythic of R2655000, and #2715's new ones if that lands first);\n- at hand, board-minion and inspect sizes.\n\nThe animated finishes (Gilded edge, Obsidian, Starlit) move on a full-art face as they do on a normal one: inside the motion gate, in a `COSMETIC_FOIL_ANIMATED_MAX` slot, and still under reduced motion or with Animated foil off.\n\nThis is presentation only (CLAUDE.md rule 7), so it takes a ruling note in this issue's block, or an amendment to R1295000. It changes how cards look, so a pending fragment claims it (a micro, R2529000).\n\n## Acceptance\n\n- For each of the nine finishes, a component (pixel) spec shows a full-art face wearing it differing visibly from the same face without it, on a Unit and on a Spell.\n- No finish covers the art beyond a named opacity, and the signature, cost gem and Unit stats stay readable on a full art wearing each finish.\n- The three animated finishes animate on a full-art face in the motion slot, and hold still under reduced motion and with Animated foil off (`cosmetics.test.tsx`).\n- A finish on a normal (non-full-art) face looks exactly as it does today.\n- The ruling note passes `cargo jackioh spec check`, and `cargo jackioh classify --base origin/main --claims` passes with the fragment.\n\n## Blocked by, part of\n\nNothing blocks it. It touches `cosmetics.css` beside #2715; whichever lands second merges main first.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2720: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
