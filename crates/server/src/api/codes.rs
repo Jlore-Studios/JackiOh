@@ -24,7 +24,7 @@ use crate::api::consent::consent_owed;
 use crate::api::crypto::{
     canonical_invite_code, format_code, hashes_for_pepper, is_well_formed_code, normalize_code, random_code,
 };
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, lock, rate_limited};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json, lock, rate_limited};
 use crate::app::App;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, INVITE_CODE_LENGTH,
@@ -465,11 +465,9 @@ async fn redeem_for_request(
     breaker: &Mutex<BreakerState>,
 ) -> Result<RedeemOutcome, ApiError> {
     // `AuthLevel::User` guarantees the caller; the guard is here because `Req` types it optional.
-    let Some(caller) = req.caller.as_ref() else {
-        return Ok(RedeemOutcome::Refused(ApiError::new(
-            ApiErrorCode::Unauthorized,
-            "sign in first",
-        )));
+    let caller = match caller_of(req) {
+        Ok(caller) => caller,
+        Err(refused) => return Ok(RedeemOutcome::Refused(refused)),
     };
     let plain_code = match plain_code_of(&req.body) {
         Ok(plain_code) => plain_code,

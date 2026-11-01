@@ -30,7 +30,7 @@ use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, read_mode_choice,
 };
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_response};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
@@ -193,14 +193,6 @@ fn wiring_fault(message: String) -> ApiError {
     ApiError::new(ApiErrorCode::Internal, "something went wrong")
 }
 
-fn profile_of(req: &Req) -> Result<String, ApiError> {
-    match req.caller.as_ref() {
-        Some(caller) => Ok(caller.profile.id.clone()),
-        // Unreachable on an `AuthLevel::Active` route; the router resolves the caller first.
-        None => Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first")),
-    }
-}
-
 /// A room the caller may still join. Missing, malformed and expired codes are one answer, so a
 /// scan of the 30-bit code space cannot tell "wrong" from "too late" (§9.4's invite-code error).
 async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
@@ -337,7 +329,7 @@ pub struct OpenedRoom {
 /// which so lapses with its challenge. Every refusal is the route's own.
 pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, ApiError> {
     // ---- end Social ----
-    let profile_id = profile_of(req)?;
+    let profile_id = caller_of(req)?.profile.id.clone();
     // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
     // R143: an optional `seed`, accepted only by an end-to-end server and rejected elsewhere,
@@ -441,7 +433,7 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
 /// Takes `&Arc<App>` because `Registry::start` does (as `api::queue::enqueue`); SURFACE §11.2's
 /// `&App` does not fit.
 pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
+    let profile_id = caller_of(&req)?.profile.id.clone();
     let choice = read_mode_choice(&req.body)?;
     // R143 again: both endpoints accept the field in end-to-end mode and refuse it outside one.
     // R1989000: the joiner's `seat` beside it, under the same rule.
@@ -752,7 +744,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
 /// is never touched. Another host's room is the join's 404; a room an open challenge holds is 409,
 /// since its challenge's cancel frees it (SPEC S7, B49).
 pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
+    let profile_id = caller_of(&req)?.profile.id.clone();
     let code = normalize_code(&req.params.get("code").cloned().unwrap_or_default());
     let mut tx = app.db.begin(None).await?;
     let Some(room) = tx.rooms_get(&code).await? else {
@@ -784,7 +776,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
 /// `POST /api/rooms` answered them (§9.5, R1075000); a room an open challenge holds is the
 /// challenge's and is not listed.
 pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
+    let profile_id = caller_of(&req)?.profile.id.clone();
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
     let open = tx.rooms_open_by_host(&profile_id, now).await?;
