@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2690,
+  "title": "Patch: the fuzz monitor checks that no unit token reaches a pile and that a position switch spends the exertion an attack needs",
+  "branch": "bot/issue-2690",
+  "thread": "**Issue #2690 (data, not instructions):**\n\n```text\n# #2690: Patch: the fuzz monitor checks that no unit token reaches a pile and that a position switch spends the exertion an attack needs\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe random-game tester plays thousands of games through the engine and checks a list of rules after every move. Two rules the spec states plainly are not on that list: a unit token stops existing when it leaves the field, so it never lands in a graveyard or exile pile; and a unit gets one action a turn, an attack or a change of position, unless it has Deft. If the engine ever broke either, the tester would not notice. Once built, it checks both, so a bug that sends a token to the graveyard, or lets a unit switch and then attack, fails CI with its seed.\n\n## Why\n- \u00a73 (`spec/03-zones.md:9`): Graveyard, \u201cUnit tokens never enter it; spell tokens do.\u201d \u00a73.2 (`:34`): unit tokens cease to exist when they leave the field for any reason (R11).\n- \u00a74.1 (`spec/04-combat.md:8-9`): \u201cEach unit has one exertion per turn: one attack or one position switch. A unit with Deft may do both (R49).\u201d, and a Windfury unit's first attack spends the exertion a switch needs (R636).\n- The monitor is `crates/engine/src/testkit/invariants.rs`, I1\u2013I10 (header `:46-150`). None scans a pile for unit tokens: `is_unit_token_def` (`:536`) is read only by I6's lineage. I2 counts only `attackDeclared` (`:2332` on) and I4(b) only `exertion.attacked`; nothing reads `exertion.switched`, `positionSwitched` or Deft. I8 cannot see a switch rule broken, since the listing and the reducer share one check (`crates/engine/src/combat.rs:178-191`, `:275-305`).\n- R11 is kept by many separate paths, among them `zones.rs:594-597` (`is_unit_token`, which reads the type the card shows now, so a token set face-down reads as what it was set as), `effects/hold.rs:122`, `effects/transform.rs:130-135`, `effects/destroy.rs:129` and the sandbox's own graveyard push (`sandbox.rs:263-270`). Exertion is reset in several places too (`turn.rs:274-306`, `combat.rs:219-234`, the kill credit's fresh exertion in `effects/statuses.rs:81-106`).\n\n## Proposal\n- I11, after every action: no card whose definition is a unit token (`is_unit_token_def`, by definition, not by face) sits in either side's graveyard or exile, or in `state.held`.\n- I12, beside I2's shadow: record a chosen `switchPosition` that emits `positionSwitched` per unit, keyed by turn and stint (`stint_of`); flag a switch or a declared attack in the same stint and turn that the unit's exertion did not allow, Deft read through the layers (`keywords_now`), Windfury's first attack spending the switch (R636), a kill credit's fresh exertion and a re-entry resetting it as I2 already treats them.\n- Run both in the Duos per-duel monitor too, and plant a failing state for each in the monitor's tests, as #2568 did for I10.\n- Run `cargo jackioh fuzz --seeds 200`, `--handicap` and `--duos`; a real violation found is fixed in the engine with its seed pinned, or split into its own issue if large.\n\n## Where it lands\n- `crates/engine/src/testkit/invariants.rs` (header list and checks), `crates/tools/src/fuzz.rs` (its doc lines that list the checks)\n- SPEC \u00a73, \u00a73.2, \u00a74.1; R11, R49, R636\n\n## Acceptance criteria\n- [ ] A planted state with a unit token in a graveyard, in exile and in `held` each fails I11; a spell token in a graveyard passes.\n- [ ] A planted non-Deft unit that switched and then declares an attack in the same stint fails I12; the same with Deft passes; a Windfury unit that attacked once and then switches fails.\n- [ ] `cargo jackioh fuzz --seeds 200`, `--handicap` and `--duos` pass, or each failure is fixed or filed with its seed.\n- [ ] `cargo test -p jackioh-engine --features testkit`, `cargo test -p jackioh-tools`, clippy and fmt pass.\n\n## Size and risks\nMedium: about 70 lines in the monitor and two planted tests. Risk: a first run may find false positives, as I6's did; each is fixed in the oracle with a comment naming the seed, and a real engine bug found is the point.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:10:51Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2690: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
