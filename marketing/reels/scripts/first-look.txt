@@ -1,0 +1,8 @@
+# One spoken line per line; a line starting with # is not read. Facts from README.md only.
+Four mana. Thirty health. Twenty-five cards, and no duplicates.
+This is JackiOh, a one on one card game you play in your browser.
+Your units fight it out in lanes.
+Your traps wait face down in the backrow, where your opponent can't see them.
+And every card has a Radiant form that hits even harder.
+No one to play? The practice AI is always ready for a game.
+Play JackiOh now. Link in bio.
