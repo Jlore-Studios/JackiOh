@@ -184,7 +184,8 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 /// (B28). A card qualifies when the seat cannot play it this turn and its teammate can, or, with the
 /// team's `pass_cost` 0, when the teammate can afford it next turn and the seat cannot. The playable ones
 /// come first, ranked by the teammate's best bounded follow-up (R1127000), and are named only when worth
-/// passing (R1723000). B29: of the teammate it reads only its own side and the determinized probe.
+/// passing (R1723000). B29: it reads its own duel redacted and, of the teammate, only its own side and
+/// the determinized probe.
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
     catch_unwind(AssertUnwindSafe(|| passes_of(state, seat))).unwrap_or_default()
@@ -441,9 +442,8 @@ fn best_step(
 }
 
 /// R1723000: the teammate's own best bounded follow-up, with no pass: the best of `evaluate` over the
-/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards, in
-/// `legal_actions` order, each applied by one engine step to its probe and scored as `pass_score`
-/// scores, with the state that play left; the probe's own value, and the probe, when none applies.
+/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards, scored as
+/// `pass_score` scores, with the state it left; the probe's own value and the probe when none applies.
 fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
     let mut cards: IndexSet<String> = IndexSet::new();
     let plays: Vec<ActionBody> = legal_actions(mate_probe, mate)

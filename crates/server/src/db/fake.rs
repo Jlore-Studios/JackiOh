@@ -536,10 +536,9 @@ pub struct RedemptionSettings {
     /// before the lookup and answers `circuit_open` from. A hook rather than a value so a caller can
     /// flip it between calls, which is how the store contract drives it against both stores.
     pub enabled: Arc<dyn Fn() -> bool + Send + Sync>,
-    /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1). `public.profiles` and
-    /// `Profile` have no such column, so the SQL function joins `auth.users` and the fixture asks here. True
-    /// by default: BUILD M8's three fixture accounts are all verified (`src/api/e2e.rs`), and the server
-    /// refuses an unverified caller from the access token (R159) before this port is reached.
+    /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1), which `Profile` has no
+    /// column for (KNOWN DIVERGENCES, redemption's email check). True by default: BUILD M8's three fixture
+    /// accounts are all verified (`src/api/e2e.rs`), and the server refuses an unverified caller (R159) first.
     pub email_verified: Arc<dyn Fn(&str) -> bool + Send + Sync>,
 }
 
@@ -599,10 +598,6 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
     // Read once the call holds the lock, as the database reads its clock inside the transaction.
     let now = (f.guard.now)();
     let profile_id = input.profile_id.as_str();
-
-    // §9.4: "Redemption is one server-side transaction." In Postgres the whole of this is one
-    // `select app.redeem_invite_code(...)`; here it is the caller's transaction, so a fault leaves
-    // nothing behind.
 
     // Step 1: "reject unless the account is pending with a verified email"
     // One result for "no such profile", "banned" and "already active", exactly as the SQL's

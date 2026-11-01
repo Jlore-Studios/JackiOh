@@ -651,9 +651,8 @@ pub struct MatchRow {
     /// one (`matches.ranked`, migration 0022).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ranked: Option<bool>,
-    /// R672: the mode a rematch was made in (migration 0023), written when the rematch is created;
-    /// absent on older rows, whose mode `matches_mode_of` derives from tickets, room or series. Only
-    /// the rematch and a match between two bots (R1555000) write it.
+    /// R672: the mode a rematch or a match between two bots (R1555000) was made in (migration 0023);
+    /// absent on every other row, whose mode `matches_mode_of` derives from tickets, room or series.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<QueueMode>,
     /// R672: a double-or-nothing rematch's stakes (migration 0023). Absent reads as 1, a normal
@@ -1002,8 +1001,7 @@ pub struct SeriesRow {
     pub sides: (SeriesSide, SeriesSide),
     pub catalog_version: String,
     /// R604: a series the queue paired is ranked and moves the rating when it ends; a room's is
-    /// not. Carried on `series.ranked` since migration 0022; the store reads a false flag back as
-    /// an absent one.
+    /// not. Carried on `series.ranked` (migration 0022), a false flag read back as an absent one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ranked: Option<bool>,
     /// Each game's seed is `{seed_base}:{game_no}` (R335). The server mints it; R143's e2e
@@ -1289,8 +1287,7 @@ pub struct PlayerSettingsMergeInput {
     pub profile_id: String,
     /// Already checked by the handler: group ids, each a flat object of values.
     pub groups: IndexMap<String, PlayerSettingsGroup>,
-    /// The server's clock when the write arrived. Postgres stamps it as the row's `updated_at`
-    /// (and `created_at` for a new row), for operators; nothing reads it back through the port.
+    /// As `TutorialMergeInput::at`: the server's clock, stamped for operators and never read back.
     pub at: i64,
 }
 
@@ -1555,9 +1552,8 @@ pub struct StartMatchInput {
     /// R604: true when the queue paired it, for the match row.
     pub ranked: bool,
     pub seats: (MatchSeat, MatchSeat),
-    /// R672: the mode a rematch is made in, carried onto the match row. Absent elsewhere: the mode is
-    /// derived from what made the match (`matches_mode_of`), and only a rematch and a match between
-    /// two bots (R1555000) — which no ticket, room or series made — state it.
+    /// R672: the mode of a rematch or of a match between two bots (R1555000), which no ticket, room or
+    /// series made, carried onto the match row. Absent elsewhere: `matches_mode_of` derives it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<QueueMode>,
     /// R672: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1.

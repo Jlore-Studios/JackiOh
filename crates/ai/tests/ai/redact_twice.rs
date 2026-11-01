@@ -52,7 +52,6 @@ fn a_face_down_traps_placeholder_keeps_its_shown_price_when_redacted_again() {
     assert_eq!(text(&twice), text(&once));
 }
 
-/// The AI decides the same on the redacted state as on the true one
 #[test]
 fn the_ai_decides_the_same_on_the_redacted_state_as_on_the_true_one() {
     let state = facing_a_face_down_trap();

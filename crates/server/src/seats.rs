@@ -13,10 +13,9 @@
 //! from the record (`boot`), and every reaper tick compares the two (`reconcile`).
 //!
 //! Two processes overlap while a deploy hands over, each with its own ledger, so every claim fences on
-//! `app.seat_epoch` (migration 0054) inside the transaction that writes its seats: boot bumps the epoch
-//! before it fills the ledger, and a claim on an older epoch writes nothing (`StoreError::Fenced`, answered
-//! 503). The fence's shared row lock makes the bump wait for the claims in flight, so the new ledger reads
-//! every seat the old process committed. The mutex is never held across an `.await`.
+//! `app.seat_epoch` (migration 0054) inside the transaction that writes its seats: boot bumps the epoch,
+//! which waits for the claims in flight, before it fills the ledger, and a claim on an older epoch writes
+//! nothing (`StoreError::Fenced`, answered 503). The mutex is never held across an `.await`.
 
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Mutex, MutexGuard};

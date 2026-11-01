@@ -448,9 +448,9 @@ pub async fn replaces_left(tx: &mut Tx<'_>, profile_id: &str, now: i64) -> Store
 /// [[R2210000]]: replaces the held quest `quest_id` at `now`, in the caller's transaction. The
 /// account is locked first (R1301003) and topped up, so a second replace at once waits and then
 /// reads what this one wrote: at most `QUEST_REPLACES_PER_DAY` land in a UTC day. The quest leaves
-/// with its progress, a `removed` row, and one drawn as an arrival is takes its slot, dated `now`;
-/// the schedule is untouched. A refusal writes nothing but the top-up's own arrivals, which a
-/// quests read writes too, and the caller drops the transaction.
+/// with its progress, a `removed` row, and one drawn as an arrival takes its slot, dated `now`; the
+/// schedule is untouched. A refusal writes nothing but the top-up's own arrivals, and the caller drops
+/// the transaction.
 pub async fn replace_quest(
     tx: &mut Tx<'_>,
     profile_id: &str,

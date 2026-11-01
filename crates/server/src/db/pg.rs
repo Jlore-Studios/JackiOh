@@ -4692,9 +4692,7 @@ pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result
     })
 }
 
-/// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
-/// result, a final hash (R768; a ceiling draw has none, R112, R1253000), a log the purge has not
-/// taken and no game record, even an emptied one (R1044001). Earliest ended first, then by id.
+/// R1596000 (R768, R112, R1253000, R1044001): the rows `Tx::game_records_unfiled` names, in its order.
 pub async fn game_records_unfiled(
     t: &mut PgTx<'_>,
     ended_after: i64,
@@ -7843,8 +7841,8 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //  * redemption limits. §9.4's "more than 5 attempts", "more than 20" and "the last hour" are written into
 //    `app.redeem_invite_code`'s body, and the breaker's knobs into `app.settings`, so neither can read
 //    `ApiLimits`; the in-memory store takes all three as options defaulting to the `src/config.rs` constants.
-//  * attempt reason. `CodeAttempt.reason` has no column in `public.code_attempts`, so it is dropped on write
-//    and a round-trip cannot return it; `redeem` returns a result code, likewise.
+//  * attempt reason. `CodeAttempt.reason` has no column in `public.code_attempts`: it is dropped on write,
+//    and `redeem` returns only a result code.
 //  * redemption's email check. The SQL reads `auth.users.email_confirmed_at` itself; the in-memory store uses
 //    `RedemptionSettings.email_verified`. The server refuses an unverified caller (R159) before either store.
 //  * redemption's circuit breaker. The SQL also refuses on its own count of recent failures (R106); the
@@ -7882,8 +7880,7 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //  * R254's decks. A deck migration 0007 made from a loadout holds its cards in `app.resolve_deck` order,
 //    which is card-id order; every deck saved since keeps the order it was saved in.
 //  * launch grant. Migration 0002's trigger grants every NON-TOKEN card of the current catalog version; the
-//    fake also skips BANNED ids (§9.4 L6), so with a banned card in the catalog the database grants one the
-//    fake does not.
+//    fake also skips BANNED ids (§9.4 L6), which the database grants.
 //  * action timestamps. `app.append_match_action` stamps `at` with the database clock and `match_actions` is
 //    append-only, so the caller cannot write `MatchActionRow.at`. `seq` order is unaffected; only a replay
 //    tool and `timing-backfill` (R1442) read `at`, so their think times run from commit to commit.

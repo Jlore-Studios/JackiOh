@@ -936,8 +936,8 @@ pub struct AiWinRate {
 
 /// #750 (R1454): a ladder bot's random decks lean on the cards that win, by its `strength` (0 to 1;
 /// `deck.rs`'s `win_rate_weight` holds the formula), so a deal with no strength is the one the seed
-/// always dealt. 20 games is CN Tech's floor and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits under
-/// `AI_DECK.themeBoost` (4.0), so a win rate never outweighs the theme or the curve.
+/// always dealt. 20 games is CN Tech's floor and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits
+/// under `AI_DECK.themeBoost` (4.0), so a win rate never outweighs the theme or the curve.
 pub const AI_WIN_RATE: AiWinRate = AiWinRate {
     min_games: CN_TECH_MIN_GAMES,
     max_boost: 3.0,

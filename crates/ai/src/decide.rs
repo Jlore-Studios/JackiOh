@@ -205,8 +205,7 @@ fn fat_width(probe: &GameState, candidates: usize) -> usize {
 
 /// The budget a decision of `fat` width spends (AI_SEARCH.fat_*): `nodes`, at most `fat_budget_nodes`
 /// (R2575000), in inverse proportion to the width past fat_reference, floored at fat_min_nodes; the
-/// lethal solver keeps its share of it, floored at fat_min_lethal. The search's shape
-/// (determinizations, widths, depths, finalists) is the caller's unchanged.
+/// lethal solver keeps its share of it, floored at fat_min_lethal. The search's shape is unchanged.
 fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
     let reference = AI_SEARCH.fat_reference.max(1) as usize;
     let nodes = if fat <= reference {
@@ -259,9 +258,8 @@ fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: Playe
 }
 
 /// R1452: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
-/// or below, or with fewer than two finalists, the first best, with no draw. Otherwise a softmax
-/// over the means: each weighs `e^((mean − best) / temperature)`, and one draw lands on the first
-/// finalist whose running sum of weights passes it.
+/// or below, or with fewer than two finalists, the first best, with no draw; otherwise one draw on a
+/// softmax over the means.
 pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
     let mut best_index = 0usize;
     for (index, mean) in means.iter().enumerate() {
