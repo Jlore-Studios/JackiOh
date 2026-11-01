@@ -12083,6 +12083,12 @@
         "tiers": {
           "claude": "strong"
         }
+      },
+      "wip": {
+        "at": "2026-11-01T10:57:38Z",
+        "provider": "claude-2",
+        "sha": "75d6c23feb165c83a0319c53762c3b89d2b33cd3",
+        "start": "e47b25dbcdb51e35d9a73e0eedf56e6bb20da5cc"
       }
     }
   },
