@@ -3334,6 +3334,7 @@
   "Chase Shard": "追猎碎片",
   "Nothing to buy yet": "暂时没有可兑换的外观",
   "The bar is full — pick a chase:": "进度条已满——挑选一个追猎外观：",
+  "Buy {name}? This spends your full Chase Shard bar.": "购买{name}？这将消耗整个追猎碎片进度条。",
   "Chase": "追猎",
   "Collection": "收藏",
   "Shop": "商店",

@@ -380,9 +380,9 @@ net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for
                         the lobby
 net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
                         its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
-                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack wait on it,
-                        Buy, Open and Open all turning economy/spend.css's wheel, and a 429 keeps its
-                        press's key
+                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack and the
+                        cosmetic pack panel's Open and chase Buy (R2683000) wait on it, Buy, Open and Open
+                        all turning economy/spend.css's wheel, and a 429 keeps its press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
@@ -486,7 +486,9 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
-                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
+                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
+                        inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
+                        focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
                         refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
                         read the account again (`onChanged`, `revision`) (`shop.ts` holds the
