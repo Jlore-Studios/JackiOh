@@ -184,9 +184,8 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn s5_1_my_pawn_fires_once_it_cannot_fire_again_on_an_attack_its_own_ai_turn_declares() {
-        // p1's Deft Duelist, which
-        // has already switched, can still attack the hero for 4, which is lethal at 4 — and a Trap that
-        // has fired is spent (§5.1), so nothing cancels it.
+        // p1's Deft Duelist, which has already switched, can still attack the hero for 4, which is lethal
+        // at 4 — and a Trap that has fired is spent (§5.1), so nothing cancels it.
         let mut s = setup(json!({
             "seed": "hunt-cw-pawn-twice-a",
             "p1": { "field": [SORCERER, DUELIST], "library": [GIGA, GIGA] },
@@ -215,8 +214,8 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn r152_r44_r82_the_ai_plays_out_only_the_rest_of_the_turn_my_pawn_took_not_the_players_next_turn() {
-        // p2 has nothing it can
-        // do, so R82 auto-ends turn 10 inside that same reduction and p1's turn 11 begins — p1's own.
+        // p2 has nothing it can do, so R82 auto-ends turn 10 inside that same reduction and p1's turn 11
+        // begins — p1's own.
         let mut s = setup(json!({
             "seed": "hunt-cw-pawn-next-turn",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
@@ -835,8 +834,8 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     #[test]
     fn r212_r171_a_unit_a_trap_in_the_window_stole_answers_the_declaration_for_the_player_who_controlled_it_then_s10_3()
      {
-        // p1's own trap in the window steals the Watcher, so the
-        // attack is over (R220). The Watcher's "whenever a unit attacks, you draw" answers a declaration
+        // p1's own trap in the window steals the Watcher, so the attack is over (R220). The Watcher's
+        // "whenever a unit attacks, you draw" answers a declaration
         // made while p2 controlled it: p2 draws, not p1 (R212's "a card whose controller has changed
         // since answers for the one it had").
         let mut s = setup(json!({

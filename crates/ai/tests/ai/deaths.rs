@@ -1,9 +1,8 @@
 //! A unit's Death in the AI's evaluation (R2424000): at a decision's root the AI prices each Death it
 //! can read, on either field and among its own hand's Units (placed first), as its controller's
 //! evaluation after the sandbox's destroy less after its remove (R923003); `unit_worth` adds
-//! `AI_EVAL.death` of the price and `kill_worth` takes the whole of it off a kill, so a unit that comes
-//! back bigger is worth more alive and less to kill, and one whose Death hurts its owner is worth less.
-//! The frozen baseline reads no price, and a call not passed a decision's prices reads none.
+//! `AI_EVAL.death` of the price and `kill_worth` takes the whole of it off a kill. The frozen baseline
+//! reads no price, and a call not passed a decision's prices reads none.
 //!
 //! The cards: Trigor, whose Death summons a Trigor with this one's base stats +3/+3; Floodgates, whose
 //! Death destroys all your Units; Training Dummy, whose Death adds a random Radiant Training Grounds

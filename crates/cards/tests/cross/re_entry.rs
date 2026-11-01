@@ -1,6 +1,6 @@
 //! Leaving the field, coming back, and what travels with a card between zones (SPEC §3.2, §4.5, R11,
 //! R13, R47, R57, R64, R76, R78, R83, R174, R175). Found by the polish-4 edge-case hunt
-//! (docs/polish/4-edge-cases.md, lenses L1, L2 and L8); every case here failed before its fix.
+//! (docs/polish/4-edge-cases.md, lenses L1, L2 and L8).
 //!  - R174: #50 K-Pop Fanatic's delayed steal fizzles on a target that has left the field since it was
 //!    chosen, even when the same card is back — bounced and replayed, or returned by Reborn — and on
 //!    a target dormant under a Stack pile when it fires (R13, R76).
@@ -698,11 +698,10 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.expect_in_zone(fused.id.as_str(), "hand");
         until_active(&mut g, PlayerId::P1);
         until_active(&mut g, PlayerId::P2);
-        // Silas's part rotates right (from p2's seat p1's backrow
-        // 3 -> 2), and lane 2 is held, so the prey is bounced to p1's hand (R14, R88); the Kpop part then
-        // schedules the steal of the prey, which has already left the field. The Lock alone bounced it
-        // until patch v0.3.10 (a rotation enters a Locked zone now, R831000), so the zone is held here
-        // as a dying Reborn unit's is (§3.2, R64).
+        // Silas's part rotates right (from p2's seat p1's backrow 3 -> 2), and lane 2 is held, so the prey
+        // is bounced to p1's hand (R14, R88); the Kpop part then schedules the steal of the prey, which has
+        // already left the field. A rotation enters a Locked zone (R831000), so the zone is held here as a
+        // dying Reborn unit's is (§3.2, R64).
         jackioh_engine::zones::reserve_zone(
             g.state_mut(),
             ZoneRef {
@@ -839,10 +838,8 @@ mod r174_r78_a_later_part_of_a_cry_acting_on_the_card_itself_once_an_earlier_par
         g.play(card.as_str(), json!({ "zone": 5, "modes": ["right"] }));
         g.expect_in_zone(card.as_str(), "hand");
 
-        // It is aimed at the card on the field, whose stay has
-        // ended (R174: "a fused card's part aimed at a card an earlier part has taken off the field
-        // fizzles"), so the coins buff nothing — least of all a card in a hand, which R78 has just made
-        // the printed card again.
+        // The Gary part is aimed at the card whose stay has ended (R174: "a fused card's part aimed at a
+        // card an earlier part has taken off the field fizzles"), so the coins buff nothing.
         assert_eq!(g.card(card.as_str()).buffs, AttackHealth { attack: 0, health: 0 });
     }
 }
@@ -1083,9 +1080,7 @@ mod c4_5_step_4_r89_the_reborn_bodies_of_one_check_return_together {
     fn c4_5_a_felinor_fiender_and_the_felinor_feeding_it_that_come_back_through_reborn_in_one_check_leave_the_fiender_at_the_same_health_whichever_lane_is_first_r89_r116()
      {
         jackioh_cards::register_all();
-        // Fiender first:
-        // it is read with Mrow still in the graveyard, 8 max and 1 left, and Mrow's return then lifts it
-        // to 3. §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
+        // §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
         assert_eq!(fiender_after_reborn(1, 2), fiender_after_reborn(2, 1));
     }
 }
@@ -1342,8 +1337,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
             json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }),
         );
 
-        // The kept card "still reads what it remembered before" (R102): its two Cubes copy a Timmy twice
-        // and a Mr.
+        // The kept card "still reads what it remembered before" (R102).
         let row = unit_row(&s);
         assert_eq!(count(&row, TIMMY), 2);
         assert_eq!(count(&row, MR_VANILLA), 2);

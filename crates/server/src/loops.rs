@@ -1,16 +1,13 @@
 //! The background loops' supervisor (#842). `app::serve` spawns each of its loops through
 //! `spawn_supervised`: SPEC §9.5's matchmaker sweep, series sweeper and reaper, the retention purge
-//! and the bot pool (R1454). A panic that unwinds out of a loop is caught, logged as `loop.crashed`
-//! (an alert) under the loop's name, and the loop starts again `LOOP_RESTART_DELAY_SECONDS` later,
-//! logged as `loop.restarted`. Every loop runs until it is aborted, so one that returns has stopped
-//! doing its work: the return is logged as `loop.returned` (an alert) and the loop starts again the
-//! same way (#1093). Only a panic or a return reaches the supervisor; a loop's per-tick `Result`
-//! handling is its own. No SPEC section or ruling: restarting is operational, not a rule.
+//! and the bot pool (R1454). A panic out of a loop is logged as `loop.crashed`, and a return, since
+//! every loop runs until aborted, as `loop.returned` (#1093), both alerts; either way the loop starts
+//! again `LOOP_RESTART_DELAY_SECONDS` later. A loop's per-tick `Result` handling is its own. No SPEC
+//! section or ruling: restarting is operational, not a rule.
 //!
-//! The panic is caught on each poll of the loop's future (`std::future::poll_fn` around
-//! `catch_unwind`), as `actor/registry.rs` catches the engine's, so the loop runs on the
-//! supervisor's own task and aborting the returned handle stops both: an abort during the restart
-//! wait starts no replacement.
+//! The panic is caught on each poll of the loop's future (`catch_unwind`), as `actor/registry.rs`
+//! catches the engine's, so the loop runs on the supervisor's own task and aborting the returned
+//! handle stops both: an abort during the restart wait starts no replacement.
 
 use std::future::Future;
 use std::panic::{AssertUnwindSafe, catch_unwind};

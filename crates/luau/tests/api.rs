@@ -1344,7 +1344,6 @@ fn gap14_shared_hook_resolves_named_hooks_on_the_running_face() {
 /// Radiant face (#871). An adapter looks its function up under the key it was built for, so the
 /// faces get one adapter each, and each runs its own face's function, its named `each_card`
 /// included, whatever face the context names (a Radiant ingredient fused into a base host, #765).
-/// One adapter shared by the two looked `cry` up on the Radiant face and found nothing.
 #[test]
 fn one_function_under_another_hook_on_each_face_runs_on_both_faces() {
     use jackioh_engine::testkit::{EngineSink, PlayerId, Rng};

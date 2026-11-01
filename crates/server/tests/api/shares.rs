@@ -20,9 +20,7 @@ const PLAYED_ACTIONS: usize = 8;
 /// An hour, in milliseconds: how long before its end a seeded match began.
 const HOUR_MS: i64 = 3_600_000;
 
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
+// Plumbing
 
 async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;

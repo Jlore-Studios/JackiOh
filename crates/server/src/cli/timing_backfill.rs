@@ -5,15 +5,13 @@
 //! jackioh-server timing-backfill
 //! ```
 //!
-//! Every finished match whose log `public.match_actions` still holds (the retention purge keeps a log
-//! `MATCH_ACTION_RETENTION_DAYS`) and that has no action timing yet is folded by `actor::telemetry::replay`,
-//! as a rebuilt actor folds it, and its rows are written as the live path writes them, one transaction per
-//! match. The log's `at` stamps stand in for the pushes, so the rows carry no clock and no rank bucket. The
-//! store leaves out the moves of an account deleted since (R1442: a deletion is never undone), and lists no
-//! match with neither account left. Nothing else is backfilled: emotes and a match's signals never reached
-//! the log. A match the engine does not fold whole (a logged action it refuses, a deck it cannot build) is
-//! skipped, since its rows would describe another game, and so is one in which no person made a move (every
-//! action the clock's); the next run folds and skips each again.
+//! Every finished match whose log `public.match_actions` still holds and that has no action timing
+//! yet is folded by `actor::telemetry::replay`, as a rebuilt actor folds it, and its rows are written
+//! as the live path writes them, one transaction per match. The log's `at` stamps stand in for the
+//! pushes, so the rows carry no clock and no rank bucket. The store leaves out the moves of an account
+//! deleted since (R1442: a deletion is never undone). Emotes and signals never reached the log, so
+//! nothing else is backfilled. A match the engine does not fold whole is skipped, since its rows would
+//! describe another game, and so is one in which no person made a move.
 
 use anyhow::bail;
 

@@ -3,14 +3,10 @@
 //! When the server finds a match its own log does not reproduce (§9.3's determinism break), it keeps
 //! the match going ("a live match is better than a dead one", `actor::registry::rebuild`), logs the
 //! finding (`bug.found`) and files one GitHub issue the night bot builds (`BUG_REPORT_LABELS`:
-//! `bot:build`, bot/README.md). It looks in six places:
-//!
-//!  - a 1v1 rebuild whose fold refuses an action the log holds (`actor::registry`);
-//!  - a co-op rebuild that does (`duos::registry`);
-//!  - the reaper's recovery fold that does (`api::results`);
-//!  - a finished match whose log does not fold to its end (`api::game_records`);
-//!  - a 1v1 live action whose `reduce` panicked (`actor::match_actor`, R1253000);
-//!  - a co-op one (`duos::actor`).
+//! `bot:build`, bot/README.md). It looks where a fold refuses an action the log holds (a 1v1 or co-op
+//! rebuild, `actor::registry`, `duos::registry`; the reaper's recovery fold, `api::results`), where a
+//! finished match's log does not fold to its end (`api::game_records`), and where a live 1v1 or co-op
+//! action's `reduce` panicked (`actor::match_actor`, R1253000; `duos::actor`).
 //!
 //! The repository is public and the match may still be live, so a report names each match, where it
 //! was found, the build, the catalog, and each refused row's seq, seat and action type: never a
@@ -18,12 +14,11 @@
 //! opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
 //! log does not reproduce").
 //!
-//! Findings group by `Signature`: one issue per signature, titled with its first match and the
-//! signature, its body listing each match the process sees with it once, up to
-//! `BUG_REPORT_LISTED_MATCHES`. At most `BUG_REPORTS_PER_WINDOW` issues are opened in
-//! `BUG_REPORT_WINDOW_MS`, and none when an issue (open or closed) whose title holds the signature
-//! exists, so a restart files nothing twice; later matches are only logged. Without
-//! `CREATE_ISSUES_TOKEN` nothing leaves the process, and a test's app records what it would file.
+//! Findings group by `Signature`: one issue per signature, titled with its first match and the signature,
+//! listing each match the process sees with it once, up to `BUG_REPORT_LISTED_MATCHES`. At most
+//! `BUG_REPORTS_PER_WINDOW` issues are opened in `BUG_REPORT_WINDOW_MS`, and none when an issue (open or
+//! closed) whose title holds the signature exists, so a restart files nothing twice; later matches are only
+//! logged. Without `CREATE_ISSUES_TOKEN` nothing leaves the process; a test's app records what it would file.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};

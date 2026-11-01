@@ -291,7 +291,6 @@ pub struct OpenedRoom {
 
 /// Opens a room for `ttl_ms` unjoined; a challenge's lapses with it (B48, B49).
 pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, ApiError> {
-    // ---- end Social ----
     let profile_id = caller_of(req)?.profile.id.clone();
     // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
@@ -432,9 +431,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         .reserve(&[&profile_id, &room.host_profile_id], seat)
         .map_err(|taken| join_refusal(&profile_id, &taken))?;
 
-    // The atomic single-claim: whoever wins this statement is the guest, and there is no second
-    // winner (§9.5, mirroring `tickets_claim_pair`). Fenced first (R1523000): once a newer server's
-    // epoch has overtaken this one, nothing is claimed and the join answers 503.
+    // Atomic single-claim (§9.5, mirroring `tickets_claim_pair`): one winner is the guest. Fenced
+    // (R1523000): past a newer epoch nothing is claimed (503).
     let mut tx = app.db.begin(None).await?;
     tx.seats_fence(app.seats.epoch()).await?;
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;

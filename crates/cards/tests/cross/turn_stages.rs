@@ -442,11 +442,10 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
     #[test]
     fn r68_a_trap_answering_a_death_the_first_start_of_turn_delayed_effect_caused_fires_before_the_second_delayed_effect_10_3_4_5()
      {
-        // p2's radiant Suppressive Aura shrinks p2's enemies by -2/-2. p1's two K-Pop Fanatics take p2's
-        // Tempo Timmy and then p2's Mr. Vanilla at the start of p1's next turn, in that order (R68).
-        // Timmy (3/3 with 1 damage) stolen onto p1's side is at 0 health there and dies in the check
-        // after the first steal. p2's fixture trap answers a Tempo Timmy dying by returning p2's units to hand: it
-        // names it by definition, since Timmy dies on p1's side as p1's card (R2618000).
+        // p2's radiant Suppressive Aura shrinks p2's enemies by -2/-2, so Timmy (3/3 with 1 damage), the
+        // first of p1's two K-Pop Fanatics' steals (R68), dies in the check after it. p2's fixture trap
+        // answers a Tempo Timmy dying by returning p2's units to hand: it names it by definition, since
+        // Timmy dies on p1's side as p1's card (R2618000).
         let mut s = scenario(json!({
             "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 7, "library": [RENO, RENO, RENO] },
             "p2": {
@@ -713,9 +712,9 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
     #[test]
     fn r241_r155_r70_a_spell_cast_on_the_opponent_s_turn_with_78_s_at_end_of_turn_exile_your_hand_does_not_exile_its_caster_s_hand_at_the_end_of_the_caster_s_next_turn_6_2()
      {
-        // attack it: the Panther survives, so p1 draws 2 on p2's turn (#32, R426). The top card is a
+        // p2's #9 Moths makes p1's Panther attack and kill it, so p1 draws 2 on p2's turn (#32, R426): a
         // cast-on-draw Spell whose `delay` at the end of its controller's turn re-enters an `exileHand`
-        // step, so p1 casts it on p2's turn (§2.4, R70).
+        // step, cast on p2's turn (§2.4, R70).
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },

@@ -42,16 +42,12 @@ pub(crate) struct Trade {
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
-/// (`kill_worth`: a unit with Reborn unspent less the body it comes back as, §4.5 step 4, #1796), less
-/// what its own death removes when it dies too, with First Strike deciding who strikes first and no
-/// strike back at all on a Ranged attacker unless the target is Ranged too (R783000). A hit that kills
-/// nothing is worth a little per point dealt, so a second attacker can finish what the first started.
-/// A Cleave attack also prices what its splash kills or unshields on the neighbours (R63), at
-/// `AI_REPLY.cleave_share` of a killed unit's worth and of the Divine Shield weight. A Trample attacker's
-/// excess hits on the hero are priced as a face hit (`reply_face_value`, §4.4 step 9), and a Lifesteal
-/// attacker's add what healing its own hero is worth (`heal_worth`, step 8; #1820). `kills` and
-/// `splash_kills` say whether the strike kills the target or a neighbour; the move order reads all three
-/// (`candidates.rs`'s even trades, #1779, #1821).
+/// (`kill_worth`, #1796), less what its own death removes when it dies too, with First Strike deciding
+/// who strikes first and no strike back on a Ranged attacker unless the target is Ranged too (R783000).
+/// A hit that kills nothing is worth a little per point dealt, so a second attacker can finish what the
+/// first started. A Cleave splash is priced at `AI_REPLY.cleave_share` of what it kills or unshields
+/// (R63), a Trample excess as a face hit and a Lifesteal heal by `heal_worth` (#1820). The move order
+/// reads `kills` and `splash_kills` too (`candidates.rs`'s even trades, #1779, #1821).
 pub(crate) fn trade_value(
     state: &GameState,
     attacker: &CardInstance,

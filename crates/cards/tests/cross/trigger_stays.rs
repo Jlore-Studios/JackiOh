@@ -310,7 +310,8 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             },
         }));
         let trap = must(s.backrow(PlayerId::P2, 2), "p2's Bear Honeypot");
-        // a cast on draw is no play since #2179, R2179002, so no trap answers it.)
+        // A 2-cost Spell, so its own play is no "card costing 1 or less": it casts Hinder, then steals the
+        // enemy's backrow card in lane 2 (a cast on draw would be no play, #2179, R2179002).
         costed_fixture(
             &mut s,
             "edge-r8-draw-then-lift",
@@ -362,7 +363,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             GameEvent::ControlChanged { instance_id, controller: PlayerId::P1, .. } if *instance_id == trap.id
         )));
         // R212: the cast is answered as the board stood when it happened. p2's Honeypot saw its
-        // opponent play a card costing 1 or less, so it fires, and its tokens are p2's (R52's shape:
+        // opponent play a card costing 1 or less, so it fires, and its tokens are p2's (R52's shape).
         assert_eq!(trap_fired_for(s.events(), &trap.id), 1);
         assert_eq!(
             units_of(&s, PlayerId::P2)

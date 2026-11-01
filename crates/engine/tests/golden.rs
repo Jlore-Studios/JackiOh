@@ -19,12 +19,11 @@ use jackioh_engine::{
     hash_state,
 };
 
-// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, and
-// this file folds it with the real `reduce`, catalog and card scripts. It lives in the engine's tests,
-// which take `jackioh-cards` as a dev-dependency (§2), because a fold without the scripts registered
-// fizzles every Cry. The log is committed (`e2e/artifacts/` is gitignored, CI never runs Cypress), so
-// the fold always runs; the last test compares it with a local Cypress recording when there is one.
-// `HOTSEAT_HASH` is a literal: a fold compared with a fold would move together and prove nothing.
+// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, and this
+// file folds it with the real `reduce`, catalog and card scripts (`jackioh-cards` is a dev-dependency, §2:
+// a fold without the scripts registered fizzles every Cry). The log is committed (`e2e/artifacts/` is
+// gitignored), so the fold always runs. `HOTSEAT_HASH` is a literal: a fold compared with a fold would
+// move together and prove nothing.
 
 /// The recording, as `e2e/support/tasks/replay.ts` writes it: `{ seed, decks, log }`.
 #[derive(Deserialize)]

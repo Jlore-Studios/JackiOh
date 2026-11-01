@@ -58,9 +58,8 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         register_all();
         // R43, R151: a Heroic Power created later rolls "as it arrives anywhere a card can be looked at".
         // #95's "summon 5 random Field Spells or Traps into your backrow" puts one straight onto the field,
-        // never through a hand or a library (R428 took backrow meals from Carnivorous Cube). The roll is
-        // searched for at run time: #95's roll is the play's first rng draw and the first backrow pick, from
-        // the pool of every set (R380), follows it, so a card joining the pool moves nothing.
+        // never through a hand or a library (not a Cube's meal, R428). The roll is searched for at run
+        // time, so a card joining the pool of every set (R380) moves nothing.
         let seed = "r151-chaos";
         let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
         let backrow = subsystems::CHAOS_EFFECTS

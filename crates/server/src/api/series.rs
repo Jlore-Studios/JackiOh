@@ -179,10 +179,9 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
     let existing = one_tx!(app.db, |t| t.matches_get(&match_id).await?)?;
     if let Some(existing) = existing {
         if matches!(existing.status, crate::db::store::MatchStatus::Live) {
-            // Started, and then the process stopped before the in-match flags were written: the match
-            // itself rebuilds from its log when a socket arrives, so only the flags need healing.
-            // A seat another match holds meanwhile cannot be healed now; the game is reported as
-            // not started by this call either way, and a later transition retries it (R890000).
+            // Started, then the process stopped before the in-match flags were written: the match
+            // rebuilds from its log, so only the flags need healing. Either way this call reports
+            // the game not started, and a later transition retries a seat taken meanwhile (R890000).
             if mark_in_match(app, &seats, &match_id).await? {
                 lease.commit();
             } else {
@@ -236,14 +235,10 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
     // in-match reference points at, and only the start writes it.
     let marked = mark_in_match(app, &seats, &match_id).await;
     if !matches!(marked, Ok(true)) {
-        // Anything but both seats flagged undoes this game. A seat that found another game mid-start
-        // keeps that game; a write a newer server's epoch fenced leaves the game to that server; a failed
-        // write would leave a live match nobody is flagged into, which `app.matches.has` keeps every later
-        // start from retrying. Stop the actor, erase the live match with no result (R679), whose
-        // `on delete set null` releases any flag this start wrote, and report a game that never started,
-        // so the next transition or the sweeper (R263) retries with the same `next_match_id`. The ledger
-        // granted both seats, so the compare-and-set's refusal is drift (R1523000); the lease puts both
-        // sides back between games as it drops.
+        // Anything but both seats flagged undoes this game: a live match nobody is flagged into would
+        // keep every later start from retrying (`app.matches.has`). Erasing it with no result (R679)
+        // lets `on delete set null` release any flag this start wrote, and the next transition or the
+        // sweeper (R263) retries the same `next_match_id`. A compare-and-set refusal is drift (R1523000).
         if matches!(marked, Ok(false)) {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             tracing::info!(

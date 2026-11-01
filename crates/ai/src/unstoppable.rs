@@ -30,11 +30,9 @@ use crate::simulate::{LineStatus, create_node_counter, line_status, search_signa
 use crate::types::NodeCounter;
 
 /// R2660000: whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing
-/// it can do this turn stops. It fills `redact(state, seat)` minus the opponent's hand and face-down cards
-/// (`showing_only`) as `UNSTOPPABLE_LETHAL_DETERMINIZATIONS` worlds drawn from `UNSTOPPABLE_LETHAL_SEED`'s
-/// own stream, and holds only when every line of the seat's turn loses on every one (`doomed_on`), within
-/// `UNSTOPPABLE_LETHAL_NODES` nodes in all. False outside the seat's own main phase, with a prompt open,
-/// after the game is over, on a panic, and when the walk is cut short by the nodes or by `should_stop`.
+/// it can do this turn stops: every line of its turn loses (`doomed_on`) on every world of what shows
+/// (`showing_only`), within `UNSTOPPABLE_LETHAL_NODES` nodes in all. False outside the seat's own main
+/// phase, with a prompt open, after the game is over, on a panic, and when the walk is cut short.
 pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool {
     let own_main = state.active == seat && state.phase == Phase::Main;
     if state.result.is_some() || state.pending.is_some() || !own_main {
@@ -82,10 +80,9 @@ fn showing_only(mut public: GameState, seat: PlayerId) -> GameState {
 }
 
 /// R2660000: whether every line `seat` can play this turn on `world` ends lost: by the end of its own
-/// turn, or by a lethal the opponent's board then has (`board_lethal`). It tries every legal action but
-/// the ones R84 skips and the mulligan, "end turn" first, a position once (`position_key`). A step that
-/// fails, that the nodes cut, or that leaves anything to chance (`sure_step`) is an escape, and so is a
-/// line that ends in anything but the opponent's win.
+/// turn, or by a lethal the opponent's board then has (`board_lethal`), each position once
+/// (`position_key`). A step that fails, that the nodes cut, or that leaves anything to chance
+/// (`sure_step`) is an escape, and so is a line that ends in anything but the opponent's win.
 fn doomed_on(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> bool {
     let root_turn = world.turn;
     let mut visited: IndexSet<String> = IndexSet::new();

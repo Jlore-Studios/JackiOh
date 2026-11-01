@@ -56,10 +56,9 @@ pub struct E2EAccount {
     pub dev: bool,
 }
 
-/// §9.4 makes a verified email a precondition of redemption ("reject unless the account is pending
-/// with a verified email"), and spec 10 asserts `emailVerified === true` on the *pending* account
-/// before it redeems. So every fixture is verified; what distinguishes `e2e-pending` and `e2e-econ`
-/// is their `profiles.status`, which is the only thing §9.4's gate reads.
+/// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts
+/// `emailVerified === true` on the pending account before it redeems, so every fixture is verified;
+/// `profiles.status`, the only thing §9.4's gate reads, tells them apart.
 pub const E2E_ACCOUNTS: &[E2EAccount] = &[
     E2EAccount {
         user_id: "e2e-p1",
@@ -178,8 +177,7 @@ const EXPIRED_CODE_AGE_MS: i64 = 60 * 60 * 1000;
 
 /// R161's default, which the fixtures take rather than choosing: `max_uses` of one matches
 /// `DEFAULT_INVITE_CODE_MAX_USES` in `codes.rs` and the db agent's `max_uses int not null default 1`,
-/// so the exhausted fixture is exhausted at one use. Restating the number is all this does; it
-/// decides nothing.
+/// so the exhausted fixture is exhausted at one use.
 const FIXTURE_CODE_MAX_USES: i64 = 1;
 
 // R144: the reseed

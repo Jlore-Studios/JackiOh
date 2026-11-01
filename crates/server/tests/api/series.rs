@@ -38,9 +38,7 @@ const ALICE_ACCOUNT: (&str, &str) = ("e2e-p1", "e2e-token-p1");
 const BOB_ACCOUNT: (&str, &str) = ("e2e-p2", "e2e-token-p2");
 const STRANGER_ACCOUNT: (&str, &str) = ("e2e-pending", "e2e-token-pending");
 
-// ---------------------------------------------------------------------------
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
-// ---------------------------------------------------------------------------
 
 /// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {

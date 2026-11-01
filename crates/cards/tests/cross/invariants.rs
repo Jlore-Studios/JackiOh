@@ -1299,8 +1299,7 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
 /// R1122, R2285002: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
 /// combat is fought there, so a Classic Golem's "when this attacks" transforms the Unit it was re-aimed
 /// at, and a Golem that kills the Unit that took its place killed its defender (R42) and may attack
-/// again: I4 reads it as readied through the redirect and the transform both (#1645; R424's
-/// self-transform was its first shape).
+/// again: I4 reads it as readied through the redirect and the transform both (#1645, R424).
 mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     use super::*;
 

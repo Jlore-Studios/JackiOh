@@ -139,11 +139,9 @@ fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
 }
 
 /// The play's events read for whose generation each one is: the swept card's ids (a card set
-/// face-down takes a fresh id, which the events that set it name through `formerId`, R227), and for
-/// each event whether a card the play cast was resolving when it came (after that card's
-/// `cardPlayed`, before its `cardResolved`), and whether one still is. What a cast card makes is that
-/// card's own generation, swept under its own id, not the caster's (R387): C+ #47 Jogg's Box never
-/// casts itself, but a card it casts, C+ #27 Zephrys Zealotism, may deal one.
+/// face-down takes a fresh id, named through `formerId`, R227), and for each event whether a card the
+/// play cast was resolving when it came, and whether one still is. What a cast card makes is its own
+/// generation, not the caster's (R387), as C+ #27 Zephrys Zealotism's is when C+ #47 Jogg's Box casts it.
 struct Attribution {
     own_ids: IndexSet<String>,
     in_cast: Vec<bool>,

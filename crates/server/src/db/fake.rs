@@ -3,26 +3,22 @@
 //! (`E2E=1`, [`create_e2e_store`]) and not otherwise (`FakeData::default()`, the unit tests' store).
 //!
 //! R144 makes the server reseed its fixture accounts and invite codes at boot, and the e2e suite has no
-//! Postgres, so this test fixture lives in `src/`: `src/app.rs` chooses it at boot, only when `env.E2E` is
-//! true (`src/env.rs` refuses `E2E` with `NODE_ENV=production`). The real implementation is `src/db/pg.rs`.
+//! Postgres, so this test fixture lives in `src/`: `src/app.rs` chooses it only when `env.E2E` is true
+//! (`src/env.rs` refuses `E2E` with `NODE_ENV=production`). The real implementation is `src/db/pg.rs`.
 //!
 //! It is strict everywhere Postgres is strict (SPEC §9.4, §9.5), or a laxer fixture would let a real bug pass
 //! the suite: a transaction snapshots every table at `begin`, restores it unless committed and runs one at a
-//! time (the `tokio::sync::Mutex` behind `Db::Fake`); `redeem` runs §9.4's six steps in order and answers
-//! `app.redeem_invite_code`'s seven result codes; claims are single-shot (§9.4 step 6, §9.5);
-//! `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any other
-//! clash as `StoreError::SeqClash` (append-only, §9.3, R776000); `tickets_insert` refuses a second open
-//! ticket per profile (`tickets_profile_queued_key`, which `queue.rs` relies on). So are the decks, trios and
-//! Conquest series (R250–R263), tutorial progress (R320), player settings (R633, R634), custom cards
-//! (R915008), deck versions (R2100000), ranked tables (R608, R609, R611) and game records (R376, R378), in
-//! migrations 0007, 0008, 0011, 0014, 0018, 0022, 0037 and 0066.
+//! time; `redeem` runs §9.4's six steps in order; claims are single-shot (§9.4 step 6, §9.5); the match log
+//! is append-only (§9.3, R776000); `tickets_insert` refuses a second open ticket per profile
+//! (`tickets_profile_queued_key`, which `queue.rs` relies on). So are the decks, trios and Conquest series
+//! (R250–R263), tutorial progress (R320), player settings (R633, R634), custom cards (R915008), deck versions
+//! (R2100000), ranked tables (R608, R609, R611) and game records (R376, R378).
 //!
-//! R111 IS A DATABASE TRIGGER, so it is implemented here rather than in a handler (SPEC §11 R111; R1310000,
-//! `config::STARTER_CARDS`, which Postgres reads from `app.settings.starter_cards`): `profiles_set_status`
-//! carries it, writing both tables as `grant_cards` in `collection.rs` does with the same `LAUNCH_COPIES` and
-//! `LAUNCH_GRANT_REASON`, so the two can never drift. Each store method is a free function here of the same
-//! name (`db::store`'s `Tx` dispatches to it), taking the transaction first, and synchronous: the transaction
-//! already holds the one lock, so nothing awaits.
+//! R111 IS A DATABASE TRIGGER, so `profiles_set_status` carries it rather than a handler (SPEC §11 R111;
+//! R1310000, `config::STARTER_CARDS`, which Postgres reads from `app.settings.starter_cards`), writing both
+//! tables as `collection.rs`'s `grant_cards` does with the same `LAUNCH_COPIES` and `LAUNCH_GRANT_REASON`.
+//! Each store method is a free function of the same name, taking the transaction first, and synchronous: the
+//! transaction already holds the one lock.
 
 use std::sync::Arc;
 
@@ -208,22 +204,17 @@ pub struct FakeTables {
     // acceptance per profile and terms version.
     pub age_checks: Vec<AgeCheckTableRow>,
     pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- migration 0038's tables.
+    // Social: friends, presence, challenges, chat (#937, #938, #941): migration 0038's tables.
     pub social: SocialTables,
-    // ---- Social: watching and shared replays (#939, #940) ----
-    // Migration 0038's `replay_shares` (friendships, blocks and the spectators setting are `social`'s).
+    // Social: watching and shared replays (#939, #940): migration 0038's `replay_shares` (friendships,
+    // blocks and the spectators setting are `social`'s).
     pub replay_shares: Vec<ReplayShare>,
-    // ---- end Social: watching and shared replays ----
-    // ---- Duos co-op (#946) ----
-    /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0039). Their store methods
-    /// are `crate::duos::store`'s.
+    /// Duos co-op (#946), Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0039).
+    /// Their store methods are `crate::duos::store`'s.
     pub duos: crate::duos::store::DuosTables,
-    // ---- end Duos co-op (#946) ----
-    // ---- Economy (SPEC §14, #1299) ----
-    /// §14.11: migration 0045's holdings and their ledgers. Their store methods are
-    /// `crate::economy::store`'s.
+    /// Economy (SPEC §14, #1299), §14.11: migration 0045's holdings and their ledgers. Their store
+    /// methods are `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
-    // ---- end Economy ----
     /// R1523000: migration 0054's `app.seat_epoch`, its one row's epoch (0 in an empty store).
     pub seat_epoch: i64,
 }
@@ -3362,7 +3353,7 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // 0034: the age check and the terms acceptances cascade with the profile.
     keep_only(&mut tables.age_checks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.terms_acceptances, |row| row.profile_id != profile_id);
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 0038 cascades too.
+    // Social (#937, #938, #941): 0038 cascades too.
     remove_social_rows(tables, profile_id);
     keep_only(&mut tables.tickets, |row| row.profile_id != profile_id);
     keep_only(&mut tables.rooms, |row| {
@@ -4136,7 +4127,7 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
     Ok(games)
 }
 
-// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// Social: friends, presence, challenges, chat (#937, #938, #941)
 // SPEC S7 (migration 0038), in memory. Strict where Postgres is strict: one row per pair, direction, message
 // and reporter as its unique keys say (`challenges_open_pair_key` among them), no request to oneself, a
 // message of 1 to `CHAT_MAX_CHARS` characters; every row goes with either profile it names
@@ -4811,8 +4802,7 @@ pub fn chat_reports_all(f: &mut FakeTx<'_>) -> Result<Vec<ChatReportListing>, St
     listed.sort_by(|a, b| (a.report.created_at, &a.report.id).cmp(&(b.report.created_at, &b.report.id)));
     Ok(listed)
 }
-// ---- end Social ----
-// ---- Social: watching and shared replays (#939, #940) ----
+// Social: watching and shared replays (#939, #940)
 // Watching a friend (B50) and sharing a replay with one (B52), over migration 0038's tables: strict
 // where Postgres is (a share names two profiles that exist, one row per match, sharer and friend).
 
@@ -4946,4 +4936,3 @@ pub fn shares_by(f: &mut FakeTx<'_>, match_id: &str, sharer: &str) -> Result<Vec
     shares.sort_by(|a, b| (a.created_at, &a.friend).cmp(&(b.created_at, &b.friend)));
     Ok(shares.into_iter().map(|row| row.friend.clone()).collect())
 }
-// ---- end Social: watching and shared replays ----

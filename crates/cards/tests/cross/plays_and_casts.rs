@@ -431,11 +431,10 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
     #[test]
     fn r2067000_r2179002_an_end_turn_s_hinders_beside_both_players_recyclers_stop_at_the_actions_cap() {
         register_all();
-        // Fuzz seed 9688 found the loop: each Hinder cast was a play #33 answered with three more Hinders
-        // (R70), so the library never ran dry, and its discard was answered by #64's draw, a chain of its
-        // own (R217). A cast on draw is no play (#2179, R2179002), so one library runs dry first: p1's end
-        // of turn (M #7's draw) casts 58 of its 60 (chains of 20, R58). The same action then starts p2's
-        // turn, whose draw sets off p2's Hinders and Recycler, and the cap counts either side's casts.
+        // Fuzz seed 9688's loop of #33's Hinders and #64's draws (R217): a cast on draw is no play (#2179,
+        // R2179002), so one library runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60
+        // (chains of 20, R58). The same action then starts p2's turn, whose draw sets off p2's Hinders and
+        // Recycler, and the cap counts either side's casts.
         let mut s = scenario(json!({
             "p1": {
                 "hand": [VANILLA, VANILLA],

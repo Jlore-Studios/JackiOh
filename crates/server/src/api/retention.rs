@@ -17,12 +17,10 @@
 //!  - a spend's idempotency key and its kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written
 //!    (R2124000; `economy::idempotency::sweep_expired`, its own transaction).
 //!
-//! `app.rs` spawns `run_purge`, which runs it at boot and then every `RETENTION_PURGE_INTERVAL_SECONDS`,
-//! next to the match reaper. In Postgres it is one call to `app.purge_expired_rows` (migration 0013,
-//! with 0029's third cutoff and 0041's fourth). Before it purges, the loop files again any finished
-//! match's game record whose write failed (R1596000, `refile_unfiled`), so the purge never takes the log
-//! of a game the card statistics lack. Last, it settles any practice claim still unsettled
-//! `PRACTICE_SETTLE_GRACE_SECONDS` after it burned its seed (R2422000, `api::practice::sweep_unsettled`).
+//! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
+//! and 0041's fourth). Before it purges, the loop refiles any game record whose write failed
+//! (R1596000), so the purge never takes the log of a game the card statistics lack; last, it settles
+//! the practice claims left unsettled (R2422000, `api::practice::sweep_unsettled`).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -87,9 +85,8 @@ pub async fn refile_unfiled(app: &App) -> Result<usize, StoreError> {
     Ok(filed)
 }
 
-/// The retention purge's loop: once now, since a free instance may sleep before an hour is up, and
-/// then on its interval. A failure is logged and the next run tries again. Never returns; `app.rs`
-/// spawns it.
+/// The retention purge's loop: once now, since a free instance may sleep before an hour is up, then
+/// every `RETENTION_PURGE_INTERVAL_SECONDS`; a failure is logged and the next run tries again.
 pub async fn run_purge(app: Arc<App>) {
     loop {
         // R1044000: the records written before the totals are folded first, in transactions of their

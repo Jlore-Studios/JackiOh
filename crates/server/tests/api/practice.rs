@@ -1474,9 +1474,7 @@ async fn r1688000_a_refused_claim_is_not_tried_again() {
     assert_unpaid(&app).await;
 }
 
-// ---------------------------------------------------------------------------
 // A claim settled once, after a restart or a failed pay (R2422000).
-// ---------------------------------------------------------------------------
 
 /// One sweep of the unsettled claims, as the retention loop runs it.
 async fn sweep(app: &Arc<App>) -> Swept {

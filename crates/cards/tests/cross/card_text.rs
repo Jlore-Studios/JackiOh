@@ -76,9 +76,7 @@ pub(super) const LABELS: &[&str] = &[
 
 /// R746 (issue #354): Bounce is a permanent's return from the field (R692). These faces return a card
 /// to hand from anywhere else (a Spell after it resolves or at the end of the turn, a card from the
-/// graveyard or exile) and say "Return … to hand", as they did before patch v0.2.10. Core #37
-/// Gravedigger's base face joined them in #911: it said "Add a random card from your graveyard to
-/// your hand", the one graveyard return that did not say "Return".
+/// graveyard or exile) and say "Return … to hand", Core #37 Gravedigger's base face among them (#911).
 const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "core-023 base",
     "core-023 radiant",
