@@ -4,7 +4,7 @@
 // #214 and #287, more than once each: its self checks ran out with them still open, the run
 // ended `built`, and deliver pushed it. Review runs then spent themselves finding them.
 //
-// bot/tests/test_markers.py, ported (PORTING.md §7).
+// bot/tests/test_markers.py, ported (#467).
 package tests
 
 import (

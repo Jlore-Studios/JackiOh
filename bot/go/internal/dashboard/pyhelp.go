@@ -1,7 +1,7 @@
 package dashboard
 
 // The few Python behaviours this module leans on that `py` and `pyjson` do not hold: kept private
-// here (PORTING §2), each naming the Python it stands for.
+// here, each naming the Python it stands for.
 
 import (
 	"strings"

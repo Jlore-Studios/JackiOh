@@ -1,7 +1,7 @@
 // The difficulty lanes: each role goes to the lane's weakest seat that meets its tier, and the
 // builder is never the planner (#695).
 //
-// bot/tests/test_lanes.py, ported (PORTING.md §7).
+// bot/tests/test_lanes.py, ported (#467).
 package tests
 
 import (

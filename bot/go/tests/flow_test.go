@@ -1,6 +1,6 @@
 // Plan, work and deliver together, against the fake GitHub and a real bare repository.
 //
-// bot/tests/test_flow.py, ported (PORTING.md §7). flowHarness is its Harness, which a score of
+// bot/tests/test_flow.py, ported (#467). flowHarness is its Harness, which a score of
 // other test files build on; flowAsk and flowReacted are its ask and reacted; flowMake,
 // flowUpdate and flowUpdateItem are the plan_mod.make and ctx.store.update calls the files make.
 package tests
