@@ -4,7 +4,7 @@
 // whether a busy day ran it short of memory. Each machine job now reads the kernel's memory
 // stall time, swapping and available memory as it goes.
 //
-// bot/tests/test_memory.py, ported (PORTING.md §7).
+// bot/tests/test_memory.py, ported (#467).
 package tests
 
 import (

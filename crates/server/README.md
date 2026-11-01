@@ -357,8 +357,8 @@ come within `WS_IDLE_TIMEOUT_SECONDS` is refused (R835002). The co-op actor hold
 holds, with four seats:
 
 - the seat is stamped from the verified token, the host's A1 and the guest's A2; B1 and B2 are the
-  AI's, played here through `duos_decide`, one action every `DUOS_AI_STEP_DELAY_MS`, whenever they owe
-  one;
+  AI's, played here through `duos_decide` at `DUOS_AI_BUDGET` (R2575000), one action every
+  `DUOS_AI_STEP_DELAY_MS`, whenever they owe one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
   illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
   log with `duos_fold` on the blocking pool, only for a profile that holds a seat and, once the match
@@ -624,7 +624,7 @@ series still makes its picks.
   `{seed_base}:bot-pick:{seat}:{game}`, from the series seed no client holds. A series game draws
   its bot no rematch plan (`MatchActorInput::series_game`), as a series game offers no rematch.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
-  budget, a softmax temperature, a chance to miss a lethal and, R747000, a skill) on the spec's
+  budget (the middle two strengths' `BOT_MID_STRENGTH_BUDGET`, R2575000), a softmax temperature, a chance to miss a lethal and, R747000, a skill) on the spec's
   resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
   acting clock, the search's deadline too; a move whose write failed is decided again

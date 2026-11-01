@@ -1,7 +1,7 @@
 // #1409: a suggestion opens with the priority label its class maps to in `.harness/config.json`
 // (`suggestions.priorities`), and approving it keeps that label.
 //
-// bot/tests/test_suggestion_priority.py, ported (PORTING.md §7).
+// bot/tests/test_suggestion_priority.py, ported (#467).
 package tests
 
 import (

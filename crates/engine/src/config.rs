@@ -52,7 +52,8 @@ pub const SETUP_TURN: i32 = 0;
 /// end.
 pub const TURN_CAP_PLAYER_TURNS: i32 = 60;
 /// §2.4, R4 (decide): a card drawn or added to a full hand is burned. A player's own hand size, once an
-/// effect sets one (Meditative #79, R1143), is read in its place (`query::hand_cap_of`).
+/// effect sets one (Meditative #79, R1143), is read in its place (`query::hand_cap_of`). Whether a hand
+/// is full is `query::room_in`'s test, the one every rule reads.
 pub const HAND_CAP: i32 = 10;
 /// R1143: the most a set hand size may be (Meditative #79's `handSize` param's max), the most cards the
 /// client lays out in one hand.
@@ -299,7 +300,8 @@ pub fn fib(index: i32) -> i32 {
     FIB.get(clamped as usize).copied().unwrap_or(0)
 }
 
-/// R80: a library holds at most this many cards.
+/// R80: a library holds at most this many cards. Whether a library is full is `query::room_in`'s test,
+/// the one every rule reads.
 pub const LIBRARY_CAP: i32 = 60;
 
 /// §6.3

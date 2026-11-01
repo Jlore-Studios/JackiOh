@@ -1197,6 +1197,20 @@ pub struct BotStrength {
 /// (docs/bot-calibration.md, Results).
 pub const BOT_SEED_RATINGS: [f64; 5] = [1517.0, 1576.0, 1666.0, 1716.0, SKILL_ELO_ANCHOR];
 
+/// R2575000: the search budget of `BOT_STRENGTHS[2]` and `[3]`: the practice AI's `AI_BUDGET` before
+/// issue #2575 doubled it, kept so that `BOT_SEED_RATINGS`, calibrated on it (R748000), still hold.
+/// Raising it is a person's call, with a calibration after it.
+pub const BOT_MID_STRENGTH_BUDGET: jackioh_ai::SearchBudget = jackioh_ai::SearchBudget {
+    nodes: 600,
+    lethal_nodes: 150,
+    determinizations: 3,
+    beam_width: 4,
+    root_branching: 20,
+    branching: 6,
+    max_depth: 8,
+    finalists: 3,
+};
+
 /// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
 pub const BOT_STRENGTHS: &[BotStrength] = &[
@@ -1233,14 +1247,14 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         seed_rating: BOT_SEED_RATINGS[1],
     },
     BotStrength {
-        budget: jackioh_ai::AI_BUDGET,
+        budget: BOT_MID_STRENGTH_BUDGET,
         temperature: 1.0,
         missed_lethal_chance: 0.12,
         skill: 0.5,
         seed_rating: BOT_SEED_RATINGS[2],
     },
     BotStrength {
-        budget: jackioh_ai::AI_BUDGET,
+        budget: BOT_MID_STRENGTH_BUDGET,
         temperature: 0.4,
         missed_lethal_chance: 0.05,
         skill: 0.75,
@@ -2410,9 +2424,9 @@ pub const CHALLENGES_PER_HOUR: usize = 30;
 pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // ---- end Social ----
 // ---- Duos co-op (#946) ----
-// Fullsend SPEC S6 (#936): the Duos co-op rooms and their four-seat actor (`src/duos/`). Every one is
-// exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board renders the same clocks and
-// the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
+// Fullsend SPEC S6 (#936): the Duos co-op rooms and their four-seat actor (`src/duos/`). Every one
+// but `DUOS_AI_BUDGET` is exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board
+// renders the same clocks and the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
 
 /// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
 /// not ended has its prompts answered by the AI and its turn ended (`duos::actor`).
@@ -2426,6 +2440,19 @@ pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
 /// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
 /// the AI team's turn.
 pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+/// R2575000: the search budget of each AI-played Duos seat (`duos::actor`, cut short at
+/// `BOT_DECISION_DEADLINE_MS`): the practice AI's before issue #2575 doubled it, so the server's work
+/// per AI step does not double. Raising it is a person's call. Only the server reads it.
+pub const DUOS_AI_BUDGET: jackioh_ai::SearchBudget = jackioh_ai::SearchBudget {
+    nodes: 600,
+    lethal_nodes: 150,
+    determinizations: 3,
+    beam_width: 4,
+    root_branching: 20,
+    branching: 6,
+    max_depth: 8,
+    finalists: 3,
+};
 /// S6, B34: how long an unjoined co-op room stays open.
 pub const DUOS_ROOM_TTL_MS: i64 = 600_000;
 /// S6, B39: the pings one seat may send inside `PING_RATE_WINDOW_MS`; the rest are dropped silently.

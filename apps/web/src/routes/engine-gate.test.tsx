@@ -148,6 +148,7 @@ describe("#778 the screens that never call the engine", () => {
     ["/privacy", "privacy-screen"],
     ["/terms", "terms-screen"],
     ["/accessibility", "accessibility-screen"],
+    ["/ai", "ai-screen"],
   ])("#778 %s paints while the module is still loading", async (path, testId) => {
     serveAs("active");
     at(path);
@@ -203,6 +204,38 @@ describe("#778 a screen that calls the engine", () => {
     expect(screen.queryByTestId(shellTestid.engineLoading)).toBeNull();
     expect(screen.queryByTestId(shellTestid.loading)).toBeNull();
     expect(window.location.pathname).toBe("/decks");
+  });
+
+  it("R2630001 /decks asks for the engine's module while /api/auth/me is still unanswered", async () => {
+    signIn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown) =>
+        String(input).endsWith("/api/auth/me")
+          ? new Promise<Response>(() => undefined)
+          : Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: "no stub" } })),
+      ),
+    );
+    at("/decks");
+    render(<App />);
+
+    await waitFor(() => {
+      expect(downloads).toBeGreaterThan(0);
+    }, SLOW);
+    // The gate is still checking the account: the download did not wait for it.
+    expect(screen.getByTestId(shellTestid.loading)).toBeTruthy();
+    expect(screen.queryByTestId(shellTestid.engineLoading)).toBeNull();
+  });
+
+  it("R2630001 with no session nothing starts: the gate sends the player to sign in", async () => {
+    serveAs("active");
+    at("/decks");
+    render(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/login");
+    }, SLOW);
+    expect(downloads).toBe(0);
   });
 
   it("#778 a module that fails to load shows the error panel, and its retry loads it", async () => {

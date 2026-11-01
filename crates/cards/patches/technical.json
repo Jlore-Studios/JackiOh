@@ -3402,5 +3402,342 @@
     "pr": 2473,
     "title": "the night bot's harness in Go",
     "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ec882eeb6ecbc86189664aacbd884dd98e7f50ce",
+    "pr": 2525,
+    "title": "patches log: c99a942..4f48333",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "8a0b772f7aa590ca392837eee79626a149d86c53",
+    "pr": 2527,
+    "title": "patches log: 4f48333..5ffe4ec",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "2a87cd654dd23b5087f59021ba8f354aeebc6024",
+    "pr": 2531,
+    "title": "a change to how cards look ships as a micro, and a system the owner names ships as a patch (#2529)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "47b5883d16c90484ce3e7c0f577f45b14d6f94e6",
+    "pr": 2537,
+    "title": "spending a cosmetic token asks first, as spending a card token does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "22d7a15da7b8d9fd2c85a0ab2e23a3cf9a1531f6",
+    "pr": 2538,
+    "title": "Back in a live online match asks first, and says how long you have to come back",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "317b500e055ad60b9a90e83466126a35b071557a",
+    "pr": 2536,
+    "title": "the challenge and co-op deck pickers grey out a deck with a custom card, as the lobby's does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "bd2bc854cc460e131527ea83b5124f9d124e6daf",
+    "pr": 2539,
+    "title": "the emote and loadout numbers move into the engine's config, the command menu's card test stops racing, and a card page reads its patch history in one load",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "38fdaeb6a29a49a065d9488069d70e73c24ed323",
+    "pr": 2541,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "f95d2e2dfada9cbb039e27c85487fa24101a9356",
+    "pr": 2542,
+    "title": "the AI prices a Field Spell's Start of turn and End of turn effects, not only its cost",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a6ccf8204d006337b1bb4c5c165ab6d700d89181",
+    "pr": 2543,
+    "title": "a request flood from one signed-in account is refused before it reaches the database",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "496b440300364f8674082f558cbe263cf92edf98",
+    "pr": 2546,
+    "title": "retcon the v0.5 line's versions by the new patch and micro rules",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "88326c93fed7dea419ad7c3a00e29f62839a21bc",
+    "pr": 2545,
+    "title": "the tutorial opponent holds and plays only Training Grounds cards that are not Legendary or Mythic",
+    "kind": "ai",
+    "player": "The tutorial's opponent now plays Training Grounds cards, like you, but never a Legendary or Mythic one."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "c6f4b0fe261be5ca908f2890ea2bb9663ccbcbc1",
+    "pr": 2553,
+    "title": "chinese.json regenerated from card-text.yaml after #2545",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "1a98a9a46659663a1304e7a7eecaa2d642cf3ec3",
+    "pr": 2493,
+    "title": "CN Tech and NA Tech read a win-rate table that covers every set that ships",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7bae09d6fa427635e8a6f2b5f54f1d452c0a642b",
+    "pr": 2561,
+    "title": "Defense cards on a phone shrink only as far as their zone needs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "3c5c7a81ee081c735f41d811027c97eebb6f6e20",
+    "pr": 2551,
+    "title": "the AI counts a Unit standing in the backrow once, as a Unit, and not again as a backrow card",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b43732e47db6d93323af9aee09a3575865f068b5",
+    "pr": 2572,
+    "title": "practice claims stop re-running the AI's moves",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "92dd40db4310650d7cd89c738f866749c83b28c5",
+    "title": "Merge pull request #2583 from Jlore-Studios/claude/great-pasteur-yzpjgm",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7836f89a8f118439dacac6fbaa4e71bc71ad112a",
+    "pr": 2585,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "fecb7c3d8cdd00948f4797c5cf349568378c79fc",
+    "pr": 2586,
+    "title": "patches ship: v0.5.7b, v0.5.7c, v0.5.7d, v0.5.8, v0.5.8b, v0.5.9, v0.5.9b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e1885c18dfc6b4283e101a6a074262be54878ae9",
+    "pr": 2587,
+    "title": "Back closes a card opened in the Collection or in the statistics, as it already closes one in the Almanac",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ded725f10e5eaedf40d57a776a052acaf77174a0",
+    "pr": 2589,
+    "title": "a new card states the catalog's counts once, not in three tests and nine docs",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a0fb2ba4472ed0101c414f4d0ad937444f66d63b",
+    "pr": 2588,
+    "title": "View full stats and the practice screen's Decks links move inside the app instead of reloading it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "bc5860045b4584ccf8293435818c116fa767b471",
+    "pr": 2592,
+    "title": "a finished match stays readable on the real database after its second player deletes their account",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "40a6e72e08491c380678ddccaab95fac96edbbb1",
+    "pr": 2594,
+    "title": "patches ship: v0.5.9c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "d5da71e8ec3ea690185e96b062a33fbf7bbe8c3a",
+    "pr": 2595,
+    "title": "the AI prices a card's repeatable Activate, so it removes a Cannon before a plain body",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "11f83582b169b679af46c1519683a7d285652b1d",
+    "pr": 2596,
+    "title": "web and e2e tests turn the automatic turn end off instead of pinning seeds that deal a turn-one play",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7ba82b660484d0837bfcd9b61c12079349cdc9c4",
+    "pr": 2599,
+    "title": "the fuzz monitor refuses an opponent-held prompt that opens on its holder's off turn",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "98f9653e8567792d9459342e3edc3bd20942de25",
+    "pr": 2601,
+    "title": "the first player's win share counts only decided games, and the game figures say how many were drawn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "f51e05a0fe134393854489fee10fa0a02271495f",
+    "pr": 2597,
+    "title": "the AI prices a Starship Piece's death by the copy it fuses into its owner's Starship",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "c306eb9a05adeb82bb21655205a54c9017f372f8",
+    "pr": 2600,
+    "title": "the AI prices the Start of turn and End of turn effects of Units on the board, on both sides",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a1b672c57c6cfdaa04ec48aa574b68cd5a4145bb",
+    "pr": 2591,
+    "title": "the Tradable pip on hand cards an aura makes Tradable, and no mana on the Trade button",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "eeb32c3e3a35263a85a415cfcd99eaf6d7ef6169",
+    "title": "Merge pull request #2584 from Jlore-Studios/bot/issue-2422",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e2c26a9ea169f5ad9b15d96b86e67d78cbfb721c",
+    "pr": 2598,
+    "title": "the AI's Death and turn-hook prices travel as a parameter, not two thread-locals",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b0246e7e224567cdf97489d3d942426aa8fa255a",
+    "pr": 2612,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "9766ab504a1e2856c0617af08ff29f46dedfd1b8",
+    "pr": 2621,
+    "title": "disclose the ladder bots in the Terms, let friends always watch, and say game data has no opt-out",
+    "kind": "app",
+    "player": "The Terms now explain AI opponents in ranked, your friends can always watch your online games, and the Privacy Policy lists your public player statistics."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7835244936811cc0fe29683ba0f409839957e8a6",
+    "pr": 2590,
+    "title": "bot: build pass 1 for #2578",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "42306e482315696696fa1d64fdc8ccca3b0a667b",
+    "pr": 2623,
+    "title": "a Duos hand card no longer passes by dragging it onto the portal or the teammate's board",
+    "kind": "app",
+    "player": "In Duos, dragging a hand card onto the portal or your teammate's board no longer passes it: use the Pass button on the card."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "57fcd5ae29a8b4021be8d129e730f1cc6894d1db",
+    "pr": 2626,
+    "title": "migration 0068 renames in seconds, so Render's release finishes and the server deploys again (#2625)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "5e7e0d38f0d2c75cab13088e0b8360f310d94d3e",
+    "pr": 2627,
+    "title": "patches ship: v0.5.9d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "cc221192469a01b3a3a8fcc316ce3e55a3e95452",
+    "pr": 2632,
+    "title": "the patch notes' card diff covers every catalog field, so a new field fails typecheck and not a release",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b79251edbb9a614f8d779ac3b193c5da6d057aa1",
+    "pr": 2633,
+    "title": "Back closes the Marketplace and the deck builder's history, cosmetics and portrait pickers",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "4453e7a1177cfbde2cbdaf219f952026fb29d727",
+    "pr": 2634,
+    "title": "a watcher's socket is held to the players' limits on repeated hellos and junk frames",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "388026de1769ad8516cc885697b51db48360fcb2",
+    "pr": 2635,
+    "title": "every route that waits on an account's economy lock takes the account's turn first",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "0b6206d7026a66a4e691082c46ac98d29653699a",
+    "pr": 2639,
+    "title": "the combat and mana sections say what their newer rulings say",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b624a0a041b05c2ede5a771a6038d2f16abdd3cc",
+    "pr": 2638,
+    "title": "the AI prices a Field Spell's Activate, as it already prices a Unit's",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "9f10a70abf7520b479d654b9607cc5cd2c7a0057",
+    "pr": 2640,
+    "title": "a card that dies goes to the graveyard of the player who controlled it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "19fea97e0fbf745202b5688dcc121496a81d32ea",
+    "pr": 2641,
+    "title": "patches ship: v0.5.9e",
+    "kind": "app"
   }
 ]

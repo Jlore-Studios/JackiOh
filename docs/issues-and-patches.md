@@ -355,6 +355,13 @@ part that narrows the task shows the gap instead of hiding it.
   `cargo jackioh patches log <base>..<head>` logs each App, AI and Internal commit of the range on the
   newest shipped X in `crates/cards/patches/technical.json`, with that line (R1369000); the page shows
   the App and AI lines under their X, and Internal ones stay in the record.
+- **GitHub releases.** Every shipped version is a GitHub release that reads as the page reads it
+  (`apps/web/src/patches/github.ts`): its note under the same headings, its technical log's player
+  lines, its cards with what changed on each, and on a major its line's summary and technical changes.
+  `.github/workflows/releases.yml` writes them after a ship, a technical log or a production merge: a
+  pre-release while only main (staging) holds the version, a release once production does, each
+  tagged at the commit `shipped.json` records. Nothing there is written by hand: the next run puts
+  back a release edited on GitHub, so a release reads better only when the note it is written from does.
 
 ## Win rates in a balance patch
 

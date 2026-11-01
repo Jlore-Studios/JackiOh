@@ -63,6 +63,10 @@ It comments on the open countdown issue and leaves its time alone. Every other
 change waits for the countdown. The gap that remains is the time for CI plus a Cloudflare build
 after Render has deployed (roughly 10 to 20 minutes). Section 7 discusses closing that gap.
 
+Each catalog version is also a GitHub release (`.github/workflows/releases.yml`): a pre-release, "on
+staging", while only `main` holds it, and a release once a merge brings it to `production`, the newest
+one Latest.
+
 ### 2.2 The rules the promotion workflow enforces
 
 These are all tested against a simulated repo before this change shipped:
@@ -151,7 +155,8 @@ job's `permissions:` say, and a day of `main` often carries one ("refusing to al
 create or update workflow ... without `workflows` permission"). The countdown issue, its comments and
 the label stay on `GITHUB_TOKEN`, whose writes start no workflow, so the night bot never picks the
 issue up. Nothing loops: a pull request's CI never starts the promotion (only a green push to `main`
-does), and nothing runs on a push to a promote branch or to `production`. Its `deploy` job uses one
+does), nothing runs on a push to a promote branch, and on a push to `production` only `releases.yml`
+runs, which writes nothing but GitHub releases. Its `deploy` job uses one
 secret, `CLOUDFLARE_API_TOKEN`.
 
 ## 3. What is in this change

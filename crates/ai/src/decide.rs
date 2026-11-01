@@ -225,16 +225,17 @@ fn fat_width(probe: &GameState, candidates: usize) -> usize {
     candidates.max(size)
 }
 
-/// The budget a decision of `fat` width spends (AI_SEARCH.fat_*): `nodes` in inverse proportion to
-/// the width past fat_reference, floored at fat_min_nodes; the lethal solver keeps its share of it,
-/// floored at fat_min_lethal. The search's shape (determinizations, widths, depths, finalists) is
-/// the caller's unchanged.
+/// The budget a decision of `fat` width spends (AI_SEARCH.fat_*): `nodes`, at most `fat_budget_nodes`
+/// (R2575000), in inverse proportion to the width past fat_reference, floored at fat_min_nodes; the
+/// lethal solver keeps its share of it, floored at fat_min_lethal. The search's shape
+/// (determinizations, widths, depths, finalists) is the caller's unchanged.
 fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
     let reference = AI_SEARCH.fat_reference.max(1) as usize;
     let nodes = if fat <= reference {
         budget.nodes
     } else {
-        (budget.nodes * reference / fat).max(AI_SEARCH.fat_min_nodes.max(0) as usize)
+        let from = budget.nodes.min(AI_SEARCH.fat_budget_nodes.max(0) as usize);
+        (from * reference / fat).max(AI_SEARCH.fat_min_nodes.max(0) as usize)
     };
     // A budget that gives the lethal solver nothing (lethal_nodes 0) is a caller that does not
     // want it run at all, not one to be floored up to fat_min_lethal.

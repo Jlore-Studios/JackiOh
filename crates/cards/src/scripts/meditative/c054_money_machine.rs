@@ -60,7 +60,7 @@ pub fn script() -> CardScripts {
 /// The card the v0.3.7b Machine shuffles into its controller's deck: rolled over `MONEY_MACHINE_ODDS`,
 /// or The Coin the full library turns away, rolled nothing (R1106).
 fn yours(ctx: &mut EffectContext<'_>) -> String {
-    if zone_count(&*ctx.state, ctx.controller, OffFieldZone::Library) >= LIBRARY_CAP {
+    if room_in(&*ctx.state, ctx.controller, OffFieldZone::Library) == 0 {
         return THE_COIN.to_string();
     }
     roll_weighted(&mut *ctx.rng, MONEY_MACHINE_ODDS, 0)
