@@ -1,54 +1,41 @@
-// The tall card (docs/polish/6-cards.md, Surface B "CardFace DOM"): cost gem, art window, name
-// ribbon, rarity gem, type line, rules box, tag badges, and sword and drop for units.
+// The tall card (docs/polish/6-cards.md, Surface B "CardFace DOM"): cost gem, art window, name ribbon, rarity gem,
+// type line, rules box, tag badges, and sword and drop for units. `layout="compact"` is a face-up backrow card:
+// cost, art, name, rarity gem and type line only.
 //
-// Every element is a span, strong or img, so a face can sit inside the deck builder's <button>.
-// Nothing here carries `data-testid`, `data-attack`, `data-health`, `data-keyword` or the `card`
-// class token: those belong to the board's root element (game/Card.tsx) and the minion form, and a
-// face in a hover preview must never answer an e2e selector meant for the board (B12, B20).
+// Every element is a span, strong or img, so a face can sit inside the deck builder's <button>. Nothing here
+// carries `data-testid`, `data-attack`, `data-health`, `data-keyword` or the `card` class token: those belong to
+// the board's root element (game/Card.tsx) and the minion form, and a face in a hover preview must never answer
+// an e2e selector meant for the board (B12, B20).
 //
-// `layout="compact"` is a face-up backrow card: cost, art, name, rarity gem and type line, with no
-// rules box, tags or stats.
+// A face in play (FaceModel.inPlay, SPEC §10.10) prints the card as it stands: its rules box ends with the
+// keywords it has gained (`.cf-text-gained`), and a Vanilla unit's box says its text is gone. A fused card's
+// text is a line per ingredient (R102). The box prints the face's whole text (`.cf-text-base`), drawn by
+// RulesText: a Radiant face its Radiant text with what the base face lacks in gold (R277), `refs` names as
+// references (R279), and in play the values its formula comes to (R280).
 //
-// A face in play (FaceModel.inPlay, SPEC §10.10) prints the card as it stands: the rules box ends
-// with the keywords it has gained (`.cf-text-gained`), and a Vanilla unit's box says its text is gone.
-// A fused card's text is a line per ingredient (R102), which the box keeps.
+// SPEC §10.8: a face in play wears the view's states as badges (CardStates.tsx): Brittle (R385), tuned (R386),
+// enchantments (E39), a card standing as a Unit (R383). An Animated Field Spell or Trap shows the Unit's attack
+// and health (B3.1). R503: a token that prints a rarity (B2.5's `printedRarity`) wears that rarity's frame, gem,
+// crest and foil rather than Token's, for display only; the art gets the card's name, which picks its motif.
 //
-// The rules box prints the face's whole text (`.cf-text-base`): a Radiant face its catalog Radiant text
-// with what the base face lacks marked in gold (R277), its `refs` names as references (R279), and in
-// play the values its formula comes to (R280), all drawn by RulesText.
+// ME-CN, R1301: a Chinese face (`face.chinese`) prints its name and text as the model gives them and its type
+// line, tags and keywords in chinese.ts's words; its art keeps the English name's motif. R1382: a card with every
+// tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line.
 //
-// SPEC §10.8: a face in play wears the states the view gives the card on a rail of badges
-// (CardStates.tsx): Brittle (R385), tuned (R386), enchantments (E39), a card standing as a Unit (R383).
-// An Animated Field Spell or Trap shows the Unit's attack and health on its full face (B3.1).
-//
-// R503: a token that prints a rarity (B2.5's `printedRarity`) wears that rarity's frame, gem, crest
-// and foil rather than Token's, for display only. The art gets the card's name, which picks its motif.
-//
-// ME-CN, R1301: a Chinese face (`face.chinese`) prints its name and text as the model gives them and
-// its type line, tags and keywords in the table's words (chinese.ts); its art keeps the English name's
-// motif, so the picture is the same card's.
-//
-// R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line in
-// place of the five, its other tags after it.
-//
-// R1177001: a token's type line reads "Token Unit", so no crowded tag row can cut the word, and the tag
-// row prints no Token chip. R2647000: where the type line hides (a face under FACE_TEXT_MIN_HEIGHT_PX,
-// a full-art face) and on the board minion nothing marks it: the hover preview's full face says it.
+// R1177001: a token's type line reads "Token Unit" and its tag row prints no Token chip. R2647000: where the type
+// line hides (a face under FACE_TEXT_MIN_HEIGHT_PX, a full-art face) and on the board minion nothing marks it.
 // Glitch stays blank (R674).
 //
-// R1017001: a full-art card (fullArt.ts; R2655001: one the cosmetics registry has a full art of, and
-// R2655002 a token listed under one) prints its art across the whole full face and no words
-// (`data-full-art`), its whole text in the hover preview and the detail view. The Full-art cards
-// setting turns it off, and so does a tutorial lesson's board (R1108000). R2655000: the face wears its
-// pick's tier (`data-full-art-tier`): an Epic still, a Legendary animated (`cf-full-art--animated`), a
-// Mythic animated and signed (`cf-full-art--signed`, FullArtSignature.tsx). R2655003: the motion runs
-// only while Animated foil is on (`data-full-art-motion`) and inside cosmetics.css's motion gate.
+// R1017001: a full-art card (fullArt.ts; R2655001: one the cosmetics registry has a full art of, R2655002 a token
+// listed under one) prints its art across the whole face and no words (`data-full-art`), its whole text in the
+// hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's
+// board (R1108000). R2655000: the face wears its pick's tier (`data-full-art-tier`), a Legendary's art animated,
+// a Mythic's animated and signed (FullArtSignature.tsx). R2655003: the motion runs only while Animated foil is on
+// and inside cosmetics.css's motion gate.
 //
-// R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its
-// own attribute apart from the rarity foil (cosmetics.ts, cosmetics.css); every other face carries none.
-//
-// R2521009: a Resource's full face prints what it sells for, "Credits: 2–5" (`.cf-text-credits`), as a
-// line under its text, in every view.
+// R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, each on its own attribute
+// apart from the rarity foil (cosmetics.ts). R2521009: a Resource's full face prints what it sells for ("Credits:
+// 2–5") under its text.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -174,11 +161,11 @@ export type RulesBox = {
 };
 
 /**
- * A Summit in play given its level prints its header and the next Ascent line; a Quest card (R1837000)
- * the stage it stands at (questFace.ts, R2450000); a face printing its catalog text its short form
- * (shortText.ts SHORT_FORMS); a face in play past the hover preview's limit clamps. Each prints less
- * than its whole text, which the hover preview prints on the face's left.
- * `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the setting decides.
+ * Prints less than the whole text, which the hover preview prints on the face's left: a Summit in play given
+ * its level prints its header and the next Ascent line; a Quest card (R1837000) the stage it stands at
+ * (questFace.ts, R2450000); a face printing its catalog text its short form (shortText.ts SHORT_FORMS); a
+ * face in play past the hover preview's limit clamps. `fullArtOn` is the caller's `useFullArt(defId)`
+ * (R1108000, R1313000); without it, the setting decides.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
   const full = face.text.full;

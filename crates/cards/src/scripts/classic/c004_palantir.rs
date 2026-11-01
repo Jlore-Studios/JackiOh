@@ -35,6 +35,7 @@ pub const ID: &str = "classic-004";
 const STOLEN: &str = "stolen";
 
 /// Patch v0.3.10 (#831): the Spells it answers are the (1) Cost ones (R65: a card's own cost as it
+/// stands out of play, an X Spell 0), Books or not.
 const STOLEN_COST: i32 = 1;
 
 fn answered(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
@@ -60,6 +61,7 @@ fn draw_limit() -> DrawLimitHook {
     })
 }
 
+/// "Steal it and cast it yourself": countered into your hand, then cast by you, every choice at
 /// random but aimed in your favor (R831001, R452, R656).
 fn steal_and_cast(spell: &str) -> Vec<Effect> {
     let card = json!({ "of": "instance", "instanceId": spell });
@@ -137,6 +139,7 @@ pub fn script() -> CardScripts {
 
 // C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4 (§2.4, R70, §10.5, R831001, R386).
 // Spells are C #24 Book of Knowledge ("Draw 3") and #5 Stockpile ("Draw 2. Heal your hero 2."), whose
+// resolution shows in whoever's draws.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,6 +287,7 @@ mod tests {
             fn s2_4_it_holds_on_its_controller_s_turn_too_the_opponent_s_off_turn_draw_counts_and_a_second_is_stopped() {
                 crate::register_all();
                 // p1's Book of Flame would take p2 from 3 to 0, so p2's C #52 Final Gambit reveals on p1's
+                // turn and draws p2 3: the first draw happens, the other two are past the limit.
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [FLAME, TIMMY],

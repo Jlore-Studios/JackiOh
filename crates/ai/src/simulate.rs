@@ -31,7 +31,6 @@ pub enum LineStatus {
 }
 
 impl LineStatus {
-    /// The literal, as TS writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             LineStatus::Open => "open",
@@ -67,7 +66,7 @@ pub struct CountingNodeCounter<'a> {
 }
 
 impl CountingNodeCounter<'_> {
-    /// TS `counter.simErrors`: a sub-counter reads its parent's tally (0 when the parent keeps none).
+    /// A sub-counter reads its parent's tally (0 when the parent keeps none).
     pub fn sim_errors(&self) -> usize {
         match &self.kind {
             CounterKind::Root { sim_errors, .. } => sim_errors.get(),
@@ -75,7 +74,7 @@ impl CountingNodeCounter<'_> {
         }
     }
 
-    /// TS `counter.simErrors = value`: a sub-counter writes its parent's tally, when it keeps one.
+    /// A sub-counter writes its parent's tally, when it keeps one.
     pub fn set_sim_errors(&self, value: usize) {
         match &self.kind {
             CounterKind::Root { sim_errors, .. } => sim_errors.set(value),
@@ -251,9 +250,8 @@ pub(crate) fn note_sim_panic(counter: &dyn NodeCounter, payload: &(dyn std::any:
     message
 }
 
-/// TS `error instanceof Error ? error.message : String(error)`, for a panic's payload. The one reader
-/// of a panic's message: the AI's simulations and match runner, the server's match tasks and the
-/// tools' agent, fuzz and arena all call it.
+/// A panic payload's message: the one reader every caller shares (the AI's simulations and match runner,
+/// the server's match tasks, the tools' agent, fuzz and arena).
 pub fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(text) = payload.downcast_ref::<&str>() {
         (*text).to_string()
@@ -264,9 +262,7 @@ pub fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
     }
 }
 
-/// `seat`'s view of a state during a line that started on `rootTurn`: "over" if state.result is set;
-/// "passed" if state.turn !== rootTurn; "yielded" if no prompt is open and state.active !== seat;
-/// otherwise "open".
+/// `seat`'s view of a state during a line that started on `rootTurn`.
 pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineStatus {
     if state.result.is_some() {
         return LineStatus::Over;
@@ -280,7 +276,7 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
     LineStatus::Open
 }
 
-/// TS `{ ok: true; state } | { ok: false; error }` (private in TS; public here, as `simulate`'s answer).
+/// `simulate`'s answer: the state reached, or the error.
 pub type SimStep = Result<GameState, String>;
 
 /// Up-front node surcharge for heavy actions (expensive scorers §10.7, turn-granting traps §8.5 core-096,
@@ -449,12 +445,11 @@ pub(crate) fn best_auto_answer(
 /// #1112: what a state waiting on `seat`'s own prompt is worth once its prompts are answered, which is
 /// how the beam ranks a child that waits there (search.rs): every prompt open on the way, the seat's
 /// and any the other seat holds, gets its holder's best of AI_SEARCH.max_auto_answer_options answers
-/// drawn from all of them (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one
-/// node of `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
-/// `open_score` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
-/// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
-/// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
-/// (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
+/// (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one node of `counter`), at most
+/// AI_SEARCH.max_auto_answers prompts, and the state reached is scored by `open_score` as the beam scores
+/// a child. Only a score: the child stays at its prompt. `None` when no prompt of the seat's is open, when
+/// the counter refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine
+/// panics (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
 pub fn own_prompt_score(
     state: &GameState,
     seat: PlayerId,
@@ -577,8 +572,7 @@ fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
     line_score(state, seat, NextSwing::Enemy, prices) - AI_EVAL.unspent_mana * f64::from(unspent)
 }
 
-/// `closeLine`'s step: the line's turn ended here, or `None` where TS handed `state` back itself
-/// (which `terminalScore` tells apart by identity).
+/// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.
 fn close_line_step(
     state: &GameState,
     seat: PlayerId,
@@ -618,9 +612,8 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &
     }
 }
 
-/// A line's value: "over"/"yielded" → `line_score`; "passed" → `line_score` − AI_EVAL.unspentMana ×
-/// (players[seat].turnLog.unspentAtEnd ?? 0); "open" → simulate endTurn if the seat is in its main
-/// phase and a node is left, then score that, else `line_score` (R1012002).
+/// A line's value: `static_score`, but an open line is first closed with an endTurn if the seat is in its
+/// main phase and a node is left (R1012002).
 pub fn terminal_score(
     state: &GameState,
     seat: PlayerId,

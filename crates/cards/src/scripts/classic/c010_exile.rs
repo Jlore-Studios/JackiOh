@@ -45,6 +45,7 @@ fn cheap_play(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<Announced> {
     }
 }
 
+/// The Radiant face's picks, drawn as the clause resolves: random enemy permanents, each costing no
 /// more than the budget left (R396), until the budget is spent or nothing fits.
 fn budget_picks(ctx: &mut EffectContext<'_>, budget: i32) -> Vec<CardInstance> {
     let mut picked: Vec<CardInstance> = Vec::new();

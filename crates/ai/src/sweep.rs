@@ -34,7 +34,7 @@ pub enum SweepFlag {
 }
 
 impl SweepFlag {
-    /// The literal, as TS writes it (and as a SHADOW_BAN reason starts with it).
+    /// The literal (as a SHADOW_BAN reason starts with it).
     pub fn as_str(self) -> &'static str {
         match self {
             SweepFlag::Error => "error",
@@ -128,10 +128,8 @@ pub struct SweepStats {
 }
 
 /// One card at one tier. `unswept` is a card that was never once affordable in hand, so its games
-/// say nothing about whether the AI can play it (a report, never a ban flag).
-///
-/// TS `SweepStats & { tier; flags; unswept }`: the stats are flattened beside the three, as TS writes
-/// the object, and the result reads as its stats (`Deref`).
+/// say nothing about whether the AI can play it (a report, never a ban flag). The stats are flattened
+/// beside `tier`, `flags` and `unswept`, and the result reads as its stats (`Deref`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SweepResult {
@@ -206,12 +204,11 @@ pub struct SlowDecision<'a> {
     pub rng: &'a Rng,
 }
 
-/// `sweepCard`'s and `sweepAtRisk`'s options (TS's anonymous `{ seeds?, now?, tier? }`, and R977000's
-/// `retime`).
+/// `sweepCard`'s and `sweepAtRisk`'s options, with R977000's `retime`.
 #[derive(Clone, Copy, Default)]
 pub struct SweepOptions<'a> {
     pub seeds: Option<i32>,
-    /// The clock, in milliseconds (TS `performance.now`); absent, no decision ever times out.
+    /// The clock, in milliseconds; absent, no decision ever times out.
     pub now: Option<&'a dyn Fn() -> f64>,
     /// R977000: whether a decision the clock found slow is still slower than decisionMs timed again
     /// (`cargo jackioh sweep`: against the perf gate's yardstick); absent, every one counts.
@@ -313,8 +310,6 @@ pub fn ban_flags(reason: &str) -> Vec<SweepFlag> {
 /// R390: the at-risk cards — every card some tier's pass-1 numbers meet at half strength
 /// (`half_flags`), and every card on `ban` or `watch` (today's SHADOW_BAN and SHADOW_WATCH by
 /// default). A pure function of pass 1's results and the two tables, sorted.
-///
-/// TS's defaults: pass `SHADOW_BAN` and `SHADOW_WATCH`.
 pub fn at_risk_ids(pass1: &[SweepResult], ban: &[(&str, &str)], watch: &[(&str, &str)]) -> Vec<String> {
     let mut ids: IndexSet<String> = ban
         .iter()
@@ -334,8 +329,6 @@ pub fn at_risk_ids(pass1: &[SweepResult], ban: &[(&str, &str)], watch: &[(&str, 
 /// R390: the cards pass 2's filler never deals — banned for `error` or `timeout` today, or flagged so
 /// by pass 1 — so a known bug is never filler. A card banned for `neverPlayed`, `selfHarm` or
 /// `selfKill` is at risk, and pass 2's filler lifts its ban.
-///
-/// TS's default: pass `SHADOW_BAN`.
 pub fn pass2_keep_out(pass1: &[SweepResult], ban: &[(&str, &str)]) -> Vec<String> {
     let bug = |flags: &[SweepFlag]| -> bool {
         flags.contains(&SweepFlag::Error) || flags.contains(&SweepFlag::Timeout)
@@ -526,8 +519,7 @@ pub fn record_sweep_play(stats: &mut SweepStats, before: &GameState, after: &Gam
 /// R2425000: one AI turn start, counted into each of `cards`. A card `seat` holds an instance of at
 /// an `effective_cost` within its mana counts an affordable turn; a card one of whose instances in
 /// hand `legal_actions` lists a `Play` of (the action `play_sweep_game` counts as a play) counts a
-/// playable turn, so a Tribute it cannot pay, a target that is not there or an unmet play condition
-/// counts none. `legal_actions` runs only when one of `cards` is in hand.
+/// playable turn. `legal_actions` runs only when one of `cards` is in hand.
 pub fn record_sweep_turn(cards: &mut [SweepStats], state: &GameState, seat: PlayerId) {
     let mana = state.players[seat].mana.current;
     let hand = zone_cards(state, seat, OffFieldZone::Hand);

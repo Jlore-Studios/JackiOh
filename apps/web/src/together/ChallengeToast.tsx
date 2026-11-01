@@ -2,21 +2,20 @@
 // challenges every `SOCIAL_POLL_MS` while the tab holds a session (`socialPoll.ts`, the one read the
 // Friends button's badge and Play together share).
 //
-// AN INCOMING CHALLENGE is a toast with its mode and a picker of the player's deck (or trio), starting
-// on the last one used for it (`challengeChoice.ts`); for All Random, "More cards from" (R924000) on the
-// device's online pick (R2031000), shown once the engine is in (#778). Accept joins the room by its
-// code, which accepts the challenge (B49), and takes the player to the game: one press (R1831000).
-// R915005: a deck naming a custom card (or a trio holding one) is listed off, "(practice only)", and
-// never picked. A screen holding unsaved work asks first (R1754000). A refused join is shown in the
-// server's words, with "Open in lobby", as a room link opens `/play` (R767).
+// AN INCOMING CHALLENGE is a toast with its mode and a picker of the player's deck (or trio), starting on the
+// last one used (`challengeChoice.ts`); for All Random, "More cards from" (R924000) on the device's online
+// pick (R2031000), shown once the engine is in (#778). Accept joins the room by its code, which accepts the
+// challenge (B49), in one press (R1831000). R915005: a deck naming a custom card (or a trio holding one) is
+// listed off, "(practice only)", and never picked. A screen holding unsaved work asks first (R1754000). A
+// refused join is shown in the server's words, with "Open in lobby", as a room link opens `/play` (R767).
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
 // friend joins it, wherever the challenger is. While one is open (`follow.ts`), each read also asks
 // `/api/auth/me` for a live game, and the toast announces it as a pairing is announced (R765).
 //
-// Nothing here is a rule (CLAUDE.md rule 7): whom a player may challenge, whether a deck may be
-// played, and when a challenge lapses, are the server's. A session the server refuses outright is
-// not asked again until the tab holds another one.
+// Nothing here is a rule (CLAUDE.md rule 7): whom a player may challenge, whether a deck may be played,
+// and when a challenge lapses are the server's. A session the server refuses outright is not asked again
+// until the tab holds another one.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 

@@ -56,12 +56,11 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
     fn r151_a_heroic_power_95_call_to_chaos_summons_straight_into_the_backrow_rolls_a_power_so_activatepower_is_offered_and_accepted_for_it_r43()
      {
         register_all();
-        // R43: "one created later rolls when it is created"; R151: it rolls "as it arrives anywhere a
-        // card can be looked at". #95's "summon 5 random Field Spells or Traps into your backrow" puts a
-        // Heroic Power straight onto the field — never through a hand or a library, the only arrivals
-        // that roll. (Carnivorous Cube's copies were this test's route until R428 took backrow meals
-        // away from the Cube.) The roll is searched for: the play's first rng draw is #95's roll, and the
-        // first backrow pick follows it, from the pool of every set (R380). The seed is arbitrary; the
+        // R43, R151: a Heroic Power created later rolls "as it arrives anywhere a card can be looked at".
+        // #95's "summon 5 random Field Spells or Traps into your backrow" puts one straight onto the field,
+        // never through a hand or a library (R428 took backrow meals from Carnivorous Cube). The roll is
+        // searched for at run time: #95's roll is the play's first rng draw and the first backrow pick, from
+        // the pool of every set (R380), follows it, so a card joining the pool moves nothing.
         let seed = "r151-chaos";
         let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
         let backrow = subsystems::CHAOS_EFFECTS
@@ -148,8 +147,9 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
 }
 
 mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s_choices {
+    // Craft a Card fuses two Discovered Units into one hand card whose declared targets and modes are
     // the ingredients' lists concatenated in ingredient order (R102), so `legalActions` offers — and
-    // `reduce` validates — one flat list read declaration by declaration (R90). The fused Cry used to
+    // `reduce` validates — one flat list read declaration by declaration (R90).
     use super::*;
 
     #[test]
@@ -226,6 +226,7 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
 
         g.play(&crafted.id, json!({ "zone": 2, "modes": ["highest", "right"] }));
 
+        // Rotating right moves the crafted card from lane 2 to lane 3, and p2's lane-1 card, the last
         // step of the ring, onto p1's lane 1 (§3.1).
         let hand: Vec<String> = g.hand(P1).iter().map(|card| card.def_id.clone()).collect();
         assert_eq!(
@@ -249,6 +250,7 @@ mod s8_conventions_r90_a_mode_that_deals_damage_or_heals_needs_its_target {
         register_all();
         // §8: "target" means the player picks from all legal units and heroes, and only a target SET that
         // is empty lets the Cry fizzle; R90: "a declaration the board cannot satisfy does not refuse the
+        // play".
         let g = scenario(json!({
             "p1": { "hand": [EFFICIENCY_DIVIDEND, RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [MR_VANILLA] },
@@ -300,7 +302,9 @@ mod r211_concede_is_on_offer_while_a_prompt_is_open {
     fn r211_legalactions_offers_concede_to_both_players_while_a_prompt_is_open_as_reduce_accepts_it_2_5_10_2()
     {
         register_all();
-        // it is open (BUILD M1-T3), so legalActions — which the client's Concede button reads (§10.2) —
+        // reduce accepts a concede from either seat while a prompt is open (BUILD M1-T3), so legalActions,
+        // which the client's Concede button reads (§10.2), must list it for both, beside the holder's
+        // answers.
         let mut g = scenario(json!({
             "p1": { "hand": [KYS_TUTOR], "library": [RENO, MR_VANILLA, "core-005"] },
             "p2": { "field": [{ "def": MR_VANILLA, "lane": 1 }], "library": [RENO] },
@@ -403,6 +407,7 @@ mod r81_r90_r101_every_tribute_a_play_may_pay_is_one_legalactions_offers {
         );
 
         // …so legalActions, which the client narrows and the AI policy draws from (§10.2, CLAUDE.md
+        // rule 7), must offer it.
         let offered = plays_for(s.state(), P1, &golem);
         assert!(!offered.is_empty());
         let enemy_only: Vec<&ActionBody> = offered

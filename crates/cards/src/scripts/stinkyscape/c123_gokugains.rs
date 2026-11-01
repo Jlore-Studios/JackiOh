@@ -10,6 +10,7 @@
 //! next played, at §10.5 step 3, each Nerf drawn from every row but the cost's (R1845001). A hand with no
 //! such Unit takes nothing and draws nothing (R129). The count is the declared `times` (R386), its Cry's.
 //! The play pipeline runs the Cry of a card it sets face-down too (§10.5 step 5), so, as S #103 Vxyl's,
+//! the Cry does nothing while the card is set, and runs once, at the reveal, which clears the stamp.
 
 use jackioh_engine::prelude::*;
 

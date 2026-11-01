@@ -97,12 +97,9 @@ pub fn script() -> CardScripts {
 
 // #18 Bread and Butter — SPEC §8.1 row 18, BUILD M4-T4 row 18.
 //
-// Must-pass (M4-T4): "Fires in the trap window at either player's end with unspent mana (R62), token
-// to trap controller (R52), X = unspent, 0 → nothing, stays; radiant 3X".
-//
 // R62: the trap watches `turnEnded`, which `traps.rs` reserves for the end-of-turn trap window (R68
-// order). R52 is why the opponent's-turn test asserts an EMPTY board on the ending player's side. §7,
-// R37: the token is printed 0/0, so every assertion reads the def id AND the stats. The R280 preview
+// order). R52 is why the opponent's-turn test asserts an EMPTY board on the ending player's side. R37
+// (§7): the token is printed 0/0, so every assertion reads the def id AND the stats. The R280 preview
 // is proved in tests/cross/preview.rs; R662's glow (`conditionMet`) at the end of this file.
 #[cfg(test)]
 mod tests {

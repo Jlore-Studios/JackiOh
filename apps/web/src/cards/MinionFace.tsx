@@ -7,9 +7,9 @@
 // nor (R2577000) those with `onField: false` (keywordVisuals.ts), which leave the "+n" too; at most
 // KEYWORD_CHIPS_MAX show (cards.css), the hover preview and inspect sheet list all. R438: a keyword that
 // acts on the field also gets a shape treatment `data-keyword-fx="<kind>"` (keywordVisuals.ts, KeywordFx.tsx).
-// Vanilla (§6.3, R115, R243): a unit a Vanilla took the text of is marked in the view and wears a
-// `.cf-vanilla` stamp; its chips are the view's. §10.8: Brittle's count and the Animated cog are keyword
-// treatments; the rest ride CardStates.tsx's rail over the name plate: tuned mark (R386), enchantments (E39).
+// Vanilla (§6.3, R115, R243): a unit a Vanilla took the text of wears a `.cf-vanilla` stamp; its chips are
+// the view's. §10.8: Brittle's count and the Animated cog are keyword treatments; the rest ride
+// CardStates.tsx's rail over the name plate: tuned mark (R386), enchantments (E39).
 // "zzz" (R849000): `.cf-sick[data-sick]` where the view marks the unit `sick` (summoning sick with neither
 // Rush nor Charge, `combat::is_asleep`), both seats. Never read `canAct` for it: false for every unit of the
 // non-active player, and a summoning-sick unit may still switch (§4.1). A spent unit of the player acting

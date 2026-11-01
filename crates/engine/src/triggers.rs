@@ -1,28 +1,26 @@
-//! The trigger registry, the trigger queue and the resolution loop of SPEC §10.3, in R68's order
-//! (BUILD M3-T2):
+//! The trigger registry, the trigger queue and the resolution loop of SPEC §10.3, in R68's order (BUILD
+//! M3-T2):
 //!
-//!  1. The registry: which cards can answer now, keyed by hook and by zone (R153: a card registers only
-//!     the triggers its zone allows). The field and the backrow answer `script.triggers` and the hooks;
-//!     a hand `handTriggers` (#89 Corpse Eater); a graveyard `graveyardTriggers` (Classic #47, B5 E26)
-//!     and §5.1's end-of-turn return (#23, #24, #31; R68); a library `deckTriggers` (Classic+ #37,
-//!     R464); exile, the resolving zone and a card dormant under a Stack nothing (§3.2, R13).
+//!  1. The registry: which cards can answer now, keyed by hook and by zone (R153: a card registers only the
+//!     triggers its zone allows): `handTriggers` in a hand (#89 Corpse Eater), `graveyardTriggers` (Classic
+//!     #47, B5 E26) and §5.1's end-of-turn return (#23, #24, #31; R68), `deckTriggers` in a library (Classic+
+//!     #37, R464); exile, the resolving zone and a card dormant under a Stack nothing (§3.2, R13).
 //!  2. The two queues live in state, so what a prompt interrupts outlives the action's sink (§9.3):
-//!     `state.dispatch` holds the events not yet offered, and a `state.trigger_queue` entry its event
-//!     as plain JSON, so every trigger but Death runs off its captured event after R78's reset (R89).
-//!     Queue order is R68's: the active side first; within a side unit lanes 1–5, backrow 1–5, hand,
-//!     library (R464: by creation, never by hidden library position), graveyard. Traps are never
-//!     queued: `traps.rs` fires them as the event is dispatched (§10.3; R100 keeps the end-of-turn
-//!     window's events out). A prompt never drops what a dispatch owes (R113): an immediate one parks
-//!     `OWED_TO_TRAPS` ahead of every card trigger, the end-of-turn window `traps::TRAP_WINDOW_WORK` on
-//!     `state.work`, which `settle` drains first.
-//!  3. The loop, `settle`: collect, run owed work, dispatch one event, run the state check, pop one
-//!     trigger and apply it whole, until both queues are empty and no prompt is open. R59 holds by
-//!     construction: the check never runs between the hits of one effect or inside one event batch.
+//!     `state.dispatch` holds the events not yet offered, a `state.trigger_queue` entry its event as plain
+//!     JSON, so every trigger but Death runs off its captured event after R78's reset (R89). Queue order is
+//!     R68's: the active side first; within a side unit lanes 1–5, backrow 1–5, hand, library (R464: by
+//!     creation, never by hidden library position), graveyard. Traps are never queued: `traps.rs` fires them
+//!     as the event is dispatched (§10.3; R100 keeps the end-of-turn window's events out). A prompt never
+//!     drops what a dispatch owes (R113): `OWED_TO_TRAPS` and `traps::TRAP_WINDOW_WORK` park on `state.work`,
+//!     which `settle` drains first.
+//!  3. The loop, `settle`: collect, run owed work, dispatch one event, run the state check, pop one trigger
+//!     and apply it whole, until both queues are empty and no prompt is open. R59 holds by construction: the
+//!     check never runs between the hits of one effect or inside one event batch.
 //!
-//! A prompt stops the loop with everything owed in state, and `answer` runs `prompts::answer_prompt`
-//! then `settle` (§9.3, §10.6). `prompts.rs` matches the `"@triggerCry"` answerer key (B5 E13, R122,
-//! SURFACE §6.6). An action's events are told apart by position in its event list, kept in one
-//! `Frontier` every sink over that list shares (SURFACE §3).
+//! A prompt stops the loop with everything owed in state, and `answer` runs `prompts::answer_prompt` then
+//! `settle` (§9.3, §10.6). `prompts.rs` matches the `"@triggerCry"` answerer key (B5 E13, R122, SURFACE
+//! §6.6). An action's events are told apart by position in one `Frontier` every sink over its list shares
+//! (SURFACE §3).
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
@@ -419,11 +417,11 @@ pub fn trigger_holders_with_hook(
 /// id or hook name, never by step.
 const TRIGGER_STEP: &str = "trigger";
 
-/// `state.next_seq` numbers a queue entry, as it numbers modifiers, delayed effects and parked work, so
-/// R68's creation order is one counter and ids replay deterministically (`t…`, apart from `q…` choices).
-/// R177: a hidden card's entry (a hand's or a library's, B5 E26, R464) borrows the counter unmoved,
-/// told apart by the queue's length, as both seats read modifier ids (R169) and a number it took would
-/// tell them a hand holds, say, #89 Corpse Eater, which answers even a token's death (R11).
+/// `state.next_seq` numbers a queue entry, as it numbers modifiers, delayed effects and parked work, so R68's
+/// creation order is one counter and ids replay deterministically. R177: a hidden card's entry (B5 E26, R464)
+/// borrows the counter unmoved, told apart by the queue's length, as a number it took would tell both seats,
+/// who read modifier ids (R169), what a hand holds (#89 Corpse Eater, which answers even a token's death,
+/// R11).
 fn next_entry_id(state: &mut GameState, hidden: bool, prefix: &str) -> (String, u32) {
     let seq = state.next_seq;
     if hidden {
@@ -561,10 +559,10 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
 
 /// Queue one hook across the board in R68's order (§6.2, R62); the caller's `settle` drains it.
 ///
-/// R820, R821 (Meditative #9 Joint Filing): a player's own start-of-turn and end-of-turn hooks run
-/// 1 + N times under a turn-hook multiplier, N read once as they are queued, each copy its own entry
-/// re-read as it pops (R153). Only these two hooks: C #62's start of the opponent's turn, the delayed
-/// effects and the end-of-turn trap window are never queued here as the player's own (R62).
+/// R820, R821 (Meditative #9 Joint Filing): a player's own start- and end-of-turn hooks run 1 + N times under
+/// a turn-hook multiplier, N read once as they are queued, each copy re-read as it pops (R153). Only these
+/// two hooks: C #62's start of the opponent's turn, the delayed effects and the trap window are never queued
+/// as the player's own (R62).
 pub fn queue_hooks_in_trigger_order(
     sink: &mut EngineSink<'_>,
     hook: HookName,
@@ -594,11 +592,11 @@ pub const TURN_HOOKS_ROUND: &str = "@turnHooksRound";
 /// Where a round entry keeps how many rounds are still to be queued after the one it queues.
 const ROUNDS_LEFT_KEY: &str = "roundsLeft";
 
-/// R824 (Meditative #12 Fear Mongerer): "trigger your End of turn effects" `rounds` times, now. Each
-/// round queues `player`'s end-of-turn hooks as §2.2's step would (same holders, R68's order, R821's
-/// multiplier) and nothing else of the end of the turn (R62). Behind each round, one entry in R68's
-/// queue queues the next as it pops, so a round reads the board the round before left; it never waits
-/// for the queue to empty, or a forced attack's playout (`effects::combat`) would wait for ever.
+/// R824 (Meditative #12 Fear Mongerer): "trigger your End of turn effects" `rounds` times, now. Each round
+/// queues `player`'s end-of-turn hooks as §2.2's step would (R68's order, R821's multiplier) and nothing else
+/// of the end of the turn (R62). One entry in R68's queue queues the next round as it pops, so a round reads
+/// the board the one before left; it never waits for the queue to empty, or a forced attack's playout
+/// (`effects::combat`) would wait for ever.
 pub fn queue_turn_hook_rounds(sink: &mut EngineSink<'_>, player: PlayerId, rounds: i32) {
     if rounds <= 0 {
         return;
@@ -704,11 +702,10 @@ fn owed_to_traps(
     Some(entry)
 }
 
-/// §10.3 step C: the traps see the event first and fire immediately, to completion. A prompt for a
-/// trap's owner stops that dispatch (BUILD M3-T2), so the traps it never reached are parked in state,
-/// in its order; one that met the event and declined has had its look (R99). R62's end-of-turn window
-/// is `traps::run_trap_window`'s, so `turnEnded` is passed over here. `at` is the event's place in
-/// this action's list, when it is on it.
+/// §10.3 step C: the traps see the event first and fire immediately, to completion. A prompt for a trap's
+/// owner stops that dispatch (BUILD M3-T2), so the traps it never reached are parked in state, in its order;
+/// one that met the event and declined has had its look (R99). R62's end-of-turn window is
+/// `traps::run_trap_window`'s, so `turnEnded` is passed over here.
 fn offer_to_traps(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<usize>) -> Option<QueuedTrigger> {
     if is_trap_window_event(event) {
         return None;
@@ -738,14 +735,13 @@ fn run_owed_traps(sink: &mut EngineSink<'_>, event: &GameEvent, entry: &QueuedTr
     owed_to_traps(sink, event, &run);
 }
 
-/// R212: the events that happened after the one being dispatched, in the order they happened.
-///
-/// The action's list is in emission order, so all of it after the event came after it, whichever loop
-/// takes it (a cast's step-4 window, R70; #96's AI turn, whose nested `reduce`s dispatch it before it
-/// is copied here, `mark_dispatched`, R44, R168), as `combat::queue_declaration_triggers` reads too.
-/// An event not on the list (`at` is `None`) is an earlier action's, owed across a pause (§9.3), so all
-/// of this action's came after it. An owed item is this action's own when it collected it
-/// (`Frontier.positions`) or a nested `reduce` dispatched it before it was copied.
+/// R212: the events that happened after the one being dispatched, in the order they happened. The action's
+/// list is in emission order, so all of it after the event came after it, whichever loop takes it (a cast's
+/// step-4 window, R70; #96's AI turn, whose nested `reduce`s dispatch it before it is copied here,
+/// `mark_dispatched`, R44, R168), as `combat::queue_declaration_triggers` reads too. An event not on the list
+/// (`at` is `None`) is an earlier action's, owed across a pause (§9.3), so all of this action's came after
+/// it; an owed item is this action's own when it collected it (`Frontier.positions`) or a nested `reduce`
+/// dispatched it.
 fn events_after_dispatched(sink: &EngineSink<'_>, at: Option<usize>) -> Vec<GameEvent> {
     let list: &[GameEvent] = &sink.events[..];
     let frontier = sink.frontier.get();
@@ -774,16 +770,14 @@ fn events_after_dispatched(sink: &EngineSink<'_>, at: Option<usize>) -> Vec<Game
     out
 }
 
-/// Offer one event to the traps and then queue every other trigger that wakes on it, in R68's order
-/// (§10.3 steps C and D). Queueing only reads the board, so it never pauses halfway: the frontier is
-/// safe to flush into state the instant a prompt opens elsewhere.
+/// Offer one event to the traps and then queue every other trigger that wakes on it, in R68's order (§10.3
+/// steps C and D). Queueing only reads the board, so it never pauses halfway: the frontier is safe to flush
+/// into state the instant a prompt opens elsewhere.
 ///
-/// R212: the event is offered to the board as it stood when it happened, read off the events owed
-/// behind it (a state check, Death hooks and Reborn may run first, §4.5). A card that has moved zones
-/// since is on a stay that did not see it (a Reborn body, R174; a card drawn since, §8 #89), and a card
-/// answers for whoever controlled it then (#32 Prem Panther, even when its victim's Death steals it, #86).
-///
-/// The event's place in the list is found by value here; the loop knows it (`dispatch_new_events`).
+/// R212: the event is offered to the board as it stood when it happened, read off the events owed behind it
+/// (a state check, Death hooks and Reborn may run first, §4.5). A card that has moved zones since is on a
+/// stay that did not see it (a Reborn body, R174; a card drawn since, §8 #89), and a card answers for whoever
+/// controlled it then (#32 Prem Panther, even when its victim's Death steals it, #86).
 pub fn dispatch_event(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
     let at = sink
         .events
@@ -1127,9 +1121,7 @@ fn offer_to_gone_killer(
     queued
 }
 
-// ---------------------------------------------------------------------------
 // 3. The loop.
-// ---------------------------------------------------------------------------
 
 /// Apply one queued entry whole (§10.3 step A). The card is found again now rather than trusted
 /// from queue time: it may have died, been played or moved while it waited, and a trigger its
@@ -1294,10 +1286,10 @@ fn queued_trigger_def(holder: &TriggerHolder, entry: &QueuedTrigger) -> Option<T
 }
 
 /// §10.3 steps B to D without step G: the events so far reach the traps, which fire at once and to
-/// completion, and the other triggers they wake are queued, but nothing queued pops and no owed work
-/// drains, bar a trap's owed remainder (`OWED_TO_TRAPS`). A stage of several whole effects needs this
-/// between two (R62's delayed effects, each whole, R59; the triggers wait for its loop, R68), as does a
-/// cast's §10.5 step 4 inside its effect (R70). Stops at a prompt, the rest owed in state.
+/// completion, and the other triggers they wake are queued, but nothing queued pops and no owed work drains,
+/// bar a trap's owed remainder (`OWED_TO_TRAPS`). A stage of several whole effects needs this between two
+/// (R62's delayed effects, each whole, R59; the triggers wait for its loop, R68), as does a cast's §10.5 step
+/// 4 inside its effect (R70).
 pub fn dispatch_pending(sink: &mut SettleSink<'_>) {
     for _pass in 0..SETTLE_PASS_CAP {
         dispatch_new_events(sink);

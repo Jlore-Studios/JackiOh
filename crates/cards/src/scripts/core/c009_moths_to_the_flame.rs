@@ -30,14 +30,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass (R53).
-//
-// `start_turn()` is the controller's own start of turn, so it is the whole trigger here. #7, #12, #2
-// and #13 have Cry or end-of-turn text only, which never fires when placed or forced to attack.
-//
-// "Sick units included" is unreachable: an enemy unit is a turn old at its opponent's start of turn.
-// `force_attack` skips §4.2 steps 1-3, so a Defense Position unit is forced all the same, and
-// `crates/engine/tests/rules/combat_resolution.rs` covers the sick attacker directly.
+// #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass (R53). `start_turn()` is the controller's
+// own, so it is the whole trigger. #7, #12, #2 and #13 have Cry or end-of-turn text only, which never fires
+// when placed or forced to attack. "Sick units included" is unreachable: an enemy unit is a turn old at its
+// opponent's start of turn; `force_attack` skips §4.2 steps 1-3, so a Defense Position unit is forced all
+// the same (`crates/engine/tests/rules/combat_resolution.rs` covers the sick attacker directly).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

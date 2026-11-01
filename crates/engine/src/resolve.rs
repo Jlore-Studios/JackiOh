@@ -146,9 +146,9 @@ fn hook_of(script: &Script, name: HookName) -> Option<Hook> {
 
 /// Run one of a card's hooks. `cry` is also a spell's on-resolve hook (§10.9).
 ///
-/// The *non-resumable* runner: the whole list is applied now, so it is right only where no effect can
-/// open a prompt. A path whose effects may ask uses `prompts.runHookResumable` (a trigger, a Cry, an
-/// activate), and a start-of-game clause, which may Choose (§10.9), `prompts.runStartOfGame` (R151, R113).
+/// The *non-resumable* runner: the whole list is applied now, so it is right only where no effect can open
+/// a prompt. A path whose effects may ask uses `prompts.runHookResumable`, a start-of-game clause (R151,
+/// R113), which may Choose (§10.9), `prompts.runStartOfGame`.
 pub fn run_hook(sink: &mut EngineSink<'_>, instance: &CardInstance, name: HookName, options: HookOptions) {
     let Some(hook) = hook_of(&crate::scripts::script_of(sink.state, instance), name) else {
         return;
@@ -169,10 +169,9 @@ pub enum CastAfterward {
 /// How a cast is made, beyond R70's defaults (B5 E12; R452, R453):
 ///
 /// - `random`: every choice its caster would make is made at random (R452).
-/// - `targetEnemies`: each target pick is aimed by its declaration (R656: harm at enemies, help at
-///   friends, when one is legal); a card carrying the `targetEnemies` enchantment (E39) is cast so.
-/// - `afterward: "exile"`: a Spell lands in exile rather than its graveyard (Classic #56 Spell
-///   Tyrant's "then exile them", R453), at §10.5 step 7's landing (`echo.exileOnLanding`).
+/// - `targetEnemies`: each target pick is aimed by its declaration (R656), as for a card carrying the
+///   `targetEnemies` enchantment (E39).
+/// - `afterward: "exile"`: a Spell lands in exile, not its graveyard (Classic #56, R453), at §10.5 step 7.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CastOptions {
@@ -189,29 +188,23 @@ pub struct CastOptions {
     pub aim_at: Option<String>,
 }
 
-/// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with
-/// cost paid 0", fires the card's script, and "a cast Spell does use Twinspell's Echo". So a cast IS
-/// §10.5's pipeline past steps 1 and 2 (the effect chose the card; nothing is paid): step 3's Gifted
-/// Program hook (#64), step 4's placement and `cardPlayed` with its Echo (R178), step 5's Quickstriker
-/// (#38) and Combo draw (#78), then steps 6 and 7, owed to `state.work` only if something paused
-/// (R117), so a cast-on-draw Spell's Echo repeat resolves before the draw repeats (§2.4).
+/// R70: "a cast is free and counts as a play for every rule that counts or reacts to plays, with cost
+/// paid 0", fires the card's script, and "a cast Spell does use Twinspell's Echo". So a cast IS §10.5's
+/// pipeline past steps 1 and 2: step 3's Gifted Program hook (#64), step 4's placement and `cardPlayed`
+/// with its Echo (R178), step 5's Quickstriker (#38) and Combo draw (#78), then steps 6 and 7 (R117).
 ///
-/// A cast happens inside some other effect (§2.4's draw, #95's recursion), so it settles nothing
-/// itself, but its step 4 is a window (R70, R17): the traps answer there (`triggers.dispatchPending`),
-/// and §2.4's chain runs the state check after each cast-on-draw cast (§4.5, R59).
+/// A cast happens inside another effect (§2.4's draw, #95), so it settles nothing itself, but its step 4
+/// is a window (R70, R17): traps answer there, and the state check runs after each cast-on-draw cast
+/// (§4.5, R59).
 pub fn cast_card(sink: &mut EngineSink<'_>, instance: &CardInstance, options: CastOptions) {
     crate::play_steps::cast_through_pipeline(sink, instance, options);
 }
 
 /// §5.1 and R155: "Spells with 'End of turn: add this back to your hand' are flagged
 /// `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn".
-/// The flag is written at §10.5 step 7, as the Spell lands, on that step's three conditions in order:
-/// a Spell (a Unit with an `endOfTurn` hook, #13 Jlockeed Shredder-10, that died on its turn must not
-/// return, R153); an `endOfTurn` hook on its resolving face (#23, #24 and #31 in Core); and in the
-/// **graveyard** (#39 Recycling Initiative exiles itself on play, so it never comes back).
-///
-/// `turn.cleanup` clears it at the end of that turn, so a flagged card that returns to hand and is
-/// later discarded into the graveyard stays there (R153).
+/// Written at §10.5 step 7, as the Spell lands, on three conditions in order: a Spell (a Unit with an
+/// `endOfTurn` hook, #13, must not return, R153); an `endOfTurn` hook on its resolving face (#23, #24,
+/// #31); and in the **graveyard** (#39 exiles itself on play). `turn.cleanup` clears it that turn (R153).
 pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &str) {
     let Some(card) = find_instance(state, instance_id) else {
         return;
@@ -231,12 +224,10 @@ pub fn flag_return_to_hand_at_end_of_turn(state: &mut GameState, instance_id: &s
 }
 
 /// R429, R766 (issues #557, #572): the climb a Spell whose return keeps its price
-/// (`StaticFlags.returnKeepsPrice`, #31 KY's Math Equation) has had from its own returns and nothing
-/// else, beside the same amount in its `costMod`. R766 takes it off in the graveyard, so step 7 writes
-/// it again on the card it lands (`note_return_price`) for its end-of-turn return to read. Engine
-/// bookkeeping in `memory`, as R178's `@exileOnLanding` is: it lives as long as R155's flag beside it
-/// (`zones::remove_from_any_zone`, `turn::clear_return_flags`), and a card that reaches a graveyard or
-/// exile any other way loses it with the rest of its memory (R78).
+/// (`StaticFlags.returnKeepsPrice`, #31) has had from its own returns, beside the same amount in its
+/// `costMod`. R766 takes it off in the graveyard, so step 7 writes it again (`note_return_price`) for the
+/// end-of-turn return to read. Engine bookkeeping in `memory`, as R178's `@exileOnLanding` is: it lives as
+/// long as R155's flag beside it, and a card reaching a graveyard or exile any other way loses it (R78).
 pub const RETURN_PRICE_KEY: &str = "@returnPrice";
 
 /// R429, R766: note `price`, the climb the card carried into its play, on a card step 7 has just

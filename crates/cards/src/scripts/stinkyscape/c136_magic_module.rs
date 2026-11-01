@@ -6,6 +6,7 @@
 //! that deals damage|random Spells that deal damage} to your hand." Spells 1, Radiant 2.
 //! Engine: its keywords are catalog data — Equip fuses it into a Unit of yours (R1086), its Spell
 //! Damage going with it into a host and into the Starship — and its death fuses a copy into its
+//! owner's Dormant Starship (R1852000).
 
 use jackioh_engine::prelude::*;
 

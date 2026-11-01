@@ -2,10 +2,9 @@
 // `expectNoBlockingViolations` (support/a11y.ts) fails on a serious or critical violation not listed with its
 // reason in support/axe-exceptions.ts, and on a listed one that no longer fires. Drag to play has no keyboard
 // path and click-click must, so one test plays a card by keyboard alone. Every route runs again at the phone
-// size (#1561), whose labels end in " (phone)" so an exception in axe-exceptions.ts holds at one width only.
-// Daily only: a pull request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38.
-// Networked: the signed-in routes need `E2E=1 cargo run --release -p jackioh-server`. Every wait is a retried
-// DOM assertion.
+// size (#1561), whose labels end in " (phone)" so an exception holds at one width only. Daily only: a pull
+// request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38. Networked: the
+// signed-in routes need `E2E=1 cargo run --release -p jackioh-server`. Every wait is a retried DOM assertion.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
@@ -63,9 +62,9 @@ function practiceUrl(seed: string): string {
 }
 
 /**
- * A pool card draws its face only once the browser reports it near the screen (PoolGrid's PoolFace, #2303),
- * and the Almanac's pool shows before any face does (#2301): axe run before then meets bare buttons, and the
- * `.db-card` exceptions in axe-exceptions.ts read as stale.
+ * A pool card draws its face only once the browser reports it near the screen (PoolFace, #2303), and the Almanac's
+ * pool shows before any face does (#2301): axe run before then meets bare buttons, and the `.db-card` exceptions
+ * in axe-exceptions.ts read as stale.
  */
 function poolFacesDrawn(): void {
   cy.get(`${ts(CARD_POOL)} .db-card-face`, { timeout: timeouts.view })

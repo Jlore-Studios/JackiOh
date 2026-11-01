@@ -143,6 +143,7 @@ mod tests {
 
     /// A play of a graveyard card (B5 E11), sent to `reduce` as `legalActions` offers it: the
     /// harness's `play` takes a card from a hand, so a graveyard play is reduced here (C #28 Second
+    /// Wind's shape).
     fn graveyard_play(state: &GameState, id: &str, attempt: u32) -> (Option<String>, GameState) {
         let action = json_as::<Action>(json!({
             "type": "play",

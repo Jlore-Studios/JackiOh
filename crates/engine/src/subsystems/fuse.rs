@@ -2,10 +2,10 @@
 //! and the instance the result lives on (#85 Unlicensed Experimentation, #99 Craft a Card).
 //!
 //! The result is a *definition*, not an instance: both faces fuse, so Make Radiant keeps working (§5.2),
-//! written fresh into `state.transient_defs` as match state surviving a JSON round-trip (§10.1). Scripts
-//! are code no JSON can hold, so Rust registers nothing (SURFACE §3, §6.6): they are composed from the
-//! ingredients' scripts by `combine_objects`'s rules then and there, and R179's id names the
-//! ingredients, so a replay of the same action list runs the same scripts (§9.3).
+//! written into `state.transient_defs` as match state surviving a JSON round-trip (§10.1). Scripts are
+//! code no JSON can hold, so Rust registers nothing (SURFACE §3, §6.6): they are composed from the
+//! ingredients' scripts by `combine_objects`'s rules, and R179's id names the ingredients, so a replay
+//! of the same action list runs the same scripts (§9.3).
 //!
 //! R77 keeps an ingredient's *instance* already on the field, zone, damage and counters intact; only the
 //! def id, summed buffs and united keywords change. R468–R470 (B5 E23): digest ids past `FUSED_ID_CAP`,
@@ -39,11 +39,10 @@ use crate::wire::{
 /// The `Script` key of the step table a continuation re-enters (`prompts::RESUME_HOOK`).
 const RESUME_KEY: &str = "resume";
 
-/// Keys whose reads return lists, not effects, so a fusion builds every ingredient's list at once:
-/// auras, read off the field on every stat read (§10.4); `preview` (R280), the numbers `view_for`
-/// shows; `drawLimit` (B5 E3, R457), read on every draw, so the lowest holds; `costAura` and
-/// `graveyardPlay` (B5 E15, E11; R455, R454), `heroGuard` and `conditionalKeywords` (B5 E6, E35) —
-/// each asked with the fused card's own context, as R196 asks `conditionMet`.
+/// Keys whose reads return lists, not effects, so a fusion builds every ingredient's list at once: auras
+/// (§10.4), `preview` (R280), `drawLimit` (B5 E3, R457; the lowest holds), `costAura` and `graveyardPlay`
+/// (R455, R454), `heroGuard` and `conditionalKeywords`, each asked with the fused card's own context, as
+/// R196 asks `conditionMet`.
 const EAGER_KEYS: &[&str] = &[
     "aura",
     "preview",
@@ -291,14 +290,14 @@ fn rarest_of(defs: &[CardDef]) -> Rarity {
 }
 
 /// The id a transient def gets (R102, R179): `t-<n>`, n from how many transient defs the state holds,
-/// so the same action list always produces the same id (§9.3) — then the ingredient ids, `t-<n>:<a>+<b>`.
+/// so the same action list always produces the same id (§9.3), then the ingredient ids, `t-<n>:<a>+<b>`.
 /// A fused ingredient goes in parentheses, so the id reads back one way (R179).
 ///
-/// The suffix keeps the scripts right: scripts are code built from the id's ingredients, and one server
-/// process runs every match (§9.2) folding its log to rebuild it (§9.3), so an id carrying the ingredients
-/// names the same scripts in every match that can mint it. R469: a Radiant-face ingredient takes `*`.
-/// R468: past `FUSED_ID_CAP` the list becomes `t-<n>:#<digest>`, a pure hash of the spelled-out list
-/// (Classic+ #74's nested fusions); the definition keeps the list (`CardDef.ingredients`) to rebuild from.
+/// The suffix keeps the scripts right: one server process runs every match (§9.2), folding its log to
+/// rebuild them (§9.3), so an id carrying the ingredients names the same scripts in every match that can
+/// mint it. R469: a Radiant-face ingredient takes `*`. R468: past `FUSED_ID_CAP` the list becomes
+/// `t-<n>:#<digest>`, a pure hash of the list (Classic+ #74's nested fusions); `CardDef.ingredients`
+/// keeps it.
 fn next_transient_id(state: &GameState, specs: &[FusedIngredient]) -> String {
     let taken = |n: usize| {
         let bare = format!("t-{n}");
@@ -342,9 +341,9 @@ fn ingredient_name(spec: &FusedIngredient) -> String {
     }
 }
 
-/// R468: a pure, deterministic 64-bit digest of a string, as 16 hex digits — two 32-bit lanes of
-/// multiply-xorshift mixing over UTF-16 code units, as TS's `charCodeAt` with `Math.imul`/`>>>` as
-/// `wrapping_mul`/a `u32` shift (CLAUDE.md rule 4: no crypto, no I/O; it names a list, not a secret).
+/// R468: a pure, deterministic 64-bit digest of a string, as 16 hex digits: two 32-bit lanes of
+/// multiply-xorshift mixing over UTF-16 code units (CLAUDE.md rule 4: no crypto, no I/O; it names a list,
+/// not a secret).
 pub fn fused_digest(text: &str) -> String {
     let units: Vec<u16> = text.encode_utf16().collect();
     let length = units.len() as u32;
@@ -611,10 +610,8 @@ fn derive_context<'b>(ctx: &'b mut EffectContext<'_>) -> EffectContext<'b> {
 
 /// §10.4 layer 5: each ingredient's aura, reading "this" as the fused card at the price that ingredient
 /// was played for (R102, `as_ingredient`): #46 Suppressive Aura played for 4 and fused onto a Mana Well
-/// is still "paid 4: −5/−5".
-///
-/// An aura's entries may borrow the card read at an ingredient's price — a copy made here — so such an
-/// entry carries that copy and asks its aura again for each unit applied to (a pure read: same answer).
+/// is still "paid 4: −5/−5". An entry that borrows the card read at that price carries the copy and asks
+/// its aura again for each unit applied to (a pure read: same answer).
 fn fused_aura(faces: &[Face]) -> Option<AuraHook> {
     let hooks: Vec<Option<AuraHook>> = faces.iter().map(|face| face.script.aura.clone()).collect();
     if hooks.iter().all(Option::is_none) {
@@ -798,11 +795,11 @@ fn combined_checks(checks: Vec<TargetCheck>) -> TargetCheck {
     target_check(move |args| checks.iter().all(|check| check(args)))
 }
 
-/// A hook-valued key (a Cry, Death, a start/end-of-turn or delayed hook, a resume
-/// step): one hook running each in turn, so "both Cry and Death lists run" (R77) — each built only when the
-/// one before resolved (`lazy_part`, R102), so a later ingredient reads the board the earlier ones left
-/// (#68's "8 if your hero is below 10" after Reno set it to 30, #22's meal after #100 exiled it). An
-/// `EAGER_KEYS` key runs each at once; a continuation left comes back to that one alone (`combined_hook`).
+/// A hook-valued key (a Cry, Death, a start/end-of-turn or delayed hook, a resume step): one hook running
+/// each in turn, so "both Cry and Death lists run" (R77), each built only when the one before resolved
+/// (`lazy_part`, R102), so a later ingredient reads the board the earlier ones left (#68's "8 if your hero
+/// is below 10" after Reno set it to 30, #22's meal after #100 exiled it). An `EAGER_KEYS` key runs each at
+/// once; a continuation left comes back to that one alone (`combined_hook`).
 fn combine_hooks(values: Vec<Option<Hook>>, key: &str, parent: &str) -> Option<Hook> {
     if values.iter().all(Option::is_none) {
         return None;
@@ -981,10 +978,9 @@ fn least_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
 }
 
 /// The static flags that are an amount of what the text does, not a quality the card has: #79's Echo +1,
-/// #38's Combo, #84's hero Armor. R102: a card fused from two such texts carries both,
-/// so amounts add — a Twinspell onto a Twinspell grants Echo +2, as two standing apart do (R124) — where
-/// a quality (`castOnDraw`, `immutable`) is had once, a requirement (`tribute`) takes the stricter,
-/// and a `true` is one.
+/// #38's Combo, #84's hero Armor. R102: a card fused from two such texts carries both, so amounts add (a
+/// Twinspell onto a Twinspell grants Echo +2, as two standing apart do, R124), where a quality
+/// (`castOnDraw`, `immutable`) is had once, a requirement (`tribute`) takes the stricter, a `true` is one.
 fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option<FlagOrCount> {
     let defined: Vec<FlagOrCount> = values.into_iter().flatten().collect();
     if defined.is_empty() {
@@ -1144,16 +1140,16 @@ fn combine_quests(records: &[Script]) -> Option<QuestBook> {
     }
 }
 
-/// The ingredients' scripts combined, `records` aligned with the ingredients: every kind
-/// of value combines by one rule, which is what keeps this working as `Script` grows new hooks —
-/// a hook becomes one hook running each in turn (`combine_hooks`), an aura running each at once; a list
-/// becomes the lists in ingredient order; a nested object combines key by key; a flag is true when any
-/// set it, a number takes the larger, an amount of what the text does adds up (`summed_count`).
+/// The ingredients' scripts combined, `records` aligned with the ingredients: every kind of value
+/// combines by one rule, which keeps this working as `Script` grows new hooks: a hook becomes one hook
+/// running each in turn (`combine_hooks`), an aura running each at once; a list becomes the lists in
+/// ingredient order; a nested object combines key by key; a flag is true when any set it, a number takes
+/// the larger, an amount of what the text does adds up (`summed_count`).
 ///
 /// `cost`, `setStat`, `conditionMet`, `tributeWhen`, `plagueMultiplier`, `wouldCounter`, `attackMods` and
-/// `echoX` left each record (`script_record`) to combine on their own, as `cry` and `aura` did for
-/// `fused_cry` and `fused_aura`. `targetingDiscards` and `recordsPlayAs` ride no fusion: their readers
-/// take a fused card's ingredients one by one, so a fusion carries neither.
+/// `echoX` leave each record (`script_record`) to combine on their own, as `cry` and `aura` do.
+/// `targetingDiscards` and `recordsPlayAs` ride no fusion: their readers take a fused card's ingredients
+/// one by one.
 fn combine_objects(records: &[Script]) -> Script {
     let hooks = |read: fn(&Script) -> Option<Hook>, key: &str| {
         combine_hooks(records.iter().map(read).collect(), key, "")
@@ -1311,11 +1307,11 @@ fn fused_attack_mods(faces: &[Face]) -> Option<AttackModHook> {
 }
 
 /// One ingredient's script, ready to combine: without its `cost` hook (R77 fixes the fused cost at
-/// min(sum, 4); a surviving Ceaseless Void hook would overrule it — R65), and without the members that
-/// combine on their own: `setStat`, `conditionMet` (R195's glow answers a boolean, so or-ed — R196),
+/// min(sum, 4); a surviving Ceaseless Void hook would overrule it, R65), and without the members that
+/// combine on their own: `setStat`, `conditionMet` (R195's glow answers a boolean, so or-ed, R196),
 /// `tributeWhen` and `wouldCounter` (R403, R667), `plagueMultiplier` (R471), `attackMods` (R1120, summed),
-/// `echoX` (R802, the larger). Trigger ids are namespaced, so two "turn-end"s stay distinct, each running
-/// in its ingredient's place (R102), as do its Activate abilities (R102, R384).
+/// `echoX` (R802, the larger). Trigger ids and Activate abilities are namespaced, so two "turn-end"s stay
+/// distinct, each running in its ingredient's place (R102, R384).
 fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
     let namespaced = |list: &[TriggerDef]| -> Vec<TriggerDef> {
         list.iter()
@@ -1586,12 +1582,11 @@ fn with_choices(effect: Effect, targets: Vec<Selection>, modes: Vec<String>) -> 
 }
 
 /// R102 concatenates the ingredients' declared targets and modes in ingredient order, and R90 reads that
-/// flat list declaration by declaration — so each ingredient's Cry resolves with its OWN slice of the play's
-/// choices, not the whole list: handed the whole list, every ingredient read its first slot (a crafted Bigot
-/// and Twisted Sorcerer aimed the Sorcerer's 4 at the unit Bigot destroyed). Modes split by mode-declaration
-/// counts; targets split by R90's rule over the active declarations (`forModes`) — with the lengths §10.5
-/// step 1 read the play with, handed over in `data` (`DECLARATION_SLICES_KEY`), since the board at resolution
-/// is not the checked one. Only a Cry with no play behind it measures against the board as it stands.
+/// flat list declaration by declaration, so each ingredient's Cry resolves with its OWN slice of the play's
+/// choices: handed the whole list, every ingredient would read its first slot. Modes split by
+/// mode-declaration counts; targets split by R90's rule over the active declarations (`forModes`), with the
+/// lengths §10.5 step 1 read the play with, handed over in `data` (`DECLARATION_SLICES_KEY`), since the
+/// board at resolution is not the checked one. Only a Cry with no play behind it measures the board as is.
 ///
 /// Every effect an ingredient's Cry returns is bound to that slice (`ctx.targets` reads at apply time, in
 /// the fused card's context), and each Cry is its own part (`lazy_part`), reading the board the earlier
@@ -1791,10 +1786,9 @@ fn fused_specs(state: &GameState, def_id: &str) -> Option<Vec<FusedIngredient>> 
 }
 
 /// The script an ingredient runs on one form: a fused ingredient's composed here on that form, its fused
-/// ingredients first; any other id's from the registry. `seen` stops a malformed id naming itself (no script).
-///
-/// Only the asked-for form is composed: composing both forms of every ingredient on every lookup doubles
-/// the work per link, and a fourteen-deep Fuse of Fuses (golden seed 68) is then 2^14 per `script_of`.
+/// ingredients first; any other id's from the registry. `seen` stops a malformed id naming itself.
+/// Only the asked-for form is composed: both forms on every lookup would double the work per link, and a
+/// fourteen-deep Fuse of Fuses (golden seed 68) would cost 2^14 per `script_of`.
 fn face_for(
     state: &GameState,
     def_id: &str,
@@ -1919,10 +1913,10 @@ pub fn rebuild_fused_def(state: &mut GameState, def_id: &str, owner: PlayerId) -
 
 /// R77's keep-the-instance path. The fused card *is* the target: only its def id, summed buffs and united
 /// granted keywords change; zone, position, damage, exertion, summoned_turn, counters, memory, the radiant
-/// and Vanilla flags stay exactly as they were. A token's `stats_override`/`armor_override` were its printed
-/// face (§7, R175), already summed into the fused definition by `worn_face`, so they leave with it — kept,
-/// §10.4's layer 1 would read them in place of the fused face. And the memory gains the ingredients'
-/// prices when not all the kept card's, so each text reads its own (R102).
+/// and Vanilla flags stay as they were. A token's `stats_override`/`armor_override` were its printed face
+/// (§7, R175), already summed into the fused definition by `worn_face`, so they leave with it: kept,
+/// §10.4's layer 1 would read them in place of the fused face. The memory gains the ingredients' prices
+/// when not all the kept card's, so each text reads its own (R102).
 fn keep_instance(
     state: &mut GameState,
     def: &CardDef,
@@ -2132,9 +2126,8 @@ fn as_it_stands(state: &GameState, card: &CardInstance) -> CardInstance {
 /// kept card (R23; R61: the trap fires and does nothing), or neither a kept card nor a hand named. A target
 /// not listed as an ingredient is one anyway, so #85 may name its two cards separately.
 ///
-/// An ingredient gives only its definition, so one an earlier fusion already consumed still fuses — letting
-/// radiant #85 fuse the played permanent "onto each matching permanent separately" (R77), each fusion its
-/// own transient definition.
+/// An ingredient gives only its definition, so one an earlier fusion consumed still fuses: radiant #85 fuses
+/// the played permanent "onto each matching permanent separately" (R77), each its own transient definition.
 pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
     let target: Option<CardInstance> = args
         .target
@@ -2229,11 +2222,10 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
             live.cost_override = Some(kept_override);
             result = live.clone();
         }
-        // R43, R151: the kept card now carries every ingredient's text, a #98 Heroic Power's included — and
-        // "one created later rolls when it is created": the rolled power ceased to exist with its ingredient,
-        // and the kept memory is the target's (R77), so without the roll the card would carry no power, only
-        // "Once per turn, spend X". A card with its power keeps it (`hero_power::ensure_power`); a crafted
-        // card rolls on reaching the hand.
+        // R43, R151: the kept card now carries every ingredient's text, a #98 Heroic Power's included, and
+        // "one created later rolls when it is created": the rolled power ceased to exist with its ingredient
+        // and the kept memory is the target's (R77), so the card would carry no power, only "Once per turn,
+        // spend X". A card with its power keeps it (`hero_power::ensure_power`); a crafted one rolls in hand.
         let controller = result.controller;
         let _ = crate::prompts::run_start_of_game(sink, &result, controller);
         // R781004: and a text that draws for its own card (Keymaster Keenus's Aura) draws for this one.

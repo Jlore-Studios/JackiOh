@@ -5,16 +5,15 @@
 //! jackioh-server balance-watch --patch=<version> [--source=live|all] [--file=<records.jsonl>]…
 //! ```
 //!
-//! Reads one patch's game records through the store (DATABASE_URL) and prints, as Markdown to paste
-//! into #699, the cards whose in-deck win rate stands out against 50%. The bands are `config.rs`
-//! (CLAUDE.md rule 9): a z-score against 50% with at least `BALANCE_WATCH_MIN_GAMES` games, never a
-//! fixed win-rate cut-off, because the same 55% is noise at 40 games and a signal at 700.
+//! Reads one patch's game records through the store (DATABASE_URL) and prints, as Markdown to paste into
+//! #699, the cards whose in-deck win rate stands out against 50%. The bands are `config.rs`
+//! (CLAUDE.md rule 9): a z-score against 50% with at least `BALANCE_WATCH_MIN_GAMES` games, never a fixed
+//! win-rate cut-off, because the same 55% is noise at 40 games and a signal at 700.
 //!
-//! It is advisory and read-only. It changes no card, tunes nothing and files nothing: below the
-//! R654 gate (`PUBLIC_STATS_MIN_LIVE_GAMES` live games) the figures blend AI development runs with
-//! live games and the report says they are provisional, and a big played delta is the sign of a card
-//! the AI pilot cannot use, so every flag asks to be confirmed against live human games, never to be
-//! acted on as it stands.
+//! It is advisory and read-only: it changes no card and files nothing. Below the R654 gate
+//! (`PUBLIC_STATS_MIN_LIVE_GAMES` live games) the figures blend AI development runs with live games and the
+//! report says they are provisional, and a big played delta is the sign of a card the AI pilot cannot use,
+//! so every flag asks to be confirmed against live human games.
 
 use std::cmp::Ordering;
 use std::path::PathBuf;
@@ -147,11 +146,10 @@ fn merge_into(by_card: &mut IndexMap<String, CardStats>, stat: CardStats) {
     }
 }
 
-/// R377: the report the options ask for, off the totals the store holds (R1044000). The counting
-/// replicates `api::stats::public_report` locally (R1451): live records count their human seats only,
-/// and development records count every seat, but only with `--source=all` while the gate stands —
-/// `--source=live` always counts live-only, and once the gate clears development runs are ignored
-/// with no toggle to bring them back.
+/// R377: the report the options ask for, off the totals the store holds (R1044000). The counting replicates
+/// `api::stats::public_report` locally (R1451): live records count their human seats only, development
+/// records every seat, but only with `--source=all` while the gate stands; `--source=live` always counts
+/// live-only, and once the gate clears development runs are ignored with no toggle to bring them back.
 pub async fn balance_watch_report(
     db: &Db,
     options: &BalanceWatchOptions,

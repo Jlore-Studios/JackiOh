@@ -1,16 +1,15 @@
 // The whole client in one component: board (M5-T1), pickers (M5-T2), animation runner (M5-T4).
 //
 // Exactly three pieces of state, none a rule: `interaction` (the play or attack being built; `actions.ts`
-// advances it by filtering the engine's `legal` array, nothing here asks if a card is affordable),
-// `queue` (the animation runner: BUILD M5-T4 updates the view after an event's animation, so the board
-// renders the view the events were planned against and swaps to the newest when the queue settles) and
-// `shown` (that held-back view). Everything else is `props.view` and `props.legal`; `onAction` goes
-// straight to the caller, the only thing that talks to the engine (CLAUDE.md rule 7). The chrome holds no
-// rule either: Concede asks first (ConfirmConcede.tsx), the draw offer's notices come from the view
-// (DrawOffer.tsx), as do R915004's script-failed notice (ScriptFailedNotice.tsx), R1838000's Trade control
-// (TradeControl.tsx) and R1853003's Marketplace shop (Marketplace.tsx, #2645), each live as `legal` lists its moves.
-// `legal` belongs to `props.view`, so every consumer gets none until the board SHOWS that view: else the newer
-// position's moves lit End turn before the player saw the turn was theirs.
+// advances it by filtering the engine's `legal` array), `queue` (the animation runner: BUILD M5-T4 updates
+// the view after an event's animation, so the board renders the view the events were planned against) and
+// `shown` (that held-back view). Everything else is `props.view` and `props.legal`; `onAction` goes straight
+// to the caller, the only thing that talks to the engine (CLAUDE.md rule 7). The chrome holds no rule either:
+// Concede asks first (ConfirmConcede.tsx), and the draw offer's notices, R915004's script-failed notice
+// (ScriptFailedNotice.tsx), R1838000's Trade control (TradeControl.tsx) and R1853003's Marketplace shop
+// (Marketplace.tsx, #2645) come from the view, each live as `legal` lists its moves. `legal` belongs to
+// `props.view`, so every consumer gets none until the board SHOWS that view: else the newer position's moves
+// lit End turn before the player saw the turn was theirs.
 
 import {
   useCallback,

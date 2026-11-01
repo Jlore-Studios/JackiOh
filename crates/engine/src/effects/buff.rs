@@ -183,10 +183,8 @@ fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
 
 /// Add a keyword to `grantedKeywords` (§10.4): a set, except that Armor and Lucky sum across sources
 /// (§6.1); a spent Divine Shield or used Reborn comes back. The grant lands on the live card and `unit`
-/// is brought up to date from it, so a caller granting again reads it (a card in no pile: the copy).
-///
-/// R2280001: an Animated granted to a backrow card with stats that first gives it both owes it its
-/// animation at the next state check (`animated::owe_animation`).
+/// is brought up to date from it (a card in no pile: the copy). R2280001: an Animated granted to a
+/// backrow card with stats that first gives it both owes it its animation at the next state check.
 fn grant_to(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
     let animated = keyword.kind() == KeywordKind::Animated;
     let was = animated && crate::animated::ready_to_animate(ctx.sink.state, &unit.id);

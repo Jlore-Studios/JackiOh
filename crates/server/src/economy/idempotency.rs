@@ -8,14 +8,14 @@
 //! (R1301003), in the spend's own transaction:
 //!
 //! - [`replayed`]: a key the account sent before answers as it committed, or with another route or
-//!   body is 422, and either way spends nothing.
+//!   body is 422; either way nothing is spent.
 //! - [`keep`]: only a committed spend is kept: a refusal writes nothing, so the same key may run
 //!   again once the refusal no longer holds.
-//! - [`sweep_expired`]: run by the retention loop (`api::retention::run_purge`); an account's
-//!   deletion takes its keys with it.
+//! - [`sweep_expired`]: run by the retention loop (`api::retention::run_purge`); deleting an account
+//!   takes its keys.
 //!
-//! The body is kept only as a keyed hash ([`RequestKey::of`]), under `CODE_PEPPER`'s `:body`
-//! domain, so no invite code a redemption sent is kept, even hashed under the code's own domain.
+//! The body is kept only as a keyed hash ([`RequestKey::of`]) under `CODE_PEPPER`'s `:body` domain, so
+//! no invite code a redemption sent is kept, even hashed under the code's own domain.
 
 use serde::Serialize;
 use serde_json::Value;

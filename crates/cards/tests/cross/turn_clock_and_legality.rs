@@ -348,7 +348,9 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
         g.play(QUICKSTRIKER, json!({}));
         g.play(VANILLA, json!({}));
         assert_eq!(g.state().players.p2.hero.health, 29);
+        // p2's turn begins: Moths makes the 5/4 Panther attack it (a forced attack spends no exertion,
         // §4.1), the Panther destroys it and survives (§4.3), so it draws 2 for p1 on p2's turn (R426) —
+        // Hinder first, which casts itself and counts as a card p1 played this turn.
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P2);
         assert!(
@@ -398,6 +400,7 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
     use super::*;
 
     // R177's last channel, closed by R227: an instance id is the only handle the action protocol has
+    // for a face-down target, so `legalActions` names one whenever a card may target a face-down trap.
     #[test]
     fn r227_r177_legal_actions_never_names_a_face_down_trap_by_an_id_its_viewer_saw_while_the_card_was_public()
      {
@@ -478,6 +481,8 @@ mod s3_2_9_3_a_play_s_zone_is_one_of_the_row_s_lanes {
         assert!(!offered);
 
         // …and §9.3 has `reduce` refuse what is illegal itself. A lane is an integer on the wire
+        // (`ZoneChoice.lane: i32`), so a play naming lane 2.5 is refused where the action is read,
+        // before `reduce` could accept it: it does not parse into an `Action`, and nothing is spent.
         let sent = json!({
             "type": "play",
             "playerId": "p1",
@@ -534,6 +539,7 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
             meanings.insert(hash_state(&result.state), graveyard_ids(&result.state));
         }
 
+        // The same two cards, listed the other way round: reduce takes it (no prompt answer is
         // order-checked, R60's "N different cards" is a set), so it has to be a play legalActions offers.
         for answer in &offered {
             let ActionBody::Answer { choice_id, selection } = answer else {
@@ -590,6 +596,7 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
         }));
         // R123's shape: one `tribute` declaration with a pick AND an amount. The tributed unit travels
         // in `tributes` (§6.3's cost, paid at §10.5 step 2) and in `targets` (what the script reads as
+        // the unit it tributed): "a card that declares both therefore names its units in both lists".
         fixture(
             &mut s,
             "edge-r8-devourer",
@@ -673,6 +680,7 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
             "p1": { "hand": [EDGE_VANILLA] },
             "p2": { "field": [EDGE_VANILLA, EDGE_VANILLA], "hand": [EDGE_VANILLA] },
         }));
+        // The exile pile is public and
         // chronological (§3), so the order the picks are exiled in is on the table for both seats.
         fixture(
             &mut s,
@@ -725,6 +733,7 @@ mod r221_r90_10_2_a_play_s_picks_for_one_declaration_are_a_set {
         assert_eq!(offered.error, None);
 
         // `reduce` may refuse the unoffered listing, or accept it as it accepts an answer's (R221) —
+        // but then it must mean what the offered play means: the same cards, exiled in the same order.
         if reversed.error.is_some() {
             return;
         }

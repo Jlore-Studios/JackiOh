@@ -100,6 +100,7 @@ mod tests {
         crate::register_all();
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): with no preview the Potion pool is the
         // non-token Potion cards of the sets that ship (R1179003), M+ #11 to #13, so the Pouch adds
+        // two of them rather than fizzling.
         let pool: Vec<String> =
             crate::query::query(&json_as(json!({ "tags": ["Potion"] }))).iter().map(|def| def.id.clone()).collect();
         assert_eq!(pool, POTIONS.map(String::from).to_vec());

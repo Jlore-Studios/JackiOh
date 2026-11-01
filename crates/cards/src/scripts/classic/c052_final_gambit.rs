@@ -94,15 +94,11 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
-// step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
-// caps (R44); fatigue counts, while losing health (R18) and set health (C #29) never open it; the hit
-// is canceled and deals nothing (R1704001); then heal 10 and draw 3; a copy that stays on the field
-// cancels one hit a turn; radiant: heal 20 and draw your whole deck (R58), most of it burning (R317);
-// tuned numbers (heal, draw) read through `param()` (R386). `mod v0_4_0f` keeps the redirect to the
-// enemy hero, the kept script's (R767000).
+// SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33), judged after Armor, multipliers and caps
+// (R44); set health (C #29) never opens it; `mod v0_4_0f` keeps the redirect to the enemy hero (R767000).
 // Going Long (Armor 2), C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either
-// hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if
+// hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if both
+// heroes are at 0" needs a second hit after the trap is spent: Prem Panther's "draw 2" into an empty deck.
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -357,8 +353,9 @@ mod tests {
                 s.play(FORWARD, json!({ "zone": 2 }));
                 s.end_turn();
                 s.state_mut().players.p2.mana.current = 10;
-                // and stays (C+ #74, R831011); a Trap's copy gives it no stats, so it stays a face-up Field
-                // Trap in its zone (R2280000).
+                // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text
+                // and stays (C+ #74, R831011); a Trap's copy has no stats, so it stays a face-up Field
+                // Trap (R2280000).
                 s.play(RAPID, json!({}));
                 s.play(GAMBIT, json!({}));
                 assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
@@ -664,8 +661,9 @@ mod tests {
                     s.play(FORWARD, json!({ "zone": 2 }));
                     s.end_turn();
                     s.state_mut().players.p2.mana.current = 10;
-                    // and stays (C+ #74, R831011); a Trap's copy gives it no stats, so it stays a face-up
-                    // Field Trap in its zone (R2280000).
+                    // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's
+                    // text and stays (C+ #74, R831011); a Trap's copy has no stats, so it stays a face-up
+                    // Field Trap (R2280000).
                     s.play(RAPID, json!({}));
                     s.play(GAMBIT, json!({}));
                     assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));

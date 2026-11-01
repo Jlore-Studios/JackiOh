@@ -116,9 +116,9 @@ pub struct ForcedAttackerFilter {
 }
 
 /// "summon 2 Rush Tokens; if it was a Unit, they attack it" (#60 Bear Honeypot): "they" is the tokens
-/// this effect list just summoned, read back from its `summoned` events (pure, replay-stable, no new
-/// `GameState` field). R136: the walk starts at `ctx.events_from` (`resolve::make_context`), so a summon
-/// earlier in the same action is not read as this script's own.
+/// this effect list just summoned, read back from its `summoned` events (pure, replay-stable). R136: the
+/// walk starts at `ctx.events_from` (`resolve::make_context`), so an earlier summon in the same action is
+/// not read as this script's own.
 fn freshly_summoned(ctx: &EffectContext<'_>) -> IndexSet<String> {
     // A list a prompt split resumes in a later action, whose event list begins after the pause, so
     // what its head summoned comes with the continuation (`prompts::summoned_so_far`, R113).
@@ -222,9 +222,9 @@ pub struct CancelAttackArgs {
 
 /// §6.3 Cancel an attack and R44: inside §4.2 step 4's trap window, mark the open `declaredAttack`
 /// canceled (`combat::declare_attack` then skips step 5) and emit `attackCancelled`; the exertion
-/// spent declaring is not given back. Outside a window it fizzles, so a trap firing on a later dispatch
-/// cannot cancel a combat already fought, and with no `self` for `byInstanceId` it fizzles too. R121: a
-/// forced attack opens no window, so this never cancels one (the rule, not an omission).
+/// spent declaring is not given back. Outside a window it fizzles, as it does with no `self` for
+/// `byInstanceId`, so a trap on a later dispatch cannot cancel a combat already fought. R121: a forced
+/// attack opens no window, so this never cancels one (the rule, not an omission).
 ///
 /// `destroyAttacker` (R283, Radiant #96) destroys the attacker as part of the cancel, on the stay it
 /// declared from (R174): an Indestructible one is knocked down at the next check (R46), a Reborn one
@@ -320,15 +320,13 @@ pub struct AiPlaysOutTurnArgs {
 /// R44 and R84: "an AI plays the rest of their turn with random legal actions" (#96 My Pawn). Sets
 /// `ai_turn`, R44's lockout (`turn::cleanup` clears it at the end of that turn, R152), and hands the
 /// turn to `play_out_turn`, whose uniform draw over `legal_actions` minus `AI_SKIPPED_ACTIONS` IS
-/// §10.7's policy; nothing here decides an action.
-///
-/// `play_out_turn` adopts a fresh state into the sink field by field, so every instance is new
-/// afterwards and no later effect may hold a `CardInstance` read before it: #96's list ends here.
+/// §10.7's policy; nothing here decides an action. `play_out_turn` adopts a fresh state into the sink
+/// field by field, so no later effect may hold a `CardInstance` read before it: #96's list ends here.
 ///
 /// `settleFirst` (R283, R59) settles the board before the AI's first action (Radiant #96): `destroy`
 /// only marks (§6.3), and the check collecting the mark would otherwise run inside the playout's first
-/// `reduce`, after the AI chose from a board still holding it (a #89 Corpse Eater in the AI's hand
-/// eats it before the AI can play it; R212). Off by default, so every other list plays out as before.
+/// `reduce`, after the AI chose from a board still holding it (a #89 Corpse Eater in the AI's hand eats
+/// it before the AI can play it; R212). Off by default.
 ///
 /// One crate calls across its modules directly (SURFACE §6.6); §9.3 and CLAUDE.md rule 4 still ban
 /// anything asynchronous inside `reduce`.

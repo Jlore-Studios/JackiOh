@@ -198,7 +198,7 @@ pub struct GameTally {
 /// `defs`, and `attacks`, the caller's count of the seat's logged attacks. A played id `defs` does
 /// not hold (a fused or crafted definition, R179, R882) counts as no card. R2089000: a Created card
 /// the seat played from its hand is a play as a dealt one is, so its `createdPlayed` counts after
-/// `played`, and a Created card it only summoned or cast counts no more than before.
+/// `played`; one it only summoned or cast is not.
 pub fn tally_seat(seat: Option<&SeatSummary>, attacks: i64, defs: &CardDefs) -> GameTally {
     let Some(seat) = seat else {
         return GameTally {
@@ -275,10 +275,9 @@ pub struct TopUp {
 }
 
 /// [[R1304000]]: the quests an account holding `held` gains at `now`, its next quest due at
-/// `next_due_at` (`None` before its first visit). A first visit brings none and starts the clock:
-/// the first falls due an interval later. Then each one due by `now` arrives while there is room,
-/// dated when it fell due, and one due with no room is skipped: the next falls due on the same
-/// rhythm, after `now`.
+/// `next_due_at` (`None` before its first visit). A first visit brings none and starts the clock: the
+/// first falls due an interval later. Then each one due by `now` arrives while there is room, dated
+/// when it fell due, and one due with no room is skipped: the next falls due on the same rhythm.
 pub fn top_up(held: usize, next_due_at: Option<i64>, now: i64) -> TopUp {
     let interval = quest_interval_ms();
     let Some(mut due) = next_due_at else {
@@ -492,9 +491,9 @@ pub async fn replace_quest(
 
 /// [[R1304001]]: one finished game moves the account's quests, in the reward hook's transaction.
 /// The account is topped up at the game's end first, so a quest that fell due as it ended counts
-/// it too. Each held quest then moves by what the game did, never past its target, and one that
-/// reaches its target completes and pays. Answers the quests it completed, in the order held, so
-/// the game's answer names them (#1657).
+/// it too. Each held quest then moves by what the game did, never past its target, and completes and
+/// pays on reaching it. Answers the quests it completed, in the order held, so the game's answer names
+/// them (#1657).
 pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<Vec<&'static QuestDef>> {
     let book = top_up_quests(tx, &summary.profile_id, summary.at).await?;
     let mut completed = Vec::new();

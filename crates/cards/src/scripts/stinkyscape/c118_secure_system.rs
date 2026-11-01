@@ -6,6 +6,7 @@
 //! minus its Attack as it stands now through the layers, before layer 5's floor (`unclamped_attack`,
 //! the reading KY's Constant sets a number with), so it shows exactly 0, a Unit Nerfed below 0
 //! included, and a later Buff adds from 0 (R1868001); a Unit Immune to Spells is passed by. Nothing
+//! here opens a prompt, so the Units read now are the ones the list reaches.
 
 use jackioh_engine::prelude::*;
 

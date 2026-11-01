@@ -94,11 +94,8 @@ pub fn script() -> CardScripts {
 }
 
 // #93 Combo-Index and #93.1 Combo-Fodder (SPEC §8 rows 93 / 93.1, §7, §2.2, §10.1, §10.4;
-// R4, R11, R27, R50, R60, R62, R63, R81, R85, R86).
-//
-// BUILD M4-T4 row 93 (R27).
-// BUILD M4-T4 row 93.1. (R276 gave it a Radiant face, 4 damage, R275). One file: #93.1 only exists through
-// radiant #93.
+// R4, R11, R27, R50, R60, R62, R63, R81, R85, R86; BUILD M4-T4 rows 93 and 93.1).
+// #93.1's Radiant face, 4 damage (R276, R275), exists only through radiant #93: one file.
 //
 // The grade is STATE, `counters.grade` as 1..6 for E..S (§10.1); the S step is "run E–A again".
 // R195's glow answers are checked in condition-active.test.ts with the other hooked cards (README §5).

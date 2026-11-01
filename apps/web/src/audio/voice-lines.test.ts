@@ -3,9 +3,9 @@
 // the catalog it voices. B34's lines that use a BANNED_RULES_WORDS entry (issue #115) are named in
 // the failure and in the passing test's title count, so none is lost by being under the allowance.
 //
-// The files are read off disk rather than imported, so this checks the committed files themselves,
-// joined by `voiceData.ts`'s `withVoiceText` as the client joins them, and not what its parser
-// makes of them. Each test collects every offender before asserting, so a red run names them all.
+// The files are read off disk, joined by `voiceData.ts`'s `withVoiceText` as the client joins them, so
+// this checks the committed files, not what the parser makes of them. Each test collects every offender
+// before asserting, so a red run names them all.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

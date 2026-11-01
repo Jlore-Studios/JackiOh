@@ -5,22 +5,20 @@
 //!   [--patch=<version>] [--pilot=human|ai|unified] [--card=<id>] [--json]
 //! ```
 //!
-//! Reads the totals every record is folded into as it is written (R1044000, migration 0041) through
-//! the store (DATABASE_URL), keeps the ones the filter names, and prints every card's four
-//! breakdowns, each with the games behind it. With nothing named it reads every counted seat of live
-//! games of every mode and patch (R807000's merged display): a development run's records are read
-//! only with `--source=dev` or `--source=all` (R378). Forced runs never reach the table because
-//! `stats-import` refuses their records whole, so no `--source=dev` figure counts rigged games
+//! Reads the totals every record is folded into as it is written (R1044000, migration 0041) through the
+//! store (DATABASE_URL), keeps the ones the filter names, and prints every card's four breakdowns, each with
+//! the games behind it. With nothing named it reads every counted seat of live games of every mode and patch
+//! (R807000's merged display): a development run's records are read only with `--source=dev` or
+//! `--source=all` (R378). Forced runs never reach the table, as `stats-import` refuses their records whole
 //! (R1284000).
 //!
-//! R1367000, R1368000: `--window[=<version>]` prints the input `cargo jackioh winrates --refresh`
-//! takes. Only the totals hold every game a window spans (R1044001 purges a record's detail after
+//! R1367000, R1368000: `--window[=<version>]` prints the input `cargo jackioh winrates --refresh` takes.
+//! Only the totals hold every game a window spans (R1044001 purges a record's detail after
 //! `GAME_RECORD_RAW_RETENTION_DAYS`, so a `stats-export` file undercounts it).
 //!
-//! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which `card_stats` reads
-//! record files with too, the same the AI's development run prints its own games with, so a
-//! pre-release run and the live games after it compare figure for figure: run both with the same
-//! `--patch`.
+//! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which the AI's development run prints
+//! its own games with too, so a pre-release run and the live games after it compare figure for figure: run
+//! both with the same `--patch`.
 
 use anyhow::bail;
 use serde::Serialize;

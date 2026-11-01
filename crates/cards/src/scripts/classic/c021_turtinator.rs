@@ -53,8 +53,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+// BUILD M9 Classic row C 21: the Tribute is paid as it activates, then one hit from Turtinator on the
 // declared target for that Unit's attack as it stood (R78); 0 attack, no hit (R63); radiant 10/8: twice
 // that attack; numbers via `param()` (R386); once a turn (patch v0.3.10). Turtinator is always one of its controller's Units when
+// activated, so the cost refuses a missing Tribute or one that is not that controller's own Unit.
 #[cfg(test)]
 mod tests {
     use super::*;

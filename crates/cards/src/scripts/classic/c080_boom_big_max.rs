@@ -42,6 +42,7 @@ pub fn script() -> CardScripts {
 
 // C #80 BOOM! Big Max (SPEC §8.6 row 80; BUILD M9 row C 80). (4) Unit, Legendary, 13/8 → 26/16:
 // Crater. Balance patch 1 set the base attack to 13, so the Radiant 26 doubles it exactly (R275) with no
+// exception left.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -79,6 +80,7 @@ mod tests {
     }
 
     /// R783010: played on `radiant`'s face into zone 4, its Tribute paid by a Timmy and a Sheep, it Locks
+    /// that zone as it arrives, and only that one.
     fn craters(radiant: bool) {
         let mut s = scenario(json!({
             "p1": {

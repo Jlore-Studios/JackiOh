@@ -7,10 +7,9 @@
 // keep its tutorial progress on the account (R320, R321) and to earn with a free game; an anonymous
 // visitor makes no request at all.
 //
-// URL params, all optional and dropped when invalid: `?seed=`, `?seat=`, `?difficulty=` and `?deck=`
-// (a `random` or `preset:` deck with a difficulty starts at once), `?lesson=` (on its own seed and
-// seat, which `?seed=` and `?seat=` never override), `?try=<custom id>` (#921, R915005), and, outside
-// a production build only, `?pace=fast` and `?aipool=fixture` (#1113, e2e).
+// URL params, all optional and dropped when invalid: `?seed=`, `?seat=`, `?difficulty=`, `?deck=`, `?lesson=`
+// (on its own seed and seat, which `?seed=` and `?seat=` never override), `?try=<custom id>` (#921, R915005),
+// and, outside a production build only, `?pace=fast` and `?aipool=fixture` (#1113, e2e).
 //
 // With no param that starts a game, a free game left in progress picks up where it was (R668); R765:
 // one left with Save and leave waits on the setup's banner instead. Custom cards (SPEC §12): a game
@@ -393,9 +392,9 @@ function useLobbyCatalog(
 }
 
 /**
- * Tell the controller whether the board is still animating, so the AI's next step waits for the
- * player to see the last one. An element carries `data-animating` for exactly as long as the runner
- * holds a view back (BUILD M5-T4), which is also what `cy.settled()` waits on.
+ * Tell the controller whether the board is still animating, so the AI's next step waits for the player to
+ * see the last one. An element carries `data-animating` for as long as the runner holds a view back (BUILD
+ * M5-T4), which is also what `cy.settled()` waits on.
  */
 function useBoardBusy(root: HTMLElement | null, controller: PracticeController | null): void {
   useEffect(() => {
@@ -434,9 +433,9 @@ export function useBoardAnimating(root: HTMLElement | null): boolean {
 }
 
 /**
- * Hold the AI's next step while an element anywhere in the page carries `attribute` (SPEC §9.9: AI
- * turns are paced so the player can follow them), for at most `maxMs` per mark, so a stuck mark can
- * slow a turn but never stop the game; it is ignored from then on until the page drops it.
+ * Hold the AI's next step while an element anywhere in the page carries `attribute` (SPEC §9.9: AI turns
+ * are paced so the player can follow them), for at most `maxMs` per mark, so a stuck mark can slow a turn
+ * but never stop the game; it is ignored from then on until the page drops it.
  */
 function useMarkHold(controller: PracticeController | null, reason: string, attribute: string, maxMs: number): void {
   useEffect(() => {

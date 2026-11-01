@@ -62,19 +62,14 @@ impl UsernameRefusal {
     }
 }
 
-/// R1432, R1433: a proposed base name's stored form, NFKC, or why it is refused. The checks run in
-/// this order, so a name with a bad character is refused for that before its length is counted:
-///
-/// 1. The input is trimmed. More than `USERNAME_INPUT_MAX_CHARS` characters is too long, refused
-///    before anything else reads it; a character outside the Basic Multilingual Plane is refused.
-/// 2. NFKC.
-/// 3. Every character is a letter (`L*`), a decimal digit (`Nd`), `_`, or a combining mark (`M*`)
-///    that follows a letter, at most `USERNAME_MAX_MARKS` in a row.
-/// 4. One script: digits, `_` and a mark that takes its letter's script go with any script;
-///    otherwise every character shares one (by its `Script_Extensions`), except Han with Hiragana
-///    and Katakana (Japanese) and Han with Hangul (Korean).
-/// 5. `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended grapheme clusters.
-/// 6. The light filter.
+/// R1432, R1433: a proposed base name's stored form, NFKC, or why it is refused. The checks run in this
+/// order, so a bad character is refused for that before the length is counted: trim (more than
+/// `USERNAME_INPUT_MAX_CHARS` characters is too long, refused before anything else reads it; a character
+/// outside the Basic Multilingual Plane is refused), NFKC, characters (a letter `L*`, a decimal digit
+/// `Nd`, `_`, or a combining mark `M*` after a letter, at most `USERNAME_MAX_MARKS` in a row), one script
+/// (`Script_Extensions`: digits, `_` and a mark that takes its letter's script go with any; Han mixes
+/// with Hiragana and Katakana, or with Hangul), `USERNAME_MIN_LENGTH` to `USERNAME_MAX_LENGTH` extended
+/// grapheme clusters, then the light filter.
 pub fn normalize_username(raw: &str) -> Result<String, UsernameRefusal> {
     let trimmed = raw.trim();
     if trimmed.chars().count() > USERNAME_INPUT_MAX_CHARS {
@@ -163,11 +158,10 @@ fn is_digit(ch: char) -> bool {
     ch.general_category() == GeneralCategory::DecimalNumber
 }
 
-/// Unicode's `Default_Ignorable_Code_Point` ranges (DerivedCoreProperties.txt): characters a
-/// renderer draws as nothing. Some are letters or marks by category (the Hangul fillers `Lo`, the
-/// combining grapheme joiner and variation selectors `Mn`), so the category test alone would let `Max`
-/// plus an invisible joiner stand as a second bare name, or a name of fillers render blank. The `Cf`
-/// ones are refused by category already, listed for completeness.
+/// Unicode's `Default_Ignorable_Code_Point` ranges (DerivedCoreProperties.txt): characters a renderer
+/// draws as nothing. Some are letters or marks by category (Hangul fillers `Lo`, the grapheme joiner and
+/// variation selectors `Mn`), so the category test alone would let `Max` plus an invisible joiner stand
+/// as a second bare name. The `Cf` ones are refused by category already, listed for completeness.
 const DEFAULT_IGNORABLE: &[(char, char)] = &[
     ('\u{00AD}', '\u{00AD}'),
     ('\u{034F}', '\u{034F}'),
@@ -233,8 +227,7 @@ enum Writing {
 /// The writings a character may stand in, or None when it goes with any: a digit (Arabic-Indic digits
 /// are Arabic), `_`, and a mark that takes the script of the letter before it (`Inherited`, with no
 /// extension naming scripts). A mark whose extension names scripts goes with those alone, so an Arabic
-/// vowel sign on a Latin letter is a mix. A character under no script, not even by extension
-/// (`Common`), is a writing of its own: only digits and `_` go with any script.
+/// vowel sign on a Latin letter is a mix. A character under no script (`Common`) is a writing of its own.
 fn writings(ch: char) -> Option<Vec<Writing>> {
     if is_digit(ch) || ch == '_' {
         return None;

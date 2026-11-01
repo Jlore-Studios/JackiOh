@@ -9,20 +9,17 @@
 //! The file is what `cargo jackioh stats` writes: one GameRecord per line. Every line is read and
 //! checked before anything is written, and a file holding a record that is not a development record,
 //! one whose id does not begin `dev:`, or a forced-run record, is refused whole (R1284000 refuses the
-//! forced file): a live record is the server's alone to write, at the end of a match, so nothing
-//! typed into a file can ever count as live play or stand in a live game's place. A record already
-//! in the table (the same run imported twice) is skipped, never doubled.
+//! forced file): a live record is the server's alone to write. A record already in the table is
+//! skipped, never doubled.
 //!
 //! ```text
 //! jackioh-server stats-import --totals-only <records.jsonl>
 //! ```
 //!
 //! R1976000: the same checks, then the file's records are folded into the totals and no row of
-//! `game_records` is written for them, so the database keeps their counts and nothing per game:
-//! the file is the run's copy of every game. The file itself is the one row kept, the SHA-256 of
-//! its contents in `game_record_batches`, so the same file imported twice is folded once. A record
-//! whose id `game_records` holds (imported a record at a time) is left out, and so is a repeat of an
-//! id the file named before. The learn lane's import and the gather workflow import this way.
+//! `game_records` is written for them. The one row kept is the file's SHA-256 in `game_record_batches`,
+//! so the same file imported twice is folded once. A record whose id `game_records` holds, or a repeat
+//! of an id the file named before, is left out. The learn lane's import and the gather workflow use it.
 
 use std::path::{Component, Path, PathBuf};
 

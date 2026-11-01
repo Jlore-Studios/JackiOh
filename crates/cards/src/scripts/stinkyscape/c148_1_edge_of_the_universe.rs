@@ -62,6 +62,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005";
 
+    /// The health loss that kills a hero outright, whatever it stands at (losing health is not damage,
     /// R18).
     const LETHAL: i32 = 100 * HERO_HEALTH;
 

@@ -238,6 +238,7 @@ mod s10_7_the_zephyrs_scorer_s_lethal_available {
         );
 
         // The same card on an open board but with no free unit zone to play it into (§3.2) is no
+        // lethal either: it cannot reach the field this turn at all.
         let full = scenario(json!({
             "p1": { "hand": [ZEPHYRS], "field": [BIG_D, BIG_D, BIG_D, BIG_D, BIG_D], "mana": 4 },
             "p2": { "health": 3 },
@@ -365,6 +366,7 @@ mod seed_search_survives_a_pool_change {
         assert_eq!(s.card(&panther.id).zone.z().as_str(), "graveyard");
         assert_eq!(s.state().players.p2.hero.health, 26);
 
+        // Plastic Surgery's pool is
         // `RANDOM_KEYWORD_POOL` (R21), which no catalog change moves, so this part holds either way.
         let setup = |seed: &str| {
             let s = scenario(json!({

@@ -77,6 +77,7 @@ fn tax(radiant: bool) -> TriggerDef {
             data[DISCOUNT] = json!(param(&*ctx, "discount"));
         }
         // R1279000: the keep is the drawer's choice, so while it is not their turn it waits for
+        // the start of their next turn, carrying the discount; on their turn it asks at once.
         if ctx.state.active == opponent_of(ctx.controller) {
             return vec![keep_prompt(data)];
         }
@@ -149,6 +150,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: the keep
+/// prompt opened at once on either player's turn.
 pub fn script_v0_3_16() -> CardScripts {
     fn tax_old(radiant: bool) -> TriggerDef {
         TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
@@ -193,6 +195,7 @@ pub fn script_v0_3_16() -> CardScripts {
 // (§2.4); the keep prompt opens at once on the drawer's turn and waits for the start of their next
 // turn otherwise (R1279000); the rest of their hand becomes yours (R12), overflow burned (R317);
 // radiant: (1) less, kept in every zone (R78); tuned numbers read through `param()` (R386). Here p2
+// sets the trap, p1 draws.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,6 +409,7 @@ mod tests {
             let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on
+                // p2's turn; the old script asked at once.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -596,7 +600,9 @@ mod tests {
 
         #[test]
         fn r97_once_in_your_hand_the_moved_cards_are_named_in_none_of_the_opponent_s_view_but_the_steal_itself() {
+            // The `stolen` event is read by a player who could read the card where it was taken from or
             // where it is now (R97 extended to E2), so the opponent reads the steal of their own hand
+            // cards; every other event and their view of your hand name none of them.
             let mut s = tax_board(json!({}));
             s.play(STOCKPILE, json!({}));
             let moved: Vec<CardInstance> = [SEVEN, FELINORS]

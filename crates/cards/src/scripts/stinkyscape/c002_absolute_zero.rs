@@ -6,6 +6,7 @@
 //! (R1848000): Frozen with its thaw stamped `FROZEN_FOREVER`, which no cleanup reaches, so only
 //! leaving the field (R78) or a Vanilla ends it, a change of control keeps it, a later ordinary
 //! Freeze changes nothing and a forced attack still moves it. The Radiant face's "You may" is a
+//! choice of two modes made with the play (R81), not a prompt after it: given, `grant_keyword`
 
 use jackioh_engine::prelude::*;
 

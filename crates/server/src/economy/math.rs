@@ -33,11 +33,9 @@ pub struct PityCounters {
     pub mythic: usize,
 }
 
-/// Pity (SPEC §14.4, R1339001) changes no roll: a pack in which a counter would reach its
-/// threshold, without its rarity, forces one slot to that rarity, Mythic first, then Legendary,
-/// then Epic, each into `forced_slot`'s slot. Then each counter resets when the pack holds its
-/// rarity and adds one when it does not, so a Mythic leaves the Epic and Legendary counters
-/// running, and a Legendary the Epic one.
+/// Pity (SPEC §14.4, R1339001) changes no roll: a pack in which a counter would reach its threshold, without
+/// its rarity, forces one slot to that rarity, Mythic first, then Legendary, then Epic, each into
+/// `forced_slot`'s slot. Then each counter resets when the pack holds its rarity, else adds one.
 pub fn apply_pity(
     counters: PityCounters,
     mut slots: Vec<PrintedRarity>,
@@ -65,13 +63,11 @@ pub fn apply_pity(
     (slots, pity)
 }
 
-/// The slot a force of `rarity` takes (R1339001), in slot order from the floored slot
-/// (`PACK_FLOORED_SLOT`) on, never one an earlier force took: the first below `rarity` whose loss
-/// takes no tracked rarity from the pack (a Common or a Rare, or a rarity another slot also
-/// holds), so the force raises it; else the first whose rarity another slot also holds. Either
-/// way the pack keeps every tracked rarity it rolled. `PACK_SLOTS >= TRACKED_RARITIES` means one
-/// of the two always exists: past the earlier forces, the slots left outnumber the tracked
-/// rarities neither forced nor this one, so a slot is Common or Rare or two share a rarity.
+/// The slot a force of `rarity` takes (R1339001), in slot order from the floored slot (`PACK_FLOORED_SLOT`)
+/// on, never one an earlier force took: the first below `rarity` whose loss takes no tracked rarity from the
+/// pack (a Common or a Rare, or a rarity another slot also holds), so the force raises it; else the first
+/// whose rarity another slot also holds. Either way the pack keeps every tracked rarity it rolled, and
+/// `PACK_SLOTS >= TRACKED_RARITIES` means one of the two always exists.
 fn forced_slot(slots: &[PrintedRarity], forced: &[bool], rarity: PrintedRarity) -> Option<usize> {
     let order: Vec<usize> = std::iter::once(PACK_FLOORED_SLOT)
         .chain((0..slots.len()).filter(|at| *at != PACK_FLOORED_SLOT))
@@ -344,11 +340,10 @@ mod tests {
         assert_eq!(next.epic, 0);
     }
 
-    /// The seeded simulation (SPEC §14.4, R1339001) reports each tracked rarity's share of packs
-    /// holding it with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^PACK_SLOTS` (30.4%, 9.6%
-    /// and 4.9%), and tunes nothing to them: the rate with pity is at least the rate before it,
-    /// within `RATE_TOLERANCE`, and no counter ever reaches its threshold (pity fires on the
-    /// threshold pack, so the largest counter seen stays one below it).
+    /// The seeded simulation (SPEC §14.4, R1339001) reports each tracked rarity's share of packs holding it
+    /// with pity and before it, `1 − (1 − w/TIER_WEIGHT_TOTAL)^PACK_SLOTS` (30.4%, 9.6% and 4.9%), and tunes
+    /// nothing to them: the rate with pity is at least the rate before it, within `RATE_TOLERANCE`, and no
+    /// counter ever reaches its threshold (pity fires on the threshold pack).
     #[test]
     fn r1339001_the_simulation_reports_pity_on_top_and_caps_every_counter() {
         const PACKS: usize = 200_000;
@@ -382,12 +377,11 @@ mod tests {
         }
     }
 
-    /// The bar sizes as §14.5 states them (R1953000, R1999000): on any collection, every slot
-    /// adding its points whatever it grants, and before pity, which only ever lifts a slot's
-    /// rarity, a pack's mean points are its slots' rarity odds (`card_odds`, the fallback
-    /// included) weighted by each rarity's points: `PACK_SLOTS - 1` slots at 1.61 and the floored
-    /// one at 2.21, so 8.65. Each bar then fills once every its target packs on average: its size
-    /// over that mean, rounded.
+    /// The bar sizes as §14.5 states them (R1953000, R1999000): on any collection, every slot adds its points
+    /// whatever it grants, and before pity (which only lifts a slot's rarity) a pack's mean points are its
+    /// slots' rarity odds (`card_odds`, the fallback included) weighted by each rarity's points:
+    /// `PACK_SLOTS - 1` slots at 1.61 and the floored one at 2.21, so 8.65. Each bar then fills once every
+    /// its target packs on average: its size over that mean, rounded.
     #[test]
     fn r1953000_the_bars_fill_at_their_target_packs_on_average() {
         let mean = |odds: TierOdds| {

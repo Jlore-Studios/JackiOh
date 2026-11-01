@@ -22,10 +22,9 @@ use crate::wire::{
 
 /// R151: a start-of-game hook also runs when its card ARRIVES in a hand or a library, not only at §2.1
 /// step 4, as R43 states the roll as an invariant: a copy arriving later (#72 Reminisce, a bounce, a
-/// reset instance, R78) must roll too, or it costs 0 for ever. It reads the script's `start_of_game`, as
-/// `setup::finish_setup` does, not #98's id; a rerun is safe, as `hero_power::ensure_power` keeps a
-/// rolled power. Not in `zones::move_to_zone`: the roll needs the sink's rng, and a fresh `Rng` from the
-/// state's cursor mid-action would repeat draws and lose its advance (§2.4's funnels hold the sink).
+/// reset instance, R78) must roll too, or it costs 0 for ever. It reads the script's `start_of_game`,
+/// not #98's id; a rerun is safe, as `hero_power::ensure_power` keeps a rolled power. Not in
+/// `zones::move_to_zone`: the roll needs the sink's rng, which a fresh `Rng` mid-action would repeat.
 pub(crate) fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) {
     // §9.3, R113: the clause is an effect list like any other, so a question in it pauses the rest of
     // it on `state.work` (`prompts::run_start_of_game`), and a draw loop around it owes its remainder.
@@ -137,11 +136,9 @@ fn library_overflow(
 /// exist, R11). One already in its owner's graveyard stays there, with no second move and no second
 /// `enteredGraveyard`, since it never left (C #30 Recycle's, `effects/shuffle_card.rs`).
 ///
-/// R316: whichever it is, the refusal is reported by `libraryOverflow`, so the board can show the
-/// full library turning the card away. Nothing else reported a copy that was never made, and an
-/// existing unit-token card that ceased to exist here moved with no event at all (§10.3). `copy_of`
-/// names the card a new copy copies, when it copies one, so a view can keep a face-down trap's copy
-/// as secret as the trap.
+/// R316: whichever it is, `libraryOverflow` reports the refusal (§10.3), so the board can show the full
+/// library turning the card away. `copy_of` names the card a new copy copies, when it copies one, so a
+/// view can keep a face-down trap's copy as secret as the trap.
 pub fn shuffle_into_library(
     sink: &mut EngineSink,
     instance: &mut CardInstance,
@@ -443,8 +440,8 @@ fn room_to_cast(state: &GameState, player: PlayerId, card: &CardInstance) -> boo
 /// owes for the answer's drain (R113, R122): `DRAW_CHAIN_WORK` one more draw at `chain`, so R58's cap
 /// bounds a split chain; `DRAW_COUNT_WORK` `count` whole draws. R117: parked at the pause, never ahead,
 /// so a loop inside one (a cast's Cry) can neither take nor re-run them. `work::push_work` parks at
-/// `state.work_cursor`, so the chain finishes before the next draw (R113); a paused draw is plain JSON
-/// and replays exactly (§10.1). An ended game (R3) parks nothing, with nothing to resume.
+/// `state.work_cursor`, so the chain finishes before the next draw (R113); a paused draw replays
+/// exactly (§10.1). An ended game (R3) parks nothing.
 pub const DRAW_CHAIN_WORK: &str = "@drawChain";
 
 const DRAW_CHAIN_STEP: &str = "chain";

@@ -507,19 +507,18 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         assert_eq!(affordable_only_at_hard["unswept"], json!(false));
     }
 
-    // One test per tier, each with its own 300 s. The two shared one test and ran 267 s on a developer
-    // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's. Both deal from the
-    // frozen fixture pool (issue #1113), so a shadow-ban change re-deals neither; each plays the games its
-    // card needs, re-pinned when the deals move (#2380, #1675, #2521, #2278, #2511, R2511001, #2542, #2490,
-    // R2490000).
+    // One test per tier, each with its own 300 s: the two shared one test and ran past its limit, the time
+    // all Easy's. Both deal from the frozen fixture pool (issue #1113), so a shadow-ban change re-deals
+    // neither; each plays the games its card needs, re-pinned when the deals move (#2380, #1675, #2521,
+    // #2278, #2511, R2511001, #2542, #2490, R2490000).
     //
     // Easy's check plays one game: game 1 draws Ceaseless Void (100), never at four crystals. A card a
     // discount brings to four crystals will not do: GIGA Glowy Jelly Bean with the Floats of R1563000
     // ("Float reduces cost", in the deck too), nor Pile On (5) once another card's discount reaches it.
     //
     // Hard's check plays eight games: 1–7 hold the card affordable on no turn and game 8 does. The deals
-    // moved with the Meditative set (v0.3.5; a player's deck, which the AI's soft gate leaves whole,
-    // R1390), the Quickdraw cap (#817, R817000) and the Stinkyscape release's cards (#1884).
+    // moved with the Meditative set (a player's deck, which the AI's soft gate leaves whole, R1390), the
+    // Quickdraw cap (#817, R817000) and the Stinkyscape release's cards (#1884).
 
     #[test]
     fn r186_ceaseless_void_100_mana_is_unswept_at_easys_four_crystals() {
@@ -1596,12 +1595,11 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// R1678000: a sweep of record writes every entry, since the sweep after each AI promotion and
-    /// each set that ships (`.github/workflows/sweep.yml`) may ban a card again, with a reason no
-    /// earlier report printed. `cargo jackioh sweep --check` (the `jackioh-tools` test
-    /// `shadow_ban_rs_is_what_its_reports_of_record_dictate`) holds every row to the reports of
-    /// record, so a row added or rewritten by hand fails there; this keeps only that none is one of
-    /// generation 0's eleven, which generations 1 to 8 removed.
+    /// R1678000: a sweep of record writes every entry, since the sweep after each AI promotion and each
+    /// set that ships (`.github/workflows/sweep.yml`) may ban a card again. `cargo jackioh sweep --check`
+    /// (the `jackioh-tools` test `shadow_ban_rs_is_what_its_reports_of_record_dictate`) holds every row
+    /// to the reports of record; this keeps only that none is one of generation 0's eleven, which
+    /// generations 1 to 8 removed.
     #[test]
     fn v12_r1678000_no_entry_is_typescripts_and_the_reports_of_record_hold_the_rest() {
         for entry in SHADOW_BAN {

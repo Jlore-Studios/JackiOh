@@ -2,11 +2,10 @@
 //! layer 4, §10.7, R32, R130, R1440).
 //!
 //! Every flip is `flip_coin`, the draws of `ctx.rng.lucky_coin(lucky)`, the only randomness §10.7
-//! allows (CLAUDE.md rule 4, SURFACE §3): a card file may not roll for itself, which is why these verbs
-//! exist. Totals and the rider go through `super::buff`, the one implementation of §10.4's layer 4.
-//! §6.1's Lucky X keeps the best of X more rolls, and R1440 (over R32/R130) makes heads a coin's best:
-//! at the flipping card's Lucky X (`query::lucky_on`, R1438) a coin flips X more and lands heads if any
-//! does; with none, one draw.
+//! allows (CLAUDE.md rule 4, SURFACE §3): a card file may not roll for itself. Totals and the rider go
+//! through `super::buff`, the one implementation of §10.4's layer 4. §6.1's Lucky X keeps the best of X
+//! more rolls, and R1440 (over R32/R130) makes heads a coin's best: at the flipping card's Lucky X
+//! (`query::lucky_on`, R1438) a coin flips X more and lands heads if any does; with none, one draw.
 //!
 //! R2652001: each verb call reports its coins as one `rolled` batch (every face each coin drew and the
 //! one it kept) just before the buff or keyword they decided. A card that flips or rolls in its own hook

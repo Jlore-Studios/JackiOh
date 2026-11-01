@@ -11,6 +11,7 @@
 //! and not Locked, gets one random Starship Piece Unit (`query::starship_pieces()`, R1878000, narrowed to
 //! Units as S #26's is, so S #131 Spacerace Stimulus, a Field Trap, is never one) summoned
 //! for the player whose zone it is (`summon_random`: no Cry, R1; R387), the caster's zones first, each
+//! lane upward.
 
 use jackioh_engine::prelude::*;
 

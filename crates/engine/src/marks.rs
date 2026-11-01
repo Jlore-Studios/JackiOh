@@ -1,6 +1,6 @@
 //! R437: a card that something still to come is aimed at carries a mark in both players' views —
 //! #50 K-Pop Fanatic's pending steal marks its target, drawn by the client as a corruption sparkle in
-//! the mark's color ("purple"), one effect reusable in other colors for other marks (SPEC §10.8).
+//! the mark's color ("purple") (SPEC §10.8).
 //!
 //! A mark is made by the effect that waits: `effects::delay`'s `delay({ …, watch, mark })` marks the
 //! card it watches (R174). A delayed destroy of a scope (Classic #20's Radiant face, R750) marks every

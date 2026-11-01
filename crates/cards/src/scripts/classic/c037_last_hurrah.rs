@@ -196,6 +196,7 @@ mod tests {
                 let grave: Vec<String> = s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.id.clone()).collect();
                 assert!(contains_all(&grave, &held));
                 // R62: `turnEnded` closes the end-of-turn triggers; the trap window and then the end-of-turn
+                // delayed effects follow it, all before the next turn starts.
                 let types: Vec<String> = s
                     .last_events()
                     .iter()

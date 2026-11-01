@@ -13,6 +13,7 @@ use jackioh_cards::{CATALOG, CATALOG_IDS};
 use jackioh_engine::testkit::*;
 
 /// B4.1 rules 3 and 4: the cards whose text makes a copy of itself, names itself, or names a pool
+/// that holds it.
 const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
     (
         "core-012",
@@ -137,11 +138,12 @@ fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
     }
 }
 
+/// The play's events read for whose generation each one is: the swept card's ids (a card set
 /// face-down takes a fresh id, which the events that set it name through `formerId`, R227), and for
 /// each event whether a card the play cast was resolving when it came (after that card's
 /// `cardPlayed`, before its `cardResolved`), and whether one still is. What a cast card makes is that
 /// card's own generation, swept under its own id, not the caster's (R387): C+ #47 Jogg's Box never
-/// casts itself, but a C+ #27 Zephrys Zealotism it casts deals a perfect hand that may hold one.
+/// casts itself, but a card it casts, C+ #27 Zephrys Zealotism, may deal one.
 struct Attribution {
     own_ids: IndexSet<String>,
     in_cast: Vec<bool>,

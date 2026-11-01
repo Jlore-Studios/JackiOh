@@ -111,8 +111,9 @@ fn series_game() -> ApiError {
     )
 }
 
-/// R1638000: a card patch went live since the match began. `details` are the co-op join's.
-fn cards_changed(app: &App, played_on: &str) -> ApiError {
+/// R1638000: a card patch went live since the match began, for a 1v1 rematch and a co-op Play again.
+/// `details` are the co-op join's.
+pub(crate) fn cards_changed(app: &App, played_on: &str) -> ApiError {
     ApiError::with_details(
         ApiErrorCode::UpdateRequired,
         "The cards changed since this game. Start a new one.",
@@ -375,12 +376,11 @@ async fn create_rematch(
     }
     .await;
     // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant), a
-    // fenced write and a write that failed (a database hiccup) all undo the rematch: kept without
-    // its flags it would refuse every socket and end in a draw nobody played. Stop the actor, then
-    // erase the live match with no result (R679), whose `on delete set null` releases the winner
-    // seat's flag and any bot flags `bots_claim_for_rematch` set, while a taken seat is untouched.
-    // The caller clears the offer claim and the seats re-offer; the lease gives the ledger's seats
-    // back as it drops.
+    // fenced write and a failed write all undo the rematch: kept without its flags it would refuse
+    // every socket and end in a draw nobody played. Stop the actor, then erase the live match with no
+    // result (R679), whose `on delete set null` releases the winner seat's flag and any bot flags
+    // `bots_claim_for_rematch` set, while a taken seat is untouched. The caller clears the offer claim
+    // and the seats re-offer; the lease gives the ledger's seats back as it drops.
     let refused = match seated {
         Err(error) => {
             // A fenced write (`unavailable`) is a newer server taking over, not a failure.

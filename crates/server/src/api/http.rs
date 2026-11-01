@@ -405,10 +405,10 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
 ///
 /// Behind a proxy the client's address is read from `X-Forwarded-For`, only from the entry the
 /// deployment's own proxies wrote: each trusted hop appends one on the right, so the client is
-/// `entries[length - hops]`. Everything left of it the caller wrote, and reading it would let a
-/// caller pick a fresh bucket per request. `CF-Connecting-IP` and `X-Real-IP` are never read:
-/// nothing here writes them, so a caller can. With fewer entries than hops, or hops 0, the key is
-/// the socket's peer address, or `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
+/// `entries[length - hops]`. Everything left of it the caller wrote, so reading it would let a caller
+/// pick a fresh bucket per request. `CF-Connecting-IP` and `X-Real-IP` are never read: nothing here
+/// writes them, so a caller can. With fewer entries than hops, or hops 0, the key is the socket's peer
+/// address, or `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
 pub fn client_address(headers: &HeaderMap, peer_address: Option<&str>, trusted_proxy_hops: usize) -> String {
     let entries = forwarded_entries(headers);
     if trusted_proxy_hops >= 1
@@ -1059,10 +1059,9 @@ impl Default for RateLimiter {
 /// behind the CORS layer, which answers preflights first.
 ///
 /// §9.8's per-account limit is `app.limiter`. R137's reasoning holds here: one shared counter lets
-/// one caller spend everybody's budget. So SPEC §11 R157 keys it on the account, `profiles.id` (the
-/// row §9.4 owns), not the auth user or the bearer token, of which a caller can hold several; a
-/// request that names no account (R109 says "per account") counts against its IP hash, in a
-/// namespace of its own.
+/// one caller spend everybody's budget. So SPEC §11 R157 keys it on the account, `profiles.id` (§9.4),
+/// not the auth user or the bearer token, of which a caller can hold several; a request that names no
+/// account (R109 says "per account") counts against its IP hash, in a namespace of its own.
 ///
 /// R190's operator signal: the fewest `X-Forwarded-For` entries any request has carried. A caller can
 /// add entries but never remove the proxies' ones, so that is the hops they add, and

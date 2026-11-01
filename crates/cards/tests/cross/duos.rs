@@ -218,6 +218,8 @@ mod expedition123 {
     const EXPEDITION: &str = "meditative-019";
     const RIFT: &str = "meditative-019-1";
 
+    /// The lost refreshes land on
+    /// A1's extra turn and on its next own turn, in duel 0 alone; the third is normal, as in the 1v1
     /// game below. The extra turn keeps duel 0's round on A1 (§13.3), so the rounds run [A1, B2],
     /// [B1, A2] from then on, and no seat acts out of its round.
     #[test]
@@ -380,6 +382,7 @@ mod pass_links {
     }
 
     /// A1's Journey Complete remembers a card of A1's own sent on a journey in duel 0 (R1246). Duel 1
+    /// numbers its cards from the same start, so that id is one of A2's own cards, exiled there:
     #[test]
     fn r1168000_a_passed_journey_complete_returns_nothing_of_the_other_duel() {
         let mut state = begun_with("cross-duos-journey", free_passes());
@@ -422,6 +425,7 @@ mod pass_links {
         );
     }
 
+    /// What a card is travels with it: KY's Math Equation's climbing price stays a price, and Heroic
     /// Power keeps the power it rolled (R43).
     #[test]
     fn r1168000_a_passed_card_keeps_its_return_price_and_its_rolled_power() {
@@ -472,6 +476,7 @@ mod pass_links {
     }
 
     /// A Radiant Do or Die watches every card of A1's hand (R1140). A pass ends each card's stay in
+    /// that hand as any other way out of it does, so once A1 has passed them all, nothing is watched.
     #[test]
     fn r1168000_a_pass_ends_the_cards_stay_under_a_hand_watch() {
         let mut state = close_round(begun_with("cross-duos-watch", free_passes()));
@@ -511,7 +516,9 @@ mod pass_links {
 mod round_turns {
     use super::*;
 
+    /// Round 2 closes into A1's turn 3, which a Tommy Tempo drawn at its start ends at once, so the
     /// close runs on into B1's turn 4. A1's turn was round 3's in duel 0, already over: round 3 is
+    /// team A's with A1 counted as ended, and round 4 team B's, both duels on turn 4.
     #[test]
     fn r1168001_a_turn_that_ends_as_the_close_starts_it_is_the_next_rounds_turn() {
         let mut state = close_round(quiet("cross-duos-tempo-close", &[VANILLA]));
@@ -601,6 +608,7 @@ mod glitch {
     }
 
     /// A reset deals duel 0 again (R676), and its life totals start over: A1's own HP is whole and
+    /// unspent again, on its team's pool as it stands.
     #[test]
     fn r1168002_a_reset_deals_a_spent_seat_its_own_hp_again_on_the_pool_as_it_stands() {
         let (_, reset) = glitched(GlitchOutcome::Reset);
@@ -655,6 +663,7 @@ mod glitch {
     }
 
     /// A swap counts on duel 0 (R677), but no seat changes hands in a co-op game: A1 still plays duel
+    /// 0's Player 1 for team A, its view and its actions as before.
     #[test]
     fn r1168002_a_swap_moves_no_seat() {
         let (before, swap) = glitched(GlitchOutcome::Swap);
@@ -709,6 +718,7 @@ mod lethal {
     }
 
     /// §10.7's scorer (Zephyrs, Zephrys Zealotism) against 27 life: a 1v1 hero at 27 health, or a Duos
+    /// hero at own HP 7 with a pool of 20.
     #[test]
     fn r1168003_the_scorer_judges_lethal_against_own_hp_and_the_pool() {
         let one = scorer_board(json!([]), false);
@@ -737,6 +747,7 @@ mod lethal {
     }
 
     /// The Radiant Mayor Medinamogger's Lucky (R1201) ranks a hero a 4-attack cannot destroy alike
+    /// whether its 23 life is health or own HP 3 and a pool of 20.
     #[test]
     fn r1168003_the_radiant_mayors_lucky_ranks_a_hero_by_its_whole_life() {
         const MAYOR: &str = "meditative-086";

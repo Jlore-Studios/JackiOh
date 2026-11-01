@@ -18,13 +18,12 @@
 //! opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
 //! log does not reproduce").
 //!
-//! Findings group by `Signature`. A signature files one issue, titled with its first match and the
-//! signature, whose body lists each match the process sees with it once, up to
+//! Findings group by `Signature`: one issue per signature, titled with its first match and the
+//! signature, its body listing each match the process sees with it once, up to
 //! `BUG_REPORT_LISTED_MATCHES`. At most `BUG_REPORTS_PER_WINDOW` issues are opened in
-//! `BUG_REPORT_WINDOW_MS`, and none when one whose title holds the signature exists already, open or
-//! closed, so a restart files nothing twice and that signature's later matches are only logged. Every
-//! finding is logged. Without `CREATE_ISSUES_TOKEN` nothing leaves the process, and a test's app
-//! records what it would file.
+//! `BUG_REPORT_WINDOW_MS`, and none when an issue (open or closed) whose title holds the signature
+//! exists, so a restart files nothing twice; later matches are only logged. Without
+//! `CREATE_ISSUES_TOKEN` nothing leaves the process, and a test's app records what it would file.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};

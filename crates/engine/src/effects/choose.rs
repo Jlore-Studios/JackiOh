@@ -525,13 +525,10 @@ pub struct ChooseCraftArgs {
     pub data: StepData,
 }
 
-/// ME-CRAFT (Meditative #17, R880): the block editor's prompt, offering the seeded presets within
-/// the budget and answered by one `Selection::Craft`, a preset or the player's own recipe, which the
-/// reducer validates (R90); `legal_actions` offers the presets (R881, R79).
-///
-/// `mode` (#1182): a potion mode fixes the cost and frame and rolls Potions (R1182000, R1182001);
-/// `scratch` rolls Meditative #17's (R1182002). R1563007: every prompt but Scratch Pad's first draws
-/// its offer, the only blocks its presets and answer use. Both ride `PendingChoice`.
+/// ME-CRAFT (Meditative #17, R880): the block editor's prompt, offering the seeded presets within the
+/// budget and answered by one `Selection::Craft`, which the reducer validates (R90); `legal_actions`
+/// offers the presets (R881, R79). `mode` (#1182): a potion mode fixes the cost and frame (R1182000,
+/// R1182001); `scratch` rolls #17's (R1182002). R1563007: all but Scratch Pad's first prompt draw an offer.
 pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
     Effect::new("chooseCraft", move |ctx| {
         let cost = match args.mode.and_then(crate::wire::CraftMode::frame) {
@@ -607,12 +604,9 @@ pub struct ChooseAnswerArgs {
     pub data: StepData,
 }
 
-/// B5 E18, R465: a multiple-choice problem (Classic+ #42 KY's Test), shuffled by the match rng
-/// under letters. The right letter rides the resume data under `prompts::ANSWER_KEY`, which
-/// `view_for` never sends and the AI's redaction strips (R185); `answered_correctly` reads it.
-///
-/// R1184000: a `streak` adds Stop last (`prompts::ANSWER_STOP_KEY`, never judged right) and rides
-/// the prompt (`PendingChoice.streak`).
+/// B5 E18, R465: a multiple-choice problem (Classic+ #42), shuffled by the match rng under letters. The
+/// right letter rides the resume data under `prompts::ANSWER_KEY`, which `view_for` never sends and the
+/// AI's redaction strips (R185). R1184000: a `streak` adds Stop last (`prompts::ANSWER_STOP_KEY`).
 pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
     Effect::new("chooseAnswer", move |ctx| {
         let given: Vec<(String, usize)> = args
@@ -998,11 +992,10 @@ pub struct ChoosePickArgs {
     pub data: StepData,
 }
 
-/// B5 E18: a pick of cards from piles (Classic #11 Mind Melt, #44 Back from the GY, #56, #78's
-/// Radiant), budgeted by count (`max`) or total cost (`budget`, `prompts::why_answer_refused`). Every
-/// matching card is an option, at its cost where it lies (R65). The options go to the chooser alone
-/// (R81, §10.8), so another hand or a library is safe to offer; a face-down card of the other
-/// player's is offered as its zone only (R177, `view_for`).
+/// B5 E18: a pick of cards from piles (Classic #11, #44, #56, #78's Radiant), budgeted by count (`max`)
+/// or total cost (`budget`, `prompts::why_answer_refused`). Every matching card is an option, at its cost
+/// where it lies (R65). The options go to the chooser alone (R81, §10.8), so another hand or a library is
+/// safe to offer; a face-down card of the other player's is offered as its zone only (R177).
 pub fn choose_pick(args: ChoosePickArgs) -> Effect {
     Effect::new("choosePick", move |ctx| {
         let filter = args.filter.clone().unwrap_or_default();

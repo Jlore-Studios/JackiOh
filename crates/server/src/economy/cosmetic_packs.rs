@@ -2,16 +2,16 @@
 //! cosmetic token cycle's last step pays, the bar each opening fills and the chase it buys.
 //!
 //! - [`roll_cosmetic_pack`]: the pure roll, from the shipped sets' pool, the account's
-//!   [`CosmeticHoldings`] and a seed to what each slot grants (R1306000, R1306001), on the
-//!   cosmetics' own scale and with no pity, leaning toward the cards the account owns.
-//! - [`open_cosmetic_pack`] and [`buy_chase`], and either under an optional `Idempotency-Key`
-//!   ([`open_cosmetic_pack_once`], [`buy_chase_once`]), under which a retry answers as its first
-//!   try did and spends nothing again (R2124000).
+//!   [`CosmeticHoldings`] and a seed to what each slot grants (R1306000, R1306001), on the cosmetics'
+//!   own scale and with no pity, leaning toward the cards the account owns.
+//! - [`open_cosmetic_pack`] and [`buy_chase`], either under an optional `Idempotency-Key`
+//!   ([`open_cosmetic_pack_once`], [`buy_chase_once`]), under which a retry answers as its first try
+//!   did and spends nothing again (R2124000).
 //! - The routes, all `AuthLevel::Active`, each spend in the account's turn (`economy::spend_slots`,
 //!   R2378000).
 //!
-//! An opening and a purchase run under the account's lock (R1301003), so neither rolls on, nor
-//! spends, counters the other is moving.
+//! An opening and a purchase run under the account's lock (R1301003), so neither rolls on, nor spends,
+//! counters the other is moving.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -267,10 +267,10 @@ pub fn slot_grant(
 
 /// The whole opening (R1306003, R1339002). Slot by slot, its draws in this order and no other: the
 /// slot's tier, then its cosmetic's pick and, for a per-card one, its card's, each only when there
-/// is something to pick. Each slot's tier is a tiered roll on `COSMETIC_TIER_WEIGHTS`, the one at
+/// is something to pick. A slot's tier is a tiered roll on `COSMETIC_TIER_WEIGHTS`, the one at
 /// `PACK_FLOORED_SLOT` floored at `COSMETIC_PACK_FLOOR_RARITY`, and falls no lower than that floor
 /// while anything there or above is open (R1339000, R1306001). Ownership moves slot by slot, so a
-/// cosmetic or a card granted earlier in the pack is owned later in it (R1306000).
+/// grant earlier in the pack is owned later in it (R1306000).
 pub fn roll_cosmetic_pack(
     pool: &[PoolCard],
     holdings: &CosmeticHoldings,
@@ -331,8 +331,8 @@ fn no_pack_held() -> ApiError {
 /// `pack`), the cosmetics, the Chase Shard bar's one, and both token bars' points, each bar that
 /// reached its size paying its tokens with the overflow kept (R1305000, R1306001). Every economy
 /// row's `ref` is the opening's log; the collection's rows have no `ref` and share the opening's
-/// `at`. No pack held is 409. Every refusal and failure returns before the commit, so it writes
-/// nothing. With no key, [`open_cosmetic_pack_once`]'s opening.
+/// `at`. No pack held is 409. A refusal or failure returns before the commit, so it writes nothing.
+/// With no key, [`open_cosmetic_pack_once`]'s opening.
 pub async fn open_cosmetic_pack(
     app: &App,
     profile_id: &str,

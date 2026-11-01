@@ -1,10 +1,9 @@
-// R1839000–R1839003 (issue #1839): Dormant, Stinkyscape's Hearthstone-style status (SPEC §6.1), with
-// its §6.2 trigger "When this awakens" and its §6.3 verb Awaken. A Dormant card is on the field and
-// fills its zone, and until it awakens nothing else reaches it: `zones::active_units_of` leaves it out,
-// `zones::acts_on_field` answers false, `restrictions::unaffected_by` passes it by, and its lasting text
-// is off (`preview::lasting_text_off`). Its countdown runs at its controller's turn start, after the
-// Brittle tick (`slumber::awaken_at_turn_start`), and its own Activate may awaken it instead (the one
-// ability it keeps, `StaticFlags.slumber.wakesBy`). Proved on the fixtures of `fixtures/slumber.rs`.
+// R1839000–R1839003 (issue #1839): Dormant, Stinkyscape's Hearthstone-style status (SPEC §6.1), with its
+// §6.2 trigger "When this awakens" and its §6.3 verb Awaken. A Dormant card is on the field and fills its
+// zone, and until it awakens nothing else reaches it (`zones::active_units_of`, `zones::acts_on_field`,
+// `restrictions::unaffected_by`) and its lasting text is off (`preview::lasting_text_off`). Its countdown
+// runs at its controller's turn start, after the Brittle tick (`slumber::awaken_at_turn_start`), and its own
+// Activate may awaken it instead (`StaticFlags.slumber.wakesBy`). Proved on `fixtures/slumber.rs`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

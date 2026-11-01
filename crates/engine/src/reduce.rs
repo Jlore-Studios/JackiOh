@@ -2,13 +2,12 @@
 //! clones the state, applies the action and returns the new state with its events; an illegal action
 //! comes back as an error with the state untouched.
 //!
-//! The action layer only: each rule lives in the module that owns it (`play_steps`, `combat`,
-//! `subsystems::activate`, `prompts`, `setup`, `turn`, `trade`, `marketplace`, `sandbox`), which gives
-//! both what `legal_actions` offers and what an action is refused for, so a greyed-out button and the
-//! reducer's error never disagree (§9.3). An attack can come back with its trap window's prompt open
-//! and the combat owed on `state.work` (R113); a Frozen unit's switch is refused (§4.1, R1174000);
-//! `turn` owns draws, concede, End turn and the turn cap (§2.2, §2.5, R36); a sandbox action is
-//! accepted only by a sandbox game and never listed (R923000–R923003).
+//! The action layer only: each rule lives in the module that owns it, which gives both what `legal_actions`
+//! offers and what an action is refused for, so a greyed-out button and the reducer's error never disagree
+//! (§9.3). An attack can come back with its trap window's prompt open and the combat owed on `state.work`
+//! (R113); a Frozen unit's switch is refused (§4.1, R1174000); `turn` owns draws, concede, End turn and the
+//! turn cap (§2.2, §2.5, R36); a sandbox action is accepted only by a sandbox game and never listed
+//! (R923000–R923003).
 //!
 //! `reduce` and `begin_game` take no rng: it is rebuilt from `(state.seed, state.rng_cursor)` and the
 //! cursor written back (SURFACE §4.1, §6.1), and fused scripts come from the state (SURFACE §6.6), so
@@ -60,7 +59,7 @@ pub struct ReduceResult {
     pub error: Option<String>,
 }
 
-/// A refusal: the input state, no events, TS's message (SURFACE §4.4.9).
+/// A refusal: the input state, no events and the error's message (SURFACE §4.4.9).
 fn refused(state: &GameState, error: &str) -> ReduceResult {
     ReduceResult {
         state: state.clone(),
@@ -359,9 +358,8 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
 /// R79 and §2.5: `timeout` "answers only the prompts of the player whose clock ran out, using the AI
 /// policy, and ends the turn only when that is the active player", as deterministic as any action.
 /// The non-active player's clock is a prompt clock: it answers that one prompt of theirs, or nothing.
-/// The active player's is the turn clock: every prompt of theirs open or opened by an answer is
-/// answered, then the turn ends; it stops at a prompt the other player holds (that one has its own
-/// clock) and once the turn has passed.
+/// The active player's is the turn clock: every prompt of theirs is answered, then the turn ends; it stops
+/// at a prompt the other player holds (that one has its own clock) and once the turn has passed.
 fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
     let who = action.player_id;
     let turn = sink.state.turn;
@@ -514,7 +512,6 @@ fn count_turn_action(state: &mut GameState, player: PlayerId, rider_id: &str) {
     if rider.id != rider_id || rider.actions_left <= 0 {
         return;
     }
-    // The rider `turn_ends_rider` found is the first `turnEnds` modifier with this id.
     for modifier in state.players[player].mods.iter_mut() {
         if modifier.id != rider.id {
             continue;
@@ -541,12 +538,11 @@ fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
     }
 }
 
-/// R82, R456: end every turn due to end once the action has resolved: one an effect cut short (as if
-/// End turn were pressed), and one with nothing but ending it left to do unless its player turned that
-/// off (R345); either may start another such turn (a Tommy Tempo drawn at its start), hence the loop.
-/// R1844000: first an aura's spent count hands the turn back; R1183002: then a turn the autopilot owes
-/// is played, unless `drive_autopilot` is off (in a search's world, and in the autopilot's own steps
-/// so none plays a turn twice).
+/// R82, R456: end every turn due to end once the action has resolved: one an effect cut short, and one
+/// with nothing but ending it left to do unless its player turned that off (R345); either may start another
+/// such turn (a Tommy Tempo drawn at its start), hence the loop. R1844000: first an aura's spent count hands
+/// the turn back; R1183002: then a turn the autopilot owes is played, unless `drive_autopilot` is off (in a
+/// search's world, and in the autopilot's own steps so none plays a turn twice).
 fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
     for _guard in 0..=TURN_CAP_PLAYER_TURNS {
         crate::subsystems::autopilot::release_spent_aura(sink.state);
@@ -665,7 +661,7 @@ fn remember_nonce(state: &mut GameState, nonce: &str, events: &[GameEvent]) {
 }
 
 /// §9.3, §10.2: apply one action. A refused action comes back with the input state, no events and
-/// TS's message; a replayed nonce comes back with the events it produced the first time.
+/// its message; a replayed nonce comes back with the events it produced the first time.
 pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
     reduce_driving(state, action, true)
 }

@@ -3,11 +3,10 @@
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 //!
 //! Managed auth (SPEC §9.4) over Supabase Auth. Per §9.2 the browser signs in against Supabase
-//! directly with the publishable key; this server only verifies the bearer token, so `verify` is the
-//! load-bearing method. Its one password path is R1443's sign-in by username (`password_grant`),
-//! which asks the provider for the session with the address only the server may read, behind the
-//! route's own limits. It never signs anyone up: a service-role sign-up would bypass the provider's
-//! rate limits and email confirmation, which §9.4's invite gate relies on.
+//! directly; this server only verifies the bearer token, so `verify` is the load-bearing method. Its
+//! one password path is R1443's sign-in by username (`password_grant`), which asks the provider for the
+//! session with the address only the server may read. It never signs anyone up: a service-role sign-up
+//! would bypass the provider's rate limits and email confirmation, which §9.4's invite gate relies on.
 //!
 //! Security notes (§9.8's "Invite code brute force" row lists "verified email"):
 //!  - `email_verified` NEVER comes from the token's `user_metadata` (users can edit it, which would
@@ -1008,11 +1007,10 @@ impl SupabaseAuth {
             };
         }
 
-        // Tier 3: unverifiable locally — ask the auth server, which is the authority either way.
-        // Only for the one token this server could not have checked itself: a legacy HS256 token
-        // while no shared secret is configured. Anything else that failed tiers 1 and 2 is forged,
-        // expired or not a JWT at all, and asking the provider about it would let any caller make
-        // this server send one request upstream per request it receives.
+        // Tier 3: unverifiable locally — ask the auth server, which is the authority either way. Only for
+        // the one token this server could not have checked itself: a legacy HS256 token while no shared
+        // secret is configured. Anything else that failed tiers 1 and 2 is forged, expired or not a JWT,
+        // and asking the provider would let any caller make this server send a request upstream per request.
         if self.hs_key.is_some() || !signed_with_shared_secret(token) {
             return None;
         }
@@ -1158,10 +1156,10 @@ struct E2eState {
 /// The provider BUILD M8's fixture accounts sign in with, and the test double: the test support
 /// (`tests/support/deps.rs`) also registers users on it (`add_user`).
 ///
-/// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts
-/// `emailVerified === true` on the *pending* account before it redeems. So every fixture is
-/// verified; what distinguishes `e2e-pending` and `e2e-econ` is their `profiles.status`.
-/// `app_metadata` stays empty: nothing here is an authorization claim.
+/// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts `emailVerified === true`
+/// on the *pending* account before it redeems, so every fixture is verified; what distinguishes
+/// `e2e-pending` and `e2e-econ` is their `profiles.status`. `app_metadata` stays empty: nothing here is
+/// an authorization claim.
 #[derive(Debug)]
 pub struct E2eAuth {
     state: Mutex<E2eState>,

@@ -1,12 +1,9 @@
 // R1295000: on the board, only the viewer's own cards wear the device's card cosmetics, a unit the opponent
 // has taken included, and only on a board that wears them (`wearCosmetics`). R1953001: what a card wears is
 // its own picks, never the account's synced foil, finish and border, which every test here holds non-default.
-//
-// R1297000: the same holds for the deck slots (playmat, backdrop, card back); a saved deck's picks
-// beat the account's.
-//
-// R1834004: an online board carries both seats' frozen loadouts (R1834002), and every seat whose cards
-// do not wear the device's picks wears its own, by owner, under the same rarity rules. The viewer's
+// R1297000: the same holds for the deck slots (playmat, backdrop, card back); a saved deck's picks beat the
+// account's. R1834004: an online board carries both seats' frozen loadouts (R1834002), and every seat whose
+// cards do not wear the device's picks wears its own, by owner, under the same rarity rules; the viewer's
 // "Show opponents' cosmetics" off leaves only the seat the board is seen from dressed.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

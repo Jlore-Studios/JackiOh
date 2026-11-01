@@ -1,11 +1,8 @@
-// The per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8): a Brittle
-// count (R385), what a Nerf and a Buff changed (R386, R513, R1320), the enchantments riding a card
-// (B5 E39), a backrow pile's depth (E21), an Animated card's stats and its standing as a Unit (R383),
-// a face's own type (B2.7) and a card's lines of code (E36), which a match hides (R693); and a Lucky
-// given to a hand card, summed with the Lucky it prints (R1438).
-//
-// Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types of
-// crates/engine/src/wire/view.rs), rendered on the board and in the inspect overlays. Each state is
+// The per-card states, drawn wherever the view lets the viewer read the card (SPEC §10.8): a Brittle count (R385),
+// what a Nerf and a Buff changed (R386, R513, R1320), the enchantments riding a card (B5 E39), a backrow pile's depth
+// (E21), an Animated card's stats and standing as a Unit (R383), a face's own type (B2.7), a card's lines of code
+// (E36), which a match hides (R693), and a Lucky given to a hand card (R1438). Every view is a fixture shaped as
+// `viewFor` builds it (src/test/fixtures.ts), rendered on the board and in the inspect overlays; each state is
 // checked on each surface, and its absence draws nothing.
 
 import { existsSync, readFileSync } from "node:fs";

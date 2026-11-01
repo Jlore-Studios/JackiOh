@@ -184,6 +184,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     fn r46_r2179000_an_indestructible_unit_is_never_in_defense_so_the_knock_down_finds_it_in_attack_position()
     {
         // Set up in Defense Position, which an Indestructible unit may not be (R2179000): it stands in
+        // Attack Position before anything is played, so the knock-down has no switch to make or report.
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, HINDER], "library": LIBRARY },
             "p2": { "field": [{ "def": ROCK, "lane": 1, "position": "DEF" }], "library": LIBRARY },
@@ -204,6 +205,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
     // #55 radiant Lava Golem and #56 radiant Jilliax print Taunt beside Indestructible, and the probe's
     // silent-change check found R46 taking that Taunt with nothing in the action's stream saying so.
     // R347 takes Taunt off every Indestructible unit, so a knock-down has none to take: the view shows
+    // none before the destroy and none after, and the action reports none.
     #[test]
     fn r46_r347_r91_an_indestructible_unit_given_taunt_shows_none_so_shrugging_off_a_destroy_changes_nothing_a_view_shows_s10_3()
      {
@@ -224,6 +226,7 @@ mod r46_r91_the_knock_down_reports_a_switch_only_when_there_is_one {
         assert!(!kinds(&shown.keywords).contains(&"Taunt".to_string()));
 
         // #16 Hit Job: "Destroy target unit". R46: an Indestructible unit that would be destroyed
+        // switches to Attack Position (it already is in it).
         s.play(HIT_JOB, json!({ "targets": pick::instance(&rock) }));
 
         s.expect_in_zone(&rock, "field");

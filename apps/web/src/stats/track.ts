@@ -1,8 +1,8 @@
-// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's takings,
-// lethal blows, Traps fired and survivors; R1743000 the damage, biggest hit, overkill, attacks, healing, draws,
-// Radiant changes and turns; R2648000: a death counts only when the other seat caused it, a Lifesteal hit credits
-// its heal. R2649000 adds the game's own mechanics, each read from the viewer's seat (R97) and, where it needs
-// what a card was, from the view before the batch.
+// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's
+// takings, lethal blows, Traps fired and survivors; R1743000 the damage, biggest hit, overkill, attacks,
+// healing, draws, Radiant changes and turns; R2648000: a death counts only when the other seat caused it,
+// a Lifesteal hit credits its heal. R2649000 adds the game's own mechanics, each read from the viewer's seat
+// (R97) and, where it needs what a card was, from the view before the batch.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -59,8 +59,8 @@ function manaSavedBy(event: Extract<GameEvent, { type: "cardPlayed" }>, id: stri
 
 /**
  * Count plays, draws, Radiant changes, turns and the viewer's Traps fired by the viewer-relative counter.
- * R2649000 adds the viewer's Flashback plays (R783012) and the mana they saved, crumbles (Brittle, R638),
- * plays countered, cards burned from a full hand (R4) and bounced, and Starship pieces launched (R1852003).
+ * R2649000 adds Flashback plays (R783012) and the mana they saved, crumbles (Brittle, R638), plays
+ * countered, cards burned from a full hand (R4) and bounced, and Starship pieces launched (R1852003).
  */
 export function countEvent(log: GameLog, event: GameEvent, viewer: PlayerView["viewer"]): GameLog {
   if (event.type === "cardPlayed") {
@@ -146,9 +146,9 @@ function keywordsOf(card: CardView): readonly Keyword[] {
 }
 
 /**
- * R1743000, R2648000: the viewer's card an event makes the source of what follows it in the batch (their play,
- * activation, Trap, attacker or damage dealer). Null for the opponent's event or a card the view does not
- * show; undefined for an event that sets none.
+ * R1743000, R2648000: the viewer's card an event makes the source of what follows it in the batch (their
+ * play, activation, Trap, attacker or damage dealer). Null for the opponent's event or a card the view does
+ * not show; undefined for an event that sets none.
  */
 function sourceAfter(event: GameEvent, view: PlayerView): string | null | undefined {
   if (event.type === "cardPlayed" || event.type === "activated") return event.player === view.viewer ? readable(event.defId) : null;
@@ -286,9 +286,9 @@ export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEv
 
 /**
  * R1743000: `healed` names no source, so a heal counts toward the viewer's card that acted last before it in
- * the batch, and toward nothing after the opponent's or a hidden card. R2648000: the viewer's attacker, or
- * damage dealer, becomes the source, so a Lifesteal hit's heal is its card's. R2649000 (Vampire): the first heal
- * after a `damage` by a card that had Lifesteal in the view before also counts as drained; none without it.
+ * the batch, and toward nothing after the opponent's or a hidden card. R2648000: the viewer's attacker or
+ * damage dealer becomes the source, so a Lifesteal hit's heal is its card's. R2649000 (Vampire): the first
+ * heal after a `damage` by a card that had Lifesteal in the view before also counts as drained.
  */
 export function countHealing(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null = null): GameLog {
   let next = log;
@@ -369,8 +369,8 @@ export function countSacrificed(log: GameLog, view: PlayerView, fresh: readonly 
  * `killerId` names the viewer's card (in this view, else the view before: the killer may die in the same
  * combat) counts a kill (Executioner) and may raise the killer's biggest kill to the victim's `maxHealth`
  * (Giant Slayer). A crumble (R638) is no kill, nor is a victim the sentinel hides (R97). A victim Frozen in
- * the view before (`UnitView.frozen`) was shattered (Shatter) by its killer, or with no `killerId` by the
- * viewer's card that acted last before it in the batch; an opponent's killer or actor shatters nothing.
+ * the view before was shattered (Shatter) by its killer, or with no `killerId` by the viewer's card that
+ * acted last before it; an opponent's killer or actor shatters nothing.
  */
 export function countKills(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   const crumbled = new Set<string>();
@@ -397,9 +397,8 @@ export function countKills(log: GameLog, view: PlayerView, fresh: readonly GameE
 }
 
 /**
- * R2649000 (Double Tap): a Unit of the viewer's second `attackDeclared` in one turn (Windfury, R636).
- * The log keeps this turn's attacks by instance id (`attackers`, never stored), emptied at each
- * `turnStarted`.
+ * R2649000 (Double Tap): a Unit of the viewer's second `attackDeclared` in one turn (Windfury, R636). The log
+ * keeps this turn's attacks by instance id (`attackers`, never stored), emptied at each `turnStarted`.
  */
 export function countDoubleAttacks(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   let next = log;
@@ -421,7 +420,7 @@ export function countDoubleAttacks(log: GameLog, view: PlayerView, fresh: readon
  * R2649000: the freezes and thaws (`marked` with the `frozen` mark, R1174000: `added` a freeze, else a thaw).
  * A freeze on a Unit the opponent's side shows (in the view before, else this one) counts for the viewer's
  * card R2648000's source rule names (Cold Snap); a freeze on the viewer's Unit counts for it (Brain Freeze);
- * a thaw of the viewer's Unit this view still shows on the field counts for it (Spring Thaw), a death never.
+ * a thaw of the viewer's Unit still on the field counts for it (Spring Thaw), a death never.
  */
 export function countFreezes(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   const foe = opponentOf(view.viewer);
@@ -449,10 +448,10 @@ export function countFreezes(log: GameLog, view: PlayerView, fresh: readonly Gam
 }
 
 /**
- * R2649000: the viewer's cards that were Temporary in their hand in the view before (its keywords, R637,
- * R2179001). One discarded after the viewer's `turnEnded` and before a later `turnStarted` (the cleanup's
- * discard, R637) slipped away (Use It or Lose It); one played, by its hand id (R227's `formerId` when the play
- * set it face-down), was played in time (Just in Time). Without that view, or a hand it shows, nothing counts.
+ * R2649000: the viewer's cards that were Temporary in their hand in the view before (R637, R2179001). One
+ * discarded after the viewer's `turnEnded` and before a later `turnStarted` (the cleanup's discard, R637)
+ * slipped away (Use It or Lose It); one played, by its hand id (R227's `formerId` when the play set it
+ * face-down), was played in time (Just in Time). Without that view, or a hand it shows, nothing counts.
  */
 export function countTemporary(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   if (before === null || !Array.isArray(before.you.hand)) return log;
@@ -478,10 +477,10 @@ export function countTemporary(log: GameLog, view: PlayerView, fresh: readonly G
 }
 
 /**
- * R2649000: the viewer's trades (R1838001: `traded` names no card, and the card it shuffles in is hidden
- * from the trader too). The first `drawn` of theirs after each `traded` was pulled from a trade (Trade-In
- * Value). For each `traded`, one Tradable card (`tradable`) of their hand in the view before that this view
- * shows nowhere was traded away (Hot Potato), in hand order; with no view before, none.
+ * R2649000: the viewer's trades (R1838001: `traded` names no card, and the card it shuffles in is hidden from
+ * the trader too). The first `drawn` of theirs after each `traded` was pulled from a trade (Trade-In Value).
+ * For each `traded`, one Tradable card of their hand in the view before that this view shows nowhere was
+ * traded away (Hot Potato), in hand order; with no view before, none.
  */
 export function countTrades(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   let trades = 0;
@@ -510,9 +509,8 @@ export function countTrades(log: GameLog, view: PlayerView, fresh: readonly Game
 }
 
 /**
- * R2649000 (Second Wind): a `destroyed` of the viewer's Unit that had Reborn in the view before, then
- * a `summoned` of theirs of the same definition later in the batch, each summon taking one such death.
- * With no view before, nothing counts.
+ * R2649000 (Second Wind): a `destroyed` of the viewer's Unit that had Reborn in the view before, then a
+ * `summoned` of theirs of the same definition later in the batch, each summon taking one such death.
  */
 export function countReborn(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   if (before === null) return log;
@@ -535,8 +533,7 @@ export function countReborn(log: GameLog, view: PlayerView, fresh: readonly Game
 
 /**
  * R2649000: a Feng Shui's judgement of the viewer's play (R983), counted for the card it names where the
- * view shows it, positive (Good Feng Shui) or negative (Bad Feng Shui); and a `countered` of the
- * opponent's play whose `byInstanceId` names the viewer's card (Nope).
+ * view shows it, good or bad; and a `countered` of the opponent's play whose `byInstanceId` is the viewer's (Nope).
  */
 export function countFengShuiAndCounters(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   let next = log;
@@ -553,10 +550,9 @@ export function countFengShuiAndCounters(log: GameLog, view: PlayerView, fresh: 
 }
 
 /**
- * R2649000 (Mass Produced): each Created card (R943's `created`) this view shows on the viewer's side, counted
- * once per instance in a game (`createdIds`, never stored), a fresh id it takes (R227's `formerId`) included.
- * The seat holding it is credited, not R2089000's `creator`, which no view forwards; a dealt card, the
- * opponent's side and a card the viewer cannot read count nothing.
+ * R2649000 (Mass Produced): each Created card (R943's `created`) this view shows on the viewer's side, once
+ * per instance in a game (`createdIds`, never stored), a fresh id it takes (R227's `formerId`) included. The
+ * seat holding it is credited, not R2089000's `creator`, which no view forwards; nothing else counts.
  */
 export function countCreated(log: GameLog, view: PlayerView, fresh: readonly GameEvent[] = []): GameLog {
   const counted = new Set(log.createdIds);
@@ -578,9 +574,8 @@ export function countCreated(log: GameLog, view: PlayerView, fresh: readonly Gam
 }
 
 /**
- * Views carry a sliding event window (SPEC §10.8), so callers supply only fresh events. `before` is the
- * view the batch followed (R1743000's overkill reads the targets' health in it, R2649000's counters what
- * a card was), null for the first.
+ * Views carry a sliding event window (SPEC §10.8), so callers supply only fresh events. `before` is the view
+ * the batch followed (R1743000's overkill and R2649000's counters read what a card was in it), null for the first.
  */
 export function observe(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null = null): GameLog {
   let next = countCreated(logSeen(log, seenIn(view)), view, fresh);

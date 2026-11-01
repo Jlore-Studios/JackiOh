@@ -8,6 +8,9 @@
 //! impossible ones (`ky_last_exam_bank.rs`), its right option drawn with it, the four shown under
 //! letters in an rng order and the key kept in the engine (R465). No answerer can work it out, so
 //! each guesses: the player, the AI, the random policy and a timeout (R79). Right: one hit of
+//! `damage` on the enemy hero (§4.4, its caster's Spell Damage raising it), then `gain_echo`: the card
+//! is owed one more resolution (§6.2 Echo), which asks a new problem, the repeats a play gives itself
+//! capped at `SELF_ECHO_GAIN_CAP`.
 
 use jackioh_engine::effects::{ChooseAnswerArgs, answered_correctly, choose_answer, damage, gain_echo};
 use jackioh_engine::prelude::*;

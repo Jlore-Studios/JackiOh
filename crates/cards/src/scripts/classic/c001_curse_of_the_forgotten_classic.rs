@@ -45,6 +45,7 @@ fn preview() -> PreviewHook {
     })
 }
 
+/// The card the Recruit will take: the newest permanent in the opponent's exile (a Spell is never
 /// recruited, and a unit token is never in an exile, R11), read as the Spell resolves.
 fn newest_permanent_of_theirs(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     let state: &GameState = &*ctx.state;

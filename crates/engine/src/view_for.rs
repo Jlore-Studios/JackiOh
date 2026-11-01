@@ -1,38 +1,35 @@
-//! What one player is allowed to see, and nothing else (SPEC §10.8). The client renders this view
-//! and never holds rules or hidden information (CLAUDE.md rule 7, §9.1's trust model).
+//! What one player is allowed to see, and nothing else (SPEC §10.8). The client renders this view and never
+//! holds rules or hidden information (CLAUDE.md rule 7, §9.1's trust model).
 //!
-//! The view is built by *copying* what the viewer is entitled to, never by deleting fields from a
-//! state clone: a field added to `GameState` stays invisible until this file names it. The rules:
-//!   - §9.1: library order, the opponent's library and hand and face-down traps are hidden;
-//!     libraries and the opponent's hand travel as counts. R310–R312: the viewer's own library also
-//!     travels as an unordered list of what they were shown going in, never an instance id, so R97
-//!     still reads no library card.
-//!   - R33: a face-down trap is readable by its *current controller* only (a steal, swap or rotation
-//!     moves who may); a Field Trap that has fired (`faceUp`) is public.
+//! The view is built by *copying* what the viewer is entitled to, never by deleting fields from a state
+//! clone: a field added to `GameState` stays invisible until this file names it. The rules:
+//!   - §9.1: library order, the opponent's library and hand and face-down traps are hidden; libraries and the
+//!     opponent's hand travel as counts. R310–R312: the viewer's own library also travels as an unordered
+//!     list of what they were shown going in, never an instance id, so R97 still reads no library card.
+//!   - R33: a face-down trap is readable by its *current controller* only; a fired Field Trap (`faceUp`) is
+//!     public.
 //!   - R13, §3.2: a Stack pile shows its top card and a count of the dormant cards buried under it.
-//!   - R81: the other player's prompt, and its `promptOpened` and `promptAnswered`, show only that it
-//!     is open and whose it is.
-//!   - R97: the event stream is redacted, not truncated: an event naming a card the viewer may not
-//!     read keeps its type and animation fields and shows `HIDDEN_ID` for that card.
-//!   - R2652000: a `rolled` batch a face-down trap made is dropped, not redacted, for the other player
-//!     unless the trap fired in the same action (`withheld_rolls`), before the window is taken.
-//!   - R764: a Glitch's reset or boards (R676, R678) takes cards out unseen, so the events up to the
-//!     end of its action read as the sentinel for each card the state no longer holds.
-//!   - R227: a card set face-down took a fresh id; events naming its old id follow it through
-//!     `formerId`, which travels only with the card.
-//!   - R1074000: a Duos pass (B20) takes a hand card out unseen, so in a duel a card in no pile reads
-//!     to the player whose hand the events last show it in, else to all if a token (R11), else nobody.
-//!   - R177: a prompt option offering a face-down card names it by id only (and its zone, R821000);
-//!     an unreadable card's cost, buff amounts and Replace go with its identity.
+//!   - R81: the other player's prompt (and its `promptOpened`, `promptAnswered`) shows only that it is open
+//!     and whose.
+//!   - R97: events are redacted, not truncated: one naming a card the viewer may not read keeps its type and
+//!     animation fields and shows `HIDDEN_ID` for that card.
+//!   - R2652000: a `rolled` batch a face-down trap made is dropped for the other player unless the trap fired
+//!     in the same action (`withheld_rolls`).
+//!   - R764: a Glitch's reset or boards (R676, R678) takes cards out unseen, so events up to the end of its
+//!     action read as the sentinel for each card the state no longer holds.
+//!   - R227: a card set face-down took a fresh id; events naming its old id follow it through `formerId`.
+//!   - R1074000: a Duos pass (B20) takes a hand card out unseen, so in a duel a card in no pile reads to the
+//!     player whose hand the events last show it in, else to all if a token (R11), else nobody.
+//!   - R177: a prompt option offering a face-down card names it by id only (and its zone, R821000); an
+//!     unreadable card's cost, buff amounts and Replace go with its identity.
 //!   - R169: the player modifiers (§10.1 `mods`) travel on both seats as `{ id, label }`.
 //!   - R434: once the game is over the opponent's hand travels in full; the rest stays hidden.
 //!   - R437: a mark (#50's pending steal) rides every view of the card in both seats, a back included.
-//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000: what the engine
-//!     works out for a card rides the viewer's own cards only, except `preview` (every card the
-//!     viewer may read) and `sick` (every unit).
+//!   - R195, R280, R667, #492, #992, R1844001, R2268000, R849000, R979000, R1571000: what the engine works
+//!     out for a card rides the viewer's own cards only, except `preview` and `sick` (every unit).
 //!
-//! Stats are recomputed on read (`layers.unitView`, §10.4), so no stored total reaches the client.
-//! The boundary is SURFACE §4.1, §6.1, §6.4 and §6.6; `VIEW_EVENT_LIMIT` lives in `crate::config`.
+//! Stats are recomputed on read (`layers.unitView`, §10.4), so no stored total reaches the client. The
+//! boundary is SURFACE §4.1, §6.1, §6.4 and §6.6; `VIEW_EVENT_LIMIT` lives in `crate::config`.
 
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
@@ -417,11 +414,10 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
     Some(DuelGone { public, passed })
 }
 
-/// R97: whether this viewer may read the card an event names, judged by where it sits *now*, not
-/// where it was (§9.1). The resolving zone is public (R98). A card that ceased to exist is judged by
-/// its replacement (R177), so what #83 Transmogulate replaced in a face-down trap or a library never
-/// reads; with none it went publicly (a unit token, R11; a card exiled out of existence, R86), save
-/// in a duel (`duel_gone`, R1074000).
+/// R97: whether this viewer may read the card an event names, judged by where it sits *now*, not where it was
+/// (§9.1). The resolving zone is public (R98). A card that ceased to exist is judged by its replacement
+/// (R177), so what #83 Transmogulate replaced in a face-down trap or a library never reads; with none it went
+/// publicly (a unit token, R11; a card exiled out of existence, R86), save in a duel (`duel_gone`, R1074000).
 fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &Replacements) -> bool {
     let mut id = instance_id.to_string();
     let mut card = find_instance(state, &id);
@@ -2686,11 +2682,10 @@ pub fn viewed_of_newest(state: &GameState, viewer: PlayerId, fresh: usize) -> us
     (total - from) - withheld
 }
 
-/// §10.8: "the last N events for animation": the tail of `state.applied`, the only event history a
-/// state carries (§9.3's nonce dedupe). `VIEW_EVENT_LIMIT` is a FLOOR, not a cap (SPEC §11 R168): the
-/// window never ends inside the newest action, since `PlayerView.events` is the client's only channel
-/// for every §10.3 animation (BUILD M5-T4) and one action can emit more (#96 My Pawn's cancel plus the
-/// §10.7 AI turn it hands over is 38 events).
+/// §10.8: "the last N events for animation": the tail of `state.applied`, the only event history a state
+/// carries (§9.3's nonce dedupe). `VIEW_EVENT_LIMIT` is a FLOOR, not a cap (SPEC §11 R168): the window never
+/// ends inside the newest action, since `PlayerView.events` is the client's only channel for every §10.3
+/// animation (BUILD M5-T4) and one action can emit more (#96 My Pawn's cancel plus the §10.7 AI turn).
 fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     let all: Vec<&GameEvent> = state
         .applied

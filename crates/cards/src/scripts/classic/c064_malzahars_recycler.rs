@@ -21,6 +21,7 @@ pub const ID: &str = "classic-064";
 /// "Discard 2 random cards." — random (R682).
 const DISCARDS: i32 = 2;
 
+/// "Activate: Discard 2 random cards.": the discard is the ability's cost, paid as it is activated
 /// (R384), so the ability itself does nothing more; the `recycle` answer draws.
 fn discard_two() -> ActivationDecl {
     ActivationDecl {
@@ -82,6 +83,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: the scripts v0.3.7b and every version before it ran, which discarded at the end of their
+/// controller's turn; `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_3_7b() -> CardScripts {
     let base = Script {
         end_of_turn: Some(hook(end_of_turn)),
@@ -347,6 +349,7 @@ mod tests {
                 s.play(LAST_HURRAH, json!({}));
                 assert_eq!(s.hand(P1).len(), 5);
                 s.end_turn();
+                // After `turnEnded`, Last Hurrah discards the whole hand of five, and each discard is
                 // answered from the deck it emptied: five fatigue draws (R62).
                 let events = s.last_events();
                 let after = &events[find_index(events, "turnEnded")..];

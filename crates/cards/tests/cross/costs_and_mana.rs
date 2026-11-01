@@ -82,6 +82,8 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
             cost_in_hand(&s, COST_4)
         }
         // R65: "add player discounts; apply Professor Curvature if the result is then 4". The result
+        // of the discounts is 4 for both modifiers, so both apply, 4 - 1 - 2 = 1, and the order the
+        // two Curvatures were played in cannot change what a card costs.
         assert_eq!([next_turn_cost(false), next_turn_cost(true)], [1, 1]);
     }
 
@@ -215,6 +217,7 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
         g.play(ARCHIVIST, json!({ "zone": 3, "modes": ["highest"] }));
 
         // R24: "highest" is the 7/7 at 4. Curvature prices a 4-cost card PLAYED this turn (R48); it does
+        // not make the 7/7 in the library a 3 that ties with Shredder and loses to its place in the pile.
         assert!(def_ids(&g.hand("p1")).contains(&SEVEN_SEVEN.to_string()));
         assert_eq!(def_ids(&g.pile("p1", "library")), [SHREDDER]);
     }

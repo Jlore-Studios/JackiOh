@@ -1,30 +1,28 @@
-//! The Starship (SPEC §6.1 Starship Piece and Starship, §6.2 When launched, §6.3 Launch;
-//! R1852000–R1852007): Stinkyscape's ship built from the pieces that die, ahead of the set's cards.
+//! The Starship (SPEC §6.1 Starship Piece and Starship, §6.2 When launched, §6.3 Launch; R1852000–R1852007):
+//! Stinkyscape's ship built from the pieces that die, ahead of the set's cards.
 //!
-//! - **The piece.** Starship Piece is a keyword with no rule of its own until the card dies (§4.5: the
-//!   state check's collection or a Sacrifice, never a card a replacement sends elsewhere). Then, once the
-//!   death pass has returned its Reborn bodies and reported its graveyard (`state_check`'s last step), a
-//!   copy of it fuses into the Dormant Starship of the player whose graveyard it entered, who controlled it
-//!   as it died (R77, `subsystems::fuse`), summoning one first if they have none (R1852000, R1852002,
-//!   R2618000). The copy is the piece's base version (`piece_copy`, R2521000). A discard, a mill or any
-//!   other way into a graveyard fuses nothing.
+//! - **The piece.** Starship Piece is a keyword with no rule until the card dies (§4.5: the state check's
+//!   collection or a Sacrifice, never a card a replacement sends elsewhere). Then, once the death pass has
+//!   returned its Reborn bodies and reported its graveyard (`state_check`'s last step), a copy of it fuses
+//!   into the Dormant Starship of the player whose graveyard it entered, who controlled it as it died (R77,
+//!   `subsystems::fuse`), summoning one first if they have none (R1852000, R1852002, R2618000). The copy is
+//!   the piece's base version (`piece_copy`, R2521000); a discard or a mill fuses nothing.
 //! - **The hull.** The Dormant Starship (`DORMANT_STARSHIP_DEF_ID`) is a 0/0 Unit that prints Dormant
 //!   (`slumber.rs`) and the hull (`StaticFlags.starship_hull`); entering the field it starts a memory
-//!   (`CardInstance.starship`), the pieces it holds (R1852005). It is summoned into its owner's backrow,
-//!   the middle first, standing there, else their unit row the same way (R2249000), else stacked on top
-//!   of their lane-3 unit zone, Locked or not, and the copy fuses into it at once, so no state check ever
-//!   reads it at 0/0. A Fuse never makes it a piece (R1852001).
-//! - **The launch.** While it is Dormant its one ability is the engine's launch, Activate: (3)
-//!   (`launch_decl`, `STARSHIP_LAUNCH_COST`, moved by "your Starship launch costs (N)", R1852006), which
-//!   awakens it; an awakening of a hull is its launch, whatever awakened it (`slumber::awaken_card`
-//!   calls `launch`). It takes the Starship keyword and a random name (R1852004), `starshipLaunched`
-//!   goes out, its fused Cries fire as a triggered Cry does (R467: asked as prompts for its controller),
-//!   and then its fused "When launched" triggers answer the event (R1852003).
+//!   (`CardInstance.starship`) of the pieces it holds (R1852005). It is summoned into its owner's backrow,
+//!   the middle first, standing there, else their unit row the same way (R2249000), else stacked on top of
+//!   their lane-3 unit zone, Locked or not, and the copy fuses into it at once, so no state check reads it at
+//!   0/0. A Fuse never makes it a piece (R1852001).
+//! - **The launch.** While Dormant its one ability is the engine's launch, Activate: (3) (`launch_decl`,
+//!   `STARSHIP_LAUNCH_COST`, moved by "your Starship launch costs (N)", R1852006), which awakens it; any
+//!   awakening of a hull is its launch (`slumber::awaken_card` calls `launch`): it takes the Starship keyword
+//!   and a random name (R1852004), `starshipLaunched` goes out, its fused Cries fire as a triggered Cry does
+//!   (R467: prompts for its controller), then its fused "When launched" triggers answer the event (R1852003).
 //! - **The exile.** A Stack card played onto a Dormant Starship lands and is exiled before it resolves
 //!   (R1852007), the one exception to R1839003.
 //!
-//! Every field is optional and absent on every card that is not a Starship, so a game without one
-//! serializes, hashes and replays exactly as before (D14).
+//! Every field is optional and absent on every card that is not a Starship, so a game without one serializes,
+//! hashes and replays exactly as before (D14).
 
 use crate::config::{
     DORMANT_STARSHIP_DEF_ID, STARSHIP_FULL_ROW_LANE, STARSHIP_LANE_ORDER, STARSHIP_LAUNCH_COST,
@@ -157,10 +155,9 @@ pub fn piece_number(ctx: &crate::script::EffectContext<'_>, def_id: &str, radian
 
 // A piece dies (R1852000–R1852002)
 
-/// R2521000: the definition a dead piece's copy is a fresh card of, the piece it was printed as. A
-/// fusion (`CardDef.ingredients`) is the card the others were fused into, its last ingredient — an
-/// Equip's host, the card the Fuse kept, the one R1852001 reads the keyword off — walked the same way
-/// where that ingredient is itself a fusion. A card that is no fusion is its own definition, so a host
+/// R2521000: the definition a dead piece's copy is a fresh card of, the piece it was printed as: a fusion
+/// (`CardDef.ingredients`) is its last ingredient, the card the Fuse kept (an Equip's host, the one R1852001
+/// reads the keyword off), walked the same way; a card that is no fusion is its own definition, so a host
 /// that is a piece by a grant or a lend (R1878001, R1878003) still fuses as itself.
 fn base_piece_def(state: &GameState, def_id: &str) -> String {
     let kept = crate::catalog::find_def(Some(state), def_id)
@@ -172,13 +169,11 @@ fn base_piece_def(state: &GameState, def_id: &str) -> String {
     }
 }
 
-/// R1852000, R2521000: the copy of a dead piece that fuses, its base version: a fresh card in no pile,
-/// owned by the player whose Starship it joins, who controlled the piece as it died (R2618000), of its
-/// base definition (`base_piece_def`), carrying of what R57's
-/// library copy carries its Radiant face, a token's X/X (`statsOverride`, `armorOverride`, its printed
-/// face, R175) and its language (R1300), and never its tuning — a Buff, Nerf or Upgrade (B3.4) was the
-/// dead card's, so the piece fuses with its printed numbers. Read off `snapshot`, the card as it stood
-/// before it died (R89). Its id is fresh, so it can be named by no other card.
+/// R1852000, R2521000: the copy of a dead piece that fuses: a fresh card in no pile, owned by the player
+/// whose Starship it joins (R2618000), of the base definition (`base_piece_def`), read off `snapshot`, the
+/// card as it stood before it died (R89). It carries of what R57's library copy carries its Radiant face, a
+/// token's X/X (`statsOverride`, `armorOverride`, its printed face, R175) and its language (R1300), never its
+/// tuning (a Buff, Nerf or Upgrade, B3.4, was the dead card's), so the piece fuses with its printed numbers.
 fn piece_copy(state: &mut GameState, snapshot: &CardInstance) -> CardInstance {
     let owner = snapshot.controller;
     let def_id = base_piece_def(state, &snapshot.def_id);
@@ -265,13 +260,13 @@ fn summon_dormant_starship(sink: &mut EngineSink<'_>, player: PlayerId) -> Optio
     None
 }
 
-/// R1852000–R1852002: a Starship Piece died (`snapshot` is the card as it stood, R89): a copy of it,
-/// its base version (`piece_copy`, R2521000), fuses into the Dormant Starship of the player whose
-/// graveyard it entered (R1852002): the player who controlled it as it died, whose card it is from then on
-/// (R2618000) — summoning one first if they have none. The fusion is R77's with the Starship kept (its zone, its Dormant status, its memory), the copy
-/// on the face it was on (R469), and the Starship is never made a piece by it (R1852001). Its memory
-/// and `starshipFused` name the copy's definition, the base one. Nothing happens when the Starship
-/// cannot be had, or when the fusion would pass `FUSED_CARDS_CAP` (R874000).
+/// R1852000–R1852002: a Starship Piece died (`snapshot` is the card as it stood, R89): a copy of it, its base
+/// version (`piece_copy`, R2521000), fuses into the Dormant Starship of the player whose graveyard it entered
+/// (R1852002), who controlled it as it died and owns it from then on (R2618000), summoning one first if they
+/// have none. The fusion is R77's with the Starship kept (its zone, Dormant status and memory), the copy on
+/// the face it was on (R469), and the Starship is never made a piece by it (R1852001). Its memory and
+/// `starshipFused` name the base definition. Nothing happens when the Starship cannot be had, or when the
+/// fusion would pass `FUSED_CARDS_CAP` (R874000).
 pub fn fuse_dead_piece(sink: &mut EngineSink<'_>, snapshot: &CardInstance) {
     let owner = snapshot.controller;
     let ship_id = match dormant_starship_of(sink.state, owner) {

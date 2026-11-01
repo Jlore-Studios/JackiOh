@@ -331,7 +331,7 @@ pub struct RadiantChanceArgs {
 /// EVERY card is rolled, a Radiant one included (§8 #42 is not one of R60's picks): skipping them would
 /// make the number of draws hang on how many of a library nobody may read were Radiant, and a success
 /// is cued either way (R177, §9.1). The pool is read as this effect applies, so an earlier exile in the
-/// list (#42's 8) is never rolled (§4.5, R59).
+/// list is never rolled (§4.5, R59).
 pub fn radiant_chance(args: RadiantChanceArgs) -> Effect {
     Effect::new("radiantChance", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

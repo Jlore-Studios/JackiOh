@@ -105,13 +105,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #34 Memory Leak — SPEC §8.7 row 34, BUILD M9 Classic+ row C+ 34: "Field Spell; Crater Locks the
-// backrow zone it enters as it enters, on both faces (R1850006, #2521); the mode is chosen
-// with the play (R81) and kept in `memory.mode`: "End of turn" Locks one random zone of the opponent's
-// ten not already Locked at each end of your turn (an occupied zone is fine, a Lock evicts nothing; all
-// ten Locked, nothing and no random draw, R129); "After your opponent plays a Unit or Field Spell" Locks
-// the zone that card went into (a cast counts, R70; a Spell, Trap or Field Trap doesn't; the card
-// stays); a Locked unit zone takes a Reborn return there (R175, R688); radiant both at once, no choice".
+// C+ #34 Memory Leak — SPEC §8.7 row 34, BUILD M9 Classic+ row C+ 34 (the must-pass row): Crater Locks
+// the backrow zone it enters as it enters, on both faces (R1850006, #2521); the mode is chosen with the
+// play (R81) and kept in `memory.mode`; all ten zones Locked, nothing and no random draw (R129); a cast
+// counts (R70); a Locked unit zone takes a Reborn return there (R175, R688).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

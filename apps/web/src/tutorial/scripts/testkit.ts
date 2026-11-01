@@ -82,11 +82,6 @@ export function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } 
   return { runs, tips };
 }
 
-/** The player-turn number (the engine's `turn`) of the human's own turn `n` (p1 takes the odd ones). */
-export function gameTurnOf(seat: PlayerId, n: number): number {
-  return seat === "p1" ? 2 * n - 1 : 2 * n;
-}
-
 /** The rarities no lesson before the last deals or generates (R2201001, R2205003). */
 const SHOWPIECES: readonly string[] = ["Legendary", "Mythic"];
 

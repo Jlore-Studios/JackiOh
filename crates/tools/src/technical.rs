@@ -1,12 +1,13 @@
 //! `cargo jackioh patches log <base>..<head> [--bodies <path>]` (#1369, R1369000): the technical log.
 //! A change that ships no card data never bumps the catalog version (R105); it is logged instead on the
-//! patch that was live when it reached players, the newest shipped X.
+//! patch that was live when it reached players, the newest shipped X: the last `patches.json` entry whose
+//! tier is a patch or a major (one that records no tier, before #1366, gets it from its changes).
 //!
 //! Each first-parent commit of the range is classified by stage 1 of `classify` (R1365000) against its
 //! first parent. A Cards commit adds nothing, its patch records it already. An App, AI or Internal commit
-//! appends one entry to `crates/cards/patches/technical.json`, and a commit already there, under any
-//! version, adds nothing, so running a range twice is running it once. The production promotion runs it
-//! over the commits it promotes (#1370). The file lists entries in the order they were logged:
+//! appends one entry to `crates/cards/patches/technical.json`; a commit already there, under any version,
+//! adds nothing, so running a range twice is running it once. The production promotion runs it over the
+//! commits it promotes (#1370). Entries are in the order they were logged:
 //!
 //! ```text
 //! { "version": "v0.3.15", "commit": "<sha>", "pr": 1394, "title": "<what it does>",
@@ -17,9 +18,7 @@
 //! when it has none; `title` is the subject without it and without its convention prefix. `player`, if
 //! any, comes from the pull request's body (`--bodies`, which `gh` fills in CI), else the commit
 //! message; a line that breaks the note rules (R724001) is left out and named on stderr. The Patch notes
-//! page shows the App and AI entries that have one; Internal entries are the record's only. The newest
-//! shipped X is the last `patches.json` entry whose tier is a patch or a major; an entry that records no
-//! tier (before #1366) gets it from its changes. Nothing parses a version (R105).
+//! page shows the App and AI entries that have one. Nothing parses a version (R105).
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fs;

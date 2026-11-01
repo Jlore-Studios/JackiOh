@@ -6,6 +6,7 @@
 //! cost and counted as played (R70), its owner then drawing again under R58's chain cap. It is a token,
 //! in no deck at setup (§2.6), and only S #84 Power Cell shuffles it in. Its cast is `gain_resources`
 //! of one random Resource into its caster's hand (R2250000, R1840002's roll), a full hand burning it; a
+//! Spell token, it then goes to the graveyard.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;

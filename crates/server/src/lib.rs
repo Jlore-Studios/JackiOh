@@ -1,6 +1,6 @@
 //! The JackiOh server (SURFACE §11): one process that runs the HTTP API (`api`) and one match actor
-//! per live match (`actor`), over one store (`db`). It serves the same routes, statuses, headers,
-//! bodies, frames, close codes and rows as `apps/server`, with SURFACE §11.3's deltas only.
+//! per live match (`actor`), over one store (`db`). Its routes, statuses, headers, bodies, frames,
+//! close codes and rows are SURFACE §11.3's.
 //!
 //! Module tree (SURFACE §11.1):
 //!
@@ -18,8 +18,8 @@
 //! - `loops`: the background loops' supervisor, which logs a loop that panics (#842) or returns
 //!   (#1093) and starts it again.
 //! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
-//! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for
-//!   the night bot while the match goes on.
+//! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for the
+//!   night bot.
 //! - `cosmetics`: the cosmetics registry, `cosmetics.json`, and its check (#1295, R1295000).
 //! - `loadout`: the cosmetics each seat of a match wears, frozen as it starts, and when a card's own
 //!   picks may be sent (#1834, R1834002, R1834003).

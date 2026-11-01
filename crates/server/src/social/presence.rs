@@ -1,23 +1,18 @@
-//! Presence and status (SPEC S7, B47): `POST /api/presence` is the heartbeat a signed-in client
-//! sends every `PRESENCE_HEARTBEAT_MS`, and `standings` is what a friend's row says of where they
-//! are. A heartbeat from an account that owes agreement to the terms in force records nothing
-//! (R970002): the Privacy Policy that names it is what the account has not agreed to yet.
+//! Presence and status (SPEC S7, B47): `POST /api/presence` is the heartbeat a signed-in client sends every
+//! `PRESENCE_HEARTBEAT_MS`, and `standings` is what a friend's row says of where they are. A heartbeat
+//! from an account that owes agreement to the terms in force records nothing (R970002).
 //!
-//! A friend is `inMatch` while a live 1v1 match holds them (the in-match flag §9.5 sets and every
-//! ending clears, which `GET /api/auth/me` reads as `currentMatchId`), while they are between the
-//! games of a Conquest series that is not over (`currentSeriesId`, R259), or while a live Duos
-//! co-op match holds them (B42, read as `duos::live_match_of` reads it); else `online` while their
-//! last heartbeat is at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it
-//! reads as a person who is away, and in a match as a person in one (R1452).
+//! A friend is `inMatch` while a live 1v1 match holds them (the in-match flag §9.5 sets and every ending
+//! clears, which `GET /api/auth/me` reads as `currentMatchId`), while they are between the games of a
+//! Conquest series that is not over (`currentSeriesId`, R259), or while a live Duos co-op match holds them
+//! (B42, read as `duos::live_match_of` reads it); else `online` while their last heartbeat is at most
+//! `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it reads as a person who is away,
+//! and in a match as a person in one (R1452).
 //!
-//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, which has
-//! fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the friend's refuses it (R2615000). The
-//! watch socket judges it again at its hello (`social::watch`).
-//!
-//! `standings` reads every friend's at once, in the caller's transaction, by a fixed number of
-//! set-based reads (heartbeats, series, co-op matches, the watch checks), whatever the number of
-//! friends, so `GET /api/friends`, which a client reads every `PRESENCE_HEARTBEAT_MS`, costs one
-//! transaction and no per-friend query.
+//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, with fewer than
+//! `SPECTATORS_PER_MATCH` watchers; no setting of the friend's refuses it (R2615000), and the watch socket
+//! judges it again at its hello (`social::watch`). `standings` reads every friend's at once in the caller's
+//! transaction, by a fixed number of set-based reads, so `GET /api/friends` costs no per-friend query.
 
 use std::sync::Arc;
 

@@ -1,29 +1,21 @@
-//! The autopilot (Meditative+ #18 Cognitive Offloading, docs/meditative-plus-set.md MP5, R1183002,
-//! R1183003): "the AI plays the rest of your turn", played by the engine's §10.7 scorer, never
-//! `crates/ai` (CLAUDE.md rule 4: the engine cannot depend on it, and the AI's pick runs on a clock,
-//! so a replay could disagree). Core #96 My Pawn's `ai_policy::play_out_turn` is its random cousin.
+//! The autopilot (Meditative+ #18 Cognitive Offloading, docs/meditative-plus-set.md MP5, R1183002, R1183003):
+//! "the AI plays the rest of your turn", played by the engine's §10.7 scorer, never `crates/ai`
+//! (CLAUDE.md rule 4: the engine cannot depend on it, and the AI's pick runs on a clock). Core #96 My Pawn's
+//! `ai_policy::play_out_turn` is its random cousin.
 //!
-//! `reduce::end_due_turns` takes `choose`'s action while `due`, through the reducer's own step, until
-//! the turn ends, the other player owes an action (their answer brings it back), or
-//! `AUTOPILOT_MAX_ACTIONS` is reached, when the rest is a timeout's (R79). The status ends at cleanup.
+//! `reduce::end_due_turns` takes `choose`'s action while `due`, until the turn ends, the other player owes
+//! an action, or `AUTOPILOT_MAX_ACTIONS` is reached, when the rest is a timeout's (R79). The status ends at
+//! cleanup. `choose` is pure in (state, player): every candidate is tried on the player's concealed copy
+//! (`scorer::concealed_copy`, R222, R1714000) on the dry run's own seed, so the same state makes the same
+//! choice (§9.3). Four steps: (1) a prompt of theirs, the best of the first `AUTOPILOT_ANSWERS_TRIED`
+//! answers; (2) a play, in the scorer's order (as M #71's judge scores a play, R1125), the first card with
+//! a harmless play; (3) an attack when `Outcome::worth_attacking`; (4) otherwise the turn ends. It never
+//! activates an ability, switches a position, emotes, offers or answers a draw or concedes.
 //!
-//! `choose` is pure in (state, player): every candidate is tried on the player's concealed copy
-//! (`scorer::concealed_copy`, R222, R1714000) on the dry run's own seed, so it never touches the
-//! match's rng or reads what the player may not, and the same state makes the same choice (§9.3):
-//!
-//! 1. A prompt of theirs: the best of the first `AUTOPILOT_ANSWERS_TRIED` answers, ties to the earlier.
-//! 2. A play: their playable cards in the scorer's order (as M #71's judge scores a play, R1125), the
-//!    first with a harmless play (`Outcome::harmless`) played at its best such play.
-//! 3. An attack: the best listed, taken when it is `Outcome::worth_attacking`.
-//! 4. Otherwise the turn ends.
-//!
-//! It never activates an ability, switches a position, emotes, offers or answers a draw or concedes.
-//!
-//! R1844000 (Stinkyscape #46 Circadian Halfcycler, #47 Circadian Fullcycler): the autopilot as an
-//! aura, engaged as each of the player's turns begins (`engage_aura`) and read again before every
-//! step (`aura_reach`). A count takes R456's actions, never an answer, which is part of the action
-//! that asked; once spent, the turn is handed back for good (`release_spent_aura`), so a prompt the
-//! player's own action opens is theirs.
+//! R1844000 (Stinkyscape #46, #47): the autopilot as an aura, engaged as each of the player's turns begins
+//! (`engage_aura`) and read again before every step (`aura_reach`). A count takes R456's actions, never an
+//! answer; once spent, the turn is handed back for good (`release_spent_aura`), so a prompt the player's own
+//! action opens is theirs.
 
 use crate::config::{AUTOPILOT_ANSWERS_TRIED, SCORER_LOW_HEALTH};
 use crate::duos_life::effective_life;

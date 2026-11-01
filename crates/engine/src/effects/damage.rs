@@ -128,8 +128,7 @@ pub struct DamageAllArgs {
 /// check between one effect's hits (R59); a target that absorbs its hit fizzles silently.
 ///
 /// R2521001: with `odds`, each target's amount is its own roll, made just before its hit, in hit order
-/// (the units, then the heroes), as Hearthstone's Lightning Storm does. Without `odds` nothing is
-/// drawn, so a sweep that names none replays exactly as before.
+/// (the units, then the heroes), as Hearthstone's Lightning Storm does; without `odds` nothing is drawn.
 pub fn damage_all(args: DamageAllArgs) -> Effect {
     Effect::new("damageAll", move |ctx| {
         let flags = damage_flags(&args.flags);

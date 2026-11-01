@@ -7,6 +7,7 @@
 //! the setup (R635). Played from the hand at (0) it does the same. The Cry is `freeze_all` over
 //! every Unit of both sides (R1174000) — the Radiant face over the enemy's alone — a hero passed by
 //! and a Unit Immune to Spells too (R81). A Unit Frozen on its controller's turn loses that turn's
+//! attack (R1867009).
 
 use jackioh_engine::prelude::*;
 

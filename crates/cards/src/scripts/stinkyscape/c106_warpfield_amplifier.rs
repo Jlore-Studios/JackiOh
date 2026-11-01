@@ -5,6 +5,9 @@
 //! give it +{attackGain} Attack." AttackGain 2, Radiant 4.
 //! Engine: its death fuses a copy into its owner's Dormant Starship (R1852000); When launched
 //! (`when_launched`, R1852003) runs only as part of that Starship. Then, for each Unit its controller
+//! has as the Starship launches, the Starship among them, in lane order: `switch_position_of` to Attack,
+//! a Unit already there staying (R91), an effect's switch spending no exertion (R20); then
+//! `buff_all_units` +N Attack on each, lasting (R1859002).
 
 use std::sync::Arc;
 

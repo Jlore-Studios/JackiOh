@@ -200,6 +200,7 @@ mod r224_setup_waits_for_a_question {
         )));
 
         // §9.3, §10.1: one prompt at a time, and the question is state until p1 answers it. p2's
+        // resolution waits behind it: p2's hand is as it answered, and p1's returned card waits to go back.
         let pending = must(state.pending.clone(), "an open prompt");
         assert_eq!(
             pending.player_id,
@@ -214,6 +215,7 @@ mod r224_setup_waits_for_a_question {
         assert_eq!(state.mulliganed, Vec::<PlayerId>::new());
 
         // The answer finishes the rest of p1's mulligan (R122): the returned card is shuffled back, then
+        // p2's sealed answer resolves, and then the game begins.
         state = act(&state, mode_answer(&pending.id, "ok", PlayerId::P1)).state;
         assert!(state.players.p1.library.iter().any(|card| card.id == returned));
         assert!(!ids(&state.players.p2.hand).contains(&p2_returned));
@@ -269,6 +271,7 @@ mod r224_setup_waits_for_a_question {
 
         // R158: a draw a prompt interrupts stops there and owes the rest, and §2.1's mulligan follows
         // the opening draw. A second prompt never overwrites an unanswered one (R156), so the question
+        // stays open until it is answered.
         let answered = started.events.iter().any(|event| match event {
             GameEvent::PromptAnswered {
                 choice_id: Some(choice_id),
@@ -407,6 +410,7 @@ mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
         let without = void_game(CRAFT);
 
         // Same public course: p1's turn 1 has begun, p2 holds its 4 opening cards and The Coin (R244),
+        // and p1 holds its Void.
         for state in [&with_power, &without] {
             assert_eq!(state.turn, 1);
             assert_eq!(state.active, PlayerId::P1);
@@ -430,6 +434,7 @@ mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
         // §2.1: p2's opening hand is 4 cards either way, and whether one of them is a Quickdraw card is
         // p2's hand (§9.1). The Void's cost counts draws (R55). Were a Quickdraw card no draw, the cost p1
         // reads off its own hand would tell p1 how many Quickdraw cards p2 started with; R225 counts it
+        // as the draw it replaces, so the cost is the same in both games.
         same_view(
             &view_for(&with_power, PlayerId::P1),
             &view_for(&without, PlayerId::P1),
@@ -452,7 +457,10 @@ fn asking(state: &mut GameState) {
 mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
     use super::*;
 
+    /// p1's library holds one card whose start-of-game clause asks as it arrives in a hand (a fixture: no
+    /// Core card asks), and with this seed p1's opening draw reaches it, so setup waits for p1's answer
     /// before it deals to p2 (R224, R151). The answer's action then carries p2's opening deal, which
+    /// p1's view shows.
     fn paused_deal(seed: &str, p2_last: &str) -> GameState {
         let mut game = create_game(&game_args(seed, (owned(&QD_P1_DECK), p2_qd_deck(p2_last))));
         asking(&mut game);
@@ -595,6 +603,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
             assert_eq!(state.players.p2.hand.len(), 0);
         }
         // R225: the Heroic Power replaces the last of p1's opening draws, so it is still in the library
+        // while the first draw's clause asks.
         assert_eq!(
             with_power
                 .players
@@ -682,7 +691,9 @@ fn setup_boomerang() -> Script {
 mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
     use super::*;
 
+    // Setup does not
     // draw a cast-on-draw card (R635), so the fixture casts itself as a replacement draw puts it in the
+    // hand (`cast_on_setup_arrival`).
     #[test]
     fn r155_a_return_spell_cast_by_a_mulligan_s_replacement_draw_stays_in_the_graveyard_at_its_caster_s_first_turn_end_a_turn_it_was_not_played_on()
      {
@@ -722,6 +733,7 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
             // R155: the return belongs to the turn the Spell was played on, and a Spell played outside its
             // controller's turn "stays in the graveyard rather than coming back at the end of a later turn
             // it was not played on". Setup is turn 0 and nobody's turn (§2.1, §2.2): a setup cast's
+            // turn-scoped riders are already dead on turn 1, and its return is over too.
             let in_hand = state.players[seat]
                 .hand
                 .iter()
@@ -786,6 +798,8 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
         assert_eq!(state.turn, 2);
 
         // R241: an end-of-turn clause is "the end of the turn the card was played on", and one made
+        // outside its controller's turn "has no end of its controller's turn to wait for, so it is not
+        // armed at all".
         let exiled: Vec<String> = hand_on_turn_one
             .iter()
             .filter(|card_id| state.players.p1.exile.iter().any(|card| &card.id == *card_id))
@@ -811,6 +825,7 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
             (p1_deck(), p2_deck()),
         )))
         .state;
+        // "Start of game: choose one; then deal 3 damage to the enemy hero", at the bottom of p1's
         // library, where no opening draw reaches it: §2.1 step 4 runs it over the library too (R153).
         let id = "edge-r10-setup-start-asks";
         state_fixture(
@@ -843,6 +858,7 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
         state = keep_all(&state, PlayerId::P1);
         state = keep_all(&state, PlayerId::P2);
         // §9.3: the question is state, and what comes after it — the rest of the clause and turn 1 —
+        // waits for its answer rather than running over it.
         let pending = must(state.pending.clone(), "the clause's question");
         assert_eq!(pending.kind, PromptKind::Mode);
         assert_eq!(pending.player_id, PlayerId::P1);
@@ -852,6 +868,7 @@ mod r151_r113_a_start_of_game_clause_that_asks_at_2_1_step_4 {
         let answered = act(&state, mode_answer(&pending.id, "a", PlayerId::P1));
         state = answered.state;
         // R122: the answer finishes the clause, then the setup it held: turn 1 is p1's (§2.1 step 5),
+        // and it begins only after the clause's last effect.
         assert_eq!(state.players.p2.hero.health, 27);
         assert_eq!(state.turn, 1);
         assert_eq!(state.active, PlayerId::P1);

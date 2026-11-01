@@ -428,6 +428,7 @@ mod tests {
             fn r399_a_fused_pile_on_back_at_the_bottom_of_its_deck_is_still_the_last_spell_and_echo_has_its_text() {
                 crate::register_all();
                 // Part 40's sweep (`sweep:easy:core-076:2`): Pile On with Book Worm fused in (R77, R179) goes
+                // back to the bottom of its deck by Pile On's own clause, where neither player sees it.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ECHO, VANILLA], "library": [STOCKPILE, MENACE, VANILLA, STOCKPILE] },

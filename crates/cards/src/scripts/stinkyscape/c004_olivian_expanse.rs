@@ -7,6 +7,7 @@
 //! shown to its caster alone: the set's six Terminus tokens (R1857002) and Core #100 Ceaseless Void
 //! (tagged Terminus since R1837000). Terminus is no `POOL_TOKEN_TAGS` tag (R382), so the pool names its
 //! cards by id, which reaches them whether or not the set ships (R1420). The pick reaches the hand on its
+//! base face.
 
 use jackioh_engine::config::DISCOVER_OPTIONS;
 use jackioh_engine::effects::{WIN_ON_PLAY_KEY, add_to_hand, discover_from_catalog};

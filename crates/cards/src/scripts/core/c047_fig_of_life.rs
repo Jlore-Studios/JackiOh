@@ -36,8 +36,7 @@ pub fn script() -> CardScripts {
 
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4 (R19).
 //
-// R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero"): the tests heal
-// an ally unit, an enemy unit, an own hero and an enemy hero.
+// R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero").
 //
 // §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. What is
 // asserted instead is the §6.3 Heal split: a unit never rises past its max health, while a hero

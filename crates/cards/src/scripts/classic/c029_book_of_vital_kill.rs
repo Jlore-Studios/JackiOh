@@ -43,6 +43,7 @@ pub fn script() -> CardScripts {
 // C #29 Book of Vital Kill — SPEC §8.6 row 29, BUILD M9 Classic row C 29: a declared hero target, either
 // side, set to 13 from above or below with Armor unchanged: not damage and not a heal, so hit caps, C #75,
 // Lifesteal, C #52's lethal window and Fed Fauci's tokens never see it; `healthSet` is public; the base
+// face then ends the turn, the Radiant face does not (patch v0.3.10).
 #[cfg(test)]
 mod tests {
     use super::*;

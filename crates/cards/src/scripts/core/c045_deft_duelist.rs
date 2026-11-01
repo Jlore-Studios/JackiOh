@@ -18,9 +18,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63).
-//
-// The must-pass row (BUILD M4-T4 #45) (R49).
+// #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63): the must-pass row of BUILD M4-T4 #45.
 //
 // R6: "switch then attack" is a unit that starts in Defense, switches to Attack and then attacks;
 // for every other unit the switch spends the turn, which the #20 Pointmaster controls prove.

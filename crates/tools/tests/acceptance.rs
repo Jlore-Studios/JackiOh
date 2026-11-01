@@ -1,32 +1,25 @@
-//! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own
-//! tests held, read off the repository itself, and the later ones beside them:
+//! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own tests held,
+//! read off the repository itself, and the later ones beside them:
 //!
-//!  - V2: the pure crates (engine, cards, ai, luau) link nothing but serde, serde_json, indexmap and
-//!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), and ts-rs only
-//!    behind the optional `ts` features (CLAUDE.md rule 4); the four `clippy.toml`s are byte for byte
-//!    the same, every entry shown to fire on `tests/fixtures/purity.rs`;
-//!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose (part 28's grep),
-//!    but the two structural readers named below;
-//!  - V28: the TypeScript the Rust replaced is gone: no source file under `packages/`, `apps/server/`
-//!    or `ladder/` (part 37; a leftover `node_modules` does not count);
-//!  - CI scope (#751): `scripts/ci-scope.sh`'s `rust_<group>` lines follow `cargo metadata`'s crate
-//!    graph, so a change in a crate runs every `rust-test` group that tests it or a crate built on it
-//!    and no other, a crate or path dependency the map lacks fails, and a file a crate includes from
-//!    outside its own directory runs a group that tests that crate;
-//!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`, the reason naming
-//!    what holds its rule per pull request; super.yml's `daily tests` job runs each, so an ignore
-//!    moves a test to the daily run and never switches one off;
-//!  - Config (BUILD §2, #1640): every `pub const` of the engine's `config.rs` is named, outside
-//!    comments, by a source file under `crates/*/src`, a `build.rs`, `tests/export_config.rs` or
-//!    another constant, so flipping one changes the game or stops the build;
-//!  - README (#1720): `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface,
-//!    read off each `-h` page: every row's words are the CLI's, and the whole CLI is in some row;
-//!  - Helpers (#1777, #1826): each family of shared test helpers (`both`, `spread`, the testkit's pick
-//!    builders, the cross and AI tests' support) is defined once, in its home, and no file under the
-//!    trees it covers defines its own, so a copied test brings no copy back (docs/ADDING_CARDS.md §2);
-//!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS`
-//!    does not list, since one of a set that ships opens nothing, so the patch that ships a set takes
-//!    its previews out with it.
+//!  - V2: the pure crates link nothing but serde, serde_json, indexmap and each other, `jackioh-luau` alone
+//!    `mlua` (#442 L3, L4), ts-rs only behind the optional `ts` features (CLAUDE.md rule 4); the four
+//!    `clippy.toml`s are identical and every entry fires on `tests/fixtures/purity.rs`;
+//!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose (part 28's grep) but the
+//!    two structural readers named below; V28: no source under `packages/`, `apps/server/` or `ladder/`
+//!    (part 37);
+//!  - CI scope (#751): `scripts/ci-scope.sh`'s `rust_<group>` lines follow `cargo metadata`'s crate graph: a
+//!    change runs every `rust-test` group that tests its crate or one built on it, and no other; so does a
+//!    file included from outside its crate's directory;
+//!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`, naming what holds its rule
+//!    per pull request, so an ignore moves a test to super.yml's daily run and never switches one off;
+//!  - Config (BUILD §2, #1640): every `pub const` of the engine's `config.rs` is named, outside comments, by
+//!    a source file under `crates/*/src`, a `build.rs`, `tests/export_config.rs` or another constant;
+//!  - README (#1720): `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface: every
+//!    row's words are the CLI's, and the whole CLI is in some row;
+//!  - Helpers (#1777, #1826): each family of shared test helpers is defined once, in its home, and no file
+//!    under the trees it covers defines its own (docs/ADDING_CARDS.md §2);
+//!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
+//!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

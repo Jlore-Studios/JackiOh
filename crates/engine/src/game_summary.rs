@@ -2,18 +2,17 @@
 //! with, drew and played, and how the game ended, read off a replay of `(seed, decks, log)`. It reads
 //! raw events no view has redacted, so it runs only where the whole game is already known.
 //!
-//! `cardPlayed` is emitted for a play from hand and a cast alike (§2.4's cast on draw, R70), so each
-//! seat's hand is followed through the events, and only a `cardPlayed` naming a card in it is a play.
-//! A play countered in its announce window has no `cardPlayed` (§10.5, R448); a play step 3 replaced
-//! (R449) is followed by its `transformed`. A card a Counter sends to its player's hand that their
-//! effect then casts (C #4 Palantir, R831001; S #139 Wormhole) is a cast all the same. Each play keeps
-//! whether `cardPlayed` placed it Radiant (R1147000), so step-3 Radiant (R0983, C+ #68) counts.
+//! `cardPlayed` is emitted for a play from hand and a cast alike (§2.4's cast on draw, R70), so each seat's
+//! hand is followed through the events, and only a `cardPlayed` naming a card in it is a play. A play
+//! countered in its announce window has none (§10.5, R448); a play step 3 replaced (R449) is followed by
+//! its `transformed`. A card a Counter sends to its player's hand that their effect then casts (C #4
+//! Palantir, R831001; S #139 Wormhole) is a cast all the same. Each play keeps whether `cardPlayed` placed
+//! it Radiant (R1147000), so step-3 Radiant (R0983, C+ #68) counts.
 //!
-//! R2089000: a Created card (R943) is left out of `opening`, `drawn` and `played` and credited to the
-//! seat that made it: a minting event's `creator`, else the controller of the card whose effect
-//! summoned it (R1088's `sourceId`), else the seat it went to (The Coin). It is used, once, the first
-//! time it is played, cast, summoned, set or takes a card's place on the field; one played from a hand
-//! is also its player's `createdPlayed`, which the quests count.
+//! R2089000: a Created card (R943) is left out of `opening`, `drawn` and `played` and credited to the seat
+//! that made it: a minting event's `creator`, else the controller of the card whose effect summoned it
+//! (R1088's `sourceId`), else the seat it went to (The Coin). It is used once, the first time it is
+//! played, cast, summoned, set or takes a card's place; a hand play is its player's `createdPlayed`.
 
 use indexmap::{IndexMap, IndexSet};
 
@@ -121,8 +120,8 @@ fn card_of<'a>(before: &'a GameState, after: &'a GameState, ids: &[&str]) -> Opt
         .or_else(|| ids.iter().find_map(|id| find_instance(before, id)))
 }
 
-/// R943: whether the card is Created. One neither state holds was made and gone within the step: no
-/// dealt card is, for the deal put every one of them in the state before the first action.
+/// R943: whether the card is Created. One neither state holds was made and gone within the step: no dealt
+/// card is, for the deal put every one of them in the state before the first action.
 fn is_created(before: &GameState, after: &GameState, ids: &[&str]) -> bool {
     card_of(before, after, ids).is_none_or(|card| card.created == Some(true))
 }

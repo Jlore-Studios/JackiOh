@@ -1,16 +1,15 @@
-//! The dev tools (SPEC §14.10, R1300000): a dev account, one `DEV_PROFILE_IDS` lists (`env.rs`) or
-//! in end-to-end mode a fixture marked dev (R1310004, `api::e2e::is_e2e_dev`), moves its own economy
-//! by hand. Every route acts on the caller's own account, named by the token, never a profile id.
-//! The server decides (CLAUDE.md rule 7): every route checks the list itself and answers anyone else
-//! 403 `forbidden`, writing nothing; the client's `isDev` only shows its panel. Each action is one
-//! transaction, every row a ledger row of reason `dev` marked `dev` (§14.10, §14.11,
-//! [`DEV_GRANT_REASON`]), and a clear is an offsetting row per holding, never a deleted one.
+//! The dev tools (SPEC §14.10, R1300000): a dev account, one `DEV_PROFILE_IDS` lists (`env.rs`) or in
+//! end-to-end mode a fixture marked dev (R1310004, `api::e2e::is_e2e_dev`), moves its own economy by hand.
+//! Every route acts on the caller's own account, named by the token, never a profile id. The server
+//! decides (CLAUDE.md rule 7): every route checks the list itself and answers anyone else 403 `forbidden`,
+//! writing nothing; the client's `isDev` only shows its panel. Each action is one transaction, every row a
+//! ledger row of reason `dev` marked `dev` (§14.10, §14.11, [`DEV_GRANT_REASON`]), and a clear is an
+//! offsetting row per holding, never a deleted one.
 //!
-//! - `POST /api/dev/xp`: XP to a shipping set's track (§14.7), up to `SET_TRACK_LEVELS`; no level's
-//!   rewards are paid.
+//! - `POST /api/dev/xp`: XP to a shipping set's track (§14.7), up to `SET_TRACK_LEVELS`; no rewards are paid.
 //! - `POST /api/dev/jlore`: Jlore (§14.1).
-//! - `POST /api/dev/fill`: every collectable card to `MAX_COPIES` and every cosmetic but each kind's
-//!   default, which every account owns with no row (§14.2), a full art on its card (R1313000).
+//! - `POST /api/dev/fill`: every collectable card to `MAX_COPIES` and every cosmetic but each kind's default,
+//!   which every account owns with no row (§14.2), a full art on its card (R1313000).
 //! - `POST /api/dev/clear/:part`: cards, cosmetics, jlore, counters, tracks, or everything; packs,
 //!   tokens and quests are no part of any.
 //! - `POST /api/dev/bar/:bar` (R1310003): a token bar filled, paying as a pack's duplicates would (§14.5).

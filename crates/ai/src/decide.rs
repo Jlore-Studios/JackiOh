@@ -3,12 +3,12 @@
 //! 1. ai_to_act / redact — the only two reads of the true state (R185).
 //! 2. an unanswered draw offer is declined at once (R188).
 //! 3. the mulligan keeps the cheap cards; a question of a sequence is answered with no search (R1184002).
-//! 4. a single candidate is played with no search, listed on a throwaway determinization: the seat's
-//!    own legal actions never depend on the hidden cards, so `options.rng` is untouched.
-//! 5. the exact lethal solver, verified on every determinization and trimmed to the actions it needs
-//!    (R1965000), unless a style passes over it (R1452).
-//! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best
-//!    first actions re-scored on the other determinizations; the best mean wins.
+//! 4. a single candidate is played with no search, listed on a throwaway determinization (the seat's own
+//!    legal actions never depend on the hidden cards, so `options.rng` is untouched).
+//! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
+//!    passes over it (R1452).
+//! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
+//!    actions re-scored on the other determinizations; the best mean wins.
 //! 7. a fallback when nothing could be scored.
 //!
 //! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
@@ -75,12 +75,11 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 }
 
 /// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
-/// Competition), the option its statement works out to (`worked_answer`) read off the redacted prompt,
-/// so the key is never read (R465); a search would spend a decision's budget on a guess, past the turn
-/// clock (R79). It never stops: a miss ends the sequence with the streak a Stop keeps. R1563005: it
-/// answers right `AI_KY_COMPETITION_ACCURACY` of the time (`AI_KY_COMPETITION_RADIANT_ACCURACY` on the
-/// Radiant face), else a wrong answer, both drawn from its own stream. `None` for any other prompt, or a
-/// statement it cannot work out, which the search then answers.
+/// Competition), the option its statement works out to (`worked_answer`) read off the redacted prompt, so
+/// the key is never read (R465); a search would spend the budget on a guess, past the turn clock (R79).
+/// It never stops. R1563005: it answers right `AI_KY_COMPETITION_ACCURACY` of the time
+/// (`AI_KY_COMPETITION_RADIANT_ACCURACY` when Radiant), else wrong, drawn from its own stream. `None` for
+/// any other prompt, or a statement it cannot work out, which the search then answers.
 fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
@@ -161,7 +160,7 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
             }
         }
     }
-    // The map keeps first-seen order (TS's `order` list).
+    // The map keeps first-seen order.
     let mut entries: Vec<Scored<'a>> = best.into_values().collect();
     // Stable, so equal scores keep the beam's order.
     entries.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
@@ -329,7 +328,7 @@ fn runners_up_of(finalists: &[Scored<'_>], means: &[f64], chosen_index: usize) -
     out
 }
 
-/// What the guarded body leaves behind for the fallback when it panics (TS's outer `let`s).
+/// What the guarded body leaves behind for the fallback when it panics.
 struct Scratch {
     candidates: Vec<ActionBody>,
     determinizations: usize,
@@ -467,7 +466,7 @@ fn plan(
         + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
-    // node through the slice afterwards, so it is the reason TS read off it at the end.
+    // node through the slice afterwards.
     let (found, beam_stopped_by) = {
         let beam_counter = create_sub_counter(counter, remaining - reserve);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
@@ -601,7 +600,7 @@ fn plan(
 /// first action of the first runner-up it accepts, best mean first (#1575), else the match's first
 /// replacement (`replacements_for`). A chosen action legal on every determinization can refuse on the
 /// true state (a face-down aura trap taxes the unseen hand, R403), and a submitted refusal is recorded
-/// against the AI and replaced anyway, so the replacement is better submitted directly.
+/// against the AI, so the replacement is submitted directly.
 fn submitted(state: &GameState, seat: PlayerId, decision: Decision, runners_up: &[RunnerUp]) -> Decision {
     if holds_placeholder(state) {
         // The worker and arena hand `decide` the redacted state, whose `ai:hidden` placeholders the
@@ -745,8 +744,8 @@ pub fn decide_styled(
             &runners_up,
         )),
         Err(payload) => {
-            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, as
-            // before #1429), and a panic.
+            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, #1429),
+            // and a panic.
             note_sim_panic(&counter, payload.as_ref());
             let action = fallback_action(&scratch.candidates);
             Some(submitted(

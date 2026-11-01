@@ -83,13 +83,12 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
-// BUILD M4-T4's must-pass row (#2179, R177). Her Cry is cut (§8's row); R64 and R83 are the engine's, not
-// this file's.
+// BUILD M4-T4's must-pass row (#2179, R177). Her Cry is cut (§8's row); R64 and R83 are the engine's.
 //
 // Fixtures: #11 Tempo Timmy (3/3 → 6/6, empty script) shows a stat change only as the radiant face
-// swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. A Saintess
-// set up with damage equal to her health dies in the setup's own state check and fires her Death;
-// the harness records no events for setup, so those cases assert state, not the log.
+// swapping in. #44 True Strike (4 damage, ignoring Armor) kills a 4/4 Saintess mid-test. One set up
+// with damage equal to her health dies in the setup's own state check and fires her Death; the harness
+// records no events for setup, so those cases assert state, not the log.
 #[cfg(test)]
 mod tests {
     use super::*;

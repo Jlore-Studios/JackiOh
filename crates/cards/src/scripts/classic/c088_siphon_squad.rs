@@ -66,6 +66,7 @@ fn siphon(
     Script {
         // "Start of Turn: Reveal" (R686): at its controller's start of turn the card shows its face to
         // both players, and from then on its aura works (R1149000) — revealed is not face-up, and a
+        // Field Trap fires face-down or up alike.
         start_of_turn: Some(hook(|_ctx| vec![reveal(Default::default())])),
         aura: Some(aura_hook(move |read| {
             if !live_face_down && dormant(read) {
@@ -312,6 +313,7 @@ mod tests {
         }
 
         /// R33, R1149000: unrevealed, the opponent's view never names the card and shows no drop; revealed,
+        /// it reads the card and the drop
         #[test]
         fn r33_r1149000_unrevealed_the_opponent_s_view_never_names_the_card_and_shows_no_drop() {
             let mut s = set_against(&[VANILLA, MENACE], false, &[]);

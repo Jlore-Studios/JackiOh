@@ -193,6 +193,7 @@ fn reward_g_defers(ctx: &EffectContext<'_>) -> bool {
 }
 
 /// One reward's own effects, before the quest it leads to opens. `defer_g` is R1279000's
+/// wait: the kept v0.3.16 scripts pass `false`, asking G at once on any turn.
 fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effect> {
     match id {
         "A" => vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": REWARD_HEAL })))],
@@ -211,6 +212,8 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
         })))],
         "G" => {
             // R1279000: no opponent-held prompt opens while its holder is not active. While the opponent is not
+            // the active player the discard waits for the start of their next turn; on their turn
+            // it asks at once, as before.
             if defer_g && reward_g_defers(ctx) {
                 let mut effects = vec![delay(json_as(json!({
                     "at": { "phase": "start", "player": "enemy" },
@@ -295,6 +298,7 @@ fn quest_completed(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Trigg
                     quest.rewards.iter().flat_map(|id| reward_effects(ctx, id, defer_g)).collect();
                 effects.extend(quest.rewards.iter().flat_map(|id| {
                     // R1279000: while the opponent is not active, G's path waits with its prompt
+                    // for the deferred step.
                     if defer_g && id.as_str() == "G" && reward_g_defers(ctx) {
                         vec![]
                     } else {
@@ -328,6 +332,7 @@ fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
                     Some(id) => {
                         let mut effects = reward_effects(ctx, &id, defer_g);
                         // R1279000: while the opponent is not active, G's path waits with its
+                        // prompt for the deferred step.
                         if !(defer_g && id == "G" && reward_g_defers(ctx)) {
                             effects.extend(path_of(&id));
                         }
@@ -337,6 +342,7 @@ fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
             ),
             // R1279000: the wait is over; G's prompt opens, and its path, due behind it at the same
             // point (R68), opens after the answer, or at once when their hand is empty and nothing
+            // asks.
             (REWARD_G_DEFERRED_STEP, hook(|_ctx| vec![reward_g_prompt()])),
             (REWARD_G_PATH_STEP, hook(|_ctx| path_of("G"))),
             (
@@ -390,6 +396,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: the scripts v0.4.0f and the versions before it back to `script_v0_3_16`'s ran, kept for
+/// their replays: quest 3 at 3 permanents, quest 5 at 12 damage and quest 6 at totals of 10.
 pub fn script_v0_4_0f() -> CardScripts {
     CardScripts {
         base: in_too_deep(false, true, QUESTS_V0_4_0F),
@@ -398,6 +405,7 @@ pub fn script_v0_4_0f() -> CardScripts {
 }
 
 /// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: reward G
+/// asked at once on any turn, and its quest opened beside the prompt, at the goals through v0.4.0f.
 pub fn script_v0_3_16() -> CardScripts {
     CardScripts {
         base: in_too_deep(false, false, QUESTS_V0_4_0F),
@@ -406,6 +414,7 @@ pub fn script_v0_3_16() -> CardScripts {
 }
 
 // SPEC §8.6 (R404, R540, R543): Field Spell with 10 quests and 13 rewards. Tests verify the tree,
+// each quest and reward, both faces, and test helpers (line) set up deep quest states directly.
 #[cfg(test)]
 mod tests {
     use super::{QUESTS, script};
@@ -448,6 +457,7 @@ mod tests {
     /// C+ #57 Book of Stats, (1) Spell: give a Unit +5/+5
     const BOOK_OF_STATS: &str = "classicplus-057";
     /// Issue #473's loop: the seeds tried for a Book of Books that adds a Book of Stats (one of 13 Books,
+    /// two adds, so the first few seeds find one), and the mana the replays may spend.
     const BOOK_OF_STATS_SEEDS: u32 = 64;
     const REPLAY_MANA: i32 = 6;
 
@@ -1552,6 +1562,7 @@ mod tests {
                 crate::register_all();
                 // Issue #473's sweep: C+ #54 priced a C+ #57 at (0), the Book reached the graveyard with its
                 // (0), and reward L replayed it for free until the action cap. #54's two Books are random, so
+                // the first seed that adds a Book of Stats is the game played.
                 let (mut s, stats) = (0..BOOK_OF_STATS_SEEDS)
                     .find_map(|n| {
                         let mut s = scenario(json!({
@@ -1919,6 +1930,7 @@ mod tests {
                 on_quest(&mut s, "5", QUESTS.damage, json!({ "done": ["1", "2"] }));
                 any_action(&mut s);
                 // No opponent-held prompt opens while its holder is not active (R1279000): G waits, while H's
+                // draw landed and its quest opened at once.
                 assert!(s.state().pending.is_none());
                 expect_line_matches(&s, json!({ "active": ["9"], "done": ["1", "2", "5"] }));
                 s.end_turn();
@@ -1946,6 +1958,7 @@ mod tests {
                 }));
                 on_quest(&mut s, "4", 1, json!({}));
                 any_action(&mut s);
+                // F asks first, and G's delays wait behind its answer: In Too Deep bounced itself, so
                 // G's quest has no stay to wait on (R174), while its discard is scheduled (R76).
                 assert_eq!(pending_kind(&s), Some(PromptKind::Target));
                 let itd = s.card(ITD).id.clone();

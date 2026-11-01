@@ -86,6 +86,7 @@ mod r89_4_5_step_1_collects_at_once_so_every_unit_dies_as_it_stood {
         assert_eq!(g.stats(&vanilla.id).attack, 2);
         assert_eq!(g.stats(&vanilla.id).max_health, 4);
 
+        // Radiant Hit Job on the Vanilla also destroys the Pillow beside it: both are collected in one
         // pass and moved "all … at once" (§4.5 step 1).
         g.play(HIT_JOB, json!({ "targets": pick::instance(&vanilla) }));
         g.expect_in_zone(&vanilla.id, "graveyard");
@@ -182,6 +183,7 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
             (g, fauci)
         };
         // #63 Plastic Surgery's random keyword comes from a pool a unit's own keywords narrow (§6.1, R21),
+        // and every keyword added to it moves the roll: search for a seed where the Fauci's is Reborn.
         let seed = seed_where("surgery-reborn-fauci", |seed| {
             let (mut g, fauci) = setup(seed);
             g.play(SURGERY, json!({ "targets": pick::instance(&fauci) }));
@@ -217,6 +219,7 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
             (g, digger)
         };
         // Plastic Surgery's pool is narrower for a unit that already has a keyword (§6.1, R21), so this
+        // scenario's roll is not the Fauci's: search for a seed where the Gravedigger's is Reborn.
         let seed = seed_where("surgery-reborn-digger", |seed| {
             let (mut g, digger) = setup(seed);
             g.play(SURGERY, json!({ "targets": pick::instance(&digger) }));
@@ -246,6 +249,7 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
     #[test]
     fn r174_r76_a_delayed_steal_whose_target_died_and_came_back_through_reborn_during_an_earlier_delayed_effect_fizzles()
      {
+        // p1 plays two K-Pop Fanatics: A on p2's Big Felinor, B on p2's Felinor Fiender, which has Reborn
         // and 10 damage and stands at 8/17 only because Big Felinor feeds its stats (§8 #92, R116). At
         // p1's next start of turn A steals Big Felinor first (R68's creation order), the Fiender dies at
         // 5/7 and Reborn returns it; B's target left the field in between, so B fizzles (R76).
@@ -382,6 +386,8 @@ mod section_4_5_step_4_10_1_reborn_never_leaves_one_card_in_two_zones {
         let saintess = must(g.unit(P1, 1), "Radiant Saintess");
 
         // Twisting Nether destroys both. §4.5 step 3 runs the grave-robber's Death in lane order after
+        // the Saintess's, and it exiles her from the graveyard she was collected to, where step 4 would
+        // have found her.
         g.play(TWISTING_NETHER, json!({}));
 
         let zone = g.card(&saintess.id).zone.clone();
@@ -456,6 +462,8 @@ fn one_unit() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
 }
 
+/// Vanilla in lane 3, and p1 holding a radiant Hit Job that
+/// destroys p2's lane-1 unit and the lane-2 unit beside it, so both of their Deaths run in that one
 /// pass, lane 1 first (R68), with no state check between them (§4.5 step 3).
 fn death_pass_board() -> (Scenario, CardInstance) {
     let s = scenario(json!({
@@ -495,7 +503,9 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
             "p1": { "hand": [RENO], "library": LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "hand": [RENO], "library": LIBRARY },
         }));
+        // "Cry: deal 5 damage to a target unit; destroy it", carrying a "whenever this destroys a Unit,
         // draw 2" text that reads R42's killer off the death — what #32's text was before R426 tied it to
+        // the Panther's own attacks.
         let kill_draws = TriggerDef::new(
             "edge-r9-maul-kill-draws",
             &[GameEventType::Destroyed],
@@ -539,6 +549,7 @@ mod r42_r89_a_unit_already_killed_is_not_killed_again {
             json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }),
         );
 
+        // The 5 took the 3/3 to -2: that hit was the lethal damage instance, and the destroy that
         // followed it found a unit already dead (§4.5 step 1 collects it on either count).
         s.expect_in_zone(&vanilla.id, "graveyard");
         assert_eq!(killer_of(&s, &vanilla), Some(Some(maul.id.clone())));

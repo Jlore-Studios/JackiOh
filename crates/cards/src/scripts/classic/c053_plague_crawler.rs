@@ -41,6 +41,7 @@ fn draw_on_placement() -> TriggerDef {
 
 pub fn script() -> CardScripts {
     let base = Script {
+        // "a permanent": the top of any unit pile or any backrow card, either side, this one included
         // (patch v0.3.10, #831; "another permanent", a declared target, before), so the pick is a prompt
         // made once this stands on the field (R831016).
         cry: Some(hook(|_ctx| {
@@ -126,6 +127,7 @@ mod tests {
         ids.into_iter().collect()
     }
 
+    /// Plays `crawler` and answers its Cry's prompt with `target`: the pick is made as the Cry
     /// resolves (patch v0.3.10, #831; a declared target before), so the Crawler itself may be it (R831016).
     fn crawl(s: &mut Scenario, crawler: impl Into<CardRef>, target: &CardInstance) {
         s.play(crawler, json!({}));

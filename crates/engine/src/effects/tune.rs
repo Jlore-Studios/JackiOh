@@ -17,18 +17,14 @@
 //!
 //! On the field neither the cost row nor a number only the Cry reads is drawn, both spent (R1748000),
 //! nor a Tribute (R2261000). An Upgrade's keyword is from R21's pool for a Unit, Indestructible or
-//! Immutable for a Field Spell (R2436000), Pierce or Lifesteal for a Spell or Field Spell that deals
-//! damage (R1748001).
+//! Immutable for a Field Spell (R2436000), Pierce or Lifesteal for a damaging Spell (R1748001).
 //!
 //! R442: the row is drawn first, uniformly, then the item within it; one choice draws nothing (R129),
 //! and a card no row can change, an Immutable one first (rule 2), is left alone with no draw.
 //!
-//! Events: `degraded` / `upgraded`. On a card someone may not read, the event names them (`hiddenFrom`,
-//! R177) and every application is cued, an unchanged card as `none` (R440), so the cues count the
-//! applications, never the changes; so a scope reaches every card of a hidden pile (`card_scope.rs`).
-//!
-//! Only `discover_number` opens a prompt, with nothing after it in the effect, so a pause never splits
-//! an application (R113).
+//! Events: `degraded` / `upgraded`, naming whoever may not read the card (`hiddenFrom`, R177). Every
+//! application is cued, an unchanged card as `none` (R440), so the cues count applications, never changes.
+//! Only `discover_number` opens a prompt, last in its effect, so a pause never splits an application (R113).
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -132,8 +128,7 @@ enum MenuApply {
     /// A keyword row: `count` keywords drawn, each removed (`remove`, `own` naming the keyword the event
     /// shows) or added (`add`). A Degrade removes what it may and adds a harmful one (R2657005's Crater in
     /// a hand); an Upgrade adds what it may and removes a harmful one (R2657005's Can't attack and Can't
-    /// Defend). The first draw is over both lists, `remove` first; any later one (R1160) keeps to the
-    /// first's way, so a row with one list draws as the two rows it replaced did.
+    /// Defend). The first draw is over both lists, `remove` first; any later one (R1160) keeps to its way.
     Keyword {
         own: Vec<Keyword>,
         remove: Vec<KeywordKind>,
@@ -250,16 +245,13 @@ fn stats_row(
 
 const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 
-/// B3.4 rule 3, keyword. A Degrade removes one keyword the card has of its own — printed (as tuning
-/// leaves it) or granted, never one an aura or its position lends it, and never a harmful one (Can't
-/// attack, Brittle, Untributable, Can't Defend, Crater): every entry of the kind goes, a printed one by
-/// `tuning.removeKeywords`, an added one out of `tuning.addKeywords`, a granted one off the instance. Or,
-/// R2657005, it adds Crater to a Unit, a Field Spell, a Trap or a Field Trap in a hand that lacks it
-/// (`TUNE_NERF_HAND_KEYWORDS`). An Upgrade adds one R21 keyword a Unit lacks (`tuning.addKeywords`),
-/// R1748001 one a Spell or a Field Spell lacks of its own (`non_unit_candidates`), and R2657005 Flashback
-/// to any card that lacks it (`TUNE_BUFF_ANY_KEYWORDS`); or it removes Can't attack or Can't Defend
-/// the card has of its own (`TUNE_BUFF_REMOVES`). A Vanilla card's text is gone, and an added keyword
-/// would be text, so nothing is added to one.
+/// B3.4 rule 3, keyword. A Degrade removes one keyword the card has of its own, printed or granted, never
+/// one an aura or its position lends it, and never a harmful one (Can't attack, Brittle, Untributable,
+/// Can't Defend, Crater): every entry of the kind goes. Or, R2657005, it adds Crater to a Unit, Field
+/// Spell, Trap or Field Trap in a hand that lacks it (`TUNE_NERF_HAND_KEYWORDS`). An Upgrade adds one R21
+/// keyword a Unit lacks, R1748001 one a Spell or Field Spell lacks (`non_unit_candidates`), and R2657005
+/// Flashback to any card (`TUNE_BUFF_ANY_KEYWORDS`); or it removes a Can't attack or Can't Defend the card
+/// has of its own (`TUNE_BUFF_REMOVES`). A Vanilla card's text is gone, so nothing is added to one.
 fn keyword_row(
     state: &GameState,
     card: &CardInstance,
@@ -440,9 +432,8 @@ fn with_x_step(card: &CardInstance, key: &str, delta: i32) -> CardInstance {
 
 /// B3.4 rule 3, X: one numbered keyword or an X-cost card's X, one step (`TUNE_X_STEP`) worse or
 /// better — more is better for all but Tribute, never below 1 (`TUNED_FLOOR`). A Brittle count in force
-/// moves itself (B3.3 rule 5), a printed one not started the number it will start at. An X-cost card
-/// with no X chosen yet always moves; on the field its X has resolved (SPEC §8.7 row 69: Classic+ #69
-/// Buff Billy), and a Tribute there was paid (R2261000), so neither moves.
+/// moves itself (B3.3 rule 5). An X-cost card with no X chosen yet always moves; on the field its X has
+/// resolved (SPEC §8.7 row 69: Classic+ #69 Buff Billy) and a Tribute was paid (R2261000), so neither moves.
 fn x_items(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<XItem> {
     let mut items: Vec<XItem> = Vec::new();
     let better = if direction == TuneDirection::Upgrade {
@@ -1115,8 +1106,8 @@ pub struct DiscoverNumberArgs {
 /// Classic+ #41 KY's Constant's Radiant: "Discover a number on it" — up to `count` different numbers
 /// on the card not `value` already, drawn uniformly (R60; all, with no draw, when no more, R129), in a
 /// `discover` prompt to the caster alone (R81). The answer re-enters `step` with the card's id under
-/// `NUMBER_CARD_KEY`, read by `chosen_tuning_number` (not E18's `number` reader: this names a number on
-/// a card). No number to offer: nothing opens, and the list goes on.
+/// `NUMBER_CARD_KEY`, read by `chosen_tuning_number` (not E18's `number` reader: this names a number on a
+/// card). No number to offer: nothing opens, and the list goes on.
 pub fn discover_number(args: DiscoverNumberArgs) -> Effect {
     Effect::new("discoverNumber", move |ctx| {
         let Some(card) = named_card(ctx, args.target.as_ref(), args.instance_id.as_deref()) else {

@@ -519,12 +519,11 @@ pub fn new_series(input: &NewSeriesInput, now: i64) -> SeriesRow {
     }
 }
 
-/// R331: `seat` picks trio slot `slot` for the next game. A pick is final once in (`pick_sealed`,
-/// checked first; `series.rs` answers a repeat of the same slot as a success) and the other side
-/// learns only that it is in. A `game_no` other than the one being picked for is `stale_pick`, so
-/// game n's late duplicate never becomes game n + 1's. The pick that completes both begins the
-/// game. Refused after the clock ran out (R333), for a slot the trio lacks, and for a won deck
-/// (R330).
+/// R331: `seat` picks trio slot `slot` for the next game. A pick is final once in (`pick_sealed`, checked
+/// first; `series.rs` answers a repeat of the same slot as a success) and the other side learns only that
+/// it is in. A `game_no` other than the one being picked for is `stale_pick`, so game n's late duplicate
+/// never becomes game n + 1's. The pick that completes both begins the game. Refused after the clock ran
+/// out (R333), for a slot the trio lacks, and for a won deck (R330).
 pub fn pick_deck(
     series: &SeriesRow,
     seat: SeriesSeat,
@@ -590,11 +589,11 @@ pub fn begin_game(series: &SeriesRow, now: i64) -> Result<SeriesRow, SeriesRefus
     Ok(stamp(next, series, now))
 }
 
-/// R330, R334: the game in play ended. `winner` is the series seat that won it, whose deck is locked
-/// from now on, or `Draw`, which counts for neither and locks nothing. A side at
-/// `SERIES_WINS_NEEDED` wins takes the series (`decided`); after `SERIES_MAX_GAMES` games more wins
-/// takes it and equal wins is a draw (`exhausted`). Otherwise the next pick phase opens under
-/// `new_match_id` (R263), picks made for a side with one deck left (R332).
+/// R330, R334: the game in play ended. `winner` is the series seat that won it, whose deck is locked from
+/// now on, or `Draw`, which counts for neither and locks nothing. A side at `SERIES_WINS_NEEDED` wins takes
+/// the series (`decided`); after `SERIES_MAX_GAMES` games more wins takes it and equal wins is a draw
+/// (`exhausted`). Otherwise the next pick phase opens under `new_match_id` (R263), picks made for a side
+/// with one deck left (R332).
 pub fn game_ended(
     series: &SeriesRow,
     winner: Winner,

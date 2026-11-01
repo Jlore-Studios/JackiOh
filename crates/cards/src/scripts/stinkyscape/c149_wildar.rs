@@ -87,6 +87,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
+    /// The Call to Chaos editions of the sets that ship, in catalog order: the set's own two joined
     /// them as it shipped (#1884, R1420). Re-pinned for the Training Grounds release (#2204): its #39
     /// joins them (R2200004).
     const SHIPPED_EDITIONS: [&str; 6] = [

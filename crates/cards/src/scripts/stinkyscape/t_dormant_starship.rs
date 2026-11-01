@@ -35,13 +35,12 @@ pub fn script() -> CardScripts {
 }
 
 // S T-dormant-starship Dormant Starship — SPEC §8.10 row T-dormant-starship, BUILD M12 row S
-// T-dormant-starship: "a Starship Piece's death summons it 0/0 into its owner's leftmost open unit zone,
-// else on top of lane 3, and the piece's copy fuses in at once (R1852000); it is Dormant, unattackable and
-// unreachable (R1839000); a Stack card played onto it is exiled before it resolves (R1852007); its
-// Activate for (3) launches it: the Starship keyword, a name (R1852004), its fused Cries, then When
-// launched (R1852003); "Your Starship launch costs (0)" prices it (R1852006); no pool and no deck holds it
-// (R1857001); radiant R349's fallback, 0/0". Issue #2521: the copy is the dead piece's base version
-// (R2521000).
+// T-dormant-starship: a Starship Piece's death summons it 0/0 into its owner's leftmost open unit zone, else
+// on top of lane 3, and the piece's copy fuses in at once (R1852000), the dead piece's base version (#2521,
+// R2521000); it is Dormant, unattackable and unreachable (R1839000); a Stack card played onto it is exiled
+// before it resolves (R1852007); its Activate for (3) launches it: the Starship keyword, a name (R1852004),
+// its fused Cries, then When launched (R1852003); "Your Starship launch costs (0)" prices it (R1852006); no
+// pool and no deck holds it (R1857001); radiant R349's fallback, 0/0.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -54,7 +53,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    // Issue #2521: Stratos (S #68) is no Starship Piece any more (B9), so a keywords-only piece stands in.
+    // Issue #2521: Stratos (S #68) is no Starship Piece (B9), so a keywords-only piece stands in.
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const FLAK_V3: &str = "stinkyscape-053"; // (2) 0/4 Starship Piece, Equip; Radiant 0/8, Lucky 1.
     const OVERDRIVE: &str = "stinkyscape-101"; // (2) 5/5 Starship Piece, Equip, Brittle 2, Reborn.

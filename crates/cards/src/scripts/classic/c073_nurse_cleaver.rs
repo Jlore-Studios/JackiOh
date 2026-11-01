@@ -24,6 +24,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 3/6 → 6/12: Rush,
+// Cleave, Lifesteal; Radiant: Charge, Cleave, Lifesteal.
 
 /// `describe("C #73 Nurse Cleaver")`.
 #[cfg(test)]

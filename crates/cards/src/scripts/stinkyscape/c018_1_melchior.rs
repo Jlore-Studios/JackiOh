@@ -10,6 +10,8 @@
 //! controller's opponent has strictly more Units than they do, as `active_units_of` counts them, so a
 //! Dormant card is no Unit (R1839000) (R1843000). Activate (R384, once a turn): a Discover of three
 //! different combat keywords drawn from R21's pool (R781005), offered as a `mode` prompt, the pick
+//! granted to each of its controller's Units as the answer resolves (`grant_keyword`); with no Unit,
+//! nothing is asked.
 
 use jackioh_engine::prelude::*;
 

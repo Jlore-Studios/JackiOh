@@ -37,6 +37,7 @@ fn outcome(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// Patch v0.3.10 (#831): the base face activates once a turn, and the Radiant face, which fused an enemy
+/// permanent before, runs the base face's text with Activate ♾️.
 fn mutate(uses: ActivationUses) -> Script {
     let ability = ActivationDecl {
         id: "mutate".into(),
@@ -146,6 +147,7 @@ mod tests {
     }
 
     /// R402 is a Field Spell with one Activate ability (♾️ on the Radiant face), its target a tokened
+    /// permanent, and two numbers
     #[test]
     fn r402_is_a_field_spell_with_one_activate_ability_its_target_a_tokened_permanent_and_two_numbers() {
         assert_eq!(def().id, MUTATE);

@@ -7,6 +7,7 @@
 //! R1848002), so each of its hits destroys a Unit it deals 1 or more to. `give_next_spell_keyword`
 //! puts a `keywordNextSpell` modifier on its caster for this turn: the next Spell they play face-up
 //! takes Poisonous at §10.5 step 4 for that resolution alone, a Unit, Field Spell or Trap played
+//! meanwhile leaving it waiting, and the turn's cleanup ending it (R1848002).
 
 use jackioh_engine::prelude::*;
 

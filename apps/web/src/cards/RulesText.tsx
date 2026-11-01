@@ -10,10 +10,9 @@
 //   (a fused card prints its ingredients' texts one after the other, R102);
 // - in play, the numbers the view moved off their printed values (`tuned`, R386), the glyph drawn by
 //   the stylesheet so the text stays the number.
-// A Chinese face (ME-CN, R1301) names its references by their Chinese names, "光辉" before one
-// pointing at the Radiant face. A mark that crosses a name's edge is cut there, so marks and
-// references always nest. It renders text nodes and spans (and portals), so it can sit inside a
-// <button>, where references stay marks and never become controls.
+// A Chinese face (ME-CN, R1301) names its references by their Chinese names. A mark that crosses a name's
+// edge is cut there, so marks and references nest. It renders text nodes and spans (and portals), so it can
+// sit inside a <button>, where references stay marks and never become controls.
 
 import { Fragment, type ReactElement, type ReactNode } from "react";
 
@@ -59,10 +58,10 @@ export function printedValue(entry: PreviewValue): string {
   return entry.display !== undefined && entry.display !== "" ? entry.display : String(entry.value);
 }
 /**
- * R280: each value after its label's nth occurrence for the nth entry with that label. A label that
- * occurs fewer times keeps its values together: past its last occurrence they join it there, in one
- * helper block — a Radiant Lizard's Breath shows both largest piles together, not one mid-text and
- * one at the end. A label the text never names still falls to the end, as does an empty label.
+ * R280: each value after its label's nth occurrence for the nth entry with that label. A label that occurs
+ * fewer times keeps its values together: past its last occurrence they join it there, in one helper block
+ * (a Radiant Lizard's Breath shows both largest piles together). A label the text never names, or an empty
+ * label, falls to the end.
  */
 function insertsOf(text: string, values: readonly PreviewValue[]): Insert[] {
   const seen = new Map<string, number>();

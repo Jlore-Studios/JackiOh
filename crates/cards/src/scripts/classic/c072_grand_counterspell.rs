@@ -311,6 +311,7 @@ mod tests {
             s.play(STOCKPILE, json!({}));
             let id = s.card(STOCKPILE).id.clone();
             // The steal itself was public (the opponent watched the card announced, B5 E16), but p2's view of
+            // p1's hand is a count; p1 reads the card.
             assert_eq!(js(&s.view(P2).opponent.hand), json!({ "count": 2 }));
             let own = js(&s.view(P1));
             assert!(

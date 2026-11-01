@@ -135,9 +135,8 @@ struct FusedEntry {
 /// read cost a card fused onto again and again (C+ #74) seconds per AI decision late in a game.
 ///
 /// Derived data, never part of what a state is: serde skips it (no wire, view or hash sees it), every
-/// state compares equal on it, and a state that came through JSON has none until `reduce` composes it.
-/// An entry answers only while its definition, ingredient list and registry are unchanged (R179: "the
-/// fused scripts depend on the ingredients' ids and on nothing else").
+/// state compares equal on it, and a state that came through JSON has none until `reduce` composes it. An
+/// entry answers only while its definition, ingredient list and registry are unchanged (R179).
 #[derive(Clone, Default)]
 pub struct FusedScripts {
     registry: usize,
@@ -339,9 +338,9 @@ fn shared_empty_script() -> &'static Script {
 
 /// The face that is running: radiant text once the instance is Radiant (§5.2).
 ///
-/// A Vanilla instance runs no script at all (§6.3's Vanilla "clears printed keywords and scripts", and
-/// R115 says so of every hook). This is the one place a card's script is read off an instance, so the
-/// guard lives here; a continuation parked before the Vanilla landed is re-entered by its stored def id
+/// A Vanilla instance runs no script at all (§6.3 "clears printed keywords and scripts"; R115 says so of
+/// every hook). This is the one place a card's script is read off an instance, so the guard lives here;
+/// a continuation parked before the Vanilla landed is re-entered by its stored def id
 /// (`prompts::run_resume`), never through here, so it still finishes.
 ///
 /// R1850000: a copier runs the text it copied (`unit_text::text_def_of`).
@@ -411,9 +410,8 @@ pub fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
 /// R77, R102: where a card a Fuse kept on the field remembers the price each ingredient was played for
 /// (§6.3 Embiggen, R65), in the fused definition's ingredient order, so a text that reads its own price
 /// (#46's, #84's and #59's "paid 4") reads the one its card was played for. A fused ingredient's own
-/// record is its `parts`. Absent when every ingredient was played at the kept card's price: R77 lets
-/// the Fuse add this one entry only when the prices differ. Memory, so R78 resets it as the card leaves
-/// the field.
+/// record is its `parts`. Absent when every ingredient was played at the kept card's price (R77). Memory,
+/// so R78 resets it as the card leaves the field.
 pub const INGREDIENTS_KEY: &str = "__ingredients";
 
 /// One ingredient of a fused card, as `INGREDIENTS_KEY` records it.

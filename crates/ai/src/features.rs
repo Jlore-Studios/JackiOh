@@ -57,11 +57,10 @@ const SIDE_FIELDS: &[&str] = &[
 const SIDES: [&str; 2] = ["own", "enemy"];
 
 /// The keyword kinds no count reads: a hand keyword newer than the layout, which does nothing on the
-/// field where the counts are taken (R1838000's Tradable), and Stinkyscape's Starship Piece and
-/// Starship (R1852000, R1852003), which came after the layout was fitted and wait for its next refit,
-/// as does Can't Defend (R2657000). Left out, so the layout stays the one `FEATURES_VERSION` names and
-/// the weights fitted on it still read it (R1010000); a Unit carrying one counts its other keywords as
-/// before.
+/// field where the counts are taken (R1838000's Tradable), and the kinds that came after the layout was
+/// fitted and wait for its next refit: Stinkyscape's Starship Piece and Starship (R1852000, R1852003) and
+/// Can't Defend (R2657000). Left out, so the layout stays the one `FEATURES_VERSION` names and the weights
+/// fitted on it still read it (R1010000); a Unit carrying one counts its other keywords as before.
 const UNCOUNTED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Tradable,
     KeywordKind::StarshipPiece,
@@ -140,11 +139,10 @@ pub fn features(view: &GameState, seat: PlayerId) -> Features {
     }
 }
 
-/// R1006000: `view` without the backrow cards `seat` cannot read. The engine's projections
-/// (`unit_view`'s auras, `face_threat`'s hero guards, `hero_armor_of`) read every backrow card's
-/// text, and a redacted view's hidden ones are placeholders with no text: what the seat cannot read
-/// is left out of them rather than guessed, so a projection reads only what the seat can see. The
-/// counts of hidden cards come from `view` itself.
+/// R1006000: `view` without the backrow cards `seat` cannot read. The engine's projections (`unit_view`'s
+/// auras, `face_threat`'s hero guards, `hero_armor_of`) read every backrow card's text, and a redacted
+/// view's hidden ones are placeholders with no text: what the seat cannot read is left out of them
+/// rather than guessed. The counts of hidden cards come from `view` itself.
 fn public_world(view: &GameState, seat: PlayerId) -> GameState {
     let mut public = view.clone();
     for player in [seat, seat.opponent()] {

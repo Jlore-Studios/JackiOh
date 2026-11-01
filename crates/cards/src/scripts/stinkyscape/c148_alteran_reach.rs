@@ -10,6 +10,7 @@
 //! dealing it in the opening hand (R640). The travel is `subsystems::starscape_abilities`: an Activate
 //! ♾️ for `STARSCAPE_TRAVEL_MANA` (R1847002) that moves its controller one node along their map, the
 //! player's and not the card's, charted from the match rng at their first travel (R1847000), and gives
+//! the node's reward (R1847001).
 
 use jackioh_engine::prelude::*;
 
@@ -52,6 +53,7 @@ mod tests {
     const JAMMED: &str = "core-036";
     const FILLER: &str = "core-005";
 
+    /// Neither
     /// side's turn ends by itself (R82).
     fn board_with(seed: &str, faces: &[bool]) -> Scenario {
         let reaches: Vec<Value> = faces
@@ -171,6 +173,7 @@ mod tests {
             fn r640_quickdraw_deals_it_in_the_opening_hand() {
                 crate::register_all();
                 // R640: `setup` deals every library card carrying `quickdraw` into the opening hand,
+                // the base face and the Radiant one alike.
                 let scripts = script();
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));

@@ -58,23 +58,30 @@ impl Default for Replays {
     }
 }
 
-/// The opened replays by match id, the one used longest ago first, each with when it was opened.
-/// They hold whole states, so nothing but this module reads them (CLAUDE.md rule 7). The lock is
-/// never held across a fold.
-#[derive(Default)]
-pub struct ReplayCache {
-    entries: Mutex<IndexMap<String, (i64, Arc<ReplayOpen>)>>,
+/// The opened replays by match id, the one used longest ago first, each with when it was opened: the 1v1
+/// replays (`ReplayOpen`) and, as `duos::replay::DuosReplayCache`, the co-op ones. They hold whole states, so
+/// nothing but their routes reads them (CLAUDE.md rule 7). The lock is never held across a fold.
+pub struct ReplayCache<T = ReplayOpen> {
+    entries: Mutex<IndexMap<String, (i64, Arc<T>)>>,
 }
 
-impl ReplayCache {
+impl<T> Default for ReplayCache<T> {
+    fn default() -> Self {
+        ReplayCache {
+            entries: Mutex::new(IndexMap::new()),
+        }
+    }
+}
+
+impl<T> ReplayCache<T> {
     /// Drops every replay opened `REPLAY_CACHE_TTL_SECONDS` or more before `now`.
-    fn expire(entries: &mut IndexMap<String, (i64, Arc<ReplayOpen>)>, now: i64) {
+    fn expire(entries: &mut IndexMap<String, (i64, Arc<T>)>, now: i64) {
         entries.retain(|_, (opened_at, _)| now - *opened_at < REPLAY_CACHE_TTL_SECONDS * MS_PER_SECOND);
     }
 
     /// The replay of `match_id` opened less than `REPLAY_CACHE_TTL_SECONDS` ago, now the one used
     /// last.
-    pub fn get(&self, match_id: &str, now: i64) -> Option<Arc<ReplayOpen>> {
+    pub fn get(&self, match_id: &str, now: i64) -> Option<Arc<T>> {
         let mut entries = lock(&self.entries);
         Self::expire(&mut entries, now);
         let entry = entries.shift_remove(match_id)?;
@@ -85,7 +92,7 @@ impl ReplayCache {
 
     /// Keeps the replay of `match_id`, opened at `now`, dropping the ones used longest ago to stay
     /// within `REPLAY_CACHE_MATCHES`.
-    pub fn put(&self, match_id: &str, open: Arc<ReplayOpen>, now: i64) {
+    pub fn put(&self, match_id: &str, open: Arc<T>, now: i64) {
         let mut entries = lock(&self.entries);
         Self::expire(&mut entries, now);
         entries.shift_remove(match_id);
@@ -100,6 +107,11 @@ impl ReplayCache {
         let mut entries = lock(&self.entries);
         Self::expire(&mut entries, now);
         entries.len()
+    }
+
+    /// Forgets every opened replay (the retention purge took logs they were folded from).
+    pub fn clear(&self) {
+        lock(&self.entries).clear();
     }
 }
 

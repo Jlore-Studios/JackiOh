@@ -9,14 +9,6 @@
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
 //! (R1852000), which can fire it again. So the removal below is a transform, which is no death, and the
 //! tribute is made beside a Voidwalker, whose aura exiles the tributed card (R461).
-//!
-//! The cards: Cannon v3, (2) 0/4, "Activate: Deal 5 damage to an enemy Unit", once a turn, 10 when
-//! Radiant; Polymorph, (3) "Transform a Unit into a Sheep Token"; The Rock, (4) 10/10 Tribute 1,
-//! Indestructible; Prejudiced Postdoc, (2) 2/4 with a Cry that finds no Human here; Twisted Sorcerer,
-//! (2) 5/5 with a Cry; Midrange Menace, (3) 9/9 Taunt; Mr. Vanilla; the (1) Traps Sheepish and My Pawn;
-//! and The Power to Punish, a (3) Field Spell, "Activate: Choose one: Deal 2 Pierce damage; your
-//! opponent discards 1 random card; or choose a Unit, which is destroyed at the start of your next
-//! turn", once a turn.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

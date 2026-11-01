@@ -9,6 +9,10 @@
 //! card of its caster's hand, in order, then deck, from the top, a hit adding `INFLATION_COST` to its
 //! `costMod`, an X card and the resolving Stimmycheck passed by, silent (R440); a Stimmycheck carrying
 //! its own chance (`INFLATION_CHANCE_KEY`) rolls at that instead of `chance`. "At the end of this
+//! turn" is a delayed add at the end of the turn it is cast on, whoever's (R350, ST-S14-11), not an
+//! End of turn trigger, the card being in the graveyard by then: `delay` re-enters this script's
+//! `resume` step (R62), whose data carries the copy's chance, 10 higher and never past 100
+//! (`next_inflation_chance`), written into the copy's memory as `add_to_hand` makes it.
 
 use jackioh_engine::prelude::*;
 

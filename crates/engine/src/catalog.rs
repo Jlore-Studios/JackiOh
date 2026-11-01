@@ -920,11 +920,10 @@ pub fn deckable(def: &CardDef) -> bool {
 
 /// R2204001, R2511001: the key a Discover from the catalog offers once. A definition that names the
 /// Core card it copied (`CardDef.snapshot_of`) shares that card's key; every other card is its own.
-/// The build's catalog names none, so every card is its own key and an offer may show a Core card
-/// and its Legacy card both; the catalogs shipped from v0.5.5 to v0.5.7 name one for each of
-/// Training Grounds #41–#60, so a replay folded under one (R767000) offers what its game offered.
-/// Only the two Discovers read it (`effects::choose`'s offer and `subsystems::scorer::top_three`); a
-/// deck holds both cards (R2511001).
+/// The build's catalog names none, so an offer may show a Core card and its Legacy card both; the
+/// catalogs shipped from v0.5.5 to v0.5.7 name one for each of Training Grounds #41–#60, so a replay
+/// folded under one (R767000) offers what its game offered. Only the two Discovers read it
+/// (`effects::choose`'s offer and `subsystems::scorer::top_three`); a deck holds both cards (R2511001).
 pub fn pair_key(def: &CardDef) -> &str {
     def.snapshot_of.as_deref().unwrap_or(&def.id)
 }
@@ -1023,8 +1022,8 @@ pub type GlitchOdds = GameState;
 
 /// R382: draw the generated card from a pool with `rng.pick`, except that a Grape pick is rolled again
 /// on `GRAPE_ODDS` (one extra draw, only then), so the Grape rarity pool persists across every kind of
-/// Grape generation. A caller generating into a hand or a deck passes the state as `glitch`, and the
-/// pick may then become Glitch (R673).
+/// Grape generation. A caller generating into a hand or a deck passes the state as `glitch`, so the pick
+/// may become Glitch (R673).
 pub fn pick_generated<'a>(
     rng: &mut Rng,
     pool: &[&'a CardDef],
@@ -1045,8 +1044,8 @@ pub fn pick_generated<'a>(
 }
 
 /// R673: after a card is picked for a hand or a deck, n/10000 that it is Glitch instead, n the match's
-/// System plays. One rng draw, and only when n is above 0, so a match no System card was played in
-/// draws exactly as before; a catalog without Glitch keeps the pick.
+/// System plays. One rng draw, and only when n is above 0, so a match with no System card draws as
+/// before; a catalog without Glitch keeps the pick.
 pub fn glitch_or_not<'a>(rng: &mut Rng, def: &'a CardDef, glitch: &GlitchOdds) -> &'a CardDef {
     let plays = glitch.system_plays.unwrap_or(0);
     if plays <= 0 {

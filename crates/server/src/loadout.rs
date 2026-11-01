@@ -5,13 +5,11 @@
 //!
 //! R1834002: when a match starts, each seat's loadout is frozen on its row ([`freeze_loadout`]): the
 //! deck's three slots and each card's picks, each resolved to a registry id the account owns at that
-//! moment and the kind's default otherwise, so no unknown or unowned id reaches another client. A row
-//! from before #1834 reads as [`Loadout::defaults`].
+//! moment and the kind's default otherwise. A row from before #1834 reads as [`Loadout::defaults`].
 //!
 //! R1834003: the seat-level half travels whole, on join and on reconnect (`loadouts`). A card's own
-//! picks travel only once a card dealt from that seat's deck, still showing as what it was dealt, is in
-//! the receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]), so the frames never name
-//! a card the receiver has not seen and no decklist can be read from them (§10.8).
+//! picks travel only once a card dealt from that seat's deck, still showing as dealt, is in the
+//! receiver's view ([`shown_defs`]), and once per receiver ([`cards_due`]): no decklist can be read (§10.8).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -250,13 +248,12 @@ impl CardPicks {
 /// of its slot's kind, that the account owns where it is worn; anything else is the kind's default:
 ///
 ///  - a deck slot wears the deck's pick when the deck carries one and it is owned, else the default (the
-///    deck's word is final, as the deck builder draws it); with no pick, the account's if owned, else the default;
+///    deck's word is final); with no pick, the account's if owned, else the default;
 ///  - a card slot wears its kind's default: never the account's foil, finish or border;
-///  - each card of the deck wears its own pick of a kind when owned on the card, else the default, as its
-///    owner's client draws it (R1655000, R1953001). Its full art is its own pick's, else its Epic when the
-///    account's Full-art cards setting is on, and prints when the account owns that full art on the card:
-///    `true` for the Epic, its id for a Legendary or a Mythic (R2655000). A card is listed only where it
-///    differs from the seat.
+///  - each card of the deck wears its own pick of a kind when owned on the card, else the default
+///    (R1655000, R1953001). Its full art is its own pick's, else its Epic when the account's Full-art
+///    cards setting is on, and prints when owned on the card: `true` for the Epic, its id for a Legendary
+///    or a Mythic (R2655000). A card is listed only where it differs from the seat.
 pub fn freeze_loadout(
     registry: &[Cosmetic],
     owned: &OwnedCosmetics,

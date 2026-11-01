@@ -78,6 +78,7 @@ pub(super) const LABELS: &[&str] = &[
 /// to hand from anywhere else (a Spell after it resolves or at the end of the turn, a card from the
 /// graveyard or exile) and say "Return … to hand", as they did before patch v0.2.10. Core #37
 /// Gravedigger's base face joined them in #911: it said "Add a random card from your graveyard to
+/// your hand", the one graveyard return that did not say "Return".
 const RETURNS_OFF_THE_FIELD: &[&str] = &[
     "core-023 base",
     "core-023 radiant",
@@ -359,6 +360,7 @@ fn ends_with_a_full_stop(line: &str) -> bool {
 }
 
 /// R1445: whether the text before a label ends on an opening double quote (`“`, or a `"` that opens
+/// a quote: an odd one), so the label opens a quoted ability the card grants.
 fn opens_a_quote(before: &str) -> bool {
     before.ends_with('\u{201c}') || (before.ends_with('"') && before.matches('"').count() % 2 == 1)
 }
@@ -370,6 +372,7 @@ fn failures(face: &Face) -> Vec<String> {
     let keywords = &face.keywords;
     // R988: a face printed in English that names the element glyphs (Meditative #40) is R366's
     // English shape. A face is printed in Chinese when it is punctuated in Chinese — R1302 ends
+    // every other line with 。, so a Chinese face always is — not when it merely names a glyph.
     if text.chars().any(is_cjk_punctuation) {
         return cjk_failures(text, keywords);
     }
@@ -454,6 +457,7 @@ fn failures(face: &Face) -> Vec<String> {
     } else {
         text.split('\n').collect()
     };
+    // The keyword list: the first line, when every item on it is a printed keyword or a Tribute cost,
     // which the list carries too (#55, #66). A face with keywords must lead with them.
     let labels: Vec<String> = keywords.iter().map(keyword_label).collect();
     let list_item = |item: &str| labels.iter().any(|label| label == item) || is_tribute_or_echo_count(item);
@@ -489,8 +493,11 @@ fn failures(face: &Face) -> Vec<String> {
 
 // R1302 (MD-B13, ME-CN): a face printed in Chinese (Meditative #32's Radiant face, and every face of
 // the Chinese table, `chinese.rs`) is R366's shape in Chinese punctuation: the keyword list is joined
+// with "，" on a line of its own with no full stop, a labeled ability ("战吼：") starts a sentence of
+// its own, every other line ends with "。", and a cost stays "(N)".
 
 /// R988: a character that punctuates a Chinese face: CJK punctuation (U+3000–U+303F) and the
+/// full-width forms (U+FF00–U+FFEF: "，", "：").
 pub(super) fn is_cjk_punctuation(c: char) -> bool {
     matches!(c, '\u{3000}'..='\u{303f}' | '\u{ff00}'..='\u{ffef}')
 }
@@ -512,6 +519,7 @@ pub(super) fn chinese_keyword_label(keyword: &Keyword, terms: &Value) -> String 
     }
 }
 
+/// `/^(献祭\d+|回响(\d+|X))$/`: a Tribute or Echo count in the keyword list, as
 /// `is_tribute_or_echo_count` (a computed Echo X, R802, prints "回响X").
 fn is_chinese_tribute_or_echo_count(item: &str) -> bool {
     if let Some(n) = item.strip_prefix("回响") {
@@ -526,6 +534,7 @@ fn ends_with_a_chinese_full_stop(line: &str) -> bool {
 }
 
 /// Every R1302 check a Chinese face fails, by name; empty when it passes them all. `keywords` are the
+/// face's printed keywords, which the first line must list.
 pub(super) fn cjk_failures(text: &str, keywords: &[Keyword]) -> Vec<String> {
     let terms = chinese_terms();
     let ability_labels: Vec<&str> = LABELS
@@ -718,6 +727,7 @@ fn face_text(catalog: &Catalog, id: &str, face: &str) -> String {
         .to_string()
 }
 
+/// readSnapshot(version) : CATALOG` — a patch pending until `patches ship` promotes it
 /// (R646) is the current catalog until then, its snapshot after.
 fn after_patch(version: &str) -> (bool, Catalog) {
     let shipped = shipped_versions().iter().any(|shipped| shipped == version);
@@ -1180,6 +1190,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             }
         }
         // Another pending fragment's cards legitimately differ beside these five (R646), so the diff is
+        // read on this patch's claims.
         let claimed: Vec<String> = changed
             .into_iter()
             .filter(|id| five.contains(id.as_str()))
@@ -1213,6 +1224,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     #[test]
     fn r366_patch_v0_2_10_issue_88_changes_exactly_the_balance_patch_cards_against_the_patch_before_it() {
         // v0.2.10 (made as v0.2.15, renumbered by R743) ships after v0.2.9: its baseline is the newest
+        // shipped snapshot while it is pending and the patch before it once `patches ship` has
+        // promoted it, and the patch is the current catalog until then, its snapshot after.
         let versions = shipped_versions();
         let at = versions.iter().position(|version| version == "v0.2.5");
         let baseline = match at {
@@ -1226,6 +1239,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             read_snapshot("v0.2.5")
         };
         // The top-level fields each balance card may move (balance patch 1, issue #88); every other
+        // field restores the baseline card, so no card smuggles an unlisted change.
         let allowed_fields: &[(&str, &[&str])] = &[
             ("core-017", &["base", "radiant"]),
             ("core-021", &["loc"]),
@@ -1380,6 +1394,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
             );
         }
         // Another pending fragment's cards legitimately differ beside these eighteen (R646), so the
+        // diff is read on this patch's claims.
         let claimed: Vec<String> = changed
             .into_iter()
             .filter(|id| unanimated.contains(id.as_str()))
@@ -1396,6 +1411,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         // The current catalog also carries every other pending patch's claims (R646), which are theirs
         // to prove. Those claims live in `patches/pending/`, a directory this test cannot list (a pure
         // crate's tests read no files, SURFACE §3); `cargo jackioh patches check` proves them. v0.2.7
+        // has shipped, so its snapshot is read and no other claim is in it.
         assert!(
             shipped,
             "v0.2.3c is pending: its baseline needs the other pending fragments' claims, which `cargo jackioh patches check` reads"
@@ -1834,6 +1850,7 @@ mod r1302_a_face_printed_in_chinese {
     #[test]
     fn r988_an_english_face_that_names_the_element_glyphs_is_read_as_english() {
         // Meditative #40 names the five glyphs but is punctuated in English (R366): no Chinese
+        // punctuation, so both printed faces read as English and pass.
         let faces: Vec<Face> = faces_of(&entries())
             .into_iter()
             .filter(|face| face.card.id == "meditative-040")
@@ -1910,6 +1927,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
 /// R1320 (patch v0.3.4, issue #543): players read Nerf for the engine's Degrade and Buff for its
 /// Upgrade (`degrade`, `upgrade`, `tune_once` and the events `degraded` and `upgraded` keep their
 /// names, as R373 kept `library`). Every entry of every set is read, the sets that have not shipped
+/// included, so a Meditative card that lands later is held to it too: it says Nerf and Buff.
 mod r1320_players_read_nerf_and_buff_issue_543 {
     use super::*;
 

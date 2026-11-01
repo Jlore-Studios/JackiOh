@@ -1,10 +1,10 @@
 // Trio codes (SPEC §9.4, R339): a trio and its three decks as one line of text, the way a deck code
 // (R255, `deckCode.ts`) carries one deck.
 //
-// Client-side like a deck code: the code is read here and nowhere else, and an import sends the
-// server the decks and the trio (`POST /api/trios/import`, R341), which checks them like any save.
-// Each deck is resolved as a deck code's is (`resolveDeck`): what no deck could hold is dropped and
-// listed, and cards the player does not own are kept and flagged.
+// Client-side like a deck code: the code is read here and nowhere else, and an import sends the server the
+// decks and the trio (`POST /api/trios/import`, R341), which checks them like any save. Each deck is resolved
+// as a deck code's is (`resolveDeck`): what no deck could hold is dropped and listed, and cards the player
+// does not own are kept and flagged.
 //
 // THE FORMAT. `JKT<version>.` then base64url (no padding) of:
 //

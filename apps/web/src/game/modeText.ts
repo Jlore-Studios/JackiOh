@@ -180,9 +180,10 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   },
   // S #18.1 MELCHIOR (R21's pool).
   "stinkyscape-018-1": combatKeywords(),
-  // S #26 ZolarKeth.
+  // S #26 ZolarKeth (#2657): `universities` is v0.5.9f's Activate's other option, kept for its replays.
   "stinkyscape-026": {
-    piece: { label: "Starship Piece", detail: "Summon a random Starship Piece." },
+    university: { label: "University", detail: "Summon a University." },
+    piece: { label: "Starship Piece", detail: "This gains “Activate: Summon a random Starship Piece.”" },
     universities: { label: "Universities", detail: "Activate your Universities." },
   },
   // S #112 Job Application, Stage 3.
@@ -277,6 +278,11 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
     "5 Credits": { label: "5 Credits", detail: "You gain 5 Credits, and your opponent 5 fewer." },
     "10 Credits": { label: "10 Credits", detail: "You gain 10 Credits, and your opponent 5 fewer." },
     "15 Credits": { label: "15 Credits", detail: "You gain 15 Credits, and your opponent 5 fewer." },
+  },
+  // S #26 ZolarKeth, radiant (#2657): the University and the Starship Piece are Radiant.
+  "stinkyscape-026": {
+    university: { label: "Radiant University", detail: "Summon a Radiant University." },
+    piece: { label: "Radiant Starship Piece", detail: "This gains “Activate: Summon a random Radiant Starship Piece.”" },
   },
   // S #121 System Schematic, radiant: "The one chosen Radiant".
   "stinkyscape-121": {

@@ -66,6 +66,7 @@ pub fn script() -> CardScripts {
     };
 
     // The Radiant face is Revealed regardless of the coin flip (balance patch 1, R686): the end of turn
+    // shows its face to both players first, then flips as usual.
     let radiant = Script {
         end_of_turn: Some(hook(|ctx| {
             let tails = flip(true)(ctx);
@@ -84,6 +85,8 @@ pub fn script() -> CardScripts {
 //
 // The coin is the match rng's next draw as its controller's turn ends (the trap's end-of-turn hook,
 // which R62 runs before the window the trap fires in), so each case picks a seed whose next coin is the
+// face it needs (`withCoin`) and then checks the trap did what that coin says — which is what "one
+// seeded coin each time" means.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -227,6 +230,7 @@ mod tests {
             }
 
             /// R1438, R1440: set from the hand with Lucky 1 given to it, it flips twice and keeps heads,
+            /// so tails then heads fires it.
             #[test]
             fn r1438_r1440_given_lucky_1_tails_then_heads_fires_it() {
                 crate::register_all();
@@ -256,6 +260,7 @@ mod tests {
             }
 
             /// R1440: given Lucky 1 it fires wherever it fires with none (its first coin is the plain
+            /// flip), and at more seeds besides.
             #[test]
             fn r1440_given_lucky_1_it_fires_more_often_over_100_seeds() {
                 crate::register_all();

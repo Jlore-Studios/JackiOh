@@ -2,14 +2,13 @@
 //! and out, nothing else crosses: the state is the `GameState` JSON object, which the client keeps
 //! behind its opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 //!
-//! `apps/web/src/wasm/index.ts` is the only caller: the hotseat port (`game/engine.ts`), the practice
-//! worker (`practice/core.ts`) and the `@jackioh/*` aliases (`apps/web/src/wire/`) reach the engine, the
-//! AI and the validator through it.
+//! `apps/web/src/wasm/index.ts` is the only caller: the hotseat port, the practice worker and the
+//! `@jackioh/*` aliases (`apps/web/src/wire/`) reach the engine, the AI and the validator through it.
 //!
-//! Errors: a JSON argument that does not parse, or a setup the engine refuses, returns `Err(JsError)`,
-//! an `Error` thrown in JavaScript (SURFACE §10.1). `reduce` never throws on an illegal action: its
-//! refusal is the `error` of the `ReduceResult` (SURFACE §6.1). A panic is an engine invariant broken
-//! (SURFACE §4.4.9); `console_error_panic_hook` prints it on the console before the trap.
+//! Errors: a JSON argument that does not parse, or a setup the engine refuses, returns `Err(JsError)`
+//! (SURFACE §10.1). `reduce` never throws on an illegal action: its refusal is the `error` of the
+//! `ReduceResult` (SURFACE §6.1). A panic is an engine invariant broken (SURFACE §4.4.9);
+//! `console_error_panic_hook` prints it on the console before the trap.
 //!
 //! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505), which the Luau
 //! module wraps too; this module keeps the wasm-bindgen wrappers, the panic hook, the clock and the
@@ -159,7 +158,7 @@ pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, JsError> {
 /// thread), `sets` (`SetName[]`) count as sets that ship. Only a module built with the `preview` feature
 /// can preview (`scripts/build-wasm.sh` builds it for development, the unit tests and the e2e client;
 /// apps/web's `prebuild` builds the production bundle without it); any other refuses a set. The hotseat
-/// route calls it for its E2E injection's `preview`, in development builds only (#552's play-through).
+/// route calls it for its E2E injection's `preview` in development builds only (#552).
 #[wasm_bindgen]
 pub fn preview_sets(sets_json: &str) -> Result<(), JsError> {
     js(wasm_core::preview_sets(sets_json))

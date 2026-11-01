@@ -12,8 +12,8 @@
 // (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant faces of #16 and #38 clamp.
 // #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Only a face printing its catalog text takes a
 // short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
-// its header and the next Ascent line only (#814): the level the engine's preview carries as "Ascent level" (R280,
-// c008_reach_the_summit.rs); a face in play past the preview's limit clamps rather than shrinking its art.
+// only its header and the next Ascent line (#814, R280, c008_reach_the_summit.rs); a face in play past the
+// preview's limit clamps rather than shrinking its art.
 
 import type { PreviewValue } from "@jackioh/shared";
 

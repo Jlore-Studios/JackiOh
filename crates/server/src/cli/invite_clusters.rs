@@ -7,16 +7,14 @@
 //!
 //! Reads `public.code_attempts` through the store (DATABASE_URL) and prints, as Markdown, every IP
 //! hash that distinct accounts made at least `--min-accounts` redemption attempts from in the last
-//! `--window` seconds, with the accounts and the attempts behind it. The ranked ladder pays for
-//! rating, so several invite-gated accounts behind one address is the cheapest way to farm it; this
-//! is where a person looks for that.
+//! `--window` seconds, with the accounts and the attempts behind it. The ranked ladder pays for rating,
+//! so several invite-gated accounts behind one address is the cheapest way to farm it.
 //!
-//! It is advisory and read-only. It bans nothing and disables nothing, because a campus, a
-//! household or a carrier's NAT puts many honest players behind one hash, and it writes nothing.
-//! What it prints is counts and the first `INVITE_CLUSTER_HASH_PREFIX_LEN` characters of each hash:
-//! no full hash, no profile id, no email, no address (the table holds none of the last: §9.4 hashes
-//! the address with the server's pepper before it is stored). The defaults are in `config.rs`
-//! (CLAUDE.md rule 9).
+//! It is advisory and read-only: a campus, a household or a carrier's NAT puts many honest players
+//! behind one hash, so it bans and disables nothing. It prints counts and the first
+//! `INVITE_CLUSTER_HASH_PREFIX_LEN` characters of each hash: no full hash, profile id, email or address
+//! (§9.4 hashes the address with the server's pepper before it is stored). The defaults are in
+//! `config.rs` (CLAUDE.md rule 9).
 
 use anyhow::bail;
 

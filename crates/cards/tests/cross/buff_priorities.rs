@@ -261,6 +261,7 @@ fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
 
 #[test]
 fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
+    // (The Power to Punish, which this test used, deals
     // Pierce damage of its own since #2179.)
     let introspection_at_armored = |pierce: bool| {
         let mut s = scenario(json!({
@@ -305,6 +306,7 @@ fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
 #[test]
 fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
     // Granted Indestructible, it has Immutable alone to gain (R2436000): a Buff draws among its keyword
+    // row, its Activate's count (the X row) and the plague row, on a seed that draws the plague row.
     let plantation = |seed: &str| {
         let mut s = scenario(json!({
             "seed": seed,

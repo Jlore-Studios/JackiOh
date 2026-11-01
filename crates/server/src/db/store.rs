@@ -13,12 +13,11 @@
 //! tx.commit().await?;
 //! ```
 //!
-//! and a `Tx` dropped without `commit` rolls back (Postgres: sqlx's `Transaction` drop; the fake:
-//! `FakeTx` restores the snapshot it took at `begin`). A `Tx` is passed down, so nothing nests.
+//! and a `Tx` dropped without `commit` rolls back (Postgres: sqlx's `Transaction` drop; the fake: `FakeTx`
+//! restores its `begin` snapshot). A `Tx` is passed down, so nothing nests.
 //!
-//! Clocks and limits: `config.rs` (R79; §9.4, §9.5). Integers: epoch milliseconds, counts, caps and
-//! sequence numbers are `i64` (as Postgres's `int8`/`count(*)` answer); ratings, deviations and
-//! volatilities are `f64` (migration 0022 made them `double precision`).
+//! Clocks and limits: `config.rs` (R79; §9.4, §9.5). Integers: epoch milliseconds, counts, caps and sequence
+//! numbers are `i64`; ratings, deviations and volatilities are `f64` (migration 0022: `double precision`).
 
 use std::ops::{Index, IndexMut};
 use std::sync::Arc;
@@ -431,12 +430,10 @@ pub struct SavedTrio {
 }
 
 store_union! {
-    /// What an upsert did:
-    ///  - `created` / `updated` — written;
-    ///  - `limit` — creating would take the profile past its cap (`MAX_SAVED_DECKS` or
-    ///    `MAX_SAVED_TRIOS`); nothing was written;
-    ///  - `not_owner` — the id is another profile's deck or trio; nothing was written, and the
-    ///    caller answers exactly as for a missing id so an id reveals nothing about anyone else.
+    /// What an upsert did: `created` / `updated` wrote the row. `limit`: creating would take the profile past
+    /// its cap (`MAX_SAVED_DECKS` or `MAX_SAVED_TRIOS`). `not_owner`: the id is another profile's deck or
+    /// trio; the caller answers it exactly as for a missing id, so an id reveals nothing about anyone else.
+    /// Neither of the last two wrote anything.
     pub enum UpsertOutcome {
         Created = "created",
         Updated = "updated",
@@ -484,12 +481,10 @@ pub struct DeckVersion {
 }
 
 store_union! {
-    /// R2100000: what keeping a save's version did:
-    ///  - `added` — a new version, the deck's newest; the oldest past the cap were dropped;
-    ///  - `merged` — the save came within the window of the newest version, which now holds it;
-    ///  - `unchanged` — the newest version already holds this name and these cards; nothing was
-    ///    written;
-    ///  - `missing` — the profile has no deck with this id; nothing was written.
+    /// R2100000: what keeping a save's version did: `added`, a new version, the deck's newest (the oldest
+    /// past the cap were dropped); `merged`, the save came within the window of the newest version, which now
+    /// holds it; `unchanged`, the newest version already holds this name and these cards; `missing`, the
+    /// profile has no deck with this id. Neither of the last two wrote anything.
     pub enum DeckVersionOutcome {
         Added = "added",
         Merged = "merged",
@@ -609,11 +604,10 @@ impl<T> IndexMut<QueueMode> for PerMode<T> {
     }
 }
 
-/// One deck as a match or a series freezes it: the cards and the name the player gave them.
-/// `portrait` freezes the deck's hero portrait with them (R642); absent on rows frozen before
-/// portraits existed, so absence stays absent and reads as `vanilla` downstream. R1834002: `slots`
-/// freezes the deck's playmat, backdrop and card back with it the same way; absent on a deck that
-/// carried none and on rows frozen before them.
+/// One deck as a match or a series freezes it: the cards and the name the player gave them. `portrait`
+/// freezes the deck's hero portrait with them (R642), and R1834002's `slots` its playmat, backdrop and card
+/// back; each is absent on rows frozen before it existed or on a deck that carried none, and absence stays
+/// absent (a missing `portrait` reads as `vanilla` downstream).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FrozenDeck {
@@ -1578,11 +1572,10 @@ pub struct StartMatchInput {
 /// that gets it wrong fails with `insufficient_privilege`.
 const ACTING_ROLE: &str = "service_role";
 
-/// One statement, two `SET LOCAL`s: `set_config(name, value, true)` takes parameters, so the profile
-/// id is bound, not interpolated. `request.jwt.claim.sub` is the GUC `auth.uid()` reads
-/// (`tests/sql/00_supabase_stub.sql`); `service_role` bypasses RLS, but a policy, trigger or SECURITY
-/// INVOKER helper that consults the caller sees the right profile. `SET LOCAL` is a silent no-op
-/// outside a transaction, so `Db::begin` is the only way to a `Tx`.
+/// One statement, two `SET LOCAL`s, the profile id bound (`set_config(name, value, true)` takes parameters).
+/// `request.jwt.claim.sub` is the GUC `auth.uid()` reads (`tests/sql/00_supabase_stub.sql`): `service_role`
+/// bypasses RLS, but a policy, trigger or SECURITY INVOKER helper that consults the caller sees the right
+/// profile. `SET LOCAL` is a silent no-op outside a transaction, so `Db::begin` is the only way to a `Tx`.
 const SESSION_SQL: &str =
     "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
 
@@ -1675,23 +1668,22 @@ impl Tx<'_> {
         }
     }
 
-    /// SPEC §9.4's redemption, whole: one transaction over `profiles`, `invite_codes` and
-    /// `code_attempts`; in Postgres one statement, `app.redeem_invite_code` (migration 0001 §6).
-    /// Steps 2 and 3's limits run in the database (`config.rs` has the fake's copy; `pg.rs`'s KNOWN
-    /// DIVERGENCES, "redemption limits") and reject BEFORE step 4, so a caller over the limit cannot
-    /// pin their own counter by retrying; a rejection is RETURNED, never thrown, so step 4's attempt
-    /// row is never rolled back. §9.4's "identical time" is R107's response floor in `codes.rs`.
+    /// SPEC §9.4's redemption, whole: one transaction over `profiles`, `invite_codes` and `code_attempts`; in
+    /// Postgres one statement, `app.redeem_invite_code` (migration 0001 §6). Steps 2 and 3's limits run in
+    /// the database (`config.rs` has the fake's copy; `pg.rs`'s KNOWN DIVERGENCES, "redemption limits") and
+    /// reject BEFORE step 4, so a caller over the limit cannot pin their own counter by retrying; a rejection
+    /// is RETURNED, never thrown, so step 4's attempt row stays. §9.4's "identical time" is R107's floor in
+    /// `codes.rs`.
     pub async fn redeem(&mut self, input: &RedeemInviteCodeInput) -> StoreResult<RedeemResult> {
         dispatch!(self, redeem(input))
     }
 
-    /// The retention purge (`api/retention.rs`): deletes `code_attempts` made before
-    /// `code_attempts_before`, the action log of every match ended before `match_actions_ended_before`
-    /// (epoch ms), the play telemetry of every match ended before `play_telemetry_ended_before` (R1442),
-    /// and the detail of every folded game record written before `game_records_recorded_before`,
-    /// keeping its id (R1044001). Results, and so ratings, are kept. Answers how many rows of each
-    /// went. Postgres: `app.purge_expired_rows`, the one path the append-only guard on `match_actions`
-    /// lets a delete through.
+    /// The retention purge (`api/retention.rs`): deletes `code_attempts` made before `code_attempts_before`,
+    /// the action log of matches ended before `match_actions_ended_before` (epoch ms), the play telemetry of
+    /// those ended before `play_telemetry_ended_before` (R1442), and the detail of folded game records
+    /// written before `game_records_recorded_before`, keeping their ids (R1044001). Results, and so ratings,
+    /// are kept. Answers how many rows of each went. Postgres: `app.purge_expired_rows`, the one path the
+    /// append-only guard on `match_actions` lets a delete through.
     pub async fn purge_expired(&mut self, input: &RetentionPurgeInput) -> StoreResult<RetentionPurgeResult> {
         dispatch!(self, purge_expired(input))
     }
@@ -1745,11 +1737,10 @@ impl Tx<'_> {
         dispatch!(self, profiles_username_tag_for(profile_id, key))
     }
 
-    /// R1434, R1435: claims a username for `claim.profile_id`, under a transaction-level lock on
-    /// the key, so two claims of one name at the same moment get different tags. Refused while the
-    /// cooldown runs (the first change away from the default is never refused), and refused when
-    /// the tag the name would carry is not `claim.expected_tag`. A claim that lands starts the
-    /// cooldown and answers the prompt.
+    /// R1434, R1435: claims a username for `claim.profile_id`, under a transaction-level lock on the key, so
+    /// two claims of one name at the same moment get different tags. Refused while the cooldown runs (the
+    /// first change away from the default never is), and when the tag the name would carry is not
+    /// `claim.expected_tag`. A claim that lands starts the cooldown and answers the prompt.
     pub async fn profiles_claim_username(
         &mut self,
         claim: &UsernameClaim,
@@ -2085,11 +2076,10 @@ impl Tx<'_> {
         dispatch!(self, matches_mode_of(match_id))
     }
 
-    /// R263: forget a match id that was reserved and never started — the first game of a Conquest
-    /// series that ended (forfeit, abandoned) before it was played. In Postgres the reservation is
-    /// an `open` row (`tickets_claim_pair`'s skeleton, or a claimed room), and dropping it releases
-    /// a room code for reuse (R110). A no-op for an id with no such row, and never touches a live or
-    /// finished match.
+    /// R263: forget a match id that was reserved and never started: the first game of a Conquest series that
+    /// ended (forfeit, abandoned) before it was played. In Postgres the reservation is an `open` row
+    /// (`tickets_claim_pair`'s skeleton, or a claimed room), and dropping it frees a room code (R110). A
+    /// no-op for an id with no such row; it never touches a live or finished match.
     pub async fn matches_discard_open(&mut self, match_id: &str) -> StoreResult<()> {
         dispatch!(self, matches_discard_open(match_id))
     }
@@ -2440,11 +2430,10 @@ impl Tx<'_> {
         dispatch!(self, bots_set_trio(profile_id, trio, catalog_version))
     }
 
-    /// R1453: claims one open ticket for a bot, single-shot as `tickets_claim_pair` is: false unless
-    /// the bot is free (in no match, a side of no series that is not over (R641000), and not
-    /// retired) and the ticket still open. On true the ticket is matched to `match_id`, the `open`
-    /// match skeleton is written and the bot is put in it; the ticket's owner is the caller's to put
-    /// in the match.
+    /// R1453: claims one open ticket for a bot, single-shot as `tickets_claim_pair` is: false unless the bot
+    /// is free (in no match, a side of no series that is not over (R641000), and not retired) and the ticket
+    /// still open. On true the ticket is matched to `match_id`, the `open` skeleton is written and the bot is
+    /// put in it; the ticket's owner is the caller's to put in the match.
     pub async fn tickets_claim_for_bot(
         &mut self,
         ticket_id: &str,
@@ -2472,10 +2461,9 @@ impl Tx<'_> {
     }
 
     /// R639000: claims a bot for the rematch `match_id` of a match `players` played, single-shot as
-    /// `tickets_claim_for_bot` is, with no ticket: false unless the bot is free (in no match, a side
-    /// of no series that is not over (R641000), and not retired), whatever its schedule. On true the
-    /// `open` match skeleton is written for `players` and the bot is put in it; the person is the
-    /// caller's to put in the match.
+    /// `tickets_claim_for_bot` is, with no ticket: false unless the bot is free (as there, R641000), whatever
+    /// its schedule. On true the `open` match skeleton is written for `players` and the bot is put in it; the
+    /// person is the caller's to put in the match.
     pub async fn bots_claim_for_rematch(
         &mut self,
         bot_id: &str,
@@ -2667,11 +2655,10 @@ impl Tx<'_> {
         dispatch!(self, game_records_fold_pending(limit))
     }
 
-    /// R1976000: a development run's file folded into the totals with no row per record. `batch`
-    /// (the SHA-256 of the file's contents, lowercase hex) is claimed in `game_record_batches`
-    /// first: `None`, and nothing folded, when it is held already. Otherwise every record whose id
-    /// `game_records` holds, and every repeat of an id the file named before, is left out, and the
-    /// rest are folded, in this transaction.
+    /// R1976000: a development run's file folded into the totals with no row per record. `batch` (the SHA-256
+    /// of the file's contents, lowercase hex) is claimed in `game_record_batches` first: `None`, and nothing
+    /// folded, when it is held already. Otherwise records whose id `game_records` holds, or the file named
+    /// before, are left out and the rest are folded, in this transaction.
     pub async fn game_record_batch_fold(
         &mut self,
         batch: &str,
@@ -3028,11 +3015,11 @@ impl Tx<'_> {
         dispatch!(self, presence_in_duos(profile_ids))
     }
 
-    /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match
-    /// (their in-match flag) `viewer` may watch as the store judges it: the two are friends with
-    /// neither blocking the other, the match is live, ranked or unranked, seats the friend and not
-    /// `viewer` (no setting of the friend's refuses it, R2615000). In the order named. Room
-    /// (`SPECTATORS_PER_MATCH`) is the actor's to judge.
+    /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match (their
+    /// in-match flag) `viewer` may watch as the store judges it: the two are friends, neither blocking the
+    /// other, the match is live, ranked or not, and seats the friend and not `viewer` (no setting of the
+    /// friend's refuses it, R2615000). In the order named. Room (`SPECTATORS_PER_MATCH`) is the actor's to
+    /// judge.
     pub async fn presence_watchable(
         &mut self,
         viewer: &str,
@@ -3177,9 +3164,8 @@ impl Tx<'_> {
 }
 // Social: watching and shared replays (#939, #940)
 //
-// Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and
-// sharing a replay with one (B52) read and write them. Its `profiles.allow_spectators` is not read
-// (R2615000).
+// Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and sharing
+// a replay with one (B52) use them; its `profiles.allow_spectators` is not read (R2615000).
 
 /// B52: one replay share (`public.replay_shares`): `sharer`, who held a seat in the finished match
 /// `match_id`, shares its replay with `friend`.

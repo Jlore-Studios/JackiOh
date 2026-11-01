@@ -244,11 +244,13 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
 
         // Twinspell's grant was taken, so /fullsend resolved twice (§10.5 step 6): two "Refresh 3 mana"
         // (8 − 2 − 4 = 2, refreshed to max 4, and the second has nothing to give back, R364) and two
+        // "Combo: Draw 1" riders.
         s.expect_mana(P1, 4);
         assert_eq!(combo_draws(&s), 2);
         // R119: the rider /fullsend installs does not answer /fullsend's own play. Its first resolution
         // is counted before the rider exists (step 5's granted parts precede its script), and the repeat
         // is the same play re-resolving (§6.2 Echo: "the same instance re-resolves"), so it draws
+        // nothing either.
         assert_eq!(drawn_count(s.last_events()), 0);
         assert_eq!(s.hand(P1).len(), 0);
     }
@@ -259,6 +261,7 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
         // The roll is pinned (R423 left the base face's one roll as it was): the play's first rng draw is
         // #95's roll, and the five picks of "summon 5 random Field Spells or Traps" follow it, from the
         // pool of every set (R380). `quickstriker_cursor` finds a cursor at which the roll is that effect
+        // and a Quickstriker is among the five, so the fixture holds whatever else the pools hold.
         let mut s = scenario(json!({
             "seed": R119_SEED,
             "p1": { "hand": [TEMPO_TIMMY, TWINSPELL, CALL_TO_CHAOS], "mana": 10, "library": R119_LIBRARY },

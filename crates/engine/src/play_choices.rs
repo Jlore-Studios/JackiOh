@@ -684,11 +684,10 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
         && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
-/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is —
-/// "X is chosen at play time, 1 ≤ X ≤ the mana the player can spend" (`MIN_CHOSEN_X`): their current
-/// mana plus what a credit line still lends them (`credit::spendable_mana`). `legal_x_values` offers
-/// exactly the values this passes and `refuse_x` refuses exactly the ones it names, so the picker and
-/// the reducer's refusal cannot disagree. `most` defaults to the mana the player can spend.
+/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is:
+/// 1 ≤ X ≤ the mana the player can spend (`MIN_CHOSEN_X`), their current mana plus what a credit line
+/// still lends them (`credit::spendable_mana`). `legal_x_values` offers exactly the values this passes
+/// and `refuse_x` refuses exactly the ones it names, so the picker and the reducer cannot disagree.
 pub fn why_x_refused(
     state: &GameState,
     player: PlayerId,
@@ -871,7 +870,7 @@ fn tribute_total(state: &GameState, units: &[&CardInstance]) -> i32 {
 /// Every set of units that pays the Tribute exactly: enough, and minimal, so no unit could be dropped
 /// (the Sheep Token's 2 is why a set may overshoot). R90, R1282: every one, with no cut: a set left off
 /// is a price the player can never pay, since the client and the §10.7 policy play only what
-/// `legal_actions` lists (CLAUDE.md rule 7). The board bounds the count (a wide Tribute: C(20,5) sets).
+/// `legal_actions` lists (CLAUDE.md rule 7).
 pub fn legal_tribute_sets(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Vec<String>> {
     let need = tribute_cost_of(state, card);
     if need == 0 {
@@ -1375,7 +1374,7 @@ pub fn selections_per_declaration(
 
 /// R90, R102: the key the pipeline stores where the play's choices were split under, in the Cry's
 /// `data`. A fused card's Cry resolves each ingredient with its slice as §10.5 step 1 read it, not the
-/// board at step 5, where the played card may be an option itself (a crafted Postdoc + Sorcerer).
+/// board at step 5, where the played card may be an option itself.
 pub const DECLARATION_SLICES_KEY: &str = "__declarationSlices";
 
 /// How many selections each active declaration took off the flat list, read now (R90).
@@ -1585,7 +1584,7 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> (Vec<
 /// The cross of several lists, the first varying slowest, bounded by `cap` (R90), and whether the bound
 /// dropped any (#992). Over the bound it drops combinations, never a pick: the first kept offer every
 /// item of every list, one per place in the longest, then the rest in order, so the client, which plays
-/// only what `legal_actions` lists (CLAUDE.md rule 7), can make every pick (a fusion's, R81, R102).
+/// only what `legal_actions` lists (CLAUDE.md rule 7), can make every pick.
 fn cross_product<T: Clone>(lists: &[Vec<T>], cap: usize) -> (Vec<Vec<T>>, bool) {
     if lists.iter().any(Vec::is_empty) {
         return (Vec::new(), false);

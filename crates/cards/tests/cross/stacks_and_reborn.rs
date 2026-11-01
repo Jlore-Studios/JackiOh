@@ -175,6 +175,7 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
         g.expect_in_zone(&felinor.id, "graveyard");
 
         // B is not on the field, so it neither dies nor returns; A still acts for lane 1. R175 puts a
+        // body back on top of a pile only when it died on top of it.
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(top.id.clone()));
         assert!(!destroyed_ids(&g).contains(&buried.id));
     }
@@ -216,6 +217,7 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
     }
 }
 
+/// No Core unit watches another card's event
 /// from the field (#32 and #91 watch their own), which is why these cases need one.
 fn place_watcher(g: &mut Scenario, id: &str, lane: i32, on: GameEventType) -> CardInstance {
     let script = Script {
@@ -241,6 +243,7 @@ fn place_watcher(g: &mut Scenario, id: &str, lane: i32, on: GameEventType) -> Ca
 mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_it_3_2_r153 {
     use super::*;
 
+    // When the top of a Stack pile leaves, the card beneath starts acting in that same step with no
     // event of its own (§3.2), so the resolution loop must not offer it the very event that uncovered
     // it: a resume records no move for R212 to read, and `stays.noteUncovered` keeps one.
     #[test]
@@ -263,6 +266,8 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
 
         // #16 Hit Job destroys the Fiender, and the watcher resumes as its pile's top (§3.2). It was
         // dormant when the Fiender died, registering nothing (R153), and R212 answers an event "as the
+        // board stood when it happened": like a Reborn body, it comes back into play because of that
+        // death and does not see it.
         g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         let hits = hits_from(g.last_events(), &watcher.id);
@@ -286,7 +291,9 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
         g.play(&fiender.id, json!({ "zone": 1 }));
         assert_eq!(g.state().players.p2.hero.health, 20);
 
+        // Hit Job kills the Fiender inside its own resolution, so the watcher resumes before step 7's
         // `cardResolved`: it lay dormant as the play began and registered nothing then (R153), and R119
+        // counts it with the arrivals the play's `cardResolved` names, as it does a Reborn body.
         g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         let hits = hits_from(g.last_events(), &watcher.id);

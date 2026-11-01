@@ -11,17 +11,14 @@
 //! ```
 //!
 //! The `invite-clusters` watch and the rejection-rate alert produce the signal; these are the levers
-//! that act on it.
-//!
-//! A ban applies at once even mid-match: new requests and upgrades are refused through
+//! that act on it. A ban applies at once even mid-match: new requests and upgrades are refused through
 //! `assert_active`, while the running actor is untouched and the reaper owns the in-flight game (the
 //! account-deletion posture).
 //!
-//! Why this reads the whole environment through `load_env()` when it only needs two variables:
-//! the code hash revoked here has to be byte-identical to the one the running server computes
-//! when it redeems, and `load_env` plus the `{CODE_PEPPER}:code` derivation is the single
-//! contract that guarantees it (`cli/mint_code.rs`). Stdout is the audit trail: the CLI has no
-//! log pipeline, so the line it prints is the record of the lever.
+//! This reads the whole environment through `load_env()`: the code hash revoked here has to be
+//! byte-identical to the one the running server computes when it redeems, and `load_env` plus the
+//! `{CODE_PEPPER}:code` derivation is the single contract that guarantees it (`cli/mint_code.rs`).
+//! Stdout is the audit trail: the CLI has no log pipeline, so the line it prints is the record.
 //!
 //! Like `mint-code`, banning a never-activated account then unbanning it leaves it active without
 //! R111's launch collection (the trigger only sees `pending → active`): operators ban pending

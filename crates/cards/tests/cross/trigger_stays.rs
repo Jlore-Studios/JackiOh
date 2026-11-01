@@ -83,6 +83,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
         let fauci = g.unit_at(PlayerId::P1, 1);
         grant_reborn(&mut g, &fauci);
 
+        // A 1/6 with 5 damage attacks a 3/3: the strike back is lethal, and Reborn brings the same
         // instance straight back (§4.5 step 4) before the combat's damage events are dispatched.
         let prey = g.unit_at(PlayerId::P2, 1);
         g.attack(&fauci.id, &prey.id);
@@ -126,6 +127,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
 
         g.play(TWINSPELL, json!({}));
         // The check between the resolutions (§4.5) kills Fauci and Reborn returns it; the repeat then
+        // asks for a fresh target, and the first hit's damage event is dispatched after all of that.
         g.play(TRUE_STRIKE, json!({ "targets": pick::instance(&fauci) }));
         answer_repeat_with_hero(&mut g);
 
@@ -335,6 +337,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         s.play(&spell.id, json!({}));
 
         // The Spell cast Hinder (R70: a play, paid 0) while the Honeypot was still p2's, and only then did
+        // it take the Honeypot.
         let cast: Vec<GameEvent> = s
             .events()
             .iter()
@@ -411,6 +414,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         set_trap(&mut s, "edge-r8-window-lifter", PlayerId::P1, 1);
 
         // p1 ends the turn with 4 unspent mana. The window offers the ending player's traps first (R62),
+        // so the lifter takes the Bread and Butter before the Bread and Butter is offered the turn end.
         s.end_turn();
 
         assert_eq!(s.card(&bread.id).controller, PlayerId::P1);
@@ -481,6 +485,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             }),
             "the Honeypot's summon",
         );
+        // The only play costing 1 or less is Hinder's cast, which happened before the Honeypot was on
         // the field: a stay that did not see it, so it does not answer it and stays armed (R212, R99).
         assert_eq!(trap_fired_for(s.events(), &honeypot_id), 0);
         assert_eq!(
@@ -648,6 +653,7 @@ mod r174_a_queued_trigger_aimed_at_the_card_its_event_names_meets_that_card_s_st
             "p2": { "hand": [RENO], "library": [RENO] },
         }));
         // Two of p2's units answer p1's plays, in lane order (R68): the first destroys the played unit,
+        // the second gives it +5 attack.
         unit_fixture(
             &mut s,
             "edge-r10-slayer",
@@ -709,6 +715,8 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
     use super::*;
 
     // R174's row takes the event's stay for the card the event names alone: a card a queued trigger
+    // reads off the board as it resolves, such as a Reborn body an earlier trigger on the same event
+    // made, is on the stay it has then, so a buff by id reaches it as the same buff over the board does.
     const HIT_JOB: &str = "core-016";
 
     fn enemy_died(controller: PlayerId, event: &GameEvent) -> bool {
@@ -835,6 +843,8 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
 
         // The striker answered the death first (lane 1, R68) and killed the 1/1; the check after it
         // brought a Reborn body back (§4.5 step 4, R59). The rally, queued on the same death, reads
+        // p1's units as it resolves, the body among them, and each one is aimed at the stay it stands
+        // on now: the event named none of them.
         assert!(died(&s, &reborn));
         s.expect_in_zone(&reborn.id, "field");
         assert_eq!(

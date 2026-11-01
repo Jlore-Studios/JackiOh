@@ -5,12 +5,11 @@
 // it submits a `play`, never an `answer`. Both render the same picker with the same `data-prompt-kind` (§10.6
 // keeps `x`, `embiggen`, `zone`, `tribute` and `direction` for later sets). A targeting cost's discards
 // (Classic #89) are random at pay time (R682) and need no picker. A card option is drawn as the card in play
-// (faces.ts, SPEC §10.10). `data-prompt-source` ("engine" or "play") is for layout only (prompt.css). #1204: a
-// new prompt is a new `PromptModal` (its `key`), so a folded picker opens unfolded. #2646: in a choice of
-// DISCOVER_OPTION_LIMIT options or fewer, every option naming no card is a choice card (ChoiceCard.tsx), art,
-// label and what it does, no cost, stats, id, inspect overlay or sheet: route 2's `mode`, `ability`, `equip`,
-// `faceDown` and `plague`, route 1's `mode`, `answer` and `reward`. No rule is applied here: `min`, `max` and the
-// options come from the engine, from `PendingView` (route 1) and the `legalActions` candidates (`actions.ts`, route 2).
+// (faces.ts, SPEC §10.10). #1204: a new prompt is a new `PromptModal` (its `key`), so a folded picker opens
+// unfolded. #2646: in a choice of DISCOVER_OPTION_LIMIT options or fewer, every option naming no card is a
+// choice card (ChoiceCard.tsx), art, label and what it does, no cost, stats, id, inspect overlay or sheet.
+// No rule is applied here: `min`, `max` and the options come from the engine, from `PendingView` (the first)
+// and the `legalActions` candidates (`actions.ts`, the second).
 
 import {
   Fragment,
@@ -997,9 +996,9 @@ function BoardHint(props: { chrome: PromptKind }) {
 }
 
 /**
- * R689, R821000: "Place N Plague Counters" names one of every permanent on the field; a list of them covered
- * the board. The pick is a click on the highlighted card or zone (`answerPlaguePlacement`, Game.tsx), so the
- * panel is only the question: no Confirm (a click answers), no Cancel (an engine prompt must be answered).
+ * R689, R821000: "Place N Plague Counters" names one of every permanent on the field, so a list covered the
+ * board. The pick is a click on the highlighted card or zone (`answerPlaguePlacement`, Game.tsx), so the
+ * panel is only the question: no Confirm, and no Cancel (an engine prompt must be answered).
  */
 function BoardOnlyPrompt(props: {
   pending: Extract<PendingView, { forYou: true }>;
@@ -1600,8 +1599,8 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
 
 /**
  * R265, R266: the viewer has answered its mulligan and the opponent has not. The answer is sealed (the hand
- * changes once both are in), so the panel shows the hand as it is, each card stamped with what will happen
- * to it (`kept` is the view's record).
+ * changes once both are in), so the panel shows the hand as it is, each card stamped with what will happen to
+ * it (`kept` is the view's record).
  */
 function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
   useLocale();

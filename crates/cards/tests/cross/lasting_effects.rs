@@ -83,6 +83,7 @@ mod r209_twinspells_grant_ends_when_twinspell_leaves_the_field {
         g.play(TWINSPELL, json!({ "zone": 5 }));
         assert_eq!(echo_riders(&g, PlayerId::P1).len(), 1);
 
+        // Backrow ring, rotating right from p1's seat: p1's lane 5 would cross to p2's lane 5, so the
         // radiant face bounces Twinspell to its controller's hand costing 0 instead (§8 #52, R14, R747).
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
         g.expect_in_zone(&twin, "hand");
@@ -176,7 +177,9 @@ mod r209_twinspells_grant_follows_its_current_face {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
 
+        // Make it Radiant." (Snom Bunny Mind Control steals only a
         // Unit since patch v0.3.12.) Twinspell is p1's now, and Radiant on the field, where §5.2 has its
+        // text be the radiant one from then on: "Echo +2".
         g.activate(
             CHURCH,
             json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
@@ -226,6 +229,7 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         let cube = g.unit("p1", 1).expect("setup: p1's Cube");
         g.expect_in_zone(&eaten, "graveyard");
 
+        // Hit Job kills the Cube, whose Death summons two copies of the Unit it ate, Twinspell's text
         // and all, into p1's unit row (R41, R64). A summon fires no Cry (§6.2).
         g.play(
             HIT_JOB,
@@ -271,6 +275,7 @@ mod r209_twinspells_grant_is_the_permanents_however_it_came_to_stand_on_the_fiel
         assert_ne!(g.card(&well).def_id, MANA_WELL);
         assert!(echo_riders(&g, PlayerId::P2).is_empty());
 
+        // "The next Spell you play gains Echo +1" now stands on p1's side, and "you" is its controller
         // (§8 Conventions): p1's next Spell, Stockpile, resolves twice.
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);

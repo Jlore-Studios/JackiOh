@@ -9,6 +9,7 @@
 //! a fresh Field Spell into its caster's leftmost open backrow zone (R64), one with no zone left not
 //! summoned; summoned, so no Cry (R1). Radiant: each `radiant: true`. The ending is the Brains' own
 //! (R1843000): each votes at its controller's start of turn on its own condition, and three votes in one
+//! turn remove that player, a loss for them and a win for the opponent (R1843001).
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;

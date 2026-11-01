@@ -45,16 +45,13 @@ pub(crate) struct Trade {
 /// (`kill_worth`: a unit with Reborn unspent less the body it comes back as, §4.5 step 4, #1796), less
 /// what its own death removes when it dies too, with First Strike deciding who strikes first and no
 /// strike back at all on a Ranged attacker unless the target is Ranged too (R783000). A hit that kills
-/// nothing is worth a little per point dealt, so a second attacker can finish what the first one
-/// started. A Cleave attack also prices what its splash kills or unshields on the target's neighbours
-/// (R63): a killed neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the
-/// same share of the Divine Shield weight. A Trample attacker's hits add what they land beyond each
-/// struck unit's health on the target's hero, priced as a face hit (`reply_face_value`, §4.4 step 9),
-/// and a Lifesteal attacker's add what healing its own hero by all they deal is worth (`heal_worth`,
-/// step 8; #1820). `kills` says whether the strike kills the target itself, `splash_kills` whether the
-/// splash kills a neighbour; the move order reads all three (`candidates.rs`'s even trades, #1779,
-/// #1821). Its screen (#1796), 400 games of improve-dev against the parent (`633568b99`), read 196-202
-/// with 2 aborted, edge -0.015 (-0.041 to 0.011).
+/// nothing is worth a little per point dealt, so a second attacker can finish what the first started.
+/// A Cleave attack also prices what its splash kills or unshields on the neighbours (R63), at
+/// `AI_REPLY.cleave_share` of a killed unit's worth and of the Divine Shield weight. A Trample attacker's
+/// excess hits on the hero are priced as a face hit (`reply_face_value`, §4.4 step 9), and a Lifesteal
+/// attacker's add what healing its own hero is worth (`heal_worth`, step 8; #1820). `kills` and
+/// `splash_kills` say whether the strike kills the target or a neighbour; the move order reads all three
+/// (`candidates.rs`'s even trades, #1779, #1821).
 pub(crate) fn trade_value(
     state: &GameState,
     attacker: &CardInstance,
@@ -243,10 +240,9 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer: TS's
-/// `GameState | null | undefined`.
+/// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer.
 pub(crate) enum Known {
-    /// The counter refused a node (TS `null`).
+    /// The counter refused a node.
     Cut,
     /// No such play is worth making.
     Nothing,
@@ -355,11 +351,10 @@ fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionB
         && find_instance(state, instance_id).is_some_and(|card| subsystems::is_acting_on_field(state, card))
 }
 
-/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's
-/// own evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried,
-/// ordered by `aim_of` and in legal_actions order within each aim: `legal_actions` lists the
-/// activating side's own targets first, so the seat's hero would otherwise come last. R2564000: the
-/// root's activation probes try each unit's uses through it too.
+/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's own
+/// evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried, ordered by
+/// `aim_of`: `legal_actions` lists the activating side's own targets first, so the seat's hero would
+/// otherwise come last. R2564000: the root's activation probes try each unit's uses through it too.
 pub(crate) fn visible_activation(
     state: &GameState,
     seat: PlayerId,

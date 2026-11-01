@@ -43,11 +43,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: pool #31, #51, #82 with repeats allowed; radiant 2
-// base + 2 radiant). The pool, every set's KY cards (R380), is asserted twice: against §5.1's query
-// directly and through seeded play.
-// Also proved: R60 (generated cards may repeat), R4 (hand cap 10, extras burned), R74/§5.2 (a generated
-// Radiant card carries the instance flag), §5.1 (no tokens, never the generating card).
+// #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: radiant 2 base + 2 radiant). The pool, every set's KY
+// cards (R380), is asserted twice: against §5.1's query directly and through seeded play. Also proved: R60
+// (generated cards may repeat), R4 (hand cap 10, extras burned), R74/§5.2 (a generated Radiant card carries
+// the instance flag), §5.1 (no tokens, never the generating card).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -58,10 +57,8 @@ mod tests {
 
     /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62, Meditative #34
     /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
-    /// tribes) and Meditative+ #20 KY's Competition and #25 KY's Intuition — no token, never #57.
-    /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
-    /// #1187): M+ #20 and #25 join it (§8.1 #57); and for the Stinkyscape release (#1884): its #25
-    /// KY's Tricknology.
+    /// tribes), Meditative+ #20 KY's Competition and #25 KY's Intuition (§8.1 #57, #1187) and Stinkyscape's
+    /// #25 KY's Tricknology (#1884) — no token, never #57.
     const KY_POOL: [&str; 14] = [
         "core-031",
         "core-051",
@@ -112,10 +109,8 @@ mod tests {
             assert!(!ids.iter().any(|id| id == "meditativeplus-020-1"));
             assert!(!ids.iter().any(|id| id == "core-057"));
             // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
-            // Prime, Meditative+ #20.1 Lil' Kenny) are only reachable by naming the token pool, which
-            // this card never does. Re-pinned for v0.3.5: the Meditative set joins the pool; and for
-            // v0.3.15 (Meditative+ ships, #1187): M+ #20.1 joins the token pool; and for the Stinkyscape
-            // release (#1884): its #4.2 KY's Last Exam.
+            // Prime, Meditative+ #20.1 Lil' Kenny, Stinkyscape #4.2 KY's Last Exam, #1187, #1884) are only
+            // reachable by naming the token pool, which this card never does.
             assert!(!ids.iter().any(|id| id == "stinkyscape-004-2"));
             assert_eq!(
                 query_ids(json!({ "tags": ["KY", "Token"] })),

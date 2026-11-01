@@ -1,15 +1,15 @@
 /**
- * The deployed stack, in a real Chromium, with two real accounts. Every other spec drives a LOCAL
- * client against fixtures (ASSUMPTION A6), so none exercises what breaks in a deployment: Vercel
- * serving the bundle, Supabase issuing a token to a real password, Render verifying it, Postgres
- * behind Render. SKIPPED BY DEFAULT: behind `--env online=true`, never part of the M8 gate.
+ * The deployed stack, in a real Chromium, with two real accounts. Every other spec drives a LOCAL client
+ * against fixtures (ASSUMPTION A6), so none exercises what breaks in a deployment: Vercel serving the
+ * bundle, Supabase issuing a token to a real password, Render verifying it, Postgres behind Render.
+ * SKIPPED BY DEFAULT: behind `--env online=true`, never part of the M8 gate.
  *
  * Run it with:
  *   E2E_BASE_URL=https://jackioh.com pnpm exec cypress run --browser chrome \
  *     --spec cypress/e2e/99-online-smoke.cy.ts --env online=true,...
  */
 
-/** Cypress 16: `Cypress.env()` is gone; spec-visible values come from `expose`. */
+/** Spec-visible values come from Cypress's `expose`. */
 function exposed(key: string, fallback = ""): string {
   const value: unknown = Cypress.expose(key);
   return typeof value === "string" && value.length > 0 ? value : fallback;
@@ -227,9 +227,8 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * Both accounts in the browser, not just on the wire, one after the other since Cypress drives one
-   * browser. The host does not navigate on its own when its room is claimed, so player 1 visits
-   * /match/<id> directly.
+   * Both accounts in the browser, one after the other since Cypress drives one browser. The host does not
+   * navigate on its own when its room is claimed, so player 1 visits /match/<id> directly.
    */
   it("both accounts reach the real board in the browser", () => {
     let code = "";
@@ -331,9 +330,8 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * Only one side's HTTP response carries the match id, so `/play` waits on `/api/auth/me`'s
-   * `currentMatchId` (§9.5, cleared by every ending). Player 1 queues IN THE BROWSER; player 2 is
-   * paired from outside it, so nothing but the poll can move player 1.
+   * Only one side's HTTP response carries the match id, so `/play` waits on `/api/auth/me`'s `currentMatchId`
+   * (§9.5, cleared by every ending): player 1 queues IN THE BROWSER, player 2 is paired from outside it.
    */
   it("the player who waited is taken to the board with no id handed to them", () => {
     resetOnlineState();

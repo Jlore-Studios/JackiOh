@@ -25,6 +25,7 @@ struct Held {
     radiant: bool,
 }
 
+/// What the instance remembers under `scepter`, read as `query::recalled` reads it (the running
 /// ingredient's own key on a fused card, R102). The memory is JSON, so it is narrowed, never cast.
 fn held_spell(self_: Option<&CardInstance>, data: &IndexMap<String, Value>) -> Option<Held> {
     let held = self_?

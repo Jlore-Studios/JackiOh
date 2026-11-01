@@ -2,24 +2,21 @@
 //!
 //! Any step of an engine sequence can open a prompt (the play pipeline of §10.5, the attack window of
 //! §4.2 step 4, the Death hooks and Reborn returns of §4.5 steps 3-4, the end-of-turn hooks of §2.2, a
-//! card's effect list), and a prompt ends the action (§9.3), so a sequence that spans one must be
-//! resumable through `state.work`, never a local variable: it parks what it owes there and returns,
-//! and the §10.3 loop drains it after the answer. Owed items are plain data (a `Resume`), never
-//! closures (§9.3), so a paused state survives a JSON round trip and replays exactly (§10.1); a hook
-//! is a pure builder (CLAUDE.md rule 5), so re-entering it and skipping the effects that already ran
-//! continues the same sequence.
+//! card's effect list), and a prompt ends the action (§9.3). A sequence that spans one parks what it owes
+//! in `state.work`, never in a local variable, and the §10.3 loop drains it after the answer. Owed items
+//! are plain data (a `Resume`), never closures, so a paused state survives a JSON round trip and replays
+//! exactly (§10.1); a hook is a pure builder (CLAUDE.md rule 5), so re-entering it and skipping the effects
+//! that already ran continues the same sequence.
 //!
-//! R113's order is neither a queue nor a stack. A Cry paused inside play step 5 parks its tail (W1),
-//! then the pipeline parks steps 6-8 (W2): W1 runs first. W1 resumes and parks W3, still inside step
-//! 5, so W3 precedes W2. So `state.work_cursor`, where the running cascade parks next, advances with
-//! each park, and taking an item or entering a drain (the boundary between one action's cascade and
-//! the next) resets it to 0, so a pause during a resumption goes ahead of everything still owed.
+//! R113's order is neither a queue nor a stack: `state.work_cursor`, where the running cascade parks next,
+//! advances with each park and resets to 0 when an item is taken or a drain starts, so a pause during a
+//! resumption goes ahead of everything still owed (a Cry's tail W1 runs before play steps 6-8, W2, and W3,
+//! parked by W1 still inside step 5, precedes W2).
 //!
-//! R68, R59: work drains before the trigger queue moves (`triggers::settle`), as an interrupted
-//! sequence is the action still finishing. The state check is the caller's (R59: between whole
-//! effects and triggers, never between the hits of one), so this module never calls it.
-//!
-//! `run_work_item` dispatches on `resume.hook` (SURFACE §6.6, research A §2.7).
+//! R68, R59: work drains before the trigger queue moves (`triggers::settle`), as an interrupted sequence is
+//! the action still finishing. The state check is the caller's (R59: between whole effects and triggers,
+//! never between the hits of one), so this module never calls it. `run_work_item` dispatches on
+//! `resume.hook` (SURFACE §6.6, research A §2.7).
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};

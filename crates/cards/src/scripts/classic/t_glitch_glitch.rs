@@ -27,6 +27,7 @@ pub fn script() -> CardScripts {
 
 // T-glitch Glitch (SPEC §7, issue #170; R673–R679). BUILD M9's row: "hidden Spell token, cost 0, blank;
 // only R673's roll makes one, after a … in the System play, at n/10000 per generated card; always
+// playable on its owner's turn; resolves as one of four outcomes drawn by the match rng".
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

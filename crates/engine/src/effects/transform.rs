@@ -410,13 +410,13 @@ pub struct TransformRandomArgs {
 
 /// E24, Classic+ #73.1 Classic Golem (the Unit it attacks, R2285002): a §6.3 Transform into a definition
 /// drawn with `ctx.rng` from `query` (§5.1's one pool, never the running card or its ingredients, B4.1),
-/// narrowed to those that could take the card's place (R35) so the draw never lands on one the zone
-/// would refuse. Immutable refuses it (R23); a refusal or an empty pool draws nothing (R129).
-/// `readyToAttack` lifts the new field body's summoning sickness (R424).
+/// narrowed to those that could take the card's place (R35), so the draw never lands on a refusal.
+/// Immutable refuses it (R23); a refusal or an empty pool draws nothing (R129). `readyToAttack` lifts the
+/// new body's summoning sickness (R424).
 ///
 /// MD-B10, R921 (Meditative #32): `scope` replaces each card of the scope instead, and `same` draws one
-/// definition all of them could take, each replaced in its place (R31, R671; an Immutable hand card
-/// too, R35). Each replacement in a hand or a deck rolls for Glitch on its own (R673).
+/// definition all of them could take, each replaced in its place (R31, R671; an Immutable hand card too,
+/// R35). Each replacement in a hand or a deck rolls for Glitch on its own (R673).
 pub fn transform_random(args: TransformRandomArgs) -> Effect {
     Effect::new("transformRandom", move |ctx| {
         let olds: Vec<CardInstance> = match &args.scope {

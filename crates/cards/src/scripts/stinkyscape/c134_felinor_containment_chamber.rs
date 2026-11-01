@@ -7,6 +7,7 @@
 //! a `statsOverride` of its Attack and its maximum Health then — its current Health is 0 or less
 //! as it died — buffs included, into the leftmost open unit zone (R64), before its own copy fuses
 //! into the Dormant Starship (R1852000), which may then stack on lane 3 if the token took the last
+//! zone; the Radiant face doubles both and grants Divine Shield through `summon`'s `keywords`
 
 use jackioh_engine::prelude::*;
 
@@ -110,6 +111,7 @@ mod tests {
         #[test]
         fn r1860007_a_full_board_summons_none() {
             crate::register_all();
+            // The Chamber tops a pile on lane 1; when it dies the Vanilla under it resumes there
             // (§3.2), so no zone is open.
             let mut s = scenario(json!({
                 "p1": {

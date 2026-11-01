@@ -297,6 +297,7 @@ mod tests {
             let chalice = s.card(CHALICE).clone();
             let menace = in_hand(&s, P1, MENACE);
 
+            // The (2) Bringer resolves at a count of 1, and both its placements go on the Chalice: one
             // prompt names the single target for the whole effect (R689).
             s.play(BRINGER, json!({}));
             s.answer(json!(chalice.id));

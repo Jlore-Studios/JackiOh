@@ -43,6 +43,7 @@ fn rolls(seed: &str, cursor: u32, effect: &str) -> bool {
 
 /// Whether a #95 play's events show its roll casting #95 itself, the play's second `cardPlayed`. "Cast a
 /// random Call to Chaos" picks the edition from the pool of every set (R380) on the roll's own rng, so a
+/// cursor rolling the recast does not pin the edition (095's own `recast_of_core_cursor`).
 fn recasts_core(events: &[GameEvent]) -> bool {
     events
         .iter()
@@ -83,6 +84,7 @@ mod r4_a_card_a_full_hand_burns_keeps_its_cost_without_the_price_of_a_return_it_
 
         g.end_turn();
 
+        // "Return to hand with cost +1": the hand is full, so the card is burned back to the graveyard
         // (§2.4) and never returns, and the +1 was the price of that return.
         g.expect_in_zone(&equation.id, "graveyard");
         assert_eq!(g.card(&equation.id).cost_mod, 0);
@@ -157,6 +159,7 @@ mod r215_a_hand_card_that_reaches_a_graveyard_is_the_printed_card_again {
         let mut g = scenario(json!({
             "p1": {
                 // Zao Gao's discard is random (R354), so the hand it discards from is the Eater and one
+                // other card, and both go; Reminisce comes from the library afterwards.
                 "hand": [CORPSE_EATER, ZAO_GAO, STOCKPILE],
                 "field": [{ "def": POINTMASTER, "lane": 1 }],
                 "library": [REMINISCE, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
@@ -363,6 +366,8 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
         s.expect_in_zone(&cod.id, "graveyard");
 
         // p2's turn ends. §5.1: the Spell returns "at the end of that turn", and R155's cleanup clears
+        // the flag "at the end of that turn" — whichever reading, nothing of that return is left once
+        // the turn it was played on is over.
         s.end_turn();
         assert_eq!(s.state().active, P1);
         let after_its_turn = s.card(&cod.id).clone();
@@ -461,6 +466,7 @@ mod r766_r429_only_kys_math_equations_own_return_gives_back_a_price_its_climb {
     #[test]
     fn r429_r766_a_kys_math_equation_played_at_3_by_a_price_not_its_own_returns_at_2_31() {
         // The one exception is #31's climb, which its own returns give it: a price put on it any other
+        // way stays in the graveyard, so it comes back at its printed (1) plus (1).
         assert_eq!(
             returned_at_a_price_of_2(KY_MATH, json!({ "targets": at_p2() })),
             (1, 2)

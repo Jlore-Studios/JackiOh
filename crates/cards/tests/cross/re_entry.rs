@@ -249,6 +249,7 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
         jackioh_cards::register_all();
         // p1 holds Felinor Fiender (Stack) on a Felinor Token and an armed #85. p2 plays Right-house
         // defender, #85 fuses it onto the Fiender (R77: the Fiender instance survives with Reborn and
+        // Stack), and p2 destroys the fused card with Hit Job.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 10,
@@ -392,6 +393,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         // p1 steals the 7/7 into its own lane 1 (R15). Rotating left, p1's lane 1 would move to p2's
         // lane 1 — to the opponent — so radiant Silas bounces it "costing 0" to its CONTROLLER's hand
         // (R747), but that hand is full, so it is burned instead (§2.4, R4) into the graveyard of the
+        // hand's player, p1, whose card it became.
         g.play(MIND_CONTROL, json!({ "targets": pick::id(&seven) }));
         assert_eq!(
             g.unit(PlayerId::P1, 1).map(|card| card.id.clone()),
@@ -495,6 +497,7 @@ mod r77_r175_a_fuse_onto_a_token_summoned_x_x {
         g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
 
         // R77 unions the keywords: the base Bread Token prints none, the 7/7 prints Armor 7. The
+        // token's X belongs to the Bread Token's own radiant Armor, not to every Armor on the face.
         let fused = g.card(bread.id.as_str()).clone();
         assert_ne!(fused.def_id, BREAD);
         assert!(
@@ -528,6 +531,7 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
             (g, power)
         };
         // Transmogulate's pick is a random Legendary Field Spell of every set (R35, R380), and every card
+        // joining the pool moves it: search for a seed where it is Classic #7 InfiniScepter.
         let seed = seed_where("transmogulate-locked", |seed| {
             let (mut g, power) = setup(seed);
             g.play(MAGIC_JAMMED, json!({ "targets": pick::id(&power) }));
@@ -576,6 +580,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let fused = g.card(sorcerer.as_str()).clone();
         assert_ne!(fused.def_id, SORCERER);
         g.end_turn();
+        // p2's radiant Silas rotates right: the fused unit in lane 5 would cross, so it is bounced to
         // p2's hand costing 0 (§8 #52 radiant, R14).
         let silas = must(
             g.hand(PlayerId::P2)
@@ -590,6 +595,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.play(TIMMY, json!({ "zone": 1 }));
         let saintess = g.unit_at(PlayerId::P2, 1).id;
         // A Timmy that has been granted Reborn (Plastic Surgery's pool, R21), with no shield or Armor to
+        // hide whether a hit lands on its body.
         grant(&mut g, &saintess, vec![Keyword::Reborn]);
         let meal = json!({ "pick": "instance", "instanceId": saintess });
         g.play(fused.id.as_str(), json!({ "zone": 5, "targets": [meal, meal] }));
@@ -634,6 +640,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.play(fused.id.as_str(), json!({ "zone": 5, "targets": [meal, meal] }));
         g.expect_in_zone(timmy.as_str(), "graveyard");
         // Timmy's stay on the field ended with the sacrifice: the copy aimed at it fizzles (R174), rather
+        // than a copy being made of a card in a graveyard.
         let copies: Vec<GameEvent> = g.events()[before..]
             .iter()
             .filter(|event| matches!(event, GameEvent::Summoned { def_id, .. } if def_id == TIMMY))
@@ -651,6 +658,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "hand": [SILAS, VANILLA, VANILLA, VANILLA],
                 "backrow": [{ "def": MANA_WELL, "lane": 1 }, { "def": MANA_WELL, "lane": 2 }],
                 "library": LIBRARY,
+                // Silas costs (4): the fifth mana keeps a Vanilla playable, so the turn does not end by
                 // itself (R82).
                 "mana": 5,
             },
@@ -670,6 +678,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
             g.backrow(PlayerId::P1, 2).map(|card| card.id.clone()),
             "p1's backrow lane 2",
         );
+        // Turn 9, p1: Silas rotates right (from p1's seat: p1's backrow 1 -> 2, 2 -> 3; p2's Kpop 3 -> 2),
         // then p2's #85 fuses the played Silas onto the Kpop: the fused Cry runs Silas's part first.
         g.play(SILAS, json!({ "zone": 3, "modes": ["right"] }));
         let fused = g.card(kpop.as_str()).clone();
@@ -689,6 +698,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.expect_in_zone(fused.id.as_str(), "hand");
         until_active(&mut g, PlayerId::P1);
         until_active(&mut g, PlayerId::P2);
+        // Silas's part rotates right (from p2's seat p1's backrow
         // 3 -> 2), and lane 2 is held, so the prey is bounced to p1's hand (R14, R88); the Kpop part then
         // schedules the steal of the prey, which has already left the field. The Lock alone bounced it
         // until patch v0.3.10 (a rotation enters a Locked zone now, R831000), so the zone is held here
@@ -739,6 +749,7 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
         grant(&mut g, &timmy, vec![Keyword::Reborn]);
         // Radiant Craft a Card's three-ingredient card, made as the card makes it (R77): its Discovers
         // draw from every set's Units (R380), so the test builds the card directly rather than
+        // hunting a seed that offers these three.
         let card = craft(&mut g, PlayerId::P1, &[CUBE, SCARAB, SORCERER]);
         let saintess = must(
             g.unit(PlayerId::P1, 1).map(|card| card.id.clone()),
@@ -746,6 +757,7 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
         );
         let aim = json!({ "pick": "instance", "instanceId": saintess });
 
+        // The Cube's part eats the Timmy and it is straight back through Reborn, a new arrival
         // (R78, R83); the Scarab's part then asks, which ends the action with the Sorcerer's part owed.
         g.play(card.id.as_str(), json!({ "zone": 2, "targets": [aim, aim] }));
         assert_eq!(
@@ -781,6 +793,8 @@ const GARY: &str = "core-004";
 const GLOWY_JELLY_BEAN: &str = "core-026";
 
 /// §8 #99 Craft a Card's result, made the way the card makes it (R77): the definitions go into
+/// `subsystems.fuse` as ingredients that were never cards, and the result is a fresh, non-Radiant
+/// hand card costing 0.
 fn craft(g: &mut Scenario, player: PlayerId, def_ids: &[&str]) -> CardInstance {
     let mut events: Vec<GameEvent> = vec![];
     let mut rng = Rng::new(&g.state().seed, g.state().rng_cursor);
@@ -820,12 +834,15 @@ mod r174_r78_a_later_part_of_a_cry_acting_on_the_card_itself_once_an_earlier_par
         g.play(GLOWY_JELLY_BEAN, json!({ "targets": pick::id(&card) }));
         assert!(g.card(card.as_str()).radiant);
 
+        // Played into lane 5 and rotated right: the card itself would cross to p2's side, so radiant
         // Silas bounces it to p1's hand costing 0 (R14). It has left the field, and R78 has reset it.
         g.play(card.as_str(), json!({ "zone": 5, "modes": ["right"] }));
         g.expect_in_zone(card.as_str(), "hand");
 
+        // It is aimed at the card on the field, whose stay has
         // ended (R174: "a fused card's part aimed at a card an earlier part has taken off the field
         // fizzles"), so the coins buff nothing — least of all a card in a hand, which R78 has just made
+        // the printed card again.
         assert_eq!(g.card(card.as_str()).buffs, AttackHealth { attack: 0, health: 0 });
     }
 }
@@ -901,6 +918,7 @@ mod r102_r212_a_card_a_fuse_kept_is_the_same_card_on_the_same_stay {
         let kept = g.card(fauci.as_str()).clone();
         assert_eq!(kept.zone.z(), ZoneName::Field);
         assert_eq!(kept.damage, 4);
+        // "Whenever this takes damage, +1 Plague Counter": the hit happened to this card on this stay
         // (R212), and the Fuse neither moved it nor dropped Fauci's text, so the token lands.
         assert_eq!(kept.counters.plague.unwrap_or(0), 1);
     }
@@ -915,6 +933,7 @@ const NETHER: &str = "core-088";
 const UNLICENSED: &str = "core-085";
 
 /// Craft a Card's and #85's fusions are built directly (R77): a fresh sink over the live state,
+/// whose rng cursor is not written back.
 fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     let mut events: Vec<GameEvent> = vec![];
     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
@@ -963,6 +982,7 @@ mod r174_r41_a_cubes_meal_is_read_on_the_stay_the_play_chose {
             "p1's Right-house defender",
         );
 
+        // The defender is p1's only other permanent, so each Cube's declaration takes it: this is the
         // one play legalActions offers for the crafted card (R81, R90).
         let picks = json!([
             { "pick": "instance", "instanceId": defender },
@@ -1063,6 +1083,8 @@ mod c4_5_step_4_r89_the_reborn_bodies_of_one_check_return_together {
     fn c4_5_a_felinor_fiender_and_the_felinor_feeding_it_that_come_back_through_reborn_in_one_check_leave_the_fiender_at_the_same_health_whichever_lane_is_first_r89_r116()
      {
         jackioh_cards::register_all();
+        // Fiender first:
+        // it is read with Mrow still in the graveyard, 8 max and 1 left, and Mrow's return then lifts it
         // to 3. §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
         assert_eq!(fiender_after_reborn(1, 2), fiender_after_reborn(2, 1));
     }
@@ -1116,6 +1138,7 @@ mod c3_2_r13_r174_a_card_the_plays_own_stack_buried_is_not_on_the_field_for_its_
             Some(crafted.id.clone())
         );
         s.expect_in_zone(vanilla.id.as_str(), "field");
+        // "Choose a Human unit on the field; summon a Vanilla copy": the chosen unit is no longer on the
         // field, so the copy fizzles, as #68's damage does on a buried pick.
         let rest: Vec<Option<String>> = (2..=5)
             .map(|lane| s.unit(PlayerId::P1, lane).map(|card| card.def_id.clone()))
@@ -1132,6 +1155,7 @@ mod c3_2_r13_r174_a_card_the_plays_own_stack_buried_is_not_on_the_field_for_its_
             s.unit(PlayerId::P1, 1).map(|card| card.id.clone()),
             Some(crafted.id.clone())
         );
+        // The meal is dormant under the crafted card when the Cry resolves, so there is nothing on the
         // field to tribute and the Cry fizzles (R41).
         s.expect_in_zone(vanilla.id.as_str(), "field");
         assert!(!s.events().iter().any(
@@ -1198,6 +1222,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
         );
 
         // The kept Cube's text copies its meal twice ("each Death copies its own", R102). The played
+        // Cube's text ate a Midrange Menace on another instance, never a Timmy.
         assert_eq!(count(&unit_row(&s), TIMMY), 2);
     }
 
@@ -1226,6 +1251,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
         assert!(before.contains_key("eaten"));
 
         // p2's Cube, after its Cry, is fused onto p1's Cube by #85 (R61): the kept instance's texts are
+        // one ingredient of the new fusion now, and the meal goes with them to that ingredient's path.
         s.end_turn();
         let menace = must(
             s.unit(PlayerId::P2, 1).map(|card| card.id.clone()),
@@ -1317,6 +1343,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
         );
 
         // The kept card "still reads what it remembered before" (R102): its two Cubes copy a Timmy twice
+        // and a Mr.
         let row = unit_row(&s);
         assert_eq!(count(&row, TIMMY), 2);
         assert_eq!(count(&row, MR_VANILLA), 2);

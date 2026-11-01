@@ -3,9 +3,8 @@
 // any other, and a cut decision marks nothing: not the game's save, not the claim's answer.
 //
 // `@jackioh/ai` is mocked with a `decide` that is the real search until a test says its next decisions
-// were cut short by the clock (`stoppedBy: "clock"`), and that records the deadlines it was asked with.
-// The real search runs without its deadline: the fake clock is not `Date.now()`, which the engine's
-// deadline reads.
+// were cut short by the clock (`stoppedBy: "clock"`). The real search runs without its deadline: the
+// fake clock is not `Date.now()`, which the engine's deadline reads.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

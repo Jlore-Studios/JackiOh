@@ -144,12 +144,11 @@ fn insert_error(error: StoreError) -> WriteError {
     }
 }
 
-/// The one write, retried on the collision below. Everything it touches is inside one
-/// transaction, so a mid-write failure leaves no half-ended match: either the row, both ratings,
-/// both in-match flags and the match's own `finished` state all land, or none of them do. #2213: the
-/// match and its log are read and folded once before the transaction, so no fold runs under the
-/// season or economy locks, and a retry on a duplicate reuses that fold. It answers the fold with the
-/// write, for the game record to read.
+/// The one write, retried on the collision below. Everything it touches is inside one transaction, so
+/// a mid-write failure leaves no half-ended match: the row, both ratings, both in-match flags and the
+/// match's own `finished` state all land, or none do. #2213: the match and its log are read and folded
+/// once before the transaction, so no fold runs under the season or economy locks, and a retry reuses
+/// that fold. It answers the fold with the write, for the game record to read.
 async fn write_result(
     app: &App,
     input: &RecordResultInput,
@@ -313,14 +312,13 @@ async fn write_once(
     // ([[R1502000]]: `game_mode_of`), in this same transaction, so a payout failure rolls the row
     // back with it. A game of a Conquest series pays as its own result, though the series moves the
     // rating only once (R262). Deliberately not gated on `rating_policy`: a reaper ceiling draw is
-    // unrated yet still pays ([[R1302002]]). A missing match row, a voided match (that path never
-    // reaches here) and a bot's side ([[R1454]]) pay nothing. The server ran the match, so it
-    // counts each seat's actions from its own log, the moves that seat took and not the server's
-    // own rows ([[R1302004]]); the client reports nothing. Nothing is paid while `ECONOMY_LIVE` is
-    // off (§14.12, [[R1302006]]): the economy is built behind it, and a ledger row is never
-    // deleted. The same hook moves each seat's quests (§14.9, [[R1304001]]) by what the game did:
-    // its plays and fired Traps, read off the log by the engine's fold (`quests_game`), and its
-    // attacks, counted from the log. What it paid each person is answered to the actor (#1657).
+    // unrated yet still pays ([[R1302002]]). A missing match row, a voided match and a bot's side
+    // ([[R1454]]) pay nothing. The server counts each seat's actions from its own log, the moves that
+    // seat took and not the server's own rows ([[R1302004]]). Nothing is paid while `ECONOMY_LIVE` is
+    // off (§14.12, [[R1302006]]), and a ledger row is never deleted. The same hook moves each seat's
+    // quests (§14.9, [[R1304001]]) by what the game did: its plays and fired Traps (the engine's fold,
+    // `quests_game`) and its attacks, counted from the log. What it paid each person is answered to the
+    // actor (#1657).
     let mut economy = PerPlayer::new(None, None);
     if app.economy_live
         && let Some(mode) = match_row
@@ -468,12 +466,11 @@ async fn write_once(
     })
 }
 
-/// §14.9: the finished game a ladder result's quests read (`economy::quests::tally_seat`): the
-/// match's `(seed, decks, log)` folded by the engine's `summarize_game`, off the runtime under the
-/// catalog the match started on (#1035, R767000). It is the fold `read_finished` made before the
-/// transaction (#2213), the one the game record reads (`game_records.rs`). `None`, logged, when the
-/// log cannot be read or reaches no result: the quests then count the log's attacks alone, and the
-/// result is written all the same.
+/// §14.9: the finished game a ladder result's quests read (`economy::quests::tally_seat`): the match's
+/// `(seed, decks, log)` folded by the engine's `summarize_game`, off the runtime under the catalog the
+/// match started on (#1035, R767000). It is the fold `read_finished` made before the transaction
+/// (#2213), the one the game record reads (`game_records.rs`). `None`, logged, when the log cannot be
+/// read or reaches no result: the quests then count the log's attacks alone, and the result is written.
 fn quests_game<'a>(
     match_id: &str,
     folded: &'a Result<Folded, String>,
@@ -592,8 +589,7 @@ pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool
 ///
 /// A voided game of a Conquest series is treated as a game that never started: the series stays
 /// `playing` on the same game, which is started again at once, with the same seats, decks and seed
-/// (`resume_series`), as `series.rs` does for a game a restart interrupted. Nothing is recorded in the
-/// series, so the score and both players' locked decks are what they were.
+/// (`resume_series`), as `series.rs` does for a game a restart interrupted.
 pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), ApiError> {
     let mut tx = app.db.begin(None).await.map_err(failure)?;
     let series = tx.series_by_match(&input.match_id).await.map_err(failure)?;
@@ -778,7 +774,7 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
 /// past its `ceiling_at` (a room nobody joined, a claimed room whose match never started, a queue
 /// pairing whose start and cleanup both failed), freeing its room code and both players. The grace
 /// outlasts any start in flight. A sweep that deleted rows holds the seat ledger to the record at once
-/// (R1523000). Answers how many rows it deleted.
+/// (R1523000).
 pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
     let before = now_ms() - OPEN_MATCH_REAP_GRACE_MS;
     let mut tx = app.db.begin(None).await.map_err(failure)?;

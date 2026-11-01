@@ -104,8 +104,10 @@ mod r90_r102_a_fused_cards_choices_are_split_as_the_play_declared_them {
     #[test]
     fn r90_r102_a_crafted_postdoc_sorcerer_played_with_no_human_on_the_field_deals_the_sorcerers_4_to_its_target()
      {
+        // Step 1 validates the play against the board with the crafted card in hand: no Human unit is on
         // the field, so the Postdoc's declaration takes nothing (R90) and the one target is the
         // Sorcerer's. The crafted card is a Human (R102 unions the tags), and by step 5 it stands on the
+        // field itself — but the play's choices were already read declaration by declaration.
         let mut s = scenario(json!({
             "p1": { "hand": [PREJUDICED_POSTDOC, TWISTED_SORCERER, RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [MIDRANGE_MENACE] },
@@ -286,6 +288,7 @@ mod r77_8_68_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
 
         // Reno's part sets the hero to 30 (§8 #53), and then the Sorcerer's part resolves: "8 if your
         // hero is below 10", with the threshold "read at resolution" (§8 #68's Engine cell). The hero is
+        // at 30 by then, so the enemy hero takes 4.
         g.play(
             &card.id,
             json!({ "zone": 1, "targets": [{ "pick": "hero", "player": "p2" }] }),
@@ -335,7 +338,9 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         assert_ne!(fused.def_id, KPOP);
         assert!(g.unit(P2, 1).is_none());
         assert!(printed_kinds(&g, &fused.def_id).contains(&KeywordKind::DivineShield));
+        // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
         // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
+        // printed shield does after a granted one was spent (`radiant.gainPrintedShield`).
         assert!(kinds(&g, &kpop).contains(&KeywordKind::DivineShield));
     }
 
@@ -381,6 +386,7 @@ const HEROIC_POWER: &str = "core-098";
 const RAPID: &str = "core-010";
 
 /// p2 plays its own 4-mana 7/7 into p1's armed #85, which fuses it onto p1's only Unit. `target` is a
+/// def id (`json!(SEVEN_SEVEN)`) or a field entry without its lane (`radiant_duelist()`).
 fn fuse_seven_seven_onto(target: Value) -> (Scenario, CardInstance) {
     let entry = match target {
         Value::String(def) => json!({ "def": def, "lane": 1 }),
@@ -418,11 +424,13 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     #[test]
     fn r102_r77_a_fuse_of_two_armor_7_units_prints_armor_14_as_armor_7_and_armor_1_print_armor_8_6_1_armor_stacks()
      {
+        // Two different Armors already add up on the fused face: the kept Duelist is Radiant, so the
         // fused card runs its Radiant face, the two Radiant faces summed (R77) — 8 + 14 attack.
         let (duelist_g, duelist_kept) = fuse_seven_seven_onto(radiant_duelist());
         assert_eq!(duelist_g.stats(&duelist_kept.id).attack, 22);
         assert_eq!(duelist_g.stats(&duelist_kept.id).armor, 8);
 
+        // Two equal ones add up the same way: each ingredient prints "Armor 7", and Armor stacks from
         // every source (§6.1, §10.4), while the stats beside it sum to 14/14 (R77).
         let (twin_g, twin_kept) = fuse_seven_seven_onto(json!(SEVEN_SEVEN));
         assert_eq!(twin_g.stats(&twin_kept.id).attack, 14);
@@ -433,7 +441,9 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     #[test]
     fn r102_r77_a_masochism_mask_fused_onto_a_masochism_mask_applies_each_start_of_turn_pick_once_not_once_per_ingredient_8_65()
      {
+        // p2 plays a Masochism Mask; p1's Unlicensed Experimentation fuses it onto p1's own Mask, the
         // only Field Spell p1 controls (R61, R77). The fused card carries both Masks' text: "Start of
+        // turn: choose one …" twice, so p1 is asked twice and each answer is one pick.
         let mut s = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-card-mask-mask",
@@ -596,6 +606,7 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
             },
         }));
         // The power the Heroic Power rolled in hand (R43): "deal 2 damage to each opposing hero", which
+        // asks nothing.
         let power = must(
             g.state()
                 .players
@@ -620,6 +631,7 @@ mod r43_r151_r77_a_heroic_powers_text_fused_onto_another_permanent_has_a_power {
 
         // R43: each power is an Activate of the card's text (R752), and "one created later rolls when it
         // is created"; R151 has a Heroic Power roll as it arrives anywhere a card can be looked at, so no
+        // copy of the text is left "carrying no power … for ever".
         assert!(subsystems::power_of(&fused).is_some());
         g.end_turn();
         assert_eq!(g.state().active, P2);
@@ -655,8 +667,10 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     #[test]
     fn r102_r124_a_going_long_fused_onto_a_going_long_gives_its_hero_armor_4_as_two_going_longs_standing_apart_do()
      {
+        // p2 plays Going Long for 2; p1's Unlicensed Experimentation fuses it onto p1's own Going Long,
         // the only Field Spell p1 controls (R61, R77). The fused card carries both texts, "Your hero has
         // Armor 2" twice: hero Armor from several sources adds up (R124), and a static flag that is an
+        // amount of what the text does adds up across a Fuse, as a Twinspell's Echo grant does.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -700,6 +714,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
 
     #[test]
     fn r102_r65_a_suppressive_aura_paid_4_fused_onto_a_mana_well_keeps_its_2_2_6_3_embiggen() {
+        // The fused cost already reads that ingredient at
         // the price it was played for (R77: the sum of the printed costs per R65), and its text is the
         // same ingredient's, which §6.3 Embiggen has read the stored choice, so the aura stays −2/−2.
         let mut g = scenario(json!({
@@ -728,7 +743,9 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     #[test]
     fn r102_a_radiant_spikey_pillow_fused_with_another_card_still_spares_every_spikey_pillow_its_aura_names_7_8_65_1()
      {
+        // p1's radiant Spikey Pillow prints "Aura: your non-Spikey-Pillow units have −2 attack"; p2's
         // Tempo Timmy is fused onto it by p1's Unlicensed Experimentation (R61, R77), and the fused card
+        // keeps that aura in full.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -776,6 +793,7 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
         }));
         let kept = backrow_at(&g, P1, 1);
         // Something the kept card remembers from before the Fuse, which R77 keeps where it is: no text
+        // of the card wrote it through `remember`, so it is none of what moves with the card's texts.
         g.card_mut(&kept.id)
             .memory
             .insert("r77-before".to_string(), json!("kept"));
@@ -812,6 +830,7 @@ mod r77_r102_a_fuse_leaves_the_kept_cards_memory_as_it_was_but_for_the_prices_it
 
 /// R2271001 (D-5 of #1884's audit): a copier runs the text it copied, so the cost of targeting a copy
 /// of a fused card is the fused card's, the stricter of its ingredients' (R102): a Tnack Trav that
+/// copied Nature Titan + Paul Allen's Ghost asks the Ghost's discards, as the fusion itself does.
 mod r2271001_a_copy_of_a_fused_card_takes_its_stricter_targeting_cost {
     use super::*;
 
@@ -859,6 +878,9 @@ mod r2271001_a_copy_of_a_fused_card_takes_its_stricter_targeting_cost {
 }
 
 /// R1850000: a fused copier runs the text it copied, so the cost of targeting it is its copy's: a
+/// Paul Allen's Ghost + Tnack Trav that copied Nature Titan asks no discards, where one that copied
+/// nothing asks the Ghost's (fuzz seed 5285 of the Stinkyscape release, which panicked reading the
+/// Ghost's number off the copied text).
 mod r1850000_a_fused_copier_s_targeting_cost_is_its_copy_s {
     use super::*;
 
@@ -936,6 +958,7 @@ mod r2226000_a_traps_text_fused_into_a_unit_never_fires_from_its_unit_zone {
 
         // The Wormhole's text stands in a unit zone on a card that is no trap: R1020's rule holds for any
         // Fuse, so the Book p2 aims at its own Unit, which the Wormhole's condition admits (R2271000),
+        // resolves, and p2's 4/4 is 9/9.
         assert!(g.state().pending.is_none());
         assert!(
             !g.events()

@@ -245,6 +245,7 @@ mod tests {
             let rod = s.backrow(P1, 2).expect("the Rod");
             s.play(VANILLA, json!({ "zone": 2, "row": "backrow", "equip": true }));
             assert_eq!(s.unit_at(P1, 2).id, rod.id);
+            // The kept Rod is Radiant, so the fusion runs its Radiant face: no stats of its own and the
             // Vanilla's Radiant 12/12 (R77, R1086); it animated with them, Indestructible.
             s.expect_stats(&rod, json!({ "attack": 12, "health": 12 }));
             assert!(has_keyword(&s.stats(&rod).keywords, KeywordKind::Indestructible));

@@ -1,15 +1,13 @@
 // Issue #219: the emote picker, the Mute emotes menu and a voice line's speech bubble, measured in a
 // real browser (jsdom has none; ui.test.tsx reads the stylesheet's text instead). A click on a portrait
 // hangs its menu off the portrait, and a hold opens the hero's inspect view with the same menu in it
-// (R1449, R1330), measured with the portraits' vivid layers (R1332). The view is opened here by a
-// right-click, the hold's mouse twin, since a spec waits on no clock.
+// (R1449, R1330), measured with the portraits' vivid layers (R1332). A right-click opens that view, the
+// hold's mouse twin, since a spec waits on no clock.
 //
-// The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest
-// container the board is given, with the routes' own `useEmotes` (no audio engine). Both seats wear
-// the default portrait, vanilla ("Well played. Plainly."), and the picker holds the default hand
-// (R1343): three voice lines, Well Played among them, and five emoji.
-// Every measurement is taken inside a `should` callback so it is retried until the layout has
-// settled after `cy.viewport()`, and until the bubble's pop-in has finished.
+// The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest container
+// the board is given, with the routes' own `useEmotes` (no audio engine). Both seats wear the default
+// portrait and the picker holds the default hand (R1343). Every measurement is taken inside a `should`
+// callback so it is retried until the layout has settled after `cy.viewport()`, and the bubble has popped in.
 
 import { StrictMode, useEffect, type ReactElement } from "react";
 
@@ -127,9 +125,8 @@ function opponentEmotes(emote: Parameters<EmotesApi["receive"]>[1]): void {
 }
 
 /**
- * #257: nothing is drawn over `element` and nothing above it fades it, asked at nine points on the
- * screen. A show is blind to the pointer, so it is made hittable first, which changes what is hit and
- * nothing about what is drawn.
+ * #257: nothing is drawn over `element` and nothing above it fades it, asked at nine points on the screen. A show
+ * is blind to the pointer, so it is made hittable first, which changes what is hit, not what is drawn.
  */
 function expectDrawnOnTop(element: HTMLElement, what: string): void {
   element.style.pointerEvents = "auto";

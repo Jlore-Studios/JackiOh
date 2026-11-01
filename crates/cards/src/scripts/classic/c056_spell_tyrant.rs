@@ -66,6 +66,7 @@ pub fn script() -> CardScripts {
 
 // C #56 Spell Tyrant, SPEC §8.6 row 56: the Cry casts up to 3 Spells (`spells`, R386) from your
 // graveyard, free, counted as played, your choices (R70), each exiled after it resolves. Radiant: every
+// Spell there as the Cry begins, oldest first, no choice; a Spell a cast puts in the graveyard is not cast.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -291,6 +292,7 @@ mod tests {
             fn a_cast_it_exiles_never_goes_to_the_graveyard_c_60_pile_ons_return_to_the_deck_does_not_apply() {
                 crate::register_all();
                 // A full deck turns Pile On's return away (R80), which is how it reaches the graveyard to start
+                // with; the cast's Recruit then makes room, so only the exile keeps it out of the deck.
                 let mut full = vec![VANILLA];
                 full.extend((0..LIBRARY_CAP - 1).map(|_| FILLER));
                 let mut s = scenario(json!({ "p1": { "hand": [TYRANT, FILLER], "graveyard": [PILE_ON], "library": full }, "p2": { "hand": [FILLER] } }));

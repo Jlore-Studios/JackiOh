@@ -94,6 +94,7 @@ mod tests {
         #[test]
         fn an_attack_on_your_hero_gives_nothing() {
             // A Flying Taunt Unit in Attack Position binds only Flying and Ranged attackers (§6.1
+            // Flying), so the Vanilla may go past it to the hero.
             let mut s = board(false, json!([MENACE]), json!([VANILLA]));
             let menace = s.unit_at(P1, 2);
             crate::give_flying(&mut s, &menace.id);

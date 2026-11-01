@@ -28,6 +28,8 @@ struct Outcome {
     tokens: i32,
 }
 
+/// The chosen permanent if it is still on the field, and whether the steal branch holds for it: an
+/// enemy permanent with at least its cost in Plague Counters — or one this run's steal has just taken,
 /// which the draw half reads as the steal branch too (R136: this script's own `controlChanged`).
 fn outcome(ctx: &EffectContext) -> Option<Outcome> {
     let card = instance_of(ctx, &TargetSpec::Chosen { index: None })?;
@@ -102,6 +104,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: through v0.4.4b its draws per counter were printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
 pub fn script_v0_4_4b() -> CardScripts {
     outbreak(false)
 }

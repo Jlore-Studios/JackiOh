@@ -126,6 +126,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: v0.4.12b and every version before it made Shadowstep's hand card from only its definition
+/// and Radiant flag; `KEPT_SCRIPTS` folds those replays under that script.
 pub fn script_v0_4_12b() -> CardScripts {
     scripts(false)
 }
@@ -312,6 +313,7 @@ mod tests {
         #[test]
         fn your_unit_the_opponent_controls_is_theirs_while_it_is_on_the_field_its_death_leaves_it_set() {
             // "Your Units" on the field are the ones you control (§3.2, R12): a Menace of yours they stole
+            // dies under their control, so it is not one of your Units dying.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -541,6 +543,7 @@ mod tests {
     }
 
     /// R1081000: a Unit of yours standing in the backrow that would die is one of your Units in the
+    /// would-die window: the Radiant face flickers it where it stands.
     #[test]
     fn r1081000_radiant_flickers_your_unit_standing_in_the_backrow_where_it_stands() {
         let mut s = wipe(true, json!([VANILLA]), json!({}));

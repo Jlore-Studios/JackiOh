@@ -86,6 +86,7 @@ mod section_4_2_step_4_the_window_after_a_cancel {
      {
         jackioh_cards::register_all();
         // p2 has nothing to do on turn 10, so R82 ends it inside the first My Pawn's AI turn and p1's
+        // turn 11 begins.
         let mut s = scenario(json!({
             "seed": "hunt-cw2-two-pawns-next",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
@@ -150,6 +151,8 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
         jackioh_cards::register_all();
         // My Pawn "fires … then goes to the graveyard" (§5.1), and its effect is the rest of p1's turn,
         // which ends at p1's cleanup (R152). So by p2's start of turn it is in p2's graveyard, and p2's
+        // Gravedigger ("Start of turn: add a random card from your GY to your hand") finds it there — it
+        // is the only card in that graveyard.
         let mut g = scenario(json!({
             "seed": "pawn-gravedigger",
             "p1": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": [RENO, RENO] },
@@ -188,6 +191,7 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
             },
         }));
         // A lethal attack: My Pawn cancels it and hands the rest of p1's turn to the AI (R44), which
+        // ends it, so p2's turn starts inside this one action.
         s.attack(SORCERER, "hero");
         let ended = s
             .last_events()
@@ -262,6 +266,7 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
     fn r117_r44_r113_a_card_the_ai_played_resolves_its_cry_on_that_turn_after_the_other_players_trap_asked_about_the_play()
      {
         jackioh_cards::register_all();
+        // p1's Tempo Timmy swings for lethal, so p2's My Pawn cancels it and hands the rest of p1's turn
         // to the AI (R44). The AI plays Jewelosco Scarab, and p2's trap asks p2 about that play at
         // §10.5 step 4, before the Scarab's Cry (Discover a 2-cost card).
         let mut s = scenario(json!({
@@ -292,6 +297,7 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
         // §10.3: the trap resolves to completion, and then the play it interrupted goes on to step 5
         // (§10.5) before anything owed behind it: the rest of the AI turn is the enclosing sequence,
         // and waits for the play (R113, R117). So the Scarab's Discover opens on the turn the Scarab
+        // was played, before that turn ends.
         let events = s.last_events();
         let discover = find_index(events, |event| {
             matches!(
@@ -372,6 +378,8 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
         s.expect_in_zone(&dying, "graveyard");
 
         // §8 #96: "an AI plays the rest of their turn with random legal actions", and §10.7 and R44 have
+        // it answer prompts from `legalActions` like any other action, while p1 is locked out until the
+        // end of the turn.
         let held = s.state().pending.clone();
         let locked_out_holds_it =
             held.as_ref().is_some_and(|held| held.player_id == PlayerId::P1) && s.state().players.p1.ai_turn;
@@ -422,6 +430,8 @@ mod r152_the_ai_turns_lockout_ends_with_the_turn_it_was_set_for {
         assert_eq!(s.state().active, PlayerId::P1);
         assert!(s.state().pending.is_none());
         // R152: the lockout ended at the cleanup of the turn My Pawn took. The fused trap's second My
+        // Pawn half ran only after that turn was over and set the lockout again on p2, for p1's turn —
+        // a turn no My Pawn handed to the AI.
         assert!(!s.state().players.p2.ai_turn);
         assert!(!s.state().players.p1.ai_turn);
     }
@@ -436,6 +446,7 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
     fn r212_r44_a_corpse_eater_drawn_during_my_pawns_ai_turn_does_not_feed_on_a_death_a_trap_dealt_earlier_in_the_same_window()
      {
         jackioh_cards::register_all();
+        // Vanilla, then My Pawn cancels
         // the swing and hands the rest of p1's turn to the AI (R44), which ends it, so p2 draws Corpse Eater
         // inside this action. The loop hands the window's death to the triggers only after the AI turn
         // (§10.3), but the Eater reached the hand after that death, and R212 says it must not feed on it.

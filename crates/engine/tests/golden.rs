@@ -227,11 +227,10 @@ mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
     }
 }
 
-/// R1846003, R2173000: the card metrics stay the build's under a fold, and a game that plays neither
-/// reader (Stinkyscape #109 xxFreshJack and #111 Shockwave447, the only cards that ask for a BUSTED or
-/// complicated pool, R1846001) folds to one hash whatever the lists hold: every card in both, or none,
-/// on this thread's override of the compiled metrics. The two committed logs deal no reader and make
-/// none.
+/// R1846003, R2173000: the card metrics stay the build's under a fold, and a game that plays neither reader
+/// (Stinkyscape #109, #111, the only cards that ask for a BUSTED or complicated pool, R1846001) folds to one
+/// hash whatever the lists hold: every card in both, or none, on this thread's override of the compiled
+/// metrics. The two committed logs deal no reader and make none.
 mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use super::*;
     use jackioh_engine::testkit::golden::hashed_state_text;

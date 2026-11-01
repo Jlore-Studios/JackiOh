@@ -7,6 +7,7 @@
 //! the host taking its Start of turn line and staying no piece (R1086, R1852001). Start of turn (R62):
 //! `gain_resources` of one random Resource into its controller's hand (R1840000, R1840002's roll), a
 //! ninth sold at once (R1840001); the first gain opens the Marketplace (R1853000). Radiant: a Radiant
+//! Resource.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;

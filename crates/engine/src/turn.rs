@@ -42,17 +42,14 @@ fn run_resume_for(sink: &mut EngineSink, resume: &Resume, controller: PlayerId) 
 /// The creation mark at which every entry is due: no game's seq reaches `u32::MAX`.
 const DUE_ALL: u32 = u32::MAX;
 
-/// §2.2's two delayed-effect points, in R68's creation order. An entry is dropped before it runs, so it
-/// can never fire twice.
-///
-/// R126: a delayed continuation is re-entered exactly as a prompt answer is, through `prompts::run_resume`
-/// and not `resolve::run_hook`: `resume.hook` may name a hook (`delayed`) or the step table (`resume`),
-/// and only `run_resume` resolves both. R127: an entry whose instance is gone still resolves by its def id
-/// with `ctx.self_ == None` (§10.6, R76: #50 K-Pop Fanatic's steal after it died, #39's exile after it
-/// exiled itself); skipping it would be the silent loss R113 forbids.
-///
-/// A step that opens a prompt stops the run (§9.3): its tail is parked by `prompts::apply_resumable`, the
-/// entries still due stay in `state.delayed`, and the caller parks the rest of the boundary.
+/// §2.2's two delayed-effect points, in R68's creation order. An entry is dropped before it runs, so it can
+/// never fire twice. R126: a delayed continuation is re-entered as a prompt answer is, through
+/// `prompts::run_resume` and not `resolve::run_hook`: `resume.hook` may name a hook (`delayed`) or the step
+/// table (`resume`), and only `run_resume` resolves both. R127: an entry whose instance is gone still
+/// resolves by its def id with `ctx.self_ == None` (§10.6, R76: #50 K-Pop Fanatic's steal after it died,
+/// #39's exile after it exiled itself); skipping it would be the silent loss R113 forbids. A step that opens
+/// a prompt stops the run (§9.3): its tail is parked by `prompts::apply_resumable`, the entries still due
+/// stay in `state.delayed`, and the caller parks the rest of the boundary.
 fn run_delayed(sink: &mut EngineSink, phase: Phase, player: PlayerId, due_before: u32) {
     // R62, R68: due here are the entries that exist as the stage begins; one made while it resolves is
     // due at the next such point. `due_before` is that creation mark, carried across a pause (R113).
@@ -512,11 +509,10 @@ fn start_of_turn_triggers(sink: &mut EngineSink, player: PlayerId) {
 
 /// R62's last stage: the turn's draw, then the main phase. The `settle` after it is §10.3: §2.4's Cast on
 /// draw is a whole play (R58) whose events must reach the traps and the trigger queue (#60 Bear Honeypot
-/// answers `cardResolved`); `reduce` settles only at the end of an action.
-///
-/// R183: the draw is DRAWS_PER_TURN plus the seat's handicap `extraDrawsPerTurn`, as one "draw N": N
-/// draws, each with its cast-on-draw chain (R58), fatigue (R3) and R158's pause handling, so a prompt in
-/// the first parks the rest ahead of the `main` step parked below (R113).
+/// answers `cardResolved`); `reduce` settles only at the end of an action. R183: the draw is one "draw N"
+/// (DRAWS_PER_TURN plus the seat's handicap `extraDrawsPerTurn`), each draw with its cast-on-draw chain
+/// (R58), fatigue (R3) and R158's pause handling, so a prompt in the first parks the rest ahead of the `main`
+/// step parked below (R113).
 fn start_of_turn_draw(sink: &mut EngineSink, player: PlayerId) {
     let count = DRAWS_PER_TURN + handicap_of(&sink.state.players[player]).extra_draws_per_turn;
     let _ = crate::draw::draw(sink, player, count);
@@ -588,14 +584,12 @@ pub fn run_owed_start_of_turn(sink: &mut EngineSink, item: &WorkItem) {
     }
 }
 
-/// Cleanup (§2.2): "this turn" modifiers expire, the turn log is closed and the AI lockout ends.
-///
-/// R152: §8 #96 locks the opponent's client out "until end of turn", so the flag is cleared at the end of
-/// the turn My Pawn took, not at that player's next turn start; `start_turn` clears it as a backstop.
-///
-/// R155: §5.1's `returnToHandAtEndOfTurn` is cleared here too: §10.5 step 7 sets it as the Spell lands
-/// and R68's end-of-turn queue has already acted on it, so left set the card would return from the
-/// graveyard on every later turn, even after a discard or mill (R153).
+/// Cleanup (§2.2): "this turn" modifiers expire, the turn log is closed and the AI lockout ends. R152: §8 #96
+/// locks the opponent's client out "until end of turn", so the flag is cleared at the end of the turn My Pawn
+/// took, not at that player's next turn start; `start_turn` clears it as a backstop. R155: §5.1's
+/// `returnToHandAtEndOfTurn` is cleared here too: §10.5 step 7 sets it as the Spell lands and R68's
+/// end-of-turn queue has already acted on it, so left set the card would return from the graveyard on every
+/// later turn, even after a discard or mill (R153).
 pub fn clear_return_flags(state: &mut GameState) {
     // Step 7 flags the card step 4 logged on its player's turn log. Both logs: a Spell cast on the other
     // player's turn is over with this turn too (§6.2, R155). A card cast on draw is logged as no play
@@ -682,13 +676,11 @@ fn turn_player_of(data: &IndexMap<String, Value>) -> Option<PlayerId> {
     PLAYER_IDS.into_iter().find(|id| Some(id.as_str()) == player)
 }
 
-/// Park the rest of the end of turn (R113). The item lands at `state.workCursor`, past the pausing
-/// scope's own item, so it sits behind that remainder (the window's owed traps first) and R62's order
-/// survives the pause.
-///
-/// R117: callers owe at the moment they pause, never in advance, so a `settle` inside one of `end_turn`'s
-/// steps can neither take nor re-run them; pre-parking a continuation made a played card's Cry fire twice
-/// (§10.5's driver, R1).
+/// Park the rest of the end of turn (R113). The item lands at `state.workCursor`, past the pausing scope's
+/// own item, so it sits behind that remainder (the window's owed traps first) and R62's order survives the
+/// pause. R117: callers owe at the moment they pause, never in advance, so a `settle` inside one of
+/// `end_turn`'s steps can neither take nor re-run them (pre-parking made a played card's Cry fire twice,
+/// §10.5's driver, R1).
 fn owe_end_of_turn(sink: &mut EngineSink, player: PlayerId, step: &str, due_before: Option<u32>) {
     crate::work::owe(sink, boundary_resume(END_OF_TURN_WORK, player, step, due_before));
 }
@@ -920,10 +912,9 @@ pub fn offer_draw(sink: &mut EngineSink, player: PlayerId) {
 }
 
 /// R36: whether `player` has an offer to answer: the active opponent offered this turn, unanswered.
-/// `legal_actions` and the reducer both ask this, so a declined offer is gone from both at once.
-///
-/// R269: an offer lapses as its turn ends (nothing clears it; the turn number moves on), and a lapsed
-/// offer is not a declined one, so it blocks nothing.
+/// `legal_actions` and the reducer both ask this, so a declined offer is gone from both at once. R269: an
+/// offer lapses as its turn ends (nothing clears it; the turn number moves on), and a lapsed offer is not a
+/// declined one, so it blocks nothing.
 pub fn has_standing_draw_offer(state: &GameState, player: PlayerId) -> bool {
     let offering = opponent_of(player);
     state.active == offering && state.players[offering].draw_offer.offered_turn == Some(state.turn)

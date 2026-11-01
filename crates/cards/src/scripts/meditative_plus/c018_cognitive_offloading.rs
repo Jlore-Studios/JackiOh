@@ -95,6 +95,7 @@ mod tests {
         fn r1183002_then_the_engine_plays_the_rest_of_your_turn_and_ends_it() {
             let mut s = on_top("offload-turn", false, json!([TIMMY]), json!([VANILLA]));
             s.end_turn();
+            // Vanilla at the empty board's hero; Timmy's Rush
             // reaches no hero the turn it lands (§6.1).
             assert!(
                 (1..=5).any(|lane| s.unit(P1, lane).is_some_and(|unit| unit.def_id == TIMMY)),
@@ -132,6 +133,8 @@ mod tests {
             let mut s = on_top("offload-pickle", false, json!([PICKLE]), json!([]));
             s.end_turn();
             // The autopilot cast Pickle on p1's turn: R1279000 defers p2's choice, so no
+            // prompt paused the AI turn — it finished the turn, and the choice opens on
+            // p2's turn instead.
             assert_eq!(s.state().active, P2);
             assert_eq!(s.state().players.p1.autopilot, None);
             let pending = s.state().pending.clone().expect("Pickle's choice is open");

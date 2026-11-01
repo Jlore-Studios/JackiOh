@@ -9,22 +9,22 @@
 //
 // Nonces (`h<n>` human, `a<n>` AI) count only accepted actions, so a refused action spends nothing and
 // the log folds exactly (R187, R508, R433). The AI draws from its own stream, `${seed}:ai`, never the
-// match rng; `decide` draws this object forward to the cursor the Rust AI hands back (`wire/ai.ts`).
+// match rng.
 //
-// Resume (R668): the worker dies with the page, so after every answer a free game in progress is
-// saved (`saveStore.ts`), and after a reload its log is folded again through `apply`, under the same
-// nonces, to the same hash. The save never crosses to the page: its log names the AI's hidden cards.
+// Resume (R668): the worker dies with the page, so a free game in progress is saved after every answer
+// (`saveStore.ts`) and, after a reload, its log is folded again through `apply` under the same nonces to
+// the same hash. The save never crosses to the page: its log names the AI's hidden cards.
 //
 // Replays (R768): the newest PRACTICE_REPLAYS_KEPT free games that ended (not a lesson, nor one Glitch
-// voided, R679) are kept in the same store. `replays` folds none of them, which would stall the worker
-// game after game; `replay` answers `viewFor` of the seat the human played at each step (R677). Like
-// the save, a kept game never crosses to the page: never the log, the seed, the decks or a state.
+// voided, R679) are kept in the same store. `replays` folds none of them, which would stall the worker;
+// `replay` answers `viewFor` of the seat the human played at each step (R677). Like the save, a kept
+// game never crosses to the page.
 //
 // Claims (R1303000): a free game on a server seed (`earning: true`) answers `claim` once it is over
 // with its seed, result and log, which the server folds (R2560000) before it pays. The log crosses only
-// after the end, so it can no longer help the human play, and the page asked the server for the seed
-// (rule 7). A resumed game claims on the seed it began on (R1303001) and decides under
-// PRACTICE_AI_CLOCK_MS like any other, since the server does not re-run the AI's moves.
+// after the end, so it cannot help the human play (rule 7). A resumed game claims on the seed it began on
+// (R1303001) and decides under PRACTICE_AI_CLOCK_MS like any other, since the server does not re-run the
+// AI's moves.
 
 import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import {
@@ -91,8 +91,8 @@ export type PracticeCoreEnv = {
 
 /**
  * `handle` never throws: anything that goes wrong comes back as `"failed"`. `needsLuau` (R915009): whether
- * `request` runs on the Luau module (a game with custom cards), on the normal one, or on whichever is in
- * use (`null`), so the worker can switch before the synchronous `handle`.
+ * `request` runs on the Luau module (custom cards), the normal one, or whichever is in use (`null`), so the
+ * worker can switch before the synchronous `handle`.
  */
 export type PracticeCore = {
   handle(request: PracticeRequest): PracticeResponse;
@@ -139,9 +139,9 @@ function messageOf(cause: unknown): string {
 }
 
 /**
- * `createGame` checks a preset or a saved deck like any other (§2.6). R1373, R924000: a random deck leans
- * as asked, "newest" (R1371) resolved here; the AI's never leans. A player's random deck is dealt from
- * every set: neither the AI's shadow ban nor its soft gate (R1390) applies.
+ * `createGame` checks a preset or a saved deck like any other (§2.6). R1373, R924000: a random deck leans as
+ * asked, "newest" (R1371) resolved here; the AI's never leans. A player's random deck is dealt from every
+ * set: neither the AI's shadow ban nor its soft gate (R1390) applies.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
@@ -203,9 +203,8 @@ function decksAndHandicap(config: PracticeStartConfig): {
 }
 
 /**
- * R433: the seats whose deck was dealt rather than built, so the human is shown none of it going in. The
- * AI's deck is never counted dealt: no view shows its seat, and R185's redaction would hide the AI's own
- * library from itself.
+ * R433: the seats whose deck was dealt rather than built, so the human is shown none of it going in. The AI's
+ * deck is never counted dealt: no view shows its seat, and R185's redaction would hide its own library.
  */
 function dealtSeats(config: PracticeStartConfig): PlayerId[] {
   const dealt = config.deck.kind === "random" || config.deck.kind === "try";
@@ -412,9 +411,8 @@ function foldable(replay: PracticeReplay): boolean {
 }
 
 /**
- * R1371000: the catalog a kept game or save was played on, as it is named now: one kept before the
- * version retcon carries no `versions` marker and names it the old way, and one of an older marker
- * names a v0.5 version as it was before the v0.5 retcon (R2532000).
+ * R1371000: the catalog a kept game or save was played on, as it is named now: one kept before the version
+ * retcon carries no `versions` marker, and one of an older marker names a v0.5 version as it was (R2532000).
  */
 export function catalogOf(kept: Pick<PracticeReplay, "catalog" | "versions">): string {
   return versionNameFrom(kept.versions ?? 1, kept.catalog);

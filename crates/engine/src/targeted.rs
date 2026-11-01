@@ -1,12 +1,11 @@
-//! After a Spell targeting an enemy resolves (Meditative+ #17 Dogpile, issue #1180, R1180005).
-//!
-//! "In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at
-//! it." Three parts, all here:
+//! After a Spell targeting an enemy resolves (Meditative+ #17 Dogpile, issue #1180, R1180005): "In your
+//! hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it." Three
+//! parts, all here:
 //!
 //!  1. **The targets kept.** While a Spell resolves, the enemies it targets are noted on the card in
 //!     order (`TARGETED_KEY`): its declared targets (§10.5 step 5), each Echo repeat's picks (step 6)
 //!     and its own `target` prompts' (§10.6). Nothing is noted unless the player holds an answering
-//!     card, so a game without one keeps its state, and its hashes, as before (D9).
+//!     card, so a game without one keeps its state, and its hashes (D9).
 //!  2. **The answer.** At §10.5 step 7 `cardResolved` names the one card that answers (`answer`); its
 //!     hand and deck triggers (R464) cast it, aimed, at that enemy (`effects::cast` with `aimOnly`),
 //!     and every other copy does nothing. `answer` names a hidden card: a view never forwards it (§10.8).

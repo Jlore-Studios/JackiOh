@@ -6,9 +6,8 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::catalog::deckable;
 use jackioh_engine::testkit::*;
 
-/// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
-/// the bigger pool moved what the forty games held, and none of them replaced a play any more; sixty
-/// games held every kind of play the test counts. Re-pinned again for #2250 (Resources in the hand):
+/// The decks deal from every set that ships (#1884, #2250), and a hundred games hold every kind of play
+/// the test counts.
 const GAMES: i32 = 100;
 const MAX_ACTIONS: usize = 3000;
 const MY_PAWN: &str = "core-096";
@@ -130,6 +129,7 @@ fn subsequence(part: &[String], whole: &[String]) -> bool {
 /// A play is open while its card waits in the resolving zone (§10.5), which a prompt can hold past
 /// its action (R449's replacement's choices, C #4 Palantir's announce window). Before its announce,
 /// a `transformed` naming it is step 3's replacement (R449), the card the play resolves as; after
+/// it, a `countered` naming it takes the play back.
 struct Play {
     id: String,
     def_id: String,
@@ -218,11 +218,13 @@ mod summarize_game_over_real_cards_s9_11 {
                 }
                 let events: &[GameEvent] = &result.events;
                 // R943: whether a card is Created, as the step left it or found it. A card in neither
+                // was made and gone within the step: the deal put every dealt card in the state.
                 let created = |id: &str| {
                     find_instance(&result.state, id)
                         .or_else(|| find_instance(&state, id))
                         .is_none_or(|card| card.created == Some(true))
                 };
+                // The cards this step added to a hand, which the summary follows into that hand too; a
                 // card a Counter sent there is its countering player's cast, never a play (R831001).
                 let stolen_here: Vec<&str> = events
                     .iter()
@@ -232,6 +234,7 @@ mod summarize_game_over_real_cards_s9_11 {
                     })
                     .collect();
                 let mut added_here: Vec<&str> = Vec::new();
+                // The Radiant changes the step has made so far, for a card no play holds yet: one a hand
                 // trigger casts later in the step is played on the face it has by then (R1147000).
                 let mut radiant_here: IndexMap<String, bool> = IndexMap::new();
                 for event in events {
@@ -292,13 +295,11 @@ mod summarize_game_over_real_cards_s9_11 {
                                 .or_else(|| former_id.as_deref().and_then(|id| open_play(&plays, id)))
                             {
                                 plays[seat][at].placed = true;
-                            // R2179002: a card cast on its draw is no play, though it stood in the hand as the
-                            // step began: a Trade shuffles it in and draws it straight back (summary-cards-28's
-                            // p1 CN in a Bottle, since issue #2280's rules change took that game down a new path).
-                            // R831001: nor is a card a Counter sent to a hand in this step, its countering
-                            // player's cast, even when a second Counter sends it back to the hand it was played
-                            // from (summary-cards-87's p2 Book of Pain between two Palantirs, since #2657's
-                            // patch took that game down a new path).
+                            // R2179002: a card cast on its draw is no play, though it stood in the hand as
+                            // the step began: a Trade shuffles it in and draws it straight back
+                            // (summary-cards-28, #2280). R831001: nor is a card a Counter sent to a hand in
+                            // this step, its countering player's cast, even when a second Counter sends it
+                            // back to the hand it was played from (summary-cards-87, #2657).
                             } else if *on_draw != Some(true)
                                 && !stolen_here.contains(&instance_id.as_str())
                                 && let Some(card) = state.players[*caster]
@@ -312,12 +313,10 @@ mod summarize_game_over_real_cards_s9_11 {
                                             .flatten()
                                     })
                             {
-                                // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
-                                // it from the hand it stood in as the step began, counted as a play
-                                // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
-                                // Re-pinned for the Training Grounds release (#2204): summary-cards-45's
-                                // p2 draws its Dogpile in the very step that casts it, so a card the step
-                                // added to the hand counts the same way. Re-pinned for R2368000's
+                                // A card cast from the hand it stood in as the step began, or that the step
+                                // added to it, counts as a play with no `play` logged: M+ #17 Dogpile's hand
+                                // trigger (R1180005; summary-cards-35, -45, #1705, #2204). A Created one the
+                                // step made Radiant is played Radiant (R2368000; summary-cards-54).
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
                                     def_id: def_id.clone(),
@@ -334,7 +333,8 @@ mod summarize_game_over_real_cards_s9_11 {
                                 plays[seat].retain(|play| !(play.open && !play.placed));
                             }
                         }
-                        // (§10.5 step 2), before any announce: the card was never played.
+                        // A Death the play's own Tribute set off can discard the hand the card still stands
+                        // in (§10.5 step 2), before any announce: the card was never played.
                         GameEvent::Discarded { instance_id, .. } => {
                             if let Some((seat, at)) = open_play(&plays, instance_id)
                                 && !plays[seat][at].announced
@@ -372,17 +372,18 @@ mod summarize_game_over_real_cards_s9_11 {
                         play.open = play.open && resolving.contains(play.id.as_str());
                     }
                 }
-                // Re-pinned for v0.3.15 (Meditative+ ships, #1187): M+ #18 Cognitive Offloading joins
-                // the decks, and its autopilot (R1183002) plays the rest of a turn with no `play` logged,
-                // as My Pawn's random turn does (summary-cards-26 plays M+ #10 Medina Grifter, the card it
-                // steals and C #78 so), so a game it engages in is held to My Pawn's check.
+                // M+ #18 Cognitive Offloading's autopilot (R1183002, #1187) plays the rest of a turn with no
+                // `play` logged, as My Pawn's random turn does (summary-cards-26: M+ #10 stealing C #78), so
+                // a game it engages in is held to My Pawn's check.
                 if events.iter().any(|event| {
                     matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN)
                         || matches!(event, GameEvent::AutopilotEngaged { .. })
                 }) {
                     pawn = true;
                 }
-                // comes between (R448), and its choices may be asked first, in a prompt of their own (R70).
+                // A cast on its draw is a `cardPlayed` naming a drawn card before any hand took it: its
+                // announce comes between (R448), and its choices may be asked first, in a prompt of their own
+                // (R70).
                 for event in events {
                     match event {
                         GameEvent::Drawn { instance_id, .. } => {
@@ -424,7 +425,9 @@ mod summarize_game_over_real_cards_s9_11 {
                                 p1.remove(at);
                             }
                         }
-                        // all the same: #21 Hinder, cast on its draw, discards one (§2.4). A discarded
+                        // A card turn 1 took from a hand before the step ended was in the opening hand all
+                        // the same: #21 Hinder, cast on its draw, discards one (§2.4). A discarded card the
+                        // step did not draw goes back.
                         let mut p2 = hand(&result.state, PlayerId::P2);
                         let drawn_here: Vec<&String> = events[from..]
                             .iter()
@@ -448,10 +451,9 @@ mod summarize_game_over_real_cards_s9_11 {
                                 }
                             }
                         }
-                        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): a card turn 1 added to a hand
-                        // with no draw, and that the hand still holds, was in no opening hand either: the
-                        // bigger pool deals summary-cards-36's p1 M #37 CN in a Bottle as turn 1's draw,
-                        // which, cast on its draw (§2.4), adds a random card.
+                        // A card turn 1 added to a hand with no draw, and that the hand still holds, was in
+                        // no opening hand either (summary-cards-36's p1 M #37 CN in a Bottle, cast on its
+                        // draw, §2.4, adds a random card).
                         for event in &events[from..] {
                             if let GameEvent::AddedToHand {
                                 player,
@@ -515,6 +517,7 @@ mod summarize_game_over_real_cards_s9_11 {
                 assert_eq!(sorted(&summary.seats.p2.opening), sorted(&opening.p2), "{seed}");
             }
             // §2.1, R244: The Coin goes to the seat going second, after its mulligan. R2089000: it is
+            // Created, so it is in no opening hand, and it is that seat's Created card, used or not.
             for player in PLAYER_IDS {
                 assert!(
                     !summary.seats[player].opening.iter().any(|id| id == COIN_DEF_ID),
@@ -869,6 +872,7 @@ mod r1256000_per_seat_counts {
         }
         let end = state.result.expect("an endTurn-only game fatigues out");
         // p1 opens on three cards and p2 on four (R2368000), so p1's library holds one card more and p2
+        // takes the eighth hit (1+…+8 = 36 at 30 HP) first, on its 29th turn, before p1's 30th.
         assert_eq!(end.winner, Winner::P1);
         assert_eq!(end.reason, GameOverReason::HeroDeath);
 
@@ -1059,6 +1063,8 @@ mod r1256000_per_seat_counts {
 }
 
 /// R2089000: the Created cards (R943) a game's record credits to the seat that made them, read off
+/// `scenario()` steps through `SummaryReader`, the reader `summarize_game` folds a log with, and off
+/// recorded games by `summarize_game` itself.
 mod r2089000_created_cards {
     use super::*;
 
@@ -1281,6 +1287,7 @@ mod r2089000_created_cards {
         step(&mut reader, &mut s, |s| {
             s.play(FATE, json!({}));
         });
+        // p1's end of turn summons a Mana Well into every empty backrow of both sides, each its own
         // side's (R942), and each one p1's Created card, used as it lands.
         step(&mut reader, &mut s, |s| {
             s.end_turn();

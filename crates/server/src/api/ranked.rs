@@ -70,12 +70,11 @@ pub struct OpenedSeason {
 }
 
 /// R609: the build's season, opened inside `t` when it does not exist yet. The first season of all
-/// resets nothing — there is no season before it to come back from — and every later one runs the
-/// soft reset over every rated player in the same transaction as the season row, so a season is
-/// either open and reset or neither. Opens serialize on `ranked_lock_seasons`: two processes
-/// opening at once — the same season or, racing deploys, two different ones — run one after the
-/// other, so the second sees the first's row (or resets over a world that already holds it) and
-/// never soft-resets off a snapshot that predates it.
+/// resets nothing, and every later one runs the soft reset over every rated player in the same
+/// transaction as the season row, so a season is either open and reset or neither. Opens serialize on
+/// `ranked_lock_seasons`: two processes opening at once (the same season or, racing deploys, two
+/// different ones) run one after the other, so the second never soft-resets off a snapshot that
+/// predates the first's row.
 pub async fn open_season_in_tx(t: &mut Tx<'_>, deps: &SeasonDeps) -> Result<OpenedSeason, StoreError> {
     let id = build_season_id(deps);
     t.ranked_lock_seasons().await?;
@@ -344,7 +343,7 @@ struct RankChange {
 /// Plans one ranked game (R603–R608): both sides rated against each other's rating from before it,
 /// each side's season moved toward the rank their new rating calls for, and the Jlorious peaks it
 /// gave anyone. Both targets are read from the season as it stood before the game, with both new
-/// ratings in it, so neither side's placement depends on which of the two is computed first.
+/// ratings in it, so neither side's placement depends on which is computed first.
 ///
 /// R640000: a ladder bot's season row moves as a person's does, its target read against people's
 /// ratings alone, and it never stands in Jlorious. A bot id with no bot profile behind it (R610's
@@ -424,7 +423,6 @@ pub async fn plan_ranked_game(
         [rated.a, rated.b]
     };
 
-    // The season with both new ratings in it, and each player's row as it stood.
     let mut new_rating: IndexMap<String, f64> = IndexMap::new();
     for (index, side) in sides.iter().enumerate() {
         if let Some((profile_id, _)) = ladder_side(side) {
@@ -482,7 +480,6 @@ pub async fn plan_ranked_game(
         );
     }
 
-    // Jlorious after the game, and the peak it gave each member who now stands higher than ever.
     let mut standings_after: Vec<SeasonStanding> = re_rated
         .iter()
         .filter(|standing| !ranks.contains_key(&standing.rank.profile_id))

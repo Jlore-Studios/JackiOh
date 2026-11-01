@@ -347,6 +347,7 @@ mod tests {
             crate::register_all();
             clear_overrides();
             // R1100's and R1183000's comparison written out: the exact rate, toward the highest or
+            // the lowest, then more games, then the smaller id.
             let ranks_before = |a: &WinRateRow, b: &WinRateRow, lowest: bool| {
                 let left = i64::from(a.wins) * i64::from(b.games);
                 let right = i64::from(b.wins) * i64::from(a.games);

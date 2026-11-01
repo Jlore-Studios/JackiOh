@@ -66,12 +66,11 @@ pub struct MayAttackAgainArgs {
 }
 
 /// B5 E35: the unit may attack again this turn (Classic+ #73.1 Classic Golem's "after it destroys a
-/// Unit"): a fresh exertion — both halves, §4.1. It does not grant an attack a unit could not otherwise
-/// make: Attack Position, attack above 0 and the unit restrictions still apply. R2657004: summoning
-/// sickness lasts the whole turn a unit entered the field, whatever attacks an effect gives it, so a
-/// unit that entered this turn attacks again as its keywords let it: a Rush unit a Unit only (§6.1),
-/// never the hero (R2521002 made it so for Tmack Trav first). `lift_sick` is the older rule, for kept
-/// scripts alone.
+/// Unit"): a fresh exertion — both halves, §4.1. It grants no attack a unit could not otherwise make:
+/// Attack Position, attack above 0 and the unit restrictions still apply. R2657004: summoning sickness
+/// lasts the whole turn a unit entered the field, whatever attacks an effect gives it, so a unit that
+/// entered this turn attacks again as its keywords let it: a Rush unit a Unit only (§6.1), never the hero
+/// (R2521002, Tmack Trav). `lift_sick` is for kept scripts alone.
 pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
     Effect::new("mayAttackAgain", move |ctx| {
         let Some(unit) = instance_of(ctx, &args.target) else {

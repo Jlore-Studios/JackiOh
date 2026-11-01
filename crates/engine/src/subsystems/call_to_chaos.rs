@@ -264,20 +264,6 @@ pub enum ChaosEffectName {
 }
 
 impl ChaosEffectName {
-    /// Every name, in the order §8 #95 lists them.
-    pub const ALL: &'static [ChaosEffectName] = &[
-        ChaosEffectName::Units,
-        ChaosEffectName::Heal,
-        ChaosEffectName::Draw,
-        ChaosEffectName::Add,
-        ChaosEffectName::Radiant,
-        ChaosEffectName::Tokens,
-        ChaosEffectName::Discount,
-        ChaosEffectName::Golem,
-        ChaosEffectName::Backrow,
-        ChaosEffectName::Recast,
-    ];
-
     pub fn as_str(self) -> &'static str {
         match self {
             ChaosEffectName::Units => "units",

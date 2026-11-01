@@ -5,15 +5,14 @@
 //! back bigger is worth more alive and less to kill, and one whose Death hurts its owner is worth less.
 //! The frozen baseline reads no price, and a call not passed a decision's prices reads none.
 //!
-//! The cards: Trigor, (3) 3/3 Tribute 3, "Death: Summon a Trigor with this one's base stats +3/+3";
-//! Floodgates, (3) 0/12 Armor 3, "Death: Destroy all your Units"; Training Dummy, (1) 0/3, "Death: Add 1
-//! random Radiant Training Grounds card to your hand"; and Mr. Vanilla, a (1) 4/4 with no text.
+//! The cards: Trigor, whose Death summons a Trigor with this one's base stats +3/+3; Floodgates, whose
+//! Death destroys all your Units; Training Dummy, whose Death adds a random Radiant Training Grounds
+//! card to your hand; and Mr. Vanilla, a (1) 4/4 with no text.
 //!
 //! R2566000: a Starship Piece's death fuses a copy of it into its owner's Dormant Starship, summoning
 //! one first (R1852000), which counts as the unit it wakes as at `slumber_waiting_share` (R2380000), so
-//! a piece with no Death of its own is priced too, after every Death. The cards: After Burner, (2) 4/8
-//! Starship Piece, whose one hook is a "When launched" only a Starship fires; and Hit Job, (3) "Destroy
-//! a Unit".
+//! a piece with no Death of its own is priced too, after every Death. The cards: After Burner, a (2) 4/8
+//! Starship Piece whose one hook is a "When launched" only a Starship fires; and Hit Job, "Destroy a Unit".
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

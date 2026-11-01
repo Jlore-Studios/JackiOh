@@ -237,9 +237,12 @@ fn units(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }
 
+/// The Activates the engine gives a card rather than its script: the Dormant Starship's launch
 /// (R1852003) and Alteran Reach's travel (`subsystems::starscape_abilities`, R1847001).
 const ENGINE_ACTIVATES: [&str; 2] = ["stinkyscape-t-dormant-starship", "stinkyscape-148"];
 
+/// The census: the cards this file covers are exactly the cards whose text has an Activate, which are
+/// exactly the cards whose script declares one, among the sets that ship (a held set's join at its
 /// release, R1857000).
 #[test]
 fn r384_activate_census_every_card_whose_text_has_an_activate_declares_one_and_has_a_case_here() {
@@ -796,6 +799,7 @@ mod c_plus_n78_claudes_datacenter {
     use super::*;
 
     /// Its controller uses the listed `activate` (an Activate since #2179, R384): free, one AI generated
+    /// card into p1's hand costing (0), Radiant on the Radiant face, the Datacenter staying, once a turn.
     fn adds_an_ai_card(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(CLAUDES_DATACENTER, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -909,6 +913,7 @@ mod c_n42_1_kys_gift {
     use super::*;
 
     /// Patch v0.3.10 (#831): the Gift's start-of-turn effects became its Activate. Used once, it gains
+    /// its controller the declared mana and adds the four cards, which cost (0).
     fn opens(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(KYS_GIFT, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1182,6 +1187,7 @@ mod m_n54_money_machine {
         shuffles_a_coin_in(true);
     }
 
+    /// Patch v0.3.13: on p2's own turn, p2's `legal_actions` lists no `activate` off p1's Machine
     /// (R384: only its controller activates it).
     #[test]
     fn r1105_the_opponent_is_not_listed_it_on_their_own_turn() {
@@ -1368,6 +1374,7 @@ mod m_n75_ever_growing_tree {
     use super::*;
 
     /// p1's Tree in its backrow with a spare in hand. Fused, its def id is the fusion's (R102), so
+    /// the instance is followed by its id.
     fn planted(radiant: bool) -> (Scenario, String) {
         let s = scenario(json!({
             "p1": { "backrow": [on(EVER_GROWING_TREE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
@@ -1439,6 +1446,7 @@ mod m_plus_n11_living_mana_potion {
     use super::*;
 
     /// The listed `activate`: p1 has Spell Damage +5 this turn (R1180001); the base face Tributes the
+    /// potion, the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "field": [on(LIVING_MANA_POTION, radiant)], "hand": [STOCKPILE] },
@@ -1470,6 +1478,7 @@ mod m_plus_n12_living_armor_potion {
     use super::*;
 
     /// The listed `activate`: p1's hero has 5 Armor (R757); the base face Tributes the potion,
+    /// the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "field": [on(LIVING_ARMOR_POTION, radiant)], "hand": [STOCKPILE] },
@@ -1501,6 +1510,7 @@ mod m_plus_n13_living_health_potion {
     use super::*;
 
     /// The listed `activate`: p1's hero heals 5 (R1179002); the base face Tributes the potion,
+    /// the Radiant face keeps it, once a turn.
     fn activates(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "health": 20, "field": [on(LIVING_HEALTH_POTION, radiant)], "hand": [STOCKPILE] },
@@ -1529,6 +1539,8 @@ mod m_plus_n13_living_health_potion {
 }
 
 /// The Stinkyscape set's Activate cards, from its release (#1884, R1857000): each Activate is found in
+/// `legal_actions`, shown usable on its controller's view and sent through `reduce` as listed, on both
+/// faces.
 mod stinkyscape {
     use super::*;
 
@@ -1889,6 +1901,7 @@ mod stinkyscape {
         use super::*;
 
         /// R1852003: a Starship Piece's death summons the Dormant Starship, whose launch is an Activate
+        /// the engine gives it (no script declares it), at (3).
         #[test]
         fn r384_its_launch_through_the_listed_activate() {
             const HIT_JOB: &str = "core-016";

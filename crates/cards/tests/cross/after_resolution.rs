@@ -191,7 +191,9 @@ mod r174_a_trap_after_bear_honeypots_run_meets_the_played_unit_the_run_killed_as
             },
         }));
 
+        // Me and Mr Token (1/1, cost 1) resolves; step 7's `cardResolved` reaches p2's traps in lane
         // order (R68). Bear Honeypot's first Rush Token kills it, so when Unlicensed Experimentation is
+        // asked, the play it would fuse onto p2's side is in p1's graveyard.
         g.play(MR_TOKEN, json!({ "zone": 1 }));
 
         assert!(
@@ -240,6 +242,7 @@ mod s4_5_r118_a_played_unit_that_does_not_survive_its_own_arrival_still_resolves
         let prey = g.unit_at("p2", 1);
         let bigot = g.card(BIGOT).clone();
 
+        // No trap answered it and nothing took it off the
         // field at step 4, so step 5 resolves its Cry (R118: the Cry is lost only where a trap has taken
         // the card off the field), and the check after the play collects it (§4.5).
         g.play(BIGOT, json!({ "targets": pick::instance(&prey) }));
@@ -405,7 +408,10 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
     #[test]
     fn r174_r53_r83_bear_honeypots_tokens_do_not_attack_the_reborn_body_of_a_played_unit_that_died_in_its_own_resolution_s10_5_step_7()
      {
+        // Step 6's check collects it and Reborn
         // brings a new arrival back at 1 health (§4.5 step 4, R83) before step 7. p2's Bear Honeypot
+        // answers the play: "if it was a Unit, they attack it" — but the unit that was played has left
+        // the field, so the tokens attack nothing and the Reborn body is left standing.
         let mut s = setup(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-honeypot-martyr",
@@ -479,6 +485,7 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
         ));
         assert!(s.pile("p2", "graveyard").iter().any(|card| card.id == target.id));
         // §8 Conventions: the spell's target is gone, so its text fizzles on it; R78: a card in a
+        // graveyard is the printed card, with no buffs and no granted keywords.
         let dead = s.card(&target.id).clone();
         assert_eq!(dead.buffs, AttackHealth { attack: 0, health: 0 });
         assert_eq!(dead.granted_keywords, Vec::<Keyword>::new());

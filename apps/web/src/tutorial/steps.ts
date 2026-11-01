@@ -38,11 +38,6 @@ export function unitOf(view: PlayerView, side: Side, defId: string): UnitView | 
   return unitsOf(view, side).find((unit) => unit.defId === defId);
 }
 
-export function myTurnNumber(view: PlayerView): number {
-  // p1 takes odd player-turns and p2 even ones (§2.1 step 5, §2.5).
-  return view.viewer === "p1" ? Math.ceil(view.turn / 2) : Math.floor(view.turn / 2);
-}
-
 export function heroTargetId(view: PlayerView, side: Side): string {
   return `hero-${sideView(view, side).player}`;
 }
@@ -195,25 +190,6 @@ export function keepHand(options: Common): CoachStep {
       const pending = ctx.view.pending;
       if (action.type !== "mulligan" || pending === null || !pending.forYou) return false;
       return action.keep.length === pending.options.length;
-    },
-  };
-}
-
-export function mulliganAway(options: Common & { defIds: readonly string[] }): CoachStep {
-  const { defIds, when, ...rest } = options;
-  return {
-    kind: "act",
-    anchor: { kind: "prompt" },
-    ...rest,
-    when: (ctx) => mulliganOpen(ctx.view) && (when === undefined || when(ctx)),
-    done: (ctx, since) => since !== ctx.view && !mulliganOpen(ctx.view),
-    moot: (ctx, since) => since === null && ctx.view.phase !== "mulligan" && ctx.view.phase !== "setup",
-    expect: (action, ctx) => {
-      const pending = ctx.view.pending;
-      if (action.type !== "mulligan" || pending === null || !pending.forYou) return false;
-      const returned = new Set(pending.options.filter((option) => defIds.includes(option.defId ?? "")).map((option) => option.key));
-      const kept = pending.options.map((option) => option.key).filter((key) => !returned.has(key));
-      return action.keep.length === kept.length && kept.every((key) => action.keep.includes(key));
     },
   };
 }

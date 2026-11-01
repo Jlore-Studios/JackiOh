@@ -323,19 +323,19 @@ comment on table app.migrations is
   'Which files in crates/server/migrations have been applied. Written by crates/server/src/db/migrate.rs.';
 ";
 
-/// Files rewritten after some database had applied them, each with the checksums of its earlier
-/// versions. A database that applied an earlier version keeps it (the ledger is not rewritten); any
-/// other edit to an applied file is still refused. Add an entry only when the earlier version can
-/// stay where it was applied and the new one is what every database that has not applied it needs.
+/// Files rewritten after some database had applied them, each with the checksums of its earlier versions.
+/// A database that applied an earlier version keeps it (the ledger is not rewritten); any other edit to an
+/// applied file is still refused. Add an entry only when the earlier version can stay where it was applied
+/// and the new one is what every database that has not applied it needs.
 ///
-/// 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set
-/// jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
-/// on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
+/// 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set jackioh.retention_purge`
+/// clause, which only a superuser may create since Postgres 15, so it failed on Supabase. Where a
+/// superuser applied it, it works as written.
 ///
-/// 0068_v0_5_retcon.sql (R2532000): its first version renamed each record id a card's co-played map
-/// keeps with a PL/pgSQL call per id over every row of `card_totals`, which ran for minutes: Render's
-/// `release` outran its boot window and the transaction rolled back each deploy. Where a database
-/// applied it, its renames are the same.
+/// 0068_v0_5_retcon.sql (R2532000): its first version renamed each record id a card's co-played map keeps
+/// with a PL/pgSQL call per id over every row of `card_totals`, which ran for minutes: Render's `release`
+/// outran its boot window and the transaction rolled back each deploy. Where applied, its renames are the
+/// same.
 pub const REWRITTEN: &[(&str, &[&str])] = &[
     ("0013_retention_purge.sql", &["16b93e4d"]),
     ("0068_v0_5_retcon.sql", &["5827754e"]),

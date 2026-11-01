@@ -1,10 +1,7 @@
-// `/play`: the lobby's modes, choices and refusals (R257, R264), and its watch.
-//
-// The watch: only one side's HTTP response carries the match (or series) id, so the other side reads
-// its own `currentMatchId` / `currentSeriesId` on every mount: a reload after pairing loses `waiting`.
-//
-// The modes: the lobby sends intent (`ModeChoice`) and relays what the server said. Its verdict is
-// the shared validator's, as UX; a refusal is shown in the server's words.
+// `/play`: the lobby's modes, choices and refusals (R257, R264), and its watch. The watch: only one side's HTTP
+// response carries the match (or series) id, so the other side reads its own `currentMatchId` /
+// `currentSeriesId` on every mount: a reload after pairing loses `waiting`. The modes: the lobby sends intent
+// (`ModeChoice`) and relays what the server said; its verdict is the shared validator's, as UX.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

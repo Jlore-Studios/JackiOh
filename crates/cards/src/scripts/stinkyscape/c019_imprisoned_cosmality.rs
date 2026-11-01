@@ -115,6 +115,7 @@ mod tests {
 
         #[test]
         fn r2271000_another_cards_awakening_deals_nothing() {
+            // "When THIS awakens": the awake Cosmality answered every awakening with its 10 hits too,
             // until its condition was read (R2271000).
             assert_eq!(hits_of_the_awake_one(false), 0);
         }

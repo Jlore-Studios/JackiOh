@@ -1,25 +1,17 @@
 //! Practice earning's check (SPEC §14.8, §9.9, #1303): a practice game runs in the browser, so the
 //! server takes no word of the client's for its result. It folds the claimed log from the setup its
-//! seed was issued for, and only a game that folds to the claimed result pays
-//! ([[R1303000]]–[[R1303003]]). It re-runs no AI move ([[R2560000]]): an action of the AI's seat is
-//! held to its nonce and seat and reduced like any other, since practice pay is held to the day's
-//! Jlore cap ([[R1483000]]).
+//! seed was issued for, and only a game that folds to the claimed result pays ([[R1303000]]–[[R1303003]]).
+//! It re-runs no AI move ([[R2560000]]): an AI action is held to its nonce and seat and reduced like any
+//! other, since practice pay is held to the day's Jlore cap ([[R1483000]]).
 //!
-//! This mirrors the browser's worker (`apps/web/src/practice/core.ts`), function by function:
-//!
-//! - [`opening`] is its `startGame` for a free game: the human's deck (a list of cards, or the
-//!   random deck dealt on `"{seed}:human-deck"` and counted dealt, R433), the AI's deck dealt on
-//!   `"{seed}:ai-deck"` (`actor::engine::deal_practice_ai_deck`), the tier's handicap on the AI's
-//!   seat alone (R180), and the human's last board, the server's own ([[R1303003]]). No game the
-//!   server folds is a sandbox or holds a custom card (R923000, R915005: `create_game_args`).
-//! - [`verify`] is its `apply`, action by action, under the worker's nonces (`h<n>` the human's,
-//!   `a<n>` the AI's, each counting only accepted actions), each sent as the seat its player plays
-//!   then: a Glitch swap moves both (R677). A game that passes is read once more by the engine's
-//!   `summarize_game`, for what the quests count ([[R1304001]]).
-//!
-//! Every engine call goes through `actor::engine` under the game's `Pinned` catalog (R767000).
-//! Nothing here reads a clock or the store: `api::practice` checks the seed, runs this off the
-//! runtime and pays.
+//! It mirrors the browser's worker (`apps/web/src/practice/core.ts`): [`opening`] is its `startGame` (the
+//! human's deck, a list or the random deck dealt on `"{seed}:human-deck"` and counted dealt, R433; the AI's
+//! on `"{seed}:ai-deck"`; the tier's handicap on the AI's seat alone, R180; the human's last board,
+//! [[R1303003]]; no sandbox or custom card, R923000, R915005: `create_game_args`), and [`verify`] its
+//! `apply`, under the worker's nonces (`h<n>` the human's, `a<n>` the AI's, each counting only accepted
+//! actions), each action sent as the seat its player plays then (a Glitch swap moves both, R677), and a game
+//! that passes read once by `summarize_game` ([[R1304001]]). Every engine call goes through `actor::engine`
+//! under the game's `Pinned` catalog (R767000); nothing here reads a clock or the store.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,11 +1,7 @@
 // Spec 34 — the public Statistics page (issues #131 and #255; SPEC §9.11, R654, R661), on the landing
-// page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints.
-//
-// BUILD M8's key assertions for this row: "the landing's calls to action carry no Stats link and the
-// footer's "Stats" link opens `/stats`; no provisional banner and no reading notes (R2325000); no data
-// source is named anywhere; summary tiles render the patch's games once, with no data source; cards table
-// searches and filters; card drill-down opens CardFace modal; players tab renders public stats
-// without Elo; Back returns to the landing page".
+// page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints. BUILD M8's key assertions
+// for this row: the landing's calls to action carry no Stats link and the footer's "Stats" link opens
+// `/stats`; no provisional banner and no reading notes (R2325000); no data source is named anywhere.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { seedFor } from "../../support/config.ts";

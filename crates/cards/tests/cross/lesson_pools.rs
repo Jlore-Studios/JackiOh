@@ -10,6 +10,7 @@ use jackioh_engine::testkit::*;
 
 const GAMES: i32 = 15;
 
+/// The cards whose text names the Legendary or Mythic card it makes, so no pool is drawn: a named
 /// card reaches its hand or deck under the hold (R2201001), as a named card does under R1420's gate.
 const NAMES_A_HELD_CARD: &[&str] = &[
     "stinkyscape-008", // Conjure Rosemary Triscuit: "Shuffle a Wardrum into your deck."

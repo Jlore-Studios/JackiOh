@@ -27,6 +27,7 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
                 return None;
             }
             // R1081000: a Unit summoned standing in a backrow zone (a Reborn return, a Flicker) is a
+            // summoned Unit too; any other card a summon sets in the backrow is none.
             if *row != Row::Units
                 && !find_instance(&*ctx.state, instance_id).is_some_and(|unit| stands_in_backrow(&*ctx.state, unit))
             {
@@ -69,6 +70,7 @@ fn zap() -> TriggerDef {
             return vec![];
         }
         // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
+        // animates but deals it nothing.
         let state: &GameState = &*ctx.state;
         let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
         let mut effects = vec![remember(json_as(json!({ "key": REVEALED, "value": true })))];
@@ -186,6 +188,7 @@ mod tests {
                 s.play(&menace, json!({ "zone": 2 }));
 
                 // A Field Trap can't target an Immutable Unit in play (R781001): Tesla fires and animates,
+                // but its hit passes the Radiant Menace by, so its Lifesteal heals nothing.
                 let tesla = s.card(TESLA).clone();
                 assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
                 assert_eq!(count(s.events(), "trapFired"), 1);

@@ -1,14 +1,13 @@
 // Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R655).
 //
-// `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits'
-// emote voices), `voice-text.json` (the words those hooks and portraits speak, which
-// crates/tools/tests/export_card_text.rs writes from crates/cards/card-text.yaml, #2498) and
-// `voice-manifest.json` (which rendered files exist, written by `apps/web/scripts/gen-voice.mjs`)
-// are imported here and nowhere else. The table is JSON5, read as text, joined to its words and
-// parsed once at import against the catalog, so a malformed table fails loudly at load, naming the
-// path of the problem, instead of speaking garbage. Everything here reads a `PlayerView` or a defId
-// and nothing else (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is
-// never in the table, so it never yields a sound.
+// `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits' emote voices),
+// `voice-text.json` (the words those hooks and portraits speak, which crates/tools/tests/export_card_text.rs
+// writes from crates/cards/card-text.yaml, #2498) and `voice-manifest.json` (which rendered files exist,
+// written by `apps/web/scripts/gen-voice.mjs`) are imported here and nowhere else. The table is JSON5, read as
+// text, joined to its words and parsed once at import against the catalog, so a malformed table fails loudly
+// at load, naming the path of the problem. Everything here reads a `PlayerView` or a defId and nothing else
+// (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is never in the table, so it never
+// yields a sound.
 
 import JSON5 from "json5";
 
@@ -256,9 +255,9 @@ function parseEmoteEntry(raw: unknown, path: string, voices: Record<string, Pers
 }
 
 /**
- * The parsed file, checked against `catalog`; throws Error("card-audio.json5: <path>: <problem>") on a
- * shape error. That every catalog card has its lines, and the word limits, the tests check (B33, B34).
- * The `emotes` section (R644) is optional, so a small test table without it still parses.
+ * The parsed file, checked against `catalog`; throws Error("card-audio.json5: <path>: <problem>") on a shape
+ * error. That every catalog card has its lines, and the word limits, the tests check (B33, B34). The
+ * `emotes` section (R644) is optional, so a small test table without it still parses.
  */
 export function parseCardAudio(raw: unknown, catalog: CatalogTypes): CardAudioTable {
   const root = record(raw, "(root)");
@@ -361,12 +360,10 @@ function duplicateKeyPath(source: string): string | null {
 
 /**
  * R655, #2498: the raw table with its words filled in from `voiceText` (`voice-text.json`'s shape,
- * `{ cards: { <id>: { <hook>: <line>, trigger: [<line>, …] } }, emotes: { <portrait>: { <line id>:
- * <line> } } }`): each hook that names a voice gets its card's line for that hook as its `text` (a
- * trigger its list as its `lines`), and each portrait its five lines. Nothing else moves, and the
- * table keeps its order. Throws when the table writes a line itself (a hook's `text` or `lines`, a
- * portrait's line), which is the YAML's to write, when the YAML has a line no voice speaks, and when
- * a voice has nothing to speak: a voiced hook or a portrait with no lines in the YAML.
+ * `{ cards: { <id>: { <hook>: <line>, trigger: [<line>, …] } }, emotes: { <portrait>: { <line id>: <line> } } }`):
+ * each hook that names a voice gets its card's line as its `text` (a trigger its list as its `lines`), and
+ * each portrait its five lines. Nothing else moves. Throws when the table writes a line itself, which is the
+ * YAML's to write, when the YAML has a line no voice speaks, and when a voiced hook or a portrait has no lines.
  */
 export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
   if (!isRecord(raw)) return raw;
@@ -437,9 +434,8 @@ export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
 }
 
 /**
- * `parseCardAudio` of JSON5 text, its words filled in from `voiceText` when it is given
- * (`withVoiceText`). A syntax error is reported the same way, with its line and column, and so is a
- * key written twice in one object.
+ * `parseCardAudio` of JSON5 text, its words filled in from `voiceText` when it is given (`withVoiceText`).
+ * A syntax error or a key written twice in one object is reported with its line and column.
  */
 export function parseCardAudioText(source: string, catalog: CatalogTypes, voiceText?: unknown): CardAudioTable {
   let raw: unknown;
@@ -556,9 +552,8 @@ export function emoteVoiceDef(portrait: PortraitId): string {
 }
 
 /**
- * Keys worth preloading for a view, deduped, in order: the viewer's hand, every unit on both boards
- * (death), the viewer's own units (attack, R655), their face-up backrow traps (cast). Only hooks that
- * have a line: an effect renders no file.
+ * Keys worth preloading for a view, deduped, in order: the viewer's hand, every unit on both boards (death),
+ * the viewer's own units (attack, R655), their face-up backrow traps (cast). Only hooks that have a line.
  */
 export function voiceKeysForView(view: PlayerView, table: CardAudioTable): VoiceKey[] {
   const keys: VoiceKey[] = [];

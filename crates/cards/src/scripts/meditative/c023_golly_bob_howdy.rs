@@ -42,11 +42,9 @@ pub fn script() -> CardScripts {
 }
 
 // M #23 Golly Bob Howdy — SPEC §8.8 row 23, BUILD M10 row M 23: "Cry (played, R1; no shipped effect casts a
-// Unit)".
-//
-// Fixtures: #8 Mr. Vanilla (4/4) and #4 Gary the Gambler (1/1) are the neighbours, #66 The Rock (Radiant,
-// Immutable) the one that stays, and #10 Rapid Replenish the spare card that keeps the turn open (R82). The
-// harness places Units rather than playing them, so none of their Cries fire (R1).
+// Unit)". Fixtures: #8 Mr. Vanilla (4/4) and #4 Gary the Gambler (1/1) are the neighbours, #66 The Rock
+// (Radiant, Immutable) the one that stays, #10 Rapid Replenish the spare card that keeps the turn open
+// (R82). The harness places Units rather than playing them, so none of their Cries fire (R1).
 #[cfg(test)]
 mod tests {
     use super::ID;

@@ -90,6 +90,7 @@ mod tests {
     }
 
     /// Held, its pool of the set's own Drone Cores was empty; since the release (#1884) the set ships,
+    /// so they arrive with no preview.
     #[test]
     fn r1857000_since_the_release_the_drone_cores_arrive_without_a_preview() {
         let s = played("sympathizer-held", false, 1);

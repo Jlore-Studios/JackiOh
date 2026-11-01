@@ -438,6 +438,7 @@ mod tests {
     }
 
     /// R1081000: a Unit of yours standing in the backrow is a unit acting on the field: a Spell's pick
+    /// of it summons Joro and moves to it, as one of a unit in a unit zone does.
     #[test]
     fn r1081000_a_spells_pick_of_your_unit_standing_in_the_backrow_summons_joro() {
         crate::register_all();

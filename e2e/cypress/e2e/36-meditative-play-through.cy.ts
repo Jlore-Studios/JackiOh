@@ -1,16 +1,14 @@
 // 36 — every Meditative card played once through the browser, with the set previewed (#552, MN09).
-// The cards come from the catalog at run time (`crates/cards/catalog.json`): every Meditative entry a
-// deck may hold once the set is previewed (R1420), so a card a later part adds is played the day it
-// lands, with no list or fixture to edit. They are dealt a few a seat (support/playthrough.ts
-// `SEAT_SHARE`, so no row fills) into seeded /dev/hotseat games that preview the set (`cy.seedGame`'s
-// `preview`, the module's `previewSets`), and played by that file's driver.
-// A card cast as it is drawn (Meditative #37 CN in a Bottle, R58) is never played from a hand: it is
-// done once it lands in a graveyard. Prestige (Meditative #53, R1851003) De-Radiants a Radiant card,
-// so its seat is dealt CN in a Bottle too, which leaves a Radiant card in hand.
-// After every play the animations and cues (which ride the runner's entries, SPEC §10.11) have run, the
-// log reads as English (`englishProblems`; a card shown in Chinese is named in Chinese, R1301), and the
-// card's hover preview prints no id or unfilled value (`noteProblems`). Each prompt a card opens is
-// answered through the board, under the kind the view gives it (`data-prompt-kind`).
+// The cards come from the catalog at run time (`crates/cards/catalog.json`): every Meditative entry a deck may hold
+// once the set is previewed (R1420), so a card a later part adds is played the day it lands. They are dealt a few a
+// seat (support/playthrough.ts `SEAT_SHARE`, so no row fills) into seeded /dev/hotseat games that preview the set
+// (`cy.seedGame`'s `preview`), and played by that file's driver. A card cast as it is drawn (Meditative #37 CN in a
+// Bottle, R58) is done once it lands in a graveyard. Prestige (Meditative #53, R1851003) De-Radiants a Radiant card, so
+// its seat is dealt CN in a Bottle too, which leaves a Radiant card in hand.
+// After every play the animations and cues (SPEC §10.11) have run, the log reads as English (`englishProblems`; a card
+// shown in Chinese is named in Chinese, R1301), and the card's hover preview prints no id or unfilled value
+// (`noteProblems`). Each prompt a card opens is answered through the board, under the kind the view gives it
+// (`data-prompt-kind`).
 
 import {
   castOnDraw,
@@ -160,10 +158,8 @@ function handCardIds(handle: Handle): string[] {
 }
 
 /**
- * Every card left in either hand opens a preview that reads (a crafted card's parts, a market lot).
- * The ids are the seat's newest view's, read once the board draws them: after the device moves, or a
- * game's last play, the board shows the view before it for a moment with nothing animating, which
- * `cy.settled()` cannot see (#659).
+ * Every card left in either hand opens a preview that reads. The ids are the seat's newest view's: after the device
+ * moves or a game's last play the board shows the view before it, which `cy.settled()` cannot see (#659).
  */
 function readHands(): void {
   for (const seat of ["p1", "p2"] as const) {

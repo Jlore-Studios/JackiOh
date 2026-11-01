@@ -40,6 +40,7 @@ const HEARTHSTONE_WORDS: &[(&str, &str)] = &[
     ("The Coin", "幸运币"),
 ];
 
+/// The set's own words (the same list): the tuning verbs print as Buff and Nerf since patch v0.3.4
 /// (R1320; Upgrade and Degrade before it, R386), and the library is the deck (R366).
 const SET_WORDS: &[(&str, &str)] = &[
     ("Radiant", "光辉"),
@@ -99,6 +100,7 @@ fn keys_of(text: &str) -> (IndexSet<String>, bool) {
     (keys, agreeing)
 }
 
+/// `phrase` stands in `text` as whole words: the characters either side are not ASCII letters, digits,
 /// an apostrophe or a hyphen (R279's rule for a name).
 fn names_word(text: &str, phrase: &str) -> bool {
     let edge = |c: Option<char>| c.is_none_or(|c| !(c.is_ascii_alphanumeric() || c == '\'' || c == '-'));
@@ -109,6 +111,8 @@ fn names_word(text: &str, phrase: &str) -> bool {
 /// R1303, R279: `text` with the names of the cards its card names (`refs`) blanked, each as R279 links
 /// it (the name, or the name before a closing parenthesis, as whole words, a plural "s" with it), so a
 /// term inside a name ("Shadow Word Death", the Stinkyscape set's S #12 token, holds "Death") asks
+/// its face for no Chinese term: such a name is held to its Chinese name instead
+/// (`r1303_each_card_a_text_names_appears_by_its_chinese_name`).
 fn without_named_cards(card: &CardDef, text: &str) -> String {
     let mut names: Vec<&str> = card
         .refs
@@ -139,6 +143,7 @@ fn without_named_cards(card: &CardDef, text: &str) -> String {
 }
 
 /// R1303: the Hearthstone and set terms `english` says as whole words that `chinese` lacks, the names
+/// of the cards `card` names read as names (`without_named_cards`).
 fn missing_terms(card: &CardDef, english: &str, chinese: &str) -> Vec<(&'static str, &'static str)> {
     let english = without_named_cards(card, english);
     HEARTHSTONE_WORDS
@@ -150,6 +155,7 @@ fn missing_terms(card: &CardDef, english: &str, chinese: &str) -> Vec<(&'static 
 }
 
 /// A name with a closing edition cut off: "混沌召唤（核心版）" is named as "混沌召唤", as R279 names
+/// "Call to Chaos (Core Edition)" as "Call to Chaos".
 fn without_edition(name: &str) -> &str {
     for (open, close) in [('（', '）'), ('(', ')')] {
         if name.ends_with(close)
@@ -161,6 +167,7 @@ fn without_edition(name: &str) -> &str {
     name
 }
 
+/// Every preview label a previewed card's view carries, by face: in its owner's hand and, for a
 /// permanent, face up in play (Combo-Index's grade shows on the field only, R372).
 fn preview_labels(id: &str) -> Vec<(FaceKind, String)> {
     let card = &CATALOG[id];
@@ -329,6 +336,7 @@ mod r1303_the_chinese_tables {
                 }
             }
             // A Chinese label may print a number its English leaves out (C+ #74's "每打出{plays}张牌" for
+            // "your opponent plays"), but only one the card declares, so the client can fill it.
             let declared: Vec<&str> = card
                 .params
                 .iter()
@@ -518,6 +526,7 @@ mod r1303_the_chinese_tables {
     }
 
     /// R1303, R279: a term inside the name of a card the face names asks for no Chinese term (the name is
+    /// held to its Chinese name), and the same term outside a name still does.
     #[test]
     fn r1303_a_term_inside_a_name_the_face_names_asks_for_no_chinese_term_and_outside_one_it_does() {
         assert_eq!(CATALOG["core-t-rush"].name, "Rush Token");
@@ -544,6 +553,7 @@ mod r1303_the_chinese_tables {
     }
 
     /// R279 in Chinese: a card the text names (`refs`) is named by its Chinese name, as the client marks
+    /// it, in the faces whose English names it, and in one face at least.
     #[test]
     fn r1303_each_card_a_text_names_appears_by_its_chinese_name() {
         let sidecar = table();

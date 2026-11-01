@@ -1,88 +1,37 @@
-//! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed
-//! work (SPEC §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md
-//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), `fuzz --duos`
-//! one per duel through `DuosInvariantMonitor` (#1074, with the Duos view's own redaction and the pool
-//! bounds, §13.4, §13.6), and the edge-case hunters reuse it.
+//! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed work (SPEC
+//! §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md "Fuzz invariants").
+//! `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), `fuzz --duos` one per duel through
+//! `DuosInvariantMonitor` (#1074; §13.4, §13.6), and the edge-case hunters reuse it.
 //!
-//! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED. It never reads `summonedTurn` to decide who is
-//! sick, but to settle what its shadow can only bound (`readied`, an uncovering inside one action). It
-//! keeps a shadow built only from the event stream and the Stack piles of the states it reads:
-//!   - `turn` and the player whose turn it is, from `turnStarted`;
-//!   - `entered`, the turn of each instance's latest entry, and `stint`, how many entries it has had.
-//!     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
-//!     stepping from its backrow zone into a unit zone enters it on that turn, R383, but for R1062's
-//!     "Animated on your turn" card at its controller's start of turn), or a `transformed` whose new
-//!     instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
-//!     side emits nothing and changes nothing. A card a Stack pile uncovers has entered (R1829000)
-//!     with no event (R212);
-//!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
-//!     pre-recorded with no attacks counted when its attack action is chosen, so a substitute
-//!     barred from the target reads as this stint's spend (R1202);
-//!   - `readied`, the Transform results R424 lets attack on the turn they entered: an attacker that
-//!     destroyed the Unit its declared attack targeted (`destroyed` naming it the killer, R42) and is
-//!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
-//!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint;
-//!   - `kill_credits`, the fresh exertion a kill gives without a transform (B5 E35's `mayAttackAgain`,
-//!     Stinkyscape #94 Tmack Trav, R1869002): an attacker that destroyed the Unit its attack targeted,
-//!     declared or forced, and whose running text answers its attacks (`afterAttack`, the only text that
-//!     can ready it) may declare its attacks of a turn again from there, in that stint that turn, and its
-//!     stint is `readied`.
+//! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED: it reads `summonedTurn` only to settle what its shadow can
+//! bound. The shadow is built from the event stream and the Stack piles alone: `turn`; `entered` and `stint`
+//! (an instance's latest entry turn and entry count; entries are plays, summons, control changes, `animated`
+//! (R383, R1062), a `transformed` to a new instance and a card a Stack pile uncovers (R1829000, R212);
+//! `fused` keeps the target's entry, R77); `lastAttack` (declared, not forced; R1202); `readied` (the
+//! Transform results R424 lets attack, Classic+ #73.1 Classic Golem, R42); `kill_credits` (B5 E35
+//! `mayAttackAgain`, Stinkyscape #94 Tmack Trav, R1869002).
 //!
-//! The ten checks:
-//!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
-//!      open, a unit of the acting player that entered on this turn has no attack target unless it
-//!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
-//!      checked the same way. It reads `attack_targets`, which is what `legal_actions` enumerates with.
-//!   I2 one declared attack per stint per turn, two for a unit that had Windfury in that stint (R636).
-//!      A unit that re-entered may attack again within its keywords (R83, R171), and a kill credit's fresh
-//!      exertion counts its attacks again from the ones declared at the kill (R1869002); forced attacks
-//!      are not declarations and are skipped (R53).
-//!   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
-//!   I4 the bookkeeping matches the shadow (white-box R171): (a) `summonedTurn` is the turn of the
-//!      latest entry, or absent on a `readied` stint (R424, R1839002, R1869002); (b) a spent attack exertion
-//!      belongs to the current stint, so an exertion left spent across an entry trips it.
-//!   I5 nothing happens after the game is over (§2.5, R216): `gameOver` is the last event an action
-//!      emits.
-//!   I6 no seat is sent a card it may not read (§9.1, §10.8, R97, R177, issue #348). On every state the
-//!      fuzz reaches, setup's included, for both seats: `view_for` and `legal_actions` do not panic, and
-//!      neither names a hidden card. Hidden is read off the state's zones on their own terms, never
-//!      from `view_for`'s rules (`hidden_from`), and a definition reads only through a card the seat
-//!      reads, never through the view being checked, which could pair a hidden definition with any id
-//!      it likes. The first run found one leak, R763 (`trapFired` named a fired trap to its controller
-//!      after it was shuffled into a library), and five false positives, each fixed here and not in the
-//!      engine. A Glitch's reset or boards (R676, R678) takes a card in no pile unseen, and the first
-//!      oracle excused it, which was the engine's own R97 rule restated: R764 fixed it.
-//!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
-//!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
-//!      has drained every paused sequence, so `work` is empty and `work_cursor` is back at 0. A game that
-//!      ended mid-sequence keeps what it owed (`settle` stops at the result, and nothing runs after it,
-//!      I5), so a game over is not checked: the fuzz reaches such game overs (Classic #52 Final
-//!      Gambit's `afterRedirect`, Classic #56 Spell Tyrant's `resolve`).
-//!   I8 every attack, switch and activation `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192): the
-//!      server reduces what a client sends without reading `legal_actions`. Each one built from the board
-//!      alone that the list lacks is reduced on a copy without the action history (as
-//!      `scorer::dry_run_base` leaves it: nothing a refusal reads is in it), and each accepted is reported.
-//!      Not probed: kinds never listed by design (R345, R923000, R79), and `play` and a well-formed
-//!      `answer` (R90's bound lists a slice, #992); a malformed answer is the fuzz's `malformed-answer`
-//!      probe (`malformed_answers`, #1574), and a listed play, activation or mulligan with one choice
-//!      made impossible its `malformed-action` probe (`malformed_actions`, #1694). Under a Mayor (R1200)
-//!      a named target is refused.
-//!   I9 the wire tells the truth (§10.3: every visible state change emits an event; §10.10: every client
-//!      renders from them; #1719). A payload wrong the same way every time folds to the same hash, so the
-//!      replay check cannot see it. In the stream, a `turnEnded` or `turnAutoEnded` names the turn under
-//!      way (§2.2), and each `fatigue` is its seat's next fatigue draw, its `amount`
-//!      `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902). On the state an action left, each seat's last
-//!      `manaChanged` is its `mana.current` and `mana.max` (§2.3): every mana write announces one.
-//!   I10 no opponent-held prompt on its holder's off turn (§10.6, R1279000; #2568). A prompt the opponent
-//!      holds (`by: "enemy"`) never opens while its holder is not the active player: each card defers it
-//!      to the start of its holder's next turn by hand. After every action of a live game, a `pending`
-//!      whose `player_id` is not `state.active`, and whose `prompt_owner_of` (the asking card's
-//!      controller, which `open_prompt` records when the player asked is someone else) is another
-//!      player, is a violation. A prompt held by the card's own controller opens on either turn (In Too
-//!      Deep's reward choice), an engine prompt records no owner, and the mulligans are no `pending`.
-//!
-//! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
-//! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
+//! The ten checks (a message leads with its id and cites the SPEC reference, so `signatureOf` groups one
+//! bug):
+//!   I1 no sick attack is offered (§4.1, §6.1, R83, R171): not in `attack_targets`, not as the chosen
+//!      `attack`.
+//!   I2 one declared attack per stint per turn, two with Windfury (R636); forced attacks are skipped (R53).
+//!   I3 every card on the field arrived by an event (§10.3).
+//!   I4 `summonedTurn` and a spent exertion match the shadow's stint (R171, R424, R1839002, R1869002).
+//!   I5 nothing happens after the game is over (§2.5, R216).
+//!   I6 no seat is sent a card it may not read (§9.1, §10.8, R97, R177, #348): hidden is read off the state's
+//!      zones, never from `view_for`'s rules (R763, R764; a Glitch's reset or boards, R676, R678).
+//!   I7 no orphaned work (§9.3, §10.3, R113): a live game with no prompt open (§10.6, R265) has `work` empty;
+//!      a game over keeps its debt (I5; Classic #52 Final Gambit, #56 Spell Tyrant).
+//!   I8 every attack, switch and activation `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192), as
+//!      the server reduces without `legal_actions`. Not probed: R345, R923000, R79, `play` and a well-formed
+//!      `answer` (R90, #992); a malformed one is the fuzz's probe (#1574, #1694). Under a Mayor (R1200) a
+//!      target is refused.
+//!   I9 the wire tells the truth (§10.3, §10.10, #1719): `turnEnded` names the turn under way (§2.2), each
+//!      `fatigue` is the next draw's `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902), the last `manaChanged`
+//!      is `mana` (§2.3).
+//!   I10 no opponent-held prompt on its holder's off turn (§10.6, R1279000; #2568): a `pending` whose
+//!      `player_id` is not `state.active` and whose `prompt_owner_of` is another player is a violation.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -539,11 +488,10 @@ fn is_token_def(state: &GameState, def_id: &str, viewer: PlayerId) -> bool {
     crate::subsystems::fuse::rebuild_fused_def(&mut scratch, def_id, viewer).is_some_and(|def| def.token)
 }
 
-/// The hidden set, from the state's zones on their own terms, never from `view_for`'s rules: the other
-/// seat's hand and Resource tray while the game is live (R434, R1840000), both libraries (§9.1), its
-/// face-down traps and cards being set face-down, mulligan returns awaiting their shuffle, and every
-/// former id of these (R227); less every definition the viewer reads through a card, never through the
-/// view being checked, which may name a definition beside any id it likes.
+/// The hidden set, from the state's zones on their own terms, never from `view_for`'s rules: the other seat's
+/// hand and Resource tray while the game is live (R434, R1840000), both libraries (§9.1), its face-down traps
+/// and cards being set, mulligan returns awaiting their shuffle, and their former ids (R227); less every
+/// definition the viewer reads through a card, never through the view being checked.
 fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     let mut ids: IndexMap<String, String> = IndexMap::new();
     let mut defs: IndexMap<String, String> = IndexMap::new();
@@ -1461,9 +1409,6 @@ pub struct InvariantMonitor {
     dormant: IndexSet<String>,
 }
 
-/// SURFACE §8's name for the monitor (`testkit::invariants::Monitor`).
-pub type Monitor = InvariantMonitor;
-
 pub fn create_invariant_monitor(start: &GameState) -> InvariantMonitor {
     InvariantMonitor::new(start)
 }
@@ -1657,11 +1602,11 @@ impl InvariantMonitor {
         at < self.turn && had
     }
 
-    /// R1829000: the entries one action made by uncovering cards in their Stack piles, which no event
-    /// reports (R212): a card dormant in the last state read that acts now (not on a side a `rolledBack`
-    /// restored, R566, nor the card a fusion kept, R77, R1086), on the turn from `began_on` on that
-    /// `summonedTurn` names, else the last. One maybe uncovered unseen (dormant, or in a zone an entry or
-    /// announce named, R14) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// R1829000: the entries one action made by uncovering cards in their Stack piles, which no event reports
+    /// (R212): a card dormant in the last state read that acts now (not on a side a `rolledBack` restored,
+    /// R566, nor a fusion's kept card, R77, R1086), on the turn `summonedTurn` names from `began_on`, else
+    /// the last. One uncovered unseen (dormant, or in a zone R14 names) takes `summonedTurn`'s word only for
+    /// a turn of the action.
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();

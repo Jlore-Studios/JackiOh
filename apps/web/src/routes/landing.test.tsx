@@ -290,6 +290,7 @@ describe("B37 the corner slot", () => {
   });
 });
 
+// B38: hero
 // R374: a seeded source must yield the same fan hand.
 
 describe("B38 the hero", () => {

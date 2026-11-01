@@ -236,6 +236,7 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [HINDER, MENACE, STOCKPILE, FILLER] } }));
             s.play(RISKY, json!({}));
             // Hinder is cast on the first draw; its discard is random (R682), so with one card held the
+            // Vanilla goes with no prompt opening.
             assert!(s.state().pending.is_none());
             let round: GameState = serde_json::from_str(&serde_json::to_string(s.state()).expect("serializable"))
                 .expect("a state reads back");
@@ -299,6 +300,7 @@ mod tests {
         }
 
         /// R386 its discount is declared: an Upgrade's step takes (2) off, so a (2) card is kept at (0),
+        /// and a Degrade finds the discount at its floor of 1
         #[test]
         fn r386_its_discount_is_declared_an_upgrade_s_step_keeps_a_2_card_at_0() {
             let mut s = scenario(json!({ "p1": { "hand": [RISKY, VANILLA], "library": [ARMOR, FILLER, FILLER] } }));

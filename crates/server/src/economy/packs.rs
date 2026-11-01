@@ -67,11 +67,10 @@ pub struct BarSettle {
     pub pays: i64,
 }
 
-/// What an opening did to both token bars (R1305000, R1305001), for the client to animate from
-/// where each stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the
-/// cycle's steps it paid, in order, so its length is `cosmetic.pays`, and `slot_points` are the
-/// points each slot added to each bar, in slot order, so the client can send each slot's points to
-/// the bars without counting them (R1953000, R1999000).
+/// What an opening did to both token bars (R1305000, R1305001), for the client to animate from where each
+/// stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the cycle's steps it paid, in
+/// order (so its length is `cosmetic.pays`), and `slot_points` are the points each slot added to each bar,
+/// in slot order, so the client sends each slot's points to the bars without counting (R1953000, R1999000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarsSettled {
@@ -135,12 +134,11 @@ pub(crate) fn delta_of(count: usize) -> Result<i64, ApiError> {
     i64::try_from(count).map_err(|_| ApiError::internal(format!("{count} does not fit a ledger delta")))
 }
 
-/// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction. A wallet that cannot cover the
-/// price is 409 and writes nothing (§14.1). Under an `Idempotency-Key` (R2124000): a keyed buy
-/// takes the account's lock first, so a retry racing its first try waits for it (through the route
-/// it waits its turn first, R2378000), then answers a key it already committed as it did then, and
-/// keeps the answer of one it buys in the same transaction. A buy with no key takes no lock and
-/// keeps nothing.
+/// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction. A wallet that cannot cover the price is
+/// 409 and writes nothing (§14.1). Under an `Idempotency-Key` (R2124000) a keyed buy takes the account's lock
+/// first, so a retry racing its first try waits for it (through the route it waits its turn first, R2378000),
+/// then answers a key it already committed as it did then, and keeps the answer of one it buys in the same
+/// transaction. A buy with no key takes no lock and keeps nothing.
 pub async fn buy_pack_once(
     app: &App,
     profile_id: &str,
@@ -294,10 +292,9 @@ pub fn slot_bar_points(slots: &[Slot]) -> Vec<i64> {
 }
 
 /// Both token bars' points for an opening's slots, `slot_points` each slot's to each bar
-/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size (R1305000,
-/// R1305001). Each bar's write carries `reference`, the opening's log, and every row shares `at`;
-/// `counters` is the account's before the opening. A card pack's opening and a cosmetic pack's
-/// both settle through it (R1306001).
+/// ([`slot_bar_points`], R1953000), each bar paying when it reaches its size (R1305000, R1305001). Each bar's
+/// write carries `reference`, the opening's log, and every row shares `at`; `counters` is the account's
+/// before the opening. A card pack's opening and a cosmetic pack's both settle through it (R1306001).
 pub(crate) async fn settle_bars(
     tx: &mut Tx<'_>,
     profile_id: &str,
@@ -423,11 +420,11 @@ pub(crate) async fn settle_bars(
     })
 }
 
-/// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock
-/// (R1301003) it rolls the opening from `seed` (`roll::roll_opening`) and writes every grant. Every
-/// economy row's `ref` is the opening's log; the collection's rows have no `ref` and share the
-/// opening's `at`. No pack held is 409. Every refusal and failure returns before the commit, so it
-/// writes nothing. With no key, [`open_pack_once`]'s opening.
+/// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock (R1301003)
+/// it rolls the opening from `seed` (`roll::roll_opening`) and writes every grant. Every economy row's `ref`
+/// is the opening's log; the collection's rows have no `ref` and share the opening's `at`. No pack held is
+/// 409. Every refusal and failure returns before the commit, so it writes nothing. With no key,
+/// [`open_pack_once`]'s opening.
 pub async fn open_pack(
     app: &App,
     profile_id: &str,

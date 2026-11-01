@@ -40,13 +40,16 @@ pub struct Read<'a> {
     pub tokens: &'a dyn Fn() -> i32,
 }
 
+/// Every Plague Counter on the field: each permanent on both sides, face-down ones included, the top of
 /// each pile only (R13). Walked from the controller's side, so the read never asks whose turn it is.
 fn tokens_on_field(read: &Read) -> i32 {
     permanents_on_field(read.state, read.controller).iter().fold(0, |sum, card| sum + plague_on(card))
 }
 
+/// The Plague Counters the Cry's own placement puts on the Doctor: the declared number times its own
 /// multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would once played.
 /// Both faces place since patch v0.3.10 (#831), the Radiant face alone before. A preview is asked only of a Doctor acting on the field or in a hand (R13), and its Cry runs
+/// as it arrives on top of its zone, so the Doctor always carries the placement.
 fn tokens_it_places(read: &Read) -> i32 {
     match read.self_ {
         Some(self_) => (read.tokens)().max(0) * plague_multiplier_of(read.state, self_),

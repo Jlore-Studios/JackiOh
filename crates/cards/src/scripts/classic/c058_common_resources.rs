@@ -41,6 +41,7 @@ pub fn script() -> CardScripts {
 // C #58 Common Resources, SPEC §8.6 row 58: the opponent's view never names the card (R97) and no
 // event carries a deck position. The draw limit is C #49 Anti-Greed Machine's (B5 E3); the start-of-turn
 // trigger runs before the turn's own draw (§2.2, R62), so it is the turn's first draw and the turn's own
+// draw is the one a limit of 1 stops.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -193,6 +194,7 @@ mod tests {
                     vec![json!([victim, "p1"]), json!([HINDER, "p1"])],
                 );
                 // §2.4's repeat of the draw and the turn's own draw are p1's own draws, from p1's deck: only the
+                // one bottom card left p2's deck.
                 assert_eq!(
                     s.state().players.p2.library.iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
                     vec![VANILLA, MENACE],
@@ -335,6 +337,7 @@ mod tests {
                 assert_eq!(s.pile(PlayerId::P2, "library").len(), 0);
                 s.end_turn();
                 // Up to p2's own start of turn (whose own draw from its empty deck is fatigue of its own, §2.4),
+                // p1's end of turn drew nothing and hit nobody.
                 let events: Vec<Value> = s.last_events().iter().map(js).collect();
                 let p2_starts = events.iter().position(|event| event["type"] == "turnStarted");
                 let before = &events[..p2_starts.unwrap_or(events.len())];

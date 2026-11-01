@@ -146,6 +146,14 @@ export function sideOf(view: PlayerView, player: PlayerId): Side {
   return player === view.viewer ? "you" : "opponent";
 }
 
+/** R370: the cost the view gives the face-down card in `player`'s backrow lane `lane`, while one stands there. */
+export function faceDownCost(view: PlayerView, player: PlayerId, lane: number): number | undefined {
+  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
+  const entry = seat.backrow[lane - 1];
+  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
+  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
+}
+
 export function playerOf(view: PlayerView, side: Side): PlayerId {
   return side === "you" ? view.you.player : view.opponent.player;
 }

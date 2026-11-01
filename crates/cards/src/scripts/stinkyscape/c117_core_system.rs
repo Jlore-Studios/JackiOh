@@ -7,6 +7,8 @@
 //! pile's top and every backrow card, face-down ones included (R13), back to its controller's hand,
 //! reset (R78), a token vanishing and a full hand burning the rest (§2.4); a Dormant card is out of
 //! reach (R1839000), and so is one Immune to Spells. Then `next_turn_mana` of minus `loss` on its
+//! caster (R1848004): their next refresh gives their max mana less it, never below 0, a badge both
+//! seats read.
 
 use jackioh_engine::prelude::*;
 

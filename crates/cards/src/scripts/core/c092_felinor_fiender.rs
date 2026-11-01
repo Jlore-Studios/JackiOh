@@ -69,15 +69,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362).
-//
-// BUILD M4-T4 row 92 (R13, R39, R362).
-// The two faces are checked in separate blocks below (CLAUDE.md rule 6).
-//
+// #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362; BUILD M4-T4 row 92):
+// the two faces are checked in separate blocks below (CLAUDE.md rule 6).
 // R39's floor is per sum, so "no Felinors at all" is its reachable boundary: a NEGATIVE total is
 // unreachable, as only an aura (§10.4 layer 5) subtracts stats (#46 Suppressive Aura, #65.1 Spikey
-// Pillow) and layer 2 reads layer 4. The Spikey Pillow test pins §10.4's "LAYER-4 stats". SPEC §8
-// TAGS #92 `Human`, NOT `Felinor` (flagged to the designer), so a second Fiender contributes nothing.
+// Pillow) and layer 2 reads layer 4. SPEC §8 TAGS #92 `Human`, NOT `Felinor`, so a second Fiender
+// contributes nothing.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,8 +89,7 @@ mod tests {
     const FELINOR_TOKEN: &str = "core-t-felinor";
     /// #65.1 Spikey Pillow: "your units have −2 attack" as an aura, i.e. §10.4 layer 5.
     const SPIKEY_PILLOW: &str = "core-065-1";
-    /// #44 True Strike: 4 damage to a target, for killing a Felinor mid-turn. (#35 Lunar Eclipse would
-    /// read more naturally at 3 damage, but its script throws — see the report.)
+    /// #44 True Strike: 4 damage to a target, for killing a Felinor mid-turn (#35 Lunar Eclipse's script throws).
     const TRUE_STRIKE: &str = "core-044";
 
     fn keyword_kinds(s: &Scenario, card: &str) -> Vec<String> {

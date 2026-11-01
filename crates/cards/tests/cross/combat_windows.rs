@@ -184,6 +184,8 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn s5_1_my_pawn_fires_once_it_cannot_fire_again_on_an_attack_its_own_ai_turn_declares() {
+        // p1's Deft Duelist, which
+        // has already switched, can still attack the hero for 4, which is lethal at 4 — and a Trap that
         // has fired is spent (§5.1), so nothing cancels it.
         let mut s = setup(json!({
             "seed": "hunt-cw-pawn-twice-a",
@@ -213,6 +215,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
 
     #[test]
     fn r152_r44_r82_the_ai_plays_out_only_the_rest_of_the_turn_my_pawn_took_not_the_players_next_turn() {
+        // p2 has nothing it can
         // do, so R82 auto-ends turn 10 inside that same reduction and p1's turn 11 begins — p1's own.
         let mut s = setup(json!({
             "seed": "hunt-cw-pawn-next-turn",
@@ -585,6 +588,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         // p2's own unit does not attack p2's hero: an attack is made on an enemy (§4.2 step 2).
         s.expect_health("p2", 20);
         // The attack is over, but the attacker changed sides: R171 gives it a fresh exertion for p2,
+        // and nothing spends it again as the attack ends.
         assert_eq!(
             exertion_json(&s, &sorcerer),
             json!({ "attacked": false, "switched": false })
@@ -677,6 +681,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         );
         s.answer(json!("ok"));
 
+        // The window's trap took Timmy: it is p2's now, and the attack p1 declared at p2's hero would be
         // p2's own unit hitting p2's own hero. Every attack is made on an enemy (§4.2 step 2, R173).
         assert_eq!(s.card(&timmy).controller, PlayerId::P2);
         s.expect_health("p2", 30);
@@ -696,6 +701,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         s.attack(&defender, "hero");
         s.answer(json!("ok"));
 
+        // The declared attacker died in the window and came back through Reborn: a new arrival, sick
         // this turn (R83), and not the stay that declared the attack (R174). Nothing hits p2's hero.
         assert_eq!(s.card(&defender).reborn_spent, Some(true));
         s.expect_health("p2", 30);
@@ -704,7 +710,9 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     #[test]
     fn r220_r44_r99_my_pawn_does_not_fire_on_a_declaration_whose_attacker_an_earlier_trap_in_the_window_destroyed()
      {
+        // p2's fixture trap in lane 1 destroys p1's attacking Twisted Sorcerer before My Pawn in lane 2
         // is offered the declaration (R68). The attacker is in its graveyard: no attack is left to be
+        // lethal, so My Pawn stays armed and p1 keeps its turn.
         let mut s = setup(json!({
             "seed": "edge-r6-vaporize-pawn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": [GIGA, GIGA, GIGA] },
@@ -765,6 +773,7 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
     }
 }
 
+// The ordinary triggers on a declaration meet the board as it stood when the attack was declared
 // (R212), whatever a trap in the window did to it since.
 
 fn fixture_unit(s: &mut Scenario, id: &str, script: Script, stats: AttackHealth) {
@@ -826,8 +835,10 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
     #[test]
     fn r212_r171_a_unit_a_trap_in_the_window_stole_answers_the_declaration_for_the_player_who_controlled_it_then_s10_3()
      {
+        // p1's own trap in the window steals the Watcher, so the
         // attack is over (R220). The Watcher's "whenever a unit attacks, you draw" answers a declaration
         // made while p2 controlled it: p2 draws, not p1 (R212's "a card whose controller has changed
+        // since answers for the one it had").
         let mut s = setup(json!({
             "seed": "edge-r7-watcher-stolen",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -1038,6 +1049,7 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
     #[test]
     fn r220_a_trap_answering_the_window_traps_hit_on_the_attacker_fires_before_step_5_so_the_destroyed_attacker_never_swings_s10_3_s4_2_step_4()
      {
+        // Traps are
         // responses that fire immediately (§10.3), and both resolve inside step 4's window, before any
         // damage of the attack (§4.2 step 4), so the attacker is gone when step 5 comes.
         let mut s = setup(json!({
@@ -1060,7 +1072,9 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
     #[test]
     fn r220_r113_r122_after_a_window_traps_question_a_trap_answering_its_hit_on_the_attacker_still_fires_before_step_5_s10_3()
      {
+        // The same two traps, but the first asks p2 a question before it deals the attacker 1 damage, so
         // the window pauses and step 5 is owed to the answer (R113). The answer finishes the window: the
+        // second trap is a response to the hit and resolves before the combat the declaration still owes.
         let mut s = setup(json!({
             "seed": "cw8-window-chain-asked",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },

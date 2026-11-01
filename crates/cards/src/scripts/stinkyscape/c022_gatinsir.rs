@@ -249,6 +249,7 @@ mod tests {
 
         #[test]
         fn r1875002_a_forced_attack_rolls_nothing() {
+            // Moths to the Flame on Gatinsir's side makes p1's Vanilla attack it at p2's start of turn: an
             // enemy Unit's attack that no one declared (R121).
             let mut s = trapped("gatinsir-forced", false, json!([{ "def": MOTHS, "lane": 2 }]));
             let cursor = s.state().rng_cursor;

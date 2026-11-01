@@ -133,12 +133,10 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// R71: the log is read here, when the delayed effect runs, so later plays are in it — through the
-/// engine's read-only `playedIdsThisTurn` (engine/src/query.ts), which gives the ids in play order.
-/// R86: an id whose instance no longer exists is skipped rather than fizzled on.
-/// R133: the log holds one entry per play, so a card played, bounced and replayed is two entries and
-/// one card. "Every other card you played this turn" is the set of cards, not the list of plays, so
-/// each id yields one copy; deduping by id leaves R86's skip untouched.
+/// R71: the log is read here, when the delayed effect runs, so later plays are in it (the ids in play order,
+/// from the engine's read-only `playedIdsThisTurn`). R86: an id whose instance no longer exists is skipped
+/// rather than fizzled on. R133: the log holds one entry per play, so a card played, bounced and replayed is
+/// two entries and one card: each id yields one copy, and deduping by id leaves R86's skip untouched.
 fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
     let discount = discount_of(ctx, terms);
     let mut out: Vec<Effect> = Vec::new();

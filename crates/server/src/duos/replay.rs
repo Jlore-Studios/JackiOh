@@ -7,9 +7,8 @@
 //! `DuosReplayCache` (`REPLAY_CACHE_TTL_SECONDS`, `REPLAY_CACHE_MATCHES`).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::json;
 
@@ -20,16 +19,13 @@ use crate::actor::contracts::one_tx;
 use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Req, account_key, lock, log_warn, now_ms, ok_of, rate_limited,
+    ApiError, ApiErrorCode, ApiResult, Req, account_key, log_warn, now_ms, ok_of, rate_limited,
 };
+use crate::api::replays::ReplayCache;
 use crate::app::App;
-use crate::config::{REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS};
 use crate::duos::engine::{self, DuosSteps, Pinned};
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosMatch, action_of};
-
-/// Unit conversion, not configuration.
-const MS_PER_SECOND: i64 = 1000;
 
 /// B41's answer.
 #[derive(Serialize)]
@@ -44,53 +40,8 @@ pub enum DuosOpened {
     Refused(ReplayRefusal),
 }
 
-type Entries = IndexMap<String, (i64, Arc<DuosOpened>)>;
-
-/// Opened co-op replays by match id, LRU-ordered. The lock is never held across a fold.
-#[derive(Default)]
-pub struct DuosReplayCache {
-    entries: Mutex<Entries>,
-}
-
-impl DuosReplayCache {
-    fn expire(entries: &mut Entries, now: i64) {
-        entries.retain(|_, (opened_at, _)| now - *opened_at < REPLAY_CACHE_TTL_SECONDS * MS_PER_SECOND);
-    }
-
-    /// The replay of `match_id` opened less than `REPLAY_CACHE_TTL_SECONDS` ago, now the one used
-    /// last.
-    pub fn get(&self, match_id: &str, now: i64) -> Option<Arc<DuosOpened>> {
-        let mut entries = lock(&self.entries);
-        Self::expire(&mut entries, now);
-        let entry = entries.shift_remove(match_id)?;
-        let open = Arc::clone(&entry.1);
-        entries.insert(match_id.to_string(), entry);
-        Some(open)
-    }
-
-    /// Keeps the replay of `match_id`, opened at `now`, within `REPLAY_CACHE_MATCHES`.
-    pub fn put(&self, match_id: &str, open: Arc<DuosOpened>, now: i64) {
-        let mut entries = lock(&self.entries);
-        Self::expire(&mut entries, now);
-        entries.shift_remove(match_id);
-        while entries.len() >= REPLAY_CACHE_MATCHES {
-            entries.shift_remove_index(0);
-        }
-        entries.insert(match_id.to_string(), (now, open));
-    }
-
-    /// Forgets every opened replay (the retention purge took logs they were folded from).
-    pub fn clear(&self) {
-        lock(&self.entries).clear();
-    }
-
-    /// How many replays are kept at `now`.
-    pub fn held(&self, now: i64) -> usize {
-        let mut entries = lock(&self.entries);
-        Self::expire(&mut entries, now);
-        entries.len()
-    }
-}
+/// The opened co-op replays: `ReplayCache` over every step of both people's views.
+pub type DuosReplayCache = ReplayCache<DuosOpened>;
 
 fn no_such_match() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "no such co-op match")

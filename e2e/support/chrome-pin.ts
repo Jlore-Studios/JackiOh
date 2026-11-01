@@ -1,16 +1,13 @@
-// The Chrome the e2e run launches as `chrome`, when the one Cypress found is a major known to break
-// under it. Node-side only: cypress.config.ts's setupNodeEvents calls `pinChrome`.
+// The Chrome the e2e run launches as `chrome`, when the one Cypress found is a major known to break under it.
+// Node-side only: cypress.config.ts's setupNodeEvents calls `pinChrome`.
 //
-// Cypress 16 answers every request the page makes over the DevTools protocol (`Fetch.enable`;
-// `forceHttp1: true` never delivered the engine's .wasm). Chrome 155 made a request id reused under
-// that interception fatal (Chromium CL 8359730), and a restarted request reuses one, so now and then
-// the browser kills its network service: every fetch and socket fails while Node's `cy.request` never
-// notices. CL 8411428 (crbug.com/559770861) fixed it in 156; on 155 `e2e smoke` failed 8 runs in 15.
-//
-// So on CI (or with E2E_CHROME_PIN=1) such a `chrome` entry is replaced, keeping its name since Cypress
-// picks a name's highest version, by Chrome for Testing PINNED_CHROME_MILESTONE cached in .cache/; a
-// failed download keeps the system Chrome and says why. Remove 155 from BROKEN_CHROME_MAJORS once the
-// runner image ships 156, and this file with it.
+// Cypress 16 answers every request the page makes over the DevTools protocol (`Fetch.enable`; `forceHttp1: true` never
+// delivered the engine's .wasm). Chrome 155 made a request id reused under that interception fatal (Chromium CL
+// 8359730), and a restarted request reuses one, so now and then the browser kills its network service; CL 8411428
+// (crbug.com/559770861) fixed it in 156. So on CI (or with E2E_CHROME_PIN=1) such a `chrome` entry is replaced, keeping
+// its name since Cypress picks a name's highest version, by Chrome for Testing PINNED_CHROME_MILESTONE cached in
+// .cache/; a failed download keeps the system Chrome and says why. Remove 155 from BROKEN_CHROME_MAJORS once the runner
+// image ships 156, and this file with it.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";

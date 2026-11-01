@@ -9,6 +9,10 @@
 //! (R1852003) and, on the Radiant face, `cardPlayed` of a card that is a Starship Piece as it is played
 //! (`is_starship_piece`), either player's, its own play left out; a card set face-down has no text in
 //! force, so it is no piece played (R1859003) and its play reveals nothing (CLAUDE.md rule 7). It fires
+//! as any Trap does (R17), its reveal being the animation and nothing more: `animate` into its own
+//! lane's unit zone or the leftmost open one (Animated, R64, R383), a 6/6 Unit with Starship Piece whose
+//! death fuses a copy into its owner's Dormant Starship (R1852000); with no open unit zone it stays
+//! face-up.
 
 use jackioh_engine::effects::{animate, remember};
 use jackioh_engine::prelude::*;

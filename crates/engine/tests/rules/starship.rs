@@ -1,10 +1,9 @@
 // R1852000–R1852007 (issue #1852): the Starship, Stinkyscape's mechanic ahead of its cards (SPEC §6.1
 // Starship Piece and Starship, §6.2 When launched, §6.3 Launch). A Starship Piece that dies fuses a copy
-// of itself into its owner's Dormant Starship, summoning one first (`starship::fuse_dead_piece`, the
-// death pass's last step); the Dormant Starship's one ability is the engine's launch, Activate: (3),
-// whose awakening fires its fused Cries and then its fused "When launched"; it remembers its pieces; and
-// a Stack card played onto it is exiled before it resolves. Proved on the fixtures of
-// `fixtures/starship.rs`, the Dormant Starship among them under the id the engine summons.
+// of itself into its owner's Dormant Starship, summoning one first (`starship::fuse_dead_piece`); the
+// Dormant Starship's one ability is the engine's launch, Activate: (3), whose awakening fires its fused
+// Cries and then its fused "When launched"; it remembers its pieces; and a Stack card played onto it is
+// exiled before it resolves. Proved on the fixtures of `fixtures/starship.rs`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;

@@ -24,6 +24,7 @@ fn recalled_on<'a>(card: &'a CardInstance, key: &str) -> Option<&'a Value> {
 
 /// Both faces' Cry: exile the deck, each card its own exile (R135), then discard the hand (R16: a whole
 /// hand needs no choice). Its discard must land in the graveyard before the Aura starts exiling (R393),
+/// so the Cry marks itself as running (`remember`) around it.
 fn cry() -> Hook {
     hook(|_ctx| {
         vec![
@@ -132,6 +133,7 @@ mod tests {
     }
 
     /// A play of a graveyard card (B5 E11), sent to `reduce` as `legalActions` offers it: the harness's
+    /// `play` takes a card from a hand, so a graveyard play is reduced here and read back off its result.
     fn play_from_graveyard(s: &Scenario, card: &CardInstance, extra: Value) -> Played {
         let mut action = json!({ "type": "play", "playerId": "p1", "instanceId": card.id });
         if let (Some(into), Some(more)) = (action.as_object_mut(), extra.as_object()) {
@@ -154,6 +156,7 @@ mod tests {
         find_instance(state, &card.id).map(|found| found.zone.z())
     }
 
+    /// On the base face a setup's graveyard would be exiled once it stands, so the graveyard
     /// comes the way the card makes it: Second Wind is played and its Cry discards the hand first (R393).
     fn standing(radiant_face: bool, graveyard: &[&str], extra: Value) -> Scenario {
         let p2 = json!({ "hand": [STOCKPILE, HIT_JOB, COLLATERAL], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] });

@@ -504,6 +504,7 @@ mod r53_r113_a_forced_run_waits_for_a_death_hook_s_question_before_its_next_comb
         let moths = must(s.unit(P2, 1), "p2's Moths to the Flame");
 
         // p2's start of turn: every p1 unit attacks Moths, lane 1 first (R53). Moths strikes the 1/1
+        // back and it dies in that combat's check, whose Death hook asks p1 something.
         s.start_turn();
         s.expect_in_zone(&last_word.id, "graveyard");
         assert_eq!(
@@ -629,6 +630,7 @@ mod r17_r118_r427_the_traps_an_event_is_still_owed_answer_it_before_the_interrup
         assert_eq!(rush_tokens(&s), 0);
         s.answer(json!("ok"));
 
+        // The play went on: the Cry summoned its Rush Token, the play resolved, and only then did
         // Sheepish answer it (R427): Me and Mr Token is a Sheep, and the token its Cry made stands.
         assert!(s.state().pending.is_none());
         assert_eq!(
@@ -691,6 +693,7 @@ mod r59_activating_a_power_whose_draw_s_cast_is_still_asking_runs_no_state_check
         s.activate(&power.id, json!({}));
         must(s.state().pending.clone(), "the cast's target prompt");
         // R59: the check follows the whole power, and its draw's cast is still asking, so Timmy is still
+        // on the field at -2 where the prompt offered it.
         s.expect_in_zone(&timmy.id, "field");
 
         s.answer(json!(timmy.id));
@@ -715,6 +718,7 @@ mod r44_r113_my_pawn_s_ai_turn_is_a_sequence_and_the_other_player_s_prompt_only_
         let turn = s.state().turn;
 
         // Timmy's 3 would be lethal: My Pawn cancels it and hands p1's turn to the AI (R44), whose play
+        // sets off p2's trap, which asks p2.
         let timmy = must(s.unit(P1, 1), "p1's Tempo Timmy");
         s.attack(&timmy.id, "hero");
         assert!(s.state().players.p1.ai_turn);
@@ -723,6 +727,7 @@ mod r44_r113_my_pawn_s_ai_turn_is_a_sequence_and_the_other_player_s_prompt_only_
 
         s.answer(json!("ok"));
         // R44: the AI plays out the rest of the turn while p1 is locked out, so once p2 has answered it
+        // goes on until the turn ends; the turn is not left to a player the lockout keeps out of it.
         assert!(s.state().pending.is_none());
         assert!(
             s.state().turn > turn,
@@ -766,6 +771,7 @@ mod r70_r81_a_cast_asks_for_the_choices_its_card_declares {
 
         s.start_turn();
         // R81: a choice made during resolution — a cast's among them — is a prompt, and R70 gives it to
+        // the caster.
         let pending = must(s.state().pending.clone(), "the cast's target prompt");
         assert_eq!(pending.player_id, P1);
         s.answer(json!(timmy.id));
@@ -814,6 +820,7 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
             "the hook's question for the play of Call to Chaos",
         );
         // R423: pin the roll the answer's Cry makes to three that include the recursion (its first rng
+        // draw is the roll).
         let seed = s.state().seed.clone();
         let mut cursor: Option<u32> = None;
         let mut at: u32 = 0;
@@ -848,6 +855,7 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
             .rposition(|event| matches!(event, GameEvent::PromptOpened { .. }));
         let after = types_of(&events[opened.map_or(0, |at| at + 1)..]);
         // R87, R113: a cast that is asking has not resolved, so nothing may have happened after the prompt —
+        // not the cast's resolution, and not the played card's own landing.
         assert_eq!(
             after,
             Vec::<&str>::new(),
@@ -877,6 +885,7 @@ mod r174_a_trap_owed_an_event_behind_another_trap_s_question_meets_the_event_as_
             "p2": { "field": [RENO], "backrow": [{ "def": UNLICENSED_EXPERIMENTATION, "lane": 2 }], "hand": [RENO] },
         }));
         // Lane 1, ahead of #85 in R68's order: asks about the opponent's resolved permanent, then
+        // destroys it.
         fixture(
             &mut s,
             "edge-r6-l7-asks-then-kills",
@@ -986,6 +995,7 @@ mod r174_r113_a_list_s_tail_after_a_prompt_still_meets_the_stay_the_play_chose {
 
         // R174: the damage was aimed at the stay the play chose, which the sacrifice ended; the list is
         // one effect list whether or not a prompt split it (R113), so the damage fizzles as it does with
+        // no question between (a fused Cube+Sorcerer, re-entry.test.ts).
         s.expect_in_zone(&saintess.id, "field");
         s.expect_stats(&saintess.id, json!({ "health": 1 }));
     }
@@ -1128,6 +1138,7 @@ mod r68_r62_a_delayed_effect_made_while_its_point_is_resolving_waits_for_the_nex
 
         // The new delayed effect was made at this start of turn, so it is due at p1's next one (R62: the
         // stage resolves the effects due as it begins, in creation order, R68), as it would be had the
+        // first one not asked anything.
         s.expect_health(P2, 30);
         assert_eq!(
             s.state()
@@ -1275,6 +1286,7 @@ mod s5_2_r113_a_queued_trigger_s_parked_tail_runs_the_face_its_head_ran {
         );
         place_fixture(&mut s, "edge-r7-l7-radiates", P1, Row::Units, 1);
 
+        // The first
         // makes it Radiant, so by the time its own trigger resolves it runs the radiant text (§5.2:
         s.play(RENO, json!({ "zone": 3 }));
         assert!(s.card(&faced.id).radiant);
@@ -1282,6 +1294,7 @@ mod s5_2_r113_a_queued_trigger_s_parked_tail_runs_the_face_its_head_ran {
         s.expect_health(P2, 28);
 
         s.answer(json!("ok"));
+        // One trigger, one face: the rest of its list after the prompt is the radiant text's 20, not the
         // base text's 10 (R113: the paused list continues, it is not a different list).
         s.expect_health(P2, 8);
     }
@@ -1649,6 +1662,8 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
         // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
         // the same draw. R122: the answer goes on with what the prompt interrupted, the draw chain, and
         // not with the resolution loop. A cast on draw is no play (R2179002), so p2's Bear Honeypot
+        // answers neither cast (through v0.5.2 it met the first at the sweep's announce and its
+        // tokens took the sweep's 1 damage).
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let types = types_of(&events);
         let sweep_drawn = find_index(
@@ -1693,6 +1708,7 @@ mod r136_r113_a_list_a_prompt_split_still_reads_the_events_its_own_head_emitted 
             "p2": { "hand": [RENO] },
         }));
         // p2's trap, #60 Bear Honeypot's list with a question in the middle: when the opponent's card
+        // resolves, summon a Rush Token, ask p2 something, then the tokens this list summoned attack it.
         let trap = Script {
             triggers: vec![
                 TriggerDef::new("edge-r7-l7-honeypot-asks", &[GameEventType::CardResolved], |_ctx, event| {
@@ -1730,6 +1746,8 @@ mod r136_r113_a_list_a_prompt_split_still_reads_the_events_its_own_head_emitted 
         s.answer(json!("ok"));
 
         // R113: the list after the prompt is the same list, and R136's "the events its own script
+        // emitted" include the summon before the prompt: the token attacks Reno (3 damage) and dies to
+        // Reno's 4 strike back.
         assert_eq!(s.card(&reno.id).damage, 3);
         s.expect_in_zone(&token.id, "gone");
     }
@@ -1817,6 +1835,7 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
         );
         let victim = place_fixture(&mut s, "edge-r7-l7-enemy-reborn", P2, Row::Units, 1);
 
+        // A 0-cost Spell: sacrifice the chosen enemy unit, ask something, and on the answer schedule
         // "at the start of your next turn, steal it", watching it (#50 K-Pop Fanatic's steal, R76).
         let spell = Script {
             targets: vec![decl(
@@ -1888,6 +1907,7 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
 
         // R174: the steal is aimed at the stay the play chose, which the sacrifice ended before the
         // question. The answer continues the same resolution (R113, §10.6), so it is never scheduled for
+        // the body that came back, as it is not when a fused card's parts do the same (re-entry.test.ts).
         let scheduled: Vec<DelayedEffect> = s
             .state()
             .delayed
@@ -2004,6 +2024,7 @@ mod r174_10_5_step_6_an_echo_repeat_s_fresh_target_is_aimed_at_the_stay_it_was_c
         assert!(pending.prompt.contains("Echo"));
         s.answer(json!(victim.id));
 
+        // The repeat is step 5 again: its Combo draw casts the destroyer, which kills the victim, and
         // Reborn puts a new body in lane 1 (§4.5 step 4, R83) before the repeat's script runs.
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let reborn = find_index(
@@ -2015,6 +2036,7 @@ mod r174_10_5_step_6_an_echo_repeat_s_fresh_target_is_aimed_at_the_stay_it_was_c
             "the victim's Reborn body came back during the repeat"
         );
         // R174: the repeat's damage was aimed at the stay chosen at its prompt, which the cast ended, as
+        // the control's was aimed at step 1's.
         s.expect_in_zone(&victim.id, "field");
         s.expect_stats(&victim.id, json!({ "health": 1 }));
     }
@@ -2215,7 +2237,9 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
     fn r113_p2_s_lane_4_and_lane_5_traps_fire_in_the_order_the_play_s_dispatch_offered_them_though_the_answer_rotated_the_lane_5_one_onto_p1_s_side_10_3_r68()
      {
         register_all();
+        // The dispatch offers the play to p1's rotor, then to
         // p2's lane-4 and lane-5 traps in the order it read as it began (R68), whichever side the
+        // rotation has put them on by then.
         let mut control =
             scenario(json!({ "p1": { "hand": [TEMPO_TIMMY], "mana": 4 }, "p2": { "hand": [RENO] } }));
         rotating_trap(&mut control, false);
@@ -2241,6 +2265,7 @@ mod s10_3_r113_the_traps_still_owed_an_event_after_a_question_meet_it_in_the_ord
         assert!(crossed_to_p1(&s, &b.id));
 
         // R113: the dispatch the question paused resumes where it stopped — the traps it still owed, in
+        // the order it had (as the end-of-turn window's remainder keeps its owed list's order).
         assert_eq!(
             fired_order(&s, &[a.id.as_str(), b.id.as_str()]),
             vec![a.id.clone(), b.id.clone()]
@@ -2270,6 +2295,8 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
         );
         let played = in_hand(&mut s, "edge-r8-played-reborn", P1);
         // p2's trap, #60 Bear Honeypot's list with a question in it: when the opponent's permanent
+        // resolves, summon a Rush Token and ask p2; the answer sacrifices the played unit; then the
+        // tokens this list summoned attack the played unit.
         fixture_faces(
             s.state_mut(),
             "edge-r8-honeypot-sacrifices",
@@ -2311,6 +2338,7 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
         let token = must(s.unit(P2, 1), "the Rush Token the trap summoned");
         s.answer(json!("ok"));
 
+        // The answer's sacrifice is a death in full: the played unit's Reborn body came back in lane 1
         // (R83) before the tail ran.
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let died = find_index(
@@ -2326,6 +2354,7 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
         // R174: "they attack it" is aimed at the played unit's stay, which the answer ended before the
         // tail ran — the list is one run whether or not a prompt split it (R113), and the answered step
         // and the tail share its mark. #60's tokens do not attack a Reborn body; before the fix the
+        // token attacked it and the 1-health body died a second time.
         let attacked = events.iter().any(|event| {
             matches!(event, GameEvent::AttackDeclared { forced, target_id, .. } if *forced && *target_id == played.id)
         });
@@ -2397,6 +2426,7 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
 
         // R174: the damage is aimed at the stay the play chose, which the sacrifice ended before the
         // question; the answered step continues the same resolution (R113), and naming the card by id
+        // rather than as "the chosen one" does not make the Reborn body the card it was aimed at.
         s.expect_in_zone(&victim.id, "field");
         s.expect_stats(&victim.id, json!({ "health": 1 }));
     }
@@ -2486,6 +2516,7 @@ mod r174_10_6_a_card_picked_at_a_prompt_is_aimed_at_the_stay_the_prompt_offered 
 
         // §10.6: the answer re-invokes the script with the selection, and the selection is a card on
         // the field as the prompt offered it. R174 aims an effect at the stay it was chosen on — here,
+        // the body's — so the 5 damage lands and kills it.
         let hit = s
             .last_events()
             .iter()
@@ -2584,6 +2615,7 @@ mod r226_10_1_a_card_being_played_is_never_left_in_two_zones_by_a_question_its_t
         // its owner's hand, the card being played is discarded to the graveyard by the answer; step 4
         // then puts it on the field too, so it stands in lane 2 and lies in the graveyard at once.
         // Either the question does not offer the card being played (it is leaving the hand, as R90 says
+        // of the play's own choices), or a card discarded that way is not played.
         assert_eq!(
             piles_holding(s.state(), &played.id).len(),
             1,
@@ -2669,6 +2701,7 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
      {
         register_all();
         // Control: the trigger deals its 5 at once. §10.5 step 4's loop runs it, then the check (R59),
+        // and Tempo Timmy has died before the Cry counts the enemy's units: 0 damage.
         let mut control = scenario(
             json!({ "p1": { "hand": [RENO], "mana": 4 }, "p2": { "field": [TEMPO_TIMMY], "hand": [RENO] } }),
         );
@@ -2691,6 +2724,8 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
 
         // R59: the check follows the whole trigger, answered step included, and step 4's loop is where
         // the play left it (R113, R118) — so Timmy, at -2, dies before step 5. Before the fix the
+        // re-entered loop held the check (`holdCheck`) because nothing had resolved inside it yet, and
+        // the Cry counted a dead unit still on the field: p2 took 1.
         s.expect_in_zone(&timmy.id, "graveyard");
         s.expect_health(P2, 30);
     }
@@ -2784,6 +2819,7 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
         assert_eq!(g.state().active, P2);
         assert_eq!(g.state().phase, Phase::Main);
         // R345: p2's turn ends when the test ends it, never on its own (R82). Whether the Unit Discovered
+        // leaves p2 a play is the pool's roll, and the spent use is read on this turn.
         g.state_mut().players.p2.auto_end_turn = Some(false);
         let hand_before = g.state().players.p2.hand.len();
         // One activation of the card's power: Witness Value Discovers (§10.6), and the answer finishes it.
@@ -2855,6 +2891,7 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
         assert_eq!(second.map(|card| card.def_id.as_str()), Some(BIGOT));
         assert_eq!(top.map(|card| card.def_id.as_str()), Some(SEVEN_SEVEN));
 
+        // The fixture is
         // drawn first and cast (§2.4), and its cast asks.
         g.play(GENNS_GREED, json!({}));
         assert_eq!(pending_kind(&g), Some(PromptKind::Mode));
@@ -2981,6 +3018,8 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
     fn r70_r2179002_a_cast_s_step_4_window_inside_a_spell_s_draw_does_not_offer_the_spell_s_own_play_to_the_triggers_a_second_time_10_3()
      {
         register_all();
+        // The cast runs inside #5 Stockpile's "draw 2", whose context is the only sink its step 4 has.
+        // The play's `cardPlayed` was dispatched by the play's own step 4, before the draw: the cast's
         // window must not collect it again (§10.3: an event is offered once).
         let mut g = scenario(json!({
             "p1": { "hand": ["core-005", RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 5 }], "library": [RENO, RENO, RENO] },
@@ -3016,6 +3055,7 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
 
         g.play("core-005", json!({}));
 
+        // One play, Stockpile: the cast Unit is logged (`cardPlayed`) but is no play and wakes no trigger
         // (R2179002; through v0.5.2 it was the second, R70). So one hit, not two.
         let played: Vec<String> = g
             .events()
@@ -3071,6 +3111,7 @@ mod r98_a_card_that_left_the_resolving_zone_before_its_question_is_answered {
         assert!(s.state().pending.is_none());
 
         // R98: "A card that has left the resolving zone before its own prompt is answered resumes with
+        // no self" — so the answered step's "this" names nothing, and the card in hand is untouched.
         assert_eq!(s.card(&spell.id).cost_mod, 0);
     }
 }
@@ -3368,6 +3409,7 @@ mod r174_a_card_picked_at_a_prompt_watched_by_a_delayed_effect_the_answered_step
         assert!(s.state().pending.is_none());
 
         // R174: "A card picked at a prompt, though, is picked on the stay the prompt offered it on …
+        // and the answered step's effect lands on it" — a delayed effect aimed at it by id included.
         assert_eq!(
             s.state()
                 .delayed
@@ -3432,6 +3474,7 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
 
         // R122: the answer re-enters what the prompt interrupted and drains what is owed — the repeat
         // resolves and the Spell reaches its graveyard, rather than stopping short of it (R113: a
+        // sequence is never dropped in silence).
         let state = s.state();
         assert!(state.pending.is_none());
         assert_eq!(state.players.p2.hero.health, before - 2);

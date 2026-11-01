@@ -86,6 +86,7 @@ mod r68_a_tribute_s_deaths_resolve_in_lane_order_whatever_order_the_play_lists_t
 
         for g in [&in_lane_order, &defender_first] {
             // The summoned base defender takes the leftmost free zone, the Saintess's lane 1 (R64); the
+            // Reborn body keeps lane 2.
             let summoned = g
                 .unit(PlayerId::P1, 1)
                 .map(|card| (card.def_id.clone(), card.radiant));
@@ -131,6 +132,7 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
 
         // Lava Golem may tribute enemy units (§8 #55), and the Sorcerer may target any unit. Step 1
         // checks the two declarations each on its own (R90), so the play is legal; step 2 sacrifices
+        // the Reno before step 5 resolves the Sorcerer's damage, which then has no unit to hit.
         g.play(
             &card.id,
             json!({ "zone": 3, "tributes": [first, second, reno.id], "targets": target }),
@@ -356,6 +358,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
     fn r119_r210_a_sheepish_text_a_tributed_carnivorous_cube_s_death_copies_at_step_2_does_not_turn_the_lava_golem_being_played_into_a_sheep()
      {
         // p2's Cube eats p2's own Midrange Menace carrying Sheepish's text (R428: a Unit), so its Death
+        // summons two copies of it into p2's unit row, each answering an opponent's resolved Unit play.
         let mut s = scenario(json!({
             "active": "p2",
             "p1": {
@@ -447,6 +450,7 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             "p2": { "hand": [STOCKPILE], "field": [MIDRANGE_MENACE], "library": R119_LIBRARY },
         }));
         // The Cube eats the Mr. Vanilla carrying the Clone Machine's text (R428), so none is on the field
+        // when The Rock is played.
         let carrier = unit_carrying(&mut s, PlayerId::P1, 3, 1);
         s.play(
             CARNIVOROUS_CUBE,

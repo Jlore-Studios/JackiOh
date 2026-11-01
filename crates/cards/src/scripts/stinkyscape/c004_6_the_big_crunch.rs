@@ -7,6 +7,7 @@
 //! M #95, the set's own two, then Training Grounds #39 from that set's release (issue #2204), each
 //! named by id, so the pool reaches them whether or not their set ships (R1420). Each is a play for
 //! every rule, its choices its caster's (R70), rolling and naming its own effects to both players
+//! (R436), its nested casts held by `CALL_TO_CHAOS_CHAIN_CAP` (R28) and `RANDOM_CAST_CHAIN_CAP`
 
 use jackioh_engine::prelude::*;
 
@@ -149,6 +150,7 @@ mod tests {
         }
 
         // Issue #2204: Training Grounds #39 is a Call to Chaos the catalog holds, so once its set ships
+        // it is the sixth cast, after Stinkyscape's two.
         #[test]
         fn r1870006_r2200004_casts_the_training_grounds_edition_last() {
             assert!(set_ships(SetName::TrainingGrounds));

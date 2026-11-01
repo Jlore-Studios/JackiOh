@@ -1,10 +1,8 @@
-// Issue #1308: the pack-opening scene (`packs/PackOpening.tsx`) measured in a real browser, from the
-// fixture answer `POST /api/packs/open` gives (`packs/fixtures.ts`): a Mythic, an Epic, a cosmetic, a
-// bar and a card. Only a layout engine can say these (jsdom has none; PackOpening.test.tsx holds the
-// rest).
-//
-// The scene mounts in a portal on the body, over whatever is there, so no page is built around it. The
-// clock is the spec's own (`cy.clock`) where the tear is waited on, since a spec waits on no real one.
+// Issue #1308: the pack-opening scene (`packs/PackOpening.tsx`) measured in a real browser, from the fixture
+// answer `POST /api/packs/open` gives (`packs/fixtures.ts`): a Mythic, an Epic, a cosmetic, a bar and a
+// card. Only a layout engine can say these (jsdom has none; PackOpening.test.tsx holds the rest). The scene
+// mounts in a portal on the body, so no page is built around it; the clock is the spec's own (`cy.clock`)
+// where the tear is waited on.
 
 import type { OpenedPackResponse } from "../../../apps/web/src/net/api.ts";
 import { PackScene } from "../../../apps/web/src/packs/PackOpening.tsx";

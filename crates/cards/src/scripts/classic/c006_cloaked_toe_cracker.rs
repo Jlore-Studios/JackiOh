@@ -40,6 +40,7 @@ fn aura() -> CostAuraHook {
 
 /// After you play a Trap or a Field Trap (a cast is a play, R70), gain the card's mana. A permanent's
 /// trigger reads its condition in `run` (a `when` predicate is a trap's, R99): any other play answers
+/// with nothing.
 fn after_you_play_a_trap() -> TriggerDef {
     TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
         let GameEvent::CardPlayed {

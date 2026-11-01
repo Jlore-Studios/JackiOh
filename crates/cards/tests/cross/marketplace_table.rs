@@ -16,6 +16,7 @@ use jackioh_engine::{
 };
 use serde_json::json;
 
+/// The ids a lot's pool holds in the registered catalog, as `marketplace::pool_ids` reads it: a set
 /// lot's no token and no card only a rule makes (R1857001).
 fn pool(pool: MarketPool) -> Vec<String> {
     match pool {

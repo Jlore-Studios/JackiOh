@@ -8,6 +8,7 @@
 //! below `per` × X (ST-S14-4): the check is asked of the card with the play's X stamped (R1868000), so
 //! `legalActions` pairs each X with the Units it reaches and the reducer refuses any other pick. The
 //! pick is needed (R703), as S #12.1 and #12.2's are: an X no Unit is below is no play. It is not
+//! asked again as the Spell resolves, so a Unit raised past it since still dies (R1868000).
 
 use jackioh_engine::prelude::*;
 

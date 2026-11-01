@@ -3,16 +3,16 @@
 // identical backs; the `Array.isArray` narrowing leaves no branch where a count renders as cards.
 // The fan (docs/polish/7-mobile-ux.md S6, S11, B26, B27): `.hand-slot` carries its index as `--i`, `.hand-cards`
 // the size as `--n`, so board.css lays it out without measuring. On the viewer's own hand a tap lifts a card
-// (`data-lifted`) to read it, legal or not: a capture-phase click, local view state, not an action. Drag to
-// play is game/drag/DragLayer.tsx; the card a drop just played is `data-landing` (drag/landing.ts), which
-// board.css takes out of the fan while the board catches up. A pointer on the viewer's own card is reported
-// upward (`onHover`, #991) so the board can ring what its preview counts; view state, never an action.
-// R504: an empty hand, either seat's, keeps its place with one card-sized outline (`hand-empty-<side>`) and
-// `data-empty="true"`. R434: the game's end reveals both hands (`reveal.ts`): each back turns face up where it
-// lay, read and never played (testid `revealed-hand-card-<id>`, no click, no drag). R1297000, R1834004: the
-// opponent's backs wear their seat's card back (`seat`), and a revealed card or the lower hand of a watched or
-// replayed game its seat's loadout where the board carries one (game/wearer.ts). #2267: the viewer's own cards
-// wear the hand hints that apply (HandHints.tsx, handHints.ts), read off the card and view alone; backs and revealed cards (R434) wear none.
+// (`data-lifted`) to read it, legal or not: local view state, not an action. Drag to play is
+// game/drag/DragLayer.tsx; the card a drop just played is `data-landing` (drag/landing.ts), out of the fan
+// while the board catches up. A pointer on the viewer's own card is reported upward (`onHover`, #991) so the
+// board can ring what its preview counts.
+// R504: an empty hand keeps its place with one card-sized outline (`hand-empty-<side>`, `data-empty="true"`).
+// R434: the game's end reveals both hands (`reveal.ts`): each back turns face up where it lay, read and never
+// played. R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a revealed card
+// or the lower hand of a watched or replayed game its seat's loadout (game/wearer.ts). #2267: the viewer's own
+// cards wear the hand hints that apply (HandHints.tsx, handHints.ts); backs and revealed cards (R434) wear none.
+// revealed cards (R434) wear none.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 

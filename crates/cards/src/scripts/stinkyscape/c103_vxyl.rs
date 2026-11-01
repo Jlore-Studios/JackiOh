@@ -7,6 +7,7 @@
 //! own (2) as a Trap and revealed by its Activate: Reveal, which takes it into a unit zone and runs
 //! its Cry; the designer's "On reveal" is that Cry (ST-S14-5), so a face-up play runs it too. The Cry
 //! is one `add_to_hand` of a base S #99 No-No Words, whose X its player chooses as they play it
+//! (R348), and nothing while the card is set (`is_set`).
 
 use jackioh_engine::prelude::*;
 

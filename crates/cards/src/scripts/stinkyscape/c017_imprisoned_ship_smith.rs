@@ -124,6 +124,7 @@ mod tests {
 
         #[test]
         fn r2271000_another_cards_awakening_summons_nothing() {
+            // "When THIS awakens": the awake Smith let every awakening through, so each one summoned
             // a Waraxe for it too, until its condition was read (R2271000).
             let s = awake_beside_a_dormant_one(false);
             assert_eq!(summoned_waraxes(&s).len(), 1);

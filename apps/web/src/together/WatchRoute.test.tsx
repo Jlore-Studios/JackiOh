@@ -1,10 +1,9 @@
 // #936 S7 B50: `/watch/:matchId?friend=<id>`, a friend's live game (`useWatch`, read through
-// `WatchRoute`). Reconnect now is offered while a reopen waits (#1691) and once they run out, its click
+// `WatchRoute`). Reconnect is offered while a reopen waits (#1691) and once they run out, its click
 // starting the attempts over (#1570); the rail offers the newest view's live modifiers (R169); the
 // socket's loadouts dress both seats (R1834004).
-// The socket is a fake `WebSocket` the test drives frame by frame; the friends list and
-// the catalog are a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those
-// tests advance time by hand.
+// The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
+// a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance time.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

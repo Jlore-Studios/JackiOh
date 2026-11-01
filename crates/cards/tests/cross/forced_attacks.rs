@@ -72,6 +72,7 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
         let mrow = g.unit_at(P2, 1);
         let vanilla = g.unit_at(P2, 2);
 
+        // Mrow goes first and dies to the strike
         // back; its Death takes control of the unit that destroyed it — Moths — for p2 (R361).
         g.start_turn();
         g.expect_in_zone(&mrow.id, "graveyard");
@@ -165,6 +166,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
                 "p2": {
                     "hand": [SURGERY, STOCKPILE],
                     // Big Felinor feeds the Fiender's layer 2 (§10.4) and dies to Moths' strike back; the
+                    // Fiender's damage is then more than it has without it.
                     "field": [
                         { "def": BIG_FELINOR, "lane": 1, "damage": 9 },
                         { "def": FIENDER, "lane": 2, "damage": 12 },
@@ -187,6 +189,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
                 .collect::<Vec<KeywordKind>>()
         };
         // Plastic Surgery's random keyword for the Fiender is rolled from §6.1's pool (R21), and every
+        // keyword added to it moves the roll: search for a seed where it is Reborn.
         let seed = seed_where("surgery-reborn-fiender", |seed| {
             let (mut g, fiender) = setup(seed);
             surgery_on(&mut g, &fiender).contains(&KeywordKind::Reborn)

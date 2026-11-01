@@ -1608,9 +1608,10 @@ impl MatchActor {
     }
 
     /// R1452: applies decided bot move with R270 prefix (bypassing R1442 think telemetry).
-    /// R639000: respects conceded/draw answers and tears down relayed aim after move. A move on a
-    /// stale state still goes in the same turn if the engine takes it. A refused fresh move falls back
-    /// to `fallback_action` once; a failed write is decided again after `BOT_WRITE_RETRY_MS`.
+    /// R639000: concedes and answers draws as `seat::play` drew them, offers one too (R2660001), never
+    /// an emote, and tears down relayed aim after move. A move on a stale state still goes in the same
+    /// turn if the engine takes it. A refused fresh move falls back to `fallback_action` once; a failed
+    /// write is decided again after `BOT_WRITE_RETRY_MS`.
     async fn on_bot_move(&self, home: PlayerId, version: i64, turn: i32, played: BotMove) {
         let aimed = played.aim.is_some();
         self.on_bot_move_inner(home, version, turn, played).await;
@@ -2382,7 +2383,7 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // keyed by home (R677: a Glitch's swap moves the record with the account), and a watcher is sent each
 // view of its friend's seat SPECTATE_DELAY_MS after the state it shows, by one armed wait. Nothing a
 // watcher's socket sends reaches a reducer, log, relay or clock; past its malformed budget it is
-// closed with 1008. Its leaving changes only the count the players are told (B51).
+// closed with 1008. Its leaving changes only the count the players are told.
 
 use crate::actor::protocol::watchers_frame;
 use crate::actor::ws_server::WS_CLOSE;

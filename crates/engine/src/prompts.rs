@@ -561,12 +561,12 @@ fn answer_owned(
     }
 }
 
-/// §10.6: "`answer` re-invokes the script with the selection." Validate, close the prompt, re-enter the
-/// step its `resume` names with the selection in `ctx.targets`, then drain what the prompt interrupted
-/// in R113's order (a pause inside this step lands ahead of everything older) up to the next prompt,
-/// so one answer finishes one sequence; the state check and triggers stay with `triggers::settle` (R59).
-/// A prompt an engine sequence opened goes to its answerer, so every caller answers every prompt
-/// through this one entry point (R122).
+/// §10.6: "`answer` re-invokes the script with the selection." Validate, close the prompt, re-enter the step
+/// its `resume` names with the selection in `ctx.targets`, then drain what the prompt interrupted in R113's
+/// order (a pause inside this step lands ahead of everything older) up to the next prompt, so one answer
+/// finishes one sequence; the state check and triggers stay with `triggers::settle` (R59). A prompt an engine
+/// sequence opened goes to its answerer, so every caller answers every prompt through this one entry point
+/// (R122).
 pub fn answer_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<(), EngineError> {
     let Some(pending) = sink.state.pending.clone() else {
         return Err(EngineError::new("no prompt is open"));
@@ -752,11 +752,10 @@ impl PickWalk<'_> {
     }
 }
 
-/// B5 E18: a `pick` prompt's answers: every set of `min` to `max` options whose costs fit the budget,
-/// bounded by `MAX_PROMPT_ANSWERS` (R90). A pile can be long (thirty cards picked four at a time is
-/// 27,405 sets) and a plain walk would leave most cards unpickable, so a cut drops sets, never a card:
-/// first, for each option, the fullest set that starts at it (wrapping round), then the ordinary walk,
-/// smallest sets first. Each set is listed once, in offered order (R221).
+/// B5 E18: a `pick` prompt's answers: every set of `min` to `max` options whose costs fit the budget, bounded
+/// by `MAX_PROMPT_ANSWERS` (R90). A pile can be long and a plain walk would leave most cards unpickable, so a
+/// cut drops sets, never a card: first, for each option, the fullest set that starts at it (wrapping round),
+/// then the ordinary walk, smallest sets first. Each set is listed once, in offered order (R221).
 fn pick_answers(pending: &PendingChoice) -> Vec<ActionBody> {
     let count = pending.options.len();
     let mut walk = PickWalk {
@@ -848,15 +847,14 @@ fn memo_at(step: &PausedStep, level: usize) -> Memo {
     step.memo.as_ref().and_then(|memo| memo.get(level)).cloned()
 }
 
-/// Apply an effect list so that a prompt in the middle of it pauses the list instead of being stepped
-/// over: the effects after the one that opened the prompt are parked as a work item naming this same
-/// continuation and where to continue from (§9.3, R113). Returns true when the whole list ran. A hook
-/// is a pure builder (CLAUDE.md rule 5), so re-entering it and skipping what already ran continues
-/// exactly; holding the remaining effects in state would hold closures, which §9.3 forbids.
-///
-/// A composed list (a fused hook, R102) builds each part as the walk reaches it (`Effect.expand`), so
-/// an ingredient's list reads the board the ones before it left. A pause parks ONE item for the whole
-/// stack (`PausedStep.part`, `from`): parking once per level would owe a Death pass's remainder twice.
+/// Apply an effect list so that a prompt in the middle of it pauses the list instead of being stepped over:
+/// the effects after the one that opened the prompt are parked as a work item naming this same continuation
+/// and where to continue from (§9.3, R113). Returns true when the whole list ran. A hook is a pure builder
+/// (CLAUDE.md rule 5), so re-entering it and skipping what already ran continues exactly; holding the
+/// remaining effects in state would hold closures, which §9.3 forbids. A composed list (a fused hook, R102)
+/// builds each part as the walk reaches it (`Effect.expand`), so an ingredient's list reads the board the
+/// ones before it left. A pause parks ONE item for the whole stack (`PausedStep.part`, `from`): parking once
+/// per level would owe a Death pass's remainder twice.
 pub fn apply_resumable(
     ctx: &mut EffectContext<'_>,
     plan: &ResumePlan,
@@ -984,11 +982,11 @@ pub fn run_resumable_list(
     }
 }
 
-/// Re-enter the continuation a `Resume` names and apply what its step returns: the answered step of
-/// a prompt, a delayed effect at its R62 point, a queued trigger, or a parked tail. Returns true
-/// when the step ran to the end, false when a prompt paused it again. The face is the one the pause
-/// recorded (§5.2), so a chain of steps runs the text that started it; an instance that has ceased to
-/// exist resumes with no `self`, which is why a step carries what it needs in `data`.
+/// Re-enter the continuation a `Resume` names and apply what its step returns: the answered step of a prompt,
+/// a delayed effect at its R62 point, a queued trigger, or a parked tail. Returns true when the step ran to
+/// the end, false when a prompt paused it again. The face is the one the pause recorded (§5.2), so a chain of
+/// steps runs the text that started it; an instance that has ceased to exist resumes with no `self`, so a
+/// step carries what it needs in `data`.
 pub fn run_resume(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOptions) -> bool {
     // R1855001: a run whose caster's choices are random is random in every continuation of it too.
     let mode = crate::random_cast::random_choices_of(resume);
@@ -1177,11 +1175,11 @@ pub fn run_hook_resumable(
     )
 }
 
-/// R151, §9.3: a card's start-of-game clause (§6.2, R43), run as the card arrives somewhere it can be
-/// looked at (a hand, a library, the field) and at §2.1's start of the game. An effect list like any
-/// other (§10.9) that may Choose, so it runs the resumable way: a question pauses the effects after it
-/// (R113, R122), and a second one is asked in its turn instead of dropped. Returns false when it
-/// paused, which a caller running a sequence of its own (setup, a draw loop) owes its remainder behind.
+/// R151, §9.3: a card's start-of-game clause (§6.2, R43), run as the card arrives somewhere it can be looked
+/// at (a hand, a library, the field) and at §2.1's start of the game. It may Choose (§10.9), so it runs the
+/// resumable way: a question pauses the effects after it (R113, R122), and a second one is asked in its turn
+/// instead of dropped. Returns false when it paused, which a caller running a sequence of its own (setup, a
+/// draw loop) owes its remainder behind.
 pub fn run_start_of_game(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
     // A Vanilla card carries no text (§6.3), and a card without the clause has nothing to run.
     if crate::scripts::script_of(sink.state, card)
@@ -1255,11 +1253,11 @@ pub fn run_enters_hand(sink: &mut EngineSink<'_>, card: &CardInstance, controlle
 // Prompts inside a cast (B5 E12, R452) — play pipeline B's random-answer mode
 
 /// R452: what becomes of a prompt opened while a random cast, or a cast that targets enemies, is being
-/// driven. A prompt for the random cast's caster is answered at once, uniformly among `prompt_answers`,
-/// and nothing opens: "a random cast makes every choice at random … so nothing pauses". A prompt a cast
-/// that targets enemies opens (or a random one that does answers) offers the enemies among its target
-/// options when there is one. Anything else is asked as it stands: the other player's prompts are
-/// theirs, and an engine sequence's own question makes its random picks itself (`play_steps`).
+/// driven. A prompt for the random cast's caster is answered at once, uniformly among `prompt_answers`, and
+/// nothing opens. A prompt a cast that targets enemies opens (or a random one that does answers) offers the
+/// enemies among its target options when there is one. Anything else is asked as it stands: the other
+/// player's prompts are theirs, and an engine sequence's own question makes its random picks itself
+/// (`play_steps`).
 fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<OpenPromptArgs> {
     if has_answerer(&args.resume.hook) {
         return Some(args);
@@ -1327,11 +1325,11 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     None
 }
 
-/// R452: answer a prompt that never opens with one of `prompt_answers`' answers, drawn uniformly from
-/// the match rng, and re-enter its step as `answer_prompt` does, inside the effect that asked: the step
-/// runs first and the rest of that effect's list after it, the order a parked tail would have kept
-/// (R113). Nothing is emitted, since no prompt was open. R1201: `luck` rolls again and keeps the answer
-/// with more picks on the prompt's aim side (Mayor Medinamogger's Radiant face).
+/// R452: answer a prompt that never opens with one of `prompt_answers`' answers, drawn uniformly from the
+/// match rng, and re-enter its step as `answer_prompt` does, inside the effect that asked: the step runs
+/// first and the rest of that effect's list after it, the order a parked tail would have kept (R113). Nothing
+/// is emitted, since no prompt was open. R1201: `luck` rolls again and keeps the answer with more picks on
+/// the prompt's aim side (Mayor Medinamogger's Radiant face).
 fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32) {
     let max = clamp(args.max.unwrap_or(1), 0, args.options.len() as i32);
     let probe = PendingChoice {

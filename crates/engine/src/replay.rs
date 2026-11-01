@@ -115,10 +115,9 @@ pub fn fnv1a32_utf16(text: &str) -> String {
 }
 
 /// FNV-1a over the canonical state, minus the nonce log (bookkeeping) and two fields whose arrival moved
-/// no recorded game's hash: the opening a Glitch reset deals again (R676, a copy of the fold's own
-/// input) and the Created cards' generators (R1956001, which play no part in a game). The text comes from
-/// `direct::canonical_text`, or the `Value` path below for a shape it leaves alone, byte for byte the
-/// same, so the hash never depends on which path ran.
+/// no recorded game's hash: the opening a Glitch reset deals again (R676) and the Created cards'
+/// generators (R1956001). The text comes from `direct::canonical_text`, or the `Value` path for a shape it
+/// leaves alone, byte for byte the same, so the hash never depends on which path ran.
 pub fn hash_state(state: &GameState) -> String {
     if let Some(text) = direct::canonical_text(state, &["applied", "opening", "generators"]) {
         return fnv1a32_utf16(&text);
@@ -136,12 +135,11 @@ pub fn hash_state(state: &GameState) -> String {
 }
 
 /// `canonical(&serde_json::to_value(value))`, written from `Serialize` without the `Value` tree. Every
-/// shape is written as `to_value` would build it, a later duplicate key replacing an earlier as a
-/// `Value` map's insert does. What it cannot write (128-bit integers, bytes, a map key that is not a
-/// string, char, bool or integer) is an error, and the caller takes the `Value` path instead.
-///
-/// A struct's keys are its `&'static str` field names, so their sorted order is worked out once per set
-/// (`Out::orders`, keyed by the names' addresses and lengths: the same pair is the same text).
+/// shape is written as `to_value` would build it, a later duplicate key replacing an earlier. What it
+/// cannot write (128-bit integers, bytes, a map key that is not a string, char, bool or integer) is an
+/// error, and the caller takes the `Value` path instead. A struct's keys are its `&'static str` field
+/// names, so their sorted order is worked out once per set (`Out::orders`, keyed by the names' addresses
+/// and lengths).
 mod direct {
     use std::borrow::Cow;
     use std::cmp::Ordering;

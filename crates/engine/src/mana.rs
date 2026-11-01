@@ -242,17 +242,16 @@ struct Price {
     used_rules: Vec<String>,
 }
 
-/// R65: start from costOverride or the printed cost, add the instance's costMod, add the player's
-/// discounts, then Professor Curvature if the result is 4 or more (R363), and floor at 0. An X-cost
-/// card costs exactly X and ignores modifiers, unless an override makes it free. Discounts and
-/// Curvature price a play (§6.3's Cost, #35, #78, R48), so they reach only a card in its controller's
-/// hand (§10.5 step 1) or in a graveyard a permission lets them play from (E11, R454); any other is read
-/// at its own cost (#30 Archivist, R24; #94, R66), as in Hearthstone (R65). `options.asPlay` prices any
+/// R65: start from costOverride or the printed cost, add the instance's costMod and the player's discounts,
+/// then Professor Curvature if the result is 4 or more (R363), and floor at 0; an X-cost card costs exactly
+/// X unless an override makes it free. Discounts and Curvature price a play (§6.3's Cost, #35, #78, R48), so
+/// they reach only a card in its controller's hand (§10.5 step 1) or a graveyard a permission lets them play
+/// from (E11, R454); any other is read at its own cost (#30, R24; #94, R66). `options.asPlay` prices any
 /// card as a play of it now.
 ///
-/// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts the flat price rules, then
-/// the threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)"
-/// sets, then the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0.
+/// R455 (E15) adds its rungs through `cost_rules.rs`: after R65's discounts the flat price rules, then the
+/// threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)" sets, then
+/// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0.
 pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }

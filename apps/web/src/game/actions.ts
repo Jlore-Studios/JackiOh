@@ -1,20 +1,19 @@
-// Turning clicks into actions — and nothing else (CLAUDE.md rule 7, BUILD M5-T2, SPEC §10.2).
+// Turning clicks into actions, and nothing else (CLAUDE.md rule 7, BUILD M5-T2, SPEC §10.2).
 //
-// THE ONE RULE OF THIS FILE IS THAT IT HAS NO RULES. Every question of the form "may I?" is
-// answered by searching the `ActionBody[]` that `legalActions(state, player)` handed us. The yellow
-// glow is `CardView.conditionActive`, which the engine computes (R195).
+// THE ONE RULE OF THIS FILE IS THAT IT HAS NO RULES. Every question of the form "may I?" is answered by
+// searching the `ActionBody[]` that `legalActions(state, player)` handed us. The yellow glow is
+// `CardView.conditionActive`, which the engine computes (R195).
 //
-// R81: zone, X, embiggen, Tribute, a card's declared targets and modes, and the `plague` payment
-// (Classic #74) are NOT prompts: they travel inside the `play` action. A targeting cost's discards
-// (Classic #89) are random at pay time (R682) and travel nowhere. Everything chosen during resolution
-// arrives as a `PendingChoice`.
+// R81: zone, X, embiggen, Tribute, a card's declared targets and modes, and the `plague` payment (Classic
+// #74) are NOT prompts: they travel inside the `play` action. A targeting cost's discards (Classic #89) are
+// random at pay time (R682) and travel nowhere. Everything chosen during resolution arrives as a `PendingChoice`.
 //
-// R391 (B4.5): a Tribute may pay for its own zone. Narrowing keeps whole candidates, never a field on
-// its own, so a zone and a Tribute picked in either order only ever finish a pair the engine listed.
+// R391 (B4.5): a Tribute may pay for its own zone. Narrowing keeps whole candidates, never a field on its own,
+// so a zone and a Tribute picked in either order only ever finish a pair the engine listed.
 //
-// CARRY_THROUGH: a candidate that leaves `tributes`, `targets` or `modes` unset accepts what a
-// *picker* chose for it (`pickInPlay`), validated by the engine per R90. A *board click* is never
-// carried through, so the board can never be clicked into an illegal play.
+// CARRY_THROUGH: a candidate that leaves `tributes`, `targets` or `modes` unset accepts what a *picker* chose
+// for it (`pickInPlay`), validated by the engine per R90. A *board click* is never carried through, so the
+// board can never be clicked into an illegal play.
 
 import type {
   ActionBody,
@@ -113,9 +112,8 @@ export type PlayNeed =
   | { kind: "mode"; min: number; max: number; options: string[] };
 
 /**
- * What a click comes to: the next interaction, the action to send, if one is ready, and (R849000,
- * R979000) a `notice`, the engine's own words for why a click on your unit or your hand card did
- * nothing. A notice sends nothing.
+ * What a click comes to: the next interaction, the action to send, if one is ready, and (R849000, R979000) a
+ * `notice`, the engine's own words for why a click on your unit or hand card did nothing. A notice sends nothing.
  */
 export type ClickResult = { interaction: Interaction; action?: ActionBody; notice?: string };
 
@@ -315,9 +313,8 @@ function containsAll(fixed: readonly string[], wanted: readonly string[]): boole
 }
 
 /**
- * A candidate still matches when every field it fixes equals what the player picked. A field the
- * candidate leaves unset is carried through (CARRY_THROUGH) rather than treated as a refusal — except
- * the payments, which a candidate without them pays none of.
+ * A candidate still matches when every field it fixes equals what the player picked. A field the candidate
+ * leaves unset is carried through (CARRY_THROUGH), except the payments, which a candidate without them pays none of.
  */
 function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   const fixed = fieldsOf(candidate);
@@ -413,9 +410,9 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
 }
 
 /**
- * The next choice the build still needs, or null when the candidates agree on everything. Asked in
- * cost order (X, embiggen and the Plague Counters change what is paid), then the Tribute, the targets,
- * the modes, and the board-driven zone last so a zone click finishes the play.
+ * The next choice the build still needs, or null when the candidates agree on everything. Asked in cost
+ * order (X, embiggen and the Plague Counters change what is paid), then the Tribute, the targets, the modes,
+ * and the board-driven zone last so a zone click finishes the play.
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
@@ -649,9 +646,8 @@ function buildingSources(view: PlayerView, interaction: Building): string[] {
 }
 
 /**
- * Every `data-testid` the board may light up, plus the selected set. `glow` is the green (Hearthstone's
- * "can act") and is narrower than `legal`: `switchPosition`, `offerDraw` and `concede` stay clickable
- * but never glow.
+ * Every `data-testid` the board may light up, plus the selected set. `glow` is the green (Hearthstone's "can
+ * act") and is narrower than `legal`: `switchPosition`, `offerDraw` and `concede` are clickable but never glow.
  */
 export function highlightFor(
   view: PlayerView,
@@ -689,7 +685,6 @@ export function highlightFor(
     }
     for (const id of sources) legalIds.add(id);
     const remaining = remainingCandidates(interaction);
-    // The glow is where the build can go next: a zone, a Tribute or a declared target.
     for (const candidate of remaining) {
       const fixed = fieldsOf(candidate);
       if (fixed.zone !== undefined) {
@@ -722,10 +717,8 @@ export function highlightFor(
 
   if (interaction.stage === "attacking") {
     selected.add(testid.card(interaction.attackerId));
-    // Any other unit the engine listed as an attacker stays clickable, so the player can switch.
     for (const body of legal) if (body.type === "attack") legalIds.add(testid.card(body.attackerId));
     legalIds.add(testid.card(interaction.attackerId));
-    // Only the selected attacker's targets glow; the other attackers stay clickable but dark.
     for (const candidate of interaction.candidates.filter(isAttack)) {
       if (candidate.attackerId !== interaction.attackerId) continue;
       const where = attackTargetTestid(view, candidate.targetId);
@@ -779,7 +772,6 @@ export function highlightFor(
         legalIds.add(testid.switchPosition(body.instanceId));
         break;
       default:
-        // Controls were added above, before the stage split.
         break;
     }
   }
@@ -791,7 +783,6 @@ export function highlightFor(
     glow.add(where);
   }
 
-  // Hearthstone's End Turn lights up once nothing else can be done this turn.
   const endTurnListed = legal.some((body) => body.type === "endTurn");
   if (endTurnListed && !canAct && view.pending === null) glow.add(testid.endTurn);
 
@@ -801,9 +792,9 @@ export function highlightFor(
 // The click reducer.
 
 /**
- * Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11). R979000:
- * when `legal` offers a hand card no play, the notice is the engine's words, `CardView.playReason`
- * (a graveyard card's shows in the pile's sheet instead, R1571000). Nothing is sent.
+ * Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11). R979000: when
+ * `legal` offers a hand card no play, the notice is the engine's `CardView.playReason` (a graveyard card's
+ * shows in the pile's sheet instead, R1571000). Nothing is sent.
  */
 function startPlay(
   legal: readonly ActionBody[],
@@ -980,9 +971,8 @@ export function pickInPlay(interaction: Interaction, patch: Partial<PlayBuild>):
 }
 
 /**
- * The listed action a board control sends. `power` is the first `activatePower` listed, kept for a
- * caller with no view; the board's power button builds its activation through `onClickTarget`
- * (`{ on: "activate" }`), so a power with targets to choose is built like any activation.
+ * The listed action a board control sends. `power` is the first `activatePower` listed, kept for a caller
+ * with no view; the board's power button builds its activation through `onClickTarget` (`{ on: "activate" }`).
  */
 export function onControl(legal: readonly ActionBody[], control: BoardControl): ActionBody | undefined {
   if (control === "power") return legal.find((body) => body.type === "activatePower");
@@ -1000,9 +990,9 @@ function withoutPickPrefix(key: string): string {
 }
 
 /**
- * A `PendingOption` back to the `Selection` the engine stored for it. FINDING against SPEC §10.6 /
- * §10.8: the view's `PendingOption` flattens the engine's `PromptOption` (`{ key, label, selection }`),
- * so the client has to rebuild the `Selection`; carrying it verbatim would delete this function.
+ * A `PendingOption` back to the `Selection` the engine stored for it. FINDING against SPEC §10.6 / §10.8:
+ * the view's `PendingOption` flattens the engine's `PromptOption` (`{ key, label, selection }`), so the
+ * client has to rebuild the `Selection`.
  */
 export function selectionForOption(option: PendingOption): Selection {
   // ME-CRAFT (Meditative #17, R880): a craft preset carries its recipe; nothing else sets it.
@@ -1024,7 +1014,7 @@ export function selectionForOption(option: PendingOption): Selection {
 /**
  * The action that answers the open prompt with the options the player picked. The mulligan is its own
  * `mulligan {keep[]}` action (§10.2): the picked keys *are* the kept cards, put in hand order so the same
- * picks always build the same action (the engine reads `keep` as a set, `crates/engine/src/setup.rs`).
+ * picks always build the same action (the engine reads `keep` as a set).
  */
 export function answerAction(
   pending: Extract<PendingView, { forYou: true }>,
@@ -1059,9 +1049,9 @@ export function answerAction(
 }
 
 /**
- * R689, R471: the prompt "Place N Plague Counters" opens (`ask_placement`,
- * `crates/engine/src/effects/plague.rs`): one pick among every permanent on the field, answered on the
- * board instead of in a list. The engine's own two sentences are the only mark the view carries.
+ * R689, R471: the prompt "Place N Plague Counters" opens (`ask_placement`, `crates/engine/src/effects/plague.rs`):
+ * one pick among every permanent on the field, answered on the board instead of in a list. The engine's own
+ * two sentences are the only mark the view carries.
  */
 const PLAGUE_PLACEMENT_PROMPT = /^Place (?:a Plague Counter|\d+ Plague Counters) on a permanent$/;
 

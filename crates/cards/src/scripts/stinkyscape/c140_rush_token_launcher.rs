@@ -10,6 +10,8 @@
 //! While the enemy has a Taunt Unit, only those may be chosen (§4.2 step 3 read for the choice): its
 //! Taunt read through the layers, so an Indestructible one has none (R347), and one no attack may name
 //! (Can't be attacked, a carrier's Unit) binds nobody (B5 E35). Then §7's Rush Token is summoned into
+//! the leftmost open unit zone (R64) and makes a forced attack on that Unit (R53), which strikes back,
+//! as Core #60 Bear Honeypot's tokens attack; one the token may not attack (§4.2 step 2) takes none.
 
 use jackioh_engine::effects::{forced_attacks, summon};
 use jackioh_engine::prelude::*;

@@ -61,15 +61,11 @@ pub fn script_v0_4_4b() -> CardScripts {
     }
 }
 
-// #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: auto-casts on draw and draws again; the opponent's next
-// refresh −1 floored at 0; no card played (R40, R2179002); radiant −2. The base face's caster discards 1
-// at random with no prompt, nothing with an empty hand (R431, R682); the Radiant face discards nothing.
-// R635 keeps it out of the opening deal and the mulligan, so the "real game" below proves the deal.
-//
-// The default board is turn 9 with p1 active, both sides at MAX_MANA (4/4): 4 − 1 = 3 base, 4 − 2 = 2
-// radiant. The floor needs a refresh below 2, so that fixture starts at turn 1 and p2's first refresh
-// is 1: 1 − 2 floors at 0 (§2.3). Hinder lowers the refresh, not max mana.
-// Both sides keep a unit on the board and a card in hand, or the engine would auto-end the turns.
+// #21 Hinder, BUILD M4-T4 row 21: R635 keeps it out of the opening deal and the mulligan, so the "real
+// game" below proves the deal. The default board is turn 9 with p1 active, both sides at MAX_MANA (4/4):
+// 4 − 1 = 3 base, 4 − 2 = 2 radiant. The floor needs a refresh below 2, so that fixture starts at turn 1
+// and p2's first refresh is 1: 1 − 2 floors at 0 (§2.3). Both sides keep a unit on the board and a card
+// in hand, or the engine would auto-end the turns.
 #[cfg(test)]
 mod tests {
     use super::script;

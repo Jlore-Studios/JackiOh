@@ -1,64 +1,42 @@
 //! The card test harness (BUILD M4-T3; SURFACE §8); its `mod tests` tests the harness itself.
 //!
-//! The engine cannot name `jackioh_cards`, so a card test calls `jackioh_cards::register_all()` first,
-//! or installs fixture cards with `register_catalog`/`register_scripts`, a thread-local override that
-//! `catalog::registered_catalog()` and `scripts::script_of()` consult first (SURFACE §8), so each
-//! `#[test]`'s is its own. A scenario is built from the engine's own functions (`create_game`,
-//! `place_on_field`, …), never a state literal, so it has every field the engine adds later.
+//! The engine cannot name `jackioh_cards`, so a card test calls `jackioh_cards::register_all()` first, or
+//! installs fixture cards with `register_catalog`/`register_scripts`, a thread-local override that
+//! `catalog::registered_catalog()` and `scripts::script_of()` consult first (SURFACE §8). A scenario is built
+//! from the engine's own functions (`create_game`, `place_on_field`, …), never a state literal, so it has
+//! every field the engine adds later.
 //!
 //! DEFAULTS (`seed`, `turn`, `active` change them): seed "jackioh-harness", active "p1", turn 9, so the
-//!   active side has started 5 turns and the other 4 (§2.5: `turnsStarted` follows `active`/`turn`,
-//!   not the parity of `turn`), both at MAX_MANA. `SideSetup.mana` sets `current` only (§2.3 lets it
-//!   exceed max). Health HERO_HEALTH (30), armor 0. The scenario starts in `main` with the mulligan,
-//!   `begin_game` and the opening `start_turn` skipped: setup draws nothing and fires no trigger, and
-//!   `field` units are not summoning sick (`summonedTurn` unset), both exertions unspent.
+//! active side has started 5 turns and the other 4 (§2.5: `turnsStarted` follows `active`/`turn`), both at
+//! MAX_MANA; `SideSetup.mana` sets `current` only (§2.3). The scenario starts in `main` with the mulligan,
+//! `begin_game` and the opening `start_turn` skipped: setup draws nothing and fires no trigger, `field` units
+//! are not summoning sick, both exertions unspent.
 //!
-//! SIDE SETUP  (what `p1`/`p2` accept; each key's rule is on its `FieldEntry` or `CostSetup` field)
-//!   hand, library, graveyard, exile   (string | { def?, defId?, radiant?, costMod?, costOverride? })[]
-//!   field, backrow                    (string | { def?, defId?, radiant?, row?, lane?, stack?,
-//!                                                 position?, damage?, counters?, faceUp?,
-//!                                                 statsOverride?, costMod?, costOverride?,
-//!                                                 slumber? })[]
-//!   health, mana, armor               number
-//! `def` and `defId` are aliases: exactly one is required, both with different values panics, and a
-//! bare string is `{ def }`. `radiant: true` works in any zone, a library's top included (#21, #23).
-//! `field` and `backrow` describe one board: an entry's row comes from its def's type (`row` overrides
-//! it; only a `row` contradicting the type is an error), and a Spell is refused in either (§3.2).
-//! Lanes are handed out per row, `field` entries first: a named `lane` is kept, the rest take the
-//! leftmost free zone; a `stack: true` entry buries the card in its lane (no `lane`: the one before
-//! it), so a pile's list reads bottom-first: `["core-043", { "def": "core-092", "stack": true }]` is a
-//! Felinor Fiender on a dormant Big Felinor (R13). Ids follow list order.
+//! SIDE SETUP (each key's rule is on its `FieldEntry` or `CostSetup` field): `def` and `defId` are aliases,
+//! exactly one is required, and a bare string is `{ def }`. `radiant: true` works in any zone, a library's
+//! top included (#21, #23). An entry's row comes from its def's type (`row` overrides it) and a Spell is
+//! refused in either (§3.2). Lanes are handed out per row, `field` first: a named `lane` is kept, the rest
+//! take the leftmost free zone; a `stack: true` entry buries the card in its lane, so a pile's list reads
+//! bottom-first (R13).
 //!
-//! STRING REFERENCES  (`play("43", …)`, `attack("Big Felinor", "hero")`), first match wins:
-//!   1. an instance id that exists right now (`"c7"`);
-//!   2. a catalog id (`"core-043"`);
-//!   3. a SPEC §5 index (`"43"`, `"51.1"`, `"T-rush"`);
-//!   4. a card name, exact, then case-insensitive.
-//!
-//! Steps 2-4 take the first instance of that def, the active player's first: hand, unit zones (lane
-//! by lane, a pile's top before the cards under it), backrow (likewise), graveyard, exile, library,
-//! resolving. `play` searches hands only, `attack`/`switch_position` the field only. No match panics
-//! listing what was there; for one of several copies pass the `CardInstance` instead.
+//! STRING REFERENCES, first match wins: an instance id that exists right now, a catalog id, a SPEC §5 index
+//! (`"43"`, `"51.1"`, `"T-rush"`), a card name (exact, then case-insensitive). The last three take the first
+//! instance of that def, the active player's first: hand, unit zones (lane by lane, a pile's top first),
+//! backrow, graveyard, exile, library, resolving. `play` searches hands only, `attack`/`switch_position` the
+//! field only. No match panics listing what was there; for one of several copies pass the `CardInstance`.
 //!
 //! INSTANCES ARE SNAPSHOTS: a `CardInstance` captured before a step is stale after it. Every method
-//! re-resolves one by `id`, so passing it is fine, but read state back with `s.card(inst)`,
-//! `s.unit(p, lane)` or `s.expect_stats(…)`; `unit`, `backrow`, `hand` and `pile` return copies.
+//! re-resolves one by `id`, but read state back with `s.card(inst)`, `s.unit(p, lane)` or
+//! `s.expect_stats(…)`.
 //!
-//! `start_turn()` runs the engine's `start_turn` for the player active now and does not pass the turn:
-//! `turn` and their `turnsStarted` go up, mana refreshes, start-of-turn effects fire, they draw, and
-//! the phase is `main` again. `end_turn()` is the `endTurn` action: end-of-turn effects fire, "this
-//! turn" modifiers expire, and the opponent really takes a turn, so two come back to your next turn.
-//! After any action a turn with nothing meaningful left auto-ends (`turnAutoEnded`, §2.5), so
-//! `end_turn()` can cascade: give each side a card in hand or a unit when a test crosses turns.
+//! `end_turn()` is the `endTurn` action: the opponent really takes a turn, so two come back to your next
+//! turn, and a turn with nothing meaningful left auto-ends (`turnAutoEnded`, §2.5), so give each side a card
+//! in hand or a unit when a test crosses turns. `start_turn()` does not pass the turn.
 //!
-//! `expect_in_zone(card, "field")` counts a unit zone or the backrow, under a pile included; `"gone"`
-//! is in no pile (§3.2 / R11's token that ceased to exist), asserted by instance or id only.
-//! `expect_stats` and `stats` read `unit_view`, every §10.4 layer in. `events()` is every event since
-//! setup, oldest first; `last_events()` the last step's; `expect_events` matches types as a
-//! subsequence. A refusal (an illegal play or attack, an answer matching no option) panics with the
-//! engine's message: `s.expect_refused_with(|s| s.play(x, json!({})), "tribute")`. `expect_refused`
-//! and `expect_refused_with` pass on refusals alone (#1247): any other panic fails the test as itself,
-//! and a test of those panics uses `expect_throw_with`. `view()` is `view_for` (§10.8).
+//! `expect_in_zone(card, "field")` counts a unit zone or the backrow, under a pile included; `"gone"` is in
+//! no pile (§3.2 / R11's token that ceased to exist). `expect_refused` and `expect_refused_with` pass on
+//! refusals alone (#1247), any other panic fails the test as itself, and a test of those panics uses
+//! `expect_throw_with`. `view()` is `view_for` (§10.8).
 
 use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};

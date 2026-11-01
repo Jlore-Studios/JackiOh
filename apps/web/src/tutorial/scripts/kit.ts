@@ -129,5 +129,3 @@ export function either(...picks: Pick[]): Pick {
     return undefined;
   };
 }
-
-export const endTurnPick: Pick = (ctx) => ctx.legal.find((action) => action.type === "endTurn");

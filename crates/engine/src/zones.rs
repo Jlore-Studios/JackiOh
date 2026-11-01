@@ -1420,10 +1420,8 @@ pub struct MoveToZoneOptions {
 /// controller's, for a card leaving the field (the side it was on) or the resolving zone (the player who
 /// played or cast it, or the thief who took it off the stack, E2, whose full hand burns it). It lands
 /// there as theirs, its owner becoming that player, as a Bounce makes a card its controller's for the
-/// hand (R747). So a graveyard holds only its holder's cards, and a replacement of the landing (B5 E5,
-/// R460) is read for that player's card and sends it to that player's exile pile or library. `None` for
-/// every other move, which goes to the owner's pile as R12 has it: an exile or a shuffle from the field,
-/// and every move from a hand or a library.
+/// hand (R747), so a replacement of the landing (B5 E5, R460) is read for that player's card. `None` for
+/// every other move, which goes to the owner's pile as R12 has it.
 fn graveyard_keeper(instance: &CardInstance, zone: OffFieldZone) -> Option<PlayerId> {
     match (zone, &instance.zone) {
         (OffFieldZone::Graveyard, Zone::Field { .. } | Zone::Resolving { .. }) => Some(instance.controller),
@@ -1434,10 +1432,9 @@ fn graveyard_keeper(instance: &CardInstance, zone: OffFieldZone) -> Option<Playe
 /// Move a card to one of its owner's off-field zones; a unit token ceases to exist instead (R11). A card
 /// bound for a graveyard from the field or the resolving zone is its keeper's first (R2618000).
 ///
-/// R151's arrival hook is deliberately NOT here: its roll needs the match rng, and one rebuilt from
-/// the state's seed and cursor mid-action would repeat the action's draws and lose its cursor to
-/// `reduce`. It lives on the sink-holding funnels every hand and library arrival passes through:
-/// `draw::add_to_hand` and `draw::shuffle_into_library`.
+/// R151's arrival hook is deliberately NOT here: its roll needs the match rng, which one rebuilt from
+/// the state's seed and cursor mid-action would repeat. It lives on the sink-holding funnels every hand
+/// and library arrival passes through: `draw::add_to_hand` and `draw::shuffle_into_library`.
 pub fn move_to_zone(
     state: &mut GameState,
     instance: &mut CardInstance,
@@ -1481,8 +1478,8 @@ pub fn move_to_zone(
 
     // R215: a card that reaches a graveyard or an exile pile from a hand or a library gets R78's reset
     // too, so what comes back is the printed card (#89's hand buffs, #98's rolled power, R151). So does
-    // a card landing from the resolving zone (§10.5 step 7): its play is over, and a #95 an earlier
-    // Call to Chaos cast (R87) carries no link of that chain (R28) into a play of its own.
+    // a card landing from the resolving zone (§10.5 step 7), whose play is over: a #95 Call to Chaos cast
+    // (R87) carries no link of its chain (R28) into a play of its own.
     // R2618000: it lands as its keeper's own card, before R78's reset hands control back to its owner.
     if let Some(keeper) = keeper {
         instance.owner = keeper;

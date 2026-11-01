@@ -292,6 +292,8 @@ mod tests {
     }
 
     /// R1180006, fuzz seeds 934, 2632, 2995 and 5204 (#1216): Core #33 Unstable Clone Machine shuffles 3
+    /// copies of every answered cast into the library, so each answer mints its successor; the armored
+    /// hero survives them all, the chain still ends at its cap of casts, and the turn can pass.
     #[test]
     fn r1180006_clone_machine_answers_end_at_the_chain_cap() {
         let mut s = game(

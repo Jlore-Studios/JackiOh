@@ -7,13 +7,9 @@
 //! Unit on either field and for a Field Spell the seat can read in the enemy's backrow too; a face-down
 //! card of the enemy's is never probed (R185).
 //!
-//! The cards: Mana Well, (3) "Start of turn: gain 1 mana", Radiant 2; Rush Token Farm, (2) "Start of
-//! turn: summon a Rush Token"; Unbiased Immigration, (2) "Start of turn: add a random card to your
-//! hand"; Masochism Mask, (1) "Start of turn: choose one: …", a prompt; Ace in the Hole, (2) a Trap,
-//! "End of turn: Flip a coin. …"; Gatling Pea, (2) 2/6 Armor 2, "End of turn: Deal 1 damage to the
-//! enemy hero. Then this damage permanently goes up by 1"; Gravedigger, (2) 4/5, "Start of turn: Return
-//! a random card from your graveyard to hand"; Meltdown Layer, a (5) 12/12 token, "End of turn: This
-//! takes 6 damage", which harms its holder; three Field Spells with no turn hook; and Mr. Vanilla.
+//! The cards: Mana Well (Radiant 2), Rush Token Farm, Unbiased Immigration, Masochism Mask (a prompt),
+//! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),
+//! three Field Spells with no turn hook, and Mr. Vanilla.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

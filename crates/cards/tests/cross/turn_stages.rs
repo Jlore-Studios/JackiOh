@@ -163,6 +163,7 @@ mod r62_10_3_a_stage_of_the_turn_loop_settles_its_events_before_the_next_stage {
 
         // §6.2 and R62: the delayed effects first, then the trigger queue. The steal's trigger is queued
         // by the steal, before the start-of-turn stage begins, and by R68 a unit's trigger comes before a
+        // backrow card's anyway: p2 is at 0 in the check after it and loses before the Mask asks.
         assert!(any_event(&s, |event| matches!(
             event,
             GameEvent::ControlChanged { instance_id, .. } if *instance_id == timmy.id
@@ -178,6 +179,7 @@ mod r44_r152_my_pawn_s_ai_plays_the_rest_of_the_turn {
     #[test]
     fn r44_r152_the_ai_turn_goes_on_after_the_other_player_answers_a_prompt_one_of_its_actions_opened_10_3_8_96()
      {
+        // p1's 3/3 Timmy swings at p2's hero at 3: lethal, so p2's My Pawn cancels it and hands the
         // rest of p1's turn to the AI (R44). p2's fixture trap asks p2 something when p1 plays a card.
         let mut s = scenario(json!({
             "p1": { "field": [TEMPO_TIMMY], "hand": [VANILLA, VANILLA, VANILLA], "mana": 4 },
@@ -227,6 +229,7 @@ mod r44_r152_my_pawn_s_ai_plays_the_rest_of_the_turn {
         // §10.3: the trap resolves to completion, its prompt included, and then the action it
         // interrupted continues — here the AI turn (§8 #96: "an AI plays the rest of their turn"). The
         // AI goes on until it ends p1's turn, which is where R152 ends the lockout; p1's own client is
+        // never handed the turn back.
         assert!(s.state().turn > turn);
         assert!(!s.state().players.p1.ai_turn);
     }
@@ -238,6 +241,7 @@ mod r44_r152_a_locked_out_player_is_never_handed_back_the_turn_my_pawn_gave_the_
     #[test]
     fn r44_r152_once_the_other_player_answers_a_prompt_the_ai_turn_ran_into_the_rest_of_the_turn_is_still_the_ai_s_8_96()
      {
+        // The seed only fixes which of p1's actions the AI draws: here it attacks the fixture unit with
         // one of its 1/1s early in the playout, with plays and position switches (§4.1) still left to take.
         let mut s = scenario(json!({
             "seed": "edge-r6-pawn-1",
@@ -281,6 +285,7 @@ mod r44_r152_a_locked_out_player_is_never_handed_back_the_turn_my_pawn_gave_the_
         s.answer(json!("keep"));
 
         // R44: "it plays out the turn while the opponent is locked out", and R152 ends the lockout only
+        // at the cleanup of that turn.
         let offered: Vec<ActionBody> = legal_actions(s.state(), PlayerId::P1)
             .into_iter()
             .filter(|action| TURN_ACTIONS.contains(&action.action_type()))
@@ -308,7 +313,9 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
     #[test]
     fn r68_r59_r76_a_trap_answering_the_first_of_two_start_of_turn_delayed_steals_fires_before_the_second_steal_10_3()
      {
+        // Both steals are
         // due at the start of p1's next turn, in that order (R68). p2's fixture trap answers the
+        // opponent taking one of p2's permanents by returning all of p2's units to p2's hand.
         let mut s = scenario(json!({
             // A (0) Spell keeps p1's turn open after the plays (R82), as the Fanatics' own switch to
             // Defense Position did until Can't Defend (R2657000).
@@ -374,8 +381,10 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
     #[test]
     fn r62_r152_a_trigger_answering_my_pawn_reaching_the_graveyard_at_cleanup_resolves_before_the_next_turn_starts_10_3()
      {
+        // p1's Tempo Timmy (3/3) swings at p2's hero at 3: lethal, so p2's My Pawn cancels it and the AI
         // plays the rest of p1's turn (R44). p1 has nothing left to do, so the AI ends the turn, and
         // R152 sends My Pawn to p2's graveyard at that turn's cleanup. p2's fixture unit answers a card
+        // entering p2's graveyard with 1 damage to the enemy hero, and p1 is at 1.
         let mut s = scenario(json!({
             "p1": { "field": [TEMPO_TIMMY], "health": 1, "library": [RENO, RENO] },
             "p2": { "health": 3, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "hand": [RENO], "library": [RENO, RENO] },
@@ -413,6 +422,7 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
         )));
         assert_eq!(winner(&s), Some(Winner::P2));
         // §10.3, R62: cleanup is a stage of p1's turn like the window and the delayed effects, so what
+        // its events wake resolves there — p1 loses at the end of p1's turn, and p2's turn never starts.
         assert!(
             !any_event(&s, |event| matches!(
                 event,
@@ -510,6 +520,7 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
     #[test]
     fn r62_a_this_turn_discount_made_while_cleanup_s_events_are_answered_ends_with_that_turn_instead_of_lasting_for_good_2_2()
      {
+        // p1 plays Lunar Eclipse on turn N and plays no Spell after it, so cleanup expires its discount
         // (§2.2) and reports the removal. p1's fixture unit answers one of p1's modifiers ending, on turn
         // N only, with "this turn your cards cost 1 less" (/fullsend's rider) for the turn that is ending.
         // Cleanup's events are answered at the end of turn N (R62), which is where it lands.
@@ -562,6 +573,7 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
         assert_eq!((s.state().turn, s.state().active), (turn_n + 2, PlayerId::P1));
 
         // §2.2: "Cleanup expires every 'this turn' effect". Whatever was made for turn N lasts at most
+        // to the end of turn N — two turns on, p1's Reno costs its printed 3, and no turn-N rider is left.
         let leftover: Vec<PlayerModifier> = s
             .state()
             .players
@@ -608,6 +620,7 @@ mod r155_a_return_spell_cast_after_cleanup_does_not_come_back_on_a_later_turn {
     #[test]
     fn r155_r62_a_spell_with_an_end_of_turn_return_cast_while_cleanup_s_events_are_answered_stays_in_the_graveyard_at_the_end_of_its_caster_s_next_turn_5_1()
      {
+        // p1 plays Lunar Eclipse on turn N and no Spell after it, so cleanup expires its discount and
         // reports the removal (§2.2). p1's fixture unit answers that, on turn N only, by drawing a Spell
         // cast on draw (§2.4, R70) with #23's "End of turn: returns from the GY to your hand". It is played
         // after turn N's end-of-turn triggers have run (R62), so R155 keeps it in the graveyard.
@@ -782,6 +795,7 @@ fn hits_on_p2_hero(events: &[GameEvent]) -> Vec<GameEvent> {
 }
 
 /// R240's report, R1362's form of it: `{ type: "damageAbsorbed", sourceId: null, targetId: "hero-p2",
+/// absorbed: 1, combat: false }`, the whole of the 1st fatigue hit taken by the Armor.
 fn absorbed_fatigue_report() -> GameEvent {
     GameEvent::DamageAbsorbed {
         source_id: None,
@@ -810,9 +824,11 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
         s.end_turn(); // p2's turn
         s.end_turn(); // p1's draw casts Hinder: p2's next refresh is 1 lower (§8 #21)
         // R431: the base face then discards 1 at random with no prompt — here p1's only card left in
+        // hand, HIT_JOB.
         let hit_job = s.card(HIT_JOB).id.clone();
         s.expect_in_zone(&hit_job, "graveyard");
 
+        // BUILD M5-T4: `modifierChanged` is the badge by the hero appearing or fading, and "badge list
         // equals the view's modifiers"; R169 puts that list on both seats under the id the event names.
         let announced: Vec<String> = s
             .events()
@@ -867,12 +883,14 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
 
         // Armor 2 takes the whole 1 (§4.4 step 2), so the hero keeps 30, and the hit is no damage
         // instance (R63). The fatigue still happened: the count both seats read went from 0 to 1, and
+        // the next one deals 2.
         assert_eq!(s.state().players.p2.hero.health, 30);
         assert_eq!(s.state().players.p2.fatigue_count, 1);
         assert_eq!(s.view(PlayerId::P1).opponent.fatigue_count, 1);
         // §10.3: "every visible state change emits an event", so the draw reports itself — R1362: by
         // the pipeline's `damageAbsorbed` from no source on p2's hero, once, the whole 1 absorbed, and
         // by nothing else: no `damage` (not even the 0 R240 once wrote), and R3 draws no card, so
+        // there is no `drawn` for p2.
         assert_eq!(hits_on_p2_hero(s.last_events()), vec![absorbed_fatigue_report()]);
         assert!(!s.last_events().iter().any(|event| matches!(
             event,

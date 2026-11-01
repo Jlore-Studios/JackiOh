@@ -38,14 +38,11 @@ impl Eaten {
 const EATEN: &str = "eaten";
 
 /// R81: the meal travels in the `play` action, as a `tribute` pick the client shows as one. R428: one
-/// of your other Units — the unit row only.
+/// of your other Units — the unit row only. `min: 1` is R41's "must eat if able", and R90 supplies the "if
+/// able": a board that cannot satisfy it does not refuse the play, the effect fizzles.
 ///
-/// `min: 1` is R41's "must eat if able", and R90 supplies the "if able": a board that cannot satisfy
-/// it does not refuse the play, the effect fizzles ("nothing to tribute → Cry fizzles").
-///
-/// Deliberately no `amount`: `playChoices.tributeCostOf` would read it as §6.3's Tribute *cost*, paid
-/// from the play's `tributes` list, with Sheep Tokens as 2, refusing a play the board cannot pay. This
-/// card's meal is a declared target its script sacrifices itself, so the play carries no Tribute cost.
+/// Deliberately no `amount`: `playChoices.tributeCostOf` would read it as §6.3's Tribute *cost*, refusing a
+/// play the board cannot pay. This card's meal is a declared target its script sacrifices itself.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::tribute(
         1,
@@ -199,9 +196,8 @@ pub fn script() -> CardScripts {
 }
 
 // #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it: the Tribute choice travels
-// in the play action (R81), one of your other Units only, never itself; the chosen Unit is sacrificed
-// and remembered; Death → 2 copies (radiant fills the board) keeping `statsOverride` (R41); nothing
-// eaten → Death does nothing (R41). Base Cube 4/6, radiant 8/12.
+// in the play action (R81), one of your other Units only; the chosen Unit is sacrificed and remembered;
+// Death → 2 copies (radiant fills the board) keeping `statsOverride` (R41); nothing eaten → nothing (R41).
 // HARNESS GAP: `FieldSetup` has no `statsOverride`, so the one fixture that needs it sets it itself.
 #[cfg(test)]
 mod tests {
@@ -255,9 +251,8 @@ mod tests {
             // R41: "cannot eat itself"; R428: "one of your other Units", so the unit row only.
             assert_eq!(filter.exclude_self, Some(true));
             assert_eq!(filter.of, Some(vec![FilterOf::Unit]));
-            // §6.3: this card's tribute is a Sacrifice its own script performs, not a Tribute *cost*, so
-            // the declaration carries no `amount` — `playChoices.tributeCostOf` would read that as a cost
-            // paid from the play's `tributes` list, which reaches units only and refuses an unpayable play.
+            // §6.3: the tribute is a Sacrifice the script performs, not a Tribute *cost*: no `amount`
+            // (see `targets`).
             assert!(decl.amount.is_none());
             // The radiant cell restates the Death clause only, so the Cry's choice is unchanged.
             assert_eq!(scripts.radiant.targets, base.targets);

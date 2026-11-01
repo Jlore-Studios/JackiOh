@@ -62,10 +62,9 @@ pub fn refuse_own_activate(args: ActivationOfArgs) -> Effect {
 
 /// R1876001: "Activate your Universities" — the named card's ability (`ability`, else its first that
 /// declares no target or mode) runs its effect as an ability of the running card, for the running
-/// card's controller, with the card as its `self` on the face it wears. No cost, no play (R384), and
-/// without `spend_use` no use spent and neither its once-a-turn nor a refusal of its own use
-/// (R1876000) read. An ability that declares a target or a mode is never run, nor a card that does not
-/// act on the field (R13).
+/// card's controller, with the card as its `self` on the face it wears. No cost, no play (R384); without
+/// `spend_use` no use is spent and neither its once-a-turn nor a refusal of its own use (R1876000) is read.
+/// An ability that declares a target or a mode is never run, nor a card that does not act on the field (R13).
 ///
 /// R2521003: with `spend_use` the ability runs only while it has a use left this turn (`uses_allowed`
 /// against `ability_uses_this_turn`, B3.2 rules 1, 3 and 9) and the run spends one (`mark_use`), so the

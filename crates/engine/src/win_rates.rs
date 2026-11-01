@@ -1,17 +1,16 @@
 //! ME-STATS (docs/meditative-set.md M5, SPEC §8.8 row 50): the compiled-in table of card win
 //! rates M #50 CN Tech reads, and the pick it makes from it.
 //!
-//! The table is `crates/cards/data/win_rates.json`, validated by `crates/cards/build.rs` and
-//! compiled in beside the catalog, so the pure crates keep their two statics (CLAUDE.md rule 4):
-//! per card, [[R377]]'s in-deck wins and games. The leader is the best exact rate among the cards
-//! with at least `CN_TECH_MIN_GAMES` games, then more games, then the catalog id — never CN Tech
-//! itself ([[R387]]), Glitch, a token or an id the catalog no longer holds. With none qualifying,
-//! CN Tech's script falls back to a random non-token card (that fallback lives in the card file,
-//! not here). The table changes only with a card patch, so a game's seed and log replay on the
-//! build that played it (MD-D1, MD-D2). A replay folding under an earlier shipped catalog reads the
-//! table that version shipped with (R1266000). Meditative+ #2 NA Tech also reads the other end, the
-//! trailer (R1183000), with the same eligibility and tie-breaks. A game that holds its pools
-//! (R2201001) ranks without Legendary and Mythic cards (R2386001).
+//! The table is `crates/cards/data/win_rates.json`, validated by `crates/cards/build.rs` and compiled in
+//! beside the catalog, so the pure crates keep their two statics (CLAUDE.md rule 4): per card, [[R377]]'s
+//! in-deck wins and games. The leader is the best exact rate among the cards with at least
+//! `CN_TECH_MIN_GAMES` games, then more games, then the catalog id — never CN Tech itself ([[R387]]),
+//! Glitch, a token or an id the catalog no longer holds. With none qualifying, CN Tech's script falls back
+//! to a random non-token card (in the card file, not here). The table changes only with a card patch, so a
+//! game's seed and log replay on the build that played it (MD-D1, MD-D2); a replay folding under an earlier
+//! shipped catalog reads the table that version shipped with (R1266000). Meditative+ #2 NA Tech also reads
+//! the trailer (R1183000), with the same eligibility and tie-breaks. A game that holds its pools (R2201001)
+//! ranks without Legendary and Mythic cards (R2386001).
 
 use serde::{Deserialize, Serialize};
 

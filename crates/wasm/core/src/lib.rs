@@ -4,15 +4,13 @@
 //! for wasm-bindgen, `crates/wasm/luau` for C; the exports stay identical.
 //!
 //! The state cache: the client hands the same state over and over, so the bodies keep the few states
-//! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text, which for a returned
-//! state is the text `JSON.stringify` writes of the object `JSON.parse` made of it. A text that differs
-//! by one byte is parsed, so the answer never depends on the cache: parsing is deterministic, and the
-//! engine only reads the state it is given.
+//! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text. A text that differs by
+//! one byte is parsed, so the answer never depends on the cache.
 //!
-//! Errors are `String`s, each module's own failure. The clock is the caller's: `ai_decide` takes
-//! `now_ms`, so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3). The setup check is the
-//! caller's too (`CheckSetup`): the normal module refuses a game with custom cards (R915009), the Luau
-//! module judges them (R915005, R915006).
+//! Errors are `String`s, each module's own failure. The clock is the caller's (`ai_decide` takes
+//! `now_ms`), so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3), and so is the setup check
+//! (`CheckSetup`): the normal module refuses a game with custom cards (R915009), the Luau module
+//! judges them (R915005, R915006).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -92,11 +90,10 @@ fn remember(text: String, state: Rc<GameState>) {
     });
 }
 
-/// How `apps/web/src/wasm/index.ts` wraps a state's JSON, `["\u{a0}",<state>]`: wasm-bindgen's glue
-/// copies a string with a per-character JavaScript loop up to its first non-ASCII character and with
-/// `TextEncoder.encodeInto` after it, so the no-break space moves nearly all of the all-ASCII state onto
-/// `encodeInto`; for emscripten it is only the shape both modules share. A state's JSON is an object, so
-/// the plain text never looks like this.
+/// How `apps/web/src/wasm/index.ts` wraps a state's JSON, `["\u{a0}",<state>]`: wasm-bindgen's glue copies
+/// a string with a per-character JavaScript loop up to its first non-ASCII character, so the no-break
+/// space moves nearly all of the state onto `TextEncoder.encodeInto`; for emscripten it is only the shape
+/// both modules share. A state's JSON is an object, so the plain text never looks like this.
 const STATE_ENVELOPE: (&str, &str) = ("[\"\u{a0}\",", "]");
 
 /// A state argument's JSON, out of its envelope when it came in one.
@@ -154,8 +151,8 @@ pub type CheckSetup = fn(&CreateGameArgs, SetupKind) -> Result<(), String>;
 
 /// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
 /// and a panic in WebAssembly is a trap the page cannot catch. R180's handicaps come first, then each
-/// deck against its seat's size (R184); the function is the engine's own (`state.rs`'s `validate_setup`),
-/// so its messages cross verbatim, and a recorded game's decks are held to the size it was made under.
+/// deck against its seat's size (R184): the engine's own `validate_setup`, whose messages cross verbatim,
+/// and a recorded game's decks are held to the size it was made under.
 pub fn check_decks(
     args: &CreateGameArgs,
     customs: &IndexMap<String, CardDef>,
@@ -289,10 +286,10 @@ pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, String> {
     to_json(&engine::deal_emote_hand(seed, player(seat)?))
 }
 
-/// R1420's preview, in the browser: from this call on, for the module's life (WebAssembly runs one
-/// thread), `sets` (`SetName[]`) count as sets that ship, as the testkit's `preview_sets` does on a test's
-/// thread. Only a module built with the `preview` feature can preview (the development, unit-test and e2e
-/// builds; the production bundle is built without it); any other refuses a set (#552's play-through).
+/// R1420's preview, in the browser: from this call on, for the module's life, `sets` (`SetName[]`) count
+/// as sets that ship, as the testkit's `preview_sets` does on a test's thread. Only a module built with the
+/// `preview` feature can preview (the development, unit-test and e2e builds, not the production bundle);
+/// any other refuses a set (#552's play-through).
 pub fn preview_sets(sets_json: &str) -> Result<(), String> {
     let sets: Vec<engine::SetName> = parse("previewSets: the sets", sets_json)?;
     preview(&sets)
@@ -443,9 +440,8 @@ pub fn constants() -> Result<String, String> {
 }
 
 /// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`) as
-/// this build computes it: its integer network's correction for each case, in order. The web's tests
-/// hold the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` holds the
-/// native one.
+/// this build computes it: its integer network's correction for each case, in order. The web's tests hold
+/// the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` does the native one.
 pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
     let fixture: serde_json::Value = serde_json::from_str(fixture_json)
         .map_err(|error| format!("the parity fixture is not JSON: {error}"))?;
@@ -566,9 +562,8 @@ fn check_deck_draft(input_json: &str) -> Result<String, String> {
 }
 
 /// A loadout input (`DeckInput`, `LoadoutInput`) whose `catalog.cards` may hold partial definitions. The
-/// rules read only `name`, `token` and `tags` (L3, `validator.rs`), and the web's tests hand
-/// `{ id, name, token, tags }` (`routes/play.test.tsx`), while `CardDef` requires every field: so each
-/// definition is laid over a registered one with `token: false` and no tags, its own fields winning.
+/// rules read only `name`, `token` and `tags` (L3, `validator.rs`), but `CardDef` requires every field, so
+/// each definition is laid over a registered one with `token: false` and no tags, its own fields winning.
 fn parse_loadout_input<T: DeserializeOwned>(call: &str, input_json: &str) -> Result<T, String> {
     let mut input: Value = parse(call, input_json)?;
     if let Some(cards) = input.pointer_mut("/catalog/cards").and_then(Value::as_object_mut) {
@@ -643,11 +638,10 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
 }
 
 // Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
-// mirror the 1v1 ones (the same envelope, a setup refused first, an illegal action in `error`), but Duos
-// states are not cached: only the dev route plays them. Only the `duos` feature builds them, which
-// `scripts/build-wasm.sh` turns on for the dev server only (`JACKIOH_WASM_DUOS=1`, apps/web's `predev`),
-// keeping them out of the module a player loads and the e2e client; without it each body answers the
-// reason, as `preview_sets` does without `preview`, so the modules export the same functions either way.
+// mirror the 1v1 ones but Duos states are not cached: only the dev route plays them. Only the `duos`
+// feature builds them, which `scripts/build-wasm.sh` turns on for the dev server only
+// (`JACKIOH_WASM_DUOS=1`, apps/web's `predev`); without it each body answers the reason, as
+// `preview_sets` does without `preview`, so the modules export the same functions either way.
 
 #[cfg(feature = "duos")]
 mod duos_bodies {

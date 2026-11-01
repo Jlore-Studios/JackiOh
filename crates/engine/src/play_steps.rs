@@ -1,12 +1,12 @@
-//! SPEC §10.5 "Playing a card": the eight steps as a table of named steps (`PLAY_STEPS`) that `drive`
-//! runs over one JSON record, a `PlayRun` (BUILD M3-T2/T3, R81, R90). A step that leaves a prompt open
-//! owes the rest to `state.work` as a `Resume` naming the step plus that record (§9.3), so nothing is
-//! held across a prompt in a local or a closure (the bug `work.rs` exists to prevent). Echo (R30, §6.1)
-//! is step 6 re-running step 5 one repeat at a time off `state.echoQueue`, with fresh prompts. Steps 3,
-//! 5 and 6 keep their own cursor in the record, so a pause resumes where it stopped.
+//! SPEC §10.5 "Playing a card": the eight steps as a table of named steps (`PLAY_STEPS`) that `drive` runs
+//! over one JSON record, a `PlayRun` (BUILD M3-T2/T3, R81, R90). A step that leaves a prompt open owes the
+//! rest to `state.work` as a `Resume` naming the step plus that record (§9.3), so nothing is held across a
+//! prompt in a local or a closure (the bug `work.rs` exists to prevent). Echo (R30, §6.1) is step 6
+//! re-running step 5 one repeat at a time off `state.echoQueue`, with fresh prompts. Steps 3, 5 and 6 keep
+//! their own cursor in the record, so a pause resumes where it stopped.
 //!
-//! The announce (B5 E1, R448), between 3 and 4, is a window for Counters (§10.3). Step 1 is the
-//! targeting point (B5 E5, E9, R450), step 3 may replace the card (R449), step 4 counts it (R451).
+//! The announce (B5 E1, R448), between 3 and 4, is a window for Counters (§10.3); step 1 is the targeting
+//! point (B5 E5, E9, R450), step 3 may replace the card (R449), step 4 counts it (R451).
 //!
 //! Not here: legal choices (`play_choices.rs`, R90), costs (`mana.rs`, R65), card text (the script,
 //! CLAUDE.md rule 5), R43's powers (`subsystems/hero_power.rs`). Callers name the entry points
@@ -2750,11 +2750,10 @@ const STEP_TABLE: &[Step] = &[
 ];
 
 /// Run the steps from `run.at` on, and stop the moment one leaves a prompt open. The rest is owed to
-/// `state.work` only when a step pauses, never before (R117): step 4's nested `settle` drains
-/// `state.work`, so a pipeline parked in advance would run its own steps 5 to 8 twice (R1: a Cry
-/// fires once). It is also R113's order: `work.rs` parks at `state.workCursor`, so a Cry's parked
-/// tail resumes first and steps 6 to 8 come after it. True when the pipeline is finished with (a
-/// game that ended under it included).
+/// `state.work` only when a step pauses, never before (R117): step 4's nested `settle` drains it, so a
+/// pipeline parked in advance would run its own steps 5 to 8 twice (R1: a Cry fires once). That is also
+/// R113's order: `work.rs` parks at `state.workCursor`, so a Cry's parked tail resumes before steps 6 to
+/// 8. True when the pipeline is finished with (a game that ended under it included).
 fn drive(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R452: a random or enemy-targeting cast is in force each time its steps are driven.
     let mode = cast_mode_of(run);

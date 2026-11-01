@@ -398,6 +398,7 @@ mod tests {
     }
 
     /// R1081000: a Flying Mid Runner played into the midlane's backrow zone is in midlane: it Tributes
+    /// itself there as in the unit zone.
     #[test]
     fn r1081000_played_flying_into_the_midlane_backrow_zone_it_tributes_itself() {
         crate::register_all();

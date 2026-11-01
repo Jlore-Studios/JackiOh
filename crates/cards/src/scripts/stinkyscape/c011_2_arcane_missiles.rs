@@ -7,6 +7,7 @@
 //! face), each resolution its own run. Each run draws one enemy from the match rng (R60) among the
 //! enemy hero and the acting enemy Units still standing, a Unit the last hit killed never drawn
 //! again, and deals it one hit of the declared damage (§4.4: Spell Damage raises each hit). With no
+//! enemy Unit the hero takes every hit.
 
 use jackioh_engine::prelude::*;
 

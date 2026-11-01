@@ -78,9 +78,6 @@ struct Tally {
     r69_survivors: i32,
     /// R69's first sentence: collected because its max health fell to 0 or less.
     r69_collected: i32,
-    /// Tallied and never asserted on.
-    #[allow(dead_code)]
-    games_over: i32,
 }
 
 fn case_seed(index: i32) -> String {
@@ -268,9 +265,6 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
     tally.combats += 1;
     tally.damage_events += events_of_type(&events, GameEventType::Damage).len() as i32;
     tally.deaths += events_of_type(&events, GameEventType::Destroyed).len() as i32;
-    if state.result.is_some() {
-        tally.games_over += 1;
-    }
 
     let mut out: Vec<Violation> = Vec::new();
     let mut fail = |invariant: &str, detail: String| {

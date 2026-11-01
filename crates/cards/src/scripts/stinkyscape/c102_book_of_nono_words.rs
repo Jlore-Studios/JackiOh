@@ -7,6 +7,7 @@
 //! (R1848003): played for that X with none to choose, at exactly that price, which no modifier
 //! reaches (R65); a full hand burns the rest, without it (§2.4); a Bounce keeps it and a graveyard
 //! takes it off (R766). Radiant: each one Radiant. The four set Xs are the card's structure, no
+//! declared number (R1748003).
 
 use jackioh_engine::prelude::*;
 

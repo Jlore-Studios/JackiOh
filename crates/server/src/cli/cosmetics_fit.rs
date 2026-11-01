@@ -5,15 +5,15 @@
 //! jackioh-server cosmetics-fit
 //! ```
 //!
-//! Reads the loadouts people's seats froze over the last `BOT_COSMETIC_FIT_WINDOW_DAYS`
-//! (`matches.loadouts`, migration 0061; a ladder bot's seat is never one) and what each of those
-//! people owns now (the ledger), and buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`):
-//! a seat by its account's age as its match began, a person by their age at their latest match.
-//! Each bucket of at least `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be
-//! pasted into `BOT_COSMETIC_FITS` in `crates/server/src/config.rs` by hand (CLAUDE.md rule 9), and
-//! a bucket under it prints a comment, so its row keeps the prior. Ownership is read now, so a full
-//! art or an earned foil, finish or border granted after a match counts as not worn there;
-//! `full_art_wear` is the share that printed that one of its card's tiers (R2655000).
+//! Reads the loadouts people's seats froze over the last `BOT_COSMETIC_FIT_WINDOW_DAYS` (`matches.loadouts`,
+//! migration 0061; a ladder bot's seat is never one) and what each of those people owns now (the ledger),
+//! and buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`): a seat by its account's age as its
+//! match began, a person by their age at their latest match. Each bucket of at least
+//! `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be pasted into `BOT_COSMETIC_FITS` in
+//! `crates/server/src/config.rs` by hand (CLAUDE.md rule 9); a smaller one prints a comment, so its row
+//! keeps the prior. Ownership is read now, so a full art or an earned foil, finish or border granted after
+//! a match counts as not worn there; `full_art_wear` is the share that printed that one of its card's
+//! tiers (R2655000).
 //!
 //! The output is aggregates only: no account id or username.
 

@@ -449,6 +449,7 @@ mod tests {
     }
 
     /// R1081000: a Unit standing in the enemy backrow is one permanent, counted once: three permanents
+    /// are not the four the Cry needs.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_counts_once() {
         crate::register_all();

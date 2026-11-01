@@ -502,6 +502,7 @@ mod tests {
 
         #[test]
         fn r1855001_no_laid_cry_ever_asks_its_caster() {
+            // Every board's laid Cries (FO's Halo and Phalanx Discover) draw their caster's choices at
             // random (R452's mode): no play leaves a question for P1.
             for seed in 0..SEEDS {
                 for radiant in [false, true] {
@@ -534,6 +535,7 @@ mod tests {
         #[test]
         fn r1855001_fo_s_halo_and_phalanx_arm_themselves_with_random_picks() {
             // Their Cries (S15, R1862002) Discover Weapons and Equip them; laid, every pick is drawn
+            // at random, so each ends armed with no question left for its caster.
             let seed = seed_laying("FO", true, &RICH_BOARDS);
             let mut s = setup(&seed, true, json!([]));
             s.play(ID, json!({}));
@@ -680,6 +682,7 @@ mod tests {
     }
 
     /// R2204002: a held game (R2201001) never draws MT, the one board that lays a Legendary card (S #152
+    /// Sanctum), neither as the card resolves nor as it arrives; the same seeds unheld do.
     mod r2204002_a_held_game_draws_no_board_that_lays_a_held_card {
         use super::*;
 

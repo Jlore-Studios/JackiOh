@@ -3,24 +3,19 @@
 //!
 //! My Pawn's attack cancel (R44) lives in a trap window, which waits and may ask. These five moments
 //! are not windows: each sits at a fixed point inside a rule that cannot stop halfway for a prompt:
-//! `lethalHit` (§4.4 after the caps, before step 5: a hit that alone would bring its hero to 0 or less,
-//! as R44 judges it; Classic #52), `healed` (inside every heal on its stated amount, Lifesteal, "heal up
-//! to" and "heal to full" included, set health not: E7, R462; Classic+ #22), `wouldDie` (§4.5 step 1;
-//! Classic #14), `toGraveyard` (every move into a graveyard; Classic #28, #50, #60) and `targeted`
-//! (§4.2 step 2 before the trap window, §10.5 step 1 and every target prompt; Classic #33 Joro).
-//!
-//! So a replacement is decided synchronously from the card's data (`Script.replacements`): the moment,
-//! where the card must stand, a pure `when` and a declarative `instead`, never an effect list, which
-//! could ask. Anything more (Final Gambit's "heal 10 and draw 3") is its `then`, a `resume` step owed on
-//! `state.work` (R113) and resolved after the replaced event, as a trap answering it would be.
+//! `lethalHit` (§4.4 before step 5, as R44 judges it; Classic #52), `healed` (inside every heal on its
+//! stated amount: E7, R462; Classic+ #22), `wouldDie` (§4.5 step 1; Classic #14), `toGraveyard` (Classic
+//! #28, #50, #60) and `targeted` (§4.2 step 2, §10.5 step 1; Classic #33 Joro). So a replacement is
+//! decided synchronously from the card's data (`Script.replacements`): the moment, where the card must
+//! stand, a pure `when` and a declarative `instead`, never an effect list, which could ask. Anything
+//! more is its `then`, a `resume` step owed on `state.work` (R113).
 //!
 //! R460: several replacements of one event apply one at a time in R68's order (`candidates`), each card
-//! at most once per event, and each later one re-checks the changed event, so a second Final Gambit
-//! finds no lethal hit and stays set.
+//! at most once per event, and each later one re-checks the changed event.
 //!
-//! A Trap or Field Trap that replaces FIRES (`trapFired`, face-up; a Trap is spent, §5.1, R33, R61); a
-//! Field Spell, a Unit or a hand card replaces without firing, as does any replacement into a graveyard
-//! (`move_to_zone` has no event list to fire into), so a face-down Trap never offers one.
+//! A Trap or Field Trap that replaces FIRES (`trapFired`, face-up; a Trap is spent, §5.1, R33, R61); any
+//! other replacement goes without firing, as every one into a graveyard does (`move_to_zone` has no
+//! event list to fire into), so a face-down Trap never offers one.
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -770,11 +765,10 @@ pub fn graveyard_redirect_for(state: &GameState, card: &CardInstance) -> Option<
 
 // "A friendly unit is targeted" (E5, E9)
 
-/// B5 E5, E9: `by` has chosen `target`, one of the other player's units on the field, for an attack
-/// (§4.2 step 2) or a pick (§10.5 step 1). The first card of its controller that interposes (Classic #33
-/// Joro, from the hand) is summoned into their leftmost open unit zone (no Cry, summoning sick) and the
-/// attack or pick moves to it (`summoned`, then `redirected`); returns the new target, or `None`. A
-/// random pick, an "all" effect or a forced attack (R121) chooses nobody and never comes here.
+/// B5 E5, E9: `by` has chosen `target`, one of the other player's units, for an attack (§4.2 step 2) or a
+/// pick (§10.5 step 1). The first card of its controller that interposes (Classic #33 Joro, from the hand)
+/// is summoned into their leftmost open unit zone (no Cry, summoning sick) and the attack or pick moves to
+/// it; returns the new target, or `None`. A random pick, "all" effect or forced attack (R121) never comes.
 pub fn answer_targeting(
     sink: &mut EngineSink<'_>,
     target: &CardInstance,

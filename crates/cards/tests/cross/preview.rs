@@ -226,6 +226,7 @@ fn seal(pile: &mut Vec<CardInstance>, fence: Fence, player: PlayerId, what: &str
     }
 }
 
+/// A copy of `state` for a preview hook to answer on, with every library and every hand fenced as
 /// given and, when `flip_active`, the other seat active (a hook reads `yourTurn` instead, README §1).
 fn fenced(
     state: &GameState,
@@ -265,6 +266,8 @@ mod r280_the_core_cards_that_declare_preview {
     use super::*;
 
     // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
+    // on the field only; the hand-based tests below keep to the six, and 093-combo-index.test.ts
+    // proves its values.
     #[test]
     fn r280_r372_r583_r2476000_are_exactly_18_31_38_40_70_91_and_93_the_new_sets_listed_ones_and_the_remembering_ones_on_their_faces()
      {
@@ -645,6 +648,7 @@ mod c40_echoes_of_the_forgotten_previews_its_start_of_turn_damage_r280 {
         }));
 
         assert_eq!(value_of(&s.view(PlayerId::P1).you.backrow[0]), expected);
+        // A public Field Spell: the other seat sees the same number, and the opponent's pile of 5 is
         // not counted (R72).
         assert_eq!(value_of(&s.view(PlayerId::P2).opponent.backrow[0]), expected);
 
@@ -2138,6 +2142,7 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
 mod c_46_divine_favor_previews_how_many_cards_it_would_draw_now_r280 {
     use super::*;
 
+    // It reads both hands' sizes, which are public
     // (§10.8), and nothing of what is in them.
     const LABEL: &str = "Draw";
 

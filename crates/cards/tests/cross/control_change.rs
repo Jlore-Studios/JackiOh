@@ -389,8 +389,10 @@ mod r171_with_the_cards_that_change_control {
 
         g.play(SILAS, json!({ "zone": 1, "modes": ["right"] }));
 
+        // "Cards that would move to the opponent are bounced": p1's lane-5 Vanilla goes home at 0 and
         // never changes sides, so it is not marked (R14).
         g.expect_in_zone(&outbound, "hand");
+        // p2's lane-1 7/7 moves to p1, which the radiant cell does not touch: it crosses, changes
         // control, and has entered p1's side this turn (R14, R171).
         let changed: Vec<String> = g
             .last_events()
@@ -627,9 +629,11 @@ mod r61_a_played_permanent_rotated_onto_the_traps_side_is_not_its_own_fuse_targe
         let pointmaster = g.unit_at("p2", 2);
 
         // Silas enters p1's lane 5 and rotates right: he crosses to p2's lane 5 (§3.1), and
+        // Pointmaster steps from p2's lane 2 to p2's lane 1.
         g.play(&silas, json!({ "zone": 5, "modes": ["right"] }));
 
         // p2's trap answers p1's played Unit (R17): "Fuse it onto a random permanent of yours of that
+        // type".
         assert!(
             g.events()
                 .iter()
@@ -664,6 +668,8 @@ mod r14_radiant_silly_silas_bounces_only_the_cards_that_would_move_to_the_oppone
         }));
         let inbound = g.unit_at("p2", 1);
 
+        // That card moves to p1, not "to the
+        // opponent", so the radiant clause does not touch it and the base clause keeps it: it crosses
         // and changes control (§8 Conventions: every base clause the radiant cell does not restate is
         // kept), entering p1's side this turn (R171).
         g.play(SILAS, json!({ "zone": 3, "modes": ["right"] }));

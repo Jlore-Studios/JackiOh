@@ -61,6 +61,24 @@ pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
 pub const LETHAL_HINT_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
 pub const LETHAL_HINT_NODES: usize = AI_BUDGET.lethal_nodes;
 
+/// R2660000: the stream the ladder bots' concession check (`unstoppable::unstoppable_lethal`) draws
+/// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
+pub const UNSTOPPABLE_LETHAL_SEED: &str = "ai:unstoppable-lethal";
+
+/// R2660000: the worlds the check proves the lethal on, the AI's own; it holds only on all of them.
+pub const UNSTOPPABLE_LETHAL_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
+const _: () = assert!(
+    UNSTOPPABLE_LETHAL_DETERMINIZATIONS > 0,
+    "R2660000: no world proves nothing"
+);
+
+/// R2660000: the nodes one whole check may spend, the seat's every line and the opponent's every
+/// reply on every world: twice a decision's, since it tries every line where the search tries a beam.
+pub const UNSTOPPABLE_LETHAL_NODES: usize = 2 * AI_BUDGET.nodes;
+
+/// R2660000: the nodes one proof of the opponent's lethal may spend, the AI's solver's own.
+pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize = AI_BUDGET.lethal_nodes;
+
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
 /// baseline, `duos.rs`'s `duos_gate`.
@@ -495,7 +513,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         stack: 0.0,
         lucky: 0.2,
         immune_to_spells: 1.0,
-        // Patch v0.3.7 (#841): untuned, conservative starts for the training lanes to move. R783000:
+        // #841: untuned, conservative starts for the training lanes to move. R783000:
         // Ranged spares its attacks the strike back, as First Strike spares a kill's, but guards
         // nothing on defense, so half First Strike's worth.
         ranged: 0.5,
@@ -669,7 +687,7 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
 /// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick. Every
-/// term and keyword AI_EVAL gained after that (R346, patches v0.2.0 and v0.3.7, #1602, #1886, …) is 0
+/// term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0
 /// here, and each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `standing_unit_priced_once`) is off, as the baseline read none of them.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {

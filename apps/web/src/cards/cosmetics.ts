@@ -7,10 +7,11 @@
 // as its kind's default. The picks never reach the engine, an action, `PlayerView` or the log; a face wears
 // them only where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). An opponent's
 // side, and every side of a watched or replayed online game, wears its seat's loadout frozen at match start
-// (R1834002, `cards/loadouts.ts`); every other face draws the defaults (CLAUDE.md rule 7). Each slot is its own
-// face attribute, apart from the rarity foil (`data-foil`, model.ts), so a decorative foil never blurs Mythic
-// and Radiant. R1834000: a card's picks live on the account, this store is the device's cache
-// (`cardPicksSync.ts`, `subscribeCardPickWrites`); it keeps what it is given, the wear path and `useCanEquip` apply ownership.
+// (R1834002, `cards/loadouts.ts`); every other face draws the defaults (CLAUDE.md rule 7). Each slot is its
+// own face attribute, apart from the rarity foil (`data-foil`, model.ts), so a decorative foil never blurs
+// Mythic and Radiant. R1834000: a card's picks live on the account, this store is the device's cache
+// (`cardPicksSync.ts`, `subscribeCardPickWrites`); it keeps what it is given, and the wear path and
+// `useCanEquip` apply ownership.
 
 import {
   createContext,
@@ -147,8 +148,8 @@ export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 
 /**
  * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default (R1953001;
- * the Full-art cards setting, for `fullArt`); a pick of a default id is a pick; an unknown id reads as the
- * default. R2655000: `fullArt` is `false`, `true` (the Epic full art) or a full art's id, kept as written.
+ * the Full-art cards setting, for `fullArt`); an unknown id reads as the default. R2655000: `fullArt` is
+ * `false`, `true` (the Epic full art) or a full art's id, kept as written.
  */
 export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean | string };
 
@@ -427,8 +428,7 @@ export function useCanEquip(): (defId: string, cosmeticId: CosmeticId) => boolea
 /**
  * What `face` wears, each kind a known id: the defaults where `picks` is null (not the viewer's own), the
  * default foil with a rarity foil (Mythic, Radiant), the default finish and border on a Radiant face (its
- * gold is its own). R1655000: a kind `card` picks that `owns` takes is the card's pick, else `picks` (the
- * kind defaults on a face, R1953001; a cosmetic sample as that cosmetic).
+ * gold is its own). R1655000: a kind `card` picks that `owns` takes is the card's pick, else `picks`.
  */
 export function wornCosmetics(
   face: FaceModel,

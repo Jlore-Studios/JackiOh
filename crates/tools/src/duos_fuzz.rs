@@ -11,14 +11,14 @@
 //!      the server's to dedupe (§9.3, §13.9), so no probe reuses one.
 //!
 //! A seed fixes the game: its setup rotates as a co-op match is made (§13.7, #1573), some seats on a
-//! dealt deck (R433), the four decks one seeded shuffle of `FUZZ_POOL` at each seat's size (R184). The
-//! policy is §10.7's over a Duos seat's legal actions, drawn from streams outside the state.
+//! dealt deck (R433), the four decks one seeded shuffle of `FUZZ_POOL` at each seat's size (R184), and
+//! the policy's draws come from streams outside the state.
 //!
 //! # The endings channel (#1572)
 //!
 //! On `ENDINGS_SHARE` of seeds a game may also send a seat's concede (B11), the server's ceiling (R79)
-//! or an emote a duel lists (R1127), logged so the fold reaches the live hash. Duos refuses a draw, a
-//! timeout, an expired disconnect and the R82 setting (B9, B10, B37, B38), so the channel sends none.
+//! or an emote a duel lists (R1127). Duos refuses a draw, a timeout, an expired disconnect and the R82
+//! setting (B9, B10, B37, B38), so the channel sends none.
 
 use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;

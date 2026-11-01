@@ -522,12 +522,11 @@ pub struct CounterPlayArgs {
     pub target: Option<TargetSpec>,
 }
 
-/// B5 E1, R448: §6.3 Counter, canceling the play an announce window answers. The card never resolves
-/// and counts for no play count (§10.5 step 4 never runs for it); its mana and Tributes stay spent. A
-/// later Counter finds no card (a trap on a canceled announce is not offered it, and stays set).
-///
-/// `to: "thief"` is E2 (`ownership::take_into_hand`), a full hand burning it (§2.4); a unit-token card
-/// ceases to exist (R11). `countered` goes out first, naming where the card went, then the move's events.
+/// B5 E1, R448: §6.3 Counter, canceling the play an announce window answers. The card never resolves and
+/// counts for no play count (§10.5 step 4 never runs for it); its mana and Tributes stay spent. A later
+/// Counter finds no card (a trap on a canceled announce stays set). `to: "thief"` is E2
+/// (`ownership::take_into_hand`), a full hand burning it (§2.4); a unit-token card ceases to exist (R11).
+/// `countered` goes out first, naming where the card went, then the move's events.
 pub fn counter_play(args: CounterPlayArgs) -> Effect {
     Effect::new("counterPlay", move |ctx| {
         let record: Option<String> = match &args.target {

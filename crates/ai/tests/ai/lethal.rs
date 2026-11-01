@@ -23,11 +23,10 @@ use super::support::{
     AI, HUMAN, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
 };
 
-/// p1 (the AI), 4 crystals: Pointmaster 7/1, Mr. Vanilla 4/4 and Tempo Timmy 3/3 ready, a Radiant Lava
-/// Golem and two cheap spells in hand; p2 at 10 behind two Taunts. The lethal: the Golem tributes both
-/// enemy Taunts and one of p1's two smaller units, then Pointmaster and the other hit the face for 10
-/// or more. The Golem is Radiant because the base face paid with opposing units is summoned for the
-/// opponent (R360), where its Taunt would wall the face again.
+/// p1 (the AI), 4 crystals, holds a Radiant Lava Golem and two cheap spells; p2 is at 10 behind two Taunts.
+/// The lethal: the Golem tributes both enemy Taunts and one of p1's two smaller units, then Pointmaster
+/// and the other hit the face for 10 or more. The Golem is Radiant because the base face paid with
+/// opposing units is summoned for the opponent (R360), where its Taunt would wall the face again.
 fn wide() -> Value {
     json!({
         "p1": { "hand": [{ "def": "core-055", "radiant": true }, "core-035", "core-031"], "mana": 4, "field": ["core-020", "core-008", "core-011"] },
@@ -109,10 +108,10 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
     f64::from(state.players[opp].hero.health - damage_past_taunts(state, opp, &attacks))
 }
 
-/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside Pointmaster 7/1 and Mr. Vanilla 4/4,
-/// ready; p2 stands behind Midrange Menace, a 9/9 Taunt, at 10 health. Silence on the Taunt and both
-/// attacks to the face win; Silence on an own unit reaches a position that differs only in which unit
-/// is Vanilla. Both sides hold a library, so ending the turn decks nobody out.
+/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside Pointmaster 7/1 and Mr. Vanilla 4/4; p2
+/// stands behind Midrange Menace, a 9/9 Taunt, at 10 health. Silence on the Taunt and both attacks to the
+/// face win; Silence on an own unit reaches a position that differs only in which unit is Vanilla. Both
+/// sides hold a library, so ending the turn decks nobody out.
 fn silence_board() -> Value {
     json!({
         "p1": { "hand": ["classicplus-009"], "field": ["core-020", "core-008"], "library": ["core-008", "core-011"] },
@@ -555,9 +554,9 @@ mod duos_life_r964000 {
 /// R1965000 (issue #1965): C #90 In Too Deep's reward L lets the AI play cards from its graveyard
 /// (R454), so a (0) Spell there can be played again and again: C #37 Last Hurrah, M #62 Small Time
 /// Recruits and The Coin. The board's lethal, Bigot into the Felinor Token and then the 7/7 at the face,
-/// is one the depth-first walk does not find first. The best-first walk proved it behind replays of the
-/// Spells, and `decide`, playing a line's first action and planning again, replayed them without end;
-/// it plays the line trimmed to the actions it needs (`trim_lethal`).
+/// is one the depth-first walk does not find first. The best-first walk proves it behind replays of the
+/// Spells, which `decide`, planning again after each action, would replay without end; it plays the line
+/// trimmed to the actions it needs (`trim_lethal`).
 mod free_replays_r1965000 {
     use super::*;
     use std::cell::Cell;
@@ -767,8 +766,8 @@ mod free_replays_r1965000 {
     }
 
     /// A replay the lethal does need is kept: Base Camp, already played this turn and back in the
-    /// graveyard, adds two Coins at no cost and moves no attack, and a Coin's mana pays for a Dogpile,
-    /// which casts the other at the enemy hero for 4. Every step is needed, so the trim keeps them all.
+    /// graveyard, adds two Coins at no cost, and a Coin's mana pays for a Dogpile, which casts the other
+    /// at the enemy hero for 4. Every step is needed, so the trim keeps them all.
     #[test]
     fn r1965000_a_replay_the_lethal_needs_is_found_and_kept() {
         register_cards();

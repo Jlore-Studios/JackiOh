@@ -1,15 +1,13 @@
-// 45 — the economy loop: a new account starts, earns, spends and collects (#1310; SPEC §14, §14.12;
-// R1310000, R1310003, R1310004). SPEC §14.12: "Practice and hotseat let a player use every card and every
-// cosmetic whatever the ledger holds, and so do the end-to-end tests, but the one that walks the economy
-// itself." This is that one (R1310004): it walks the fixture account `e2e-econ` through the loop, each
-// step asserted on what the server answers and what the page shows. A ladder win (R1302001) pays at least
-// its constants, since a level the XP reaches may pay more.
-// One test, after a reseed (R144) in `beforeEach`: each step spends what the one before it earned, so a
-// retry walks the loop again from the start. The reseed also puts back `e2e-p1`, `e2e-p2`, `e2e-pending`
-// and the good code; spec 10 and spec 44, which read them, reseed first too.
-// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside a development-mode client
-// (`vite dev` or `build:e2e`, the only builds that read `FULL_ART_GATED_KEY`). Daily only, as every
-// spec outside scripts/shard-specs.mjs's SMOKE.
+// 45 — the economy loop: a new account starts, earns, spends and collects (#1310; SPEC §14, §14.12; R1310000, R1310003,
+// R1310004). Every other spec may use every card and cosmetic whatever the ledger holds (§14.12); this one walks the
+// fixture account `e2e-econ` through the loop (R1310004), each step asserted on what the server answers and what the
+// page shows. A ladder win (R1302001) pays at least its constants, since a level the XP reaches may pay more.
+// One test, after a reseed (R144) in `beforeEach`: each step spends what the one before it earned, so a retry walks the
+// loop again from the start. The reseed also puts back `e2e-p1`, `e2e-p2`, `e2e-pending` and the good code; spec 10 and
+// spec 44, which read them, reseed first too.
+// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside a development-mode client (`vite dev` or
+// `build:e2e`, the only builds that read `FULL_ART_GATED_KEY`). Daily only, as every spec outside
+// scripts/shard-specs.mjs's SMOKE.
 
 import { newestShippedSet } from "../../../apps/web/src/wire/catalog.ts";
 import { COSMETICS } from "../../../apps/web/src/wire/generated/cosmetics.ts";

@@ -68,15 +68,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #17 Flood — SPEC §8.1 row 17, BUILD M4-T4 row 17.
-//
-// Must-pass (M4-T4): "Bounces both sides, tokens vanish, hand cap burns; radiant three modes each
-// tested plus draw 1". Engine cell: "Tokens vanish on bounce; hand cap burns extras" — R11 and R4.
-//
-// R81 is why no test calls `answer()`: the radiant "choose one" is a DECLARED mode that travels in
-// the play action and never opens a `PendingChoice`. The strings are the same constants the script
-// declares; a drift between the two would fail `refuse_modes` (play_choices.rs) rather than silently
-// pick the first option.
+// #17 Flood — SPEC §8.1 row 17, BUILD M4-T4 row 17. Must-pass (M4-T4): "Bounces both sides, tokens
+// vanish, hand cap burns; radiant three modes each tested plus draw 1" (R11 and R4). R81 is why no test
+// calls `answer()`: the radiant "choose one" is a DECLARED mode that travels in the play action and never
+// opens a `PendingChoice`. The strings are the script's own constants; a drift would fail `refuse_modes`
+// (play_choices.rs) rather than silently pick the first option.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -27,13 +27,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4 (R30).
-//
-// The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes each resolution
-// a number: one extra resolution is +2 instead of +1, two extra is +3.
-// The "fresh prompts per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every
-// resolution opens a Discover of a set and then one of a number (§10.6, R831004); #80 Zao Gao's discard
-// is random (R354), so it opens no prompt.
+// BUILD M4-T4 (R30). The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes
+// each resolution a number: one extra resolution is +2 instead of +1, two extra is +3. The "fresh prompts
+// per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every resolution opens a
+// Discover of a set and then one of a number (§10.6, R831004); #80 Zao Gao's discard is random (R354).
 #[cfg(test)]
 mod tests {
     use super::*;

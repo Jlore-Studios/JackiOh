@@ -12,9 +12,8 @@
 //! of the older ones are in the totals alone. It writes one GameRecord per line in id order: the
 //! format `cargo jackioh stats --out` and the training lanes write, which `stats-import` and
 //! `cargo jackioh stats report` read and `analysis/` loads. Pilots are per seat, so the file holds
-//! every seat of every game it names; the pilot filter and the card are for the report that reads
-//! it. `--out` is resolved against the directory the command was started in, and an existing file
-//! there is replaced.
+//! every seat of every game; the pilot filter and the card are for the report that reads it. `--out`
+//! is resolved against the directory the command was started in, and an existing file there is replaced.
 
 use std::path::{Path, PathBuf};
 

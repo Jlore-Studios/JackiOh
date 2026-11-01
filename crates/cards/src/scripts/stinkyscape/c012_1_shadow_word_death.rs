@@ -77,6 +77,7 @@ mod tests {
         json!({ "attack": attack, "health": health })
     }
 
+    /// This thread's script for `def_id`, for one test: after each card its controller's opponent
     /// plays, it gains `attack` Attack (a negative one lowers it), before that card resolves (§10.5).
     fn moves_on_enemy_plays(def_id: &str, attack: i32) {
         let moves = TriggerDef::new("swd-moves", &[GameEventType::CardPlayed], move |ctx, event| match event {

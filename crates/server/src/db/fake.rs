@@ -1,68 +1,28 @@
-//! The in-memory store (SURFACE §11.1, §11.2): one `FakeData` behind `Db::Fake` for the unit tests
-//! and for `E2E=1` (BUILD M8's end-to-end mode). R111's launch grant runs when the store is built
-//! with a catalog (`E2E=1`, [`create_e2e_store`]) and not otherwise (`FakeData::default()`, the unit
-//! tests' store, which "carries no launch grant, so the existing tests keep seeing the store their
-//! assertions were written against").
+//! The in-memory store (SURFACE §11.1, §11.2): one `FakeData` behind `Db::Fake` for the unit tests and for
+//! `E2E=1` (BUILD M8's end-to-end mode). R111's launch grant runs when the store is built with a catalog
+//! (`E2E=1`, [`create_e2e_store`]) and not otherwise (`FakeData::default()`, the unit tests' store).
 //!
-//! R144 makes the server reseed its fixture accounts and invite codes at boot, which needs somewhere
-//! to seed *into*, and the e2e suite has no Postgres. The real implementation of this port is
-//! `src/db/pg.rs`; this one is a test fixture that happens to live in `src/` because `src/app.rs` has
-//! to be able to choose it at boot. It is reachable only when `env.E2E` is true, and `src/env.rs`
-//! refuses `E2E` together with `NODE_ENV=production`.
+//! R144 makes the server reseed its fixture accounts and invite codes at boot, and the e2e suite has no
+//! Postgres, so this test fixture lives in `src/`: `src/app.rs` chooses it at boot, only when `env.E2E` is
+//! true (`src/env.rs` refuses `E2E` with `NODE_ENV=production`). The real implementation is `src/db/pg.rs`.
 //!
-//! It is deliberately strict everywhere Postgres is strict, because those are the invariants
-//! SPEC §9.4 and §9.5 lean on and a laxer fixture would let a real bug pass the suite:
+//! It is strict everywhere Postgres is strict (SPEC §9.4, §9.5), or a laxer fixture would let a real bug pass
+//! the suite: a transaction snapshots every table at `begin`, restores it unless committed and runs one at a
+//! time (the `tokio::sync::Mutex` behind `Db::Fake`); `redeem` runs §9.4's six steps in order and answers
+//! `app.redeem_invite_code`'s seven result codes; claims are single-shot (§9.4 step 6, §9.5);
+//! `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any other
+//! clash as `StoreError::SeqClash` (append-only, §9.3, R776000); `tickets_insert` refuses a second open
+//! ticket per profile (`tickets_profile_queued_key`, which `queue.rs` relies on). So are the decks, trios and
+//! Conquest series (R250–R263), tutorial progress (R320), player settings (R633, R634), custom cards
+//! (R915008), deck versions (R2100000), ranked tables (R608, R609, R611) and game records (R376, R378), in
+//! migrations 0007, 0008, 0011, 0014, 0018, 0022, 0037 and 0066.
 //!
-//!  - a transaction snapshots every table at `begin` and restores it unless it is committed, so
-//!    §9.4's "writes `collection` and `collection_grants` in one transaction" is really
-//!    all-or-nothing, and runs one transaction at a time (the `tokio::sync::Mutex` behind
-//!    `Db::Fake`, which hands itself out first come, first served), so a transaction that rolls
-//!    back never takes another request's committed writes with it;
-//!  - `redeem` runs §9.4's six steps in SPEC's order inside one transaction and answers the same
-//!    seven result codes `app.redeem_invite_code` does, so the redemption the server calls here is
-//!    the redemption it calls in Postgres;
-//!  - `codes_claim`, `rooms_claim` and `tickets_claim_pair` are single-shot, so the second of two
-//!    racing callers loses (§9.4 step 6, §9.5);
-//!  - `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any
-//!    other clash as `StoreError::SeqClash` (append-only, §9.3, R776000);
-//!  - `results_insert` refuses a second row for the same match (§9.5);
-//!  - `tickets_insert` refuses a second open ticket for one profile (`tickets_profile_queued_key`,
-//!    which `queue.rs` relies on as the race-proof half of "not already queued").
-//!
-//! The saved decks, saved trios and Conquest series R250–R263 added, R320's tutorial progress and
-//! R376's game records are strict where Postgres is strict too (migrations 0007, 0008, 0011):
-//!  - `decks_upsert` / `trios_upsert` refuse an id owned by another profile (`not_owner`) and a
-//!    create past the cap (`limit`), exactly as `app.upsert_deck` / `app.upsert_trio` do;
-//!  - `trios_upsert` refuses a slot naming a deck that is not this profile's (`unknown_deck`, the
-//!    composite foreign key) and one deck in two slots (the check constraint);
-//!  - `decks_remove` empties every trio slot that named the deck (`on delete set null`);
-//!  - `deck_versions_keep` answers `missing` for a deck that is not the profile's (the composite
-//!    foreign key), and a deck's delete and its account's take its versions (`on delete cascade`;
-//!    0066, R2100000);
-//!  - `custom_cards_create` refuses a create past the cap (`limit`) and an id already held, and
-//!    `custom_cards_update` is compare-and-set on the card's version (`stale`) and the owner's
-//!    alone (`missing`), as `app.create_custom_card` / `app.update_custom_card` are (0037, R915008);
-//!  - `series_update` is compare-and-set on `version`;
-//!  - `tutorial_merge` only ever grows the lessons and keeps the newest choice (0011, R320);
-//!  - `player_settings_merge` replaces a group only with a strictly later one and caps the result's
-//!    groups and bytes (0018, R633, R634);
-//!  - `ranked_create_season` refuses an id that exists, `ranked_record_game` a second row for one
-//!    game, and `ranked_note_peak_jlorious` only ever lowers a peak (R608, R609, R611; migration
-//!    0022 carries the same tables on Postgres),
-//!  - `game_records_insert` writes one record per id and refuses a second, and refuses a
-//!    development record without a `dev:` id or a live one with one (0014, R376, R378).
-//!
-//! R111 IS A DATABASE TRIGGER, so it is implemented here rather than in a handler. SPEC §11 R111:
-//! becoming `active` grants one copy of each starter card (R1310000, `config::STARTER_CARDS`, which
-//! Postgres reads from `app.settings.starter_cards` as `seed-catalog` writes it), "written by a
-//! trigger on the `pending → active` transition and idempotent, so a repeated redemption cannot
-//! double a collection." `profiles_set_status` carries the trigger, writing both tables exactly as
-//! `grant_cards` in `collection.rs` does and reading the same `LAUNCH_COPIES` and
-//! `LAUNCH_GRANT_REASON` so the two can never drift.
-//!
-//! Each store method is a free function here of the same name (`db::store`'s `Tx` dispatches to it),
-//! taking the transaction first, and synchronous: the transaction already holds the one lock, so
-//! nothing here awaits.
+//! R111 IS A DATABASE TRIGGER, so it is implemented here rather than in a handler (SPEC §11 R111; R1310000,
+//! `config::STARTER_CARDS`, which Postgres reads from `app.settings.starter_cards`): `profiles_set_status`
+//! carries it, writing both tables as `grant_cards` in `collection.rs` does with the same `LAUNCH_COPIES` and
+//! `LAUNCH_GRANT_REASON`, so the two can never drift. Each store method is a free function here of the same
+//! name (`db::store`'s `Tx` dispatches to it), taking the transaction first, and synchronous: the transaction
+//! already holds the one lock, so nothing awaits.
 
 use std::sync::Arc;
 
@@ -410,13 +370,12 @@ impl FakeData {
         true
     }
 
-    /// Seeds a profile without going through the API: `input` is a JSON object of `Profile`'s
-    /// fields, camelCase, every one but `id` optional. Without `username` it gets the username a new
-    /// account gets, the lowest free `Player#n` (R1434); `username` names a base instead (stored as
-    /// given, so a caller passes a stored form), with `usernameTag` as its tag or else the tag a claim
-    /// of it would carry now. `consent` (default true) seeds the age check and agreement to
-    /// `TERMS_VERSION` at sign-up, dated `createdAt`, as an account that signed up through the age
-    /// screen and the terms box has (R757000, R757001); false seeds neither.
+    /// Seeds a profile without going through the API: `input` is a JSON object of `Profile`'s fields,
+    /// camelCase, every one but `id` optional. Without `username` it gets the lowest free `Player#n` (R1434);
+    /// `username` names a base instead (stored as given), with `usernameTag` as its tag or else the tag a
+    /// claim of it would carry now. `consent` (default true) seeds the age check and agreement to
+    /// `TERMS_VERSION` at sign-up, dated `createdAt`, as the age screen and terms box would (R757000,
+    /// R757001); false seeds neither.
     pub fn seed_profile(&mut self, input: Value) -> Profile {
         let id = input
             .get("id")
@@ -586,11 +545,10 @@ pub struct RedemptionSettings {
     /// before the lookup and answers `circuit_open` from. A hook rather than a value so a caller can
     /// flip it between calls, which is how the store contract drives it against both stores.
     pub enabled: Arc<dyn Fn() -> bool + Send + Sync>,
-    /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1). `public.profiles`
-    /// has no such column and neither does `Profile`, so the SQL function joins `auth.users` for it
-    /// and the fixture asks here. True by default: BUILD M8's three fixture accounts are all verified
-    /// (`src/api/e2e.rs`), and the server refuses an unverified caller from the access token (R159)
-    /// before this port is reached.
+    /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1). `public.profiles` and
+    /// `Profile` have no such column, so the SQL function joins `auth.users` and the fixture asks here. True
+    /// by default: BUILD M8's three fixture accounts are all verified (`src/api/e2e.rs`), and the server
+    /// refuses an unverified caller from the access token (R159) before this port is reached.
     pub email_verified: Arc<dyn Fn(&str) -> bool + Send + Sync>,
 }
 
@@ -635,18 +593,15 @@ fn reject_redeem(
     Ok(RedeemResult::InvalidCode)
 }
 
-/// SPEC §9.4's redemption, whole, over this store's own methods: every read and write goes back
-/// through the port, so the fake's own invariants (`codes_claim` is single-shot, `profiles_set_status`
-/// carries R111's launch grant) hold here exactly as they do for any other caller.
+/// SPEC §9.4's redemption, whole, over this store's own methods: every read and write goes back through the
+/// port, so the fake's own invariants (`codes_claim` is single-shot, `profiles_set_status` carries R111's
+/// launch grant) hold here as for any other caller. Calls run one at a time (the transaction holds the
+/// store's one lock), or one pending profile's two redemptions could use up two codes.
 ///
-/// CALLS RUN ONE AT A TIME, or two redemptions by one pending profile could both pass step 1 and one
-/// account use up two codes. A redemption runs inside a transaction, which holds the store's one
-/// lock, so two of them cannot interleave at all.
-///
-/// That is STRICTER than Postgres, not the same. `app.redeem_invite_code` serializes two redemptions
-/// only where they share something it locks: the profile row (step 1), the caller's IP hash (an
-/// advisory lock before step 3's count, migration 0006) and the code row (step 5). So a race this
-/// fixture cannot lose still needs `tests/store/redeem_race.rs` against Postgres (`tests/db/run.sh`).
+/// That is STRICTER than Postgres: `app.redeem_invite_code` serializes two redemptions only where they share
+/// something it locks: the profile row (step 1), the caller's IP hash (an advisory lock before step 3's
+/// count, migration 0006) and the code row (step 5). So a race this fixture cannot lose still needs
+/// `tests/store/redeem_race.rs` against Postgres (`tests/db/run.sh`).
 pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<RedeemResult, StoreError> {
     call(f, "redeem")?;
     let settings = f.guard.redemption.clone();
@@ -658,7 +613,7 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
     // `select app.redeem_invite_code(...)`; here it is the caller's transaction, so a fault leaves
     // nothing behind.
 
-    // ---- Step 1: "reject unless the account is pending with a verified email" --------------
+    // Step 1: "reject unless the account is pending with a verified email"
     // One result for "no such profile", "banned" and "already active", exactly as the SQL's
     // `if not found or v_status is distinct from 'pending'` decides them together.
     let profile = profiles_get_by_id(f, profile_id)?;
@@ -672,14 +627,14 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
 
     let since = now - settings.attempt_window_ms;
 
-    // ---- Step 2: "reject if this profile made more than 5 attempts in the last hour" --------
+    // Step 2: "reject if this profile made more than 5 attempts in the last hour"
     // Strictly `>`, and the count excludes the attempt being made because step 4 logs it below,
     // so the SEVENTH attempt is the first refused (`src/config.rs` carries the reasoning).
     if codes_count_attempts_by_profile(f, profile_id, since)? > settings.attempts_per_profile_per_hour {
         return Ok(RedeemResult::RateLimitedProfile);
     }
 
-    // ---- Step 3: "reject if this IP hash made more than 20" ---------------------------------
+    // Step 3: "reject if this IP hash made more than 20"
     if codes_count_attempts_by_ip(f, &input.ip_hash, since)? > settings.attempts_per_ip_per_hour {
         return Ok(RedeemResult::RateLimitedIp);
     }
@@ -692,12 +647,10 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
         return Ok(RedeemResult::CircuitOpen);
     }
 
-    // ---- Steps 4 and 5: log the attempt either way, then "look up by hash and reject if
-    // revoked, expired or exhausted" ---------------------------------------------------------
-    // The log is written with the outcome rather than ahead of it: the code store has only
-    // `log_attempt`, and no way to flip a row's result afterwards the way the SQL updates its
-    // own. Inside one transaction the two orders commit identically; what matters is that every
-    // attempt past steps 2 and 3 leaves a row, whichever way the code turned out.
+    // Steps 4 and 5: log the attempt either way, then "look up by hash and reject if revoked, expired or
+    // exhausted". The log is written with the outcome, not ahead of it: the code store has only `log_attempt`
+    // and no way to flip a row's result afterwards. Inside one transaction the two orders commit identically;
+    // every attempt past steps 2 and 3 leaves a row, whichever way the code turned out.
 
     // A code that could never exist (§9.4's alphabet and length) takes the identical path: no
     // oracle separates "well formed but unknown" from "not a code at all".
@@ -718,7 +671,7 @@ pub fn redeem(f: &mut FakeTx<'_>, input: &RedeemInviteCodeInput) -> Result<Redee
         return reject_redeem(f, input, now, "exhausted");
     }
 
-    // ---- Step 6: "increment uses and set the account active, atomically" --------------------
+    // Step 6: "increment uses and set the account active, atomically"
     // `claim` is the atomic increment, so a false return is a code that ran out between the
     // check above and here.
     if !codes_claim(f, &code.id, now)? {
@@ -773,11 +726,10 @@ fn collection_row<'t>(
         .find(|row| row.profile_id == profile_id && row.card_id == card_id)
 }
 
-/// One copy of each non-token, unbanned starter card (R1310000, `STARTER_CARDS`), idempotent.
-/// Written as a delta against what the profile already owns, as `grant_cards` does, so a second
-/// `pending → active` transition computes zero for everything and writes no row at all:
-/// `collection_grants.delta` carries `check (delta <> 0)` in migration `0002_collection.sql`, and an
-/// empty audit row would be a lie in the ledger. A store built without a catalog grants nothing.
+/// One copy of each non-token, unbanned starter card (R1310000, `STARTER_CARDS`), idempotent: written as a
+/// delta against what the profile already owns, as `grant_cards` does, so a second `pending → active`
+/// transition writes no row at all (`collection_grants.delta` carries `check (delta <> 0)` in migration
+/// `0002_collection.sql`). A store built without a catalog grants nothing.
 fn apply_launch_grant(f: &mut FakeTx<'_>, profile_id: &str) {
     let Some(catalog) = f.guard.catalog.clone() else {
         return;
@@ -3357,11 +3309,10 @@ fn keep_only<T>(rows: &mut Vec<T>, wanted: impl FnMut(&T) -> bool) -> usize {
     before - rows.len()
 }
 
-/// The profile store's `remove`, as migration 0012 makes Postgres do it: the profile's own rows go,
-/// its invite-code attempts lose their link to it, a room it opened that nobody joined goes too,
-/// and (0029, R1442) so does the play telemetry of every seat it held.
-/// Finished matches, results and series stay for the other player. Postgres empties this profile's
-/// seat on them and reads it back as the empty id; here the id stays (`db/pg.rs`, KNOWN
+/// The profile store's `remove`, as migration 0012 makes Postgres do it: the profile's own rows go, its
+/// invite-code attempts lose their link to it, a room it opened that nobody joined goes too, and (0029,
+/// R1442) so does the play telemetry of every seat it held. Finished matches, results and series stay for the
+/// other player: Postgres empties this profile's seat on them, here the id stays (`db/pg.rs`, KNOWN
 /// DIVERGENCES, deleted accounts), and a read of it finds no profile.
 pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     if keep_only(&mut tables.profiles, |row| row.id != profile_id) == 0 {
@@ -4186,11 +4137,10 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
 }
 
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-// SPEC S7 (migration 0038), in memory. Strict where Postgres is strict: one request per direction
-// and pair and never to oneself, one friendship per pair, one block per pair and direction, one open
-// challenge per challenger and friend (`challenges_open_pair_key`), a message of 1 to
-// `CHAT_MAX_CHARS` characters, one report per message and reporter; and every row goes with either
-// profile it names (`remove_social_rows`, the foreign keys' cascade).
+// SPEC S7 (migration 0038), in memory. Strict where Postgres is strict: one row per pair, direction, message
+// and reporter as its unique keys say (`challenges_open_pair_key` among them), no request to oneself, a
+// message of 1 to `CHAT_MAX_CHARS` characters; every row goes with either profile it names
+// (`remove_social_rows`).
 
 use crate::config::CHAT_MAX_CHARS;
 use crate::db::store::{

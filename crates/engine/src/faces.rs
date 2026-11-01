@@ -22,9 +22,9 @@ pub fn running_face_of<'a>(state: &'a GameState, def_id: &str, radiant: bool) ->
 /// B2.7: the card's type now — its running face's own type, else its definition's.
 ///
 /// R383 (B3.1 rule 3): a card standing in a unit zone is a Unit for every rule, so an animated Field
-/// Spell, Trap or Field Trap answers "Unit" while it stands there. Its trigger text still works the
-/// way its face's type says — an animated Field Trap keeps firing as a trap — which is why the trap
-/// machinery reads the face's own type (`animated::face_type_of`), never this.
+/// Spell, Trap or Field Trap answers "Unit" while it stands there. Its trigger text still works as its
+/// face's type says (an animated Field Trap keeps firing as a trap): the trap machinery reads the face's
+/// own type (`animated::face_type_of`), never this.
 pub fn card_type_of(state: &GameState, instance: &CardInstance) -> CardType {
     if let Zone::Field { row: Row::Units, .. } = instance.zone {
         return CardType::Unit;

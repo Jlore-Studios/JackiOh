@@ -5,14 +5,12 @@
 //! jackioh-server timing-fit
 //! ```
 //!
-//! Reads every row of `public.action_timings` (DATABASE_URL), leaves out the moves an AI made
-//! (`pilot = 'ai'`), groups the rest by rank bucket, action kind and whether the move was the
+//! Reads every row of `public.action_timings` (DATABASE_URL, all of it in memory), leaves out the moves an
+//! AI made (`pilot = 'ai'`), groups the rest by rank bucket, action kind and whether the move was the
 //! seat's first of its turn, and fits each group of at least `TIMING_FIT_MIN_SAMPLES` moves with a
-//! log-normal: the maximum-likelihood `mu` and `sigma` of `ln(think_ms)`. It prints one
-//! `ThinkTimeFit` per bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs`
-//! by hand, as `cargo jackioh sweep` prints its rows (CLAUDE.md rule 9): no number reaches the
-//! ladder bots (#636) without a person reading it first. Every row is read into memory, which is
-//! fine at today's scale.
+//! log-normal: the maximum-likelihood `mu` and `sigma` of `ln(think_ms)`. It prints one `ThinkTimeFit` per
+//! bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs` by hand, as `cargo jackioh
+//! sweep` prints its rows (CLAUDE.md rule 9): no number reaches the ladder bots (#636) unread by a person.
 //!
 //! R639000: it then prints, from the same people's rows of `action_timings`, `emote_events` and
 //! `match_signals` (each signals row beside its match's result), one row for each of the other fits
@@ -224,11 +222,10 @@ fn opponent_of<'a>(seats: &BySeat<'a>, outcome: &SignalOutcomeRow) -> Option<&'a
         .copied()
 }
 
-/// R639000: how people concede. The conceders are the people's seats that conceded with a deficit
-/// recorded; `share` is them over the people's seats that lost, `min_turn` the
-/// `TIMING_FIT_CONCEDE_TURN_QUANTILE` quantile of the turns they conceded on, and the deficit's
-/// mean and population standard deviation are theirs. `None` with fewer than `min_samples`
-/// conceders.
+/// R639000: how people concede. The conceders are the people's seats that conceded with a deficit recorded;
+/// `share` is them over the people's seats that lost, `min_turn` the `TIMING_FIT_CONCEDE_TURN_QUANTILE`
+/// quantile of the turns they conceded on, and the deficit's mean and population standard deviation are
+/// theirs. `None` with fewer than `min_samples` conceders.
 pub fn fit_concede(outcomes: &[SignalOutcomeRow], min_samples: usize) -> Option<ConcedeFit> {
     let losers = human(outcomes)
         .filter(|outcome| outcome.won == Some(false))

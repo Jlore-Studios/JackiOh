@@ -8,6 +8,7 @@
 //! target strikes back. R1878001: the Embiggened version is a Starship Piece, a keyword its text lends
 //! the card stamped embiggened (`conditionalKeywords`, as Core #56 Jilliax's Equip comes with its price,
 //! R831013), so its death fuses a copy into its owner's Dormant Starship (R1852000). The Radiant face's
+//! 16/10 is catalog data.
 
 use jackioh_engine::effects::forced_attack_random;
 use jackioh_engine::prelude::*;

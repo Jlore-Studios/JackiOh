@@ -62,15 +62,14 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
 /// what a card's script does, not only a number its definition holds, keeps the script it replaces
 /// here, under the newest shipped version that ran it, as any `fn` that builds that card's scripts
-/// (`docs/ADDING_CARDS.md` §3). A replay of a game on that version, or on one before it back to the
-/// previous kept script, folds under the kept one; every other card runs the build's own. Each card's
-/// file says what its kept script ran. Kept by #1034 (R987), #1039 (R1143), K-Pop Fanatic (R1045000),
+/// (`docs/ADDING_CARDS.md` §3). A replay on that version, or on one before it back to the previous kept
+/// script, folds under the kept one; every other card runs the build's own. Each card's file says what
+/// its kept script ran. Kept by #1034 (R987), #1039 (R1143), K-Pop Fanatic (R1045000),
 /// #1149 (R1149000, R1149001), #1194, #1279 (R1279000), #1563 (R844), #1704 (R831003, R406), #1748
 /// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
 /// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
 /// `never_defense_kept`, R2657001, R2657002, R2657004).
-/// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
-/// by its final hash.
+/// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
         c097_2_wishing_well::ID,
@@ -816,7 +815,6 @@ mod tests {
         assert!(shipped_catalog(own).is_none());
         assert!(shipped_catalog("v0.0.0-unknown").is_none());
 
-        // The oldest is rebuilt, entry for entry, as its snapshot holds it.
         let oldest = shipped_catalog("v0.1.0").expect("v0.1.0 is carried");
         assert_eq!(oldest.version(), "v0.1.0");
         let snapshot: CardDefs =
@@ -955,7 +953,6 @@ mod tests {
             .collect();
         assert_eq!(shipped_versions(), shipped);
 
-        // The oldest snapshot is rebuilt, entry for entry.
         let oldest = catalog_defs_at("v0.1.0").expect("v0.1.0 is carried");
         let snapshot_v0_1_0: CardDefs =
             serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");

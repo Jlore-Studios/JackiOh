@@ -57,6 +57,7 @@ fn run(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
     }
     if kind == Some(Answer::Sale) {
         // B3.1 rule 4: every firing of an Animated trap ends with its animating, so one stuck in the
+        // backrow for want of a zone steps into a unit zone as soon as one is open; a Unit stays put.
         return vec![
             draw(json_as(json!({ "count": param(ctx, "draw") }))),
             damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": param(ctx, "damage") }))),
@@ -286,6 +287,7 @@ mod tests {
 
                 let first = fillers(&s, P1).first().map(|card| card.id.clone()).unwrap_or_else(|| FILLER.to_string());
                 s.play(&first, json!({}));
+                // Stockpile is the 2nd play; its first draw casts Hinder, which is no play (through
                 // v0.5.2 it was, R70, and the 3rd).
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(count(s.events(), "trapFired"), 0);

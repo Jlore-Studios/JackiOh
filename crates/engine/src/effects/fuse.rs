@@ -253,8 +253,7 @@ fn pool_for(ctx: &EffectContext<'_>, asked: Option<&CatalogQueryArgs>) -> Vec<&'
 /// ME-FUSE-RANDOM (Meditative #47, MD-C20): fuse one card drawn uniformly from `scope` into the
 /// live `targetInstanceId`. The pool leaves out the kept card and every Immutable card (being eaten
 /// changes its text, R23); an Immutable kept card or an empty pool fuses and draws nothing. A library
-/// ingredient goes in as a fresh phantom and the library card ceases to exist, so its id never reaches
-/// a view.
+/// ingredient is a phantom, as `randomIngredient` says.
 fn fuse_random_ingredient(
     ctx: &mut EffectContext<'_>,
     args: &FuseCardsArgs,

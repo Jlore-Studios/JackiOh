@@ -1,19 +1,17 @@
-//! The picks an account makes for one card of its own (SPEC §14.2, SPEC §11 R1834000, R1834001): a
-//! foil, a finish, a border and which of its full arts prints, if any (R1655000, R2655000), held on the
-//! account so the server, which shows them to an opponent (R1834002), has them. Only the caller's own,
-//! keyed on the verified token's profile and never on a field of the request.
+//! The picks an account makes for one card of its own (SPEC §14.2, SPEC §11 R1834000, R1834001): a foil, a
+//! finish, a border and which of its full arts prints, if any (R1655000, R2655000), held on the account so
+//! the server, which shows them to an opponent (R1834002), has them. Only the caller's own, keyed on the
+//! verified token's profile and never on a field of the request.
 //!
-//! `GET /api/card-picks` answers `{ cards }` by card id, each id as it was written.
+//! `GET /api/card-picks` answers `{ cards }` by card id, each id as it was written. `PUT` changes one
+//! card's picks (`{ cardId, foil?, finish?, border?, fullArt? }`): a key left out keeps its pick, `null`
+//! clears it. R1834001: an id must be one the account owns on that card; `fullArt` is a boolean or a full
+//! art's id (R2655000), `true` needing the card's Epic full art owned and an id one of the card's own,
+//! owned; else 400 and nothing is written.
 //!
-//! `PUT /api/card-picks` changes one card's picks (`{ cardId, foil?, finish?, border?, fullArt? }`):
-//! a key left out keeps its pick, `null` clears it. R1834001: an id must be one the account owns on
-//! that card; `fullArt` is a boolean or a full art's id (R2655000), `true` needing the card's Epic full
-//! art owned and an id one of the card's own, owned; else 400 and nothing is written.
-//!
-//! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they moved
-//! to the account. A card the account already holds a row for is never touched, so a newer device's
-//! pick stands; an unknown id is kept (R1655000), and one that could never be worn (a full art of
-//! another card's or not owned among them) is left out.
+//! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they moved to
+//! the account. A card the account already holds a row for is never touched, so a newer device's pick
+//! stands; an unknown id is kept (R1655000), and one that could never be worn is left out.
 
 use std::sync::Arc;
 

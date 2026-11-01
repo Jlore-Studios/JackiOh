@@ -1,12 +1,11 @@
 // Entry point and the route table. The client is a `PlayerView` renderer (CLAUDE.md rule 7, SPEC
 // §10.8): this file picks a route, applies §9.4's gate once, and gets out of the way. Routing is a
-// pathname switch on `usePathname()` (`net/navigate.ts`) because a redirect has to re-render:
-// `cy.location("pathname")` in specs 09 and 10 reads the real URL, which the gate moves.
+// pathname switch on `usePathname()` (`net/navigate.ts`) because a redirect has to re-render.
 //
 // THE GATE IS UX, NOT SECURITY: the server enforces §9.4. `Gated` reads `GET /api/auth/me` and sends
 // the browser to the screen that will work, in one place so there is one thing to change when §9.4
-// grows a status. The same read says whether an active account owes the username prompt (R1435) or,
-// first, the age check or agreement to the terms in force (R757000, R757001).
+// grows a status. The same read says whether an active account owes the username prompt (R1435) or, first,
+// the age check or agreement to the terms in force (R757000, R757001).
 //
 // NO DEAD ENDS (docs/polish/5-sign-in.md, B40): every panel this file draws offers a way out. The
 // landing (`routes/landing.tsx`) is imported statically: it is the first screen most visits see.
@@ -18,10 +17,9 @@
 // ONE SOCKET PER SESSION (R194): the match screen is keyed by the token's provider session, so the
 // gate's renewal keeps its socket (the new token waits for the next reconnect).
 //
-// Before the route switch runs, an emailed link is scrubbed from the address bar, on `/login` too,
-// and one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login` (R193); a
-// room link on /play is kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose
-// it (R767).
+// Before the route switch runs, an emailed link is scrubbed from the address bar, on `/login` too, and
+// one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login` (R193); a room link
+// on /play is kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose it (R767).
 //
 // THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) watches the account on
 // every screen but `/play`, and takes a paired player to the game (`QueueFound`).
@@ -217,9 +215,8 @@ export type LoadingProps = {
 };
 
 /**
- * A holding panel. With `slow`, a wait that runs past `GATE_SLOW_NOTICE_SECONDS` says why it may
- * be slow (Render's free tier sleeps and takes about a minute to wake) and offers the way out, so a
- * server or network that never answers is not a trap.
+ * A holding panel. With `slow`, a wait past `GATE_SLOW_NOTICE_SECONDS` says why it may be slow (Render's
+ * free tier sleeps about a minute) and offers the way out, so a server that never answers is not a trap.
  */
 export function Loading({ what, slow = false, testId, children, skeleton }: LoadingProps): ReactElement {
   const [late, setLate] = useState(false);
@@ -269,7 +266,6 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
         message={account.message}
         retryAfterMs={account.retryAfterMs}
         onRetry={() => {
-          // Re-reads /api/auth/me in place, without a page load.
           account.retry?.();
         }}
         testId={shellTestid.error}
@@ -283,9 +279,9 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
 }
 
 /**
- * A screen whose code could not be loaded: a lazy chunk fails on a flaky network, and after every
- * deploy for a tab left open (the old hashed file is gone). Without this the whole root would unmount
- * to a blank page. A reload fetches the current build; the home link is a real page load too.
+ * A screen whose code could not be loaded: a lazy chunk fails on a flaky network, and after every deploy
+ * for a tab left open (the old hashed file is gone). Without this the root would unmount to a blank page.
+ * A reload fetches the current build.
  */
 type LoadFailedState = { failed: boolean };
 
@@ -330,13 +326,11 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
 
 // The engine's module (#778)
 
-/** Where the engine's WebAssembly module stands, for a screen that calls it. */
 type EngineLoad = "loading" | "ready" | "failed";
 
 /**
- * Holds a screen that calls the engine until its module is in, in the panel a lazy screen waits in.
- * A module that did not arrive gets a panel whose retry asks `loadWasm()` again in place: a failed
- * download is not cached (`wasm/index.ts`), so the next call fetches it anew.
+ * Holds a screen that calls the engine until its module is in. A module that did not arrive gets a panel
+ * whose retry asks `loadWasm()` again in place: a failed download is not cached (`wasm/index.ts`).
  */
 function EngineGate({ children }: { children: ReactNode }): ReactElement {
   const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() ? "ready" : "loading"));
@@ -405,7 +399,6 @@ export type GatedProps = {
   children: (account: ReadyAccount) => ReactElement;
 };
 
-/** Where a given account belongs, or null when it may stay where it is. */
 export function redirectFor(account: Account, allowPending: boolean): string | null {
   if (account.kind === "anonymous") {
     // A renewal the provider refused (R194) ended the session, and the sign-in screen says so.
@@ -419,10 +412,9 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
 }
 
 /**
- * R1435: the profiles this page has let past the username prompt: one a gated screen was shown to
- * while active, and one that answered the prompt here. Page-wide, since each route mounts a gate of
- * its own, whose state would forget and raise it over the next screen (the match a queue just
- * paired). A pending account's `/invite` screen does not count, so the prompt still follows it.
+ * R1435: the profiles this page has let past the username prompt: one a gated screen was shown to while
+ * active, and one that answered the prompt here. Page-wide, since each route mounts a gate of its own whose
+ * state would forget it. A pending account's `/invite` screen does not count, so the prompt follows it.
  */
 const usernamePromptPassed = new Set<string>();
 
@@ -553,9 +545,8 @@ export function Gated({ allowPending = false, consentExempt = false, engine = fa
 // The tab title and the canonical link
 
 /**
- * Every route is served from one index.html, so a static canonical link would point every route at
- * `/`. The one `<link rel="canonical">` is kept here instead, following the path, and removed on a
- * page that does not exist.
+ * Every route is served from one index.html, so a static canonical link would point every route at `/`.
+ * The one `<link rel="canonical">` is kept here, following the path, and removed on a missing page.
  */
 function useDocumentHead(path: string): void {
   // The tab title is in the reader's language and follows a switch (#711).
@@ -848,10 +839,9 @@ export function App(): ReactElement {
 }
 
 /**
- * `index.html` loads this module as its only script, so the mount is a module side effect. The
- * engine is WebAssembly (docs/v0.3.0/SURFACE.md §10.3); see THE ENGINE LOADS ALONGSIDE. Vitest
- * imports the module to reach `App`, and a second React root would duplicate every query and every
- * `/api/auth/me` round trip; `MODE` is `"test"` only under vitest (`routes/gate.test.tsx` asserts it).
+ * `index.html` loads this module as its only script, so the mount is a module side effect. The engine is
+ * WebAssembly (docs/v0.3.0/SURFACE.md §10.3). Vitest imports the module to reach `App`, and a second React
+ * root would duplicate every `/api/auth/me` round trip; `MODE` is `"test"` only under vitest.
  */
 if (import.meta.env.MODE !== "test") {
   const host = document.getElementById("root");

@@ -77,9 +77,6 @@ const PUB_FN: &str = "pub fn ";
 /// The `Script` hooks live in this struct of `script.rs`.
 const SCRIPT_STRUCT: &str = "Script";
 
-/// The pool object's name in a script: `catalog.pool(…)`, `catalog.trap_types`.
-const CATALOG_OBJECT: &str = "catalog";
-
 #[derive(clap::Args)]
 pub(super) struct SurfaceArgs {
     /// Print the report as JSON instead of Markdown tables.
@@ -436,11 +433,10 @@ fn idents(text: &[u8], range: Range<usize>) -> Vec<Range<usize>> {
     found
 }
 
-/// A path `a::b::c` that starts at `start`: its segments, where it ends (after any `::<…>`) and
-/// whether `(` follows.
+/// A path `a::b::c` that starts at `start`: its segments and whether `(` follows (after any
+/// `::<…>`).
 struct PathAt {
     segments: Vec<String>,
-    end: usize,
     call: bool,
 }
 
@@ -464,11 +460,7 @@ fn path_at(text: &[u8], start: usize) -> PathAt {
         break;
     }
     let call = text.get(skip_space(text, at)) == Some(&b'(');
-    PathAt {
-        segments,
-        end: at,
-        call,
-    }
+    PathAt { segments, call }
 }
 
 /// `.name`, a method or a field, but not `..name`.
@@ -1087,19 +1079,6 @@ impl Code<'_> {
             }
             let single = path.segments.len() == 1;
             let local = self.locals.contains(first);
-            if single && first == CATALOG_OBJECT && !local {
-                let method = (self.text.get(path.end) == Some(&b'.'))
-                    .then(|| {
-                        let start = path.end + 1;
-                        word(self.text, &(start..run_end(self.text, start)))
-                    })
-                    .filter(|method| !method.is_empty());
-                face.pools.insert(match method {
-                    Some(method) => format!("{CATALOG_OBJECT}.{method}"),
-                    None => CATALOG_OBJECT.to_string(),
-                });
-                continue;
-            }
             if names.pool_words.contains(last) && ((single && !local) || first == "crate") {
                 face.pools.insert(last.to_string());
                 continue;
@@ -1697,9 +1676,7 @@ mod tests {
             names.pool_fns
         );
         assert!(
-            names
-                .pool_words
-                .is_superset(&set(&["CardQuery", "TRAP_TYPES", "catalog"])),
+            names.pool_words.is_superset(&set(&["CardQuery", "TRAP_TYPES"])),
             "{:?}",
             names.pool_words
         );

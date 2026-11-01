@@ -213,6 +213,8 @@ fn pickle() -> Script {
                 n: 1,
             };
             // R1279000: no opponent-held prompt opens while its holder is not active. While the opponent is not
+            // the active player the first question waits for the start of their next turn, carrying
+            // the chain in the delay's data; on their turn it asks at once, as before.
             if ctx.state.active == opponent_of(ctx.controller) {
                 return ask(ctx, &chain, Pending::default());
             }
@@ -225,6 +227,7 @@ fn pickle() -> Script {
         resume: IndexMap::from([("chosen", hook(|ctx| chosen(ctx)))]),
         delayed: Some(hook(|ctx| {
             // R1279000: the wait is over; the chain rode the delay's data, so this asks exactly
+            // what the Cry would have asked.
             let Some(chain) = chain_of(ctx) else {
                 return vec![];
             };
@@ -385,6 +388,7 @@ mod tests {
             fn r1279000_a_pickle_cast_on_the_opponent_s_turn_asks_at_once() {
                 crate::register_all();
                 // p2 plays Pickle into p1's Palantir, which steals and casts it (R831001): the Cry
+                // runs as p1 with the holder active, so the first question opens at once.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": {
@@ -429,6 +433,7 @@ mod tests {
                 let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
                 jackioh_engine::with_shipped(Some(shipped), || {
                     // The old script asked during your turn, where R800's guard is awake: a
+                    // guarded holder is not offered "discard".
                     let mut s = scenario(json!({
                         "p1": { "hand": [PICKLE, FILLER], "library": MY_DECK.to_vec() },
                         "p2": {
@@ -760,7 +765,9 @@ mod tests {
             #[test]
             fn r800_the_guard_sleeps_on_the_holder_s_own_turn_so_the_deferred_discard_is_offered_and_lands() {
                 crate::register_all();
+                // p2's Disruptor guards p2's side, but the guard stops only discards off the
                 // holder's turn (R800): the deferred question opens on p2's turn, where the
+                // guard sleeps, so "discard" is offered and lands with no `discardPrevented`.
                 let mut s = scenario(json!({
                     "p1": { "hand": [PICKLE, FILLER], "library": MY_DECK.to_vec() },
                     "p2": {

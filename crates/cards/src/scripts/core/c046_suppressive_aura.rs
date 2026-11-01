@@ -63,8 +63,7 @@ pub fn script() -> CardScripts {
 // #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4 (R81, R69).
 //
 // Stat assertions go through `expect_stats`, which reads the engine's `unitView`, so §10.4 layer 5
-// is already in the number. The props have no script beyond printed keywords, so only the aura
-// moves their numbers.
+// is already in the number. The props have no script beyond printed keywords.
 //
 // A scenario cannot place a card with `embiggened` set (R81 makes the price part of the play), so
 // every paid-4 case plays from hand with `{ embiggen: true }`, which writes it (R65).

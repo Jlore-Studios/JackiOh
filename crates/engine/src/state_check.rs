@@ -29,14 +29,12 @@ use crate::wire::{
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
 
-/// Every unit on the field: the top of each unit zone's pile in lane order, then the Units the carriers
-/// hold in backrow lane order (R446), then the Units standing in the backrow zones (R1081000), which the
-/// death pass takes from here and not from `backrow_of`.
-///
-/// A card dormant under a Stack is not on the field (§3.2, R13, R174), so §4.5 step 1 never reaches
-/// under a pile: an aura that stops reaching a buried card cannot kill it there; it keeps its damage,
-/// cannot be marked (R90) and is judged once it resumes on top. Collecting buried cards also let a
-/// buried Reborn card come back over the card acting in its zone (R175).
+/// Every unit on the field: the top of each unit zone's pile in lane order, then the Units the carriers hold
+/// in backrow lane order (R446), then the Units standing in the backrow zones (R1081000), which the death
+/// pass takes from here and not from `backrow_of`. A card dormant under a Stack is not on the field (§3.2,
+/// R13, R174), so §4.5 step 1 never reaches under a pile: an aura that stops reaching a buried card cannot
+/// kill it there; it keeps its damage, cannot be marked (R90) and is judged once it resumes on top.
+/// Collecting buried cards also let a buried Reborn card come back over the card acting in its zone (R175).
 fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut units: Vec<CardInstance> = Vec::new();
@@ -110,11 +108,10 @@ fn backrow_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
         .collect()
 }
 
-/// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn; a
-/// backrow card has no position, so an Indestructible Field Spell only has its mark dropped. §10.3:
-/// both are reported, the switch as `positionSwitched` only when there is one (R91), the Taunt as a
-/// `keywordGranted` with `lost` set (no event says a keyword went), so the Taunt that decides what may
-/// be attacked (§4.2 step 3) never goes silently.
+/// R46: a marked Indestructible unit switches to Attack Position and loses Taunt for the turn; a backrow card
+/// has no position, so an Indestructible Field Spell only has its mark dropped. §10.3: both are reported, the
+/// switch as `positionSwitched` only when there is one (R91), the Taunt as a `keywordGranted` with `lost`
+/// set, so the Taunt that decides what may be attacked (§4.2 step 3) never goes silently.
 fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
         for unit in units_of(sink.state, player) {
@@ -174,12 +171,11 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor),
-/// every Unit on either side in Defense Position switches to Attack Position, active player's first
-/// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
-/// exertion is spent; `positionSwitched` reports it. R2179000: so does an Indestructible Unit in
-/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it —
-/// and R2657000 a Unit with Can't Defend, the same way.
+/// R1849006: while an aura says Units cannot be in Defense Position (Stinkyscape #23 Warp Disruptor), every
+/// Unit on either side in Defense Position switches to Attack Position, active player's first (R68), whether
+/// it arrived in it or stood in it as the aura came. An effect's switch (R20), so no exertion is spent;
+/// `positionSwitched` reports it. R2179000: so does an Indestructible Unit in Defense Position, aura or not
+/// (one that arrived in it, or became Indestructible standing in it), and R2657000 a Unit with Can't Defend.
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
@@ -219,8 +215,8 @@ const PASS_KEY: &str = "pass";
 
 /// What one pass of the check still owes once its collected cards have moved (§4.5 steps 3 to 5):
 ///
-///  - `owed`: step 3's Death hooks, in R68's order, each the card's snapshot from just before it left
-///    the field, the only `ctx.self` once R78 has reset the instance (R89, R127).
+///  - `owed`: step 3's Death hooks, in R68's order, each the card's snapshot from just before it left the
+///    field, the only `ctx.self` once R78 has reset the instance (R89, R127).
 ///  - `reborn`: step 4's returns, each unit by id with the zone it reserved (R64), so one a Death hook
 ///    removed in between is not resurrected from a stale reference.
 ///  - `collected`: step 5's `enteredGraveyard` report, of what Reborn left in a graveyard (R47).
@@ -489,11 +485,11 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
     }
 }
 
-/// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the
-/// field, so R78's reset is applied here, where `moveToZone` would have applied it had the token
-/// reached a pile: damage, buffs, granted keywords, counters, memory, exertion and controller go,
-/// and the zone is set by `placeOnField`. It comes back as the card of the player it died under, as a
-/// card the move took to that player's graveyard does (R2618000).
+/// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the field, so
+/// R78's reset is applied here, where `moveToZone` would have applied it had the token reached a pile:
+/// damage, buffs, granted keywords, counters, memory, exertion and controller go, and `placeOnField` sets the
+/// zone. It comes back as the card of the player it died under, as a card the move took to that player's
+/// graveyard does (R2618000).
 fn reborn_token(snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
     body.owner = body.controller;
@@ -667,11 +663,11 @@ struct ReadCard {
     snapshot: CardInstance,
 }
 
-/// §4.5 step 1: move the collected cards (units by health or a destroy mark, backrow cards by a mark)
-/// all at once, in R68's order, leaving the pass steps 3 to 5 owe. Every card is read (layers, Reborn,
-/// snapshot) before any moves, since a card's layers depend on the others (#65.1 Spikey Pillow's aura,
-/// a #92 Felinor Fiender's count), so what it "was as it died" (R89) does not hang on lane order. A
-/// Sacrifice (§6.3) names no killer (R42) and bypasses Indestructible, so its caller decides it dies.
+/// §4.5 step 1: move the collected cards (units by health or a destroy mark, backrow cards by a mark) all at
+/// once, in R68's order, leaving the pass steps 3 to 5 owe. Every card is read (layers, Reborn, snapshot)
+/// before any moves, since a card's layers depend on the others (#65.1 Spikey Pillow's aura, a #92 Felinor
+/// Fiender's count), so what it "was as it died" (R89) does not hang on lane order. A Sacrifice (§6.3) names
+/// no killer (R42) and bypasses Indestructible, so its caller decides it dies.
 fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause) -> DeathPass {
     let mut pass = DeathPass::default();
 
@@ -826,13 +822,12 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
 }
 
 /// §6.3 Sacrifice: the card goes from the field to its controller's graveyard at once (R2618000), bypassing
-/// Indestructible, and "counts as a death" — so it is §4.5's death in full rather than a move with a
-/// Death hook bolted on: the destroyed counter (R55) and the `destroyed` event (R89), its Death hook
-/// off the snapshot (R78), and §6.1's Reborn, which returns a sacrificed Reborn unit to the zone it
-/// reserved at 1 health (R64, R83), exactly as the state check returns a unit that died there. A
-/// Death hook that asks pauses the rest of the pass on `state.work` like any other (R113). Step 2's
-/// hero check is left to the state check that follows the whole effect (R59): a sacrifice is one
-/// effect among the list that made it, and nothing about it touches a hero.
+/// Indestructible, and "counts as a death", so it is §4.5's death in full rather than a move with a Death
+/// hook bolted on: the destroyed counter (R55) and `destroyed` event (R89), its Death hook off the snapshot
+/// (R78), and §6.1's Reborn, which returns a sacrificed Reborn unit to the zone it reserved at 1 health (R64,
+/// R83), exactly as the state check does. A Death hook that asks pauses the rest of the pass on `state.work`
+/// (R113). Step 2's hero check is left to the state check that follows the whole effect (R59): a sacrifice
+/// touches no hero.
 pub fn sacrifice_now(sink: &mut EngineSink<'_>, card: &CardInstance) {
     // R1220: a Sacrifice of an Untributable card does nothing.
     if crate::query::is_untributable(sink.state, card) {

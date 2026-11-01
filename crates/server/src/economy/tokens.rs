@@ -215,12 +215,11 @@ pub(crate) fn choice_of(
     }
 }
 
-/// §14.5: a cosmetic token buys any cosmetic at its tier or below (§14.2's scale, Common to
-/// Mythic; a token is a [`CosmeticRarity`] too, so the two compare on that scale alone, and
-/// Legendary and Mythic are unreachable: no token exceeds Epic): a per-card cosmetic for a card the
-/// account owns, or an account cosmetic ([`Choice`]), never a chase, in one transaction, every row
-/// with the same `at`. A token outside Rare and Epic is 400, as is an unknown cosmetic id. With no
-/// key, [`redeem_cosmetic_token_once`]'s redemption.
+/// §14.5: a cosmetic token buys any cosmetic at its tier or below (§14.2's scale, Common to Mythic; a
+/// token is a [`CosmeticRarity`] too, so Legendary and Mythic are unreachable: no token exceeds Epic): a
+/// per-card cosmetic for a card the account owns, or an account cosmetic ([`Choice`]), never a chase, in
+/// one transaction, every row with the same `at`. A token outside Rare and Epic is 400, as is an unknown
+/// cosmetic id. With no key, [`redeem_cosmetic_token_once`]'s redemption.
 pub async fn redeem_cosmetic_token(
     app: &App,
     profile_id: &str,
@@ -235,10 +234,9 @@ pub async fn redeem_cosmetic_token(
     Ok(())
 }
 
-/// [`redeem_cosmetic_token`] under an `Idempotency-Key` (R2124000), answering the tokens after it,
-/// read in its transaction: right after the account's lock, before anything held is read, a key
-/// already committed answers what it kept, and a redemption's answer is kept in its own
-/// transaction.
+/// [`redeem_cosmetic_token`] under an `Idempotency-Key` (R2124000), as [`redeem_card_token_once`] runs a
+/// card token's: the key is read in its transaction right after the account's lock, before anything held
+/// is read, and a redemption's answer is kept in its own transaction.
 pub async fn redeem_cosmetic_token_once(
     app: &App,
     profile_id: &str,

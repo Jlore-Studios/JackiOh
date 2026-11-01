@@ -1,17 +1,15 @@
-// Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviors B15 and B21).
-// jsdom has no layout, so apps/web/src/cards/CardFace.test.tsx can only check the DOM; whether a name
-// and a rules box fit their boxes, and whether the board still fits BUILD M5-T1's two viewports with
-// the real catalog's names, is measured here, in Chrome, on real client components:
+// Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviors B15 and B21). jsdom has no layout, so
+// apps/web/src/cards/CardFace.test.tsx can only check the DOM; whether a name and a rules box fit their boxes, and
+// whether the board fits BUILD M5-T1's two viewports with the real catalog's names, is measured here, in Chrome:
 //   B15  every catalog card, base and radiant face, as a full CardFace 270 px and 170 px wide.
 //   R1017002  every card the homescreen's hand can deal (`rotationPool`, the widest pool).
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`), and #82's Discover of numbers (R247).
 //   B21  `Game` rendering `fullBoardView()` with the real catalog in `CatalogContext`; board-layout.cy.tsx
 //        measures the same board with no catalog, where every name is a short def id.
-// Every measurement sits inside `.should()`, so it retries while `useFitText` settles. Each also
-// carries a control, because "fits" is satisfied perfectly by a box that collapsed to nothing.
-// The catalog comes from `@jackioh/cards`, which the client's aliases resolve to its wire layer's
-// reader of crates/cards/catalog.json (e2e/cypress.config.ts). Client code comes from apps/web/src, and
-// from outside apps/web/src/cards only through its barrel, cards/index.ts.
+// Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and carries a control, because
+// "fits" is satisfied by a box that collapsed to nothing. The catalog comes from `@jackioh/cards`, which the client's
+// aliases resolve to its wire layer's reader of crates/cards/catalog.json (e2e/cypress.config.ts). Client code comes
+// from apps/web/src, and from outside apps/web/src/cards only through its barrel, cards/index.ts.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -48,9 +46,8 @@ const FIT_BOXES: readonly FitBox[] = [
 ];
 
 /**
- * R1017000: a face whose text runs past the measured limit prints less than its whole text (a
- * short form, or its text clamped, shortText.ts), and only such a face may clamp, at 170 px. #98
- * Heroic Power's face prints the header over its thirteen powers, which fits at both widths (#1017).
+ * R1017000: only a face that prints less than its whole text (a short form, or its text clamped, shortText.ts)
+ * may clamp, at 170 px. #98 Heroic Power's face prints the header over its thirteen powers: no clamp (#1017).
  */
 function clampAllowedFor(def: CardDef, box: FitBox, radiant: boolean): boolean {
   return box.clampAllowed && faceText(faceModel({ defId: def.id, def, radiant })).less;

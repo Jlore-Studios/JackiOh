@@ -154,7 +154,7 @@ pub fn echo_grant_of(state: &GameState, player: PlayerId, modifier: &PlayerModif
 
 /// R30: Twinspell grants Echo to the next Spell and "stays until a spell is played, then goes to the
 /// GY": the grant is spent when it applies and the Field Spell follows. Only a Spell takes it, so a
-/// cast or played permanent leaves it armed; R70 makes a cast Spell take it like any other.
+/// permanent leaves it armed; R70 makes a cast Spell take it like any other.
 ///
 /// R209: one grant per Twinspell on the field: every rider a permanent owns is spent, only the first
 /// counts, so a Twinspell that left and came back between two state checks still echoes once.

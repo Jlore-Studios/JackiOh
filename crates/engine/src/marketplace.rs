@@ -9,10 +9,9 @@
 //!
 //! A player buys or sells in their own main phase with no prompt open, for Credits and no mana
 //! (`marketBuy { offer }`, `marketSell { instanceId }`, R1853003). `why_market_buy_refused` and
-//! `why_market_sell_refused` are the one rule `legal_actions`, the reducer and the view all ask, so a
-//! greyed-out button and a refusal cannot disagree (§9.3). A purchase is hidden like a gain (R97); a
-//! sale is public. Only a `handSale` card (R1861000) is sold: a Resource pays its Credits as it is
-//! played or discarded instead (R2250001).
+//! `why_market_sell_refused` are the one rule `legal_actions`, the reducer and the view all ask (§9.3). A
+//! purchase is hidden like a gain (R97); a sale is public. Only a `handSale` card (R1861000) is sold: a
+//! Resource pays its Credits as it is played or discarded instead (R2250001).
 //!
 //! Every roll and every price move draws from the match's rng, in the order this file draws them
 //! (§10.7); opening and rolling report nothing (R1853000).

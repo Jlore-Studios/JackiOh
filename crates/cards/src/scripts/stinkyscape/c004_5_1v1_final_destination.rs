@@ -9,6 +9,7 @@
 //! never its controller's own (C #65 Ace in the Hole's `turnEnded` trigger, the other player's), going
 //! to the graveyard as it fires. One lane drawn uniformly from the match rng stays open and
 //! `lock_lane` Locks the other four whole, both sides' unit and backrow zones (C #71's; a Lock evicts
+//! nothing, R688).
 
 use jackioh_engine::effects::{add_to_hand, discard, lock_lane, set_health};
 use jackioh_engine::draw::discard_guarded;

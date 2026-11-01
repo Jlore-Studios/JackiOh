@@ -49,7 +49,9 @@ mod r216_nothing_happens_after_the_game_is_over {
 
     #[test]
     fn r216_5_stockpiles_heal_does_not_follow_the_cn_virus_cast_that_killed_its_hero_2_5_4_5_2_4() {
+        // p1 at 1 health draws a CN-Virus off Stockpile's "draw 2": the cast deals p1 1 damage, and
         // §2.4's chain runs §4.5's check after that cast, which ends the game (§2.5). Stockpile's
+        // "heal your hero 2" is the rest of a script whose game is already decided.
         let mut s = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-after-game-over",
@@ -72,6 +74,7 @@ mod r216_nothing_happens_after_the_game_is_over {
 
     #[test]
     fn r216_r152_96_my_pawn_is_not_consumed_after_the_ai_turn_it_handed_over_ended_the_game_2_5() {
+        // p2's Jlockeed Shredder swings for lethal at p1 (2 health); My Pawn cancels it and hands the
         // rest of p2's turn to the AI (R44), which has nothing left but to end it. Shredder's
         // end-of-turn 2 damage kills p1 and the game is over (§2.5) — and nothing then consumes the trap.
         let mut s = scenario(json!({
@@ -97,7 +100,10 @@ mod r216_nothing_happens_after_the_game_is_over {
     #[test]
     fn r216_fullsends_combo_draws_stop_once_a_cast_on_draw_draw_inside_them_has_ended_the_game_2_5_2_4_10_5_step_5()
      {
+        // Two Radiant /fullsends make two "Combo: draw 1" riders, so the Vanilla played after them owes
         // two draws. The first draws Hinder, cast on its draw (R70), which owes two draws of its own from
+        // an empty library (fatigue 1, then 2); the check after that cast finds p1 at 0 or less and the
+        // game is over.
         let mut g = scenario(json!({
             "p1": {
                 "hand": [{ "def": FULLSEND, "radiant": true }, { "def": FULLSEND, "radiant": true }, VANILLA],
@@ -135,8 +141,10 @@ mod r216_nothing_happens_after_the_game_is_over {
 
     #[test]
     fn r216_r437_a_marked_unit_that_dies_with_its_hero_says_nothing_of_its_mark_after_game_over_2_5() {
+        // Fuzz seed 329, cut down: p1's The Power to Punish marks p2's Pointmaster for a destroy at
         // the start of p1's next turn (R437's red mark). Shredder's end-of-turn 2 damage kills the
         // Pointmaster and p2's hero in one state check, which ends the game (§2.5). The destroy went
+        // with its Unit, but the mark's `marked` (added: false) may not follow `gameOver`.
         let mut s = scenario(json!({
             "seed": "r216-marked-after-game-over",
             "p1": { "field": [SHREDDER], "backrow": [PUNISH] },

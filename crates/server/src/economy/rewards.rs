@@ -2,26 +2,24 @@
 //!
 //! Every payout goes through [`pay_game_rewards`], which pays a finished game's summary and moves
 //! the account's set tracks (§14.7) and its quests (§14.9, `quests::move_quests`, [[R1304001]]).
-//! Practice earning calls into this same hook: it owns no transaction of its own, so each caller
-//! pays in the transaction that records its game, and a failure rolls the game back with it. It
-//! answers what it paid as the game's [`GameEconomy`], which its callers hand the seat it paid
-//! (#1657).
+//! Practice earning calls into this same hook: it owns no transaction of its own, so each caller pays
+//! in the transaction that records its game, and a failure rolls the game back with it. It answers what
+//! it paid as the game's [`GameEconomy`], which its callers hand the seat it paid (#1657).
 //!
 //! - Where the server ran the match, it counts the actions from its own log; the client reports
-//!   nothing. `api::results`'s write pays every 1v1 match it records (ladder, unranked and Conquest
-//!   games), and `duos::finish_match` pays a co-op game, counting each person's own moves
-//!   ([[R1502000]]). An action counts when [`is_player_action`] says the player took it
-//!   ([[R1302004]]): every caller counts with it.
-//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together,
-//!   counted over the UTC day the game ended in ([[R1483000]]). The game that crosses
-//!   the cap is paid the part that fits and the ones after it no Jlore, with no Jlore row; XP and
-//!   quests are paid in full. Quest and track Jlore neither count nor stop.
+//!   nothing. `api::results`'s write pays every 1v1 match it records (ladder, unranked and Conquest),
+//!   and `duos::finish_match` pays a co-op game, counting each person's own moves ([[R1502000]]). An
+//!   action counts when [`is_player_action`] says the player took it ([[R1302004]]).
+//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together, counted
+//!   over the UTC day the game ended in ([[R1483000]]). The game that crosses the cap is paid the part
+//!   that fits and the ones after it no Jlore, with no Jlore row; XP and quests are paid in full. Quest
+//!   and track Jlore neither count nor stop.
 //! - A new account starts with its tracks' first rewards ([`pay_starting_rewards`], [[R1310000]]);
 //!   an older set's track pays its first level when it unlocks ([`pay_xp`], [[R1302003]]).
 //!
-//! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on, so a build
-//! behind the switch changes nothing a player owns. `api::results` is that caller for a 1v1 match,
-//! `duos::finish_match` for a co-op game, and `api::codes`'s redemption for the starting rewards.
+//! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on (the two above, and
+//! `api::codes`'s redemption for the starting rewards), so a build behind the switch changes nothing a
+//! player owns.
 //!
 //! Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
 
@@ -256,10 +254,9 @@ pub fn utc_day_bounds(at: i64) -> (i64, i64) {
 }
 
 /// Pays one finished game's rewards in the caller's transaction: its Jlore, held to the account's
-/// daily cap ([[R1483000]]), its XP on every active set track ([`pay_xp`]), and then moves its
-/// quests, which may pay too ([[R1304001]]). A bot's side writes nothing. Answers what it paid,
-/// each track's gain read off the account's tracks before and after the whole payout, so a
-/// completed quest's XP is in the same gain as the game's.
+/// daily cap ([[R1483000]]), its XP on every active set track ([`pay_xp`]), and then moves its quests,
+/// which may pay too ([[R1304001]]). A bot's side writes nothing. Answers what it paid, each track's
+/// gain read off the tracks before and after the whole payout, so a completed quest's XP is in it.
 pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<GameEconomy> {
     if summary.bot {
         return Ok(GameEconomy::default());

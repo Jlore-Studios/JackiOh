@@ -18,10 +18,11 @@ import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
 import { leaveMatchTestid } from "../game/ConfirmLeaveMatch.tsx";
+import { connectionWords } from "../game/connectionWords.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import { streakWords } from "../rank/StreakFlame.tsx";
-import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
+import MatchRoute, { matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate, paths, usePathname } from "../net/navigate.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";

@@ -54,11 +54,10 @@ pub fn script_v0_5_9f() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 4 (radiant 3, its hero's Armor 1
-// taking 1 more first), per instance, hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health
-// bypasses the cap".
-// The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2 since patch
-// v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health" is read against both caps:
+// #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4 (the Cry draws 1, radiant 2, R275), plus R18's "lose
+// health bypasses the cap".
+// The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`): a `field` setup fires no
+// Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health" is read against both caps:
 // 7 is over the base cap of 5 and the radiant cap of 3, so either face tells a clamp from a bypass.
 #[cfg(test)]
 mod tests {

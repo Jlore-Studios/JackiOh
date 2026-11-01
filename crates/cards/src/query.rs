@@ -6,6 +6,7 @@
 //! 3. Printed costs read out of play (R65; 0 for X-cost, base for embiggen; #7, #30, #51, #94).
 //! 4. Ascending §5 index order set by set; seeded RNG replays identically (§9.3, R58, R60).
 //! 5. Registered catalog cards only; transient defs never generate.
+//! Scripts reach it through `use crate::query::*;`: [`query`], [`pool`], [`query_cost`], [`TRAP_TYPES`].
 
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, SetName};
 
@@ -79,38 +80,7 @@ pub const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 /// R65's out-of-play cost of a definition: an X-cost card reads 0, an embiggen card reads its base
 /// price, everything else its printed cost. This is what `cost` and `costRange` compare against, and
 /// what a card script must use whenever it sorts, brackets or counts costs in a library, hand,
-/// graveyard or pool. The in-play number is the engine's `mana::effective_cost`, which starts from an
-/// instance and adds `cost_mod`, discounts and Professor Curvature.
+/// graveyard or pool. The in-play number is the engine's `mana::effective_cost`.
 pub use jackioh_engine::catalog::query_cost;
-
-/// Catalog surface for card scripts: query, pool, cost, trap_types.
-#[derive(Clone, Copy, Debug)]
-pub struct CatalogSurface {
-    /// [`TRAP_TYPES`]: both trap types (TS `catalog.trapTypes`).
-    pub trap_types: &'static [CardType],
-}
-
-impl CatalogSurface {
-    /// §5.1's `catalog.query(...)`: [`query`].
-    pub fn query(&self, args: &CardQuery) -> Vec<&'static CardDef> {
-        query(args)
-    }
-
-    /// `catalog.pool(ownId, args)`: [`pool`], never offering `own_id` itself (R387).
-    pub fn pool(&self, own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
-        pool(own_id, args)
-    }
-
-    /// `catalog.cost(def)`: [`query_cost`], R65's out-of-play cost.
-    pub fn cost(&self, def: &CardDef) -> i32 {
-        query_cost(def)
-    }
-}
-
-/// §5.1's `catalog.query(...)` surface. Keeps lowercase name (SURFACE §4.2) to avoid collision.
-#[allow(non_upper_case_globals)]
-pub const catalog: CatalogSurface = CatalogSurface {
-    trap_types: TRAP_TYPES,
-};
 
 // Never sort, filter or de-duplicate a pool after `query`: §5.1 forbids duplicating the filter.

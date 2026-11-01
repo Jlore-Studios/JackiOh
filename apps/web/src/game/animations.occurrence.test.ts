@@ -1,13 +1,10 @@
-// R97, R385: `newEventsSince` hands the runner only the events its view has not shown yet, and finds them
-// by matching the end of the old window against the start of the new one with `sameOccurrence`. R97
-// judges a card by where it sits NOW, so an older event can read differently in the next view: the
-// engine's `redactEvent` rewrites some fields together with a hidden card's identity, and
-// `REWRITTEN_WITH_IDENTITY` has to name each of them or two copies of one event stop matching. When
-// they stop matching, no overlap is found and the whole 32-event window is animated again.
-//
-// Found by the R318 sweep in animations.window.test.ts (game 57 of the overflow games, once the pool
-// held one more card): a `counterChanged` for a Brittle count on a card that was hidden in the old view
-// and readable in the new one.
+// R97, R385: `newEventsSince` hands the runner only the events its view has not shown yet, found by
+// matching the end of the old window against the start of the new one with `sameOccurrence`. R97 judges a
+// card by where it sits NOW, so an older event can read differently in the next view: the engine's
+// `redactEvent` rewrites some fields with a hidden card's identity, and `REWRITTEN_WITH_IDENTITY` has to
+// name each or two copies of one event stop matching and the whole 32-event window is animated again.
+// Found by the R318 sweep in animations.window.test.ts (game 57): a `counterChanged` for a Brittle count
+// on a card hidden in the old view and readable in the new one.
 
 import type { GameEvent } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

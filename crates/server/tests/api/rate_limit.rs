@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use axum::body::Body;
-use axum::http::{HeaderMap, Request, StatusCode};
+use axum::http::{Request, StatusCode};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use hmac::{Hmac, KeyInit, Mac};
@@ -44,8 +44,6 @@ const GATED: &str = "/api/tutorial";
 /// One response, read whole.
 struct Reply {
     status: u16,
-    #[allow(dead_code)]
-    headers: HeaderMap,
     text: String,
 }
 
@@ -71,13 +69,11 @@ async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip:
         .await
         .expect("the router answers");
     let status = response.status().as_u16();
-    let headers = response.headers().clone();
     let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
         .await
         .expect("body");
     Reply {
         status,
-        headers,
         text: String::from_utf8_lossy(&bytes).into_owned(),
     }
 }

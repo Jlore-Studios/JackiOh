@@ -59,6 +59,7 @@ mod r179_a_fused_definitions_id_names_its_ingredients {
     #[test]
     fn r179_r77_a_fused_card_keeps_its_own_scripts_when_another_match_in_the_same_process_fuses_a_different_pair_into_the_same_slot_9_3()
      {
+        // Match A fuses Pointmaster onto Jlockeed Shredder-10 ("End of turn: deal 2 damage to each
         // enemy unit and the enemy hero"); only its JSON is kept, as a match actor keeps it (§9.3).
         let a = fused_onto(SHREDDER);
         let fused_a = a.card(&a.unit_at(P2, 1).id).def_id.clone();

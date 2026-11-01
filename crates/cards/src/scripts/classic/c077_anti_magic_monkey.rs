@@ -39,6 +39,7 @@ pub fn script() -> CardScripts {
 
 // SPEC §8.6 row 77: Spells cost (1) more (Radiant 2; R65, R70, R177, R386, B5).
 // Off while dormant under Stack, gone when leaving. Graveyard plays via C #28
+// Second Wind are sent to `reduce` since the harness's `play` takes a hand card.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

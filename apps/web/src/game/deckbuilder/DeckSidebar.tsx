@@ -10,7 +10,7 @@
 
 import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 
-import type { CardCost, CardDef } from "@jackioh/shared";
+import type { CardDef } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validator";
 
 import { CardArt, faceModel, isInspectKey, useInspectTrigger, type FaceModel } from "../../cards/index.ts";
@@ -20,7 +20,7 @@ import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { ariaKeyshortcuts, SHORTCUTS } from "../../shortcuts/shortcuts.ts";
 import { DECK_SIZE } from "./deckSize.ts";
-import { deckListOrder } from "./filters.ts";
+import { deckListOrder, tileCost } from "./filters.ts";
 import ManaCurve from "./ManaCurve.tsx";
 import { DB_SIDEBAR, DECK_CARDS, DECK_COUNT, DECK_DROP, DECK_FOLD, deckCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
@@ -86,13 +86,6 @@ function allowDrop(event: DragEvent<HTMLElement>): void {
   } catch {
     // Synthesised events lack DataTransfer; `preventDefault` enables drops.
   }
-}
-
-function tileCost(cost: CardCost | undefined): string {
-  if (cost === undefined) return "";
-  if (typeof cost === "number") return String(cost);
-  if (cost === "X") return cost;
-  return String(cost.base);
 }
 
 type DeckTileProps = {

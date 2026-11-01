@@ -13,13 +13,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #20 Pointmaster — SPEC §8.1 row 20, BUILD M4-T4 row 20.
-//
-// Must-pass (M4-T4): "First Strike; radiant Divine Shield". Engine cell: "Keywords only".
-//
-// The script is empty, so these tests prove the PRINTED keywords reach combat. §4.3 step 1: one First
-// Striker hits alone and the other side answers in step 2 only if it survives; §4.4 step 1: Divine
-// Shield negates the whole hit and is gone.
+// #20 Pointmaster — SPEC §8.1 row 20, BUILD M4-T4 row 20 (must-pass: "First Strike; radiant Divine Shield").
+// The script is empty, so these tests prove the PRINTED keywords reach combat (§4.3 step 1, §4.4 step 1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

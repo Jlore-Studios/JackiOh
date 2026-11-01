@@ -635,6 +635,7 @@ mod c93_combo_index_lights_up_when_its_grade_will_rise_r195_b9 {
         assert_eq!(s.state().active, PlayerId::P2);
         assert_eq!(grade(&s), 2);
         // "This turn" starts afresh for both players (§6.2), so p1's two plays no longer count on
+        // p2's turn, and the hook's `yourTurn` would keep it dark even if they did.
         assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
         assert!(!index_glows(&s));
     }
@@ -723,6 +724,7 @@ mod r196_a_crafted_c53_reno_c68_twisted_sorcerer_glows_when_either_printed_condi
         assert!(hand_glows(&s, &fused));
         play_at_sponge(&mut s, &fused);
         // R102: each ingredient's list is built as the fused Cry reaches it, so the Sorcerer's
+        // "8 if your hero is below 10" reads the hero Reno has just set to 30.
         s.expect_health("p1", 30)
             .expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
     }
@@ -1177,6 +1179,7 @@ mod meditative_c57_clip_farming_critikal_lights_up_in_hand_once_a_card_was_playe
 mod r195_the_cards_that_declare_condition_met {
     // Classic+ #18 Gullible Treatler, #19.5 Bot Loser and #37 Wardrum prove theirs in their own card
     // files, and so do R662's Core #18, #60, #70, #85, #96 and #100; Meditative #57 Clip-Farming
+    // Critikal proves its own above.
     #[test]
     fn r195_r662_are_exactly_c10_c53_c68_c71_and_c93_classic_c22_c36_c40_and_c69_classic_plus_c18_c19_5_c37_and_c50_meditative_c57_and_r662s_c18_c60_c70_c85_c96_and_c100_on_both_faces_so_a_new_hook_cannot_land_untested()
      {

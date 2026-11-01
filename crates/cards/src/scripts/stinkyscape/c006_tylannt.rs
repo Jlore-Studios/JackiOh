@@ -12,6 +12,7 @@
 //! Greatest Heist into its controller's leftmost open backrow zone (R64). The summon names it, so its
 //! Cry (its Discover) runs there, as League of Losers' Mid Loser's does (R411), a face-up Field Spell's
 //! Cry being triggered as a Unit's is (R1873003); its first stage, opened as it entered, is then
+//! completed with the rest.
 
 use jackioh_engine::prelude::*;
 
@@ -253,6 +254,7 @@ mod tests {
         let hand = s.state().players.p1.hand.len();
         s.play(ID, json!({ "zone": 1 }));
         // The summon names the Heist, so its Cry runs first (R411): its Discover is asked, with the
+        // summoned Heist in the next backrow zone and the completion waiting behind it.
         let pending = s.state().pending.clone().expect("the summoned Heist's Discover");
         assert_eq!(pending.player_id, P1);
         assert_eq!(pending.prompt, "Discover an Acclaimed Unit or a Jelly Bean");

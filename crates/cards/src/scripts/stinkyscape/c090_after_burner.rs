@@ -5,6 +5,7 @@
 //! keyword|random combat keywords}." Keywords 2, Radiant 4.
 //! Engine: Starship Piece is catalog data: its death fuses a copy into its owner's Dormant Starship
 //! (R1852000). When launched (`when_launched`, R1852003) runs only as part of that Starship, after its
+//! fused Cries; on the field it does nothing.
 
 use jackioh_engine::prelude::*;
 

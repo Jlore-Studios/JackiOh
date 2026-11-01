@@ -69,6 +69,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #71 Lane Eater (SPEC §8.6 row 71; BUILD M9 row C 71). (3) Unit, Common, 4/4 → 8/8: Cry: destroy
+// every other card in this lane, then Lock this lane.
 
 #[cfg(test)]
 mod tests {
@@ -322,6 +323,7 @@ mod tests {
     }
 
     /// R1081000: a Flying Lane Eater played into a backrow zone eats every other card in its lane from
+    /// there — its own side's unit zone included.
     #[test]
     fn r1081000_played_flying_into_the_backrow_it_eats_every_other_card_in_its_lane() {
         let mut s = scenario(json!({

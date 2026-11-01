@@ -120,6 +120,8 @@ pub fn script_v0_5_2() -> CardScripts {
     }
 }
 
+// BUILD M9 Classic row C 20: 2 damage; the opponent discards 1 at random (an empty hand: nothing); or a
+// Unit, either side, is destroyed at the start of your next turn; radiant: 4 damage; discards 2; or every
 // enemy Unit there then. Tuned numbers (damage, discards) read through `param()` (R386).
 #[cfg(test)]
 mod tests {

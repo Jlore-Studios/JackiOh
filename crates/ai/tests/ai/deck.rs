@@ -986,9 +986,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. The six kept
         // must hold Units for every floor to stay in reach and the units' to be held (R1370, seed 7): the
         // first six of Meditative+ (#1187) are all Spells, its last six hold two Units (M+ #21, #24). In
-        // Training Grounds (#2204) the Legacy cards (#41–#60) are left out (R2511000), and so is #40
-        // Goetzmann Game Design, a Quickdraw card the cap may keep out (R817000): the six are TG #34–#39,
-        // two of them Units (#36, #38).
+        // Training Grounds (#2204) the Legacy cards (#41–#60, R2511000) and #40 Goetzmann Game Design, a
+        // Quickdraw card the cap may keep out (R817000), are left out: the six are TG #34–#39, two of
+        // them Units (#36, #38).
         let kept: Vec<String> = printed[printed.len() - 6..].to_vec();
         assert!(
             kept.iter()
@@ -1068,8 +1068,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     .count();
                 measured_somewhere |= forced > 0;
                 // Fewer than one deck in ten needs the floor to force a card, wherever the floor owes
-                // at most two of the set's cards in five. Where it owes more (Meditative+'s 26 cards
-                // owe 15 of a Medium deck's 30 and 18 of a Hard deck's 35), forcing is the floor's job.
+                // at most two of the set's cards in five. Where it owes more, forcing is the floor's job.
                 if owed * 5 <= cards * 2 {
                     assert!(
                         forced * 10 < seeds,
@@ -1330,7 +1329,7 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative.
+        // own decks are dealt from it.
         assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
@@ -1359,9 +1358,8 @@ mod r1390_the_ai_decks_soft_gate {
         }
     }
 
-    /// The Stinkyscape set (#1884, `docs/stinkyscape-set.md` D8) left the list when #1885's sweep of
-    /// record measured the AI on it: the AI's own decks are dealt from it at every tier, and a lean on it
-    /// is a lean on it.
+    /// The gate holds no Stinkyscape card (#1884, `docs/stinkyscape-set.md` D8; #1885's sweep of record
+    /// measured the AI on it): the AI's own decks are dealt from it at every tier.
     #[test]
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_stinkyscape_cards() {
         register_cards();

@@ -1,17 +1,15 @@
 //! `cli/seed_catalog.rs` (`seed-catalog`), in two halves.
 //!
-//! The first (every `cargo test`): `read_catalog` against the file it actually has to read. The
-//! catalog (`crates/cards/catalog.json`) is a record keyed by card id — the `CardDefs` shape the API
-//! parses.
+//! The first (every `cargo test`): `read_catalog` against the file it actually has to read. The catalog
+//! (`crates/cards/catalog.json`) is a record keyed by card id, the `CardDefs` shape the API parses.
 //!
-//! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real
-//! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
-//! admits each later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010
-//! and Book, Pancake and AI (B2.4) from 0015 among them. The seed runs in one transaction, so one
-//! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
-//! second checks that the database really accepts them. Both count the catalog of the sets that ship
-//! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
-//! Meditative+ set and the Stinkyscape set (R1420).
+//! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real catalog
+//! into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002) admits each
+//! later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010 and Book, Pancake
+//! and AI (B2.4) from 0015 among them. The seed runs in one transaction, so one such row fails the whole
+//! catalog. The first half compares the tags with the migrations' text; the second checks that the
+//! database accepts them. Both count the catalog of the sets that ship (`SHIPPED_SETS`), so they hold
+//! before and after the patches that ship the Meditative, Meditative+ and Stinkyscape sets (R1420).
 
 use std::path::{Path, PathBuf};
 
@@ -369,9 +367,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
         }
-        // R1178000: but for a tag that waits for its held set's release. Potion waited for 0043,
-        // which lands with the gate that ships Meditative+, and the Stinkyscape set's four for 0065
-        // (R1857000), so none waits once its set ships.
+        // R1178000: but for a tag that waits for its held set's release: Potion for 0043, which lands with
+        // the gate that ships Meditative+, and the Stinkyscape set's four for 0065 (R1857000).
         assert_eq!(
             tags,
             Tag::ALL
@@ -896,11 +893,10 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
     }
 }
 
-/// `test:db` only: R1310001, which ends R1300001's pass over a dev account by ending the grant it
-/// passed over. Two people's accounts are active, one of them a dev account, when a new catalog
-/// version of one starter card is seeded: the stamp grants neither of them the card, `seed-catalog`
-/// writes the starter cards (R1310000) beside it, and a person activated after the stamp is granted
-/// it, so the card was one a grant could give.
+/// `test:db` only: R1310001, which ends R1300001's pass over a dev account by ending the grant it passed
+/// over. Two accounts are active, one a dev account, when a new catalog version of one starter card is
+/// seeded: the stamp grants neither the card, `seed-catalog` writes the starter cards (R1310000) beside
+/// it, and a person activated after the stamp is granted it, so the card was one a grant could give.
 mod r1310001_r1300001_db_a_new_version_grants_nobody {
     use super::*;
     use jackioh_server::cli::seed_catalog::{CatalogEntry, seed_catalog};

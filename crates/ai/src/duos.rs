@@ -184,10 +184,9 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 /// (B28). A card qualifies when the seat cannot play it this turn and its teammate can (`has_zone_for`,
 /// else `mate_can_play`), or, with the team's `pass_cost` 0, when the teammate can afford it next turn
 /// and the seat cannot. The playable ones come first, ranked by the teammate's best bounded follow-up
-/// (R1127000), and are named only when worth passing (R1723000, `pass_gain`).
-///
-/// B29: it reads the redacted probe `decide` lists the seat's actions on and, of the teammate, only its
-/// own side and the determinized probe the follow-ups are scored on.
+/// (R1127000), and are named only when worth passing (R1723000, `pass_gain`). B29: it reads the redacted
+/// probe `decide` lists the seat's actions on and, of the teammate, only its own side and the determinized
+/// probe the follow-ups are scored on.
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
     catch_unwind(AssertUnwindSafe(|| passes_of(state, seat))).unwrap_or_default()
@@ -466,7 +465,7 @@ fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
 /// follow-up with it (R1127000) or, when higher, the card's best play after the teammate's own best play
 /// (`mate_baseline`), since the mana that play leaves may pay for it too; less the baseline's value, the
 /// card's worth in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of the pass cost and
-/// `DUOS_PASS_MIN_GAIN`. The pass is worth making when this is above 0.
+/// `DUOS_PASS_MIN_GAIN`: worth making above 0.
 fn pass_gain(
     own_probe: &GameState,
     seat_player: PlayerId,
@@ -785,8 +784,7 @@ pub type DuosGateDecider = fn(&DuosState, DuosSeat, &mut AiOptions<'_>) -> Optio
 /// Game n (1-based) of the series: seed `opponent.seed(series, n)`, every seat on AI_DIFFICULTY.easy
 /// with a `build_ai_deck` deck, the AI team acting through `ai` at `budget` and the other through
 /// `opponent`'s policy, each on its own stream. A refused action is replaced by the random policy's and
-/// counted in `rejected`; a game no seat sends anything in stops unfinished. A pure function of `n`,
-/// `series`, `opponent`, `budget` and `ai`.
+/// counted in `rejected`; a game no seat sends anything in stops unfinished.
 pub fn duos_gate_game_with(
     n: usize,
     series: &str,

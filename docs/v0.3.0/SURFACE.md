@@ -684,7 +684,7 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
 `card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
-`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::Monitor`
+`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::InvariantMonitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate
@@ -708,6 +708,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
 pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;   // R2102000: a sure win this turn by what `seat` sees
+pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;   // R2660000: a lethal on the opponent's board that nothing the seat does this turn stops
 pub fn random_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;   // §10.7's policy, via subsystems::choose_action
 pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;
 pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord;
@@ -946,8 +947,8 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   to warn when it disagrees: the compiled-in version is served either way, so a stale dashboard value
   never stops a deploy (#488; it first refused to boot, which made every card patch a hand edit).
   `GET /api/catalog` keeps `x-deployed-commit` from `RENDER_GIT_COMMIT`.
-- **Routes dropped** (unused): `POST /api/auth/signup` (503 in production), `GET /api/catalog/:version`.
-  `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
+- **Routes dropped** (unused): `POST /api/auth/signup` (503 in production). `GET /api/catalog/:version`
+  stays, since R388 and §9.4 promise it (#2160). `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
 - **All Random's lean** (#549, R1372; #924, R924000): "More cards from" is a request field, not a
   socket frame (the queue, the rooms and the rematch are HTTP routes, and `actor/protocol.rs` carries

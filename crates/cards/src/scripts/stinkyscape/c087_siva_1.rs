@@ -111,6 +111,7 @@ mod tests {
     const WARDRUM: &str = "classicplus-037";
     const BIG_MAX: &str = "classic-080";
     const YILEGPT: &str = "meditative-049";
+    /// The Acclaimed Units of the sets that ship, Siva 1 aside (R387): the Stinkyscape set's own since
     /// its release (#1884).
     const SHIPPED_ACCLAIMED: [&str; 11] = [
         WARDRUM,

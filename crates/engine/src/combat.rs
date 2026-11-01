@@ -182,12 +182,10 @@ pub fn is_asleep(state: &GameState, unit: &CardInstance, keywords: &[Keyword]) -
 }
 
 /// R171: a card whose controller changes has entered its new controller's side on this turn (§4.1, for
-/// `is_sick`), with a fresh exertion. Every path that changes control on the field calls this as it
-/// emits `controlChanged`, for every card that changes sides (dormant and backrow cards included) and
-/// for nothing else: a card moving along its own side has not entered anything.
-///
-/// A player modifier a permanent installed and still owns (#79 Twinspell, `sourceId`) is its lasting
-/// effect (§5.1) whose "you" is the controller (§8), so it follows the card from `from` to its new side.
+/// `is_sick`), with a fresh exertion. Every path that changes control on the field calls this, for every
+/// card that changes sides (dormant and backrow included) and for nothing else. A player modifier a
+/// permanent installed and still owns (#79 Twinspell, `sourceId`) is its lasting effect (§5.1) whose
+/// "you" is the controller (§8), so it follows the card from `from` to its new side.
 pub fn enter_new_side(sink: &mut EngineSink<'_>, card: &CardInstance, from: PlayerId) {
     let turn = sink.state.turn;
     let mut controller = card.controller;
@@ -257,9 +255,9 @@ pub fn why_cannot_switch_in(
         return Err(EngineError::new("that unit has already acted this turn"));
     }
     // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
-    // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it
-    // through v0.5.9f), nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23
-    // Warp Disruptor), nor an Indestructible one, whatever made it so (R2179000).
+    // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it),
+    // nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor
+    // an Indestructible one, whatever made it so (R2179000).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
             || auras.unit_has(unit, KeywordKind::CantDefend)
@@ -771,10 +769,9 @@ const ATTACK_COMBAT_STEP: &str = "combat";
 
 /// R100: "an event the window is scheduled to deliver is not also offered to the immediate trap
 /// check". The window delivers `attackDeclared` itself, so §10.3's frontier must not (a Field Trap
-/// would answer twice): moving its cursor (`triggers::dispatched`) past the event takes it.
-/// `traps::TRAP_WINDOW_EVENTS` withholds a whole *type*, but a forced attack's `attackDeclared` opens
-/// no window (R121) and must still reach the immediate check. Under `reduce` the cursor is at the
-/// event; on a test's sink it may be behind, and moving it would drop the events between.
+/// would answer twice): moving its cursor (`triggers::dispatched`) past the event takes it. That is per
+/// declaration, not per *type* (`traps::TRAP_WINDOW_EVENTS`): a forced attack's opens no window (R121).
+/// A test's sink may have its cursor behind the event, and moving it would drop the events between.
 fn withhold_from_frontier(sink: &mut EngineSink<'_>, at: usize) {
     // Every sink over the action's list shares the frontier (`EngineSink::frontier`), so a loop on
     // another sink (a cast's step-4 window inside the window's traps, R70) sees the cursor move too.
@@ -785,9 +782,8 @@ fn withhold_from_frontier(sink: &mut EngineSink<'_>, at: usize) {
 
 /// The ordinary (non-trap) triggers on the declaration, queued in R68's order: the second half of
 /// `triggers::dispatch_event`, whose first half step 4's window replaces; they pop after the combat.
-/// R212: the board is read after the window, so a card that moved zones since is on a stay that did
-/// not see the declaration (R174), and one whose controller changed answers for its controller at the
-/// declaration (R171).
+/// R212: the board is read after the window, so a card that moved zones since is on a stay that did not
+/// see the declaration (R174), and one whose controller changed answers for its controller then (R171).
 fn queue_declaration_triggers(sink: &mut EngineSink<'_>, event: &GameEvent, since: &[GameEvent]) {
     let mut later: Option<crate::stays::LaterMoves> = None;
     for holder in crate::triggers::holders_answering(sink.state, event.event_type()) {
@@ -1100,10 +1096,9 @@ pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// The player's attack: §4.2 steps 1 to 5, validation, then step 4 (the exertion, the trap window),
 /// then step 5's combat and state check; an attack Windfast would make, its substitute makes (R1202).
 /// The declaration goes into `state.declared_attack` (what `effects::combat::cancel_attack` marks, §6.3,
-/// R44) before the traps are offered it through `traps::run_trap_window`, §2.2's window's entry point,
-/// sharing R68's side order and R113's parking. The combat is owed only when the window pauses (R117),
-/// behind the traps the window still owes; `triggers::dispatch_event` would queue those behind the
-/// combat, firing after the damage they exist to pre-empt.
+/// R44) before `traps::run_trap_window` (§2.2) offers it to the traps, sharing R68's side order and R113's
+/// parking. When the window pauses (R117) the combat is owed behind the traps it still owes: queued by
+/// `triggers::dispatch_event` it would fire after the damage they exist to pre-empt.
 pub fn declare_attack(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
@@ -1233,10 +1228,9 @@ pub(crate) fn declare_instead(
 
 /// A forced attack (Moths to the Flame, Bear Honeypot; §4.2's last paragraph, R53): it skips steps 1
 /// to 3 and spends no exertion; the target still strikes back, and its own state check follows.
-/// R121: it opens no trap window, "declared by the effect, not the player … so it is not 'the opponent
-/// declaring an attack'", so `state.declared_attack` stays null and nothing cancels it (§6.3; #96's
-/// `when` refuses `forced`), and no prompt splits a card's effect list, §10.3's one unit of work. Its
-/// `attackDeclared` still reaches the immediate check, the withholding above being per declaration.
+/// R121: it opens no trap window ("declared by the effect, not the player"), so `state.declared_attack`
+/// stays null and nothing cancels it (§6.3; #96's `when` refuses `forced`), and no prompt splits a card's
+/// effect list, §10.3's one unit of work. Its `attackDeclared` still reaches the immediate check.
 pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: &AttackTarget) {
     force_attack_with(sink, attacker, target, false);
 }
@@ -1952,11 +1946,10 @@ pub const AFTER_ATTACK_WORK: &str = "@afterAttack";
 
 /// The facts a combat hands its attacker's `afterAttack` hook, in the hook's `ctx.data`
 /// (`after_attack_of` reads them back): the attack's target (a unit's id or `hero-<player>`), the units
-/// that combat destroyed — the ones whose lethal hit was the attacker's (R42's killer: the attacked
-/// unit, and Cleave's kills) — whether the attacker is still on the field on the stay it attacked from
-/// once the check has closed (true, since an "After this attacks" runs only then, R2285001; false only
-/// for a "Whenever this attacks" whose attacker died or left, R2396000), and whether the attack was
-/// forced (R53).
+/// the attacker's lethal hits destroyed (R42's killer: the attacked unit, and Cleave's kills), whether
+/// the attacker is still on the field on the stay it attacked from once the check has closed (false only
+/// for a "Whenever this attacks" whose attacker died or left, R2396000; R2285001), and whether the attack
+/// was forced (R53).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterAttackFacts {
@@ -2109,12 +2102,10 @@ pub fn run_owed_combat_copies(sink: &mut EngineSink<'_>, item: &WorkItem) {
 }
 
 /// The state check that closes a combat (§4.2 step 5, §4.3 step 3, R53), then the attacker's
-/// `afterAttack` hook (Classic+ #73.1, Stinkyscape #91) — only when the attacker is still on the
-/// field on the stay it attacked from once that check has closed (R2285001), or, for a "Whenever this
-/// attacks" (Core #32), whatever became of it (R2396000). An attack that was called
-/// off (R44, R220) never fought and never reaches here. The hook is a whole effect, so a check follows
-/// it (R59); a question inside it, or a Death's question in the check before it, owes the rest to
-/// `state.work` (R113).
+/// `afterAttack` hook (Classic+ #73.1, Stinkyscape #91): only for an attacker still on the field on the
+/// stay it attacked from (R2285001), or, for a "Whenever this attacks" (Core #32), whatever became of it
+/// (R2396000). A called-off attack (R44, R220) never reaches here. The hook is a whole effect, so a check
+/// follows it (R59); a question inside it, or in the check before it, owes the rest to `state.work` (R113).
 ///
 /// MD-D20, R1123: when `copies_for` names a player, that player's fresh copies of what the two
 /// combatants destroyed come first, right after the check and before `afterAttack`.
@@ -2256,11 +2247,9 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
                 && !crate::stays::left_field_after(sink.state, owed.since, &live.id)
         })
     });
-    // R2285001: "After this attacks" only for an attacker still on the field on the stay it attacked
-    // from; one that died in the combat, or left the field otherwise, does nothing, and no check is
-    // owed after a hook that never ran. R2396000: "Whenever this attacks" also for one that died or
-    // left, as the snapshot it fought with, as `run_after_attacked` runs a dead defender; a Reborn
-    // body is not it, so it runs once.
+    // R2285001, R2396000 (above): an "After this attacks" for a gone attacker does nothing and owes no
+    // check; a "Whenever this attacks" runs as the snapshot it fought with, as `run_after_attacked` runs
+    // a dead defender; a Reborn body is not it, so it runs once.
     let self_card = match (live, survived) {
         (Some(live), true) => live,
         _ if script.after_attack_even_if_gone => owed.snapshot.clone(),

@@ -1,30 +1,27 @@
 //! Practice earning (SPEC §14.8, §9.9, #1303): a practice game pays half rates once the server has
 //! checked it, on a seed the server issued for it.
 //!
-//! - **An issue** (`POST /api/practice/seeds`) mints a seed and keeps it with the profile and the
-//!   game's setup (AI tier, human's seat, deck, catalog version) and the human's last board, which
-//!   the server keeps ([[R1303003]]). The same transaction prunes seeds issued more than
-//!   `PRACTICE_SEED_TTL_SECONDS` ago ([[R1303001]]), and refuses, issuing nothing, while the account
-//!   holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]), counted under the account's
-//!   economy lock so requests made at once cannot pass it together.
+//! - **An issue** (`POST /api/practice/seeds`) mints a seed and keeps it with the profile, the game's
+//!   setup (AI tier, human's seat, deck, catalog version) and the human's last board ([[R1303003]]). The
+//!   same transaction prunes seeds older than `PRACTICE_SEED_TTL_SECONDS` ([[R1303001]]), and refuses,
+//!   issuing nothing, while the account holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]),
+//!   counted under the account's economy lock so requests made at once cannot pass it together.
 //! - **A release** (DELETE /api/practice/seeds/:seed) deletes the caller's unclaimed seed under the
 //!   economy lock, so a game left without saving gives its place back ([[R2379000]]).
-//! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once it
-//!   is over. Its seed is burned first, in a transaction of its own, so it pays once whatever the
-//!   check answers ([[R1303001]]); then `economy::practice::verify` folds the log to the claimed
-//!   result off the runtime, re-running no AI move ([[R2560000]]), at most
-//!   `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting. A claim that passed pays at practice rates (held
-//!   to the day's Jlore cap, [[R1483000]]), moves the quests as a ladder game does ([[R1304001]]) and
-//!   keeps the board it ended on, in a task that finishes even when the caller stops waiting. The
-//!   pay is one transaction, tried up to `PRACTICE_PAY_ATTEMPTS` times ([[R1688000]]); one that never
-//!   lands answers an error and leaves the seed burned. No transaction stays open across a check.
-//!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
+//! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log. Its seed is
+//!   burned first, in a transaction of its own, so it pays once whatever the check answers ([[R1303001]]);
+//!   then `economy::practice::verify` folds the log to the claimed result off the runtime, re-running no
+//!   AI move ([[R2560000]]), at most `PRACTICE_VERIFY_CONCURRENCY` at once. A claim that passed pays at
+//!   practice rates (held to the day's Jlore cap, [[R1483000]]), moves the quests as a ladder game does
+//!   ([[R1304001]]) and keeps the board it ended on, in a task that finishes even when the caller stops
+//!   waiting. The pay is one transaction, tried up to `PRACTICE_PAY_ATTEMPTS` times ([[R1688000]]); one
+//!   that never lands answers an error and leaves the seed burned. No transaction stays open across a
+//!   check. Every refusal answers 200 with `paid: false` and why.
 //! - **A settle, once** ([[R2422000]]): the burn keeps the claim with the seed. The pay marks the seed
 //!   `paid` first, only where it has no mark, so the try that lands pays once; a refusal marks it
-//!   `refused`. The shutdown drain waits for running settles (`App::practice_settles`,
-//!   `all_settled`). A claim unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after its burn is settled by
-//!   the retention loop (`sweep_unsettled`): checked again under the same permits, then paid with no
-//!   board, or marked refused.
+//!   `refused`. The shutdown drain waits for running settles (`App::practice_settles`, `all_settled`). A
+//!   claim unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after its burn is settled by the retention loop
+//!   (`sweep_unsettled`): checked again under the same permits, then paid with no board, or marked refused.
 //!
 //! The issue and the claim answer only while the economy is on ([[R1302006]]): an issue is a 409, a
 //! claim `economy_off`. A release answers whatever the switch says: it pays nothing. The page asks

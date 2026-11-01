@@ -1,14 +1,13 @@
 // The runner's diff of two views (`newEventsSince`) against the real engine's redaction.
 //
-// Game hands the runner only the events a new view's window adds to the last one's (SPEC §10.8's
-// window slides over the whole match). R97 redacts that window afresh for every view, judging each
-// card by where it sits now, so an event both windows carry can read differently in each.
+// Game hands the runner only the events a new view's window adds to the last one's (SPEC §10.8's window slides over the
+// whole match). R97 redacts that window afresh for every view, judging each card by where it sits now, so an event both
+// windows carry can read differently in each.
 //
-// The games are real (`audio/test/realGame.ts`, through `engine.real.ts` as the client reaches the
-// engine), and every action is checked on both seats: the runner must be handed exactly the events that
-// action produced, as the very objects the new view carries, and nothing it has already been given.
-// R318's sweep does the same over games built to reach §2.4's three overflows, which the dev decks
-// rarely do.
+// The games are real (`audio/test/realGame.ts`, through `engine.real.ts` as the client reaches the engine), and every
+// action is checked on both seats: the runner must be handed exactly the events that action produced, as the very
+// objects the new view carries, and nothing it has already been given. R318's sweep does the same over games built to
+// reach §2.4's three overflows, which the dev decks rarely do.
 
 import { describe, expect, it } from "vitest";
 
@@ -112,10 +111,8 @@ function cheapest(n: number, needs: readonly string[] = []): string[] {
 type OverflowGame = { label: string; game: () => RealGame; seed: number; prefer: readonly string[]; maxActions: number };
 
 /**
- * The games (R180 handicaps, validated by the engine): p1's extra draws fill its hand and burn, while
- * p2's 6-card deck runs dry and fatigues; and p1's 60-card deck (R80's cap, #33 and #90 in it) plays #33
- * whenever it can, so its library reaches the cap and refuses the copies. The seeds were picked to reach
- * them within the caps; p1 empties its hand in seeds 1 and 2, so seed 3 joins them for the burn.
+ * The games (R180 handicaps): p1's extra draws fill its hand and burn, p2's 6-card deck fatigues, and p1's 60-card
+ * deck (R80's cap, #33 and #90 in it) plays #33 until its library refuses the copies. The seeds reach them in the caps.
  */
 function overflowGames(): OverflowGame[] {
   const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 6, extraDrawsPerTurn: 2 };

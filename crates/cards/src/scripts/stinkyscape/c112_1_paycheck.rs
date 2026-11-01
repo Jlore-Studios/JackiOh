@@ -9,6 +9,7 @@
 //! §6.3 Mana), a draw (§2.4) and `gain_market_credits` (R1840005). All in on red: one luck-based roll
 //! from the match rng, a win on 18 of 39 pockets (§6.1 Lucky), giving twice each of Payday's three, a
 //! loss nothing. Radiant: its Lucky 1 (`lucky_on`) rolls again and keeps the win (R1438), and the
+//! controller's Luck does the same on either face (R987).
 
 use jackioh_engine::effects::{
     DrawArgs, GainManaArgs, GainMarketCreditsArgs, chosen_options, draw, gain_mana, gain_market_credits,

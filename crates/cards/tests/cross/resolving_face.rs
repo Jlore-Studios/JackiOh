@@ -22,6 +22,7 @@ const HINDER: &str = "core-021";
 const PANTHER: &str = "core-032";
 const PEK_CONTROLLER: &str = "core-048";
 /// Meditative #97.4 Mega Church, a Unit token: "Activate: Steal an enemy permanent." An Activate is no
+/// card played.
 const CHURCH: &str = "meditative-097-4";
 const SILAS: &str = "core-052";
 const RENO: &str = "core-053";
@@ -92,6 +93,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         }));
         let gifted = backrow_at(&g, PlayerId::P2, 1).id;
 
+        // p1's start of turn: Moths makes p2's Panther attack it; the Panther destroys it and survives,
         // so p2 draws 2 — on p1's turn (R426: a forced attack is an attack). The first draw is Hinder,
         // cast as it is drawn for 0: no play (R2179002), so p2's Gifted Program passes it by (through
         // v0.5.2 it was a play, R70, and made it Radiant).
@@ -148,6 +150,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         g.play(first.as_str(), json!({ "zone": 1 }));
         assert!(g.card(first.as_str()).radiant);
 
+        // Radiant Silas rotates right: Gifted Program in p1's backrow lane 5 would cross, so it is
         // bounced to p1's hand costing 0 (§8 #52), and p1 plays it again.
         g.play(SILAS, json!({ "zone": 2, "modes": ["right"] }));
         g.expect_in_zone(gifted.as_str(), "hand");
@@ -302,6 +305,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
             },
             "p2": { "field": [BIG_FELINOR, SEVEN_SEVEN], "hand": [RENO], "library": [RENO] },
         }));
+        // Vanilla, which
         // keeps its instance and its type (R77). #22 eats Units only (R428), and this one is a Unit.
         let vanilla = must(s.unit(PlayerId::P1, 3), "p1's Mr. Vanilla");
         let gifted = must(s.backrow(PlayerId::P1, 1), "p1's Gifted Program");
@@ -339,6 +343,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
             (gifted_unit, crafted)
         };
         // #22 eats the Unit carrying the Gifted Program's text (R41, R428), so none stands on p1's side
+        // any more; its Death will summon two copies of it.
         s.play(
             CARNIVOROUS_CUBE,
             json!({ "targets": [{ "pick": "instance", "instanceId": gifted_unit.id }] }),
@@ -357,6 +362,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
             "p2's 4-mana 7/7",
         );
 
+        // Step 1 sees no Gifted Program, so the face that answers the play's choices is the base one
         // (R214), and legalActions offers its single-target Cry with the Tribute paid by the Cube.
         let tributes = vec![
             cube.clone(),
@@ -402,6 +408,8 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         assert_eq!(copies, 2);
 
         // R214: "step 1 already knows" the face, and step 1 checked the play's choices against the base
+        // face, so that is the face step 5 resolves: the chosen Big Felinor is destroyed and nothing
+        // else.
         assert!(!s.card(crafted.id.as_str()).radiant);
         s.expect_in_zone(felinor.as_str(), "graveyard");
         s.expect_in_zone(seven_seven.as_str(), "field");

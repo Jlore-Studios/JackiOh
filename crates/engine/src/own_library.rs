@@ -4,12 +4,12 @@
 //!   - R310: the list is a multiset. One entry per definition and face, with a count, sorted by the
 //!     definition's printed cost (R65's `query_cost`), then its name, then its id, base face first.
 //!     It carries no instance id, no position, no live cost and no rolled power.
-//!   - R311: each library card carries `knownAs`, what its owner was shown of it as it went in. The
-//!     list reads that record and never the card itself, so a change made inside a library, where
-//!     nobody sees it (#28 or #42 making a card Radiant, #95's discount, #98's roll), shows nothing.
-//!   - R312: a card with no record was never shown to its owner, and is counted as unknown until it
-//!     leaves: a library Pocket Chaos swapped (#87), a card Transmogulate put in one (#83, R177), even
-//!     one a prompt has since revealed (#51's options). It may show less than its owner knows, never more.
+//!   - R311: each library card carries `knownAs`, what its owner was shown of it as it went in. The list
+//!     reads that record and never the card itself, so a change made inside a library, where nobody sees
+//!     it (#28, #42, #95, #98), shows nothing.
+//!   - R312: a card with no record was never shown to its owner, and is counted as unknown until it leaves
+//!     (a library Pocket Chaos swapped, #87; a card Transmogulate put in one, #83, R177; even one a prompt
+//!     has since revealed, #51). It may show less than its owner knows, never more.
 //!
 //! The record is written where a card goes in openly (`state::create_game`, `setup::finish_mulligan`,
 //! `draw::shuffle_into_library`); a path that forgets to write it shows a card back, never a card.

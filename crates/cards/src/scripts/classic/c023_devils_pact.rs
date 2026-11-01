@@ -71,6 +71,7 @@ fn pact(radiant_book: bool) -> Script {
 
 pub fn script() -> CardScripts {
     // Issue #2179: both faces' Book of Flame is the base one; the Radiant face keeps its Spell Damage +2
+    // and its 6 discards.
     CardScripts {
         base: pact(false),
         radiant: pact(false),
@@ -78,6 +79,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: through v0.5.2 the Radiant face's Book of Flame was Radiant; `KEPT_SCRIPTS` folds those
+/// replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
         base: pact(false),
@@ -579,6 +581,7 @@ mod tests {
             }
 
             /// R767000: the script kept for the replays of v0.5.2 and before, whose Radiant face's Book of
+            /// Flame was Radiant.
             #[test]
             fn r767000_a_game_on_v0_5_2_replaces_each_play_with_a_radiant_book_of_flame() {
                 crate::under_kept(PACT, script_v0_5_2(), || {

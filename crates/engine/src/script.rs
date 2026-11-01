@@ -1047,11 +1047,10 @@ pub struct Script {
     /// the layers with its printed keywords (§10.4), so a Vanilla takes them. A PURE READ of instance
     /// data that must never call back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
-    /// "When this attacks" (Classic #13 Boots on the Ground, Classic #45 Nature Titan, Classic+ #73.1,
-    /// Stinkyscape #75 Badger): run for the attacker before any damage of each attack, a declared one's
-    /// once its trap window has closed (before the defender's `allyAttacked`), a forced one's before its
-    /// combat (R2285000). Parkable (R113); `ctx.data`: `combat::when_attacks_of`. An attacker or target
-    /// gone after it does not fight (R220).
+    /// "When this attacks" (Classic #13, #45, Classic+ #73.1, Stinkyscape #75): run for the attacker before
+    /// any damage of each attack, a declared one's once its trap window has closed (before the defender's
+    /// `allyAttacked`), a forced one's before its combat (R2285000). Parkable (R113); `ctx.data`:
+    /// `combat::when_attacks_of`. An attacker or target gone after it does not fight (R220).
     pub when_attacks: Option<Hook>,
     /// "After this attacks" (Classic+ #73.1, Stinkyscape #38, #91, #92 and #94): run for the attacker
     /// once the state check closing each of its combats (declared or forced) has run, only while it is
@@ -1242,10 +1241,9 @@ pub struct ActivationCost {
 
 /// B3.2, R384: one Activate ability. "unlimited" `uses` is bounded by `ACTIVATE_UNLIMITED_CAP`, and the
 /// tuning key "Activate" moves a number (B3.4). `cost` may be mana, a random discard (Classic #15), a
-/// Tribute (Classic #21) or the card itself (Classic #84); `targets` and `modes` travel in the action as
-/// a play's do (R81); `canActivate` is a pure read for a condition the text sets (Classic #7).
-/// `cost.tribute` counts units, one each: a Sheep Token's "worth 2" counts only toward a play's Tribute
-/// X (§6.3), and the card itself, as a Unit, may be one. `tributeSelf` bypasses Indestructible as every
+/// Tribute (Classic #21) or the card itself (Classic #84); `targets` and `modes` travel as a play's do
+/// (R81); `canActivate` is a pure read (Classic #7). `cost.tribute` counts units, one each (a Sheep Token's
+/// "worth 2" counts only toward a play's Tribute X, §6.3); `tributeSelf` bypasses Indestructible as every
 /// Sacrifice does.
 #[derive(Clone)]
 pub struct ActivationDecl {
@@ -1542,17 +1540,17 @@ pub struct ReplacementInstead {
 }
 
 /// One replacement a card makes. The moment fixes what `instead` may say:
-///  - `lethalHit`: `redirect: "enemyHero"` (E9) moves the hit, as a new instance from the same source,
-///    through the enemy hero's Armor and caps; it and `cancel` (Classic #52, R1704001) answer only for its
-///    own hero, `redirect: "self"` (R1204) for its controller's hero and other Units, once each per hit.
-///  - `healed`: `damage: "pierce"` turns the heal into that much Pierce damage from this card (E8), and
+///  - `lethalHit`: `redirect: "enemyHero"` (E9) moves the hit, as a new instance, through the enemy hero's
+///    Armor and caps; it and `cancel` (Classic #52, R1704001) answer only for its own hero, and
+///    `redirect: "self"` (R1204) for its controller's hero and other Units, once each per hit.
+///  - `healed`: `damage: "pierce"` turns the heal into Pierce damage from this card (E8), and
 ///    `lasting: "thisTurn"` every later heal on its enemies this turn; answers only a heal on its enemies.
-///  - `wouldDie`: `flicker: "yours"` (E22): its controller's dying units go back to their zones at once,
-///    reset, summoning sick, no Death, no Reborn, in one firing; or `resolveFirst` (#138, R1875006, R460).
+///  - `wouldDie`: `flicker: "yours"` (E22) sends its controller's dying units back to their zones at once,
+///    reset and summoning sick, no Death, no Reborn; or `resolveFirst` (#138, R1875006, R460).
 ///  - `toGraveyard`: `to`, exile or the bottom of the owner's library.
-///  - `targeted`: `interpose: true` summons this from its controller's hand to the leftmost open unit
-///    zone (none: nothing), no Cry, summoning sick, and the attack or pick moves to it; answers only its
-///    controller's unit targeted by the other player, and `by` narrows it (Classic #33 Joro, R651).
+///  - `targeted`: `interpose: true` summons this from its controller's hand to the leftmost open unit zone
+///    (none: nothing), summoning sick, and the attack or pick moves to it; answers only its controller's
+///    unit targeted by the other player, and `by` narrows it (Classic #33 Joro, R651).
 #[derive(Clone)]
 pub struct ReplacementDef {
     pub id: String,

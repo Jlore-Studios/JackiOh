@@ -412,6 +412,7 @@ mod tests {
     const LIBRARY: usize = 10;
     const MANA: i32 = 10;
 
+    /// Each turn ends when the test
     /// ends it (R82).
     fn setup(seed: &str, radiant: bool, extra: &[&str]) -> Scenario {
         let mut hand = vec![
@@ -807,6 +808,7 @@ mod tests {
     #[test]
     fn r1865001_a_stage_completed_with_no_resume_waits_as_a_weak_one_and_asks_for_a_0() {
         // R1854001: a "complete the current stage" from elsewhere (S #6 Tylannt's), as it marks the
+        // goal met, which the next state check notices.
         let seed = seed_where("ja-no-resume", |seed| {
             let mut s = setup(seed, false, &[]);
             played(&mut s, None);

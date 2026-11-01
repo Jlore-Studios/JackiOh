@@ -1,26 +1,20 @@
 // MN09 (#552), mobile: the prompt kinds the Meditative set adds, at phone width with a touch hold
-// (docs/polish/7-mobile-ux.md; R2617000: on a touch screen a card is read by holding it, which shows
-// its hover preview).
+// (docs/polish/7-mobile-ux.md; R2617000: a touch screen reads a card by holding it, which shows its preview).
 //
 //   craft   ME-CRAFT (Meditative #17, R880): the block editor docked as one sheet
 //   market  ME-MARKET (Meditative #42): the night market's stall
 //
-// At 360x780 and 390x844 each prompt is a bottom sheet across the whole width, never taller than the
-// screen; nothing in it scrolls sideways, every control is a 44 px target, and the card it shows has a
-// box inside the sheet. A hold on that card shows its preview and picks nothing: a lot is read, not bought.
+// At 360x780 and 390x844 each prompt is a bottom sheet across the whole width, never taller than the screen; nothing in
+// it scrolls sideways, every control is a 44 px target, and the card it shows has a box inside the sheet. A hold on
+// that card shows its preview and picks nothing: a lot is read, not bought.
 //
-// The play-time choices (R81) the set adds are no prompt kind of their own: a card's modes, picked in
-// a "Choose one" before the play is sent (#617), each the same sheet under the same checks:
+// The play-time choices (R81) the set adds are a card's modes, picked in a "Choose one" before the play is sent (#617),
+// each the same sheet under the same checks: #22 Mind Games' secret (ME-SECRET: Greed, Attack or Defend), #22.1 Fortify
+// Mind's guess at it, and #98 Showdown's lane (Lane 1 to Lane 5). The Created status (ME-CREATED, R943) of a card in
+// hand draws no mark on its face (R2647000), and a hold shows its preview.
 //
-//   secret      #22 Mind Games' secret choice (ME-SECRET): Greed, Attack or Defend
-//   prediction  #22.1 Fortify Mind's guess at it
-//   lane        #98 Showdown's lane, the target that names a lane: Lane 1 to Lane 5
-//
-// The Created status (ME-CREATED, R943) of a card in hand: no mark on its face (R2647000), and a hold
-// shows its preview, which says it was made during the game.
-//
-// The mount is mobile-ux.cy.tsx's, with the real catalog (the market draws its lots from it). The block
-// editor's meters and face are the engine's own `craftPreview`, so the WebAssembly module loads first.
+// The mount is mobile-ux.cy.tsx's, with the real catalog (the market draws its lots from it). The block editor's meters
+// and face are the engine's own `craftPreview`, so the WebAssembly module loads first.
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PendingOption, PlayerView } from "@jackioh/shared";

@@ -1,50 +1,22 @@
 //! BUILD M4-T1 and M9-T1 acceptance: catalog.json is the diff against SPEC §8 and the brief.
 //!
-//! Each fixture table below transcribes a document, not catalog.json, so that a card whose data drifts from
-//! its source fails here. Each was produced mechanically from its document's lines and checked in as a
-//! literal; the test never reads a document at run time (a re-parse would pass while it and the catalog
-//! drifted together, and would put file I/O in a crate that must stay pure: CLAUDE.md rule 4).
+//! Each fixture table is a literal transcribed from a document, so a card whose data drifts from its source
+//! fails here. No test reads a document at run time: a re-parse would pass while it and the catalog drifted
+//! together, and would put file I/O in a crate that must stay pure (CLAUDE.md rule 4).
 //!
-//!   CORE           — SPEC §8.1–§8.5, the 105 rows of the catalog table (`A/B → C/D` is base → radiant;
-//!                    `A/B` alone means the radiant form keeps those stats; an empty cell, no stats), and
-//!                    SPEC §7's six named tokens (`T-rush`, `T-sheep`, `T-felinor`, `T-bread`, `T-coin`,
-//!                    the one §2.1's setup deals, R244, and `T-ghoul`, R353), whose `rarity: "Token"` and
-//!                    Token tag follow §8's token rows and §7's token rules. The costs of #16 (3), #17,
-//!                    #34, #43, #49, #88 (4) and #65 (1) are patch v0.2.0's (issue #40).
-//!   CLASSIC        — docs/classic-sets.md B6, with the decisions B9 and the v0.2.0 plan adopted: #55 is
-//!                    Book of Wildfire, #72 Grand Counterspell (R381), #86 Genn's Radiant 42/42.
-//!   CLASSIC_PLUS   — docs/classic-sets.md B7's header lines and token bullets (B2.3's numbering; the
-//!                    Losers typed Unit, Otherworldly Removal's three and the Grapes typed Spell, the
-//!                    Grapes tagged Fruit, every token tagged Token and rated "Token", B2.5) and B8's
-//!                    table of the ten AI generated cards (tagged AI). C+ #69 Buff Billy's
-//!                    "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
-//!   MEDITATIVE     — docs/meditative-set.md's card headers (M6), with §8.8's later patches. The later
-//!                    sets' tables name their documents on their own docs.
-//!   Later patches  — the briefs keep what the designer first wrote, the fixture what the cards are now:
-//!                    #1067 Jlockheed → Jlockeed in every name; #831 costs, stats, types and tags in
-//!                    every set's rows; #2278 Megabase (Stinkyscape 116) a Unit, without Animated; #1149
-//!                    costs, stats and the CN in a Bottle rename; #1219 12 Attack for the Radiant
-//!                    Jlockeed Shredder-10; #1194 costs of #76 (2), C+ #64 (5) and Meditative #19.1 (0);
-//!                    #1151 Human on C #40 MC Tech and Meditative #57, #82, #83 and #85; #2280 C+ #74 and
-//!                    S #16 print no stats on either face (R2280000).
-//!   issue #2521    — the Stinkyscape balance patch, in §8's rows: Core #84 and Meditative #80 lose
-//!                    Quickdraw; C+ #34 (2); S #11 (2), #39 (3), #163 (0) and #164 (1); S #68 3/1 → 6/2;
-//!                    the five Faction cards (S #95, #159 to #162) renamed "Faction: …", (2) and tagged
-//!                    Faction; S #137 a Legendary Human; the six Resources tagged Resource; and the new
-//!                    S #176, S #177 and M+ #1.5 (§8.9, §8.10, §7).
-//!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
-//!                    being R349's fallback.
-//!   census         — each set's cards, tokens and rarities, read from `jackioh_cards::census` (#2581),
-//!                    where they are written once; the totals are its sums.
-//!   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book, Pancake
-//!                    and AI, the mechanics patch's Plague (every card that uses Plague Counters), and
-//!                    patch v0.2.Y's Catalyst, Prime and Acclaimed.
+//!   CORE          — SPEC §8.1–§8.5 (`A/B → C/D` is base → radiant), §7's tokens (§2.1's setup coin R244,
+//!                   `T-ghoul` R353); the costs of #16, #17, #34, #43, #49, #88 and #65 are v0.2.0's (#40).
+//!   CLASSIC       — docs/classic-sets.md B6, B9: #55 Book of Wildfire, #72 (R381), #86 Genn's Radiant 42/42.
+//!   CLASSIC_PLUS  — B7 (B2.3, B2.5) and B8's ten AI cards; #69 prints 0/0 (`xStats`).
+//!   MEDITATIVE    — docs/meditative-set.md's card headers (M6), with §8.8's later patches.
+//!   Later patches — the fixture holds what the cards are now: #1067, #831, #2278, #1149, #1219, #1194 (#76,
+//!                   C+ #64, M #19.1), #1151 (#57, #82, #83, #85), #2280 (C+ #74, S #16; R2280000).
+//!   issue #2521   — §8's rows: Core #84, M #80, C+ #34, S #11, #39, #68, #95, #137, #159 to #162, #163,
+//!                   #164, #176, #177 and M+ #1.5 (§8.9, §8.10, §7).
+//!   others        — radiant faces (§5.2, R276, R349), the census (#2581), tags (§5, §6, M4-T1, R278, B2.4).
 //!
-//! Not asserted here: `keywords`, `text`, `params`, `refs` and `loc` (the per-card tests prove the
-//! behavior `keywords`, `text` and `params` describe, references.rs proves `refs`, and `loc` is
-//! frozen data, SURFACE §7.5), and id shape (`cargo jackioh catalog check` owns the schema).
-//!
-//! One test per set checks every row and names every row that fails.
+//! Not asserted: `keywords`, `text`, `params`, `refs` and `loc` (per-card tests and references.rs prove the
+//! first four; `loc` is frozen data, SURFACE §7.5) and id shape (`cargo jackioh catalog check`).
 
 use std::collections::BTreeMap;
 
@@ -7560,7 +7532,8 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
 ];
 
 /// The only tags any entry may carry: BUILD M4-T1's and B2.4's, and those added since (the mechanics
-/// patch's Plague, patch v0.2.Y's Catalyst, Prime and Acclaimed, #1837's R1837000, R1857000, #2521's).
+/// patch's Plague, patch v0.2.Y's Catalyst, Prime and Acclaimed, #1837's tags R1837000, the Stinkyscape
+/// set's R1857000, #2521's).
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -8969,11 +8942,10 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .collect::<Vec<_>>(),
             "entries tagged Jlockeed"
         );
-        // The tag follows the name: every entry whose name says Jlockeed carries it (one faction, one
-        // spelling: #1067, B2.4), plus Classic #4 Palantir, which the balance patch inducted without renaming
-        // it, and M #87 Tatches the Totem, which carries every tribal tag ("All Tribes", §8.8 row 87, R1424).
-        // M #97.9 Jlockeed's Headquarters is the Meditative set's, a token that fills the board with the
-        // faction's Units (§8.8).
+        // The tag follows the name (one faction, one spelling: #1067, B2.4), plus Classic #4 Palantir, which
+        // the balance patch inducted without renaming it, and M #87 Tatches the Totem, which carries every
+        // tribal tag ("All Tribes", §8.8 row 87, R1424). M #97.9 Jlockeed's Headquarters is a Meditative
+        // token that fills the board with the faction's Units (§8.8).
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.contains("Jlockeed"))

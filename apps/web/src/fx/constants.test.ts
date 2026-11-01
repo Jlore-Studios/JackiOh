@@ -38,10 +38,6 @@ const S2 = {
   FX_OVERFLOW_FIZZLE_AT: 0.45,
   FX_MANA_STAGGER_MS: 40,
   FX_MANA_MAX_SPARKS: 10,
-  FX_SHAKE_MIN_DAMAGE: 3,
-  FX_TRAUMA_PER_DAMAGE: 0.15,
-  FX_SHAKE_MAX_TRAUMA: 0.8,
-  FX_HERO_TRAUMA_MULT: 1.25,
   FX_SLAM_STATS_MIN: 10,
   FX_SLAM_TRAUMA_PER_STAT: 0.06,
   FX_SLAM_MAX_TRAUMA: 0.5,
@@ -264,7 +260,6 @@ describe("S2 the effects constants", () => {
 
   it("S2 the shake caps stay inside [0, 1] trauma", () => {
     for (const trauma of [
-      constants.FX_SHAKE_MAX_TRAUMA,
       constants.FX_SLAM_MAX_TRAUMA,
       constants.FX_LEGENDARY_TRAUMA,
       constants.FX_TRAP_TRAUMA,
@@ -279,16 +274,10 @@ describe("S2 the effects constants", () => {
     expect((1 / constants.FX_TRAUMA_DECAY) * 1000).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
   });
 
-  it("S2 a typical hit reads: 4 or 5 damage moves the board several pixels and keeps it moving for a third of a second (B52)", () => {
-    // Peak offset is FX_SHAKE_MAX_PX · trauma² (shake.ts); a hit that peaks under 1 px goes unnoticed.
-    const trauma = (damage: number): number => Math.min(constants.FX_SHAKE_MAX_TRAUMA, damage * constants.FX_TRAUMA_PER_DAMAGE);
+  it("S2 the result thumps hardest of all, and a trap reveal is still felt (B52)", () => {
+    // Peak offset is FX_SHAKE_MAX_PX · trauma² (shake.ts). A damage hit's shake is its tier's
+    // `shakePx` (game/damageFeel.ts, #57), which cues.test.ts holds.
     const peak = (t: number): number => constants.FX_SHAKE_MAX_PX * t * t;
-    expect(peak(trauma(4))).toBeGreaterThanOrEqual(6);
-    expect(peak(trauma(5))).toBeGreaterThanOrEqual(9);
-    // How long it stays above one pixel of amplitude.
-    const visibleMs = (t: number): number => ((t - Math.sqrt(1 / constants.FX_SHAKE_MAX_PX)) / constants.FX_TRAUMA_DECAY) * 1000;
-    expect(visibleMs(trauma(5))).toBeGreaterThanOrEqual(300);
-    // The result thumps hardest of all, and a trap reveal is still felt.
     expect(peak(constants.FX_RESULT_TRAUMA)).toBeGreaterThanOrEqual(12);
     expect(peak(constants.FX_TRAP_TRAUMA)).toBeGreaterThanOrEqual(2);
   });

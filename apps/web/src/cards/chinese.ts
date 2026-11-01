@@ -1,19 +1,19 @@
-// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the
-// catalog (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases
-// resolve to crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no
-// server is asked. Presentation only (CLAUDE.md rule 7): no rule reads them.
+// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the catalog
+// (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases resolve to
+// crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no server is asked.
+// Presentation only (CLAUDE.md rule 7): no rule reads them.
 //
-// The first table is keyed by catalog id: each card's and token's name and both faces' texts, each
-// text with exactly the `{key}`s its English face has (an English `{key|singular|plural}` is a plain
-// `{key}` there, a measure word beside it), and its preview labels (`previews`). It is written in each
-// card's `zh` in crates/cards/card-text.yaml (#2498), which crates/tools/tests/export_card_text.rs
-// turns into `chinese.json`; its `"//"` entry says so and is dropped here. The second holds the
-// frame's words. crates/cards' cross tests hold both to their contract; chinese.test.tsx proves the
-// glossary names exactly GLOSSARY's entries.
+// The first table is keyed by catalog id: each card's and token's name and both faces' texts, each text with
+// exactly the `{key}`s its English face has (an English `{key|singular|plural}` is a plain `{key}` there, a
+// measure word beside it), and its preview labels (`previews`). It is written in each card's `zh` in
+// crates/cards/card-text.yaml (#2498), which crates/tools/tests/export_card_text.rs turns into
+// `chinese.json`; its `"//"` entry says so and is dropped here. The second holds the frame's words.
+// crates/cards' cross tests hold both to their contract; chinese.test.tsx proves the glossary names exactly
+// GLOSSARY's entries.
 //
-// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), whatever the
-// reader's language, and for a reader who reads Chinese (R711000) every card is drawn from these
-// tables, in a match and in the collection alike.
+// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), whatever the reader's
+// language, and for a reader who reads Chinese (R711000) every card is drawn from these tables, in a match
+// and in the collection alike.
 
 import chineseJson from "@jackioh/cards/chinese.json";
 import termsJson from "@jackioh/cards/chinese-terms.json";
@@ -119,10 +119,9 @@ function ingredientEntries(def: CardDef): { entry: ChineseEntry; radiant: boolea
 }
 
 /**
- * R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its
- * ingredients' joined as crates/engine/src/subsystems/fuse.rs joins the English (R469: one fused on its
- * Radiant face puts that face in the base text too). Any other with no entry comes back as given, and
- * so does Glitch, corrupted in every language (glitch.ts).
+ * R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its ingredients'
+ * joined as crates/engine/src/subsystems/fuse.rs joins the English (R469: one fused on its Radiant face puts
+ * that face in the base text too). Any other with no entry, and Glitch (glitch.ts), comes back as given.
  */
 export function chineseDef(def: CardDef): CardDef {
   if (isGlitch(def.id)) return def;
@@ -159,9 +158,9 @@ export function chineseKeyword(keyword: Keyword): string {
 }
 
 /**
- * R280, R1301: a preview label in Chinese: of the card's templates (its own or its ingredients'),
- * filled as its face is (`fillParams`), the one whose English fill is `label` gives its Chinese
- * template, filled the same way. A label no template fills comes back as it is.
+ * R280, R1301: a preview label in Chinese: of the card's templates (its own or its ingredients'), filled as
+ * its face is (`fillParams`), the one whose English fill is `label` gives its Chinese template, filled the
+ * same way. A label no template fills comes back as it is.
  */
 export function chinesePreviewLabel(
   def: CardDef,

@@ -1,16 +1,16 @@
-//! What a card may not be done to (docs/classic-sets.md B5 E35): the one place a targeting rule, a
-//! damage step or an attack validator asks whether a card is out of an effect's reach, so the answer a
-//! client greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
+//! What a card may not be done to (docs/classic-sets.md B5 E35): the one place a targeting rule, a damage
+//! step or an attack validator asks whether a card is out of an effect's reach, so the answer a client
+//! greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
 //!
-//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `effects/targets.rs`'s,
-//!    which asks `effect_is_from_spell` for every card a target or a scope names.
+//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `effects/targets.rs`'s, which
+//!    asks `effect_is_from_spell` for every card a target or a scope names.
 //!  * Immutable's targeting half (R781001, R450): every declaration and `target` prompt asks
-//!    `immutable_bars`, as does a Field Trap naming its one card (Classic #5 Tesla, Classic+ #74);
-//!    random picks, scopes and attacks still reach it. Its text half (R23) is read at each verb.
-//!  * The attack restrictions (Classic+ #51, Classic+ #19.1, a carried Unit's R446, Flying's #783, the
-//!    Gauntlet's R1849005): `combat.rs` asks `attack_restriction` for a declared attack (§4.2 step 2),
-//!    the Taunt wall (step 3: a Taunt binds only who may attack it) and every forced attack, which
-//!    skips steps 1 to 3 (R53) but not these.
+//!    `immutable_bars`, as does a Field Trap naming its one card (Classic #5 Tesla, Classic+ #74); random
+//!    picks, scopes and attacks still reach it. Its text half (R23) is read at each verb.
+//!  * The attack restrictions (Classic+ #51, #19.1, a carried Unit's R446, Flying's #783, the Gauntlet's
+//!    R1849005): `combat.rs` asks `attack_restriction` for a declared attack (§4.2 step 2), the Taunt wall
+//!    (step 3: a Taunt binds only who may attack it) and every forced attack, which skips steps 1 to 3
+//!    (R53) but not these.
 //!
 //! Beside them, Stinkyscape's (#1849) Immune to Spell Damage (R1849000) and "Units cannot be in Defense
 //! Position" (R1849006). A printed restriction is a static flag, so a Vanilla takes it with the text. A

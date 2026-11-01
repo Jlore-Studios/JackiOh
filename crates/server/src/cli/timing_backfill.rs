@@ -5,18 +5,15 @@
 //! jackioh-server timing-backfill
 //! ```
 //!
-//! Every finished match whose log `public.match_actions` still holds (the retention purge keeps a
-//! log `MATCH_ACTION_RETENTION_DAYS`) and that has no action timing yet is folded by
-//! `actor::telemetry::replay`, the fold a rebuilt actor makes, and its rows are written as the live
-//! path writes them, one transaction per match. The log's `at` stamps stand in for the pushes, so a
-//! think time runs from one logged action to the next, and the rows carry no clock and no rank
-//! bucket, which the log does not hold. The store leaves out the moves of an account deleted since
-//! (R1442: a deletion is never undone), and lists no match with neither account left. Nothing else
-//! is backfilled: emotes and a match's signals never reached the log. A match today's engine no
-//! longer folds whole (a logged action it refuses, or a deck it no longer builds) is skipped, since
-//! its rows would describe another game; a second run folds it again and skips it again. So is a
-//! match in which no person made a move (every action the clock's): it leaves no row, and the next
-//! run folds it again.
+//! Every finished match whose log `public.match_actions` still holds (the retention purge keeps a log
+//! `MATCH_ACTION_RETENTION_DAYS`) and that has no action timing yet is folded by `actor::telemetry::replay`,
+//! as a rebuilt actor folds it, and its rows are written as the live path writes them, one transaction per
+//! match. The log's `at` stamps stand in for the pushes, so the rows carry no clock and no rank bucket. The
+//! store leaves out the moves of an account deleted since (R1442: a deletion is never undone), and lists no
+//! match with neither account left. Nothing else is backfilled: emotes and a match's signals never reached
+//! the log. A match the engine does not fold whole (a logged action it refuses, a deck it cannot build) is
+//! skipped, since its rows would describe another game, and so is one in which no person made a move (every
+//! action the clock's); the next run folds and skips each again.
 
 use anyhow::bail;
 
@@ -38,7 +35,7 @@ pub struct BackfillOutcome {
     pub matches: usize,
     /// The action timings written (none for the seat of an account since deleted).
     pub rows: usize,
-    /// Matches today's engine no longer folds whole.
+    /// Matches today's engine does not fold whole.
     pub skipped: usize,
 }
 

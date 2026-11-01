@@ -76,6 +76,7 @@ fn zones_at(plays: &[(Option<ZoneChoice>, Option<bool>)], embiggened: bool) -> V
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
+/// The modes of the first play `legalActions` lists for p1's hand card, so a card that declares one
 /// (Meditative+ #4 Supply Drop's Combat or Supplies, R81) is played with a mode it is offered at;
 fn listed_modes(g: &Scenario, card: &str) -> Option<Vec<String>> {
     legal_actions(g.state(), P1)
@@ -236,6 +237,7 @@ fn view_prices_are_charged(g: &Scenario, card: &str, normal: i32, embiggened: i3
 }
 
 /// Ends turns until p1's first turn after the setup turn `from`. R82 may already have ended a turn
+/// with nothing left to do in it, so the walk reads whose turn it is rather than counting.
 fn to_p1s_next_turn(g: &mut Scenario, from: i32) {
     while g.state().active != P1 || g.state().turn <= from {
         g.end_turn();
@@ -281,6 +283,7 @@ fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_an
         "the catalog holds an embiggen card with A below (4) and B at (4)+"
     );
     // Every embiggen card is driven: each price is reached exactly when it is (4)+, so M #81
+    // Deadman's Hand's (0) embiggen (2) is reached at neither.
     for (id, base, embiggen) in cards {
         for radiant in [false, true] {
             let mut g = scenario(json!({

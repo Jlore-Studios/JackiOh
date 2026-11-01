@@ -53,6 +53,7 @@ mod tests {
     const COMET: &str = "stinkyscape-156";
     const FILLER: &str = "core-005";
 
+    /// The shipped Catalyst cards: the Comet's pool, the set's own #147 IN33DH3 among them since its
     /// release (#1884).
     const POOL: [&str; 7] = [
         "classicplus-038",

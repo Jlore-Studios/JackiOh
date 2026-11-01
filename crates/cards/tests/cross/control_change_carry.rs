@@ -62,6 +62,7 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         g.end_turn();
+        // The steal fired at the start of p2's turn, and the modifier went with the card; both seats
         // were told, since `modifierChanged` names the seat (R169).
         assert_eq!(g.state().active, PlayerId::P2);
         assert_eq!(g.card(&twinspell).controller, PlayerId::P2);
@@ -114,6 +115,7 @@ mod s6_2_a_start_of_turn_hook_belongs_to_its_controllers_turn {
         let mrow = g.unit_at("p2", 1);
         let p2_hand = g.hand("p2").len();
 
+        // Moths compels Mrow, which
         // dies to the strike back; its Death takes control of the unit that destroyed it (R361): Moths.
         g.start_turn();
         g.expect_in_zone(&mrow, "graveyard");

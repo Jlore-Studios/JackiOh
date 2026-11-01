@@ -169,6 +169,7 @@ mod tests {
 
     const MANA: i32 = 20;
 
+    /// Re-pinned for the Training
     /// Grounds release (#2204): its Jelly Beans #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean (the
     /// snapshot of Core #26) join it.
     const POOL: [&str; 18] = [
@@ -192,6 +193,7 @@ mod tests {
         "traininggrounds-050",
     ];
 
+    /// Each turn ends when the
     /// test ends it (R82).
     fn holding(radiant: bool, seed: &str, hand: &[&str]) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
@@ -379,6 +381,7 @@ mod tests {
     fn r1854002_r1854003_stealing_an_enemy_card_meets_stage_3_which_steals_their_mana_crystals() {
         let mut s = at_the_vaults(false, "heist-vaults", &[MIND_CONTROL]);
         // A round, so each side holds crystals (R1854003: no maximum mana, nothing to steal). Stage 1's
+        // Unit may be a Wardrum, whose end of turn casts a copy of the Heist, asking its Discover again.
         for _ in 0..2 {
             s.end_turn();
             while s.state().pending.is_some() {
@@ -411,6 +414,7 @@ mod tests {
         let pick = offered(&s)[0].clone();
         s.answer(json!(pick));
         // Re-pinned for the Training Grounds release (#2204): the seed's first option is now S #6
+        // Tylannt, which the hand already holds two of, so the pick is the one added last.
         let card = s.hand(P1).into_iter().rev().find(|card| card.def_id == pick).expect("the pick");
         assert!(card.radiant);
         tylannt(&mut s, 1);

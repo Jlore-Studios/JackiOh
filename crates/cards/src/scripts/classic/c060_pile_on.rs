@@ -32,6 +32,7 @@ pub fn script() -> CardScripts {
     };
 
     // The Radiant face drops the return (SPEC §8.6 row 60): the same Recruit, and this Spell goes to the
+    // graveyard as any Spell does.
     let radiant = Script {
         cry: base.cry.clone(),
         ..Script::default()
@@ -40,6 +41,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+// The deck holds Core cards with their own tests; Bigot's Cry would destroy an enemy Unit, which a
 // Recruit never fires (R1); a Rush Token card stands for a unit-token card a deck may hold (R11).
 #[cfg(test)]
 mod tests {

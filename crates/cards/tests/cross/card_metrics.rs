@@ -194,6 +194,7 @@ fn r1846003_r2173000_a_fold_under_a_carried_version_reads_its_own_lists_or_the_b
     for version in versions {
         let shipped = shipped_catalog(version).expect("a carried version's catalog");
         // R2173000: a version that kept its own lists folds against them; one that kept none (every
+        // version before the first card that reads them shipped) against the build's.
         let expected = match shipped.card_lists() {
             None => build,
             Some(lists) => jackioh_engine::CardMetrics {

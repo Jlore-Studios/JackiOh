@@ -1,11 +1,10 @@
 // #492: every Embiggen card asks whether to pay its embiggen price, against the REAL engine.
 //
-// The engine lists a play of an "A embiggen B" card with `embiggen: false` and, once B is affordable,
-// the same play with `embiggen: true` (R81). The client builds the play from those (CLAUDE.md rule 7):
-// with both forms listed it opens the embiggen picker and sends the form picked; with only the normal
-// form listed it asks nothing about the price. The view and the legal list are real states' (the
-// WebAssembly module, docs/v0.3.0/SURFACE.md §10.3). The Embiggened card shows the view's
-// `embiggenCost`, the engine's price under every cost change. Every Embiggen card in the catalog is
+// The engine lists a play of an "A embiggen B" card with `embiggen: false` and, once B is affordable, the
+// same play with `embiggen: true` (R81). The client builds the play from those (CLAUDE.md rule 7): with
+// both forms listed it opens the embiggen picker and sends the form picked; with only the normal form it
+// asks nothing about the price. The view and the legal list are real states' (docs/v0.3.0/SURFACE.md
+// §10.3); the Embiggened card shows the view's `embiggenCost`. Every Embiggen card in the catalog is
 // driven, on both faces, so a new one is covered the day it is added.
 
 import { CATALOG } from "@jackioh/cards";

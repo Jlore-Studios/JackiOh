@@ -63,6 +63,7 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [VANILLA], "library": filler(4) },
         }));
         s.play(VAMP, json!({ "zone": 1 }));
+        // Its 2 damage heals its
         // controller's hero 2 (§4.4 step 8), though it dies to the 4-attack strike back.
         s.end_turn();
         s.end_turn();

@@ -17,6 +17,7 @@ fn catalog_size() -> usize {
 
 const EXPECT_ALL_SCRIPTS: bool = false;
 
+/// Core's files have all landed (M4-T4), so a Core card without a script is a regression; the
 /// Classic and Classic+ scripts land in their own card waves (B10.2, M9-T6 … M9-T8).
 fn ids_allowed_without_script() -> Vec<String> {
     if EXPECT_ALL_SCRIPTS {
@@ -117,7 +118,9 @@ mod registry_build_m4_t2 {
     fn keys_cards_by_catalog_id_and_takes_every_def_from_the_catalog() {
         for id in scripted_ids() {
             assert!(CATALOG_IDS.contains(&id), "\"{id}\" is not a catalog id");
+            // A script file names its card by `ID` alone and build.rs takes the def from catalog.json
             // (SURFACE §7.4), so its def is the one the engine and the client see: a hand-written def
+            // cannot exist to drift from catalog.json.
             assert_eq!(card_def(&id).id, id, "{id}: def must come from the catalog");
         }
     }
@@ -131,6 +134,7 @@ mod registry_build_m4_t2 {
 
     #[test]
     fn two_scripts_never_claim_one_card_build_rs_refuses_it() {
+        // build.rs is that check now
         // (SURFACE §7.4): what reaches the registry has one file per id, sorted by id.
         let ids = scripted_ids();
         let mut sorted = ids.clone();
@@ -200,6 +204,7 @@ mod registry_build_m4_t2 {
         register_all();
         // An engine test registers its own fixtures (BUILD §0). In Rust a fixture registration is the
         // testkit's thread-local override (SURFACE §8), so it is in force on its own thread and never
+        // anywhere else: the registries every other thread reads are the real ones.
         std::thread::scope(|scope| {
             scope.spawn(|| {
                 jackioh_engine::testkit::register_catalog(CardDefs::new());

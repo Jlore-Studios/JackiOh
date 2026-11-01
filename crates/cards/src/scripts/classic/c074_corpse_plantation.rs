@@ -17,6 +17,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-074";
 
 /// Patch v0.3.10 (#831): the Activate arms one play from the graveyard this turn (R831015), the turn it
+/// was armed on remembered here; the play that uses it, or the turn's end, disarms it.
 const ARMED: &str = "armed";
 
 fn is_this_turn(state: &GameState, value: Option<&Value>) -> bool {
@@ -84,6 +85,7 @@ pub fn script() -> CardScripts {
     }
 }
 
+// The harness's `play` takes a card from a hand, so a graveyard play is sent to `reduce` as
 // `legalActions` offers it and read back off its result (as C #28 Second Wind's test does).
 
 /// `describe("C #74 Corpse Plantation")`.

@@ -1,20 +1,20 @@
 //! The cosmetics registry (#1295, #1297, SPEC §11 R1295000): every cosmetic a player can pick, in
-//! `crates/server/cosmetics.json`. The pack roll ([`pack_cosmetics`], R1301002) and ownership read
-//! it here; `tests/export_cosmetics.rs` writes it into `apps/web/src/wire/generated/cosmetics.ts`.
-//! [`problems`] is its check: unique lower-case slugs short enough for a settings text (R633), one
-//! default per kind a player picks, a chase exactly when Legendary or Mythic (R1333000). A cosmetic
-//! never enters `PlayerView`, an action, the log or a replay hash (CLAUDE.md rule 7).
+//! `crates/server/cosmetics.json`. The pack roll ([`pack_cosmetics`], R1301002) and ownership read it here;
+//! `tests/export_cosmetics.rs` writes it into `apps/web/src/wire/generated/cosmetics.ts`. [`problems`] is
+//! its check: unique lower-case slugs short enough for a settings text (R633), one default per kind a
+//! player picks, a chase exactly when Legendary or Mythic (R1333000). A cosmetic never enters `PlayerView`,
+//! an action, the log or a replay hash (CLAUDE.md rule 7).
 //!
-//! R2655000: a full-art card has an Epic (still), a Legendary (animated) and a Mythic (signed) full
-//! art, the last two chases; the check refuses two of one rarity. A card's own pick names one
-//! ([`full_art_picked`]): `false`, `true` for its Epic, or a full art's id. R2655001: #2655 appends
-//! 57, none a default or a starter (§14.12).
+//! R2655000: a full-art card has an Epic (still), a Legendary (animated) and a Mythic (signed) full art, the
+//! last two chases; the check refuses two of one rarity. A card's own pick names one ([`full_art_picked`]):
+//! `false`, `true` for its Epic, or a full art's id. R2655001: #2655 appends 57, none a default or a
+//! starter (§14.12).
 //!
 //! R1827000: the hero portraits (R641) are account cosmetics, one `portrait-<id>` per `PortraitId`,
-//! `portrait-vanilla` the default and a starter. R1833000: #1833 appends 36, none a default or a
-//! starter; a deck's save refuses one its account does not own ([`owns_account_cosmetic`],
-//! [`owns_portrait`]). R1834001: every write of a pick is held to [`check_pick`], and a loadout
-//! freezes nothing else (`loadout::freeze_loadout`, R1834002).
+//! `portrait-vanilla` the default and a starter. R1833000: #1833 appends 36, none a default or a starter; a
+//! deck's save refuses one its account does not own ([`owns_account_cosmetic`], [`owns_portrait`]).
+//! R1834001: every write of a pick is held to [`check_pick`], and a loadout freezes nothing else
+//! (`loadout::freeze_loadout`, R1834002).
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -591,8 +591,7 @@ mod tests {
         ("card-back-nebula", CosmeticKind::CardBack, CosmeticRarity::Mythic),
     ];
 
-    /// R2655000: how many full arts #2655 appends after #1833's 36 (six portrait cards' Legendary and
-    /// Mythic, fifteen more cards' Epic, Legendary and Mythic).
+    /// R2655000: how many full arts #2655 appends after #1833's 36.
     const R2655000_NEW: usize = 6 * 2 + 15 * 3;
 
     /// The shipped registry before #1833 (R1833000): all but its 36 and #2655's 57.
@@ -967,7 +966,6 @@ mod tests {
                 ..dropping("full-art-new", CosmeticKind::FullArt)
             },
         ]);
-        // A default that is not marked a starter is still a default.
         cosmetics[0].starter = false;
         let ids: Vec<String> = pack_cosmetics(&cosmetics)
             .into_iter()
@@ -1036,7 +1034,6 @@ mod tests {
             ..entry(id, kind, false)
         };
         let mut cosmetics = defaults();
-        // A default that is not marked a starter is still a default.
         cosmetics[3].starter = false;
         cosmetics.extend([
             Cosmetic {

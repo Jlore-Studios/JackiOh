@@ -7,10 +7,10 @@
 //!
 //! The boundary is C: `mlua` builds Luau for WebAssembly only through `wasm32-unknown-emscripten`, which
 //! `wasm-bindgen` cannot target, so the module links through `emcc` and every binding is an `extern "C"`
-//! function over NUL-terminated UTF-8 strings, with the names and JSON SURFACE §10.1 gives, so nothing
-//! above `index.ts` changes. A call that fails returns NULL (or -1, 1) and stows its message for
-//! `jackioh_last_error`; `reduce`'s refusal of an illegal action is the `ReduceResult`'s `error`
-//! (SURFACE §6.1). A panic is an engine invariant broken (SURFACE §4.4.9), printed before the abort.
+//! function over NUL-terminated UTF-8 strings, with the names and JSON SURFACE §10.1 gives. A call that
+//! fails returns NULL (or -1, 1) and stows its message for `jackioh_last_error`; `reduce`'s refusal of an
+//! illegal action is the `ReduceResult`'s `error` (SURFACE §6.1). A panic is an engine invariant broken
+//! (SURFACE §4.4.9), printed before the abort.
 //!
 //! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505). The pure crates
 //! read no clock (CLAUDE.md rule 4, SURFACE §3): `ai_decide` hands the body `wall_now_ms`.
@@ -53,9 +53,9 @@ pub extern "C" fn jackioh_last_error() -> *const c_char {
 }
 
 /// Free a string this module returned, or an argument buffer `index.ts` is done with. Both live on the
-/// one emscripten heap (Rust's allocator here is libc's `malloc`, the `_malloc` the glue's
-/// `stringToNewUTF8` writes through), and every argument is `JSON.stringify` output, valid UTF-8 with no
-/// interior NUL, so a buffer the glue allocated reads back as exactly the `CString` this frees.
+/// one emscripten heap (Rust's allocator here is libc's `malloc`, which the glue's `stringToNewUTF8`
+/// writes through), and every argument is valid UTF-8 with no interior NUL, so a buffer the glue
+/// allocated reads back as exactly the `CString` this frees.
 ///
 /// # Safety
 ///

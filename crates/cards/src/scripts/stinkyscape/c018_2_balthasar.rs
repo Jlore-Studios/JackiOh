@@ -11,6 +11,9 @@
 //! its controller's hero health is below the health that hero started with, its seat's handicap
 //! `heroHealth` else HERO_HEALTH (`starting_health_of`, R290, R180) (R1843000). Activate (R384, once a
 //! turn): a copy (R57) of the last face-up card its controller played (`last_face_up_played`, R451: casts
+//! count, R70; a face-down Trap never; the AI generated cards passed over), on the face it was played,
+//! a Chinese one Chinese (R1300), added to their hand with `add_to_hand`'s `costMod` of `surcharge`, not
+//! capped; a full hand burns it (§2.4); nothing before a play.
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
