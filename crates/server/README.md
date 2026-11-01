@@ -179,6 +179,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
+| `GET` | `/api/catalog/:version` | none | the snapshot shipped patch `version` left, in `/api/catalog`'s shape; 404 for a version never shipped (SPEC §9.4, R388) |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001). The activation grants the starter cards (R111) and pays the newest set's track its first level (R1310000) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
