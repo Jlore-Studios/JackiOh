@@ -38,10 +38,10 @@ trap backrow. This file binds every agent, not only Claude.
    `spec-fold.yml` folds both files on `main` daily, since every ruling's branch conflicted on them. Section and
    ruling notes are edited in the PR as ever. `cargo jackioh spec check` fails on any mismatch between the
    notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`, comments included.
-4. `crates/engine`, `crates/cards`, `crates/ai` and `crates/luau` are pure: no clock, I/O, environment,
-   threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
+4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/luau` and `crates/run` (the dungeon run) are pure:
+   no clock, I/O, environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
    the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
-   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the four (no game
+   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five (no game
    crate takes `jackioh-luau`: it is the custom-card host, #902 V4), `mlua` (`jackioh-luau`'s) and, behind a
    `ts` feature (the engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
@@ -68,7 +68,7 @@ trap backrow. This file binds every agent, not only Claude.
    and attach the report.
 9. Every number is a named constant: rules numbers in `crates/engine/src/config.rs` (BUILD §2, the "decide"
    rulings included), server numbers in `crates/server/src/config.rs`, the AI's in `crates/ai/src/`
-   (`config.rs` and its modules' constants). Those the client reads are generated into
+   (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`. Those the client reads are generated into
    `apps/web/src/wire/engineConfig.ts` and `serverConfig.ts` by each crate's `tests/export_config.rs`, and CI
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
@@ -177,6 +177,8 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 - `crates/cards`: a script reads state only through the prelude's read helpers, never `state.players[…]`; a
   missing verb or board fact goes into the engine (board facts in `src/query.rs`) with its test.
 - `crates/ai`: hidden cards never change a decision.
+- `crates/run`: the dungeon run (`docs/dungeon-run.md`), a seeded map of fights and tiles around plain
+  games. It changes no game: the caller plays each fight and reports its result.
 - `crates/server`: `cargo test` runs the store's in-memory fake, so RLS and triggers are checked only by the
   Docker suites, and a store change goes in `tests/store/contract.rs`.
 - `apps/web`: components take a `PlayerView` and nothing else. `Game.tsx` is the one board; each of its
