@@ -554,7 +554,7 @@
   overflow: hidden;
   border: 1px solid var(--tavern-brass);
   border-radius: 12px;
-  background: linear-gradient(180deg, #341e10, var(--tavern-well));
+  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-well));
 }
 
 .tavern.app-shell .patch__art-img {
