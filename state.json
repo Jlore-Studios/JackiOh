@@ -12578,11 +12578,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-01T16:06:59Z",
+        "at": "2026-11-01T16:35:17Z",
         "difficulty": "hard",
-        "provider": "gpt",
-        "tier": "medium",
-        "why": "The hard rule applies because this changes crates/ai/src root probing and search evaluation, with bounded simulations that must preserve hidden-information and node-budget contracts."
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the hard line 'the AI's search (crates/ai/src/)' clearly applies: this adds a new root probe in evaluate.rs and decide.rs and a new ruling"
       },
       "failures": 0,
       "forced": false,
