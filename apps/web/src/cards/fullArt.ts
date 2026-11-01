@@ -71,6 +71,7 @@ import fullArtTokens from "./fullArtTokens.json";
 import type { FaceModel } from "./model.ts";
 import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
+import { getStored } from "../net/storage.ts";
 
 /**
  * R2655000: a full art's tier, the cosmetics' own rarity scale's: the still Epic, the animated
@@ -219,12 +220,8 @@ export function fullArtGated(live: boolean, mode: string, e2eGated: boolean = fa
 /** R1310004: whether a development build's e2e run asks for the gate; never read in another build, and false when storage throws. */
 function e2eAsksFullArtGate(): boolean {
   if (import.meta.env.MODE !== "development") return false;
-  try {
-    return window.localStorage.getItem(E2E_FULL_ART_GATED_KEY) === "1";
-  } catch {
-    // A private window or blocked site data: no e2e run asked.
-    return false;
-  }
+  // A private window or blocked site data: no e2e run asked.
+  return getStored(E2E_FULL_ART_GATED_KEY) === "1";
 }
 
 /** R1313000: this build's `fullArtGated`. */

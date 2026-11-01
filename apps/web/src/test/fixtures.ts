@@ -20,6 +20,7 @@ import type {
   UnitView,
 } from "@jackioh/shared";
 
+import type { PracticeResponse, PracticeSnapshot } from "../practice/protocol.ts";
 import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { Team } from "../wire/generated/Team.ts";
@@ -393,4 +394,14 @@ export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
     base: fusedFaceOf(ingredients.map((def) => def.base)),
     radiant: fusedFaceOf(ingredients.map((def) => def.radiant)),
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// A practice core's answer, as the practice tests read it (#2160)
+// ---------------------------------------------------------------------------------------------
+
+/** The snapshot a practice core's answer carries; any other answer fails the test, saying what came. */
+export function snapshotOf(response: PracticeResponse): PracticeSnapshot {
+  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
+  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }

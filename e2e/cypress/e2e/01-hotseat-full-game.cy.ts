@@ -14,6 +14,7 @@ import {
   zoneId,
 } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Row } from "../../support/types.ts";
+import { ensureSeat } from "../../support/hotseat.ts";
 
 /** BUILD M8's seed; `--expose seed=…` overrides it for the nightly sweep. */
 const SEED = seedFor("01-hotseat");
@@ -57,16 +58,6 @@ function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
     // Cypress treats bare `null` as the current subject, so wrap the answer.
     return cy.wrap(found ?? null, { log: false });
-  });
-}
-
-/** BUILD M5-T3: hand the hotseat device to the active seat. */
-function ensureSeat(player: PlayerId): void {
-  cy.jackioh().then((handle) => {
-    expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
-      undefined,
-    );
-    if (handle.seat !== player) cy.handOver();
   });
 }
 

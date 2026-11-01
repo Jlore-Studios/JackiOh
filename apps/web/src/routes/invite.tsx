@@ -28,12 +28,13 @@ import {
   type CodeStatusResponse,
   type MeResponse,
 } from "../net/api.ts";
-import { AUTH_MESSAGES, AUTH_NOTICES, AuthError, resendConfirmation } from "../net/auth.ts";
+import { AUTH_NOTICES, authMessageOf, resendConfirmation } from "../net/auth.ts";
 import { announceAccountChange, callWithRenewal, useAccount, type Account } from "../net/gate.ts";
 import { loginPath, navigate, paths } from "../net/navigate.ts";
 import { pendingEmailEntry } from "../net/session.ts";
 import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import { messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
 
@@ -357,7 +358,7 @@ function InviteScreen({ account }: { account: Account }) {
         }
         if (isUnverifiedRefusal(cause)) setUnverifiedRefusal(true);
         // R145/R192 distinctions live in the server's message; only the adjacent wait is ours.
-        setError(cause instanceof Error ? cause.message : String(cause));
+        setError(messageOf(cause));
         if (isRateLimited(cause)) {
           const wait = retryAfterMsOf(cause);
           setRateLimit({ retryAfterMs: wait, until: wait === null ? null : Date.now() + wait });
@@ -390,7 +391,7 @@ function InviteScreen({ account }: { account: Account }) {
         resendCooldown.startUntil(address, deadlineAfter(AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, Date.now()));
       })
       .catch((cause: unknown) => {
-        setResendNotice(cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service);
+        setResendNotice(authMessageOf(cause));
       })
       .finally(() => {
         setResendBusy(false);

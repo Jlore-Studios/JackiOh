@@ -32,13 +32,9 @@ import { cachedRead } from "../net/readCache.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { nextStepWords, shopTestid, tokenPoolIds, unownedCards } from "./shop.ts";
+import { messageOf } from "../net/errors.ts";
 import "../game/deckbuilder/deckbuilder.css";
 import "./shop.css";
-
-/** What a failed request says: the server's words, else the error's. */
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
 
 /**
  * The panel. `revision` is how many times the page has asked it to read again (another panel
@@ -85,7 +81,7 @@ export default function TokenPicker({
           const keptBars = cachedRead<TokenBarsResponse>(token, keptPaths.tokens);
           const keptCollection = cachedRead<CollectionResponse>(token, keptPaths.collection);
           if (keptBars === undefined || keptCollection === undefined) {
-            setLoadError(wordsOf(cause));
+            setLoadError(messageOf(cause));
           } else {
             setBars(keptBars);
             setCollection(keptCollection);
@@ -113,12 +109,12 @@ export default function TokenPicker({
             setCollection(next);
           },
           (cause: unknown) => {
-            setError(wordsOf(cause));
+            setError(messageOf(cause));
           },
         );
       },
       (cause: unknown) => {
-        setError(wordsOf(cause));
+        setError(messageOf(cause));
       },
     ).finally(() => {
       setBusy(null);

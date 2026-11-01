@@ -20,6 +20,7 @@ import {
   type SocketLike,
   type Timers,
 } from "./net.ts";
+import { setVisibility } from "../test/setup.ts";
 
 /** #1664: what a result's write paid the account: the track moved one level, and one quest completed. */
 const ECONOMY = {
@@ -813,15 +814,11 @@ describe("a silent socket", () => {
     const h = connected({ pageEvents: true });
     const live = h.socket();
     const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
-    const show = (state: "hidden" | "visible"): void => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
-      document.dispatchEvent(new Event("visibilitychange"));
-    };
     try {
       h.now(SILENCE_MS + 1);
-      show("hidden");
+      setVisibility("hidden");
       expect(live.frames()).toEqual([HELLO]);
-      show("visible");
+      setVisibility("visible");
       expect(live.frames()).toEqual([HELLO, HELLO]);
 
       live.deliver({ type: "view", view: baseView() });
