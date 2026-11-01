@@ -12408,14 +12408,8 @@
     "what": "build #2648 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-11-01T06:35:45Z",
-    "notes": [
-      "delivered plan #2653 on claude-8 (run 41280548523): planned",
-      "started build #2655 on claude-4 (run 41281536339)",
-      "started build #2647 on claude-8 (run 41281563758)",
-      "started build #2648 on claude-2 (run 41281591111)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` it refused a call; its limit resets at 2026-11-01T06:50:00Z; `claude-4` is busy; `claude-6` 5-hour usage is 76%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-01T06:40:00Z; it can start a build or a plan again in 2m; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-02T09:00:00Z; it can start a build or a plan again in 16h 22m; `muse` it refused a call; its limit resets at 2026-11-02T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy"
-    ],
+    "at": "2026-11-01T06:46:57Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13120,7 +13114,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T06:35:45Z",
+  "loop_tick": "2026-11-01T06:46:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
