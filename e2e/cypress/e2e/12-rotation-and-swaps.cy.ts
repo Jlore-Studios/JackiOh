@@ -202,10 +202,10 @@ const VIEWPORTS = [
   { label: "phone", width: 390, height: 844 },
 ] as const;
 
+/** BUILD M5-T1: each viewport must fit without clipping the tracked cards. */
 function expectFitsViewport(
   viewport: { label: string; width: number; height: number },
   cards: readonly string[],
-/** BUILD M5-T1: each viewport must fit without clipping the tracked cards. */
 ): void {
   cy.viewport(viewport.width, viewport.height);
   cy.get(ts(BOARD)).should("be.visible");

@@ -147,8 +147,8 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
   let running: Promise<void> | null = null;
   let again = false;
 
-  const lowered = new Set<string>();
   /** Clock entries intentionally lowered to the server's time. */
+  const lowered = new Set<string>();
 
   /** Another tab's higher timestamp wins unless this sync intentionally lowered it. */
   const persist = (): void => {

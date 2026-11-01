@@ -135,10 +135,6 @@ export function unownedCards(collection: CollectionResponse, defs: readonly Card
 }
 
 /**
- * `fittingCards`, below (the server's `choice_of`): a full art fits its own card alone (R1313000), any
- * other per-card kind every card owned at `MAX_COPIES`; null for an account cosmetic.
- */
-/**
  * The pool the card-token picker browses: the ids of `unowned` that the catalog knows, filtered and
  * sorted as the deck builder sorts. SPEC §14.5 names exactly `unownedCards`: `matchesFilter` never reads
  * `ownedOnly`, so the hidden owned toggle cannot affect it.
@@ -157,6 +153,10 @@ export function tokenPoolIds(
   return sortPool(kept, catalog, sort);
 }
 
+/**
+ * The owned cards a per-card cosmetic fits on (the server's `choice_of`): a full art its own card alone
+ * (R1313000), any other per-card kind every card owned at `MAX_COPIES`; null for an account cosmetic.
+ */
 export function fittingCards(cosmetic: RegistryCosmetic, quantities: Map<string, number>): string[] | null {
   if (!isPerCardKind(cosmetic.kind)) return null;
   if (cosmetic.card !== undefined) return ownsMax(cosmetic.card, quantities) ? [cosmetic.card] : [];

@@ -325,9 +325,9 @@ describe("10 invite gate — a pending account", () => {
       granted = JSON.stringify(entries);
     });
 
+    // R111 is idempotent; §9.4 makes repeat redemption an account-state conflict.
     redeem(inviteCodes.good()).should((response) => {
       expect(response.status, "an already-active account is 409, not a code failure").to.eq(409);
-    // R111 is idempotent; §9.4 makes repeat redemption an account-state conflict.
       expect(
         response.body.error?.message,
         "§9.4's identical error covers the three code kinds, not the account's own state",

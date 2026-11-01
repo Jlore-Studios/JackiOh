@@ -168,10 +168,10 @@ function TokenBody({
   const [filter, setFilter] = useState<PoolFilter>({ ...DEFAULT_FILTER, ownedOnly: false });
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
+  // Whether the open detail asks before it spends the token.
   const [asking, setAsking] = useState(false);
   const questionId = useId();
   const locale = useLocale();
-  // Whether the open detail asks before it spends the token.
   const catalog = useMemo(() => ({ version: collection.catalogVersion, cards: CATALOG }), [collection.catalogVersion]);
   const unowned = useMemo(() => unownedCards(collection), [collection]);
   const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort, locale]);

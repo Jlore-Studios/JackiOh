@@ -227,9 +227,9 @@ function deckWith(customId: string): string[] {
 /** Seeds tried, each a fresh deal, before the spec gives up on the card's coming to the human's opening hand. */
 const SEED_BUDGET = 25;
 
-
 /** The localStorage key under which practice keeps a game in progress. */
 const RESUME_KEY = "jackioh.practice.game";
+
 /**
  * Start practice on the saved deck, on the first of `SEED`'s deals that puts the custom card in the human's
  * opening hand, and say its seed. The deck is DECK_SIZE cards and the passive human is beaten on turn 9, so

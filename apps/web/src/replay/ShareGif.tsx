@@ -160,9 +160,9 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
       setPhase(IDLE);
     },
     send: () => {
+      // Share, or Try again after a share that failed: the made GIF either way, never drawn again.
       const ready = phase.kind === "ready" ? phase : phase.kind === "failed" ? phase.ready : null;
       if (ready === null || loaded.current === null) return;
-      // Share, or Try again after a share that failed: the made GIF either way, never drawn again.
       setPhase(ready);
       loaded.current.shareGif(ready.file).catch((cause: unknown) => {
         // A dismissed share sheet is the viewer's answer, not a failure.

@@ -203,9 +203,9 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
           .find(MODIFIER_BADGE)
           .should("have.text", CURVATURE_DORMANT);
 
+        // The controller's next turn activates the existing badge.
         cy.advanceToTurn(5);
         ensureSeat("p1");
-        // The controller's next turn activates the existing badge.
         cy.get(ts(modifiersId("you"))).should("have.attr", "data-count", "1");
         cy.get(ts(modifiersId("you"))).find(modifierBadgeOf(modifierId)).should("exist");
         cy.get(ts(modifiersId("you"))).find(MODIFIER_BADGE).should("have.text", CURVATURE_DISCOUNT);

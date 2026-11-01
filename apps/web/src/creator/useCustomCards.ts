@@ -89,10 +89,10 @@ export function customDefsOf(cards: readonly CustomCard[]): CardDefs {
   return defs;
 }
 
+/** The custom cards a deck names, in the order it first names them; ids it names that are gone are `missing`. */
 export function customCardsOfDeck(
   deck: readonly string[],
   cards: readonly CustomCard[],
-/** The custom cards a deck names, in the order it first names them; ids it names that are gone are `missing`. */
 ): { cards: CustomCard[]; missing: string[] } {
   const byId = new Map(cards.map((card) => [card.id, card]));
   const found: CustomCard[] = [];

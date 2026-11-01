@@ -155,17 +155,17 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
           cy.playCard(beanId, { answers: [{ kind: "hand", cards: [target.id] }] });
         });
 
+        // BUILD M5-T4's `radiantSet` confirms §5.2's hand flip.
         cy.get(`${ts(handCardId(target.id))}${RADIANT}`).should("exist");
         cy.gameState().then((after) => {
-        // BUILD M5-T4's `radiantSet` confirms §5.2's hand flip.
           const held = handOf(after, "p1").find((card) => card.id === target.id);
           expect(held?.radiant, "§5.2: Radiant is a flag on the instance").to.eq(true);
         });
       });
 
+      // #94 leaves Knockoff Temu as the sole candidate.
       waitToPlay("p1", GENNS_GREED);
       cy.playByName(nameOf(94));
-      // #94 leaves Knockoff Temu as the sole candidate.
 
       cy.gameState().then((state) => {
         const side = peek(state, "p1");

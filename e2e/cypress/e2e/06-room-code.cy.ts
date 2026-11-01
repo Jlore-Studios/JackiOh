@@ -259,9 +259,9 @@ describe("06 room code — a networked match between a browser and a Node client
       .its("length")
       .should("be.within", 1, constants.MAX_MANA);
 
+    // CLAUDE.md rule 7: browser renders only seat 1's hand.
     cy.then(() => {
       cy.wsPlayer({ action: "view", name: SEAT_TWO }).then((result) => {
-    // CLAUDE.md rule 7: browser renders only seat 1's hand.
         const held = opponentHandCount(result.view);
         expect(held, "an opening hand (§2.1: OPENING_DRAW)").to.be.within(
           constants.OPENING_DRAW[0],

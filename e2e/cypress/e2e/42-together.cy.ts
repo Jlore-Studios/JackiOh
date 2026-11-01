@@ -743,6 +743,7 @@ describe("42 Play together — friends, chat and challenges between two accounts
     });
     onStep(0);
 
+    // Part the two accounts, for the next run and the next spec.
     cy.then(() => {
       separate([
         [one, twoId],
@@ -750,5 +751,4 @@ describe("42 Play together — friends, chat and challenges between two accounts
       ]);
     });
   });
-    // Part the two accounts, for the next run and the next spec.
 });

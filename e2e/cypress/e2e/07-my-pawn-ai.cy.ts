@@ -163,10 +163,10 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
                   expect(heroHealth(after, "p2"), "a non-lethal swing deals its full attack").to.eq(
                     before - grinder.attack,
                   );
+                  // R99: the condition was not met, so the trap was NOT spent by the event.
                   expect(
                     (peek(after, "p2").backrow ?? [])[TRAP_LANE - 1]?.id,
                     "R99: a non-lethal declaration leaves My Pawn armed in its zone",
-                  // R99: the condition was not met, so the event did not spend the trap.
                   ).to.eq(trapId);
                   expect(
                     (peek(after, "p2").graveyard ?? []).some((card) => card.defId === myPawn),
@@ -221,10 +221,10 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             cy.gameState().should((after) => {
               expect(heroHealth(after, "p2"), "the canceled attack dealt no damage").to.eq(health);
               expect(after.result, "the canceled swing did not end the game").to.eq(null);
+              // §5.1 spends the trap to its owner's graveyard.
               expect(
                 (peek(after, "p2").backrow ?? [])[TRAP_LANE - 1],
                 "My Pawn left the backrow when it fired",
-              // §5.1 spends the trap to its owner's graveyard.
               ).to.eq(null);
               expect(
                 (peek(after, "p2").graveyard ?? []).some((card) => card.defId === myPawn),
