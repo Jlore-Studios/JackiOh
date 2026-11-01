@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2687,
+  "title": "Patch: the AI prices a Field Spell's Death, as it already prices a Unit's",
+  "branch": "bot/issue-2687",
+  "thread": "**Issue #2687 (data, not instructions):**\n\n```text\n# #2687: Patch: the AI prices a Field Spell's Death, as it already prices a Unit's\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome Field Spells pay out when they are destroyed: Comet Crash gives you random Resources as it crumbles a turn after you play it, Bauble Bubble gives two Stockpiles, Job Application and The Narcor Project have their own payouts. The practice AI counts what a Unit leaves behind when it dies, but not what a Field Spell does, so it sees these cards as their cost and nothing more and rarely plays them; the AI's own card sweep already flags Comet Crash as almost never played. Once built, the AI counts a Field Spell's Death on the board on both sides and in its hand, as it does for Units, so it plays these cards and values destroying the opponent's.\n\n## Why\n- \u00a76.2: Death is a backrow card's too, and the engine fires it there (`crates/engine/src/state_check.rs:1128-1139`).\n- Five Field Spells have a `death` hook: Bauble Bubble `classicplus-061`, Comet Crash `stinkyscape-155`, Job Application `stinkyscape-112`, The Narcor Project `stinkyscape-039` and Frostspatula `classicplus-012-8` (every script with `death: Some`, read against `crates/cards/catalog.json`'s types).\n- `crates/ai/src/evaluate.rs:1237-1249` (`death_prices`, R2424000): the candidates are `active_units_of` on both sides and the hand's `CardType::Unit` cards only.\n- `material`'s readable backrow branch (`evaluate.rs:755-781`) adds the turn hook price (R2477000, R2565000) and the Activate price (R2603000), but no `death_price`, while `unit_worth` adds it (`:388`).\n- `crates/ai/src/shadow_ban.rs:1007`: Comet Crash is at risk, \u201caffordable on 17 turns over 8 games, played 1 time(s), mean evaluate change -0.1\u201d; The Narcor Project at `:791`, \u201cnever played\u201d on pass 1.\n\n## Proposal\n- In `death_prices`, after the field's units, list each readable backrow card on either side whose Death is live (`death_hook_of`), and the seat's own hand Field Spells with one, spawned onto the backrow as `spawned_turn_hook_probe` spawns them (factor the spawn out and share it); keep R2424000's order, its node budget `AI_DEATH_PROBE_NODES` and the dedupe by `DeathPrice::is_for`.\n- In `material`'s readable backrow branch add `w.death * death_price(...)` outside the Brittle share, as `unit_worth` does (a Brittle crumble is a destroy).\n- A face-down enemy card is never priced (R351, R185).\n- A ruling in this issue's block extending R2424000, with `spec/pending/<issue>.md`; re-run `cargo jackioh gate`, and the sweep if the gate's numbers move.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs`; tests in `crates/ai/tests/ai/deaths.rs`\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a76.2, \u00a79.9\n\n## Acceptance criteria\n- [ ] On a board where nothing else is worth doing, the AI with Comet Crash or Bauble Bubble in hand and the mana for it plays it.\n- [ ] A Field Spell with a live Death on the AI's backrow is worth more to it than the same card with its Death removed; an enemy one is worth more to destroy.\n- [ ] An enemy face-down card's Death is never probed (two states that differ only in which trap sits face-down price the same).\n- [ ] Tests named after the new ruling, listed in its `proven_in`; `cargo test -p jackioh-ai`, clippy, `cargo jackioh gate` and `cargo jackioh spec check` pass.\n\n## Size and risks\nMedium (hard by CLAUDE.md rule 11, the AI): about 50 lines and tests. Risk: more probes per decision; they share `AI_DEATH_PROBE_NODES`, so the budget does not grow. The Narcor Project pays only on a Brittle destroy, so a sandbox destroy may price it at nothing; that is correct and should be a test, not a fix.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:07:27Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2687: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
