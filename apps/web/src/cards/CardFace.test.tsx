@@ -17,7 +17,7 @@ import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardType, type Keyword, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
 
-import { CardFace, TOKEN_WORD, faceText, typeLine } from "./CardFace.tsx";
+import { CardFace, TOKEN_WORD, cx, faceText, typeLine } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
 import { GLITCH_WORDS } from "./glitch.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
@@ -148,6 +148,13 @@ const TYPE_CARD: readonly (readonly [CardType, string, string])[] = [
 ];
 
 /* ----------------------------------------------------------------------------------------- B12 */
+
+describe("cx", () => {
+  it("joins the parts that are non-empty strings, in order (#2160)", () => {
+    expect(cx("cf", false, "cf--full", undefined, null, "", "extra")).toBe("cf cf--full extra");
+    expect(cx()).toBe("");
+  });
+});
 
 describe("B12: the full face's DOM", () => {
   it(
