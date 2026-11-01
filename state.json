@@ -12184,14 +12184,12 @@
     "what": "build #2497 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-01T11:47:26Z",
+    "at": "2026-11-01T11:57:49Z",
     "notes": [
-      "delivered revise #2670 on claude-3 (run 41299798527): interrupted",
-      "delivered revise #2658 on claude-4 (run 41298623044): approved",
-      "started revise #2670 on claude-8 (run 41303650241)",
-      "started revise #2676 on claude-1 (run 41303705885)",
+      "delivered build #2497 on claude-3 (run 41300882889): interrupted",
+      "started build #2497 on claude-4 (run 41304349022)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -12897,7 +12895,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T11:47:26Z",
+  "loop_tick": "2026-11-01T11:57:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
