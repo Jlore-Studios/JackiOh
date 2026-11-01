@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2738,
+  "title": "Patch: a Discover is just its cards, with no panel or words around them, the way Hearthstone draws one",
+  "branch": "bot/issue-2738",
+  "thread": "**Issue #2738 (data, not instructions):**\n\n```text\n# #2738: Patch: a Discover is just its cards, with no panel or words around them, the way Hearthstone draws one\nOpened by @MaxGoetzmann.\n\n## What it does\n\n#2646 (PR #2665) made every choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer use the Discover picker of cards. The cards are right. What sits around them is not. The owner wants the Hearthstone kind of clean: **no background panel, no base, no extra text. Show the player the cards as the options and nothing else.** KY's Trial (Core #82, R831004, R247) is the model: three set marks, then three card backs, and the player taps one.\n\nToday a card-layout picker (`isCardLayout`, `data-prompt-layout=\"cards\"`) is still drawn in the general modal, `PromptModal` in `apps/web/src/game/Prompt.tsx`. It has:\n\n- the raised panel: `.prompt` in `prompt.css`, with `background: var(--bg-raised)`, a border, a radius, `box-shadow: var(--shadow-3)`, padding and a fixed `width: min(560px, 100%)`\n- a title line (`PickerTitle`, `.prompt-title`, e.g. \"Pocket Chaos: choose one\")\n- a count line, \"Choose 1: 0 chosen\" (`.prompt-count`)\n- the board hint and board note lines (`BoardHint`, `.prompt-board-note`)\n- a row of buttons under the cards: Confirm (`prompt-submit`), Cancel, and \"View the board\" (`prompt-peek`, #1204), drawn as full form buttons\n\n## The design\n\nFor a card-layout picker only (`isCardLayout(picker)`):\n\n1. **No panel.** The cards float over the dimmed board. `.prompt[data-prompt-layout=\"cards\"]` gets no background, border, shadow, radius or padding, and no fixed width. The scrim's dim stays, as Hearthstone dims the board behind a Discover.\n2. **No words around the cards.** No title, no count line, no board hint or note. The dialog keeps its accessible name (`aria-label={picker.title}`), so screen readers still hear what is being asked. Text on the cards themselves stays: a real card's face, and a choice card's name and detail (#2646). Those are the options, not chrome.\n3. **One tap answers** when one tap can (`picker.immediate`, i.e. `max <= 1` and not the mulligan). There is no Confirm then, since tapping the card sends it, as in Hearthstone. Check this holds for every card-layout chrome (`discover`, `hand`, `pick`, a short `mode`/`ability`/`equip`/`faceDown`/`plague`/`answer`/`reward`, `embiggen`, a short `x`) and render no `prompt-submit` for an immediate picker.\n4. **What is left, kept small.** A picker that needs more than a tap (the mulligan's \"Ready\", a multi-pick, R515's budget line, R1184000's streak Stop, a play's Cancel) keeps those controls as one compact row under the cards, styled as quiet buttons rather than a form's footer. \"View the board\" (#1204) stays as a small, unobtrusive toggle (Hearthstone's \"Hide\"), not a full-width button. The R515 budget line and the mulligan's opponent status are the only lines of text that stay, because they carry state the cards don't show.\n5. **Unchanged:** every non-card picker (board picks, lists of 5+ options, `number` chips outside the card layout, `market`, `craft`, the waiting notice), every `data-testid`, `data-prompt-kind`, `data-prompt-layout`, `data-prompt-source`, the replay's `readOnly` fold (R2211000: folded it is a bar, which may keep the title, since it has no cards to show), keyboard focus on open, R420's arrow focus, and the answers sent. CLAUDE.md rule 7 holds. This is presentation only, with no engine or wire change.\n\nCard sizes: with the panel gone the cards may grow toward Hearthstone's Discover scale on desktop. On a 360 px phone the 2\u00d72 layout from #2646 must still fit with no horizontal scroll.\n\n## Acceptance\n\n- [ ] For each card-layout chrome, the open picker renders no `.prompt-title`, `.prompt-count`, `.prompt-board-note` or `.prompt-board-hint`, and the `.prompt` element has a transparent background and no border or shadow (computed style, or a class or attribute the CSS keys on). Vitest in `Prompt*.test.tsx`, one per chrome.\n- [ ] An immediate card-layout picker renders no `prompt-submit`, and one click on a `prompt-option-<key>` sends the answer. Existing tests that click `prompt-submit` after a single pick are updated to the single click, and no assertion is dropped.\n- [ ] The mulligan, a multi-pick and a budget pick keep a working Confirm/Ready, and a play's picker keeps Cancel, in the compact row.\n- [ ] `prompt-peek` still folds and unfolds (#1204's tests green). A replay's read-only picker still opens folded (R2211000).\n- [ ] The dialog keeps `role=\"dialog\"` and an `aria-label` naming the ask.\n- [ ] Non-card pickers are pixel-for-pixel unchanged (`pnpm --dir e2e test:component` green, with no new snapshot diffs outside the card layout).\n- [ ] e2e specs `02`, `17` and the playthrough pass with unchanged test ids.\n- [ ] `ui-walkthrough` screenshots in the PR, desktop and 360 px phone: KY's Trial (both Discovers), a Discover of real cards, Pocket Chaos's Choose one, the mulligan and a quest reward.\n- [ ] `pnpm --dir apps/web test`, `typecheck`, `pnpm exec eslint apps/web e2e` and `cargo jackioh classify --base origin/main --claims` are green. Add the micro fragment the classifier asks for if `apps/web/src/cards/` is touched (R2529000).\n\n## Blocked by, part of\n\nFollows #2646 (merged in #2665), and builds on #492 and #1204. Nothing blocks it.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2738: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
