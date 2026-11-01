@@ -11507,16 +11507,18 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
+      "pr": 2700,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-01T14:21:22Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "41318643930",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T14:56:14Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2632": {
       "cleared": {
