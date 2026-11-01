@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 2707,
+  "title": "Patch: the dungeon run's map, tiles, rewards and run-over screen",
+  "branch": "bot/issue-2707",
+  "thread": "**Issue #2707 (data, not instructions):**\n\n````text\n# #2707: Patch: the dungeon run's map, tiles, rewards and run-over screen\nOpened by @squishy-squooby.\n\nPart F of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; the design it shows is DR4, DR6, DR7 and DR9 of the same file.\n\nBetween fights the run is a map and its tiles. This part draws every phase but the fight: the map, the rewards after a fight, the pack, the extraction after a boss, the shop, the campfire, the event, the shrine and the run-over screen.\n\n## The surface (frozen)\n\nThis part writes:\n\n```ts\n// apps/web/src/dungeon/map/RunScreen.tsx (DungeonPage, part D, renders it in every phase but fight)\nexport function RunScreen(props: { dungeon: Dungeon }): ReactElement;\n```\n\nIt uses, as frozen in DR14 and without waiting for their parts:\n- part D's `Dungeon` (`dungeon/store.ts`): `dungeon.run`, `dungeon.content` and `dungeon.act(action)`, which returns the refusal or null;\n- part C's `runScore`, `runEmbers` and `runMaxHp` (`apps/web/src/wasm/index.ts`);\n- the run's types from `@jackioh/run` (`RunState`, `RunPhase`, `RunAction`, `RunNode`, `RunContent`, \u2026).\n\n`RunPhase` is tagged `phase`, camelCase: `map`, `fight`, `reward`, `pack`, `extractCard`, `extractArtifact`, `shop`, `campfire`, `event`, `shrine`, `won` and `dead`. `RunAction` is tagged `type`, camelCase, with camelCase fields: `go { col }`, `takeArtifact { take }`, `openPack { index }`, `keep { cards }`, `extract { index }`, `buy { index }`, `removeCard { index }`, `removeCards { indices }`, `makeRadiant { index }`, `buff { index }`, `levelArtifact { index }`, `heal`, `choose { index }`, `bless { index }`, `leave` and `abandon` (`crates/run/src/lib.rs`).\n\n## What to do\n\n- **The HUD,** on every screen: HP over `runMaxHp`, Coins, Tickets, the deck's size, the artifacts held, and the score so far (`runScore`). Words go through `t()`: \"Coins\", \"Tickets\" and \"Embers\" are placeholder names.\n- **The map.** The whole current act (an act ends at a boss row), each node's kind with an icon and label, each boss's preseeded `artifact`, and where the player stands. Only the next row's nodes can be chosen (`go`).\n- **The rewards.** The artifact first, taken or left (`takeArtifact`), then the four packs (`openPack`), each labelled by its kind (`boss`, `random`, a set, a card type, a tag or a rarity). The pack's cards are drawn with the card faces the deck builder uses, by id from the catalog. Exactly `keep` of them are chosen (`keep`), or none when a Skip passive allows it, the run's refusal shown as it comes.\n- **Extraction.** After a mini-boss, choose a card of the deck or none. After the final boss, choose an artifact or none; the boss's own Unobtainable one is refused, the refusal shown.\n- **The shop:** its stock with prices (`buy`), removing a card for Coins, making a card Radiant or buffing it for Tickets, levelling an artifact for Tickets, and leaving. **The campfire:** one of heal, make a card Radiant, buff a card, or remove 2 cards. **The event:** its text and options (`choose`). **The shrine:** the blessings offered, or leave (`bless`).\n- **The run's end** (`won` or `dead`): the score, the Embers it pays (`runEmbers(runScore(\u2026))`), what was extracted, the run's stats, and buttons for a new run (the store clears the finished run; part D) and for `/dungeon/stats`.\n- Use test ids from `dungeon/map/testids.ts`, prefixed `dungeon-`.\n\n## Owns\n\n`apps/web/src/dungeon/map/`. No other part of #2701 edits it.\n\n## Behaviors (each proved by a vitest test whose comment names it, rendering `RunScreen` with a fake `Dungeon`)\n\n- **B27** The map shows the whole current act, each node's kind, each boss's preseeded artifact and where the player stands; only the next row's nodes can be chosen.\n- **B28** The reward screen offers the artifact (take or leave) before the four packs; the pack screen keeps exactly `keep` cards, or none with a Skip passive.\n- **B29** Extraction is a card after a mini-boss and an artifact after the final boss, and the boss's own is refused.\n- **B30** The shop, campfire, event and shrine screens send their actions and show the run's refusals; Coins, Tickets and HP are always on screen.\n- **B31** The run-over screen shows the score, the Embers it pays, what was extracted and the stats.\n\n## Done when\n\nB27\u2013B31 have tests; `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web e2e` pass for this part's files.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2707: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2738 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
