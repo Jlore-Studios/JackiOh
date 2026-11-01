@@ -12334,13 +12334,25 @@
       "started_at": "2026-11-01T14:35:37Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2692": {
+      "action": "plan",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "gpt",
+      "run_id": "pending:cbe439b0-1793544934",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-01T14:55:48Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T14:43:23Z",
+    "at": "2026-11-01T14:55:48Z",
     "url": "",
-    "what": "build #2620 on claude-1"
+    "what": "plan #2692 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-01T14:42:11Z",
