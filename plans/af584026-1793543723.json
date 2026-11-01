@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2681,
+  "title": "Add art for each release",
+  "branch": "bot/issue-2681",
+  "thread": "**Issue #2681 (data, not instructions):**\n\n```text\n# #2681: Add art for each release\nOpened by @jgoetzmann.\n\nCreate art with cards effected for each release. The art should be full screen and animated on large releases (e.g., v0.3, v0.4). Make art for all past patches & make a process so there is art going forward for every patch. See if you can plop it into the releases on github too\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2681: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
