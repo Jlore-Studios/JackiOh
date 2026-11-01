@@ -13036,7 +13036,7 @@
       "pending_by": "jgoetzmann",
       "pending_request": false,
       "provider": "claude-4",
-      "run_id": "pending:34fb5991-1793557527",
+      "run_id": "41336583901",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T18:25:51Z",
       "stop_requested": false,
