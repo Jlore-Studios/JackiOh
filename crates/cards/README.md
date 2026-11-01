@@ -163,7 +163,6 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
 | `traded_card_of(ctx)` | in a trigger on `traded`, the card that Trade put into a deck (R1864003) |
 | `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
-| `player_spell_damage(state, player)` | the player's Spell Damage, the one sum §4.4 step 0 reads: Units, auras for one player or both, "this turn" modifiers (R1180000, R1180001) |
 | `heal_multiplier_of(state, player)` | how many times as large a heal of the player's hero or Units is now (R1180003, Meditative+ #7) |
 | `inflation_chance_of(card, printed)`, `next_inflation_chance(chance)` | the Inflation chance a card rolls at (the one it carries, else its printed one) and the one the copy it makes carries (R1848006, Stinkyscape #153) |
 | `freeze::frozen_forever(card)` | whether a Unit is Frozen forever, which never thaws (R1848000) |
@@ -172,7 +171,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `subsystems::completed_stage_of(ctx, event)`, `subsystems::quest_stages_of(state, card)`, `subsystems::quest_memory_of(card)` | the stage (1 for the first) a staged quest's own `questCompleted` names, its stages, and its line: the stage it stands at and its wait to hear back (R1854000, R1854004, Stinkyscape #7, #112) |
 
 Board facts live in `crates/engine/src/query.rs`; if the one you need is missing, add it there and
-test it there. Randomness goes through `ctx`'s rng and every pool through `catalog.query` (§3).
+test it there. Randomness goes through `ctx`'s rng and every pool through `query` or `pool` (§3).
 
 **Play-time choices (R81).** Zone, X, embiggen, Tribute and the targets and modes a card needs for
 its own play travel in the `play` action. Declare them (`targets: vec![TargetDecl::target(…)]`,
@@ -223,15 +222,15 @@ Tags are the designer's as written (`Jlockeed` is a pool as well as a filter, R2
 share a name (R381). Texts follow the house style (R432, R373): "Nerf" and "Buff", never "Degrade" or
 "Upgrade" (R1320).
 
-## 3. `catalog.query`, the only random pool (spec §5.1)
+## 3. `query`, the only random pool (spec §5.1's `catalog.query`)
 
 ```rust
 use crate::query::*;   // in a card file that draws from a pool
 
-catalog.query(&json_as(json!({ "type": "Unit", "cost": 2 })))     // every matching non-token card
-catalog.pool("core-057", &json_as(json!({ "tags": ["KY"] })))       // the same, your own id excluded (R387)
-catalog.cost(def)                                                   // R65's out-of-play cost
-TRAP_TYPES                                                          // [Trap, Field Trap]
+query(&json_as(json!({ "type": "Unit", "cost": 2 })))     // every matching non-token card
+pool("core-057", &json_as(json!({ "tags": ["KY"] })))       // the same, your own id excluded (R387)
+query_cost(def)                                             // R65's out-of-play cost
+TRAP_TYPES                                                  // [Trap, Field Trap]
 ```
 
 `src/query.rs` is a thin wrapper over the engine's one filter (`crates/engine/src/catalog.rs`). Its

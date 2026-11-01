@@ -48,7 +48,7 @@ pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, LIST_READERS};
 /// the BUSTED or complicated lists.
 pub mod code_lines;
 
-/// SPEC §5.1's single pool source over the shipped catalog (`catalog.query`, `catalog.pool`, …).
+/// SPEC §5.1's single pool source over the shipped catalog (its `catalog.query`: `query`, `pool`, …).
 pub mod query;
 
 /// Classic+ #42 KY's Test's problem bank (R420).

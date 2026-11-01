@@ -34,9 +34,8 @@
 //!      live on `state.transient_defs`, so no pool can ever generate one.
 //!
 //! Card scripts get this whole surface through `use crate::query::*;` (and the crate root's
-//! re-export), so `catalog.query(...)`, `catalog.pool(...)`, `catalog.cost(...)` and
-//! `catalog.trap_types` are always in reach even when only `catalog` is named, as the TS `catalog`
-//! object was.
+//! re-export): spec §5.1's `catalog.query(...)` is [`query`] here, with [`pool`] for a pool that
+//! leaves out its own card, [`query_cost`] and [`TRAP_TYPES`].
 
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs, KeywordKind, OneOrMany, SetName};
 
@@ -123,40 +122,6 @@ pub const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
 /// graveyard or pool. The in-play number is the engine's `mana::effective_cost`, which starts from an
 /// instance and adds `cost_mod`, discounts and Professor Curvature.
 pub use jackioh_engine::catalog::query_cost;
-
-/// The TS `catalog` object's type: `{ query, pool, cost: queryCost, trapTypes: TRAP_TYPES }`, so a
-/// script writes `catalog.pool(ID, &args)` and `catalog.trap_types` as the TypeScript did. The three
-/// functions are methods (no fn pointers in a pure crate's values) and the constant is a field.
-#[derive(Clone, Copy, Debug)]
-pub struct CatalogSurface {
-    /// [`TRAP_TYPES`]: both trap types (TS `catalog.trapTypes`).
-    pub trap_types: &'static [CardType],
-}
-
-impl CatalogSurface {
-    /// §5.1's `catalog.query(...)`: [`query`].
-    pub fn query(&self, args: &CardQuery) -> Vec<&'static CardDef> {
-        query(args)
-    }
-
-    /// `catalog.pool(ownId, args)`: [`pool`], never offering `own_id` itself (R387).
-    pub fn pool(&self, own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
-        pool(own_id, args)
-    }
-
-    /// `catalog.cost(def)`: [`query_cost`], R65's out-of-play cost.
-    pub fn cost(&self, def: &CardDef) -> i32 {
-        query_cost(def)
-    }
-}
-
-/// §5.1's `catalog.query(...)`, as the object 110 card scripts call. Lower-case because it is the
-/// TS name a script calls it by (SURFACE §4.2: a constant keeps its name); a value, not a module, so
-/// it never collides with `jackioh_engine::catalog` in a script that names both.
-#[allow(non_upper_case_globals)]
-pub const catalog: CatalogSurface = CatalogSurface {
-    trap_types: TRAP_TYPES,
-};
 
 // Never sort, filter or de-duplicate a pool after calling `query`: a second sort here would be the
 // duplicated filter §5.1 forbids, and the ordering is the engine comparator's job. (It once
