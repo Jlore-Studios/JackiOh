@@ -2500,18 +2500,30 @@ impl InvariantMonitor {
                         });
                         continue;
                     }
-                    // R1869002: a credited attacker declaring again inside the action proves it used
-                    // the fresh exertion before the settled state could. R53: a forced attack proves
-                    // nothing, so only the non-forced declaration reaches this branch.
-                    if self.unsettled_credits.shift_remove(attacker_id) {
-                        self.readied.insert(attacker_id.clone());
-                        self.last_switch.shift_remove(attacker_id);
-                    }
                     // R1202: a substitute's declaration spends its declarer's attack, not its own —
                     // Windfast's exertion, Windfast's Windfury count — while the strike itself is the
                     // substitute's to answer for.
                     let declarer = instead_of.as_deref().unwrap_or(attacker_id);
                     let current = self.stint_of(declarer);
+                    // R1869002: a credited declarer attacking again inside the action consumes I2's
+                    // speculative attack baseline before the settled state can. The declaration alone
+                    // does not prove that I12's shared switch exertion was refreshed: a no-op
+                    // `afterAttack` can be followed by the very illegal declaration this oracle must
+                    // catch. Clear a spent switch only when the resulting field state independently
+                    // shows that half reset. R1202 makes `declarer`, not `attacker_id`, own both facts.
+                    let switch_spent = self
+                        .last_switch
+                        .get(declarer)
+                        .is_some_and(|mark| mark.turn == self.turn && mark.stint == current);
+                    let switch_refreshed = switch_spent
+                        && find_instance(state, declarer)
+                            .is_some_and(|card| card.zone.z() == ZoneName::Field && !card.exertion.switched);
+                    if (!switch_spent || switch_refreshed) && self.unsettled_credits.shift_remove(declarer) {
+                        self.readied.insert(declarer.to_string());
+                        if switch_refreshed {
+                            self.last_switch.shift_remove(declarer);
+                        }
+                    }
                     let chosen = self.chosen_exertion.as_ref().filter(|chosen| {
                         chosen.kind == crate::combat::ExertionKind::Attack && chosen.instance_id == declarer
                     });

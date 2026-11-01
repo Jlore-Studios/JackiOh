@@ -195,13 +195,30 @@ fn exertion_state(seed: &str, attacker_def: &str) -> (GameState, String, String)
 }
 
 /// Give `def_id` an `afterAttack` hook that does not refresh exertion. I2/I12 must treat its kill
-/// credit as speculative until the settled state or a later declaration proves a refresh happened.
+/// credit as speculative until the settled state proves a refresh happened.
 fn register_no_refresh_after_attack(def_id: &str) {
     let mut scripts = registered_scripts().clone();
     scripts.insert(
         def_id.to_string(),
         both(Script {
             after_attack: Some(hook(|_ctx| vec![])),
+            ..Script::default()
+        }),
+    );
+    register_scripts(scripts);
+}
+
+/// Give `def_id` the `afterAttack` refresh whose settled exertion I12 is allowed to observe.
+fn register_refresh_after_attack(def_id: &str) {
+    let mut scripts = registered_scripts().clone();
+    scripts.insert(
+        def_id.to_string(),
+        both(Script {
+            after_attack: Some(hook(|_ctx| {
+                vec![effects::may_attack_again(json_as(
+                    json!({ "target": { "of": "self" } }),
+                ))]
+            })),
             ..Script::default()
         }),
     );
@@ -432,8 +449,8 @@ fn i12_a_forced_kill_that_refreshes_nothing_does_not_forget_a_spent_switch() {
 }
 
 #[test]
-fn i12_a_declaration_in_the_forced_kill_batch_consumes_a_genuine_refresh() {
-    let (state, attacker_id, defender_id) = exertion_state("i12-forced-refresh", "fx-1");
+fn i12_a_declaration_after_a_noop_kill_hook_does_not_erase_a_spent_switch() {
+    let (mut state, attacker_id, defender_id) = exertion_state("i12-noop-refresh", "fx-1");
     register_no_refresh_after_attack("fx-1");
     let mut monitor = create_invariant_monitor(&state);
     let switch = ActionBody::SwitchPosition {
@@ -447,6 +464,11 @@ fn i12_a_declaration_in_the_forced_kill_batch_consumes_a_genuine_refresh() {
         }],
         &state,
     );
+    let exertion = &mut find_instance_mut(&mut state, &attacker_id)
+        .expect("the attacker")
+        .exertion;
+    exertion.attacked = true;
+    exertion.switched = true;
 
     let _ = monitor.before(&state, P1, &ActionBody::EndTurn);
     let found = invariant(
@@ -460,6 +482,53 @@ fn i12_a_declaration_in_the_forced_kill_batch_consumes_a_genuine_refresh() {
                     target_id: "hero-p2".to_string(),
                     forced: false,
                     instead_of: None,
+                },
+            ],
+            &state,
+        ),
+    );
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].starts_with("I12 attack after switch"), "{}", found[0]);
+}
+
+#[test]
+fn i12_a_confirmed_refresh_used_by_an_r1202_substitute_is_clean() {
+    let (mut state, declarer_id, defender_id) = exertion_state("i12-r1202-refresh", "fx-1");
+    let substitute = put(&mut state, "fx-2", slot(P1, Row::Units, 2), json!({}));
+    register_refresh_after_attack("fx-1");
+    let mut monitor = create_invariant_monitor(&state);
+    let switch = ActionBody::SwitchPosition {
+        instance_id: declarer_id.clone(),
+    };
+    let _ = monitor.before(&state, P1, &switch);
+    let _ = monitor.after(
+        &[GameEvent::PositionSwitched {
+            instance_id: declarer_id.clone(),
+            position: Position::Def,
+        }],
+        &state,
+    );
+
+    // The forced kill's `mayAttackAgain` reset both halves before the later declared attack spent
+    // only the attack half. R1202 emits the physical substitute as `attacker_id` and the Unit whose
+    // exertion was spent as `instead_of`.
+    let exertion = &mut find_instance_mut(&mut state, &declarer_id)
+        .expect("the declarer")
+        .exertion;
+    exertion.attacked = true;
+    exertion.switched = false;
+    let _ = monitor.before(&state, P1, &ActionBody::EndTurn);
+    let found = invariant(
+        "I12",
+        monitor.after(
+            &[
+                forced_attack(&declarer_id, &defender_id),
+                destroyed_by(&defender_id, &declarer_id),
+                GameEvent::AttackDeclared {
+                    attacker_id: substitute.id,
+                    target_id: "hero-p2".to_string(),
+                    forced: false,
+                    instead_of: Some(declarer_id),
                 },
             ],
             &state,
