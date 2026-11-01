@@ -1,12 +1,7 @@
-// The gear that opens the settings dialog (docs/polish/7-mobile-ux.md S8, B23). Mounts:
-// `placement="game"` at the end of the board's control bar, `placement="nav"` at the end of
-// `BackLink`'s nav and in the landing's corner, so it is always the top-right control of a screen.
-// The panel is portalled to <body> so it sits above the board's own stacking contexts, and focus
-// returns to this gear when it closes.
-//
-// The icon is drawn, not typed: U+2699 in the system font rendered about 8 px wide at the button's
-// size and read as a dot (integration QA). The path is a gear of eight teeth with a hub, filled in
-// `currentColor` so every skin's button color applies.
+// The gear that opens the settings dialog (docs/polish/7-mobile-ux.md S8, B23), mounted at the end of
+// the board's control bar (`game`) or of `BackLink`'s nav and the landing's corner (`nav`): always a
+// screen's top-right control. The panel is portalled to <body> to sit above the board's own stacking
+// contexts. The icon is drawn: U+2699 in the system font read as a dot at this size (integration QA).
 
 import { useCallback, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";

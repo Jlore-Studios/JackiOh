@@ -1,10 +1,8 @@
-// The Games panel of /stats (SPEC §9.11, R1994000): how the patch's games went, for the match type
-// shown. The first player's win share with its margin (half its 95% interval), the median game's
-// length in turns and the share of games that reach fatigue, each on its own line, and nothing of the
-// set traps (R2446000); a patch with fewer games than the sample floor says only that. When some of
-// the patch's games were recorded before these figures were kept, a note says how many of them it
-// counts. It names no data source and no gate (R661), and sits in the scrolling panel, never the
-// fixed top (R1646000).
+// The Games panel of /stats (SPEC §9.11, R1994000), for the match type shown: the first player's win
+// share with its margin (half its 95% interval), the median game's length in turns and the share of
+// games that reach fatigue, and nothing of the set traps (R2446000). A note counts the games recorded
+// before these figures were kept. It names no data source and no gate (R661), and sits in the
+// scrolling panel, never the fixed top (R1646000).
 
 import { useEffect, useState, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";

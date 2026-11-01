@@ -1,12 +1,9 @@
 // R1584000: the stats the floor below the tavern's showcase shows, one at a time: each with a title,
 // the card it is about and the player's number for it. A stat the device holds no data for is left
-// out. This module only chooses and words them; StatShowcase.tsx draws them and showcaseStage.ts
-// plays the board's animation for each. It takes the stage's types and nothing else of it, so the
-// effects layer stays off the first screen until the showcase is drawn.
-//
-// R1743000: there are 35 of them, and a stat's card is never a token: every choice passes over a card
-// whose catalog entry is a token, as it does one the catalog no longer holds. The order they come in
-// is the showcase's (`nextInBag`), a shuffled bag drawn from the page's random source.
+// out. StatShowcase.tsx draws them and showcaseStage.ts animates them; only the stage's types are
+// taken from it, so the effects layer stays off the first screen until the showcase is drawn.
+// R1743000: a stat's card is never a token nor one the catalog no longer holds; the order they come
+// in is `nextInBag`'s, a shuffled bag drawn from the page's random source.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
@@ -112,7 +109,6 @@ function ranked(counts: Readonly<Record<string, number>>): CardTally[] {
     .sort((a, b) => b.count - a.count || byId(a.id, b.id));
 }
 
-/** Each card's score by id. */
 function column(stats: PlayerStats, score: (counts: CardCounters) => number): Record<string, number> {
   return Object.fromEntries(Object.entries(stats.cards).map(([id, counts]) => [id, score(counts)]));
 }
@@ -151,17 +147,14 @@ function drawOne(ids: readonly string[], random: RandomSource): string | undefin
 
 type StatMeta = Omit<ShowcaseStat, "cardId" | "line">;
 
-/** A stat about a card tallied under one number, worded with that number. */
 function tallied(top: CardTally | undefined, stat: StatMeta, line: (n: number) => string): ShowcaseStat[] {
   return top === undefined ? [] : [{ ...stat, cardId: top.id, line: () => line(top.count) }];
 }
 
-/** A stat about the card the device logged most under one counter, worded with that count. */
 function counted(stats: PlayerStats, counter: CardCounter, stat: StatMeta, line: (n: number) => string): ShowcaseStat[] {
   return tallied(topCard(stats, counter), stat, line);
 }
 
-/** A stat about the card with the highest share of one number, worded with the part and the whole. */
 function shared(share: Share | undefined, stat: StatMeta, line: (part: number, whole: number) => string): ShowcaseStat[] {
   return share === undefined ? [] : [{ ...stat, cardId: share.id, line: () => line(share.part, share.whole) }];
 }
@@ -171,7 +164,6 @@ function about(id: string | undefined, stat: StatMeta, line: () => string): Show
   return id === undefined ? [] : [{ ...stat, cardId: id, line }];
 }
 
-/** The tally of a card, all zeros for one the device holds none of. */
 function countsOf(stats: PlayerStats, id: string): CardCounters {
   return stats.cards[id] ?? NO_COUNTS;
 }
@@ -192,11 +184,10 @@ export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): Showc
 }
 
 /**
- * The stats there are to show: one for each the device has data for, none before the first finished
- * game. The Pocket Pick comes from R1583000's request, so it is absent until that answers (or from
- * `pocketStat`, which a caller adds after the draw so its answer redraws nothing), when it names
- * nothing, or when the catalog no longer holds its card. R1743000: the order is not the stats'; and
- * each stat that picks a card at random draws once from `random`, and only when it has a candidate.
+ * One stat for each the device has data for, none before the first finished game. The Pocket Pick
+ * (R1583000's request) is absent until that answers with a card the catalog holds; a caller may add
+ * it after the draw with `pocketStat`, so its answer redraws nothing. R1743000: the order is not the
+ * stats'; each stat that picks a card at random draws once from `random`, only when it has a candidate.
  */
 export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, random: RandomSource): ShowcaseStat[] {
   if (stats.games === 0) return [];
@@ -358,9 +349,8 @@ export type ShowcaseBag = { readonly shown: ShowcaseKey | null; readonly left: r
 export const EMPTY_BAG: ShowcaseBag = Object.freeze({ shown: null, left: Object.freeze([]) });
 
 /**
- * R1743000: the bag after one stat more. What is left of the round (those of it that `keys` still holds)
- * gives the next; with none left the stats are shuffled by `random` into a new round, and a round never
- * starts with the stat just shown (it goes to the round's end), so none shows twice in a row.
+ * R1743000: the bag after one stat more: the next of the round's left (those `keys` still holds), or,
+ * with none left, a new round shuffled by `random` that never starts with the stat just shown.
  */
 export function nextInBag(bag: ShowcaseBag, keys: readonly ShowcaseKey[], random: RandomSource): ShowcaseBag {
   let left = bag.left.filter((key) => keys.includes(key));

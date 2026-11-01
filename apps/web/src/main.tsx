@@ -1,72 +1,42 @@
 // Entry point and the route table. The client is a `PlayerView` renderer (CLAUDE.md rule 7, SPEC
-// §10.8): this file picks a route, applies §9.4's gate once, and gets out of the way.
+// §10.8): this file picks a route, applies §9.4's gate once, and gets out of the way. The pathname
+// comes from `usePathname()` (`net/navigate.ts`) because a redirect has to re-render: the gate moves
+// the URL with `history.replaceState` and this component follows it.
 //
-// Routing is still a pathname switch rather than a router dependency, but the pathname now comes
-// from `usePathname()` (`net/navigate.ts`) instead of being read once at boot, because a redirect
-// has to re-render: `cy.location("pathname")` in specs 09 and 10 reads the real URL, so the gate
-// moves the URL with `history.replaceState` and this component follows it.
+// THE GATE IS UX, NOT SECURITY (SPEC §9.4): the server refuses a pending account everywhere but
+// `/api/auth/me` and `/api/codes/*`. `Gated` reads `GET /api/auth/me` and sends the browser to the
+// screen that will work; it lives in one place so there is one thing to change when §9.4 grows a
+// status. The same read says whether the account owes the username prompt (R1435) or the age check
+// or terms (R757000, R757001), which come first.
 //
-// THE GATE IS UX, NOT SECURITY. SPEC §9.4: "A pending account can log in, verify its email and see
-// the code screen, and nothing else: no collection, loadout, queue or match." The server is what
-// enforces that — every endpoint but `/api/auth/me` and `/api/codes/*` is declared `auth: "active"`
-// and answers 403 `account_pending`, and `wsServer.ts` runs the same `assertActive` on the upgrade.
-// What `Gated` does is read `GET /api/auth/me`, the endpoint §9.4 provides precisely so "the client
-// knows to show the code screen", and send the browser to the screen that will actually work. It
-// lives in exactly one place so there is one thing to change when §9.4 grows a status. The same
-// read says whether an active account still owes the username prompt (R1435), which the gate then
-// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`),
-// and whether the account owes the age check or agreement to the terms in force (R757000, R757001),
-// which comes first (`auth/ConsentPrompt.tsx`).
+// NO DEAD ENDS (docs/polish/5-sign-in.md, B40): every panel this file draws itself offers a way out.
+// The landing page is imported statically because it is the first screen most visits see.
 //
-// NO DEAD ENDS (docs/polish/5-sign-in.md, B40). Every panel this file draws itself — the gate's
-// error, the banned account, the 404, a screen whose code failed to load, and a check that is
-// taking too long — offers a way out: home, sign out, and try again where trying again can help.
-// The landing page is `routes/landing.tsx`, imported statically because it is the first screen most
-// visits see. The panels sit in the same tavern frame as the sign-in screens (`auth/tavern.css`),
-// since they are the waypoints between the landing and those screens.
+// ONE GATE PER SCREEN: each route's gate is keyed by its path, so an in-app move re-reads
+// `/api/auth/me` rather than React reusing one instance and the account it read.
 //
-// ONE GATE PER SCREEN. Every gated route renders `<Gated>` at the same place in the tree, so React
-// would reuse one instance (and the account it read) across in-app moves: a redemption on
-// `/invite` went on to `/decks` still holding the "pending" account it read before, and bounced
-// straight back. Each route's gate is keyed by its path, so a move re-reads `/api/auth/me`.
+// ONE SOCKET PER SESSION (R194): the match screen is keyed by the provider session its token belongs
+// to, so a renewal keeps its socket and only a different session, or account, opens a new one.
 //
-// ONE SOCKET PER SESSION (R194). The gate renews a session shortly before its token expires and
-// hands the new token down. The match screen is keyed by the provider session the token belongs to,
-// so a renewal of the same session keeps its socket (the new token waits for the next reconnect),
-// and only a different session, or account, opens a new one.
+// Before the route switch runs, an emailed link (R193) is scrubbed from the address bar on any path,
+// `/login` too, whose screen is a lazy chunk that may fail to load, and one that landed elsewhere
+// (Supabase's Site URL fallback) is handed to `/login`. A room link on /play is kept for this tab
+// (R767, net/roomLink.ts), so the gate's way to /login cannot lose it.
 //
-// EMAILED LINKS ON ANY PATH (R193). Before the route switch runs, a link is scrubbed from the
-// address bar, on `/login` too (whose screen is a lazy chunk that may be slow or fail to load), and
-// one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login`.
+// THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) watches the account on
+// every screen but `/play`, and takes the player to the game when the queue pairs them.
 //
-// A ROOM LINK (R767). Before the route switch runs, a room link on /play is taken out of the address
-// bar and kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose it; the lobby
-// uses it once.
+// THE ENGINE LOADS ALONGSIDE (#778): the page paints once the language is in, and EngineGate holds
+// every screen that calls the engine until its module is in, with a retry if it never arrives.
 //
-// THE QUEUE FOLLOWS THE PLAYER (R765). A player queued on `/play` may go anywhere in the client while
-// they wait. The route table's own `useQueueFollow` (`net/liveGame.ts`) watches the account on every
-// screen but `/play`, which watches for itself, and when the queue pairs them it says so over the
-// screen (`QueueFound`) and takes them to the game.
+// SCREEN CODE ON INTENT (#2116, R2116000): the screens are chunks of one map (`routes/chunks.tsx`),
+// which the prefetch shares, so intent toward a control starts its screen's code before the click.
 //
-// THE ENGINE LOADS ALONGSIDE (#778). The engine's module is 2.31 MB gzipped, and the landing, sign-in,
-// the reset and code screens and the legal pages never call it. The page paints once the language is
-// in; EngineGate holds every other screen until the module is in, with a retry if it never arrives.
+// FRIENDS FIND THE PLAYER ANYWHERE (#936, B47, B57): the presence heartbeat and the challenge toast
+// are this file's, so neither waits on a screen's gate nor restarts with it.
 //
-// SCREEN CODE ON INTENT (#2116, R2116000). The screens are chunks of one map
-// (`routes/chunks.tsx`), which the prefetch shares: intent toward a control starts its screen's
-// code, and a game screen's engine, before the click, and a screen whose code is already in skips
-// the loading panel.
-//
-// FRIENDS FIND THE PLAYER ANYWHERE (#936, B47, B57). While the tab holds a session, the shell sends the
-// presence heartbeat (`together/presence.ts`) and shows the challenge toast (`together/ChallengeToast.tsx`)
-// over every screen, whichever is open: both are this file's, as the queue's follow is, so neither
-// waits on a screen's gate nor restarts with it.
-//
-// A COMMAND MENU ON EVERY MENU (R2118000). Ctrl+K (Cmd+K) opens the command menu
-// (`routes/CommandMenu.tsx`, `routes/commandEntries.ts`) on every menu screen: the common actions,
-// every menu page and the Almanac shelf's cards by name, each a `navigate` move. It is never
-// mounted on a board route, nor over a board sharing a menu's path (`game/boardShown.ts`), and it
-// is keyed by the path, so a move closes it. Presentation only (CLAUDE.md rule 7).
+// A COMMAND MENU ON EVERY MENU (R2118000): Ctrl+K opens `routes/CommandMenu.tsx` on every menu screen,
+// never over a board (`game/boardShown.ts`); it is keyed by the path, so a move closes it.
 
 import {
   Component,
@@ -319,9 +289,8 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
 }
 
 /**
- * A screen whose code could not be loaded. Every route but the landing page is a lazy chunk, and a
- * chunk fails on a flaky network, and after every deploy for a tab left open (the old hashed file is
- * gone, and the host answers the request with `index.html`). Without this the whole root unmounted
+ * A screen whose code could not be loaded: a lazy chunk fails on a flaky network, and after every
+ * deploy for a tab left open (the old hashed file is gone). Without this the whole root would unmount
  * to a blank page. A reload fetches the current build; the home link is a real page load too.
  */
 type LoadFailedState = { failed: boolean };
@@ -365,9 +334,7 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // The engine's module (#778)
-// ---------------------------------------------------------------------------------------------
 
 /** Where the engine's WebAssembly module stands, for a screen that calls it. */
 type EngineLoad = "loading" | "ready" | "failed";
@@ -424,9 +391,7 @@ function EngineGate({ children }: { children: ReactNode }): ReactElement {
   return <>{children}</>;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The gate (SPEC §9.4)
-// ---------------------------------------------------------------------------------------------
 
 export type ReadyAccount = { token: string; me: MeResponse };
 
@@ -458,14 +423,12 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
 }
 
 /**
- * R1435: the profiles this page has let past the username prompt, for as long as the page lives:
- * one a gated screen was shown to while active, and one that answered the prompt here. The prompt
- * meets an account before its first screen, never after. Each route mounts a gate of its own, so a
- * gate's own state would forget, and a re-read that finds the prompt owed once a screen is up (a
- * renewal, another tab, a server that gained usernames meanwhile) would raise it over the next
- * screen: the match a queue just paired, mid-mulligan. Kept here instead, it waits for the next
- * sign-in (a new page). A redemption on `/invite` showed its screen to a pending account, so the
- * prompt still follows it. An answer counts at once, whatever the re-read after it finds.
+ * R1435: the profiles this page has let past the username prompt: one a gated screen was shown to
+ * while active, and one that answered the prompt here. The prompt meets an account before its first
+ * screen, never after; each route mounts a gate of its own, so a gate's own state would forget and
+ * raise it over the next screen (the match a queue just paired, mid-mulligan). A redemption on
+ * `/invite` showed its screen to a pending account, so the prompt still follows it. An answer counts
+ * at once, whatever the re-read after it finds.
  */
 const usernamePromptPassed = new Set<string>();
 
@@ -497,8 +460,7 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
   const [, setAnswered] = useState(0);
 
   // In an effect, never during render: `navigate` dispatches an event that re-renders every
-  // `usePathname` subscriber, and doing that while this component is rendering would be an update
-  // during render.
+  // `usePathname` subscriber, which would be an update during this render.
   useEffect(() => {
     if (target === null) return;
     navigate(target, { replace: true });
@@ -511,10 +473,8 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
   const status = account.me.profile.status;
   if (status === "pending" && !allowPending) return <Loading what="Redeem an invite code first." />;
   if (status === "banned") {
-    // Not in SPEC, and no R-row: §9.4 has three statuses and names a screen for two of them. This
-    // is a terminal message, not a decision — the server already refuses a banned account at every
-    // door (R145 reports it distinctly, because it depends on the caller's own account and leaks
-    // nothing), so nothing downstream rides on what this screen says and there is no rule to state.
+    // Not in SPEC, and no R-row: §9.4 names a screen for two of its three statuses. This is a terminal
+    // message, not a decision: the server already refuses a banned account at every door (R145).
     return (
       <ShellPanel>
         <p className="notice" data-testid={shellTestid.error} role="alert">
@@ -528,17 +488,15 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
     );
   }
   // R1435: an active account owes the username prompt until it picks or skips, and meets it before
-  // any gated screen. `promptOwed` is the server's; a server that sends no `username` owes none.
-  // Never while the account is in a match or a Conquest series: a reload mid-game, or the landing's
-  // Rejoin, opens the board (or the series' pick, its clock running) on a new page, and the prompt
-  // waits for the next sign-in like any other screen it found open.
+  // any gated screen; a server that sends no `username` owes none. Never while the account is in a
+  // match or a Conquest series: a reload mid-game opens the board on a new page, and the prompt waits
+  // for the next sign-in.
   const profileId = account.me.profile.id;
   const playing = account.me.currentMatchId !== null || (account.me.currentSeriesId ?? null) !== null;
   // R757000, R757001: an account owing the age check or agreement to the terms in force meets the
-  // consent screen first, the server's `ageCheckOwed` and `termsOwed` (a server that sends neither
-  // owes none). A pending account meets it before the code screen, whose redemption the server
-  // refuses until it is answered. Never on `/account`, never while in a match or a series, and
-  // never over a screen this gate already showed an active account.
+  // consent screen first, a pending one before the code screen, whose redemption the server refuses
+  // until it is answered. Never on `/account`, never while in a match or a series, and never over a
+  // screen this gate already showed an active account.
   const consentOwed = account.me.ageCheckOwed === true || account.me.termsOwed === true;
   if (
     consentOwed &&
@@ -593,9 +551,7 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
   );
 }
 
-// ---------------------------------------------------------------------------------------------
 // The tab title and the canonical link
-// ---------------------------------------------------------------------------------------------
 
 /**
  * Every route is served from one index.html, so a static canonical link would point every route at
@@ -622,9 +578,7 @@ function useDocumentHead(path: string): void {
   }, [path, locale]);
 }
 
-// ---------------------------------------------------------------------------------------------
 // The route table
-// ---------------------------------------------------------------------------------------------
 
 /**
  * The provider session a token belongs to (its `session_id` claim), else the token itself (the
@@ -678,8 +632,8 @@ export function App(): ReactElement {
     }
     if (path === paths.play) {
       // R1578000: the hub is every mode's front door, so a visitor with no account sees it too, its
-      // online panel a sign-in. A room link waits through the sign-in as it always did (R767), and a
-      // stored session, even a stale one, still meets the gate.
+      // online panel a sign-in. A room link waits through the sign-in (R767), and a stored session,
+      // even a stale one, still meets the gate.
       if (!signedIn && readRoomLink() === null) return <PlayRoute token={null} />;
       return (
         <Gated key={path}>
@@ -892,15 +846,10 @@ export function App(): ReactElement {
 }
 
 /**
- * `index.html` loads this module as its only script, so the mount is a module side effect.
- *
- * The engine is WebAssembly (docs/v0.3.0/SURFACE.md §10.3). Its download starts here beside the
- * language's, and the first render waits only for the language: see THE ENGINE LOADS ALONGSIDE.
- *
- * Vitest imports the module to reach `App`, `Gated` and `redirectFor`, and a second React root
- * mounted into the test's own document would duplicate every query and every `/api/auth/me` round
- * trip. `MODE` is `"test"` only under vitest (`routes/gate.test.tsx` asserts it, so a change in
- * vitest's default fails there rather than silently double-mounting here).
+ * `index.html` loads this module as its only script, so the mount is a module side effect. The
+ * engine is WebAssembly (docs/v0.3.0/SURFACE.md §10.3); see THE ENGINE LOADS ALONGSIDE. Vitest
+ * imports the module to reach `App`, and a second React root would duplicate every query and every
+ * `/api/auth/me` round trip; `MODE` is `"test"` only under vitest (`routes/gate.test.tsx` asserts it).
  */
 if (import.meta.env.MODE !== "test") {
   const host = document.getElementById("root");

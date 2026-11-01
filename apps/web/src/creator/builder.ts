@@ -1,21 +1,9 @@
-// The creator's no-code builder (#920, SPEC §12.3, K3): a custom card as blocks a player picks from
-// menus, and the card-kit Luau those blocks write. The builder knows only the kit's own words (#913,
-// docs/custom-cards.md), so everything it writes is a script the kit runs; the code view shows and
-// edits the same script.
-//
-// The model is plain data, saved beside the card (`CustomCard.builder`) and read back by the creator
-// alone; the engine never reads it (R915006). The script it writes is a pure function of the model
-// (`writeScript`), and the card's text of the model and the frame (`writeText`), so a card whose
-// source still equals what its model writes is the builder's to show; one edited in code beyond
-// that is code-only (`builderShows`), and says why.
-//
-// Numbers. Each amount a block names is one of the card's numbers (`{key}` in the text, `n.key` in
-// the script), so Degrade and Upgrade move it and its Radiant face may print another value. The
-// builder keeps their keys itself (`numbersOf`): a verb's own word, with a digit when two blocks
-// share it (`dmg`, `dmg2`).
-//
-// Nothing here is a rule (CLAUDE.md rule 7): the frame and the script are judged by the engine's
-// validator and the Luau module's check, and the builder only offers what they accept.
+// The creator's no-code builder (#920, SPEC §12.3, K3): a custom card as blocks picked from menus,
+// and the card-kit Luau they write, in the kit's own words only (#913, docs/custom-cards.md). The
+// model is saved beside the card (`CustomCard.builder`) for the creator alone; the engine never reads
+// it (R915006). Each amount is one of the card's numbers (`{key}` in the text, `n.key` in the script),
+// so Degrade and Upgrade move it and its Radiant face may print another. Nothing here is a rule
+// (CLAUDE.md rule 7): the engine's validator and the Luau module's check judge the card.
 
 /** The kit's hooks a block list can hang on. */
 export const TRIGGERS = ["cry", "death", "startOfTurn", "endOfTurn"] as const;
@@ -87,7 +75,6 @@ export type BuilderAura = {
 
 export type BuilderActivate = { label: string; cost: number; steps: BuilderStep[] };
 
-/** The builder's whole model of one card. */
 export type BuilderModel = {
   version: 1;
   /** The Cry's target chosen as the card is played; null for none. */
@@ -118,7 +105,6 @@ const NUMBER_WORD: Readonly<Record<BuilderVerb, string>> = {
   summon: "tokens",
 };
 
-/** One number a block names: its key, its base value, which block and field it is. */
 export type BuilderNumber = { key: string; base: number; radiant: number };
 
 /** Every block of the model, hook by hook, then the Activate's. */
@@ -215,7 +201,7 @@ function stepLua(step: BuilderStep, keys: readonly string[]): string {
   }
 }
 
-/** The script the model writes: `Card { … }` in the kit, a pure function of the model. */
+/** The script the model writes: `Card { … }` in the kit. */
 export function writeScript(model: BuilderModel): string {
   const keys = keysByBlock(model);
   let at = 0;
@@ -350,10 +336,7 @@ export function writeText(model: BuilderModel): string {
   return lines.join("\n");
 }
 
-/**
- * K3: whether the builder can show the card: it has a model, and the source is exactly what that
- * model writes. A card edited in code beyond that is code-only.
- */
+/** K3: whether the builder can show the card: it has a model and the source is exactly what it writes. */
 export function builderShows(model: BuilderModel | null, source: string): boolean {
   return model !== null && writeScript(model) === source;
 }

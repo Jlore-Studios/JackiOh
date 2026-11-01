@@ -1,8 +1,7 @@
 // BUILD M5-T1 measures the 10-unit, 10-backrow, stacked-pile fixture in a real browser.
 // B28 and B46 extend it to the mobile and tablet viewports without horizontal or vertical overflow.
 // Mount `Game` in `.app-shell--wide`, its narrowest product container; a bare `Board` gets space it
-// never has. The width checks, full-card visibility, and board span distinguish overflow from a
-// clipped or collapsed board.
+// never has.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
@@ -35,7 +34,6 @@ type Measurement = {
   boardScrollWidth: number;
   boardRight: number;
   boardWidth: number;
-  /** Recorded, never asserted — see the note where these are filled in. */
   documentScrollHeight: number;
   boardHeight: number;
   boardBottom: number;
@@ -125,7 +123,6 @@ describe("BUILD M5-T1 — the full fixture board fits 1280x720, 844x390, 768x102
   }
 });
 
-// R504: measure empty hand rows in a browser and keep the field in place at every viewport.
 describe("R504 an empty hand keeps its place at every size", () => {
   function handRows(doc: Document): { you: number; opponent: number; fieldTop: number } {
     const height = (id: string): number => doc.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect().height ?? -1;

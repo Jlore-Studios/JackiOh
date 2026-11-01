@@ -1,13 +1,10 @@
-// The toolbar both replays share (#2025): the step and turn buttons, Play, the scrubber with
-// its held state, a readout slot and an extra-actions slot. The 1v1 player puts it in its
-// board's notice slot, so it is mounted afresh with each fresh board, and the co-op replay puts
-// it above its board.
+// The toolbar both replays share (#2025): the step and turn buttons, Play, the scrubber, a readout slot
+// and an extra-actions slot. The 1v1 player puts it in its board's notice slot, so it is mounted afresh
+// with each fresh board; giving focus back after one is the replay's job.
 //
-// It decides nothing: each replay hands it the step on the board, its own moves (a co-op turn
-// is a round, §13.9) and its readout, and clamps the moves itself. While the scrubber is held
-// nothing moves: the board goes to where it is let go (`pointerup` on the window), and
-// `pointercancel` leaves it where it was. Moved without a pointer (its arrow keys, a `change`
-// with no hold), it moves at once. Giving focus back after a fresh board is the replay's job.
+// It decides nothing: each replay hands it the step on the board, its own moves (a co-op turn is a
+// round, §13.9) and its readout, and clamps the moves itself. The scrubber moved without a pointer
+// (its arrow keys, a `change` with no hold) moves the board at once.
 //
 // The arrow keys are the two replays' own (ReplayPlayer.tsx, DuosReplay.tsx); the four step and turn
 // buttons name them in their tooltips and aria-keyshortcuts, and listen for none (R2126000).
@@ -49,7 +46,6 @@ export function isTyping(target: EventTarget | null): boolean {
 export type ReplayToolbarProps = {
   /** The step on the board. */
   at: number;
-  /** The replay's last step. */
   last: number;
   playing: boolean;
   /** Play or Pause pressed; a hold of the scrubber stops Play. */

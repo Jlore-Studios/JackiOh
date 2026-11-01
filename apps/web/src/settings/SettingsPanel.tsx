@@ -137,7 +137,6 @@ export default function SettingsPanel({
   // R2127000: Back closes the panel as Close does.
   useBackLayer(onClose);
 
-  // Omit empty sections.
   const sections = SECTIONS.filter(
     (section) => section.controls.length > 0 || slots.some((slot) => slot.section === section.id),
   );
@@ -337,7 +336,6 @@ export default function SettingsPanel({
             data-testid="settings-reset"
             onClick={() => {
               resetSettings();
-              // Reset every mounted slot too.
               for (const slot of slots) slot.reset?.();
             }}
           >

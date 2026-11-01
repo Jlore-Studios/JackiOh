@@ -69,9 +69,8 @@ export function collectionOf(
 }
 
 /**
- * `GET /api/collection` owning every catalog card at `MAX_COPIES` but `free`: the token pick's pool
- * stays a few faces, so a test that mounts the browse pane (about 570 faces from `collectionOf`)
- * stays fast whatever the catalog holds.
+ * `GET /api/collection` owning every catalog card at `MAX_COPIES` but `free`, so a test that mounts
+ * the token pick's browse pane draws a few faces, and stays fast whatever the catalog holds.
  */
 export function collectionOwningAllBut(...free: string[]): CollectionResponse {
   return {

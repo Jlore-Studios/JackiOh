@@ -69,7 +69,6 @@ function where(viewport: Viewport): string {
   return `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 }
 
-/** Nothing on the page is wider than the viewport. */
 function expectNoHorizontalOverflow(viewport: Viewport): void {
   cy.window({ log: false }).should((win) => {
     expect(win.innerWidth, "the viewport is the one asked for").to.eq(viewport.width);

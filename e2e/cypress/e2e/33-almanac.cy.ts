@@ -30,10 +30,9 @@ const POOL_WALK = 120;
 const apiCalls: string[] = [];
 
 /**
- * #2334: the grid mounts only the rows of cards near the view (PoolGrid's `virtual`), so a check of
- * every card scrolls the pool from its top to its foot, a screen at a time, and meets the cards each
- * screen mounts. `check` sees each card once; the ids come back in the grid's order, and there are as
- * many as the result count says.
+ * #2334: the grid mounts only the rows near the view (PoolGrid's `virtual`), so a check of every card
+ * scrolls the pool from top to foot a screen at a time. `check` sees each card once; the ids come
+ * back in the grid's order, as many as the result count says.
  */
 function eachPoolCard(check: ($card: JQuery<HTMLElement>) => void): Cypress.Chainable<string[]> {
   const ids: string[] = [];

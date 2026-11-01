@@ -308,7 +308,7 @@ describe("#1658 reduced motion", () => {
   });
 });
 
-/* ------------------------------------------------------------------------ the stylesheet --- */
+/* the stylesheet */
 
 type Block = { prelude: string; body: string };
 

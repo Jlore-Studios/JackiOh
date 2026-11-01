@@ -1,9 +1,7 @@
-// #37, Global Cosmetic: "make it more evident when a zone is locked". A Locked zone is drawn with a
-// padlock (LockIcon.tsx), and a card dragged onto one it cannot go into is refused with a blocked X
-// where it landed (BlockedMark.tsx) rather than silently snapping back.
-//
-// Driven through `<Game/>` the way drag-layer.test.tsx drives it: jsdom has no
-// `document.elementsFromPoint`, so each test stubs it with the element the pointer is "over".
+// #37, Global Cosmetic: "make it more evident when a zone is locked". A Locked zone shows a padlock
+// (LockIcon.tsx), and a card dragged onto one it cannot go into is refused with a blocked X where it
+// landed (BlockedMark.tsx) rather than silently snapping back. jsdom has no `document.elementsFromPoint`,
+// so each test stubs it with the element the pointer is "over", as drag-layer.test.tsx does.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";

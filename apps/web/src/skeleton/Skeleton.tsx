@@ -1,9 +1,7 @@
-// #2115, R2115000: the shape of what a menu panel waits for, drawn in place of its "Loading …" line, in
-// four variants: a card grid, list rows, table rows and a generic panel. The words stay as a status line
-// a screen reader hears and nobody sees; the blocks are aria-hidden. Their shimmer is the one animation,
-// left out under Reduce motion, the settings panel's or the OS's (skeleton.css). Presentation only
-// (CLAUDE.md rule 7): a fixed number of blank blocks, never a count from the read. A wait shorter than
-// SKELETON_DELAY_MS shows no blocks, and the blocks are brass (#2108, R2108000).
+// #2115, R2115000: the shape of what a menu panel waits for, drawn in place of its "Loading …" line.
+// The words stay as a status line a screen reader hears; the blocks are aria-hidden, and their shimmer
+// stops under Reduce motion (skeleton.css). Presentation only (CLAUDE.md rule 7): a fixed number of
+// blank blocks, never a count from the read. The blocks are brass (#2108, R2108000).
 
 import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -16,7 +14,6 @@ export type SkeletonVariant = "grid" | "rows" | "table" | "panel";
 
 /** Card tiles: two rows at most in a phone's region, so a skeleton fits one screen (R1581000). */
 export const SKELETON_TILES = 8;
-/** List rows. */
 export const SKELETON_ROWS = 4;
 /** Table rows under the header row, and the cells of each. */
 export const SKELETON_TABLE_ROWS = 5;

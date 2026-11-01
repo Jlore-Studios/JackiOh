@@ -1,13 +1,10 @@
-// The token picker (#1309, SPEC §14.5): both token bars, the cosmetic cycle's next step, the
-// card token's pick of an unowned card and the cosmetic tokens held. R1953001: a cosmetic token is
-// spent where a locked cosmetic is shown, in the Collection (collection/TokenOffer.tsx), so the shop
-// keeps no pick of one and links there.
+// The token picker (#1309, SPEC §14.5): both token bars, the cosmetic cycle's next step, the card
+// token's pick of an unowned card and the cosmetic tokens held. R1953001: a cosmetic token is spent in
+// the Collection (collection/TokenOffer.tsx), so the shop keeps no pick of one and links there.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The bars, their sizes, the next step and the held
-// counts come from `GET /api/tokens`; the filter only chooses what to browse. A redemption sends
-// intent and renders the answer: success re-reads the bars (and the collection, so the unlocked
-// card leaves the list), refusal shows the server's words through `t()` (R711000) with nothing
-// changed on screen.
+// THE SERVER DECIDES (CLAUDE.md rule 7): the bars, their sizes, the next step and the held counts
+// come from `GET /api/tokens`. A redemption sends intent and renders the answer: success re-reads the
+// bars and the collection, refusal shows the server's words through `t()` (R711000) with nothing changed.
 
 import { useEffect, useId, useMemo, useState, type ReactElement } from "react";
 

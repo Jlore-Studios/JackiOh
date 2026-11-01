@@ -1,12 +1,9 @@
 // What a finished game paid, as the server answers it (#1664, part of #1651; SPEC §14.7–§14.9,
-// R1483000, R1502000): the game's Jlore and XP, every set track it moved from where it stood to where
-// it stands with each level it reached and what that level paid, and every quest it completed. It
-// mirrors `crates/server/src/economy/rewards.rs`' `GameEconomy`, which the server puts on the match
-// socket's `view` frame, the co-op frame and the paid practice claim once the result is written.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). The client computes no curve: the bar's size, where it was
-// and where it is, the levels and their rewards are the answer's, and `stagesOf` only lays them out
-// as the bars `FillBar` draws.
+// R1483000, R1502000): its Jlore and XP, every set track it moved with each level reached and what
+// that paid, and every quest it completed. It mirrors `crates/server/src/economy/rewards.rs`'
+// `GameEconomy`, which the match socket's `view` frame, the co-op frame and the paid practice claim
+// carry. THE SERVER DECIDES (CLAUDE.md rule 7): the client computes no curve; `stagesOf` only lays the
+// answer out as `FillBar`'s bars.
 
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
 
@@ -113,19 +110,17 @@ function pointsOf(point: TrackPoint): number | null {
 }
 
 /**
- * One bar `FillBar` plays: the level it is on, and where it starts (null for a bar that does not
- * move) and rests. `fills` is 1 for a bar that fills and passes to the next level, 0 for the last
- * one of a track.
+ * One bar `FillBar` plays: its level, where it starts (null for a bar that does not move) and rests.
+ * `fills` is 1 for a bar that passes to the next level, 0 for a track's last.
  */
 export type Stage = { level: number; size: number; from: number | null; value: number; fills: 0 | 1 };
 
 /**
- * The bars a track's gain plays, one for each level it passes through: the level it stood on, from
- * where it stood to full; each level between, full; and the level it ends on, from empty to where it
- * stands. Levels span different XP (the answer gives the first's and the last's), so each bar is its
- * own: the bars between give no size, and take the last one's, which only sets how long they sweep.
- * A track that reaches its last level ends full, that level having no span, at the XP it holds; one
- * that stood there already never moves.
+ * The bars a track's gain plays, one per level it passes through: the level it stood on from where
+ * it stood to full, each level between full, and the last from empty to where it stands. The answer
+ * gives only the first and last spans, so a bar between takes the last's size, which only sets how
+ * long it sweeps. A track reaching its last level ends full at the XP it holds (that level has no
+ * span); one that stood there already never moves.
  */
 export function stagesOf({ before, after }: TrackGain): Stage[] {
   const start = pointsOf(before);

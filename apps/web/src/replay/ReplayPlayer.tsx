@@ -2,23 +2,17 @@
 // `ReplaySource` and nothing else (CLAUDE.md rule 7), draws each step's view with `Game` as a board
 // to look at (`replay`: no legal action or glow, and a click changes nothing; `replayPrompt`,
 // R2211000: the seat's own open prompt read-only and folded, the other seat's as the waiting panel)
-// and holds the controls (`ReplayToolbar.tsx`, which the co-op replay shares) in the board's notice
-// slot.
+// and holds the controls (`ReplayToolbar.tsx`) in the board's notice slot.
 //
 // A step forward hands `Game` the next view with the same key, so its animation queue, effects and
-// sound run as live play's do (R201's speed included). Any other move, a step back or a jump, gives
-// `Game` a fresh key: the board mounts on that view with nothing animating, and its log history,
-// which reads a window that does not overlap the last as a gap, starts over (`useLogHistory`). The
-// last step is `Game`'s own result chip, with both hands (R434).
+// sound run as live play's do (R201's speed included). Any other move gives `Game` a fresh key: the
+// board mounts with nothing animating, and its log history, which reads a window that does not
+// overlap the last as a gap, starts over. The last step is `Game`'s result chip, with both hands (R434).
 //
-// R768000: a result screen opens it at step 0 ("Watch the replay") or at the last step with the
-// last turn's GIF already being made ("Share the last turn"). #936 B59: an online match's route hands
-// it "Share with a friend" (`actions`), drawn under the toolbar. #1568: Try again appears only for
-// `error`, since a refusal or an expiry cannot change, and it repeats the failed move. Failed pages
-// are not cached (`steps.ts`, the `finally` that runs `flying.delete`).
-//
-// R1834004: an online match's board wears both seats' frozen loadouts, as its pages have sent them
-// (`ReplaySource.loadouts`); each step drawn reads them afresh, its own page's cards among them.
+// R768000: a result screen opens it at step 0 or at the last step with that turn's GIF being made.
+// #1568: Try again appears only for `error`, since a refusal or an expiry cannot change; failed pages
+// are not cached (`steps.ts`). R1834004: an online match's board wears both seats' frozen loadouts
+// (`ReplaySource.loadouts`), each step drawn reading them afresh.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";

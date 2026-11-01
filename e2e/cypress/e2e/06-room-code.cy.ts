@@ -131,8 +131,8 @@ function renderedHandCards(): Cypress.Chainable<number> {
 
 describe("06 room code — a networked match between a browser and a Node client", () => {
   it("opens a room, plays it out and leaves both players queue-eligible", () => {
-    // Re-pinned for R2368000's three-card opening hand: "06-room-code" no longer deals seat 1 a card it
-    // can play on its first turn, so R82 would end that turn by itself.
+    // With R2368000's three-card opening hand this seed deals seat 1 a card it can play on its first
+    // turn, so R82 does not end that turn by itself.
     const seed = seedFor("06-room-code-1");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
@@ -200,7 +200,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Both connect.
     cy.then(() => {
       // `wsPlayer` defaults the omitted seat to p2 (ASK: type its `seat` field).
       cy.wsPlayer({
@@ -217,7 +216,6 @@ describe("06 room code — a networked match between a browser and a Node client
       cy.visitAs(seatOne, routes.match(matchId));
     });
 
-    // Both see the board.
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(heroId("opponent"))).should("be.visible");
     for (const side of SIDES) {
@@ -379,8 +377,7 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // Host makes a Best-of-1 room and hands over its link. R1989000 pins the host to p1 beside
-    // the seed, so the spec keeps the seats it was written for.
+    // Host makes a Best-of-1 room and hands over its link.
     cy.then(() => {
       cy.request<{ code: string; mode: string }>({
         method: "POST",
@@ -418,7 +415,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
 
-    // The host reaches the same match.
     cy.then(() => {
       cy.wsPlayer({
         action: "connect",

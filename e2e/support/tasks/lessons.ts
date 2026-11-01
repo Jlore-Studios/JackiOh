@@ -1,11 +1,8 @@
 // `cy.task("tutorialLessons")`: the tutorial's lessons as the web source states them (SPEC §9.10).
-//
-// Specs 22 and 23 assert that a lesson plays with its own seed, seat and two fixed decks (R291) and
-// the tutorial handicap (R290). Those lists are content another team edits, so a spec never copies
-// them: this task reads apps/web/src/tutorial/lessons.ts (and AI_TUTORIAL, and the catalog's
-// Quickdraw tag) at spec time, in a child process under the repo's own tsx, exactly as the
-// replayHash task folds a log (replay.ts). The client under test must be built from the same
-// source, which is why the README says to rebuild after a lesson changes.
+// Specs 22 and 23 assert each lesson's seed, seat, two fixed decks (R291) and handicap (R290); those
+// lists are content another team edits, so this task reads apps/web/src/tutorial/lessons.ts (and
+// AI_TUTORIAL, and the catalog's Quickdraw tag) at spec time under the repo's own tsx, as replay.ts
+// folds a log. The client under test must be built from the same source.
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";

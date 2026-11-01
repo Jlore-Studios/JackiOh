@@ -49,7 +49,6 @@ function quiet(viewport: Viewport | null): { onBeforeLoad?: (win: Cypress.AUTWin
 
 function shoot(viewport: Viewport | null, name: string): void {
   if (viewport === null) return;
-  // Wait for the opponent's showcase animation.
   cy.get(ts(SHOWCASE)).should("not.exist");
   cy.screenshot(`28-patch-011-ui/${viewport.label}/${name}`, { capture: "viewport", overwrite: true });
 }

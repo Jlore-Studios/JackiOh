@@ -1,13 +1,11 @@
 // What one patch did to one card, as both screens print it (R388, R507).
 //
-// A value that changed reads "Cost: (2) Cost → (1) Cost", "Stats: 2/3 → 3/3" (R432's cost style).
-// A face's text that changed prints whole, as the patch left it, with the words and numbers it did
-// not have before marked the way R277 marks a Radiant face — bold and underlined, so the mark does
-// not rest on color alone — but in the patch mark's teal and with a double underline, so it is never
-// read as the Radiant gold or as a reference's dotted line (R279). Under it, when the patch also took
-// words away, the text as it was, with those words struck through ("Was"). Assistive technology
-// hears "new:" and "removed:" before each mark (patches.css), since `<ins>` and `<del>` alone are not
-// announced by every screen reader.
+// A value that changed reads "Cost: (2) Cost → (1) Cost" (R432's cost style). A changed text prints
+// whole, as the patch left it, its new words marked as R277 marks a Radiant face (bold and underlined,
+// so the mark does not rest on color alone) but in teal with a double underline, never read as the
+// Radiant gold or a reference's dotted line (R279); words it took away show under it, struck through
+// ("Was"). A screen reader hears "new:" and "removed:" before each mark (patches.css), since `<ins>`
+// and `<del>` alone are not announced by every screen reader.
 
 import type { ReactElement, ReactNode } from "react";
 

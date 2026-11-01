@@ -605,8 +605,6 @@ function earnAFullArt(loop: Loop): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-
 describe("R1310000 R1310003 the economy loop", () => {
   beforeEach(() => {
     expect(SEED, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");

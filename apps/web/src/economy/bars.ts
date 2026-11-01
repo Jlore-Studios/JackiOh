@@ -1,10 +1,7 @@
-// The pure parts of the bar that fills and the reward reveal (#1658, part of #1651, SPEC §14.5):
-// the segments one `FillBar` plays, the points each slot sends flying into an opening's bars
-// (R1953000, R1999000), the reward a bar's fill reveals in an opening, and the sting a reward plays. Nothing
-// here reads the DOM or a clock; the components keep the timers.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). A bar's points, its size, each slot's points and what a fill
-// pays all come from the server's answer; these functions only lay that answer out in time.
+// The pure parts of the bar that fills and the reward reveal (#1658, part of #1651, SPEC §14.5): a
+// `FillBar`'s segments, the slots' points flying into an opening's bars (R1953000, R1999000), the
+// reward a fill reveals and the sting a reward plays. No DOM or clock; the components keep the timers.
+// THE SERVER DECIDES (CLAUDE.md rule 7): these only lay the server's answer out in time.
 
 import type { PrintedRarity } from "@jackioh/shared";
 
@@ -45,8 +42,7 @@ export type OpeningBar = OpeningBarsAnswer["card"];
 
 /**
  * One slot's points on their way to the bars (R1953000, R1999000): the server's points, the slot's
- * rarity (a card pack's card rarity, a cosmetic pack's cosmetic rarity), which tints the flight and
- * sizes its burst, and the testid of the slot it takes off from.
+ * rarity, which tints the flight and sizes its burst, and the testid of the slot it takes off from.
  */
 export type BarFlight = {
   key: string;
@@ -84,10 +80,8 @@ export function fraction(points: number, size: number): number {
 }
 
 /**
- * The sweeps a bar plays, `from` its points before to `value` after, over a bar of `size`. Each of
- * `fills` is a sweep to full that bursts and restarts at 0 (the first starts at `from`), and the
- * last sweep ends at `value`. A bar that paid nothing is one sweep. Points past either end of the
- * bar are held to it.
+ * The sweeps a bar plays from `from` to `value` over a bar of `size`: each of `fills` sweeps to full,
+ * bursts and restarts at 0, and the last ends at `value`. Points past either end are held to the bar.
  */
 export function segments(size: number, value: number, from: number, fills: number): Segment[] {
   const top = Math.max(0, size);
@@ -108,9 +102,8 @@ export function segmentMs(segment: Segment, size: number): number {
 }
 
 /**
- * The flights of an opening (R1953000): one for each slot the answer's `slotPoints` gives points,
- * which since R1999000 is every slot, in slot order, with slot `index`'s rarity in `rarities` and
- * its testid from `sourceOf`.
+ * The flights of an opening (R1953000): one for each slot `slotPoints` gives points (every slot,
+ * R1999000), in slot order, with its rarity from `rarities` and its testid from `sourceOf`.
  */
 export function flightsOf(
   bars: OpeningBarsAnswer,
@@ -130,9 +123,8 @@ export function flightsMs(count: number): number {
 }
 
 /**
- * The reward a bar's `fill`th fill (counting from 1) reveals in an opening: a card token for the
- * card bar, the cycle's step the opening paid for the cosmetic bar (R1305001). None when the
- * answer names no such fill.
+ * The reward a bar's `fill`th fill (from 1) reveals: a card token for the card bar, the cycle's step
+ * the opening paid for the cosmetic bar (R1305001); none when the answer names no such fill.
  */
 export function fillReward(bars: OpeningBarsAnswer, bar: "card" | "cosmetic", fill: number): RevealItem | null {
   if (bar === "card") {

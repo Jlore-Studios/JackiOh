@@ -1,6 +1,6 @@
 // BUILD M8: §9.4 and §9.8 require identical bad-code responses; R107 hides branch timing.
 // The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption; M6-T1 tests timing tightly.
-// R111's activation grant is the starter cards since the economy went live (R1310000, §14.12): enough
+// R111's activation grant is the starter cards (R1310000, §14.12): enough
 // for a deck Best of 1 accepts (L2, L3, L5, L6; R250, R253), not for a trio's three DECK_SIZE decks of
 // distinct cards (L4).
 // Test order leaves the fixture active.
@@ -300,8 +300,8 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.needsInviteCode).to.eq(false);
     });
 
-    // Read R111's grant from the §9.1 ledger: since the economy went live it is `STARTER_CARDS`
-    // (R1310000), every one a non-token card of the catalog the server serves.
+    // Read R111's grant from the §9.1 ledger: `STARTER_CARDS` (R1310000), every one a non-token card
+    // of the catalog the server serves.
     cy.request<CatalogBody>({ method: "GET", url: apiUrl("/api/catalog") }).then((response) => {
       for (const id of STARTER_CARDS) {
         const def = response.body.defs[id];

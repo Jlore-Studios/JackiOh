@@ -1,7 +1,6 @@
 // The panel's controls for the stores tasks 1 and 6 own (slots.ts mounts them). Each reads its own
-// store and writes straight back, like the built-in switches, so a change applies at once: the
-// animation runner reads the effects speed at every enqueue (R201), the effects layer re-renders on
-// the intensity, and every card face on the foil switch.
+// store and writes straight back, so a change applies at once: the animation runner reads the effects
+// speed at every enqueue (R201).
 
 import { useId, type CSSProperties, type ReactElement } from "react";
 
@@ -34,9 +33,8 @@ function trackFill(speed: number): number {
 
 /**
  * R435: the effects speed as a slider from FX_SPEED_MIN to FX_SPEED_MAX in FX_SPEED_STEP steps, with
- * its value beside it. A native range input, so the arrow keys, Page Up/Down, Home and End move it and
- * assistive tech reads it; the row is the 44px touch target. Ticks mark the slowest, the default and
- * the fastest.
+ * its value beside it. A native range input, so the keys move it and assistive tech reads it; the row
+ * is the 44px touch target. Ticks mark the slowest, the default and the fastest.
  */
 function SpeedSlider(props: { speed: number; onChange: (speed: number) => void }): ReactElement {
   const id = useId();

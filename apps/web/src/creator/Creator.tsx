@@ -1,17 +1,10 @@
-// The card creator (#920, SPEC §12.9): the account's custom cards in a list, and an editor for one
-// of them: the frame form, the no-code builder or the code view (K3), the problems the checks found,
-// a live preview and the save, delete and "Try it" buttons.
-//
-// The checks guide and the server decides (CLAUDE.md rule 7). The frame's issues are the engine
-// validator's (`validateCustomCard`, the normal module, at once); the script's are the Luau module's
-// (`checkCustomCard`, loaded the first time the editor asks, R915009), and a script with a problem is
-// not saved, since the server never compiles one (§12.9). A save the server refuses shows its issues
-// or its sentence as it sent them.
-//
-// R2119000: Delete asks nothing. The card leaves the list at once behind "Card deleted · Undo", and
-// its DELETE waits for the undo window (`undo/hold.ts`). Undo puts it back where it was; a DELETE that
-// fails puts it back too and shows why. A new card's first save sends a held DELETE first, so the
-// card it frees a place for is gone before the server counts.
+// The card creator (#920, SPEC §12.9): the account's custom cards and an editor for one (the frame
+// form, the builder or the code view, K3) with its problems, a preview and save, delete and "Try it".
+// The checks guide and the server decides (CLAUDE.md rule 7): a script with a problem from
+// `checkCustomCard` (loaded on first use, R915009) is not saved, since the server never compiles one.
+// R2119000: Delete asks nothing; its DELETE waits for the undo window (`undo/hold.ts`), and a new
+// card's first save sends a held DELETE first, so the card it frees a place for is gone before the
+// server counts.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 

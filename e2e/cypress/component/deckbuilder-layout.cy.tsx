@@ -210,7 +210,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // B38: the detail actions remain visible when it opens.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 
@@ -233,7 +232,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // B39: the pool scrolls internally while its bottom remains onscreen.
   it("B39 at 1280x720 the pool's own bottom edge is on screen and the page itself does not scroll", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
@@ -289,7 +287,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // #263: an off-screen card fits only after it nears the screen.
   it("#263 a pool card off the screen is fitted when it nears the screen, not before", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);

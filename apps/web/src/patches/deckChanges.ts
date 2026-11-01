@@ -25,10 +25,7 @@ export function deckChanges(deck: DeckRef, changes: NewestChanges): ChangedCard[
   return [...changes.cards.values()].filter((delta) => held.has(delta.id));
 }
 
-/**
- * Loads the newest patch's changes, but only while that patch is the catalog the builder shows:
- * the badge describes only the patch the builder's catalog is.
- */
+/** The newest patch's changes, loaded only while that patch is the catalog the builder shows: the badge describes no other. */
 export async function loadNewestChanges(source: PatchSource, catalogVersion: string): Promise<NewestChanges | null> {
   const patches = await source.patches();
   const newest = patches.at(-1);

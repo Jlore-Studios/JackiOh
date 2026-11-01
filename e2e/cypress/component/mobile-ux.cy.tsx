@@ -265,7 +265,6 @@ function expectMiddlesToCards(): void {
         const owner = doc.elementFromPoint(x, y)?.closest("[data-testid]") ?? null;
         if (owner !== card) problems.push(`${id} ${label} → ${owner?.getAttribute("data-testid") ?? "nothing"}`);
       }
-      // Disabled switches pass through to the card or zone beneath them.
       const zone = card.parentElement;
       const button = zone?.querySelector<HTMLButtonElement>(":scope > .switch-button") ?? null;
       if (button?.disabled === true) {

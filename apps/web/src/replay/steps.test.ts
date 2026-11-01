@@ -1,6 +1,5 @@
-// The replay player's step cache (#511): pages fetched once, however a step is reached; a short page
-// followed by the next; turn moves found across pages; a failure passed on as the source's; and the
-// page after the shown step fetched ahead.
+// The replay player's step cache (#511): pages fetched once however a step is reached, turn moves
+// across pages, a failure passed on as the source's, and the page after the shown step fetched ahead.
 
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 import type { ReplayStep } from "@jackioh/engine";

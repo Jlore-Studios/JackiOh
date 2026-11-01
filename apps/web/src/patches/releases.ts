@@ -1,12 +1,11 @@
-// R724000: the Patch notes page groups patches by release line. A line is the major version that
-// brought a set (a Z), and lists the patches from it up to the next major; it carries a summary and
-// the technical changes players noticed in that major version, which ship no card data (v0.3.0, the
-// Rust rewrite, is Meditative's). Every patch's own note (R724001) reads under fixed headings.
+// R724000: the Patch notes page groups patches by release line: the major version that brought a set
+// (a Z) and the patches from it up to the next major, with a summary and the technical changes players
+// noticed in that major, which ship no card data. Every patch's own note (R724001) reads under fixed
+// headings.
 //
-// Presentation only, over public data (CLAUDE.md rule 7). A version is compared for equality and
-// never parsed or ordered (R105): a line starts at its major (R1369000), its `tier` in patches.json or,
-// for a patch shipped before tiers were recorded, the one that adds a card of a set no earlier patch
-// held, in patches.json's own order, so a lettered patch ("v0.2.10b") sits in its line like any other.
+// Presentation only, over public data (CLAUDE.md rule 7). A version is compared for equality and never
+// parsed or ordered (R105): a line starts at its major (R1369000), in patches.json's own order, so a
+// lettered patch ("v0.2.10b") sits in its line like any other.
 
 import type { Patch, PlayerNote, TechnicalEntry } from "./source.ts";
 

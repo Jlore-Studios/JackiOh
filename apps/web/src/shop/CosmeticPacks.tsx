@@ -1,16 +1,13 @@
 // The cosmetic packs (#1309, #1667, SPEC §14.6): the unopened pack as a `PackObject` above Open, a
-// simple reveal of an opening's slots with both token bars pinned at the top of the viewport while it
-// is on screen, each slot's points flying into them before they fill (`OpeningBars`, R1953000, R1999000),
-// and the Chase Shard bar, a `FillBar` that fills across an opening and, when it reaches full, bursts
-// and reveals its Legendary-or-Mythic choice as a moment of its own (`RewardReveal`).
+// reveal of an opening's slots with both token bars pinned at the top while it is on screen
+// (`OpeningBars`, R1953000, R1999000), and the Chase Shard bar, which bursts when full and reveals its
+// Legendary-or-Mythic choice as a moment of its own (`RewardReveal`).
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, every slot, both bars and the shard bar come
-// from the answers; the reveal only reads them out, slot by slot in order. The shard bar plays from the
-// points the panel read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
-// The odds are not here: they are on `/purchases` (R1665000). A refused open or chase shows the
-// server's words through `t()` (R711000) with nothing changed on screen. A slot's new cosmetic is
-// equipped from the reveal too (R1955000, collection/EquipButton.tsx); the link to the Collection
-// stays.
+// THE SERVER DECIDES (CLAUDE.md rule 7): the packs held, every slot and every bar come from the
+// answers. The shard bar plays from the points read before the opening to the answer's, with no
+// `fills`: a full bar holds (R1306002). The odds are on `/purchases` (R1665000). A refused open or
+// chase shows the server's words through `t()` (R711000) with nothing changed on screen. A slot's new
+// cosmetic is equipped from the reveal too (R1955000, collection/EquipButton.tsx).
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 

@@ -1,10 +1,6 @@
-// The emote session (session.ts) driven through its injected clock — no timers, no React.
-//
-// R643 is what is proved here: an admitted send shows for that player at once, a send the shared
-// `emoteGate` drops shows nothing (and notifies nobody — the same silent drop the server gives),
-// a received emote shows unless its player is muted, one emote per player stands at a time, and
-// `expire` clears only the show it was armed for. The state is keyed by PlayerId throughout, so a
-// hotseat hand-over moves nothing.
+// The emote session (session.ts) driven through its injected clock, proving R643: a send the shared
+// `emoteGate` drops shows nothing and notifies nobody, the same silent drop the server gives. The
+// state is keyed by PlayerId throughout, so a hotseat hand-over moves nothing.
 
 import { describe, expect, it, vi } from "vitest";
 

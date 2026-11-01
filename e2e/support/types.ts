@@ -1,9 +1,7 @@
-// Types the specs and the support commands share.
-//
-// e2e does NOT import @jackioh/shared: BUILD M8 is written while the engine (`crates/*`) and apps/*
-// are still in flight, and `tsc -p e2e/tsconfig.json` has to pass on its own. Everything below is a
-// structural subset of the real types (SPEC §10.1, §10.2, §10.8) — narrow enough that a drift in
-// the engine types cannot silently break the specs, wide enough for the assertions M8 asks for.
+// Types the specs and the support commands share. e2e does NOT import @jackioh/shared, since
+// `tsc -p e2e/tsconfig.json` has to pass on its own: everything below is a structural subset of the
+// real types (SPEC §10.1, §10.2, §10.8), narrow enough that a drift in the engine types cannot
+// silently break the specs.
 
 /** SPEC §10.1: seats. */
 export type PlayerId = "p1" | "p2";
@@ -89,23 +87,18 @@ export type GameStateLike = {
   phase: string;
   result: { winner: PlayerId | "draw"; reason: string } | null;
   /**
-   * TWO SHAPES, ONE FIELD. The hotseat handle hands over the raw `GameState`, so `pending` is the
-   * engine's `PendingChoice` and the seat it belongs to is **`playerId`**
-   * (`crates/engine/src/state.rs`). A networked handle has no `GameState` at all and derives this
-   * from the `PlayerView` instead (`apps/web/src/game/net.ts` `viewDerivedState`), which spells the
-   * same seat **`player`**. Both are optional here because either may be the one present.
-   *
-   * Declaring only `player` is what made an assertion on a hotseat game read `undefined` and pass
-   * type-checking while failing at run time, so both names are spelled out rather than one.
+   * TWO SHAPES, ONE FIELD: the hotseat handle's raw `PendingChoice` names its seat **`playerId`**
+   * (`crates/engine/src/state.rs`); a networked handle derives this from the `PlayerView`
+   * (`apps/web/src/game/net.ts` `viewDerivedState`), which spells it **`player`**. Declaring only one
+   * let an assertion on the other read `undefined` past type-checking, so both are spelled out.
    */
   pending:
     | { id?: string; choiceId?: string; kind?: PromptKind; playerId?: PlayerId; player?: PlayerId }
     | null;
   /**
-   * §2.1 step 3, R265: both seats' opening mulligans while they are open at once — hotseat only,
-   * since it is the raw `GameState` (`crates/engine/src/state.rs` `MulliganSeat`). `pending` is
-   * null for the whole window; `keep` is a seat's sealed answer, null until it gives one. Absent
-   * once the second answer has resolved both, and never on a networked handle.
+   * §2.1 step 3, R265: both seats' opening mulligans while they are open at once, hotseat only
+   * (`crates/engine/src/state.rs` `MulliganSeat`); `pending` is null for the whole window, and `keep`
+   * is a seat's sealed answer, null until it gives one. Absent once both answers have resolved.
    */
   mulligan?: Record<PlayerId, { prompt?: { id?: string; kind?: PromptKind }; keep: string[] | null }>;
   players: Record<PlayerId, unknown>;
@@ -125,18 +118,13 @@ export type JackiOhDevHandle = {
   log?: Action[];
   /** ASSUMPTION A2: the two deck lists the route resolved, seat order [p1, p2]. */
   decks?: [string[], string[]];
-  /**
-   * R180: the handicaps the hotseat game was created with, `{}` for none (a fixture's `handicap`,
-   * injected by `seedGame`). `cy.replayCheck` folds the log with them.
-   */
+  /** R180: the handicaps the hotseat game was created with, `{}` for none; `cy.replayCheck` folds with them. */
   handicaps?: Partial<Record<PlayerId, FixtureHandicap>>;
   /** Present in networked mode (apps/web/src/game/net.ts) when the route is not hotseat. */
   seat?: PlayerId;
   /**
-   * Hotseat only (routes/dev/hotseat.tsx): the seat holding the device's `viewFor`, its
-   * `legalActions`, and handing the device to a seat. Spec 36's driver (support/playthrough.ts) reads
-   * the view and the legal list to choose each step, as the AI does; the view is a `PlayerView`,
-   * kept loose here like the state.
+   * Hotseat only (routes/dev/hotseat.tsx): the device's seat's `viewFor` (a `PlayerView`, kept loose
+   * like the state), its `legalActions`, and handing the device to a seat, for spec 36's driver.
    */
   view?: () => Record<string, unknown>;
   legal?: () => ActionBody[];
@@ -165,17 +153,13 @@ export type FixtureDeck = {
   spec: string;
   /** Why these cards: what the spec needs out of the deck. */
   description: string;
-  /**
-   * Exactly DECK_SIZE distinct non-Token catalog ids, or exactly `handicap.deckSize` when the
-   * fixture carries a handicap (R184); `validateDeck` throws otherwise.
-   */
+  /** Exactly DECK_SIZE distinct non-Token catalog ids, or `handicap.deckSize` with a handicap (R184). */
   cards: string[];
   /**
-   * The seat's handicap (R180), for a scenario SPEC's own resources cannot reach in a few turns:
-   * spec 25's 5-card library that fatigues on turn 3, 9-card opening hand, 60-card library. A
+   * The seat's handicap (R180), for a scenario SPEC's own resources cannot reach in a few turns. A
    * hotseat fixture whose deal was tuned before #1705 carries `TUTORIAL_HUMAN`'s, a human's resources
-   * with the earlier deck size, so it keeps its cards (R1705005). `seedGame` gives fixture A's to p1
-   * and fixture B's to p2. A networked fixture carries none: the server refuses a handicap.
+   * with the earlier deck size, so it keeps its cards (R1705005). A networked fixture carries none:
+   * the server refuses a handicap.
    */
   handicap?: FixtureHandicap;
 };
@@ -188,8 +172,7 @@ export type E2EDeckInjection = {
   handicaps?: Partial<Record<PlayerId, FixtureHandicap>>;
   /**
    * R1420: the sets the hotseat engine previews before it creates the game, so a deck may hold a set
-   * the catalog carries before it ships (spec 36's `["Meditative"]`). The route calls the engine's
-   * `previewSets`, which a production build's module refuses.
+   * before it ships (spec 36). A production build's module refuses the engine's `previewSets`.
    */
   preview?: string[];
 };
@@ -199,16 +182,11 @@ export type PromptAnswer = {
   /** `PendingOption.key` values to pick (discover, mode, direction, embiggen, hand, mulligan). */
   options?: string[];
   /**
-   * Take the first N options offered, whatever their keys are. Discover's three options are drawn
-   * by the match rng (SPEC §10.6), so no spec can name one: "take the first" is the only stable
-   * way to answer it. Picked before `options`, and the two can be combined.
+   * Take the first N options offered, whatever their keys: Discover's three options are drawn by the
+   * match rng (SPEC §10.6), so no spec can name one. Picked before `options`; the two combine.
    */
   first?: number;
-  /**
-   * R81's embiggen price, as the boolean it is. The picker keys its two options `"true"` and
-   * `"false"` (the two prices), so this is `options: [String(embiggen)]` without a spec having to
-   * know that the key is a stringified boolean.
-   */
+  /** R81's embiggen price, as the boolean it is: the picker keys its two prices `"true"` and `"false"`. */
   embiggen?: boolean;
   /** Board instance ids to pick (target, tribute, hand pickers rendered on the cards). */
   cards?: string[];

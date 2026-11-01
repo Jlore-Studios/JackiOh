@@ -1,13 +1,9 @@
 // The Jlore shop (#1309, #1667, SPEC §14.1, §14.3): the wallet and one shelf row per pack kind, each
-// a `PackObject` with its count, its price and Buy, bought at the server's pack price.
+// a `PackObject` with its count, its price and Buy.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The price comes from `GET /api/packs` and the balance
-// from `GET /api/wallet`; a short wallet disables the button and says the shortfall, and a
-// refused buy shows the server's words through `t()` (R711000) with nothing changed on screen (no
-// optimistic update: the wallet and the counts move only on the answer). Buy presses the pack while
-// the request is out; on the answer a copy of the pack flies into that kind's count (transform and
-// opacity, `shop.css`; with Reduce motion the count just changes) and every pill is told the
-// balance (`announceWallet`).
+// THE SERVER DECIDES (CLAUDE.md rule 7): the price comes from `GET /api/packs` and the balance from
+// `GET /api/wallet`, and a refused buy shows the server's words through `t()` (R711000) with nothing
+// changed: no optimistic update, the wallet and the counts move only on the answer.
 //
 // ONE SPEND AT A TIME (R2378000): while any spend of the tab is out (`net/spending.ts`), every Buy
 // waits, disabled and turning a loading wheel (`economy/spend.css`), and a press sends nothing.

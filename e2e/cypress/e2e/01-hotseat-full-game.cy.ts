@@ -1,6 +1,6 @@
 // BUILD M8: a seeded hotseat game completes through the UI; its final hash matches replay (V19).
 // The browser records actions, then `jackioh replay` folds and hashes them; equality proves accepted client actions in order (M5-T3).
-// The seed is overridable for §4's 20-seed run; waits use `cy.settled` or retry, and selectors come from `support/testids.ts`.
+// The seed is overridable for §4's 20-seed run.
 // Fixture decks are choice-free, so generic play and attack open no `PendingChoice` (R81); seedGame and board clicks answer M5-T2.
 
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -157,7 +157,6 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
     });
 
     // `cy.replayCheck` folds the log with `jackioh replay` and compares `hashState` (§12).
-    // It also requires the fold to accept every recorded action.
     cy.replayCheck("01-hotseat-full-game");
   });
 });

@@ -1,16 +1,13 @@
-// The Jlore shop's model (#1309, SPEC §14.1, §14.5, §14.6): its test ids and the pure helpers
-// behind the shop, the token picker and the cosmetic packs, all of them plain data in and out.
+// The Jlore shop's model (#1309, SPEC §14.1, §14.5, §14.6): its test ids and the pure helpers behind
+// the shop, the token picker and the cosmetic packs.
 //
-// EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7). The wallet, the pack price, both
-// bars and their sizes, the cycle's next step and the shard bar all arrive in the responses
-// (`net/api.ts`); nothing here prices, counts or decides. The pickers' filters are browsing UX
-// only, mirroring the server's `choice_of`: a filter gap cannot grant anything, because the
-// server re-refuses every redemption.
+// EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7): nothing here prices, counts or decides.
+// The pickers' filters are browsing UX only, mirroring the server's `choice_of`: a filter gap cannot
+// grant anything, because the server re-refuses every redemption.
 //
-// Cosmetic rarity is its own scale (Common to Mythic), so a token buys at its tier or below on
-// the COSMETIC's rarity, not the card's: a Rare token reaches Common and Rare, an Epic token adds
-// Epic, and Legendary and Mythic are unreachable, since no token exceeds Epic (R1305003). It is
-// its own type, `CosmeticRarity`, never a card's `PrintedRarity`, so the two cannot mix (R1333000).
+// Cosmetic rarity is its own scale (Common to Mythic): a token buys at its tier or below on the
+// COSMETIC's rarity, and no token exceeds Epic (R1305003). It is its own type, `CosmeticRarity`, never
+// a card's `PrintedRarity`, so the two cannot mix (R1333000).
 
 import { CATALOG } from "@jackioh/cards";
 import { MAX_COPIES } from "@jackioh/engine/config";
@@ -41,7 +38,6 @@ export const REGISTRY: readonly RegistryCosmetic[] = COSMETICS as unknown as rea
 /** Cosmetic rarities lowest first, mirroring `CosmeticRarity::tier`. */
 export const COSMETIC_TIER_ORDER: readonly CosmeticRarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 
-/** A cosmetic rarity's place on its own scale, commonest first. */
 export function cosmeticTier(rarity: CosmeticRarity): number {
   return COSMETIC_TIER_ORDER.indexOf(rarity);
 }
@@ -49,7 +45,6 @@ export function cosmeticTier(rarity: CosmeticRarity): number {
 /** The kinds a player wears on a card (`CosmeticKind::is_per_card`); the rest sit on the account. */
 const PER_CARD_KINDS: readonly string[] = ["foil", "finish", "border", "fullArt"];
 
-/** Whether a cosmetic of this kind goes on a card rather than the account. */
 export function isPerCardKind(kind: string): boolean {
   return PER_CARD_KINDS.includes(kind);
 }

@@ -1,7 +1,6 @@
 // BUILD M9-T12 `30-activate.cy.ts`: C #81 Thrive and C #21 Turtinator activation (R384, R510).
-// Read player 1's DOM only (CLAUDE.md rule 7). Both are once per turn (Turtinator since patch v0.3.10);
-// Thrive's third mode makes a card in hand cheaper (R831009), and a Turtinator use Tributes another
-// Unit (R683).
+// Read player 1's DOM only (CLAUDE.md rule 7). Both are once per turn; Thrive's third mode makes a
+// card in hand cheaper (R831009), and a Turtinator use Tributes another Unit (R683).
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -103,7 +102,7 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
         cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
         cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH - VANILLA_ATTACK)).should("exist");
 
-        // Once a turn (patch v0.3.10; Activate ♾️ before).
+        // Once a turn.
         cy.get(ts(activateUsesId(turtinator))).should("have.text", "0");
         cy.get(control).should("have.attr", "data-legal", "false");
         // The control capitalises the engine's refusal (ActivateControl.tsx, `capitalised`).

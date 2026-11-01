@@ -1,15 +1,8 @@
-// The Jlore shop and the cosmetic packs (#1309, #1667), from fixture responses: each pack kind a
-// PackObject on the shelf, Buy pressing it and, on the answer, a copy flying into the count and the
-// wallet announced; a short wallet disabling every buy with its shortfall, a refused buy changing
-// nothing, a bought pack moving the wallet and the count; the cosmetic pack as an object above Open and
-// no odds; an opening's reveal naming every slot, with both token bars pinned at the top and its spent
-// slot's points flying into them (R1953000); the Chase Shard bar
-// filling from before to after and, at full, bursting and revealing the chase choice; reduce motion
-// showing every end state at once; each panel telling the page what it changed and reading again when
-// told, and Buy waiting with a wheel while another spend of the tab is out (R2378000). The tier
-// filters live beside them as pure tests over crafted registries, since the shipped
-// registry holds no Legendary or Mythic a token could reach. The stylesheet is read as text, as
-// `economy/FillBar.test.tsx` reads its own, because Vitest stubs CSS imports.
+// The Jlore shop and the cosmetic packs (#1309, #1667), from fixture responses: buying, opening and
+// the Chase Shard bar, an opening's spent slot's points flying into both bars (R1953000), and Buy
+// waiting with a wheel while another spend of the tab is out (R2378000). The tier filters are pure
+// tests over crafted registries, since the shipped registry holds no Legendary or Mythic a token
+// could reach.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
@@ -535,8 +528,7 @@ describe("#1309 the cosmetic packs", () => {
     // R2125000: the second visit is a first one, not a revisit that opens on the kept 19 / 20.
     clearReadCache();
 
-    // Full, with every Legendary and Mythic already owned (a registry whose chases are all
-    // starters, as the shipped one's were before R1833000): the empty sentence, and still no choice.
+    // Full, with every Legendary and Mythic already owned (every chase a starter): the empty sentence, and still no choice.
     cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
     render(<CosmeticPacks token={TOKEN} registry={REGISTRY.filter((cosmetic) => !cosmetic.chase || cosmetic.starter)} />);
     expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("20 / 20");
@@ -1040,7 +1032,7 @@ describe("#1667 the Chase Shard bar", () => {
   });
 });
 
-/* ------------------------------------------------------------------------ the stylesheet --- */
+/* the stylesheet */
 
 type Block = { prelude: string; body: string };
 

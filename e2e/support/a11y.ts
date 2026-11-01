@@ -1,9 +1,7 @@
 // The accessibility check spec 38 runs on each route (issue #757): axe-core in the page, WCAG 2.2
 // A and AA rules only, and a failure for every serious or critical violation that is not listed in
-// `axe-exceptions.ts` for that route.
-//
-// axe-core is injected from e2e's own node_modules (a dev dependency of this package, never of the
-// client), once per page: a `cy.visit` makes a new window, and the check injects again.
+// `axe-exceptions.ts` for that route. axe-core is injected from e2e's own node_modules (a dev
+// dependency of this package, never of the client), once per page: a `cy.visit` makes a new window.
 
 import type { AxeResults, ImpactValue, NodeResult, Result } from "axe-core";
 

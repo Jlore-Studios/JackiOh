@@ -1,8 +1,6 @@
-// The emote client's numbers (CLAUDE.md rule 9): bubble span, the emoji's own 2s show, the menu's
-// grey-out tick and its distance from the screen's edge, and the voice-line duration estimate. The
-// SEND limits (1.5s cooldown, 5 per 20s)
-// are NOT here — they live in the wire layer (`src/wire/emotes.ts`, `@jackioh/shared`, beside
-// `crates/engine/src/wire/emotes.rs`) because the server enforces them too (R643).
+// The emote client's numbers (CLAUDE.md rule 9). The send limits are not here: they live in the wire
+// layer (`src/wire/emotes.ts`, beside `crates/engine/src/wire/emotes.rs`) because the server enforces
+// them too (R643).
 
 /** An emoji sticker's whole show: pop, bounce, hold and fade (issue §4, "2s total"). */
 export const EMOTE_EMOJI_MS = 2000;
@@ -19,9 +17,8 @@ export const EMOTE_MENU_TICK_MS = 250;
 export const EMOTE_MENU_EDGE_PX = 8;
 
 /**
- * The persona rate a `say` voice speaks at is words per minute; a SAPI persona's is a percent of
- * baseline, which SAPI itself documents at ~180 wpm. Felinors' echo runs 120ms past the base
- * voice (issue §3's mix), which the bubble holds for.
+ * A `say` persona's rate is words per minute; a SAPI persona's is a percent of baseline, which SAPI
+ * documents at ~180 wpm. Felinors' echo runs past the base voice (issue §3's mix); the bubble holds for it.
  */
 export const SAPI_BASELINE_WPM = 180;
 export const FELINORS_ECHO_TAIL_MS = 120;

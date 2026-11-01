@@ -1,8 +1,5 @@
 // The raster's worker entry (#513): draws a GIF's frame plan on an `OffscreenCanvas`, off the main
-// thread, and answers with its progress and then the bytes. `export.ts` starts it with
-// `new Worker(new URL("./raster.worker.ts", import.meta.url), { type: "module" })`, which Vite splits
-// into a chunk of its own that loads only when a clip is exported; a browser that cannot draw in a
-// worker is answered `unsupported` and `export.ts` rasterizes on the main thread instead.
+// thread, and answers with its progress and then the bytes, or `unsupported` where it cannot draw.
 //
 // `self` is typed with a local minimal interface rather than the `WebWorker` lib, which would clash
 // with the `DOM` lib the rest of `apps/web` compiles against (as `practice.worker.ts` does).

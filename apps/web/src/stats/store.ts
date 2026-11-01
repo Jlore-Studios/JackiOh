@@ -46,7 +46,6 @@ function parseCounts(raw: unknown): Record<string, number> {
   return counts;
 }
 
-/** Tolerant parsing: malformed input becomes empty statistics. */
 export function parsePlayerStats(raw: unknown): PlayerStats {
   try {
     let value: unknown = raw;

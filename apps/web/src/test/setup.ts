@@ -1,13 +1,11 @@
-// Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
-// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, a
-// `PointerEvent` that keeps `pointerType`, and the engine, and an empty read cache before each test
+// Vitest setup for the web package: jsdom matchers, a `matchMedia` stub (jsdom lacks it, and the
+// animation table needs `prefers-reduced-motion`, BUILD M5-T4), a silent `window.scrollTo`, a
+// `PointerEvent` that keeps `pointerType`, the engine, and an empty read cache before each test
 // (R2125000: a test never starts on another's kept answers).
-//
-// The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
-// (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
-// does, so its bytes are read from disk here and instantiated before any test file is imported
-// (`scripts/build-wasm.sh`, which `pretest` runs, writes them). Every test then reaches the engine
-// synchronously, as the page does after `main.tsx` has awaited `loadWasm()`.
+// The engine, the AI and the validator are the Rust ones in WebAssembly (docs/v0.3.0/SURFACE.md §10.3).
+// jsdom cannot fetch the module from a file URL, so its bytes (which `scripts/build-wasm.sh`, run by
+// `pretest`, writes) are read from disk before any test file is imported, and every test reaches the
+// engine synchronously, as the page does after `main.tsx` has awaited `loadWasm()`.
 
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";

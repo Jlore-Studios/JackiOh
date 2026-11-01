@@ -1,9 +1,7 @@
-// The viewer's vibration switch (R669, issue #259): a presentation preference of this device, so it
-// lives in this browser only, under HAPTICS_SETTINGS_KEY in `localStorage`. The settings panel mounts
-// it through `SETTINGS_SLOTS`; the haptics player reads it at every buzz, so it applies at once.
-//
-// Storage is optional. A missing `window`, a throwing `localStorage`, a quota error on write or
-// unparsable JSON fall back to the default or to the in-memory value, and nothing here throws.
+// The viewer's vibration switch (R669, issue #259): a presentation preference of this device, kept in
+// this browser's `localStorage` only. The haptics player reads it at every buzz, so it applies at once.
+// Storage is optional: any storage failure falls back to the default or to the in-memory value, and
+// nothing here throws.
 
 import { useSyncExternalStore } from "react";
 

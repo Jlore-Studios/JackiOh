@@ -27,10 +27,7 @@ export function registerTasks(
     tutorialLessons() {
       return tutorialLessons(config.projectRoot);
     },
-    /**
-     * 99-online-smoke only: clear queue and match state so the spec is re-runnable. Inert unless
-     * `E2E_DATABASE_URL` is set, which CI never sets.
-     */
+    /** 99-online-smoke only: clear queue and match state; inert unless `E2E_DATABASE_URL` is set (CI never). */
     onlineReset() {
       return onlineReset();
     },

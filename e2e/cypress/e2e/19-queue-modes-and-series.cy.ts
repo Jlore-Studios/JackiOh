@@ -2,7 +2,6 @@
 // #21 Hinder is the selected deck's observable opening-hand card.
 // Browser p1 uses the UI; p2 seeds matches over HTTP/socket (R143). Opening hands prove selected decks (R245; §10.8).
 // Balance each fixture account's rated endings and clean both before every test; pairing allows §9.5's R108 window.
-// BUILD M5-T1 fixes testids; M6/M7 supply the server, actor, queue and results.
 
 import {
   MATCHMAKER_SWEEP_INTERVAL_SECONDS,
@@ -67,7 +66,6 @@ const PAIRING_TIMEOUT_MS =
     MS_PER_SECOND +
   timeouts.view;
 
-/** Allow a poll and render. */
 const SERIES_POLL_TIMEOUT_MS = SERIES_POLL_SECONDS * MS_PER_SECOND + timeouts.view;
 
 /** R245 Tokens are the only hand cards not from a deck. */
@@ -158,9 +156,8 @@ function dequeue(account: E2EAccount): void {
 
 /**
  * R897000: seat two is a queued client, so it polls like one. The queue cancels a ticket nobody has
- * heard from for `QUEUE_TICKET_STALE_MS`, and the browser's earlier rated endings leave the two
- * accounts apart, so the newer ticket may wait up to `RATING_WINDOW_FULL_AFTER_SECONDS` for its
- * window to reach the gap.
+ * heard from for `QUEUE_TICKET_STALE_MS`, and the browser's earlier rated endings keep the accounts
+ * apart, so the newer ticket may wait up to `RATING_WINDOW_FULL_AFTER_SECONDS` for the gap.
  */
 function pollWhileQueued(account: E2EAccount): void {
   cy.stayQueued(account, SERIES_POLL_SECONDS * MS_PER_SECOND);
@@ -272,8 +269,6 @@ function installed(value: InstalledLoadout | null): InstalledLoadout {
   expect(value, "cy.installLoadout has answered").to.not.eq(null);
   return value as InstalledLoadout;
 }
-
-// ---------------------------------------------------------------------------------------------
 
 describe("19 queue modes and series — Best of 1, All Random, Conquest and rooms", () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-// E2E selector contract: BUILD M5-T1, BUILD M5-T2, BUILD M5-T3 and BUILD M5-T4 fix base testids and attributes; BUILD M8 exercises them. Assumptions are in e2e/README.md.
+// E2E selector contract: BUILD M5-T1 to M5-T4 fix base testids and attributes; BUILD M8 exercises them. Assumptions: e2e/README.md.
 
 import type { EventType, Lane, PromptKind, Row, Side } from "./types.ts";
 
@@ -767,8 +767,7 @@ export function replaysOnlineId(matchId: string): string {
   return `replays-online-${matchId}`;
 }
 
-// #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
-// the chat panel and the Friends button's panel (#1831), the challenge toast, the watch screen and the replay share.
+// #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`.
 
 export const TOGETHER_ROOT = "together";
 export const TOGETHER_ADD_INPUT = "together-add-input";
@@ -864,9 +863,7 @@ export const OPPONENT_AIM_ARROW = "opponent-aim-arrow";
 export const EMOTE_BUBBLE = "emote-bubble";
 export const EMOTE_MUTE_MENU = "emote-mute-menu";
 export const EMOTE_MUTE = "emote-mute";
-// #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65): the
-// co-op panel's, the board's (its life strip, teammate strip, portal, pass control and pings), and
-// the slice's own chrome after them.
+// #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65).
 
 export const COOP_CREATE = "coop-create";
 export const COOP_DIFFICULTY = "coop-difficulty";
@@ -911,11 +908,9 @@ export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
   return `duos-dev-seat-${seat}`;
 }
 
-// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid` in
-// apps/web/src/routes/account.tsx, `devToolsTestid` in routes/DevTools.tsx, `shopTestid` in
-// shop/shop.ts, `packTestid` in packs/packs.ts, `questsTestid` in routes/QuestsPanel.tsx and
-// `collectionTestid` in collection/collection.ts, none of which this project can import (each
-// reaches `@jackioh/*`, which only the client's own build resolves).
+// #1310 (SPEC §14): the economy's selectors, for spec 45, mirroring the client's `accountTestid`,
+// `devToolsTestid`, `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, none of which
+// this project can import (each reaches `@jackioh/*`, which only the client's own build resolves).
 
 /** `/account`: the Dev tools toggle (R1300000). */
 export const ACCOUNT_SCREEN = "account-screen";

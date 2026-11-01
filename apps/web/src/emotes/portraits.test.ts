@@ -1,8 +1,6 @@
-// R641's portrait roster on the client (portraits.ts): every portrait id resolves, once at module
-// load, to the catalog card its `PORTRAITS` entry names — BY NAME, never by number, so the test
-// reads the name off the resolved def rather than asserting the lookup went anywhere in
-// particular. `portraitOrDefault` is the other half: the deck column's `null` and anything the
-// roster does not know both read as `vanilla` (D5).
+// R641's portrait roster on the client (portraits.ts): every portrait id resolves to the catalog card
+// its `PORTRAITS` entry names, by name, never by number. `portraitOrDefault` is the other half: the
+// deck column's `null` and anything the roster does not know both read as `vanilla` (D5).
 
 import { describe, expect, it } from "vitest";
 

@@ -1,8 +1,7 @@
 // #1578, R1578000: the Play hub is one screen. jsdom cannot measure layout, so this mounts the route in
 // a browser at a desktop and a phone size, serves the reads it makes from fixtures, and checks that the
 // page does not scroll, that online play comes first, and that every way to play and the room are in
-// view on a desktop and on a 390x844 phone, with no scroll inside the hub either. The signed-out
-// variant is held to the same.
+// view, with no scroll inside the hub either.
 
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";

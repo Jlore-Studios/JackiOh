@@ -1,7 +1,6 @@
-// The frame plan of a shared GIF (#513, R513000, decision D5): a pure function of a clip's views on a
-// fixed frame clock. These hold what makes it shareable: the same clip and options give the same plan
-// whatever the device's settings or clock, a frame draws only what its step's view shows, and no
-// account name can reach it.
+// The frame plan of a shared GIF (#513, R513000, decision D5): the same clip and options give the
+// same plan whatever the device's settings or clock, a frame draws only what its step's view shows,
+// and no account name can reach it.
 
 import type { ReplayStep } from "@jackioh/engine";
 import type { PlayerView } from "@jackioh/shared";

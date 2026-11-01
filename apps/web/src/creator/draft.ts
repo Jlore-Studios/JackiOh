@@ -1,11 +1,7 @@
 // The creator's editor state (#920): one card being made or edited, as plain data, and the pure steps
-// that move it. The page holds a `Draft`; the builder, the code view and the frame form each hand
-// back a new one through these functions, so a test can walk the whole round trip without a page.
-//
-// K3: the builder's model writes the script (`writeScript`), the card's numbers (`numbersOf`) and,
-// until the player writes their own, the card's text (`writeText`). The code view edits the script
-// itself; a card whose script no longer equals what its model writes is code-only from then on, and
-// `builderRefusal` says why.
+// that move it, so a test can walk the round trip without a page. K3: the builder's model writes the
+// script, the numbers and, until the player writes their own, the text; a card whose script no longer
+// equals what its model writes is code-only from then on, and `builderRefusal` says why.
 
 import type { CustomCard, CustomFrame, CustomParam } from "@jackioh/shared";
 

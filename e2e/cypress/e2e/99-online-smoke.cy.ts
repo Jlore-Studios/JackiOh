@@ -1,15 +1,12 @@
 /**
  * The deployed stack, in a real Chromium, with two real accounts.
  *
- * Every other spec here drives a LOCAL client against fixtures: specs 01-04 and 07-12 run the
- * engine in the tab with no server at all, and 05, 06, 09 and 10 seed
- * `localStorage["jackioh.e2e.session"]` because ASSUMPTION A6 hands them ready-made tokens. None
- * of that exercises the thing that actually breaks in a deployment — Vercel serving the bundle,
+ * Every other spec drives a LOCAL client against fixtures (ASSUMPTION A6 hands them ready-made
+ * tokens), so none exercises what actually breaks in a deployment — Vercel serving the bundle,
  * Supabase issuing a token to a real password, Render verifying it, and Postgres behind Render.
  * This spec signs in through the form like a person does and asserts each of those in turn.
  *
- * SKIPPED BY DEFAULT. CI runs `cypress run` over every spec against localhost, where none of this
- * exists, so the suite is behind `--env online=true` and is never part of the M8 gate.
+ * SKIPPED BY DEFAULT: the suite is behind `--env online=true` and is never part of the M8 gate.
  *
  * Run it with:
  *   E2E_BASE_URL=https://jackioh.com pnpm exec cypress run --browser chrome \
@@ -46,9 +43,8 @@ function tokenFor(email: string): Cypress.Chainable<string> {
 }
 
 /**
- * The account's second saved deck, oldest first: the deck R257's legacy `{ deckIndex: 1 }` named
- * (0-based, in `GET /api/decks` order). The server takes a Best-of-1 choice only as
- * `{ mode: "bo1", deckId }` now (docs/v0.3.0/SURFACE.md §11.3), so the bodies below send that.
+ * The account's second saved deck, oldest first in `GET /api/decks` order (R257's `{ deckIndex: 1 }`).
+ * The server takes a Best-of-1 choice only as `{ mode: "bo1", deckId }` (docs/v0.3.0/SURFACE.md §11.3).
  */
 function secondDeckId(token: string): Cypress.Chainable<string> {
   return cy
@@ -63,13 +59,9 @@ function secondDeckId(token: string): Cypress.Chainable<string> {
 }
 
 /**
- * Clears queue AND match state, so the spec is re-runnable.
- *
- * Canceling the queue is not enough and the second run proved it: the first run left both
- * accounts in a live match and every later `POST /api/rooms` came back `409 Conflict`, because
- * `assertNotInMatch` guards both room endpoints and the queue. There is no HTTP route out of a
- * match — only the socket's `concede`, R79's clocks, or the reaper — and `/api/auth/me` does not
- * return the match id a concede would need. So the reset goes through the database
+ * Clears queue AND match state, so the spec is re-runnable: a live match left behind makes every
+ * later `POST /api/rooms` a `409 Conflict`. There is no HTTP route out of a match — only the
+ * socket's `concede`, R79's clocks, or the reaper — so the reset goes through the database
  * (`support/tasks/onlineReset.ts`), which is inert unless `E2E_DATABASE_URL` is set.
  */
 function resetOnlineState(): void {
@@ -159,7 +151,7 @@ function signInThroughForm(email: string): void {
     cy.get('[data-testid="login-error"]').should("not.exist");
 
     // Past the invite gate: the gate leaves an active account on /decks; a pending one would be
-    // bounced to /invite. (#1577: the landing offers no Build decks door anymore.)
+    // bounced to /invite. (#1577: the landing offers no Build decks door.)
     cy.visit("/decks");
     cy.get('[data-testid="deck-list"]', { timeout: 40_000 }).should("exist");
     cy.location("pathname").should("eq", "/decks");
@@ -243,12 +235,9 @@ function signInThroughForm(email: string): void {
 
   /**
    * Both accounts in the browser, not just on the wire: sign in through the form, open a room on
-   * one, claim it on the other, and require the real board to render for each.
-   *
-   * Sequential rather than two tabs because Cypress drives one browser, and it costs nothing
-   * here: `play.tsx`'s own comment says "Nothing yet tells the host when the room is claimed, so
-   * the match id has to come from the joiner", so the host does not navigate on its own anyway.
-   * That gap is the reason step 5 visits /match/<id> directly instead of waiting for a redirect.
+   * one, claim it on the other, and require the real board to render for each. Sequential, since
+   * Cypress drives one browser; the host does not navigate on its own when its room is claimed, so
+   * player 1 visits /match/<id> directly instead of waiting for a redirect.
    */
   it("both accounts reach the real board in the browser", () => {
     let code = "";
@@ -292,11 +281,8 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * The ranked queue, which returned 500 to the SECOND player on every pair until the duplicate
-   * `matches.create` was removed (`startPairedMatch` wrote the row and then
-   * `createMatchRegistry.start` wrote it again). The match was created correctly and the caller
-   * was told nothing, so the client never learned the match id — which is why this asserts the
-   * RESPONSE, not just the database.
+   * The ranked queue tells the SECOND player the match id: a 500 there once left a live match the
+   * client never learned of, which is why this asserts the RESPONSE, not just the database.
    */
   it("the ranked queue pairs two accounts and tells the second one the match id", () => {
     resetOnlineState();
@@ -355,17 +341,10 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * The player who WAITED gets into the match without being told the id by anyone.
-   *
-   * This is the gap that made two-player play impossible in practice. Only one side's HTTP
-   * response carried the match id — the joiner of a room, or whoever enqueued second — so the
-   * other player sat on /play while their opponent sat on the board, and the only way to actually
-   * play was to paste the URL across. `/api/auth/me` now reports the caller's own
-   * `currentMatchId` (§9.5, cleared by every ending) and `/play` waits on it.
-   *
-   * Player 1 queues IN THE BROWSER and is never handed an id; player 2 is paired from outside the
-   * browser entirely. Nothing but the poll can move player 1, so arriving on the board is proof
-   * the fix works.
+   * The player who WAITED gets into the match without being told the id by anyone: only one side's
+   * HTTP response carries the match id, so `/play` waits on `/api/auth/me`'s `currentMatchId` (§9.5,
+   * cleared by every ending). Player 1 queues IN THE BROWSER and is never handed an id; player 2 is
+   * paired from outside it, so nothing but the poll can move player 1.
    */
   it("the player who waited is taken to the board with no id handed to them", () => {
     resetOnlineState();
@@ -373,7 +352,7 @@ function signInThroughForm(email: string): void {
     signInThroughForm(P1);
     cy.visit("/play");
     cy.get('[data-testid="play-queue"]').click();
-    // Queued, with nobody to pair against: the old build stopped here forever.
+    // Queued, with nobody to pair against.
     cy.get('[data-testid="play-status"]', { timeout: 30_000 }).should("exist");
     cy.location("pathname").should("eq", "/play");
 
@@ -396,10 +375,7 @@ function signInThroughForm(email: string): void {
     cy.get('[data-testid="board"]', { timeout: 60_000 }).should("exist");
   });
 
-  /**
-   * The account screen, which did not exist: a signed-in player could not see which address they
-   * were signed in as, could not see a record, and could not sign out at all.
-   */
+  /** The account screen: who is signed in, their record, and signing out. */
   it("the account screen shows who you are signed in as, and your record", () => {
     signInThroughForm(P1);
     cy.visit("/account");

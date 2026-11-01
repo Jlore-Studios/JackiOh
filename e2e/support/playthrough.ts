@@ -3,18 +3,10 @@
 //
 // Each step reads the dev handle (the raw state only for whose move it is, as the AI's `seat_to_act`
 // does; everything else from the seat's own `viewFor` and `legalActions`) and does exactly one thing:
-//
-//   - the device goes to the seat that owes the move, if another holds it;
-//   - a mulligan still owed is answered keeping the whole hand;
-//   - a prompt the seat holds is answered with its first legal answer (`legalActions` lists a
-//     prompt's answers, R211, so every kind is answered with no picker logic here);
-//   - a card still to be played that the seat holds and may play is played, its first legal play;
-//   - otherwise the turn ends.
-//
-// Concede and the draw offer are listed among the legal actions at every moment and are never taken.
-// `reduce` still refuses anything illegal (SPEC §9.3), so the driver can reach no state a player
-// could not: dispatching is a way past the UI, never past the rules. The spec around it waits on the
-// DOM between steps (`cy.settled()`) and asserts what the board, the log and the inspect view show.
+// hand the device over, answer an owed mulligan keeping the whole hand, answer a prompt with its first
+// legal answer (`legalActions` lists a prompt's answers, R211, so no picker logic here), play a card
+// still to be played, or end the turn. Concede and the draw offer are never taken. `reduce` still
+// refuses anything illegal (SPEC §9.3), so the driver can reach no state a player could not.
 
 import type { ActionBody, JackiOhDevHandle, PlayerId } from "./types.ts";
 
@@ -75,9 +67,9 @@ export function boardKind(pending: { kind?: string; options?: unknown[] }): stri
 }
 
 /**
- * The prompt kind the next step will answer, when it is one, as the board draws it (`boardKind`): the seat that owes the move holds the
- * device and its view holds a prompt for it. The spec waits on the board to draw that prompt before
- * the step reads it, since the board swaps its view only once the animations before it have run.
+ * The prompt kind the next step will answer, if the seat owing the move holds the device and a
+ * prompt, as the board draws it (`boardKind`). The spec waits on the board to draw it before the step
+ * reads it, since the board swaps its view only once the animations before it have run.
  */
 export function owedPromptKind(handle: Handle): string | null {
   const state = handle.state as unknown as StateLike;
@@ -90,9 +82,9 @@ export function owedPromptKind(handle: Handle): string | null {
 }
 
 /**
- * One step of the game, as the header says. `toPlay` is the set of definition ids still to be played;
- * the step plays one of them when it can and never anything else. `doc` is read for the open prompt's
- * `data-prompt-kind`, so the spec can check the board showed the prompt the view holds.
+ * One step of the game, as the header says: it plays a card of `toPlay` when it can and never
+ * anything else. `doc` is read for the open prompt's `data-prompt-kind`, so the spec can check the
+ * board showed the prompt the view holds.
  */
 export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Document): PlayStep {
   const state = handle.state as unknown as StateLike;
@@ -138,7 +130,7 @@ export function playStep(handle: Handle, toPlay: ReadonlySet<string>, doc: Docum
   return { kind: "end", seat, turn: state.turn, held, deck: view.you.libraryCount ?? 0 };
 }
 
-/* ------------------------------------------------------------------------------- the decks */
+/* the decks */
 
 /** The fields of a catalog entry (`crates/cards/catalog.json`) the decks are built from. */
 export type CatalogRow = {
@@ -185,9 +177,9 @@ function share(def: CatalogRow): "units" | "backrow" | "spells" {
 
 /**
  * The next game's two decks out of the cards still to play, in catalog order, each seat within
- * SEAT_SHARE. A seat left with nothing holds `filler`, a card of a set that ships, so every deck has a card.
- * A seat holding a card that needs a Radiant card in hand (Prestige) is dealt `source` too, when given,
- * unless it already holds a Radiant source of its own.
+ * SEAT_SHARE; a seat left with nothing holds `filler`, a card of a set that ships. A seat holding a
+ * card that needs a Radiant card in hand (Prestige) is dealt `source` too, when given, unless it
+ * already holds a Radiant source of its own.
  */
 export function nextGame(cards: readonly CatalogRow[], filler: CatalogRow, source?: CatalogRow): [CatalogRow[], CatalogRow[]] {
   const seats: [CatalogRow[], CatalogRow[]] = [[], []];
@@ -212,7 +204,7 @@ export function printedCost(def: CatalogRow): number {
   return def.cost === "X" ? 0 : def.cost.base;
 }
 
-/* ------------------------------------------------------------------------------- the words */
+/* the words */
 
 /** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`, `meditativeplus-001-1`, `stinkyscape-t-ai-01`, `traininggrounds-039-1`): never in a line a player reads. */
 const CATALOG_ID = /\b(?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|traininggrounds)-(?:t-)?[0-9a-z]+(?:-[0-9a-z]+)?\b/;

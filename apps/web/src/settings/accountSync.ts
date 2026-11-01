@@ -172,7 +172,6 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     persist();
   };
 
-  /** Reconcile each group by timestamp. */
   const reconcile = (copy: PlayerSettingsAccountCopy): void => {
     for (const group of groups) {
       const held = copy.groups[group.id];

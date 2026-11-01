@@ -1,9 +1,7 @@
-// A GIF89a encoder for a shared replay (#513, R513000): RGBA frames in, bytes out, the same bytes
-// for the same frames on every run. It is written by hand instead of pulled in as a dependency: a
-// fixed 6x7x6 color cube for the palette (no per-frame palette search and no dithering, so nothing
-// can differ between runs), each frame LZW-compressed with the GIF variant of the code table, and
-// the Netscape loop extension so the clip repeats. It loads on demand, with the raster (export.ts),
-// so the main bundle does not carry it.
+// A GIF89a encoder for a shared replay (#513, R513000): RGBA frames in, the same bytes for the same
+// frames on every run. Written by hand, not a dependency: a fixed 6x7x6 color cube for the palette (no
+// per-frame palette search and no dithering, so nothing can differ between runs), each frame
+// LZW-compressed, and the Netscape loop extension so the clip repeats. It loads on demand (export.ts).
 
 const RED_LEVELS = 6;
 const GREEN_LEVELS = 7;

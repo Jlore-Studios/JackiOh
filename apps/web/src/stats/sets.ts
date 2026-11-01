@@ -1,10 +1,8 @@
 // R1966000: the Sets tab of `/stats` (SPEC §9.11): each shipped set's cards on the patch the page
-// shows, read off the card figures `GET /api/stats/cards` already sends, so the server adds nothing.
-//
-// A card's win rate is R377's in-deck rate: its deck's wins over the games it was in a deck. A set's
-// win rate pools its cards (their wins over their games); its mean and median are over the cards with
-// the sample floor's games (R654). Decks mix sets (R380), so a set's rate is how its cards fare in mixed
-// decks, not how a deck of it would.
+// shows, read off the card figures `GET /api/stats/cards` already sends. A card's win rate is R377's
+// in-deck rate; a set's pools its cards (their wins over their games), and its mean and median are over
+// the cards with the sample floor's games (R654). Decks mix sets (R380), so a set's rate is how its
+// cards fare in mixed decks, not how a deck of it would.
 
 import { SHIPPED_SETS } from "@jackioh/shared";
 
@@ -65,7 +63,6 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-/** A higher win rate first, then more games, then the id. */
 function byRate(a: RatedCard, b: RatedCard): number {
   return b.winRate - a.winRate || b.games - a.games || a.id.localeCompare(b.id);
 }

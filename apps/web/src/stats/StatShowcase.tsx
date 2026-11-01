@@ -1,18 +1,13 @@
-// R1584000: the floor's showcase. One stat at a time: its title, its card as a real card face, the
-// player's number for it and the board's own animation for that stat, played on a one-card stage
-// (showcaseStage.ts) that carries the board's testids, so the board's keyframes (game/animations.css)
-// and effects (fx/) run on it unchanged. No effect is new.
+// R1584000: the floor's showcase, one stat at a time: its title, its card as a real card face, the
+// player's number and the board's own animation for it, played on a one-card stage (showcaseStage.ts)
+// that carries the board's testids, so the board's keyframes and effects run on it unchanged.
 //
-// The showcase steps on its own every `SHOWCASE_INTERVAL_MS`, and the player steps it by hand with a
-// click, a tap, Enter or Space. It holds like the home hand (R639): under reduced motion (the page's,
-// the panel's or the effects setting), a pointer or focus on it, and while the page is hidden. A card
-// already moving finishes its animation first. Reduced motion shows the still card and its number,
-// and a click still steps it. It reads only what the device logged and the Pocket Pick's public
-// rates (CLAUDE.md rule 7).
+// It steps every `SHOWCASE_INTERVAL_MS` or by hand (a click, a tap, Enter or Space), and holds like
+// the home hand (R639) under reduced motion, a pointer or focus on it, or a hidden page. It reads only
+// what the device logged and the Pocket Pick's public rates (CLAUDE.md rule 7).
 //
-// R1743000: the stats come in a shuffled bag drawn from the page's random source (`nextInBag`): each
-// once before any repeats, never the one just shown first in a new round. There is no arrow and no dot
-// (a dot for each would give away how many there are), and the showcase is itself the one control.
+// R1743000: the stats come in a shuffled bag (`nextInBag`), each once before any repeats. No arrow and
+// no dot (a dot for each would give away how many there are): the showcase is itself the one control.
 
 import {
   useEffect,

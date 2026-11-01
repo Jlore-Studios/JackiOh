@@ -1,8 +1,7 @@
-// The emoji emotes (issue §4, R1345): original animated stickers in the tavern's flat gold-and-ink
-// style — inline SVG, no borrowed art and no `<text>`. Patch v0.2.X's five, then MN03's fourteen
-// (#545). Each is drawn the same for every portrait; the bounce, hold and fade live in emotes.css
-// (`data-emoji`), which Reduce Motion flattens to a fade, and so are the few parts that move inside a
-// sticker (a waving hand, a beating heart, a flicker, a falling drop, confetti), which it stills.
+// The emoji emotes (issue §4, R1345, #545): original animated stickers in the tavern's flat
+// gold-and-ink style — inline SVG, no borrowed art and no `<text>`. Each is drawn the same for every
+// portrait; the motion lives in emotes.css (`data-emoji`), which Reduce Motion flattens to a fade
+// and whose few moving parts inside a sticker it stills.
 
 import type { ReactElement } from "react";
 

@@ -1,7 +1,6 @@
 // The emote UI (ui.tsx): what a shown emote draws (R644) and what the two menus do (issue §2, §5,
-// with R643's grey-out). The components are cosmetic — a pick reports the emote upward and the
-// session decides whether anything shows — so the tests render them bare, against a hand-read
-// `gate`, with no session and no clock but the bubble's `--emote-hold` span.
+// with R643's grey-out). The components are cosmetic, so the tests render them bare, against a
+// hand-read `gate`, with no session and no clock.
 
 import { StrictMode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -178,10 +177,8 @@ describe("R643 the Mute emotes menu", () => {
   });
 });
 
-// #219: jsdom has no layout engine, so what the slide does to a real rect is pinned on `menuShift`
-// and the stylesheet's own text; the rendered menu proves the hook writes the variable and keeps
-// it across an effect replay. The measurements themselves (emoji and label sizes, 44px targets,
-// menus and bubble on screen) are e2e/cypress/component/emotes-layout.cy.tsx's, in Chrome.
+// #219: jsdom has no layout engine, so the slide is pinned on `menuShift` and the stylesheet's own
+// text; the measurements themselves are e2e/cypress/component/emotes-layout.cy.tsx's, in Chrome.
 describe("#219 menuShift, the slide that keeps a menu on the screen", () => {
   it("#219 shifts right by what pokes out on the left, left by what pokes out on the right, nothing when it fits", () => {
     // The fixture board at 360px puts your portrait at the screen's left edge: a 320px menu
@@ -229,10 +226,9 @@ describe("#219 an open menu measures itself and slides back on screen", () => {
   });
 
   it("#219 a StrictMode replay — dev's second layout-effect run — keeps the shift, it does not cancel it", () => {
-    // jsdom has no layout, so the stub plays the layout engine: the centered rect plus whatever
-    // --emote-menu-shift the element already carries, what a real getBoundingClientRect reports
-    // once the transform applies. main.tsx mounts the app under StrictMode, so in dev the hook's
-    // effect runs twice — a second run that took the slid rect for centered would write 0 back.
+    // The stub plays the layout engine: the centered rect plus whatever --emote-menu-shift the
+    // element already carries. Under StrictMode (main.tsx) the hook's effect runs twice in dev, and a
+    // second run that took the slid rect for centered would write 0 back.
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
       const applied = Number.parseFloat(this.style.getPropertyValue("--emote-menu-shift")) || 0;
       return rect(-131 + applied, 189 + applied, 320);
@@ -394,11 +390,9 @@ describe("R1345 every emoji of the pool is an inline sticker with its own name",
 });
 
 // #257: a hero that is not a target is drawn at 0.9 opacity (board.css), which makes it a stacking
-// context, so the show's and the menus' z-indexes counted only inside it: the field, which follows
-// the opponent's seat in the document, painted over their bubble, sticker and Mute menu. The sheet
-// lifts the hero and its seat while a piece is up, and draws the hero at full strength. Whether
-// anything still covers a piece takes a layout engine (emotes-layout.cy.tsx); what the sheets pin is
-// the lift itself, and that it stays under every overlay the issue keeps above an emote.
+// context, so the field painted over the opponent's bubble, sticker and Mute menu. The sheet lifts the
+// hero and its seat while a piece is up; the sheets pin the lift, and that it stays under every
+// overlay the issue keeps above an emote (what still covers a piece is emotes-layout.cy.tsx's).
 function sheet(path: string): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), path), "utf8");
 }

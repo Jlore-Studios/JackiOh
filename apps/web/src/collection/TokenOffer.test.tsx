@@ -1,7 +1,6 @@
-// R1953001 (#1953): a held cosmetic token is offered where a locked cosmetic is shown, a card's own
-// cosmetics view and the account's tiles, and only where its tier covers the cosmetic (R1305003):
-// the offer redeems it through `POST /api/tokens/redeem-cosmetic` and the cosmetic shows owned once
-// the screen's ownership reads again; a refusal shows the server's words and changes nothing.
+// R1953001 (#1953): a held cosmetic token is offered on a locked cosmetic its tier covers (R1305003),
+// in a card's view and the account's tiles; it redeems through `POST /api/tokens/redeem-cosmetic` and
+// the cosmetic shows owned on the re-read; a refusal shows the server's words and changes nothing.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,12 +36,10 @@ afterEach(() => {
   resetLocaleForTests();
 });
 
-/** Held cosmetic tokens, none but those given. */
 function held(over: Partial<HeldTokens> = {}): HeldTokens {
   return { card: 0, cosmeticRare: 0, cosmeticEpic: 0, cosmeticPack: 0, ...over };
 }
 
-/** The bars answer, holding `tokens`. */
 function barsHolding(tokens: Partial<HeldTokens>): TokenBarsResponse {
   return { ...tokenBars(), tokens: held(tokens) };
 }

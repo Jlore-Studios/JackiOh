@@ -27,7 +27,6 @@ const ARROWS = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown:
 const APPLE_LABELS: Readonly<Record<string, string>> = { ...ARROWS, [MOD]: "⌘", Shift: "⇧" };
 const OTHER_LABELS: Readonly<Record<string, string>> = { ...ARROWS, [MOD]: "Ctrl", Shift: "Shift" };
 
-/** Whether a user agent is an Apple device's: a Mac, an iPhone, an iPad or an iPod. */
 export function isApplePlatform(userAgent: string): boolean {
   return /Mac|iPhone|iPad|iPod/u.test(userAgent);
 }
@@ -62,7 +61,7 @@ function touchQuery(): MediaQueryList | null {
   }
 }
 
-/** Whether the device is touch-only now: no hover and a coarse pointer. A host without `matchMedia` is not. */
+/** Whether the device is touch-only now; a host without `matchMedia` is not. */
 export function touchOnly(): boolean {
   return touchQuery()?.matches === true;
 }

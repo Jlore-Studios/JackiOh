@@ -78,7 +78,6 @@ function handOf(state: GameStateLike, player: PlayerId): HandCard[] {
   return side.hand ?? [];
 }
 
-/** The first target the client marks legal. */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);

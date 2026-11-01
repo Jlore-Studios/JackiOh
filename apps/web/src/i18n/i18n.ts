@@ -2,34 +2,19 @@
 // lookup every user-visible sentence goes through. Presentation only (CLAUDE.md rule 7): no rule reads
 // it, and nothing about it reaches the engine, the wire or the server.
 //
-// The English stays inline where it is written, wrapped in `t()`: `t("Your turn")` is the chosen
-// language's entry for that exact English string, with `{name}` parameters filled, and the English
-// itself when the language has no entry, so English needs no file and a sentence nobody has
-// translated yet reads as it always did. The engine's and the server's English (prompt titles,
-// refusals, validator issues) is looked up where it is displayed, by the same call; a dictionary key
-// that holds `{name}` tokens also matches a sentence whose values are already filled in, since those
-// arrive complete from Rust ("Choose 2 cards" finds "Choose {n} cards").
-// That fallback is for the engine's and the server's sentences: every literal the client itself
-// wraps in `t()` has an entry in `zh-CN.json` (an identity entry when it reads as written, as
-// "English" has), which `i18n.test.ts` checks (R711000).
+// The English stays inline, wrapped in `t()`, and reads as itself where the language has no entry.
+// The engine's and the server's English arrives complete from Rust, so a key holding `{name}` tokens
+// also matches a filled-in sentence ("Choose 2 cards" finds "Choose {n} cards"). Every literal the
+// client wraps in `t()` has a `zh-CN.json` entry, which `i18n.test.ts` checks (R711000).
 //
-// A language is one dictionary file (`<tag>.json`, English to its words; a value is a string, or
-// `{ one, other }` and the other CLDR plural categories, chosen by `Intl.PluralRules` over the
-// `count` parameter), its card tables beside the catalog (`cards/chinese.ts`, CARD_TABLES) and one
-// line of LOCALES. A dictionary loads on demand (a dynamic `import()`), so the English bundle does
-// not carry any of them.
+// A language is one dictionary file (`<tag>.json`), its card tables (`cards/chinese.ts`) and one line
+// of LOCALES; a dictionary loads on demand, so the English bundle carries none. The choice is the
+// device's; the browser's pick is not written down, so only a click on the language button fixes it.
+// Never call `t()` at module scope: it would freeze the language the module loaded in.
 //
-// The choice is the device's: `localStorage["jackioh.locale"]` inside try/catch, applied live (the
-// store notifies, `useLocale()` re-renders) and set on `<html lang>`. A first visit takes the best
-// match of `navigator.languages`, else English; the browser's pick is not written down, so only a
-// click on the language button fixes it. Never call `t()` at module scope: it would freeze the
-// language the module loaded in.
-//
-// The language button stays until the device has settled on its language (R1916000):
-// localStorage["jackioh.locale.settledVisits"] counts the boots (countLocaleVisit, main.tsx), every
-// language change and the settings' reset set it back to 0, and from the boot it reaches
-// LANGUAGE_SETTLED_VISITS the button leaves the top bar and the board; settings' Language row stays.
-// Storage that throws never settles.
+// The language button stays until the device has settled on its language (R1916000): the boots are
+// counted (countLocaleVisit, main.tsx), and every language change and the settings' reset restart
+// the count. Storage that throws never settles.
 
 import { useSyncExternalStore } from "react";
 
@@ -75,7 +60,7 @@ export const LOCALE_STORAGE_KEY = "jackioh.locale";
 /** The boots since this device's last language change (R1916000), beside the language itself. */
 export const LOCALE_VISITS_STORAGE_KEY = "jackioh.locale.settledVisits";
 
-/** Boots with no language change after which the device has settled on its language: the language button leaves the top bar and the board, settings' Language row staying (R1916000). */
+/** Boots with no language change after which the device has settled and the language button leaves (R1916000). */
 export const LANGUAGE_SETTLED_VISITS = 3;
 
 const LOCALE_TAGS = Object.keys(LOCALES) as Locale[];
@@ -368,25 +353,22 @@ export function nextLocale(locale: Locale): Locale {
   return LOCALE_TAGS[(LOCALE_TAGS.indexOf(locale) + 1) % LOCALE_TAGS.length] ?? DEFAULT_LOCALE;
 }
 
-/**
- * The language tag numbers and moments are written in: the reader's, or for English the browser's own,
- * as the bare `toLocaleString()` these helpers replace wrote them, so English reads as it always did.
- */
+/** The language tag numbers and moments are written in: the reader's, or for English the browser's own. */
 function formatTag(): string | undefined {
   return state.locale === DEFAULT_LOCALE ? undefined : state.locale;
 }
 
-/** A number in the reader's language (replaces the bare `toLocaleString()`). */
+/** A number in the reader's language. */
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat(formatTag(), options).format(value);
 }
 
-/** A span of seconds as the clock reads it: "5s", "7200s", "5秒"; never grouped, as `${n}s` never was. */
+/** A span of seconds as the clock reads it: "5s", "7200s", "5秒"; never grouped. */
 export function formatSeconds(seconds: number): string {
   return new Intl.NumberFormat(state.locale, { style: "unit", unit: "second", unitDisplay: "narrow", useGrouping: false }).format(seconds);
 }
 
-/** A moment (epoch ms, or a Date) as the reader's date and time (replaces the bare `toLocaleString()`). */
+/** A moment (epoch ms, or a Date) as the reader's date and time. */
 export function formatDateTime(at: Date | number, options?: Intl.DateTimeFormatOptions): string {
   return new Date(at).toLocaleString(formatTag(), options);
 }

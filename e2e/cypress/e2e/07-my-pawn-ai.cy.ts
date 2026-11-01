@@ -224,7 +224,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             });
 
             cy.gameState().should((after) => {
-              // The canceled hit never happened.
               expect(heroHealth(after, "p2"), "the canceled attack dealt no damage").to.eq(health);
               expect(after.result, "the canceled swing did not end the game").to.eq(null);
               // §5.1 spends the trap to its owner's graveyard.
@@ -236,7 +235,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
                 (peek(after, "p2").graveyard ?? []).some((card) => card.defId === myPawn),
                 "My Pawn is in its owner's graveyard (§5.1: a Trap goes there after it fires)",
               ).to.eq(true);
-              // The AI ended seat 1's turn.
               expect(after.turn, "the player-turn advanced").to.be.greaterThan(turn);
               expect(after.active, "the turn ended and seat 2 is to act").to.eq("p2");
             });

@@ -20,9 +20,8 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * `prefersReducedMotion()` OR the settings panel's "Reduce motion" switch (settings/store.ts) OR the
- * effects store's `motion: "reduce"` (`settings` defaults to `getFxSettings()`). Either setting
- * behaves exactly like the media query (R200, R201).
+ * `prefersReducedMotion()` OR the panel's "Reduce motion" switch OR the effects store's `motion: "reduce"`
+ * (`settings` defaults to `getFxSettings()`). Either setting behaves exactly like the media query (R200, R201).
  */
 export function reducedMotionNow(settings?: Pick<FxSettings, "motion">): boolean {
   return (

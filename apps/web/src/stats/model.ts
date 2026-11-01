@@ -253,10 +253,7 @@ export function topCards(stats: PlayerStats, counter: CardCounter, limit: number
     .slice(0, Math.max(0, limit));
 }
 
-/**
- * SPEC §9.11, R377: formats a server-calculated played delta as signed percentage points.
- * Returns null when delta is null.
- */
+/** SPEC §9.11, R377: a server-calculated played delta as signed percentage points. */
 export function formatPlayedDelta(delta: number | null): string | null {
   if (delta === null) return null;
   const points = Math.round(delta * 100);

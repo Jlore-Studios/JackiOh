@@ -1,9 +1,7 @@
-// The raster of a shared GIF (#513, R513000): a frame plan drawn, frame by frame, onto a 2D canvas
-// and handed to the encoder. It runs in `raster.worker.ts` on an `OffscreenCanvas`; where a worker
-// cannot draw, `export.ts` runs it on the main thread, one frame per macrotask. It knows no React,
-// no catalog and no `t()`: the faces and art it draws arrive in `GifAssets`, made from the same
-// data the board's faces use (`cards/art`), so the same plan and assets give the same pixels' bytes.
-// It loads on demand with the encoder, never in the main bundle.
+// The raster of a shared GIF (#513, R513000): a frame plan drawn onto a 2D canvas and handed to the
+// encoder, in `raster.worker.ts` or, where a worker cannot draw, on the main thread (`export.ts`). It
+// knows no React, no catalog and no `t()`: its faces and art arrive in `GifAssets`, made from the data
+// the board's faces use (`cards/art`), so the same plan and assets give the same bytes.
 
 import type { CardType, PortraitId, Rarity } from "@jackioh/shared";
 

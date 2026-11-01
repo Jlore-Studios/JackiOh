@@ -42,7 +42,6 @@ const EXPECTED_IDS = [
   "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
 ] as const;
 
-/** Each recipe's silence deadline. */
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   draw: 180,
   play: 260,

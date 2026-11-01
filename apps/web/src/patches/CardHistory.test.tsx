@@ -1,6 +1,4 @@
-// R388, R507: the History section of the collection's card detail view. Collapsed by default; opened,
-// it loads only the snapshots the card needs and lists each patch that changed the card, newest
-// first, with its faces as that patch left them and what changed marked. Fixtures through the
+// R388, R507: the History section of the collection's card detail view, from fixtures through the
 // source's context, then the real data through the default source.
 
 import { readFileSync } from "node:fs";

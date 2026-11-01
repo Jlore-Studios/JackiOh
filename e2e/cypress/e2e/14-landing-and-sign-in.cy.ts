@@ -1,7 +1,6 @@
 // Spec 14: landing and sign-in (B16-B18, B22, B23, B29-B31, B37 and B40).
 // No server or provider: API calls are intercepted, sessions seed in `onBeforeLoad`, and links use
-// `/login` hashes or queries. The CORS stub handles client/API preflights.
-// Paste uses a realm-local `ClipboardEvent`; unit tests cover the unhandled path.
+// `/login` hashes or queries. Paste uses a realm-local `ClipboardEvent`; unit tests cover the unhandled path.
 
 import {
   AUTH_PASSWORD_MIN_LENGTH,
@@ -173,7 +172,6 @@ function stubApi(initial: Partial<Api> = {}): Api {
   return api;
 }
 
-/** No request may reach the auth provider. */
 function forbidProvider(): void {
   cy.intercept({ pathname: /\/auth\/v1\// }, () => {
     throw new Error("spec 14 must never reach the auth provider");

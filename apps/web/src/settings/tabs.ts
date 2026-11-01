@@ -1,9 +1,7 @@
 // Which tab the settings dialog opens on (issue #128): the last one the player used on this device.
-//
-// It is a screen preference, not a game setting, so it is not in the settings store and no account
-// carries it. `localStorage` may be missing or throw (private windows, blocked site data), and a
-// hand-edited value can hold anything: every access sits in try/catch and a value that is not one of
-// the tabs the dialog has right now is ignored.
+// A screen preference, not a game setting, so no account carries it. `localStorage` may be missing or
+// throw and a hand-edited value can hold anything: every access sits in try/catch, and a value that is
+// not one of the dialog's tabs now is ignored.
 
 import type { SettingsSectionId } from "./slots.ts";
 

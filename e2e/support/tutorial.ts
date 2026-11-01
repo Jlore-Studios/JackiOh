@@ -1,9 +1,6 @@
-// Tutorial e2e driver (SPEC §9.10; specs 22 and 23).
-//
-// The driver never dispatches; it performs the coach's suggested legal actions through the UI and
-// only reads the practice view to await snapshots and locate cards.
-//
-// Cypress-retried waits observe the board and coach settling (BUILD M8).
+// Tutorial e2e driver (SPEC §9.10; specs 22 and 23). The driver never dispatches; it performs the
+// coach's suggested legal actions through the UI and only reads the practice view to await
+// snapshots and locate cards. Cypress-retried waits observe the board and coach settling (BUILD M8).
 
 import { timeouts, TUTORIAL_PROGRESS_KEY } from "./config.ts";
 import {

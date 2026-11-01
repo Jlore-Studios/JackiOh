@@ -1,28 +1,20 @@
 // The Chrome the e2e run launches as `chrome`, when the one Cypress found is a major known to break
 // under it. Node-side only: cypress.config.ts's setupNodeEvents calls `pinChrome`.
 //
-// Cypress 16 runs Chrome on its native network path: every request the page makes, at both its
-// request and its response stage, is paused and answered over the DevTools protocol (`Fetch.enable`,
-// packages/server/lib/network-runtime.ts and browsers/cdp-protocol/cdp-fetch-transport.ts in
-// cypress-io/cypress v16.1.0). `forceHttp1: true` is the only way back to the HTTP/1 proxy, and that
-// path never delivered the engine's .wasm. Chrome 155 made a request id reused under DevTools
-// request interception fatal (Chromium CL 8359730), and Chrome legitimately reuses one when a
-// request restarts, so now and then the browser kills its own network service ("DevTools:
-// Duplicate request ID", then "Network service crashed or was terminated"). Every fetch in flight
-// fails at once and every socket drops, while `cy.request`, which runs in Node, never notices. CL
-// 8411428 (crbug.com/559770861) fixed it in Chrome 156; 154 has neither change
-// (github.com/blassaut/dappress/pull/37 measured it). GitHub's ubuntu-24.04 image ubuntu24/20261012
-// ships Google Chrome 155.0.8059.39, on which `e2e smoke` failed 8 runs in 15 against none in 7 on
-// 154: a lobby showing "Couldn't reach JackiOh", a series banner that never came, a guest left on
-// /play.
+// Cypress 16 pauses and answers every request the page makes over the DevTools protocol
+// (`Fetch.enable`); `forceHttp1: true`, the only way back to the HTTP/1 proxy, never delivered the
+// engine's .wasm. Chrome 155 made a request id reused under DevTools request interception fatal
+// (Chromium CL 8359730), and Chrome reuses one when a request restarts, so now and then the browser
+// kills its own network service: every fetch in flight fails and every socket drops, while
+// `cy.request`, which runs in Node, never notices. CL 8411428 (crbug.com/559770861) fixed it in
+// Chrome 156; 154 has neither change. On 155 `e2e smoke` failed 8 runs in 15, against none in 7 on 154.
 //
-// So when the `chrome` entry is a major in BROKEN_CHROME_MAJORS and the run is on CI (or
-// E2E_CHROME_PIN=1 asks), that entry is pointed at Chrome for Testing PINNED_CHROME_MILESTONE,
-// downloaded once into the repository's .cache/ (gitignored). Its name stays `chrome`, so
-// `cypress run --browser chrome` launches it; Cypress picks the highest version of a name, so the
-// entry is replaced, not joined. Any other Chrome, and every other browser, is left exactly as
-// found. A failed download leaves the system Chrome in place and says why. Remove 155 from
-// BROKEN_CHROME_MAJORS once the runner image ships 156, and this file with it.
+// So on CI (or when E2E_CHROME_PIN=1 asks) a `chrome` entry of a major in BROKEN_CHROME_MAJORS is
+// pointed at Chrome for Testing PINNED_CHROME_MILESTONE, downloaded once into the repository's
+// .cache/ (gitignored). It keeps the name `chrome` and replaces the entry rather than joining it,
+// since Cypress picks the highest version of a name. A failed download leaves the system Chrome in
+// place and says why. Remove 155 from BROKEN_CHROME_MAJORS once the runner image ships 156, and
+// this file with it.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";

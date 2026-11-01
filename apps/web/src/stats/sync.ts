@@ -1,8 +1,6 @@
-// Player statistics sync with the account (SPEC §9.11, R654, R1142000).
-//
-// When an active session is present, syncs the device's tracked player statistics
-// to PUT /api/stats/player, with no privacy flag (R2000000). Pruned to the summary's inputs
-// (R1142000) and bounded by PLAYER_STATS_BYTES_MAX.
+// Player statistics sync with the account (SPEC §9.11, R654, R1142000): with an active session, the
+// device's statistics go to PUT /api/stats/player with no privacy flag (R2000000), pruned to the
+// summary's inputs (R1142000) and bounded by PLAYER_STATS_BYTES_MAX.
 
 import { putPlayerStats } from "../net/api.ts";
 import { readSession } from "../net/session.ts";
@@ -32,12 +30,9 @@ type CandidateCard = {
 };
 
 /**
- * Prunes local PlayerStats for syncing to the server account copy (R1142000).
- *
- * Keeps game totals (games, wins, losses, draws) and only the four counters
- * read by the public player summary (played, playedAgainst, destroyed, defeated).
- * Omits seen, zero counters, and all-zero cards.
- * If the resulting PUT body exceeds maxBytes, drops lowest-count cards first until it fits.
+ * R1142000: the game totals and the four counters the public player summary reads (played,
+ * playedAgainst, destroyed, defeated), without seen, zero counters or all-zero cards. Over maxBytes,
+ * the lowest-count cards go first until it fits.
  */
 export function syncPayload(
   stats: PlayerStats,
@@ -65,7 +60,6 @@ export function syncPayload(
     }
   }
 
-  // Highest activity first; break ties by card id ascending
   candidates.sort((a, b) => b.total - a.total || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
   const buildCards = (list: readonly CandidateCard[]): Record<string, PrunedCardCounters> => {
@@ -106,10 +100,7 @@ export function syncPayload(
   };
 }
 
-/**
- * Sends the device's player stats to the server, never `isPrivate` (R2000000).
- * Safe to call frequently: if not signed in or network is unreachable, it silently completes.
- */
+/** Sends the device's player stats, never `isPrivate` (R2000000); signed out or offline, it silently completes. */
 export async function syncPlayerStats(tokenOverride?: string): Promise<void> {
   const token = tokenOverride ?? readSession()?.accessToken;
   if (!token) return;

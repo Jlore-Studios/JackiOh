@@ -1,11 +1,7 @@
-// The opening's two bars and the reward reveal (#1658, R1953000), from crafted answers: both bars
-// pinned at the top as a HUD, unmoved ones included; each spent slot's points flying into it, labeled
-// with the server's points and tinted by rarity; then each bar filling from its points before to its
-// points after, a full one pulsing as it bursts and revealing what its fill paid; and the reveal
-// flying its items out one by one with the pack opening's sting, or all at once with one sting under
-// reduced motion, which flies and pulses nothing. The stylesheet is read as text, as
-// `FillBar.test.tsx` reads it, because Vitest stubs CSS imports. The audio engine is the recording
-// fake the pack scene's tests use; fake timers move everything.
+// The opening's two bars and the reward reveal (#1658, R1953000), from crafted answers: the HUD, the
+// slots' points flying in, each bar filling and bursting, the reveal's stings, and reduced motion
+// flying and pulsing nothing. The stylesheet is read as text, as `FillBar.test.tsx` reads it, because
+// Vitest stubs CSS imports; the audio engine is the pack scene's recording fake; fake timers move all.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
@@ -223,7 +219,7 @@ describe("#1658 the opening's two bars", () => {
   });
 });
 
-/* ------------------------------------------------------------------------ the stylesheet --- */
+/* the stylesheet */
 
 /** `economy.css` without its comments: vitest stubs CSS imports, so the file is read from the test's working directory. */
 const sheet: string = (() => {

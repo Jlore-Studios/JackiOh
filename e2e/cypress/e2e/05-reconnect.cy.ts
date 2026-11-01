@@ -1,8 +1,7 @@
 // BUILD M8 05 (V14): reload during #65 Masochism Mask's active-player `PendingChoice` (SPEC §8, §6.2).
 // Prompts are state (§9.3), so reconnect gets a full view rather than replay (§9.5).
 // Turn 7 makes #77 Professor Curvature's R48 modifier live; fingerprint also covers R169 badges.
-// It checks testids (BUILD M5-T1, M5-T4), prompt, counters and badges; R79 owns the clock limits
-// (BUILD §2). CLAUDE.md rule 7 requires assertions against the DOM `viewFor` renders.
+// R79 owns the clock limits (BUILD §2). CLAUDE.md rule 7: assert against the DOM `viewFor` renders.
 // Needs M6/M7-T1; see e2e/README.md.
 
 import {
@@ -75,7 +74,6 @@ type SideLike = { hand?: { instanceId: string }[] | { count: number } };
 function handIdsOf(view: Record<string, unknown> | null | undefined): string[] {
   const you = (view?.you ?? {}) as SideLike;
   const hand = you.hand;
-  // §10.8: the viewer's own hand is full cards; only the opponent's is a count.
   expect(Array.isArray(hand), "the viewer's own hand arrives as cards, not a count (§10.8)").to.eq(
     true,
   );
@@ -190,7 +188,7 @@ function optionKeysOf(print: ViewFingerprint): string[] {
 
 describe("05 reconnect — a networked game reloaded mid-prompt", () => {
   it("rebuilds the same view and the same open prompt, with the clock still running", () => {
-    // Re-pinned for #1705's 25-card decks: "05-reconnect-14" no longer draws seat 1 #77 by player-turn 5.
+    // This seed draws seat 1 #77 by player-turn 5 from #1705's 25-card decks.
     const seed = seedFor("05-reconnect-9");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
@@ -346,7 +344,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       );
     });
 
-    // Essential reconnected-board testids.
     cy.get(ts(heroId("you"))).should("be.visible");
     cy.get(ts(heroId("opponent"))).should("be.visible");
     for (const lane of LANES) {

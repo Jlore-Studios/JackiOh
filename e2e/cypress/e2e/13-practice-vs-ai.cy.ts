@@ -49,9 +49,8 @@ import type { Action, Lane, PlayerId } from "../../support/types.ts";
 const SEED = seedFor("13-practice-t");
 
 /**
- * BUILD M8 seed keeps the Easy game alive for four human turns despite R635's cost-bucket deal. Patch
- * v0.3.10's costs dealt `SEED`'s Easy game a deck that kills the passive human on turn 7, so this game
- * has its own: on `13-practice-z` the human lived until turn 11, and AI gen 13 (learn) kills it on turn 9.
+ * BUILD M8 seed keeps the Easy game alive despite R635's cost-bucket deal: `SEED`'s Easy deal kills
+ * the passive human on turn 7, so this game has its own.
  */
 const EASY_SEED = seedFor("13-practice-z");
 
@@ -59,9 +58,8 @@ const EASY_SEED = seedFor("13-practice-z");
 const HARD_SEED = `${seedFor("13-practice")}:hard`;
 
 /**
- * The human turns the Easy game ends after its first, before the log and the concede. The passive
- * human must outlive every AI a training lane promotes, and a stronger one kills it sooner, so the
- * game plays only the turns its checks need (R745's own proof is `Log.test.tsx`).
+ * The human turns the Easy game ends after its first. The passive human must outlive every AI a
+ * training lane promotes, so the game plays only the turns its checks need (R745's own proof is `Log.test.tsx`).
  */
 const HUMAN_TURNS = 1;
 

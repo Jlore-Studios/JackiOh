@@ -11,24 +11,8 @@ import { ReplayFailure } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts";
 
-// Re-picked for patch v0.3.12 (#1149): Zephyrs and CN in a Bottle left the (0) Cost cards, so `cheap20`
-// changed, and "replay-player" now ends with the viewer's hand empty.
-// Re-pinned for v0.3.15 (Meditative+ ships, #1187): the shipped pools grew by Meditative+, so
-// "replay-player-5" now ends with the opponent's hand empty, in under three pages; "replay-player-6"
-// ends with both hands holding cards and spans a third page.
-// Re-pinned for #1563: Last Hurrah and Aestheticize the Game cost (0), so `cheap20` changed again and
-// "replay-player-6" now ends with the opponent's hand empty; "replay-player-10" holds cards in both.
-// Re-pinned for #1705's 25-card decks: "replay-player-10" now ends with the viewer's hand empty, and
-// "replay-player-4" shows no card in the steps the GIF export's clip takes (8 to 14);
-// "replay-player-5" holds cards in both hands and in that clip.
-// Re-pinned for the Stinkyscape release (#1884): the shipped pools grew by the set, so "replay-player-5"
-// ends with the viewer's hand empty and its first animated step queues an event the board never plays
-// out; "replay-player-8" holds cards in both hands, animates, and passes every replay test.
-// Re-pinned for #2179, whose costs change `cheap20` again: "replay-player-8" now ends with the opponent's
-// hand empty; "replay-player-10" holds cards in both and passes every replay test.
-// Re-pinned for #2368, whose first player opens on three cards (R2368000): "replay-player-10" now ends
-// in under three pages with both hands empty; "replay-player-6" holds cards in both and passes every
-// replay test.
+// Re-pinned whenever the seeded game changes (#1149, #1187, #1563, #1705, #1884, #2179, and #2368's
+// three-card opening, R2368000): "replay-player-6" holds cards in both hands and passes every replay test.
 const SEED = "replay-player-6";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */
 const GAME_ACTIONS = 2 * REPLAY_PAGE_STEPS + 8;

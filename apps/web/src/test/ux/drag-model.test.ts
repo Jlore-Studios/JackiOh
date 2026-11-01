@@ -1,13 +1,8 @@
-// Polish task 7, B34 and B35 (docs/polish/7-mobile-ux.md, Surface S9): the pure drag model.
-//
-// `planDrag` decides what a press on the board may lift, and `resolveDrop` decides what a release
-// does with it. Both only narrow the `legalActions` array they are handed, through the same
-// `actions.ts` reducer click-click uses, so every expected action below is a body the engine
-// listed. Nothing here renders; the DOM half is drag-layer.test.tsx.
-//
-// The `DragPlan`s that `resolveDrop` is tested with are written out by hand from S9's field
-// definitions rather than built by `planDrag`, so a fault in one function is never reported as a
-// fault in the other.
+// Polish task 7, B34 and B35 (docs/polish/7-mobile-ux.md, Surface S9): the pure drag model; the DOM half
+// is drag-layer.test.tsx. `planDrag` and `resolveDrop` only narrow the `legalActions` they are handed,
+// through the `actions.ts` reducer click-click uses, so every expected action below is a body the
+// engine listed. `resolveDrop`'s `DragPlan`s are written out by hand from S9's fields rather than built
+// by `planDrag`, so a fault in one function is never reported as a fault in the other.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -17,16 +12,13 @@ import type { ClickTarget } from "../../game/contract.ts";
 import { planDrag, resolveDrop, type DragPlan, type DropSpot } from "../../game/drag/model.ts";
 import { baseView, card, emptySide, unit } from "../fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The board and what the engine allows on it.
-// ---------------------------------------------------------------------------------------------
 
 /**
- * Your hand holds one card of every shape a drag has to handle: a unit with two zones (h1), a card
- * with exactly one zone (z1), a one-candidate spell (s1), a targeted spell (t1), an X spell (x1), a
- * unit whose Cry also takes a target (c1), a spell that targets a card in your own hand (j1) and a
- * card nothing lets you play (n1). Your field: u1 can attack e1 or the hero, u2 can only switch
- * position, u3 can attack e2.
+ * Your hand: h1 a unit with two zones, z1 a card with one, s1 a one-candidate spell, t1 a targeted
+ * spell, x1 an X spell, c1 a unit whose Cry also takes a target, j1 a spell that targets a card in your
+ * own hand, n1 a card nothing lets you play. Your field: u1 can attack e1 or the hero, u2 can only
+ * switch position, u3 can attack e2.
  */
 function view(): PlayerView {
   return baseView({
@@ -105,9 +97,7 @@ const LEGAL: readonly ActionBody[] = [
   { type: "concede" },
 ];
 
-// ---------------------------------------------------------------------------------------------
 // Click targets, drop spots and interactions.
-// ---------------------------------------------------------------------------------------------
 
 const hand = (instanceId: string): ClickTarget => ({ on: "hand", instanceId });
 const yourUnit = (instanceId: string, lane: number): ClickTarget => ({ on: "unit", instanceId, side: "you", lane });
@@ -152,9 +142,7 @@ function expectIdle(result: { interaction: Interaction; action?: ActionBody }): 
   expect(result.action).toBeUndefined();
 }
 
-// ---------------------------------------------------------------------------------------------
 // B34: planDrag
-// ---------------------------------------------------------------------------------------------
 
 describe("B34 planDrag lifts what a play or an attack names", () => {
   it("B34 a hand card with two zones gives a play plan holding both candidates, unsettled, dropped only on its zones", () => {
@@ -288,7 +276,7 @@ describe("B34 planDrag lifts what a play or an attack names", () => {
     expect(sorted(got.dropTestids)).toEqual(["card-e2"]);
   });
 
-  // --- null: nothing to lift -------------------------------------------------------------------
+  // null: nothing to lift
 
   it("B34 a hand card no play names gives null", () => {
     expect(planDrag(view(), LEGAL, IDLE, hand("n1"))).toBeNull();
@@ -337,9 +325,7 @@ describe("B34 planDrag lifts what a play or an attack names", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B35: resolveDrop
-// ---------------------------------------------------------------------------------------------
 
 const PLAN_H1 = plan({
   kind: "play",
@@ -482,7 +468,7 @@ describe("B35 resolveDrop acts only on a drop the plan allows", () => {
     expect(got.interaction.instanceId).toBe("x1");
   });
 
-  // --- anything else: idle, nothing sent -------------------------------------------------------
+  // anything else: idle, nothing sent
 
   it("B35 a drop spot in the set whose click changes nothing returns idle and sends nothing", () => {
     // The testid is in the drop set but the target it reports matches no candidate, so
@@ -534,9 +520,7 @@ describe("B35 resolveDrop acts only on a drop the plan allows", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R658: a build in flight lifted again from what it has picked
-// ---------------------------------------------------------------------------------------------
 
 describe("R658 a play narrowed to its zone is dragged again from that zone to its Cry target", () => {
   /** c1 dropped (or clicked) into units lane 4, its Cry target still to name. */

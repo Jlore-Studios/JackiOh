@@ -1,8 +1,6 @@
-// The replay player (#511): its controls reach the steps they name, the board it draws offers nothing,
-// a step forward animates and any other move remounts, Play follows the table's speed, the last step
-// shows both hands, the rail's modifier list follows the step on the board (R169), and each way a
-// replay can fail says so. Over a fake source of one seeded game's steps (`test/replay.ts`), the
-// player's own contract: no log, seed or state reaches it.
+// The replay player (#511) over a fake source of one seeded game's steps (`test/replay.ts`), the
+// player's own contract: no log, seed or state reaches it. The rail's modifier list follows the step
+// on the board (R169).
 
 import { CATALOG } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";

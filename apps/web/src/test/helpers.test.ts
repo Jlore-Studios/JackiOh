@@ -1,9 +1,8 @@
 // #2215: the web's tests take `settle`, `withCatalog`, `renderBoard` and the `PointerEvent` polyfill
 // (`ensurePointerEvent`) from src/test/ (settle.ts, board.tsx, setup.ts), never from a copy of their own,
-// as the Rust tests are held to their shared kit (crates/tools/tests/acceptance.rs, #1777). A test file that
-// needs a helper whose body differs gives it another name. Sources are read with
-// `import.meta.glob(..., "?raw")`, as auth/no-raw-html.test.ts reads them; the planted copies below are
-// strings, so no line of this file starts with a definition.
+// as the Rust tests are held to their shared kit (crates/tools/tests/acceptance.rs, #1777). A helper
+// whose body differs takes another name. The planted copies below are strings, so no line of this
+// file starts with a definition.
 
 import { describe, expect, it } from "vitest";
 

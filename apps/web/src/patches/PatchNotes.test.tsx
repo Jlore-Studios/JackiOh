@@ -1,9 +1,5 @@
-// R388, R507, R724000: the Patch notes page's body. Patches by release line, one bubble per set, the
-// newest open; every patch newest first with its version, date, player note title and note; the
-// newest shows its cards on arrival and the others load their snapshots when opened; a patch's cards
-// as faces with their changes marked, data-only changes and added cards as names by set, a name
-// filter; a card opens its full history. Fixtures through the context, the empty and failed states,
-// then the real history through the default source.
+// R388, R507, R724000: the Patch notes page's body, from fixtures through the context, the empty and
+// failed states, then the real history through the default source.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -304,11 +300,9 @@ describe("R388 the Patch notes page over the real history", () => {
     // Newest first is patches.json read backwards (R105, R388) — and promotions only append
     // (R646), so the page's list is the file's, whatever the newest patch is called today.
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
-    // Only the newest opens on load (R507); an older patch's cards wait for its toggle, so v0.2.0
-    // — the patch this test reads, frozen history — is opened by hand once it is no longer newest.
-    // v0.2.3 added the Mask's faces, v0.2.4 aimed random casts and v0.2.5 removes the faces again
-    // (R743's names for issues #113, #181 and #218): whichever of the three is the newest opens with
-    // every card it changed.
+    // Only the newest opens on load (R507), so v0.2.0, the frozen patch this test reads, is opened by
+    // hand. v0.2.3 added the Mask's faces, v0.2.4 aimed random casts and v0.2.5 removes the faces again
+    // (R743's names for issues #113, #181 and #218): whichever is newest opens with every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     // A newest patch that changed no card has no cards to open: its entry says so instead.
     if ((shipped.at(-1)?.changes ?? []).length === 0) {

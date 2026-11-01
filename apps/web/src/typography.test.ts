@@ -1,9 +1,6 @@
-// #2123 (part of #2036): tabular numbers and balanced headlines across the menus.
-//
-// Vitest stubs CSS imports, so the sheets are read as text with `node:fs` and parsed as
-// `fx/css.test.ts` parses them (its parser, copied below): a rule is its selector list, its
-// declarations and the @media it sits in, so the checks hold whatever the sheet's formatting.
-// Card faces get neither change: `cards/fit.ts` measures and fits their text.
+// #2123 (part of #2036): tabular numbers and balanced headlines across the menus. Vitest stubs CSS
+// imports, so the sheets are read as text and parsed with `fx/css.test.ts`'s parser (copied below), so
+// the checks hold whatever the sheet's formatting. Card faces get neither: `cards/fit.ts` fits their text.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";

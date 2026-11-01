@@ -1,10 +1,7 @@
-// useEmotes: the React half of the emote session (R643, R644). session.ts holds the pure state;
-// this hook adds what a component tree needs that must not live there:
-//   1. Re-rendering: the session's `subscribe` bumps a counter that `visible`/`gate`/`muted` read live.
-//   2. Expiry: each show schedules the timeout that calls `expire`; a newer show's different key
-//      makes an old timer a no-op ("a new emote replaces the current one immediately", issue §5).
-//   3. Sound: `playEmote` (play.ts) runs on a shown emote; a muted or gate-dropped one returns first.
-// A send outside the seat's hand is dropped before the gate, as the server's relay drops it (R1342).
+// useEmotes: the React half of the emote session (R643, R644). session.ts holds the pure state; this
+// hook adds re-rendering, expiry (a newer show's different key makes an old timer a no-op, issue §5)
+// and sound (`playEmote`, on a shown emote only). A send outside the seat's hand is dropped before the
+// gate, as the server's relay drops it (R1342).
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 

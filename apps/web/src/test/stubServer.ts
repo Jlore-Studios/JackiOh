@@ -1,11 +1,9 @@
-// A stubbed `fetch` for the Play together tests (#936): every request is recorded with its method,
-// path, query, headers and JSON body, and answered by the test's handler, or by a 404 `not_found`
-// when the handler has no answer. Beside it, the helpers most of the web's tests share (#1799):
-// `must`, `jsonResponse`, `at`, `signIn` and `meBody`. Test support only; no component imports it.
-//
-// A refusal carries its code twice: inside `error`, the shape `crates/server/src/api/http.rs`
-// answers with and `net/api.ts` reads, and at the top level, as SPEC S6/S7 write it
-// (`409 {code:"full"}`), so a wrapper reading either finds it.
+// A stubbed `fetch` for the Play together tests (#936): every request is recorded and answered by the
+// test's handler, or by a 404 `not_found` when it has none. Beside it, the helpers most of the web's
+// tests share (#1799). Test support only; no component imports it.
+// A refusal carries its code twice, inside `error` (as `crates/server/src/api/http.rs` answers and
+// `net/api.ts` reads) and at the top level (SPEC S6/S7's `409 {code:"full"}`), so a wrapper reading
+// either finds it.
 
 import { vi } from "vitest";
 
@@ -141,10 +139,9 @@ export function showsNumber(text: string | null | undefined, n: number): boolean
 }
 
 /**
- * A text matcher for words the page draws across elements. A username is its base and its tag in
- * elements of their own (`auth/Username.tsx`, R1436), so `getByText(/Ann#2/)`, which reads only an
- * element's own text nodes, never finds one. This matches the innermost elements whose whole text
- * holds `text`.
+ * A text matcher for words the page draws across elements, such as a username's base and tag
+ * (`auth/Username.tsx`, R1436), which `getByText` never finds: it matches the innermost elements
+ * whose whole text holds `text`.
  */
 export function wholeText(text: string): (content: string, element: Element | null) => boolean {
   return (_content, element) =>

@@ -1,12 +1,7 @@
-// The collection screen's model (#1307, SPEC §14): its test ids and the pure helpers behind the
-// owned-cards, wallet and track panels, all of them plain data in and out. R1655000: and what a
-// card's view offers it (`cardStrip`) and the account's cosmetics as tiles (`accountTiles`).
-//
-// EVERY NUMBER SHOWN COMES FROM A RESPONSE, `serverConfig.ts` OR THE SHIPPED CATALOG (CLAUDE.md
-// rule 7). The balance, the unopened packs, each track's level, XP and rewards and the quests
-// arrive in the server's answers (`net/api.ts`); a set's total is the count of its collectible
-// cards in the catalog (§14: only the non-token cards of a set that ships are collected), and
-// whether one is owned is the row the server sent. Nothing here prices, levels or decides.
+// The collection screen's model (#1307, SPEC §14): its test ids and the pure helpers behind its
+// panels, a card's strip (R1655000) and the account's tiles. EVERY NUMBER SHOWN COMES FROM A RESPONSE,
+// `serverConfig.ts` OR THE SHIPPED CATALOG (CLAUDE.md rule 7): a set's total counts its collectible
+// cards (§14: the non-token cards of a set that ships), and ownership is the server's row.
 
 import { CATALOG } from "@jackioh/cards";
 import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
@@ -73,10 +68,8 @@ export const collectionTestid = {
     cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;
 
-/** The cards a player can own: not a token, of a set that ships. */
 export const COLLECTED_DEFS: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && setShips(def.set));
 
-/** One shipped set's cards and how many of them the account owns. */
 export type SetCompletion = {
   set: SetName;
   owned: number;
@@ -84,10 +77,7 @@ export type SetCompletion = {
   cards: { def: CardDef; owned: boolean }[];
 };
 
-/**
- * One entry per shipped set, in catalog order, over the non-token cards of `defs`. A card is
- * owned when the server's row for it holds a quantity above 0.
- */
+/** One entry per shipped set, in catalog order; a card is owned when its row's quantity is above 0. */
 export function setCompletions(collection: CollectionResponse, defs: readonly CardDef[] = COLLECTED_DEFS): SetCompletion[] {
   const quantities = quantitiesOf(collection);
   return SHIPPED_SETS.map((set) => {
@@ -118,10 +108,9 @@ export function lockWords(): string {
 }
 
 /**
- * R1579000: the cosmetics the account owns, in the registry's order. Every account owns the
- * starters, on every card (§14.2), so each shows once but for the defaults; the server lists the
- * rest (R1313000), a per-card one once for each card it sits on, an account one (a portrait,
- * R1827000) once on no card. An id this client does not know is not shown.
+ * R1579000: the cosmetics the account owns, in the registry's order: each starter (every account's,
+ * §14.2) once, no default, and the server's rest (R1313000), a per-card one once per card it sits on,
+ * an account one (a portrait, R1827000) on no card. An id this client does not know is not shown.
  */
 export function ownedCosmetics(owned: OwnedCosmeticsResponse): { cosmetic: Cosmetic; cardId: string | null }[] {
   const out: { cosmetic: Cosmetic; cardId: string | null }[] = [];
@@ -144,7 +133,6 @@ export function cardNameOf(cardId: string): string {
   return def === undefined ? cardId : readerName(def);
 }
 
-/** A cosmetic's kind in a player's words. */
 export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
   switch (kind) {
     case "foil":
@@ -173,7 +161,6 @@ export type StripKind = (typeof STRIP_KINDS)[number];
 /** R1655000: the face without a full art, the default of that kind and a pick of its own, which no registry entry names. */
 export const NO_FULL_ART_ID = "no-full-art";
 
-/** One thing a card may wear, as its strip shows it. */
 export type StripItem = {
   kind: StripKind;
   /** The registry's id; `NO_FULL_ART_ID` for the face with no full art. */
@@ -189,10 +176,8 @@ export type StripItem = {
 export type StripGroup = { kind: StripKind; items: StripItem[] };
 
 /**
- * R1655000: what a card may wear, by kind. The foil, finish and border are the registry's entries
- * of each kind (the default first); the full art is the card's own entry beside the face with none,
- * and the kind is absent from a card that has none. `canEquip` is the ownership answer
- * (`useCanEquip`), so a locked item is the one it says no to.
+ * R1655000: what a card may wear, by kind: the registry's foils, finishes and borders (the default
+ * first), and the card's own full art beside the face with none, the kind absent where it has none.
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
   const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
@@ -218,14 +203,11 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
   return groups;
 }
 
-/** One of the account's own cosmetics as a tile shows it: owned, or locked with its rarity. */
 export type AccountTile = { cosmetic: Cosmetic; owned: boolean };
 
 /**
- * R1579000, R1655000: `kind`'s entries in the registry's order, each owned or not as `owns` says.
- * R1833000: `owns` is `useOwnsAccountCosmetic`'s: a default and a starter are owned by every account
- * (§14.2), the server lists the rest (`GET /api/cosmetics`' account list) while ownership decides, and
- * every one is owned where it does not.
+ * R1579000, R1655000: `kind`'s entries in the registry's order, owned as `owns` says (R1833000:
+ * `useOwnsAccountCosmetic`'s; a default and a starter are every account's, §14.2).
  */
 export function accountTiles(kind: DeckSlotKind, owns: (id: string) => boolean): AccountTile[] {
   return cosmeticsOf(kind).map((cosmetic) => ({ cosmetic, owned: owns(cosmetic.id) }));

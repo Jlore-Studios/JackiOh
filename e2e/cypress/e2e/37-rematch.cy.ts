@@ -238,8 +238,6 @@ function finishedRoomMatch(seed: string, seatOneDeck: string, seatTwoDeck: strin
   return cy.then(() => matchId);
 }
 
-// ---------------------------------------------------------------------------------------------
-
 describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
   beforeEach(() => {
     cy.freeAccount(accounts.p1());

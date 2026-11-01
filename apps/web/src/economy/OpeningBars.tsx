@@ -1,20 +1,14 @@
 // The two bars of an opening (#1658, part of #1651, SPEC §14.5, R1305000, R1953000): the card token
 // bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
-// on screen. Each slot's points (R1999000) fly from the slot into the HUD, labeled and tinted by the slot's
-// rarity, a bigger rarity landing in a bigger burst; once the last has landed each bar fills from where
-// the opening found it to where it left it, a full one pulsing and glowing as it bursts, and the reward
-// of every fill is revealed as it does. The pack-opening scene and the cosmetic packs mount it with the
-// opening's answer.
+// on screen. Each slot's points (R1999000) fly from the slot into the HUD, tinted by rarity; once the
+// last has landed each bar fills, a full one pulsing as it bursts and revealing its fill's reward.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer: the points before and after,
-// the size, how often each bar paid, what the cosmetic bar paid (R1305001) and each slot's points
-// (R1953000), which `flights` carry. Nothing here counts a point or picks a reward, and both bars are
-// drawn whether or not the opening moved them.
+// THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer, what the cosmetic bar paid
+// (R1305001) and each slot's points included; nothing here counts a point or picks a reward, and both
+// bars are drawn whether or not the opening moved them.
 //
-// `play` holds the opening back (the scene's cards still face down): both bars rest at their points
-// before. REDUCED MOTION (the panel's, the system's or the effects' own), or the effects' intensity
-// off, flies nothing, sweeps nothing and pulses nothing: the bars show their final fill at once, every
-// reward revealed (FillBar draws the end state at once, `still` carrying the intensity off to it).
+// REDUCED MOTION, or the effects' intensity off, flies, sweeps and pulses nothing: the bars show their
+// final fill at once, every reward revealed (`still` carries the intensity off to FillBar).
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 

@@ -1,10 +1,8 @@
 // R1827000: the hero portraits (R641) an account owns, which the deck builder's picker offers. Every
-// portrait is an account cosmetic, `portrait-<id>` in the registry: `vanilla` is a starter every
-// account owns with no row (§14.2), and the other five are earned. The client reads what `GET
-// /api/cosmetics` lists and decides nothing (CLAUDE.md rule 7): the server refuses a deck save that
-// names a portrait the account does not own. `routes/decks.tsx` mounts `PortraitsOwned` while
-// ownership decides (`FULL_ART_GATED`, as for full art, R1310004); with none above it every portrait
-// is offered, as before. A deck's own pick is always offered, so an editor never hides what it wears.
+// portrait is an account cosmetic, `portrait-<id>` in the registry; `vanilla` is a starter (§14.2).
+// The client reads `GET /api/cosmetics` and decides nothing (CLAUDE.md rule 7). `routes/decks.tsx`
+// mounts `PortraitsOwned` while ownership decides (`FULL_ART_GATED`, R1310004); with none above it
+// every portrait is offered. A deck's own pick is always offered, so an editor never hides what it wears.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -15,7 +13,6 @@ import { COSMETICS } from "../wire/generated/cosmetics.ts";
 /** What a portrait's registry id starts with; the rest is its `PortraitId`. */
 const PORTRAIT_COSMETIC_PREFIX = "portrait-";
 
-/** The registry id of `portrait`'s cosmetic. */
 export function portraitCosmeticId(portrait: PortraitId): string {
   return `${PORTRAIT_COSMETIC_PREFIX}${portrait}`;
 }

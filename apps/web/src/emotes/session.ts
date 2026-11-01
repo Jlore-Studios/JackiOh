@@ -1,12 +1,8 @@
 // The emote session (R643, R644): what is on screen, who is muted, and when the next send is admitted,
-// as pure data plus a notify, so the unit tests run the same object the routes drive.
-//
-// `send` is the local player's emote: the shared `emoteGate`, the one limiter and the function the actor
-// runs (R643), judges it, and an admitted emote shows at once, without the relay (issue §7). `receive` is
-// the peer's (the actor's relay or the practice AI's persona), shown unless that player is muted, by
-// `mute` or the `globalMute` setting; a muted emote is never kept and its sound never scheduled (issue
-// §5). One emote per player: `show` replaces it. No timers here (tests inject `now`): `useEmotes` owns
-// expiry and sound. Players are keyed by PlayerId, so a hotseat hand-over does not move a bubble.
+// as pure data plus a notify, so the unit tests run the same object the routes drive. `send` is judged
+// by the shared `emoteGate`, the function the actor runs (R643), and shows at once, without the relay
+// (issue §7). A muted player's emote is never kept and its sound never scheduled (issue §5). No timers
+// here (tests inject `now`): `useEmotes` owns expiry and sound.
 
 import type { EmoteId, PlayerId } from "@jackioh/shared";
 import { emoteGate, type EmoteGate } from "@jackioh/shared";

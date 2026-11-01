@@ -1,9 +1,7 @@
-// Log a game as it is played (SPEC R639). `Game` calls this beside `useGameAudio`: it watches the
-// views the board is handed, collects what the player was shown (track.ts) and adds the game to the
-// device's totals (store.ts) once, when the view says it is over.
-//
-// It only counts a game the caller says is the player's own: online matches and practice games, not a
-// tutorial lesson, a hotseat game on one screen or a test fixture. Nothing it does reaches the board.
+// Log a game as it is played (SPEC R639). `Game` calls this beside `useGameAudio`: it collects what the
+// player was shown (track.ts) and adds the game to the device's totals (store.ts) once, when it is over.
+// It counts only a game the caller says is the player's own (online and practice, not a tutorial
+// lesson, a hotseat game or a test fixture). Nothing it does reaches the board.
 
 import { useEffect, useRef } from "react";
 import type { PlayerView } from "@jackioh/shared";

@@ -1,9 +1,7 @@
 // The XP reveal (#1664), from crafted answers: a track fills from where a game found it, its level
-// pops as the bar bursts and the server's rewards for it fly out one by one with the sting; levels
-// chain in order, each bar the size the answer gives; a quest the game completed is listed with its
-// pay; reduced motion shows the end state and every reward at once. The audio engine is the recording
-// fake the opening bars' tests use; fake timers move everything. No number here is a shipped one: a
-// test that finds one on screen has found the answer's.
+// pops as the bar bursts and its rewards fly out with the sting; levels chain, each bar the answer's
+// size; a completed quest is listed with its pay; reduced motion shows it all at once. No number here
+// is a shipped one: a test that finds one on screen has found the answer's.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

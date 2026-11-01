@@ -1,30 +1,13 @@
 // MN09 (#552), mobile: the prompt kinds the Meditative set adds, at phone width with long-press inspect
 // (docs/polish/7-mobile-ux.md: the prompt as a bottom sheet, 44 px touch targets, no horizontal scroll;
 // docs/polish/6-cards.md: a card is read by a long-press on a touch screen).
-//
 //   craft   ME-CRAFT (Meditative #17, R880): the block editor docked as one sheet
 //   market  ME-MARKET (Meditative #42): the night market's stall
-//
-// At 360x780 (the narrowest phone the client is laid out for) and 390x844 (BUILD M5-T1's phone), each
-// prompt is a bottom sheet across the whole width resting on the bottom edge, never taller than the
-// screen; nothing in it scrolls sideways, every control is a 44 px target, and the card it shows has
-// a box inside the sheet. A touch long-press on that card opens its inspect sheet, which stays on the
-// screen with its 44 px Close, and the press itself picks nothing: a lot is read, not bought.
-//
+// A long-press on the card a sheet shows picks nothing: a lot is read, not bought.
 // The play-time choices (R81) the set adds are no prompt kind of their own: a card's modes, declared
-// with the play, picked in a "Choose one" before it is sent (#617):
-//
-//   secret      #22 Mind Games' secret choice (ME-SECRET): Greed, Attack or Defend
-//   prediction  #22.1 Fortify Mind's guess at it
-//   lane        #98 Showdown's lane, the target that names a lane: Lane 1 to Lane 5
-//
-// Each opens from a tap on the card in hand as the same sheet, under the same checks; its options are
-// words, so the card is read from its name in the title, and a long-press there opens its sheet.
-//
-// The Created mark (ME-CREATED, R943) on a card in hand at both phone sizes: on the face, inside the
-// card, clear of its name and cost gem; a long-press on the card opens its sheet, which says it was
-// made during the game.
-//
+// with the play, picked in a "Choose one" before it is sent (#617): #22 Mind Games' secret choice
+// (ME-SECRET), #22.1 Fortify Mind's guess at it and #98 Showdown's lane. Each opens from a tap on the
+// card in hand as the same sheet; its options are words, so the card is read from its name in the title.
 // The mount is mobile-ux.cy.tsx's (`Game` inside `.app-shell.app-shell--wide`, the narrowest box the
 // board is ever given), with the real catalog, since the market draws its lots from it. The block
 // editor's meters and face are the engine's own `craftPreview`, so the WebAssembly module is loaded
@@ -59,7 +42,7 @@ function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-/* ------------------------------------------------------------------------------------- views */
+/* views */
 
 /** ME-CRAFT's presets, as `viewFor` sends them: a Unit and a Spell the points cover at cost 2. */
 const UNIT_PRESET: CraftRecipe = { cost: 2, type: "Unit", adjective: "Pure", noun: "Closure", attack: 5, health: 6, keywords: [], echo: 0, hats: [] };
@@ -171,7 +154,7 @@ function longPress(selector: string): void {
   cy.get(selector).trigger("click", { force: true });
 }
 
-/* ----------------------------------------------------------------------------------- helpers */
+/* helpers */
 
 const sent: ActionBody[] = [];
 
@@ -231,7 +214,7 @@ function nameOf(element: Element): string {
   return `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").split(/\s+/)[0] ?? ""} "${name}"`;
 }
 
-/* ------------------------------------------------------------------------------------- specs */
+/* specs */
 
 describe("MN09: the Meditative prompt kinds at phone width, with long-press inspect", () => {
   beforeEach(() => {
@@ -280,7 +263,7 @@ describe("MN09: the Meditative prompt kinds at phone width, with long-press insp
   }
 });
 
-/* ------------------------------------------------------------------------------- the Created mark */
+/* the Created mark */
 
 /** ME-CREATED (R943): a card made during the game, in hand beside one dealt with the deck. */
 const CREATED = "h-created";

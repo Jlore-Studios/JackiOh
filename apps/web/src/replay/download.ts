@@ -1,10 +1,8 @@
 // Downloading a replay as JSON (#1141, R1141000): every step of a replay, as its seat saw it, in one
 // file a player attaches to a bug report. Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
-// and no account (as a GIF names none, R513000): the steps, the row's own facts and the build's
-// catalog version. Nothing is uploaded or kept: the file is made in memory and handed to the
-// browser's downloads. And back in (#1160): a file the page wrote opens again, parsed in the page
-// against that same shape, nothing sent and nothing stored. A co-op replay's file is another
-// shape, `duos/download.ts`'s (R1242000).
+// and no account (as a GIF names none, R513000), and nothing is uploaded or kept. And back in (#1160):
+// a file the page wrote opens again, parsed in the page against that same shape. A co-op replay's
+// file is another shape, `duos/download.ts`'s (R1242000).
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
@@ -55,7 +53,6 @@ export function allSteps(source: ReplaySource): Promise<ReplayStep[]> {
   return loadClip(createStepCache(source), 0, source.total - 1);
 }
 
-/** The file for `game`'s replay, made at `savedAt`. */
 export async function replayJsonFile(game: ReplayJsonGame, source: ReplaySource, savedAt: number): Promise<File> {
   const json: ReplayJson = {
     format: REPLAY_JSON_FORMAT,
@@ -102,8 +99,7 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
 }
 
 /**
- * The steps of a file `replayJsonFile` wrote (#1160), or a `ReplayFailure` saying why it is refused:
- * too big, not JSON of the documented shape, another format or version, or another catalog version
+ * The steps of a file `replayJsonFile` wrote (#1160), or a `ReplayFailure` saying why it is refused
  * (a file from a newer build is refused as a stale one is, since its views may differ). The file is
  * untrusted, so it is held to the caps before its text is read and again before its steps are kept.
  * A step is checked for its index, a turn that never goes back and a view that is an object; the

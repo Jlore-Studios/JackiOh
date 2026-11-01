@@ -1,6 +1,6 @@
 // BUILD M8: P2's Sheepish interrupts then resumes P1's play (R1, R17, R23, R118, R427; §10.3).
-// #15 Me and Mr Token triggers it; #3 Right-house defender verifies a later play (#81 Radiant Saintess
-// did until #2220 made it cost (2), more than the one mana Me and Mr Token leaves on player-turn 2).
+// #15 Me and Mr Token triggers it; #3 Right-house defender verifies a later play (#81 Radiant Saintess,
+// at (2) by #2220, costs more than the one mana Me and Mr Token leaves on player-turn 2).
 // The trap validates hidden information (R33; CLAUDE.md rule 7, §10.8); the modifier validates face-up views (R169).
 // R48's discount is dormant until its controller's next turn, then expires.
 

@@ -1,13 +1,8 @@
-// R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown (a card's own
-// cosmetics view, the playmat, backdrop and card back tiles), in place of the shop's picker it
-// replaces. A Rare token covers Common and Rare, an Epic token Epic and below, and no token a chase,
-// a default or a starter (R1305003, §14.2), so the offer shows only where a held token covers the
-// cosmetic.
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7). The held counts are `GET /api/tokens`' and the offer only
-// hides what the server would refuse: the click sends `POST /api/tokens/redeem-cosmetic` and renders
-// the answer, its held counts and a re-read of what the account owns (`rereadOwnedCosmetics`), so the
-// cosmetic shows owned. A refusal shows the server's words and changes nothing.
+// R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown. A Rare token
+// covers Common and Rare, an Epic token Epic and below, and no token a chase, a default or a starter
+// (R1305003, §14.2). THE SERVER DECIDES (CLAUDE.md rule 7): the offer only hides what it would refuse;
+// the click sends `POST /api/tokens/redeem-cosmetic` and renders its held counts and a re-read of
+// ownership (`rereadOwnedCosmetics`); a refusal shows the server's words and changes nothing.
 
 import { useEffect, useState, type ReactElement } from "react";
 
@@ -29,9 +24,8 @@ function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
 }
 
 /**
- * The token a locked `cosmetic` is offered for: the lowest held one whose tier covers its rarity on
- * the cosmetic's own scale (R1305003). Null for a chase, a default or a starter, and where nothing
- * held covers it or the held tokens are unread.
+ * The lowest held token whose tier covers `cosmetic`'s rarity on its own scale (R1305003). Null for a
+ * chase, a default or a starter, and where nothing held covers it or the held tokens are unread.
  */
 export function offerTier(
   cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "chase">,
@@ -65,7 +59,6 @@ export function useHeldTokens(token: string | null | undefined): [HeldTokens | n
   return [held, setHeld];
 }
 
-/** What the offer's button says: the token it spends and how many of it are held. */
 function offerWords(tier: CosmeticTokenTier, count: number): string {
   return tier === "Rare"
     ? t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) })

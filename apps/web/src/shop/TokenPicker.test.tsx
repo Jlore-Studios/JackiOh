@@ -1,9 +1,6 @@
-// The token picker (#1309, #2251), from fixture responses: the card-token pick as the deck
-// builder's browse pane over exactly the unowned cards, a detail view with an Unlock button, a
-// confirm naming the card before `redeemCardToken` sends, both bars and the cycle's next step, a
-// redemption telling the page while a refused one changes nothing, and the page's next revision
-// reading the bars again. R1953001: no cosmetic token is picked here any more
-// (collection/TokenOffer.test.tsx holds its tier rules); the held counts stay.
+// The token picker (#1309, #2251), from fixture responses: the card-token pick as the deck builder's
+// browse pane over exactly the unowned cards, with Unlock and a confirm before `redeemCardToken`.
+// R1953001: no cosmetic token is picked here (collection/TokenOffer.test.tsx holds its tier rules).
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -41,7 +38,6 @@ afterEach(() => {
 
 const TOKEN = "token-1";
 
-/** A crafted registry entry. */
 function entry(over: Partial<RegistryCosmetic> & { id: string }): RegistryCosmetic {
   return {
     kind: "foil",

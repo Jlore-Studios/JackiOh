@@ -1,10 +1,7 @@
 // The settings panel as the integration branch wires it (docs/polish/reference.md, "Who owns what"):
-// task 7's panel mounts task 1's effects speed and intensity, task 6's animated foil and task 2's
-// audio controls through SETTINGS_SLOTS, beside its own drag, confirm, hover and motion switches.
-// Every control writes its owner's store, which persists it, and the surface that reads that store
-// changes at once, on a board already on screen behind the panel. "Reset to defaults" resets every
-// store the panel shows. Two settings are one switch each across two stores: "Hover previews" also
-// gates task 6's enlarged preview, and "Reduce motion" also stops task 1's effects layer.
+// task 7's panel mounts the other tasks' controls through SETTINGS_SLOTS beside its own switches. Every
+// control writes its owner's store and the surface reading it changes at once, on a board behind the
+// panel. "Hover previews" also gates task 6's enlarged preview, "Reduce motion" task 1's effects layer.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -109,7 +106,6 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);
-    // Every slot's store has a reset.
     for (const slot of SETTINGS_SLOTS) {
       expect(typeof slot.reset, slot.id).toBe("function");
     }

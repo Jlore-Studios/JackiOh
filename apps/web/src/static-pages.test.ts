@@ -70,7 +70,7 @@ function read(outDir: string, path: string): { html: string; doc: Document } {
   return { html, doc: new DOMParser().parseFromString(html, "text/html") };
 }
 
-/** Writes every page for this data and returns a reader of one page's HTML, as text and as a document. */
+/** `writeAll`, and a reader of one written page. */
 function build(
   cards: CardDefs,
   patches: readonly Patch[],

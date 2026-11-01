@@ -1,14 +1,9 @@
 // The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
 // emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. The picker offers
-// the seat's dealt hand and nothing else (R1343): its voice lines and its emoji, in the pool's order.
-// A click on a portrait hangs its menu off the portrait, the placement below; a hold opens the hero's
-// inspect view (`HeroInspect.tsx`), which draws the same menu `inline` (R1449, R1330).
-//
-// Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
-// the hand's voice lines sit on an arc above the portrait, its emoji in a row under them, the bubble or
-// sticker beside the portrait — `.emote-*` in emotes.css owns the geometry, and an open menu only
-// measures itself once to slide back onto the screen (`useKeepOnScreen`, #219). Everything here is
-// cosmetic (R643): a menu pick reports the emote and the caller decides how it travels.
+// the seat's dealt hand and nothing else (R1343). A hold on a portrait opens the hero's inspect view
+// (`HeroInspect.tsx`), which draws the same menu `inline` (R1449, R1330). Placement is inside the
+// hero element, so it needs no board coordinates: `.emote-*` in emotes.css owns the geometry.
+// Everything here is cosmetic (R643): a menu pick reports the emote and the caller decides how it travels.
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement, type RefObject } from "react";
 
@@ -31,9 +26,8 @@ export const VOICE_LABEL: Record<VoiceEmoteId, string> = {
 
 /**
  * The arc the voice buttons sit on: an item `d` places from the middle dips `ARC_CURVE_PX × d²`
- * below the arc's crown (rounded), so five lines drop 14, 4, 0, 4, 14 and a hand's three 4, 0, 4.
- * Each item carries its drop as `--emote-arc-drop`, which emotes.css turns into a translateY, and
- * flattens on a phone held upright, where the voice lines wrap onto two rows.
+ * below the arc's crown. Each item carries its drop as `--emote-arc-drop`, which emotes.css turns
+ * into a translateY, and flattens on a phone held upright, where the voice lines wrap onto two rows.
  */
 const ARC_CURVE_PX = 3.5;
 
@@ -44,8 +38,7 @@ export function arcDrop(index: number, count: number): number {
 }
 
 /**
- * Closes on an outside press, Escape or a drag beginning elsewhere — the issue's menu lifetime —
- * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against. A
+ * Closes on an outside press, Escape or a drag beginning elsewhere (the issue's menu lifetime). A
  * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1449): that click
  * toggles the menu shut itself, and a hold there turns it into the hero's inspect view, so closing
  * on its pointerdown would have the click open the menu again.
@@ -75,8 +68,7 @@ function useMenuLifetime(open: boolean, onClose: () => void, menu: RefObject<HTM
 
 /**
  * How far to slide a menu centered on its portrait so it stays `margin` px inside a viewport
- * `viewportWidth` wide (#219): right by what pokes out on the left, left by what pokes out on the
- * right, nothing when it fits. A menu too wide for both keeps its left edge on the screen.
+ * `viewportWidth` wide (#219). A menu too wide for both edges keeps its left edge on the screen.
  */
 export function menuShift(rect: { left: number; right: number }, viewportWidth: number, margin: number): number {
   if (rect.left < margin) return margin - rect.left;
@@ -85,13 +77,11 @@ export function menuShift(rect: { left: number; right: number }, viewportWidth: 
 }
 
 /**
- * Keeps an open menu on the screen (#219). emotes.css centers the menu on the portrait, and a seat
- * puts the portrait anywhere from the screen's left edge (a phone) to its middle, so once laid out
- * the menu measures itself and slides sideways by `menuShift` through `--emote-menu-shift`, which
- * the CSS adds to its centering transform. A layout effect, so the menu never paints off the screen.
- * The measure first puts the variable back to 0: StrictMode replays this effect in dev (main.tsx
- * mounts the app under it), and a re-run that read the shift the first run applied would take the
- * slid menu for centered and write 0 back — the rect carries the transform.
+ * Keeps an open menu on the screen (#219): once laid out the menu measures itself and slides
+ * sideways by `menuShift` through `--emote-menu-shift`, which the CSS adds to its centering
+ * transform. A layout effect, so the menu never paints off the screen. The measure first puts the
+ * variable back to 0: StrictMode replays this effect in dev, and a re-run that read the applied
+ * shift would take the slid menu for centered and write 0 back (the rect carries the transform).
  */
 function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>, enabled: boolean): void {
   useLayoutEffect(() => {
@@ -161,9 +151,8 @@ export function EmoteMenu({
       role="menu"
       aria-label={t("Emotes")}
       onPointerDown={(event) => event.stopPropagation()}
-      // A click inside the menu must never reach .hero's own onClick — it would read the hero as
-      // a non-legal target and reopen the very menu the pick just closed (issue §2: closes on a
-      // pick).
+      // A click inside the menu must never reach .hero's own onClick: it would read the hero as a
+      // non-legal target and reopen the very menu the pick just closed (issue §2).
       onClick={(event) => event.stopPropagation()}
     >
       <div className="emote-voice-arc" role="none">
@@ -266,10 +255,9 @@ function bubbleText(show: EmoteShowState): string | null {
 }
 
 /**
- * What a hero shows while its player emotes: the speech bubble for a voice line (its text, for the
- * line's audible span, 2–4s), or the sticker that pops out and bounces for an emoji (issue §4).
- * The show's remaining span rides `--emote-hold` so the CSS animates exactly as long as the
- * session keeps it up.
+ * What a hero shows while its player emotes: the speech bubble for a voice line, or the sticker
+ * that pops out and bounces for an emoji (issue §4). The show's remaining span rides
+ * `--emote-hold` so the CSS animates exactly as long as the session keeps it up.
  */
 export function EmoteShow({ show }: { show: EmoteShowState }): ReactElement {
   const isVoice = isVoiceEmote(show.emote);

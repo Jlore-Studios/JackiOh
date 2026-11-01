@@ -1,6 +1,5 @@
-// R2126000: the client's own keyboard shortcuts are shown on keyboard devices, ⌘ or Ctrl by platform, in
-// each control's tooltip and aria-keyshortcuts, in the hover preview, the command menu and the site
-// footer; a touch-only device shows no hint, and no key handler is added on a board route.
+// R2126000: the client's own keyboard shortcuts are shown on keyboard devices, ⌘ or Ctrl by platform,
+// wherever a hint goes; a touch-only device shows no hint, and no key handler is added on a board route.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -179,7 +178,6 @@ describe("R2126000 shortcut hints", () => {
   });
 });
 
-/** The client's sources: `apps/web/src`, this folder's parent. */
 const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Sources that draw a board, or that a board's routes mount (the deck builder's menu screens aside). */
@@ -189,10 +187,9 @@ const KEY_PROP = /^onKey(Down|Up|Press)(Capture)?$/u;
 const KEY_EVENTS = ["keydown", "keyup", "keypress"];
 
 /**
- * R2126000: the key handlers in each source of a board route, by path under `src/`: a
- * `addEventListener("keydown" | "keyup" | "keypress", …)` call, an `onKey*` prop, or an `onKey*` entry in
- * a props object. A hint adds none, so a new shortcut, an End-turn key above all, fails this test; a
- * count is never raised to pass it.
+ * R2126000: the key handlers in each source of a board route, by path under `src/` (an
+ * `addEventListener` of a key event, or an `onKey*` prop or props-object entry). A hint adds none, so a
+ * new shortcut, an End-turn key above all, fails this test; a count is never raised to pass it.
  */
 const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "cards/CardRef.tsx": 2,

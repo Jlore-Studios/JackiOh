@@ -57,16 +57,14 @@ describe("R1833000 a cosmetic's look", () => {
     rerender(<CosmeticLook id="field-cosmic-drift" cardId={CARD} />);
     expect(look().querySelector(".collection-miniboard")).toHaveAttribute("data-table", DEFAULT_CARD_COSMETICS.table);
     expect(look().querySelector(".board-backdrop")).toHaveAttribute("data-backdrop", "field-cosmic-drift");
-    // A card back, as a game draws it.
     rerender(<CosmeticLook id="card-back-nebula" cardId={null} />);
     expect(look().querySelector(".cf-back")).toHaveAttribute("data-card-back", "card-back-nebula");
     expect(look().querySelector(".cf")).toBeNull();
-    // A portrait's art, as the reveals drew it before (R1827000).
+    // A portrait's art (R1827000).
     rerender(<CosmeticLook id="portrait-gary" cardId={null} />);
     expect(container.querySelector('[data-portrait-art="gary"]')).toHaveClass("pack-slot__portrait");
     expect(container.querySelector(".cosmetic-look")).toBeNull();
 
-    // Nothing for what has no look.
     rerender(<CosmeticLook id="full-art-gary-the-gambler" cardId="core-004" />);
     expect(container.innerHTML).toBe("");
     rerender(<CosmeticLook id="foil-void-shimmer" cardId={null} />);

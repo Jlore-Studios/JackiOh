@@ -1,10 +1,4 @@
 // R711000: client-wide internationalisation (#711).
-// Covers:
-// 1. t() with fallback, params, and plurals;
-// 2. the card rule and the easter egg;
-// 3. the language button switching live, persisting, and updating <html lang>;
-// 4. every zh-CN.json dictionary entry's {params} matching its English key;
-// 5. every literal sentence a non-test source wraps in t() having a zh-CN.json entry.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -185,11 +179,9 @@ describe("R711000 internationalisation and reader language", () => {
     expect(zhFaceFlagged.flagged).toBe(true);
     expect(showsEasterEgg(zhFaceFlagged)).toBe(true);
 
-    // Verify Flavour component rendering the easter egg text:
     const { container } = render(createElement(Flavour, { defId: sampleDefId, easter: true }));
     expect(container).toHaveTextContent("本来要把它翻译成中文的——可它已经是中文了！");
 
-    // Verify CardDetail modal inspect view also renders the easter egg line for Chinese reader:
     render(createElement(CardDetail, { def: sampleDef, onClose: () => {}, easter: true }));
     expect(document.body).toHaveTextContent("本来要把它翻译成中文的——可它已经是中文了！");
   });
@@ -221,7 +213,6 @@ describe("R711000 internationalisation and reader language", () => {
     expect(button).toHaveTextContent("EN");
     expect(button).toHaveAttribute("data-locale", "en");
 
-    // Click button to switch to Chinese:
     fireEvent.click(button);
     await vi.waitFor(() => {
       expect(button).toHaveTextContent("中文");
@@ -231,7 +222,6 @@ describe("R711000 internationalisation and reader language", () => {
     expect(document.documentElement.lang).toBe("zh-CN");
     expect(window.localStorage.getItem("jackioh.locale")).toBe("zh-CN");
 
-    // Click again to switch back to English:
     fireEvent.click(button);
     await vi.waitFor(() => {
       expect(button).toHaveTextContent("EN");

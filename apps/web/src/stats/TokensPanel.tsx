@@ -1,9 +1,7 @@
-// The Tokens table of /stats (SPEC §9.11, R2370000): behind the Cards tab's "Show tokens" toggle, off by
-// default, the catalog's tokens alone out of R2089000's Created cards, each with a win rate of its own:
-// the wins of the seats that made one, used or not, over their games. Those are the Created tallies the
-// server already sends, pooled as the Sets tab pools its cards' (R1966000), so nothing is collected or
-// counted anew (CLAUDE.md rule 7). Best first; a token below R654's floor shows "—" and comes last, in the
-// server's order. It sits in the scrolling panel, never the fixed top (R1646000).
+// The Tokens table of /stats (SPEC §9.11, R2370000), behind the Cards tab's "Show tokens" toggle: the
+// catalog's tokens out of R2089000's Created cards, from the Created tallies the server already sends,
+// pooled as the Sets tab pools its cards' (R1966000), so nothing is counted anew (CLAUDE.md rule 7). A
+// token below R654's floor shows "—" and comes last. It sits in the scrolling panel (R1646000).
 
 import { useId, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";

@@ -19,11 +19,10 @@ export type AxeException = {
 
 /**
  * WCAG 2.5.3 Label in Name. A card shown as a button (the landing page's fan, the card pool's tiles,
- * a prompt's card options) draws the whole card face, its cost, name, type, rules text and stats, and
- * axe counts all of that as the button's visible label. Its accessible name is a summary that names
- * the card ("Read Bigot"; the pool's R432 "Bigot, Unit, (2) Cost, Common. Show details"; a prompt's
- * "Bigot, costs (2)"), so a voice user who says the name they see reaches it. Reading the whole face as the name, or moving the face out of the button,
- * is a design decision about how a card is announced, left to a person.
+ * a prompt's card options) draws its whole face, which axe counts as the button's visible label. Its
+ * accessible name is a summary that names the card (the pool's R432 "Bigot, Unit, (2) Cost, Common.
+ * Show details"), so a voice user who says the name they see reaches it. How a card is announced is
+ * a design decision left to a person.
  */
 const CARD_FACE_LABEL =
   "A card button's visible text is its whole face; its name is a summary that names the card. Changing how a card is announced is a design decision.";

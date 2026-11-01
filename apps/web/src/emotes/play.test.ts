@@ -1,9 +1,7 @@
 // What a shown emote sounds and reads like (play.ts, R644): a voice-line emote is its portrait's
-// own line — played on the voice channel as the `emote-<portrait>` defId at react priority, the
-// way R204's death line cuts in — and captioned by a bubble holding that line's text for the
-// line's audible span, two to four seconds. An emoji emote is one of the nineteen synthesized
-// effects on the effects channel (R1345) and a two-second sticker with no words. The SoundSink is a two-method
-// seam, so the engine here is a pair of spies — no Web Audio is constructed.
+// own line on the voice channel at react priority, the way R204's death line cuts in, captioned for
+// its audible span; an emoji is a synthesized effect (R1345) and a sticker with no words. The
+// SoundSink is a two-method seam, so the engine here is a pair of spies.
 
 import { describe, expect, it, vi } from "vitest";
 

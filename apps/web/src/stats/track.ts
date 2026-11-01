@@ -1,4 +1,4 @@
-// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's takings, lethal blows, Traps fired and survivors; R1743000 adds the damage, the biggest hit, the overkill, the attacks, the healing, the draws and the Radiant changes of the viewer's cards, and a game's turns.
+// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7); R1582000 and R1743000 add the counters below.
 
 import type { CardView, GameEvent, PlayerView, SideView } from "@jackioh/shared";
 
@@ -72,10 +72,9 @@ function defIdOn(sides: readonly SideView[], instanceId: string | null): string 
 }
 
 /**
- * R1582000: a card of the viewer's that the opponent's Allure took. The steal (`controlChanged`,
- * `how: "steal"`, to the other seat) and the `allure` mark leaving that card come in one action's
- * events, so in one batch; the card is named where the view shows it now. A face-down Trap taken reads
- * as the sentinel (R33) and counts nothing, as does a steal no Allure mark left.
+ * R1582000: a card of the viewer's that the opponent's Allure took. The steal and the `allure` mark
+ * leaving that card come in one action's events, so in one batch. A face-down Trap taken reads as the
+ * sentinel (R33) and counts nothing, as does a steal no Allure mark left.
  */
 export function countAllured(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
   const lifted = new Set<string>();
@@ -130,11 +129,9 @@ function healthIn(view: PlayerView, targetId: string): number | null {
 }
 
 /**
- * R1743000: what the viewer's cards attacked and hit in one batch. An `attackDeclared` by a card on the
- * viewer's side counts an attack. A `damage` of one counts its amount, may raise the card's biggest hit
- * and, when it went past what its target had left, its overkill. The target's health is read from the
- * view before the batch (`before`) less the hits of the batch already walked; with no view before, or a
- * target the view does not show, there is no overkill. A hidden or opposing source counts nothing.
+ * R1743000: the viewer's cards' attacks, damage, biggest hit and overkill in one batch. A target's
+ * health is read from `before` less the batch's earlier hits; with no view before, or a target it does
+ * not show, there is no overkill. A hidden or opposing source counts nothing.
  */
 export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   const left = new Map<string, number>();

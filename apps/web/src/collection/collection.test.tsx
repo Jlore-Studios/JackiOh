@@ -1,8 +1,6 @@
-// The collection screen's panels (#1307, SPEC §14), from fixture responses: the completion counts
-// and locked cards of the owned-cards panel, the wallet, and the tracks' levels, XP bars, rewards
-// and locks. The server's answers are the fixtures; nothing here asks it anything.
-// R1655000: a card in context (the card view's strip, its previews, its equips and its locks) and the
-// account's cosmetics as tiles. R1956000: the owned cards' grid wears their picks.
+// The collection screen's panels (#1307, SPEC §14), from fixture responses (nothing here asks the
+// server anything): owned cards, wallet and tracks. R1655000: a card in context and the account's
+// cosmetics as tiles. R1956000: the owned cards' grid wears their picks.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -96,7 +94,7 @@ describe("#1307 setCompletions", () => {
       [0, 0],
       [0, 0],
       [0, 0],
-      // Re-pinned for the Training Grounds release (#2204): the set ships, so it has a row.
+      // Training Grounds ships (#2204), so it has a row.
       [0, 0],
     ]);
     expect(sets[0]?.cards.map((card) => [card.def.id, card.owned])).toEqual([
@@ -392,7 +390,6 @@ describe("R1655000 a card in context", () => {
   const MYTHIC = "core-096";
   const BIG_D_ART = "full-art-big-d-fender";
   const CARDS = [BIG_D, PLAIN, GARY, MYTHIC].map(defOf);
-  /** The cosmetics the ledger lists for Big D-fender's owner: its full art. */
   const OWNS_BIG_D_ART = new Map([[BIG_D, new Set([BIG_D_ART])]]);
 
   /** Opens `id` in its set, with every cosmetic owned unless `owned` says what the ledger holds. */
