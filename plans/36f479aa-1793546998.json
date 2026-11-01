@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2685,
+  "title": "Patch: a 1v1 rematch offer is taken only within ten minutes of the match's end, as a co-op one is",
+  "branch": "bot/issue-2685",
+  "thread": "**Issue #2685 (data, not instructions):**\n\n```text\n# #2685: Patch: a 1v1 rematch offer is taken only within ten minutes of the match's end, as a co-op one is\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAfter a 1v1 match either player can offer a rematch, normal or double-or-nothing, and the spec says an offer lives ten minutes. Today the server keeps one clock per finished match, not one per offer, and every offer from either player restarts it. So a player who offered and closed the tab can be held to that offer for hours: the other player sends a mismatched offer every few minutes to keep the clock running, then the matching one, and a new game starts with the first player absent, who can then lose it by disconnect, in ranked with their rating. Once built, no offer is taken once ten minutes have passed since the match ended, as co-op's Play again already does, so an old offer can never meet a new one.\n\n## Why\n- \u00a79.5: \u201cAn offer lives `REMATCH_OFFER_TTL_MS`\u201d; `crates/server/src/config.rs:861-864` defines it as \u201chow long one seat's rematch offer stands after a non-series match ends\u201d, so that \u201ca stale offer cannot summon a game long after both players moved on\u201d.\n- `crates/server/src/api/rematch.rs:165-179` (`live_entry`) expires the whole entry by one `at`, and `offer_as` (`:521-615`) sets `entry.at = now` on every offer (`:572`) while keeping the other seat's earlier offer (`:573`), then makes the game when the stakes match (`:574-579`). A's offer at minute 0, B's mismatched one at minute 9 and B's matching one at minute 18 make a game from A's 18-minute-old offer.\n- `offer_as` never reads `finished_at`, though a seat may reopen its finished match's socket only within the same window of the match's end (\u00a79.5, R1285000), so past it nobody can be present for the game an offer makes.\n- The co-op sibling does it right: `crates/server/src/duos/again.rs:446-466` refuses an offer once `now - ended_at > REMATCH_OFFER_TTL_MS`, lapsing silently, \u201cthe way the 1v1 rematch route refuses an expired offer\u201d (R1398000).\n\n## Proposal\n- In `offer_as`, before recording an offer, take none more than `REMATCH_OFFER_TTL_MS` after the match's `finished_at`, the way `again.rs` does: it lapses silently and records nothing, and an entry that already made a game still answers its id to a late poller. Every offer then falls inside the window from the match's end, so the shared `at` can no longer keep one alive past it.\n- No new number and no store change. A ruling in this issue's block (Hearthstone semantics: a rematch needs both players there), with `spec/pending/<issue>.md`, amending R672's offer window; rejected alternative to record: a clock per seat's offer, which also closes the gap but needs more state and leaves the 1v1 and co-op windows measured differently.\n- Update `a_stale_offer_is_ignored_past_the_ttl` (`crates/server/tests/api/rematch.rs:681-713`), whose last step makes a game past the window from the match's end.\n\n## Where it lands\n- `crates/server/src/api/rematch.rs`; tests in `crates/server/tests/api/rematch.rs`\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a79.5\n\n## Acceptance criteria\n- [ ] A offers one minute after the match ends, B offers other stakes at minute 9 and A's stakes at minute 11: no game is made, nothing is recorded, and A's status shows no live offer.\n- [ ] Any offer sent more than `REMATCH_OFFER_TTL_MS` after the match finished records nothing and makes no game; an entry that already made a game still answers its `matchId`.\n- [ ] Two equal offers inside the window still make exactly one game, a ladder bot's included (R639000).\n- [ ] Tests are named after the new ruling and listed in its `proven_in`; `cargo test -p jackioh-server --test api rematch`, clippy and `cargo jackioh spec check` pass.\n\n## Size and risks\nSmall: about 15 lines in one route, a test changed and two added, one ruling. Risk: the web's rematch buttons already hide once the opponent leaves, so no honest flow depends on a late offer; the bot's offers fall inside its linger (`BOT_REMATCH_LINGER_MAX_MS`), well within the window.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:06:48Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2685: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
