@@ -15,7 +15,7 @@
 
 use serde_json::{Value, json};
 
-use crate::catalog::{def_by_index, query};
+use crate::catalog::{def_id_by_index, query};
 use crate::config::{
     CHAOS_SCAPE_CORVETTES, CHAOS_SCAPE_FUSED_PIECES, CHAOS_SCAPE_HAND_PIECES, CHAOS_SCAPE_LOT_PRICE,
     CHAOS_SCAPE_SYSTEMS, CHAOS_SCAPE_WEAPONS, CHAOS_STINKYSCAPE_COST, UNIT_ZONES,
@@ -67,7 +67,7 @@ pub fn scape_entry(
 
 /// The set's card at `index`, by its id, when the catalog holds it.
 fn def_id_at(index: &str) -> Option<String> {
-    def_by_index(SET, index).map(|def| def.id.clone())
+    def_id_by_index(SET, index)
 }
 
 /// R1878000: the Starship Piece pool, the set's non-token cards that print the keyword (the cards
