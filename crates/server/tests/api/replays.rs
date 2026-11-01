@@ -1234,6 +1234,7 @@ mod off_the_runtime {
 /// before loadouts wears every default and carries no card's picks.
 mod r1834003_a_replays_pages_carry_the_loadouts {
     use super::*;
+    use crate::support::store::named_cards;
     use std::collections::BTreeSet;
 
     use jackioh_server::actor::engine::dealt_cards;
@@ -1247,27 +1248,6 @@ mod r1834003_a_replays_pages_carry_the_loadouts {
             "finish": "finish-plain",
             "border": "border-standard",
         })
-    }
-
-    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
-    fn named_cards(view: &Value) -> Vec<(String, String)> {
-        let mut named = Vec::new();
-        let mut stack = vec![view];
-        while let Some(value) = stack.pop() {
-            match value {
-                Value::Object(fields) => {
-                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
-                        (fields.get("instanceId"), fields.get("defId"))
-                    {
-                        named.push((instance.clone(), def.clone()));
-                    }
-                    stack.extend(fields.values());
-                }
-                Value::Array(entries) => stack.extend(entries),
-                _ => {}
-            }
-        }
-        named
     }
 
     /// One entry per distinct card of `deck`, sorted, wearing `id` as its `key`.

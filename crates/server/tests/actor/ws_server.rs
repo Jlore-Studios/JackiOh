@@ -36,6 +36,7 @@ use jackioh_server::config::{
 
 use crate::support::deps::{add_user, call, test_app};
 use crate::support::engine::playable;
+use crate::support::socket::read_frame_now;
 use crate::support::store::{fake, from, record_calls};
 
 /// How long a read waits before the test calls the socket silent. Real time: the listener does
@@ -256,29 +257,8 @@ impl Client {
         self.close_code().await
     }
 
-    /// The next frame as it stands on the wire (server frames are unmasked), or `None` at the end
-    /// of the stream.
-    async fn read_frame_now(&mut self) -> Option<(u8, Vec<u8>)> {
-        let mut head = [0u8; 2];
-        self.stream.read_exact(&mut head).await.ok()?;
-        let opcode = head[0] & 0x0F;
-        let mut length = u64::from(head[1] & 0x7F);
-        if length == 126 {
-            let mut extended = [0u8; 2];
-            self.stream.read_exact(&mut extended).await.ok()?;
-            length = u64::from(u16::from_be_bytes(extended));
-        } else if length == 127 {
-            let mut extended = [0u8; 8];
-            self.stream.read_exact(&mut extended).await.ok()?;
-            length = u64::from_be_bytes(extended);
-        }
-        let mut payload = vec![0u8; usize::try_from(length).ok()?];
-        self.stream.read_exact(&mut payload).await.ok()?;
-        Some((opcode, payload))
-    }
-
     async fn read_frame(&mut self, wait: Duration) -> Read {
-        match tokio::time::timeout(wait, self.read_frame_now()).await {
+        match tokio::time::timeout(wait, read_frame_now(&mut self.stream)).await {
             Err(_) => Read::Silent,
             Ok(Some((opcode, payload))) => Read::Frame(opcode, payload),
             Ok(None) => Read::Ended,
