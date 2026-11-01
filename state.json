@@ -10185,8 +10185,18 @@
       "verdict_rounds": 0
     },
     "2520": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-2497",
-      "part_of": 2497
+      "part_of": 2497,
+      "pending_request": false,
+      "provider": "gpt",
+      "run_id": "pending:a1eceaf3-1793526899",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-01T09:55:19Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2528": {
       "action": "plan",
@@ -12701,9 +12711,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T09:26:37Z",
+    "at": "2026-11-01T09:55:19Z",
     "url": "",
-    "what": "revise #2670 on claude-2"
+    "what": "build #2520 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-01T09:40:52Z",
