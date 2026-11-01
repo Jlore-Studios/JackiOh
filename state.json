@@ -12495,10 +12495,8 @@
       ]
     },
     "2686": {
-      "action": "plan",
-      "asks": [
-        "c:6559741951"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-01T15:46:16Z",
         "difficulty": "medium",
@@ -12524,15 +12522,17 @@
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
-      "provider": "gpt",
+      "provider": "claude-4",
       "queued_at": "2026-11-01T15:08:23Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41322304924",
-      "runs_on": "night-vm-gpt",
-      "started_at": "2026-11-01T15:39:06Z",
+      "run_id": "pending:8b1b567b-1793550979",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-01T16:36:33Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6559741951"
+      ]
     },
     "2687": {
       "action": "plan",
@@ -12801,9 +12801,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T16:27:59Z",
+    "at": "2026-11-01T16:36:33Z",
     "url": "",
-    "what": "build #2684 on gpt"
+    "what": "build #2686 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-01T16:25:30Z",
