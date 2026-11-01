@@ -12371,7 +12371,9 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 2670,
       "provider": "claude-2",
+      "question": "",
       "queued_at": "2026-11-01T04:13:05Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -12380,7 +12382,7 @@
       "started_at": "2026-11-01T08:01:53Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2658": {
       "cleared": {
