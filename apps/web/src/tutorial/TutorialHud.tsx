@@ -1,10 +1,6 @@
-// The bar above a lesson's board (SPEC §9.10): which lesson this is, how far through its steps the
-// player is, the practice HUD's live status (modifiers, "AI is thinking…", the outcome), and Exit
-// tutorial, which nothing the coach draws is ever placed over, and beside it the Field Guide (R2205002). There is no Skip step (R314): a step
-// moves on when it is done, by "Got it", or by itself (coach.ts).
-//
-// It replaces the practice HUD for a lesson and wears its look (`practice-hud`), so the board below
-// is laid out exactly as in any practice game.
+// The bar above a lesson's board (SPEC §9.10), with Exit tutorial (nothing the coach draws is ever placed
+// over it) and the Field Guide (R2205002); there is no Skip step (R314). It wears the practice HUD's look
+// (`practice-hud`), so the board below is laid out exactly as in any practice game.
 
 import { useSyncExternalStore, type CSSProperties, type ReactElement } from "react";
 
@@ -27,7 +23,6 @@ type TutorialHudProps = {
   humanSeat: PlayerId;
   aiSeat: PlayerId | null;
   thinking: boolean;
-  /** The lesson's outcome once it is over; null while it is played. */
   outcome: PracticeOutcome | null;
   onShowResult(): void;
   /** Mid-lesson this opens "Leave this game?"; once it is over it leaves at once. */

@@ -1,8 +1,6 @@
 // The audio engine against a fake Web Audio context (docs/polish/2-sound.md, B1 and B3 to B11).
-//
-// Every clock the engine may read moves together through `elapse`/`tick`: the injected `now`, each
-// fake context's `currentTime` (which fires `onended` as sources finish), and vitest's fake timers.
-// So a test holds whichever of the three an implementation happens to use.
+// `elapse`/`tick` move every clock the engine may read together (the injected `now`, each fake context's
+// `currentTime` and vitest's fake timers), so a test holds whichever one an implementation uses.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -319,8 +317,6 @@ describe("B3 with no Web Audio every call is a refused no-op", () => {
   });
 });
 
-/* B4: the graph and its gains */
-
 describe("B4 the bus graph", () => {
   it("B4 unlock wires sfx and voice buses into master, master into a compressor, and that into the destination", () => {
     const r = rig();
@@ -387,8 +383,6 @@ describe("B4 the bus graph", () => {
     expect(audio.violations).toEqual([]);
   });
 });
-
-/* B5: the acceptance gate and the log */
 
 describe("B5 the acceptance gate", () => {
   it("B5 an accepted sfx returns true, is logged, and plays through the sfx bus from currentTime + delayMs/1000", () => {
@@ -499,8 +493,6 @@ describe("B5 the acceptance gate", () => {
     expect(r.engine.log()).toEqual([]);
   });
 });
-
-/* B6: SFX retrigger and polyphony */
 
 describe("B6 SFX limits", () => {
   it("B6 the same id again within SFX_RETRIGGER_MS is refused and not logged, while another id is accepted", () => {
@@ -835,8 +827,6 @@ describe("B10 late lines are dropped", () => {
   });
 });
 
-/* B11: preloading */
-
 describe("B11 preloadVoices", () => {
   it("B11 fetches nothing before unlock", async () => {
     const r = rig({ engine: { manifest: PRELOAD_MANIFEST } });
@@ -899,8 +889,6 @@ describe("B11 preloadVoices", () => {
     expect(lastVoice(r)?.outcome).toBe("file");
   });
 });
-
-/* B46: nothing is scheduled on a context that is not running */
 
 describe("B46 a context that is not running schedules nothing", () => {
   for (const state of ["suspended", "interrupted"] as const) {
@@ -1078,8 +1066,6 @@ describe("B48 the queue", () => {
   });
 });
 
-/* B49: a rendered line plays and holds the channel for its audible span */
-
 describe("B49 a rendered line's silent head and tail are skipped", () => {
   /** 2 s of silence with a tone from 0.30 s to 1.20 s. */
   const speechBetween = (samples: Float32Array, rate: number): void => {
@@ -1127,8 +1113,6 @@ describe("B49 a rendered line's silent head and tail are skipped", () => {
   });
 });
 
-/* B50: mute and voice lines off stop the line that is speaking */
-
 describe("B50 muting stops voice at once", () => {
   it("B50 muting cancels a spoken fallback line and drops every waiting line", async () => {
     const r = rig();
@@ -1163,8 +1147,6 @@ describe("B50 muting stops voice at once", () => {
     expect(bus.voice.param("gain").targets().at(-1)?.value).toBeCloseTo(LEVELS.voice, 6);
   });
 });
-
-/* B51: the voice caches and the background prefetch */
 
 describe("B51 caches and prefetch", () => {
   it("B51 at most VOICE_DECODED_MAX lines stay decoded; an evicted one decodes again from its bytes, with no second fetch", async () => {
@@ -1221,8 +1203,6 @@ describe("B51 caches and prefetch", () => {
     expect(r.fetch.urls()).toEqual([url("core-004-play")]);
   });
 });
-
-/* B58: no background voice work while the board animates */
 
 describe("B58 background voice work waits while the engine is busy", () => {
   /** Resolves every hanging request, over and over, until nothing new is asked for. */
@@ -1323,10 +1303,7 @@ describe("B58 background voice work waits while the engine is busy", () => {
   });
 });
 
-/*
- * Integration: `speaking`, the signal behind the page's `data-speaking` (SPEC §9.9: practice holds
- * the AI's next step while a line plays).
- */
+/* Integration: `speaking`, behind `data-speaking` (SPEC §9.9: practice holds the AI's next step while a line plays) */
 
 describe("speaking: a line holds the voice channel from its request until it ends", () => {
   it("is false before any line, true from the request of a file line (loading included), false once it has played", async () => {
@@ -1414,13 +1391,8 @@ describe("speaking: a line holds the voice channel from its request until it end
   });
 });
 
-/* R655: card effects and the pick-up */
-
 describe("R655 a card's effect and a Unit picked up to attack", () => {
-  /**
-   * #66 The Rock: effects alone on its play and attack hooks, an effect and a line on its death.
-   * #4: an attack hook with an effect and a line (with a file). #8 has no attack hook.
-   */
+  /** #66 The Rock: effects alone on play and attack, an effect and a line on death; #4: both on attack; #8: no attack. */
   const FX_LINES: CardAudioTable = {
     voices: LINES.voices,
     effects: {
@@ -1761,10 +1733,8 @@ describe("background: the page hides mid-game and comes back", () => {
 
     const audio = r.factory.last();
     expect(audio).not.toBe(closed);
-    // The new mix hears a later settings write …
     writeAudioSettings({ ...LEVELS, muted: false, voiceOn: true, master: 0.9 });
     expect(buses(audio).master.param("gain").targets().at(-1)?.value).toBeCloseTo(0.9, 9);
-    // … and cues play again through it.
     expect(r.engine.playSfx("draw")).toBe(true);
     await settle();
     expect(r.engine.log().at(-1)).toMatchObject({ kind: "sfx", id: "draw" });
@@ -1822,7 +1792,6 @@ describe("background: the page hides mid-game and comes back", () => {
     const bus = buses(audio);
     expect(r.engine.state()).toBe("running");
 
-    // The OS suspends the context while the page is hidden.
     audio.state = "suspended";
     r.life.visible = false;
     r.life.fire();

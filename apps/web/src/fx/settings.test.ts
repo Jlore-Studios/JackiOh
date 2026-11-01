@@ -1,8 +1,6 @@
-// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3).
-//
-// `localStorage` must only ever be touched inside try/catch: a missing, throwing or full storage and
-// unparsable JSON all fall back to the defaults without throwing, and `setFxSettings` keeps working
-// in memory. Every test leaves storage empty and the store reset.
+// docs/polish/1-animations.md, behaviors B6 and B7: the effects settings store (S3). `localStorage` must
+// only ever be touched inside try/catch: a missing, throwing or full storage and unparsable JSON fall back
+// to the defaults without throwing, and `setFxSettings` keeps working in memory.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createElement, type ReactElement } from "react";

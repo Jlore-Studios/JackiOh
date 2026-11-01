@@ -135,8 +135,8 @@ const refusals = new WeakMap<PracticeSavedDeck, string | null>();
 
 /**
  * §9.9: why the worker's `createGame` would refuse a complete saved deck, as the validator's first issue
- * (`practiceDeckIssues`: a repeated, unknown, Token or unshipped card), or null when it would start it.
- * Also null for an R250 draft short of `DECK_SIZE`, whose label already says so. The worker still judges every deck.
+ * (`practiceDeckIssues`); null too for an R250 draft short of `DECK_SIZE`, whose label already says so.
+ * The worker still judges every deck.
  */
 export function savedDeckRefusal(deck: PracticeSavedDeck): string | null {
   if (deck.cards.length !== DECK_SIZE) return null;

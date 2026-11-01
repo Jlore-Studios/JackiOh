@@ -1,8 +1,6 @@
-// "AI is thinking…": shown while the controller is pacing the AI's actions (SPEC §9.9). It renders
-// nothing at all otherwise, so `practice-thinking` exists exactly while the AI owes an action.
-//
-// The orb is decoration (aria-hidden); the status text is the whole accessible content, so a
-// screen reader hears "AI is thinking…" and nothing else.
+// "AI is thinking…": shown while the controller is pacing the AI's actions (SPEC §9.9), and nothing at
+// all otherwise, so `practice-thinking` exists exactly while the AI owes an action. The orb is
+// aria-hidden: the status text is the whole accessible content.
 
 import type { ReactElement } from "react";
 

@@ -1,9 +1,7 @@
 // A Glitch in a practice game (issue #170): after a swap the human plays the AI's former seat and the
-// AI the human's (R677), and a voided game shows its result and leaves no last board (R679).
-//
-// No deck deals a Glitch on cue, so `reduce` is the real one with a hook: a test names the change a
-// Glitch would have made (`seatSwaps` up by one, or the voided result), and the hook makes it on the
-// state the next accepted action leaves. Everything else is the real core.
+// AI the human's (R677), and a voided game shows its result and leaves no last board (R679). No deck
+// deals a Glitch on cue, so a hook on the real `reduce` makes the change a test names (`seatSwaps` up by
+// one, or the voided result) on the state the next accepted action leaves.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

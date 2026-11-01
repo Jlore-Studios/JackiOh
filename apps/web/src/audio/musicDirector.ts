@@ -67,10 +67,7 @@ export function rotationFor(first: PlayerView): number {
   return n;
 }
 
-/**
- * The card a cast names and who cast it, at R204's moments: a unit or spell's play, a trap's first
- * firing. `fired` remembers the trap instances that have fired this match.
- */
+/** The card a cast names and who cast it, at R204's moments (a trap's at its first firing, `fired`). */
 function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { defId: string; player: PlayerId } | null {
   if (event.type === "cardPlayed") {
     if (event.defId === HIDDEN_DEF_ID) return null;

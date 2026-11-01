@@ -1,8 +1,5 @@
 // Lesson 4 data (SPEC §9.10, R291, R2434001); ../lessons.ts defines its fields and ../scripts/backrow.ts
-// is the coach. The player's deck is ten Training Grounds units the first lessons taught, three spells,
-// four Field Spells, two Traps and a Field Trap; the AI's is seven Core units, two Traps, a Field Trap
-// and two Field Spells. No Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal
-// (`scripts/lesson-deal.ts backrow`).
+// is the coach. Deck order fixes this seed's deal (`scripts/lesson-deal.ts backrow`).
 
 import type { TutorialLesson } from "../lessons.ts";
 

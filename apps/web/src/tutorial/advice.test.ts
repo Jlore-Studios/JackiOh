@@ -1,8 +1,5 @@
-// The coach's advice for a lesson's quiet turns (tutorial/advice.ts), on hand-built views: R292.
-//
-// Every move it names is one `legalActions` already offered, read off what the view shows: it plays
-// the dearest card first, then a trade that kills and survives, then the hero, then a dent in a Taunt,
-// then End turn — and it never aims a play at the human's own side.
+// The coach's advice for a lesson's quiet turns (tutorial/advice.ts), on hand-built views: R292. Every
+// move it names is one `legalActions` already offered, and it never aims a play at the human's own side.
 
 import { describe, expect, it } from "vitest";
 

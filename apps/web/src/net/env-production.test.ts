@@ -1,7 +1,6 @@
-// apps/web/.env.production: the production build's settings, committed so that no host has to hold
-// them (promote-production.yml builds from it; check-production-bundle.mjs refuses a bundle without
-// them). It is shipped to every browser, so it may only ever hold the public half of the environment
-// contract, and the two hosts it names must be ones the CSP lets the page reach.
+// apps/web/.env.production, committed so no host holds the production settings (promote-production.yml
+// builds from it). It ships to every browser, so it may hold only public variables, and the two hosts it
+// names must be ones the CSP lets the page reach.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -42,7 +41,6 @@ describe("apps/web/.env.production", () => {
       expect(PUBLIC, key).toContain(key);
       expect(value, key).not.toMatch(/sb_secret_|service_role|postgres(ql)?:\/\/|-----BEGIN/u);
     }
-    // The server's own list (PUBLIC_ENV_VARS in the Rust env parser) says the same names are public.
     const server = readFileSync(join(ROOT, "crates/server/src/env.rs"), "utf8");
     for (const [key] of entries()) expect(server, key).toContain(`"${key}"`);
   });

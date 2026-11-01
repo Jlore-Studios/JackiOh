@@ -1,7 +1,5 @@
-// Lesson 4's coach (SPEC §9.10, R2205000, R2434001): Field Spells and Traps. The player finds that a
-// Trap waits face-down and springs by itself, that a Field Trap springs and stays, that a Field Spell
-// keeps working turn after turn, and that the AI's face-down cards are hidden until they spring. Picks
-// read the view and the legal actions only (CLAUDE.md rule 7).
+// Lesson 4's coach (SPEC §9.10, R2205000, R2434001): Field Spells and Traps. Picks read the view and
+// the legal actions only (CLAUDE.md rule 7).
 
 import type { LessonScript } from "../coach.ts";
 import { finishOf, momentOf, playOf } from "./kit.ts";

@@ -9,7 +9,6 @@ import { loginPath, navigate, paths, usePathname } from "./navigate.ts";
 /** The pathname the page was at when each `window.scrollTo` ran. */
 let scrolledAt: string[] = [];
 
-/** Steps the browser's history and waits for its `popstate`, as a press of Back or Forward does. */
 async function traverse(step: () => void): Promise<void> {
   await act(async () => {
     const popped = new Promise((resolve) => {

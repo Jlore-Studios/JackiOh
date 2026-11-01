@@ -822,7 +822,6 @@ describe("R194 B34 revokeSession and signOut", () => {
       "fetch",
       vi.fn((input: unknown, init?: RequestInit) => {
         calls.push(toCall(input, init));
-        // The provider never answers.
         return new Promise<Response>(() => {});
       }),
     );

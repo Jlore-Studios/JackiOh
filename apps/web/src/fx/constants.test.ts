@@ -1,7 +1,6 @@
 // docs/polish/1-animations.md S2: the effects layer's constants, whose values the design fixes
-// ("values binding"). Every planner, director and CSS bound in the doc is stated in these names, and
-// task 7's settings panel reads the speed steps and intensity scale, so a silent change to one of
-// them is a contract change. The table below is S2 verbatim.
+// ("values binding"): every bound in the doc, and the settings panel's speed steps and intensity
+// scale, is stated in these names, so a silent change to one is a contract change.
 
 import { describe, expect, it } from "vitest";
 
@@ -68,8 +67,7 @@ const S2 = {
   FX_ADAPT_RECOVER_WINDOWS: 3,
   FX_DEFAULT_SEED: 0x5eed,
   FX_MEMORY_LIMIT: 64,
-  // v0.2.0: R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand;
-  // R436's Call to Chaos reveal.
+  // R502's cast on draw, #21 Hinder's crack and #27 Blood Ridden's drain; R437's brand; R436's Call to Chaos.
   FX_MEMORY_RECENT: 16,
   FX_MEMORY_RESOLVING: 8,
   FX_CAST_ON_DRAW_TRAUMA: 0.25,
@@ -82,14 +80,14 @@ const S2 = {
   FX_BLOOD_PICK_BASE: 1,
   FX_BLOOD_PICK_STRIDE: 2,
   FX_BLOOD_TRAUMA: 0.2,
-  // Patch v0.2.7: Classic+ #24 Crushing Walls.
+  // Classic+ #24 Crushing Walls.
   FX_WALLS_HIT_AT: 0.3,
   FX_WALLS_TAIL_MS: 850,
   FX_WALLS_REACH: 0.2,
   FX_WALLS_TRAUMA: 0.45,
   FX_BRAND_SLAM_AT: 0.35,
   FX_BRAND_TAIL_MS: 700,
-  // Patch v0.3.X (MN05): Armor's shield flash (R1363).
+  // MN05: Armor's shield flash (R1363).
   FX_SHIELD_TAIL_MS: 450,
   FX_CHAOS_LAND_AT: 0.4,
   FX_CHAOS_STAGGER: 0.2,
@@ -274,8 +272,7 @@ describe("S2 the effects constants", () => {
   });
 
   it("S2 a typical hit reads: 4 or 5 damage moves the board several pixels and keeps it moving for a third of a second (B52)", () => {
-    // Peak offset is FX_SHAKE_MAX_PX · trauma² (shake.ts). Review: at 8 px and 0.1 per damage point a
-    // 5-damage hit peaked under 1 px on screen, which no player notices.
+    // Peak offset is FX_SHAKE_MAX_PX · trauma² (shake.ts); a hit that peaks under 1 px goes unnoticed.
     const trauma = (damage: number): number => Math.min(constants.FX_SHAKE_MAX_TRAUMA, damage * constants.FX_TRAUMA_PER_DAMAGE);
     const peak = (t: number): number => constants.FX_SHAKE_MAX_PX * t * t;
     expect(peak(trauma(4))).toBeGreaterThanOrEqual(6);

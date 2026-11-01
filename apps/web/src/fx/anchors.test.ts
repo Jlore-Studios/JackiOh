@@ -1,9 +1,6 @@
 // docs/polish/1-animations.md S8: `anchors.ts`, where an effect plays and how the shake reaches the
-// board (the board half of B35). Until now only the Cypress component spec drove these, and
-// `pnpm test` never runs it.
-//
-// jsdom lays nothing out, so every element reports a 0×0 rect. Each test gives the elements it
-// needs a rect of its own; an element left alone is exactly the "not laid out" case S8 names.
+// board (the board half of B35). jsdom lays nothing out, so each test gives the elements it needs a
+// rect of its own; an element left alone is exactly the "not laid out" case S8 names.
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -149,8 +146,7 @@ describe("S8 resolveAnchor", () => {
 });
 
 describe("S8 a hand anchor is where the hand's cards are", () => {
-  // Review: the strip runs the whole board width while the cards sit at its left, so a drawn card's
-  // ghost landed in the middle of empty table (x 640 at 1280x720, with the last card at 284-343).
+  // The strip runs the whole board width while the cards sit at its left: its middle is empty table.
   const STRIP: FxBox = { x: 20, y: 637, width: 1240, height: 89 };
 
   function hand(testid: string, cards: FxBox[]): HTMLElement {

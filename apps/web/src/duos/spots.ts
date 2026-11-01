@@ -3,9 +3,8 @@
 // that board shows. Game.tsx stays the one board, so the Duos layer finds its anchors by the testids
 // every other layer uses, and adds nothing to the board itself.
 //
-// A board always shows a view of the viewer's own team: its "you" side is the team's player in that
-// duel (team A's `p1`, team B's `p2`), its "opponent" side the enemy's. A hand target only ever names
-// "you" (S6: the sender's own team's side), the one hand the view holds as cards.
+// A board's "you" side is the viewer's team's player in that duel (team A's `p1`, team B's `p2`). A
+// hand target only ever names "you" (S6), the one hand the view holds as cards.
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
@@ -51,7 +50,6 @@ export function spotOfElement(element: Element | null): BoardSpot | null {
   return { at: "zone", side, row, lane };
 }
 
-/** The testid of the element a spot is drawn as. */
 export function spotTestid(spot: BoardSpot): string {
   switch (spot.at) {
     case "hand":

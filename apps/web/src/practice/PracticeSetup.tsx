@@ -1,9 +1,8 @@
 // Practice setup maps difficulty and deck selection to Start (SPEC §9.9).
 // AI resource tiers derive from `AI_DIFFICULTY` (CLAUDE.md rule 9).
 // R1373, R924000: only the player's Random deck can lean toward a set; retain its pick.
-// R915005: a saved deck that names custom cards starts with them (`customCards`), drawn in the preview
-// from their frames; one that names a card the account no longer has says so and does not start.
-// §9.9: a complete saved deck the worker would refuse is listed disabled, with its reason in the deck hint and a link to Decks (`savedDeckRefusal`).
+// R915005: a saved deck that names custom cards starts with them (`customCards`); one that names a card
+// the account no longer has says so and does not start.
 
 import { useId, useMemo, useState, type FormEvent, type ReactElement } from "react";
 
@@ -47,10 +46,7 @@ import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, DIFFICULTY_TAGLINE, TierCrest } from "./Tier.tsx";
 import "./practice.css";
 
-/**
- * Selection passed to Start, including the random deck's "More cards from" pick (R1373, R924000) and
- * whether the game is a sandbox with dev tools (R923000).
- */
+/** Selection passed to Start: the random deck's "More cards from" pick (R1373, R924000), the sandbox (R923000). */
 export type PracticeSetupChoice = {
   difficulty: Difficulty;
   deck: PracticeDeckChoice;
@@ -60,12 +56,8 @@ export type PracticeSetupChoice = {
   customCards?: CustomCard[];
 };
 
-/**
- * What the player's account offers the deck picker, and why when it offers nothing, so the hint
- * under the picker can say the right thing: a signed-in player is never told to sign in.
- */
+/** What the account offers the deck picker, and why when nothing: a signed-in player is never told to sign in. */
 export type SavedDecks =
-  /** No session. */
   | { kind: "anonymous" }
   /** The account, or its saved decks, are still being read. */
   | { kind: "checking" }
@@ -73,10 +65,7 @@ export type SavedDecks =
   | { kind: "inactive" }
   /** An active account that has no saved deck. */
   | { kind: "none" }
-  /**
-   * The account or its saved decks could not be read. `retry` reads them again (#1691), after the
-   * wait a rate limit stated, `retryAfterMs` (R192); absent, there is nothing to ask again.
-   */
+  /** Could not be read. `retry` reads them again (#1691) after `retryAfterMs`, a rate limit's wait (R192). */
   | { kind: "unavailable"; retry?: () => void; retryAfterMs?: number }
   /** `GET /api/decks`'s decks, oldest first (R250). */
   | { kind: "ready"; decks: readonly PracticeSavedDeck[] };

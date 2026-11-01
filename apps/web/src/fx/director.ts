@@ -80,7 +80,6 @@ export type FxDirector = {
 
 type PendingCue = { cue: FxCue; due: number };
 type MountedEffect = { effect: DomEffect; expiresAt: number; kind: FxDomCue["kind"]; tone?: string };
-/** Stage effect cleanup and optional movement tracking. */
 type StagedEffect = { undo(): void; track?: () => void; expiresAt: number };
 
 function defaultViewport(): FxViewportEvents {

@@ -1,14 +1,9 @@
-// Play together's REST surface (#936, SPEC S7): friends, requests, blocks, presence, challenges,
-// chat and shared replays, one wrapper per route and typed with S7's types.
+// Play together's REST surface (#936, SPEC S7), one wrapper per route.
 //
-// CLAUDE.md rule 7: nothing here decides a rule. Who may befriend, challenge, chat with or watch whom
-// is the server's (B43–B53); a refusal is thrown as `ApiRequestError` (`net/api.ts`) carrying the
-// status and the body's code (`not_found`, `self`, `already_friends`, `busy`, `too_long`, …) and the
-// server's own sentence, which a screen shows as it is.
-//
-// Every route is `AuthLevel::Active` and the caller is the signed-in account, so no function takes a
-// token: each reads the tab's session (`net/session.ts`) and renews it once on a 401 (R194,
-// `callWithRenewal`). No session, or a session that has ended, is the 401 a signed-out request gets.
+// CLAUDE.md rule 7: who may befriend, challenge, chat with or watch whom is the server's (B43–B53); a
+// refusal is an `ApiRequestError` whose sentence a screen shows as it is. Every route is
+// `AuthLevel::Active`, so no function takes a token: each reads the tab's session and renews it once on
+// a 401 (R194). No session is the 401 a signed-out request gets.
 
 import { apiRequest, type RequestOptions, type SendOptions } from "./api.ts";
 import { withSession } from "./gate.ts";
@@ -45,7 +40,6 @@ export type ChatPage = { messages: ChatMessage[]; nextCursor: string | null };
 
 export type SharedReplay = { matchId: string; sharer: PlayerRef; createdAt: string; endedAt: string | null };
 
-/** One social request as the signed-in account, renewed once on a 401 (`withSession`). */
 function social<T>(path: string, options: Omit<RequestOptions, "token"> = {}): Promise<T> {
   return withSession((token) => apiRequest<T>(path, { ...options, token }));
 }
@@ -70,10 +64,7 @@ export function cachedFriends(): FriendsList | undefined {
   return session === null ? undefined : cachedRead<FriendsList>(session.accessToken, FRIENDS_PATH);
 }
 
-/**
- * The friends list, kept for the next visit (R2125000) unless `keep` is false: the watch and the
- * replay share read it too, and neither is a menu that opens on its last answer.
- */
+/** Kept for the next visit unless `keep` is false: the watch and the replay share are no menu that opens on its last answer. */
 export function getFriends({ keep = true }: { keep?: boolean } = {}): Promise<FriendsList> {
   return withSession(async (token) => {
     const answer = await apiRequest<FriendsList>(FRIENDS_PATH, { token });
@@ -117,7 +108,6 @@ export async function cancelFriendRequest(requestId: string): Promise<void> {
 export async function removeFriend(profileId: string, options: SendOptions = {}): Promise<void> {
   await withSession(async (token) => {
     await apiRequest<null>(`/api/friends/${part(profileId)}`, { method: "DELETE", ...options, token });
-    // R2125000: the next visit shows what this answer left.
     updateCachedRead<FriendsList>(token, FRIENDS_PATH, (before) => ({
       ...before,
       friends: before.friends.filter((friend) => friend.profileId !== profileId),
@@ -138,7 +128,7 @@ export async function unblockPlayer(profileId: string): Promise<void> {
 
 // Presence (B47)
 
-/** The heartbeat `usePresenceHeartbeat` sends every `PRESENCE_HEARTBEAT_MS`. */
+/** Sent by `usePresenceHeartbeat` every `PRESENCE_HEARTBEAT_MS`. */
 export async function heartbeat(): Promise<void> {
   await social<null>("/api/presence", { method: "POST" });
 }
@@ -168,7 +158,7 @@ export async function cancelChallenge(challengeId: string): Promise<void> {
 
 // Chat (B53)
 
-/** The newest page of the conversation, or the page before `cursor` (a `nextCursor` as answered, never built here); it marks them read. */
+/** The newest page, or the one before `cursor` (a `nextCursor` as answered, never built here); it marks them read. */
 export function getChat(friendId: string, cursor?: string): Promise<ChatPage> {
   const query = cursor === undefined ? "" : `?${new URLSearchParams({ before: cursor }).toString()}`;
   return social<ChatPage>(`/api/chat/${part(friendId)}${query}`);

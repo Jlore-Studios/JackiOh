@@ -1,13 +1,8 @@
-// The Web Audio engine (docs/polish/2-sound.md, "engine.ts"; B1–B11, B46–B53).
-//
-// Created inside a user gesture for autoplay. Music ducks under voice and selected effects (R631);
-// voice ducks effects and lane cues pan through a stereo panner (R669).
-//
-// Nothing is scheduled on an inactive context: its frozen clock would start every cue on resume.
-//
-// `setBusy(true)` holds background voice work outside animation bursts (B58), avoiding R82's delayed
-// auto-ended turn; requested lines are never held.
-//
+// The Web Audio engine (docs/polish/2-sound.md, "engine.ts"; B1–B11, B46–B53), created inside a user
+// gesture for autoplay. Music ducks under voice and selected effects (R631); voice ducks effects and lane
+// cues pan (R669). Nothing is scheduled on an inactive context: its frozen clock would start every cue on
+// resume. `setBusy(true)` holds background voice work outside animation bursts (B58), avoiding R82's
+// delayed auto-ended turn; requested lines are never held.
 // CARD EFFECTS (R655) guard by bank name. `playPickup` plays the effect, then a priority line after
 // CARD_EFFECT_DELAY_MS; a nearby repeat does nothing and a later one fades the prior effect.
 
@@ -179,9 +174,8 @@ type Span = { offsetS: number; lengthS: number };
 const spans = new WeakMap<AudioBuffer, Span>();
 
 /**
- * Where the speech in a rendered line starts and ends. `say` pads a line with silence and AAC adds
- * encoder priming, which played whole would hold the one voice channel for nothing. A buffer with no
- * sample above the threshold is played whole.
+ * Where the speech in a rendered line starts and ends: `say`'s padding and AAC's encoder priming would
+ * hold the one voice channel for nothing. A buffer with no sample above the threshold plays whole.
  */
 export function audibleSpan(buffer: AudioBuffer): Span {
   const cached = spans.get(buffer);
@@ -231,7 +225,6 @@ type VoiceLine = {
   delayMs: number;
 };
 
-/** The line holding the one voice channel. */
 type VoiceChannel = {
   line: VoiceLine;
   phase: "loading" | "waiting" | "playing" | "speaking";
@@ -435,10 +428,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /**
-   * R631: dips the music bus for `lengthS` from `startAt` (context time), when `duckMusic` is on.
-   * Overlapping ducks hold the dip until the last of them ends.
-   */
+  /** R631: dips the music bus for `lengthS` from `startAt`; overlapping ducks hold until the last ends. */
   function duck(startAt: number, lengthS: number): void {
     if (ctx === null || buses === null || !readAudioSettings().duckMusic) return;
     const gain = buses.musicDuck.gain;
@@ -449,10 +439,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     gain.setTargetAtTime(1, duckUntil, MUSIC_DUCK_RELEASE_TC_S);
   }
 
-  /**
-   * R669: dips the effects for a voice line's `lengthS` from `startAt` (context time), so the line
-   * is heard over the board. Overlapping lines hold the dip until the last of them ends.
-   */
+  /** R669: dips the effects for a voice line's `lengthS` from `startAt`, held as `duck` holds. */
   function duckSfx(startAt: number, lengthS: number): void {
     if (ctx === null || buses === null) return;
     const gain = buses.sfxDuck.gain;
@@ -517,8 +504,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       }
 
       // A field tap is a fidget surface: every physical tap gets its own crunch, even in a burst
-      // faster than ordinary UI/SFX retrigger protection. Its short, low-gain cue nodes still
-      // disconnect through the normal delayed cleanup below.
+      // faster than the retrigger guard.
       const rapid = RAPID_SFX.has(id);
       const last = lastSfxAt.get(id);
       if (!rapid && last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
@@ -916,7 +902,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     startFile(ch, buffer);
   }
 
-  /** Gives the channel to `line`. */
   function begin(line: VoiceLine): void {
     // A timer that fires while the page is hidden must not take the channel.
     if (!accepting()) return;

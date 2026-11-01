@@ -1,7 +1,6 @@
 // The Field Guide (SPEC §9.10, R2205002): every mechanic the lessons let a player find, in lesson
-// order, each met one with its rule and each not yet met as "?" under the lesson that sets it up. One
-// button opens it, from the lesson HUD or the lesson path's header; it is a modal dialog that takes
-// focus and keeps Tab inside, closes on Escape or Close, and gives focus back to the button that opened it.
+// order, each met one with its rule and each not yet met as "?" under the lesson that sets it up. Its
+// modal dialog gives focus back to the button that opened it.
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";

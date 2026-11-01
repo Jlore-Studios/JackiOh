@@ -1,9 +1,7 @@
 // One effect, many looks: a look is one family's choice of particles, ring, DOM tint and emblem, so a
 // single recipe reads differently for a Felinor, a CN virus or a Book, and a new family is one row.
-//
 // The families are the art themes (`cards/art/themes.ts`), picked as a card's picture is: its tags,
-// then Token, then its type. The tint is the theme's palette and the emblem its glyph.
-//
+// then Token, then its type.
 // R202: a look is chosen from the public catalog facts (`FxCardFacts`) of a definition the viewer can
 // read, never from a hidden card: no facts, no look, and the caller falls back to a tone's.
 
@@ -55,10 +53,7 @@ export const FX_LOOKS: Readonly<Record<ArtThemeId, FxLook>> = Object.fromEntries
   (Object.keys(THEME_PARTICLES) as ArtThemeId[]).map((theme) => [theme, lookOfTheme(theme)]),
 ) as Record<ArtThemeId, FxLook>;
 
-/**
- * The looks of what nothing readable cast: hits in fire with a flame, heals in holy light with a
- * heart, and the arcane of a card cast by a card the viewer may not read.
- */
+/** The looks of what nothing readable cast: a hit, a heal, or a card cast by a card the viewer may not read. */
 export const TONE_LOOKS: Readonly<Record<"damage" | "heal" | "cast", FxLook>> = {
   damage: {
     preset: "fire",
@@ -108,10 +103,7 @@ const ZONE_GONE: FxLook = {
   icon: iconOf("portal"),
 };
 
-/**
- * Each event's look on a whole pile: Degrade sinks in violet, Upgrade rises in gold, a card made Radiant
- * shines gold, cards leaving (exiled, crumbled) go in smoke and void; anything else is arcane.
- */
+/** Each event's look on a whole pile; any other event's is `ZONE_DEFAULT`. */
 export const ZONE_LOOKS: Readonly<Partial<Record<string, ZoneLook>>> = {
   degraded: { look: ZONE_DOWN, direction: "down" },
   upgraded: { look: ZONE_UP, direction: "up" },

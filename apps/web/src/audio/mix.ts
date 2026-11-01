@@ -41,9 +41,7 @@ export type Mix = {
   reverb: ConvolverNode;
 };
 
-/**
- * R669: wide, seeded white noise decaying by REVERB_DECAY_POWER, without early reflections.
- */
+/** R669: wide, seeded white noise decaying by REVERB_DECAY_POWER, without early reflections. */
 export function reverbImpulse(ctx: BaseAudioContext): AudioBuffer {
   const length = Math.max(1, Math.round(REVERB_SECONDS * ctx.sampleRate));
   const buffer = ctx.createBuffer(REVERB_CHANNELS, length, ctx.sampleRate);

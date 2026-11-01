@@ -1,8 +1,6 @@
 // The tutorial's progress kept on the account as well as the device (tutorial/accountSync.ts): R321.
-//
-// The account is a fake `TutorialAccountApi` that merges as the server does (a union of lessons and
-// the strictly newer choice, R320), so these tests read what the device and the account hold after
-// each step. The device is the real progress store over jsdom's localStorage.
+// The account is a fake `TutorialAccountApi` that merges as the server does (R320); the device is the
+// real progress store over jsdom's localStorage.
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -224,7 +222,6 @@ describe("R321 the network never blocks the tutorial", () => {
     expect(account.stored.completed).toEqual([TWO]);
     sync.stop();
 
-    // The next visit, online: both copies end with all three.
     account.offline = false;
     await start(account).settled();
     expect(readTutorialProgress().completed).toEqual([ONE, TWO, THREE]);

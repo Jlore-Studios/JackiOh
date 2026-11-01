@@ -1,10 +1,8 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: the merge of
 // main into production through a pull request, Vercel's hold and fast-forward, and the one countdown
 // issue that can hold or delay either and shows the queue. Each case runs the real script in a fresh
-// clone of a throwaway "origin", with a stand-in for `gh` (below) that keeps issues, pull requests,
-// comments, reactions, CI runs and Vercel's deployments in a JSON file and does the merge for real
-// with git, so what production ends up holding is what GitHub would leave it, and one for `curl`
-// that records the deploy hook's calls.
+// clone of a throwaway "origin", with stand-ins for `curl` and `gh`, which keeps GitHub's state in a
+// JSON file and merges with real git, so production ends up holding what GitHub would leave it.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -25,7 +23,7 @@ const LABEL = "production merge";
 // Both people, and `human` so the night bot never picks these up.
 const PEOPLE = ["jgoetzmann", "MaxGoetzmann"];
 
-// --- the stand-in for `gh` -------------------------------------------------------------------
+// The stand-in for `gh`
 
 const FAKE_GH = String.raw`#!/usr/bin/env node
 const fs = require("fs");
@@ -171,7 +169,7 @@ interface Gh {
   tokens: string[];
 }
 
-// --- a world: origin, a working copy, the stand-in -------------------------------------------
+// A world: origin, a working copy, the stand-in
 
 interface World { root: string; origin: string; work: string; bin: string; sha: Record<string, string> }
 const roots: string[] = [];

@@ -1,12 +1,8 @@
 // docs/polish/1-animations.md, behaviors B8 to B22: the cue planner (S6) and its recipe table (S7).
-//
 // R200 (the effects layer paces nothing) and R202 (effects draw from the redacted stream only) are
 // named here; the rulings index points at this file for both.
-//
-// Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop those
-// two fields and B9 checks how counts scale instead. Everything else in a cue (kind, preset, anchor,
-// spread, delay, duration, tone, amount, text) is S7's and is compared exactly. Within one recipe the
-// cues are compared as a set: S7 lists what is planned, not in which order.
+// Burst `count` and `power` come from `cues.ts`'s own TUNING table, so recipe comparisons drop them (B9
+// checks how counts scale); the rest of a cue is S7's, compared exactly and, within a recipe, as a set.
 
 import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -871,7 +867,6 @@ describe("B15 cast", () => {
       expectCues(cues, [
         ring("dust", tid(zone), slam, D),
         burst("dust", tid(zone, FOOT), "ring", slam),
-        // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
         burst("spark", tid(zone, FOOT), "point", slam),
       ]);
     }
@@ -1021,7 +1016,7 @@ describe("B16 the recipe table, row by row", () => {
           crack(cardT(MINE_3), 0, D),
           burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
-          // #1446: core-017 is Nature, so it wilts: leaves drop off the card and settle at its foot.
+          // #1446: core-017 is Nature, so it wilts.
           burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
         ],
@@ -1234,7 +1229,7 @@ describe("B16 the recipe table, row by row", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
       const zone = zoneT("opponent", "backrow", 4);
-      // The event names a card the catalog knows, but the view shows no such instance (an opponent's face-down trap).
+      // The catalog knows the card, but the view shows no such instance (an opponent's face-down trap).
       const fired: GameEvent = { type: "trapFired", instanceId: "face-down-1", defId: "core-021", controller: "p2", row: "backrow", lane: 4 };
       const cues = plan([fired], D);
       expectCues(cues, [ring("arcane", zone, 0, D), burst("arcane", zone, "ring", b), shake(0.4, b)]);
@@ -1528,7 +1523,6 @@ describe("B19 mana sparks", () => {
   }
 
   it("B19 one sparkle per crystal that fills, from the planning view's current mana up", () => {
-    // The fixture's viewer has 2 of 4 crystals lit; the opponent has 0 of 3.
     expect(VIEW.you.mana.current).toBe(2);
     expect(VIEW.opponent.mana.current).toBe(0);
     const D = ANIMATIONS.manaChanged.durationMs;
@@ -1936,7 +1930,7 @@ describe("B22 planResult and planHandover", () => {
   });
 });
 
-/* Review fixes: the killing blow, and projectiles that scale with intensity */
+/* The killing blow, and projectiles that scale with intensity */
 
 describe("R200 planLethal: the killing blow a drained game over never drew", () => {
   const finished = (winner: "p1" | "p2" | "draw") =>
@@ -2001,7 +1995,6 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
     const lethal = planLethal(entries, finished("p2"), envOf());
     expect(lethal.leadMs).toBe(FX_LETHAL_LEAD_MAX_MS);
     const empty = r(FX_LETHAL_LEAD_MAX_MS / 2);
-    // The library's dust at 0, the streak landing inside the first half, the hit's splat after it.
     expect(lethal.cues.some((cue) => cue.kind === "burst" && cue.preset === "dust" && cue.delayMs === 0)).toBe(true);
     const streak = lethal.cues.find((cue) => cue.kind === "projectile");
     expect(streak).toMatchObject({ preset: "void", from: tid("library-you"), to: heroT("you") });

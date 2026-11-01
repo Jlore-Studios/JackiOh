@@ -1,7 +1,5 @@
 // docs/polish/1-animations.md, behaviors B23 to B26: the pooled particle system (S5).
-//
-// No canvas is needed: `inspect()`, `alive()`, `capacity()` and `stats()` are the observable surface,
-// and nothing here draws.
+// No canvas is needed: `inspect()`, `alive()`, `capacity()` and `stats()` are the observable surface.
 
 import { describe, expect, it, vi } from "vitest";
 

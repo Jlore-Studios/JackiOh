@@ -1,22 +1,8 @@
 // Practice's emote driver (R642–R645, R1341, R1344): the AI's persona, both portraits and both
-// hands, and the wiring that turns the worker's snapshots into persona triggers — all on the page
-// side, since the persona is presentation, not part of the AI's decisions (issue §6: "a separate
-// RNG outside the engine and AI search").
-//
-// The split mirrors the match route's: `useEmotes` owns what every route shares (the session,
-// the sounds, the shared gate, the mutes), and this hook owns what only practice has:
-//
-//   - The portraits (R642): the human's from their deck — saved deck's stored id, `vanilla` for
-//     a preset (a preset is not a saved deck, so it carries none) or a lesson — and a random one
-//     when the deck itself is random; the AI's always random except the tutorial's `vanilla`.
-//   - The hands (R1341): each seat's eight, dealt from the game's seed as a match deals them — the
-//     human's menu shows theirs, and the AI's persona chooses within its own (R1344).
-//   - The persona (R645): dealt once per game from §6's weights — the tutorial is always Silent —
-//     fed `onEvents` deltas off the snapshot's redacted event window (`newEventsSince`, the same
-//     function the board's animation runner uses), `onPlayerEmote` from the player's sends, and
-//     `onPlayerTurnLong` off a timer armed each time the player's turn starts.
-//   - Delivery: each rolled intent waits its own `delayMs` (§6's 0.8–2.5s) and then shows as a
-//     `receive` — which is also where the mute the setting or the menu set drops it.
+// hands, all on the page side, since the persona is presentation, not part of the AI's decisions
+// (issue §6: "a separate RNG outside the engine and AI search"). `useEmotes` owns what every route
+// shares (the session, the sounds, the shared gate, the mutes); this hook owns what only practice has.
+// The hands (R1341) are each seat's eight, dealt from the game's seed as a match deals them.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -45,10 +31,7 @@ function dealPortraits(config: PracticeStartConfig): { human: PortraitId; ai: Po
   return { human, ai: pickPortrait(Math.random) };
 }
 
-/**
- * The persona one game plays (R645): the tutorial is always Silent (issue §6). It chooses within
- * the AI seat's own dealt hand (R1344).
- */
+/** R645: the tutorial is always Silent (issue §6); the persona chooses within the AI seat's own hand (R1344). */
 function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly EmoteId[]): EmotePersona {
   const persona = config.lesson === undefined ? pickPersona(Math.random) : "silent";
   return createEmotePersona({ persona, seat, rng: Math.random, hand });
@@ -56,13 +39,11 @@ function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly
 
 /**
  * One practice game's emote half, keyed to `config` (a new game is a new config object — the
- * controller hands `state.config` back verbatim). Returns the `GameEmotes` Game.tsx takes;
- * undefined until the AI's seat is known (it arrives with the first snapshot).
+ * controller hands `state.config` back verbatim).
  */
 /**
- * MD-D29, R1127: the page's side of the `Emote` action — the player's sends. The player's emote
- * becomes an action only while the view hears emotes. The persona's emotes stay cosmetic (R643):
- * they are no AI decision, so they never reach the game.
+ * MD-D29, R1127: the page's side of the `Emote` action, the player's sends. The persona's emotes stay
+ * cosmetic (R643): they are no AI decision, so they never reach the game.
  */
 export type PracticeEmotePort = {
   act(action: ActionBody): void;
@@ -77,9 +58,8 @@ export function usePracticeEmotes(
   const globalMuteEmotes = useSetting("muteOpponentEmotes");
   const view = snapshot?.view ?? null;
 
-  // The game's deal: persona and portraits, made once when the AI seat is first known — the same
-  // render-adjust pattern `concedeFor` uses, so the first painted board already wears the dealt
-  // portraits. Kept in a ref as well so the emit/timer closures below always read the live one.
+  // The game's deal, made once when the AI seat is first known (the render-adjust pattern `concedeFor`
+  // uses), so the first painted board already wears the dealt portraits; a ref too, for the closures.
   const [deal, setDeal] = useState<{
     config: PracticeStartConfig;
     persona: EmotePersona;
@@ -99,9 +79,8 @@ export function usePracticeEmotes(
   const dealRef = useRef(deal);
   dealRef.current = deal;
 
-  // Delivery: an intent fires its show after its delay, as a `receive` — the mute the menu or
-  // the setting put on the AI is honored there like anywhere else. Timers belong to the deal
-  // that scheduled them; a new game clears whatever the old one left pending.
+  // Delivery: an intent shows after its delay as a `receive`, where the AI's mute is honored like
+  // anywhere else. A new game clears whatever timers the old one left pending.
   const timers = useRef<number[]>([]);
   const emotesRef = useRef<EmotesApi | null>(null);
   const portRef = useRef(port);
@@ -147,9 +126,8 @@ export function usePracticeEmotes(
   });
   emotesRef.current = emotes;
 
-  // Trigger detection: every new snapshot's events run the table once. `newEventsSince` is the
-  // animation runner's own delta — a window shared with a seat hand-over does not exist in
-  // practice, so the views always compare.
+  // Every new snapshot's events run the table once, by the animation runner's own delta
+  // (`newEventsSince`); practice has no seat hand-over, so the views always compare.
   const fed = useRef<{ config: PracticeStartConfig | null; prev: PlayerView | null }>({
     config: null,
     prev: null,

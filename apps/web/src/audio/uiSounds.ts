@@ -1,8 +1,6 @@
-// Quiet UI ticks (SPEC §10.11): a click on anything pressable, and a hover blip when a mouse moves
-// onto a new pressable element. Delegated from one root, so no component has to know about sound.
-//
-// Hover is mouse only: a touch or pen `pointerover` fires right before the tap's own click, which
-// would play two sounds for one touch.
+// Quiet UI ticks (SPEC §10.11): a click on anything pressable, and a hover blip when a mouse moves onto
+// a new pressable element, delegated from one root so no component knows about sound. Hover is mouse
+// only: a touch or pen `pointerover` fires right before the tap's click, two sounds for one touch.
 
 import { UI_HOVER_THROTTLE_MS } from "./constants.ts";
 import type { SoundSink } from "./types.ts";

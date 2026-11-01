@@ -34,7 +34,6 @@ export type MusicRequest = {
   track: string | null;
   /** A sting to play first, when the request starts from silence or the menu (a match's start). */
   intro?: string | null;
-  /** The opponent's-turn mix on or off. */
   opponentTurn?: boolean;
 };
 
@@ -43,9 +42,8 @@ export type MusicLogEntry = { kind: "start" | "stop"; track: string; at: number 
 export type MusicPlayer = {
   request(request: MusicRequest): void;
   /**
-   * R1350: plays a card's intro (a track that plays once) on top of the music, ducking the rest
-   * until its music ends; a second one cuts the first (R1351). Ignored muted, at zero, or while the
-   * context is not running.
+   * R1350: plays a card's intro over the music, ducking it until the intro's music ends; a second one
+   * cuts the first (R1351). Ignored muted, at zero, or while the context is not running.
    */
   playIntro(id: string): void;
   /** R1351: cuts the intro playing (or about to) short with MUSIC_INTRO_CUT_FADE_S, and lets the bed back up. */
@@ -166,7 +164,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
   const bytes = new Map<string, Promise<ArrayBuffer | null>>();
   const decoded = new Map<string, AudioBuffer>();
   const decoding = new Map<string, Promise<AudioBuffer | null>>();
-  /** Tracks whose file could not be fetched or decoded: tried again when a request names them anew, or at a turn boundary. */
+  /** Tracks whose file could not be fetched or decoded (retried below). */
   const failed = new Set<string>();
   let heldPreload: string[] = [];
   /** R1350: the intro playing, the one being loaded (with the context time it was asked for), and their caches. */
@@ -447,7 +445,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
       // A track that failed waits for the next request that names it, not every idle (setBusy).
       if (missing.includes(target) && failed.has(target)) return;
       if (missing.length > 0) {
-        // Nothing is fetched or decoded during an animation burst (B58); setBusy(false) comes back here.
+        // B58: nothing loads during an animation burst; setBusy(false) comes back here.
         if (busy) return;
         for (const id of missing) {
           void decode(id).then((buffer) => {

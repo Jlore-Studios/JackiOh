@@ -1,14 +1,10 @@
-// R2378000: an account runs one spend at a time. Every spend of the tab (`net/api.ts`'s
-// `spendRequest`) runs through `whileSpending`, so the tab knows from a press until its answer or
-// its failure that one of its spends is out. While one is, the Shop's Buy and the pack panel's
-// Open, Open all, sealed pack, Reveal all and Next pack wait, disabled, Buy, Open and Open all
-// turning a loading wheel (`economy/spend.css`), so a press the server would only queue or refuse is
-// never sent and a person sees a wait, not an error. The server still orders every spend of the
-// account, other tabs' too.
+// R2378000: an account runs one spend at a time. Every spend of the tab (`net/api.ts`'s `spendRequest`)
+// runs through `whileSpending`; while one is out the spend buttons wait, disabled (`economy/spend.css`),
+// so a press the server would only queue or refuse is never sent and a person sees a wait, not an error.
+// The server still orders every spend of the account, other tabs' too.
 
 import { useSyncExternalStore } from "react";
 
-/** How many of the tab's spends are out. */
 let out = 0;
 
 const listeners = new Set<() => void>();

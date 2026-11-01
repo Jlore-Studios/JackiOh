@@ -1,8 +1,6 @@
 // Lesson 2 data (SPEC §9.10, R291, R2434001); ../lessons.ts defines its fields and ../scripts/keywords.ts
-// is the coach. The player's deck is Training Grounds units, many with a Cry or a keyword (Taunt,
-// Armor, Divine Shield, Rush, Pierce), and no spell, Aura, Death or backrow card; the AI's is twelve
-// Core units with a Cry or a keyword. No Legendary or Mythic, the pool hold on. Deck order fixes this
-// seed's deal (`scripts/lesson-deal.ts keywords`): reordering it changes the game, so rerun its tests.
+// is the coach. Units with Cries and keywords, and no spell, Aura, Death or backrow card. Deck order fixes
+// this seed's deal (`scripts/lesson-deal.ts keywords`): reordering it changes the game, so rerun its tests.
 
 import type { TutorialLesson } from "../lessons.ts";
 

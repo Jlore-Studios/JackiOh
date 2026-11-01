@@ -1,10 +1,7 @@
-// Polish 1 (docs/polish/1-animations.md, S10): the stylesheets, B40's text half.
-//
-// Vitest stubs CSS imports, so both files are read as text with `node:fs`, the way
-// `animations.test.ts` reads `animations.css`. A small parser below turns a sheet into rules
-// (selector list, declarations, the @media it sits in) and a set of @keyframes names, and the
-// tests ask questions of that rather than of raw substrings, so formatting, ordering and grouping
-// are the stylesheet author's choice. The browser half of B40 is e2e/cypress/component/fx-layer.cy.tsx.
+// Polish 1 (docs/polish/1-animations.md, S10): the stylesheets, B40's text half (the browser half is
+// e2e/cypress/component/fx-layer.cy.tsx). Vitest stubs CSS imports, so both files are read as text with
+// `node:fs` and parsed into rules, and the tests ask questions of those rather than of raw substrings, so
+// formatting, ordering and grouping are the stylesheet author's choice.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -221,9 +218,8 @@ function animatedDecls(body: string): { name: string; value: string }[] {
 
 /**
  * What Chrome's compositor can animate off the main thread: transforms, opacity, and a filter that
- * moves no pixels. drop-shadow and blur move pixels (compositeFailed 4096); box-shadow, mask-position,
- * background-position and letter-spacing are main-thread properties (8192), and letter-spacing
- * re-lays the text out every frame. `animation-timing-function` is a per-stop easing, not a property.
+ * moves no pixels (drop-shadow and blur do: compositeFailed 4096; box-shadow, mask-position,
+ * background-position and letter-spacing are main-thread, 8192). `animation-timing-function` is a per-stop easing.
  */
 function compositorOnly(decl: { name: string; value: string }): boolean {
   if (["transform", "translate", "scale", "rotate", "opacity", "animation-timing-function"].includes(decl.name)) return true;
@@ -377,9 +373,8 @@ describe("B40 — fx.css", () => {
   });
 
   it("R200 the cocoon, its pop and its shell are drawn only while the layer is on: nothing under the reduce setting or intensity off", () => {
-    // Review: the cocoon was gated on nothing but the media query, so the viewer's reduce setting and
-    // intensity "off" (which only turn the layer's own root to data-fx="off") left an endless pulse
-    // on every Divine Shield card.
+    // The reduce setting and intensity "off" only set the layer's root to data-fx="off": a cocoon gated
+    // on the media query alone pulsed forever on every Divine Shield card.
     const cocoonRules = fx.rules.filter(
       (rule) => !isReduced(rule) && rule.selectors.some((s) => s.includes('data-keyword="Divine Shield"')),
     );
@@ -456,9 +451,8 @@ describe("B40 — animations.css follows the squeeze and loses nothing", () => {
   });
 
   it("B40 the squeeze is never read without its fallback of 1, so an entry with no squeeze set keeps its full duration", () => {
-    // `var(--anim-squeeze)` with no fallback is invalid wherever the property is unset, which
-    // makes the whole calc() invalid and the duration 0: every motion outside a runner entry
-    // would vanish.
+    // `var(--anim-squeeze)` with no fallback is invalid wherever it is unset, which zeroes the whole
+    // calc(): every motion outside a runner entry would vanish.
     expect(anim.text).not.toMatch(/var\(\s*--anim-squeeze\s*\)/);
     const withSqueeze = durationValues(anim).filter((value) => value.includes("--anim-squeeze"));
     expect(withSqueeze.length).toBeGreaterThan(0);
@@ -481,8 +475,7 @@ describe("B40 — animations.css follows the squeeze and loses nothing", () => {
   });
 
   it("B50 the result overlay is a panel fixed on screen, and a finished game shows no turn", () => {
-    // Review: after the 3.2 s Victory / Defeat sequence the only result left was an unstyled line
-    // below the fold (y 874 in a 720 px viewport), under a status line still saying "Your turn".
+    // Else the result sequence leaves an unstyled line below the fold, under a status saying "Your turn".
     const overlay = declsFor(anim, '[data-testid="result-overlay"]');
     expect(overlay.get("position")).toBe("fixed");
     expect(layerOf(overlay.get("z-index"))).toBe("39");
@@ -543,7 +536,7 @@ describe("B45 — a summon lands a silhouette, a dying card burns away", () => {
     const climb = animatedDecls(keyframeBodies(anim).get("jk-burn-climb") ?? "");
     expect(climb.length).toBeGreaterThan(0);
     expect(climb.every((d) => d.name === "transform")).toBe(true);
-    // No mask moves any more (mask-position is not compositable).
+    // mask-position is not compositable.
     expect(anim.text).not.toMatch(/mask-position/);
   });
 });

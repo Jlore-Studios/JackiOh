@@ -1,9 +1,6 @@
-// #936 S7/S8: `net/social.ts`, one fetch wrapper per social route. Each test asserts what goes on the
-// wire (method, path, query, JSON body) and what comes back: the parsed answer, or the repo's
-// `ApiRequestError` carrying the refusal's status and code (B43, B45, B46, B48, B52, B53).
-//
-// The wrappers take no token (SPEC S8), so the signed-in session is put where `net/session.ts`
-// keeps it before each test.
+// #936 S7/S8: `net/social.ts`, one fetch wrapper per social route: what each sends, and the parsed
+// answer or the `ApiRequestError` carrying the refusal's status and code (B43, B45, B46, B48, B52, B53).
+// The wrappers take no token (SPEC S8), so each test first puts a session where `net/session.ts` keeps it.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -1,8 +1,7 @@
-// #1446: one death exit per flavor, appended by the `death` recipe (cues.ts) over today's
-// crack, embers and smoke for a `destroyed` card the view showed face-up. Every delay is 0 or
-// one of the death's beats (FX_DEATH_EMBER_AT, FX_DEATH_SMOKE_AT) and every tail is an existing
-// one, so an exit paces nothing (R200). Only a face-up card takes an exit: a face-down card
-// (R371) or a hidden or unknown one keeps today's death (R202, CLAUDE.md rule 7).
+// #1446: one death exit per flavor, appended by the `death` recipe (cues.ts) for a `destroyed` card the
+// view showed face-up. Every delay is 0 or one of the death's beats (FX_DEATH_EMBER_AT, FX_DEATH_SMOKE_AT)
+// and every tail an existing one, so an exit paces nothing (R200). A face-down card (R371) or a hidden or
+// unknown one keeps today's death (R202, CLAUDE.md rule 7).
 
 import type { Flavor, PlayerView } from "@jackioh/shared";
 
@@ -24,11 +23,7 @@ const FOOT: FxPoint = { x: 0.5, y: 1 };
 const TOP: FxPoint = { x: 0.5, y: 0 };
 const T = FX_DEATH_FLAVOR_TUNING;
 
-/**
- * What a flavor exit plans against: the entry's duration, the card's testid, the intensity, the
- * embers' and the smoke's delays (`fallAt`, `settleAt`), the card's instance id, and the owner's
- * graveyard testid (`pile`).
- */
+/** `fallAt` and `settleAt` are the embers' and the smoke's delays; `pile` is the owner's graveyard testid. */
 export type FlavorExitPlan = { D: number; tgt: string; intensity: number; fallAt: number; settleAt: number; instanceId: string; pile: string };
 
 export type FlavorExit = (p: FlavorExitPlan) => FxCue[];
@@ -182,11 +177,7 @@ function shownFaceUp(view: PlayerView, instanceId: string): boolean {
   return false;
 }
 
-/**
- * #1446: the flavor exit a `destroyed` card the view showed face-up adds over today's death, or
- * nothing: a face-down card, a hidden or unknown `defId` (`flavorLookOf`, CLAUDE.md rule 7) and
- * reduced motion (every duration is 0) keep today's cue alone.
- */
+/** The exit a face-up `destroyed` card adds, or none: a hidden or unknown `defId` or reduced motion (D is 0). */
 export function flavorExitCues(opts: { defId: string; instanceId: string; view: PlayerView; D: number; tgt: string; intensity: number; pile: string }): FxCue[] {
   if (!FX_FLAVOR_LIVE || !(opts.D > 0) || !shownFaceUp(opts.view, opts.instanceId)) return [];
   const look = flavorLookOf(opts.defId, opts.instanceId, opts.view);

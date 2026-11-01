@@ -41,7 +41,7 @@ export type FxRayTone = "legendary" | "mythic" | "radiant" | "holy" | "victory";
 export type FxBannerTone = "you" | "opponent" | "muted";
 export type FxOutcome = "victory" | "defeat" | "draw";
 
-/** `scale` multiplies particle size as `power` does speed (absent: 1). `colors` (#1447, hot first) replace the preset's palette; its shape and physics stay. */
+/** `scale` multiplies particle size as `power` does speed (absent: 1). `colors` (#1447, hot first) replace the preset's palette. */
 export type FxBurstCue = {
   kind: "burst";
   preset: FxPreset;
@@ -57,11 +57,7 @@ export type FxBurstCue = {
 export type FxProjectileCue = { kind: "projectile"; preset: FxPreset; from: FxAnchor; to: FxAnchor; delayMs: number; flightMs: number; density: number };
 /** #1442: what a flavor's shot throws; `shots.ts` draws each with paths, never an image (B27). */
 export type FxShotSprite = "arrow" | "boulder" | "book" | "seed" | "goo" | "snack" | "coin" | "bill" | "heart" | "emoji";
-/**
- * #1442: a flavor's projectile. An `arc` lobs `count` sprites (`turn`: pointing, spinning or floating), with
- * an optional `trail` and impact `shake`; a `bolt` is a glowing straight shot that may `wave`; a `beam` is an
- * instant line; a `swipe` a claw-slash crescent.
- */
+/** #1442: a flavor's projectile: a lobbed `arc` of sprites, a glowing straight `bolt`, an instant `beam` or a claw-slash `swipe`. */
 export type FxShot =
   | {
       motion: "arc";
@@ -100,17 +96,17 @@ export type FxGhostCue = { kind: "ghost"; from: FxAnchor; to: FxAnchor; delayMs:
 export type FxArrowsCue = { kind: "arrows"; direction: "up" | "down"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxBannerCue = { kind: "banner"; text: string; tone: FxBannerTone; delayMs: number; durationMs: number };
 export type FxResultCue = { kind: "result"; outcome: FxOutcome; text: string; delayMs: number; durationMs: number };
-/** R502: a mana crystal cracking and going dark under frost (#21 Hinder's refresh loss); the lasting mark is `manaMarks.ts`'s. */
+/** R502: a mana crystal cracking under #21 Hinder's refresh loss; the lasting mark is `manaMarks.ts`'s. */
 export type FxFractureCue = { kind: "fracture"; at: FxAnchor; delayMs: number; durationMs: number };
 /** Classic+ #24 Crushing Walls: walls close in from `at`'s left and right edges, each `reach` of its width deep. */
 export type FxWallsCue = { kind: "walls"; at: FxAnchor; reach: number; delayMs: number; durationMs: number };
 export type FxTint = { rim: string; core: string; glow: string };
-/** R437: a mark branded onto a card: a sigil in the mark's colors slams on and fades into the aura. */
+/** R437: a mark's sigil branded onto a card (brand.ts). */
 export type FxBrandCue = { kind: "brand"; at: FxAnchor; tint: FxTint; delayMs: number; durationMs: number };
 /** R1363 (MN05): Armor taking a hit: `small` for half or more of a hit that still landed, `full` for the whole hit. */
 export type FxShieldCue = { kind: "shield"; size: "small" | "full"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxChaosLine = { text: string; reel: readonly string[]; landMs: number };
-/** R436: the slot-machine reveal of the effects a Call to Chaos rolled, one line each, over the board. */
+/** R436: the slot-machine reveal of what a Call to Chaos rolled (chaos.ts). */
 export type FxChaosCue = { kind: "chaos"; title: string; lines: readonly FxChaosLine[]; delayMs: number; durationMs: number };
 /** A small glyph a DOM cue draws (an emblem of `cards/art/emblems.ts`): SVG path data in a 24×24 box. */
 export type FxIcon = { d: string; rule: "nonzero" | "evenodd" };
@@ -219,7 +215,7 @@ export type FxCardFacts = { rarity?: Rarity; attack?: number; health?: number; t
 
 export type FxTrapZone = { player: PlayerId; row: Row; lane: number };
 
-/** An unresolved play. `defId` is hidden when unreadable (R97), so recipes cannot key off it (R202); records whether it was cast on draw (R502). */
+/** An unresolved play. `defId` is hidden when unreadable (R97), so recipes cannot key off it (R202). */
 export type FxPlay = {
   player: PlayerId;
   instanceId: string;
@@ -227,7 +223,7 @@ export type FxPlay = {
   castOnDraw: boolean;
   /** Events since this play's `cardPlayed` (the next is step 1), public on both seats (R202). */
   step: number;
-  /** Public event types and counts, including the planned event (R202). Classic+ #24 Crushing Walls starts at its first `destroyed`. */
+  /** Public event types and counts, including the planned event (R202). */
   seen: Readonly<Partial<Record<GameEvent["type"], number>>>;
 };
 

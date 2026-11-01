@@ -1,7 +1,6 @@
-// Polish task 2 (docs/polish/2-sound.md): `gen-voice.mjs` generates by default (B45; B37 covers
-// `--check`). B45 exits 2 without a synthesizer; macOS is hash-idempotent, removes orphans and
-// rerenders edited lines. R501 renders SAPI lines in the committed M4A format when available.
-// Every run uses a temporary `--root`; CI (Linux) covers the no-synthesizer case.
+// docs/polish/2-sound.md B45: `gen-voice.mjs` generates by default (B37 covers `--check`), exits 2 without
+// a synthesizer (CI's Linux case), and on macOS is hash-idempotent, removes orphans and rerenders edited
+// lines. R501: SAPI lines in the committed M4A format when available. Every run uses a temporary `--root`.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

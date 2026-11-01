@@ -185,10 +185,8 @@ describe("background: the page hides mid-game and comes back (issue #2034)", () 
     const audio = r.factory.last();
     expect(audio).not.toBe(closed);
     const bus = crowdBusOf(r.engine, audio);
-    // The next patron murmurs on the rebuilt context …
     due(r.tasks);
     expect(heard(audio, bus)).toHaveLength(1);
-    // … and so do a hit's roar and the patron after it, none of them on the dead one.
     r.crowd.observeDamage(25);
     due(r.tasks);
     expect(heard(audio, bus)).toHaveLength(3);

@@ -3,12 +3,10 @@
 // server pushed, never computed here.
 //
 // The handshake is `/ws/match`'s (S6): the match id in the query string, the token as a subprotocol
-// (R1379000), never in the address. The token is the gate's, via `setToken` (the tab's session until
-// then), so a reconnect after a renewal carries the new one and a 4401 is final only for the token it
-// refused (R1115000). Drops and page wakes are handled as in `game/net.ts` (R1441); a refusal
-// (4401/4403/4404) or a voided match (4410) never reconnects. Pings are cosmetic (B39): one sent while
-// down is dropped, one past the server's limit (PING_RATE_LIMIT per PING_RATE_WINDOW_MS) is not sent
-// (the server would drop it silently), and the seat's own is kept so the board marks it for the sender.
+// (R1379000), never in the address. The token is the gate's (`setToken`), so a 4401 is final only for
+// the token it refused (R1115000). Drops and page wakes are handled as in `game/net.ts` (R1441); a
+// refusal or a voided match never reconnects. A ping past the server's limit is not sent (B39: the
+// server would drop it silently), and the seat's own is kept so the board marks it for the sender.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
@@ -47,7 +45,6 @@ import { isDuosSeat, isPingKind, parsePingTarget } from "./pings.ts";
 /** `WebSocket.OPEN`, spelled out so this module needs no DOM constant at runtime. */
 const OPEN = 1;
 
-/** The Duos socket's path, beside `/ws/match` (S6). */
 const DUOS_PATH = "/ws/duos";
 
 /** `/ws/match`'s URL (`VITE_SERVER_WS_URL`, `net/api.ts`) with its path swapped, so one variable names the server. */
@@ -156,10 +153,7 @@ export type DuosSnapshot = {
   legal: readonly DuosActionBody[];
   /** R1483000: the last view said the daily Jlore cap held back this seat's Jlore; never worked out here. */
   jloreCapped: boolean;
-  /**
-   * #1664: what the finished match paid this seat's person (`economy/xp.ts`), from the last view that
-   * carried it; null before the result is written and after a view without it.
-   */
+  /** #1664: what the finished match paid this seat's person (`economy/xp.ts`); null if the last view lacks it. */
   economy: GameEconomy | null;
   /** The last `error` frame's message, relayed verbatim, or null. */
   error: string | null;
@@ -190,7 +184,6 @@ export type DuosClientOptions = {
   matchId: string;
   /** The bearer for the next open until `setToken` gives one; defaults to the tab's session. */
   token?: () => string | null;
-  /** Defaults to `duosSocketUrl()`. */
   baseUrl?: string;
   /** Test seam. Defaults to the browser's `WebSocket`. */
   socketFactory?: SocketFactory;
@@ -240,11 +233,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   let pendingRetry: unknown = null;
   /** R1441: the monotonic reading at which the open socket was created or last heard from. */
   let heardAt = 0;
-  /**
-   * R1441: the wall clock at the same instant. The monotonic clock leaves a sleeping machine's time
-   * out on most platforms, so a socket heard just before a laptop slept would read as recent on
-   * waking; the wall clock keeps counting.
-   */
+  /** R1441: the wall clock at the same instant, which counts a sleep the monotonic clock mostly leaves out. */
   let heardWall = 0;
   /** R1441: the timer of a wake probe still waiting for its answer. */
   let probe: unknown = null;
@@ -265,7 +254,6 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     for (const listener of [...listeners]) listener();
   }
 
-  /** The pings still worth marking, plus `ping`, at most DUOS_PINGS_KEPT. */
   function withPing(ping: ReceivedPing): readonly ReceivedPing[] {
     const live = snapshot.pings.filter((kept) => ping.at - kept.at < PING_SHOW_MS);
     return [...live, ping].slice(-DUOS_PINGS_KEPT);
@@ -307,8 +295,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   function handle(frame: DuosServerFrame): void {
     switch (frame.type) {
       case "view": {
-        // A new socket's first view proves the server answered its `hello` (§9.5, §13): an error from
-        // before it (a send while the socket was down) no longer describes the match.
+        // A new socket's first view clears an error from before it (a send while the socket was down).
         const fresh = awaitingFirstView;
         awaitingFirstView = false;
         patch({
@@ -418,9 +405,8 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   }
 
   /**
-   * R1441: lets go of `stale` without waiting for it (a dead peer never answers a close) and opens
-   * its successor, which sends `hello` as any new socket does. The new socket opens before the old
-   * one is closed, so the server meets the successor first when both reach it.
+   * R1441: lets go of `stale` without waiting for it (a dead peer never answers a close), opening
+   * its successor before closing it, so the server meets the successor first when both reach it.
    */
   function replace(stale: SocketLike): void {
     socket = null;
@@ -439,11 +425,9 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   }
 
   /**
-   * R1441: the page woke (its tab turned visible, the network came back). A phone that changed
-   * networks or a laptop that slept can leave a socket that never reports its own end, and the
-   * browser answers the server's pings without telling the page, so a quiet socket looks the same as
-   * a dead one. A socket heard from lately is left alone. One that is not is asked for a full view
-   * (`hello`, §9.5), and replaced if nothing comes back within `WAKE_PROBE_MS`: a healthy one answers
+   * R1441: the page woke. A socket that slept or changed networks may never report its end, and
+   * a quiet one looks the same as a dead one, so one not heard from lately is asked for a full view
+   * (`hello`, §9.5) and replaced if nothing comes back within `WAKE_PROBE_MS`: a healthy one answers
    * and is kept, so a tab switch never flashes the teammate's disconnect grace.
    */
   function onWake(): void {
@@ -482,7 +466,6 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     snapshot: () => snapshot,
     connect: () => {
       stopped = false;
-      // A backoff still waiting is cut short: the socket opens now (the route's Reconnect now).
       cancelRetry();
       unwake ??= wake(onWake);
       open();
@@ -541,7 +524,6 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     url: () => base,
     setToken: (next) => {
       given = next;
-      // R1115000: after a 4401, a token other than the one it refused opens one more socket.
       if (refusedToken === null || next === refusedToken) return;
       refusedToken = null;
       // A view does not clear an error here, so the refusal's reason goes now.
@@ -559,7 +541,6 @@ export type UseDuosMatchOptions = Omit<DuosClientOptions, "token" | "monotonic" 
 };
 
 export type UseDuosMatchResult = DuosSnapshot & {
-  /** Open a socket now rather than at the end of the backoff (the route's Reconnect now). */
   connect: () => void;
   send: (body: DuosActionBody) => void;
   sendPing: (ping: PingKind, target: PingTarget) => void;

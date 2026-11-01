@@ -1,10 +1,6 @@
-// The HUD mute button (SPEC §10.11 "Settings"). It reads and writes the audio settings store; the
-// engine hears the change through its own subscription. Task 7 may move it into its HUD; until then
-// `audio.css` pins it to the top-right corner.
-//
-// Unmuting answers with a click (B54). The page-wide tick (uiSounds.ts) listens in the capture
-// phase, so it runs before this handler, while the store still says muted, and is refused; without
-// a tick of its own here, turning sound back on would be the one silent click on the page.
+// The HUD mute button (SPEC §10.11 "Settings"): it writes the audio settings store, which the engine
+// subscribes to. Unmuting answers with a click (B54): the page-wide tick (uiSounds.ts) runs in the capture
+// phase, before this handler, while the store still says muted, and is refused, so this one plays its own.
 
 import type { ReactElement } from "react";
 

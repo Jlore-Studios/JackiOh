@@ -1,11 +1,6 @@
-// Patch v0.2.0's events on the effects layer (docs/classic-sets.md B3, B5; SPEC §10.10). Each new
-// event's ANIMATIONS row names a recipe, and the planner gives it a look of its own: an announced play
-// hangs under a sheen, a countered one shatters, a stolen card flies to its thief's hand, an unlock
-// snaps the chains, an Animated card lifts from its backrow zone into its unit zone and back, Brittle
-// crumbles like glass, a redirected hit flies from its old target to its new one, a hero's health set
-// reads as the way it went, a flicker blinks out and back, and Rollback rewinds the board. R200 binds
-// every one (inside the entry, gone within the tail) and R202 too (a ghost is a card back; the
-// sentinel plans what any card would).
+// The events of docs/classic-sets.md B3 and B5 on the effects layer (SPEC §10.10): each one's ANIMATIONS
+// row names a recipe, and the planner gives it a look of its own. R200 binds every one (inside the entry,
+// gone within the tail) and R202 too (a ghost is a card back; the sentinel plans what any card would).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

@@ -1,6 +1,5 @@
-// The lesson path (tutorial/TutorialPath.tsx): every lesson in order with what it teaches, its
-// status in words, and a button that starts, replays or explains why it is locked; and R322's Hide
-// tutorial and Show tutorial.
+// The lesson path (tutorial/TutorialPath.tsx): every lesson in order, its status and its button; and
+// R322's Hide tutorial and Show tutorial.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -130,7 +129,6 @@ describe("the lesson path", () => {
     fireEvent.click(button(lesson(1)));
     expect(onStart).toHaveBeenLastCalledWith(lesson(1));
 
-    // Continue: the next lesson, one press from the path's header.
     expect(screen.getByTestId(tutorialTestid.continue)).toHaveTextContent("Continue: Lesson 2");
     fireEvent.click(screen.getByTestId(tutorialTestid.continue));
     expect(onStart).toHaveBeenLastCalledWith(lesson(2));

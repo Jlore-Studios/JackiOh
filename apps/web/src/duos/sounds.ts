@@ -1,6 +1,6 @@
-// A received ping's sound (#936 B64): each ping plays one of the recipes `audio/sfx.ts` already
-// synthesizes, chosen for what the ping says, so the ear tells a "careful" from a "kill this" without
-// looking. No binary asset and no new recipe: the Web Audio synthesis the board's cues already use.
+// A received ping's sound (#936 B64): one of the recipes `audio/sfx.ts` already synthesizes, chosen
+// for what the ping says, so the ear tells a "careful" from a "kill this" without looking. No binary
+// asset and no new recipe.
 
 import { getAudioEngine, type SfxId } from "../audio/index.ts";
 import type { SfxParams } from "../audio/types.ts";

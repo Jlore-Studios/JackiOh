@@ -64,11 +64,7 @@ export type PersonaName = "balanced" | "polite" | "bm" | "silent";
 export type PersonaSpec = {
   /** The share of AI opponents dealt this persona at match creation; weights sum to 1. */
   readonly weight: number;
-  /**
-   * §6's caps: most emotes within one of the AI's own turns (`ownTurn`) or one of the player's
-   * (`otherTurn`), and per match (`match`) — the mulligan greeting and the end-of-match emotes
-   * exempted from the last.
-   */
+  /** §6's caps per turn and per match; the mulligan greeting and the end-of-match emotes skip `match`. */
   readonly caps: { readonly ownTurn: number; readonly otherTurn: number; readonly match: number };
   readonly triggers: Partial<Record<EmoteTrigger, { readonly chance: number; readonly pool: readonly EmoteId[] }>>;
   readonly replies: Partial<Record<EmoteReplyKey, { readonly chance: number; readonly pool: readonly EmoteId[] }>>;
@@ -173,7 +169,6 @@ export function pickPersona(rng: () => number): PersonaName {
   return "silent";
 }
 
-/** The uniform pick from a pool, or null for an empty one. */
 function pickFrom(pool: readonly EmoteId[], rng: () => number): EmoteId | null {
   const at = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
   return pool[at] ?? null;
@@ -332,7 +327,6 @@ export function createEmotePersona(opts: {
     const moment = { active: view.active, phase: view.phase };
     lastMoment = moment;
 
-    // Mulligan end is the transition away from a previous mulligan view.
     if (prev?.mulligan !== undefined && view.mulligan === undefined) {
       out.push(...emit(rollForTrigger(persona, "mulliganEnd", rng, hand), moment, now, true));
     }

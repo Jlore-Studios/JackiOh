@@ -19,7 +19,6 @@ import { COACH_HOLD, createCoachTracker, suggestedAction, type CoachSource, type
 
 const VANILLA = "core-008";
 
-/** The fake lesson: a welcome that holds the AI, a play step, an end-turn step, and one tip. */
 const SCRIPT: LessonScript = {
   lessonId: "fake",
   steps: [
@@ -116,11 +115,7 @@ let tracker: CoachTracker | null = null;
 type DockStub = { set(matches: boolean): void; restore(): void };
 let dockStub: DockStub | null = null;
 
-/**
- * The board's phone layouts, as `window.matchMedia(COACH_DOCK_QUERY)` reports them (jsdom has no
- * media queries: test/setup.ts's stub answers only reduced motion). `set` flips it the way turning
- * a phone does, firing the query's `change`.
- */
+/** The board's phone layouts as `matchMedia(COACH_DOCK_QUERY)` reports them; `set` fires the query's `change`. */
 function phoneLayout(matches: boolean): DockStub {
   const listeners = new Set<() => void>();
   let now = matches;
@@ -164,10 +159,7 @@ function textHeights(scrollHeight: number, clientHeight: number): void {
   });
 }
 
-/**
- * A new snapshot arrives. Its display shows a microtask later, once the board has had its chance to
- * mark what it animates (Coach.tsx `useCaughtUp`).
- */
+/** Its display shows a microtask later, once the board has marked what it animates (Coach.tsx `useCaughtUp`). */
 async function arrive(source: FakeSource, snapshot: PracticeSnapshot): Promise<void> {
   await act(async () => {
     source.push(snapshot);
@@ -237,7 +229,6 @@ describe("the coach bubble", () => {
     expect(bubble()).toHaveAttribute("data-coach-anchor", "hand-card-h1");
     expect(bubble()).toHaveTextContent("You have 4 mana: play Mr. Vanilla.");
     expect(bubble()).toHaveTextContent("2 / 3");
-    // An act step has no Got it: the player does what it says.
     expect(screen.queryByTestId(tutorialTestid.coachAck)).toBeNull();
   });
 
@@ -246,13 +237,10 @@ describe("the coach bubble", () => {
     source.push(snap(myTurn(1)));
     mount(source, boardWith([]));
 
-    // The welcome, an info step.
     expect(buttonsInBubble()).toEqual(["Got it"]);
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));
-    // "Play a unit", an act step: the player does what it says, and it moves on when the board shows it.
     expect(bubble()).toHaveAttribute("data-coach-step", "play");
     expect(buttonsInBubble()).toEqual([]);
-    // A tip, in front of it.
     await arrive(source, snap(myTurn(1, { you: emptySide("p1", { libraryCount: 0, hand: [card({ instanceId: "h1", defId: VANILLA, cost: 1 })] }) })));
     expect(bubble()).toHaveAttribute("data-coach-mode", "tip");
     expect(buttonsInBubble()).toEqual(["Got it"]);
@@ -302,7 +290,6 @@ describe("the coach bubble", () => {
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));
     expect(source.setHold).toHaveBeenLastCalledWith(COACH_HOLD, false);
 
-    // A holdAi tip arrives: held again until "Got it"; then the tracker goes and nothing is held.
     await arrive(source, snap(myTurn(1, { you: emptySide("p1", { libraryCount: 0, hand: [card({ instanceId: "h1", defId: VANILLA })] }) })));
     expect(bubble()).toHaveAttribute("data-coach-mode", "tip");
     expect(bubble()).toHaveTextContent("Tip");
@@ -357,7 +344,7 @@ describe("the coach bubble", () => {
     const source = fakeSource();
     source.push(snap(myTurn(2, { active: "p2" }), [], true));
     mount(source, boardWith([]));
-    // The welcome is an info step with no `when`: it shows even now. Got it reaches "play".
+    // The welcome has no `when`, so it shows even now; Got it reaches "play".
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));
     const el = bubble();
     expect(el).toHaveAttribute("data-coach-mode", "waiting");
@@ -375,7 +362,6 @@ describe("the coach bubble", () => {
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));
     expect(bubble()).toHaveAttribute("data-coach-step", "play");
 
-    // The play lands, and the board animates it: the bubble keeps the step it was on, marked stale.
     root.firstElementChild?.setAttribute("data-animating", "summoned");
     act(() => {
       source.push(snap(myTurn(1, { you: emptySide("p1", { hand: [] }) }), [{ type: "endTurn" }]));
@@ -384,7 +370,6 @@ describe("the coach bubble", () => {
     expect(bubble()).toHaveAttribute("data-coach-step", "play");
     expect(bubble()).toHaveAttribute("data-stale", "true");
 
-    // The board catches up.
     await act(async () => {
       root.firstElementChild?.removeAttribute("data-animating");
       await Promise.resolve();
@@ -400,8 +385,7 @@ describe("the coach bubble", () => {
     mount(source, root);
     expect(bubble()).toHaveAttribute("data-coach-step", "welcome");
 
-    // The last card is drawn while the board animates: the tip it raises waits behind the welcome,
-    // marked stale, and the welcome's Got it neither dismisses the tip nor completes the welcome.
+    // The welcome's Got it, pressed while the tip waits behind it, neither dismisses the tip nor completes it.
     root.firstElementChild?.setAttribute("data-animating", "drawn");
     act(() => {
       source.push(snap(myTurn(1, { you: emptySide("p1", { libraryCount: 0, hand: [card({ instanceId: "h1", defId: VANILLA, cost: 1 })] }) })));
@@ -413,7 +397,6 @@ describe("the coach bubble", () => {
     expect(tracker?.getState().display).toMatchObject({ mode: "tip", id: "fatigue" });
     expect(tracker?.getState().coach.outcomes).toEqual({});
 
-    // The board catches up, and the tip shows with its own Got it.
     await act(async () => {
       root.firstElementChild?.removeAttribute("data-animating");
       await Promise.resolve();
@@ -431,8 +414,8 @@ describe("the coach bubble", () => {
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));
     expect(bubble()).toHaveAttribute("data-coach-step", "play");
 
-    // The snapshot lands; the board draws `data-animating` in the render after it (Game.tsx plans
-    // the events in a layout effect), which here is after the coach's own effect has run.
+    // The board draws `data-animating` in the render after the snapshot (Game.tsx plans the events in a
+    // layout effect), which here is after the coach's own effect has run.
     act(() => {
       source.push(snap(myTurn(1, { you: emptySide("p1", { hand: [] }) }), [{ type: "endTurn" }]));
     });
@@ -463,7 +446,6 @@ describe("the coach bubble", () => {
     expect(bubble()).toHaveAttribute("data-coach-step", "play");
     expect(bubble()).toHaveAttribute("data-stale", "true");
 
-    // The card goes down: the display the board has caught up with shows.
     await act(async () => {
       showcase.remove();
       await Promise.resolve();
@@ -475,7 +457,6 @@ describe("the coach bubble", () => {
     const stuck = document.createElement("div");
     stuck.setAttribute("data-showcase", "played");
     document.body.appendChild(stuck);
-    // A new turn: the last step is done, and the lesson's coach has nothing more to show.
     await arrive(source, snap(myTurn(2), [{ type: "endTurn" }]));
     expect(tracker?.getState().display).toEqual({ mode: "finished" });
     expect(bubble()).toHaveAttribute("data-coach-step", "end");
@@ -521,14 +502,12 @@ describe("the coach bubble", () => {
     expect(bubble()).toHaveAttribute("data-coach-anchor", "hand-you");
     expect(screen.queryByTestId(tutorialTestid.coachRing)).toBeNull();
 
-    // The same element inside the prompt (a card the picker offers) is what the step points at.
     act(() => {
       sheet.appendChild(root.firstElementChild as Element);
       window.dispatchEvent(new Event("resize"));
     });
     expect(screen.getByTestId(tutorialTestid.coachRing)).toBeInTheDocument();
 
-    // A prompt clear of the anchor (a desktop's picker in the sidebar) hides nothing.
     act(() => {
       root.appendChild(sheet.firstElementChild as Element);
       sheet.getBoundingClientRect = () =>
@@ -587,7 +566,6 @@ describe("the coach bubble", () => {
     const source = fakeSource();
     source.push(snap(myTurn(1)));
     tracker = createCoachTracker(source, SCRIPT);
-    // The welcome expects nothing.
     expect(suggestedAction(SCRIPT, tracker.getState())).toBeNull();
     tracker.ack();
     expect(suggestedAction(SCRIPT, tracker.getState())).toEqual(PLAY);
@@ -620,7 +598,6 @@ describe("the coach on a phone: a panel between the HUD and the board", () => {
     expect(el).not.toHaveAttribute("data-coach-side");
     expect(el.getAttribute("style") ?? "").toBe("");
     expect(el).toHaveAttribute("data-placed", "true");
-    // The same contract as the bubble: what it says, what it points at, and its buttons.
     expect(el).toHaveAttribute("data-coach-mode", "step");
     expect(el).toHaveAttribute("data-coach-step", "welcome");
     expect(el).toHaveAttribute("data-coach-anchor", "hand-you");
@@ -628,7 +605,6 @@ describe("the coach on a phone: a panel between the HUD and the board", () => {
     expect(el).toHaveTextContent("These cards are your hand.");
     expect(el).toHaveTextContent("1 / 3");
     expect(buttonsInBubble()).toEqual(["Got it"]);
-    // "Got it" still takes the focus, and the ring still marks the anchor on the board.
     expect(screen.getByTestId(tutorialTestid.coachAck)).toHaveFocus();
     expect(screen.getByTestId(tutorialTestid.coachRing).style.left).toBe("94px");
   });
@@ -663,11 +639,9 @@ describe("the coach on a phone: a panel between the HUD and the board", () => {
     source.push(snap(myTurn(1)));
     mount(source, boardWith(["hand-you", "hand-card-h1"]));
     expect(bubble()).toHaveAttribute("data-expanded", "false");
-    // Everything fits: no More.
     textHeights(36, 36);
     expect(screen.queryByRole("button", { name: "More" })).toBeNull();
 
-    // The text runs past the panel's lines.
     textHeights(72, 54);
     const more = screen.getByRole("button", { name: "More" });
     expect(more).toHaveAttribute("aria-expanded", "false");
@@ -680,14 +654,12 @@ describe("the coach on a phone: a panel between the HUD and the board", () => {
     // Unfolded, the text no longer runs over, and Less stays.
     textHeights(72, 72);
     expect(screen.getByRole("button", { name: "Less" })).toBe(more);
-    // Folded, it will run over again (the page clamps it before the coach measures): the same
-    // button says More, so a keyboard user's focus stays on it.
+    // The same button says More again, so a keyboard user's focus stays on it.
     textHeights(72, 54);
     fireEvent.click(less);
     expect(bubble()).toHaveAttribute("data-expanded", "false");
     expect(screen.getByRole("button", { name: "More" })).toBe(more);
 
-    // Opened again, then the step changes: the next one starts folded.
     fireEvent.click(screen.getByRole("button", { name: "More" }));
     expect(bubble()).toHaveAttribute("data-expanded", "true");
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));

@@ -1,8 +1,6 @@
 /**
- * The pooled particle system (docs/polish/1-animations.md, S5; B23–B26).
- *
- * Particles live in a struct of arrays sized to the capacity, so a busy board allocates nothing after
- * construction. A ring cursor takes the next free slot, or overwrites the oldest once the pool is full.
+ * The pooled particle system (docs/polish/1-animations.md, S5; B23–B26). Particles live in a struct of arrays
+ * sized to the capacity, so a busy board allocates nothing after construction; a full pool overwrites the oldest.
  * Every random draw comes from the injected `FxRng`, so one seed gives the same particles.
  */
 import { PARTICLE_PRESETS, PRESET_ORDER, type ParticlePresetSpec } from "./presets.ts";
@@ -10,19 +8,13 @@ import type { FxRng } from "./rng.ts";
 import { createSpriteCache, domSpriteCanvas, type SpriteCache } from "./sprites.ts";
 import type { FxBox, FxPreset, FxSpread } from "./types.ts";
 
-/**
- * `scale` multiplies each particle's size; absent, 1. `colors` (#1447) replaces the preset's palette for this
- * emit, hot first: the preset still gives the particles their shape and physics. Absent or empty: the preset's.
- */
+/** `scale` (default 1) multiplies each particle's size; a non-empty `colors` (#1447, hot first) replaces only the palette. */
 export type EmitOptions = { count: number; spread: FxSpread; box: FxBox; power: number; scale?: number; colors?: readonly string[] };
 
 export type ParticleSystem = {
   /** Emits at (x, y), or across `box` for "area" and around its ellipse for "ring". Returns how many. */
   emit(preset: FxPreset, x: number, y: number, options: EmitOptions): number;
-  /**
-   * Moves every particle by `dtMs` (the clamped frame time) and ages it by `ageMs` (real time, default
-   * `dtMs`): a stalled frame never flings a particle nor keeps one alive past its wall-clock life (R200).
-   */
+  /** Moves by `dtMs` (clamped), ages by `ageMs` (real time, default `dtMs`): a stalled frame never flings a particle nor keeps one alive (R200). */
   step(dtMs: number, ageMs?: number): void;
   /** Draws every live particle; a null sprite falls back to a filled arc in the preset color. */
   draw(ctx: CanvasRenderingContext2D, dpr: number): void;

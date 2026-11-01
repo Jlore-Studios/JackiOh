@@ -1,7 +1,5 @@
 // R1242000, issue #1242: a finished co-op replay downloads as one JSON file of the caller's seat's
-// views, and opens again from it. `duosReplayJson` holds only the format, the version, the catalog
-// version, the seat and each step's index, round and view; `parseDuosReplayJson` reads that shape
-// back under the 1v1 file's caps and sentences.
+// views, and opens again from it under the 1v1 file's caps and sentences.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import { describe, expect, it } from "vitest";

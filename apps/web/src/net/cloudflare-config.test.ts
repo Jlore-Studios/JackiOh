@@ -1,8 +1,6 @@
-// Cloudflare production must match Vercel staging: routes, 404s and security headers.
-// `vercel.json` is source of truth; this holds redirects, headers and Wrangler configuration to it,
-// but for the one header only staging sends (`X-Robots-Tag: noindex`, #770).
-// Cloudflare rewrites target `/`, list both slash spellings and use `404-page`.
-// Generated static pages need a folder rule; Vercel serves files before rewrites.
+// Cloudflare production must match Vercel staging (`vercel.json`, the source of truth): routes, 404s and
+// headers, but for the one header only staging sends (#770). Cloudflare rewrites target `/`, list both
+// slash spellings and use `404-page`; generated static pages need a folder rule, as Vercel serves files first.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -32,9 +30,8 @@ const isStagingOnly = (header: Header): boolean =>
   header.key === STAGING_ONLY_HEADER.key && header.value === STAGING_ONLY_HEADER.value;
 
 /**
- * The header blocks `_headers` must hold for these vercel.json blocks: each path in Cloudflare's
- * spelling (`(.*)` as `*`), and the every-path block without STAGING_ONLY_HEADER. Every other
- * header, value and path is copied as it is, so any other difference fails the comparison.
+ * The `_headers` blocks for these vercel.json blocks: paths in Cloudflare's spelling (`(.*)` as `*`),
+ * the every-path block without STAGING_ONLY_HEADER, the rest as is, so any other difference fails.
  */
 function productionHeaders(staging: VercelConfig["headers"]): HeaderBlock[] {
   return staging.map((block) => ({
@@ -90,7 +87,7 @@ describe("public/_redirects", () => {
 
   it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays, the replay list's old home).
+      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays).
       .filter(([name]) => name !== "hotseat" && name !== "duosDev")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     for (const path of fixed) {

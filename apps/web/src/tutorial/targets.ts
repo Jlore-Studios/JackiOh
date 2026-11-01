@@ -1,9 +1,6 @@
-// A coach anchor as the `data-testid`s the board already renders (game/contract.ts, BUILD M5-T1).
-//
-// The view names the instance behind a definition (the human's hand, both sides' units), so the
-// coach finds "Mr. Vanilla in your hand" as `hand-card-<instanceId>` without a hook into the board.
-// An anchor the view cannot place (the card has left the hand) resolves to nothing, and the coach
-// shows its bubble without a mark.
+// A coach anchor as the `data-testid`s the board already renders (game/contract.ts, BUILD M5-T1), so
+// the coach needs no hook into the board. An anchor the view cannot place resolves to nothing, and the
+// coach shows its bubble without a mark.
 
 import type { PlayerView } from "@jackioh/shared";
 

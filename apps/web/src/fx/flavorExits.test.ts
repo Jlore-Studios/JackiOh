@@ -1,7 +1,5 @@
-// #1446: a Unit's death exit takes its flavor. The `death` recipe (cues.ts) keeps today's
-// motion underneath and appends one exit per flavor from `FLAVOR_EXITS` (exits.ts).
-// A death the view does not show face-up keeps today's cue (R202), and reduced motion and
-// intensity off keep the death's fallback.
+// #1446: the `death` recipe (cues.ts) appends one exit per flavor from `FLAVOR_EXITS` (exits.ts) over its
+// base motion. A death the view does not show face-up keeps the base cue (R202).
 
 import type { BackrowView, Flavor, GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";

@@ -1,10 +1,7 @@
-// R2102000, R2291000: the practice core's lethal hint. In every game against the AI (each tier, a
-// sandbox game, a tutorial lesson), every snapshot asks `lethalHint` for the human's seat and carries
-// `lethal: true` when it says yes. A check that throws gives no hint and the game goes on.
-//
-// `@jackioh/ai` is mocked with a `lethalHint` that is the real one until a test tells it to answer
-// yes or throw, and that records the seats and deadlines it was asked with. The check's own tests, the hidden-card
-// invariance among them, are the Rust AI's (`crates/ai/tests/ai/lethal_hint.rs`).
+// R2102000, R2291000: the practice core's lethal hint. In every game against the AI, every snapshot asks
+// `lethalHint` for the human's seat and carries `lethal: true` when it says yes; one that throws gives no
+// hint. The mocked `lethalHint` is the real one until a test says otherwise; the check's own tests, the
+// hidden-card invariance among them, are the Rust AI's (`crates/ai/tests/ai/lethal_hint.rs`).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -1,32 +1,18 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B35, B36 and B37: the pre-rendered voice set
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
 //
-//   B35  the expected files (one `<defId>-<hook>` per hook in card-audio.json5 that names a voice,
-//        which covers a play, an attack (R1448) and a death line per catalog Unit and one cast line
-//        per anything else)
-//        exist under apps/web/public/audio/voice/, each an MP4 with `ftyp` at byte 4 and brand
-//        `M4A ` at byte 8; the manifest lists exactly those keys with each file's size and its
-//        recomputed voiceHash; the directory holds nothing else.
-//        Each file's MP4 header (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
-//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501, 12 MiB since R1448, 16 MiB since R1884000).
-//   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
-//        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
-//        `core-004-play`.
-//   R655 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
-//        voice lines, each hashing as the manifest records; and a hook that is only an effect expects
-//        no file, though since R1448 a unit's attack hook names a voice like its play and death.
-//
-// The Surface's `--check` contract (every expected key has a manifest entry whose hash matches and
-// a file of that size, no orphan files or entries; otherwise one line per problem, each starting
-// with the key, and exit 1) is what the further B37 cases below exercise, one broken thing at a
-// time, each in its own copy of the tree.
+//   B35  exactly one `<defId>-<hook>` file under apps/web/public/audio/voice/ per hook in card-audio.json5
+//        that names a voice (R1448's attack line among them), each an MP4 within VOICE_FILE_MAX_MS, and a
+//        manifest of exactly those keys with each file's size and voiceHash.
+//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (R501, R1448, R1884000).
+//   B37  `--check` exits 0 on the committed tree; on a temp copy with one thing broken it exits 1 with
+//        one line per problem, each starting with the key (the Surface's contract).
+//   R655 the manifest's keys are exactly the file's voice lines; an effect-only hook expects no file.
 //
 // voiceHash = sha1(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).hex.slice(0, 16), keys in
-// exactly that order, over the fields of the voice the hook names, for a voice rendered by macOS
-// `say`; and, since R501, sha1(JSON.stringify({ v: 1, backend: "sapi", voice, rate, semitones,
-// filter, text })) for one rendered by Windows SAPI and ffmpeg. Both are recomputed here from the
-// formula, never imported, so the script and this test cannot share a mistake. The edits below
-// parse a temp copy with JSON5 and write it back as JSON, which is JSON5 too.
+// exactly that order, for a voice rendered by macOS `say`; sha1(JSON.stringify({ v: 1, backend: "sapi",
+// voice, rate, semitones, filter, text })) for one rendered by Windows SAPI (R501). Both are recomputed
+// here from the formula, never imported, so the script and this test cannot share a mistake.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -146,10 +132,7 @@ const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
   isRecord(AUDIO.emotes) ? AUDIO.emotes : {},
 ).flatMap((portrait) => EMOTE_LINES.map((line) => `emote-${portrait}-${line}`));
 
-/**
- * Every hook the committed file voices, plus every emote line; a hook that is only an effect
- * renders no file.
- */
+/** Every hook the committed file voices, plus every emote line. */
 const EXPECTED_KEYS: readonly string[] = [...voicedKeys(AUDIO).filter(voicedNow), ...EXPECTED_EMOTE_KEYS];
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
 /** Core's own count (44 units with three lines each, 67 spells and traps) plus whatever the other sets bring. */
@@ -344,8 +327,6 @@ function expectReported(root: string, keys: readonly string[]): void {
   expect(reportedKeys(run), `only the broken keys are reported; ${describeRun(run)}`).toEqual([...keys].sort());
 }
 
-// B35
-
 describe("the committed voice files (B35)", () => {
   it("B35 R1448 expects a play, an attack and a death line per unit and one cast line per spell and trap, Core's 199 among them", () => {
     expect(new Set(EXPECTED_KEYS).size, "no key twice").toBe(EXPECTED_FILE_COUNT);
@@ -451,8 +432,6 @@ describe("the committed voice files (B35)", () => {
   });
 });
 
-// B36
-
 describe("the voice budget (B36)", () => {
   it("B36 R501 R1448 R1884000 fits the whole set into VOICE_BUDGET_BYTES (16 MiB), counted in 4 KiB blocks", () => {
     expect(VOICE_BUDGET_BYTES, "the budget R1884000 fixes").toBe(16 * 1024 * 1024);
@@ -462,8 +441,6 @@ describe("the voice budget (B36)", () => {
     expect(onDisk, "sum of ceil(bytes / 4096) * 4096").toBeLessThanOrEqual(VOICE_BUDGET_BYTES);
   });
 });
-
-// R655
 
 describe("the move to card-audio.json5 (R655)", () => {
   it("R655 carries every voice line over: the manifest's keys are the file's voice lines, each hashing as the manifest records", () => {
@@ -494,8 +471,6 @@ describe("the move to card-audio.json5 (R655)", () => {
     expect(effectOnly, "hooks that name no voice").toEqual([]);
   });
 });
-
-// B37
 
 describe("gen-voice.mjs --check (B37)", () => {
   beforeAll(() => {
@@ -630,10 +605,7 @@ describe("gen-voice.mjs --check (B37)", () => {
     CHECK_TIMEOUT_MS,
   );
 
-  /**
-   * R501: a line voiced by a Windows SAPI voice, on a card a given catalog holds. The card is
-   * invented (`classicplus-999`), so no real catalog ever has it, and its file is a copy of a real one.
-   */
+  /** R501: a line voiced by a Windows SAPI voice, on an invented card no real catalog has. */
   function sapiTree(): { root: string; catalog: string } {
     const root = copyWebTree();
     const voice = { backend: "sapi", voice: "Microsoft Zira Desktop", rate: 5, semitones: -2, filter: "lowpass=f=3500", web: { pitch: 1, rate: 1 } };
@@ -654,10 +626,7 @@ describe("gen-voice.mjs --check (B37)", () => {
     return { root, catalog };
   }
 
-  /**
-   * R1420: a voiced card of `set` that the catalog --catalog names holds and no file renders, with
-   * the committed voices and an invented id (`meditative-999`), so no real catalog has it.
-   */
+  /** R1420: a voiced card of `set`, an invented id the --catalog holds, that no file renders. */
   function unrenderedTree(set: string): { root: string; catalog: string } {
     const root = copyWebTree();
     editAudio(root, (table) => {

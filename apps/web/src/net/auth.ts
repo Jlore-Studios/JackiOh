@@ -1,7 +1,6 @@
 // Client-side auth requests under SPEC §9.2; the server verifies returned tokens.
 // `net/session.ts` owns storage (M8 e2e contract, A6); a verified account stays pending until §9.4's invite.
 // Emailed links use PKCE when possible (R323, R324); the client never exposes provider text (R160).
-// Auth flow rules: R192, R194, R663, R664, R665 and R666.
 // BUILD M6-T1's server-only scope leaves client sign-in to this module.
 
 import {
@@ -30,12 +29,10 @@ export type AuthEndpoint =
   | "resend"
   | "recover"
   | "updatePassword"
-  /** R663: an email change. */
   | "changeEmail"
   | "refresh"
   /** R664: mail a sign-in link and code. */
   | "otp"
-  /** R664: a mailed sign-in code. */
   | "verifyOtp"
   /** R665: an authenticator app's code (enrolling, or signing in). */
   | "mfaVerify"
@@ -44,7 +41,6 @@ export type AuthEndpoint =
 
 export type AuthFailure =
   | "credentials"
-  /** R1443: a sign-in by username, refused. */
   | "usernameCredentials"
   /** R1443, R192: a sign-in by username, refused for going too fast, by name or by address. */
   | "usernameRateLimited"
@@ -79,10 +75,10 @@ export const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an a
 export const USERNAME_SIGN_IN_FAILED_MESSAGE = "That username and password do not match an account.";
 export const SIGN_UP_FAILED_MESSAGE = "Could not create that account.";
 
-/** What a player reads when this build has no auth provider. The fix goes to the console instead. */
+/** What a player reads when this build has no auth provider. */
 export const AUTH_UNCONFIGURED_MESSAGE = "Sign-in isn't available on this site right now.";
 
-/** For whoever opens the console on a build with no auth provider; never shown on the page. */
+/** For the console only, never shown on the page. */
 const AUTH_UNCONFIGURED_DETAIL =
   "No auth provider configured: this build was made without VITE_SUPABASE_URL and " +
   "VITE_SUPABASE_PUBLISHABLE_KEY. Set both in the web app's .env (see its .env.example) and rebuild.";
@@ -127,7 +123,6 @@ export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
 /** Unit conversion, not configuration. */
 const SECONDS_PER_MINUTE = 60;
 
-/** Format the provider's mail interval for notices. */
 function mailInterval(): { span: string; wait: string } {
   const seconds = AUTH_EMAIL_RESEND_COOLDOWN_SECONDS;
   if (seconds % SECONDS_PER_MINUTE === 0) {
@@ -145,7 +140,6 @@ const MAIL_INTERVAL_NOTE =
   `If one went out in the last ${MAIL_INTERVAL.span}, from any device, this one can't: ` +
   `wait ${MAIL_INTERVAL.wait}, then ask again.`;
 
-/** Screen notices. */
 export const AUTH_NOTICES: Readonly<{
   signUpSent: string;
   resendSent: string;
@@ -254,7 +248,6 @@ const WEAK_PASSWORD_REASONS: ReadonlyArray<readonly [string, AuthFailure]> = [
   ["pwned", "weakPasswordPwned"],
 ];
 
-/** Recognized weak-password reasons, in display order. */
 function weakPasswordFailures(body: unknown): AuthFailure[] {
   if (typeof body !== "object" || body === null) return [];
   const detail = (body as { weak_password?: unknown }).weak_password;
@@ -264,7 +257,6 @@ function weakPasswordFailures(body: unknown): AuthFailure[] {
   return WEAK_PASSWORD_REASONS.filter(([reason]) => reasons.includes(reason)).map(([, failure]) => failure);
 }
 
-/** The first weak-password reason; no reason, or none we know, is the plain `weakPassword`. */
 function weakPasswordFailure(body: unknown): AuthFailure {
   return weakPasswordFailures(body)[0] ?? "weakPassword";
 }
@@ -359,7 +351,6 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
   return genericRefusal(endpoint);
 }
 
-/** Turn a classified provider refusal into the caller's error. */
 export function providerRefusal(endpoint: AuthEndpoint, status: number, body: unknown): AuthError {
   const failure = classifyProviderRefusal(endpoint, status, body);
   const reasons = weakPasswordFailures(body);
@@ -371,7 +362,6 @@ export function providerRefusal(endpoint: AuthEndpoint, status: number, body: un
 
 export type AuthConfig = { url: string; publishableKey: string };
 
-/** Public auth configuration, or null for a deployment without auth. */
 export function authConfig(): AuthConfig | null {
   const url: unknown = import.meta.env.VITE_SUPABASE_URL;
   const publishableKey: unknown = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -415,7 +405,7 @@ type ProviderRequest = {
   method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   body?: Record<string, unknown>;
-  /** A session call carries the access token; an anonymous one carries the publishable key. */
+  /** A session call's access token; an anonymous one sends the publishable key. */
   bearer?: string;
   keepalive?: boolean;
 };
@@ -514,7 +504,6 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     path: "/auth/v1/token?grant_type=password",
     body: { email, password },
   });
-  // R160: every account-dependent refusal is one message.
   if (!isSuccess(status)) throw new AuthError(classifyProviderRefusal("signIn", status, json));
 
   const body = (json ?? {}) as TokenResponse;
@@ -539,7 +528,7 @@ type UsernameSignInResponse = {
   secondFactor?: unknown;
 };
 
-/** The failure a refused username sign-in reads as: our own sentences, never the server's text. */
+/** Our own sentences, never the server's text. */
 function usernameRefusal(cause: unknown): AuthFailure {
   if (!(cause instanceof ApiRequestError)) return "network";
   if (cause.status === 401) return "usernameCredentials";
@@ -548,10 +537,9 @@ function usernameRefusal(cause: unknown): AuthFailure {
 }
 
 /**
- * R1443: a sign-in by username. The provider signs in by email alone and this client never learns
- * another player's address, so our server makes the password grant for the account that holds the
- * name and answers the session it got, never the address. What follows is a password sign-in's:
- * the session is the provider's, renewed and ended against it.
+ * R1443: the provider signs in by email alone and this client never learns another player's address,
+ * so our server makes the password grant for the name's account and answers only the session, which
+ * is then the provider's, renewed and ended against it as a password sign-in's.
  */
 export async function signInWithUsername(username: string, password: string): Promise<SignInResult> {
   requireConfig();
@@ -579,7 +567,6 @@ export async function signInWithUsername(username: string, password: string): Pr
   const secondFactor = body?.secondFactor;
   return {
     session,
-    // §9.4: only the server trusts verification; this is screen wording.
     emailVerified: body?.emailVerified === true,
     secondFactor: typeof secondFactor === "string" && secondFactor.length > 0 ? secondFactor : null,
   };
@@ -610,7 +597,6 @@ function mailerRefusal(endpoint: "resend" | "recover" | "otp", status: number, j
   return failure === "invalidEmail" ? new AuthError(failure) : null;
 }
 
-/** R192: resend confirmation without disclosing account state. */
 export async function resendConfirmation(email: string): Promise<void> {
   const config = requireConfig();
   const { status, json } = await send(config, {
@@ -650,7 +636,7 @@ export function isAuthCode(code: string): boolean {
 }
 
 export type CodeExchange =
-  /** The code and a verifier here matched: the link's session, and which kind of link it was. */
+  /** A verifier here matched the code: the link's session, and which kind of link it was. */
   | { kind: "session"; session: Session; flow: PkceFlow; secondFactor: string | null }
   /** R324: a code without a local verifier came from elsewhere. */
   | { kind: "elsewhere" }
@@ -726,7 +712,6 @@ async function renewOnce(refreshToken: string): Promise<Session> {
   return session;
 }
 
-/** R194: callers sharing a refresh token share its request. */
 export function refreshSession(refreshToken: string): Promise<Session> {
   const existing = refreshesInFlight.get(refreshToken);
   if (existing !== undefined) return existing;
@@ -900,7 +885,6 @@ function factorPath(factorId: string, suffix = ""): string {
   return `/auth/v1/factors/${encodeURIComponent(factorId)}${suffix}`;
 }
 
-/** An authenticator app's codes are six digits. */
 const TOTP_CODE_PATTERN = /^[0-9]{6}$/u;
 
 /** R665: verify a factor's challenge and replace the session with its `aal2` tokens. */
@@ -933,7 +917,6 @@ export async function verifySecondFactor(session: Session, factorId: string, cod
 /** What enrolling shows the player: the QR code, and the same key to type by hand. */
 export type TotpEnrolment = { factorId: string; qrCode: string | null; secret: string };
 
-/** The issuer an authenticator app files the account under. */
 const TOTP_ISSUER = "JackiOh";
 
 /** Re-encode only SVG data URIs; a raw `#` would terminate one. */

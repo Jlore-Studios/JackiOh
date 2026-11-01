@@ -94,7 +94,6 @@ function store(session: { accessToken: string; refreshToken?: string | null; exp
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
-/** A gated screen that prints the token it was opened with. */
 /** Lets the round trips already answered, and the renders they cause, run (no timer stands behind them). */
 async function flush(): Promise<void> {
   await act(async () => {

@@ -1,8 +1,7 @@
 /**
- * Flavor shots (#1442, docs/polish/8-flavor.md): what a Ranged attacker fires at its target, drawn
- * procedurally on the effects canvas, never from an image (B27). Each shot ends exactly when its
- * flight is up, bursting its preset where it lands, so nothing outlives its entry (R200). Glow is
- * layered strokes under `lighter` blending (no canvas blur or text); every random draw is `FxRng`'s.
+ * Flavor shots (#1442, docs/polish/8-flavor.md): what a Ranged attacker fires at its target, drawn on the
+ * effects canvas, never from an image (B27). Each ends exactly when its flight is up, so nothing outlives its
+ * entry (R200). Glow is layered strokes under `lighter` blending; every random draw is `FxRng`'s.
  */
 import type { ParticleSystem, EmitOptions } from "./particles.ts";
 import type { FxRng } from "./rng.ts";

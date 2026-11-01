@@ -1,7 +1,6 @@
-// R631 (SPEC §10.11 "Music"): the game's music director. It follows the viewer's own view, starts a
-// station switch at the moment R204 gives a card's cast line and only for a card the viewer can read,
-// and opens a match on its sting. R822000: no card plays a theme.
-// R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it.
+// R631 (SPEC §10.11 "Music"): the game's music director follows the viewer's own view, switches station
+// at the moment R204 gives a readable card's cast line, and opens a match on its sting. R822000: no card
+// plays a theme. R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -1,7 +1,6 @@
-// The remade lessons' moment builders (SPEC §9.10, R2205000). A moment asks its question and is done
-// once the view shows what it sets up found (coach.ts); what it names here is only the coach's own line,
-// `expect`, which the lesson tests and the dev handle follow and the page never decides by (R293), and
-// the card or lane its last hint points at. Every legality is the engine's: a pick reads `ctx.legal`.
+// The lessons' moment builders (SPEC §9.10, R2205000). What a moment names here is only the coach's own
+// line, `expect`, which the page never decides by (R293), and what its last hint points at. Every
+// legality is the engine's: a pick reads `ctx.legal`.
 
 import type { ActionBody, UnitView } from "@jackioh/shared";
 
@@ -22,13 +21,13 @@ type MomentOptions = {
   pick: Pick;
   /** Further gate on the moment's board, beyond `pick`. */
   when?: (ctx: CoachCtx) => boolean;
-  /** What the pointed hint rings; by default the card or target `pick` names. */
+  /** What the pointed hint rings; by default what `pick` names. */
   point?: (ctx: CoachCtx) => CoachAnchor | null;
   revisit?: boolean;
   prompt?: boolean;
 };
 
-/** The board element an action is about: the hand card it plays, the target it attacks, End turn. */
+/** The board element an action is about. */
 export function anchorOfAction(ctx: CoachCtx, action: ActionBody | undefined): CoachAnchor | null {
   if (action === undefined) return null;
   if (action.type === "play") {
@@ -60,7 +59,6 @@ export function finishOf(options: Omit<MomentOptions, "pick" | "discovers">): Co
   return { ...momentOf({ ...options, discovers: ["winning"], pick: (ctx) => nextMove(ctx)?.action }), final: true };
 }
 
-/** Where a play of a card goes: its lane, and whom its target is. */
 type PlayFilter = { lane?: number; target?: "enemy" | "own" | "none" };
 
 function aimsAt(ctx: CoachCtx, play: Play, side: "enemy" | "own"): boolean {
@@ -122,7 +120,6 @@ export function isCard(defId: string): (unit: UnitView) => boolean {
   return (unit) => unit.defId === defId;
 }
 
-/** The first of `picks` that offers an action. */
 export function either(...picks: Pick[]): Pick {
   return (ctx) => {
     for (const pick of picks) {

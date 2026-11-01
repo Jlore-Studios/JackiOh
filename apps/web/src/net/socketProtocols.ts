@@ -1,8 +1,7 @@
-// R1379000: a socket's sign-in travels as an offered WebSocket subprotocol, never in its address.
-// Every socket (`/ws/match`, `/ws/duos`, `/ws/watch`) offers `jackioh.v1` and, beside it, the token
-// as `jackioh.bearer.<base64url of its UTF-8, no padding>`; the server reads the second and answers
-// with the first alone (`WS_SUBPROTOCOL`, `WS_BEARER_PROTOCOL_PREFIX` and `bearer_protocol` in
-// `crates/server/src/actor/ws_server.rs`). The encoding keeps any token a valid protocol name.
+// R1379000: a socket's sign-in travels as an offered WebSocket subprotocol, never in its address: every
+// socket offers `jackioh.v1` and `jackioh.bearer.<base64url of the token's UTF-8, no padding>`, which keeps
+// any token a valid protocol name. Must match `crates/server/src/actor/ws_server.rs` (`WS_SUBPROTOCOL`,
+// `WS_BEARER_PROTOCOL_PREFIX`, `bearer_protocol`).
 
 /** The one subprotocol the server echoes; a browser fails a handshake whose offer gets no name back. */
 export const WS_SUBPROTOCOL = "jackioh.v1";
@@ -16,16 +15,12 @@ function base64url(text: string): string {
   return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
 }
 
-/** What a socket offers on its handshake for `token`: `jackioh.v1` first, then the credential. */
+/** `jackioh.v1` first, then the credential. */
 export function socketProtocols(token: string): string[] {
   return [WS_SUBPROTOCOL, WS_BEARER_PROTOCOL_PREFIX + base64url(token)];
 }
 
-/**
- * The token `protocols` carry, read as the server's `upgrade_token` reads it: the first credential,
- * or null when there is none or it does not decode to a non-empty token. The tests read a socket's
- * offer back with it.
- */
+/** The token `protocols` carry, as the server's `upgrade_token` reads it: the first credential, or null. */
 export function tokenFromProtocols(protocols: readonly string[]): string | null {
   const offered = protocols.find((protocol) => protocol.startsWith(WS_BEARER_PROTOCOL_PREFIX));
   if (offered === undefined) return null;

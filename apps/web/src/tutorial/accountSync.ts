@@ -1,6 +1,5 @@
-// Account tutorial progress (SPEC §9.10, R320, R321) merges by union: the device remains
-// authoritative during a session, and failed requests leave it intact for a later retry. Active
-// accounts (§9.4) sync one request at a time; signed-out visitors do not sync (R294).
+// Account tutorial progress (SPEC §9.10, R320, R321) merges by union; the device remains authoritative
+// during a session. Active accounts (§9.4) sync one request at a time; signed-out visitors do not (R294).
 
 import { useEffect, useRef } from "react";
 

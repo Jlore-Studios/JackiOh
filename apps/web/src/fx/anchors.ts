@@ -6,9 +6,6 @@
 //
 // A hand anchor is the box of the cards it holds plus the slot the next card takes, clipped to the
 // strip (the strip's center is empty table); an empty hand is the strip itself.
-//
-// `boardShakeSink` writes the individual CSS `translate` and `rotate` properties, which compose with
-// the board's `transform` keyframes, and restores the inline values the board carried before.
 
 import type { FxAnchor, FxBox, FxPoint, FxShakeOffset, FxShakeSink, FxVec } from "./types.ts";
 
@@ -103,7 +100,10 @@ function restoreProperty(style: CSSStyleDeclaration, name: string, value: string
   else style.setProperty(name, value, priority);
 }
 
-/** CSS `translate`/`rotate` on [data-testid="board"] while shaking; restores the prior inline values on clear(). */
+/**
+ * CSS `translate`/`rotate` on [data-testid="board"] while shaking (they compose with its `transform` keyframes);
+ * restores the prior inline values on clear().
+ */
 export function boardShakeSink(doc?: Document): FxShakeSink {
   let target: HTMLElement | null = null;
   let saved: SavedInline | null = null;

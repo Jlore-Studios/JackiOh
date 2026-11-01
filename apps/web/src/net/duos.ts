@@ -1,11 +1,7 @@
 // The client's door onto the Duos co-op routes (#936 SPEC S6): one fetch wrapper per route, and the
 // ping vocabulary the `/ws/duos` socket carries (S8). CLAUDE.md rule 7: nothing here decides a rule;
-// a refusal is the server's, thrown as the repo's `ApiRequestError` with its status and code.
-//
-// THE TOKEN. These wrappers take none (S8's signatures): each reads the tab's session when it is
-// called (`net/session.ts`), so a renewal the gate made meanwhile is the one sent, and a 401 renews
-// once and retries (`withSession`, R194) as a screen’s own request does. No session, or one that
-// cannot be renewed, is a 401 refusal like any other.
+// a refusal is the server's, thrown as the repo's `ApiRequestError` with its status and code. The
+// wrappers take no token (S8's signatures): `withSession` reads the tab's session at each call (R194).
 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { LeanPick } from "@jackioh/shared";
@@ -35,7 +31,7 @@ export type DuosRoom = {
  */
 export type DuosDeckChoice = { deckId?: string; random?: boolean; leanSet?: LeanPick };
 
-/** `POST /api/duos/rooms`: a difficulty and the deck choice; the answer is the room's code. */
+/** `POST /api/duos/rooms`. */
 export function createDuosRoom(body: { difficulty: Difficulty } & DuosDeckChoice): Promise<{ code: string }> {
   return withSession((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
 }
@@ -74,7 +70,7 @@ export function getDuosReplay(matchId: string): Promise<{ seat: DuosSeat; steps:
 /** `POST /api/duos/matches/:matchId/again` (R2092000): the new match's id once both seats offered, else null. */
 export type DuosAgainOffer = { matchId: string | null };
 
-/** `GET /api/duos/matches/:matchId/again` (R2092000): what each seat offered, whether the teammate is here, and the new game. */
+/** `GET /api/duos/matches/:matchId/again` (R2092000). */
 export type DuosAgainStatus = { youOffered: boolean; teammateOffered: boolean; teammateHere: boolean; matchId: string | null };
 
 /** R2092000: record this seat's Play again offer, carrying the device's lean pick for a dealt seat (`leanSet`, R924000, R2031000). */
@@ -88,7 +84,6 @@ export function offerDuosAgain(matchId: string, lean: LeanPick | null): Promise<
   );
 }
 
-/** R2092000: read the two seats' Play again offers. */
 export function getDuosAgain(matchId: string): Promise<DuosAgainStatus> {
   return withSession((token) => apiRequest<DuosAgainStatus>(`/api/duos/matches/${encodeURIComponent(matchId)}/again`, { token }));
 }
@@ -110,5 +105,5 @@ export type PingTarget =
   | { duel: 0 | 1; at: "unit" | "backrow"; side: "p1" | "p2"; lane: number }
   | { duel: 0 | 1; at: "hand"; side: "p1" | "p2"; index: number };
 
-/** A ping as the board shows it: who sent it, what and where, and when it landed (epoch ms, `Date.now()`). */
+/** A ping as the board shows it; `at` is when it landed (epoch ms, `Date.now()`). */
 export type ReceivedPing = { from: DuosSeat; ping: PingKind; target: PingTarget; at: number };

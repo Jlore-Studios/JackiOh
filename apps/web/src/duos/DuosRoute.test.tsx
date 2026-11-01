@@ -1,7 +1,6 @@
-// `/duos/<matchId>`'s connection line: "Reconnect now" shows while the socket is reconnecting and opens
-// one at once (the 1v1 match screen's own, `routes/match.test.tsx`). The socket is a fake `WebSocket`
-// the test drives; the catalog is a stubbed `fetch` (`test/stubServer.ts`). The route is shown on its
-// holding panel, before any view: the board's chrome draws the same line.
+// `/duos/<matchId>`'s connection line, as the 1v1 match screen's (`routes/match.test.tsx`), over a fake
+// `WebSocket` and a stubbed `fetch` (`test/stubServer.ts`). It is read on the holding panel, before any
+// view: the board's chrome draws the same line.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

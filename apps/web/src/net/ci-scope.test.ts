@@ -1,10 +1,7 @@
 // scripts/ci-scope.sh: the lines ci.yml's `changes` job uses to skip jobs. It may say `full=false`
-// only when every changed file is one no CI job reads (the night bot's code and its switches, the
-// workflows that run the bot, the training lanes' prompts and loop), and any other line false only
-// when nothing that line's job reads changed (`db` and its three suites, clippy, each Rust test
-// group, the web's checks and unit tests, e2e smoke, infra/'s terraform steps), so each case here is a diff in a throwaway repo
-// and the answer a pull request would get: a path alone that leaves a line off, and the same path
-// beside an engine source, which turns it on. Every doubt must come out with every line true. The
+// only when no CI job reads any changed file, and any other line false only when nothing its job reads
+// changed, so each case is a diff in a throwaway repo: a path alone that leaves a line off, and the same
+// path beside an engine source, which turns it on. Every doubt must come out with every line true. The
 // scans at the end hold `web` and `e2e` to every repository path the web's and the client's sources
 // name; crates/tools/tests/acceptance.rs holds the Rust groups to `cargo metadata`.
 
@@ -62,23 +59,20 @@ const RUST = [
 const ENGINE = "crates/engine/src/reduce.rs";
 
 let repo = "";
-/** The first commit's sha. */
 let baseSha = "";
 
-/** Git's background upkeep is off (#1016): from git 2.54 a commit can start a detached repack (`git
- * maintenance run --auto`), whose prune-packed removes the empty objects/xx directory a `git add` here
- * has just made for an object, and the add fails with "unable to create temporary file". */
+/** Git's background upkeep is off (#1016): from git 2.54 a commit can start a detached repack whose
+ * prune-packed removes the empty objects/xx directory a `git add` here has just made. */
 const GIT_CONFIG = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0"];
 
 function git(...args: string[]): string {
   return execFileSync("git", [...GIT_CONFIG, ...args], { cwd: repo, encoding: "utf8" }).trim();
 }
 
-/** A commit on top of the first one that writes each file with its content; returns the first commit's sha and the new one's. */
+/** A commit on top of the first one that writes each file with its content. */
 function changeFiles(contents: Record<string, string>): { base: string; head: string } {
-  // The files go in a directory of their own, staged over the first commit's tree in an index of
-  // their own, so the commit takes one process and no checkout: a case makes dozens of these, and
-  // a process is what costs a case its time.
+  // Staged over the first commit's tree in an index of their own, so the commit takes one process and
+  // no checkout: a case makes dozens of these, and processes are what cost a case its time.
   const files = mkdtempSync(join(tmpdir(), "ci-scope-change-"));
   for (const [file, content] of Object.entries(contents)) {
     mkdirSync(dirname(join(files, file)), { recursive: true });
@@ -119,7 +113,6 @@ function lines(base: string | undefined, head: string | undefined): Answer {
 
 const every = (value: boolean): Answer => Object.fromEntries(NAMES.map((name) => [name, value])) as Answer;
 
-/** What a pull request that adds `files` gets. */
 function answerFor(...files: string[]): Answer {
   const { base, head } = change(...files);
   return lines(base, head);
@@ -360,8 +353,7 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
-  // Each line beside the Rust groups and the db suites: a path that turns it on alone, and a path
-  // that leaves it off alone and is run beside an engine source.
+  // The other lines: an `on` path turns its line on alone; an `off` path leaves it off alone, not beside an engine source.
   const SCOPED: Record<"clippy" | "web" | "e2e", { on: string[]; off: string[] }> = {
     clippy: {
       on: [
@@ -473,8 +465,7 @@ describe("scripts/ci-scope.sh", () => {
   }
 
   // promote-production.test.ts, which `web (promote-production)` runs on its own line: an `on` path
-  // alone turns it on (and `web` with it, so the job that runs it runs); an `off` path alone leaves
-  // it off, beside an engine source too, and beside an `on` path turns it on.
+  // turns it on (and `web` with it, so the job that runs it runs); an `off` path leaves it off.
   const PROMOTE = {
     on: [
       "scripts/promote-production.sh",

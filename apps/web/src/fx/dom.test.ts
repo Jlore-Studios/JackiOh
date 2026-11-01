@@ -1,13 +1,7 @@
-// Polish 1 (docs/polish/1-animations.md, S10): `mountDomEffect`, B39.
-//
-// One cue per kind, mounted into a plain jsdom `div`. The element contract is the S10 table: one
-// appended element per cue, `class="fx-<kind>"`, `data-fx="<kind>"`, `aria-hidden="true"`, no text
-// node (numbers and words ride in `data-amount` / `data-text` and reach the screen only through CSS
-// `content: attr(…)`), placement in `--fx-x/--fx-y/--fx-w/--fx-h`, flight in `--fx-dx/--fx-dy`, and
-// timing in `--fx-ms`. A cue missing a box its kind needs mounts nothing and returns null.
-//
-// The boxes are whole numbers with even sizes, so every center is a whole number and the expected
-// lengths are plain `<n>px` strings.
+// Polish 1 (docs/polish/1-animations.md, S10): `mountDomEffect`, B39, to the S10 table's contract: one
+// appended element per cue, `class="fx-<kind>"`, `data-fx="<kind>"`, `aria-hidden="true"`, no text node
+// (words ride in `data-amount` / `data-text`, shown only through CSS `content: attr(…)`), geometry and
+// timing in `--fx-*` properties. The boxes are whole with even sizes, so lengths are plain `<n>px`.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -40,7 +34,7 @@ function textNodeCount(el: Node): number {
   return n;
 }
 
-/** The part of the S10 contract every kind shares. Returns the element for kind-specific checks. */
+/** The part of the S10 contract every kind shares. */
 function expectMounted(effect: DomEffect | null, cue: FxDomCue): HTMLElement {
   expect(effect).not.toBeNull();
   if (effect === null) throw new Error("nothing mounted");

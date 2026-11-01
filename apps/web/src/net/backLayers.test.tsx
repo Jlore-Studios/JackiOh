@@ -1,7 +1,6 @@
-// R2127000: the browser's Back closes the topmost open sheet or dialog before it leaves the screen
-// (`backLayers.ts`), through `navigate.ts`'s one `popstate` listener; where the browser has
-// `CloseWatcher` the top layer holds one instead. jsdom traverses the history in queued tasks, so
-// every Back here waits on real timers (`test/history.ts`).
+// R2127000: Back closes the topmost open sheet or dialog before it leaves the screen (`backLayers.ts`); where
+// the browser has `CloseWatcher` the top layer holds one instead. jsdom traverses the history in queued
+// tasks, so every Back here waits on real timers (`test/history.ts`).
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState, type ReactElement } from "react";
@@ -67,7 +66,6 @@ function press(name: "Open" | "Close"): void {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
-/** The layers on screen, oldest first. */
 function shown(): string[] {
   return screen.queryAllByTestId(/^overlay-/).map((element) => element.dataset.testid ?? "");
 }

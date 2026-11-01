@@ -35,9 +35,8 @@ afterAll(() => {
 });
 
 /**
- * R1352: the cards of `sets` that open their play with an intro of their own: every Legendary and
- * Mythic, and every token printed Legendary or Mythic. The release that ships a set (the Meditative
- * set's 22 come with MR) is what adds it to the list this is called with.
+ * R1352: the cards of `sets` that open their play with an intro of their own: every Legendary and Mythic,
+ * tokens printed so included. A set joins the list this is called with when its release ships.
  */
 function introCards(sets: readonly SetName[]): string[] {
   return Object.entries(CATALOG)
@@ -93,9 +92,8 @@ describe("R631 the rendered music", () => {
       if (t.loop) {
         // The tail past the loop's end is what lets a decoder's priming offset loop cleanly.
         expect(t.duration - (t.loopEnd ?? 0), id).toBeGreaterThan(0.25);
-        // #51: two to four minutes for whatever can play for a long stretch, the menu theme and each
-        // station's in-game and low-health tracks. A result's loop plays for a moment of the match and
-        // is shorter, though still longer than a few bars.
+        // #51: two to four minutes for whatever can play for a long stretch (the menu, a station's
+        // tracks); a result's loop plays for a moment, so it is shorter, though longer than a few bars.
         const minimum = /^(tavern|edm|lofi|epic)-(\d+|danger)$/.test(id) || id === MENU_TRACK ? 120 : 15;
         expect((t.loopEnd ?? 0) - (t.loopStart ?? 0), id).toBeGreaterThanOrEqual(minimum - 1e-6);
       }

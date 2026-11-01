@@ -1,15 +1,9 @@
-// A finished practice game's claim (SPEC §14.8, R1303000–R1303002): what the worker hands the page
-// for the server to check, and the game the server's tests check it against.
-//
-// The REAL core plays here, as in `core.test.ts`, but at the browser's own budget, AI_BUDGET, with a
-// frozen clock (`now: () => 0`), so the wall-clock cap never cuts a decision short: every AI move is
-// the one the server's clock-free re-run makes (R1303002). The first test's game is the fixture
-// `crates/server/tests/fixtures/practice-claim.json`, which the server's
-// `r1303002_the_ai_rerun_matches_the_game_the_worker_played` folds and pays; after an AI, card or
-// engine change that plays it differently, record it again with
-// `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`.
-// A training lane's promotion records it with its gate (learn.yml; training/README.md, What a lane
-// may change): it is the one file outside crates/ai/** and training/history/** a lane may change.
+// A finished practice game's claim (SPEC §14.8, R1303000–R1303002). The REAL core plays at AI_BUDGET with
+// a frozen clock, so every AI move is the one the server's clock-free re-run makes (R1303002). The first
+// test's game is `crates/server/tests/fixtures/practice-claim.json`, which the server's
+// `r1303002_the_ai_rerun_matches_the_game_the_worker_played` folds and pays; record it again (RECORD_COMMAND)
+// after a change that plays it differently. A training lane's promotion records it with its gate: it is the
+// one file outside crates/ai/** and training/history/** a lane may change (learn.yml; training/README.md).
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

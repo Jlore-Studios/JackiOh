@@ -47,10 +47,7 @@ export const practiceTestid = {
   menu: "practice-menu",
   /** "Leave this game?": the confirmation `newGame` or `menu` opens while a game is in progress. */
   leave: "practice-leave",
-  /**
-   * In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game"
-   * for a lesson) and go where `newGame` or `menu` goes.
-   */
+  /** In the confirmation: abandon the game ("Leave without saving" for a free game, R765; "Leave game" for a lesson). */
   leaveConfirm: "practice-leave-confirm",
   /** R765: in a free game's confirmation, "Save and leave": keep the game for the practice menu's banner. */
   leaveSave: "practice-leave-save",
@@ -94,17 +91,14 @@ export const practiceTestid = {
   sandboxSpawnSeat: "practice-sandbox-spawn-seat",
   sandboxSpawnWhere: "practice-sandbox-spawn-where",
   sandboxSpawn: "practice-sandbox-spawn",
-  /** A hero's health and Armor. */
   sandboxHeroSeat: "practice-sandbox-hero-seat",
   sandboxHealth: "practice-sandbox-health",
   sandboxArmor: "practice-sandbox-armor",
   sandboxSetHero: "practice-sandbox-set-hero",
-  /** A player's current and maximum mana. */
   sandboxManaSeat: "practice-sandbox-mana-seat",
   sandboxManaCurrent: "practice-sandbox-mana-current",
   sandboxManaMax: "practice-sandbox-mana-max",
   sandboxSetMana: "practice-sandbox-set-mana",
-  /** A draw. */
   sandboxDrawSeat: "practice-sandbox-draw-seat",
   sandboxDrawCount: "practice-sandbox-draw-count",
   sandboxDraw: "practice-sandbox-draw",

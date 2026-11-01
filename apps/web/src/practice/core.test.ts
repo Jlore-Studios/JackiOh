@@ -1,11 +1,9 @@
 // The practice core, for real: B34, B35, B38 and B39 of docs/polish/3-ai.md, and R187 / R188.
 //
-// Everything here drives the REAL `createPracticeCore` — the engine, the card scripts and the AI
-// the worker runs — with a frozen clock (`now: () => 0`, so the wall-clock cap never fires and every
-// decision is a pure function of the node budget) and the quality gates' smaller budget, so a whole
-// game fits a test. The only door into the true state is `debug`, which a dev core answers; every
-// assertion about what the page receives compares a response with `viewFor` / `legalActions` of
-// that state, which is CLAUDE.md rule 7 stated as a test.
+// It drives the REAL `createPracticeCore` with a frozen clock (`now: () => 0`, so every decision is a
+// pure function of the node budget) and the gates' smaller budget, so a whole game fits a test. The only
+// door into the true state is `debug`; comparing a response with its `viewFor` / `legalActions` is
+// CLAUDE.md rule 7 stated as a test.
 
 import { describe, expect, it } from "vitest";
 
@@ -56,7 +54,6 @@ type Exchange = { request: PracticeRequest; response: PracticeResponse };
 
 type Driver = {
   core: PracticeCore;
-  /** Stamps the next id, hands the request to the core and returns its answer. */
   send(body: PracticeRequestBody): PracticeResponse;
   exchanges: Exchange[];
 };
@@ -110,15 +107,11 @@ function keepAll(snapshot: PracticeSnapshot): ActionBody | null {
   return { type: "mulligan", keep: pending.options.map((option) => option.key) };
 }
 
-/** The engine's own reason for refusing `body` from `seat` on `state`, or undefined if it accepts. */
 function engineRefusal(state: GameState, body: ActionBody, seat: PlayerId): string | undefined {
   return reduce(state, { ...body, playerId: seat, nonce: "test:probe" } as Action).error;
 }
 
-/**
- * One step of a practice game: the AI's step when it owes one, else the human by §10.7's random
- * policy on the true state (read through `debug`). Null once nobody has anything to do.
- */
+/** The AI's step when it owes one, else the human by §10.7's random policy on the true state. */
 function step(d: Driver, human: PlayerId, rng: Rng, last: PracticeSnapshot): PracticeResponse | null {
   if (last.view.result !== null) return null;
   if (last.aiToAct) return d.send({ type: "aiStep" });
@@ -127,10 +120,7 @@ function step(d: Driver, human: PlayerId, rng: Rng, last: PracticeSnapshot): Pra
   return d.send({ type: "act", action: body });
 }
 
-/**
- * Drive the game until the human stands in its own main phase with no prompt open: the AI by
- * `aiStep`, the human's prompts by keeping the whole mulligan or taking the first legal answer.
- */
+/** Drive the game until the human stands in its own main phase with no prompt open. */
 function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): PracticeSnapshot {
   let last = from;
   for (let n = 0; n < WALK_CAP; n += 1) {
@@ -156,11 +146,9 @@ function untilHumanMain(d: Driver, human: PlayerId, from: PracticeSnapshot): Pra
 }
 
 /**
- * B34, for one response: the snapshot holds exactly four keys (with `lastBoard` once the game is
- * over, and `lethal` while R2102000's hint is lit), `view` and `legal` are the human's `viewFor` /
- * `legalActions` of the true state, `aiToAct` is the AI's, `lethal` is the human's `lethalHint`,
- * and no AI hand or library instance id that the human's own view does not already name appears
- * anywhere in the response.
+ * B34, for one response: the snapshot holds exactly its four keys (`lastBoard` once over, `lethal`
+ * while R2102000's hint is lit), each the true state's, and no AI hand or library id that the human's
+ * own view does not already name appears anywhere in it.
  */
 function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai: PlayerId): void {
   const snapshot = snapshotOf(response);
@@ -239,7 +227,6 @@ describe("B34 the core answers with the human's view and nothing else", () => {
       last = snapshotOf(response);
     }
 
-    // The walk exercised both sides of the boundary: the AI acted and so did the human.
     const log = debugOf(d).log;
     expect(log.some((action) => action.playerId === "p1")).toBe(true);
     expect(log.some((action) => action.playerId === "p2")).toBe(true);
@@ -571,7 +558,6 @@ describe("B35 a human action is either refused with the engine's reason or logge
 
 // R265: both mulligans are open at once, and either seat answers first
 
-/** The human's hand as its own view lists it, by instance id. */
 function handOf(snapshot: PracticeSnapshot): string[] {
   const hand = snapshot.view.you.hand;
   return Array.isArray(hand) ? hand.map((card) => card.instanceId) : [];
@@ -579,9 +565,7 @@ function handOf(snapshot: PracticeSnapshot): string[] {
 
 /**
  * The seeds deal player 1 a play on turn 1 in all four runs, so R82 does not end that turn before the
- * view is read. The Radiant pass's shadow ban (R186) changed the AI's random deck and moved them, and
- * patch v0.1.1 (its shadow ban of Zao Gao and CN-Viral Injection, then its card patches) moved the
- * AI-first pair twice more.
+ * view is read.
  */
 describe("R265 the practice mulligan: the AI answers its own at once, and the human answers before or after it", () => {
   for (const human of ["p1", "p2"] as const) {
@@ -621,8 +605,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       expect(begun.aiToAct, "turn 1 is p1's").toBe(ai === "p1");
     });
 
-    // Re-pinned for the Training Grounds release (#2204): the AI's random deck draws from the set now,
-    // and seed `-d` dealt the AI (p1) a hand with nothing to play on turn 1, so its turn auto-ended
+    // #2204: seed `-d` dealt the AI (p1) a hand with nothing to play on turn 1, so its turn auto-ended
     // (turnAutoEnded) before the snapshot read turn 1.
     it(`R265 seated ${human}: the human answers first and waits with its answer sealed, and the AI's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);

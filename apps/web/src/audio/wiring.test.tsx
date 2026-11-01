@@ -1,9 +1,7 @@
 // Audio as the integration branch wires it into Game (docs/polish/reference.md, "audio x cards"):
 //
-//  - the board's `CatalogContext` reaches the sound director, so a Legendary or Mythic unit enters
-//    with its sting (beside task 1's light rays), a unit's thud carries its family's accent and a
-//    spell rings in its family's chimes; with no catalog, or for a card behind the sentinel (R203),
-//    every card keeps its plain sounds;
+//  - the board's `CatalogContext` reaches the sound director, so a readable card sounds its rarity and
+//    family; with no catalog, or for a card behind the sentinel (R203), every card keeps its plain sounds;
 //  - a voice line holding the channel marks the board `data-speaking`, the attribute practice's
 //    pacing holds the AI on (SPEC §9.9).
 

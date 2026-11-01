@@ -1,8 +1,5 @@
 // The audio UI and its wiring into Game (docs/polish/2-sound.md, B28 to B32, B44's preload, and
-// B58: no background voice work while the board animates).
-//
-// B28's other half, "every pre-existing web test stays green", is the whole `web` project run, not
-// a test of its own: `pnpm vitest run --project web`.
+// B58). B28's other half, "every pre-existing web test stays green", is the whole `web` project run.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -67,10 +64,7 @@ function storedSettings(): Record<string, unknown> | null {
 
 const mounted: HTMLElement[] = [];
 
-/**
- * Renders fixed markup into its own attached root. Through React, not by assigning raw HTML, so
- * this file keeps to task 5's B36 like every other file under apps/web/src (auth/no-raw-html.test.ts).
- */
+/** Renders fixed markup into its own attached root, through React to keep to B36 (auth/no-raw-html.test.ts). */
 function mount(ui: ReactElement): HTMLElement {
   const root = document.createElement("div");
   document.body.append(root);
@@ -111,8 +105,6 @@ afterEach(() => {
   resetAudioSettingsForTests();
   localStorage.clear();
 });
-
-/* B28: Game with audio */
 
 describe("B28 Game plays sound in step with its runner", () => {
   it("B28 Game renders in jsdom with no AudioContext, shows the audio toggle, and new views change nothing audible", () => {
@@ -198,8 +190,6 @@ describe("B28 Game plays sound in step with its runner", () => {
   });
 });
 
-/* B29: the mute toggle */
-
 describe("B29 AudioToggle", () => {
   it("B29 renders an unpressed button labeled Mute sound while not muted", () => {
     render(<AudioToggle />);
@@ -275,8 +265,6 @@ describe("B29 AudioToggle", () => {
     expect(button).toHaveClass("hud-slot");
   });
 });
-
-/* B30: the full controls */
 
 describe("B30 AudioControls", () => {
   function input(id: string): HTMLInputElement {
@@ -388,8 +376,6 @@ describe("B30 AudioControls", () => {
     expect(screen.getByTestId("audio-controls")).toHaveClass("settings-section");
   });
 });
-
-/* B31: UI ticks */
 
 describe("B31 UI click and hover sounds", () => {
   const PAGE = (
@@ -535,8 +521,6 @@ describe("B31 UI click and hover sounds", () => {
   });
 });
 
-/* B32: the debug handle */
-
 describe("B32 window.__jackiohAudio", () => {
   it("B32 mounting Game exposes the singleton's state, log, clearLog and contextsCreated, and unmounting removes it", () => {
     const entry: PlayedCue = { kind: "sfx", id: "draw", delayMs: 0, atMs: 12 };
@@ -629,10 +613,7 @@ describe("B44 Game preloads the voice lines each view makes likely, once the con
 
 /* B58: no background voice work while the board animates */
 
-/**
- * The shape of the burst that broke e2e spec 08 in CI: R82 auto-ending dead turns back to back,
- * each with its banner, mana and draw. 3200 ms of table durations, played in BURST_BUDGET_MS.
- */
+/** The burst that broke e2e spec 08 in CI: R82 auto-ending dead turns back to back, played in BURST_BUDGET_MS. */
 function autoEndedTurns(): GameEvent[] {
   const turn = (player: "p1" | "p2", n: number): GameEvent[] => [
     { type: "turnStarted", player, turn: n },
@@ -718,8 +699,6 @@ describe("B58 the board's animations hold background voice work", () => {
   });
 });
 
-/* B52: one set of page-wide listeners */
-
 describe("B52 the unlock and the UI ticks are page-wide, installed once", () => {
   it("B52 the app root and a Game share one set of listeners: a click ticks once and unlocks once", () => {
     const engine = recordingEngine({ state: "locked" });
@@ -769,8 +748,6 @@ describe("B52 the unlock and the UI ticks are page-wide, installed once", () => 
     release();
   });
 });
-
-/* B54: a setting you can hear */
 
 describe("B54 changing a sound setting answers with a sound", () => {
   it("B54 unmuting with the toggle plays uiClick after the store says unmuted; muting plays nothing more", () => {

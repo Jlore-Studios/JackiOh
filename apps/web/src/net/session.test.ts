@@ -1,8 +1,5 @@
 // Where a session is kept (SPEC R632, §9.2): in the tab's `sessionStorage`, never in `localStorage`.
-//
-// `net/session.ts` is the one module that reads, writes and clears the token, so these assert it
-// directly over jsdom's two storages. The gate's side (another tab's sign-out leaves this tab
-// signed in) is in routes/shell-gate.test.tsx.
+// The gate's side (another tab's sign-out leaves this tab signed in) is in routes/shell-gate.test.tsx.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

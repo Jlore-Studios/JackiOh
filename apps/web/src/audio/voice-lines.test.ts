@@ -1,27 +1,16 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`
 // against the catalog it voices.
 //
-//   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
-//        (the file never states it); a unit carries a `play` and a `death` line (a hook with a voice
-//        and a text) and no `cast` hook, a spell or trap a `cast` line and no `play`, `attack` or
-//        `death` hook; no hook outside CARD_HOOK_NAMES and no field on a hook but voice, text and
-//        effect; and every voice a line names exists, usable for its backend (a `say` voice with
-//        in-range rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and
-//        a filter chain, and neither carrying the other's fields), with web values and (where set)
-//        loudness trim `gain`, 0-2.
-//   B34  every line is non-empty, uses only /^[A-Za-z ,.'!?-]+$/, stays within
-//        VOICE_MAX_WORDS[hook] words (a word is a token that contains a letter), and uses a
-//        BANNED_RULES_WORDS entry as a whole word, in any case, in fewer than BANNED_WORDS_MAX_SHARE
-//        (2%) of the lines (issue #115). The lines that do are named in the failure and in the
-//        passing test's title count, so none is lost by being under the allowance.
-//   R655 the sections are voices, effects and cards, in that order; each card's entry names the card
-//        in a comment on the line of its id, in catalog order; comments and trailing commas parse;
-//        every effect a hook names is in the bank, every bank effect is a recipe sfx.ts has, and
-//        every one is used.
+//   B33  exactly the catalog's ids, each card's kind from its catalog type (the file never states it),
+//        each kind's hooks and lines (CARD_HOOK_NAMES), and every voice a line names usable for its
+//        backend (`say`, or R501's SAPI).
+//   B34  every line non-empty, in /^[A-Za-z ,.'!?-]+$/, within VOICE_MAX_WORDS[hook] words, and with a
+//        BANNED_RULES_WORDS entry in fewer than BANNED_WORDS_MAX_SHARE of the lines (issue #115), each
+//        offender named even under the allowance.
+//   R655 the sections in order, each entry's name comment in catalog order, and the effects bank.
 //
 // Both files are read off disk rather than imported, so this checks the committed file itself and
-// not whatever `voiceData.ts` makes of it. Each test collects every offender before asserting, so
-// a red run names all of them at once instead of the first.
+// not whatever `voiceData.ts` makes of it.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -374,7 +363,7 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
 
   it("B33 R1448 gives every card a line per its kind: three times the units plus the spells and traps", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
-    // Since R1448 a Unit's attack line (R655) is required beside its play and death lines.
+    // R1448: a Unit's attack line (R655) is required beside its play and death lines.
     const lines = allAssignments().filter(({ value }) => isLine(value));
     expect(lines, "lines in the table").toHaveLength(units * 3 + (Object.keys(CARDS).length - units));
     const required = Object.keys(CARDS).flatMap((id) => {
@@ -414,11 +403,9 @@ describe("every voice line is short, plain flavour (B34)", () => {
 
   it("B34 passes a corpus with fewer than 2% of its lines restating rules vocabulary, and no more", () => {
     expect(BANNED_WORDS_MAX_SHARE).toBe(0.02);
-    // 1 line in 100 is 1%; 2 in 100 is 2%, which is not fewer than 2%.
     expect(withinBannedShare(0, 100)).toBe(true);
     expect(withinBannedShare(1, 100)).toBe(true);
     expect(withinBannedShare(2, 100)).toBe(false);
-    // 1 in 51 is 1.96% and passes; 1 in 50 is exactly 2% and does not.
     expect(withinBannedShare(1, 51)).toBe(true);
     expect(withinBannedShare(1, 50)).toBe(false);
     // An empty corpus proves nothing.

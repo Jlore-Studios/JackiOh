@@ -10,11 +10,9 @@ import type { DuosAgainStatus } from "../net/duos.ts";
 export type DuosPlayAgain = {
   /** R2092000: the route's last status read, null before the first one lands. */
   status: DuosAgainStatus | null;
-  /** R2092000: the offer request is in flight. */
   offering: boolean;
   /** R2092000: the last offer's refusal, in the server's words, null when none. */
   refusal: string | null;
-  /** R2092000: send this seat's Play again offer. */
   offer: () => void;
 };
 

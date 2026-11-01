@@ -3,7 +3,6 @@
 // AI's Core cards. Lessons 1–4 hold no Legendary or Mythic card and set `poolHold` (R2201001) on both
 // seats, so none is generated either; lesson 5 deals them to the human alone. Decks meet R184's sizes,
 // respect R186 and bring nothing a later lesson teaches. `lessons.test.ts` holds them to it.
-// R2434000: the ids of the lessons before #2434 read as the lesson in their place on the path.
 
 import { AI_TUTORIAL, TUTORIAL_HUMAN, type Handicap } from "@jackioh/engine/config";
 import type { PlayerId } from "@jackioh/shared";
@@ -25,7 +24,6 @@ export type TutorialLesson = {
   humanSeat: PlayerId;
   humanDeck: readonly string[];
   aiDeck: readonly string[];
-  /** R2201001, R2205003, R2434001: hold Legendary and Mythic cards out of every random pool (lessons 1–4), on both seats. */
   poolHold: boolean;
   /** R291: an R186 exception a fixed lesson needs, with its reason. */
   aiShadowBanned?: Readonly<Record<string, string>>;
@@ -40,7 +38,6 @@ export const TUTORIAL_LESSONS: readonly TutorialLesson[] = [basics, keywords, ca
  */
 export const EARLIER_LESSON_IDS: Readonly<Record<string, string>> = { spells: "keywords", traps: "casting", advanced: "backrow" };
 
-/** R2434000: the lesson an id names now, an earlier id read as the lesson in its place. */
 export function currentLessonId(id: string): string {
   return Object.hasOwn(EARLIER_LESSON_IDS, id) ? (EARLIER_LESSON_IDS[id] ?? id) : id;
 }
@@ -54,7 +51,7 @@ export function nextLessonOf(id: string): TutorialLesson | undefined {
   return lesson === undefined ? undefined : TUTORIAL_LESSONS.find((candidate) => candidate.number === lesson.number + 1);
 }
 
-/** R290, R1705005, R2201000, R2201001, R2433000, R2434001: the tutorial opponent's handicap, Core-only bar and all, and the human's, the pool hold on both when the lesson sets it. */
+/** R290, R1705005, R2201000, R2201001, R2433000, R2434001: both seats' handicaps, the pool hold on both when the lesson sets it. */
 export function lessonHandicaps(lesson: TutorialLesson): { human: Handicap; ai: Handicap } {
   const hold = lesson.poolHold ? { poolHold: true } : {};
   return { human: { ...TUTORIAL_HUMAN, ...hold }, ai: { ...AI_TUTORIAL, ...hold } };

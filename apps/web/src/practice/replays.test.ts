@@ -1,8 +1,6 @@
 // R768, issue #509: the practice worker keeps each finished free game and replays it, through the
-// in-thread host (the same core a Worker runs). A kept game's steps are `viewFor` of the human's seat
-// after a fresh fold of that many accepted actions; nothing a response holds is the log, the seed, a
-// deck or a card the human's view lacked at that step (CLAUDE.md rule 7); and every game it cannot
-// vouch for is listed unavailable and refused.
+// in-thread host. Nothing a response holds is the log, the seed, a deck or a card the human's view lacked
+// at that step (CLAUDE.md rule 7), and every game it cannot vouch for is listed unavailable and refused.
 
 import { afterEach, describe, expect, it } from "vitest";
 

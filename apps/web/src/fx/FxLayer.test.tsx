@@ -1,8 +1,6 @@
 // Polish 1 (docs/polish/1-animations.md, S9): the effects layer, B36 to B38.
 // The layer renders as `Game` renders it, a direct child of `.game`, next to a real animation
 // runner whose `schedule` the test fires by hand; every browser API comes in through `seams`.
-// Tests read what the layer shows: `--anim-squeeze` on its parent, `data-fx` and the children of
-// its root, and the anchors it asked `measure` to resolve (how a planned cue becomes visible).
 
 import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
@@ -345,8 +343,7 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
     const sched = fakeSchedule();
     const queue = queueWith(sched);
     const fx = fakeSeams();
-    // The layer shows an empty board, where u10 does not exist; the entry was planned over the
-    // full board, where it does.
+    // The layer shows an empty board, where u10 does not exist.
     const m = mountLayer(queue, baseView(), fx);
 
     act(() => queue.enqueue([HIT], fullBoardView()));
@@ -941,12 +938,10 @@ describe("S9 — the default catalog and the surface seam", () => {
     fx.pump(400);
 
     expect(m.rays("legendary")).toBe(0);
-    // core-019 is really Brute, and the flavor resolves off the bundled catalog: its entrance
-    // shakes the board (#1445).
+    // core-019 is Brute in the bundled catalog, so its entrance shakes the board (#1445).
     expect(fx.shakes).toContain("apply");
-    // Every measure is the landing zone: three times at its foot for the dust (the base burst
-    // plus the Brute's two), and bare for the stand-in that lands there and follows it frame by
-    // frame.
+    // Every measure is the landing zone: at its foot for the dust (the base burst plus the Brute's
+    // two), and bare for the stand-in that follows it.
     const zone = { kind: "testid", testid: "zone-you-units-3" };
     expect(fx.measured.filter((anchor) => anchor.kind === "testid" && anchor.at !== undefined)).toEqual([
       { ...zone, at: { x: 0.5, y: 1 } },

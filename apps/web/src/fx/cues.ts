@@ -1,15 +1,13 @@
 // The cue planner (docs/polish/1-animations.md S6, S7): pure, it turns one animation entry into the
 // effects that decorate it, reading only its arguments, never the DOM.
-// R200: effects pace nothing. Every delay and duration derives from the entry's `durationMs` (D)
-// through `constants.ts`: an effect starts inside the entry (0 <= delay <= D), a projectile lands
-// inside it (delay + flight <= D) and any tail is gone within FX_MAX_TAIL_MS of its end.
+// R200: effects pace nothing. Every delay and duration derives from the entry's `durationMs` (D): an
+// effect starts inside the entry (0 <= delay <= D), a projectile lands inside it (delay + flight <= D)
+// and any tail is gone within FX_MAX_TAIL_MS of its end.
 // R202: effects draw from the redacted stream only (the event, the entry's view, `env.card`). A
 // "hidden" id or defId is never looked up, so a hidden card plans the same cues whatever it hides,
 // gets no rarity entrance, and no cue carries a defId or a card name.
 // CLAUDE.md rule 9: particle counts live in `TUNING`, game-over timings in `RESULT_TUNING`, the rest
-// in `constants.ts`. Issue #124: a whole-pile run, a sweep and a card cast by a card (game/runs.ts)
-// each plan as one (`zoneCues`, `sweepCues`, `castCues`); a readable card's family lends its look
-// (looks.ts) to those and to a play, a summon and a spell's hit.
+// in `constants.ts`.
 
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
@@ -105,15 +103,12 @@ import type {
 
 /* Tuning tables (rule 9) */
 
-/**
- * Each burst's particle count at intensity "normal" (planned as `max(1, round(count × intensity))`)
- * and its emit power, unscaled. Every count is at least 6, so "low" plans fewer than "normal".
- */
+/** Each burst's particle count at intensity "normal" and its power. Every count is at least 6, so "low" plans fewer. */
 const TUNING = {
   cast: { count: 24, power: 1 },
   castOpponent: { count: 12, power: 0.8 },
   summonDust: { count: 30, power: 1.1 },
-  // #185: a Small Unit shifts a few grains, a Large one kicks up a cloud, a Huge or MASSIVE one heavy dust.
+  // #185: the dust under a landing Unit, by its tier.
   slamGrains: { count: 8, power: 0.5 },
   slamCloud: { count: 48, power: 1.3 },
   slamHeavy: { count: 64, power: 1.6 },
@@ -193,11 +188,8 @@ type TuningKey = keyof typeof TUNING;
 
 /** The game-over sequence's own timings (S7 `planResult`), all inside FX_RESULT_MS. */
 const RESULT_TUNING = {
-  /** How long the loser's hero crack runs. */
   crackMs: 900,
-  /** When the hero bursts into shards and the board shakes. */
   impactDelayMs: 200,
-  /** When the smoke (and, on a defeat, the embers) rise from the broken hero. */
   smokeDelayMs: 300,
 } as const;
 
@@ -250,7 +242,6 @@ function burst(
   };
 }
 
-/** `density` is the intensity: it scales the trail and the arrival burst as `count` scales a burst. */
 function projectile(intensity: number, preset: FxPreset, from: FxAnchor, to: FxAnchor, flightMs: number): FxProjectileCue {
   return { kind: "projectile", preset, from, to, delayMs: 0, flightMs, density: intensity };
 }
@@ -316,7 +307,6 @@ function renderedSource(view: PlayerView, id: string): { anchor: FxAnchor; kind:
   return null;
 }
 
-/** True when `sourceId` is a unit on either board of `view` that has Poisonous. */
 function sourceIsPoisonous(sourceId: string | null, view: PlayerView): boolean {
   if (sourceId === null || sourceId === HIDDEN_ID) return false;
   for (const side of SIDES) {
@@ -328,7 +318,7 @@ function sourceIsPoisonous(sourceId: string | null, view: PlayerView): boolean {
   return false;
 }
 
-/** Where a non-combat damage source is: rendered instance → remembered trap zone → caster's hero → null. */
+/** Where a non-combat damage source is drawn, or null. */
 export function sourceAnchor(
   sourceId: string | null,
   view: PlayerView,
@@ -363,7 +353,6 @@ type Recipe = (event: GameEvent, p: Plan) => FxCue[];
 const cast: Recipe = (event, p) => {
   // B5 E1: an announced play glows where it hangs; B3.2: an ability flares on its card.
   if (event.type === "cardAnnounced") {
-    // It hangs where it was announced, under a sheen, while the window for a Counter is open.
     const at = anchor(p.tgt);
     const cues: FxCue[] = [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "sparkle", at, "ring", 0, "announceSparkle")];
     if (isCard(p.tgt) || isHandCard(p.tgt)) cues.push({ kind: "sheen", at, delayMs: 0, durationMs: p.D });
@@ -391,7 +380,7 @@ const cast: Recipe = (event, p) => {
   return [burst(p.env.intensity, base, at, "point", 0, "castOpponent"), ...accent];
 };
 
-/** #185: when a Unit hits the table: after the slam's anticipation, at FX_SLAM_AT of the landing. */
+/** #185: when a Unit hits the table. */
 export function slamLandMs(entry: Pick<AnimationEntry, "slam">, D: number): number {
   const wait = entry.slam?.anticipationMs ?? 0;
   return wait + frac(FX_SLAM_AT, D - wait);
@@ -429,7 +418,7 @@ const summon: Recipe = (event, p) => {
   // #185: the entry's slam, when it is this event's Unit landing (`slamEntries`).
   const slam = "instanceId" in event && p.entry.slam?.instanceId === event.instanceId ? p.entry.slam : undefined;
   const landAt = slamLandMs(p.entry, p.D);
-  // B3.1: an Animated card lifts off its backrow zone and lands in its unit zone like a summon.
+  // B3.1: an Animated card lifts off its backrow zone into its unit zone.
   if (event.type === "animated") {
     const home = anchor(testid.zone(sideOf(p.view, event.player), "backrow", event.backrowLane));
     const lift = [ghost(p.D, home, anchor(p.tgt)), burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane")];
@@ -499,7 +488,7 @@ function impactTail(event: DamageEvent, p: Plan, hit: number, flavorParticle?: F
     cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
   }
   if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
-  // R1363: the Armor took half or more of the hit, and a small shield glances up as it lands.
+  // R1363: the Armor took half or more of the hit.
   if (armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, p.D, hit, i));
   // B35: the board shakes here, by the tier's shakePx (#57's DAMAGE_FEEL); a Normal hit stays still.
   pushShake(cues, i, traumaForShakePx(feel.shakePx), hit);
@@ -547,14 +536,13 @@ const impact: Recipe = (event, p) => {
   return [...cues, ...impactTail(event, p, p.D, look.particle)];
 };
 
-/** R1363: the Armor took the whole hit (`damageAbsorbed`), and a full shield blooms over the target. */
+/** R1363: the Armor took the whole hit (`damageAbsorbed`). */
 const armor: Recipe = (event, p) => {
   if (event.type !== "damageAbsorbed") return [];
   return shieldCues("full", anchor(p.tgt), p.D, 0, p.env.intensity);
 };
 
 const drain: Recipe = (event, p) => {
-  // B5 E7: a hero's health set outright — a drain of void with no number, since it is not a loss.
   if (event.type === "healthSet") return healthSetCues(event, p);
   if (event.type !== "healthLost") return [];
   const at = anchor(p.tgt);
@@ -582,7 +570,7 @@ const death: Recipe = (event, p) => {
   const i = p.env.intensity;
   const at = anchor(p.tgt);
   if (event.type === "crumbled") {
-    // B3.3: Brittle runs out and the card shatters like glass where it stands (a pile stands in).
+    // B3.3: Brittle runs out and the card shatters like glass (a pile stands in).
     if (!isCard(p.tgt) && !isHandCard(p.tgt)) return [burst(i, "shard", at, "point", 0, "crumbleShard")];
     return [
       crack(p.D, at, 0),
@@ -591,8 +579,8 @@ const death: Recipe = (event, p) => {
     ];
   }
   if (!isCard(p.tgt)) return [burst(i, "smoke", at, "point", 0, "pileSmoke")];
-  // #1446: a card the view showed face-up leaves in its flavor's exit, over today's death; a
-  // face-down one (the viewer's own unrevealed Trap) keeps today's alone (CLAUDE.md rule 7).
+  // #1446: a card the view showed face-up adds its flavor's exit (exits.ts); a face-down one, the
+  // viewer's own unrevealed Trap, keeps today's death alone (CLAUDE.md rule 7).
   const exit = flavorExitCues({
     defId: event.defId,
     instanceId: event.instanceId,
@@ -616,7 +604,6 @@ const exile: Recipe = (event, p) => {
   const at = anchor(p.tgt);
   const out: FxCue[] = [ring(p.D, "void", at, 0), burst(p.env.intensity, "void", at, "area", 0, "exileVoid")];
   if (event.type === "flickered") {
-    // …and back in at once: an arcane ring and motes as it returns to the same zone.
     const back = frac(FX_FLICKER_RETURN_AT, p.D);
     out.push(ring(p.D, "arcane", at, back), burst(p.env.intensity, "arcane", at, "ring", back, "flickerArcane"));
   }
@@ -749,9 +736,8 @@ const glint: Recipe = (event, p) => {
   if (event.type === "modifierChanged" && event.added) {
     return [burst(p.env.intensity, "arcane", anchor(p.tgt), "point", 0, "glintArcane")];
   }
-  // B3.1: a Unit sinking back into its backrow zone glints there; Classic+ #41: a number set outright.
   if (event.type === "deanimated") {
-    // B3.1: the Unit lifts out of its unit zone and settles back into its backrow zone.
+    // B3.1: the Unit settles back into its backrow zone.
     const from = anchor(testid.zone(sideOf(p.view, event.player), "units", event.unitLane));
     return [ghost(p.D, from, anchor(p.tgt)), burst(p.env.intensity, "arcane", anchor(p.tgt), "point", p.D, "glintArcane")];
   }
@@ -777,8 +763,7 @@ const radiant: Recipe = (event, p) => {
 const smoke: Recipe = (event, p) => {
   if (event.type !== "transformed") return [];
   const at = anchor(p.tgt);
-  // Centered on the unit that changed, and light: an area of big puffs read as smoke drifting over
-  // the neighbouring lanes on a phone (integration QA).
+  // Centered and light: an area of big puffs read as smoke over the next lanes on a phone (integration QA).
   return [
     burst(p.env.intensity, "smoke", at, "point", 0, "transformSmoke"),
     burst(p.env.intensity, "arcane", at, "point", 0, "transformArcane"),
@@ -803,7 +788,6 @@ const fuse: Recipe = (event, p) => {
 };
 
 const mindControl: Recipe = (event, p) => {
-  // B5 E2, E16: a stolen card's arcane lands on the thief's hand.
   if (event.type === "stolen") return stolenCues(event, p);
   if (event.type !== "controlChanged") return [];
   const i = p.env.intensity;
@@ -826,8 +810,8 @@ const trap: Recipe = (event, p) => {
   if (event.type !== "trapFired") return [];
   const at = anchor(p.tgt);
   const delay = frac(FX_TRAP_BURST_AT, p.D);
-  // #1447: the reveal names the card only when the view shows this very instance (§10.8, R33); its burst then takes the
-  // card's flavor colors and particle. An opponent's face-down trap is not in the view, so its burst stays arcane.
+  // #1447: the burst takes the card's flavor only when the view shows this very instance (§10.8, R33): an
+  // opponent's face-down trap is not in it, so its burst stays arcane.
   const look = FX_FLAVOR_LIVE && locateInstance(p.view, event.instanceId) !== null ? flavorLookOf(event.defId, event.instanceId, p.view) : null;
   // A tight ring on the trap's own zone, not motes over the whole area (integration QA).
   const cues: FxCue[] = [
@@ -839,7 +823,6 @@ const trap: Recipe = (event, p) => {
 };
 
 const lunge: Recipe = (event, p) => {
-  // B5 E9: the redirected hit, attack or pick kicks up dust at its new target.
   if (event.type === "redirected") return redirectedCues(event, p);
   if (event.type !== "attackDeclared") return [];
   // #1444: a non-Ranged attacker's contact burst is its flavor particles; Ranged keeps dust.
@@ -854,8 +837,7 @@ const lunge: Recipe = (event, p) => {
 };
 
 const fizzle: Recipe = (event, p) => {
-  // B5 E1: a countered card goes up in smoke; B5 E3: a draw the limit stopped puffs from the deck;
-  // R800: a discard a discard guard stopped fizzles over the hand.
+  // B5 E3: a draw the limit stopped puffs from the deck; R800: a discard a guard stopped fizzles over the hand.
   if (event.type !== "attackCancelled" && event.type !== "countered" && event.type !== "drawLimited" && event.type !== "discardPrevented") return [];
   if (event.type === "countered") return counteredCues(p);
   return [burst(p.env.intensity, "smoke", anchor(p.tgt), "point", 0, "fizzleSmoke")];
@@ -882,8 +864,7 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
   // R1183002: the AI plays the rest of the turn.
   if (event.type === "autopilotEngaged") return [banner(p.D, FX_TEXT.autopilot, "muted")];
-  // R1843000, R1843002: the agreement that removes a player, and the escape, in the removed or the
-  // fleeing player's colors.
+  // R1843000, R1843002: a player voted out, and an escape, in that player's colors.
   if (event.type === "votedOut") return [banner(p.D, FX_TEXT.votedOut, sideOf(p.view, event.player))];
   if (event.type === "fled") return [banner(p.D, FX_TEXT.escaped, sideOf(p.view, event.player))];
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
@@ -906,9 +887,8 @@ const turnBanner: Recipe = (event, p) => {
 };
 
 /**
- * R315, R318: a draw finds the library empty. Dust and a little smoke puff out of the pile at once,
- * then void wisps streak from it to its owner's hero, landing just inside the entry (R200), where the
- * `damage` entry after it pops the number and shakes by the amount.
+ * R315, R318: a draw finds the library empty. Void wisps streak from the pile to its owner's hero, landing
+ * just inside the entry (R200), where the `damage` entry after it pops the number and shakes by the amount.
  */
 const fatigue: Recipe = (event, p) => {
   if (event.type !== "fatigue") return [];
@@ -927,10 +907,8 @@ const fatigue: Recipe = (event, p) => {
 };
 
 /**
- * R316, R318: a full library turns a card away. A refusal ring flares on the pile; a card that was
- * never made, or has ceased to exist, fizzles into smoke there, and one sent to the graveyard flies
- * there as a card back (R202: a ghost never names a card) and lands in embers. The card's face, when
- * the viewer may read it, is the board's `overflow-card`, not an effect.
+ * R316, R318: a full library turns a card away. One sent to the graveyard flies there as a card back (R202:
+ * a ghost never names a card); its face, when the viewer may read it, is the board's `overflow-card`.
  */
 const overflow: Recipe = (event, p) => {
   if (event.type !== "libraryOverflow") return [];
@@ -946,7 +924,7 @@ const overflow: Recipe = (event, p) => {
   return cues;
 };
 
-/* Patch v0.2.0's events (docs/classic-sets.md B3, B5): their own looks, inside R200's bounds */
+/* docs/classic-sets.md B3, B5's events: their own looks, inside R200's bounds */
 
 /** The engine writes a hero target as `hero-<playerId>` (as `damage` does). */
 const HERO_ID = /^hero-(p1|p2)$/;
@@ -960,7 +938,7 @@ function idAnchor(view: PlayerView, id: string): FxAnchor | null {
   return at === null ? null : anchor(at);
 }
 
-/** B5 E1: a countered card shatters where it hung, then its smoke drifts off; a pile stands in for it. */
+/** B5 E1: a countered card shatters where it hung; a pile stands in for it. */
 function counteredCues(p: Plan): FxCue[] {
   const i = p.env.intensity;
   const at = anchor(p.tgt);
@@ -1014,7 +992,7 @@ function redirectedCues(event: Extract<GameEvent, { type: "redirected" }>, p: Pl
 
 /**
  * B5 E7: a hero's health set outright. Not damage and not a heal (R18's lose health is the nearest
- * rule), so it reads as either by the way it went: holy light and the gain, or void and the loss.
+ * rule), so it reads as either by the way it went.
  */
 function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, p: Plan): FxCue[] {
   const i = p.env.intensity;
@@ -1026,7 +1004,7 @@ function healthSetCues(event: Extract<GameEvent, { type: "healthSet" }>, p: Plan
   return [ring(p.D, "arcane", at, 0)];
 }
 
-/** Classic+ #35 Rollback: the whole board rewinds, a swirl of arcane at its center and a jolt. */
+/** Classic+ #35 Rollback: the whole board rewinds. */
 const rewind: Recipe = (event, p) => {
   if (event.type !== "rolledBack") return [];
   const cues: FxCue[] = [
@@ -1037,10 +1015,7 @@ const rewind: Recipe = (event, p) => {
   return cues;
 };
 
-/**
- * C+ #62 KY's Papaya (R831003): the curve drawn across the board, an arcane bolt from each cell it
- * passes through to the next in lane order, and a ring at each cell as the line reaches it.
- */
+/** C+ #62 KY's Papaya (R831003): the curve drawn across the board, cell to cell in lane order. */
 const curve: Recipe = (event, p) => {
   if (event.type !== "curveDrawn") return [];
   const cells = event.cells.map((cell) => anchor(testid.zone(sideOf(p.view, cell.player), cell.row, cell.lane)));
@@ -1095,10 +1070,7 @@ function sourceFacts(sourceId: string | null, view: PlayerView, env: FxPlanEnv):
   return defId === undefined ? undefined : factsOf(defId, env);
 }
 
-/**
- * A card another card cast flares at its caster's hero, in the caster's family look (arcane when
- * the view hides the caster), bigger with each cast of the burst.
- */
+/** A card another card cast flares at its caster's hero, in its family look (arcane when the view hides it). */
 function castCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   const cast = entry.cast;
   const played = entry.events.find((event) => event.type === "cardPlayed");
@@ -1115,10 +1087,7 @@ function castCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCu
   return cues;
 }
 
-/**
- * A run that reached every card of one pile: one wave over the pile in the event's look, with the
- * count it reached popping in its middle, instead of one flash per card.
- */
+/** A run that reached every card of one pile: one wave over the pile, instead of one flash per card. */
 function zoneCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   const zone = entry.zone;
   if (zone === undefined) return [];
@@ -1142,10 +1111,7 @@ function zoneCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCu
   ];
 }
 
-/**
- * The instance ids of `side`'s units `entry` reached, in lane order, with the side's hero last
- * when the sweep reached them too.
- */
+/** The instance ids of `side`'s units `entry` reached, in lane order, then its hero when reached too. */
 function sweepOrder(entry: AnimationEntry, view: PlayerView, side: Side): string[] {
   const sv = side === "you" ? view.you : view.opponent;
   const reached = new Set<string>();
@@ -1163,9 +1129,8 @@ function sweepOrder(entry: AnimationEntry, view: PlayerView, side: Side): string
 }
 
 /**
- * A run of hits or heals that swept a side: one fog rolling over each swept side's row, in the
- * look of what cast it (fire and a flame for hits, holy light and a heart for heals, when nothing
- * readable did), with each hit landing as the fog reaches its lane.
+ * A run of hits or heals that swept a side: one fog rolling over each swept side's row, in the look of
+ * what cast it, with each hit landing as the fog reaches its lane.
  */
 function sweepCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   const sweep = entry.sweep;
@@ -1208,7 +1173,6 @@ function sweepCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxC
     if (event.type === "divineShieldLost") {
       cues.push(ring(D, "gold", at, hit), burst(i, "shard", at, "ring", hit, "shieldShard"));
     } else if (event.type === "damageAbsorbed") {
-      // R1363: the fog reaches a unit whose Armor takes its hit whole, and the shield blooms there.
       cues.push(...shieldCues("full", at, D, hit, i));
     } else {
       if (event.type === "damage" && flavorFrom !== null && flavorShot !== null && shots < FX_FLAVOR_VOLLEY_MAX) {
@@ -1257,12 +1221,10 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   banner: turnBanner,
   fatigue,
   overflow,
-  // R436: the slot-machine reveal of what Call to Chaos rolled (chaos.ts).
+  // R436 (chaos.ts) and R437 (brand.ts).
   chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
-  // R437: a mark branded onto its card in the mark's colors (brand.ts).
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,
-  // R1363: a hit the Armor took whole, a full shield over the target (shield.ts).
   armor,
   curve,
 };
@@ -1270,14 +1232,11 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
 /* Public planners (S6) */
 
 /**
- * Plans every event of one entry: each event's row recipe, in event order, concatenated. R502: while
- * a card with a signature recipe is resolving (`CARD_FX`, cardFx.ts), that recipe may claim an event
- * of its own resolution first, adding to the row's cues or replacing them.
+ * Each event's row recipe, in event order. R502: while a card with a signature recipe (`CARD_FX`, cardFx.ts)
+ * resolves, that recipe may claim an event of its own resolution first, adding to the row's cues or replacing them.
  */
 export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxCue[] {
   if (!(env.intensity > 0)) return [];
-  // Issue #124: a sweep plays its fog and its timed hits, and a whole-pile impact its wave, instead
-  // of one recipe per event; a cast plays its card's cues as usual, plus the flare at its caster.
   if (entry.sweep !== undefined) return sweepCues(entry, view, env);
   if (entry.zone !== undefined) return zoneCues(entry, view, env);
   const cues: FxCue[] = [];
@@ -1297,7 +1256,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
   return cues;
 }
 
-/** The game-over sequence for a view with a result; [] when view.result is null. */
+/** The game-over sequence for a view with a result. */
 export function planResult(view: PlayerView, env: Pick<FxPlanEnv, "intensity">): FxCue[] {
   const i = env.intensity;
   if (!(i > 0) || view.result === null) return [];
@@ -1339,18 +1298,11 @@ export function planResult(view: PlayerView, env: Pick<FxPlanEnv, "intensity">):
 }
 
 /**
- * The killing blow, replayed ahead of the game-over sequence.
- *
- * A result settles the runner at once (Game.tsx drains it the moment a finished view arrives), so the
- * entry that dealt the lethal damage is cleared before it ever draws: without this, the last hit of the
- * match (the lunge's impact, the Fireball, the splat on the hero) would never show. `entries` are the
- * ones the drain cut short, in order. This takes the last of them whose `damage` or `healthLost` lands
- * on a losing hero and plans it again, given its own duration but never more than
- * FX_LETHAL_LEAD_MAX_MS, and reports that duration as `leadMs`, the beat the result waits for.
- *
- * Pure, like `planFx`: the caller remembers the drained entries' events in `env.memory` first, so a
- * spell's caster is known. Nothing is replayed when the entries were planned for another seat (a
- * hot-seat hand-over), because their `hero-you` would be the other hero now.
+ * The killing blow, replayed ahead of the game-over sequence: Game.tsx drains the runner the moment a
+ * finished view arrives, so the lethal entry never draws. Replays the last drained entry whose `damage`
+ * or `healthLost` lands on a losing hero, capped at FX_LETHAL_LEAD_MAX_MS (`leadMs`, the beat the result
+ * waits for). The caller remembers the drained events in `env.memory` first, so a spell's caster is known.
+ * Entries planned for another seat (a hot-seat hand-over) never replay: their `hero-you` is the other hero.
  */
 export function planLethal(
   entries: readonly AnimationEntry[],
@@ -1371,9 +1323,8 @@ export function planLethal(
       return tgt !== null && heroes.has(tgt);
     });
     if (!lethal) continue;
-    // R318: a fatigue hit comes out of an empty library, and the entry just before it says so. A
-    // lethal one is replayed with it, the two sharing the same lead, so the killing blow is not a hit
-    // from nowhere; the board's "Fatigue N" never mounts under a finished view.
+    // R318: a lethal fatigue hit replays with the entry before it (the empty library), sharing the lead, so
+    // the killing blow is not a hit from nowhere; the board's "Fatigue N" never mounts under a finished view.
     const before = entries[k - 1];
     const fatigue =
       before !== undefined &&
@@ -1397,7 +1348,6 @@ export function planLethal(
   return none;
 }
 
-/** The same cues, each `ms` later. */
 export function delayCues(cues: readonly FxCue[], ms: number): FxCue[] {
   return ms > 0 ? cues.map((cue) => ({ ...cue, delayMs: cue.delayMs + ms })) : [...cues];
 }
@@ -1406,7 +1356,7 @@ function resultCue(outcome: FxOutcome, text: string): FxCue {
   return { kind: "result", outcome, text, delayMs: 0, durationMs: FX_RESULT_MS };
 }
 
-/** The "Your turn" banner on a hot-seat hand-over; [] unless active === viewer, phase ≠ "mulligan", no result. */
+/** The "Your turn" banner on a hot-seat hand-over. */
 export function planHandover(view: PlayerView, env: Pick<FxPlanEnv, "intensity">): FxCue[] {
   if (!(env.intensity > 0)) return [];
   if (view.active !== view.viewer || view.phase === "mulligan" || view.result !== null) return [];

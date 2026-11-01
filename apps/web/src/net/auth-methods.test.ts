@@ -1,7 +1,6 @@
 // `net/auth.ts`'s three further ways in (issue #267): the email sign-in link and code (R664), the
-// authenticator app's second step (R665) and the OAuth providers (R666). Every one ends in a session
-// for an account the server gates exactly as a password sign-in's (§9.4): nothing here can make an
-// account active, and these tests only prove what each call sends and how it reads the answers.
+// authenticator app's second step (R665) and the OAuth providers (R666). The server gates each one's
+// account as a password sign-in's (§9.4), so these tests prove only what each call sends and reads.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -29,7 +28,6 @@ const EMAIL = "player@example.com";
 type Call = { url: URL; method: string; headers: Headers; body: unknown };
 type Answer = { status: number; body?: unknown };
 
-/** Answers each request with `answer(call)`, recording every call. */
 function serveBy(answer: (call: Call) => Answer): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal(

@@ -158,8 +158,6 @@ function entriesOf(view: PlayerView, events: readonly GameEvent[], reducedMotion
   return planEntries(events, view, reducedMotion);
 }
 
-// B24: cues play when an entry starts
-
 describe("B24 cues play when the runner starts an entry", () => {
   it("B24 onView sends nothing to the sink, it only owes the fresh events", () => {
     const { sink, director } = rig();
@@ -244,8 +242,6 @@ describe("B24 cues play when the runner starts an entry", () => {
     expect(sent(sink)).toEqual(["sfx:impact@0"]);
   });
 });
-
-// B25: the flush
 
 describe("B25 events the runner never started are flushed once, condensed, by onIdle", () => {
   it("B25 a reduced-motion burst: SFX deduped in stream order, at most FLUSH_MAX_SFX, FLUSH_GAP_MS apart, one line, gameOver last", () => {
@@ -374,8 +370,6 @@ describe("B25 events the runner never started are flushed once, condensed, by on
   });
 });
 
-// B26: nothing is voiced twice
-
 describe("B26 no event is voiced twice", () => {
   it("B26 across overlapping event windows, the events both views carry sound once", () => {
     const { sink, director } = rig();
@@ -493,8 +487,6 @@ describe("R203: a hand-over plays nothing the arriving seat's view did not produ
     expect(sink.sent).toEqual([]);
   });
 });
-
-// B22: the director's mana baseline
 
 describe("B22 the mana baseline", () => {
   it("B22 starts at the planned view's mana.current for that player", () => {
@@ -778,8 +770,6 @@ describe("R203 against real viewFor redaction: a trap names itself only to its c
   });
 });
 
-// B47 end to end: the director into the real engine
-
 describe("B47 a trap that answers a play is heard over that play's line", () => {
   let engine: AudioEngine | null = null;
 
@@ -840,8 +830,6 @@ describe("B47 a trap that answers a play is heard over that play's line", () => 
   });
 });
 
-// A sweep or a whole-pile impact is voiced condensed
-
 describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => {
   function sweptView(): PlayerView {
     return baseView({
@@ -891,8 +879,6 @@ describe("issue #124 a sweep or a whole-pile impact is voiced condensed", () => 
     expect(director.owedCount()).toBe(0);
   });
 });
-
-// R655: card effects ride the same path as the lines
 
 describe("R655 a card's effect is sent on its hook's moment, through the director", () => {
   /** #66 The Rock: an effect and a line on its play, only an effect on its death; #5 a cast that is only an effect. */

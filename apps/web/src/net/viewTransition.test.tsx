@@ -1,6 +1,5 @@
-// R2117000: a move between two menu screens cross-fades in the browser's view transition
-// (`net/navigate.ts`'s `showMove`), with the render flushed inside it so the browser captures the
-// new screen. A separate file from `navigate.test.tsx`, which covers the leave guard itself.
+// R2117000: a move between two menu screens cross-fades in the browser's view transition (`showMove`),
+// the render flushed inside it so the browser captures the new screen.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { useEffect, type ReactElement } from "react";
@@ -26,7 +25,6 @@ function guard(): (() => void)[] {
   return held;
 }
 
-/** Moves the history by `step` and waits for the `popstate` it fires. */
 async function traverse(step: () => void): Promise<void> {
   await act(async () => {
     const popped = new Promise((resolve) => {

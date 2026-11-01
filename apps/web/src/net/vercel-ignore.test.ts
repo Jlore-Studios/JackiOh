@@ -1,8 +1,7 @@
 // scripts/vercel-ignore.sh, run the way vercel.json runs it (its `ignoreCommand`), in a throwaway git
 // repo: Vercel deploys on the last push, only when the push can change what the site serves, and on
-// main only once MIN_GAP_SECONDS have passed since the last build.
-// Exit 1 builds, exit 0 skips, and every doubt must build: a skipped deploy that should have run
-// leaves production stale, while an extra build costs one deployment.
+// main only once MIN_GAP_SECONDS have passed since the last build. Exit 1 builds, exit 0 skips, and
+// every doubt must build: a wrongly skipped deploy leaves production stale, an extra build costs one.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -27,11 +26,9 @@ let base = "";
 /** The committer date of every git call, in seconds since the epoch; `commit` moves it on. */
 let now = Date.UTC(2026, 0, 1) / 1000;
 
-/** Where the throwaway repo lives: the checkout's own ignored `.cache/`, not the machine's shared temp
- * directory, and with git's background upkeep off, so nothing but this file touches it while it runs
- * (#1016: on main at 67811e0 a `git add` failed mid-test because, from git 2.54, the first case's
- * commits start a detached repack whose prune-packed removed the objects/xx directory the add had
- * just made). */
+/** The throwaway repo lives in the checkout's ignored `.cache/`, not the shared temp directory, with git's
+ * background upkeep off, so nothing but this file touches it (#1016: from git 2.54 a commit can start a
+ * detached repack whose prune-packed removes the objects/xx directory a `git add` has just made). */
 const SCRATCH = join(ROOT, ".cache");
 
 function git(...args: string[]): string {
@@ -267,8 +264,7 @@ describe("scripts/vercel-ignore.sh", () => {
     expect(builds({ previous: "" })).toBe(true);
     expect(builds({ previous: "0".repeat(40) })).toBe(true);
     expect(builds({ previous: "not-a-commit" })).toBe(true);
-    // Nothing changed since the last build (a redeploy of the same commit, which rule 4's wait does
-    // not skip either).
+    // A redeploy of the same commit, which rule 4's wait does not skip either.
     expect(builds({ previous: git("rev-parse", "HEAD") })).toBe(true);
     // The last build is not an ancestor of this commit (a preview from another branch). Every file
     // between the two is a skippable one, so only the ancestry check can make this a build.

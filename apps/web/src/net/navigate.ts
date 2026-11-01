@@ -1,8 +1,7 @@
 // Client routing; §9.4 redirects pending accounts and room claims.
 // `pushState` and `replaceState` do not fire `popstate`, so `navigate` dispatches an event for `usePathname`.
-// A page holding work a move would lose registers a leave guard (`guardLeaving`, R1754000): `navigate` and Back wait for it.
-// A move between two menu screens cross-fades in a view transition (`showMove`, R2117000).
-// An open sheet or dialog takes Back first, and a move off its entry takes that entry's place (`backLayers.ts`, R2127000).
+// Moves wait on a leave guard (R1754000), cross-fade between menu screens (R2117000) and give an open
+// sheet or dialog Back first (`backLayers.ts`, R2127000).
 
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
@@ -47,9 +46,8 @@ export function guardLeaving(hold: (leave: () => void) => void): () => void {
 }
 
 /**
- * R2117000: a board on screen (every game and replay). `testid.board` spelled out: e2e's typecheck loads
- * this file through the Vite config and cannot compile what `game/contract.ts` imports.
- * viewTransition.test.tsx pins the two.
+ * R2117000: `testid.board` spelled out: e2e's typecheck loads this file through the Vite config and
+ * cannot compile what `game/contract.ts` imports. viewTransition.test.tsx pins the two.
  */
 const BOARD_ON_SCREEN = '[data-testid="board"]';
 
@@ -66,7 +64,6 @@ function crossFades(from: string, to: string): boolean {
   return !reducedMotionNow() && typeof document.startViewTransition === "function";
 }
 
-/** R2117000: true while a view transition's update is being flushed. */
 let flushing = false;
 
 /**
@@ -142,9 +139,8 @@ export function leaveFirst(then: () => void): boolean {
 }
 
 /**
- * R1754000: a `popstate` off a guarded page puts its address back before any screen reads it; the
- * way out is the browser's Back, the guard gone, to the entry the player went to. After a Forward
- * that Back lands on the guarded page instead, so the entry is made again.
+ * R1754000: a `popstate` off a guarded page puts its address back before any screen reads it; let go,
+ * Back leaves for the entry the player went to (made again after a Forward, whose Back lands here).
  */
 function heldPop(): boolean {
   const guard = leaveGuard;
@@ -202,19 +198,16 @@ function currentSearch(): string {
   return window.location.search;
 }
 
-/** The query string (`?a=b`, or empty), re-read on every `navigate` and every `popstate`. */
 export function useSearch(): string {
   return useSyncExternalStore(subscribe, currentSearch, currentSearch);
 }
 
 /**
- * The address the source files spell: `index.html`, `public/robots.txt` and
- * `public/.well-known/security.txt` name it, and `static-pages.ts` replaces it with the build's
- * own (#696). It is staging's host, and the address of any build that sets no `VITE_SITE_ORIGIN`.
+ * The address `index.html`, `public/robots.txt` and `public/.well-known/security.txt` spell, which
+ * `static-pages.ts` replaces with the build's own (#696): staging's, and a build's with no `VITE_SITE_ORIGIN`.
  */
 export const SITE_ORIGIN = "https://jackioh.vercel.app";
 
-/** A build's address from its `VITE_SITE_ORIGIN`, without a trailing slash; `SITE_ORIGIN` when unset or empty. */
 export function originOf(configured: unknown): string {
   return typeof configured === "string" && configured.length > 0 ? configured.replace(/\/+$/u, "") : SITE_ORIGIN;
 }
@@ -261,19 +254,19 @@ export const paths = {
   creator: "/creator",
   /** R768000: the recent games and their replays. */
   replays: "/replays",
-  /** #936 S8: Play together: friends, requests, challenges, chat and shared replays. */
+  /** #936 S8: Play together. */
   together: "/together",
   /** #1307: the account's collection, wallet, tracks and quests. */
   collection: "/collection",
   /** R1579000: a Collection section that opens in place. */
   collectionSection: (section: "cards" | "cosmetics"): string => `/collection?section=${section}`,
-  /** #1577, R1580000: the shop: buying and opening packs, pity, the tokens and the cosmetic packs. */
+  /** #1577, R1580000: the shop. */
   shop: "/shop",
   /** #1665, R1665000: the odds and pity of every pack, public like the terms; the account's counters need a session. */
   purchases: "/purchases",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
-  /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */
+  /** R338: a Conquest series between its games. */
   series: (seriesId: string): string => `/series/${seriesId}`,
   /** #936 S8 (B50): a friend's live game, watched from their seat; the friend rides on `?friend=`. */
   watch: (matchId: string): string => "/watch/" + matchId,
@@ -297,12 +290,10 @@ export function seriesIdOf(path: string): string | null {
   return idUnder(path, "series");
 }
 
-/** #936 S8: the match a `/watch/:matchId` path watches, or null. */
 export function watchIdOf(path: string): string | null {
   return idUnder(path, "watch");
 }
 
-/** #936: the match id of a `/duos/:matchId` path, or null. */
 export function duosIdOf(path: string): string | null {
   return idUnder(path, "duos");
 }
@@ -351,7 +342,6 @@ export function newDeckPath(): string {
   return `${paths.decks}?new=deck`;
 }
 
-/** R2118000: whether `search` (`window.location.search`) asks the workshop for one new deck. */
 export function wantsNewDeck(search: string): boolean {
   return queryValue(search, "new") === "deck";
 }

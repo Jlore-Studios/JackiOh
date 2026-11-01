@@ -1,7 +1,6 @@
 // The four seats of a Duos game and how they map onto its two duels (#936 SPEC "The core design",
-// S2's `DuosSeat` methods). Structure, not rules: duel 0 is A1 against B1, duel 1 is A2 against B2,
-// team A is `p1` in both and team B `p2`, and every per-seat array of a `DuosTeamView` is in duel
-// order, so a seat's slot in its team's arrays is its duel.
+// S2's `DuosSeat` methods). Structure, not rules: team A is `p1` in both duels and team B `p2`, and
+// every per-seat array of a `DuosTeamView` is in duel order.
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { Team } from "../wire/generated/Team.ts";

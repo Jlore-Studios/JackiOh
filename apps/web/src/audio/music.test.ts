@@ -1,8 +1,6 @@
 // R631 (SPEC §10.11 "Music"): the music player, on the real engine over the strict fake Web Audio
-// context. Changes wait for a bar line and crossfade; a sting hands off on its last bar line; the
-// opponent's turn is a mix; a station track resumes; nothing is scheduled on a stopped context; and
-// the engine ducks the music under voice lines and the big effects. R1350, R1351: a card's intro on
-// top of the music, the duck under it, and what cuts it.
+// context: bar-line changes, a sting's handoff, the opponent's turn mix, resume, a stopped context and
+// the engine's ducks. R1350, R1351: a card's intro on top of the music, the duck under it, what cuts it.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -529,7 +527,6 @@ describe("R1350 a card's intro on top of the music", () => {
     expect(clip?.source.loop).toBe(false);
     expect(r.fetch.urls()).toContain("/audio/music/intro-a.m4a");
     expect(r.player.intro()).toBe("intro-a");
-    // The track goes on under it.
     expect(voices(r.audio)).toHaveLength(1);
     expect(voices(r.audio)[0]?.source.stopTime).toBeNull();
     expect(r.player.current()).toBe("tavern-1");
@@ -726,10 +723,9 @@ describe("background: the OS closes the context mid-game (issue #2034)", () => {
 
     const after = r.audio;
     expect(after).not.toBe(before);
-    // The wanted track restarts on the new context, through the music chain …
+    // The wanted track restarts on the new context, through the music chain.
     expect(voices(after)).toHaveLength(1);
     expect(started(r)).toEqual(["tavern-1", "tavern-1"]);
-    // … and the focus target ends back at 1.
     const focus = focusGainOf(after);
     expect(focus.param("gain").targets().at(-1)?.value).toBe(1);
     expect(after.violations).toEqual([]);

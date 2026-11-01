@@ -1,11 +1,9 @@
 // Downloading a finished co-op replay as JSON (issue #1242, R1242000): the caller's seat's
 // already-authorized `DuosView`s, each step's index and round, the caller's seat and the build's
-// catalog version, in one file a player attaches to a bug report. Nothing else leaves (CLAUDE.md
-// rule 7): no seed, log, state, deck, match id, account id or name, and no ping. The file does
-// carry what the team shares (§13.6): the teammate's duel and hand as the seat saw them, so
-// sharing the file shares that with whoever reads it, though nothing in it names the teammate.
-// Its format is versioned apart from R1141000's 1v1 file, and like that file it is made in the
-// page and handed to the browser's downloads, never uploaded or kept.
+// catalog version. Nothing else leaves: no seed, log, state, deck, match id, account id or name, and
+// no ping. The file does carry what the team shares (§13.6), the teammate's duel and hand as the seat
+// saw them, though nothing in it names the teammate. Its format is versioned apart from R1141000's 1v1
+// file, and it is made in the page and handed to the browser's downloads, never uploaded or kept.
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 
@@ -59,10 +57,9 @@ export function duosReplayJsonFile(steps: DuosReplaySteps): File {
 }
 
 /**
- * The views of a file `duosReplayJsonFile` wrote, or a `ReplayFailure` saying why it is refused:
- * another format or version, another catalog version, no Duos seat, or steps missing, out of
- * order, out of round or of another seat, under the 1v1 file's caps and sentences. A view is
- * checked only for its seat and round, never for rules (CLAUDE.md rule 7).
+ * The views of a file `duosReplayJsonFile` wrote, or a `ReplayFailure` saying why it is refused,
+ * under the 1v1 file's caps and sentences. A view is checked only for its seat and round, never for
+ * rules (CLAUDE.md rule 7).
  */
 export function parseDuosReplayJson(json: Record<string, unknown>): DuosReplaySteps {
   const unmarked = json.version === DUOS_REPLAY_JSON_UNMARKED_VERSION;

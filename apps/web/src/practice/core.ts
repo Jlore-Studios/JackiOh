@@ -1,26 +1,14 @@
 // The practice game itself: the one `GameState`, both seats' actions and the AI (SPEC §9.9, R187).
 //
 // The ONLY practice file that imports `@jackioh/engine`, `@jackioh/cards` or `@jackioh/ai` (the Rust
-// engine and AI as WebAssembly, through `src/wire/`, SURFACE.md §10.4), loaded only by the worker and
-// the jsdom tests' `host.ts`, each running `loadWasm` first. Rule 7: the state, hands and libraries stay
-// behind `handle`, which stands where §9.1 puts the server; a `PracticeSnapshot` crosses, with the
-// human's sure win this turn asked of the human's own redaction (R2102000, R2291000).
+// engine and AI as WebAssembly, SURFACE.md §10.4), loaded only by the worker and the jsdom tests' `host.ts`.
+// Rule 7: the state, hands and libraries stay behind `handle`, which stands where §9.1 puts the server; no
+// save, log, seed, deck or state crosses to the page, since the log names the AI's hidden cards.
 //
-// Nonces `h<n>` (human) and `a<n>` (AI) count only accepted actions, so the log folds exactly
-// (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws only from
-// `${seed}:ai`, never the match rng, as `(seed, cursor)`; `decide` draws this object forward (`wire/ai.ts`).
-//
-// Resume (R668): a free game in progress is saved after every answer and folded again under the same
-// nonces to the same hash. Replays (R768): the newest PRACTICE_REPLAYS_KEPT finished free games (no
-// lesson, none Glitch voided, R679) are kept; a listing folds none (that would stall the worker), pages
-// come from a fold held for the last PRACTICE_REPLAYS_CACHED opened, and both are refused mid-game. No
-// save, log, seed, deck or state crosses to the page: the log would name the AI's hidden cards.
-//
-// Claims (R1303000): an `earning` game answers `claim` once over with its seed, result and log, for the
-// server to fold and check (R1303002); the log crosses only after the end, and the page asked the server
-// for the seed. A resumed game claims on the seed it began on (R1303001). R2208000: it decides under
-// PRACTICE_EARNING_AI_CLOCK_MS; a decision that cap still cuts marks it (clockCut, saved), answered
-// beside the claim, never in it.
+// Nonces `h<n>` (human) and `a<n>` (AI) count only accepted actions, so the log folds exactly (R508, R433).
+// The AI draws only from `${seed}:ai`, never the match rng. Replays (R768): a listing folds none (that would
+// stall the worker), and listings and pages are refused mid-game. A resumed game claims on the seed it
+// began on (R1303001). R2208000: a clock cut is answered beside the claim, never in it.
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import {
@@ -79,32 +67,28 @@ import type {
 
 export type PracticeCoreEnv = {
   /**
-   * The wall clock the AI's cap is measured on, and the lethal hint's (R2102000), in `Date.now()`
-   * terms (worker: `Date.now`), because that is the clock the WebAssembly side reads against the
-   * deadline. A clock that reads 0 is no clock: the tests' frozen `() => 0` never stops a search, so a
-   * decision is its budget's alone. It is also the time a finished game is kept at (R768).
+   * The AI's and the lethal hint's (R2102000) wall clock, in `Date.now()` terms: the clock the WebAssembly
+   * side reads against the deadline; 0 is no clock. Also the time a finished game is kept at (R768).
    */
   now: () => number;
   /** answer `debug` only when true */
   dev: boolean;
   /** default AI_BUDGET */
   budget?: SearchBudget;
-  /** R668, R768: where a free game in progress and the finished ones kept for replay live; absent, nothing is kept, no resume folds and nothing is replayed. */
+  /** R668, R768: where the game in progress and the finished ones kept for replay live; absent, nothing is kept. */
   saves?: PracticeSaveStore;
 };
 
 /**
- * `handle` never throws: anything that goes wrong comes back as `"failed"`. `needsLuau` is what the
- * worker asks first (R915009): whether `request` runs on the Luau module (a game with custom cards,
- * started, resumed or replayed), on the normal one, or on whichever is in use (`null`), so it can
- * switch before the synchronous `handle`.
+ * `handle` never throws: anything that goes wrong comes back as `"failed"`. `needsLuau` (R915009): whether
+ * `request` runs on the Luau module (a game with custom cards), on the normal one, or on whichever is in
+ * use (`null`), so the worker can switch before the synchronous `handle`.
  */
 export type PracticeCore = {
   handle(request: PracticeRequest): PracticeResponse;
   needsLuau(request: PracticeRequest): boolean | null;
 };
 
-/** R915006: whether a game's setup carries custom cards. */
 export function hasCustomCards(config: PracticeStartConfig): boolean {
   return config.customCards !== undefined && config.customCards.length > 0;
 }
@@ -121,7 +105,6 @@ type PracticeGame = {
   dealt?: PlayerId[];
   state: GameState;
   log: Action[];
-  /** The AI's own stream, `${seed}:ai`, for the whole game. */
   rng: Rng;
   humanCount: number;
   aiCount: number;
@@ -137,9 +120,8 @@ type PracticeGame = {
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
 function isForbiddenAiAction(action: ActionBody): boolean {
-  // MD-D29, R1127: the persona's emote is no AI decision — it arrives on its own request, and the
-  // random policy never emotes, so the gate answers it, never the search. R923000: the sandbox's tools
-  // are the human's alone (`legalActions` never lists one, and this gate holds it twice).
+  // MD-D29, R1127: the persona's emote is no AI decision; it arrives on its own request. R923000: the
+  // sandbox's tools are the human's alone (`legalActions` never lists one; this gate holds it twice).
   if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote" || action.type === "sandbox") return true;
   return action.type === "answerDraw" && action.accept;
 }
@@ -149,12 +131,9 @@ function messageOf(cause: unknown): string {
 }
 
 /**
- * The human's deck: a random draw at the spec's own size, a named preset's list, or a saved
- * loadout deck. `createGame` checks a preset or a saved deck like any other (§2.6): the engine's
- * ruling, printed as given. R1373, R924000: a random deck the player asked to lean on a set leans on
- * it, "newest" being the newest set that ships (R1371), resolved here, where the deck is dealt; the
- * AI's own deck never leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
- * (R1390) applies.
+ * `createGame` checks a preset or a saved deck like any other (§2.6). R1373, R924000: a random deck leans
+ * as asked, "newest" (R1371) resolved here; the AI's never leans. A player's random deck is dealt from
+ * every set: neither the AI's shadow ban nor its soft gate (R1390) applies.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
@@ -183,10 +162,8 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
 }
 
 /**
- * §9.10, R291: a lesson's two fixed decks, the tutorial handicap on the AI (R290) and `TUTORIAL_HUMAN` on the
- * human, whose fixed deck is smaller than `DECK_SIZE` (R1705005), with the lesson's pool hold (R2201001); or the
- * free game's: the difficulty's
- * handicap, the chosen deck and a dealt AI deck (§9.9), with no handicap on the human.
+ * §9.10, R291: a lesson's fixed decks, the tutorial handicap on the AI (R290) and `TUTORIAL_HUMAN` on the
+ * human, whose fixed deck is smaller than `DECK_SIZE` (R1705005); or a free game's (§9.9), none on the human.
  */
 function decksAndHandicap(config: PracticeStartConfig): {
   humanDeck: string[];
@@ -218,13 +195,11 @@ function decksAndHandicap(config: PracticeStartConfig): {
 }
 
 /**
- * R433: the seats whose deck was dealt rather than built. A free game on the random deck deals the
- * human theirs (`humanDeckFor`'s "random"), so the human is shown none of it going in. The AI's
- * deck is never counted dealt: no view shows its seat, and R185's redaction would hide the AI's own
- * library from itself. A lesson plays its fixed decks, whatever `deck` says.
+ * R433: the seats whose deck was dealt rather than built, so the human is shown none of it going in. The
+ * AI's deck is never counted dealt: no view shows its seat, and R185's redaction would hide the AI's own
+ * library from itself.
  */
 function dealtSeats(config: PracticeStartConfig): PlayerId[] {
-  // R433: the human was dealt a random deck, or (#920's "Try it") a random deck around their custom card.
   const dealt = config.deck.kind === "random" || config.deck.kind === "try";
   return config.lesson === undefined && dealt ? [config.humanSeat] : [];
 }
@@ -244,8 +219,7 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     board.length === 0 ? undefined : config.humanSeat === "p1" ? [[...board], []] : [[], [...board]];
   const dealt = dealtSeats(config);
 
-  // `createGame` throws on an illegal deck and `beginGame` reports a refusal in `error`; either way
-  // there is no game, and `handle` turns the throw into "failed".
+  // `createGame` throws on an illegal deck and `beginGame` reports a refusal: no game, and "failed".
   const created = createGame({
     seed: config.seed,
     decks,
@@ -283,16 +257,13 @@ function humanSeatNow(game: PracticeGame): PlayerId {
   return seatPlayedBy(game.state, game.config.humanSeat);
 }
 
-/** R677: the seat the AI plays now. */
 function aiSeatNow(game: PracticeGame): PlayerId {
   return seatPlayedBy(game.state, game.aiSeat);
 }
 
 /**
- * R677, R768: the seat the human played at step `from` of a kept game, and how many steps from
- * there, up to `count`, it went on playing it. Every logged action was sent as its player's seat
- * at the step it was taken from (`h…` the human's, `a…` the AI's), and the last step's seat is the
- * one the game ended in, so a page stops where a Glitch swap moved the human.
+ * R677, R768: the seat the human played at step `from` of a kept game, and for how many steps up to
+ * `count`, so a page stops where a Glitch swap moved the human. The last step's is the one it ended in.
  */
 export function replaySeatRun(log: readonly Action[], endSeat: PlayerId, from: number, count: number): { seat: PlayerId; count: number } {
   const seatAt = (step: number): PlayerId => {
@@ -307,9 +278,8 @@ export function replaySeatRun(log: readonly Action[], endSeat: PlayerId, from: n
 }
 
 /**
- * One action for the human or the AI, in the seat it plays now (R677); null when the engine
- * accepted it, else the engine's reason. The nonce counts by player, not by seat, so a swap leaves
- * both streams unbroken.
+ * R677: in the seat the player plays now; null when accepted, else the engine's reason. The nonce
+ * counts by player, not by seat, so a swap leaves both streams unbroken.
  */
 function apply(game: PracticeGame, body: ActionBody, human: boolean): string | null {
   const seat = human ? humanSeatNow(game) : aiSeatNow(game);
@@ -332,10 +302,8 @@ function apply(game: PracticeGame, body: ActionBody, human: boolean): string | n
 }
 
 /**
- * R2291000: whether the snapshot carries the lethal hint, in every game the worker plays against the
- * AI (each tier, a sandbox game, a lesson; R2102000 kept it to Easy's free games): asked for the
- * human's seat of the human's own redaction, on the Rust side, under its own wall-clock cap as
- * `decide` is under the AI's. A check that runs past it, or throws, gives no hint, and the game goes on.
+ * R2291000: the lethal hint, asked of the human's own redaction under its own wall-clock cap; a check
+ * that runs past it, or throws, gives no hint, and the game goes on.
  */
 function lethalFor(game: PracticeGame, now: number): boolean {
   try {
@@ -345,7 +313,7 @@ function lethalFor(game: PracticeGame, now: number): boolean {
   }
 }
 
-/** `now` is the env's clock when the snapshot is made (`PracticeCoreEnv.now`), which caps the lethal hint's check. */
+/** `now` (the env's clock) caps the lethal hint's check. */
 function snapshotOf(game: PracticeGame, now: number): PracticeSnapshot {
   // R677: the human sees, and acts from, the seat it plays now; the result reads from it too.
   const human = humanSeatNow(game);
@@ -383,9 +351,8 @@ function saveOf(game: PracticeGame): PracticeSave | null {
 }
 
 /**
- * R668: a save folded back into its game. The log is replayed through `apply`, so every action must
- * be accepted under the nonce it was accepted under, and the folded state must hash as it did when
- * saved; a save from another catalog, or one that does not fold to the same game, is refused.
+ * R668: the log is replayed through `apply`, under the nonces it was accepted under, to the hash it was
+ * saved at; a save from another catalog, or one that does not fold to the same game, is refused.
  */
 function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): PracticeGame {
   if (save === null) throw new Error("no practice game is saved on this device");
@@ -413,9 +380,8 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
 }
 
 /**
- * R768: the kept game's setup and its log. R767000: the setup it kept, else (a game kept before
- * setups were, on this build's catalog only) the setup `startGame` deals from the kept config, as a
- * resume does.
+ * R768, R767000: the setup it kept, else (a game kept before setups were, on this build's catalog only)
+ * the setup `startGame` deals from the kept config, as a resume does.
  */
 function foldInputOf(replay: PracticeReplay): FoldInput {
   const dealt = replay.setup ?? startGame(replay.config);
@@ -448,10 +414,7 @@ export function catalogOf(kept: Pick<PracticeReplay, "catalog" | "versions">): s
   return kept.versions === undefined ? currentVersionName(kept.catalog) : kept.catalog;
 }
 
-/**
- * The AI's fallback when `decide` gave nothing usable: `endTurn` when legal, else the first legal
- * action the engine accepts, never one R188 forbids.
- */
+/** The AI's fallback when `decide` gave nothing usable, `endTurn` first, never one R188 forbids. */
 function fallbackActions(game: PracticeGame): ActionBody[] {
   const legal = legalActions(game.state, aiSeatNow(game)).filter((action) => !isForbiddenAiAction(action));
   const endTurn = legal.filter((action) => action.type === "endTurn");
@@ -512,10 +475,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     throw new Error(`the AI owes an action and the engine accepts none of its legal ones (${lastRefusal})`);
   }
 
-  /**
-   * R768: a free game that has just ended is kept, the newest of the last PRACTICE_REPLAYS_KEPT; a
-   * lesson, or a game Glitch voided (R679: no record is kept of it), is not.
-   */
+  /** R768: a free game that has just ended is kept; a lesson, or a game Glitch voided (R679), is not. */
   function keepFinished(active: PracticeGame): void {
     const result = active.state.result;
     if (active.kept || result === null) return;
@@ -645,8 +605,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     const endSeat = humanSeatNow(active);
     return {
       seed: active.config.seed,
-      // R677: read from the seat the human ended in, as `keepFinished` reads it.
-      // R1843004: the AI's `fled` is the human's draw, as the server's fold reads it.
+      // R677, R1843004: from the seat the human ended in, as `keepFinished` and the server's fold read it.
       result: seatOutcome(result.winner, result.reason, endSeat),
       log: JSON.parse(JSON.stringify(active.log)) as Action[],
     };
@@ -692,8 +651,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         return snapshotResponse(request.id, active);
       }
       case "catalog":
-        // The card data the setup screen previews decks with, before any game exists (§5.1: the
-        // catalog is public). The same map `started` carries.
+        // §5.1: the catalog is public, so the setup previews decks with it before any game exists.
         return { id: request.id, type: "catalog", defs: registeredCatalog() };
       case "replays":
         refuseWhilePlaying();

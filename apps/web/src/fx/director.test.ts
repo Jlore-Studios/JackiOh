@@ -1,6 +1,5 @@
 // Polish 1 (docs/polish/1-animations.md, S8): effects director tests, B32–B35.
 // Public seams only; 5 ms frames make every multiple-of-five delay land exactly on its due frame.
-// Timing starts at T0.
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -859,8 +858,7 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     const plain = play();
     const tinted = play(palette);
 
-    // The particles are drawn (jsdom gives them no sprites, so as arcs) only in the palette's colors,
-    // and the bloom's gradient takes its first color as the core and its last as the glow.
+    // jsdom gives particles no sprites, so they draw as arcs, in the palette's colors only.
     const particleFills = tinted.h.surface.fills.filter((fill): fill is string => typeof fill === "string");
     expect(particleFills.length).toBeGreaterThan(0);
     for (const fill of particleFills) expect(palette).toContain(fill);

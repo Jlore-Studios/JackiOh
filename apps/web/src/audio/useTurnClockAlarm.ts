@@ -3,8 +3,7 @@
 //
 //   useTurnClockAlarm(turn?.remainingMs ?? null, turn !== null && turn.side === "you" && !turn.paused);
 //
-// It never throws: with no AudioContext (jsdom), or before the first gesture, every reading is
-// passed over in silence.
+// It never throws: with no AudioContext (jsdom), or before the first gesture, it stays silent.
 
 import { useEffect, useRef } from "react";
 

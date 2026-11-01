@@ -1,10 +1,7 @@
 /**
- * The effects canvas (docs/polish/1-animations.md, S5). One `<canvas>` overlays the board. Its backing
- * store is the CSS size times the device pixel ratio, clamped to FX_MAX_DPR so a 3× phone does not
- * pay for 9× the pixels, and it is only reallocated when the size or the ratio actually changes.
- *
- * jsdom has no 2D context and logs "Not implemented" when asked for one, so under jsdom the surface
- * is never created and `getContext` is never called: the layer simply draws nothing there.
+ * The effects canvas (docs/polish/1-animations.md, S5). Its backing store is the CSS size times the
+ * device pixel ratio, clamped to FX_MAX_DPR so a 3× phone does not pay for 9× the pixels. jsdom has
+ * no 2D context and logs "Not implemented" when asked for one, so under jsdom `getContext` is never called.
  */
 import { FX_MAX_DPR } from "./constants.ts";
 
