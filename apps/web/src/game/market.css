@@ -138,36 +138,53 @@
   }
 }
 
-/* The Marketplace (R1853000–R1853003, Marketplace.tsx): Stinkyscape's shop. A toggle at the bottom
- * left of the table opens a panel above it, the board still in view, under the prompt's scrim (40)
- * and the result overlay (39): a prompt or the result is the thing to read. It borrows the night
- * market's captions, price tags and purse, under a starlit blue in place of the lanterns' red. */
+/* The Marketplace (R1853000–R1853003, Marketplace.tsx): Stinkyscape's shop. Its toggle is a button of the
+ * board's control bar (#2645), an icon where the bar is on one row (a phone), and its panel opens upward
+ * from the bar's top edge, the board still in view, under the prompt's scrim (40) and the result overlay
+ * (39): a prompt or the result is the thing to read. Where the board has its sidebar (the media query
+ * below) the toggle stays the pill it was, at the table's bottom left, and the panel above it. It borrows
+ * the night market's captions, price tags and purse, under a starlit blue in place of the lanterns' red. */
 
-.marketplace-toggle,
-.marketplace-panel {
-  position: fixed;
-  left: max(12px, env(safe-area-inset-left));
-  z-index: var(--z-market);
-}
-
-.marketplace-toggle {
-  bottom: max(12px, env(safe-area-inset-bottom));
+.board .marketplace-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 44px;
   min-height: 44px;
-  padding: 0 1rem;
+  padding: 0;
   border: 1px solid var(--pal-blue-800);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--pal-slate-900) 92%, transparent);
   color: var(--pal-blue-200);
   font-weight: 700;
   cursor: var(--cursor-glove-point, pointer);
 }
 
-.marketplace-toggle[aria-expanded="true"] {
+.marketplace-toggle-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.marketplace-toggle-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.marketplace-toggle-label {
+  display: none;
+}
+
+.board .marketplace-toggle[aria-expanded="true"] {
   border-color: var(--pal-gold-300);
 }
 
 .marketplace-panel {
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-market);
   width: min(40rem, calc(100vw - 24px));
   max-height: 70vh;
   overflow-y: auto;
@@ -177,6 +194,55 @@
   background: var(--bg-sunken);
   box-shadow: var(--shadow-3);
   color: var(--pal-slate-100);
+}
+
+/* The sidebar layout (board.css's: a desktop, a wide tablet on its side), which leaves out a window
+   500px tall or less, where board.css lays out its landscape column: the pill floats at the table's
+   bottom left, as before, and the panel above it. */
+@media (min-width: 1025px) and (min-height: 501px), (min-width: 900px) and (orientation: landscape) and (min-height: 501px) {
+  .board .marketplace-toggle,
+  .marketplace-panel {
+    position: fixed;
+    left: max(12px, env(safe-area-inset-left));
+  }
+
+  .board .marketplace-toggle {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 0 1rem;
+    border-radius: var(--radius-pill);
+  }
+
+  .marketplace-toggle-icon {
+    display: none;
+  }
+
+  .marketplace-toggle-label {
+    display: inline;
+  }
+
+  .marketplace-panel {
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px);
+  }
+}
+
+/* A phone held upright: the panel ends at the bar's right edge and takes the width it has. */
+@media (max-width: 600px) {
+  .marketplace-panel {
+    right: 0;
+    width: auto;
+  }
+}
+
+/* A phone on its side: the controls are a column at the screen's right, so the panel opens to the
+   left of the bar, level with its foot. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .marketplace-panel {
+    right: calc(100% + 6px);
+    bottom: 0;
+    left: auto;
+    width: min(40rem, calc(100vw - 224px));
+    max-height: calc(100cqh - 12px);
+  }
 }
 
 .marketplace-header {

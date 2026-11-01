@@ -1648,6 +1648,7 @@ button.modifier-badge[data-open="true"] {
 /* ----------------------------------------------------------------- controls and the log --- */
 
 .control-bar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1659,6 +1660,91 @@ button.modifier-badge[data-open="true"] {
    of the bar at its natural size. */
 .board .control-bar .friends-button--game {
   flex: 0 0 auto;
+}
+
+/* The match menu (game/MatchMenu.tsx, #2645), on the two phone layouts where Board.tsx draws it: ⋯ is a
+   square icon button of the bar, like the gear and the log toggle, and its menu opens upward from the
+   bar's top edge, Offer draw, Concede and Friends each a full-width 44px row with its whole label, so
+   nothing wraps and nothing is squeezed out of the one row. Never set `display` on the menu's items:
+   practice.css and duos.css hide them by selector, and a `display` here would override that. */
+.board .control-bar .match-menu-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.match-menu-toggle-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.match-menu-toggle-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.board .control-bar .match-menu-toggle[aria-expanded="true"] {
+  border-color: var(--selected);
+  color: var(--selected);
+}
+
+/* A dot while Offer draw has something to say (a declined offer blocks it), which the closed menu hides. */
+.board .control-bar .match-menu-toggle[data-dot="true"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-round);
+  background: var(--pal-red-500);
+}
+
+.match-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: var(--z-market);
+  display: grid;
+  gap: 4px;
+  min-width: 12rem;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-3);
+}
+
+.match-menu[hidden] {
+  display: none;
+}
+
+.board .control-bar .match-menu > .control,
+.board .control-bar .match-menu > .friends-button {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 12px;
+  font-size: inherit;
+  text-align: start;
+  white-space: nowrap;
+}
+
+.board .control-bar .match-menu > .friends-button {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+/* The badge sits inside the row, at its end, not over the menu's edge. */
+.board .control-bar .match-menu > .friends-button .friends-button__badge {
+  position: static;
+  margin-inline-start: auto;
 }
 
 /* Route controls, alerts and series information are hardware in the same rail as End turn, not
@@ -2631,38 +2717,6 @@ button.modifier-badge[data-open="true"] {
     --card-h: clamp(44px, calc((100cqh - 312px - var(--board-rail-phone-h)) / 5.24), 90px);
   }
 
-  /* The Friends button (#1831) is one more 44px control. An online match's rail row, which has room,
-     holds it at its end (the rail gives up the width it takes); every other bar tightens to take it,
-     as the narrow phone's does below. */
-  .board .control-bar:has(> .board-rail) > .board-rail {
-    order: -2;
-    flex-basis: calc(100% - 50px);
-  }
-
-  .board .control-bar:has(> .board-rail) > .friends-button--game {
-    order: -1;
-  }
-
-  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) {
-    gap: 4px;
-  }
-
-  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) .control {
-    padding-inline: 6px;
-  }
-
-  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) [data-testid="settings-open-game"] {
-    padding-inline: 10px;
-  }
-
-  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) .control-offer-draw,
-  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) .control-concede {
-    flex-shrink: 1;
-    min-width: min-content;
-    line-height: 1.1;
-    white-space: normal;
-  }
-
   .board .control-bar .control {
     padding-inline: 10px;
     white-space: nowrap;
@@ -2751,23 +2805,6 @@ button.modifier-badge[data-open="true"] {
   .board .control-bar [data-testid="settings-open-game"] {
     padding-inline: 10px;
   }
-
-  /* At 320px the row is still wider than the screen: Offer draw and Concede may wrap their labels
-     too, down to their longest word. A row with room to spare never shrinks them. */
-  .board .control-bar .control-offer-draw,
-  .board .control-bar .control-concede {
-    flex-shrink: 1;
-    min-width: min-content;
-    line-height: 1.1;
-    white-space: normal;
-  }
-
-  /* The dev hotseat's bar holds a seat's controls and nothing else, and has no room at this width for
-     the Friends button (#1831); the practice table's, which tightens to take it above, and every rail
-     (the button sits in its row) keep it. */
-  :not(.practice-table) > .game > .board > .control-bar:not(:has(> .board-rail)) > .friends-button--game {
-    display: none;
-  }
 }
 
 /* Phone landscape, 844x390: a phone on its side has height for the four field rows and little
@@ -2845,8 +2882,10 @@ button.modifier-badge[data-open="true"] {
     align-content: flex-end;
   }
 
-  /* End turn and the gear share the first row under the turn plate, Offer draw and Concede the
-     second, so the column is three rows tall instead of four. */
+  /* End turn and the gear share the first row under the turn plate; the Marketplace's toggle, the
+     log's and ⋯ (#2645) share the second, so the column is three rows tall. Five controls cannot share
+     the column's 176px, which a 44px target each and End turn's housing overrun; Offer draw, Concede
+     and Friends are in ⋯'s menu (`MatchMenu.tsx`), so none of them is here. */
   .board .control-bar .turn-mechanism,
   .board .control-bar .control-end-turn {
     flex: 1 1 calc(100% - 56px);
@@ -2855,34 +2894,21 @@ button.modifier-badge[data-open="true"] {
   .board .control-bar [data-testid="settings-open-game"] {
     flex: 0 0 auto;
     order: 1;
+    padding-inline: 10px;
   }
 
-  /* The log toggle sits after Offer draw and Concede, on a row of its own at the column's foot,
-     with the mute beside it (integration: the gear's row is End turn's). */
-  .board .control-bar .log-toggle {
-    order: 3;
-    flex: 1 1 auto;
-  }
-
-  .board .control-bar .audio-toggle {
-    order: 3;
-    flex: 0 0 auto;
-  }
-
-  .board .control-bar .control-offer-draw,
-  .board .control-bar .control-concede {
-    flex: 1 1 40%;
+  .board .control-bar .marketplace-toggle,
+  .board .control-bar .log-toggle,
+  .board .control-bar .match-menu-toggle {
     order: 2;
-    padding-inline: 6px;
-    white-space: nowrap;
+    flex: 1 1 0;
   }
 
   /* A rail tops the column: Back and chat fill its width, so the rank line takes a line of its own
      under them. Under the opponent's hand the column had no height for it, and the opponent's backs
-     were drawn over Back and chat, so the column gives up a row and a half: the empty notices pill
-     leaves (as from the row of a phone held upright), the language button steps aside (the gear's
-     Gameplay tab holds Language, #785) so the gear joins the log's row, and the turn plate says its
-     two lines on one. */
+     were drawn over Back and chat, so the column gives up a row: the empty notices pill leaves (as
+     from the row of a phone held upright), the language button steps aside (the gear's Gameplay tab
+     holds Language, #785), and the turn plate says its two lines on one. */
   .match-ranks {
     flex-basis: 100%;
   }
@@ -2899,10 +2925,6 @@ button.modifier-badge[data-open="true"] {
 
   .board .control-bar:has(> .board-rail) .language-button--game {
     display: none;
-  }
-
-  .board .control-bar:has(> .board-rail) [data-testid="settings-open-game"] {
-    order: 3;
   }
 
   .board .control-bar:has(> .board-rail) .turn-plate {
