@@ -371,7 +371,7 @@ func (w *backendsWorld) request(readOnly bool) *runner.RunRequest {
 	return &runner.RunRequest{Role: role, Prompt: "THE TASK", Cwd: w.tmp, SystemAppend: "SYSTEM TEXT",
 		AllowedTools: []string{}, DisallowedTools: []string{}, MaxTurns: 42, TimeoutS: 60,
 		Model: "the-model", Effort: "high", Transcript: filepath.Join(w.tmp, "t", "01.jsonl"),
-		ReadOnly: readOnly, ExtraDirs: []string{"/repo/.git"}}
+		ExtraDirs: []string{"/repo/.git"}}
 }
 
 // backendsPatchEnv is mock.patch.dict(os.environ, values): the values set until the returned
