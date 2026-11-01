@@ -169,11 +169,16 @@ const RARITY_ORDER: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", 
 
 const TYPE_ORDER: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
 
-/** The printed price a card is filed under: an embiggen card under its base price. */
-function printedPrice(cost: CardCost): number | "X" {
+/** The printed price a card is filed under and printed with: an embiggen card's base price (§5.1), or "X". */
+export function printedPrice(cost: CardCost): number | "X" {
   if (typeof cost === "number") return cost;
   if (cost === "X") return "X";
   return cost.base;
+}
+
+/** A deck tile's gem: the printed price, as the card's full face shows it; blank for a card the catalog lacks. */
+export function tileCost(cost: CardCost | undefined): string {
+  return cost === undefined ? "" : String(printedPrice(cost));
 }
 
 /** n ≥ 6 → "6+" (so 100 is "6+"); an embiggen card → its base price's bucket; "X" → "X". */
