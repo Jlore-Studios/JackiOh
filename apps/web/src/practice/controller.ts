@@ -177,9 +177,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     timerPending = false;
   }
 
-  // -------------------------------------------------------------------------------------------
   // the queue: one request in flight
-  // -------------------------------------------------------------------------------------------
 
   function send(body: PracticeRequestBody, done: (response: PracticeResponse) => void): void {
     jobs.push({ body, done });
@@ -214,9 +212,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     });
   }
 
-  // -------------------------------------------------------------------------------------------
   // snapshots and the pacing loop
-  // -------------------------------------------------------------------------------------------
 
   function clearSequence(): void {
     if (sequence === null) return;
@@ -352,9 +348,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     });
   }
 
-  // -------------------------------------------------------------------------------------------
   // the public surface
-  // -------------------------------------------------------------------------------------------
 
   return {
     getState(): PracticeControllerState {

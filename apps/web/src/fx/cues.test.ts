@@ -54,9 +54,7 @@ import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, 
 import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
 
-/* ------------------------------------------------------------------------------------------- *
- * Fixture ids, read off the M5-T1 board rather than guessed
- * ------------------------------------------------------------------------------------------- */
+/* Fixture ids, read off the M5-T1 board rather than guessed */
 
 const VIEW: PlayerView = fullBoardView();
 
@@ -91,9 +89,7 @@ const FIELD_SPELL = backrowId(0);
 /** The viewer's face-up Trap in backrow lane 5. */
 const MY_TRAP = backrowId(4);
 
-/* ------------------------------------------------------------------------------------------- *
- * Anchors and expected cues, in S7's notation
- * ------------------------------------------------------------------------------------------- */
+/* Anchors and expected cues, in S7's notation */
 
 type Loose = Record<string, unknown>;
 
@@ -201,9 +197,7 @@ function shakesOf(cues: readonly FxCue[]): number[] {
   return cues.flatMap((cue) => (cue.kind === "shake" ? [cue.trauma] : []));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Planning helpers
- * ------------------------------------------------------------------------------------------- */
+/* Planning helpers */
 
 function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory(), ...over };
@@ -261,9 +255,7 @@ const played = (player: "p1" | "p2", instanceId: string, defId = "core-002"): Ga
   costPaid: 1,
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * One sample per recipe branch, for the property checks
- * ------------------------------------------------------------------------------------------- */
+/* One sample per recipe branch, for the property checks */
 
 type Sample = { name: string; events: GameEvent[]; prime?: GameEvent[]; card?: FxPlanEnv["card"] };
 
@@ -352,9 +344,7 @@ function planSample(sample: Sample, D: number, intensity: number = FX_INTENSITY_
   return planFx({ ...entry, durationMs: D }, view, env);
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B8: R200, every cue lands inside its entry
- * ------------------------------------------------------------------------------------------- */
+/* B8: R200, every cue lands inside its entry */
 
 describe("B8 timing bounds", () => {
   it("R200 every planned cue starts inside its entry and ends within FX_MAX_TAIL_MS of the entry's end, for every D from MIN_ENTRY_MS to 1400 ms", () => {
@@ -401,9 +391,7 @@ describe("B8 timing bounds", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B9: intensity
- * ------------------------------------------------------------------------------------------- */
+/* B9: intensity */
 
 describe("B9 intensity", () => {
   const LEVELS = [FX_INTENSITY_SCALE.low, FX_INTENSITY_SCALE.normal, FX_INTENSITY_SCALE.high] as const;
@@ -481,9 +469,7 @@ describe("B9 intensity", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B10 to B12: impact
- * ------------------------------------------------------------------------------------------- */
+/* B10 to B12: impact */
 
 describe("B10 spell projectiles", () => {
   it("B10 a non-combat damage from a rendered unit fires its flavor's shot and lands every impact at the landing", () => {
@@ -641,9 +627,7 @@ describe("B12 poison", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B13: sources and memory
- * ------------------------------------------------------------------------------------------- */
+/* B13: sources and memory */
 
 describe("B13 sourceAnchor and memory", () => {
   it("B13 a rendered instance comes first: a unit, a face-up backrow card or a card in the viewer's hand", () => {
@@ -761,9 +745,7 @@ describe("B13 sourceAnchor and memory", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B14, B15: summon and cast
- * ------------------------------------------------------------------------------------------- */
+/* B14, B15: summon and cast */
 
 describe("B14 summon", () => {
   const ZONE = testid.zone("you", "units", 3);
@@ -982,9 +964,7 @@ describe("B15 cast", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B16: one test per S7 row
- * ------------------------------------------------------------------------------------------- */
+/* B16: one test per S7 row */
 
 describe("B16 the recipe table, row by row", () => {
   it("B16 healed: holy rays and a holy burst at 0, a heal splat at 0.2 D", () => {
@@ -1442,9 +1422,7 @@ describe("B16 the recipe table, row by row", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B17, B18: flights and buffs
- * ------------------------------------------------------------------------------------------- */
+/* B17, B18: flights and buffs */
 
 describe("B17 card flights", () => {
   it("B17 drawn: a card back flies from library to hand over D, and a sparkle lands at D", () => {
@@ -1542,9 +1520,7 @@ describe("B18 buff arrows", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B19, B20: mana and banners
- * ------------------------------------------------------------------------------------------- */
+/* B19, B20: mana and banners */
 
 describe("B19 mana sparks", () => {
   function manaCues(player: "p1" | "p2", current: number, D: number, view?: PlayerView): FxCue[] {
@@ -1650,9 +1626,7 @@ describe("B20 turn banners", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B21: R202, the redacted stream only
- * ------------------------------------------------------------------------------------------- */
+/* B21: R202, the redacted stream only */
 
 /** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`. */
 const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
@@ -1864,9 +1838,7 @@ describe("B21 the redacted stream only", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B22: game over and hand-over
- * ------------------------------------------------------------------------------------------- */
+/* B22: game over and hand-over */
 
 describe("B22 planResult and planHandover", () => {
   const over = (winner: "p1" | "p2" | "draw", extra: Partial<PlayerView> = {}) =>
@@ -1964,9 +1936,7 @@ describe("B22 planResult and planHandover", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Review fixes: the killing blow, and projectiles that scale with intensity
- * ------------------------------------------------------------------------------------------- */
+/* Review fixes: the killing blow, and projectiles that scale with intensity */
 
 describe("R200 planLethal: the killing blow a drained game over never drew", () => {
   const finished = (winner: "p1" | "p2" | "draw") =>

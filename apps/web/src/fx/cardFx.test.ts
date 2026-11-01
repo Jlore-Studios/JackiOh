@@ -350,9 +350,7 @@ describe("R502 the per-card table", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The real engine: both seats' redacted windows
- * ------------------------------------------------------------------------------------------- */
+/* The real engine: both seats' redacted windows */
 
 const DECK_A = [
   "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-008", "core-009", "core-010", "core-011",

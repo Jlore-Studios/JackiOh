@@ -2,11 +2,8 @@
 // CLAUDE.md rule 7). There is no skip: only ackable `info` steps or tips may hold AI (R314).
 // Non-final steps expire after `TUTORIAL_STEP_TURNS_MAX` player turns; tips survive steps until game
 // end, and the HUD always offers exit.
-//
-// R2205000: a `moment` poses a question and is done once the player finds what it sets up. The coach
-// recognizes each Field Guide entry (discoveries.ts) from the view alone and names the rule in a
-// discovery bubble; a moment's hint escalates only when the player stalls or asks for one, and a
-// moment never holds the AI.
+// R2205000: a `moment` poses a question and is done once the player finds what it sets up; the coach
+// recognizes each Field Guide entry (discoveries.ts) from the view alone and names its rule in a bubble.
 
 import type { ActionBody, CardDef, GameEvent, PlayerView, Row } from "@jackioh/shared";
 
@@ -59,7 +56,6 @@ export type CoachStep = {
   anchor?: AnchorOf;
   /** `info`: "Got it" completes it. `act`: its `done` completes it. `moment`: finding what it `discovers`, or its `done`. */
   kind: "info" | "act" | "moment";
-  /** `when` gates activation. */
   when?: (ctx: CoachCtx) => boolean;
   /** Required for `act`; receives the activation view. */
   done?: (ctx: CoachCtx, since: PlayerView) => boolean;
@@ -172,17 +168,14 @@ function safely(test: () => boolean): boolean {
   }
 }
 
-/** A script that lists no `teaches` is a step list with no moments, and watches for nothing. */
 /** The step the coach is on: the `index`-th in its order. */
 function stepAt(script: LessonScript, state: CoachState): CoachStep | undefined {
   return script.steps[state.order[state.index] ?? state.index];
 }
 
 /**
- * R2205000: a moment waits for its board, and a later moment whose board has come shows meanwhile. The
- * run of moments after the current one (up to the next other step or the final one) is searched in
- * order for the first that can show now; it swaps places with the current one, which waits behind it,
- * whether it had shown or not.
+ * R2205000: a moment waits for its board; the first later moment in its run (to the next other step or
+ * the final one) that can show now swaps places with it, the current one waiting behind, shown or not.
  */
 function bringForward(script: LessonScript, state: CoachState, ctx: CoachCtx): CoachState | null {
   const order = state.order.length === 0 ? script.steps.map((_step, at) => at) : [...state.order];

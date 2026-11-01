@@ -45,9 +45,7 @@ import type {
   PracticeStartConfig,
 } from "./protocol.ts";
 
-// ---------------------------------------------------------------------------------------------
 // the driver
-// ---------------------------------------------------------------------------------------------
 
 const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 
@@ -198,9 +196,7 @@ function expectRule7(d: Driver, response: PracticeResponse, human: PlayerId, ai:
   }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B34: what the main thread receives (rule 7)
-// ---------------------------------------------------------------------------------------------
 
 describe("B34 the core answers with the human's view and nothing else", () => {
   it("B34 `started` is { id, type, snapshot, defs, aiSeat } with the AI on the other seat", () => {
@@ -366,9 +362,7 @@ describe("B34 the core answers with the human's view and nothing else", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // the named practice decks, and the catalog the setup previews them with
-// ---------------------------------------------------------------------------------------------
 
 describe("the named practice decks are real decks, and the setup can preview them", () => {
   it("every preset is DECK_SIZE distinct non-token Core cards, none of them on the AI's shadow ban", () => {
@@ -416,9 +410,7 @@ describe("the named practice decks are real decks, and the setup can preview the
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B35: refusals and the log
-// ---------------------------------------------------------------------------------------------
 
 describe("B35 a human action is either refused with the engine's reason or logged as h<n>", () => {
   it("B35 an action other than a mulligan while the mulligans are open is refused with the engine's reason; hash and log are unchanged", () => {
@@ -577,9 +569,7 @@ describe("B35 a human action is either refused with the engine's reason or logge
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R265: both mulligans are open at once, and either seat answers first
-// ---------------------------------------------------------------------------------------------
 
 /** The human's hand as its own view lists it, by instance id. */
 function handOf(snapshot: PracticeSnapshot): string[] {
@@ -706,9 +696,7 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Issue #1113: the AI's test-only pool
-// ---------------------------------------------------------------------------------------------
 
 describe("the AI deck is dealt with aiBanned when set, and the live shadow ban when absent", () => {
   it("a game started with aiBanned deals the AI that deck", () => {
@@ -738,9 +726,7 @@ describe("the AI deck is dealt with aiBanned when set, and the live shadow ban w
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B38: a practice game replays exactly (R187)
-// ---------------------------------------------------------------------------------------------
 
 const SEAT_BY_DIFFICULTY: Record<Difficulty, PlayerId> = { easy: "p2", medium: "p1", hard: "p2" };
 
@@ -851,9 +837,7 @@ describe("R187 B38 a practice game folds from (seed, decks, handicaps, log) to i
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B39: the AI declines a draw at once (R188)
-// ---------------------------------------------------------------------------------------------
 
 describe("B39 a draw offer is declined by the AI's next step", () => {
   it("R188 B39 the human's offerDraw makes aiToAct true, and the next aiStep answers answerDraw { accept: false }", { timeout: 120_000 }, () => {
@@ -899,9 +883,7 @@ describe("B39 a draw offer is declined by the AI's next step", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R508: the human's last practice board (R417, Classic+ #29 Portal to the Past)
-// ---------------------------------------------------------------------------------------------
 
 describe("R508 a practice game's last board", () => {
   /** A free game walked by the random policy until the field holds a card, then conceded. */
@@ -959,9 +941,7 @@ describe("R508 a practice game's last board", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1705005: a lesson's human seat plays its fixed deck under TUTORIAL_HUMAN
-// ---------------------------------------------------------------------------------------------
 
 describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () => {
   it("R1705005 a lesson seats the human under TUTORIAL_HUMAN", () => {
@@ -988,9 +968,7 @@ describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () =>
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R433: the random deck is dealt, not built
-// ---------------------------------------------------------------------------------------------
 
 /** How many cards the human's own library list names (R310), the unknown ones aside. */
 function listedCount(snapshot: PracticeSnapshot): number {
@@ -1059,9 +1037,7 @@ describe("R433 practice's fresh random deck lists only the cards the human has b
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1373: the Random deck, more cards from the newest set
-// ---------------------------------------------------------------------------------------------
 
 describe("R1373 practice's Random deck with more cards from the newest set", () => {
   /** How many of `deck`'s cards are of the newest set that ships (R1371). */
@@ -1136,9 +1112,7 @@ describe("R1373 practice's Random deck with more cards from the newest set", () 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R668: a free game in progress is kept in the worker's store and folds back after a reload
-// ---------------------------------------------------------------------------------------------
 
 describe("R668 the practice save and resume", () => {
   /** A game walked `steps` requests in, on a core that keeps its saves in `saves`. */

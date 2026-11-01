@@ -103,7 +103,7 @@ export const BANNED_RULES_WORDS: readonly string[] = [
  */
 export const BANNED_WORDS_MAX_SHARE = 0.02;
 
-// ---- Patch v0.2.0 sound: card moments, Call to Chaos, marks and the turn clock (R506) ----
+// Patch v0.2.0 sound: card moments, Call to Chaos, marks and the turn clock (R506)
 /** #21 Hinder: its rider on the victim's next refresh is heard as a mana crack (cues.ts, R506). */
 export const HINDER_DEF_ID = "core-021";
 /** #27 Blood Ridden Glowy Jelly Bean: each card it turns Radiant is a blood drain and a gold burst. */
@@ -130,7 +130,7 @@ export const CLOCK_ALARM_LOOKAHEAD_MS = 400;
 /** A beat whose moment passed at most this long ago still plays, at once; an older one is skipped. */
 export const CLOCK_ALARM_LATE_MS = 250;
 
-// ---- #51's music (SPEC §10.11 "Music", R631) ----
+// #51's music (SPEC §10.11 "Music", R631)
 /** The stations, in the order the picker lists them. */
 export const MUSIC_STATIONS = ["tavern", "edm", "lofi", "epic"] as const;
 /** The match counter that rotates each station's in-game tracks, kept per device. */
@@ -173,7 +173,7 @@ export const MUSIC_BYTES_MAX = 8;
  */
 export const MUSIC_BUDGET_BYTES = 28 * 1024 * 1024;
 
-// ---- Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb ----
+// Patch v0.2.X sound polish (#259, R669): stings, the mix's panning, ducking and reverb
 /** A played card's rarity sting starts this long after the card whoosh, so the two read as one. */
 export const STING_DELAY_MS = 40;
 /** The pan of a sound about a unit in the outermost lane; the middle lane is centered. */
@@ -193,7 +193,7 @@ export const REVERB_VOICE_SEND = 0.3;
 /** The impulse's noise is filled from this seed, so every run of the mix is identical. */
 export const REVERB_SEED = 0x52564242; // "RVBB"
 
-// ---- Patch v0.3.X sound (docs/meditative-set.md M8, MN05): Armor and the niche moments ----
+// Patch v0.3.X sound (docs/meditative-set.md M8, MN05): Armor and the niche moments
 /** R1364: a hit is overkill when what it does beyond the health left is at least this, and at least that health. */
 export const OVERKILL_MIN_EXCESS = 3;
 /** R1364: the overkill crunch lands this long after the hit's impact, so the two read as one blow. */
@@ -203,7 +203,7 @@ export const SHEEP_DEF_IDS: readonly string[] = ["core-t-sheep"];
 /** R1365: the bleat starts this long into the transform's puff, as the Sheep comes out of it. */
 export const BLEAT_DELAY_MS = 120;
 
-// ---- Patch v0.3.X sound (docs/meditative-set.md M8, MN04): a Legendary's or a Mythic's intro ----
+// Patch v0.3.X sound (docs/meditative-set.md M8, MN04): a Legendary's or a Mythic's intro
 /** R1350: the bed (every other track the music plays) under a card's intro, for the intro's span. */
 export const MUSIC_INTRO_DUCK_GAIN = 0.35;
 /** R1350: how fast the bed dips as an intro starts, and comes back as its music ends (about three of these). */

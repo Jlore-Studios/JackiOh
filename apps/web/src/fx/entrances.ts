@@ -125,9 +125,7 @@ const tyrantSigil: Entrance = ({ D, tgt, intensity: i }) => {
 
 export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = { voidCollapse, bigBoom, titanBloom, tyrantSigil };
 
-/* ------------------------------------------------------------------------------------------- *
- * #1445: one summon entrance per flavor
- * ------------------------------------------------------------------------------------------- */
+/* #1445: one summon entrance per flavor */
 
 /** What a flavor entrance plans against: the entry's duration, the zone's testid, the intensity, the landing beat and the summoned card's instance id. */
 export type FlavorEntrancePlan = { D: number; tgt: string; intensity: number; landAt: number; instanceId: string };

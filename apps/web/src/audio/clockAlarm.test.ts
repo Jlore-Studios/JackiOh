@@ -119,9 +119,7 @@ describe("R506 the turn clock's alarm: the schedule (R439)", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Into a real engine over the fake context
- * --------------------------------------------------------------------------------------------- */
+/* Into a real engine over the fake context */
 
 describe("R506 the turn clock's alarm through the engine", () => {
   let engine: AudioEngine | null = null;
@@ -210,9 +208,7 @@ describe("R506 the turn clock's alarm through the engine", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * The hook
- * --------------------------------------------------------------------------------------------- */
+/* The hook */
 
 describe("R506 useTurnClockAlarm", () => {
   afterEach(() => {

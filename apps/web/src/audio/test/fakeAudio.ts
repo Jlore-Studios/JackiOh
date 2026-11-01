@@ -392,7 +392,7 @@ export class FakeAudio {
     for (const hung of this.hungDecodes.splice(0)) hung.reject(namedError("EncodingError", "the fake could not decode"));
   }
 
-  /* ----- construction ----- */
+  /* construction */
 
   private makeContext(): AudioContext {
     const v = this.violations;

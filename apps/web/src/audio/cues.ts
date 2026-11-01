@@ -1,56 +1,19 @@
-// The sound table (SPEC §10.11): one row per member of `GameEventType`, like `ANIMATIONS` in
-// `game/animations.ts`. A row names its headline sound effect, or states why the event is silent,
-// and resolves an event into the cues to play. `SOUND_CUES` is typed as a total map, so a new event
-// type does not compile until it has a row here.
+// The sound table (SPEC §10.11): one row per `GameEventType` (like `ANIMATIONS` in
+// `game/animations.ts`) naming its headline sound or why the event is silent; a total map, so a new
+// event type does not compile until it has a row here. No rule lives here (CLAUDE.md rule 7): a row
+// reads the event and the viewer's `PlayerView` alone, so it says no more than the screen (R203).
+// R204 fixes which moments speak, each at its VOICE_PRIORITY: a death or a firing trap answers what
+// just happened and takes the channel from a play or cast line; a summoned unit speaks into silence.
 //
-// No rule lives here (CLAUDE.md rule 7). The table reads the event and the viewer's `PlayerView`
-// and nothing else, so it can say no more than the screen does (R203): a card whose `defId` is the
-// sentinel never speaks, and a trap set speaks on no seat. R204 fixes which moments speak: a unit
-// on its `cardPlayed` (or, when an effect put it there without a play, its `summoned`) and its
-// `destroyed`, a spell on its `cardPlayed`, a trap on its `trapFired`. Each line carries its
-// VOICE_PRIORITY: a death or a firing trap answers something that just happened and takes the
-// channel from a play or cast line, and a summoned unit speaks only when nothing else is talking.
-//
-// A card the viewer can name may also color its sounds from the public catalog (§5.1): a unit's
-// summon thud carries its family's accent and a Legendary or Mythic unit enters with a sting beside
-// the effects layer's light rays (R202's rarity entrance), and a spell's shimmer rings in its
-// family's chimes. The family is the card art's theme (cards/art/themes.ts), so a card looks and
-// sounds like the same kind of thing. R203 bounds it: only a unit on the field (always public) and a
-// cast spell vary, never a card behind the sentinel and never a Trap, whose set must sound the same
-// for every Trap. A token that prints a rarity (B2.5's `printedRarity`) enters with that rarity's
-// sting.
-//
-// R506 adds the card moments of patch v0.2.0. A sound may also answer the readable play an event
-// happens inside (`CueContext.playing`, which the director keeps: the innermost `cardPlayed` whose
-// `cardResolved` has not come): #21 Hinder's rider landing on the victim's next refresh cracks like
-// glass, and each card #27 Blood Ridden Glowy Jelly Bean turns Radiant is a blood drain and a gold
-// burst, on the opponent's seat too, where that `radiantSet` carries the sentinel: the burst reads
-// the public cast, never the card it hit. A card cast as it is drawn stings (`castOnDraw`), Call to
-// Chaos's roll dings once for each effect it names (R436), and a mark brands its card (R437).
-//
-// R655: those moments are a card's hooks (`play`, `death`, `cast`), and a hook in `card-audio.json5`
-// gives a line, a named effect, or both. The effect plays at the moment the line would speak, and a
-// line an effect leads waits CARD_EFFECT_DELAY_MS more, so the sound reads as what the card does and
-// the line as its reaction. The effect is read off the same readable entry as the line, so R203 holds
-// for both. The `attack` hook is no event's: the board plays it when the viewer picks a Unit up
-// (`usePickupSound`).
-//
-// R669 (#259): every card the viewer can read stings as it is played, sized by its rarity: Common,
-// Rare and Epic Units and Spells on their `cardPlayed`, a Legendary or Mythic Spell with the
-// entrance there, and a Legendary or Mythic Unit with the entrance on its `summoned` as before.
-// Never a Trap (R203), never the sentinel, and never a card cast as it is drawn, whose own sting
-// stands in. And every effect about a unit on the field comes from that unit's lane: `cuesFor`
-// pans it left or right by where the unit stands, which the screen shows both seats alike.
-//
-// MN05 (docs/meditative-set.md M8): Armor and the niche moments, each keyed on what its event
-// already says. R1363: a hit Armor took half or more of (`damage.absorbed * 2 >= absorbed + amount`)
-// clanks dully under its impact, and one Armor took whole (`damageAbsorbed`) rings bright; both come
-// from the unit's lane. R1364: a hit that does far more than the health the view shows the target
-// with is overkill, a crunch on top. R1365: a Brittle crumble, an unlock, a Counter, a fuse, a Nerf
-// and a Buff each have a sound of their own, and a card transformed into a Sheep bleats. R1366: a
-// card taken is a steal and a card handed over a give, as `controlChanged.how` says. None of
-// them varies with a card the viewer cannot read (R203), and a Nerf or a Buff sounds the same
-// whatever it changed (R440).
+// A readable card colors its sounds by its family, the card art's theme (§5.1, cards/art/themes.ts),
+// so it looks and sounds like the same kind of thing: only a unit on the field (always public) and a
+// cast spell, never a Trap, whose set must sound alike (R203). R202's rarity entrance rings beside
+// the light rays. R506 keys card moments on the play an event happens inside (`CueContext.playing`);
+// R655 makes them hooks in `card-audio.json5`, a line its effect leads waiting CARD_EFFECT_DELAY_MS
+// more so the sound reads as the act and the line as the reaction (the `attack` hook is the board's,
+// `usePickupSound`). R669 (#259): every readable play stings by rarity, and an effect about a unit on
+// the field pans to its lane, which both seats' screens show alike. MN05 (docs/meditative-set.md
+// M8): Armor and the niche moments, R1363 to R1366.
 
 import type {
   CardType,
@@ -139,9 +102,8 @@ export type CueCard = {
 };
 
 /**
- * R506: a play in progress, as the director follows the stream: from its `cardPlayed` until its
- * `cardResolved`. `defId` is the sentinel for a card the viewer cannot read, which no card moment
- * matches. `castOnDraw`: the play is a card cast as it was drawn.
+ * R506: a play in progress, from its `cardPlayed` until its `cardResolved`. `defId` is the sentinel
+ * for a card the viewer cannot read, which no card moment matches.
  */
 export type PlayFrame = { defId: string; instanceId: string; player: PlayerId; castOnDraw: boolean };
 
@@ -152,10 +114,7 @@ export type CueContext = {
   lines: CardAudioTable;
   /** Current mana this player had before this event, as the director tracks it. */
   manaBefore: (player: PlayerId) => number;
-  /**
-   * True when this instance's own `cardPlayed` has already sounded, so its `summoned` is that play
-   * arriving and its line has been spoken. Absent: no play has sounded.
-   */
+  /** True when this instance's own `cardPlayed` has sounded, so its `summoned` has spoken already. */
   wasPlayed?: (instanceId: string) => boolean;
   /** R669: the newest view the director has, for where a unit that has just arrived stands. Absent: none. */
   newestView?: () => PlayerView | null;
@@ -163,19 +122,13 @@ export type CueContext = {
   unitNow?: (instanceId: string) => UnitView | null;
   /** The public catalog, by a defId the viewer can read. Absent (or undefined): the plain sounds. */
   card?: (defId: string) => CueCard | undefined;
-  /**
-   * R506: the innermost play this event happens inside, or null. Absent: none is known, and every
-   * event makes its row's plain sound.
-   */
+  /** R506: the innermost play this event happens inside, or null. Absent: every row's plain sound. */
   playing?: () => PlayFrame | null;
-  /**
-   * R506: true when this `cardPlayed` is the card a readable `drawn` has just drawn, cast as it was
-   * drawn. Absent: no play is a cast on draw.
-   */
+  /** R506: true when this `cardPlayed` is the card a readable `drawn` has just drawn, cast as drawn. */
   castOnDraw?: (instanceId: string) => boolean;
   /**
-   * R1088: the client's own cosmetic rng, a sample from 0 through 1, for picking one trigger line.
-   * Absent: the match's own randomness is never spent on a sound — the director injects one.
+   * R1088: the client's own cosmetic rng (0 through 1) for picking one trigger line: the match's own
+   * randomness is never spent on a sound. The director injects one.
    */
   random?: () => number;
 };
@@ -603,7 +556,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     },
   },
 
-  // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
+  // Patch v0.2.0 (docs/classic-sets.md B3, B5)
   // B5 E1: the announce is the play's own moment; its `cardPlayed` sounds and speaks once it lands.
   cardAnnounced: silent("the play it announces sounds on its cardPlayed; a countered one sounds on countered"),
   // B5 E1, R1365: a Counter slams the play shut and it fizzles out.
@@ -661,13 +614,13 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R800: a discard a discard guard stopped: nothing moved, so a soft cancel.
   discardPrevented: { sfx: "cancel", cues: () => [sfx("cancel")] },
 
-  // ---- Patch v0.3.X (docs/meditative-set.md M8, MN05) ----
+  // Patch v0.3.X (docs/meditative-set.md M8, MN05)
   // R1363: the Armor took the whole hit: a bright ring from the unit's lane (a hero's is centered).
   damageAbsorbed: { sfx: "armorRing", cues: () => [sfx("armorRing")] },
   // R961: a Jade Counter rose; the badge ticks, the same click as every counter badge.
   jadeChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
 
-  // ---- Meditative MB05 (ME-SECRET, R860–R864) ----
+  // Meditative MB05 (ME-SECRET, R860–R864)
   // A secret is kept like a trap is set; its reveal stings like a trap's; a judgement notifies.
   secretChosen: { sfx: "trapSet", cues: () => [sfx("trapSet")] },
   secretRevealed: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
@@ -695,7 +648,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R1852003: a Starship launches, with the entrance a big arrival makes.
   starshipLaunched: { sfx: "entrance", cues: () => [sfx("entrance")] },
 
-  // ---- Issue #1843: voted out and fled (R1843000–R1843002) ----
+  // Issue #1843: voted out and fled (R1843000–R1843002)
   // A vote drops like a counter's tick; the agreement that removes a player stings; the escape
   // whooshes away, and the `gameOver` behind both sounds the result.
   voteCast: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
@@ -707,7 +660,7 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R1850003: a permanent held beneath a card leaves the board as an exiled card does.
   held: { sfx: "poof", cues: () => [sfx("poof")] },
 
-  // ---- Issue #1855: Anomalies, the board swap (R1855000) ----
+  // Issue #1855: Anomalies, the board swap (R1855000)
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
   boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 };

@@ -95,7 +95,7 @@ function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-// ------------------------------------------------------------------------------ expectations ---
+// expectations
 
 const CATALOG = readJson(CATALOG_PATH) as Record<string, { type?: unknown; set?: unknown }>;
 
@@ -263,7 +263,7 @@ function movieSeconds(buf: Buffer): number | null {
   return timescale > 0 ? duration / timescale : null;
 }
 
-// -------------------------------------------------------------------------------- the script ---
+// the script
 
 type CheckRun = { status: number | null; output: string; lines: string[]; error: string };
 
@@ -344,7 +344,7 @@ function expectReported(root: string, keys: readonly string[]): void {
   expect(reportedKeys(run), `only the broken keys are reported; ${describeRun(run)}`).toEqual([...keys].sort());
 }
 
-// ------------------------------------------------------------------------------------ B35 ---
+// B35
 
 describe("the committed voice files (B35)", () => {
   it("B35 R1448 expects a play, an attack and a death line per unit and one cast line per spell and trap, Core's 199 among them", () => {
@@ -451,7 +451,7 @@ describe("the committed voice files (B35)", () => {
   });
 });
 
-// ------------------------------------------------------------------------------------ B36 ---
+// B36
 
 describe("the voice budget (B36)", () => {
   it("B36 R501 R1448 R1884000 fits the whole set into VOICE_BUDGET_BYTES (16 MiB), counted in 4 KiB blocks", () => {
@@ -463,7 +463,7 @@ describe("the voice budget (B36)", () => {
   });
 });
 
-// ----------------------------------------------------------------------------------- R655 ---
+// R655
 
 describe("the move to card-audio.json5 (R655)", () => {
   it("R655 carries every voice line over: the manifest's keys are the file's voice lines, each hashing as the manifest records", () => {
@@ -495,7 +495,7 @@ describe("the move to card-audio.json5 (R655)", () => {
   });
 });
 
-// ------------------------------------------------------------------------------------ B37 ---
+// B37
 
 describe("gen-voice.mjs --check (B37)", () => {
   beforeAll(() => {

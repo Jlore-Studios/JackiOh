@@ -211,7 +211,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     return !s.muted && s.music > 0;
   }
 
-  /* ----- graph ----- */
+  /* graph */
 
   function ensureGraph(): Graph | null {
     const out = engine().musicOutput();
@@ -277,7 +277,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     graph.turn.gain.setTargetAtTime(opponent ? MUSIC_OPPONENT_GAIN : 1, t, MUSIC_TURN_TC_S);
   }
 
-  /* ----- loading ----- */
+  /* loading */
 
   function fetchCached(id: string): Promise<ArrayBuffer | null> {
     const cached = bytes.get(id);
@@ -340,7 +340,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     return job;
   }
 
-  /* ----- voices ----- */
+  /* voices */
 
   function top(): Voice | null {
     for (let i = voices.length - 1; i >= 0; i -= 1) {
@@ -509,7 +509,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     for (const id of intros) if (manifest.files[id] !== undefined) void fetchIntro(id);
   }
 
-  /* ----- a card's intro (R1350, R1351) ----- */
+  /* a card's intro (R1350, R1351) */
 
   /** A track that plays once, as every intro is. */
   function isClip(id: string): boolean {

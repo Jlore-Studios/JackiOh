@@ -604,9 +604,7 @@ describe("scripts/ci-scope.sh", () => {
   });
 });
 
-// ------------------------------------------------------------------------------------------------
 // The paths the web's and the client's sources name
-// ------------------------------------------------------------------------------------------------
 
 const TOP = new Set(readdirSync(ROOT));
 /** First segments a named path never counts under: the web and e2e run for everything there already. */

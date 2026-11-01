@@ -47,9 +47,7 @@ import { armorTookHalf } from "../game/damageFeel.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Fixtures
- * --------------------------------------------------------------------------------------------- */
+/* Fixtures */
 
 const LINES: CardAudioTable = {
   voices: {
@@ -418,9 +416,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "damageAbsorbed",
 ];
 
-/* --------------------------------------------------------------------------------------------- *
- * B17: a total table
- * --------------------------------------------------------------------------------------------- */
+/* B17: a total table */
 
 describe("B17 SOUND_CUES is total over GameEvent types", () => {
   it("B17 has exactly one row per GAME_EVENT_TYPES member, and no other", () => {
@@ -506,9 +502,7 @@ describe("B17 SOUND_CUES is total over GameEvent types", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B18 and B19: which moments speak (R204)
- * --------------------------------------------------------------------------------------------- */
+/* B18 and B19: which moments speak (R204) */
 
 describe("R319: the overflows' sounds", () => {
   it("R319 a fatigue draw knocks, a full library refuses, a full hand burns: three sounds of their own", () => {
@@ -685,9 +679,7 @@ describe("R204: which moments speak", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B20: what audio may reveal (R203)
- * --------------------------------------------------------------------------------------------- */
+/* B20: what audio may reveal (R203) */
 
 describe("R203: audio reveals no more than the screen", () => {
   it("R203 (B20) HIDDEN_DEF_ID is the sentinel a redacted event carries", () => {
@@ -740,9 +732,7 @@ describe("R203: audio reveals no more than the screen", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B21: amounts
- * --------------------------------------------------------------------------------------------- */
+/* B21: amounts */
 
 describe("B21 amounts", () => {
   it("B21 damage, healed and healthLost with amount 0 give nothing", () => {
@@ -807,9 +797,7 @@ describe("B21 amounts", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B22: mana against a baseline
- * --------------------------------------------------------------------------------------------- */
+/* B22: mana against a baseline */
 
 describe("B22 manaChanged", () => {
   const before = (values: Partial<Record<PlayerId, number>>) => (player: PlayerId): number => values[player] ?? 0;
@@ -850,9 +838,7 @@ describe("B22 manaChanged", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B23: seat-relative rows
- * --------------------------------------------------------------------------------------------- */
+/* B23: seat-relative rows */
 
 describe("B23 seat-relative rows", () => {
   const p2Seat = (): CueContext => ctx({ view: baseView({ viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }) });
@@ -921,9 +907,7 @@ describe("B23 seat-relative rows", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * B56: a summon sounds its size
- * --------------------------------------------------------------------------------------------- */
+/* B56: a summon sounds its size */
 
 describe("B56 a summon is sized by the unit that lands", () => {
   const landed: GameEvent = { type: "summoned", player: "p1", instanceId: "c1", defId: UNIT, row: "units", lane: 1 };
@@ -947,10 +931,10 @@ describe("B56 a summon is sized by the unit that lands", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
+/*
  * Integration: the public catalog colors a card the viewer can name (docs/polish/reference.md,
  * audio x cards), and R203 still bounds it.
- * --------------------------------------------------------------------------------------------- */
+ */
 
 describe("the catalog colors summons and spells, never what the viewer cannot name", () => {
   const CATALOG: Record<string, CueCard> = {
@@ -1032,10 +1016,10 @@ describe("the catalog colors summons and spells, never what the viewer cannot na
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
+/*
  * Patch v0.2.0 (R506): the Book, Pancake and AI families, a token's printed rarity, the card
  * moments, Call to Chaos's roll and a mark. Real catalog cards, through the board's own lookup.
- * --------------------------------------------------------------------------------------------- */
+ */
 
 const LOOKUP = lookupFromDefs(CATALOG);
 const realCard = (defId: string): CueCard | undefined => cueCard(LOOKUP, defId);
@@ -1273,9 +1257,7 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R655: a hook's effect plays at the moment its line would speak
- * --------------------------------------------------------------------------------------------- */
+/* R655: a hook's effect plays at the moment its line would speak */
 
 describe("R655 a card's hook may carry an effect beside or instead of its line", () => {
   /** The Rock (#66) with an effect and a line on its play and only an effect on its death; #5, #18 and #96 likewise. */
@@ -1358,9 +1340,7 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R669 (#259): a sting for every readable play, and lane panning
- * --------------------------------------------------------------------------------------------- */
+/* R669 (#259): a sting for every readable play, and lane panning */
 
 describe("R669 every card the viewer can read stings as it is played, by its rarity", () => {
   const catalogOf =
@@ -1460,9 +1440,7 @@ describe("R669 an effect about a unit on the field comes from its lane", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * MN05 (docs/meditative-set.md M8): Armor's sounds and the niche moments
- * --------------------------------------------------------------------------------------------- */
+/* MN05 (docs/meditative-set.md M8): Armor's sounds and the niche moments */
 
 /** A hit of `amount` with `absorbed` taken off it by Armor, on `targetId`. */
 type DamageEvent = Extract<GameEvent, { type: "damage" }>;

@@ -81,9 +81,7 @@ const summon = (player: "p1" | "p2", instanceId: string, lane = 3): GameEvent =>
   lane,
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The planner
- * ------------------------------------------------------------------------------------------- */
+/* The planner */
 
 describe("B46 stand-ins are planned for every card the burst moves onto the board", () => {
   it("B46 a unit played from the viewer's hand flies from its hand card to its zone and lands on the slam; the hand card hides at once", () => {
@@ -223,9 +221,7 @@ describe("R200 stage cues pace nothing", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The DOM side
- * ------------------------------------------------------------------------------------------- */
+/* The DOM side */
 
 /** jsdom lays nothing out, so every element the director measures gets a fixed rectangle. */
 function place(element: Element, box: FxBox): void {
@@ -644,9 +640,7 @@ describe("B46 standInCopy and landingBox", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * The layer: the release lands in the same commit as the new board
- * ------------------------------------------------------------------------------------------- */
+/* The layer: the release lands in the same commit as the new board */
 
 describe("B46 FxLayer releases the stage when the shown view changes", () => {
   it("B46 a stand-in lives while the runner holds the view back and is gone in the render that shows the next view", () => {

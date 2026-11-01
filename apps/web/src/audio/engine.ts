@@ -310,7 +310,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     timers.add(id);
   }
 
-  /* ----- state ----- */
+  /* state */
 
   function state(): AudioState {
     if (factory === null || broken) return "unsupported";
@@ -327,7 +327,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return ctx !== null && ctx.state === "running";
   }
 
-  /* ----- graph ----- */
+  /* graph */
 
   function applySettings(s: AudioSettings): void {
     if (ctx === null || buses === null || disposed) return;
@@ -474,7 +474,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return { input: panner, extra: panner };
   }
 
-  /* ----- log ----- */
+  /* log */
 
   function pushLog(entry: PlayedCue): void {
     entries.push(entry);
@@ -488,7 +488,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     line.entry = next;
   }
 
-  /* ----- gate ----- */
+  /* gate */
 
   function accepting(): boolean {
     if (ctx === null || buses === null || disposed) return false;
@@ -498,7 +498,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return true;
   }
 
-  /* ----- sfx ----- */
+  /* sfx */
 
   function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
     try {
@@ -548,7 +548,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /* ----- card effects (R655) ----- */
+  /* card effects (R655) */
 
   /**
    * Schedules a card's effect for a hook. false: refused (nothing logged). null: accepted while the
@@ -640,7 +640,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /* ----- voice files ----- */
+  /* voice files */
 
   function fetchCached(key: VoiceKey): Promise<ArrayBuffer | null> {
     const cached = bytes.get(key);
@@ -722,7 +722,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     });
   }
 
-  /* ----- voice channel ----- */
+  /* voice channel */
 
   /** Tells the `speaking` subscribers when the channel has gone from free to held or back. */
   function notifySpeaking(): void {
@@ -1045,7 +1045,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /* ----- lifetime ----- */
+  /* lifetime */
 
   function dispose(): void {
     if (disposed) return;

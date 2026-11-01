@@ -97,9 +97,7 @@ function store(value: unknown): void {
   window.localStorage.setItem(FX_SETTINGS_KEY, JSON.stringify(value));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * B6: loading and normalizing
- * ------------------------------------------------------------------------------------------- */
+/* B6: loading and normalizing */
 
 describe("B6 loadFxSettings and normalization", () => {
   it("B6 the defaults are speed 1, intensity normal and motion system, under the key jackioh.fx.v1", () => {
@@ -221,9 +219,7 @@ describe("B6 loadFxSettings and normalization", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B6: the in-memory store and persistence
- * ------------------------------------------------------------------------------------------- */
+/* B6: the in-memory store and persistence */
 
 describe("B6 getFxSettings and setFxSettings", () => {
   it("B6 getFxSettings starts at the defaults with empty storage", () => {
@@ -299,9 +295,7 @@ describe("B6 getFxSettings and setFxSettings", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B7: notification and the hook
- * ------------------------------------------------------------------------------------------- */
+/* B7: notification and the hook */
 
 function Probe(): ReactElement {
   const [settings, update] = useFxSettings();

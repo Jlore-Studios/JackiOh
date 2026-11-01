@@ -321,9 +321,7 @@ describe("the code screen reads the account once", SLOW_TEST, () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A re-read in the background keeps the open screen (the third panel round)
-// ---------------------------------------------------------------------------------------------
 
 /** A token of one provider session: `session_id` is what tells a renewal from a new sign-in. */
 function sessionToken(sub: string, sessionId: string, tag: string): string {

@@ -11,9 +11,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-/* ------------------------------------------------------------------------------------------- *
- * Reading and parsing
- * ------------------------------------------------------------------------------------------- */
+/* Reading and parsing */
 
 function readSheet(fromWeb: string): string {
   for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
@@ -151,9 +149,7 @@ function declsFor(sheet: Sheet, selector: string): Map<string, string> {
 
 const isZero = (value: string | undefined): boolean => value !== undefined && /^0(px)?( 0(px)?){0,3}$/.test(normValue(value));
 
-/* ------------------------------------------------------------------------------------------- *
- * The two sheets, and what animations.css carried before this task
- * ------------------------------------------------------------------------------------------- */
+/* The two sheets, and what animations.css carried before this task */
 
 const fx = parseSheet(readSheet("src/fx/fx.css"));
 const anim = parseSheet(readSheet("src/game/animations.css"));
@@ -245,9 +241,7 @@ function durationValues(sheet: Sheet): string[] {
     }));
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * fx.css
- * ------------------------------------------------------------------------------------------- */
+/* fx.css */
 
 describe("B40 — fx.css", () => {
   it("B40 .fx-layer is fixed over the whole viewport at z-index 38, clips its overflow and takes no pointer event", () => {
@@ -447,9 +441,7 @@ describe("B40 — fx.css", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * animations.css
- * ------------------------------------------------------------------------------------------- */
+/* animations.css */
 
 describe("B40 — animations.css follows the squeeze and loses nothing", () => {
   it("B40 every existing @keyframes name survives", () => {
@@ -509,9 +501,7 @@ describe("B40 — animations.css follows the squeeze and loses nothing", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B45: the summon silhouette and the burn-away (visual pass 1)
- * ------------------------------------------------------------------------------------------- */
+/* B45: the summon silhouette and the burn-away (visual pass 1) */
 
 describe("B45 — a summon lands a silhouette, a dying card burns away", () => {
   it("B45 a zone being summoned into glows without scaling the zone box itself", () => {

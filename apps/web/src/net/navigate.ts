@@ -1,9 +1,8 @@
-// Client routing.
-// M5's pathname switch and M6's screens share URL changes; §9.4 redirects pending accounts and room claims.
+// Client routing; §9.4 redirects pending accounts and room claims.
 // `pushState` and `replaceState` do not fire `popstate`, so `navigate` dispatches an event for `usePathname`.
-// A page holding work a move would lose registers a leave guard (`guardLeaving`, R1754000): `navigate` and the browser's Back wait for it.
-// A move between two menu screens cross-fades in the browser's view transition (`showMove`, R2117000).
-// An open sheet or dialog takes the browser's Back first, and a move off its entry takes that entry's place (`backLayers.ts`, R2127000).
+// A page holding work a move would lose registers a leave guard (`guardLeaving`, R1754000): `navigate` and Back wait for it.
+// A move between two menu screens cross-fades in a view transition (`showMove`, R2117000).
+// An open sheet or dialog takes Back first, and a move off its entry takes that entry's place (`backLayers.ts`, R2127000).
 
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
@@ -36,9 +35,8 @@ function here(): string {
 }
 
 /**
- * R1754000: while a page holds work a move would lose, every `navigate` off it (but a `force`d one)
- * and every `popstate` off it is held: `hold` is handed the move, to make if the player lets the
- * work go. Returns the release, which the page calls once nothing is at stake.
+ * R1754000: every `navigate` (but a `force`d one) and `popstate` off the page is handed to `hold`, to
+ * make if the player lets the work go. Returns the release, called once nothing is at stake.
  */
 export function guardLeaving(hold: (leave: () => void) => void): () => void {
   const guard = { hold, here: here() };
@@ -49,9 +47,9 @@ export function guardLeaving(hold: (leave: () => void) => void): () => void {
 }
 
 /**
- * R2117000: a board on screen; `Board.tsx` draws one for every game and every replay. `testid.board`
- * spelled out: e2e's typecheck loads this file through the Vite config, and `game/contract.ts`'s
- * imports reach the card components, which it cannot compile. viewTransition.test.tsx pins the two.
+ * R2117000: a board on screen (every game and replay). `testid.board` spelled out: e2e's typecheck loads
+ * this file through the Vite config and cannot compile what `game/contract.ts` imports.
+ * viewTransition.test.tsx pins the two.
  */
 const BOARD_ON_SCREEN = '[data-testid="board"]';
 
@@ -61,11 +59,7 @@ let shown = "/";
 /** R2117000: every `usePathname` and `useSearch` reader, so one `popstate` tells them all in one transition. */
 const readers = new Set<() => void>();
 
-/**
- * R2117000: a move cross-fades only between two menu screens: the pathname changes (a query or
- * fragment alone is the same screen), neither end is a board's route, no board is on screen (a
- * replay plays in place), Reduce motion is off and the browser has view transitions.
- */
+/** R2117000: only between two menu screens; a query or fragment alone is the same screen, and a replay plays on a board in place. */
 function crossFades(from: string, to: string): boolean {
   if (from === to || isBoardPath(from) || isBoardPath(to)) return false;
   if (document.querySelector(BOARD_ON_SCREEN) !== null) return false;
@@ -76,12 +70,10 @@ function crossFades(from: string, to: string): boolean {
 let flushing = false;
 
 /**
- * R2117000: `update` tells the screens of a move from `from` to the address now. A move that
- * cross-fades runs it inside the browser's view transition, flushed at once so the browser
- * captures the new screen; any other runs it at once, as before. A move made while that flush runs
- * (a gate's redirect, from an effect of the screen being drawn) joins it: a second transition there
- * would skip the first and flush inside React's own commit (React #177, spec 14 B37). A transition
- * skipped by a later one rejects its `ready`, which is no error.
+ * R2117000: a cross-fading move runs `update` in a view transition, flushed at once so the browser
+ * captures the new screen. A move made during that flush (a gate's redirect) joins it: a second
+ * transition would skip the first and flush inside React's commit (React #177, spec 14 B37). A
+ * skipped transition rejects its `ready`, which is no error.
  */
 function showMove(from: string, update: () => void): void {
   const to = currentPath();
@@ -115,11 +107,9 @@ function go(path: string, replace: boolean): void {
 }
 
 /**
- * Avoid stacking history when a guard re-renders the current pathname and query. A new pathname opens
- * at the top (#1756), scrolled after the push so the entry left keeps its position for Back; a change
- * of query or fragment alone keeps the scroll, and Back and Forward (`popstate`) are the browser's.
- * R1754000: a page's leave guard holds the move unless `force` (a move the page itself decided);
- * returns false when it held it.
+ * No stacking when a guard re-renders the current address. A new pathname opens at the top (#1756),
+ * scrolled after the push so the entry left keeps its position for Back (`popstate` scroll is the
+ * browser's). R1754000: a leave guard holds the move unless `force`d; false when it held it.
  */
 export function navigate(path: string, options: { replace?: boolean; force?: boolean } = {}): boolean {
   if (typeof window === "undefined") return true;
@@ -138,10 +128,8 @@ export function navigate(path: string, options: { replace?: boolean; force?: boo
 }
 
 /**
- * R1754000, R1831000: work that leaves the page without a `navigate` of its own (the toast's Accept
- * joins a room, then goes) waits on the guard as a move would. Runs `then` at once when no page
- * guards; otherwise the guard is handed it, to run if the player lets the work go, and this returns
- * false.
+ * R1754000, R1831000: work that leaves without a `navigate` of its own (the toast's Accept joins a
+ * room, then goes) waits on the guard as a move would; false when the guard holds it.
  */
 export function leaveFirst(then: () => void): boolean {
   const guard = leaveGuard;
@@ -154,10 +142,9 @@ export function leaveFirst(then: () => void): boolean {
 }
 
 /**
- * R1754000: a `popstate` off a guarded page puts its address back before any screen reads the
- * path, and hands the guard the way out: the browser's own Back, the guard gone, which returns to
- * the entry the player went to (the restored address sits just after it). Had the player pressed
- * Forward, that Back lands on the guarded page instead, so the entry is made again.
+ * R1754000: a `popstate` off a guarded page puts its address back before any screen reads it; the
+ * way out is the browser's Back, the guard gone, to the entry the player went to. After a Forward
+ * that Back lands on the guarded page instead, so the entry is made again.
  */
 function heldPop(): boolean {
   const guard = leaveGuard;
@@ -233,9 +220,9 @@ export function originOf(configured: unknown): string {
 }
 
 /**
- * The address this bundle is served from: jackioh.com in production (`.env.production`), the Vercel
- * host on staging (`vercel.json`'s build command). Read here, not at load: Vite's config loader runs
- * this file with no `import.meta.env`, so `static-pages.ts` calls `originOf` instead.
+ * jackioh.com in production (`.env.production`), the Vercel host on staging (`vercel.json`'s build
+ * command). Read here, not at load: Vite's config loader runs this file with no `import.meta.env`, so
+ * `static-pages.ts` calls `originOf` instead.
  */
 export function siteOrigin(): string {
   const configured: unknown = import.meta.env.VITE_SITE_ORIGIN;
@@ -320,11 +307,7 @@ export function duosIdOf(path: string): string | null {
   return idUnder(path, "duos");
 }
 
-/**
- * R2117000: the routes that are a board, whose moves the animation queue owns: a match, a watched
- * game, a co-op match, practice (its setup and its game share the path) and the two development
- * hotseats. No move into or out of one cross-fades.
- */
+/** R2117000: the board routes, whose moves the animation queue owns (practice's setup shares its game's path). */
 function isBoardPath(path: string): boolean {
   return (
     matchIdOf(path) !== null ||
@@ -336,9 +319,8 @@ function isBoardPath(path: string): boolean {
   );
 }
 
-// Sign-in screen entry states.
-// `/login` permits only exact expiry and password-reset tokens, so URL input cannot carry a destination,
-// message or address (B35, R193). A sign-in always lands on a `paths` value.
+// Sign-in entry states: `/login` permits only exact expiry and password-reset tokens, so URL input cannot
+// carry a destination, message or address (B35, R193). A sign-in always lands on a `paths` value.
 
 export type LoginReason = "expired";
 export type LoginEntryMode = "forgot";
@@ -357,18 +339,14 @@ export function tryPath(customId: string): string {
 }
 
 /**
- * #1991: the deck editor's "Practice with this deck": `/practice?deck=saved:<place>` opens practice's setup
- * with the saved deck at that 1-based place in `GET /api/decks`'s list picked (`practice/decks.ts`); a saved
- * deck never starts a game by itself.
+ * #1991: "Practice with this deck" opens practice's setup with the saved deck at that 1-based place in
+ * `GET /api/decks`'s list picked (`practice/decks.ts`); a saved deck never starts a game by itself.
  */
 export function practiceDeckPath(place: number): string {
   return `${paths.practice}?deck=saved:${String(place)}`;
 }
 
-/**
- * R2118000: the command menu's New deck action: `/decks` asking for one new deck, which the
- * workshop makes and opens, then drops from the address.
- */
+/** R2118000: the command menu's New deck: the workshop makes and opens one, then drops it from the address. */
 export function newDeckPath(): string {
   return `${paths.decks}?new=deck`;
 }

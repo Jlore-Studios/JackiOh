@@ -95,9 +95,7 @@ const FOG: FxDomCue = {
 };
 const ZONE: FxDomCue = { kind: "zone", at: anchor, tint: TINT, text: "×12", direction: "down", delayMs: 0, durationMs: 1100 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Each kind mounts one element to the contract
- * ------------------------------------------------------------------------------------------- */
+/* Each kind mounts one element to the contract */
 
 describe("B39 — mountDomEffect mounts one element per cue", () => {
   it("B39 a damage splat carries its tone and a hyphen-minus amount, centered on its box", () => {
@@ -200,9 +198,7 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * What it refuses, and what it never does
- * ------------------------------------------------------------------------------------------- */
+/* What it refuses, and what it never does */
 
 describe("B39 — a cue without the box it needs mounts nothing", () => {
   for (const cue of [SPLAT_DAMAGE, RAYS, SHEEN, ARROWS_UP]) {

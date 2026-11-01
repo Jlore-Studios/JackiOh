@@ -78,9 +78,7 @@ const TEAMMATE_HAND = 3;
 const PASSES_LEFT = 8;
 const PASS_COST = 1;
 
-// ---------------------------------------------------------------------------------------------
 // fixtures
-// ---------------------------------------------------------------------------------------------
 
 type Life = { pool: number; poolCap: number; spent: boolean };
 
@@ -189,9 +187,7 @@ const CONCEDED: DuosView["result"] = { outcome: "win", winner: "b", reason: "con
 const END_TURN: DuosActionBody = { kind: "duel", body: { type: "endTurn" } };
 const PASS_H1: DuosActionBody = { kind: "pass", instanceId: "h1" };
 
-// ---------------------------------------------------------------------------------------------
 // rendering and reading the board
-// ---------------------------------------------------------------------------------------------
 
 type Board = {
   onAction: Mock<(body: DuosActionBody) => void>;
@@ -313,9 +309,7 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
 // B61: the own duel's board and the life strip
-// ---------------------------------------------------------------------------------------------
 
 describe("B61 the own duel and the life strip", () => {
   it("B61 renders the board for the seat's own duel: its own hand, not the teammate's", () => {
@@ -369,9 +363,7 @@ describe("B61 the own duel and the life strip", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B62: the pass control
-// ---------------------------------------------------------------------------------------------
 
 describe("B62 the pass control", () => {
   it("B62 on a hand card legal lets pass, duos-pass sends {kind: \"pass\", instanceId}", () => {
@@ -433,9 +425,7 @@ describe("B62 the pass control", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B63: the portal, the teammate strip, waiting
-// ---------------------------------------------------------------------------------------------
 
 describe("B63 the portal", () => {
   it("B63 the portal flips the board to the teammate's duel, and back", () => {
@@ -534,9 +524,7 @@ describe("B63 the portal", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B64: pings
-// ---------------------------------------------------------------------------------------------
 
 describe("B64 the ping wheel", () => {
   it("B64 no card inspected, no ping wheel", () => {
@@ -649,9 +637,7 @@ describe("B64 received pings", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #965: the result panel's replay door, and the board's replay mode
-// ---------------------------------------------------------------------------------------------
 
 describe("#965 the replay door and the board's replay mode", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
@@ -704,9 +690,7 @@ describe("#965 the replay door and the board's replay mode", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R1483000: the result panel names the daily cap for a capped seat
-// ---------------------------------------------------------------------------------------------
 
 describe("R1483000 the result panel names the daily cap only for a capped seat", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
@@ -723,9 +707,7 @@ describe("R1483000 the result panel names the daily cap only for a capped seat",
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R169: the live-modifier chip in the rail
-// ---------------------------------------------------------------------------------------------
 
 describe("R169 the modifier list on the co-op board", () => {
   const TEAMMATE_MODIFIER = { id: "m9", label: "Your Spells cost (1) less" };
@@ -766,9 +748,7 @@ describe("R169 the modifier list on the co-op board", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1664: the result panel plays the seat's economy
-// ---------------------------------------------------------------------------------------------
 
 describe("#1664 the result panel plays what the game paid the seat's person", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
@@ -814,9 +794,7 @@ describe("#1664 the result panel plays what the game paid the seat's person", ()
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1755: the result panel takes the focus, folds to the rail's Result and opens again
-// ---------------------------------------------------------------------------------------------
 
 describe("#1755 the result panel takes the focus and opens again", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
@@ -887,9 +865,7 @@ describe("#1755 the result panel takes the focus and opens again", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R2092000: Play again on the result panel
-// ---------------------------------------------------------------------------------------------
 
 describe("R2092000 Play again on the result panel", () => {
   const OVER: DuosView = { ...duosView(), result: CONCEDED };
@@ -954,9 +930,7 @@ describe("R2092000 Play again on the result panel", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // #1146: the team's result waits for the own duel's last burst
-// ---------------------------------------------------------------------------------------------
 
 describe("#1146 the team result waits for the own duel's lethal burst", () => {
   const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 5 }];
@@ -991,9 +965,7 @@ describe("#1146 the team result waits for the own duel's lethal burst", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R2095000: Both boards, the teammate's duel beside the own one
-// ---------------------------------------------------------------------------------------------
 
 describe("R2095000 both boards render side by side with the teammate's read-only", () => {
   it("R2095000 with the toggle on, both boards render, the teammate's inside duos-board-teammate", () => {

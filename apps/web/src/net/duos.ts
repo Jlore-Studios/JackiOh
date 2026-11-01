@@ -15,9 +15,7 @@ import type { DuosView } from "../wire/generated/DuosView.ts";
 import { apiRequest } from "./api.ts";
 import { withSession } from "./gate.ts";
 
-// ---------------------------------------------------------------------------------------------
 // Rooms and matches (S6)
-// ---------------------------------------------------------------------------------------------
 
 /** A player named in a room: the profile id keys it, the username is what is shown (R1436). */
 export type DuosRoomPlayer = { profileId: string; username: string };
@@ -95,9 +93,7 @@ export function getDuosAgain(matchId: string): Promise<DuosAgainStatus> {
   return withSession((token) => apiRequest<DuosAgainStatus>(`/api/duos/matches/${encodeURIComponent(matchId)}/again`, { token }));
 }
 
-// ---------------------------------------------------------------------------------------------
 // Pings (S6's socket frames, B39, B64): cosmetic, team-only, never in a view or the log
-// ---------------------------------------------------------------------------------------------
 
 export type PingKind = "thumbsUp" | "thumbsDown" | "portal" | "careful" | "killThis";
 

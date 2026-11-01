@@ -1,20 +1,14 @@
-// The `/ws/duos` client (#936 SPEC S6): one socket per co-op match, the way `game/net.ts` is one per
-// 1v1 match. CLAUDE.md rule 7: it sends intent (a `DuosActionBody`, a ping) and keeps what the server
-// pushed — the seat's `DuosView` and its `legal` list, never computed here — for the board to render.
+// The `/ws/duos` client (#936 SPEC S6), one socket per co-op match as `game/net.ts` is per 1v1 match.
+// CLAUDE.md rule 7: it sends intent (an action, a ping) and keeps the `DuosView` and `legal` list the
+// server pushed, never computed here.
 //
-// The handshake is `/ws/match`'s (auth as `/ws/match`, S6): the match id rides in the query string
-// and the token is offered as a subprotocol (R1379000), never in the address, and `hello` asks for a
-// fresh view. The token is the gate's, given through `setToken` as `game/net.ts` takes it (the tab's
-// session until one is given, `net/session.ts`), so a reconnect after a renewal carries the new one,
-// and a 4401 is final only for the token it refused (R1115000).
-//
-// A drop reconnects with `game/net.ts`'s backoff and jitter (R1441); a refusal (4401/4403/4404) and
-// a voided match (4410) do not. A woken page (the tab turned visible, the network came back) asks a
-// socket quiet past the server's ping interval for a view with `hello`, and replaces it if nothing
-// answers within `WAKE_PROBE_MS`, as `game/net.ts` does (R1441). Pings are cosmetic (B39): one sent while the socket is down is dropped,
-// and one past the server's own limit (PING_RATE_LIMIT per PING_RATE_WINDOW_MS) is not sent at all,
-// as the server would drop it silently. The seat's own ping is kept beside the relayed ones, so the
-// board marks it for the sender too.
+// The handshake is `/ws/match`'s (S6): the match id in the query string, the token as a subprotocol
+// (R1379000), never in the address. The token is the gate's, via `setToken` (the tab's session until
+// then), so a reconnect after a renewal carries the new one and a 4401 is final only for the token it
+// refused (R1115000). Drops and page wakes are handled as in `game/net.ts` (R1441); a refusal
+// (4401/4403/4404) or a voided match (4410) never reconnects. Pings are cosmetic (B39): one sent while
+// down is dropped, one past the server's limit (PING_RATE_LIMIT per PING_RATE_WINDOW_MS) is not sent
+// (the server would drop it silently), and the seat's own is kept so the board marks it for the sender.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 
@@ -56,10 +50,7 @@ const OPEN = 1;
 /** The Duos socket's path, beside `/ws/match` (S6). */
 const DUOS_PATH = "/ws/duos";
 
-/**
- * The `/ws/duos` URL on the same server as `/ws/match` (`VITE_SERVER_WS_URL`, `net/api.ts`): the
- * configured URL with its path swapped, so one environment variable still names the server.
- */
+/** `/ws/match`'s URL (`VITE_SERVER_WS_URL`, `net/api.ts`) with its path swapped, so one variable names the server. */
 export function duosSocketUrl(base: string = matchSocketUrl()): string {
   return serverSocketUrl(DUOS_PATH, base);
 }
@@ -77,12 +68,7 @@ export type DuosClockFrame = {
 export type DuosClockReading = DuosClockFrame & { receivedAt: number };
 
 export type DuosServerFrame =
-  /**
-   * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
-   * all of this seat's Jlore for it; the server leaves it off a frame that has nothing to say.
-   * #1664: `economy` is what the result's write paid this seat's person (`economy/xp.ts`), on every
-   * view of the seat from then on; absent when the frame carries none (or not a whole one).
-   */
+  /** `jloreCapped` and `economy` as `DuosSnapshot` reads them; the server leaves either off when it has none. */
   | {
       type: "view";
       view: DuosView;
@@ -165,19 +151,14 @@ export type DuosConnection = "connecting" | "open" | "reconnecting" | "refused" 
 
 export type DuosSnapshot = {
   connection: DuosConnection;
-  /** The seat's last `DuosView`, or null before the first one. */
   view: DuosView | null;
   /** The seat's legal actions as the server last listed them; never computed here (rule 7). */
   legal: readonly DuosActionBody[];
-  /**
-   * R1483000: whether the last view said the daily Jlore cap held back this seat's Jlore for the
-   * finished match, as the server read it off its ledger; the page never works it out.
-   */
+  /** R1483000: the last view said the daily Jlore cap held back this seat's Jlore; never worked out here. */
   jloreCapped: boolean;
   /**
-   * #1664: what the finished match paid this seat's person, from the last view that carried it: the
-   * tracks it moved with their levels and rewards, and the quests it completed. Null before the
-   * result is written and after a view without it.
+   * #1664: what the finished match paid this seat's person (`economy/xp.ts`), from the last view that
+   * carried it; null before the result is written and after a view without it.
    */
   economy: GameEconomy | null;
   /** The last `error` frame's message, relayed verbatim, or null. */
@@ -219,10 +200,7 @@ export type DuosClientOptions = {
   now?: () => number;
   /** Test seam. Defaults to `setTimeout` / `clearTimeout`. */
   timers?: Timers;
-  /**
-   * Test seam for what wakes a sleeping page (R1441): takes the handler, returns the function that
-   * stops listening. Defaults to the tab turning visible and the `online` event.
-   */
+  /** Test seam for what wakes a page (R1441), returning its unlisten; defaults to visibility and `online`. */
   wake?: (handler: () => void) => () => void;
   /** Test seam for the reconnect jitter (R1441), a draw in [0, 1). Defaults to `Math.random`. */
   random?: () => number;

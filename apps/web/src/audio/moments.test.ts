@@ -16,9 +16,7 @@ import { newEventsSince, planEntries } from "../game/animations.ts";
 import { baseView, emptySide, withEvents } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 
-/* --------------------------------------------------------------------------------------------- *
- * Rig
- * --------------------------------------------------------------------------------------------- */
+/* Rig */
 
 type Sent = { id: SfxId; params: SfxParams | undefined; delayMs: number };
 type Recorder = SoundSink & { sfx: Sent[] };
@@ -84,9 +82,7 @@ const radiantInHand = (instanceId: string, defId: string, player: PlayerId = "p2
 const healthLost = (player: PlayerId, amount: number): GameEvent => ({ type: "healthLost", player, amount });
 const SPELL = "core-005";
 
-/* --------------------------------------------------------------------------------------------- *
- * The stream, synthetic
- * --------------------------------------------------------------------------------------------- */
+/* The stream, synthetic */
 
 describe("R506 the director follows the plays in progress", () => {
   it("R506 Hinder drawn and cast: the cast-on-draw sting, then the victim's rider cracks", () => {
@@ -206,9 +202,7 @@ describe("R506 the director follows the plays in progress", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * Against real engine games and viewFor's redaction
- * --------------------------------------------------------------------------------------------- */
+/* Against real engine games and viewFor's redaction */
 
 type Seats = { p1: Recorder; p2: Recorder };
 /** `fresh`: each seat's new events, as its view redacts them. */

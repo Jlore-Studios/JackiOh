@@ -186,7 +186,7 @@ function everyRun(): Run[] {
 
 const returnedSeconds = (run: Run): number => (typeof run.returned === "number" ? run.returned : Number.NaN);
 
-/* ----- the contract, one clause per checker; each returns its problems ----- */
+/* the contract, one clause per checker; each returns its problems */
 
 function subsetProblems(run: Run): string[] {
   const problems = run.audio.violations.map((v) => `${run.label}: ${v}`);
@@ -258,9 +258,7 @@ function rampProblems(run: Run): string[] {
     .map(({ param }) => `${run.label}: exponential ramp on ${param.node.kind}.${param.name} targets a value <= 0`);
 }
 
-/* --------------------------------------------------------------------------------------------- *
- * B14
- * --------------------------------------------------------------------------------------------- */
+/* B14 */
 
 describe("B14 the SFX table", () => {
   it("B14 SFX_IDS lists every id, in the order of the SfxId union", () => {
@@ -442,9 +440,7 @@ describe("B14 the shared noise buffer", () => {
   });
 });
 
-/* --------------------------------------------------------------------------------------------- *
- * R506: patch v0.2.0's families and card moments keep the recipe contract, and vary as they say
- * --------------------------------------------------------------------------------------------- */
+/* R506: patch v0.2.0's families and card moments keep the recipe contract, and vary as they say */
 
 describe("R506 the new families and moments keep the recipe contract", () => {
   const variants: Run[] = [

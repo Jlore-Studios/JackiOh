@@ -34,9 +34,7 @@ import type {
   PracticeStartConfig,
 } from "./protocol.ts";
 
-// ---------------------------------------------------------------------------------------------
 // the driver (core.test.ts's, at the browser's budget)
-// ---------------------------------------------------------------------------------------------
 
 const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_BUDGET };
 
@@ -108,9 +106,7 @@ function earning(over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {
   return { seed: "practice-claim-test", difficulty: "easy", humanSeat: "p2", deck: { kind: "random" }, earning: true, ...over };
 }
 
-// ---------------------------------------------------------------------------------------------
 // the fixture
-// ---------------------------------------------------------------------------------------------
 
 describe("R1303002 the claim the server re-runs the AI on", () => {
   it("R1303002 the worker plays the claim fixture move for move", { timeout: 60_000 }, () => {
@@ -149,9 +145,7 @@ describe("R1303002 the claim the server re-runs the AI on", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // what the worker answers
-// ---------------------------------------------------------------------------------------------
 
 describe("R1303001 a claim names the seed its game began on", () => {
   it("R1303001 a game resumed after a reload claims on the seed it began on", () => {

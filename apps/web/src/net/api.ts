@@ -225,7 +225,6 @@ async function keptGet<T>(path: string, token: string | null, signal?: AbortSign
   return answer;
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2124000: a spend runs once. Every spend (a pack bought or opened, a token redeemed, a chase
 // bought, an invite code redeemed) goes with an `Idempotency-Key`, a UUID minted when the player
 // presses and sent again by that press's retries, "Try again" after a timeout included, so a spend
@@ -234,7 +233,6 @@ async function keptGet<T>(path: string, token: string | null, signal?: AbortSign
 // one is a new key. A press with no answer (a timeout or a failed transport), a 429 or a server error
 // keeps its key for the retry. A press is the spend's path and body: pressing again before an answer
 // is the retry of the press that got none. Each spend is out (`net/spending.ts`) until it settles.
-// ---------------------------------------------------------------------------------------------
 
 /** The first status that is the server's own failure, not its answer to the spend. */
 const FIRST_SERVER_ERROR_STATUS = 500;
@@ -267,9 +265,7 @@ function spendRequest<T>(path: string, token: string, body: unknown): Promise<T>
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // The endpoints, as the handlers in `crates/server/src/api/**` return them.
-// ---------------------------------------------------------------------------------------------
 
 /** `GET /api/auth/me` (`auth: "user"`): the code screen's own read (§9.4). */
 export type MeResponse = {
@@ -346,11 +342,9 @@ export function getMe(token: string): Promise<MeResponse> {
   return apiRequest<MeResponse>("/api/auth/me", { token });
 }
 
-// ---------------------------------------------------------------------------------------------
 // Usernames (R1435, R1436). The server validates, normalizes and tags a name; the client proposes
 // one, shows the server's verdict as it stands, and saves exactly the username that verdict named,
 // so a player never gets a tag they were not shown.
-// ---------------------------------------------------------------------------------------------
 
 /** Why the server refused a name. Its `message` is the sentence a player reads, shown as is. */
 export type UsernameRefusal = "characters" | "mixed_scripts" | "too_short" | "too_long" | "not_allowed" | "unchanged";
@@ -431,11 +425,9 @@ export async function deleteAccount(token: string): Promise<void> {
   await apiRequest<null>("/api/account", { method: "DELETE", token });
 }
 
-// ---------------------------------------------------------------------------------------------
 // The dev tools (SPEC §14.10, R1300000): a dev account's own economy, which the server alone
 // changes. Each answers 403 `forbidden` to an account `DEV_PROFILE_IDS` does not list, and 400 to
 // an amount that is not a positive whole number; the client sends what was typed and shows that.
-// ---------------------------------------------------------------------------------------------
 
 /** What `POST /api/dev/clear/:part` clears: one holding, or all five. */
 export type DevClearPart = "cards" | "cosmetics" | "jlore" | "counters" | "tracks" | "everything";
@@ -551,10 +543,8 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
   return keptGet<OwnedCosmeticsResponse>(keptPaths.cosmetics, token);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1834000, R1834001: each card's picks on the account (R1655000). The device's copy is the one the
 // faces read (`cards/cosmetics.ts`); `cards/cardPicksSync.ts` is the only caller of these three.
-// ---------------------------------------------------------------------------------------------
 
 /** One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt` may be false. */
 export type CardPicksEntry = { cardId: string; foil?: string; finish?: string; border?: string; fullArt?: boolean };
@@ -624,10 +614,8 @@ export async function replaceQuest(token: string, questId: string): Promise<Ques
   return answer;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Card packs (SPEC §14.3, §14.4; #1301, #1308): the odds and the counters the server holds, and an
 // opening it has already decided slot by slot.
-// ---------------------------------------------------------------------------------------------
 
 /** The three rarities a pity counter tracks. */
 export type PackCounters = { epic: number; legendary: number; mythic: number };
@@ -731,12 +719,10 @@ export async function openPack(token: string, pack: string): Promise<OpenedPackR
   return answer;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The Jlore shop and the token picker (SPEC §14.1, §14.5, §14.6; #1309): spending what the
 // economy pays. Every number shown comes from these answers, never a client constant
 // (CLAUDE.md rule 7): the wallet, the pack price, both bars and their sizes, the cycle's next
 // step and the Chase Shard bar. A refusal rejects with `ApiRequestError` and changes nothing.
-// ---------------------------------------------------------------------------------------------
 
 /** `GET /api/wallet`: the caller's Jlore balance. */
 export type WalletResponse = { jlore: number };
@@ -903,11 +889,9 @@ export async function buyChase(token: string, cosmeticId: string, cardId?: strin
   return answer;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). Ids are minted HERE, by the client
 // (`crypto.randomUUID()`), so every save is an idempotent `PUT` that can be retried after a dropped
 // connection without making a second deck (R256).
-// ---------------------------------------------------------------------------------------------
 
 export type SavedDeck = {
   id: string;
@@ -1098,10 +1082,8 @@ export async function deleteTrio(token: string, id: string, options: SendOptions
   return answer;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320). The device's copy is the one the page
 // renders (`tutorial/progress.ts`); `tutorial/accountSync.ts` is the only caller of these two.
-// ---------------------------------------------------------------------------------------------
 
 /** `TutorialProgressView` in `crates/server/src/api/tutorial.rs`. */
 export type TutorialAccountProgress = {
@@ -1134,10 +1116,8 @@ export async function putTutorialProgress(
   ).progress;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Game settings on the account (SPEC §9.1, R633, R634). The device's copy is the one the game
 // reads (`settings/`); `settings/accountSync.ts` is the only caller of these two.
-// ---------------------------------------------------------------------------------------------
 
 /** One setting's value, as the server keeps it. */
 export type PlayerSettingValue = boolean | number | string;
@@ -1175,9 +1155,7 @@ export async function putPlayerSettings(
   ).settings;
 }
 
-// ---------------------------------------------------------------------------------------------
 // Queue modes (SPEC §9.5, R257–R258, R264)
-// ---------------------------------------------------------------------------------------------
 
 export type QueueMode = "bo1" | "bo3" | "random";
 
@@ -1271,10 +1249,8 @@ export function roomModeOf(error: unknown): QueueMode | null {
   return mode === "bo1" || mode === "bo3" || mode === "random" ? mode : null;
 }
 
-// ---------------------------------------------------------------------------------------------
 // The Conquest series (SPEC §9.5, R330–R336). The server's projection for the caller: the other
 // side's pick is never in it before both have picked, and the other side's deck names never are.
-// ---------------------------------------------------------------------------------------------
 
 export type SeriesEnd = "decided" | "exhausted" | "forfeit" | "abandoned";
 
@@ -1345,10 +1321,8 @@ export function getSeriesForMatch(token: string, matchId: string): Promise<{ ser
   return apiRequest<{ series: SeriesView | null }>(`/api/matches/${encodeURIComponent(matchId)}/series`, { token });
 }
 
-// ---------------------------------------------------------------------------------------------
 // The ranked ladder (SPEC §9.12, R612). Every shape below is `crates/server/src/api/ranked.rs`'s,
 // and none of them carries the hidden rating — the client shows the visible rank only.
-// ---------------------------------------------------------------------------------------------
 
 export type GrapeTier = "rotten" | "normal" | "large" | "golden" | "mythic";
 
@@ -1414,10 +1388,8 @@ export function getMatchRanks(token: string, matchId: string): Promise<MatchRank
   return apiRequest<MatchRanksResponse>(`/api/matches/${encodeURIComponent(matchId)}/ranks`, { token });
 }
 
-// ---------------------------------------------------------------------------------------------
 // Online replays (SPEC §9.3, R768, #510): the shapes of `crates/server/src/api/replays.rs`. A step is
 // the view the caller's seat held; no seed, log, state or deck crosses (CLAUDE.md rule 7).
-// ---------------------------------------------------------------------------------------------
 
 /** One finished match in `GET /api/replays`; `unavailable` is part 1's reason this build cannot show it. */
 export type OnlineReplayListing = {
@@ -1466,10 +1438,8 @@ export function getReplaySteps(token: string, matchId: string, from: number, cou
   );
 }
 
-// ---------------------------------------------------------------------------------------------
 // Rematch offers after a finished non-series match (SPEC §9.5, R672). Only offer stakes,
 // presence booleans and ids cross here — never decks, hands or ratings (CLAUDE.md rule 7).
-// ---------------------------------------------------------------------------------------------
 
 /** A rematch's stakes: 1 is a normal game, 2 is double-or-nothing (ranked only). */
 export type RematchStakes = 1 | 2;
@@ -1533,9 +1503,7 @@ export function forfeitSeries(token: string, seriesId: string): Promise<SeriesVi
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // Public card and player statistics (SPEC §9.11, R654)
-// ---------------------------------------------------------------------------------------------
 
 export type PublicCardStat = {
   id: string;

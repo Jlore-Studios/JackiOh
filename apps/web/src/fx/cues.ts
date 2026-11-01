@@ -1,28 +1,15 @@
-// The cue planner (docs/polish/1-animations.md S6 and S7).
-//
-// Turns one animation entry into the effects that decorate it: particle bursts, projectiles, cracks,
-// rings, a board shake and short DOM flourishes. Every function here is pure. It reads only its
-// arguments, never the DOM, and returns plain data the director schedules.
-//
-// R200: effects pace nothing. Every delay and duration is derived from the duration the runner gave
-// the entry (D, `entry.durationMs`) through the constants in `constants.ts`, so for any D an effect
-// starts inside the entry (0 <= delay <= D), a projectile lands inside it (delay + flight <= D) and
-// whatever trails after it is gone within FX_MAX_TAIL_MS of the entry's end.
-//
-// R202: effects draw from the redacted stream only. The planner reads the event, the view the entry
-// was planned against and the public catalog facts in `env.card`. An id or defId redacted to
-// "hidden" is never looked up, so a hidden card plans the same cues whatever it hides, gets no rarity
-// entrance, and no cue ever carries a defId or a card name.
-//
-// CLAUDE.md rule 9: particle counts live in `TUNING`, the game-over timings in `RESULT_TUNING`, and
-// every other number in `constants.ts`.
-//
-// Issue #124: the runner gives three new shapes of entry (`game/runs.ts`), and each plans as one: a
-// whole pile reached at once washes one wave over the pile (`zoneCues`), a sweep rolls a fog over each
-// row it swept and lands each hit as the fog reaches its lane (`sweepCues`), and a card another card
-// cast flares at its caster's hero, bigger with each cast of the burst (`castCues`). A readable card's
-// family lends its look (looks.ts) to those and, as an accent, to a play, a summon and a spell's hit:
-// the same recipe in the colors, particles and emblem of what made it.
+// The cue planner (docs/polish/1-animations.md S6, S7): pure, it turns one animation entry into the
+// effects that decorate it, reading only its arguments, never the DOM.
+// R200: effects pace nothing. Every delay and duration derives from the entry's `durationMs` (D)
+// through `constants.ts`: an effect starts inside the entry (0 <= delay <= D), a projectile lands
+// inside it (delay + flight <= D) and any tail is gone within FX_MAX_TAIL_MS of its end.
+// R202: effects draw from the redacted stream only (the event, the entry's view, `env.card`). A
+// "hidden" id or defId is never looked up, so a hidden card plans the same cues whatever it hides,
+// gets no rarity entrance, and no cue carries a defId or a card name.
+// CLAUDE.md rule 9: particle counts live in `TUNING`, game-over timings in `RESULT_TUNING`, the rest
+// in `constants.ts`. Issue #124: a whole-pile run, a sweep and a card cast by a card (game/runs.ts)
+// each plan as one (`zoneCues`, `sweepCues`, `castCues`); a readable card's family lends its look
+// (looks.ts) to those and to a play, a summon and a spell's hit.
 
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
@@ -116,14 +103,11 @@ import type {
   FxSpread,
 } from "./types.ts";
 
-/* ------------------------------------------------------------------------------------------- *
- * Tuning tables (rule 9)
- * ------------------------------------------------------------------------------------------- */
+/* Tuning tables (rule 9) */
 
 /**
- * Every burst's base particle count at intensity "normal", and the emit power it is thrown with.
- * A planned count is `max(1, round(count × intensity))`; power does not scale with intensity.
- * Every count is at least 6, so "low" plans strictly fewer particles than "normal" and "high" more.
+ * Each burst's particle count at intensity "normal" (planned as `max(1, round(count × intensity))`)
+ * and its emit power, unscaled. Every count is at least 6, so "low" plans fewer than "normal".
  */
 const TUNING = {
   cast: { count: 24, power: 1 },
@@ -178,7 +162,7 @@ const TUNING = {
   lungeDust: { count: 12, power: 0.8 },
   fizzleSmoke: { count: 10, power: 0.7 },
   manaSparkle: { count: 6, power: 0.5 },
-  // Patch v0.2.0's events (docs/classic-sets.md B3, B5).
+  // docs/classic-sets.md B3, B5's events.
   announceSparkle: { count: 10, power: 0.6 },
   animateArcane: { count: 12, power: 0.8 },
   crumbleShard: { count: 26, power: 1.1 },
@@ -194,7 +178,7 @@ const TUNING = {
   resultSmoke: { count: 24, power: 0.9 },
   resultEmber: { count: 30, power: 1 },
   resultDust: { count: 16, power: 0.8 },
-  // Issue #124: the looks (looks.ts) a card's family lends a recipe, and the runner's new shapes.
+  // Issue #124: family looks (looks.ts) and the runner's new shapes.
   castAccent: { count: 14, power: 0.9 },
   summonAccent: { count: 16, power: 1 },
   impactAccent: { count: 12, power: 1 },
@@ -224,9 +208,7 @@ const HIDDEN_ID = "hidden";
 
 const SIDES: readonly Side[] = ["you", "opponent"];
 
-/* ------------------------------------------------------------------------------------------- *
- * Anchors
- * ------------------------------------------------------------------------------------------- */
+/* Anchors */
 
 function anchor(id: string, at?: FxPoint): FxAnchor {
   return at === undefined ? { kind: "testid", testid: id } : { kind: "testid", testid: id, at: { x: at.x, y: at.y } };
@@ -238,9 +220,7 @@ function viewportCenter(): FxAnchor {
 
 const isCard = (tgt: string): boolean => tgt.startsWith("card-");
 const isHandCard = (tgt: string): boolean => tgt.startsWith("hand-card-");
-/* ------------------------------------------------------------------------------------------- *
- * Cue builders
- * ------------------------------------------------------------------------------------------- */
+/* Cue builders */
 
 function frac(fraction: number, durationMs: number): number {
   return Math.round(fraction * durationMs);
@@ -299,11 +279,7 @@ function banner(D: number, text: string, tone: FxBannerTone): FxCue {
   return { kind: "banner", text, tone, delayMs: 0, durationMs: D + FX_BANNER_TAIL_MS };
 }
 
-/** Appends a shake of `min(1, base × intensity)` at `delayMs`, only when that is above 0. */
-/**
- * The trauma that shakes the board by `px` at its peak: the shake's offset is FX_SHAKE_MAX_PX times
- * trauma squared (shake.ts), so a tuning table can name its shake in pixels (#57, #185).
- */
+/** The trauma for a peak shake of `px`: offset is FX_SHAKE_MAX_PX × trauma² (shake.ts) (#57, #185). */
 export function traumaForShakePx(px: number): number {
   return px <= 0 ? 0 : Math.min(1, Math.sqrt(px / FX_SHAKE_MAX_PX));
 }
@@ -316,9 +292,7 @@ function pushShake(cues: FxCue[], intensity: number, base: number, delayMs: numb
   }
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Sources
- * ------------------------------------------------------------------------------------------- */
+/* Sources */
 
 type FxSourceKind = "unit" | "backrow" | "hand" | "trap" | "hero";
 
@@ -372,9 +346,7 @@ export function sourceAnchor(
   return null;
 }
 
-/* ------------------------------------------------------------------------------------------- *
- * Recipes: one per FxRecipe (S7)
- * ------------------------------------------------------------------------------------------- */
+/* Recipes: one per FxRecipe (S7) */
 
 type Plan = {
   entry: AnimationEntry;
@@ -419,10 +391,7 @@ const cast: Recipe = (event, p) => {
   return [burst(p.env.intensity, base, at, "point", 0, "castOpponent"), ...accent];
 };
 
-/**
- * #185: when in its entry a Unit hits the table: after the slam's anticipation, at FX_SLAM_AT of the
- * landing motion that follows it.
- */
+/** #185: when a Unit hits the table: after the slam's anticipation, at FX_SLAM_AT of the landing. */
 export function slamLandMs(entry: Pick<AnimationEntry, "slam">, D: number): number {
   const wait = entry.slam?.anticipationMs ?? 0;
   return wait + frac(FX_SLAM_AT, D - wait);
@@ -460,10 +429,8 @@ const summon: Recipe = (event, p) => {
   // #185: the entry's slam, when it is this event's Unit landing (`slamEntries`).
   const slam = "instanceId" in event && p.entry.slam?.instanceId === event.instanceId ? p.entry.slam : undefined;
   const landAt = slamLandMs(p.entry, p.D);
-  // B3.1: a backrow card stepping into its unit zone lands like a summon, with its flavor's
-  // entrance on top (#1445).
+  // B3.1: an Animated card lifts off its backrow zone and lands in its unit zone like a summon.
   if (event.type === "animated") {
-    // B3.1: the card lifts off its backrow zone and lands in its unit zone, where it slams down.
     const home = anchor(testid.zone(sideOf(p.view, event.player), "backrow", event.backrowLane));
     const lift = [ghost(p.D, home, anchor(p.tgt)), burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane")];
     // #1445: an Animated card takes its flavor's entrance too; a hidden one keeps the lift alone.
@@ -509,9 +476,8 @@ const summon: Recipe = (event, p) => {
 type DamageEvent = Extract<GameEvent, { type: "damage" }>;
 
 /**
- * #1443: every impact at `hit`: the spark, the splat, the poison, the family's accent, the dust,
- * the shockwave, the shield and the shake. `flavorParticle` is the flavor's own accent, used when
- * a flavor shot flew instead of today's projectile; otherwise the accent is looked up as before.
+ * #1443: every impact at `hit`. `flavorParticle` is the accent of a flavor shot that flew instead of
+ * the projectile; without one the accent is looked up.
  */
 function impactTail(event: DamageEvent, p: Plan, hit: number, flavorParticle?: FxPreset): FxCue[] {
   const i = p.env.intensity;
@@ -540,7 +506,7 @@ function impactTail(event: DamageEvent, p: Plan, hit: number, flavorParticle?: F
   return cues;
 }
 
-/** Today's impact: the remembered projectile when one flies, then every impact at its landing. */
+/** The remembered projectile when one flies, then every impact at its landing. */
 function impactCues(event: DamageEvent, p: Plan): FxCue[] {
   const i = p.env.intensity;
   const at = anchor(p.tgt);
@@ -666,9 +632,8 @@ const bounce: Recipe = (event, p) => {
 };
 
 /**
- * R318: the card a full hand cannot take burns over it, and what is left of it reaches the graveyard
- * as the entry ends. The card itself is the board's `burn-notice` (face or back by R97); this only
- * lights it.
+ * R318: the card a full hand cannot take burns, its ashes reaching the graveyard as the entry ends.
+ * The card itself is the board's `burn-notice` (face or back by R97); this only lights it.
  */
 const burn: Recipe = (event, p) => {
   if (event.type !== "burned") return [];
@@ -981,9 +946,7 @@ const overflow: Recipe = (event, p) => {
   return cues;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Patch v0.2.0's events (docs/classic-sets.md B3, B5): their own looks, inside R200's bounds
- * ------------------------------------------------------------------------------------------- */
+/* Patch v0.2.0's events (docs/classic-sets.md B3, B5): their own looks, inside R200's bounds */
 
 /** The engine writes a hero target as `hero-<playerId>` (as `damage` does). */
 const HERO_ID = /^hero-(p1|p2)$/;
@@ -1092,9 +1055,7 @@ const curve: Recipe = (event, p) => {
   return cues;
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Issue #124: the runner's new entry shapes (game/runs.ts), each planned as one
- * ------------------------------------------------------------------------------------------- */
+/* Issue #124: the runner's new entry shapes (game/runs.ts), each planned as one */
 
 /** The public facts of a readable defId; undefined for R97's sentinel or an unknown id (R202). */
 function factsOf(defId: string, env: FxPlanEnv): FxCardFacts | undefined {
@@ -1306,9 +1267,7 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   curve,
 };
 
-/* ------------------------------------------------------------------------------------------- *
- * Public planners (S6)
- * ------------------------------------------------------------------------------------------- */
+/* Public planners (S6) */
 
 /**
  * Plans every event of one entry: each event's row recipe, in event order, concatenated. R502: while
