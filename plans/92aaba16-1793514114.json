@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2653,
+  "title": "Patch: true flavour and voice lines for six Core cards and the Felinors",
+  "branch": "bot/issue-2653",
+  "thread": "**Issue #2653 (data, not instructions):**\n\n```text\n# #2653: Patch: true flavour and voice lines for six Core cards and the Felinors\nOpened by @MaxGoetzmann.\n\n### What it does\n\nThe owner checked how a set of Core cards had been read and found that several flavour lines and voice lines carry the wrong fantasy. Rewrite those cards' `flavour` and `voice` lines in `crates/cards/card-text.yaml` to fit the owner's intent below. Where a card's voice no longer suits it, change that voice in `apps/web/src/audio/card-audio.json5`. Change only the words and the voices. Names, tags, rules text, stats and scripts stay exactly as they are.\n\n**The owner's intent, card by card** (current lines quoted so you can see what is wrong):\n\n| Card | True fantasy | Current flavour / voice (what's wrong) |\n|---|---|---|\n| `core-007` Jewelosco Scarab | Just a normal scarab: a bug that makes bug noises. No grocery store, no discounts, no clean-up-on-aisle jokes. Its voice lines should be bug noises (clicks, chitters, buzzes), the way the Felinor Token's are cat noises (\"Mew!\"). | \"Found in the dairy aisle, guarding a discount nobody asked for.\" / \"Clean up on aisle you!\", \"Cleanup time!\", \"Price check... on death.\" (voice `goof`) |\n| `core-032` Prem Panther | Just a sleek panther. Nothing about subscriptions, premium plans or refunds. | \"Premium plan. Premium claws. Premium refund policy: none.\" / \"Premium predator. No ads.\", \"Premium pounce.\", \"Subscription cancelled.\" (voice `hero`) |\n| `core-054` Straaza | A big mother dragon. Her Cry, which adds two (3) Cost Units to your hand, can read as her brood or her hoard. | \"She's been to every shop and haggled with every clerk.\" / \"Shopping spree! On the house!\", \"Everything must go!\", \"Out of stock.\" (voice `diva`) |\n| `core-074` Adaptive UI | A reference to Hearthstone's **Ultimate Infestation**: deal X, heal X, draw X and summon an X/X Ghoul is that card's deal-5 / gain-5 / draw-5 / summon-a-5/5 shape. Nothing about responsive UIs or wallets. | \"It resized itself to fit your wallet.\" / \"Now responsive on all devices!\" (voice `robot`) |\n| `core-092` Felinor Fiender | He loves Felinors and is obsessed with them, in a creepy, romantic, predatory way: an unsettling admirer, played for discomfort and kept PG. He is not a cat collector. **His play line must be exactly \"Cats. I need more cats.\") | \"He counts every cat on the field, and then he becomes them.\" / attack \"Sic 'em, kitties!\", death \"Who feeds them now?\" (voice `crone`, an old woman's voice for a man) |\n| `core-096` My Pawn | Your opponent is your pawn: you manipulate them the way Kiyotaka Ayanok\u014dji (*Classroom of the Elite*) does. Calm, expressionless, several moves ahead, steering them from behind the scenes. The line may allude to him; it doesn't have to name him. | \"Not today. Not like this. Maybe never, actually.\" / \"Checkmate, puppet.\" (voice `snob`) |\n\n**Felinors in general.** Felinors are a **cat-person humanoid race**: people, not pets, strays or house cats. Reread every Core Felinor line against that and rewrite the ones that treat them as animals (owners, feeding, \"here kitty\", \"neighbourhood cats\"). Cat-like mannerisms such as a purr or \"mrow\" in speech are fine for a cat-person. The Core cards that touch Felinors:\n\n- `core-012` Duplicating Felinors (\"One was cute. Two was a choice. Nobody agreed to three.\" / \"Meow. Meow again.\", \"Double pounce!\", \"Both of us?\")\n- `core-043` Big Felinor (\"He loves every cat. He has opinions about everything else.\" / \"Big cat. Bigger problems.\", \"Big cat pounce!\", \"Landed on my back?\")\n- `core-062` Friend of Felinors (\"Every cat in the neighbourhood comes when called. They all bring friends.\" / \"Here kitty kitty kitty!\")\n- `core-086` \"Miss\" Mrow (\"The \\\"Miss\\\" is honorary. The claws are not.\" / \"Mrow. Don't touch me.\", \"Hiss!\", \"You're all mine now.\")\n- `core-092` Felinor Fiender (above)\n- `core-t-felinor` Felinor Token (\"Small, curious, and technically part of an army.\" / \"Mew!\", \"Mrrp!\", \"Mew...\")\n\nKeep a line that already fits; rewrite only what doesn't. This issue covers only the Core set. The owner will file the other sets separately.\n\n**How** (`docs/ADDING_CARDS.md` rows 7 and 8, and \u00a77):\n\n- Edit the cards' entries in `crates/cards/card-text.yaml`: the `flavour` line (at most 120 characters, no rules words, R660) and each `voice` line (letters, spaces and `, . ' ! ? -` only). Then run `cargo test -p jackioh-tools --test export_card_text` and commit the files it rewrites: `crates/cards/flavour.json`, `crates/cards/chinese.json` and `apps/web/src/audio/voice-text.json`.\n- Where a voice no longer fits, pick a better one from the voices bank in `card-audio.json5`. Suggestions only: the scarab could use no spoken voice, or one that suits chitters, plus an effect such as `rattle` or `dataBlips`; Straaza something big and maternal such as `elder` or `storyteller` with `fireWhoosh` or `rumble`; Felinor Fiender a man's creepy voice such as `whisper` instead of `crone`; My Pawn a calm, flat voice. Keep a Unit's play, attack and death hooks (R1448).\n- Every changed line, and every line given a new voice, must be rendered again. Push a commit whose message holds `[gen:voice]` so the `voice` workflow renders it on GitHub's runners, then push once more so CI runs. If the audio isn't rendered, say in the PR that it is owed.\n- No catalog data changes, so no pending fragment claims this: `card-text.yaml` isn't card data (ADDING_CARDS row 8). Run `cargo jackioh classify --base origin/main --claims` before pushing anyway, and follow what it says.\n\n### Acceptance\n\n- Every line in the table above, and every Core Felinor line that treated Felinors as animals, is rewritten to the owner's intent, and the PR body lists each card's old and new lines.\n- `core-092` Felinor Fiender's play line is exactly `More! I need more cats!`.\n- No `name`, tag, rules text, stat or script changes. `crates/cards/catalog.json` is untouched.\n- `cargo test -p jackioh-tools --test export_card_text` passes, and the three generated files are committed.\n- `pnpm --dir apps/web test` passes, including `voice-lines.test.ts`, `voiceData.test.ts` and `src/cards/flavour.test.tsx`, and so does `cargo test -p jackioh-cards` (`tests/cross/flavour.rs`).\n- The changed lines are rendered by the `voice` workflow (`gen-voice.mjs --check` passes), or the PR says the audio is owed.\n\n### Blocked by, part of\n\nNothing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2653: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2520 skipped: it waits for #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2649 skipped: it waits for #2648 to close first"
+  ]
+}
