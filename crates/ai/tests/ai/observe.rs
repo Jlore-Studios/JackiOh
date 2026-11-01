@@ -1301,3 +1301,162 @@ mod r1181003_placeholder_names_no_embiggened_price {
         assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R2691000: the seat's own library as its owner was shown it
+// ---------------------------------------------------------------------------------------------
+
+mod r2691000_own_library_as_its_owner_was_shown {
+    use super::*;
+
+    /// The instance ids `seat`'s own open prompt offers.
+    fn offered_to(state: &GameState, seat: PlayerId) -> Vec<String> {
+        state
+            .pending
+            .as_ref()
+            .filter(|pending| pending.player_id == seat)
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .filter_map(|option| match &option.selection {
+                        Selection::Instance { instance_id } => Some(instance_id.clone()),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// R2691000: a card of the seat's own library changed after it went in redacts to the face its
+    /// owner was shown; one shown Radiant as it went in (a Radiant Created copy shuffled in openly)
+    /// stays so.
+    #[test]
+    fn r2691000_a_known_own_library_card_redacts_to_the_face_its_owner_was_shown() {
+        let mut a = clone(&real_game("observe-r2691000"));
+        let secret = a.players[AI].library[0].id.clone();
+        let open = a.players[AI].library[1].id.clone();
+        {
+            let card = find_instance_mut(&mut a, &secret).expect("the secret card");
+            card.radiant = false;
+            card.known_as = Some(KnownAs {
+                def_id: card.def_id.clone(),
+                radiant: false,
+            });
+            // #95's discount, made inside the library.
+            card.cost_mod = -1;
+        }
+        {
+            let card = find_instance_mut(&mut a, &open).expect("the open card");
+            card.radiant = true;
+            card.created = Some(true);
+            card.known_as = Some(KnownAs {
+                def_id: card.def_id.clone(),
+                radiant: true,
+            });
+        }
+        let mut b = clone(&a);
+        // #42's roll, made inside the library: the record stays as it was.
+        find_instance_mut(&mut b, &secret)
+            .expect("the secret card")
+            .radiant = true;
+
+        let hidden = hidden_instance_ids(&b, AI);
+        assert!(!hidden.contains(&secret) && !hidden.contains(&open));
+        assert_ne!(hash_state(&a), hash_state(&b));
+        assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
+
+        let known = card_by_id(&a, &secret).and_then(|card| card.known_as.clone());
+        let public = redact(&b, AI);
+        let shown = card_by_id(&public, &secret).expect("the secret card");
+        assert!(!shown.radiant);
+        assert_eq!(shown.cost_mod, 0);
+        assert_eq!(shown.known_as, known);
+        assert_eq!(Some(shown.def_id.clone()), known.map(|known| known.def_id));
+        let kept = card_by_id(&public, &open).expect("the open card");
+        assert!(kept.radiant);
+        assert_eq!(kept.created, Some(true));
+        assert_eq!(kept.known_as.as_ref().map(|known| known.radiant), Some(true));
+    }
+
+    /// R2691000: after Eugenics (#42) resolves, the AI's decision on a fixed seed is the same whatever
+    /// its rolls made Radiant in the AI's own library.
+    #[test]
+    fn r2691000_after_eugenics_the_ais_decision_is_the_same_whatever_its_rolls_made_radiant() {
+        jackioh_cards::register_all();
+        // #25 costs 4, so Eugenics exiles none of them; Stockpile's draws then read their faces.
+        let library = vec!["core-025"; 20];
+        let mut s = scenario(json!({
+            "seed": "observe-r2691000-eugenics",
+            "p1": { "hand": ["core-042", "core-005"], "library": library },
+            "p2": { "hand": ["core-005"] },
+        }));
+        s.play("core-042", json!({}));
+        let rolled = s.state().clone();
+        assert!(rolled.pending.is_none());
+        assert_eq!(rolled.players[AI].library.len(), 20);
+        let mut none = clone(&rolled);
+        let mut all = clone(&rolled);
+        for card in none.players[AI].library.iter_mut() {
+            card.radiant = false;
+        }
+        for card in all.players[AI].library.iter_mut() {
+            card.radiant = true;
+        }
+        assert!(
+            all.players[AI]
+                .library
+                .iter()
+                .all(|card| card.known_as.as_ref().is_some_and(|known| !known.radiant))
+        );
+        assert_ne!(hash_state(&none), hash_state(&all));
+        assert_eq!(hash_state(&redact(&none, AI)), hash_state(&redact(&all, AI)));
+        let from_none = decide(&none, AI, &mut ai_options("observe-r2691000-eugenics", AI_BUDGET));
+        assert!(from_none.is_some());
+        assert_eq!(
+            decide(&all, AI, &mut ai_options("observe-r2691000-eugenics", AI_BUDGET)),
+            from_none
+        );
+    }
+
+    /// R2691000, §10.8: a card the seat's own prompt reveals out of its library (#51) keeps the face the
+    /// prompt shows it; one the prompt does not offer reads as its owner was shown it.
+    #[test]
+    fn r2691000_a_library_card_the_seats_own_prompt_offers_keeps_the_face_the_prompt_shows() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "observe-r2691000-tutor",
+            "p1": {
+                "hand": ["core-051"],
+                "library": ["core-025", "core-025", "core-025", "core-008", "core-005"],
+            },
+            "p2": { "hand": ["core-005"] },
+        }));
+        s.play("core-051", json!({}));
+        s.answer(json!("Unit"));
+        s.answer(json!("4+"));
+        let mut state = s.state().clone();
+        let offered = offered_to(&state, AI);
+        assert_eq!(offered.len(), 3);
+        let vanilla = state.players[AI]
+            .library
+            .iter()
+            .find(|card| card.def_id == "core-008")
+            .map(|card| card.id.clone())
+            .expect("Mr. Vanilla");
+        for id in [&offered[0], &vanilla] {
+            find_instance_mut(&mut state, id)
+                .expect("a library card")
+                .radiant = true;
+        }
+        let public = redact(&state, AI);
+        assert_eq!(
+            card_by_id(&public, &offered[0]).map(|card| card.radiant),
+            Some(true)
+        );
+        assert_eq!(
+            card_by_id(&public, &vanilla).map(|card| card.radiant),
+            Some(false)
+        );
+    }
+}

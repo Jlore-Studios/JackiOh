@@ -184,6 +184,16 @@ fn face_down_to(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool 
     ) && backrow_hidden_from(state, card, seat)
 }
 
+/// §10.8, R265: the prompt whose options `view_for` shows `seat` in full: its own open prompt, or its
+/// own mulligan while both are open.
+fn own_prompt(state: &GameState, seat: PlayerId) -> Option<&PendingChoice> {
+    state
+        .pending
+        .as_ref()
+        .or_else(|| mulligan_prompt_for(state, seat))
+        .filter(|pending| pending.player_id == seat)
+}
+
 /// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every backrow card the seat cannot read, the cards in the seat's own library that
 /// were minted for the opponent's opening deck (#87 Pocket Chaos's library swap, R73), and every card
 /// in the seat's own library it was never shown (no `knownAs`, R312: a library swapped in, or swapped away and
@@ -235,13 +245,7 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
         }
     }
 
-    let pending: Option<&PendingChoice> = state
-        .pending
-        .as_ref()
-        .or_else(|| mulligan_prompt_for(state, seat));
-    if let Some(pending) = pending
-        && pending.player_id == seat
-    {
+    if let Some(pending) = own_prompt(state, seat) {
         for option in &pending.options {
             if let Selection::Instance { instance_id } = &option.selection
                 && !find_instance(state, instance_id).is_some_and(|card| face_down_to(state, card, seat))
@@ -599,6 +603,37 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             }
             card.counters.plague = plague;
         }
+    }
+    // R2691000 (R311, R386): every other card of the seat's own library reads as its owner's list shows
+    // it (R310): the definition and face its `knownAs` recorded as it went in and its Created mark
+    // (R943), and nothing a change made inside the library wrote on it (#28's or #42's Radiant, a Nerf, a
+    // discount). A card the seat's own open prompt offers is shown to it in full there (§10.8), so it
+    // stays as it is. Redacting twice is redacting once: the record is kept.
+    let offered: IndexSet<String> = own_prompt(state, seat)
+        .map(|pending| {
+            pending
+                .options
+                .iter()
+                .filter_map(|option| match &option.selection {
+                    Selection::Instance { instance_id } => Some(instance_id.clone()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    for card in next.players[seat].library.iter_mut() {
+        if hidden.contains(&card.id) || offered.contains(&card.id) {
+            continue;
+        }
+        let Some(known) = card.known_as.clone() else {
+            continue;
+        };
+        let created = card.created;
+        to_placeholder(card);
+        card.def_id = known.def_id.clone();
+        card.radiant = known.radiant;
+        card.known_as = Some(known);
+        card.created = created;
     }
     // R1853003, R2250002: the opponent's lots and what they bought are theirs alone (the view sends the
     // viewer only the lots offered to them, indexed among themselves), so the seat reads none of it.
