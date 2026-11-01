@@ -466,7 +466,8 @@ export function countFreezes(log: GameLog, view: PlayerView, fresh: readonly Gam
  * R2649000: the viewer's cards that were Temporary in their hand in the view before (its keywords,
  * R637, R2179001). One discarded after the viewer's `turnEnded` and before any later `turnStarted` (the
  * cleanup's discard, R637) slipped away (Use It or Lose It); one the viewer played was played in time
- * (Just in Time). With no view before, or a hand it does not show, nothing counts.
+ * (Just in Time), by its hand id (R227's `formerId` when the play set it face-down). With no view
+ * before, or a hand it does not show, nothing counts.
  */
 export function countTemporary(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   if (before === null || !Array.isArray(before.you.hand)) return log;
@@ -483,7 +484,7 @@ export function countTemporary(log: GameLog, view: PlayerView, fresh: readonly G
     } else if (event.type === "discarded" && ended && event.owner === view.viewer && temporary.has(event.instanceId)) {
       const id = readable(event.defId);
       if (id !== null) next = logWith(next, "tempExpired", id);
-    } else if (event.type === "cardPlayed" && event.player === view.viewer && temporary.has(event.instanceId)) {
+    } else if (event.type === "cardPlayed" && event.player === view.viewer && temporary.has(event.formerId ?? event.instanceId)) {
       const id = readable(event.defId);
       if (id !== null) next = logWith(next, "tempPlayed", id);
     }
@@ -569,12 +570,20 @@ export function countFengShuiAndCounters(log: GameLog, view: PlayerView, fresh: 
 
 /**
  * R2649000 (Mass Produced): each Created card (R943's `created`) this view shows on the viewer's side,
- * counted once per instance in a game however often it moves or is seen (`createdIds`, never stored).
+ * counted once per instance in a game however often it moves or is seen (`createdIds`, never stored),
+ * a fresh id it takes (R227's `formerId`) included.
  * The seat holding it is credited, not R2089000's `creator`, which no view forwards; a dealt card, the
  * opponent's side and a card the viewer cannot read count nothing.
  */
-export function countCreated(log: GameLog, view: PlayerView): GameLog {
+export function countCreated(log: GameLog, view: PlayerView, fresh: readonly GameEvent[] = []): GameLog {
   const counted = new Set(log.createdIds);
+  const known = counted.size;
+  // R227: a card set face-down or changing control takes a fresh id but is the same card, so its new
+  // id joins the ones counted when its `formerId` is among them, in the batch's order.
+  for (const event of fresh) {
+    if (event.type !== "cardPlayed" && event.type !== "summoned" && event.type !== "controlChanged") continue;
+    if (event.formerId !== undefined && counted.has(event.formerId)) counted.add(event.instanceId);
+  }
   let next = log;
   for (const card of cardsOnSide(view.you)) {
     const id = readable(card.defId);
@@ -582,7 +591,7 @@ export function countCreated(log: GameLog, view: PlayerView): GameLog {
     counted.add(card.instanceId);
     next = logWith(next, "created", id);
   }
-  return next === log ? log : { ...next, createdIds: [...counted] };
+  return next === log && counted.size === known ? log : { ...next, createdIds: [...counted] };
 }
 
 /**
@@ -591,7 +600,7 @@ export function countCreated(log: GameLog, view: PlayerView): GameLog {
  * a card was), null for the first.
  */
 export function observe(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null = null): GameLog {
-  let next = countCreated(logSeen(log, seenIn(view)), view);
+  let next = countCreated(logSeen(log, seenIn(view)), view, fresh);
   for (const event of fresh) next = countEvent(next, event, view.viewer);
   next = countAllured(next, view, fresh);
   next = countDeaths(next, view, fresh, before);

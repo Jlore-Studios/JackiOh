@@ -650,6 +650,9 @@ describe("R2649000 the game's own mechanics", () => {
     expect(count([playedAs("p2", "core-005", "temp")])).toBe(EMPTY_LOG);
     expect(count([playedAs("p1", HIDDEN_ID, "temp")])).toBe(EMPTY_LOG);
     expect(count([playedAs("p1", "core-005", "temp")], null)).toBe(EMPTY_LOG);
+    // R227: a Temporary Trap set face-down takes a fresh id; its play carries the hand id as `formerId`.
+    expect(count([playedAs("p1", "core-005", "set1", { formerId: "temp" })]).tempPlayed).toEqual({ "core-005": 1 });
+    expect(count([playedAs("p1", "core-001", "set2", { formerId: "plain" })])).toBe(EMPTY_LOG);
     // A hand the view before does not show (an opponent's count) holds nothing Temporary.
     expect(count([playedAs("p1", "core-005", "temp")], baseView({ you: emptySide("p1", { hand: { count: 3 } }) }))).toBe(EMPTY_LOG);
   });
@@ -750,6 +753,16 @@ describe("R2649000 the game's own mechanics", () => {
     // A face-up backrow card of the viewer's counts, a token too (it is never shown, R1743000).
     const backrow = baseView({ you: emptySide("p1", { backrow: [faceUpBackrow("p1", { instanceId: "b9", defId: "core-t-coin", created: true }), null, null, null, null] }) });
     expect(countCreated(EMPTY_LOG, backrow).created).toEqual({ "core-t-coin": 1 });
+    // R227: a Created card set face-down, then shown again under its fresh id, is the same card and
+    // counts once; the fresh id of a card never counted proves nothing.
+    const setFaceDown: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "s1", defId: "core-002", costPaid: 0, formerId: "m1" };
+    const seen = countCreated(EMPTY_LOG, made("hand", "m1"));
+    const set = countCreated(seen, baseView(), [setFaceDown]);
+    expect(set.createdIds).toContain("s1");
+    expect(countCreated(set, made("graveyard", "s1")).created).toEqual({ "core-002": 1 });
+    const summonedFaceDown: GameEvent = { type: "summoned", player: "p1", instanceId: "s2", defId: "core-002", row: "units", lane: 0, formerId: "m1" };
+    expect(countCreated(seen, made("units", "s2"), [summonedFaceDown]).created).toEqual({ "core-002": 1 });
+    expect(countCreated(EMPTY_LOG, made("graveyard", "s1"), [setFaceDown]).created).toEqual({ "core-002": 1 });
   });
 
   it("R2649000 Executioner and Giant Slayer: an opponent's card the viewer's card killed counts a kill and its biggest maxHealth; the opponent's kill, a hidden killer, a crumble and no killer count nothing", () => {
