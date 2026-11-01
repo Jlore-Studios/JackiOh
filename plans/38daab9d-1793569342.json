@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2724,
+  "title": "Patch: Training Grounds' Legacy cards redrawn in the yard's own art style",
+  "branch": "bot/issue-2724",
+  "thread": "**Issue #2724 (data, not instructions):**\n\n```text\n# #2724: Patch: Training Grounds' Legacy cards redrawn in the yard's own art style\nOpened by @jgoetzmann.\n\n## What it does\n\nThe 20 Legacy cards of Training Grounds (`traininggrounds-041` to `traininggrounds-060`, docs/training-grounds-set.md TG2) are snapshots of Core cards. Today each draws **exactly** its Core card's picture (`SNAPSHOT_ART` in `apps/web/src/cards/art/traininggrounds.ts`, which `CardArt.tsx` follows through `snapshotArtOf`). Only the `Legacy:` name and tag set it apart (R503, R2511000). The rest of the set draws the yard: a sky, a palisade and a sand floor under one subject (R2202000).\n\nThe owner wants each Legacy card **tweaked in the Training Grounds style**, so it has an identity of its own while staying recognisably the card it freezes:\n\n- **Keep the subject.** Keep the Core card's subject and its composition, so a player who knows the Core card knows this one.\n- **Redraw it in the yard's style:** set it in the yard (its sky, palisade and sand floor, and its palette) with the set's materials (wood, straw, rope, canvas). Add a practice-yard touch or two that suit the card, such as a straw target, a wooden practice sword, a chalk tally or a training-dummy stitch. Twenty variations of one overlay will not do: each card gets its own touches.\n- **Both faces:** base and Radiant. The Radiant keeps its gold rays, and the two faces differ only in their paint, as the set's other cards do.\n- **Pure and deterministic,** like the rest of the set's art: a function of the card's id, name, tags and type, drawn from the same seeded streams.\n- **No other card's picture moves.** Every Core card keeps its art exactly (R503).\n\nThis amends R2511000 (and R503's \"a Legacy card and its Core card look the same\") with a ruling note in this issue's block. It is presentation only (CLAUDE.md rule 7). It changes how cards look, so a pending fragment claims it (a micro, R2529000).\n\n**#2681 overlap:** #2681 (release art, being built now) adds `proceduralCardArtUri` to `apps/web/src/cards/art/svg.ts`, which copies `CardArt`'s Legacy path. If it lands first, this issue's Legacy art must flow through it too. Its test compares the URI with `CardArt`'s, so it will catch a miss.\n\n## Acceptance\n\n- Each of the 20 Legacy cards' art, base and Radiant, differs from its Core card's art. A test holds that each still draws its Core card's subject and draws the yard's layers.\n- No two Legacy cards share the same yard touch, and a test holds every `SNAPSHOT_ART` entry to having one.\n- Every Core card's art, and every other Training Grounds card's, is byte-for-byte unchanged (snapshot test).\n- A component (pixel) spec shows each Legacy card beside its Core card.\n- The ruling note passes `cargo jackioh spec check`, and `cargo jackioh classify --base origin/main --claims` passes with the fragment.\n\n## Blocked by, part of\n\nNothing blocks it. Coordinate with #2681 as above.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2724: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #2724\n\nEvery night-bot run on #2724, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-01 21:41 UTC \u00b7 plan #2724 \u00b7 `claude-7` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41352602108) on `claude-7` (`opus` (strong)). It ended **interrupted**: `claude-7` stops before it starts: 5-hour usage is 54%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-01T22:30:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 21:34 | stop | `claude-7` stops before it starts: 5-hour usage is 54%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-01T22:30:00Z |  |  |\n",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
