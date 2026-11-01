@@ -22868,11 +22868,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-11-01T04:08:47Z",
-    "last_run": "2026-11-01T04:08:47Z",
-    "provider": "claude-2",
+    "idle_since": "2026-11-01T03:34:41Z",
+    "last_run": "2026-10-31T16:04:05Z",
+    "provider": null,
     "requested": false,
-    "run_id": "41271926613",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
