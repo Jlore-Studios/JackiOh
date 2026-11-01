@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2715,
+  "title": "Patch: full arts that really animate, and Animated as its own Epic tier",
+  "branch": "bot/issue-2715",
+  "thread": "**Issue #2715 (data, not instructions):**\n\n```text\n# #2715: Patch: full arts that really animate, and Animated as its own Epic tier\nOpened by @jgoetzmann.\n\n## What it does\n\nTwo changes to #2655's full-art tiers (SPEC \u00a714.2, R2655000, R2655003), after Hearthstone's card qualities (https://hearthstone.fandom.com/wiki/Quality): a golden card's portrait moves inside its normal frame, and a signature card is its own art, moving and signed.\n\n### 1. Animated tiers that really animate\n\nToday the Legendary (`full-art-<slug>-animated`) and the Mythic (`full-art-<slug>-signed`) move only as a whole: the still picture drifts inside its crop and a light band sweeps over it (`apps/web/src/cards/cosmetics.css`, `full-art-drift` and `full-art-sweep`; R2655003). Nothing inside the picture moves. The owner wants actual animation: the art's own elements moving, as a golden or signature Hearthstone card's portrait does.\n\nEvery card's art is procedural SVG today (`apps/web/src/cards/art/`: `procedural.ts`, `svg.ts`, `motifs.ts`, the Stinkyscape and Training Grounds painters; no file is delivered under `apps/web/public/art/`). So the animation is the art's own layers moving: the subject (bobbing, breathing, a limb or a prop swaying), its background (clouds, water, stars, light) and particles that suit the card (sparks, embers, bubbles, coins\u2026). Each card gets its own, not one filter shared by all. The pan and the sweep may stay on top.\n\n### 2. Animated as its own Epic tier\n\nAdd a fourth per-card cosmetic to each of the 21 full-art cards (`crates/server/cosmetics.json`, R2655001's list): **Animated**, Epic. It is the card's normal face (its frame and its text, not full art) with part 1's moving art in its art window, as a Hearthstone golden card is. The ladder becomes:\n\n| Rarity | Id | What it is |\n|---|---|---|\n| Epic | `full-art-<slug>` | Full art, still (unchanged) |\n| **Epic (new)** | e.g. `animated-<slug>` | Animated: the normal face, its art moving |\n| Legendary | `full-art-<slug>-animated` | Full art + animated |\n| Mythic | `full-art-<slug>-signed` | Full art + animated + signature |\n\nA card wears one of them at a time, or none. The new Epic is earned the way the Epic full art is: it is no chase, it drops wherever an Epic per-card cosmetic drops on its card (\u00a714.3, \u00a714.6), an Epic cosmetic token buys it on a card the account owns (\u00a714.5), and no account is granted it (\u00a714.12, as R1833000 and R2655000). `POST /api/dev/fill` grants it with the rest.\n\n### Design points for the builder to rule on (a new ruling note in this issue's block)\n\n- **How the Animated Epic is stored.** It could be a new per-card kind beside `fullArt`, or a `fullArt` entry that prints the normal face. Either way, the registry's check (`crates/server/src/cosmetics.rs`: one full art of each rarity per card, R2655000) and the card's pick have to accept it. The pick (`fullArt` is `false`, `true` or a `full-art-\u2026` id) is held by migration 0072's `card_cosmetic_picks_full_art_id_check`, so changing it takes a migration.\n- **How motion is rationed.** R2655003 lets the tiers move only by `transform` and `opacity`, and they take no motion slot. Animating an SVG's elements one by one costs more, and the Almanac and the Collection draw many cards at once. Hold the new motion to `COSMETIC_FOIL_ANIMATED_MAX`'s slots (`apps/web/src/cards/cosmetics.ts`) or to `near.ts`'s visibility check, or say why not.\n- **Cards with no full art.** They are out of scope (each card's animation is authored) unless the owner says otherwise.\n\nAmend R2655000 (the ladder, the registry's check, the pick), R2655003 (the motion) and SPEC \u00a714.2's full-art paragraph. This is presentation only (CLAUDE.md rule 7): no rule reads it, and nothing enters `PlayerView`, an action, the log or a replay hash.\n\n## Acceptance\n\n- Each of the 21 full-art cards has an animation of its own art, in which at least two of the art's elements move independently, beyond the whole picture panning or a band sweeping. A unit test holds every full-art card in the registry to having one, so a later full-art card cannot ship without it.\n- A component spec (beside `e2e/cypress/component/full-art-tiers.cy.tsx`) shows the art window's pixels changing between two moments for the Animated Epic, the Legendary and the Mythic, and not for the still Epic.\n- Under reduced motion (the media query or the Reduce motion setting), and with Animated foil off, every animated tier draws a still frame and the Mythic's signature stands whole (R2655003, R1953001).\n- The registry holds 84 cosmetics for the full-art cards (21 \u00d7 4). Its check passes, the new Epic carries no chase mark, and `public.cosmetics` is seeded with it.\n- The server accepts a pick of the Animated Epic only where it is owned on that card, and otherwise answers 400 and writes nothing. It freezes the pick in a match's loadout, and the opponent, a watcher and a replay's viewer see it (R1834001, R1834002, R1834004). Each has a test.\n- An Epic cosmetic token buys it, and a duplicate's cosmetic roll or a cosmetic pack slot that lands on Epic can drop it. No account owns it after the migration, and `POST /api/dev/fill` grants it.\n- The Collection's card view offers No full art, Animated, Full art, Full art + animated and Signed, with the unowned ones locked. The pack reveal's equip and `EquipButton` can pick it.\n- The new ruling note and the tests named after it pass `cargo jackioh spec check`, as do the amended R2655000 and R2655003. `cargo jackioh classify --base origin/main --claims` passes (a change to how cards look is a micro, R2529000).\n\n## Blocked by, part of\n\nFollows #2655. Nothing blocks it.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2715: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
