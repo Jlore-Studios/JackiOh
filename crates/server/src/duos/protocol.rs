@@ -28,7 +28,7 @@ use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
 pub use crate::actor::protocol::encode;
 use crate::actor::protocol::{
     ClientMessage, MAX_FRAME_BYTES, MAX_NONCE_LENGTH, MalformedMessage, SERVER_NONCE_PREFIX, SocketErrorCode,
-    parse_client_message,
+    is_int, is_player_id, parse_client_message,
 };
 use crate::economy::rewards::GameEconomy;
 
@@ -123,27 +123,13 @@ fn malformed(reason: impl Into<String>) -> MalformedMessage {
     }
 }
 
-/// A JSON number with no fraction, as the 1v1 parser reads one (JS reads `3.0` as 3).
-fn whole(value: Option<&Value>) -> Option<f64> {
-    let number = value?.as_f64()?;
-    (number.is_finite() && number.fract() == 0.0).then_some(number)
-}
-
-/// A whole number in `0..below`.
+/// A whole number in `0..below`, read as the 1v1 parser reads one (JS reads `3.0` as 3).
 fn index_under(value: Option<&Value>, below: usize) -> Option<usize> {
-    let number = whole(value)?;
+    let number = is_int(value)?;
     if number < 0.0 || number >= below as f64 {
         return None;
     }
     Some(number as usize)
-}
-
-fn side_of(value: Option<&Value>) -> Option<PlayerId> {
-    match value?.as_str()? {
-        "p1" => Some(PlayerId::P1),
-        "p2" => Some(PlayerId::P2),
-        _ => None,
-    }
 }
 
 /// The two duels (S2: duel 0 is A1 against B1, duel 1 A2 against B2).
@@ -152,7 +138,7 @@ const DUELS: usize = 2;
 fn parse_target(value: &Value) -> Option<PingTarget> {
     let record = value.as_object()?;
     let duel = u8::try_from(index_under(record.get("duel"), DUELS)?).ok()?;
-    let side = side_of(record.get("side"))?;
+    let side = is_player_id(record.get("side"))?;
     let zones = |count: i32| usize::try_from(count).unwrap_or(0);
     let (at, lane, index) = match record.get("at")?.as_str()? {
         "hero" => (PingAt::Hero, None, None),
@@ -448,9 +434,27 @@ mod tests {
             r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"unit","side":"p1","lane":9}}"#,
             r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"hand","side":"p3","index":0}}"#,
             r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"hand","side":"p1","index":-1}}"#,
+            r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"unit","side":"p1","lane":1.5}}"#,
+            r#"{"type":"ping","ping":"portal","target":{"duel":0,"at":"hero","side":1}}"#,
         ] {
             assert!(parse_duos_message(bad).is_err(), "{bad}");
         }
+        // A whole number is read as JS reads it: `1.0` is duel 1.
+        let whole = parse_duos_message(
+            r#"{"type":"ping","ping":"careful","target":{"duel":1.0,"at":"unit","side":"p1","lane":2.0}}"#,
+        );
+        assert!(matches!(
+            whole,
+            Ok(DuosClientMessage::Ping {
+                target: PingTarget {
+                    duel: 1,
+                    side: PlayerId::P1,
+                    lane: Some(2),
+                    ..
+                },
+                ..
+            })
+        ));
     }
 
     #[test]

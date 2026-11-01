@@ -393,8 +393,8 @@ fn is_bool(value: Option<&Value>) -> Option<bool> {
 }
 
 /// `typeof value === "number" && Number.isInteger(value)`: a JSON number with no fraction (JS reads
-/// `3.0` as the integer 3).
-fn is_int(value: Option<&Value>) -> Option<f64> {
+/// `3.0` as the integer 3). The co-op parser reads its pings' numbers with it (`duos::protocol`).
+pub(crate) fn is_int(value: Option<&Value>) -> Option<f64> {
     let number = value?.as_f64()?;
     if number.is_finite() && number.fract() == 0.0 {
         Some(number)
@@ -411,7 +411,8 @@ fn is_row(value: Option<&Value>) -> Option<Row> {
     }
 }
 
-fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
+/// `"p1"` or `"p2"`; the co-op parser reads a ping's side with it (`duos::protocol`).
+pub(crate) fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
     match value.and_then(Value::as_str) {
         Some("p1") => Some(PlayerId::P1),
         Some("p2") => Some(PlayerId::P2),
