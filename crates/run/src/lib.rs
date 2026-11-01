@@ -3,9 +3,7 @@
 //! knows about a run. `README.md` is this crate's contract.
 //!
 //! Every rule here is the plan's (its DR sections), every number a constant in `config.rs`, and the
-//! mode has no spec section yet. The content (the pool packs and shops deal, the cards any starting
-//! deck may hold, the enemies, artifacts, blessings, events and curses) is data the caller passes in;
-//! `run_placeholder_content` is pseudo cards and temporary bosses until the designer's lists land.
+//! mode has no spec section yet. The content is data the caller passes in (`RunContent`).
 //!
 //! Like the engine's `reduce`, `run_reduce` takes no rng: it rebuilds it from `(seed, rng_cursor)` and
 //! writes the cursor back, so a run file (`RunFile`: its setup, the unlocks it started from and its

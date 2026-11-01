@@ -39,18 +39,18 @@ struct OpenLine {
     score: f64,
 }
 
-/// `b.score - a.score` as a comparator: best first; a NaN difference reads as a tie, as `sort` read it.
+/// `b.score - a.score` as a comparator: best first; a NaN difference reads as a tie.
 fn by_score_desc(a: f64, b: f64) -> Ordering {
     b.partial_cmp(&a).unwrap_or(Ordering::Equal)
 }
 
-/// Best first; equal scores keep their order (`sort_by` is stable, as Array.prototype.sort is).
+/// Best first; equal scores keep their order (`sort_by` is stable).
 fn best_first_open(mut lines: Vec<OpenLine>) -> Vec<OpenLine> {
     lines.sort_by(|a, b| by_score_desc(a.score, b.score));
     lines
 }
 
-/// Best first; equal scores keep their order (`sort_by` is stable, as Array.prototype.sort is).
+/// Best first; equal scores keep their order (`sort_by` is stable).
 fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
     lines.sort_by(|a, b| by_score_desc(a.score, b.score));
     lines
@@ -274,7 +274,7 @@ pub fn beam_search_with(
 
     // Open lines at maxDepth, or where the counter refused, are closed where they stand; then the lane
     // variants (#1797), after every line the beam would close without them, so a tie goes to the first
-    // lane as before.
+    // lane.
     let open_lines = left_open
         .into_iter()
         .map(|line| (line.state, line.actions))
@@ -324,7 +324,7 @@ pub fn score_line(
             break;
         }
         // Membership asks for the candidates' set only (candidate_set), not their move order, and an
-        // action is its own key: `==` on the body answers what action_key equality did.
+        // action is its own key, so `==` on the body is the test.
         let candidates = if at == 0 {
             root_candidate_set(&state, seat)
         } else {

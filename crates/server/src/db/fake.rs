@@ -1,6 +1,5 @@
 //! The in-memory store (SURFACE §11.1, §11.2): one `FakeData` behind `Db::Fake` for the unit tests and for
-//! `E2E=1` (BUILD M8's end-to-end mode). R111's launch grant runs when the store is built with a catalog
-//! (`E2E=1`, [`create_e2e_store`]) and not otherwise (`FakeData::default()`, the unit tests' store).
+//! `E2E=1` (BUILD M8's end-to-end mode, [`create_e2e_store`]).
 //!
 //! R144 makes the server reseed its fixture accounts and invite codes at boot, and the e2e suite has no
 //! Postgres, so this test fixture lives in `src/`: `src/app.rs` chooses it only when `env.E2E` is true

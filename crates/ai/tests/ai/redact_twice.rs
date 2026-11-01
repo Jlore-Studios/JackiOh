@@ -65,7 +65,6 @@ fn the_ai_decides_the_same_on_the_redacted_state_as_on_the_true_one() {
     assert_eq!(on_view, on_truth);
 }
 
-/// Redacting twice is redacting once, for both seats, all through random-policy games
 #[test]
 fn redacting_twice_is_redacting_once_through_random_policy_games() {
     let mut face_down_seen = 0;

@@ -3081,7 +3081,7 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
         };
         let assigned = int_of(seq.as_deref().unwrap_or("0"))?;
         // Raised INSIDE the transaction the function's own insert ran in, so the rollback takes that insert
-        // with it: a store that wrote the row and then complained would be worse than one that refused.
+        // with it.
         if assigned != row.seq {
             return Err(StoreError::SeqClash(format!(
                 "match_actions is append-only: seq {} exists (app.append_match_action assigned {} for nonce {})",
@@ -3094,8 +3094,8 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
 
 pub async fn matches_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<MatchActionRow>, StoreError> {
     run_as(t, None).await?;
-    // Ordered by the table's column, qualified: a bare `order by seq` names the output column first (the
-    // `seq::text` above), which sorted 1, 10, 11, …, 2 and folded a log of ten actions or more out of order
+    // Ordered by the table's column, qualified: a bare `order by seq` would sort the text output column
+    // (`seq::text`), 1, 10, 11, …, 2
     // (`store::contract`'s `reads_a_log_of_ten_or_more_actions_back_in_seq_order`).
     let rows = sqlx::query(
         "select a.seq::text as seq, a.action, a.at from public.match_actions a

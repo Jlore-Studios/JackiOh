@@ -837,9 +837,9 @@ pub const AI_REPLY: AiReply = AiReply {
     // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing
     // (training/improve.md, A screen).
     open_lethal: false,
-    // #1696: on. Its screen (400 games of improve-dev against the parent) read 199-199 with deal 136
-    // aborted at the action cap in both seatings (the parent aborts it against itself too), edge 0.0
-    // (-0.057 to 0.057), every other game clean (training/improve.md, A screen); 0 turns it off.
+    // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
+    // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
+    // (training/improve.md, A screen); 0 turns it off.
     defense_switches: 4,
     // #1995: untuned; the training lanes may move it.
     countdown_share: 0.5,

@@ -18,7 +18,7 @@
 //! listing each match the process sees with it once, up to `BUG_REPORT_LISTED_MATCHES`. At most
 //! `BUG_REPORTS_PER_WINDOW` issues are opened in `BUG_REPORT_WINDOW_MS`, and none when an issue (open or
 //! closed) whose title holds the signature exists, so a restart files nothing twice; later matches are only
-//! logged. Without `CREATE_ISSUES_TOKEN` nothing leaves the process; a test's app records what it would file.
+//! logged.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
