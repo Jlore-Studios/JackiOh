@@ -142,8 +142,8 @@ export type FaceModel = {
    */
   printedRarity?: PrintedRarity | null;
   /**
-   * R1177001: the card is a token (`CardDef.token`), which every token's face says: its type line
-   * ("Token Unit") and, where that line hides, its token mark. On every catalog card the flag agrees
+   * R1177001: the card is a token (`CardDef.token`), which its full face says on its type line
+   * ("Token Unit"); no face wears a mark of it (R2647000). On every catalog card the flag agrees
    * with rarity Token, the Token tag and §7's row, and on a fused card with its tag (R1177000).
    * Absent (false) on a face built by hand and on a card with no definition.
    */
