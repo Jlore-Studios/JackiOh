@@ -3,7 +3,7 @@
 // next" when the planner would not start it and a subscription is never free when it gets no
 // work.
 //
-// bot/tests/test_waiting.py, ported (PORTING.md §7).
+// bot/tests/test_waiting.py, ported (#467).
 package tests
 
 import (

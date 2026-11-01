@@ -7,6 +7,13 @@ pinned issues, the same state, journal and plan files byte for byte. This file i
 contract (CLAUDE.md: each crate's and app's README): how it is laid out, how to build, run and test
 it, the rules a change to it keeps, and why it is built the way it is.
 
+The port is finished, and the Python is gone, so a change here answers to this file and the suite.
+The port's own rules (`PORTING.md`: the Python's behaviour won any disagreement, and a quirk was
+ported as a quirk, not fixed) and its list of every Python test beside its Go twin
+(`tests/PARITY.md`) bound only the port; #2580 removed them, and the rules that still hold are
+[below](#rules-for-a-change). `git show 5ffe4ecc9:bot/go/PORTING.md` and
+`git show 5ffe4ecc9:bot/go/tests/PARITY.md` print them.
+
 ## Build, run, test
 
 ```sh
@@ -34,7 +41,7 @@ stays Python (`bot/machine/`'s Lambdas and scripts, `.github/hygiene/`'s branch 
 | `internal/pyjson/` | JSON as the Python held it, written byte for byte as `json.dumps` writes it |
 | `internal/py/` | the Python behaviours the harness depends on, one tested copy each: text (`strip`, `split`, `lower`, slicing by code point, `splitlines`, `fnmatch`, re's Unicode classes), bytes as text, numbers (`round` to even, floor division, `sum`, the `%` format), the built-ins over JSON values (`int()`, `float()`, `x or default`, iteration) and Python's own exceptions |
 | `internal/fakes/`, `internal/testsupport/` | the tests' in-memory GitHub and git helpers (`fakes.py`), and their configs, contexts and clocks (`support.py`) |
-| `tests/` | the suite: `bot/tests/test_<file>.py` became `tests/<file>_test.go`, each Python test a Go test of the same name (`PARITY.md` lists them) |
+| `tests/` | the suite, black-box against `internal/`: `bot/tests/test_<file>.py` became `tests/<file>_test.go`, each Python test a Go test of the same name |
 
 The packages keep the Python modules' boundaries, order and docstrings, so the bot's README and
 issues that name a module (`dashboard.lanes_table`, `plan.peek`, `waiting.py`) still point at the
@@ -119,8 +126,8 @@ else in the design exists for the tests.
 #467's first milestone asked for language-neutral fixtures proven against the Python. The Python
 suite was already that oracle: about a thousand tests over an in-memory GitHub, real git
 repositories and fixed clocks, asserting on every write. Each was ported one to one, with the same
-name, inputs and assertions (`tests/PARITY.md`), so the Go passes exactly the checks the Python
-passed. `test_machine.py` and `test_hygiene.py` stayed Python, beside their Python subjects.
+name, inputs and assertions, so the Go passed exactly the checks the Python passed (989 of 989).
+`test_machine.py` and `test_hygiene.py` stayed Python, beside their Python subjects.
 
 ### Read the repository from disk, as the Python did
 
@@ -193,14 +200,22 @@ differences it knowingly left, all outside what the bot writes to GitHub:
   with a message instead; integers beyond 64 bits overflow.
 - **Help width.** argparse wrapped help to the terminal; the Go wraps it at 78 columns.
 
-Python bugs the port found are kept, each with a comment (for example `Context.window` reading
+The port kept the Python bugs it found, each with a comment (for example `Context.window` reading
 fields `Config` no longer has, and `plan.ranked` keeping the last index of a repeated name where
-`builder_seat` keeps the first): fixing them is a change of behaviour for its own pull request.
+`builder_seat` keeps the first). With the Python gone they are bugs like any other: fix one in a
+pull request of its own, with a test that shows the new behaviour.
 
 ## Rules for a change
 
-The port's rules stay the harness's rules (`PORTING.md` has the full list):
+These are the harness's own rules, not a port's: a change may fix a bug or change what the bot
+does, with a test that shows it. The rules hold the formats the bot's state branches, comments,
+markers and plans already hold, which its later runs and the Python that stays (`bot/machine/`,
+`.github/hygiene/branches.py`) read back, and keep the code in one style:
 
+- What something reads back stays the same byte for byte unless the change means it to differ:
+  the state, journal and plan files, `result.json`, the `<!-- … -->` markers and labels, and the
+  `$GITHUB_OUTPUT` lines the workflows read. A change to one still reads what is already written,
+  and changes its other readers in the same pull request.
 - Write and hash JSON only through `pyjson`; never `encoding/json`'s `Marshal`.
 - Raise with `herr.Raise`, catch with `herr.Catch` or `herr.Try`; a goroutine recovers its own.
 - Measure and slice text with `py.Len` and `py.Slice`, strip and split it with `py.Strip` and
@@ -211,4 +226,9 @@ The port's rules stay the harness's rules (`PORTING.md` has the full list):
   into a package's private copy.
 - Only `config` and `identity` read the environment.
 - A new test seam is a package variable the package calls through.
+- Names are Go's, with these words in capitals: id, url, json, pr, ci, api, sha, http, cli, iso,
+  utc, ui, pid, tty, gh, html, uid, ok, usd, sql, aws, vm, pc, ai (`ParseISO`, `PRURL`). A test is
+  `Test<File>_<Name>` in `tests/<file>_test.go` (`TestEvents_CILeavesAStoppedOrBlockedPRAlone`),
+  black-box against `internal/`, with `internal/fakes` and `internal/testsupport`.
+- Before a change is done, `gofmt -l .` prints nothing and `go vet ./...` and `go test ./...` pass.
 - The bots may not change `bot/` (their `forbidden_paths`): a change here is a person's.

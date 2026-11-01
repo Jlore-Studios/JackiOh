@@ -33,8 +33,8 @@ import (
 
 // RepoRoot is the repository root. The Python's is two directories above
 // `bot/harness/identity.py`; a Go binary has no such file, so it is the first directory from the
-// working directory up that holds `.harness/config.json` (PORTING §5), or the working directory
-// when none does.
+// working directory up that holds `.harness/config.json` (bot/go/README.md, Read the repository
+// from disk), or the working directory when none does.
 var RepoRoot = findRepoRoot()
 
 func findRepoRoot() string {

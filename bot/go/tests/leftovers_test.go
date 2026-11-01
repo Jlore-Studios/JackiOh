@@ -1,7 +1,7 @@
 // #317 part 12, what was left of #160: the state file pruned, fix passes at their own effort,
 // and `main` merged again before a review when it moved and merges cleanly.
 //
-// bot/tests/test_leftovers.py, ported (PORTING.md §7).
+// bot/tests/test_leftovers.py, ported (#467).
 package tests
 
 import (

@@ -1,6 +1,6 @@
 // The claude CLI backend, driven against a fake `claude` executable.
 //
-// bot/tests/test_runner.py, ported (PORTING.md §7). The Python's fake `claude` is a Python
+// bot/tests/test_runner.py, ported (#467). The Python's fake `claude` is a Python
 // script; here it is this test binary run again as a helper process (runnerFakeClaude), behind a
 // two-line sh script, so the suite needs no Python.
 package tests
