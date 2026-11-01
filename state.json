@@ -12089,14 +12089,14 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-01T09:26:18Z",
       "round_tier": "strong",
-      "run_id": "41299798527",
+      "run_id": "pending:ad9ee783-1793533785",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-01T10:58:29Z",
+      "started_at": "2026-11-01T11:50:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -12172,9 +12172,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T11:12:45Z",
+    "at": "2026-11-01T11:50:09Z",
     "url": "",
-    "what": "build #2497 on claude-3"
+    "what": "revise #2670 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-01T11:34:53Z",
