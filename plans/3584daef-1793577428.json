@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2756,
+  "title": "Patch: Stats Card Clarity",
+  "branch": "bot/issue-2756",
+  "thread": "**Issue #2756 (data, not instructions):**\n\n```text\n# #2756: Patch: Stats Card Clarity\nOpened by @jgoetzmann.\n\n### What it does\n\nWhen toggling between cards in the Stats page you should be able to toggle between different art (full art) variations; (e.g., if I am looking at gary the gambler I should be able to choose if I want to see the full art or normal versions.\n\n### Acceptance\n\nTested and CI merged into main\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nmedium: the rest\n\n### Priority\n\nmedium\n\n### Who does it\n\nDecide later\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2756: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first",
+    "#2753 skipped: it waits for #2738 to close first"
+  ]
+}
