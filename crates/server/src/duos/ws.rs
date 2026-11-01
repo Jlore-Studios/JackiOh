@@ -23,10 +23,8 @@ use jackioh_engine::wire::DuosSeat;
 
 use crate::actor::guard;
 use crate::actor::protocol::SocketErrorCode;
-use crate::actor::ws_server::{Socket, WS_CLOSE, WS_DUOS_PATH};
-use crate::api::http::{ApiErrorCode, assert_active, upgrade_profile};
+use crate::actor::ws_server::{Socket, UpgradeFailure, WS_CLOSE, WS_DUOS_PATH, authenticate_upgrade};
 use crate::app::App;
-use crate::db::store::{Profile, StoreError};
 use crate::duos::live_match_of;
 use crate::duos::protocol::{DuosClientMessage, encode, error_message, parse_duos_message};
 use crate::duos::registry::{DuosAttachError, registry};
@@ -51,68 +49,19 @@ fn duos_hello(text: &str) -> Result<Option<String>, String> {
     }
 }
 
-/// Why a socket is refused: R148's close code and the message, or a fault.
-enum Refusal {
-    Refused { code: u16, message: String },
-    Threw(String),
-}
-
-impl Refusal {
-    fn refused(code: u16, message: &str) -> Refusal {
-        Refusal::Refused {
-            code,
-            message: message.to_string(),
-        }
-    }
-}
-
-impl From<StoreError> for Refusal {
-    fn from(error: StoreError) -> Refusal {
-        Refusal::Threw(error.to_string())
-    }
-}
-
-/// The token's profile, active (§9.4), as `/ws/match` authenticates its sockets.
-async fn authenticate(app: &Arc<App>, token: Option<String>) -> Result<Profile, Refusal> {
-    let Some(token) = token.filter(|token| !token.is_empty()) else {
-        return Err(Refusal::refused(WS_CLOSE.unauthorized, "sign in first"));
-    };
-    let Ok(user) = app.auth.verify(&token).await else {
-        return Err(Refusal::refused(WS_CLOSE.unauthorized, "sign in first"));
-    };
-    // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
-    let profile = match upgrade_profile(app, &user, WS_DUOS_PATH).await {
-        Ok(Some(profile)) => profile,
-        Ok(None) => return Err(Refusal::refused(WS_CLOSE.unauthorized, "sign in first")),
-        Err(error) if error.code == ApiErrorCode::RateLimited => {
-            return Err(Refusal::refused(WS_CLOSE.rate_limited, &error.message));
-        }
-        Err(error) => return Err(Refusal::Threw(error.message)),
-    };
-    assert_active(&profile).map_err(|error| {
-        let code = if error.code == ApiErrorCode::NotFound {
-            WS_CLOSE.not_found
-        } else {
-            WS_CLOSE.forbidden
-        };
-        Refusal::Refused {
-            code,
-            message: error.message.clone(),
-        }
-    })?;
-    Ok(profile)
-}
-
 async fn attach_socket(
     app: &Arc<App>,
     socket: &Socket,
     gate: &HelloGate,
     token: Option<String>,
     query_match_id: Option<String>,
-) -> Result<DuosSeat, Refusal> {
-    let profile = authenticate(app, token).await?;
+) -> Result<DuosSeat, UpgradeFailure> {
+    // The token's profile, active (§9.4), as `/ws/match` authenticates its sockets. An empty token
+    // is no token.
+    let token = token.filter(|token| !token.is_empty());
+    let profile = authenticate_upgrade(app, token, WS_DUOS_PATH).await?;
     let Some(asked) = gate.0.wait().await else {
-        return Err(Refusal::refused(
+        return Err(UpgradeFailure::refused(
             WS_CLOSE.forbidden,
             "send hello with your matchId first",
         ));
@@ -122,7 +71,7 @@ async fn attach_socket(
         None => match live_match_of(app, &profile.id).await? {
             Some(match_id) => match_id,
             None => {
-                return Err(Refusal::refused(
+                return Err(UpgradeFailure::refused(
                     WS_CLOSE.not_found,
                     "you are not in a co-op match",
                 ));
@@ -133,8 +82,8 @@ async fn attach_socket(
         .attach(app, &match_id, &profile.id, socket.clone())
         .await
         .map_err(|error| match error {
-            DuosAttachError::NotFound => Refusal::refused(WS_CLOSE.not_found, "no such match"),
-            DuosAttachError::Internal(message) => Refusal::Threw(message),
+            DuosAttachError::NotFound => UpgradeFailure::refused(WS_CLOSE.not_found, "no such match"),
+            DuosAttachError::Internal(message) => UpgradeFailure::Threw(message),
         })
 }
 
@@ -154,8 +103,8 @@ pub async fn handle_duos_socket(
     };
     match attach_socket(app, socket, &gate, token, query_match_id).await {
         Ok(_) => {}
-        Err(Refusal::Refused { code, message }) => refuse(code, &message),
-        Err(Refusal::Threw(message)) => {
+        Err(UpgradeFailure::Refused { code, message }) => refuse(code, &message),
+        Err(UpgradeFailure::Threw(message)) => {
             tracing::error!(event = "duos.ws.upgrade.threw", message = %message);
             refuse(WS_CLOSE.internal, "something went wrong");
         }

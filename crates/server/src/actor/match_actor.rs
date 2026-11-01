@@ -56,10 +56,10 @@ use crate::actor::contracts::{
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
-    ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
-    ack_message, aim_relay_message, card_loadouts_message, clock_message, emote_relay_message, encode,
-    error_message, loadouts_message, parse_client_message, portraits_message, prompt_for_opponent,
-    prompt_for_you, view_message,
+    ACTION_PANICKED_MESSAGE, ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage,
+    SocketErrorCode, ack_message, aim_relay_message, card_loadouts_message, clock_message,
+    emote_relay_message, encode, error_message, loadouts_message, parse_client_message, portraits_message,
+    prompt_for_opponent, prompt_for_you, view_message,
 };
 use crate::actor::registry::panic_text;
 use crate::actor::telemetry::{self, Recorder};
@@ -468,11 +468,7 @@ fn persona_for(
 
 /// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
 fn panicked_answer(nonce: &str) -> ServerMessage {
-    error_message(
-        SocketErrorCode::Internal,
-        "the server could not apply this action; it has been reported",
-        Some(nonce),
-    )
+    error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
 }
 
 fn panic_message(error: tokio::task::JoinError) -> String {
@@ -2561,7 +2557,11 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // the result, is let go (R1107000).
 
 use crate::actor::protocol::watchers_frame;
-use crate::actor::ws_server::WS_CLOSE;
+// RFC 6455's normal closure and "going away" (`ws_server`'s): a watcher's socket is closed with the
+// first when a newer socket of the same account replaces it or once it has had a finished match's
+// last view (R1107000), and with the second when the actor goes (wire vocabulary, like
+// `CLOSE_POLICY_VIOLATED`).
+use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::parse_watch_hello;
 
@@ -2569,12 +2569,6 @@ use crate::social::watch::parse_watch_hello;
 /// (`social::watch`), so a socket learns that it may no longer watch, never which change said so.
 pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 
-/// RFC 6455's normal closure and "going away": a watcher's socket is closed with the first when a
-/// newer socket of the same account replaces it or once it has had a finished match's last view
-/// (R1107000), and with the second when the actor goes (wire vocabulary, like
-/// `CLOSE_POLICY_VIOLATED`).
-const CLOSE_NORMAL: u16 = 1000;
-const CLOSE_GOING_AWAY: u16 = 1001;
 /// R1107000: what a finished match's watcher's close says, once it has been sent its seat's last view.
 const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 

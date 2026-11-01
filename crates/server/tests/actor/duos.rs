@@ -49,9 +49,9 @@ use jackioh_server::economy::rewards::{GameMode, game_xp};
 use jackioh_server::economy::store::{JloreGrant, JloreReason};
 
 use super::ws_server::encode_query;
-use crate::support::deps::{add_user, call, empty_test_app, record_logs};
+use crate::support::deps::{call, empty_test_app, record_logs};
 use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
-use crate::support::store::{fake, uuid};
+use crate::support::store::{Account, account, fake, uuid};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -444,34 +444,6 @@ impl WsClient {
 // ---------------------------------------------------------------------------------------------
 // Accounts and requests
 // ---------------------------------------------------------------------------------------------
-
-/// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.
-pub(super) struct Account {
-    pub(super) id: String,
-    pub(super) name: String,
-    pub(super) token: String,
-}
-
-/// An active account, username `base#n`.
-pub(super) async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    let id = uuid(n);
-    let user_id = format!("user-{n}");
-    let tag = i64::from(n);
-    fake(app).lock().await.seed_profile(json!({
-        "id": id,
-        "userId": user_id,
-        "status": "active",
-        "username": base,
-        "usernameTag": tag,
-        "usernamePrompted": true,
-    }));
-    let token = add_user(app, &user_id, &format!("{user_id}@example.test"), true);
-    Account {
-        id,
-        name: format!("{base}#{tag}"),
-        token,
-    }
-}
 
 pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
@@ -2859,6 +2831,53 @@ mod r2478000_co_op_and_watch_upgrades_count_against_the_accounts_budget {
                 "{path}"
             );
             assert!(client.of_type("view").is_empty(), "{path}: {:?}", client.frames());
+        }
+    }
+}
+
+mod an_account_that_is_not_active_is_refused_the_co_op_and_watch_sockets {
+    //! §9.4's gate on `/ws/duos` and `/ws/watch`, as on `/ws/match` (`ws_server.rs`): a pending or
+    //! banned account's upgrade is answered `forbidden` with the gate's own words and closed with
+    //! R148's 4403, before any hello is read.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_pending_or_banned_accounts_co_op_or_watch_upgrade_is_closed_with_4403() {
+        let app = empty_test_app().await;
+        let served = serve(&app);
+        for (n, status, message) in [
+            (1u32, "pending", "redeem an invite code to activate this account"),
+            (2, "banned", "this account is banned"),
+        ] {
+            let user_id = format!("user-{n}");
+            fake(&app).lock().await.seed_profile(json!({
+                "id": uuid(n),
+                "userId": user_id,
+                "status": status,
+            }));
+            let token = add_user(&app, &user_id, &format!("{user_id}@example.test"), true);
+            for path in [DUOS_PATH, WATCH_PATH] {
+                let client = served.connect(path, &token).await;
+                let (_, _, refusal) = client
+                    .wait_for(0, PROMPTLY, |frame| {
+                        frame["type"] == "error" && frame["code"] == "forbidden"
+                    })
+                    .await
+                    .unwrap_or_else(|| panic!("{status} {path}: no forbidden: {:?}", client.frames()));
+                assert_eq!(refusal["message"], message, "{status} {path}");
+                assert_eq!(
+                    client.wait_closed(PROMPTLY).await,
+                    Some(WS_CLOSE.forbidden),
+                    "{status} {path}"
+                );
+                assert!(
+                    client.of_type("view").is_empty(),
+                    "{status} {path}: {:?}",
+                    client.frames()
+                );
+            }
         }
     }
 }

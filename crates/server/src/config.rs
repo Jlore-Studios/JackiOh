@@ -26,6 +26,19 @@ use serde::{Deserialize, Serialize};
 use crate::cosmetics::CosmeticRarity;
 
 // ---------------------------------------------------------------------------------------------
+// Time units: conversions, not configuration. Rows and clocks are stamped in epoch milliseconds
+// and most durations here are stated in seconds or days; every module that converts between them
+// takes these (#2160).
+// ---------------------------------------------------------------------------------------------
+
+/// Milliseconds in a second.
+pub const MS_PER_SECOND: i64 = 1000;
+/// Milliseconds in a day, a UTC day included (an epoch-ms timestamp has no leap seconds).
+pub const MS_PER_DAY: i64 = 86_400_000;
+/// Nanoseconds in a millisecond: `time::OffsetDateTime` counts the one, the port the other.
+pub const NANOS_PER_MS: i128 = 1_000_000;
+
+// ---------------------------------------------------------------------------------------------
 // R79 — match lifecycle defaults (SPEC §9.5, BUILD §2). Exact names per BUILD §2's last
 // paragraph; do not rename or re-derive these.
 // ---------------------------------------------------------------------------------------------
