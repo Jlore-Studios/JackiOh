@@ -341,7 +341,7 @@ function swap(html: string, pattern: RegExp, value: string): string {
   return html.replace(pattern, (_whole, lead: string) => lead + value);
 }
 
-/** A price in R432's words, as the patch diff writes it (patches/diff.ts), an embiggen card's too (R1175000). */
+/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (4)" for an embiggen card (R1175000). */
 const costText = (cost: CardCost): string =>
   typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})` : `(${String(cost)}) Cost`;
 

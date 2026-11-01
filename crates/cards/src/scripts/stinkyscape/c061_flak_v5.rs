@@ -9,18 +9,12 @@
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses its base version into its owner's Dormant Starship
 //! (R1852000, R2521000).
-//! #2657: "each enemy Unit" is every enemy Unit and no hero (every enemy Unit and then the enemy hero,
-//! R1862001's "each enemy", through v0.5.9f, `script_v0_5_9f`), one hit each before one state
-//! check (`damage_all`, R59), and "three times" is three such rounds, each after the last one's check,
-//! so a Unit a round destroyed is not hit again. R2521001:
-//! each hit of each round is its own roll, made just before it lands, so every round rolls every
-//! target anew: `ODDS` laid over `least..=most` from the low end (a value past the third weighted as
-//! the third, the two swapped if a Nerf crossed them). Lucky is the card's Lucky now plus its
-//! controller's Luck, as S #145 Fortify Flesh reads it (R1438, R987): the Radiant face prints Lucky 1,
-//! so each roll is made twice and the higher kept. Once a turn (R384); the Radiant face's Activate 3 is
-//! three uses a turn (R1751000, R1857003). Both ends are declared numbers (R386), read through `param`.
-//! Through v0.5.11 it dealt its declared `damage` to all enemies, no roll, which `script_v0_5_11`
-//! keeps (R767000).
+//! "each enemy Unit" is every enemy Unit and no hero (#2657), one hit each before one state check
+//! (`damage_all`, R59), and "three times" is three such rounds, each after the last one's check, so a
+//! Unit a round destroyed is not hit again. Each hit of each round is its own roll, made just before it
+//! lands (R2521001). Lucky is the card's Lucky now plus its controller's Luck, as S #145 Fortify Flesh
+//! reads it (R1438, R987). Once a turn (R384); the Radiant face's Activate 3 is three uses a turn
+//! (R1751000, R1857003). Both ends are declared numbers (R386), read through `param`.
 
 use jackioh_engine::effects::{DamageOdds, after_state_check, damage_all};
 use jackioh_engine::prelude::*;
@@ -52,8 +46,7 @@ fn odds(least: i32, most: i32) -> Vec<DamageOdds> {
 
 /// R1862001, R2521001: `left` rounds of "deal a random `least` to `most` damage to each enemy", each
 /// after the last one's check, every target rolling its own each round, `lucky` more kept at the
-/// highest.
-/// `heroes`: the enemy hero too, as through v0.5.9f; each enemy Unit alone since #2657.
+/// highest. `heroes`: the enemy hero too, as `script_v0_5_9f` runs it.
 fn rounds(least: i32, most: i32, lucky: i32, left: i32, heroes: bool) -> Vec<Effect> {
     let mut round = vec![damage_all(json_as(json!({
         "amount": least.min(most),
@@ -115,8 +108,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     scripts(true)
 }
 
-/// R767000: `left` rounds of "deal `amount` damage to all enemies", each after the last one's check,
-/// as v0.5.11 ran them: its declared `damage`, no roll.
+/// R767000: `left` rounds of "deal `amount` damage to all enemies", each after the last one's check.
 fn rounds_v0_5_11(amount: i32, left: i32) -> Vec<Effect> {
     let mut round = vec![damage_all(json_as(
         json!({ "amount": amount, "side": "enemy", "heroes": true }),
@@ -142,9 +134,8 @@ fn flak_v0_5_11(uses: i32) -> ActivationDecl {
     }
 }
 
-/// R767000: through v0.5.11 its Activate dealt its declared `damage` to all enemies, three times, with
-/// no roll and no Lucky, the Radiant face's Activate 3 as now; `KEPT_SCRIPTS` folds those replays under
-/// it, the definitions they carry declaring `damage`.
+/// R767000: through v0.5.11 its Activate dealt its declared `damage` to all enemies, with no roll and
+/// no Lucky; `KEPT_SCRIPTS` folds those replays under it, the definitions they carry declaring `damage`.
 pub fn script_v0_5_11() -> CardScripts {
     let base = Script {
         activations: vec![flak_v0_5_11(BASE_USES)],
@@ -158,12 +149,9 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // Stinkyscape #61 Flak v5 — SPEC §8.10 row 61, BUILD M12 row S 61: its Activate deals each enemy Unit
-// its own random 1 to 3 (60%, 30%, 10%), three times, three rounds, each rolling anew, and the enemy
-// hero nothing (#2657); a Unit one round destroys is not hit by the next; two enemies
-// can take different amounts; once a turn, a second use refused; equipped onto a Unit, the host takes
-// the Activate; least and most read through `param()`, a value past the third weighted as the third;
-// given Lucky keeps the higher roll; radiant 0/16, 2 to 4 with Lucky 1: two rolls per hit, the higher
-// kept (R2521001), and Activate 3.
+// its own random 1 to 3 (60%, 30%, 10%), three rounds, each rolling anew, and the enemy hero nothing
+// (#2657); radiant 0/16, 2 to 4 with Lucky 1: two rolls per hit, the higher kept (R2521001), and
+// Activate 3.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,7 +172,6 @@ mod tests {
     const RADIANT_HEALTH: i32 = 16;
     /// The printed odds as the test reads them, lowest first.
     const PRINTED: [i32; 3] = [60, 30, 10];
-    /// How many seeds a sweep of seeds walks.
     const SEEDS: usize = 60;
     /// A hero with room for three Radiant activations' worth of hits.
     const DEEP_HEALTH: i32 = 100;
@@ -202,7 +189,6 @@ mod tests {
         )
     }
 
-    /// Two walls for p2.
     fn walls() -> Value {
         json!({ "field": [wall(), wall()] })
     }
@@ -223,8 +209,7 @@ mod tests {
 
     /// Activates `card` against enemies that all live through it and holds its hits to the rolls a
     /// copy of the match rng gives: each enemy Unit in lane order, round after round, each its own roll
-    /// over `range` with `lucky` more kept at the higher, and no other draw; the enemy hero takes
-    /// nothing (#2657).
+    /// over `range` with `lucky` more kept at the higher, and no other draw.
     fn fire(s: &mut Scenario, card: &str, range: (i32, i32), lucky: i32) -> Vec<(String, i32)> {
         let targets: Vec<String> = (1..=UNIT_ZONES)
             .filter_map(|lane| s.unit(P2, lane))
@@ -297,9 +282,8 @@ mod tests {
             });
         }
 
-        /// R767000: the script kept for the replays of v0.5.11 and before, under that version's declared
-        /// `damage`, dealt it to each enemy Unit and then the enemy hero, round after round, rolling
-        /// nothing.
+        /// R767000: the script kept for the replays of v0.5.11 and before dealt its declared `damage` to
+        /// each enemy Unit and then the enemy hero, round after round.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_deals_its_declared_damage_and_rolls_nothing() {
             // v0.5.11's number, which its definition declared and the replay carries.

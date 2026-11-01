@@ -5,16 +5,15 @@
 //! back bigger is worth more alive and less to kill, and one whose Death hurts its owner is worth less.
 //! The frozen baseline reads no price, and a call not passed a decision's prices reads none.
 //!
-//! The cards: Trigor (traininggrounds-025), (3) 3/3 Tribute 3, "Death: Summon a Trigor with this one's
-//! base stats +3/+3"; Floodgates (traininggrounds-030), (3) 0/12 Armor 3, "Death: Destroy all your
-//! Units"; Training Dummy (traininggrounds-036), (1) 0/3, "Death: Add 1 random Radiant Training Grounds
-//! card to your hand"; and Mr. Vanilla (core-008), a (1) 4/4 with no text.
+//! The cards: Trigor, (3) 3/3 Tribute 3, "Death: Summon a Trigor with this one's base stats +3/+3";
+//! Floodgates, (3) 0/12 Armor 3, "Death: Destroy all your Units"; Training Dummy, (1) 0/3, "Death: Add 1
+//! random Radiant Training Grounds card to your hand"; and Mr. Vanilla, a (1) 4/4 with no text.
 //!
 //! R2566000: a Starship Piece's death fuses a copy of it into its owner's Dormant Starship, summoning
 //! one first (R1852000), which counts as the unit it wakes as at `slumber_waiting_share` (R2380000), so
-//! a piece with no Death of its own is priced too, after every Death. The cards: After Burner
-//! (stinkyscape-090), (2) 4/8 Starship Piece, whose one hook is a "When launched" that only a Starship
-//! fires; and Hit Job (core-016), (3) "Destroy a Unit".
+//! a piece with no Death of its own is priced too, after every Death. The cards: After Burner, (2) 4/8
+//! Starship Piece, whose one hook is a "When launched" only a Starship fires; and Hit Job, (3) "Destroy
+//! a Unit".
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -28,7 +27,6 @@ const VANILLA: &str = "core-008";
 const AFTER_BURNER: &str = "stinkyscape-090";
 const HIT_JOB: &str = "core-016";
 
-/// The AI's turn with `hand` and `field`, the human's `enemy` and a Mr. Vanilla in the human's hand.
 fn board(seed: &str, hand: Value, field: Value, enemy: Value) -> GameState {
     register_cards();
     let library = json!([VANILLA, VANILLA, VANILLA, VANILLA]);
@@ -48,7 +46,6 @@ fn priced(state: &GameState) -> (Vec<DeathPrice>, usize) {
     (prices, counter.used())
 }
 
-/// `deaths` as a decision passes them, with no turn-hook price.
 fn prices_of(deaths: Vec<DeathPrice>) -> Prices {
     Prices {
         deaths,
@@ -56,7 +53,6 @@ fn prices_of(deaths: Vec<DeathPrice>) -> Prices {
     }
 }
 
-/// `player`'s unit of `def_id` on the field.
 fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
     active_units_of(state, player)
         .into_iter()
@@ -64,7 +60,6 @@ fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardIns
         .expect("the unit is on the field")
 }
 
-/// The price of `def_id`'s Death, which must be priced.
 fn price_of(prices: &[DeathPrice], def_id: &str) -> f64 {
     prices
         .iter()

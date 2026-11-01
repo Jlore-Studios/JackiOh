@@ -54,6 +54,11 @@ function handBox(hand: Element): FxBox | null {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
+/**
+ * testid → the element's rect (a hand: see the header); crystal → the index-th `.mana-crystal` in
+ * `mana-<side>` (else the tray); handCard → the `pick`-th card of `hand-<side>` modulo its cards
+ * (else the hand); viewport → a zero-size box at (innerWidth·at.x, innerHeight·at.y).
+ */
 export function resolveAnchor(anchor: FxAnchor, doc?: Document, win?: Window): FxBox | null {
   if (anchor.kind === "viewport") {
     const view = win ?? window;
@@ -95,10 +100,7 @@ function restoreProperty(style: CSSStyleDeclaration, name: string, value: string
   else style.setProperty(name, value, priority);
 }
 
-/**
- * CSS `translate`/`rotate` on [data-testid="board"] while shaking (they compose with its `transform` keyframes);
- * restores the prior inline values on clear().
- */
+/** CSS `translate`/`rotate` on [data-testid="board"] while shaking; restores the prior inline values on clear(). */
 export function boardShakeSink(doc?: Document): FxShakeSink {
   let target: HTMLElement | null = null;
   let saved: SavedInline | null = null;

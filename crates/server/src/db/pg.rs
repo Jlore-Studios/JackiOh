@@ -84,7 +84,6 @@ fn loser_draws_reasons() -> Vec<String> {
         .collect()
 }
 
-
 /// Migration 0001 §8's `service_role`: the only role granted EXECUTE on the `app.*` functions, so a call this
 /// file gets wrong fails with `insufficient_privilege` instead of succeeding as the table's owner.
 const ACTING_ROLE: &str = "service_role";
@@ -109,7 +108,6 @@ fn is_results_key_conflict(error: &sqlx::Error) -> bool {
 /// (`tests/sql/00_supabase_stub.sql` stands it up for a plain Postgres) sees the profile the call is about.
 const SESSION_SQL: &str =
     "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
-
 
 fn db_error(error: sqlx::Error) -> StoreError {
     StoreError::Db(error)
@@ -1566,7 +1564,6 @@ fn to_rated_game(row: RatedGameDbRow) -> Result<RatedGameRow, StoreError> {
         ended_at: ms_of(row.ended_at),
     })
 }
-
 
 /// Maximum pooled connections when the caller names none; small, since every call is one short transaction.
 const POOL_MAX_DEFAULT: u32 = 10;

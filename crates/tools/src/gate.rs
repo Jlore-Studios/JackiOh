@@ -416,7 +416,6 @@ fn merge(dir: &Path) -> Result<()> {
     }
 }
 
-
 /// Plays the listed games of a matchup (1-based), each folded with its handicaps to fill
 /// replayHash/replayErrors; one game per rayon task, collected in the listed order.
 fn play_gate(matchup: Matchup, played: &[i32]) -> GateReport {
@@ -1176,7 +1175,6 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
     }
     problems
 }
-
 
 /// A switch's value from its flag, else its environment variable.
 fn flag_or_env(flag: Option<String>, variable: &str) -> Option<String> {

@@ -6,12 +6,9 @@
 //! Starship Piece and Equip are catalog keywords the engine plays: played onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
-//! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero: since #2521 the enemy
-//! hero is no legal target, and the old "deals half damage to heroes" is gone. Pierce is `ignoreArmor`
-//! (R346). Activate 3 is three uses a turn (R384, R1857003), each hit its own state check. The number
-//! is the declared `damage` (R386), read through `param`.
-//! Through v0.5.11 it had Activate 6 and the enemy hero was a target too, its hit halved
-//! (R1841001), which `script_v0_5_11` keeps (R767000).
+//! R1862000: the Activate's target is a declared enemy Unit (R81), never a hero (#2521). Pierce is
+//! `ignoreArmor` (R346). Activate 3 is three uses a turn (R384, R1857003), each hit its own state check.
+//! The number is the declared `damage` (R386), read through `param`.
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
 use jackioh_engine::prelude::*;
@@ -74,8 +71,7 @@ fn shot_v0_5_11(ctx: &EffectContext<'_>) -> Vec<Effect> {
     })]
 }
 
-/// R767000: the Activate as v0.5.11 ran it, `USES_V0_5_11` a turn, aimed at an enemy Unit or the
-/// enemy hero.
+/// R767000: the Activate as v0.5.11 ran it.
 fn repeater_v0_5_11() -> ActivationDecl {
     ActivationDecl {
         id: "repeater".into(),
@@ -105,10 +101,8 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #55 Repeater v4 — SPEC §8.10 row 55, BUILD M12 row S 55: its Activate deals 2 to a
-// chosen enemy Unit through Armor (Pierce); the enemy hero is never offered as its target, and aiming
-// at it is refused; three uses a turn, the third landing and a fourth refused; equipped onto a Unit,
-// the host takes the Activate; damage reads through `param()`; radiant 0/12, 4 damage.
+// Stinkyscape #55 Repeater v4 — SPEC §8.10 row 55, BUILD M12 row S 55: its Activate deals 2 through
+// Armor (Pierce) to a chosen enemy Unit, never the enemy hero; three uses a turn; radiant 0/12, 4 damage.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,9 +238,6 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// R767000: the script kept for the replays of v0.5.11 and before may aim at the enemy hero,
-        /// whose hit is halved, rounded down (R1841001), `USES_V0_5_11` times a turn; the next is
-        /// refused.
         #[test]
         fn r767000_the_script_kept_for_v0_5_11_hits_the_enemy_hero_for_half_its_old_uses_a_turn() {
             crate::under_kept(ID, script_v0_5_11(), || {

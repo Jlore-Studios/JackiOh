@@ -90,7 +90,6 @@ fn ask(sink: &mut EngineSink<'_>, player: PlayerId) {
     );
 }
 
-/// Hit for 1, ask, hit for 2.
 const SEQUENCE_STEPS: usize = 3;
 
 fn sequence_step(sink: &mut EngineSink<'_>, at: usize, run: SequenceRun) {
@@ -290,8 +289,7 @@ fn hit(sink: &mut EngineSink<'_>, amount: i32) {
     (effect.apply)(&mut ctx);
 }
 
-/// One action's worth of work, with its own event list, as `reduce` gives each action (§9.3): run
-/// `body`, then drain whatever a pause owed.
+/// One action's worth of work, with its own event list, as `reduce` gives each action (§9.3).
 fn on_sink(state: &mut GameState, body: impl FnOnce(&mut EngineSink<'_>)) -> Vec<GameEvent> {
     let mut sink = sink_for(state);
     body(&mut sink);
@@ -299,8 +297,7 @@ fn on_sink(state: &mut GameState, body: impl FnOnce(&mut EngineSink<'_>)) -> Vec
     sink.events.clone()
 }
 
-/// The `answer` action of §10.6: close the prompt, re-enter the step it named with the selection,
-/// then continue what it interrupted.
+/// The `answer` action of §10.6.
 fn answer(state: &mut GameState, option: &str) -> Vec<GameEvent> {
     assert!(state.pending.is_some());
     let pending = state.pending.clone().expect("no prompt is open");
@@ -362,8 +359,6 @@ fn panics_with(run: impl FnOnce(), text: &str) {
     );
 }
 
-// A card's own effect list
-
 mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
     use super::*;
 
@@ -387,7 +382,7 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
             &json!({ "defId": middle_asker().id, "hook": "cry", "instanceId": card.id })
         ));
         assert_eq!(owed.map(|item| item.owner), Some(P1));
-        // The continuation names where to pick up (the effect after the one that asked); closures never enter the state (§9.3).
+        // The continuation names where to pick up: the effect after the one that asked.
         assert_eq!(
             owed.and_then(|item| paused_of(&item.resume.data))
                 .map(|step| step.from),
@@ -436,8 +431,6 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
         assert!(state.pending.is_none());
     }
 }
-
-// An engine sequence of named steps
 
 mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
     use super::*;
@@ -491,13 +484,10 @@ mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
 
         let last = answer(&mut state, "b");
 
-        // The Cry's tail (16) runs before the sequence's remaining step (2): the newer pause is innermost.
         assert_eq!(amounts(&last), vec![16, 2]);
         assert!(state.work.is_empty());
     }
 }
-
-// Serializable, and the same on a replay
 
 mod a_paused_state_is_plain_data_9_3_10_1 {
     use super::*;
@@ -514,11 +504,10 @@ mod a_paused_state_is_plain_data_9_3_10_1 {
         let mut round = revive(&state);
         assert_eq!(round, state);
         assert_eq!(round.work, state.work);
-        // Nothing owed is a closure or a class instance, anywhere in the state (§10.1).
+        // Nothing owed is a closure, anywhere in the state (§10.1).
         assert!(unserializable(&state, "state").is_empty());
         assert_eq!(hash_state(&round), hash_state(&state));
 
-        // And the revived state answers to the same place: the parked tail still runs.
         let live = answer(&mut state, "a");
         let revived = answer(&mut round, "a");
         assert_eq!(amounts(&revived), amounts(&live));
@@ -563,8 +552,6 @@ mod a_paused_state_is_plain_data_9_3_10_1 {
         assert_ne!(first.paused, first.done);
     }
 }
-
-// The queue itself
 
 mod the_work_queue_9_3_r68 {
     use super::*;
@@ -734,7 +721,8 @@ mod the_work_queue_9_3_r68 {
             },
             None,
         );
-        // No handler registry (SURFACE §6.6): the default arm re-enters a card's own step only when its script has it; an item naming no card raises.
+        // No handler registry (SURFACE §6.6): the default arm re-enters a card's own step only when its
+        // script has it; an item naming no card raises.
         panics_with(
             || {
                 run_work_item(&mut sink, &item);
@@ -747,7 +735,7 @@ mod the_work_queue_9_3_r68 {
     fn s9_3_stops_a_sequence_that_keeps_owing_work_instead_of_spinning() {
         let mut state = queue();
         let mut sink = sink_for(&mut state);
-        // The looper card's continuation owes its own item again (see `scripts()`); the drain must stop.
+        // The looper card's continuation owes its own item again (see `scripts()`).
         push_work(&mut sink, looper_resume(), None);
         panics_with(
             || {

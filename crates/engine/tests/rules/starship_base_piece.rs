@@ -1,8 +1,7 @@
 // R2521000 (issue #2521): a dead Starship Piece fuses its base version into its owner's Dormant
-// Starship (`starship::piece_copy`): a fresh card of the piece it was printed as — for a fusion, the
-// card the others were fused into, its last ingredient, a fused one walked the same way — on its
-// Radiant face if it was Radiant, and without its tuning. The Starship's memory and `starshipFused`
-// name that base definition. Proved on the fixtures of `fixtures/starship.rs`.
+// Starship (`starship::piece_copy`): a fresh card of the piece it was printed as (for a fusion, its
+// last ingredient, a fused one walked the same way), on its Radiant face if it was Radiant, without its
+// tuning. The Starship's memory and `starshipFused` name it. Proved on `fixtures/starship.rs`.
 
 use jackioh_engine::testkit::PlayerId::P1;
 use jackioh_engine::testkit::*;
@@ -46,7 +45,6 @@ fn ship_of(s: &Scenario) -> CardInstance {
         .expect("p1 has a Dormant Starship")
 }
 
-/// The definitions a fused definition lists, in ingredient order (`CardDef.ingredients`).
 fn ingredients_of(s: &Scenario, def_id: &str) -> Vec<String> {
     jackioh_engine::catalog::find_def(Some(s.state()), def_id)
         .and_then(|def| def.ingredients.clone())
@@ -63,7 +61,6 @@ fn record(def_id: &str, radiant: bool) -> StarshipPieceRecord {
     }
 }
 
-/// The `def_id` of the `starshipFused` the last action reported for the dead piece `piece`.
 fn fused_def_of(s: &Scenario, piece: &str) -> String {
     s.last_events()
         .iter()

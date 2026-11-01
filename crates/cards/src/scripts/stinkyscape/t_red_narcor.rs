@@ -5,12 +5,11 @@
 //!
 //! A Mythic Resource (R1840000), tagged Resource and Token (§5's tags, issue #2521), played from its
 //! owner's hand at (0) for its Credits (R2250000, R2250001); the Radiant S #39 The Narcor Project makes
-//! them. "Gain {mana} mana" is S #153 Stimmycheck's `gain_mana`: temporary mana this turn, which may
-//! take current above max (§2.3, §6.3 Mana); then "Draw" is §6.3's draw of `draw` cards from its
-//! caster's library, a full hand burning the overflow and an empty library dealing fatigue (§2.4, R4).
-//! Both numbers are declared on each face (`mana` 2/4, `draw` 1/2) and read as it resolves (R386).
-//! Issue #2521 replaced its old random Legendary-or-Mythic add (at a discount, Radiant at a set cost)
-//! with this text; `script_v0_5_11` keeps the old add for the replays of v0.5.11 and before (R767000).
+//! them. "Gain {mana} mana" is S #153 Stimmycheck's `gain_mana`, temporary mana which may take current
+//! above max (§2.3, §6.3 Mana); "Draw" is §6.3's draw, a full hand burning the overflow and an empty
+//! library dealing fatigue (§2.4, R4). Both numbers are declared on each face and read as it resolves
+//! (R386). `script_v0_5_11` keeps the random Legendary-or-Mythic add for the replays of v0.5.11 and
+//! before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -35,9 +34,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: a face as v0.5.11 ran it: a random non-token Legendary or Mythic card added, at a `costMod`
-/// of −`discount` on the base face (never below (0), §2.3) and a `costOverride` of `setCost` on the
-/// Radiant one, Radiant, each number declared on its own face (R1431, R824000).
+/// R767000: a face as v0.5.11 ran it, each number declared on its own face (R1431, R824000).
 fn face_v0_5_11(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -54,9 +51,8 @@ fn face_v0_5_11(radiant: bool) -> Script {
     }
 }
 
-/// R767000: through v0.5.11 it added a random Legendary or Mythic card at a discount, Radiant at a set
-/// cost; `KEPT_SCRIPTS` folds those replays under it, the definitions they carry declaring `discount`
-/// and `setCost`.
+/// R767000: `KEPT_SCRIPTS` folds the replays of v0.5.11 and before under it, the definitions they carry
+/// declaring `discount` and `setCost`.
 pub fn script_v0_5_11() -> CardScripts {
     CardScripts {
         base: face_v0_5_11(false),
@@ -145,9 +141,6 @@ mod tests {
         assert_eq!(drawn(&s), ["core-008", "core-019", "core-025"]);
     }
 
-    /// R767000: the script kept for the replays of v0.5.11 and before, under that version's declared
-    /// `discount`, added a random non-token Legendary or Mythic card at (2) less, never below (0), and
-    /// drew nothing.
     #[test]
     fn r767000_the_script_kept_for_v0_5_11_adds_a_legendary_or_mythic_at_its_discount() {
         // v0.5.11's numbers, each declared on its own face (R1431, R824000), which the replay carries.

@@ -1,11 +1,9 @@
 //! R2521003 (issue #2521): `runActivation` with `spendUse` (S #26 ZolarKeth's "Activate your
 //! Universities" beside its "A University can be Activated at most once each turn") runs another card's
 //! ability only when that ability has not been used this turn, counted as its own Activate counts it
-//! (B3.2 rules 1, 3 and 9), and then spends every use it has this turn: an ability its card used itself
-//! is passed by, a second run the same turn finds it spent, an "Activate 2" runs once and is spent, and
-//! the next turn starts the count afresh. The run is
-//! still no activation of the card's (no `activated` event) and R1876000's refusal of its own use is still
-//! not read. Without `spendUse` nothing changes (R1876001).
+//! (B3.2 rules 1, 3 and 9), and then spends every use it has this turn. The run is still no activation
+//! of the card's (no `activated` event) and R1876000's refusal of its own use is still not read.
+//! Without `spendUse` nothing changes (R1876001).
 //!
 //! Fixtures are this file's own: `fx-` defs indexed from 25220 (BUILD §0).
 
@@ -23,9 +21,7 @@ const SCHOOL: &str = "fx-25220";
 const ACADEMY: &str = "fx-25221";
 /// "Activate: Activate your schools and academies", spending their uses (ZolarKeth's shape).
 const DEAN: &str = "fx-25222";
-/// The mana a school's or an academy's ability gains.
 const GAIN: i32 = 1;
-/// The academy's N.
 const ACADEMY_USES: i32 = 2;
 /// The refusal of a once-a-turn ability used this turn (`why_cannot_activate_ability`).
 const SPENT: &str = "that ability has already been used this turn";
@@ -42,7 +38,6 @@ fn dean() -> CardDef {
     unit_def(25222, json!({ "attack": 1, "health": 5 }))
 }
 
-/// An ability with no cost, target, mode or condition.
 fn ability(id: &str, uses: i32, run: Hook) -> ActivationDecl {
     ActivationDecl {
         id: id.to_string(),
@@ -61,7 +56,6 @@ fn gain() -> Hook {
     hook(|_ctx| vec![gain_mana(json_as(json!({ "amount": GAIN })))])
 }
 
-/// `runActivation` of the card `id`, `spendUse` when `spend`.
 fn run_of(id: &str, spend: bool) -> Effect {
     run_activation(ActivationOfArgs {
         instance_id: Some(id.to_string()),
@@ -150,7 +144,6 @@ fn mana(s: &Scenario) -> i32 {
     s.state().players.p1.mana.current
 }
 
-/// Why p1 cannot activate the card's only ability now, or `None`.
 fn why_not(s: &Scenario, id: &str) -> Option<String> {
     why_cannot_activate_ability(s.state(), P1, id, None)
         .err()

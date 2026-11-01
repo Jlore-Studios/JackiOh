@@ -39,9 +39,10 @@ pub struct Args {
     #[arg(long)]
     pub dry_run: bool,
     /// R1368000: write the table only when a refresh is due, with the pending fragment that ships it:
-    /// the current patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` live games and the table is from an
-    /// earlier patch. Reads JSONL record files or one `stats report --window <v> --json` export.
-    /// R2386000: also while the window is short, if the table misses a shipped set the input fills.
+    /// the current patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` live games and the table is from
+    /// an earlier patch. Reads JSONL record files or one `stats report --window <v> --json` export.
+    /// R2386000: also while the window is short, when the table misses a shipped set and the input
+    /// fills every one.
     #[arg(long)]
     pub refresh: bool,
 }

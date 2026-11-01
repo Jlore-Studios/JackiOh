@@ -2,26 +2,21 @@
 //! and then the enemy's on a copy, tries each visible unit's Activate at the start of its controller's
 //! next turn as the opponent's reply tries one, and prices the best use as its controller's evaluation
 //! after it less before it; `unit_worth` adds `AI_EVAL.activation` of the price for the seat's units
-//! and the enemy's alike, so a Cannon that destroys a Unit every turn is worth more than its body to
-//! keep and to remove. A face-down or hand card is never probed, hidden cards change no decision
+//! and the enemy's alike. A face-down or hand card is never probed, so hidden cards change no decision
 //! (R185), the frozen baseline reads no price, and a call not passed a decision's prices reads none.
+//! R2603000 prices a face-up backrow card's Activate, a Field Spell's, the same way.
 //!
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
-//! (R1852000), which can launch and fire it again. So the removal below is a transform, which is no
-//! death, and the tribute is made beside a Voidwalker, whose aura exiles a card that would go to a
-//! graveyard, so the tributed card never dies (R461). Either way the Activate is all that is weighed.
+//! (R1852000), which can fire it again. So the removal below is a transform, which is no death, and the
+//! tribute is made beside a Voidwalker, whose aura exiles the tributed card (R461).
 //!
-//! The cards: Cannon v3 (stinkyscape-052), (2) 0/4 Starship Piece, "Activate: Deal 5 damage to an
-//! enemy Unit", once a turn, 10 when Radiant; Polymorph (meditative-024), (3) "Transform a Unit into a
-//! Sheep Token"; The Rock (core-066), (4) 10/10 Tribute 1, Indestructible; Prejudiced Postdoc
-//! (core-061), (2) 2/4 with a Cry that finds no Human here; Twisted Sorcerer (core-068), (2) 5/5 with a
-//! Cry; Voidwalker (classic-050), (2) 6/3, "Aura: Cards that would go to a graveyard are exiled
-//! instead"; Midrange Menace (core-019), (3) 9/9 Taunt; Mr. Vanilla (core-008), a (1) 4/4 with no
-//! text; and the (1) Traps Sheepish (core-041) and My Pawn (core-096).
-//!
-//! R2603000 prices a face-up backrow card's Activate the same way, a Field Spell's: The Power to Punish
-//! (classic-020), a (3) Field Spell, "Activate: Choose one: Deal 2 Pierce damage; your opponent discards
-//! 1 random card; or choose a Unit, which is destroyed at the start of your next turn", once a turn.
+//! The cards: Cannon v3, (2) 0/4, "Activate: Deal 5 damage to an enemy Unit", once a turn, 10 when
+//! Radiant; Polymorph, (3) "Transform a Unit into a Sheep Token"; The Rock, (4) 10/10 Tribute 1,
+//! Indestructible; Prejudiced Postdoc, (2) 2/4 with a Cry that finds no Human here; Twisted Sorcerer,
+//! (2) 5/5 with a Cry; Midrange Menace, (3) 9/9 Taunt; Mr. Vanilla; the (1) Traps Sheepish and My Pawn;
+//! and The Power to Punish, a (3) Field Spell, "Activate: Choose one: Deal 2 Pierce damage; your
+//! opponent discards 1 random card; or choose a Unit, which is destroyed at the start of your next
+//! turn", once a turn.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -66,7 +61,6 @@ fn prices_of(activations: Vec<ActivationPrice>) -> Prices {
     }
 }
 
-/// `player`'s unit of `def_id` on the field.
 fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
     active_units_of(state, player)
         .into_iter()
@@ -83,8 +77,7 @@ fn price_of(prices: &[ActivationPrice], def_id: &str, controller: PlayerId) -> f
         .unwrap_or_else(|| panic!("{controller}'s {def_id}'s Activate is priced: {prices:?}"))
 }
 
-/// The AI's Sorcerer against the human's Cannon v3 and Mr. Vanilla, the human holding a Mr. Vanilla
-/// and `backrow`, the AI `hand`.
+/// The AI's Sorcerer and `hand` against the human's Cannon v3, Mr. Vanilla and `backrow`.
 fn cannon_against_vanilla(seed: &str, hand: Value, backrow: Value) -> GameState {
     board(
         seed,

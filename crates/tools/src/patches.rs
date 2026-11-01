@@ -2492,8 +2492,8 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `cargo jackioh patches …` (SURFACE §12). The arguments go to the command's own parser, so `check`,
-/// `ship` and the fragment form share one positional list.
+/// `cargo jackioh patches …` (SURFACE §12). The arguments go to `patches.ts`'s own parser as it read
+/// them, so `check`, `ship` and the fragment form share one positional list.
 #[derive(clap::Args)]
 pub struct Args {
     /// `"<title>" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule]`, or `check`, or `ship`.

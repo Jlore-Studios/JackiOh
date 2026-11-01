@@ -81,7 +81,7 @@ export function tokenize(source: string): Token[] {
   return tokens;
 }
 
-/** The tokens line by line (a token across a line break is cut there). */
+/** The tokens line by line (a token across a line break is cut there), for a view that numbers its lines. */
 export function tokenLines(source: string): Token[][] {
   const lines: Token[][] = [[]];
   for (const token of tokenize(source)) {

@@ -4,7 +4,7 @@
 //! play resolves. A cast, an Echo repeat and a random cast never ask it (R70), a set Spell's Reveal
 //! waits for it as for a needed pick (R783006), a fusion holds every ingredient's and a copier its
 //! copied face's. The fixtures in `fixtures/play_gate.rs` stand in for Meditative #53 Prestige's
-//! Radiant face, which tests it again in its own file.
+//! Radiant face.
 
 use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
@@ -35,14 +35,12 @@ fn hero_health(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hero.health
 }
 
-/// Whether `legal_actions` offers p1 a play of this card.
 fn offers(state: &GameState, id: &str) -> bool {
     legal_actions(state, P1)
         .iter()
         .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
 }
 
-/// p1 plays this card with no choices.
 fn play(state: &GameState, id: &str) -> ReduceResult {
     let body = play_choices::PlayAction {
         instance_id: id.to_string(),
@@ -95,7 +93,7 @@ fn r1851000_a_gate_that_does_not_hold_is_neither_offered_nor_accepted_and_the_vi
         "the view gives the refusal's own words"
     );
 
-    // The gate holds: offered once, with no reason, and the play goes through.
+    // The gate holds.
     enemy_unit(&mut state);
     assert!(offers(&state, &card.id));
     assert_eq!(play_reason(&state, &card.id), None);

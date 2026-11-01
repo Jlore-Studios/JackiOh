@@ -4,12 +4,9 @@
 //! Autocomplete adds a copy of the opponent's last face-up card. A fused card (R77, R179) that has gone
 //! back where the seat cannot see it is still named by them, so the redacted state keeps its definition.
 //!
-//! Rust only. Found by part 40's sweep: in `sweep:easy:core-076:2` the greedy seat's Pile On, with Book
-//! Worm fused in by Classic+ #73, went back to the bottom of its deck by Pile On's own clause. Step 6
-//! dropped its definition, since no card the AI could see used it, and the AI's reply simulation dealt
-//! that seat an Echo, whose `copied_text::copied_chooses_x` panicked with `unknown defId`; the decision
-//! fell back. TypeScript's `redact` dropped the definition the same way, and its `copiedChoosesX` threw
-//! the same error (05f5cfd). The true state never loses one: `transient_defs` only grows.
+//! The case: Pile On with Book Worm fused in by Classic+ #73, gone back to the bottom of its deck by
+//! its own clause, where step 6 would drop its definition and an Echo copying it would panic with
+//! `unknown defId`. The true state never loses one: `transient_defs` only grows.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -49,7 +46,6 @@ fn fused_pile_on_gone_home(held: &str) -> Scenario {
     s
 }
 
-/// The legal plays of `instance_id` for `player`.
 fn plays_of(state: &GameState, player: PlayerId, instance_id: &str) -> Vec<ActionBody> {
     legal_actions(state, player)
         .into_iter()
@@ -57,7 +53,6 @@ fn plays_of(state: &GameState, player: PlayerId, instance_id: &str) -> Vec<Actio
         .collect()
 }
 
-/// The state with neither play record: no last Spell, and no player's last face-up card.
 fn without_records(mut state: GameState) -> GameState {
     state.last_spell = None;
     for player in PLAYER_IDS {
@@ -71,7 +66,6 @@ fn without_records(mut state: GameState) -> GameState {
 mod redact_keeps_what_the_play_records_name_r185 {
     use super::*;
 
-    /// R185 R399 a copier in the seat's hand keeps the fused Spell it copies, whose card went back into a hidden deck
     #[test]
     fn r185_r399_a_copier_in_the_seats_hand_keeps_the_fused_spell_it_copies_whose_card_went_back_into_a_hidden_deck()
      {
@@ -94,7 +88,6 @@ mod redact_keeps_what_the_play_records_name_r185 {
         assert_eq!(view["defs"][FUSED]["id"], FUSED);
     }
 
-    /// R185 a decision holding that copier is searched, not a fallback
     #[test]
     fn r185_a_decision_holding_that_copier_is_searched_not_a_fallback() {
         let s = fused_pile_on_gone_home(ECHO);
@@ -107,7 +100,6 @@ mod redact_keeps_what_the_play_records_name_r185 {
         assert_ne!(decision.reason, DecisionReason::Fallback);
     }
 
-    /// R185 R451 T-AI-5 copies the opponent's last face-up card on the redacted state, a fused one with its definition
     #[test]
     fn r185_r451_t_ai_5_copies_the_opponents_last_face_up_card_on_the_redacted_state_a_fused_one_with_its_definition()
      {
@@ -128,14 +120,13 @@ mod redact_keeps_what_the_play_records_name_r185 {
         let _ = view_for(&played.state, AI);
     }
 
-    /// R185 each record alone keeps the definition, and with none the hidden card takes it away
     #[test]
     fn r185_each_record_alone_keeps_the_definition_and_with_none_the_hidden_card_takes_it_away() {
         let s = fused_pile_on_gone_home(ECHO);
         let truth = s.state().clone();
         let kept = |state: &GameState| redact(state, AI).transient_defs.contains_key(FUSED);
 
-        // Only the card in the human's deck uses it: step 6 drops it, as it always did.
+        // Only the card in the human's deck uses it: step 6 drops it.
         let none = without_records(truth.clone());
         assert!(!kept(&none));
 

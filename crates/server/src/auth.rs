@@ -99,7 +99,6 @@ pub enum AuthError {
     Unavailable(String),
 }
 
-
 /// Supabase issues project JWTs with this audience for a signed-in user.
 const AUTHENTICATED_AUDIENCE: &str = "authenticated";
 

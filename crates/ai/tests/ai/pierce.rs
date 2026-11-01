@@ -19,7 +19,6 @@ fn board(setup: Value) -> GameState {
     scenario(setup).state().clone()
 }
 
-/// Grants `keyword` to `player`'s unit of `def_id` on the field.
 fn grant(state: &mut GameState, player: PlayerId, def_id: &str, keyword: Keyword) {
     let id = active_units_of(state, player)
         .into_iter()
@@ -137,8 +136,7 @@ mod r346_move_order {
 mod r346_reply {
     use super::*;
 
-    /// The AI's turn 9, with `p1` as its side and the enemy's Plague Crawler 2/2 given `keywords`,
-    /// ended through the reducer: the enemy's turn 10.
+    /// The AI's turn 9 against the enemy's Plague Crawler 2/2, ended through the reducer.
     fn handed_over(p1: Value, keywords: &[Keyword]) -> GameState {
         let mut state = board(json!({
             "seed": "ai-pierce-reply",
@@ -164,9 +162,9 @@ mod r346_reply {
         .expect("a reply")
     }
 
-    /// The AI's Plague Crawler in Defense Position (Armor 1, Taunt) against the enemy's, which
-    /// strikes first: its hit kills only when it pierces, and short of a kill the strike back
-    /// destroys it, so the model attacks only when it reads the Pierce.
+    /// The AI's Plague Crawler in Defense Position (Armor 1, Taunt) against the enemy's, which strikes
+    /// first: it kills only when it pierces, else the strike back destroys it, so the model attacks only
+    /// when it reads the Pierce.
     fn crawlers(keywords: &[Keyword]) -> GameState {
         handed_over(
             json!({ "field": [{ "def": "classic-053", "position": "DEF" }], "library": LIBRARY }),

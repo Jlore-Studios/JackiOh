@@ -44,8 +44,9 @@ function byTestid(id: string): string {
 }
 
 /**
- * The boxes of the elements `idsKey` names ("|"-joined testids) inside `host`: relative to `host`
- * (`origin: "host"`, for a bar positioned inside it), or to the viewport (`"viewport"`, for a fixed one).
+ * The boxes of the elements `idsKey` names ("|"-joined testids) inside `host`, kept current every
+ * animation frame while there are any: relative to `host` (`origin: "host"`, for a bar positioned
+ * inside it), or to the viewport (`"viewport"`, for a fixed one).
  */
 export function useBoxes(
   host: HTMLElement | null,
@@ -133,6 +134,7 @@ export function useCardBarFocus(
       if (spot !== null) point(spot);
       else if (!touch) clearSoon();
     };
+    // A press (a tap on a phone, where nothing hovers) moves the bar to its spot, or closes it.
     const down = (event: Event): void => {
       noteKind(event);
       if (onBar(event.target, barClass)) return;

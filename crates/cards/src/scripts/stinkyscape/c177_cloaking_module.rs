@@ -3,13 +3,12 @@
 //!   Base:    "Starship Piece, Equip, Cloaked, Immutable"
 //!   Radiant: "Starship Piece, Equip, Cloaked, Immutable, Immune to Spells"
 //!
-//! Keywords only (§6.1): its script is empty. Equip (R1086): played onto one of your Units it fuses into
-//! it, the host keeping its zone and taking its stats and keywords (R77), Starship Piece only into a
-//! piece (R1852001). Cloaked (R783004–R783006): it may be set face-down at its own (2) and revealed by
-//! its Activate: Reveal into a unit zone. Immutable (R23, R781001): no Spell, Field Spell or Field Trap
+//! Keywords only (§6.1): its script is empty. Equip (R1086, R77): played onto one of your Units it fuses
+//! into it, Starship Piece only into a piece (R1852001). Cloaked (R783004–R783006): it may be set
+//! face-down and revealed into a unit zone. Immutable (R23, R781001): no Spell, Field Spell or Field Trap
 //! targets it in play, and nothing fuses onto it. Starship Piece: played alone, its death fuses its base
-//! version into its owner's Dormant Starship, summoned first if they have none (R1852000, R2521000). The
-//! Radiant face doubles the stats and adds Immune to Spells (E35): no Spell targets or affects it.
+//! version into its owner's Dormant Starship (R1852000, R2521000). Immune to Spells (E35): no Spell
+//! targets or affects it.
 
 use jackioh_engine::prelude::*;
 
@@ -17,7 +16,7 @@ pub const ID: &str = "stinkyscape-177";
 
 pub fn script() -> CardScripts {
     let base = Script::default();
-    // The Radiant face doubles the stats and adds Immune to Spells: catalog data only.
+    // The Radiant face differs in catalog data only.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -50,7 +49,6 @@ mod tests {
             .collect()
     }
 
-    /// p1 with the Module (Radiant on `radiant`) standing in unit zone 1 and `hand`; p2 holds `p2_hand`.
     fn standing(radiant: bool, hand: Value, p2_hand: Value) -> Scenario {
         scenario(json!({
             "p1": { "hand": hand, "field": [{ "def": MODULE, "radiant": radiant }], "mana": 10, "library": filler(4) },

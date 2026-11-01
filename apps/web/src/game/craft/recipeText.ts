@@ -96,6 +96,7 @@ class Reader {
     return token?.kind === "punct" && token.text === punct;
   }
 
+  /** Skip the optional `;` between statements. */
   semicolons(): void {
     while (this.is(";")) this.at += 1;
   }
@@ -104,6 +105,7 @@ class Reader {
     return this.at >= this.tokens.length;
   }
 
+  /** `( arg, arg … )`: the arguments, each a number or a word. */
   args(): Token[] {
     this.expect("(");
     const out: Token[] = [];

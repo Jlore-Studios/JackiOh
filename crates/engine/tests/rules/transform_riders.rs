@@ -3,9 +3,8 @@
 //! deck) and `chinese` (anywhere). With `scope` and `same: true`, `transform_random` replaces every
 //! card of the scope with new cards of one shared definition — drawn from the definitions every old
 //! card could take — each in its place (R31, R671; an Immutable hand card too, R35), each a card
-//! generated into a hand or a deck for its own R673 Glitch roll. Without them it draws exactly as
-//! before; an empty scope draws nothing (R129). The `arrives` rider is proved with `enters_hand`
-//! (R925).
+//! generated into a hand or a deck for its own R673 Glitch roll. An empty scope draws nothing (R129).
+//! The `arrives` rider is proved with `enters_hand` (R925).
 
 use jackioh_engine::config::{GLITCH_DEF_ID, GLITCH_ODDS_DENOMINATOR};
 use jackioh_engine::effects::{transform, transform_random};
@@ -26,7 +25,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     run_effect(state, effect, P1)
 }
@@ -63,7 +61,6 @@ mod r921_transform_riders_md_b10 {
         assert!(defs.iter().all(|def| *def == defs[0]), "{defs:?}");
         assert!(defs[0] == plain.id || defs[0] == body.id);
         for card in hand {
-            // New instances, Radiant, costing (0), in place.
             assert!(!before.contains(&card.id));
             assert!(card.radiant);
             assert_eq!(card.cost_override, Some(0));
@@ -183,8 +180,7 @@ mod r921_transform_riders_md_b10 {
 
     #[test]
     fn r921_each_held_replacement_rolls_glitch_on_its_own() {
-        // One shared draw, three independent Glitch rolls: over seeds, Glitch replacements and
-        // shared-definition replacements both occur — and in a mixed hand every non-Glitch card is
+        // One shared draw, three independent Glitch rolls: in a mixed hand every non-Glitch card is
         // the one shared definition.
         let mut saw_glitch = false;
         let mut saw_shared = false;

@@ -95,8 +95,9 @@ fn from_count(raw: &str) -> Result<i32, String> {
     count("from", raw)
 }
 
-/// `cargo jackioh stats …`: clap takes `--games 50` and `--games=50` alike, and refuses an option it
-/// does not know with exit 2.
+/// `cargo jackioh stats …` (TS `DevRunArgs`, read by clap where TS's `parseDevRunArgs` read
+/// `--flag=value` by hand; clap takes `--games 50` and `--games=50` alike, and refuses an option it
+/// does not know with exit 2).
 #[derive(clap::Args, Debug, Clone, PartialEq)]
 #[command(args_conflicts_with_subcommands = true)]
 pub struct Args {

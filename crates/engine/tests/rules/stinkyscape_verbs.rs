@@ -133,7 +133,6 @@ mod r1849000_immune_to_spell_damage {
         // A Field Spell is no Spell: its hit takes the Divine Shield.
         s.play(EMBER, json!({}));
         assert!(types_of(s.last_events()).contains(&GameEventType::DivineShieldLost));
-        // A Unit's strike lands.
         let grunt = id_at(&s, P1, 1);
         s.attack(grunt.as_str(), immune.as_str());
         s.expect_stats(immune.as_str(), json!({ "health": 1 }));

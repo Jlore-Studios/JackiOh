@@ -350,8 +350,7 @@ mod r1839000_a_dormant_card_fills_its_zone_and_nothing_reaches_it {
         assert_eq!(slumber_of(&s, &dormant), dormant_for(2));
     }
 
-    /// Hearthstone's Magtheridon: a card played Dormant runs its Cry as it is played, and the Cry, like
-    /// any effect, passes the Dormant card itself by.
+    /// Hearthstone's Magtheridon: a card played Dormant runs its Cry as it is played.
     #[test]
     fn r1839000_its_cry_runs_as_it_is_played_and_passes_it_by() {
         let mut s = board(

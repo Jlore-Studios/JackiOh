@@ -102,7 +102,7 @@ function cardsIn(state: GameState): string[] {
   return ids;
 }
 
-/** Every Legendary or Mythic card a run's game ever held or showed. */
+/** Every Legendary or Mythic card a run's game ever held or showed, anywhere. */
 export function showpiecesIn(run: LessonRun): string[] {
   const seen = new Set<string>();
   for (const step of stepsOf(run)) {

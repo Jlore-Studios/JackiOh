@@ -21,7 +21,6 @@ fn board(setup: Value) -> GameState {
     scenario(setup).state().clone()
 }
 
-/// Grants `keyword` to `player`'s unit of `def_id` on the field.
 fn grant(state: &mut GameState, player: PlayerId, def_id: &str, keyword: Keyword) {
     let id = active_units_of(state, player)
         .into_iter()
@@ -37,10 +36,10 @@ fn grant(state: &mut GameState, player: PlayerId, def_id: &str, keyword: Keyword
 mod r783000_move_order {
     use super::*;
 
-    /// The AI's Midrange Menace 9/9 ready on the field, Mr. Vanilla in hand, and the enemy's Wrong-House
-    /// Attacker 1/1 Poisonous: a kill either way, which the Menace survives only when it is Ranged and
-    /// the enemy's unit is not. Otherwise the poison kills it, a losing trade, which waits behind the
-    /// plays even beside the even trades (#1779). Returns the enemy unit's id.
+    /// The AI's Midrange Menace 9/9 against the enemy's Wrong-House Attacker 1/1 Poisonous: a kill
+    /// either way, which the Menace survives only when it is Ranged and the enemy's unit is not.
+    /// Otherwise the poison kills it, a losing trade, which waits behind the plays even beside the even
+    /// trades (#1779).
     fn trade(attacker_ranged: bool, defender_ranged: bool) -> (GameState, String) {
         let mut state = board(json!({
             "seed": "ai-ranged-order",
@@ -97,8 +96,7 @@ mod r783000_move_order {
 mod r783000_reply {
     use super::*;
 
-    /// Mr. Vanilla against Mr. Vanilla, the enemy's Ranged (and the AI's too when `p1_ranged`), with
-    /// the AI's turn 9 ended through the reducer: the enemy's turn 10.
+    /// Mr. Vanilla against a Ranged Mr. Vanilla, the AI's turn 9 ended through the reducer.
     fn handed_over(p1_ranged: bool) -> GameState {
         let mut state = board(json!({
             "seed": "ai-ranged-reply",
@@ -144,8 +142,7 @@ mod r783000_reply {
 mod r783002_r783003_taunts {
     use super::*;
 
-    /// The AI's Midrange Menace 9/9 Taunt with Flying, in `position`, against the enemy's Tempo Timmy
-    /// 3/3 and Pointmaster 7/1, the Pointmaster Flying too when `flying_pointmaster`.
+    /// The AI's Flying Midrange Menace 9/9 Taunt against the enemy's Tempo Timmy 3/3 and Pointmaster 7/1.
     fn flying_menace(position: &str, flying_pointmaster: bool) -> GameState {
         let mut state = board(json!({
             "seed": "ai-flying-taunt",

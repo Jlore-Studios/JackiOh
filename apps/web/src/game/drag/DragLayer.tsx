@@ -161,6 +161,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     let flight: Flight | null = null;
     let swallowClick = false;
 
+    /** jsdom lacks `elementsFromPoint`, so tests stub it on `document`. */
     function hits(x: number, y: number): readonly Element[] {
       try {
         // R2095000: a replay board (the Duos teammate's, beside this one) is no drop target of this
@@ -192,7 +193,10 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       setDrawn(null);
     }
 
-    /** Back to idle with nothing sent, or (R658) to the build a drag lifted again from its picks. */
+    /**
+     * Back to idle with nothing sent, or (R658) to the build a drag lifted again from its picks. A
+     * press that never became a drag is simply forgotten.
+     */
     function cancel(): void {
       if (flight === null) {
         press = null;
