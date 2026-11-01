@@ -30,6 +30,7 @@ pub mod simulate;
 pub mod skill;
 pub mod sweep;
 pub mod types;
+pub mod unstoppable;
 
 pub use baselines::*;
 pub use candidates::*;
@@ -55,3 +56,4 @@ pub use simulate::*;
 pub use skill::*;
 pub use sweep::*;
 pub use types::*;
+pub use unstoppable::*;
