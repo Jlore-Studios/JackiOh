@@ -10139,6 +10139,7 @@
     "2518": {
       "action": "build",
       "asks": [],
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "onto": "bot/issue-2497",
