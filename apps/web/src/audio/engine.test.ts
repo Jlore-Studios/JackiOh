@@ -13,6 +13,7 @@ import {
   HIDDEN_DEF_ID,
   LOG_LIMIT,
   MUSIC_DUCK_GAIN,
+  MUSIC_DUCK_SFX,
   PICKUP_MIN_GAP_MS,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
@@ -1589,6 +1590,19 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playSfx("death")).toBe(true);
     expect(duck.param("gain").targets()).toEqual([]);
     expect(r.engine.playEffect("core-066", "attack")).toBe(true);
+    expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
+  });
+
+  it("R2722000 the entrance sting plays beside an intro and no longer ducks the music; a trap's sting still does", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    writeAudioSettings({ duckMusic: true });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+    expect(MUSIC_DUCK_SFX).not.toContain("entrance");
+    expect(r.engine.playSfx("entrance", { mythic: true })).toBe(true);
+    expect(duck.param("gain").targets()).toEqual([]);
+    expect(r.engine.playSfx("trapSting")).toBe(true);
     expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
   });
 

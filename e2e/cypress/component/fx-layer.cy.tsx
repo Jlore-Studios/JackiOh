@@ -1,9 +1,13 @@
 // Polish 1: B28 checks clamped DPR, B35 board shake, and B40 that browser effects draw without blocking the board.
+// R2722001: a Mythic's takeover of the board, caught mid-flight and at rest.
 // Mount a real `Game`, append events, then watch page frames before the effects begin.
 // The watcher must see the splat before synchronous `getImageData`: a delayed read can miss R200's short-lived effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
+import { CATALOG } from "@jackioh/cards";
+
 import { FX_MAX_DPR } from "../../../apps/web/src/fx/constants.ts";
+import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView, withEvents } from "../../../apps/web/src/test/fixtures.ts";
 
@@ -207,4 +211,40 @@ describe("Polish 1: the effects layer over a real board", () => {
       });
     });
   }
+});
+
+describe("R2722001 a Mythic takes over a real board", () => {
+  it("R2722001 a Mythic's takeover mid-flight and at rest", () => {
+    cy.viewport(1280, 720);
+    const view = fullBoardView();
+    const lookup = lookupFromDefs(CATALOG);
+    const noop = (): void => undefined;
+    // Meditative #49 YileGPT, a Mythic Unit, played into the viewer's empty lane 3.
+    const events: GameEvent[] = [
+      { type: "cardPlayed", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", costPaid: 2 },
+      { type: "summoned", player: view.viewer, instanceId: "fx-yile", defId: "meditative-049", row: "units", lane: 3 },
+    ];
+    const board = (shown: PlayerView) => (
+      <CatalogContext.Provider value={lookup}>
+        <div className="app-shell app-shell--wide">
+          <Game view={shown} legal={[]} onAction={noop} />
+        </div>
+      </CatalogContext.Provider>
+    );
+    cy.mount(board(view)).then(({ rerender }) => {
+      cy.get(LAYER).should("have.attr", "data-fx", "on");
+      cy.then(() => rerender(board(withEvents(view, events))));
+    });
+    // Mid-flight: the queue holds the entry for the takeover, and its layers are over the board.
+    cy.get('[data-testid="game"]').should("have.attr", "data-takeover", "mythic");
+    cy.get(`${FX_DOM} [data-fx="takeover"]`).should("have.attr", "data-look", "ai");
+    cy.get(`${FX_DOM} .fx-takeover-sweep`).should("exist");
+    cy.screenshot("takeover-mid", { capture: "viewport", overwrite: true });
+    // At rest: nothing animating, the hold over, and every layer of the takeover gone.
+    cy.get("[data-animating]", { timeout: 8_000 }).should("not.exist");
+    cy.get('[data-testid="game"]').should("not.have.attr", "data-takeover");
+    cy.get(`${FX_DOM} [data-fx="takeover"]`, { timeout: 4_000 }).should("not.exist");
+    cy.get('[data-testid="takeover-still"]').should("not.exist");
+    cy.screenshot("takeover-rest", { capture: "viewport", overwrite: true });
+  });
 });

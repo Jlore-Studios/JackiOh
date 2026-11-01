@@ -787,7 +787,7 @@ describe("B14 summon", () => {
     });
   });
 
-  it("B14 a Legendary adds legendary rays from 0, a gold burst at the slam and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 a Legendary adds legendary rays from 0, a gold burst and ring at the slam and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Legendary", attack: 1, health: 1 }, D), [
@@ -795,12 +795,13 @@ describe("B14 summon", () => {
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         rays("legendary", tid(ZONE), 0, D),
         burst("gold", tid(ZONE), "area", slam),
-        shake(0.5, slam),
+        ring("gold", tid(ZONE), slam, D),
+        shake(0.7, slam),
       ]);
     });
   });
 
-  it("B14 a Mythic adds mythic rays, a prismatic burst and FX_LEGENDARY_TRAUMA", () => {
+  it("B14 R2722001 a Mythic adds mythic rays, a prismatic burst and ring and FX_LEGENDARY_TRAUMA", () => {
     forDs("summoned", (D) => {
       const slam = r(FX_SLAM_AT * D);
       expectCues(summonCues({ rarity: "Mythic", attack: 2, health: 2 }, D), [
@@ -808,7 +809,8 @@ describe("B14 summon", () => {
         burst("dust", tid(ZONE, FOOT), "ring", slam),
         rays("mythic", tid(ZONE), 0, D),
         burst("prismatic", tid(ZONE), "area", slam),
-        shake(0.5, slam),
+        ring("prismatic", tid(ZONE), slam, D),
+        shake(0.7, slam),
       ]);
     });
   });
@@ -825,8 +827,8 @@ describe("B14 summon", () => {
 
   it("B14 Legendary and Mythic trauma stacks on the slam trauma", () => {
     const slam = r(FX_SLAM_AT * 250);
-    expect(shakesOf(summonCues({ rarity: "Legendary", attack: 5, health: 5 }, 250)).map(round6)).toEqual([0.56]);
-    expect(shakesOf(summonCues({ rarity: "Mythic", attack: 6, health: 6 }, 250)).map(round6)).toEqual([0.68]);
+    expect(shakesOf(summonCues({ rarity: "Legendary", attack: 5, health: 5 }, 250)).map(round6)).toEqual([0.76]);
+    expect(shakesOf(summonCues({ rarity: "Mythic", attack: 6, health: 6 }, 250)).map(round6)).toEqual([0.88]);
     // A big Mythic slams as hard as a shake goes.
     expect(shakesOf(summonCues({ rarity: "Mythic", attack: 20, health: 20 }, 250)).map(round6)).toEqual([1]);
     expect(summonCues({ rarity: "Mythic", attack: 20, health: 20 }, 250).find((c) => c.kind === "shake")?.delayMs).toBe(slam);
@@ -1695,6 +1697,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   roll: ["kind", "title", "die", "items", "delayMs", "durationMs"],
   fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
+  takeover: ["kind", "look", "tint", "at", "landMs", "delayMs", "durationMs"],
 };
 
 const ANCHOR_KEYS: Record<FxAnchor["kind"], { required: readonly string[]; optional: readonly string[] }> = {

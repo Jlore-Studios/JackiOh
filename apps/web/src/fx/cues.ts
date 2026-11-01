@@ -42,6 +42,7 @@ import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import { shieldCues } from "./shield.ts";
 import { shotCue } from "./stage.ts";
+import { entranceCues, entranceLandMs } from "./takeover.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
@@ -82,7 +83,6 @@ import {
   FX_RING_MS,
   FX_SHAKE_MAX_PX,
   FX_SHOT_LAUNCH_AT,
-  FX_SLAM_AT,
   FX_SLAM_MAX_TRAUMA,
   FX_SLAM_STATS_MIN,
   FX_SLAM_TRAUMA_PER_STAT,
@@ -408,25 +408,27 @@ const cast: Recipe = (event, p) => {
   const paired = p.entry.events.some((e) => e.type === "summoned" && e.instanceId === event.instanceId);
   if (paired) return [];
   const at = anchor(p.tgt);
-  // Issue #124: a card the viewer reads flares in its family's look as well.
-  const look = lookOf(factsOf(event.defId, p.env));
-  const accent = look === undefined ? [] : [burst(p.env.intensity, look.preset, at, "ring", 0, "castAccent")];
+  // R2722001: a Mythic's play bursts once its takeover's hold is over, as its card moves.
+  const wait = p.entry.entrance?.holdMs ?? 0;
+  // Issue #124: a card the viewer reads flares in its family's look as well; R2722002: never as it is
+  // set face-down, which keys nothing on the card.
+  const look = event.formerId === undefined ? lookOf(factsOf(event.defId, p.env)) : undefined;
+  const accent = look === undefined ? [] : [burst(p.env.intensity, look.preset, at, "ring", wait, "castAccent")];
   // #1444: a readable face-up play bursts in its flavor particle; a face-down or hidden one bursts arcane.
   const flavor = FX_FLAVOR_LIVE && event.formerId === undefined ? flavorLookOf(event.defId, event.instanceId, p.view) : null;
   const base = flavor?.particle ?? "arcane";
   if (isCard(p.tgt) || isHandCard(p.tgt)) {
-    return [burst(p.env.intensity, base, at, "area", 0, "cast"), ring(p.D, "arcane", at, 0), ...accent];
+    return [burst(p.env.intensity, base, at, "area", wait, "cast"), ring(p.D, "arcane", at, wait), ...accent];
   }
-  return [burst(p.env.intensity, base, at, "point", 0, "castOpponent"), ...accent];
+  return [burst(p.env.intensity, base, at, "point", wait, "castOpponent"), ...accent];
 };
 
 /**
- * #185: when in its entry a Unit hits the table: after the slam's anticipation, at FX_SLAM_AT of the
- * landing motion that follows it.
+ * #185: when in its entry a Unit hits the table: after the slam's anticipation (and a Mythic
+ * takeover's hold, R2722001), at FX_SLAM_AT of the landing motion that follows them.
  */
-export function slamLandMs(entry: Pick<AnimationEntry, "slam">, D: number): number {
-  const wait = entry.slam?.anticipationMs ?? 0;
-  return wait + frac(FX_SLAM_AT, D - wait);
+export function slamLandMs(entry: Pick<AnimationEntry, "slam" | "entrance">, D: number): number {
+  return entranceLandMs(entry, D);
 }
 
 /** #185: what the board throws up under a landing Unit, by its tier (UNIT_SLAM's `board`). */
@@ -486,11 +488,13 @@ const summon: Recipe = (event, p) => {
       : slamCues(slam, i, p.D, p.tgt, landAt);
   cues.push(...flavor);
   let entrance = 0;
+  // R2722001: a Legendary's or a Mythic's entrance is bigger than the rays alone: a ring of its light
+  // bursts out where it lands, and the shake is FX_LEGENDARY_TRAUMA's (a Mythic's takeover is takeover.ts's).
   if (facts.rarity === "Legendary") {
-    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"));
+    cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"), ring(p.D, "gold", at, landAt));
     entrance = FX_LEGENDARY_TRAUMA;
   } else if (facts.rarity === "Mythic") {
-    cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", landAt, "summonPrismatic"));
+    cues.push(rays(p.D, "mythic", at, 0), burst(i, "prismatic", at, "area", landAt, "summonPrismatic"), ring(p.D, "prismatic", at, landAt));
     entrance = FX_LEGENDARY_TRAUMA;
   }
   if (slam !== undefined) {
@@ -503,7 +507,8 @@ const summon: Recipe = (event, p) => {
     stats >= FX_SLAM_STATS_MIN
       ? Math.min(FX_SLAM_MAX_TRAUMA, (stats - FX_SLAM_STATS_MIN + 1) * FX_SLAM_TRAUMA_PER_STAT)
       : 0;
-  pushShake(cues, i, slamTrauma + entrance, landAt);
+  // A shake is at most 1 before the intensity scales it (B9), however its parts add up.
+  pushShake(cues, i, Math.min(1, slamTrauma + entrance), landAt);
   return cues;
 };
 
@@ -1341,6 +1346,8 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
     if (tgt === null) continue;
     cues.push(...RECIPES[recipe](event, { entry, view, env, D: entry.durationMs, tgt }));
   }
+  // R2722001: a Legendary's or a Mythic's entrance, and a Mythic's takeover of the board (takeover.ts).
+  cues.push(...entranceCues(entry, env, entry.durationMs));
   return cues;
 }
 

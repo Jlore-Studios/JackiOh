@@ -17,6 +17,7 @@ import type { PlayerId, PlayerView } from "@jackioh/shared";
 
 import {
   animationRow,
+  leadMs,
   reducedMotionNow,
   type AnimationEntry,
   type AnimationQueue,
@@ -221,8 +222,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           const table = animationRow(entry.type)?.durationMs ?? 0;
           const parent = root?.parentElement ?? null;
           if (parent !== null) {
-            // A slam's anticipation is a wait before the motion, not a slower motion.
-            const motionMs = entry.durationMs - (entry.slam?.anticipationMs ?? 0);
+            // A slam's anticipation and a takeover's hold (R2722001) are a wait before the motion, not a slower motion.
+            const motionMs = entry.durationMs - leadMs(entry);
             // An event type this build does not know has no row (issue #769): no squeeze.
             if (table > 0) parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
             else removeSqueeze(root);

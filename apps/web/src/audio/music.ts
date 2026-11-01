@@ -17,6 +17,7 @@ import {
   MUSIC_INTRO_DUCK_ATTACK_TC_S,
   MUSIC_INTRO_DUCK_GAIN,
   MUSIC_INTRO_DUCK_RELEASE_TC_S,
+  MUSIC_INTRO_GAIN,
   MUSIC_INTRO_LATE_S,
   MUSIC_LEAD_S,
   MUSIC_OPEN_LOWPASS_HZ,
@@ -580,7 +581,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     const from = Math.max(at, c.startAt);
     const param = c.gain.gain;
     param.cancelScheduledValues(from);
-    param.setValueAtTime(1, from);
+    param.setValueAtTime(MUSIC_INTRO_GAIN, from);
     param.linearRampToValueAtTime(0, from + MUSIC_INTRO_CUT_FADE_S);
     c.source.stop(from + MUSIC_INTRO_CUT_FADE_S + STOP_GRACE_S);
   }
@@ -594,6 +595,8 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     const source = g.ctx.createBufferSource();
     source.buffer = buffer;
     const gain = g.ctx.createGain();
+    // R2722000: the intro sits above the effects around it, while the bed under it drops away.
+    gain.gain.value = MUSIC_INTRO_GAIN;
     source.connect(gain);
     gain.connect(g.focus);
     const mine: Clip = { id, source, gain, startAt: at, end: at + (track.handoff ?? track.duration), stopping: false };

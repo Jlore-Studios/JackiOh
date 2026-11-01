@@ -42,7 +42,9 @@ const S2 = {
   FX_SLAM_STATS_MIN: 10,
   FX_SLAM_TRAUMA_PER_STAT: 0.06,
   FX_SLAM_MAX_TRAUMA: 0.5,
-  FX_LEGENDARY_TRAUMA: 0.5,
+  FX_LEGENDARY_TRAUMA: 0.7,
+  FX_TAKEOVER_TAIL_MS: 700,
+  FX_TAKEOVER_TRAUMA: 1,
   FX_TRAP_TRAUMA: 0.4,
   FX_RESULT_TRAUMA: 0.9,
   FX_LETHAL_LEAD_MAX_MS: 600,
@@ -266,6 +268,7 @@ describe("S2 the effects constants", () => {
       constants.FX_LEGENDARY_TRAUMA,
       constants.FX_TRAP_TRAUMA,
       constants.FX_RESULT_TRAUMA,
+      constants.FX_TAKEOVER_TRAUMA,
     ]) {
       expect(trauma).toBeGreaterThan(0);
       expect(trauma).toBeLessThanOrEqual(1);
@@ -290,6 +293,7 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
     expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_WALLS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
+    expect(constants.FX_TAKEOVER_TAIL_MS, "R2722001").toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST, constants.FX_ROLL_LAND_AT, constants.FX_ROLL_LAND_LAST]) {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);

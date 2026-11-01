@@ -934,27 +934,59 @@ const cancel: SfxRecipe = (ctx, out, at) => {
 };
 
 /**
- * A Legendary or Mythic unit enters (cues.ts, with the effects layer's light rays): a low gong under
- * a brass fifth that swells open, and high glints; a Mythic's are longer, faster and shimmering.
+ * A Legendary or Mythic card enters (cues.ts, with the effects layer's rays), rebuilt by R2722000 to
+ * stand beside its orchestral intro: a band-passed swell rising into the downbeat at a quarter
+ * second, where a sub boom, a brass chord opening through a low-pass and a cymbal's wash land
+ * together under high glints; a Mythic's glints are more and faster and shimmer, over a choir of
+ * detuned saws. Its loudest moment is no louder than the gong and brass it replaced (B57).
  */
 const entrance: SfxRecipe = (ctx, out, at, params) => {
   const len = 1.3;
+  const hit = 0.25;
   const k = kit(ctx, out, at, len);
-  fmBell(k, out, 98, 1.4, 200, 0, 0.01, 0.35, len);
-  const brass = biquad(k, "lowpass", 600, 0);
-  glide(k, brass.frequency, 3000, 0.5);
-  chain(brass, heldEnvelope(k, 0, 0.25, 0.32, 0.9, 0.24, len), out);
-  for (const hz of [196, 294]) {
-    const note = oscillator(k, "sawtooth", hz);
-    chain(note, brass);
-    run(k, note, 0, len);
-  }
   const mythic = params.mythic === true;
+  // The swell: noise through a band that rises with it, cut off at the downbeat.
+  const swell = noiseSource(k);
+  const band = biquad(k, "bandpass", 700, 1.2);
+  glide(k, band.frequency, 3200, hit);
+  const rise = k.ctx.createGain();
+  rise.gain.setValueAtTime(FLOOR, time(k, 0));
+  rise.gain.exponentialRampToValueAtTime(0.2, time(k, hit));
+  rise.gain.exponentialRampToValueAtTime(FLOOR, time(k, hit + 0.06));
+  chain(swell, band, rise, out);
+  run(k, swell, 0, hit + 0.08);
+  // The downbeat: a sub boom, the brass chord opening, the cymbal.
+  fmBell(k, out, 49, 1.5, 90, hit, 0.008, 0.34, len);
+  const brass = biquad(k, "lowpass", 400, 0);
+  glide(k, brass.frequency, 3200, hit + 0.45);
+  const voices = level(k, 0.5);
+  chain(voices, brass, heldEnvelope(k, hit, 0.04, 0.3, 0.95, 0.2, len), out);
+  for (const hz of [98, 147, 196, 247]) {
+    const note = oscillator(k, "sawtooth", hz, hit);
+    chain(note, voices);
+    run(k, note, hit, len);
+  }
+  const wash = noiseSource(k);
+  chain(wash, biquad(k, "highpass", 6000, 0), envelope(k, hit, 0.005, 0.12, len), out);
+  run(k, wash, hit, len);
+  if (mythic) {
+    const choir = biquad(k, "lowpass", 2200, 0);
+    const swing = tremolo(k, 5.5, 0.25);
+    chain(choir, heldEnvelope(k, hit + 0.05, 0.3, 0.12, 1, 0.08, len), swing, out);
+    for (const hz of [392, 494, 587]) {
+      for (const cents of [-9, 9]) {
+        const voice = oscillator(k, "sawtooth", hz, hit);
+        voice.detune.setValueAtTime(k.cents + cents, time(k, hit));
+        chain(voice, choir);
+        run(k, voice, hit, len);
+      }
+    }
+  }
   const glints = mythic ? [2093, 2637, 3136, 3520, 4186, 5274] : [1568, 2093, 2637];
   const shimmer = mythic ? tremolo(k, 9, 0.2) : level(k, 1);
   chain(shimmer, out);
   glints.forEach((hz, i) => {
-    const start = 0.25 + (mythic ? 0.06 : 0.08) * i;
+    const start = hit + 0.05 + (mythic ? 0.06 : 0.08) * i;
     tone(k, shimmer, "sine", hz, start, 0.003, 0.1, start + 0.45);
   });
   return len;

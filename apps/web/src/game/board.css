@@ -1579,25 +1579,33 @@ button.modifier-badge[data-open="true"] {
    (animations.css's jk-summon-scale), and the cards around it wobble as it hits: the landing side's
    for a Large Unit, the whole board's for a Huge one, every card for a MASSIVE one, which also flashes
    the edges of the screen. None of it plays under Reduce motion; the hit-stop and the sound do. */
+/* R2722001: a Mythic's takeover. The queue holds its entry for the takeover's beat (`--takeover-hold`),
+   so the entry's own motion waits for it as a slam's waits for its anticipation, and when the card
+   lands (`--takeover-land-ms`) every other card on the board recoils from it. None of it plays under
+   Reduce motion, which takes no hold (a still card stands in, TakeoverStill.tsx). */
+.game:not([data-reduced-motion="true"])[data-takeover="mythic"] [data-animating] {
+  animation-delay: var(--takeover-hold, 0ms);
+}
+
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="summoned"],
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="animated"] {
-  animation-delay: var(--slam-anticipation, 0ms);
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
   animation: slam-wobble-slight 220ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
   animation: impact-card-wobble 250ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
   animation: slam-wobble-hard 320ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"]::after {
@@ -1610,7 +1618,34 @@ button.modifier-badge[data-open="true"] {
   mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   animation: giga-vignette-flash 400ms var(--ease-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
+}
+
+.game:not([data-reduced-motion="true"])[data-takeover="mythic"] .board .card:not([data-animating]) {
+  animation: takeover-recoil 420ms var(--ease-out) both;
+  animation-delay: var(--takeover-land-ms, 0ms);
+}
+
+@keyframes takeover-recoil {
+  0%, 100% { translate: 0 0; scale: 1; }
+  20% { translate: 0 7px; scale: 0.93; }
+  55% { translate: 0 -2px; scale: 1.02; }
+}
+
+/* R2722001: under Reduce motion a Mythic's entrance is this still card over the board, with no shake,
+   flash or sweep: shown, then gone (TakeoverStill.tsx). It takes no pointer event. */
+.takeover-still {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-clock);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--pal-black) 45%, transparent);
+}
+
+.takeover-still-card {
+  width: min(46vmin, 300px);
 }
 
 @keyframes slam-wobble-slight {

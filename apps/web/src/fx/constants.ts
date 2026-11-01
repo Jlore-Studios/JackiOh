@@ -37,7 +37,12 @@ export const FX_MANA_MAX_SPARKS = 10;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
-export const FX_LEGENDARY_TRAUMA = 0.5;
+/** R2722001: a Legendary's or a Mythic's entrance lands this hard (0.5 until R2722001 made it bigger). */
+export const FX_LEGENDARY_TRAUMA = 0.7;
+/** R2722001: a Mythic's takeover lasts its entry and this much more, inside FX_MAX_TAIL_MS (R200). */
+export const FX_TAKEOVER_TAIL_MS = 700;
+/** R2722001: the takeover's shake as its card lands, the hardest the board takes. */
+export const FX_TAKEOVER_TRAUMA = 1;
 export const FX_TRAP_TRAUMA = 0.4;
 export const FX_RESULT_TRAUMA = 0.9;
 export const FX_LETHAL_LEAD_MAX_MS = 600;     // the killing blow replayed before the result plays in at most this (R200)

@@ -62,6 +62,8 @@ import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, ty
 import {
   animTestid,
   createAnimationQueue,
+  entranceEntries,
+  leadMs,
   newEventsSince,
   planEntries,
   slamEntries,
@@ -72,7 +74,8 @@ import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget } f
 import { CatalogContext } from "./catalog.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
-import { createSlamResolver } from "./slamResolver.ts";
+import { createEntranceResolver, createSlamResolver } from "./slamResolver.ts";
+import TakeoverStill from "./TakeoverStill.tsx";
 import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
@@ -391,9 +394,12 @@ export default function Game({
   // motion has none, and starts it as the action arrives, below).
   const inFlightSlam = inFlight?.slam;
   const inFlightMs = inFlight?.durationMs ?? 0;
+  // R2722001: a slam's anticipation and a Mythic takeover's hold both come before the motion.
+  const inFlightLead = inFlight === null ? 0 : leadMs(inFlight);
+  const takeoverHold = inFlight?.entrance?.holdMs ?? 0;
   useEffect(() => {
     if (reducedMotion || inFlightSlam === undefined) return undefined;
-    const landsAt = inFlightSlam.anticipationMs + (inFlightMs - inFlightSlam.anticipationMs) * SLAM_LAND_AT;
+    const landsAt = inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT;
     const timer = window.setTimeout(() => {
       triggerHitStopMs(inFlightSlam.hitStopMs);
       // The cracks and the crater go into the sand under the cards, and fade there (SandSurface).
@@ -403,18 +409,25 @@ export default function Game({
       if (marks.length > 0 && zone !== null && zone !== undefined) slamSand(zone, { marks });
     }, landsAt);
     return () => window.clearTimeout(timer);
-  }, [inFlightSlam, inFlightMs, reducedMotion, triggerHitStopMs]);
+  }, [inFlightSlam, inFlightMs, inFlightLead, reducedMotion, triggerHitStopMs]);
   // #185: a landing Unit's tier comes from the newest view and the catalog, read at each enqueue.
   const catalog = useContext(CatalogContext);
   const catalogRef = useRef(catalog);
   catalogRef.current = catalog;
   const slamResolver = useMemo(() => createSlamResolver(() => latest.current, () => catalogRef.current), []);
+  // R2722001: a readable Legendary's or Mythic's entrance, and a Mythic's takeover, read at each enqueue.
+  const entranceResolver = useMemo(() => createEntranceResolver(() => catalogRef.current), []);
+  /** R2722001: under Reduce motion, the viewer's own Mythic shown still over the board, and the cards already shown so. */
+  const [still, setStill] = useState<{ defId: string; instanceId: string; view: PlayerView } | null>(null);
+  const stillSeen = useRef(new Set<string>());
+  const endStill = useCallback(() => setStill(null), []);
   const builtFor = useRef(reducedMotion);
   if (queue.current === null || builtFor.current !== reducedMotion) {
     builtFor.current = reducedMotion;
     queue.current = createAnimationQueue({
       reducedMotion,
       slamOf: slamResolver,
+      entranceOf: entranceResolver,
       onSettled: () => {
         setShown(latest.current);
       },
@@ -509,11 +522,21 @@ export default function Game({
         // #185: and the heaviest landing's, from the same capped share the queue would give it.
         const slams = slamEntries(planEntries(fresh, previous, true), slamResolver, true);
         triggerHitStopMs(slams.reduce((ms, entry) => Math.max(ms, entry.slam?.hitStopMs ?? 0), 0));
+        // R2722001: a Mythic's entrance is a still card instead of a takeover: the viewer's own (the
+        // other seat's is up in the showcase already), once per card.
+        const mythic = entranceEntries(slams, entranceResolver, { reduced: true, speed: 1, seen: stillSeen.current }).find(
+          (entry) => entry.entrance?.tier === "mythic" && entry.entrance.player === previous.viewer,
+        )?.entrance;
+        if (mythic !== undefined) setStill({ defId: mythic.defId, instanceId: mythic.instanceId, view: previous });
       }
       runner.enqueue(fresh, previous);
     }
+    if (previous !== null && previous.viewer !== view.viewer) {
+      stillSeen.current.clear();
+      setStill(null);
+    }
     if (runner.idle()) setShown(view);
-  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver]);
+  }, [view, runner, reducedMotion, triggerHitStop, triggerHitStopMs, slamResolver, entranceResolver]);
 
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
@@ -689,14 +712,19 @@ export default function Game({
       data-slam-side={inFlightSlam?.side}
       data-hit-stop={hitStop ? "true" : undefined}
       data-reduced-motion={reducedMotion ? "true" : undefined}
-      style={impactFeel === undefined && inFlightSlam === undefined ? undefined : {
+      data-takeover={takeoverHold > 0 ? "mythic" : undefined}
+      style={impactFeel === undefined && inFlightSlam === undefined && takeoverHold <= 0 ? undefined : {
         ...(impactFeel === undefined ? {} : {
           "--impact-number-scale": String(impactFeel.numberScale),
           "--impact-number-linger": `${String(impactFeel.numberLingerMs)}ms`,
         }),
         ...(inFlightSlam === undefined ? {} : {
           "--slam-anticipation": `${String(inFlightSlam.anticipationMs)}ms`,
-          "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightSlam.anticipationMs) * SLAM_LAND_AT))}ms`,
+          "--slam-land-ms": `${String(Math.round((inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
+        }),
+        ...(takeoverHold <= 0 ? {} : {
+          "--takeover-hold": `${String(takeoverHold)}ms`,
+          "--takeover-land-ms": `${String(Math.round(inFlightLead + (inFlightMs - inFlightLead) * SLAM_LAND_AT))}ms`,
         }),
       } as CSSProperties}
     >
@@ -767,6 +795,7 @@ export default function Game({
       {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
       <WearerProvider seat={wearer} loadouts={loadouts} viewer={shown.viewer}>
       {silent ? null : <CardShowcase view={view} queue={runner} />}
+      {silent || still === null ? null : <TakeoverStill defId={still.defId} instanceId={still.instanceId} view={still.view} onDone={endStill} />}
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
       {(replay && !replayPrompt) || promptOver(shown, burst, inFlight) ? null : (

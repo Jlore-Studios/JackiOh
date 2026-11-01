@@ -1,6 +1,6 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // Missing boxes mount nothing. No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, and R1363 shields.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, R1363 shields and R2722001 takeovers.
 
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint } from "./types.ts";
@@ -54,6 +54,9 @@ function spanOf(a: FxBox, b: FxBox, pad: number): FxBox {
 }
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** R2722001: a takeover's layers, bottom to top (fx.css). */
+const TAKEOVER_PARTS = ["dark", "sweep", "rays", "wave"] as const;
 
 function fogParts(doc: Document, el: HTMLElement, icon: FxIcon | null): void {
   el.style.setProperty("--fx-puffs", String(FX_FOG_PUFFS));
@@ -263,6 +266,22 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       el.setAttribute("data-direction", cue.direction);
       el.setAttribute("data-text", cue.text);
       tintVars(el, cue.tint);
+      break;
+    }
+    case "takeover": {
+      // R2722001: the board's darkening, a card-shaped silhouette (never a face, R202) sweeping into
+      // `at`, and the rays and the shockwave from there once the card lands at `--fx-land`.
+      const at = boxes.at ?? null;
+      if (at === null) return null;
+      placeAtCenter(el, at);
+      el.setAttribute("data-look", cue.look);
+      tintVars(el, cue.tint);
+      el.style.setProperty("--fx-land", `${Math.max(0, cue.landMs)}ms`);
+      for (const part of TAKEOVER_PARTS) {
+        const child = doc.createElement("div");
+        child.className = `fx-takeover-${part}`;
+        el.appendChild(child);
+      }
       break;
     }
   }

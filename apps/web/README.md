@@ -812,8 +812,11 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
-  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
-  with a one-second faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
+  accompaniment and modes from the family; the set's glint; a Mythic's shimmer). R2722000 makes it an orchestral
+  fanfare: a riser into the first downbeat, a Mythic's own motif (brass and choir, picked by its id), the melody under
+  brass, tremolo strings, trombone and an orchestra hit, and an ending held to the bar line, all FluidR3's (no other
+  SoundFont). A Legendary's file runs at most 9 s and every Mythic's longer, to 12 s at most. It renders as a sting
+  with a 1.2 s faded tail (`tail`, `post.fadeOutS`), its loudness measured over the file it keeps
   (`post.loudnessOverFile`); a track without those fields renders exactly as before. A Legendary or Mythic added to a
   set that ships needs its `INTRO_CARDS` row, its `intro` in `music-cards.json`, a render and a license row:
   `music-assets.test.ts` refuses a shipped one without them.

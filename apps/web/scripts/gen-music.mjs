@@ -23,10 +23,10 @@
 // LOOP_GUARD_S before the loop's end to LOOP_TAIL_S after it (`seam`). So the jump is exact even on
 // a decoder that keeps AAC's encoder priming (2112 samples, about 48 ms, of delay) or trims more.
 //
-// CARD INTROS (R1352). A Legendary's or a Mythic's intro is a sting of its own: a few bars that play
-// once, then a short tail (the score's `tail`, not STING_TAIL_S) whose last `post.fadeOutS` seconds
-// fade to silence, so the file ends clean wherever the reverb is, and its loudness is measured over
-// the file it keeps (`post.loudnessOverFile`), so it sits at every other track's level. A track that
+// CARD INTROS (R1352, R2722000). A Legendary's or a Mythic's intro is a sting of its own: a fanfare
+// that plays once, then a short tail (the score's `tail`, not STING_TAIL_S) whose last
+// `post.fadeOutS` seconds fade to silence, so the file ends clean wherever the reverb is, and its
+// loudness is measured over the file it keeps (`post.loudnessOverFile`), so it sits at every other track's level. A track that
 // names none of these renders exactly as before, and its hash does not move.
 //
 // It is idempotent by input: a track renders again only when its hash (the MIDI bytes, the render
@@ -74,9 +74,10 @@ const PEAK_DB = -1.5;
 /**
  * MUSIC_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks. R1352
  * raised it from 24 MiB for the card intros (the shipped sets' and, with its release, the Meditative
- * set's), at the same encoding as every track.
+ * set's), and R2722000 from 28 MiB for their fanfares (a riser, a Mythic's own motif and an ending
+ * make them about half as long again), at the same encoding as every track.
  */
-const BUDGET_BYTES = 28 * 1024 * 1024;
+const BUDGET_BYTES = 35 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 const FILE_MODE = 0o644;
 const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>]";

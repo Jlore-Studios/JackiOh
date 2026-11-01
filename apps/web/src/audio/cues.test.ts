@@ -1650,3 +1650,68 @@ describe("R1044 your own set Unit sounds as a set", () => {
     expect(shape(event)).toEqual([sfx("trapSet")]);
   });
 });
+
+describe("R2722002 a hidden card makes its entrance as it reveals, never as it is set", () => {
+  /** Legendary and Mythic Traps, and Cloaked cards of each kind: Units, a Spell and a Field Spell. */
+  const CARDS: Record<string, CueCard> = {
+    "trap-legend": { type: "Trap", tags: [], rarity: "Legendary" },
+    "trap-mythic": { type: "Field Trap", tags: [], rarity: "Mythic" },
+    "trap-rare": { type: "Trap", tags: [], rarity: "Rare" },
+    "cloak-common": { type: "Unit", tags: [], rarity: "Common" },
+    "cloak-epic": { type: "Spell", tags: [], rarity: "Epic" },
+    "cloak-legend": { type: "Unit", tags: [], rarity: "Legendary" },
+    "cloak-mythic": { type: "Field Spell", tags: [], rarity: "Mythic" },
+  };
+  const LINES_CLOAKED: CardAudioTable = {
+    ...LINES,
+    cards: {
+      ...LINES.cards,
+      "cloak-common": { kind: "unit", play: { voice: "hustler", text: "Peekaboo." } },
+      "cloak-legend": { kind: "unit", play: { voice: "hustler", text: "Surprise." } },
+      "cloak-mythic": { kind: "spell", cast: { voice: "crone", text: "Ta-da." } },
+    },
+  };
+  const seat = (viewer: PlayerId): CueContext =>
+    ctx({
+      lines: LINES_CLOAKED,
+      card: (defId) => CARDS[defId],
+      view: baseView(viewer === "p1" ? {} : { viewer: "p2", you: emptySide("p2"), opponent: emptySide("p1") }),
+    });
+  const reveal = (defId: string): GameEvent => ({ type: "activated", player: "p1", instanceId: "b1", defId, ability: "reveal" });
+  const ENTRANCE = sfx("entrance", STING_DELAY_MS);
+
+  it("R2722002 a Legendary or Mythic Trap's first firing plays the entrance; the sentinel and a firing again do not", () => {
+    expect(shape(trapFired("trap-legend"), seat("p1"))).toEqual([sfx("trapSting"), ENTRANCE].sort());
+    const mythic = cuesFor(trapFired("trap-mythic"), seat("p1")).find((c) => c.kind === "sfx" && c.id === "entrance");
+    expect(mythic).toMatchObject({ params: { mythic: true } });
+    // A lower-rarity Trap keeps the sting every Trap shares (R203).
+    expect(shape(trapFired("trap-rare"), seat("p1"))).toEqual([sfx("trapSting")]);
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSting")]);
+    const again = { ...trapFired("trap-mythic"), again: true } as GameEvent;
+    expect(shape(again, seat("p1"))).toEqual([sfx("spell")]);
+  });
+
+  it("R2722002 a Cloaked Common's reveal plays its rarity sting, a Cloaked Legendary's the entrance, on both seats", () => {
+    // Its controller reads it at the firing; the other seat, whose firing is the sentinel, at the activated reveal.
+    expect(shape(trapFired("cloak-common"), seat("p1"))).toEqual([sfx("trapSting"), sfx("sting", STING_DELAY_MS)].sort());
+    expect(shape(reveal("cloak-common"), seat("p2"))).toEqual([sfx("spell"), sfx("sting", STING_DELAY_MS)].sort());
+    expect(shape(trapFired("cloak-legend"), seat("p1"))).toEqual([sfx("trapSting"), ENTRANCE].sort());
+    expect(shape(reveal("cloak-legend"), seat("p2"))).toEqual([sfx("spell"), ENTRANCE].sort());
+    const epic = cuesFor(reveal("cloak-epic"), seat("p2")).find((c) => c.kind === "sfx" && c.id === "sting");
+    expect(epic).toMatchObject({ params: { tier: "epic" } });
+    const mythic = cuesFor(reveal("cloak-mythic"), seat("p2")).find((c) => c.kind === "sfx" && c.id === "entrance");
+    expect(mythic).toMatchObject({ params: { mythic: true } });
+    // The controller's own activated reveal adds nothing: its entrance is the firing's.
+    expect(shape(reveal("cloak-legend"), seat("p1"))).toEqual([sfx("spell")]);
+    expect(shape(trapFired(HIDDEN_DEF_ID, "p1"), seat("p2"))).toEqual([sfx("trapSting")]);
+  });
+
+  it("R2722002 a Cloaked set plays trapSet or the plain play whatever its rarity", () => {
+    for (const defId of ["cloak-common", "cloak-legend", "cloak-mythic"]) {
+      const own: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "c9", defId, costPaid: 2, formerId: "c2" };
+      expect(shape(own, seat("p1")), defId).toEqual([sfx("trapSet")]);
+    }
+    const theirs: GameEvent = { type: "cardPlayed", player: "p1", instanceId: HIDDEN_DEF_ID, defId: HIDDEN_DEF_ID, costPaid: 2 };
+    expect(shape(theirs, seat("p2"))).toEqual([sfx("play")]);
+  });
+});

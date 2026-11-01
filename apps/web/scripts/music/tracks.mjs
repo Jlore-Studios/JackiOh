@@ -18,7 +18,7 @@
 
 import {
   DR, DRUMS, GM, KIT, MOTIF_CELL, RHYTHMS,
-  alterOf, arp, bass, bend, cc, chordAt, chordPitches, comp, createSong, drums, instrument, line, melody, note, pad, pulse, pump, roots, section,
+  alterOf, arp, bass, bend, cc, chord, chordAt, chordPitches, comp, createSong, drums, instrument, line, melody, note, pad, pulse, pump, roots, section,
 } from "./compose.mjs";
 import { TONIC, key, pitch, rng, seedOf, voicing } from "./theory.mjs";
 
@@ -639,8 +639,20 @@ function draw() {
  *     celesta, Meditative a kalimba, Meditative+ a music box, Stinkyscape a crystal, Training Grounds
  *     a xylophone), and a Mythic adds a prismatic shimmer over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
- * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S and then rings out for
- * INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and `post.fadeOutS`).
+ * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S.
+ *
+ * R2722000 makes each a fanfare around that melody, in this order:
+ *   - a riser into the first downbeat: a timpani roll and a cymbal roll swelling on the dominant, and
+ *     tremolo strings swelling under them (INTRO_LEGENDARY_RISER_BEATS, a Mythic's INTRO_MYTHIC_RISER_S);
+ *   - a Mythic's own motif (MYTHIC_MOTIF_CONTOURS, picked by its id), stated by the brass and the choir
+ *     in octaves over timpani, a step higher each bar, for as many bars as hold it past every Legendary;
+ *   - the melody under the full ensemble: brass doubling the tune, the choir and the tremolo strings
+ *     holding the chords, a trombone doubling the bass, an orchestra hit and a crash on the downbeat;
+ *   - an ending, the tonic struck by everything with a second crash, held to the next bar line, and a
+ *     timpani roll-off, so the music still ends on a bar line;
+ * then it rings out for INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and
+ * `post.fadeOutS`). A Legendary's file runs at most INTRO_LEGENDARY_MAX_S, a Mythic's from
+ * INTRO_MYTHIC_MIN_S to INTRO_MAX_S, so every Mythic's runs longer than every Legendary's.
  *
  * The Mythics are hand-tuned from the themes they had until R822000 retired them (each theme's key,
  * tempo and forces, and the motif as the theme quoted it), and so are the best-known Legendaries:
@@ -649,14 +661,47 @@ function draw() {
  * card's tags moves no rendered file without a new render.
  * ------------------------------------------------------------------------------------------- */
 
-/** R1352: seconds of ring-out kept after an intro's last bar line, the last INTRO_FADE_S of them faded. */
-const INTRO_TAIL_S = 1;
-const INTRO_FADE_S = 0.6;
 /**
- * R1352: how long an intro's music runs to its last bar line, in seconds (MUSIC_INTRO_MIN_S and,
- * with the tail, MUSIC_INTRO_MAX_S in src/audio/constants.ts hold the files to it).
+ * R1352, R2722000: seconds of ring-out kept after an intro's last bar line, the last INTRO_FADE_S of
+ * them faded (raised from 1 s and 0.6 s for the ending's held chord and its hall).
+ */
+const INTRO_TAIL_S = 1.2;
+const INTRO_FADE_S = 0.8;
+/**
+ * R1352: how long an intro's melody runs, in seconds (MUSIC_INTRO_MIN_S in src/audio/constants.ts
+ * holds every file's music to its low end at least).
  */
 const INTRO_SPAN_S = [3, 5];
+/** R2722000: a Legendary's riser, in beats: a pickup into the melody's first downbeat. */
+const INTRO_LEGENDARY_RISER_BEATS = 1;
+/** R2722000: about how long a Mythic's riser runs, in seconds, rounded to whole beats of its tempo. */
+const INTRO_MYTHIC_RISER_S = 1.2;
+/** R2722000: a Legendary's whole file, ring-out included, runs at most this (MUSIC_INTRO_LEGENDARY_MAX_S). */
+const INTRO_LEGENDARY_MAX_S = 9;
+/** R2722000: a Mythic's whole file runs at least this, so it outlasts every Legendary's, and at most INTRO_MAX_S. */
+const INTRO_MYTHIC_MIN_S = 9.25;
+/** R2722000: no intro's file runs longer than this (MUSIC_INTRO_MAX_S). */
+const INTRO_MAX_S = 12;
+/**
+ * R2722000: the contours a Mythic's own motif takes, in degrees of the key from its chord's root:
+ * wide leaps through the chord, the way a hero's theme climbs, each its own shape.
+ */
+const MYTHIC_MOTIF_CONTOURS = [
+  [0, 4, 7, 9, 7],
+  [0, -3, 4, 7, 11],
+  [0, 7, 6, 4, 9],
+  [0, 2, 4, 9, 7],
+  [7, 4, 0, 4, 11],
+];
+/** R2722000: one bar's rhythm for a Mythic motif's five notes, by beats in the bar. */
+const MYTHIC_MOTIF_RHYTHMS = {
+  4: [[1, 0.5, 0.5, 1, 1], [0.75, 0.25, 1, 1, 1], [0.5, 0.5, 1, 0.5, 1.5], [1.5, 0.5, 0.5, 0.5, 1]],
+  3: [[0.5, 0.5, 0.5, 0.5, 1], [1, 0.5, 0.5, 0.5, 0.5], [0.75, 0.25, 1, 0.5, 0.5]],
+};
+/** R2722000: the tutti's velocity, a Legendary's and a Mythic's. */
+const INTRO_TUTTI_VEL = { legendary: 84, mythic: 104 };
+/** R2722000: the channels the full ensemble adds, past the ones every intro already uses (0–8, 10). */
+const TUTTI_CH = { brass: 11, choir: 12, tremolo: 13, hit: 14, trombone: 15 };
 /** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
@@ -1086,7 +1131,117 @@ const INTRO_STYLES = {
   },
 };
 
-/** An intro's score: the lead on the motif, its style's accompaniment, the set's glint, a Mythic's shimmer. */
+/* ----- R2722000: the fanfare around the melody ----- */
+
+/**
+ * A section of `beats` beats on one chord, appended to the intro the way `section` appends bars: a
+ * riser before the first downbeat, or the ending after the cadence (neither need be a whole bar).
+ */
+function pickup(song, beats, token) {
+  const part = song.parts.intro;
+  const sec = { song, part, start: part.beats, bars: 1, beats, spans: [{ chord: chord(token), t: 0, beats, bar: 0 }], k: song.key, rng: song.rng };
+  part.beats += beats;
+  return sec;
+}
+
+/** The octave that centers `notes` (degrees of the key) on the MIDI note `center`. */
+function octaveFor(k, notes, center) {
+  const mean = notes.reduce((sum, [d]) => sum + pitch(k, d), 0) / notes.length;
+  return Math.round((center - mean) / 12);
+}
+
+/** The downbeat the riser lands on: an orchestra hit on the chord, a timpani stroke, a crash and a bass drum. */
+function downbeat(sec, vel) {
+  comp(sec, { ch: TUTTI_CH.hit, hits: [[0, 0.8, 1]], center: 60, vel, until: 0.01 });
+  const c = chordAt(sec, 0);
+  note(sec, 4, 0, 1.5, pitch(sec.k, c.root, -2, alterOf(c, c.root)), vel, { exact: true });
+  note(sec, DRUMS, 0, 0.25, DR.crash2, vel * 0.9);
+  note(sec, DRUMS, 0, 0.25, DR.kick, vel * 0.9);
+}
+
+/**
+ * The riser: `beats` on the dominant, a timpani roll and a cymbal roll swelling into the first
+ * downbeat, the tremolo strings swelling under them (expression from 40 to full).
+ */
+function introRiser(song, s, beats, vel) {
+  const sec = pickup(song, beats, "V");
+  pad(sec, { ch: TUTTI_CH.tremolo, center: 55, vel: vel * 0.7 });
+  const steps = Math.max(4, Math.round(beats * 8));
+  for (let i = 0; i <= steps; i += 1) cc(sec, TUTTI_CH.tremolo, (beats * i) / steps, 11, 40 + (87 * i) / steps);
+  timpaniRoll(sec, 4, 0, beats, vel * 0.9);
+  for (let t = 0; t < beats - 1e-9; t += 0.125) note(sec, DRUMS, t, 0.125, DR.crash2, 18 + ((vel - 18) * t) / beats, { exact: true });
+}
+
+/** How many bars of its own motif hold a Mythic's file to INTRO_MYTHIC_MIN_S at least: one or more. */
+function mythicBars(s, riser, ending) {
+  const spb = 60 / s.bpm;
+  const fixed = riser + s.bars * s.bpb + ending;
+  let n = 1;
+  while ((fixed + n * s.bpb) * spb + INTRO_TAIL_S < INTRO_MYTHIC_MIN_S - 1e-9) n += 1;
+  return n;
+}
+
+/**
+ * A Mythic's own motif, picked by its id: one bar's contour and rhythm, stated by the brass and the
+ * choir an octave apart over timpani, tremolo strings and the trombone, a step higher each bar.
+ */
+function mythicMotif(song, s, bars, vel) {
+  const r = rng(seedOf(`mythic:${s.card.card}`));
+  const contour = r.pick(MYTHIC_MOTIF_CONTOURS);
+  const rhythm = r.pick(MYTHIC_MOTIF_RHYTHMS[s.bpb]);
+  const climb = ["I", "II", "III", "IV"];
+  const sec = section(song, "intro", bars, Array.from({ length: bars }, (_, bar) => climb[bar % climb.length]));
+  const notes = [];
+  for (let bar = 0; bar < bars; bar += 1) contour.forEach((d, i) => notes.push([d + (bar % climb.length), rhythm[i]]));
+  const octave = octaveFor(song.key, notes, 62);
+  line(sec, { ch: TUTTI_CH.brass, notes, octave, vel });
+  line(sec, { ch: TUTTI_CH.choir, notes, octave: octave + 1, vel: vel * 0.8 });
+  pad(sec, { ch: TUTTI_CH.tremolo, center: 55, vel: vel * 0.6 });
+  bass(sec, { ch: TUTTI_CH.trombone, pattern: [[0, "R", s.bpb, 1]], octave: -1, vel: vel * 0.75 });
+  bass(sec, { ch: 2, pattern: [[0, "R", s.bpb, 1]], vel: 76 });
+  roots(sec, { ch: 4, octave: -2, vel: vel * 0.8, hits: [[0, 0.5, 1], [s.bpb - 1, 0.5, 0.7]] });
+  downbeat(sec, vel);
+}
+
+/**
+ * The full ensemble under the melody: the brass doubling the tune, the tremolo strings (and a
+ * Mythic's choir) holding the chords, the trombone doubling the bass, the riser's downbeat.
+ */
+function introTutti(sec, s, vel) {
+  line(sec, { ch: TUTTI_CH.brass, notes: s.melody, octave: octaveFor(sec.k, s.melody, 62), vel: vel * 0.8 });
+  pad(sec, { ch: TUTTI_CH.tremolo, center: 55, vel: vel * 0.55 });
+  if (s.mythic) pad(sec, { ch: TUTTI_CH.choir, center: 64, vel: vel * 0.6 });
+  bass(sec, { ch: TUTTI_CH.trombone, pattern: [[0, "R", s.bpb, 1]], octave: -1, vel: vel * 0.75 });
+  downbeat(sec, vel);
+}
+
+/**
+ * The ending: the tonic struck by everything (the lead on the melody's last degree, the brass, the
+ * tremolo strings and a Mythic's choir, the bass and the trombone, the orchestra hit, a second crash
+ * and the bass drum) and held to the bar line, under a timpani roll that dies away with it.
+ */
+function introEnding(song, s, beats, vel) {
+  const sec = pickup(song, beats, "I");
+  const hold = beats - 0.05;
+  const tonic = s.melody[s.melody.length - 1][0];
+  note(sec, 0, 0, hold, pitch(sec.k, tonic, s.leadOctave), 92, { exact: true });
+  comp(sec, { ch: TUTTI_CH.brass, hits: [[0, hold, 1]], center: 60, vel: vel * 0.85 });
+  pad(sec, { ch: TUTTI_CH.tremolo, center: 55, vel: vel * 0.6 });
+  if (s.mythic) pad(sec, { ch: TUTTI_CH.choir, center: 64, vel: vel * 0.7 });
+  bass(sec, { ch: TUTTI_CH.trombone, pattern: [[0, "R", hold, 1]], octave: -1, vel: vel * 0.8 });
+  bass(sec, { ch: 2, pattern: [[0, "R", hold, 1]], vel: 80 });
+  comp(sec, { ch: TUTTI_CH.hit, hits: [[0, 0.8, 1]], center: 60, vel, until: 0.01 });
+  const root = pitch(sec.k, 0, -2);
+  note(sec, 4, 0, 0.5, root, vel, { exact: true });
+  for (let t = 0.25; t < hold - 0.25 + 1e-9; t += 0.125) note(sec, 4, t, 0.125, root, vel * (0.8 - (0.45 * (t - 0.25)) / Math.max(0.25, hold - 0.5)), { exact: true });
+  note(sec, DRUMS, 0, 0.25, DR.crash2, vel);
+  note(sec, DRUMS, 0, 0.25, DR.kick, vel);
+}
+
+/**
+ * An intro's score: the riser, a Mythic's own motif, the lead on the melody with its style's
+ * accompaniment, the set's glint and a Mythic's shimmer under the full ensemble, and the ending.
+ */
 function cardIntro(card) {
   const s = introSpec(card);
   const style = INTRO_STYLES[s.palette.style];
@@ -1096,21 +1251,33 @@ function cardIntro(card) {
   song.post.fadeOutS = INTRO_FADE_S;
   song.post.loudnessOverFile = true;
   // The lead sits where its instrument sings: the melody's middle near the palette's center.
-  const mean = s.melody.reduce((sum, [d]) => sum + pitch(song.key, d), 0) / s.melody.length;
-  s.leadOctave = Math.round((s.palette.center - mean) / 12);
+  s.leadOctave = octaveFor(song.key, s.melody, s.palette.center);
   instrument(song, 0, s.palette.lead, { volume: 100, pan: 62, reverb: 55 });
   instrument(song, 1, s.palette.second, { volume: 80, pan: 50, reverb: 60 });
   instrument(song, 2, s.palette.bass, { volume: 86, pan: 64, reverb: 35 });
   instrument(song, 3, s.palette.color, { volume: 76, pan: 84, reverb: 65 });
-  instrument(song, 4, GM.timpani, { volume: 84, pan: 64, reverb: 60 });
+  instrument(song, 4, GM.timpani, { volume: 88, pan: 64, reverb: 60 });
   instrument(song, 6, s.glint, { volume: 66, pan: 30, reverb: 70 });
   instrument(song, 7, s.palette.extra ?? GM.warmPad, { volume: 74, pan: 76, reverb: 60 });
   instrument(song, 10, GM.glock, { volume: 62, pan: 92, reverb: 55 });
   if (s.mythic) {
     instrument(song, 5, GM.choir, { volume: 62, pan: 64, reverb: 85 });
     instrument(song, 8, GM.crystal, { volume: 70, pan: 96, reverb: 80 });
+    instrument(song, TUTTI_CH.choir, GM.choir, { volume: 84, pan: 72, reverb: 80 });
   }
-  if (style.kit !== null) instrument(song, DRUMS, style.kit, { volume: 84, reverb: 45 });
+  instrument(song, TUTTI_CH.brass, GM.brass, { volume: 88, pan: 56, reverb: 60 });
+  instrument(song, TUTTI_CH.tremolo, GM.tremolo, { volume: 78, pan: 44, reverb: 65 });
+  instrument(song, TUTTI_CH.hit, GM.orchHit, { volume: 84, pan: 64, reverb: 55 });
+  instrument(song, TUTTI_CH.trombone, GM.trombone, { volume: 84, pan: 70, reverb: 50 });
+  // A style that names no kit still takes the orchestra's, for the riser's cymbal and the hits.
+  instrument(song, DRUMS, style.kit ?? KIT.orchestra, { volume: 84, reverb: 45 });
+
+  const vel = s.mythic ? INTRO_TUTTI_VEL.mythic : INTRO_TUTTI_VEL.legendary;
+  const riser = s.mythic ? Math.max(1, Math.round((INTRO_MYTHIC_RISER_S * s.bpm) / 60)) : INTRO_LEGENDARY_RISER_BEATS;
+  // The ending fills the bar the riser began, so the music still ends on a bar line.
+  const ending = s.bpb - (riser % s.bpb) || s.bpb;
+  introRiser(song, s, riser, vel);
+  if (s.mythic) mythicMotif(song, s, mythicBars(s, riser, ending), vel);
 
   const sec = section(song, "intro", s.bars, s.prog);
   const last = lastBarOf(sec);
@@ -1123,6 +1290,12 @@ function cardIntro(card) {
     glintRun(sec, 8, last, { count: 8, step: 0.25, center: 76, vel: 44 });
   }
   s.extra?.(sec, s);
+  introTutti(sec, s, vel);
+  introEnding(song, s, ending, vel);
+
+  const seconds = (song.parts.intro.beats * 60) / s.bpm + INTRO_TAIL_S;
+  if (!s.mythic && seconds > INTRO_LEGENDARY_MAX_S + 1e-9) throw new Error(`intro ${card.card}: ${seconds.toFixed(2)} s is over a Legendary's ${INTRO_LEGENDARY_MAX_S} s`);
+  if (s.mythic && (seconds < INTRO_MYTHIC_MIN_S - 1e-9 || seconds > INTRO_MAX_S + 1e-9)) throw new Error(`intro ${card.card}: ${seconds.toFixed(2)} s is outside a Mythic's ${INTRO_MYTHIC_MIN_S}–${INTRO_MAX_S} s`);
   return { song, tail: INTRO_TAIL_S };
 }
 

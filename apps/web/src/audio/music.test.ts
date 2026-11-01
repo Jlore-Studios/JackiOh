@@ -14,6 +14,7 @@ import {
   MUSIC_HANDOFF_FADE_S,
   MUSIC_INTRO_CUT_FADE_S,
   MUSIC_INTRO_DUCK_GAIN,
+  MUSIC_INTRO_GAIN,
   MUSIC_INTRO_LATE_S,
   MUSIC_LEAD_S,
   MUSIC_OPEN_LOWPASS_HZ,
@@ -550,6 +551,22 @@ describe("R1350 a card's intro on top of the music", () => {
     await settle();
     const danger = voices(r.audio)[1];
     expect(danger !== undefined && r.audio.reaches(danger.source, bedOf(r.audio))).toBe(true);
+  });
+
+  it("R2722000 plays the intro at MUSIC_INTRO_GAIN over a bed ducked to MUSIC_INTRO_DUCK_GAIN, lower than before", async () => {
+    const r = await playing();
+    r.player.playIntro("intro-a");
+    await settle();
+    const [clip] = clips(r);
+    expect(clip?.gain.param("gain").value).toBe(MUSIC_INTRO_GAIN);
+    expect(MUSIC_INTRO_GAIN).toBeGreaterThan(1);
+    expect(MUSIC_INTRO_DUCK_GAIN).toBeLessThan(0.35);
+    expect(bedOf(r.audio).param("gain").targets()[0]?.value).toBe(MUSIC_INTRO_DUCK_GAIN);
+    // Cut short, it fades from its own gain, never jumping back to unity first.
+    r.player.stopIntro();
+    const set = clip?.gain.param("gain").events.find((e) => e.method === "setValueAtTime");
+    expect(set?.value).toBe(MUSIC_INTRO_GAIN);
+    expect(r.audio.violations).toEqual([]);
   });
 
   it("R1350 follows the music's volume and mute: through the music bus, and nothing fetched or played muted or at zero", async () => {

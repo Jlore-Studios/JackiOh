@@ -1979,6 +1979,197 @@
   animation: fx-zone-count var(--fx-ms) ease-out both;
 }
 
+/* ---------------------------------------------------------------------------- takeover --- */
+
+/* R2722001: a Mythic takes over the board, as Hearthstone's Deathwing arrives. The cue covers the
+   whole layer; `--fx-x/--fx-y` is where the card lands and `--fx-land` when, inside the queue's hold.
+   The board darkens to that moment (the card mid-animation sits above the layer, so it stays lit), a
+   card-shaped silhouette in the look's colors sweeps across it into the landing point (a shape,
+   never a face: R202), then light rays turn and a shockwave crosses both sides from there. The
+   whole cue fades out by --fx-ms, inside the effects' tail (R200). Transform and opacity only. */
+.fx-takeover {
+  inset: 0;
+  z-index: 0;
+  animation: fx-takeover-in var(--fx-ms) linear both;
+}
+
+@keyframes fx-takeover-in {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fx-takeover-dark {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--fx-x) var(--fx-y),
+    color-mix(in srgb, var(--fx-tint-core) 22%, transparent) 0,
+    color-mix(in srgb, var(--fx-tint-glow) 14%, rgb(0 0 0 / 0.55)) 30%,
+    rgb(0 0 0 / 0.92) 75%
+  );
+  animation: fx-takeover-dark var(--fx-land) ease-in both;
+}
+
+@keyframes fx-takeover-dark {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0.72;
+  }
+}
+
+.fx-takeover-sweep {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: min(42vmin, 320px);
+  aspect-ratio: 5 / 7;
+  translate: -50% -50%;
+  border-radius: 6%;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--fx-tint-rim) 85%, white) 0%,
+    color-mix(in srgb, var(--fx-tint-core) 60%, transparent) 45%,
+    color-mix(in srgb, var(--fx-tint-glow) 80%, transparent) 100%
+  );
+  box-shadow:
+    0 0 0 3px var(--fx-tint-rim),
+    0 0 40px 12px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
+  animation: fx-takeover-sweep var(--fx-land) cubic-bezier(0.55, 0, 0.75, 0.35) both;
+}
+
+@keyframes fx-takeover-sweep {
+  0% {
+    transform: translateX(-75vw) rotate(-14deg) scale(2.4);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* #100 Ceaseless Void collapses into the dark from all around; #97 Zephrys blows in from the other side. */
+.fx-takeover[data-look="void"] .fx-takeover-sweep {
+  animation-name: fx-takeover-collapse;
+}
+
+.fx-takeover[data-look="genie"] .fx-takeover-sweep {
+  animation-direction: reverse;
+  animation-name: fx-takeover-gust;
+}
+
+@keyframes fx-takeover-collapse {
+  0% {
+    transform: scale(6) rotate(30deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-takeover-gust {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(75vw) rotate(16deg) scale(2.2);
+    opacity: 0;
+  }
+}
+
+.fx-takeover-rays {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 220vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--fx-tint-core) 55%, transparent) 0deg 4deg,
+    transparent 7deg 15deg,
+    color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 17deg 20deg,
+    transparent 23deg 30deg
+  );
+  mask-image: radial-gradient(circle, black 0, black 18%, transparent 55%);
+  animation: fx-takeover-rays calc(var(--fx-ms) - var(--fx-land)) cubic-bezier(0.2, 0.7, 0.3, 1) var(--fx-land) both;
+}
+
+@keyframes fx-takeover-rays {
+  0% {
+    transform: rotate(0deg) scale(0.3);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: rotate(40deg) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.fx-takeover[data-look="void"] .fx-takeover-rays {
+  animation-direction: reverse;
+}
+
+.fx-takeover-wave {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  width: 40vmax;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, var(--fx-tint-rim) 80%, white),
+    0 0 30px 14px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
+    inset 0 0 30px 10px color-mix(in srgb, var(--fx-tint-glow) 50%, transparent);
+  animation: fx-takeover-wave calc(var(--fx-ms) - var(--fx-land)) ease-out var(--fx-land) both;
+}
+
+@keyframes fx-takeover-wave {
+  0% {
+    transform: scale(0.05);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(5);
+    opacity: 0;
+  }
+}
+
 /* ------------------------------------------------------------------------ reduced motion --- */
 
 /* R200: under prefers-reduced-motion no effect is drawn at all. FxLayer already renders

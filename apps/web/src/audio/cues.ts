@@ -42,6 +42,11 @@
 // stands in. And every effect about a unit on the field comes from that unit's lane: `cuesFor`
 // pans it left or right by where the unit stands, which the screen shows both seats alike.
 //
+// R2722002: a hidden card makes that entrance as it reveals, never as it is set. A Trap's or a
+// Cloaked card's first firing does on the seat that reads it, and a Cloaked card's Activate: Reveal
+// on the other seat, whose `trapFired` is the sentinel; every set keeps the set sound or the plain
+// play (`revealSting`, game/entrance.ts).
+//
 // MN05 (docs/meditative-set.md M8): Armor and the niche moments, each keyed on what its event
 // already says. R1363: a hit Armor took half or more of (`damage.absorbed * 2 >= absorbed + amount`)
 // clanks dully under its impact, and one Armor took whole (`damageAbsorbed`) rings bright; both come
@@ -65,6 +70,7 @@ import type {
 } from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
+import { otherSeatReveal } from "../game/entrance.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { armorTookHalf, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
@@ -349,6 +355,22 @@ function playSting(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueCo
   return NONE;
 }
 
+/**
+ * R2722002: a hidden card's sting as it reveals, on a seat that can read the card: a Legendary's or a
+ * Mythic's the entrance its normal play gets, and a Cloaked card of a lower rarity (one that is no
+ * Trap) its rarity's play sting. A lower-rarity Trap keeps the trap sting every Trap shares (R203).
+ */
+function revealSting(defId: string, ctx: CueContext): readonly SoundCue[] {
+  const card = readable(ctx, defId);
+  if (card === undefined) return NONE;
+  const rarity = card.printedRarity ?? card.rarity;
+  if (rarity === "Legendary") return [sfx("entrance", undefined, STING_DELAY_MS)];
+  if (rarity === "Mythic") return [sfx("entrance", { mythic: true }, STING_DELAY_MS)];
+  if (card.type === "Trap" || card.type === "Field Trap") return NONE;
+  const tier = STING_TIERS[rarity ?? "Token"];
+  return tier === undefined ? NONE : [sfx("sting", tier === "common" ? undefined : { tier }, STING_DELAY_MS)];
+}
+
 /** R669: the rarities a play sting sizes itself by; Legendary and Mythic enter instead, a Token has none. */
 const STING_TIERS: Readonly<Partial<Record<Rarity | PrintedRarity, StingTier>>> = {
   Common: "common",
@@ -551,13 +573,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R203 + R154: only the controller's seat reads the trap, so only it hears the cast line. R17's
   // play-reactive traps fire on the very play they answer, so the line cuts in on that play's line.
   // R2657001: a face-up Field Trap firing again reveals nothing, so it gives an activation's shimmer,
-  // with no sting and no line (it spoke when it revealed).
+  // with no sting and no line (it spoke when it revealed). R2722002: a first firing the seat can read
+  // is the hidden card's reveal, and makes its entrance (`revealSting`); the sentinel makes none.
   trapFired: {
     sfx: "trapSting",
     cues: (event, ctx) =>
       event.again === true
         ? [sfx("spell")]
-        : [sfx("trapSting"), ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
+        : [sfx("trapSting"), ...revealSting(event.defId, ctx), ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
   },
   attackDeclared: { sfx: "attack", cues: () => [sfx("attack")] },
   attackCancelled: { sfx: "cancel", cues: () => [sfx("cancel")] },
@@ -614,13 +637,15 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   stolen: { sfx: "steal", cues: () => [sfx("steal")] },
   // R1365: the latch springs open, where `locked` clanked shut.
   unlocked: { sfx: "unlock", cues: () => [sfx("unlock")] },
-  // B3.2: an ability is a small cast; the effects it resolves into carry their own sounds.
+  // B3.2: an ability is a small cast; the effects it resolves into carry their own sounds. R2722002:
+  // a Cloaked card's Reveal is that card's entrance on the seat whose `trapFired` cannot name it.
   activated: {
     sfx: "spell",
     cues: (event, ctx) => {
       const card = readable(ctx, event.defId);
       const timbre = card === undefined ? undefined : timbreFor(card);
-      return [sfx("spell", timbre === undefined ? undefined : { timbre })];
+      const shimmer = sfx("spell", timbre === undefined ? undefined : { timbre });
+      return otherSeatReveal(event, ctx.view.viewer) ? [shimmer, ...revealSting(event.defId, ctx)] : [shimmer];
     },
   },
   // B3.1: the card lands in its unit zone with a summon's thud, sized by the Unit it now is. It keeps no

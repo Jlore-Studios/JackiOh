@@ -144,6 +144,14 @@ export type FxFogCue = {
   delayMs: number;
   durationMs: number;
 };
+/**
+ * R2722001: a Mythic's takeover, its look a marquee card's own or the shared prismatic one. The board
+ * darkens, a card-shaped silhouette (never a face, R202) sweeps across it into `at`, light rays turn
+ * and a shockwave crosses both sides when it lands at `landMs`, all inside the entry and gone within
+ * the effects' tail (R200).
+ */
+export type TakeoverLook = "prismatic" | "void" | "pawn" | "genie" | "ai";
+export type FxTakeoverCue = { kind: "takeover"; look: TakeoverLook; tint: FxTint; at: FxAnchor; landMs: number; delayMs: number; durationMs: number };
 export type FxZoneCue = {
   kind: "zone";
   at: FxAnchor;
@@ -192,7 +200,8 @@ export type FxDomCue =
   | FxChaosCue
   | FxRollCue
   | FxFogCue
-  | FxZoneCue;
+  | FxZoneCue
+  | FxTakeoverCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue;
 export type FxCue = FxCanvasCue | FxShakeCue | FxDomCue | FxStageCue;
 

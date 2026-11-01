@@ -1,6 +1,6 @@
 // R631 (SPEC §10.11 "Music"): the rendered music on disk, its manifest, its size cap, its license
 // record, the cards that play it, and `gen-music.mjs --check`. R1352: every Legendary's and Mythic's
-// own intro, tokens printed so included, over the sets that ship.
+// own intro, tokens printed so included, over the sets that ship; R2722000: a Mythic's outlasts them all.
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, openSync, closeSync, ftruncateSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
+import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_LEGENDARY_MAX_S, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
 import { MENU_TRACK, MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, parseMusicCards, parseMusicManifest, startTrack, stationTracks } from "./musicData.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -154,6 +154,27 @@ describe("R631 the cards that play music", () => {
       expect(track?.handoff ?? 0, id).toBeGreaterThanOrEqual(MUSIC_INTRO_MIN_S - 1e-6);
       expect(track?.duration ?? Infinity, id).toBeLessThanOrEqual(MUSIC_INTRO_MAX_S + 1e-6);
     }
+  });
+
+  it("R2722000 runs every Legendary's intro MUSIC_INTRO_LEGENDARY_MAX_S at most and every Mythic's longer than every Legendary's, each its own", () => {
+    const seconds: Record<"Legendary" | "Mythic", number[]> = { Legendary: [], Mythic: [] };
+    const hashes: string[] = [];
+    for (const [id, entry] of Object.entries(MUSIC_CARDS)) {
+      if (entry.intro === undefined) continue;
+      const card = CATALOG[id];
+      const rarity = card?.token === true ? card.printedRarity : card?.rarity;
+      const track = MUSIC_MANIFEST.files[entry.intro];
+      expect(rarity === "Legendary" || rarity === "Mythic", id).toBe(true);
+      if (track === undefined || (rarity !== "Legendary" && rarity !== "Mythic")) continue;
+      seconds[rarity].push(track.duration);
+      hashes.push(track.hash);
+    }
+    expect(seconds.Legendary.length).toBeGreaterThan(0);
+    expect(seconds.Mythic.length).toBeGreaterThan(0);
+    for (const s of seconds.Legendary) expect(s).toBeLessThanOrEqual(MUSIC_INTRO_LEGENDARY_MAX_S + 1e-6);
+    expect(Math.min(...seconds.Mythic)).toBeGreaterThan(Math.max(...seconds.Legendary));
+    for (const s of seconds.Mythic) expect(s).toBeLessThanOrEqual(MUSIC_INTRO_MAX_S + 1e-6);
+    expect(new Set(hashes).size, "no two intros render the same score").toBe(hashes.length);
   });
 
   it("R1352 refuses an intro that names a looping track or none", () => {
