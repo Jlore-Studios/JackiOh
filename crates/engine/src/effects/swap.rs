@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::combat::enter_new_side;
 use crate::own_library::hide_from_owner;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, GameState, find_instance};
+use crate::state::{CardInstance, GameState};
 use crate::wire::{GameEvent, PlayerId, Row, Zone, opponent_of};
 use crate::zones::{
     PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, carried_at, is_locked, is_reserved,

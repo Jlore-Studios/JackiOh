@@ -15,7 +15,7 @@ use serde_json::json;
 use crate::layers::AuraTable;
 use crate::prelude::json_as;
 use crate::script::Effect;
-use crate::state::{CardInstance, GameState, find_instance};
+use crate::state::{CardInstance, GameState};
 use crate::subsystems::scorer::{Scored, ScorerOptions, dry_run_base, perfect_pool, score_def_in};
 use crate::wire::PlayerId;
 

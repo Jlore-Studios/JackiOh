@@ -13,7 +13,7 @@ use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, pl
 use crate::faces::card_type_of;
 use crate::rng::Rng;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance, find_instance_mut};
+use crate::state::{CardInstance, find_instance_mut};
 use crate::wire::{CardType, GameEvent, Keyword, OneOrMany, PlayerId, Row, Zone, ZoneName};
 use crate::zones::{StandingAt, acting_on};
 
