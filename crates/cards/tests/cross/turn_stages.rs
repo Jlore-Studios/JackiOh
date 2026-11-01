@@ -316,7 +316,8 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
         // Both steals are due at the start of p1's next turn, in that order (R68); p2's fixture trap
         // returns all of p2's units to hand when the opponent takes one of p2's permanents.
         let mut s = scenario(json!({
-            // A (0) Spell keeps p1's turn open after the plays (R82): the Fanatics Can't Defend (R2657000).
+            // A (0) Spell keeps p1's turn open after the plays (R82): the Fanatics Can't Defend
+            // (R2657000), so they offer no switch to Defense Position.
             "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO, "core-010"], "library": [RENO, RENO, RENO] },
             "p2": { "field": [VANILLA, TEMPO_TIMMY], "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
