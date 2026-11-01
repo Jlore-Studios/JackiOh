@@ -86,11 +86,12 @@ pub const WS_CLOSE: WsClose = WsClose {
 /// RFC 6455's "message too big".
 const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
 
-/// RFC 6455's normal closure.
-const CLOSE_NORMAL: u16 = 1000;
+/// RFC 6455's normal closure: the default close, and the match and co-op actors' for a socket they
+/// are done with (replaced, detached, or a finished match's watcher).
+pub const CLOSE_NORMAL: u16 = 1000;
 
-/// RFC 6455's "going away": the server is shutting down (#861).
-const CLOSE_GOING_AWAY: u16 = 1001;
+/// RFC 6455's "going away": the server is shutting down (#861), or an actor is going.
+pub const CLOSE_GOING_AWAY: u16 = 1001;
 
 /// How long a socket the server closed waits for the peer's half of the closing handshake before
 /// the connection is dropped.
