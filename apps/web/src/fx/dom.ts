@@ -1,9 +1,9 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
 // Missing boxes mount nothing. No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
-// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, and R1363 shields.
+// Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, R2652001 rolls, and R1363 shields.
 
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";
-import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxTint } from "./types.ts";
+import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxTint } from "./types.ts";
 import { t } from "../i18n/i18n.ts";
 
 export type DomEffectBoxes = { at?: FxBox | null; from?: FxBox | null; to?: FxBox | null };
@@ -102,6 +102,54 @@ function chaosLines(doc: Document, el: HTMLElement, lines: FxChaosCue["lines"]):
   });
 }
 
+/**
+ * R2652001: one item per coin or die, all at once. Each is a window one face tall over a reel of its
+ * tumble faces, which spins (a coin) or tumbles (a die) and lands on the kept face at `--fx-land-ms`;
+ * under it, when Lucky drew more than one face, every face it drew, the kept one marked. The words
+ * are already the reader's (fx/rolls.ts).
+ */
+function rollItems(doc: Document, el: HTMLElement, cue: FxRollCue): void {
+  el.setAttribute("data-kind", cue.die);
+  el.style.setProperty("--fx-items", String(cue.items.length));
+  const tray = doc.createElement("div");
+  tray.className = "fx-roll-tray";
+  cue.items.forEach((item, index) => {
+    const one = doc.createElement("div");
+    one.className = "fx-roll-item";
+    one.setAttribute("data-kind", cue.die);
+    one.setAttribute("data-landed-text", item.tumble[item.tumble.length - 1] ?? "");
+    one.style.setProperty("--fx-item", String(index));
+    one.style.setProperty("--fx-land-ms", `${Math.max(0, item.landMs)}ms`);
+    one.style.setProperty("--fx-steps", String(Math.max(0, item.tumble.length - 1)));
+    const face = doc.createElement("div");
+    face.className = "fx-roll-face";
+    const reel = doc.createElement("div");
+    reel.className = "fx-roll-reel";
+    item.tumble.forEach((text, at) => {
+      const cell = doc.createElement("span");
+      cell.className = "fx-roll-cell";
+      cell.setAttribute("data-text", text);
+      if (at === item.tumble.length - 1) cell.setAttribute("data-landed", "true");
+      reel.appendChild(cell);
+    });
+    face.appendChild(reel);
+    one.appendChild(face);
+    if (item.faces.length > 1) {
+      const drawn = doc.createElement("div");
+      drawn.className = "fx-roll-draws";
+      item.faces.forEach((text, at) => {
+        const chip = doc.createElement("span");
+        chip.className = at === item.kept ? "fx-roll-kept" : "fx-roll-extra";
+        chip.setAttribute("data-text", text);
+        drawn.appendChild(chip);
+      });
+      one.appendChild(drawn);
+    }
+    tray.appendChild(one);
+  });
+  el.appendChild(tray);
+}
+
 function signedAmount(tone: "damage" | "heal" | "loss", amount: number): string {
   return tone === "heal" ? `+${amount}` : `-${amount}`;
 }
@@ -191,6 +239,11 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
     case "chaos": {
       el.setAttribute("data-text", t(cue.title));
       chaosLines(doc, el, cue.lines);
+      break;
+    }
+    case "roll": {
+      el.setAttribute("data-text", t(cue.title));
+      rollItems(doc, el, cue);
       break;
     }
     case "fog": {

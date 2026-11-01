@@ -69,6 +69,14 @@ pub const OPENING_COINS: &[i32] = &[0, 1];
 /// §7, R245: the catalog id of The Coin, the one token a rule deals rather than a card.
 pub const COIN_DEF_ID: &str = "core-t-coin";
 
+/// R2652001: a coin flip is reported as a two-sided die (`rolled.sides`), face 1 heads and face 2
+/// tails, so a coin and a die are one shape on the wire.
+pub const ROLL_COIN_SIDES: i32 = 2;
+/// R2652001: the face a coin reports when it lands heads.
+pub const ROLL_HEADS: i32 = 1;
+/// R2652001: the face a coin reports when it lands tails.
+pub const ROLL_TAILS: i32 = 2;
+
 /// MD-D1 (Meditative #50 CN Tech): the games a card needs in the compiled win-rate table before it
 /// can lead it. A thinner row never leads, so a new patch's first games cannot crown a card. The
 /// trailer Meditative+ #2 NA Tech reads has the same floor (R1183000).

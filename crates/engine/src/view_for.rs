@@ -18,6 +18,10 @@
 //!     it is open and whose it is, nothing more, and so do its `promptOpened` and `promptAnswered`.
 //!   - R97: the event stream is redacted, not truncated. An event that names a card the viewer may
 //!     not read keeps its type and its animation fields and shows `HIDDEN_ID` for that card.
+//!   - R2652000: the one event dropped rather than redacted is a `rolled` batch a face-down trap made,
+//!     to the other player, unless the trap fired in the same action: its flip alone would tell them a
+//!     trap is set there (`withheld_rolls`). It is dropped before the window is taken, so their window
+//!     is as full as it would be had the trap never flipped.
 //!   - R764: a Glitch's reset or boards (R676, R678) takes cards out of the match unseen, so the events
 //!     up to the end of its action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
@@ -2718,6 +2722,17 @@ fn redact_event(
             rebuild(shown)
         }
 
+        // R2652000: a batch of coins or dice a viewer reads at all (`withheld_rolls` drops the rest)
+        // shows every face; the card itself follows R97, as Call to Chaos's does below. `faceDown` is
+        // the engine's, so no view forwards it.
+        GameEventType::Rolled => {
+            shown.remove("faceDown");
+            if !instance.is_empty() && hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            rebuild(shown)
+        }
+
         // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
         GameEventType::ChaosRolled => {
             if !hidden(&instance) {
@@ -2799,6 +2814,50 @@ fn hidden_tuning_change() -> TuningChange {
     }
 }
 
+/// R2652000: the places, in `state.applied`'s events flattened oldest action first, of the `rolled`
+/// batches `viewer` never reads: each one a card made face-down in its controller's backrow, the viewer
+/// being the other player, unless that trap's own `trapFired` follows in the same action (Hearthstone's
+/// Secret, whose flip is seen only once it fires). It is judged inside the action that rolled, which no
+/// later action changes, so a batch never comes into a window or leaves it after the fact.
+pub(crate) fn withheld_rolls(state: &GameState, viewer: PlayerId) -> IndexSet<usize> {
+    let mut withheld = IndexSet::new();
+    let mut base = 0;
+    for entry in &state.applied {
+        for (at, event) in entry.events.iter().enumerate() {
+            let GameEvent::Rolled {
+                player,
+                instance_id,
+                face_down: Some(true),
+                ..
+            } = event
+            else {
+                continue;
+            };
+            let fired = entry.events[at + 1..].iter().any(|later| {
+                matches!(later, GameEvent::TrapFired { instance_id: trap, .. } if trap == instance_id)
+            });
+            if *player != viewer && !fired {
+                withheld.insert(base + at);
+            }
+        }
+        base += entry.events.len();
+    }
+    withheld
+}
+
+/// R2652000: how many of the newest `fresh` events of `state.applied` `viewer`'s view carries, all but
+/// the face-down rolls `withheld_rolls` leaves out, so a host that slices the view's events by a step's
+/// count (the server's bot personas, R645) still reads that step's events and no older one.
+pub fn viewed_of_newest(state: &GameState, viewer: PlayerId, fresh: usize) -> usize {
+    let total: usize = state.applied.iter().map(|entry| entry.events.len()).sum();
+    let from = total.saturating_sub(fresh);
+    let withheld = withheld_rolls(state, viewer)
+        .iter()
+        .filter(|at| **at >= from)
+        .count();
+    (total - from) - withheld
+}
+
 /// §10.8: "the last N events for animation". `state.applied` is the only event history a state
 /// carries (§9.3's nonce dedupe), oldest action first, so flattening it in order and taking the tail
 /// is the stream — and it is bounded by `NONCE_HISTORY` already.
@@ -2819,7 +2878,13 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         .iter()
         .flat_map(|entry| entry.events.iter())
         .collect();
-    let newest = state.applied.last().map_or(0, |entry| entry.events.len());
+    // R2652000: the window is taken from the events `viewer` reads, the face-down rolls withheld from
+    // them already out, so it holds as many as it would had those cards never rolled: a window one
+    // event short would tell them a hidden card rolled. The floor counts the newest action the same way.
+    let withheld = withheld_rolls(state, viewer);
+    let read: Vec<usize> = (0..all.len()).filter(|at| !withheld.contains(at)).collect();
+    let newest_from = all.len() - state.applied.last().map_or(0, |entry| entry.events.len());
+    let newest = read.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
     let replaced = replacements_of(&all, Some(state));
     // R764: a Glitch's reset or boards (R676, R678) took cards out of the match without a word, so what
@@ -2846,20 +2911,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         voided: true,
         ..replaced.clone()
     };
-    let from = all.len().saturating_sub(window);
-    all[from..]
+    read[read.len().saturating_sub(window)..]
         .iter()
-        .enumerate()
-        .map(|(at, event)| {
+        .map(|&at| {
             redact_event(
                 state,
                 viewer,
-                event,
-                if from + at < voided_until {
-                    &earlier
-                } else {
-                    &replaced
-                },
+                all[at],
+                if at < voided_until { &earlier } else { &replaced },
             )
         })
         .collect()

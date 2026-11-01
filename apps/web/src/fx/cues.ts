@@ -34,6 +34,7 @@ import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
+import { rollCues } from "./rolls.ts";
 import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
@@ -1301,6 +1302,8 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   overflow,
   // R436: the slot-machine reveal of what Call to Chaos rolled (chaos.ts).
   chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
+  // R2652001: a batch of coin flips or die rolls, every one landing at once in one panel (rolls.ts).
+  roll: (event, p) => rollCues(event, p.D, p.env.intensity),
   // R437: a mark branded onto its card in the mark's colors (brand.ts).
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,
