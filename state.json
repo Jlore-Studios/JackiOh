@@ -12444,6 +12444,13 @@
     "2685": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:38:26Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The change is small and localized, but easy rule 3 fails because it adds R2685000 and edits SPEC \u00a79.5."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
