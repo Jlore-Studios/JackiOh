@@ -12968,7 +12968,7 @@
       "provider": "gpt",
       "queued_at": "2026-11-01T18:44:29Z",
       "requested_by": "squishy-squooby",
-      "run_id": "pending:470ee1a3-1793561029",
+      "run_id": "41341551238",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T19:24:08Z",
       "stop_requested": false,
