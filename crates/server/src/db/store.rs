@@ -3233,8 +3233,8 @@ impl Tx<'_> {
 // ---- Social: watching and shared replays (#939, #940) ----
 //
 // Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and
-// sharing a replay with one (B52) read and write them. Its `profiles.allow_spectators` is read no
-// longer (R2615000).
+// sharing a replay with one (B52) read and write them. Friends may always watch (R2615000): migration
+// 0073 drops 0038's watching setting from `profiles`.
 
 /// B52: one replay share (`public.replay_shares`): `sharer`, who held a seat in the finished match
 /// `match_id`, shares its replay with `friend`.
