@@ -8,7 +8,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { castOnDrawAt } from "../../fx/castOnDraw.ts";
 import { chaosRollOf, type ChaosRoll } from "../../fx/chaos.ts";
 import { rollBatchOf, type RollBatch } from "../../fx/rolls.ts";
-import { sideOf } from "../contract.ts";
+import { faceDownCost, sideOf } from "../contract.ts";
 import { firesAgain } from "../animations.ts";
 import { createPlayTracker, type PlayTracker } from "../runs.ts";
 import { HIDDEN_CARD, cardInView } from "../faces.ts";
@@ -88,14 +88,6 @@ function setLane(play: Played, at: number, fresh: readonly GameEvent[]): number 
     }
   }
   return null;
-}
-
-/** R370: the cost the view gives the face-down card in that backrow lane, if one still stands there. */
-function faceDownCost(view: PlayerView, player: PlayerId, lane: number): number | undefined {
-  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
-  const entry = seat.backrow[lane - 1];
-  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
-  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
 function playOf(event: Played, at: number, fresh: readonly GameEvent[], view: PlayerView): ShowcasePlay {

@@ -42,7 +42,7 @@ import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { rollBatchOf, rollWords } from "../fx/rolls.ts";
 import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
-import { sideOf, testid } from "./contract.ts";
+import { faceDownCost, sideOf, testid } from "./contract.ts";
 import { curveEquation } from "./curveEquation.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
@@ -217,14 +217,6 @@ function defIdOfInstance(view: PlayerView, instanceId: string): string | undefin
   return undefined;
 }
 
-/** R370: the cost the view gives the face-down card in a backrow lane, while one stands there. */
-function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): number | undefined {
-  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
-  const entry = seat.backrow[lane - 1];
-  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
-  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
-}
-
 /** R404: an open quest's words, off the quest line its card's view carries, or null once it is not open. */
 function questText(view: PlayerView, instanceId: string, quest: string): string | null {
   return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
@@ -274,7 +266,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       // cost its back shows while it still stands there.
       const where = { whose: name.whose(event.player), zone: zoneLabel(event.row, event.lane) };
       if (event.defId === HIDDEN_CARD && event.row === "backrow") {
-        const cost = faceDownCostAt(view, event.player, event.lane);
+        const cost = faceDownCost(view, event.player, event.lane);
         return capitalised(
           cost === undefined
             ? t("{whose} {zone}: a face-down trap was set", where)
