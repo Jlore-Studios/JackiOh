@@ -1575,7 +1575,6 @@ pub struct InvariantMonitor {
     dormant: IndexSet<String>,
 }
 
-
 pub fn create_invariant_monitor(start: &GameState) -> InvariantMonitor {
     InvariantMonitor::new(start)
 }

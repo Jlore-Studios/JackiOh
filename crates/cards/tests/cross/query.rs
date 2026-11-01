@@ -676,7 +676,9 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     fn r35_the_filter_a_card_script_writes_returns_exactly_that_list() {
         register();
         assert_eq!(
-            ids(query(&q(json!({ "rarity": "Legendary", "excludeDefId": "core-083" })))),
+            ids(query(&q(
+                json!({ "rarity": "Legendary", "excludeDefId": "core-083" })
+            ))),
             strings(R35_POOL)
         );
         assert_eq!(
@@ -711,7 +713,10 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
             strings(&["core-085", "classic-009"])
         );
         assert_eq!(
-            core_indices(pool("core-083", &q(json!({ "rarity": "Legendary", "type": "Unit" })))),
+            core_indices(pool(
+                "core-083",
+                &q(json!({ "rarity": "Legendary", "type": "Unit" }))
+            )),
             strings(&["52", "92"])
         );
     }
