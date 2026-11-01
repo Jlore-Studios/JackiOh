@@ -418,8 +418,9 @@ fn plan(
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000, R2564000, R2565000, R2603000: every Death the seat can read, every turn hook of
-    // the cards it can read on either board and of its hand's Field Spells and Units, and each Activate of
+    // R2424000, R2477000, R2564000, R2565000, R2603000, R2687000: every Death the seat can read on either
+    // board and of its hand's Units and Field Spells, every turn hook of the cards it can read on either
+    // board and of its hand's Field Spells and Units, and each Activate of
     // a Unit on either field or of a face-up backrow card on either side, priced once on the probe world
     // for the whole decision, their probes drawn from the searched section's nodes; all are priced before
     // any is passed, so no probe reads a price, and every step below is passed them (`Prices`).

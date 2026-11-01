@@ -85,7 +85,12 @@ Death on the field and in the seat's hand (spawned first, R923001) as its contro
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
 `kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
 fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
-(R2566000). A card's start-of-turn and end-of-turn hooks count
+(R2566000). A backrow card's Death counts the same way (R2687000): after the units, `death_prices`
+probes each backrow card the seat can read on either side (never a face-down enemy card nor a Unit
+standing there), then the hand's Units and Field Spells (set first), within the same budget, and
+`material` adds `AI_EVAL.death` of it outside the Brittle share, a crumble being a destroy. A destroy is
+read by the card having left the field (`left_field_after`), so a card its Death returns is priced.
+A card's start-of-turn and end-of-turn hooks count
 by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
 such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
 enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,

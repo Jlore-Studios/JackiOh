@@ -443,7 +443,8 @@ pub struct EvalWeights {
     pub slumber_waiting_share: f64,
     /// R2424000: the share of what a unit's Death leaves its controller (`evaluate::death_price`) that
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
-    /// killing a unit whose Death pays its owner is worth less than its body.
+    /// killing a unit whose Death pays its owner is worth less than its body. R2687000: `material` adds
+    /// the same share for each backrow card the seat can read, either side's, outside its Brittle share.
     pub death: f64,
     /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
     /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
@@ -640,8 +641,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
-/// R2424000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two per field
-/// unit with a Death, three or four per own hand Unit with one.
+/// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
+/// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
+/// or four per own hand Unit with one.
 pub const AI_DEATH_PROBE_NODES: usize = 24;
 
 /// R2477000, R2565000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`)
