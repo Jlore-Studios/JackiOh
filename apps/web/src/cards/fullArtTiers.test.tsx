@@ -1,7 +1,9 @@
 // R2655000-R2655003: the full-art tiers (an Epic, an animated Legendary and a signed Mythic on every
 // full-art card), the registry as the list of full-art cards, the tokens that wear their parent's full
-// art, and the motion's gate and the signature's words. The pixels are e2e's
-// cypress/component/full-art-tiers.cy.tsx; this file holds the DOM.
+// art, and the motion's gate and the signature's words. R2715000: the Animated art, the normal face
+// with its art moving; R2715001: whose art moves its own layers, as the Legendary's and the Mythic's
+// do. The pixels are e2e's cypress/component/full-art-tiers.cy.tsx and animated-art.cy.tsx; this
+// file holds the DOM.
 
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -11,7 +13,15 @@ import { CATALOG } from "@jackioh/cards";
 
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { CardFace } from "./CardFace.tsx";
-import { DEFAULT_CARD_COSMETICS, resetCosmeticsForTests, writeCardFullArt, type CardPicks, type OwnedByCard } from "./cosmetics.ts";
+import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
+import {
+  DEFAULT_CARD_COSMETICS,
+  readCardPicks,
+  resetCosmeticsForTests,
+  writeCardFullArt,
+  type CardPicks,
+  type OwnedByCard,
+} from "./cosmetics.ts";
 import {
   FULL_ART_CARDS,
   FULL_ART_TIERS,
@@ -32,6 +42,8 @@ import fullArtTokens from "./fullArtTokens.json";
 import { TheirCopy, type SeatLoadout } from "./loadouts.ts";
 import { faceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
+import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { setReducedMotion } from "../test/setup.ts";
 
 /** R2655001: the fifteen cards #2655 adds to the six hero portraits' cards. */
 const NEW_CARDS = [
@@ -89,11 +101,19 @@ function drawn(id: string, { worn = true, owned = "every", wrap = (face) => face
   return cf;
 }
 
-/** The tier the face prints, or null for its normal face; a full face that prints one has no words. */
+/**
+ * The tier the face wears, or null for its normal face; a full face that prints full art has no words,
+ * and R2715000's Animated art keeps them.
+ */
 function tierOf(cf: HTMLElement): string | null {
   const full = cf.getAttribute("data-full-art") === "true";
   expect(cf.querySelector(".card-type") === null).toBe(full);
-  return full ? cf.getAttribute("data-full-art-tier") : null;
+  return cf.getAttribute("data-full-art-tier");
+}
+
+/** The art window's picture, decoded: what its CSS background draws. */
+function pictureOf(cf: HTMLElement): string {
+  return decodeURIComponent(cf.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage ?? "");
 }
 
 /** A seat's loadout whose cards' own picks are `cards`, every slot its default. */
@@ -112,6 +132,8 @@ afterEach(() => {
   resetCosmeticsForTests();
   localStorage.clear();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+  __resetSettingsForTests();
+  setReducedMotion(false);
 });
 
 describe("R2655001 the registry is the list of full-art cards", () => {
@@ -363,6 +385,135 @@ describe("R2655003 the signature's words", () => {
       // The banner prints the Chinese name, and the signature the English one.
       expect(printed, id).not.toBe(english);
       expect(cf.querySelector(".cf-signature text")?.textContent, id).toBe(english);
+      cleanup();
+    }
+  });
+});
+
+describe("R2715000 the Animated art", () => {
+  it("R2715000 an owned Animated pick prints the normal face with its art moving, an unowned one its still face", () => {
+    for (const id of FULL_ART_CARDS) {
+      const animated = idOf(id, "Animated");
+      expect(animated, id).toBe(`animated-${idOf(id, "Epic").slice("full-art-".length)}`);
+      writeCardFullArt(id, fullArtPickOf(id, animated));
+      const cf = drawn(id, { owned: owning([id], ["Animated"]) });
+      // Its normal face: the frame, its type line and rules box, no full art, nothing signed or swept.
+      expect(tierOf(cf), id).toBe("Animated");
+      expect(cf.getAttribute("data-full-art"), id).toBeNull();
+      expect(cf.querySelector(".card-text"), id).not.toBeNull();
+      expect(cf.querySelector(".cf-art.cf-art--full"), id).toBeNull();
+      expect(cf.classList.contains("cf-full-art--animated"), id).toBe(false);
+      expect(cf.querySelector(".cf-signature, .cf-full-art-sweep"), id).toBeNull();
+      // Its art moving in its window.
+      expect(cf.getAttribute("data-art-motion"), id).toBe("animated");
+      expect(cf.querySelector('.cf-art[data-art-moving="true"]'), id).not.toBeNull();
+      expect(pictureOf(cf), id).toContain("art-m-particle");
+      cleanup();
+      // Unowned, only its other tiers owned: the normal face, still.
+      const still = drawn(id, { owned: owning([id], ["Epic", "Legendary", "Mythic"]) });
+      expect(tierOf(still), id).toBeNull();
+      expect(still.getAttribute("data-art-motion"), id).toBeNull();
+      expect(still.querySelector('.cf-art[data-art-moving="true"]'), id).toBeNull();
+      expect(pictureOf(still), id).not.toContain("art-m-");
+      cleanup();
+    }
+  });
+
+  it("R2715000 the opponent's, a watcher's and a replay's copy wear the Animated tier their owner's loadout names", () => {
+    // Every other seat's copy, on a board, a watched game or a replay, reads its owner's frozen loadout.
+    const theirs = (cards: Record<string, CardPicks>) => (face: ReactElement) => <TheirCopy loadout={loadout(cards)}>{face}</TheirCopy>;
+    for (const id of [VANILLA, "classicplus-046", "stinkyscape-154"]) {
+      const cf = drawn(id, { worn: false, owned: NO_FULL_ART, wrap: theirs({ [id]: { fullArt: idOf(id, "Animated") } }) });
+      expect(tierOf(cf), id).toBe("Animated");
+      expect(cf.getAttribute("data-art-motion"), id).toBe("animated");
+      cleanup();
+    }
+    // The viewer's Full-art cards setting off turns it off there, as it does every tier of another's copy.
+    writeCardSettings({ fullArt: false });
+    const off = drawn(VANILLA, { worn: false, owned: NO_FULL_ART, wrap: theirs({ [VANILLA]: { fullArt: idOf(VANILLA, "Animated") } }) });
+    expect(tierOf(off)).toBeNull();
+    expect(off.getAttribute("data-art-motion")).toBeNull();
+  });
+
+  it("R2715000 a stored Animated pick survives the store and true still names the still Epic", () => {
+    const animated = idOf(VANILLA, "Animated");
+    const epic = idOf(VANILLA, "Epic");
+    expect(fullArtPickOf(VANILLA, animated)).toBe(animated);
+    expect(fullArtPickOf(VANILLA, epic)).toBe(true);
+    expect(fullArtIdOf(VANILLA, true)).toBe(epic);
+    expect(fullArtTierOf(VANILLA, animated)).toBe("Animated");
+    writeCardFullArt(VANILLA, animated);
+    // Read back after the page reloads, from what the device stored.
+    resetCosmeticsForTests();
+    expect(readCardPicks(VANILLA).fullArt).toBe(animated);
+    expect(tierOf(drawn(VANILLA))).toBe("Animated");
+    cleanup();
+    // `true` on the account and the device still wears the still Epic, never the Animated art.
+    writeCardFullArt(VANILLA, true);
+    expect(tierOf(drawn(VANILLA))).toBe("Epic");
+  });
+});
+
+describe("R2715001 the moving art", () => {
+  it("R2715001 the Legendary and Mythic move their art's own layers, the Epic none", () => {
+    for (const tier of ["Epic", "Legendary", "Mythic"] as const) {
+      writeCardFullArt(VANILLA, fullArtPickOf(VANILLA, idOf(VANILLA, tier)));
+      const cf = drawn(VANILLA);
+      const moves = tier !== "Epic";
+      expect(cf.getAttribute("data-art-motion"), tier).toBe(moves ? "animated" : null);
+      expect(cf.querySelector('.cf-art[data-art-moving="true"]') !== null, tier).toBe(moves);
+      expect(pictureOf(cf).includes("art-m-subject"), tier).toBe(moves);
+      cleanup();
+    }
+  });
+
+  it("R2715001 Reduce motion, the system's reduced motion and Animated foil off draw every moving tier still", () => {
+    const stills: [string, () => void][] = [
+      ["the Reduce motion setting", () => writeSettings({ reduceMotion: true })],
+      ["the system's reduced motion", () => setReducedMotion(true)],
+      ["Animated foil off", () => writeCardSettings({ animatedFoil: false })],
+    ];
+    for (const [why, still] of stills) {
+      still();
+      for (const tier of ["Animated", "Legendary", "Mythic"] as const) {
+        writeCardFullArt(VANILLA, fullArtPickOf(VANILLA, idOf(VANILLA, tier)));
+        const cf = drawn(VANILLA);
+        const where = `${tier} under ${why}`;
+        expect(tierOf(cf), where).toBe(tier);
+        expect(cf.getAttribute("data-art-motion"), where).toBe("static");
+        expect(cf.querySelector('.cf-art[data-art-moving="true"]'), where).toBeNull();
+        expect(cf.querySelector<HTMLElement>(".cf-art")?.style.backgroundImage, where).not.toContain("%3Cstyle");
+        // The Mythic's signature stands whole.
+        if (tier === "Mythic") expect(cf.querySelector(".cf-signature text")?.textContent, where).toBe(CATALOG[VANILLA]?.name);
+        cleanup();
+      }
+      __resetSettingsForTests();
+      setReducedMotion(false);
+      writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    }
+  });
+
+  it("R2715001 past COSMETIC_FOIL_ANIMATED_MAX moving faces the rest hold still", () => {
+    writeCardFullArt(VANILLA, idOf(VANILLA, "Animated"));
+    const face = faceOf(VANILLA);
+    const { container } = render(
+      <FullArtOwned owned="every">
+        {Array.from({ length: COSMETIC_FOIL_ANIMATED_MAX + 1 }, (_, index) => (
+          <CardFace key={index} face={face} layout="full" worn />
+        ))}
+      </FullArtOwned>,
+    );
+    const motions = [...container.querySelectorAll<HTMLElement>(".cf")].map((cf) => cf.getAttribute("data-art-motion"));
+    expect(motions).toEqual([...Array<string>(COSMETIC_FOIL_ANIMATED_MAX).fill("animated"), "static"]);
+    expect(container.querySelectorAll('.cf-art[data-art-moving="true"]')).toHaveLength(COSMETIC_FOIL_ANIMATED_MAX);
+  });
+
+  it("R2715001 a lazy face never moves its art", () => {
+    for (const tier of ["Animated", "Legendary", "Mythic"] as const) {
+      writeCardFullArt(VANILLA, fullArtPickOf(VANILLA, idOf(VANILLA, tier)));
+      const { container } = render(<CardFace face={faceOf(VANILLA)} layout="full" worn lazyArt />);
+      expect(container.querySelector(".cf")?.getAttribute("data-art-motion"), tier).toBe("static");
+      expect(container.querySelector('.cf-art[data-art-moving="true"]'), tier).toBeNull();
       cleanup();
     }
   });

@@ -16,7 +16,7 @@ use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
-use jackioh_server::cosmetics::{CosmeticKind, shipped};
+use jackioh_server::cosmetics::{ANIMATED_ART_ID_PREFIX, CosmeticKind, shipped};
 use jackioh_server::db::fake::OnCall;
 use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
@@ -571,6 +571,47 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     );
     assert_eq!(card_grants(&app, DEV).await.len(), cards.len());
     assert_eq!(ledger(&app, DEV).await, after);
+}
+
+#[tokio::test]
+async fn r2715000_fill_grants_each_full_art_card_its_animated_art() {
+    let (app, dev, _other) = dev_app().await;
+    let registry = shipped().expect("the registry parses");
+    // The 21 Animated arts, each on the one card it names (R1313000, R2715000).
+    let animated: Vec<(&str, &str)> = registry
+        .iter()
+        .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+        .filter(|cosmetic| cosmetic.id.starts_with(ANIMATED_ART_ID_PREFIX))
+        .filter_map(|cosmetic| Some((cosmetic.card.as_deref()?, cosmetic.id.as_str())))
+        .collect();
+    assert_eq!(animated.len(), 21);
+    assert!(
+        holdings(&app, DEV).await.cosmetics.cards.is_empty(),
+        "the dev account starts with no per-card cosmetic"
+    );
+
+    ok(&app, "/api/dev/fill", &dev, json!({})).await;
+
+    // Each is owned on its own card, and on no other, as a dev grant.
+    let held = holdings(&app, DEV).await;
+    for (card, id) in &animated {
+        let on: Vec<&str> = held
+            .cosmetics
+            .cards
+            .iter()
+            .filter(|owned| owned.cosmetic_id == *id)
+            .map(|owned| owned.card_id.as_str())
+            .collect();
+        assert_eq!(on, [*card], "{id}");
+    }
+    let rows: Vec<(bool, bool)> = ledger(&app, DEV)
+        .await
+        .cosmetics
+        .iter()
+        .filter(|row| row.cosmetic_id.starts_with(ANIMATED_ART_ID_PREFIX))
+        .map(|row| (row.reason == EconomyReason::Dev, row.dev))
+        .collect();
+    assert_eq!(rows, vec![(true, true); animated.len()]);
 }
 
 // ---------------------------------------------------------------------------------------------

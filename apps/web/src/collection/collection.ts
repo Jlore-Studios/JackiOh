@@ -14,6 +14,7 @@ import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } 
 
 import { readerName } from "../cards/chinese.ts";
 import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
+import { FULL_ART_STRIP_TIERS, fullArtTierOfEntry } from "../cards/fullArt.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, OwnedCosmeticsResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
@@ -195,8 +196,8 @@ export type StripGroup = { kind: StripKind; items: StripItem[] };
 /**
  * R1655000: what a card may wear, by kind. The foil, finish and border are the registry's entries
  * of each kind (the default first); the full art is the face with none, then the card's own entries
- * in the registry's order (R2655000: its Epic, Legendary and Mythic), and the kind is absent from a
- * card that has none. `canEquip` is the ownership answer (`useCanEquip`), so a locked item is the one
+ * (R2655000: its Epic, Legendary and Mythic; R2715000: its Animated art first of them, the normal face
+ * moving, `FULL_ART_STRIP_TIERS`), and the kind is absent from a card that has none. `canEquip` is the ownership answer (`useCanEquip`), so a locked item is the one
  * it says no to.
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
@@ -210,11 +211,13 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
       owned: canEquip(defId, cosmetic.id),
     })),
   }));
-  const fullArts: StripItem[] = COSMETICS.flatMap((cosmetic): StripItem[] =>
-    cosmetic.kind === "fullArt" && cosmetic.card === defId
-      ? [{ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }]
-      : [],
-  );
+  const place = (cosmetic: Cosmetic): number => {
+    const tier = fullArtTierOfEntry(cosmetic);
+    return tier === null ? FULL_ART_STRIP_TIERS.length : FULL_ART_STRIP_TIERS.indexOf(tier);
+  };
+  const fullArts: StripItem[] = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt" && cosmetic.card === defId)
+    .sort((a, b) => place(a) - place(b))
+    .map((cosmetic) => ({ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }));
   if (fullArts.length > 0) {
     groups.push({
       kind: "fullArt",

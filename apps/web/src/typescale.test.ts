@@ -14,8 +14,21 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 const TYPE_MAX = 10;
 /** The step the board's body is set in; every other step's em form is a fraction of it. */
 const BODY_STEP = "md";
-/** The faces a stylesheet may name: fonts.css's four families, or its parent's. */
-const FAMILIES = ["inherit", "var(--font-display)", "var(--font-text)", "var(--font-mono)", "var(--font-signature)"];
+/** The faces a stylesheet may name: fonts.css's four families (R2715002: and the signature's hands), or its parent's. */
+const FAMILIES = [
+  "inherit",
+  "var(--font-display)",
+  "var(--font-text)",
+  "var(--font-mono)",
+  "var(--font-signature)",
+  // R2715002: the sets' signature hands, which only a Mythic full art's signature is set in.
+  "var(--font-signature-brush)",
+  "var(--font-signature-copperplate)",
+  "var(--font-signature-flourish)",
+  "var(--font-signature-ink)",
+  "var(--font-signature-tag)",
+  "var(--font-signature-marker)",
+];
 
 const STEP = /var\(--type-[a-z0-9]+(?:-em)?\)/;
 /** A viewport or container term, which a clamp() or max() may hold beside a step. */
@@ -150,6 +163,12 @@ describe("#2107 the type scale", () => {
       "--font-text",
       "--font-mono",
       "--font-signature",
+      "--font-signature-brush",
+      "--font-signature-copperplate",
+      "--font-signature-flourish",
+      "--font-signature-ink",
+      "--font-signature-tag",
+      "--font-signature-marker",
     ]);
   });
 });

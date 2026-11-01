@@ -1,0 +1,21 @@
+{
+  "title": "Patch: full arts that really animate, and Animated as its own Epic tier",
+  "sources": "#2715",
+  "notes": "Every full-art card's art now really animates: its own layers move on a recipe written for that card, its subject, background, light and props each on a beat of its own, with particles that suit the card (R2715001). It moves on a new fourth cosmetic of each full-art card, the Animated art, an Epic that prints the card's normal face with its art moving (R2715000), and under the Legendary's and the Mythic's drift and sweep. The Animated art drops where an Epic per-card cosmetic drops, an Epic cosmetic token buys it, it is granted to no account, and a card's pick names it by its id (migration 0074). The Mythic now signs its name in under a second behind a pen tip, lands with a burst and a flourish, shines now and then, and signs in its set's own hand (R2715002). Moving art takes a moving foil's slot; reduced motion and Animated foil off hold it still. How cards look only: nothing plays differently.",
+  "player": {
+    "title": "Full arts that really animate",
+    "new": [
+      "Every full-art card has a new Animated version: its normal card face with its art moving inside the frame. Earn it like an Epic full art, or unlock it with an Epic cosmetic token.",
+      "The animated and signed full arts now animate the art itself: each card's figure, background, light and particles move in their own way."
+    ],
+    "balance": [],
+    "changes": [
+      "A signed full art now signs its name fast, behind a glowing pen tip, with a flourish and a shine, in a hand that suits its set.",
+      "A card's cosmetics in the Collection now offer No full art, Animated, Full art, Full art + animated and Signed."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

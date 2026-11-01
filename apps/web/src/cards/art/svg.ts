@@ -4,11 +4,16 @@
 // reference: the only `url(…)`s point at gradients defined inside it, and nothing uses `href`.
 // It is percent-encoded in full, parentheses and quotes included, so it can sit inside a CSS
 // `url("…")` in any browser and in jsdom's style parser.
+//
+// R2715001: given a full-art card's motion (motion.ts), the same picture moves: its layers are tagged
+// by role and a `<style>` after the `<defs>` animates them, with particles over it. Given none, it is
+// the still picture, byte for byte.
 
 import type { CardType, Tag } from "@jackioh/shared";
 
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
+import { CENTER_ORIGIN, FIGURE_SUBJECT_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion, type ArtRole } from "./motion.ts";
 import type { MotifId } from "./motifs.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
 import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
@@ -74,8 +79,8 @@ function rayPath(cx: number, cy: number, angle: number, width: number): string {
   );
 }
 
-/** The SVG document, unencoded. */
-function artSvg(spec: ArtSpec): string {
+/** The SVG document, unencoded; R2715001: moving as `motion` says, its particles placed by `defId`. */
+function artSvg(spec: ArtSpec, motion: ArtMotion | null, defId: string): string {
   const { sky, glow, emblem } = spec;
   const half = ART_BOX / 2;
   const angle = sky.angle * DEGREES;
@@ -105,9 +110,10 @@ function artSvg(spec: ArtSpec): string {
       `<stop offset="1" stop-color="#000" stop-opacity="${VIGNETTE_OPACITY}"/></radialGradient>`,
   );
   parts.push("</defs>");
+  parts.push(motionStyle(motion, spec.composition === "figure" ? FIGURE_SUBJECT_ORIGIN : CENTER_ORIGIN));
 
   parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#s)"/>`);
-  parts.push(`<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`);
+  parts.push(moving("light", `<circle cx="${fmt(glow.cx)}" cy="${fmt(glow.cy)}" r="${fmt(glow.r)}" fill="url(#g)"/>`, motion));
 
   if (spec.rays.length > 0) {
     parts.push(`<g fill="${RADIANT_PALETTE.ray}">`);
@@ -117,18 +123,28 @@ function artSvg(spec: ArtSpec): string {
     parts.push("</g>");
   }
 
+  // R2715001: each run of ridges of one role moves as one layer.
+  let run: string[] = [];
+  let runRole: ArtRole | null = null;
   for (const ridge of spec.ridges) {
-    parts.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
+    if (ridge.role !== runRole && runRole !== null) {
+      parts.push(moving(runRole, run.join(""), motion));
+      run = [];
+    }
+    runRole = ridge.role;
+    run.push(`<path d="${ridge.d}" fill="${ridge.fill}" opacity="${fmt(ridge.opacity)}" fill-rule="evenodd"/>`);
   }
+  if (runRole !== null) parts.push(moving(runRole, run.join(""), motion));
 
   // R503: the motif's glyphs sit over the composition and under the emblem.
-  for (const placed of spec.motifGlyphs) parts.push(glyphMarkup(placed, placed.opacity));
+  spec.motifGlyphs.forEach((placed, index) => parts.push(moving("props", glyphMarkup(placed, placed.opacity), motion, index)));
 
-  parts.push(glyphMarkup(emblem, 1));
-  if (spec.accent !== null) parts.push(glyphMarkup(spec.accent, ACCENT_OPACITY));
+  parts.push(moving("subject", glyphMarkup(emblem, 1), motion));
+  if (spec.accent !== null) parts.push(moving("props", glyphMarkup(spec.accent, ACCENT_OPACITY), motion, spec.motifGlyphs.length));
 
-  for (const mote of spec.motes) parts.push(moteMarkup(mote, spec.moteShape));
+  spec.motes.forEach((mote, index) => parts.push(moving("motes", moteMarkup(mote, spec.moteShape), motion, index)));
 
+  parts.push(particleMarkup(motion, defId));
   parts.push(`<rect width="${ART_BOX}" height="${ART_BOX}" fill="url(#v)"/>`);
   parts.push("</svg>");
   return parts.join("");
@@ -139,15 +155,24 @@ function encodeSvg(svg: string): string {
   return encodeURIComponent(svg).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }
 
-/** `data:image/svg+xml,…`: one <svg viewBox="0 0 100 100">, no <text>, no <title>, no external refs. */
-export function artDataUri(spec: ArtSpec): string {
-  return `${DATA_PREFIX}${encodeSvg(artSvg(spec))}`;
+/**
+ * `data:image/svg+xml,…`: one <svg viewBox="0 0 100 100">, no <text>, no <title>, no external refs.
+ * R2715001: moving as `motion` says, its particles placed by `defId`; the still picture with none.
+ */
+export function artDataUri(spec: ArtSpec, motion: ArtMotion | null = null, defId = ""): string {
+  return `${DATA_PREFIX}${encodeSvg(artSvg(spec, motion, defId))}`;
 }
 
 // The memo behind `CardArt`: keyed `${defId}|${radiant}|${composition}`, as the Surface fixes, plus
 // the motif (R503), which a card's name fixes as its id fixes the rest. Transient `t-<n>` defs can
-// be minted without bound, so the map is cleared rather than grown.
+// be minted without bound, so the map is cleared rather than grown. R2715001: a moving picture adds
+// `|moving` (a card's motion is fixed by its id, motion.ts), so the still one keeps its key.
 const proceduralCache = new Map<string, string>();
+
+/** R2715001: what a moving picture's memo key ends with. */
+function movingKey(motion: ArtMotion | null): string {
+  return motion === null ? "" : "|moving";
+}
 
 export function proceduralArtUri(
   defId: string,
@@ -155,12 +180,13 @@ export function proceduralArtUri(
   composition: Composition,
   radiant: boolean,
   motif: MotifId | null = null,
+  motion: ArtMotion | null = null,
 ): string {
-  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}`;
+  const key = `${defId}|${radiant}|${composition}|${motif ?? ""}${movingKey(motion)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = artDataUri(artSpec(defId, theme, composition, radiant, motif));
+  const uri = artDataUri(artSpec(defId, theme, composition, radiant, motif), motion, defId);
   proceduralCache.set(key, uri);
   return uri;
 }
@@ -180,23 +206,37 @@ export function starshipArtUri(pieces: number, launched: boolean, radiant: boole
   return uri;
 }
 
-export function stinkyscapeArtUri(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
-  const key = `${defId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}`;
+export function stinkyscapeArtUri(
+  defId: string,
+  name: string | undefined,
+  tags: readonly Tag[],
+  type: CardType,
+  radiant: boolean,
+  motion: ArtMotion | null = null,
+): string {
+  const key = `${defId}|${radiant}|stinkyscape|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(stinkyscapeSvg(defId, name, tags, type, radiant))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(stinkyscapeSvg(defId, name, tags, type, radiant, motion))}`;
   proceduralCache.set(key, uri);
   return uri;
 }
 
 /** R2202000: a Training Grounds face's picture (traininggrounds.ts), memoised as Stinkyscape's is. */
-export function trainingGroundsArtUri(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
-  const key = `${defId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}`;
+export function trainingGroundsArtUri(
+  defId: string,
+  name: string | undefined,
+  tags: readonly Tag[],
+  type: CardType,
+  radiant: boolean,
+  motion: ArtMotion | null = null,
+): string {
+  const key = `${defId}|${radiant}|traininggrounds|${name ?? ""}|${tags.join(",")}|${type}${movingKey(motion)}`;
   const hit = proceduralCache.get(key);
   if (hit !== undefined) return hit;
   if (proceduralCache.size >= ART_CACHE_MAX) proceduralCache.clear();
-  const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant))}`;
+  const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant, motion))}`;
   proceduralCache.set(key, uri);
   return uri;
 }

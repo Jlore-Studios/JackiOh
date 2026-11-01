@@ -148,7 +148,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9 });
     // Every card's Epic full art is one an Epic token buys; no token buys a Legendary or Mythic one.
     const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
-    expect(fullArts).toHaveLength(21 * 3);
+    expect(fullArts).toHaveLength(21 * 4);
     for (const fullArt of fullArts) expect(offerTier(fullArt, plenty), fullArt.id).toBe(fullArt.rarity === "Epic" ? "Epic" : null);
     expect(offerTier(entry("full-art-league-of-losers"), held({ cosmeticRare: 9 }))).toBeNull();
 
@@ -159,6 +159,21 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
       expect(screen.getByTestId(T.stripItem(id)), id).toHaveAttribute("data-owned", "false");
       expect(screen.queryByTestId(T.tokenOffer(id)), id).toBeNull();
     }
+  });
+
+  it("R2715000 a locked Animated art offers an Epic token", async () => {
+    // Every card's Animated art is an Epic, no chase: an Epic token buys it, a Rare one does not.
+    const animated = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt" && cosmetic.id.startsWith("animated-"));
+    expect(animated).toHaveLength(21);
+    for (const fullArt of animated) {
+      expect(fullArt.chase, fullArt.id).toBe(false);
+      expect(offerTier(fullArt, held({ cosmeticRare: 9, cosmeticEpic: 9 })), fullArt.id).toBe("Epic");
+      expect(offerTier(fullArt, held({ cosmeticRare: 9 })), fullArt.id).toBeNull();
+    }
+
+    tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
+    cardViewOf(() => Promise.resolve(new Map()));
+    expect(await screen.findByTestId(T.tokenOffer("animated-big-d-fender"))).toHaveTextContent("Unlock with an Epic token (1 held)");
   });
 
   it("R1953001 a refusal shows the server's words and changes nothing", async () => {

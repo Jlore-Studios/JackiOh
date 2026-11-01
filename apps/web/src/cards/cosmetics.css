@@ -27,7 +27,10 @@
  * art too, between the gems and the name banner (FullArtSignature.tsx). R2655003: still, the band
  * rests across the art and the name stands whole; in the motion gate, while Animated foil is on
  * (`data-full-art-motion`), the art drifts in its crop, the band sweeps over it and the name writes
- * itself left to right once, then holds. A full art takes no foil's motion slot.
+ * itself left to right once, then holds. A full art takes no foil's motion slot. R2715002: the name is
+ * set in its set's face or its card's (`data-signature-face`, fonts.css); in the gate it signs fast
+ * under a pen tip, through a slanted, feathered mask, then bursts, slashes a flourish under itself and
+ * shines now and then, its timings the custom properties FullArtSignature.tsx sets.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -713,18 +716,7 @@
   }
 }
 
-.cf-signature-wipe,
-.cf-signature-ink {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.cf-signature-wipe {
-  overflow: hidden;
-}
-
-.cf-signature-ink > svg {
+.cf-signature > svg {
   display: block;
   width: 100%;
   height: 100%;
@@ -736,6 +728,68 @@
   font-weight: 700;
   fill: var(--pal-parchment);
   filter: drop-shadow(0 0 1px var(--pal-black)) drop-shadow(0 1px 1px var(--pal-black));
+}
+
+/* R2715002: each set's hand, and a card's own (signatureFaces.ts). Each face has the one weight. */
+.cf-signature[data-signature-face="brush"] .cf-signature-text {
+  font-family: var(--font-signature-brush);
+  font-weight: 400;
+}
+
+.cf-signature[data-signature-face="copperplate"] .cf-signature-text {
+  font-family: var(--font-signature-copperplate);
+  font-weight: 400;
+}
+
+.cf-signature[data-signature-face="flourish"] .cf-signature-text {
+  font-family: var(--font-signature-flourish);
+  font-weight: 400;
+}
+
+.cf-signature[data-signature-face="ink"] .cf-signature-text {
+  font-family: var(--font-signature-ink);
+  font-weight: 400;
+}
+
+.cf-signature[data-signature-face="tag"] .cf-signature-text {
+  font-family: var(--font-signature-tag);
+  font-weight: 400;
+}
+
+.cf-signature[data-signature-face="marker"] .cf-signature-text {
+  font-family: var(--font-signature-marker);
+  font-weight: 400;
+}
+
+/* The flourish under the name, in the ink's color. */
+.cf-signature-flourish {
+  fill: none;
+  stroke: var(--pal-parchment);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px var(--pal-black));
+}
+
+/* The pen tip, the landing's burst and the shine only show while they move: still, each is hidden. */
+.cf-signature-pen,
+.cf-signature-burst,
+.cf-signature-shine {
+  opacity: 0;
+}
+
+.cf-signature-pen-glow {
+  fill: var(--pal-gold-200);
+  opacity: 0.6;
+}
+
+.cf-signature-pen-tip,
+.cf-signature-shine-band {
+  fill: var(--pal-white);
+}
+
+.cf-signature-burst {
+  fill: var(--pal-gold-200);
 }
 
 /* ----------------------------------------------------------------------------- motion --- */
@@ -855,14 +909,36 @@
     animation: full-art-sweep 6s ease-in-out infinite;
   }
 
+  /* R2715002: the pen writes the name with no slow start; the wipe and the pen share one frame, so the
+     pen's glint rides the wipe's edge. Once it lands, the burst and the flourish hit, and the shine
+     runs through the ink then and every period after. */
   :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-wipe {
-    will-change: transform;
-    animation: full-art-sign-wipe 2.4s ease-in-out 0.4s both;
+    transform-box: fill-box;
+    animation: full-art-sign-wipe var(--cf-sign-write) cubic-bezier(0.2, 0.8, 0.3, 1) var(--cf-sign-start) both;
   }
 
-  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-ink {
-    will-change: transform;
-    animation: full-art-sign-ink 2.4s ease-in-out 0.4s both;
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-pen {
+    transform-box: fill-box;
+    animation:
+      full-art-sign-wipe var(--cf-sign-write) cubic-bezier(0.2, 0.8, 0.3, 1) var(--cf-sign-start) both,
+      full-art-sign-pen var(--cf-sign-write) linear var(--cf-sign-start) both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-burst {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: full-art-sign-burst var(--cf-sign-land) ease-out var(--cf-sign-landed) both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-flourish {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: full-art-sign-flourish var(--cf-sign-land) cubic-bezier(0.2, 0.8, 0.3, 1) var(--cf-sign-landed) both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-shine {
+    transform-box: fill-box;
+    animation: full-art-sign-shine var(--cf-sign-shine) ease-in-out var(--cf-sign-landed) infinite both;
   }
 }
 
@@ -1053,8 +1129,8 @@
   }
 }
 
-/* The wipe and the ink move in opposite directions, so the name stays put while a widening window
-   uncovers it from the left, as a pen writes it. */
+/* R2715002: the mask's written ink slides in from the left over the name, which stays put, as a pen
+   writes it; the pen rides it. */
 @keyframes full-art-sign-wipe {
   from {
     transform: translateX(-100%);
@@ -1064,11 +1140,58 @@
   }
 }
 
-@keyframes full-art-sign-ink {
+/* The pen's glint touches down at once and lifts as the last letter lands. */
+@keyframes full-art-sign-pen {
   from {
-    transform: translateX(100%);
+    opacity: 0;
+  }
+  8%,
+  88% {
+    opacity: 1;
   }
   to {
+    opacity: 0;
+  }
+}
+
+/* The landing: a flash where the pen lifts, swelling and fading. */
+@keyframes full-art-sign-burst {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* The flourish slashes out under the name from its start. */
+@keyframes full-art-sign-flourish {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* The shine crosses the ink in the first fifth of its period and rests past it for the rest. */
+@keyframes full-art-sign-shine {
+  from {
     transform: translateX(0);
+    opacity: 1;
+  }
+  20% {
+    transform: translateX(100%);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
   }
 }

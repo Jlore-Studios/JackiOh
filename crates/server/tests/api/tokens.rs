@@ -1089,3 +1089,41 @@ async fn r2655000_an_epic_token_buys_a_new_card_s_epic_full_art_and_no_token_its
     );
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
 }
+
+#[tokio::test]
+async fn r2715000_an_epic_token_buys_an_animated_art_and_a_rare_one_does_not() {
+    let (app, token) = setup().await;
+    let card = "classicplus-019".to_string();
+    own(&app, std::slice::from_ref(&card)).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 1).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let animated = "animated-league-of-losers";
+
+    // League of Losers' Animated art is an Epic, above a Rare token's tier: refused, and every
+    // token kept.
+    let before = everything(&app).await;
+    let (status, answer) = redeem(json!({ "token": "Rare", "cosmeticId": animated, "cardId": card })).await;
+    assert_eq!(status, 409, "{answer}");
+    assert_eq!(everything(&app).await, before);
+
+    // It is no chase, so an Epic token buys it, on its own card.
+    let (status, answer) = redeem(json!({ "token": "Epic", "cosmeticId": animated, "cardId": card })).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(
+        ledger(&app)
+            .await
+            .cosmetics
+            .iter()
+            .any(|row| row.card_id.as_deref() == Some(card.as_str()) && row.cosmetic_id == animated)
+    );
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 0);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);
+}

@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
-use jackioh_server::cosmetics::{CosmeticKind, shipped};
+use jackioh_server::cosmetics::{ANIMATED_ART_ID_PREFIX, CosmeticKind, shipped};
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 use serde_json::{Value, json};
 
@@ -166,14 +166,15 @@ async fn r2655000_an_existing_account_owns_none_of_the_57() {
     let profile = profile_id_of(&app, USER).await;
     // What an account made before #2655 could own: a portrait card's Epic full art on its card.
     own(&app, &profile, Some("core-008"), "full-art-mr-vanilla").await;
-    // #2655's 57: every full art but the six portrait cards' Epics, none a default or a starter
-    // (R2655000).
+    // #2655's 57: every full art but the six portrait cards' Epics and #2715's Animated arts, none
+    // a default or a starter (R2655000).
     let new: Vec<String> = shipped()
         .expect("the shipped registry")
         .into_iter()
         .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
         .filter(|cosmetic| !cosmetic.default && !cosmetic.starter)
         .map(|cosmetic| cosmetic.id)
+        .filter(|id| !id.starts_with(ANIMATED_ART_ID_PREFIX))
         .filter(|id| {
             ![
                 "full-art-big-d-fender",
@@ -195,6 +196,44 @@ async fn r2655000_an_existing_account_owns_none_of_the_57() {
     assert_eq!(
         body,
         json!({ "cards": [{ "cardId": "core-008", "cosmeticId": "full-art-mr-vanilla" }], "account": [] })
+    );
+    let listed = body.to_string();
+    for id in &new {
+        assert!(!listed.contains(&format!("\"{id}\"")), "{id} is owned");
+    }
+    // And another fixture account, which was given nothing, owns none either.
+    let (status, body) = get(&app, Some(OTHER_TOKEN)).await;
+    assert_eq!((status, body), (200, json!({ "cards": [], "account": [] })));
+}
+
+#[tokio::test]
+async fn r2715000_an_existing_account_owns_none_of_the_21() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    // What an account made before #2715 could own: a card's still Epic and its signed full art.
+    own(&app, &profile, Some("core-008"), "full-art-mr-vanilla").await;
+    own(&app, &profile, Some("core-008"), "full-art-mr-vanilla-signed").await;
+    // #2715's 21: one Animated art on each full-art card, none a default or a starter (R2715000).
+    let new: Vec<String> = shipped()
+        .expect("the shipped registry")
+        .into_iter()
+        .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+        .filter(|cosmetic| cosmetic.id.starts_with(ANIMATED_ART_ID_PREFIX))
+        .inspect(|cosmetic| assert!(!cosmetic.default && !cosmetic.starter, "{}", cosmetic.id))
+        .map(|cosmetic| cosmetic.id)
+        .collect();
+    assert_eq!(new.len(), 21);
+
+    // Nothing grants them: the account reads what it was given, and none of the 21, not even its
+    // own card's.
+    let (status, body) = get(&app, Some(TOKEN)).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [
+            { "cardId": "core-008", "cosmeticId": "full-art-mr-vanilla" },
+            { "cardId": "core-008", "cosmeticId": "full-art-mr-vanilla-signed" },
+        ], "account": [] })
     );
     let listed = body.to_string();
     for id in &new {

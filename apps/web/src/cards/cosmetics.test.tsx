@@ -1100,12 +1100,16 @@ describe("R2655003 the full-art tiers' motion", () => {
   it("R2655003 the full-art tiers move only inside the motion gate by transform or opacity, and stand still outside it", () => {
     const gated = gatedRules(cosmeticsCss);
     const moving = gated.filter((rule) => rule.selector.includes("cf-full-art--") && /animation\s*:/.test(rule.body));
-    // The art's drift and the band's sweep on both moving tiers; the signature's wipe on the Mythic.
+    // The art's drift and the band's sweep on both moving tiers; on the Mythic, R2715002's signing: the
+    // wipe, the pen, the landing's burst and flourish, and the shine.
     expect(moving.map((rule) => rule.selector)).toEqual([
       `${GATE}.cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-art-frame > .cf-art`,
       `${GATE}.cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-full-art-sweep`,
       `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-wipe`,
-      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-ink`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-pen`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-burst`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-flourish`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-shine`,
     ]);
     // Outside the gate nothing of a full art's tier animates: the still frame and the whole name.
     const all = rules(cosmeticsCss);
@@ -1114,8 +1118,16 @@ describe("R2655003 the full-art tiers' motion", () => {
     );
     expect(ungated.length).toBeGreaterThan(0);
     for (const rule of ungated) expect(rule.body, rule.selector).not.toMatch(/animation|transition|transform\s*:/);
-    // Each loop moves by transform or opacity alone, and the name's wipe runs once and holds.
-    for (const name of ["full-art-drift", "full-art-sweep", "full-art-sign-wipe", "full-art-sign-ink"]) {
+    // Each loop moves by transform or opacity alone, and the name signs once and holds, but its shine.
+    for (const name of [
+      "full-art-drift",
+      "full-art-sweep",
+      "full-art-sign-wipe",
+      "full-art-sign-pen",
+      "full-art-sign-burst",
+      "full-art-sign-flourish",
+      "full-art-sign-shine",
+    ]) {
       const at = cosmeticsCss.indexOf(`@keyframes ${name} {`);
       expect(at, name).toBeGreaterThanOrEqual(0);
       const body = blockFrom(cosmeticsCss, cosmeticsCss.indexOf("{", at));
@@ -1123,8 +1135,10 @@ describe("R2655003 the full-art tiers' motion", () => {
       expect(properties.length, name).toBeGreaterThan(0);
       for (const property of properties) expect(["transform", "opacity"], `${name}: ${property ?? ""}`).toContain(property);
     }
-    for (const rule of moving.filter((rule) => rule.selector.includes("cf-signature"))) expect(rule.body, rule.selector).toMatch(/\bboth\b/);
-    for (const rule of moving.filter((rule) => !rule.selector.includes("cf-signature"))) expect(rule.body, rule.selector).toMatch(/\binfinite\b/);
+    const signing = moving.filter((rule) => rule.selector.includes("cf-signature") && !rule.selector.endsWith(".cf-signature-shine"));
+    for (const rule of signing) expect(rule.body, rule.selector).toMatch(/\bboth\b/);
+    for (const rule of signing) expect(rule.body, rule.selector).not.toMatch(/\binfinite\b/);
+    for (const rule of moving.filter((rule) => !signing.includes(rule))) expect(rule.body, rule.selector).toMatch(/\binfinite\b/);
     // The signature is set in the self-hosted script face, in the palette's colors.
     const text = ruleBody(cosmeticsCss, /\.cf-signature-text\s*\{/);
     expect(text).toMatch(/font-family:\s*var\(--font-signature\)/);

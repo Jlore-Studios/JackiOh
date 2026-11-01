@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_engine::{BackrowView, HandView, PLAYER_IDS, PlayerId, PlayerView, SideView};
 
-use crate::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, default_of, full_art_picked, owns, registry};
+use crate::cosmetics::{Cosmetic, CosmeticKind, default_of, full_art_of, full_art_picked, owns, registry};
 use crate::db::store::{BotRow, PlayerSettingValue, PlayerSettingsRow, SavedDeck, StoreResult, Tx};
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 
@@ -268,8 +268,9 @@ impl CardPicks {
 ///    default when it has none, does not own it or picks an id the registry has none of for its
 ///    kind, as its owner's client draws it (R1655000, R1953001). Its full art is the one its own
 ///    pick names, else its Epic when the account's Full-art cards setting is on, and prints when
-///    the account owns that full art on the card: `true` for the Epic, its id for a Legendary or a
-///    Mythic (R2655000). A card is listed only where it differs from the seat.
+///    the account owns that full art on the card: `true` for the still Epic, its id for a
+///    Legendary or a Mythic (R2655000) or the card's Animated art, an Epic too (R2715000). A card is
+///    listed only where it differs from the seat.
 pub fn freeze_loadout(
     registry: &[Cosmetic],
     owned: &OwnedCosmetics,
@@ -321,7 +322,9 @@ pub fn freeze_loadout(
         if let Some(full_art) =
             full_art_picked(registry, card, &pick).filter(|full_art| owns(full_art, Some(card), owned))
         {
-            entry.full_art = Some(if full_art.rarity == CosmeticRarity::Epic {
+            // R2715000: `true` is the still Epic alone; the card's Animated art, an Epic too, is its id.
+            let still = full_art_of(registry, card).is_some_and(|epic| epic.id == full_art.id);
+            entry.full_art = Some(if still {
                 FullArtPick::On(true)
             } else {
                 FullArtPick::Id(full_art.id.clone())
@@ -804,6 +807,67 @@ mod tests {
         assert_eq!(
             serde_json::to_value(id("full-art-core-001-signed")).ok(),
             Some(serde_json::json!("full-art-core-001-signed"))
+        );
+    }
+
+    #[test]
+    fn r2715000_an_owned_animated_art_freezes_as_its_id() {
+        // The card's Animated art, an Epic listed ahead of its still Epic.
+        let mut registry = test_registry();
+        registry.insert(
+            0,
+            Cosmetic {
+                card: Some("core-001".to_owned()),
+                rarity: CosmeticRarity::Epic,
+                ..entry("animated-core-001", CosmeticKind::FullArt, false, false)
+            },
+        );
+        let owning = |ids: &[&str]| OwnedCosmetics {
+            cards: ids
+                .iter()
+                .map(|id| CardCosmetic {
+                    card_id: "core-001".to_owned(),
+                    cosmetic_id: (*id).to_owned(),
+                })
+                .collect(),
+            account: Vec::new(),
+        };
+        let deck = cards(&["core-001", "core-002"]);
+        let frozen = |owned: &OwnedCosmetics, account_on: bool, pick: Option<FullArtPick>| {
+            let picks: Vec<CardPicks> = pick
+                .map(|pick| CardPicks {
+                    card_id: "core-001".to_owned(),
+                    full_art: Some(pick),
+                    ..CardPicks::default()
+                })
+                .into_iter()
+                .collect();
+            freeze_loadout(&registry, owned, &account(&[], account_on), None, &picks, &deck)
+                .card("core-001")
+                .and_then(|card| card.full_art.clone())
+        };
+        let animated = || Some(FullArtPick::Id("animated-core-001".to_owned()));
+        let both = owning(&["full-art-core-001", "animated-core-001"]);
+        // An owned Animated pick freezes as its id, not as `true`, whatever the setting.
+        assert_eq!(frozen(&both, false, animated()), animated());
+        assert_eq!(frozen(&both, true, animated()), animated());
+        // `true`, or the setting with no pick, still freezes the still Epic as `true`.
+        assert_eq!(
+            frozen(&both, false, Some(FullArtPick::On(true))),
+            Some(FullArtPick::On(true))
+        );
+        assert_eq!(frozen(&both, true, None), Some(FullArtPick::On(true)));
+        // The Animated art alone owns no still Epic, so `true` and the setting print nothing.
+        let animated_only = owning(&["animated-core-001"]);
+        assert_eq!(frozen(&animated_only, true, animated()), animated());
+        assert_eq!(frozen(&animated_only, true, Some(FullArtPick::On(true))), None);
+        assert_eq!(frozen(&animated_only, true, None), None);
+        // Not owned, it freezes nothing.
+        assert_eq!(frozen(&owning(&["full-art-core-001"]), true, animated()), None);
+        // It travels as its id's text.
+        assert_eq!(
+            serde_json::to_value(animated()).ok(),
+            Some(serde_json::json!("animated-core-001"))
         );
     }
 

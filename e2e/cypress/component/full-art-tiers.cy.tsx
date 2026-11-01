@@ -4,8 +4,9 @@
 // one full-art face of each card type (a Unit, a Spell, a Field Spell, a Field Trap, and two tokens
 // that wear their parent's full art, R2655002) at each tier, at the hand and inspect sizes, keeps its
 // cost gem, rarity gem, set mark, crest, name banner and stats apart, and a Mythic's
-// signature is on the art, clear of all of them; and under Reduce motion no tier moves and the
-// signature stands whole.
+// signature is on the art, clear of all of them, in its set's hand (R2715002); and under Reduce
+// motion no tier moves and the signature stands whole. R2715000's Animated art prints the normal face,
+// so it is animated-art.cy.tsx's, not this layout's.
 //
 // Each face is the viewer's own copy (`OwnCopy`) shown at a tier by `FullArtShown`, as the
 // Collection's preview shows one, so the three tiers of one card stand side by side with no pick
@@ -16,7 +17,7 @@ import { CardFace, FACE_ASPECT, faceModel } from "../../../apps/web/src/cards/in
 import { resetCosmeticsForTests } from "../../../apps/web/src/cards/cosmetics.ts";
 import {
   FULL_ARTS_OF_CARD,
-  FULL_ART_TIERS,
+  FULL_ART_LAYOUT_TIERS,
   FullArtShown,
   OwnCopy,
   fullArtPickOf,
@@ -24,6 +25,7 @@ import {
   type FullArtTier,
 } from "../../../apps/web/src/cards/fullArt.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../../../apps/web/src/cards/settings.ts";
+import { SIGNATURE_FACES, signatureFaceOf } from "../../../apps/web/src/cards/signatureFaces.ts";
 import { __resetSettingsForTests, writeSettings } from "../../../apps/web/src/settings/index.ts";
 
 type CardDef = (typeof CATALOG)[string];
@@ -58,7 +60,7 @@ const SMALL_FACE_PARTS: readonly string[] = [".cf-signature"];
 /** The widest face drawn at the small layout (100 px wide is 140 px tall, under 150). */
 const SMALL_FACE_MAX_WIDTH = 100;
 
-/** Retries cover `useFitText`'s passes, and a signature's wipe, which ends 2.8 s after it mounts. */
+/** Retries cover `useFitText`'s passes, and a signature's signing, done under a second after it mounts (R2715002). */
 const SETTLE_TIMEOUT_MS = 8_000;
 
 function heightFor(width: number): number {
@@ -83,7 +85,7 @@ function Faces({ width }: { width: number }) {
     <OwnCopy own>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8, background: "#1b1f2b" }}>
         {CARDS.flatMap(({ id }) =>
-          FULL_ART_TIERS.map((tier) => (
+          FULL_ART_LAYOUT_TIERS.map((tier) => (
             <div key={`${id}-${tier}`} data-face={`${id}-${tier}`} style={{ width, height: heightFor(width), flex: "none" }}>
               <FullArtShown defId={fullArtSource(id)} pick={pickFor(id, tier)}>
                 <CardFace face={faceModel({ defId: id, def: CATALOG[id] as CardDef, radiant: false })} layout="full" />
@@ -131,7 +133,7 @@ describe("R2655003 the full-art tiers on real faces", () => {
       cy.mount(<Faces width={width} />);
       cy.document().should((doc) => {
         for (const { id, why } of CARDS) {
-          for (const tier of FULL_ART_TIERS) {
+          for (const tier of FULL_ART_LAYOUT_TIERS) {
             const where = `${id} (${why}) at ${tier}, ${width}px`;
             const cf = faceIn(doc, id, tier);
             const face = cf.getBoundingClientRect();
@@ -166,7 +168,8 @@ describe("R2655003 the full-art tiers on real faces", () => {
               const text = cf.querySelector<SVGTextElement>(".cf-signature text");
               const box = text?.getBoundingClientRect();
               expect(box?.width ?? 0, `${where}: the name has a width`).to.be.greaterThan(width / 4);
-              expect(getComputedStyle(text as Element).fontFamily, `${where}: the script face`).to.contain("Dancing Script");
+              const family = SIGNATURE_FACES[signatureFaceOf(id)].family;
+              expect(getComputedStyle(text as Element).fontFamily, `${where}: its hand`).to.contain(family);
             }
           }
         }
@@ -212,7 +215,7 @@ describe("R2655003 the full-art tiers on real faces", () => {
     cy.get("html").should("have.attr", "data-reduce-motion", "true");
     cy.document().should((doc) => {
       for (const { id } of CARDS) {
-        for (const tier of FULL_ART_TIERS) {
+        for (const tier of FULL_ART_LAYOUT_TIERS) {
           const cf = faceIn(doc, id, tier);
           const where = `${id} at ${tier}`;
           expect(cf.getAttribute("data-full-art-tier"), where).to.eq(tier);

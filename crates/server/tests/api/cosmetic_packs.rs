@@ -1605,3 +1605,26 @@ async fn r2655000_a_full_shard_bar_buys_a_full_art_chase_on_an_owned_card() {
     assert!(!owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler").await);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
 }
+
+#[tokio::test]
+async fn r2715000_the_chase_shard_bar_refuses_an_animated_art() {
+    let (app, token) = setup().await;
+    let card = "core-004".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    own(&app, std::slice::from_ref(&card)).await;
+    // Owning the card and a full bar, its Animated art, an Epic and no chase, is refused, nothing
+    // is written and the bar stays full.
+    let before = everything(&app).await;
+    let (status, _, answer) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/chase",
+        Some(&token),
+        json!({ "cosmeticId": "animated-gary-the-gambler", "cardId": card }),
+    )
+    .await;
+    assert_eq!(status, 409, "{answer}");
+    assert_eq!(everything(&app).await, before);
+    assert!(!owns_cosmetic(&app, Some(&card), "animated-gary-the-gambler").await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
+}

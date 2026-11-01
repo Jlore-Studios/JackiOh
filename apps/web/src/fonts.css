@@ -1,14 +1,23 @@
 /* The web fonts (issue #262): one display face and one text face, and since #2655 one signature
-   face, all under the SIL Open Font License and self-hosted from public/fonts (their licenses
-   beside them), so the page asks no third party for anything and the CSP's `font-src 'self'` holds.
+   face (R2715002: and the sets' signature hands), all open-licensed and self-hosted from
+   public/fonts (their licenses beside them), so the page asks no third party for anything and the
+   CSP's `font-src 'self'` holds.
 
    - Alegreya (Huerta Tipográfica), the display face: titles, card names, the tavern's headings.
    - Inter (Rasmus Andersson), the text face: everything else, card rules text included.
    - Dancing Script (Impallari Type), the signature face: only the name a Mythic full art signs
      across its art (R2655003, cards/FullArtSignature.tsx). It has no metric-matched fallback: it
      is drawn inside an SVG that scales the name to its box, so a swap refits nothing.
+   - R2715002: the sets' signature hands, each a Mythic of its set's (or a card's own,
+     cards/signatureFaces.ts): Kaushan Script (Pablo Impallari and Igino Marini, Core), Pinyon
+     Script (Nicole Fally, Classic), Mr Dafoe (Alejandro Paul, Classic+), Nanum Brush Script
+     (Sandoll for NHN, Meditative) and Sedgwick Ave Display (Kevin Burke and Pedro Vergani,
+     Stinkyscape), under the SIL Open Font License, and Permanent Marker (Font Diner, Training
+     Grounds), under the Apache License 2.0. Each is one weight (400), its Latin subset, and like
+     Dancing Script needs no fallback. A browser fetches a face only when some text is set in it,
+     so a hand costs nothing until a Mythic of its set shows.
 
-   All are variable fonts over the weight axis, so the many weights the CSS asks for (400 to 900)
+   The first three are variable fonts over the weight axis, so the many weights the CSS asks for (400 to 900)
    are one file each, plus an italic for the first two. Only the Latin subset is shipped; anything outside it falls to
    the stacks' system faces glyph by glyph. The files are Fontsource's builds (v5.3.0); the version
    is in the file name, because public/_headers and vercel.json let browsers keep /fonts/* for a year
@@ -72,6 +81,66 @@
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+@font-face {
+  font-family: "Kaushan Script";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/kaushan-script-5.3.0-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Pinyon Script";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/pinyon-script-5.3.0-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Mr Dafoe";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/mr-dafoe-5.3.0-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Nanum Brush Script";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/nanum-brush-script-5.3.0-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Sedgwick Ave Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/sedgwick-ave-display-5.3.0-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Permanent Marker";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/permanent-marker-5.3.0-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* The metric-matched fallbacks (scripts/font-fallbacks.py). */
 
 @font-face {
@@ -101,4 +170,11 @@
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   /* R2655003: the signature face, then the systems' own script faces. */
   --font-signature: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  /* R2715002: the sets' signature hands, each falling back to the signature face's stack. */
+  --font-signature-brush: "Kaushan Script", "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  --font-signature-copperplate: "Pinyon Script", "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  --font-signature-flourish: "Mr Dafoe", "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  --font-signature-ink: "Nanum Brush Script", "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  --font-signature-tag: "Sedgwick Ave Display", "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
+  --font-signature-marker: "Permanent Marker", "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
 }

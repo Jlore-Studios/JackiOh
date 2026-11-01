@@ -10,6 +10,7 @@ import type { CardType, Tag } from "@jackioh/shared";
 
 import { EMBLEM_BOX, EMBLEMS, type EmblemGlyph } from "./emblems.ts";
 import { fmt, hashId, seededRandom } from "./hash.ts";
+import { CENTER_ORIGIN, motionStyle, moving, particleMarkup, type ArtMotion } from "./motion.ts";
 import { MOTIFS, motifFor } from "./motifs.ts";
 import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 
@@ -1410,8 +1411,15 @@ function rays(seed: number): string {
   return out.join("");
 }
 
-/** The SVG document a Stinkyscape face draws, unencoded. */
-export function stinkyscapeSvg(defId: string, name: string | undefined, tags: readonly Tag[], type: CardType, radiant: boolean): string {
+/** The SVG document a Stinkyscape face draws, unencoded; R2715001: moving as `motion` says. */
+export function stinkyscapeSvg(
+  defId: string,
+  name: string | undefined,
+  tags: readonly Tag[],
+  type: CardType,
+  radiant: boolean,
+  motion: ArtMotion | null = null,
+): string {
   const subject = stinkySubject(defId, name, tags, type);
   const lower = (name ?? "").toLowerCase();
   const seed = hashId(defId);
@@ -1429,9 +1437,11 @@ export function stinkyscapeSvg(defId: string, name: string | undefined, tags: re
   return (
     `<svg viewBox="0 0 ${BOX} ${BOX}" width="${BOX}" height="${BOX}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">` +
     `<defs>${defs.join("")}</defs>` +
-    sky +
+    motionStyle(motion, CENTER_ORIGIN) +
+    moving("back", sky, motion) +
     (radiant ? rays(seed) : "") +
-    group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn) +
+    moving("subject", group(at(SUBJECT_X + (SUBJECT_SHIFTS[subject.family] ?? 0), SUBJECT_Y, tilt, scale), drawn), motion) +
+    particleMarkup(motion, defId) +
     rect(0, 0, BOX, BOX, "url(#v)") +
     "</svg>"
   );

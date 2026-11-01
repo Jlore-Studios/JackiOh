@@ -26,6 +26,7 @@ import {
   FULL_ART_OF_CARD,
   FULL_ARTS_OF_CARD,
   FULL_ART_TIERS,
+  fullArtTierOfEntry,
   FullArtAllowed,
   FullArtOwned,
   type FullArtOwnership,
@@ -82,16 +83,17 @@ afterEach(() => {
 });
 
 describe("R1313000 the full-art faces are owned cosmetics", () => {
-  it("R1313000 R2655000 the registry holds an Epic, a Legendary and a Mythic full art for each of its twenty-one full-art cards, and none is a pick", () => {
+  it("R1313000 R2655000 the registry holds an Epic, a Legendary, a Mythic and an Animated full art for each of its twenty-one full-art cards, and none is a pick", () => {
     const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
     const cards = fullArts.flatMap((cosmetic) => ("card" in cosmetic ? [cosmetic.card] : []));
     expect(new Set(cards)).toEqual(new Set(HERO_IDS));
     expect(HERO_IDS).toHaveLength(21);
     expect(fullArts).toHaveLength(21 * FULL_ART_TIERS.length);
     for (const id of HERO_IDS) {
-      // One of each tier, its Epic what `true` names, and only the Legendary and Mythic chases.
+      // One of each tier, its Epic what `true` names, and only the Legendary and Mythic chases
+      // (R2715000: the Animated art an Epic too, appended last).
       const tiers = fullArts.filter((cosmetic) => "card" in cosmetic && cosmetic.card === id);
-      expect(tiers.map((cosmetic) => cosmetic.rarity), id).toEqual(FULL_ART_TIERS);
+      expect(tiers.map((cosmetic) => fullArtTierOfEntry(cosmetic)), id).toEqual(FULL_ART_TIERS);
       expect([...(FULL_ARTS_OF_CARD.get(id)?.values() ?? [])], id).toEqual(tiers.map((cosmetic) => cosmetic.id));
       expect(FULL_ART_OF_CARD.get(id), id).toBe(tiers[0]?.id);
       for (const cosmetic of tiers) expect(cosmetic.chase, cosmetic.id).toBe(cosmetic.rarity !== "Epic");

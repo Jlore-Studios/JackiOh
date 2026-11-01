@@ -1142,6 +1142,20 @@ describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
     expect(screen.getByTestId(T.equip(2))).toBeDisabled();
   });
 
+  it("R2715000 an Animated art's Equip picks it by its id", () => {
+    // The card wears its Epic already: the Animated art it just drew is still one to equip.
+    writeCardFullArt("core-004", true);
+    torn({ opened: granting({ kind: "cosmetic", cosmeticId: "animated-gary-the-gambler", cosmeticRarity: "Epic" }) });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equip");
+    expect(screen.getByTestId(T.equip(2))).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCardPicks("core-004").fullArt).toBe("animated-gary-the-gambler");
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
   it("R1955000 skip-all shows every Equip at once; an account cosmetic writes the account's pick, a portrait, a card and bars offer none", () => {
     const opened = openedPack();
     const account = (cosmeticId: string): OpenedPackResponse["slots"][number] => ({

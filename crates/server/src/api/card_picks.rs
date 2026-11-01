@@ -10,8 +10,9 @@
 //! where a key left out keeps the card's pick and `null` clears it (the card then wears the
 //! account's). R1834001: an id must be one of the registry under its kind that the account owns on
 //! that card (a default, a starter or a ledger row). `fullArt` is a boolean or a full art's id
-//! (R2655000): `true` needs the card's Epic full art, owned, and an id one of the card's own full
-//! arts, owned; anything else is 400 `bad_request`, and nothing is written.
+//! (R2655000), `full-art-…` or the card's Animated art's `animated-…` (R2715000): `true` needs the
+//! card's still Epic full art, owned, and an id one of the card's own full arts, owned; anything
+//! else is 400 `bad_request`, and nothing is written.
 //!
 //! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they
 //! moved to the account (`{ cards }`, as `GET` answers them). A card the account already holds a row
@@ -29,7 +30,9 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, bad_request, now_ms, ok_of, str};
 use crate::app::App;
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
-use crate::cosmetics::{self, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal, full_art_of, is_slug, owns};
+use crate::cosmetics::{
+    self, ANIMATED_ART_ID_PREFIX, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal, full_art_of, is_slug, owns,
+};
 use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 use crate::loadout::{CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
 
@@ -57,11 +60,14 @@ fn check_full_art(card_id: &str, pick: &FullArtPick, owned: &OwnedCosmetics) -> 
 }
 
 /// A `fullArt` value as a `PUT` or an upload sends it: a boolean, or a well-shaped full art's id,
-/// `full-art-…` (R2655000).
+/// `full-art-…` (R2655000) or `animated-…` (R2715000).
 fn full_art_pick_of(value: &Value) -> Option<FullArtPick> {
     match value {
         Value::Bool(on) => Some(FullArtPick::On(*on)),
-        Value::String(id) if is_id_shape(id) && id.starts_with(FULL_ART_ID_PREFIX) => {
+        Value::String(id)
+            if is_id_shape(id)
+                && (id.starts_with(FULL_ART_ID_PREFIX) || id.starts_with(ANIMATED_ART_ID_PREFIX)) =>
+        {
             Some(FullArtPick::Id(id.clone()))
         }
         _ => None,
@@ -356,5 +362,58 @@ mod tests {
         assert_eq!(full_art_pick_of(&json!("Full Art")), None);
         assert_eq!(full_art_pick_of(&json!("foil-rainbow")), None);
         assert_eq!(full_art_pick_of(&json!(1)), None);
+    }
+
+    #[test]
+    fn r2715000_an_animated_art_id_is_a_full_art_pick() {
+        // The wire reads an Animated art's well-shaped id as a full art's.
+        let animated = || Some(FullArtPick::Id("animated-mr-vanilla".to_string()));
+        assert_eq!(full_art_pick_of(&json!("animated-mr-vanilla")), animated());
+        assert_eq!(full_art_pick_of(&json!("animated-Mr")), None);
+        assert_eq!(
+            full_art_pick_of(&json!(format!(
+                "animated-{}",
+                "a".repeat(PLAYER_SETTINGS_TEXT_MAX_LENGTH)
+            ))),
+            None
+        );
+        assert_eq!(full_art_pick_of(&json!("animated")), None);
+        // Owned on its card, it is a pick; `true` still needs the still Epic, which it is not.
+        let owned = OwnedCosmetics {
+            cards: vec![CardCosmetic {
+                card_id: "core-008".to_string(),
+                cosmetic_id: "animated-mr-vanilla".to_string(),
+            }],
+            account: Vec::new(),
+        };
+        let id = FullArtPick::Id("animated-mr-vanilla".to_string());
+        assert_eq!(check_full_art("core-008", &id, &owned), Ok(()));
+        assert_eq!(
+            check_full_art("core-008", &FullArtPick::On(true), &owned),
+            Err(PickRefusal::NotOwned)
+        );
+        assert_eq!(
+            check_full_art("core-008", &id, &OwnedCosmetics::default()),
+            Err(PickRefusal::NotOwned)
+        );
+        assert_eq!(
+            check_full_art("core-004", &id, &owned),
+            Err(PickRefusal::WrongKind)
+        );
+        // An upload keeps it owned and drops it unowned or on another card.
+        let upload = |card: &str, owned: &OwnedCosmetics| {
+            keepable(
+                CardPicks {
+                    card_id: card.to_string(),
+                    full_art: animated(),
+                    ..CardPicks::default()
+                },
+                owned,
+            )
+            .full_art
+        };
+        assert_eq!(upload("core-008", &owned), animated());
+        assert_eq!(upload("core-008", &OwnedCosmetics::default()), None);
+        assert_eq!(upload("core-004", &owned), None);
     }
 }

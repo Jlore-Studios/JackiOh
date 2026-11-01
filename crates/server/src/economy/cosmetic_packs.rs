@@ -1205,4 +1205,39 @@ mod tests {
         }
         assert!(chases > 0, "no chase in 200 openings");
     }
+
+    #[test]
+    fn r2715000_an_epic_slot_drops_a_card_s_animated_art() {
+        // A card's still Epic full art held and its Animated art, an Epic too, not: the Epic slot
+        // drops the Animated art on its card, a pack slot like any other Epic per-card cosmetic.
+        let droppable = [
+            full_art("full-art-a", CosmeticRarity::Epic, "card-1"),
+            full_art("animated-a", CosmeticRarity::Epic, "card-1"),
+        ];
+        assert_eq!(cosmetic_pack_cosmetics(&droppable), droppable);
+        let pool = pool_of(10);
+        let holdings = CosmeticHoldings {
+            owned: owning(&["card-1"]),
+            ..wearing("card-1", &["full-art-a"])
+        };
+        let mut rng = Rng::new("r2715000", 0);
+        assert_eq!(
+            slot_grant(Epic, Epic, &pool, &droppable, &holdings, &mut rng),
+            CosmeticSlotGrant::Cosmetic {
+                cosmetic_id: "animated-a".to_owned(),
+                cosmetic_rarity: Epic,
+                card_id: Some("card-1".to_owned()),
+                card_granted: false,
+            }
+        );
+        // With both held the slot has nothing left to drop.
+        let both = CosmeticHoldings {
+            owned: owning(&["card-1"]),
+            ..wearing("card-1", &["full-art-a", "animated-a"])
+        };
+        assert_eq!(
+            slot_grant(Epic, Epic, &pool, &droppable, &both, &mut rng),
+            CosmeticSlotGrant::Bars
+        );
+    }
 }
