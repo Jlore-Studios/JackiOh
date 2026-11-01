@@ -13061,28 +13061,14 @@
     "what": "build #2723 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-01T18:01:32Z",
+    "at": "2026-11-01T18:13:38Z",
     "notes": [
-      "#2718 needs a plan",
-      "#2720 needs a plan",
-      "#2721 needs a plan",
-      "#2722 needs a plan",
-      "#2723 needs a plan",
-      "#2724 needs a plan",
-      "delivered build #2691 on claude-8 (run 41332672447): interrupted",
-      "delivered build #2497 on claude-8 (run 41328415477): interrupted",
-      "delivered build #2685 on claude-3 (run 41324982464): approved",
-      "started plan #2722 on claude-3 (run 41334740168)",
-      "started build #2718 on claude-3 (run 41334797851)",
-      "started build #2723 on claude-3 (run 41334849658)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-01T21:50:00Z; it can start a build or a plan again in 2h 43m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 60%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-11-02T09:00:00Z; it can start a build or a plan again in 4h 53m; `muse` it refused a call; its limit resets at 2026-11-02T00:00:00Z; `agy` it refused a call; its limit resets at 2026-11-06T22:06:08Z; `gpt` is busy; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-11-01T18:10:00Z; it can start a build or a plan again in 3m",
-      "pruned 1 plan file(s) older than 7 days",
-      "#2725: typed it Task",
-      "#2724: typed it Task",
-      "#2723: typed it Task",
-      "#2722: typed it Task",
-      "#2721: typed it Task",
-      "#2720: typed it Task"
+      "#2727 needs a plan",
+      "#2728 needs a plan",
+      "#2730 needs a plan",
+      "#2730: typed it Task",
+      "#2729: typed it Task",
+      "#2728: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13788,7 +13774,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T18:01:32Z",
+  "loop_tick": "2026-11-01T18:13:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
