@@ -12093,14 +12093,8 @@
     "what": "build #2497 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-01T10:37:14Z",
-    "notes": [
-      "#2497: its parts have all closed; queued its reconcile",
-      "started revise #2658 on claude-4 (run 41298623044)",
-      "started build #2497 on claude-8 (run 41298664791)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-01T10:49:21Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12805,7 +12799,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T10:37:14Z",
+  "loop_tick": "2026-11-01T10:49:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
