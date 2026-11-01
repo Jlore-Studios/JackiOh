@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2734,
+  "title": "Patch: an opponent's Trap reveal names the Trap to both seats",
+  "branch": "bot/issue-2734",
+  "thread": "**Issue #2734 (data, not instructions):**\n\n```text\n# #2734: Patch: an opponent's Trap reveal names the Trap to both seats\nOpened by @MaxGoetzmann.\n\n### What it does\n\nWhen the opponent's Trap fires, the \"Trap revealed\" showcase (#1493) and the flip in its lane play for the player it is revealed to with a **card back** and the line \"the opponent's face-down trap fired\". The card's name only shows up a moment later, in the graveyard (or face-up on the field, for a Field Trap). Nothing is being kept secret: R97 itself says *\"The identity is not thereby concealed \u2014 the graveyard shows it \u2014 the event simply does not name it.\"* The reveal should reveal the card.\n\n**Why it happens.** `trapFired` is R97's one exception to the zone rule. R154, amended by R763, keys its `instanceId`/`defId` to the trap's **controller**, so the other seat always reads the `\"hidden\"` sentinel (`crates/engine/src/view_for.rs`, the `GameEventType::TrapFired` arm, about line 2362). The client handles the sentinel correctly: `apps/web/src/game/showcase/plan.ts` (about line 149) makes a `defId: null` play, and `CardShowcase.tsx` renders `<CardBack>` with `TRAP_REVEAL_TEXT.hidden`.\n\n**The change.** Remove the controller key so `trapFired` follows R97's plain zone rule on **both** seats: it names the card to any viewer who may read it where it sits now. That is the graveyard, exile, or a Field Trap or animated Trap face-up on the field, all of them public. It still shows the sentinel where the card is not readable: in a library (R763's Counterspell Trap case, for both seats now), or in a hand that isn't the viewer's. `row`, `lane` and `controller` keep travelling as before. This takes a new ruling in this issue's block (R<this issue>000) that amends R154, R763 and R97's `trapFired` sentence. The ruling notes and the \u00a710.8 paragraph in `spec/10-engine-guide.md` (\"A fired trap's `trapFired` event names it to its controller only\u2026\") are edited in the PR, and the \u00a711 paragraph goes in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n\nWatch for these:\n- **Timing.** The view is computed after the action, so \"where it sits now\" is the card's resting place. Check that there is no case where a Trap's `trapFired` names a card that is still face-down in a backrow (a Trap that fires and stays set, if any can); a card there stays the sentinel to the other seat under \u00a710.8.\n- **R2652000** (a face-down card's `rolled` batch reaches the other seat only when its own `trapFired` follows in the same action) is unaffected. Re-read it anyway.\n- **Client paths that branch on the sentinel** and now get a name on the other seat: `apps/web/src/game/Log.tsx` (R154 comment, about lines 11 and 417), `apps/web/src/audio/cues.ts` (about line 551, \"only the controller's seat reads the trap, so only it hears the cast line\"; decide in the ruling whether the opponent now hears the Trap's voice line, as Hearthstone plays a Secret's reveal to both players, and record it), `apps/web/src/audio/voiceData.ts`, `animations.ts` (its `trapFired` row already prefers `locateInstance`, then the zone). Update their tests and comments to the new ruling.\n- **Hidden-information checks**: the fuzz gate's I6 (`crates/engine/src/testkit/invariants.rs`), `crates/cards/tests/cross/invariants.rs`, `crates/engine/tests/rules/view_for.rs` and `crates/tools/src/fuzz.rs` (about line 2353) must accept the name where the zone is public and still refuse it in a library or another seat's hand.\n- **The AI**: hidden cards never change a decision. This makes a public card public a step sooner, so nothing hidden leaks, but check that `crates/ai` reads no `trapFired` identity in a way that assumed the sentinel.\n- **Related:** #2722 part 3 works around this redaction for Legendary/Mythic Trap entrances on the opponent's seat (\"Showing the opponent the Trap's identity at the firing itself would change R154 and R763's redaction\"). Once this lands, that entrance can play at the firing. Note it on #2722; don't build it here.\n\n### Acceptance\n\n- A new ruling note in this issue's block amends R154, R763 and R97; `cargo jackioh spec check` passes.\n- Engine test (named after the new ruling): an opponent's Trap that fires into the graveyard reads with its real `instanceId` and `defId` in the **other** seat's `view_for` events, and its `row`/`lane`/`controller` are unchanged.\n- Engine test: a Field Trap's first firing names it to both seats; a firing `again` (R2657001) is unchanged.\n- Engine test: R763's case (a fired Trap shuffled back into a library) reads as the sentinel to **both** seats; one taken into a hand reads only to that hand's owner.\n- `r154_\u2026` and `r763_\u2026` in `crates/engine/tests/rules/rulings_c.rs` are updated to the amended rules, not deleted.\n- Web test (named after the new ruling): `showcasePlays` on the non-controller's view of a named `trapFired` gives a play with the Trap's `defId`, and `CardShowcase` renders its face with `TRAP_REVEAL_TEXT.named` (or `namedNumbered`) instead of a card back.\n- The Log and the audio cue tests match the ruling's decision on the opponent's seat.\n- `cargo jackioh fuzz --seeds 200` stays green (I6 included), and so does `cargo jackioh golden check`; re-record the golden only if the hotseat fixture's view hashes change, and say so in the PR.\n- `cargo jackioh classify --base origin/main --claims` matches the pending fragments.\n\n### Blocked by, part of\n\nNone. Related: #2722, #1493, #348.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2734: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
