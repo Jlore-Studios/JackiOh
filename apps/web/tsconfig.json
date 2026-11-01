@@ -20,6 +20,7 @@
       "@jackioh/cards/chinese-terms.json": ["../../crates/cards/chinese-terms.json"],
       "@jackioh/ai": ["./src/wire/ai.ts"],
       "@jackioh/ai/config": ["./src/wire/ai.ts"],
+      "@jackioh/run": ["./src/wire/run.ts"],
       "@jackioh/server-config": ["./src/wire/serverConfig.ts"]
     }
   },

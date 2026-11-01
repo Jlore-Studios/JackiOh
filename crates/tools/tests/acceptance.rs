@@ -3,9 +3,9 @@
 //!
 //!  - V2: the pure crates (engine, cards, ai, luau, run) link nothing but serde, serde_json, indexmap and
 //!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), and the
-//!    engine's and `jackioh-luau`'s ts-rs only behind their optional `ts` features (CLAUDE.md rule 4;
-//!    each crate's `clippy.toml` holds the rest of the rule, the five byte for byte the same and every
-//!    entry shown to fire on `tests/fixtures/purity.rs`);
+//!    engine's, `jackioh-luau`'s and `jackioh-run`'s ts-rs only behind their optional `ts` features
+//!    (CLAUDE.md rule 4; each crate's `clippy.toml` holds the rest of the rule, the five byte for byte
+//!    the same and every entry shown to fire on `tests/fixtures/purity.rs`);
 //!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose, part 28's grep
 //!    (`readFileSync(…md`, `include_str!(…md`, `read_to_string(…md`) as a test. The two structural
 //!    readers it allows are named below;
@@ -126,7 +126,7 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
             path.display()
         );
         for (name, entry) in &dependencies {
-            if matches!(crate_dir, "engine" | "luau") && name == "ts-rs" {
+            if matches!(crate_dir, "engine" | "luau" | "run") && name == "ts-rs" {
                 assert!(
                     entry.contains("optional = true"),
                     "{}: ts-rs must stay optional, behind the `ts` feature",

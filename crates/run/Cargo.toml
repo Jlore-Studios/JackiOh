@@ -7,7 +7,18 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-# Pure (CLAUDE.md rule 4): serde, serde_json and the engine. Nothing else.
+# Pure (CLAUDE.md rule 4): serde, serde_json, the engine and, behind `ts`, ts-rs. Nothing else.
 jackioh-engine = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+# Off by default, as the engine's `ts` is: the run's types are written to `apps/web/src/wire/generated/`
+# by `cargo test -p jackioh-run --features ts` (DR14), and nothing else derives types.
+ts-rs = { workspace = true, optional = true }
+
+[features]
+ts = ["dep:ts-rs", "jackioh-engine/ts"]
+
+[dev-dependencies]
+# The tests' real catalog (`run_catalog_content`, the starting cards, a scripted fight). No cycle: the
+# cards take nothing of this crate.
+jackioh-cards = { workspace = true }
