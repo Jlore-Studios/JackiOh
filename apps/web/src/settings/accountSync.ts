@@ -7,6 +7,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { getPlayerSettings, putPlayerSettings, type PlayerSettingsAccountCopy, type PlayerSettingsGroup } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
 import { SETTINGS_GROUPS, type SettingsGroup } from "./groups.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 /** Where this device keeps, per group, when it last changed here (epoch ms). Not a setting. */
 export const SETTINGS_SYNC_STORAGE_KEY = "jackioh.settings.sync.v1";
@@ -71,7 +72,7 @@ export function retrySettingsSync(): void {
 
 function readClock(): Record<string, number> {
   try {
-    const raw: unknown = JSON.parse(window.localStorage.getItem(SETTINGS_SYNC_STORAGE_KEY) ?? "null");
+    const raw: unknown = JSON.parse(getStored(SETTINGS_SYNC_STORAGE_KEY) ?? "null");
     if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
     const clock: Record<string, number> = {};
     for (const [id, at] of Object.entries(raw)) {
@@ -84,11 +85,8 @@ function readClock(): Record<string, number> {
 }
 
 function writeClock(clock: Record<string, number>): void {
-  try {
-    window.localStorage.setItem(SETTINGS_SYNC_STORAGE_KEY, JSON.stringify(clock));
-  } catch {
-    // Keep the in-memory clock when storage is unavailable.
-  }
+  // Storage that is unavailable leaves the in-memory clock.
+  setStored(SETTINGS_SYNC_STORAGE_KEY, JSON.stringify(clock));
 }
 
 function sameValues(a: Record<string, unknown>, b: Record<string, unknown>): boolean {

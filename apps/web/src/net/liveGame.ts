@@ -10,7 +10,7 @@ import { pageWake } from "../game/net.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
-import { sessionStorageOrNull } from "./storage.ts";
+import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 import { attempt } from "./errors.ts";
 
 /** Unit conversion, not configuration. */
@@ -115,12 +115,8 @@ const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
 
 /** The mode this tab is queued in, or null. */
 export function readQueued(): QueueMode | null {
-  try {
-    const raw = sessionStorageOrNull()?.getItem(QUEUE_STORAGE_KEY) ?? null;
-    return (QUEUE_MODES as readonly (string | null)[]).includes(raw) ? (raw as QueueMode) : null;
-  } catch {
-    return null;
-  }
+  const raw = getStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
+  return (QUEUE_MODES as readonly (string | null)[]).includes(raw) ? (raw as QueueMode) : null;
 }
 
 function changed(): void {
@@ -129,21 +125,14 @@ function changed(): void {
 
 /** R765: remember this tab's queue so a pairing can follow it. */
 export function rememberQueued(mode: QueueMode): void {
-  try {
-    sessionStorageOrNull()?.setItem(QUEUE_STORAGE_KEY, mode);
-  } catch {
-    // Blocked storage: only `/play` follows the queue (R765).
-  }
+  // Blocked storage: only `/play` follows the queue (R765).
+  setStored(QUEUE_STORAGE_KEY, mode, sessionStorageOrNull());
   changed();
 }
 
 /** Forget a left or paired queue. */
 export function forgetQueued(): void {
-  try {
-    sessionStorageOrNull()?.removeItem(QUEUE_STORAGE_KEY);
-  } catch {
-    // Blocked storage has nothing to forget.
-  }
+  removeStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
   changed();
 }
 

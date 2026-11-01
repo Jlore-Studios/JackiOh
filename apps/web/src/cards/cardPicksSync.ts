@@ -25,6 +25,7 @@ import {
   type CardPickChange,
   type StoredCardPicks,
 } from "./cosmetics.ts";
+import { getStored, setStored } from "../net/storage.ts";
 
 /** R1834000: the profiles whose account copy has replaced this device's picks, a JSON list of profile ids. */
 export const CARD_PICKS_UPLOADED_KEY = "jackioh.cosmetics.cards.uploaded.v1";
@@ -52,7 +53,7 @@ export type CardPicksAccountSync = {
 /** The profiles listed under CARD_PICKS_UPLOADED_KEY; none where storage is missing, blocked or unparsable. */
 function uploadedProfiles(): string[] {
   try {
-    const raw: unknown = JSON.parse(window.localStorage.getItem(CARD_PICKS_UPLOADED_KEY) ?? "[]");
+    const raw: unknown = JSON.parse(getStored(CARD_PICKS_UPLOADED_KEY) ?? "[]");
     return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : [];
   } catch {
     return [];
@@ -60,11 +61,8 @@ function uploadedProfiles(): string[] {
 }
 
 function markUploaded(profileId: string): void {
-  try {
-    window.localStorage.setItem(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
-  } catch {
-    // Storage refused: the next sign-in may send the picks again, which overwrites nothing on the account.
-  }
+  // Storage that refuses it: the next sign-in may send the picks again, which overwrites nothing on the account.
+  setStored(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
 }
 
 /** The account's answer as the store's input, card id to picks; an answer of another shape is a failed request. */

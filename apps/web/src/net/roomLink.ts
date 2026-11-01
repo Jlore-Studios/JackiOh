@@ -8,7 +8,7 @@ import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import type { QueueMode } from "./api.ts";
 import { currentPath, paths } from "./navigate.ts";
-import { sessionStorageOrNull } from "./storage.ts";
+import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
 const ROOM_PARAM = "room";
 const MODE_PARAM = "mode";
@@ -59,11 +59,8 @@ export function adoptRoomLink(): boolean {
     // A sandboxed frame may refuse; the link is still read and kept below.
   }
   if (link === null) return false;
-  try {
-    sessionStorageOrNull()?.setItem(ROOM_LINK_STORAGE_KEY, JSON.stringify(link));
-  } catch {
-    // Blocked or full storage: the link serves this page load but not a trip through sign-in.
-  }
+  // Blocked or full storage: the link serves this page load but not a trip through sign-in.
+  setStored(ROOM_LINK_STORAGE_KEY, JSON.stringify(link), sessionStorageOrNull());
   return true;
 }
 
@@ -71,7 +68,7 @@ export function adoptRoomLink(): boolean {
 export function readRoomLink(): RoomLink | null {
   adoptRoomLink();
   try {
-    const raw = sessionStorageOrNull()?.getItem(ROOM_LINK_STORAGE_KEY) ?? null;
+    const raw = getStored(ROOM_LINK_STORAGE_KEY, sessionStorageOrNull());
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
@@ -85,11 +82,7 @@ export function readRoomLink(): RoomLink | null {
 }
 
 export function forgetRoomLink(): void {
-  try {
-    sessionStorageOrNull()?.removeItem(ROOM_LINK_STORAGE_KEY);
-  } catch {
-    // Blocked storage held nothing to forget.
-  }
+  removeStored(ROOM_LINK_STORAGE_KEY, sessionStorageOrNull());
 }
 
 export const COOP_LINK_STORAGE_KEY = "jackioh.together.coopLink";
@@ -127,11 +120,8 @@ export function adoptCoopLink(): boolean {
     // A sandboxed frame may refuse; the link is still read and kept below.
   }
   if (code === null) return false;
-  try {
-    sessionStorageOrNull()?.setItem(COOP_LINK_STORAGE_KEY, JSON.stringify({ code }));
-  } catch {
-    // Blocked or full storage: the link serves this page load but not a trip through sign-in.
-  }
+  // Blocked or full storage: the link serves this page load but not a trip through sign-in.
+  setStored(COOP_LINK_STORAGE_KEY, JSON.stringify({ code }), sessionStorageOrNull());
   return true;
 }
 
@@ -139,7 +129,7 @@ export function adoptCoopLink(): boolean {
 export function readCoopLink(): string | null {
   adoptCoopLink();
   try {
-    const raw = sessionStorageOrNull()?.getItem(COOP_LINK_STORAGE_KEY) ?? null;
+    const raw = getStored(COOP_LINK_STORAGE_KEY, sessionStorageOrNull());
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
@@ -151,11 +141,7 @@ export function readCoopLink(): string | null {
 }
 
 export function forgetCoopLink(): void {
-  try {
-    sessionStorageOrNull()?.removeItem(COOP_LINK_STORAGE_KEY);
-  } catch {
-    // Blocked storage held nothing to forget.
-  }
+  removeStored(COOP_LINK_STORAGE_KEY, sessionStorageOrNull());
 }
 
 /**
