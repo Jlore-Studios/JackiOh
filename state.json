@@ -12295,7 +12295,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-01T03:41:45Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "41278823632",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T05:56:25Z",
