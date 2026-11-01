@@ -1056,6 +1056,9 @@ func CmdProviders(cfg *config.Config, args *Args) int {
 			caps = append(caps, fmt.Sprintf("%s %s min", k, py.Str(v)))
 			return true
 		})
+		if provider.HardCap != nil {
+			caps = append(caps, fmt.Sprintf("never past %.0f%%", *provider.HardCap*100))
+		}
 		capText := strings.Join(caps, ", ")
 		if capText == "" {
 			capText = "none"

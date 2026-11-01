@@ -601,10 +601,12 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// Ten a second follows a hover from target to target and bounds what a scripted client can push.
 pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
 /// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
-/// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. A second: a
-/// page probes only once its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer
-/// ends the quiet (R1441), so a real page's probe never falls inside it, while a scripted flood
-/// costs one view a second.
+/// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. R2686000
+/// holds a player's socket to the same interval, on `/ws/match` and `/ws/duos`: a later hello of one
+/// socket generation, sooner than this after the last answered one, is dropped unanswered, while the
+/// first hello of a new generation (a reattach) is always answered. A second: a page probes only once
+/// its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer ends the quiet (R1441),
+/// so a real page's probe never falls inside it, while a scripted flood costs one view a second.
 pub const WATCH_HELLO_INTERVAL_MS: i64 = 1_000;
 /// Match sockets one client address may hold at once, counting handshakes still in progress. Not in
 /// SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it
