@@ -12484,6 +12484,13 @@
     "2686": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:46:16Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "Easy rule 3 fails because the change adds R2686000 and edits the spec's ruling notes."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
