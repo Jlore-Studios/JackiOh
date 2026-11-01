@@ -5,15 +5,15 @@
 // It is percent-encoded in full, parentheses and quotes included, so it can sit inside a CSS
 // `url("…")` in any browser and in jsdom's style parser.
 
-import type { CardType, Tag } from "@jackioh/shared";
+import type { CardDef, CardType, Tag } from "@jackioh/shared";
 
 import { EMBLEM_BOX, EMBLEMS } from "./emblems.ts";
 import { fmt } from "./hash.ts";
-import type { MotifId } from "./motifs.ts";
+import { motifFor, type MotifId } from "./motifs.ts";
 import { artSpec, ART_BOX, type ArtSpec } from "./procedural.ts";
-import { starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
-import { trainingGroundsSvg } from "./traininggrounds.ts";
-import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
+import { isStinkyscapeArt, starshipSvg, stinkyscapeSvg } from "./stinkyscape.ts";
+import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, trainingGroundsSvg } from "./traininggrounds.ts";
+import { compositionFor, themeFor, RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts";
 
 const DATA_PREFIX = "data:image/svg+xml,";
 /** Rays reach past every corner of the box from anywhere inside it. */
@@ -199,4 +199,20 @@ export function trainingGroundsArtUri(defId: string, name: string | undefined, t
   const uri = `${DATA_PREFIX}${encodeSvg(trainingGroundsSvg(defId, name, tags, type, radiant))}`;
   proceduralCache.set(key, uri);
   return uri;
+}
+
+/**
+ * #2681: the art a card's window draws, as one data URI, from the card's public definition alone and
+ * with no React: the release artwork (patches/releaseArt.ts) is built in Node as well as the browser.
+ * It makes the choices `CardArt` makes, in its order (R503, R2170000, R2202000, R2511000): a Stinkyscape
+ * card and a Training Grounds card draw their set's own family, a Legacy card its Core card's picture
+ * read by the Core card's name, and every other card its theme, composition and motif.
+ */
+export function proceduralCardArtUri(def: Pick<CardDef, "id" | "name" | "tags" | "type">, radiant: boolean): string {
+  const theme = themeFor(def.tags, def.type);
+  const coreId = snapshotArtOf(def.id);
+  const name = coreId === null ? def.name : def.name.replace(LEGACY_PREFIX, "");
+  if (isStinkyscapeArt(def.id)) return stinkyscapeArtUri(def.id, name, def.tags, def.type, radiant);
+  if (isTrainingGroundsArt(def.id)) return trainingGroundsArtUri(def.id, name, def.tags, def.type, radiant);
+  return proceduralArtUri(coreId ?? def.id, theme, compositionFor(def.type), radiant, motifFor(name, theme));
 }
