@@ -12666,14 +12666,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T16:26:18Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
+      "pr": 2737,
       "provider": "gpt",
+      "question": "",
       "queued_at": "2026-11-01T15:13:26Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "41328453871",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T16:51:20Z",
@@ -12681,7 +12685,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6559775491"
-      ]
+      ],
+      "verdict_rounds": 3
     },
     "2691": {
       "action": "build",
