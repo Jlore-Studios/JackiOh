@@ -12902,8 +12902,16 @@
       "stop_requested": false
     },
     "2703": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-2701",
-      "part_of": 2701
+      "part_of": 2701,
+      "pending_request": false,
+      "queued_at": "2026-11-01T18:44:26Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
     },
     "2704": {
       "onto": "bot/issue-2701",
