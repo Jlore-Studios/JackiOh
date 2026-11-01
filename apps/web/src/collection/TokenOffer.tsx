@@ -1,8 +1,7 @@
 // R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown. A Rare token
-// covers Common and Rare, an Epic token Epic and below, and no token a chase, a default or a starter
-// (R1305003, §14.2). THE SERVER DECIDES (CLAUDE.md rule 7): the offer only hides what it would refuse;
-// the click sends `POST /api/tokens/redeem-cosmetic` and renders its held counts and a re-read of
-// ownership (`rereadOwnedCosmetics`); a refusal shows the server's words and changes nothing.
+// covers Common and Rare, an Epic token Epic and below (R1305003, §14.2). THE SERVER DECIDES
+// (CLAUDE.md rule 7): the offer only hides what it would refuse; a refusal shows the server's words
+// and changes nothing.
 
 import { useEffect, useState, type ReactElement } from "react";
 

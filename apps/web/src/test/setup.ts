@@ -1,11 +1,7 @@
-// Vitest setup for the web package: jsdom matchers, a `matchMedia` stub (jsdom lacks it, and the
-// animation table needs `prefers-reduced-motion`, BUILD M5-T4), a silent `window.scrollTo`, a
-// `PointerEvent` that keeps `pointerType`, the engine, and an empty read cache before each test
-// (R2125000: a test never starts on another's kept answers).
-// The engine, the AI and the validator are the Rust ones in WebAssembly (docs/v0.3.0/SURFACE.md §10.3).
-// jsdom cannot fetch the module from a file URL, so its bytes (which `scripts/build-wasm.sh`, run by
-// `pretest`, writes) are read from disk before any test file is imported, and every test reaches the
-// engine synchronously, as the page does after `main.tsx` has awaited `loadWasm()`.
+// Vitest setup. jsdom lacks `matchMedia`, which the animation table needs (BUILD M5-T4); each test
+// starts on an empty read cache (R2125000: never on another's kept answers). The Rust engine
+// (docs/v0.3.0/SURFACE.md §10.3) loads synchronously from the bytes `scripts/build-wasm.sh` (run by
+// `pretest`) writes, as jsdom cannot fetch a file URL, before any test file is imported.
 
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
@@ -16,8 +12,8 @@ import { beforeEach } from "vitest";
 import { clearReadCache } from "../net/readCache.ts";
 import { loadWasmSync } from "../wasm/index.ts";
 
-// A path, not `new URL("../wasm/pkg/…", import.meta.url)`: Vite rewrites that literal pattern into an
-// asset URL against the page's origin, which `readFileSync` refuses ("The URL must be of scheme file").
+// A path, not `new URL(…, import.meta.url)`: Vite rewrites that into an asset URL against the page's
+// origin, which `readFileSync` refuses.
 loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
 
 let reducedMotion = false;
@@ -52,9 +48,8 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
   });
 }
 
-// jsdom's `window.scrollTo` only logs "Not implemented" on the console, and `navigate` scrolls every
-// new screen to the top (#1756), so each test that follows a link would log it. `net/navigate.test.ts`
-// spies on this no-op.
+// jsdom's `window.scrollTo` logs "Not implemented", and `navigate` scrolls each new screen to the top
+// (#1756). `net/navigate.test.ts` spies on this no-op.
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "scrollTo", { configurable: true, writable: true, value: () => {} });
 }

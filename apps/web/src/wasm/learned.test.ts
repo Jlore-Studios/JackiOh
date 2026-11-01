@@ -1,6 +1,5 @@
-// R1011000, issue #1011: the learned evaluation's integer network gives, in the WebAssembly build,
-// exactly the corrections the Python reference computed for the parity fixture, bit for bit, as
-// `cargo test -p jackioh-ai` holds the native build to the same fixture.
+// R1011000, issue #1011: the WebAssembly build's learned evaluation gives the Python reference's
+// corrections for the parity fixture bit for bit, as `cargo test -p jackioh-ai` holds the native build.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

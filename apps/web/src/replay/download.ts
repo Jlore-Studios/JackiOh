@@ -1,8 +1,7 @@
 // Downloading a replay as JSON (#1141, R1141000): every step of a replay, as its seat saw it, in one
 // file a player attaches to a bug report. Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
-// and no account (as a GIF names none, R513000), and nothing is uploaded or kept. And back in (#1160):
-// a file the page wrote opens again, parsed in the page against that same shape. A co-op replay's
-// file is another shape, `duos/download.ts`'s (R1242000).
+// and no account (as a GIF names none, R513000), and nothing is uploaded or kept. A file the page wrote
+// opens again (#1160); a co-op replay's file is another shape, `duos/download.ts`'s (R1242000).
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
@@ -100,10 +99,9 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
 
 /**
  * The steps of a file `replayJsonFile` wrote (#1160), or a `ReplayFailure` saying why it is refused
- * (a file from a newer build is refused as a stale one is, since its views may differ). The file is
- * untrusted, so it is held to the caps before its text is read and again before its steps are kept.
- * A step is checked for its index, a turn that never goes back and a view that is an object; the
- * catalog gate is what makes that enough, and the page never enforces rules on a view (rule 7).
+ * (a file from a newer build is refused as a stale one is, since its views may differ). Its steps are
+ * held to the cap before they are kept, each checked for its index, a turn that never goes back and a
+ * view that is an object; the catalog gate makes that enough, and the page never enforces rules (rule 7).
  */
 export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
   const unmarked = json.version === REPLAY_JSON_UNMARKED_VERSION;

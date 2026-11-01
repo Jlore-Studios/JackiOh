@@ -1,5 +1,4 @@
 // Settings-dialog coverage (R633, R634). The shared account changes only background music and ends off.
-// BUILD M8: await account requests and use retried DOM assertions; selectors come from support/testids.ts and support/ux.ts.
 
 import { SESSION_STORAGE_KEY, accounts, routes, server } from "../../support/config.ts";
 import { ts } from "../../support/testids.ts";

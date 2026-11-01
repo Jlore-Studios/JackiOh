@@ -1,8 +1,6 @@
-// #2215: the web's tests take `settle`, `withCatalog`, `renderBoard` and the `PointerEvent` polyfill
-// (`ensurePointerEvent`) from src/test/ (settle.ts, board.tsx, setup.ts), never from a copy of their own,
-// as the Rust tests are held to their shared kit (crates/tools/tests/acceptance.rs, #1777). A helper
-// whose body differs takes another name. The planted copies below are strings, so no line of this
-// file starts with a definition.
+// #2215: the web's tests take `settle`, `withCatalog`, `renderBoard` and `ensurePointerEvent` from
+// src/test/, never from a copy of their own (as the Rust tests take their shared kit, #1777); a helper
+// whose body differs takes another name. The planted copies below are strings, not definitions.
 
 import { describe, expect, it } from "vitest";
 
@@ -29,7 +27,6 @@ function definesAt(name: string): RegExp {
 
 const PATTERNS = SHARED.map(({ name }) => ({ name, pattern: definesAt(name) }));
 
-/** Each line of `source` that defines a shared helper, as `line <n>: <name>`. */
 function copiesIn(source: string): string[] {
   return source.split("\n").flatMap((line, index) =>
     PATTERNS.filter(({ pattern }) => pattern.test(line)).map(({ name }) => `line ${String(index + 1)}: ${name}`),

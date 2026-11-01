@@ -1,7 +1,6 @@
 // The creator's editor state (#920): one card being made or edited, as plain data, and the pure steps
-// that move it, so a test can walk the round trip without a page. K3: the builder's model writes the
-// script, the numbers and, until the player writes their own, the text; a card whose script no longer
-// equals what its model writes is code-only from then on, and `builderRefusal` says why.
+// that move it. K3: a card whose script no longer equals what its model writes is code-only from then
+// on, and `builderRefusal` says why.
 
 import type { CustomCard, CustomFrame, CustomParam } from "@jackioh/shared";
 
@@ -24,7 +23,6 @@ export type Draft = {
 /** The id a card not saved yet is checked under: well formed, and never one the server mints (`custom-` and 32 hex digits). */
 export const DRAFT_ID = "custom-draft";
 
-/** A new card: a 1-mana 1/1 Unit with no text, in the builder. */
 export function newDraft(): Draft {
   const model = emptyModel();
   return {
@@ -37,7 +35,6 @@ export function newDraft(): Draft {
   };
 }
 
-/** A saved card, opened in the builder when its model still writes its script, else in code. */
 export function draftOf(card: CustomCard): Draft {
   const model = isBuilderModel(card.builder) ? card.builder : null;
   return {
@@ -50,7 +47,7 @@ export function draftOf(card: CustomCard): Draft {
   };
 }
 
-/** The card as the checks and a save read it: the draft's id or `DRAFT_ID`, and the model while it still writes the script. */
+/** The card as the checks and a save read it: the model only while it still writes the script. */
 export function cardOf(draft: Draft): CustomCard {
   const keepModel = draft.model !== null && builderShows(draft.model, draft.source);
   return {
@@ -138,7 +135,7 @@ function sameJson(a: unknown, b: unknown): boolean {
   return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
 
-/** Whether the draft differs from the card it was read from (a new card is unsaved until its first save). */
+/** Whether the draft differs from the card it was read from. */
 export function isDirty(draft: Draft, saved: CustomCard | null): boolean {
   if (saved === null) return true;
   const card = cardOf(draft);

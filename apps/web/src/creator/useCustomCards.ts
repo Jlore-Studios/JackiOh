@@ -1,6 +1,5 @@
-// The account's custom cards as a screen reads them (SPEC §12.9, R915008): the creator's list, the
-// deck builder's "Custom" filter and the practice setup all read `GET /api/custom-cards` through this
-// hook, and draw each card from its frame's definition (`customDef`: no Luau is loaded to draw, R915009).
+// The account's custom cards (`GET /api/custom-cards`) as a screen reads them (SPEC §12.9, R915008),
+// each drawn from its frame's definition (`customDef`: no Luau is loaded to draw, R915009).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -12,7 +11,6 @@ import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts"
 import { customDef } from "../wire/validator.ts";
 
 export type CustomCardsState =
-  /** No active account: there are no custom cards to read. */
   | { kind: "none" }
   | { kind: "loading" }
   | { kind: "ready"; cards: CustomCard[]; limit: number }

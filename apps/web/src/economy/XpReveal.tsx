@@ -1,8 +1,6 @@
 // The XP reveal (#1664, part of #1651, SPEC §14.7–§14.9): what a finished game did to the set tracks,
-// shown after every game that paid. Each track the game moved fills level by level; each level it
-// reaches pops its number and flies out what it paid; each quest the game completed is listed with
-// its pay. A quest only ever completes inside a game's payout (§14.9), so this is where it shows.
-//
+// shown after every game that paid. A quest only ever completes inside a game's payout (§14.9), so
+// this is where it shows.
 // THE SERVER DECIDES (CLAUDE.md rule 7): the tracks and quests are the answer's (`xp.ts`). Levels span
 // different XP, so a track plays as one bar per level it passes through (`stagesOf`), each the size
 // the answer gives. REDUCED MOTION draws every end state and reward at once, with one sting.
@@ -28,7 +26,6 @@ export type XpRevealProps = {
   testid?: string;
 };
 
-/** What each part of a level's reward is, in the reveal's kinds and the answer's fields. */
 const REWARD_PARTS: readonly (readonly [RevealKind, keyof TrackRewards])[] = [
   ["jlore", "jlore"],
   ["setPack", "setPacks"],

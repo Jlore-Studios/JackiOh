@@ -73,7 +73,6 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
       cy.get(PROMPT).should("not.exist");
       manaIs(0);
 
-      // Mr. Vanilla costs (0) now.
       cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
       manaIs(0);
 
@@ -102,7 +101,6 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
         cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
         cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH - VANILLA_ATTACK)).should("exist");
 
-        // Once a turn.
         cy.get(ts(activateUsesId(turtinator))).should("have.text", "0");
         cy.get(control).should("have.attr", "data-legal", "false");
         // The control capitalises the engine's refusal (ActivateControl.tsx, `capitalised`).

@@ -1,6 +1,5 @@
 // Spec 20: concurrent mulligans, confirmed concede, and draw offers over browser and socket views.
 // CLAUDE.md rule 7: each seat sees only its `viewFor` data (R266, §9.1, §10.8).
-// R265 and R268 cover sealed mulligans and their shared clock; R36 and R269 cover draw offers.
 // Fixture turns stay actionable under R82 and R244; kept and redrawn cards follow R9 and R10.
 // Room setup follows R143 and R257 (SPEC §11; §§2.1, 2.5, 9.5; SURFACE §11.3); clocks follow R79.
 
@@ -124,7 +123,6 @@ function seatTwoSends(body: ActionInput): Cypress.Chainable<WsPlayerResult> {
   return cy.wsPlayer({ action: "send", name: SEAT_TWO, body });
 }
 
-/** Latest clock frame (R79, R268). */
 function seatTwoClock(): Cypress.Chainable<ClockFrame> {
   return cy.wsPlayer({ action: "messages", name: SEAT_TWO }).then((result) => {
     const frames = (result.messages ?? []).filter((message) => message.type === "clock") as unknown as ClockFrame[];
@@ -142,7 +140,6 @@ function seatTwoKeepsWholeHand(): void {
 
 // The browser
 
-/** Opening hand ids from the mulligan picker (R9). */
 function browserMulliganIds(): Cypress.Chainable<string[]> {
   return cy
     .get(`${promptOf("mulligan")} ${ANY_OPTION}`, { timeout: timeouts.view })

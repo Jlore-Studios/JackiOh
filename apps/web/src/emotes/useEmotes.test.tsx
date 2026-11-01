@@ -78,7 +78,6 @@ describe("R643 a local send", () => {
     });
 
     expect(sent).toBe(true);
-    // The bubble is up already: the sender's own line text, for that portrait.
     expect(result.current.visible("p1")).toMatchObject({
       emote: "greetings",
       text: "Hey there, friend! Feeling lucky?",
@@ -298,7 +297,6 @@ describe("R643 one emote per player, expiring on its own span", () => {
     const shown = result.current.visible("p2");
     expect(shown?.emote).toBe("laugh");
 
-    // The first sticker's timer fires inside the second's span and must not expire it.
     act(() => {
       vi.advanceTimersByTime(EMOTE_EMOJI_MS / 2);
     });

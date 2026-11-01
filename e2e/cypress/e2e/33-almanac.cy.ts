@@ -1,5 +1,4 @@
 // Spec 33 (SPEC §10.10, R630): signed-out landing-page access to read-only `/almanac`.
-// BUILD M8 permits only its public statistics request (R654) in this serverless scenario.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { seedFor } from "../../support/config.ts";
@@ -120,11 +119,9 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
         cy.get(ts(filterCostId(COST))).click().should("have.attr", "aria-pressed", "true");
         cy.get(ts(DB_RESULT_COUNT)).invoke("attr", "data-count").then(Number).should("be.lessThan", Number(all)).and("be.greaterThan", 0);
       });
-    // Every card the filter keeps, which scrolling the pool through meets.
     eachPoolCard(($card) => {
       expect($card.attr("aria-label"), $card.attr("data-card")).to.contain(COST_WORDS);
     }).then((ids) => {
-      // Back at its top, the first card opens its detail.
       const id = ids[0] ?? "";
       cy.get(ts(CARD_POOL)).then(($pool) => {
         $pool.scrollTop(0);
@@ -154,7 +151,6 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.get(ts(ALMANAC)).should("be.visible");
     cy.get(ts(CARD_POOL)).find(".db-card").should("have.length.greaterThan", 0);
 
-    // Far fewer cards than the pool's count are in the page at once.
     cy.get(ts(DB_RESULT_COUNT))
       .invoke("attr", "data-count")
       .then(Number)
@@ -162,7 +158,6 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
         cy.get(ts(CARD_POOL)).find(".db-card").its("length").should("be.lessThan", count / 2);
       });
 
-    // Every card the pool holds is met by scrolling through it, each a button named "<card>. Show details".
     eachPoolCard(($card) => {
       expect($card.prop("tagName"), $card.attr("data-card")).to.eq("BUTTON");
       expect($card.attr("aria-label"), $card.attr("data-card")).to.match(/\. Show details$/u);
@@ -173,7 +168,6 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
       });
       cy.get(ts(poolCardId(ids[0] ?? ""))).focus();
       cy.focused().should("have.attr", "data-card", ids[0]);
-      // More cards than a screen and its overscan mount at once: the keyboard goes past the rows that were.
       for (let at = 1; at < POOL_WALK; at += 1) {
         cy.press(Cypress.Keyboard.Keys.TAB);
         cy.focused().should("have.attr", "data-card", ids[at]);

@@ -33,7 +33,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** A device with no hover and a coarse pointer: only `TOUCH_ONLY_QUERY` matches. */
+/** A touch-only device: only `TOUCH_ONLY_QUERY` matches. */
 function touchOnlyDevice(): void {
   vi.spyOn(window, "matchMedia").mockImplementation(
     (query: string) =>
@@ -58,7 +58,7 @@ function toolbar(): void {
 
 let enemyId = "";
 
-/** Hovers the first opponent unit on a full board until its preview opens, and returns the preview. */
+/** Hovers the first opponent unit on a full board and returns its preview. */
 function hoverPreview(): HTMLElement {
   vi.useFakeTimers();
   const view = fullBoardView();
@@ -187,9 +187,8 @@ const KEY_PROP = /^onKey(Down|Up|Press)(Capture)?$/u;
 const KEY_EVENTS = ["keydown", "keyup", "keypress"];
 
 /**
- * R2126000: the key handlers in each source of a board route, by path under `src/` (an
- * `addEventListener` of a key event, or an `onKey*` prop or props-object entry). A hint adds none, so a
- * new shortcut, an End-turn key above all, fails this test; a count is never raised to pass it.
+ * R2126000: each board-route source's key handlers (an `addEventListener` of a key event, or an `onKey*`
+ * prop or entry). A hint adds none, so a new shortcut fails this test; a count is never raised to pass it.
  */
 const BOARD_KEY_HANDLERS: Readonly<Record<string, number>> = {
   "cards/CardRef.tsx": 2,

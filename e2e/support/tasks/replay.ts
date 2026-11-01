@@ -11,9 +11,9 @@ export type ReplayHashPayload = {
   decks: [string[], string[]];
   log: unknown[];
   state: unknown;
-  /** R180: `createGame` handicaps; R187 practice and hotseat replays need nonstandard decks, mana, hands and draws. */
+  /** R180: `createGame` handicaps (R187: nonstandard decks, mana, hands and draws). */
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
-  /** R433: the seats the game dealt (spec 13's practice random deck: the human's), passed to `fold` untouched. */
+  /** R433: the seats the game dealt, passed to `fold` untouched. */
   dealt?: ("p1" | "p2")[];
   /** R915006: a practice game's custom cards (spec 40), folded through the card kit by the CLI. */
   customCards?: unknown[];

@@ -55,7 +55,6 @@ describe("R643 the emote session", () => {
     expect(gate.ok).toBe(false);
     if (gate.ok === false) expect(gate.retryAfterMs).toBe(1);
 
-    // The menu stays open and the first emote keeps standing: the drop changes nothing on screen.
     expect(session.send("p1", "oops", "Oops.", HOLD)).toBe(false);
     expect(session.visible("p1")).toMatchObject({ key: 1, emote: "greetings" });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -182,7 +181,6 @@ describe("R643 the emote session", () => {
       expect(session.gate(player).ok, player).toBe(player === "p1" ? false : true);
     }
 
-    // Muting one seat leaves the other able to show.
     session.mute("p1");
     expect(session.receive("p2", "yawn", null, HOLD)).toBe(true);
     expect(session.visible("p2")?.emote).toBe("yawn");

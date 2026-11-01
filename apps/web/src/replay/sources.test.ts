@@ -85,7 +85,6 @@ describe("the practice source", () => {
     }
     expect(steps.map((step) => step.step)).toEqual(Array.from({ length: listing.steps }, (_, k) => k));
     expect(steps.every((step) => step.view.viewer === HUMAN)).toBe(true);
-    // The worker's own answer to the same request, step for step.
     const answer = await host.request({ type: "replay", game: listing.game, from: 0, count: REPLAY_PAGE_STEPS });
     if (answer.type !== "replay") throw new Error("expected a replay answer");
     expect(await source.page(0, REPLAY_PAGE_STEPS)).toEqual(answer.steps);

@@ -69,13 +69,11 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
 /** Unit conversion, not configuration. */
 const SECONDS_PER_HOUR = 3600;
 
-/** A section of a page's static text: its heading and its paragraphs or list, as HTML. */
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
  * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
- * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check);
- * /almanac and /patch-notes are written from their data (`almanacList`, `patchList`).
+ * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
@@ -297,7 +295,7 @@ function swap(html: string, pattern: RegExp, value: string): string {
   return html.replace(pattern, (_whole, lead: string) => lead + value);
 }
 
-/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (4)" for an embiggen card (R1175000). */
+/** A price in R432's words, as the patch diff writes it (patches/diff.ts), an embiggen card's too (R1175000). */
 const costText = (cost: CardCost): string =>
   typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})` : `(${String(cost)}) Cost`;
 

@@ -1,4 +1,4 @@
-// Component specs mount fixtures without e2e support and load the production global CSS for real layout.
+// Component specs load the production global CSS for real layout.
 
 import { mount } from "cypress/react";
 
@@ -16,6 +16,5 @@ declare global {
 
 Cypress.Commands.add("mount", mount);
 
-// An uncaught error in the component is a spec failure; nothing here swallows it (the default,
-// made explicit as support/e2e.ts does).
+// An uncaught error fails the spec: the default, made explicit as support/e2e.ts does.
 Cypress.on("uncaught:exception", () => true);

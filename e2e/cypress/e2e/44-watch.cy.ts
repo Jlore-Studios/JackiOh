@@ -8,18 +8,8 @@
 // good code for it, which leaves nothing for a spec after this one: only spec 10 reads that account
 // and it reseeds first.
 //
-// What it asserts, by behavior (every frame read is one the watch screen's own socket received;
-// an account is one watcher and a newer socket replaces the older, so the spec opens none itself):
-// - B56: a friend's row in a live unranked match offers Watch, and the click opens `/watch/:matchId`
-//   with the friend in the query;
-// - B50: the screen waits (its waiting panel) until the first view, which comes `SPECTATE_DELAY_MS`
-//   after the state it shows, then draws the friend's board read-only from the friend's seat;
-// - B50, §10.8: every `view` frame carries `legal: []`, the friend's seat's hand in full and the
-//   other seat's hand as a count alone;
-// - B50 (revocation): the friend turning `allowSpectators` off mid-watch ends it with a `forbidden`
-//   frame and the refused screen;
-// - B50 (refusal): with watching off, and with the friends no longer friends, the watch link is
-//   refused the same way, and the way back leads to Play together.
+// Every frame read is one the watch screen's own socket received: an account is one watcher and a
+// newer socket replaces the older, so the spec opens none itself.
 //
 // "Full" (`SPECTATORS_PER_MATCH`) is not covered here: an account is one watcher, so filling a match
 // takes nine friend accounts and the E2E server seeds three. The server's own test covers it
@@ -53,8 +43,6 @@ import {
   ts,
 } from "../../support/testids.ts";
 
-// Constants
-
 /** Play together's route, mirroring `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
 
@@ -81,12 +69,10 @@ function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy.request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) }).its("body");
 }
 
-/** A friend row of the page, by the profile it shows. */
 function friendRow(profileId: string): string {
   return `${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${profileId}"]`;
 }
 
-/** The page's row for a friend request to the watcher, by the profile that sent it. */
 function incomingRequestRow(profileId: string): string {
   return `${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${profileId}"]`;
 }
@@ -247,9 +233,7 @@ describe("44 watching a friend's live game", () => {
     });
 
     // B45: `two` accepts, and the page reads the friends list again. B56: the new friend's row offers
-    // Watch, and the click opens the watch screen in the page already loaded. Only those clicks sit
-    // between the join and the watcher's hello, so the waiting panel (up to the delay) is still showing
-    // when it is asserted.
+    // Watch, and the click opens the watch screen in the page already loaded.
     cy.then(() => {
       cy.get(incomingRequestRow(oneId)).within(() => {
         cy.get(ts(TOGETHER_REQUEST_ACCEPT)).click();

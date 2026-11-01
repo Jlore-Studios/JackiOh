@@ -1,6 +1,5 @@
-// Polish task 7: browser layout checks for B18, B29, B30, B31, B32, B43, B44, B45, B46, and B47.
-// B28 is covered by board-layout.cy.tsx; its mount keeps this suite at the product's narrowest container.
-// Measurements use `should` retries after each viewport change.
+// Polish task 7: B18, B29, B30, B31, B32, B43, B44, B45, B46 and B47, measured in a browser.
+// B28 is in board-layout.cy.tsx; its mount keeps this suite at the product's narrowest container.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { BackLink } from "../../../apps/web/src/routes/nav.tsx";
@@ -26,7 +25,7 @@ const YELLOW = "rgb(250, 204, 21)";
 /** WCAG 2.5.5 / Apple HIG, the floor S11 sets for every touch target. */
 const TOUCH_PX = 44;
 
-/** Subpixel slack for edges the browser rounds; never enough to hide a real overlap. */
+/** Subpixel slack for edges the browser rounds, too small to hide a real overlap. */
 const EPSILON = 0.5;
 
 const BOARD = '[data-testid="board"]';
@@ -54,7 +53,7 @@ function boxShadowOf(element: Element): string {
 
 // B18: glow colors
 
-/** Fixture separates ready, condition, unavailable, and switch-only cards for glow assertions. */
+/** Ready, condition, unavailable and switch-only cards, apart. */
 function glowView(): View {
   return baseView({
     you: emptySide("p1", {
@@ -159,9 +158,8 @@ describe("B18 the green and yellow glows in a real browser", () => {
 
     expectShadow("hand-card-r1", (shadow) => {
       for (const layer of shadowLayers(shadow).filter((one) => !one.includes("inset"))) {
-        // #2164 writes the shadow as a `color-mix` of the palette's black, which Chrome computes as
-        // `color(srgb 0 0 0 / 0.45)` rather than `rgba(0, 0, 0, 0.45)`: both are the same plain black.
-        // Any colored glow (the yellow, the green, gold) still fails either spelling.
+        // #2164's `color-mix` of the palette's black computes in Chrome as `color(srgb 0 0 0 / 0.45)`,
+        // the same plain black as `rgba(0, 0, 0, 0.45)`; any colored glow fails either spelling.
         expect(layer, "an outer shadow layer of a Radiant card is a plain dark shadow").to.match(
           /^(rgba\(0, 0, 0, |color\(srgb 0 0 0 \/ )/,
         );
@@ -250,7 +248,7 @@ function switchesLegal(view: View): Legal {
   return view.you.units.flatMap((u) => (u === null ? [] : [{ type: "switchPosition" as const, instanceId: u.instanceId }]));
 }
 
-/** Tile-center taps must remain on cards; disabled enemy switches pass through to their cards. */
+/** Tile-center taps stay on cards; disabled enemy switches pass taps through to them. */
 function expectMiddlesToCards(): void {
   cy.get(`${BOARD} .field .card-unit`).should("have.length", 10);
   cy.document({ log: false }).should((doc) => {
@@ -292,7 +290,7 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       }
     });
 
-    // Switch targets shrink before taking a tile center and accept input only when legal.
+    // Switch targets accept input only when legal.
     it(`B29 the switch (⟳) takes a tap across a target of up to 44x44 at its zone's corner, short of the tile's middle, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       const view = fullBoardView();
@@ -344,7 +342,7 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       cy.viewport(viewport.width, viewport.height);
       mountGame(fullBoardView());
 
-      // The pill's ::after pseudo-element is its finger-sized target.
+      // The pill's ::after is its finger-sized target.
       cy.get(`${BOARD} [data-browsable="true"]`)
         .should("have.length", 3)
         .each(($pile) => {
@@ -382,7 +380,7 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
   }
 });
 
-/** Extra-small tiles and desktop must also keep switch targets from their centers. */
+/** Tiny tiles and desktop keep switch targets off their centers too. */
 const SMALL_TILE_VIEWPORTS = [
   { label: "phone, Safari's visible viewport", width: 390, height: 664 },
   { label: "small phone", width: 360, height: 640 },
@@ -482,7 +480,7 @@ describe("B30 the hand fan fits a phone and never overlaps on a desktop", () => 
   });
 });
 
-// B31: phone grids and height budget
+// B31: phone grids and height
 
 describe("B31 the phone layouts fit the height and hide the log", () => {
   it("B31 at 844x390 the controls sit right of the field, the board ends on the screen, and the log is hidden", () => {
@@ -633,9 +631,9 @@ describe("B43 a phone opens the log from the control bar", () => {
   });
 });
 
-// B44 and B45: tapping a hand card on a phone
+// B44, B45: tapping a hand card on a phone
 
-/** Seven crowded hand cards include board-target, hero-target, and unplayable cases. */
+/** Seven crowded hand cards: board-target, hero-target and unplayable ones. */
 function tapView(): View {
   return baseView({
     you: emptySide("p1", {
@@ -667,7 +665,7 @@ const PHONES = [
   [844, 390],
 ] as const;
 
-/** Wait for the lift transition to settle before measuring its card. */
+/** Measures the card once its lift transition settles. */
 function settledBox(testid: string, check: (box: DOMRect, element: HTMLElement) => void): void {
   let last = "";
   cy.get(ts(testid)).should(($card) => {
@@ -779,7 +777,7 @@ describe("B44 a play's board pick on a phone held upright", () => {
       expect(bar.top, "below the hand").to.be.at.least(hand.bottom - EPSILON);
       expect(bar.top, "below the card that was tapped").to.be.at.least(lifted.bottom - EPSILON);
     });
-    // Without options, the prompt describes board targets within the bar.
+    // With no options, the prompt describes board targets within the bar.
     cy.get(ts("prompt-modal"))
       .find(".prompt-board-hint")
       .should("be.visible")
@@ -806,7 +804,7 @@ describe("B44 a play's board pick on a phone held upright", () => {
   });
 });
 
-// B47: a card picker folded away to show the board
+// B47: a card picker folded away
 
 /** `transparent`, as the browser computes a background. */
 const CLEAR = "rgba(0, 0, 0, 0)";
@@ -848,7 +846,7 @@ describe("B47 a card picker folds away to show the board", () => {
   });
 });
 
-// B46: whole game screen fits
+// B46: the whole game screen fits
 
 /** Mirror the match route's BackLink and match bar. */
 function mountMatch(view: View, legal: Legal = []): void {
@@ -899,7 +897,7 @@ function expectScreenFits(width: number, height: number, where: string): void {
     const cards = [...doc.querySelectorAll(`${ts("hand-you")} [data-testid^="hand-card-"]`)].map(rectOf);
     expect(cards.length, "your hand has cards").to.be.greaterThan(0);
     for (const card of cards) {
-      // Enough of each card to see and to press: its top 24 px (the cost and the name).
+      // Enough of each card to see and press: its top 24 px (cost and name).
       expect(card.top + 24, `a hand card shows its top at ${where}`).to.be.at.most(height + EPSILON);
     }
   });

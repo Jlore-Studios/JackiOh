@@ -1,9 +1,7 @@
 // R1295000: the card cosmetics in a real browser. apps/web's vitest suite proves which attributes a
 // face wears (cards/cosmetics.test.tsx) and what the stylesheet declares; how the worn face draws
-// beside the plain one, which only a style engine can say, is measured here. A worn foil (R1953001:
-// and a chase finish or border) moves only on the worn face. R1953001: a face wears its card's own picks.
-// A face's look is what the cosmetics can reach, read off the computed styles: the root's edge,
-// the finish layer's background and shadow, the panel and the art's sheen.
+// beside the plain one, which only a style engine can say, is measured here. R1953001: a face wears its
+// card's own picks, and a worn foil (and a chase finish or border) moves only on the worn face.
 
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";

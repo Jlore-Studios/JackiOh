@@ -1,9 +1,7 @@
-// The Created cards of /stats (SPEC §9.11, R2089000): below the Cards tab's table, the cards made
-// during a game (tokens, generated and Discovered cards, copies, transforms' results, The Coin). A row
-// counts the seats that made a Created copy of the card: Used those that used one, split by whether a
-// copy was Radiant at its first use, and Not used, the baseline. A rate below R654's floor shows "—";
-// the figures, their order and the comparison's floor are the server's (CLAUDE.md rule 7). It sits in
-// the scrolling panel, never the fixed top (R1646000).
+// The Created cards of /stats (SPEC §9.11, R2089000), below the Cards tab's table: the cards made during a
+// game (tokens, generated and Discovered cards, copies, transforms' results, The Coin). A row counts the seats
+// that made a copy: Used, split by a copy Radiant at its first use, and Not used, the baseline. The figures,
+// order and R654's floor ("—" below it) are the server's (CLAUDE.md rule 7). It scrolls, never fixed (R1646000).
 
 import { useId, type ReactElement } from "react";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
@@ -15,7 +13,7 @@ import { statsTestid } from "./testids.ts";
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
-/** A rate as the cards table shows one, or "—" when there is none or its games are below the floor. */
+/** A rate as the cards table shows one, or "—" when there is none or it is below the floor. */
 export function rateText(games: number, rate: number | null, minSample: number): string {
   const shown = faceRate(games, rate, minSample);
   return shown === null ? "—" : `${Math.round(shown * PERCENT)}%`;

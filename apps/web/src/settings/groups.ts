@@ -1,8 +1,7 @@
 // The stores that make up a player's settings, as the account sync sees them (issue #129, R633). A
 // group is one store, read as a flat object of booleans, numbers and short texts, applied back through
-// the store's own writer (which drops what it does not know and clamps what is out of range) and
-// watched through its own subscription. The sync never reads a store's storage key, so a store stays
-// free to change how it saves; a store added later joins the account by being listed here.
+// the store's own writer and watched through its own subscription. The sync never reads a store's
+// storage key, so a store stays free to change how it saves; a new store joins by being listed here.
 
 import { readAudioSettings, subscribeAudioSettings, writeAudioSettings } from "../audio/settings.ts";
 import type { AudioSettings } from "../audio/types.ts";

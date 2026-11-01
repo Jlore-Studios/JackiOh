@@ -1,7 +1,6 @@
 // The Luau browser module (#919, SPEC §12.10, R915009): `crates/wasm/luau`, the engine with the card
-// kit, which `scripts/build-wasm.sh` builds into `./pkg/luau` (git ignores it). `index.ts` imports this
-// file dynamically, so no page or worker fetches the module until a practice game with a custom card
-// or the creator asks for it (`useLuauModule`, `checkCustomCard`).
+// kit, built into `./pkg/luau` by `scripts/build-wasm.sh`. `index.ts` imports this file dynamically, so
+// nothing fetches the module until a practice game with a custom card or the creator asks for it.
 // The module is an emscripten `MODULARIZE` factory with a C boundary (v0.4.0's, `da817ba6`): strings
 // cross as pointers, each freed with `jackioh_free`, and a failing binding answers NULL (or a negative
 // status) with its message in `jackioh_last_error`. `adapt` gives it the normal module's wasm-bindgen

@@ -80,15 +80,12 @@ describe("the replay's step cache", () => {
     // From mid-turn: forward is the next turn's first step, back is this turn's own.
     expect(await cache.nextTurn(8)).toBe(12);
     expect(await cache.previousTurn(8)).toBe(6);
-    // From a turn's first step: back is the turn before's first step.
     expect(await cache.nextTurn(6)).toBe(12);
     expect(await cache.previousTurn(6)).toBe(0);
     expect(await cache.previousTurn(12)).toBe(6);
-    // From step 0, and the step after it, which is still the first turn.
     expect(await cache.previousTurn(0)).toBe(0);
     expect(await cache.previousTurn(1)).toBe(0);
     expect(await cache.nextTurn(0)).toBe(STEPS_PER_TURN);
-    // In the last turn there is no next one: the last step.
     expect(await cache.nextTurn(37)).toBe(STEPS.length - 1);
     expect(await cache.nextTurn(STEPS.length - 1)).toBe(STEPS.length - 1);
     expect(await cache.previousTurn(STEPS.length - 1)).toBe(36);
@@ -121,7 +118,6 @@ describe("the replay's step cache", () => {
     // Nothing unheld within reach of step 0 any more.
     cache.prefetch(0);
     expect(source.calls).toEqual([0, REPLAY_PAGE_STEPS]);
-    // Past the last step there is nothing to fetch.
     cache.prefetch(STEPS.length - 1);
     expect(source.calls).toEqual([0, REPLAY_PAGE_STEPS]);
   });
@@ -153,7 +149,6 @@ describe("the replay's clips", () => {
     expect(await turnRange(cache, 6)).toEqual([6, 11]);
     expect(await turnRange(cache, 11)).toEqual([6, 11]);
     expect(await turnRange(cache, 0)).toEqual([0, 5]);
-    // The last turn has no step after it.
     expect(await turnRange(cache, STEPS.length - 1)).toEqual([36, STEPS.length - 1]);
   });
 

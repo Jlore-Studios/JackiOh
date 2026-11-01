@@ -1,6 +1,5 @@
 // B38 and B39 audio on a Chrome hotseat board (docs/polish/2-sound.md).
 // Assert voice requests, not playback: headless audio outputs differ, but accepted cues are stable.
-// BUILD M8: seed the game, avoid fixed waits, and use `ts()` selectors.
 // The choice-free 01-aggro decks let the test end turns until a unit is offered.
 
 import { seedFor } from "../../support/config.ts";
@@ -94,7 +93,7 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string };
 
-/** Play an offered unit, ending turns until one appears; clear the log immediately before its click. */
+/** Ends turns until a unit is offered and plays it, clearing the log just before its click. */
 function playOfferedUnit(played: Played, beforePlay: () => void, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered a unit inside the turn budget").to.be.greaterThan(0);

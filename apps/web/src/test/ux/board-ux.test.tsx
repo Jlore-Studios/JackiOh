@@ -23,8 +23,6 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-// Fixtures.
-
 function boardView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -71,8 +69,6 @@ function setConfirmEndTurn(on: boolean): void {
     writeSettings({ confirmEndTurn: on });
   });
 }
-
-// B25: confirm end turn
 
 describe("B25 confirm end turn asks twice only while a move is left", () => {
   it("B25 with the setting on and a card still playable, the first click arms end-turn and sends nothing", () => {
@@ -232,8 +228,6 @@ describe("B25 confirm end turn asks twice only while a move is left", () => {
   });
 });
 
-// B26: the hand fan and tap-to-lift
-
 describe("B26 each hand card sits in a slot and a tap lifts it", () => {
   it("B26 each of your hand cards sits in its own .hand-slot, in hand order, with --i its index inside a fan of --n", () => {
     render(<Board view={boardView()} highlight={NO_HIGHLIGHT} />);
@@ -335,8 +329,6 @@ describe("B26 each hand card sits in a slot and a tap lifts it", () => {
     expect(opponent.querySelectorAll("[data-lifted]")).toHaveLength(0);
   });
 });
-
-// B27: settings reflected on the board
 
 describe("B27 the board reflects drag to play and hover previews, live", () => {
   it("B27 by default the board says data-drag=on and your hand says data-hover-preview=on", () => {
@@ -440,8 +432,6 @@ describe("B33 the board and the prompt pad for the safe areas, and the board dec
   });
 });
 
-// B43: the log on a phone
-
 describe("B43 a phone opens the log from the control bar", () => {
   it("B43 log-toggle opens the log over the board (data-log=open) and closes it again", () => {
     render(<Board view={boardView()} highlight={NOTHING_LEFT} />);
@@ -471,8 +461,6 @@ describe("B43 a phone opens the log from the control bar", () => {
   });
 });
 
-// #785: the control bar on a phone held upright
-
 describe("#785 a phone held upright keeps the control bar to one row", () => {
   it("board.css hides the board's mute and language buttons on a phone held upright, where the settings gear holds both", () => {
     const text = css("board.css");
@@ -499,8 +487,6 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
     expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-notices > :not\(:empty\)\)\s*\{\s*flex-wrap:\s*wrap;/);
   });
 });
-
-// #1831: the Friends button in the control bar on a phone
 
 describe("#1831 the Friends button in the board's phone bars", () => {
   it("#1831 board.css places the Friends button in the phone bars", () => {
@@ -535,8 +521,6 @@ describe("#1831 the Friends button in the board's phone bars", () => {
     );
   });
 });
-
-// #990: an online match's rail (Back, chat, the ranks) on a phone
 
 describe("#990 an online match's rail on a phone", () => {
   it("#990 board.css gives a rail a row of its own above the controls, End turn's housing room in the row under it, and the cards the rail's height", () => {
@@ -589,8 +573,6 @@ describe("#990 an online match's rail on a phone", () => {
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.turn-plate\s*\{[^}]*flex-flow:\s*row wrap;/);
   });
 });
-
-// B44: which route opened a picker, for the phone's slim bar
 
 describe("B44 the picker says which route opened it", () => {
   it("B44 a play's zone pick is data-prompt-source=play, and an engine prompt is data-prompt-source=engine", () => {

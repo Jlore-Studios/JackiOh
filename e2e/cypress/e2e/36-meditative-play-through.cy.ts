@@ -1,36 +1,18 @@
 // 36 — every Meditative card played once through the browser, with the set previewed (#552, MN09).
 //
-// Key assertions (issue #552, "Every card plays"): "A hotseat run with the set previewed plays each
-// Meditative card once through the browser … Each card's animation and cue run with nothing left
-// `data-animating`, the log line reads as English, and the inspect view's notes (tuning, counters,
-// locks, the Jade counter, the market's stock, a crafted card's parts) read well."
-//
 // The cards come from the catalog at run time (`crates/cards/catalog.json`): every Meditative entry a
 // deck may hold once the set is previewed (R1420), so a card a later part adds is played the day it
 // lands, with no list or fixture to edit. They are dealt into seeded /dev/hotseat games whose engine
 // previews the set (`cy.seedGame`'s `preview`, the WebAssembly module's `previewSets`), a few cards a
-// seat (support/playthrough.ts `SEAT_SHARE`, so no row fills) with every card in the opening hand,
-// mana enough for the dearest and heroes no game can kill (R180's handicap), and played by the
-// driver in support/playthrough.ts: whoever owes the move answers its prompt with its first legal
-// answer, plays a card still to play, or ends the turn. A card another card turned into something
-// else (Spiritually 中国 makes a hand Gachaholics) goes into the next game, until every card is done.
+// seat (support/playthrough.ts `SEAT_SHARE`, so no row fills), and played by that file's driver.
 // A card cast as it is drawn (Meditative #37 CN in a Bottle, R58) is never played from a hand: it is
 // done once it lands in a graveyard. Prestige (Meditative #53, R1851003) De-Radiants a Radiant card,
 // so its seat is dealt CN in a Bottle too, which casts as it is drawn and leaves a Radiant card in hand.
 //
-// After every play:
-//   - `cy.settled()`: the play's animations and cues (which ride the runner's entries, SPEC §10.11)
-//     ran and nothing is left `data-animating`;
-//   - every line of the log reads as English (support/playthrough.ts `englishProblems`: it opens with
-//     a capital and prints no card id, no engine identifier and no unfilled value; a card shown in
-//     Chinese is named in Chinese, R1301);
-//   - the card, where it now stands on the field, opens its hover preview, whose face and notes print
-//     no id or unfilled value (`noteProblems`), and the Jade Counter badge, where a hero has one, is a
-//     number titled "Jade Counter".
-// Each prompt a card opens is on the board under the kind the view gives it (`data-prompt-kind`), so
-// the crafter, the market and the rest are answered through a board that shows them. At the end of
-// each game every card left in either hand (a crafted card, a card bought at the market) opens its
-// preview, which reads as the played cards' do.
+// After every play the animations and cues (which ride the runner's entries, SPEC §10.11) have run, the
+// log reads as English (`englishProblems`; a card shown in Chinese is named in Chinese, R1301), and the
+// card's hover preview prints no id or unfilled value (`noteProblems`). Each prompt a card opens is
+// answered through the board, under the kind the view gives it (`data-prompt-kind`).
 
 import {
   castOnDraw,
@@ -63,7 +45,6 @@ const TURN_LIMIT = 12;
 const STEP_BUDGET = 400;
 /** R180, R290: a hero no game here can kill, so every game lasts until its cards are played. */
 const HERO_HEALTH = 999;
-/** The hand-card selector the end-of-game reading walks. */
 const HAND_CARD = '[data-testid^="hand-card-"]';
 
 type Handle = Parameters<typeof playStep>[0];
@@ -101,7 +82,6 @@ function graveyardDefIds(handle: JackiOhDevHandle): Set<string> {
   return ids;
 }
 
-/** After a play: the animations drained, the log in English, and the card's inspect view read. */
 function afterPlay(game: Game, step: Extract<PlayStep, { kind: "play" }>): void {
   cy.settled();
   cy.get(`${ts(LOG)} .log-line`).then(($lines) => {
@@ -118,10 +98,8 @@ function afterPlay(game: Game, step: Extract<PlayStep, { kind: "play" }>): void 
   });
 }
 
-/** Rest a mouse on a card, read its hover preview, and leave. */
 function readInspect(selector: string, where: string): void {
   cy.get(selector).first().trigger("pointerover", { pointerType: "mouse", force: true });
-  // Retried until the preview opens; the message names the card, should it never open.
   cy.get("body", { timeout: timeouts.view }).should(($body) => {
     const hover = $body.find(ts(INSPECT_HOVER));
     expect(hover.length, `${where}'s hover preview opens`).to.be.greaterThan(0);
@@ -144,7 +122,6 @@ function finished(game: Game, step: PlayStep): boolean {
   return step.turn > TURN_LIMIT || game.emptyEnds >= 2;
 }
 
-/** One step, its checks, and the next step, until the game is done with. */
 function drive(game: Game, budget: number): void {
   if (budget <= 0 || game.toPlay.size === 0) return;
   cy.settled();
@@ -167,7 +144,6 @@ function drive(game: Game, budget: number): void {
         remaining.delete(step.defId);
         afterPlay(game, step);
       }
-      // A card cast as it was drawn has had its turn once it is in a graveyard.
       const graveyard = graveyardDefIds(handle);
       for (const def of game.arrivals) {
         if (!graveyard.has(def.id)) continue;

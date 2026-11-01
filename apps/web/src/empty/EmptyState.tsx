@@ -1,5 +1,5 @@
-// #2108, R2108000: a menu panel's empty state, one look on every menu: a brass tankard beside the words,
-// and the next step where there is one. Nothing moves. Presentation only (CLAUDE.md rule 7).
+// #2108, R2108000: one empty state for every menu panel, a tankard beside the words and the next step
+// where there is one. Nothing moves. Presentation only (CLAUDE.md rule 7).
 
 import type { ReactElement } from "react";
 

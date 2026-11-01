@@ -1,7 +1,6 @@
-// R1371000, issue #1371: the version retcon renamed every shipped version, and old and new names
-// overlap, so a file says which scheme names its catalog: format version 1 the old way, read through
-// `aliases.json`, and version 2 the new way. This file spells old names on purpose, so the retcon's
-// rewrite leaves it alone (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
+// R1371000, issue #1371: old and new version names overlap, so a file says which scheme names its
+// catalog: format version 1 the old way, read through `aliases.json`, and version 2 the new way. This
+// file spells old names on purpose, so the retcon's rewrite leaves it alone (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import { describe, expect, it, vi } from "vitest";

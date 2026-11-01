@@ -1,7 +1,6 @@
-// The emoji emotes (issue §4, R1345, #545): original animated stickers in the tavern's flat
-// gold-and-ink style — inline SVG, no borrowed art and no `<text>`. Each is drawn the same for every
-// portrait; the motion lives in emotes.css (`data-emoji`), which Reduce Motion flattens to a fade
-// and whose few moving parts inside a sticker it stills.
+// The emoji emotes (issue §4, R1345, #545): original animated stickers, inline SVG, no borrowed art
+// and no `<text>`, each drawn the same for every portrait. The motion lives in emotes.css
+// (`data-emoji`), which Reduce Motion flattens to a fade and whose few moving parts it stills.
 
 import type { ReactElement } from "react";
 
@@ -21,7 +20,7 @@ const INK = "#3a2a12";
 const EYE = { fill: INK } as const;
 /** A stroke in the faces' ink, round-capped, as every mouth and brow is drawn. */
 const LINE = { fill: "none", stroke: INK, strokeWidth: 2.5, strokeLinecap: "round" } as const;
-/** A hand or an arm: a paler gold than the face, outlined in the face's brown. */
+/** A hand or an arm. */
 const HAND = { fill: "#f7d77e", stroke: "#5a3d1a", strokeWidth: 1.3 } as const;
 
 /** A sticker that is not a face (a heart, a flame, a skull, a popper): the same frame, no head. */
@@ -33,7 +32,7 @@ function Sticker({ children }: { children: ReactElement }): ReactElement {
   );
 }
 
-/** The stickers. `wahWah` carries its small trombone sliding in beside the glum face. */
+/** The stickers. */
 export function EmojiArt({ emoji }: { emoji: EmojiEmoteId }): ReactElement {
   switch (emoji) {
     case "sob":

@@ -1,11 +1,7 @@
-// R724000: the Patch notes page groups patches by release line: the major version that brought a set
-// (a Z) and the patches from it up to the next major, with a summary and the technical changes players
-// noticed in that major, which ship no card data. Every patch's own note (R724001) reads under fixed
-// headings.
-//
+// R724000: the Patch notes page groups patches by release line, from the major that brought a set (a Z)
+// up to the next major; each patch's own note (R724001) reads under fixed headings.
 // Presentation only, over public data (CLAUDE.md rule 7). A version is compared for equality and never
-// parsed or ordered (R105): a line starts at its major (R1369000), in patches.json's own order, so a
-// lettered patch ("v0.2.10b") sits in its line like any other.
+// parsed or ordered (R105): a line starts at its major (R1369000), in patches.json's own order.
 
 import type { Patch, PlayerNote, TechnicalEntry } from "./source.ts";
 
@@ -37,7 +33,7 @@ export const EARLIER_RELEASE: Release = { id: "earlier", name: "Earlier patches"
 /**
  * R724000, R1369000: the release lines, oldest first, the n-th opened by the n-th major. A major
  * version that brings a set adds its line here; a set the owner wraps into a line (R2204000) renames
- * the line it joins instead, as Training Grounds did Stinkyscape's.
+ * the line it joins instead.
  */
 export const RELEASES: readonly Release[] = [
   {
@@ -138,9 +134,8 @@ function unwrittenRelease(patch: Patch): Release {
 }
 
 /**
- * R724000, R1369000: the patches by release line, newest line first and each line's patches newest
- * first. The n-th major opens the n-th line; patches before every major open Earlier patches; every
- * other patch joins the line open before it.
+ * R724000, R1369000: the patches by release line, newest line first, each line's patches newest first.
+ * Patches before every major form Earlier patches; every other patch joins the line open before it.
  */
 export function releaseGroups(patches: readonly Patch[], releases: readonly Release[]): ReleaseGroup[] {
   const groups: { release: Release; patches: Patch[] }[] = [];

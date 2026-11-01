@@ -1,6 +1,5 @@
-// B15, B37, B39: browser layout checks for landing and invite-code controls at four viewport widths.
-// jsdom cannot measure layout; assertions check horizontal overflow and complete visible border boxes.
-// `should` retries after asynchronous relayout and fan animation.
+// B15, B37, B39: landing and invite-code layout at four viewport widths, which jsdom cannot measure.
+// `should` retries through relayout and the fan's animation.
 
 import { useState, type ReactElement } from "react";
 
@@ -39,7 +38,7 @@ const VIEWPORTS = [
 
 type Viewport = (typeof VIEWPORTS)[number];
 
-/** Every landing CTA B37 names: the three doors, plus the corner slot with no session. */
+/** B37's CTAs: the three doors, plus the corner slot with no session. */
 const LANDING_CTAS = [
   landingTestid.play,
   landingTestid.collection,
@@ -49,7 +48,7 @@ const LANDING_CTAS = [
 
 const GROUPS = INVITE_CODE_LENGTH / INVITE_CODE_GROUP_SIZE;
 
-/** A complete code over R104's alphabet, built from config rather than spelled. */
+/** A full code over R104's alphabet, built from config. */
 const LETTERS = CODE_ALPHABET.replace(/[0-9]/g, "");
 const BARE_CODE = LETTERS.slice(0, INVITE_CODE_LENGTH);
 function grouped(characters: string): string {
@@ -79,7 +78,6 @@ function expectNoHorizontalOverflow(viewport: Viewport): void {
   });
 }
 
-/** The element is visible and its whole width is on screen. */
 function expectOnScreen(testid: string, viewport: Viewport): void {
   cy.get(byTestid(testid)).should("be.visible");
   cy.get(byTestid(testid)).should(($element) => {
@@ -116,7 +114,7 @@ function CodeFieldHarness(): ReactElement {
 }
 
 beforeEach(() => {
-  // No session, so the landing's corner slot settles on `landing-sign-in` with no request.
+  // No session: the corner slot settles on `landing-sign-in` with no request.
   cy.window({ log: false }).then((win) => {
     win.localStorage.clear();
   });
@@ -129,17 +127,15 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
       cy.mount(<LandingRoute />);
 
       cy.get(byTestid(landingTestid.root)).should("be.visible");
-      // B37: the anonymous corner slot, which is also the fourth CTA.
       cy.get(byTestid(landingTestid.root)).should("have.attr", "data-account", "anonymous");
       for (const cta of LANDING_CTAS) expectOnScreen(cta, viewport);
-      // B38: the fan is drawn (decoratively) and is part of what must fit.
+      // B38: the fan must fit too.
       cy.get(byTestid(landingTestid.fan)).should("exist");
 
       expectNoHorizontalOverflow(viewport);
     });
 
-    // #1577: the top screen fits the viewport with no scrolling: title, fan and the three doors
-    // clear the first screen, while the stats floor below stays where it is.
+    // #1577: title, fan and the three doors fit the first screen unscrolled; the stats floor stays below.
     it(`B39 the hero ends inside the first screen at ${where(viewport)}`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.mount(<LandingRoute />);
@@ -157,9 +153,8 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
       });
     });
 
-    // R1584000: with stats to show, the floor below the hero is one screen: the showcase and the
-    // footer are inside it, and nothing in it scrolls. R1743000: the showcase is the one
-    // control, with no arrow or dot (and so no row of them to fit) inside it.
+    // R1584000: the stats floor is one screen holding the showcase and footer, with no scrolling inside.
+    // R1743000: the showcase has no arrow or dot to fit.
     it(`B39 R1584000 R1743000 the stats floor fits one screen below the hero at ${where(viewport)}`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.window({ log: false }).then((win) => {
@@ -220,12 +215,12 @@ describe("B39 the invite code field fits 360, 390, 768 and 1280 px", () => {
       cy.get(byTestid(codeFieldTestid.root)).should("have.attr", "data-complete", "false");
       expectNoHorizontalOverflow(viewport);
 
-      // Typed full, as spec 10 types it: no `force`, so a segment drawn over the input fails here.
+      // As spec 10 types it, with no `force`: a segment drawn over the input fails here.
       cy.get(byTestid(inviteTestid.input)).type(BARE_CODE.toLowerCase());
       cy.get(byTestid(inviteTestid.input)).should("have.value", FULL_CODE);
       cy.get(byTestid(codeFieldTestid.root)).should("have.attr", "data-complete", "true");
 
-      // B15: four segments, each complete, each inside the viewport.
+      // B15.
       for (let index = 0; index < GROUPS; index += 1) {
         cy.get(byTestid(codeFieldSegmentTestid(index))).should("have.attr", "data-state", "complete");
         cy.get(byTestid(codeFieldSegmentTestid(index))).should(($segment) => {
@@ -304,7 +299,7 @@ describe("the auth fields do not make iOS zoom the page", () => {
 
 const LANDSCAPE_PHONE = { label: "phone on its side", width: 844, height: 390 } as const;
 
-/** The element's whole box is inside the first screen, with the page scrolled to the top. */
+/** Its whole box is in the first screen, the page scrolled to the top. */
 function expectAboveTheFold(testid: string): void {
   cy.window({ log: false }).then((win) => {
     win.scrollTo(0, 0);

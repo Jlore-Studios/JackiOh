@@ -3,7 +3,6 @@
 // #5 Stockpile and #6 Mana Well drive fatigue and burns; #4 Gary the Gambler, #8 Mr. Vanilla, #33
 // Unstable Clone Machine, #66 The Rock, and #90 CN-Viral Injection drive library overflow.
 // Fixtures assert their preconditions because deck order affects each seeded game.
-// BUILD M8: each fixture owns its seed and uses retried waits.
 
 import { CARD_NAMES, TOKEN_NAMES } from "../../support/cards.ts";
 import { FX_SETTINGS_KEY, constants, seedFor, timeouts } from "../../support/config.ts";
@@ -153,8 +152,6 @@ function recorded(testid: string): Cypress.Chainable<NoticeState[]> {
     return seen.filter((state) => state.testid === testid);
   });
 }
-
-// Helpers
 
 type Game = { seed: string; a: string; b: string };
 

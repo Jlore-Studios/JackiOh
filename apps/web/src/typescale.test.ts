@@ -1,6 +1,5 @@
 // #2107: the board's text takes its sizes from one type scale, typescale.css, and its faces from
-// fonts.css's three families, and no stylesheet gains a size or a face of its own unless this file
-// says so.
+// fonts.css's three families; no stylesheet gains its own unless this file says so.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -53,7 +52,7 @@ function files(dir: string, ending: string): string[] {
 const SHEETS = files(SRC, ".css").map((path) => relative(SRC, path).replaceAll("\\", "/")).sort();
 const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 
-/** The board's stylesheets, as palette.test.ts has them: index.css and game/'s, but the deck builder's and table.css. */
+/** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );

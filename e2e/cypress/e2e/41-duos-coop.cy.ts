@@ -3,24 +3,7 @@
 // this spec drives over `/ws/duos` itself, as the networked specs drive their second seat over
 // `/ws/match` (spec 06's `wsPlayer`, whose frames are the 1v1 protocol's, not S6's).
 //
-// What it asserts, by behavior:
-// - B60 "The co-op panel creates a room (difficulty, deck or random), shows its code, … joins by code,
-//   and navigates both players to `/duos/:matchId` once the guest joins."
-// - B61 "The Duos board renders `Game.tsx` for the own duel; a life strip shows own HP (`duos-own-hp`)
-//   and the team pool (`duos-pool`) for both teams."
-// - B62 "The pass control (`duos-pass`) on an inspected hand card … sends `Pass` only when `legal`
-//   holds it, showing cost and passes left."
-// - B63 "The portal (`duos-portal`) flips the board to the teammate's duel read-only …; the teammate
-//   strip (`duos-teammate-strip`) always shows their HP, mana, hand count and whether they have
-//   ended; 'Waiting for your teammate' shows after you end."
-// - B64 "The ping wheel (`duos-ping-wheel`) … offers the five pings; a received ping … marks the card
-//   (`duos-ping-marker`) … and flashes the portal when it is on the other view."
-// - B39 (client half): a ping goes to the teammate only, and the teammate's arrives.
-// - §13.9 (#965): the result panel's "Watch the replay" plays the host's own seat's steps with the replay controls, offering nothing live.
-//
-// S6's room takes no seed, so the deal is not fixed: every assertion holds for any deal. Where B9
-// ends a seat that has nothing but End turn to do, the guest ends too and the spec waits for the
-// team's next round, until the host has a round with moves in it.
+// S6's room takes no seed, so the deal is not fixed: every assertion holds for any deal.
 
 import { socketProtocols } from "../../../apps/web/src/net/socketProtocols.ts";
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
@@ -108,7 +91,6 @@ function ownHandIds(view: PlayerViewLike | undefined): string[] {
   return Array.isArray(hand) ? hand.map((card) => card.instanceId) : [];
 }
 
-/** A round of team A's is open: past the mulligans, nobody has won, and the duels' P1 is active. */
 function teamARoundOpen(view: DuosViewLike | null): boolean {
   return view !== null && (view.round ?? 0) >= 1 && (view.result ?? null) === null && view.own?.active === "p1";
 }
@@ -422,7 +404,7 @@ describe("41 duos co-op — two players against the Easy AI", () => {
       expect(seat.view?.result?.winner, "and the other team wins").to.eq("b");
     });
 
-    // §13.9: the result panel's replay, the host's own seat's steps, with nothing live on it.
+    // §13.9 (#965): the result panel's replay, the host's own seat's steps, with nothing live on it.
     cy.get(ts(DUOS_RESULT_REPLAY)).click();
     cy.get(ts(DUOS_REPLAY), { timeout: timeouts.view }).should("have.attr", "data-step", "0");
     cy.get(ts(DUOS_RESULT)).should("not.exist");

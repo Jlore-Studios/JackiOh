@@ -1,6 +1,6 @@
-// Fixture responses for the pack screen's tests and its component spec (#1308): what `GET /api/packs`
-// and `POST /api/packs/open` answer, as the server's JSON. Neither uses the shipped numbers, so a test
-// that finds one on screen has found the response's value and not a copy of the server's config.
+// Fixture responses for the pack screen's tests and its component spec (#1308), as the server's JSON.
+// Neither uses the shipped numbers, so a test that finds one on screen has found the response's value
+// and not a copy of the server's config.
 
 import { GLOBAL_PACK_NAME, PACK_PRICE_JLORE, PACK_SLOTS } from "@jackioh/server-config";
 

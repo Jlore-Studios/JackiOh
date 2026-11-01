@@ -1,4 +1,4 @@
-// BUILD M8: client verdicts and queue refusals share L1–L6 validation, including L2 and L4 (§9.3, §9.4, R253).
+// BUILD M8: client verdicts and queue refusals share L1–L6 validation (§9.3, §9.4, R253).
 // Saves apply D1–D4 (R250); device-mirrored drafts are untrusted input (R256). R111 enables L5.
 // R251 covers comparisons. M6 and TASK 1: see e2e/README.md.
 
@@ -135,7 +135,7 @@ function legalDecks(): Cypress.Chainable<Legal> {
   );
 }
 
-/** A Core card none of the three legal decks holds: the first one past them in SPEC §8 order. */
+/** The first Core card past the three legal decks in SPEC §8 order, so none of them holds it. */
 const FREE_CARD = cardId(TRIO_DECKS * DECK_SIZE + 1);
 
 /** Wait for the workshop, not merely the route. */

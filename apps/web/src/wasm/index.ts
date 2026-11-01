@@ -1,17 +1,15 @@
 // The wrapper over the WebAssembly module (docs/v0.3.0/SURFACE.md §10.3), the one file in apps/web that
-// touches `./pkg` (`scripts/build-wasm.sh` builds it from `crates/wasm`; git ignores it). Every rule the
-// client runs goes through here (`game/engine.ts`, `practice/core.ts`, the deck builder's validator and
-// the `@jackioh/*` aliases in `wire/`), as JSON strings in and out (SURFACE §10.1); the client keeps the
-// state behind its opaque `EngineState` brand and never reads it (CLAUDE.md rule 7, SPEC §10.8).
+// touches `./pkg` (`scripts/build-wasm.sh` builds it from `crates/wasm`). Every rule the client runs goes
+// through here, as JSON strings in and out (SURFACE §10.1); the client keeps the state behind its opaque
+// `EngineState` brand and never reads it (CLAUDE.md rule 7, SPEC §10.8).
 //
 // LOADING. Nothing works until `loadWasm()` (which `main.tsx`'s `EngineGate` awaits before any screen
 // that calls the engine, #778, as the deck builder calls the validator synchronously) or `loadWasmSync`
-// (jsdom's, from bytes `test/setup.ts` reads) has run the module's `init()`, which registers the catalog
-// and the card scripts.
+// has run the module's `init()`, which registers the catalog and the card scripts.
 //
-// ERRORS. A deck `createGame` refuses or a malformed argument throws the engine's message; `reduce` and
-// `beginGame` answer an illegal action with `error` on the result. A panic is an engine invariant
-// broken: the panic hook prints it on the console, and the call throws "the engine panicked".
+// ERRORS. A refused deck or a malformed argument throws the engine's message; `reduce` and `beginGame`
+// answer an illegal action with `error` on the result. A panic (an engine invariant broken) is printed
+// on the console by the panic hook, and the call throws "the engine panicked".
 
 import initWasm, { initSync } from "./pkg/jackioh_wasm.js";
 import * as normal from "./pkg/jackioh_wasm.js";
@@ -73,10 +71,7 @@ export function luauModuleInUse(): boolean {
   return engine !== NORMAL;
 }
 
-/**
- * The creator's check of one custom card (#913, #919): the frame's issues, the script's problems and
- * the definition the frame builds, which the preview draws.
- */
+/** The creator's check of one custom card (#913, #919); `def`, the frame's definition, is what the preview draws. */
 export type CustomCardCheck = { frame: CustomIssue[]; script: ScriptProblem[]; def: CardDef };
 
 export type ScriptProblem = { line?: number; message: string };
@@ -170,8 +165,7 @@ const STATE_MARK = "\u00A0";
  * A state as it crosses: `["\u00A0",<the state's JSON>]`, which `crates/wasm`'s `state_of` unwraps.
  * wasm-bindgen's glue copies a string in one character at a time up to its first non-ASCII one, which
  * cost an all-ASCII state 0.18 ms of a 0.24 ms crossing (Node); the mark, third, sends the rest through
- * `TextEncoder.encodeInto`. One `JSON.stringify` writes it, and it stays one byte a character (a mark
- * outside Latin-1, or one added with `+`, cost more than it saved).
+ * `TextEncoder.encodeInto`. A mark outside Latin-1, or one added with `+`, cost more than it saved.
  */
 function stateJson(state: GameState): string {
   return JSON.stringify([STATE_MARK, state]);
@@ -293,9 +287,9 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
 }
 
 /**
- * R1420: from now on the module treats `sets` as sets that ship, as the testkit previews a set on a
- * test's thread. Only a module built with crates/wasm's `preview` feature can (scripts/build-wasm.sh;
- * the production bundle's throws). The hotseat route calls it for its E2E injection's `preview` alone.
+ * R1420: from now on the module treats `sets` as sets that ship. Only a module built with crates/wasm's
+ * `preview` feature can (scripts/build-wasm.sh; the production bundle's throws). The hotseat route
+ * calls it for its E2E injection's `preview` alone.
  */
 export function previewSets(sets: readonly SetName[]): void {
   call("previewSets", () => {
@@ -345,9 +339,8 @@ export function carriedVersions(): readonly string[] {
 declare const duosStateBrand: unique symbol;
 
 /**
- * The engine's `DuosState` (two `GameState`s and the wrapper's own fields), opaque: it holds all four
- * hands and libraries, so the client passes it back and never reads it (CLAUDE.md rule 7). It crosses
- * in the same envelope as a `GameState` (`stateJson`).
+ * The engine's `DuosState`, opaque: it holds all four hands and libraries, so the client passes it back
+ * and never reads it (CLAUDE.md rule 7). It crosses in the same envelope as a `GameState` (`stateJson`).
  */
 export type DuosState = { readonly [duosStateBrand]: never };
 

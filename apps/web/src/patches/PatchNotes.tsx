@@ -1,7 +1,6 @@
-// Patch notes (brief B4.2 item 5; R388, R507) lazy-load opened snapshots and limit faces in large additions.
-// Patches sit in their release line, one bubble per set, the newest open (R724000), and each shows its
-// player note, never its record's source or notes (R724001). They read public patch data only (CLAUDE.md
-// rule 7).
+// Patch notes (brief B4.2 item 5; R388, R507): opened snapshots load lazily, large additions limit
+// their faces. Patches sit in their release line, the newest open (R724000), each with its player
+// note, never its record's source or notes (R724001). Public patch data only (CLAUDE.md rule 7).
 
 import { useId, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -55,10 +54,7 @@ export function countsLine(patch: Patch): string {
     .join(" · ");
 }
 
-/**
- * A card's name as a control that opens its history. `link-button` keeps the tavern's wood-button
- * rule off it; patches.css draws it as the tavern's gold prose link.
- */
+/** A card's name that opens its history; `link-button` keeps the wood-button rule off it (patches.css draws the gold link). */
 function NameButton({ def, onOpen }: { def: CardDef; onOpen: OpenCard }): ReactElement {
   return (
     <button
@@ -369,7 +365,7 @@ function OpeningCard({ read, onClose }: { read: Exclude<Loaded<CardDef | null>, 
 function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Patch[]; onClose: () => void }): ReactElement | null {
   const source = usePatchSource();
   const read = useLoaded<CardDef | null>(`open:${id}`, async () => currentDef(id, patches, await source.index(), (version) => source.snapshot(version)));
-  // #2052, R2108000: a card that answers within SKELETON_DELAY_MS opens as it always did, with no wait shown.
+  // #2052, R2108000: a card that answers within SKELETON_DELAY_MS opens with no wait shown.
   const waited = useShownAfterDelay();
   if (read.status === "ready") return read.value === null ? null : <CardDetail def={read.value} onClose={onClose} historyOpen />;
   if (read.status === "loading" && !waited) return null;

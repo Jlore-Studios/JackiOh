@@ -1,11 +1,8 @@
-// What one patch did to one card, as both screens print it (R388, R507).
-//
-// A value that changed reads "Cost: (2) Cost → (1) Cost" (R432's cost style). A changed text prints
-// whole, as the patch left it, its new words marked as R277 marks a Radiant face (bold and underlined,
-// so the mark does not rest on color alone) but in teal with a double underline, never read as the
-// Radiant gold or a reference's dotted line (R279); words it took away show under it, struck through
-// ("Was"). A screen reader hears "new:" and "removed:" before each mark (patches.css), since `<ins>`
-// and `<del>` alone are not announced by every screen reader.
+// What one patch did to one card, as both screens print it (R388, R507), a value in R432's cost style.
+// A changed text prints whole, its new words bold and underlined as R277 marks a Radiant face (so the
+// mark does not rest on color alone), but teal with a double underline, never R277's gold nor R279's
+// dotted reference line. A screen reader hears "new:" and "removed:" before each mark (patches.css),
+// since `<ins>` and `<del>` alone are not announced by every screen reader.
 
 import type { ReactElement, ReactNode } from "react";
 
@@ -123,7 +120,7 @@ function valueOf(field: string, text: string): string {
   }
 }
 
-/** One change as a line of plain words, for the compact list: "Lines of code: not recorded → 15". */
+/** One change as a line of plain words, for the compact list. */
 export function changeSummary(change: FieldChange): string {
   if (change.kind === "text") return t("{label} changed", { label: t(change.label) });
   return `${t(change.label)}${isZhCn() ? "：" : ": "}${valueOf(change.field, change.before)} → ${valueOf(change.field, change.after)}`;

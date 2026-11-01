@@ -48,7 +48,6 @@ describe("R644 EmoteShow", () => {
     expect(bubble).toHaveClass("emote-bubble");
     expect(bubble).toHaveTextContent("Hey there, friend! Feeling lucky?");
     expect(bubble).toHaveAttribute("role", "status");
-    // A voice show is a bubble, not a sticker: no emoji marker, and its span rides --emote-hold.
     expect(bubble).not.toHaveAttribute("data-emoji");
     expect(bubble.style.getPropertyValue("--emote-hold")).toMatch(/^\d+ms$/);
   });
@@ -71,13 +70,11 @@ describe("R643 R1343 the emote picker", () => {
 
     const items = screen.getAllByRole("menuitem");
     expect(items).toHaveLength(EMOTE_HAND_SIZE);
-    // In the hand's own (the pool's) order, the lines first, then the emoji.
     expect(items.map((item) => item.dataset.testid)).toEqual(HAND.map((emote) => `emote-${emote}`));
     const arc = screen.getByTestId("emote-menu").querySelector(".emote-voice-arc");
     const row = screen.getByTestId("emote-menu").querySelector(".emote-emoji-row");
     expect(arc?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_VOICE);
     expect(row?.querySelectorAll(".emote-item")).toHaveLength(EMOTE_HAND_SIZE - EMOTE_HAND_VOICE);
-    // The voice items are labeled by name; the emoji carry their title/aria label and a sticker.
     for (const label of ["Greetings", "Thanks", "Threaten"]) {
       expect(screen.getByRole("menuitem", { name: label })).toBeInTheDocument();
     }
@@ -85,7 +82,6 @@ describe("R643 R1343 the emote picker", () => {
       const item = screen.getByRole("menuitem", { name: EMOJI_LABEL[emote as keyof typeof EMOJI_LABEL] });
       expect(item.querySelector("svg.emote-emoji-svg")).not.toBeNull();
     }
-    // Nothing of the pool outside the hand is offered.
     for (const emote of EMOTE_IDS.filter((id) => !HAND.includes(id))) {
       expect(screen.queryByTestId(`emote-${emote}`), emote).toBeNull();
     }
@@ -129,7 +125,6 @@ describe("R643 R1343 the emote picker", () => {
     expect(waits).toHaveLength(EMOTE_HAND_SIZE);
     expect(waits[0]).toHaveTextContent("3");
 
-    // The press is still guarded: a limited menu reports nothing and stays open.
     fireEvent.click(screen.getByTestId("emote-threaten"));
     expect(onPick).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
@@ -186,7 +181,6 @@ describe("#219 menuShift, the slide that keeps a menu on the screen", () => {
     expect(menuShift({ left: -131, right: 189 }, 360, EMOTE_MENU_EDGE_PX)).toBe(139);
     expect(menuShift({ left: 300, right: 420 }, 360, EMOTE_MENU_EDGE_PX)).toBe(-68);
     expect(menuShift({ left: 20, right: 300 }, 360, EMOTE_MENU_EDGE_PX)).toBe(0);
-    // Exactly at the margin is still on the screen.
     expect(menuShift({ left: EMOTE_MENU_EDGE_PX, right: 352 }, 360, EMOTE_MENU_EDGE_PX)).toBe(0);
   });
 
@@ -308,8 +302,6 @@ describe("#219 each voice item carries its arc drop as the --emote-arc-drop the 
   });
 });
 
-// R1345: MN03's fourteen emoji are stickers like the five — inline SVG and no words, each with its
-// own accessible name, and still under Reduce Motion but for the fade.
 describe("R1345 every emoji of the pool is an inline sticker with its own name", () => {
   it("R1345 each draws one emote-emoji-svg, hidden from the accessibility tree, with no <text> in it", () => {
     for (const emote of EMOJI_EMOTE_IDS) {

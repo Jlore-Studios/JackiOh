@@ -70,7 +70,6 @@ describe("R639 the stored statistics", () => {
     window.dispatchEvent(new StorageEvent("storage", { key: PLAYER_STATS_KEY, newValue: value }));
     expect(heard).toHaveBeenCalledTimes(1);
     expect(readPlayerStats().games).toBe(7);
-    // A different key is none of its business.
     window.dispatchEvent(new StorageEvent("storage", { key: "other", newValue: "x" }));
     expect(heard).toHaveBeenCalledTimes(1);
     stop();
@@ -179,7 +178,6 @@ describe("R639 a tolerant reader", () => {
     expect(bad.cards["core-001"]).toEqual({ ...NO_COUNTS, attacks: 4, playedInWin: 2 });
     expect(parsePlayerStats({ v: PLAYER_STATS_VERSION, games: 1, longestGamePlayed: [3] }).longestGamePlayed).toEqual({});
 
-    // A won game stores every new counter and total under the same key, and reads them back.
     const log = { ...logMax(logWith(EMPTY_LOG, "drawn", "core-001"), "overkill", "core-001", 5), turns: 12 };
     recordGame({ ...log, played: { "core-001": 2 } }, "win");
     dropPlayerStatsCache();

@@ -1,9 +1,7 @@
-// A hero portrait (issue §1, R641): the portrait's card drawn in `CardArt`'s `oval` shape, with
-// health badged on its lower right and armor on its lower left. The oval is `PortraitArt` (R1332);
-// when the hero's menu or inspect view opens it squashes and glints (R1331, `reacting`). R987: Luck
-// rides above the health badge when the side has any. Presentation only: it lives inside the
-// `hero-<side>` element, which keeps the testid, the ClickTarget and every glow, highlight and
-// damage shake.
+// A hero portrait (issue §1, R641): the portrait's card drawn in `CardArt`'s `oval` shape
+// (`PortraitArt`, R1332), squashing and glinting as its menu or inspect view opens (R1331). R987: Luck
+// rides above the health badge. Presentation only: it lives inside the `hero-<side>` element, which
+// keeps the testid, the ClickTarget and every glow, highlight and damage shake.
 
 import { useEffect, useRef, useState, type CSSProperties, type DOMAttributes, type ReactElement, type ReactNode } from "react";
 
@@ -47,7 +45,7 @@ export function HeroPortrait({
   /** The hero's true health; the badge draws it clamped to 0. */
   health: number;
   armor: number;
-  /** The menu or the inspect view has just opened: the oval squashes and a glint crosses it (R1331). */
+  /** The menu or the inspect view has just opened (R1331). */
   reacting?: boolean;
   /** R987: the side's Luck (`SideView.luck`); the badge draws only above 0. */
   luck?: number;

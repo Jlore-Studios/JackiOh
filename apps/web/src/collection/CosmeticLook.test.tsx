@@ -1,7 +1,5 @@
-// R1833000: a cosmetic's look where a surface grants or sells one: a foil, finish or border on its
-// card's face, a chase one moving (R1953001); a playmat or backdrop as a mini board; a card back as a
-// game draws it; a portrait as its art. A full art, and a per-card cosmetic with no card to draw it
-// on, have none.
+// R1833000: a cosmetic's look where a surface grants or sells one. A full art, and a per-card
+// cosmetic with no card to draw it on, have none.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

@@ -1,8 +1,7 @@
 // Node stand-in for a queued client's poll (R897000; e2e/README.md). The queue cancels a ticket
 // nobody has heard from for `QUEUE_TICKET_STALE_MS`, and a real client sends `GET /api/auth/me`
-// every `SERIES_POLL_SECONDS`, so a seat a spec enqueues over HTTP and leaves waiting (two accounts
-// 320 apart pair only after 50 s) must send it too. The poll ends by itself once the server stops
-// naming the ticket, and `before:spec`/`after:spec` clear whatever is left.
+// every `SERIES_POLL_SECONDS`, so a seat a spec leaves waiting over HTTP must send it too. The poll
+// ends once the server stops naming the ticket; `before:spec`/`after:spec` clear the rest.
 
 export type StayQueuedCommand = {
   /** The API's origin (`server.http()`). */
@@ -12,10 +11,7 @@ export type StayQueuedCommand = {
   everyMs: number;
 };
 
-/**
- * A bound on the loop, not a rule: a ticket that is never paired or canceled (a spec that failed
- * half-way) does not keep a poll running for the rest of the run.
- */
+/** A bound on the loop, not a rule: a ticket never paired or canceled (a spec failed half-way) keeps no poll running all run. */
 const GIVE_UP_AFTER_MS = 180_000;
 
 const stops = new Map<string, () => void>();

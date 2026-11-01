@@ -1,10 +1,5 @@
 // 37 — rematch offers after a finished match, between the browser and cy.task("wsPlayer") (#728; §9.5, R672).
-//
-// Key assertion (issue #728): "Each flow above has a case that fails if the rendezvous, stakes check,
-// presence gate, or ranked flag regresses". The flows: a room match refuses its double-or-nothing, makes
-// nothing of one seat's offer and one unranked rematch of both seats' equal offers; a ranked match makes
-// nothing of mismatched stakes and a ranked double-or-nothing of matched ones; the buttons show only while
-// the opponent's match socket is open; a Conquest game offers no rematch and continues the series instead.
+// Each flow has a case that fails if the rendezvous, stakes check, presence gate, or ranked flag regresses.
 //
 // Daily only: the super run plays every spec file, while a pull request's `e2e smoke` plays only SMOKE in
 // scripts/shard-specs.mjs, which does not hold 37. No wait depends on REMATCH_OFFER_TTL_MS: every wait is a
@@ -43,9 +38,6 @@ import {
   type QueueMode,
 } from "../../support/testids.ts";
 
-// Constants
-
-/** Seconds to milliseconds. */
 const MS_PER_SECOND = 1000;
 
 /** Pairing waits out the rating window's widening to MAX_FAIR_GAP (R640001), a sweep, a poll and a render. */
@@ -65,7 +57,6 @@ const STAKE_DOUBLE = 2;
 /** The Node second-player client, as in spec 06. */
 const SEAT_TWO = "seat-two";
 
-/** A match page, capturing its id. */
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 
 /** installLoadout's default deck index. */
@@ -141,7 +132,6 @@ function offerAs(account: E2EAccount, matchId: string, stakes: number): Cypress.
     .its("body");
 }
 
-/** Read `account`'s rematch status for `matchId`. */
 function statusAs(account: E2EAccount, matchId: string): Cypress.Chainable<RematchStatusBody> {
   return cy
     .request<RematchStatusBody>({
@@ -168,7 +158,6 @@ function refused(
   });
 }
 
-/** Whether `matchId` is ranked. */
 function ranksOf(account: E2EAccount, matchId: string): Cypress.Chainable<RanksBody> {
   return cy
     .request<RanksBody>({ method: "GET", url: apiUrl(`/api/matches/${matchId}/ranks`), headers: bearerHeaders(account.token) })

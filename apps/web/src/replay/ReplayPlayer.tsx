@@ -1,18 +1,14 @@
 // The replay player (#511, SPEC §9.3, §10.8, R768): a finished game, a step at a time. It reads a
 // `ReplaySource` and nothing else (CLAUDE.md rule 7), draws each step's view with `Game` as a board
 // to look at (`replay`: no legal action or glow, and a click changes nothing; `replayPrompt`,
-// R2211000: the seat's own open prompt read-only and folded, the other seat's as the waiting panel)
-// and holds the controls (`ReplayToolbar.tsx`) in the board's notice slot.
-//
+// R2211000: the seat's own open prompt read-only and folded, the other seat's as the waiting panel).
 // A step forward hands `Game` the next view with the same key, so its animation queue, effects and
 // sound run as live play's do (R201's speed included). Any other move gives `Game` a fresh key: the
 // board mounts with nothing animating, and its log history, which reads a window that does not
 // overlap the last as a gap, starts over. The last step is `Game`'s result chip, with both hands (R434).
-//
 // R768000: a result screen opens it at step 0 or at the last step with that turn's GIF being made.
 // #1568: Try again appears only for `error`, since a refusal or an expiry cannot change; failed pages
-// are not cached (`steps.ts`). R1834004: an online match's board wears both seats' frozen loadouts
-// (`ReplaySource.loadouts`), each step drawn reading them afresh.
+// are not cached (`steps.ts`). R1834004: an online match's board wears both seats' frozen loadouts.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -61,9 +57,8 @@ const IGNORE = (): void => undefined;
 const BUSY = "[data-animating], [data-speaking]";
 
 /**
- * Whether the board under `root` is animating or speaking. It reads the board's own marks, as
- * practice's pacing does (`useBoardBusy` in `routes/practice.tsx`), so Play never starts a step over
- * the last one's animation.
+ * Whether the board under `root` is animating or speaking, read off its own marks as practice's pacing
+ * does (`useBoardBusy` in `routes/practice.tsx`), so Play never starts a step over the last one's.
  */
 export function useBoardBusy(root: HTMLElement | null): boolean {
   const [busy, setBusy] = useState(false);

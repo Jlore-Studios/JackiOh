@@ -1,8 +1,6 @@
 // R1580000: the Shop screen fits one screen. jsdom cannot measure layout, so this mounts the route in
-// a browser, serves the six reads its four panels make from the fixtures, and checks that at 360 px,
-// 390 px and a desktop's 1280 px nothing is wider than the viewport and the page never scrolls: the
-// body is what scrolls. The pack opening still plays full screen over it: its scene, drawn in a
-// portal on the body, covers the window.
+// a browser, its reads served from fixtures: at 360, 390 and 1280 px nothing is wider than the viewport
+// and only the body scrolls. The pack opening still covers the window, from a portal on the body.
 
 import {
   collectionOf,
@@ -40,7 +38,7 @@ function byTestid(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-/** What each read the screen makes answers; any other request goes on to the network. */
+/** Answers each read the screen makes; other requests go on to the network. */
 function serveFixtures(): void {
   const bodies: Record<string, unknown> = {
     "/api/packs": packsInfo(),

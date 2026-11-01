@@ -1,8 +1,7 @@
-// The pack as a physical object (#1663, part of #1651, SPEC §14.3, §14.6), drawn by the store's shelf
-// and the pack-opening scene at `shelf` and `scene` size. PRESENTATION ONLY (CLAUDE.md rule 7):
-// `state` is the caller's, and this decides nothing about when. Every animation moves transform and
-// opacity alone (`pack-object.css`). REDUCED MOTION holds the tilt, the sheen and the tear still and
-// sets `data-motion=reduce`.
+// The pack as a physical object (#1663, part of #1651, SPEC §14.3, §14.6) for the shelf and the
+// pack-opening scene. PRESENTATION ONLY (CLAUDE.md rule 7): `state` is the caller's, and this decides
+// nothing about when. Every animation moves transform and opacity alone (`pack-object.css`). REDUCED
+// MOTION holds the tilt, the sheen and the tear still and sets `data-motion=reduce`.
 
 import { useRef, type CSSProperties, type PointerEvent, type ReactElement, type ReactNode } from "react";
 

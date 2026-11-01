@@ -270,7 +270,6 @@ describe("#1308 the pack-opening scene", () => {
     expect(engine.playSfx).toHaveBeenCalledWith("sting");
 
     fireEvent.click(screen.getByTestId(T.flip(3)));
-    // R1953000: the server's points for the slot, from the opening's answer.
     expect(screen.getByTestId(T.outcome(3))).toHaveTextContent(SPENT);
     expect(engine.playSfx).toHaveBeenCalledWith("sting", { tier: "rare" });
 
@@ -337,7 +336,6 @@ describe("#1308 the pack-opening scene", () => {
     expect(back).toHaveTextContent("Legendary · Chase");
     expect(back.querySelector(".pack-slot__face .cf-back")).toHaveAttribute("data-card-back", "card-back-clockwork");
     expect(back.querySelector(".pack-slot__face .cf")).toBeNull();
-    // A card's slot has no cosmetic rarity.
     expect(screen.getByTestId(T.slot(0))).not.toHaveAttribute("data-cosmetic-rarity");
   });
 
@@ -521,7 +519,7 @@ describe("#1308 the pack-opening scene", () => {
     const card = (): HTMLElement => within(bars).getByTestId(`${T.bars}-card`);
     const cosmetic = (): HTMLElement => within(bars).getByTestId(`${T.bars}-cosmetic`);
 
-    // Epic and above hold to turn; a keyboard press (no pointer) turns them at once.
+    // Epic and above hold to turn; a keyboard press turns them at once.
     for (const index of [4, 3, 2, 1]) {
       fireEvent.click(screen.getByTestId(T.flip(index)), { detail: 0 });
       expect(bars, `after card ${String(index)}`).toHaveAttribute("data-phase", "waiting");
@@ -531,7 +529,6 @@ describe("#1308 the pack-opening scene", () => {
     }
     fireEvent.click(screen.getByTestId(T.flip(0)), { detail: 0 });
 
-    // The spent duplicate's points fly from its card, tinted by its rarity; then the bars fill.
     expect(bars).toHaveAttribute("data-phase", "flights");
     expect(bars.querySelectorAll(".bar-flight")).toHaveLength(1);
     const flight = within(bars).getByTestId(`${T.bars}-flight-3`);
@@ -562,8 +559,7 @@ describe("#1308 the pack-opening scene", () => {
   });
 
   it("R1999000 an opening of all-new cards flies a flight from every slot and fills both bars", () => {
-    // Every slot a new card, and the server's points for each, its card rarity's: since R1999000 a
-    // new card adds them as a spent duplicate does.
+    // Every slot a new card, each with its card rarity's points (R1999000).
     const fixture = openedPack();
     const slotPoints = [10, 3, 1, 2, 1];
     const opened: OpenedPackResponse = {
@@ -808,7 +804,6 @@ describe("#1308 the card packs panel", () => {
 
     answers.info = { status: 200, body: packsInfo() };
     fireEvent.click(screen.getByTestId(T.retry));
-    // The read is out: the button waits for it, and a second press sends nothing.
     expect(screen.getByTestId(T.retry)).toBeDisabled();
     fireEvent.click(screen.getByTestId(T.retry));
 

@@ -1,10 +1,7 @@
 // R2119000: a deletion is undone, not asked. Deleting a deck, a trio or a custom card, or removing a
 // friend, takes the item off the screen at once and holds its request for `UNDO_WINDOW_MS` behind the
-// undo toast (`UndoToast.tsx`); Undo puts the item back and sends nothing. One deletion is held at a
-// time, and its request goes early when another takes the toast, when the screen goes away, or when the
-// page hides (`pagehide`, or `visibilitychange` to hidden), then as a `keepalive` request.
-// The hook holds only the timing; each screen's `HeldDeletion` says the rest. Nothing here is a rule
-// (CLAUDE.md rule 7): the server still decides every deletion.
+// undo toast (`UndoToast.tsx`), one at a time. Nothing here is a rule (CLAUDE.md rule 7): the server
+// still decides every deletion.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 

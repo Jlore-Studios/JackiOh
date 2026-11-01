@@ -1,5 +1,4 @@
-// The settings panel as the integration branch wires it (docs/polish/reference.md, "Who owns what"):
-// task 7's panel mounts the other tasks' controls through SETTINGS_SLOTS beside its own switches. Every
+// The settings panel as the integration branch wires it (docs/polish/reference.md, "Who owns what"): every
 // control writes its owner's store and the surface reading it changes at once, on a board behind the
 // panel. "Hover previews" also gates task 6's enlarged preview, "Reduce motion" task 1's effects layer.
 
@@ -149,7 +148,6 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
         `${id} follows the built-in switch`,
       ).toBeTruthy();
     }
-    // Every control has an accessible name, including the task-owned ones.
     expect(screen.getByRole("slider", { name: "Effects speed" })).toBe(slider("setting-fxSpeed"));
     expect(screen.getByRole("combobox", { name: "Effects intensity" })).toBe(select("setting-fxIntensity"));
     expect(screen.getByRole("switch", { name: "Animated foil" })).toBe(toggle("setting-animatedFoil"));

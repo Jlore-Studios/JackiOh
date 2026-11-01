@@ -1,9 +1,7 @@
-// The creator's no-code builder (#920, SPEC §12.3, K3): a custom card as blocks picked from menus,
-// and the card-kit Luau they write, in the kit's own words only (#913, docs/custom-cards.md). The
-// model is saved beside the card (`CustomCard.builder`) for the creator alone; the engine never reads
-// it (R915006). Each amount is one of the card's numbers (`{key}` in the text, `n.key` in the script),
-// so Degrade and Upgrade move it and its Radiant face may print another. Nothing here is a rule
-// (CLAUDE.md rule 7): the engine's validator and the Luau module's check judge the card.
+// The creator's no-code builder (#920, SPEC §12.3, K3): a custom card as blocks and the card-kit Luau
+// they write, in the kit's own words only (#913, docs/custom-cards.md). The engine never reads the
+// model (`CustomCard.builder`, R915006). Each amount is one of the card's numbers, so Degrade and
+// Upgrade move it. Nothing here is a rule (CLAUDE.md rule 7): the validator and Luau check judge it.
 
 /** The kit's hooks a block list can hang on. */
 export const TRIGGERS = ["cry", "death", "startOfTurn", "endOfTurn"] as const;
@@ -134,8 +132,7 @@ function amountsOf(step: BuilderStep): number[] {
 
 /**
  * The card's numbers, in block order: each amount gets the verb's word, with a digit from the
- * second on (`dmg`, `dmg2`; a buff's attack and health are `buff` and `buff2`). The keys are the
- * builder's, so editing a block never renames another's.
+ * second on. The keys are the builder's, so editing a block never renames another's.
  */
 export function numbersOf(model: BuilderModel): BuilderNumber[] {
   const seen = new Map<string, number>();

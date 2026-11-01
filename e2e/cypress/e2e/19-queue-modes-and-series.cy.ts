@@ -56,8 +56,6 @@ import {
   type QueueMode,
 } from "../../support/testids.ts";
 
-// Constants
-
 const MS_PER_SECOND = 1000;
 
 /** Allow the §9.5/R108 window to reach MAX_FAIR_GAP (R640001), a sweep, poll, and render. */
@@ -215,14 +213,12 @@ function browserHand(): Cypress.Chainable<string[]> {
     .then(($cards) => $cards.map((_index, element) => element.getAttribute("data-def-id") ?? "").get());
 }
 
-/** §10.8 sends the viewer's own hand as cards. */
 function socketHand(view: Record<string, unknown> | null | undefined): string[] {
   const you = (view?.you ?? {}) as { hand?: unknown };
   expect(Array.isArray(you.hand), "the viewer's own hand arrives as cards, not a count (§10.8)").to.eq(true);
   return (Array.isArray(you.hand) ? (you.hand as { defId?: string }[]) : []).map((card) => card.defId ?? "");
 }
 
-/** Require enough non-Token cards to prove the selected deck. */
 function expectDealtFrom(hand: readonly string[], deck: readonly string[], others: readonly (readonly string[])[], label: string): void {
   const drawn = hand.filter((id) => !TOKEN_IDS.has(id));
   expect(drawn.length, `${label}: an opening hand (§2.1)`).to.be.at.least(constants.OPENING_DRAW[0]);
@@ -238,7 +234,6 @@ function expectDealtFrom(hand: readonly string[], deck: readonly string[], other
 
 function openLobby(account: E2EAccount, mode: QueueMode): void {
   cy.visitAs(account, routes.play());
-  // The lobby's mode chips, or what the page shows instead when they never come.
   cy.get("body", { timeout: timeouts.view }).should(($body) => {
     const shown = $body.find(ts(playModeId(mode))).length > 0;
     expect(shown, `the lobby's ${mode} chip; the page shows: ${$body.text().replace(/\s+/gu, " ").slice(0, 400)}`).to.eq(true);
@@ -465,7 +460,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       cy.get(ts(SERIES_SCORE)).should("have.attr", "data-you", String(wins)).and("have.attr", "data-opponent", "0");
     };
 
-    // Queue Conquest
     openLobby(seatOne, "bo3");
     cy.then(() => {
       cy.get(ts(PLAY_TRIO_SELECT), { timeout: timeouts.view }).select(installed(mine).trioId);
@@ -497,7 +491,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       seriesAs(seatTwo, seriesId).should((view) => {
         expect(view.status).to.eq("picking");
         expect(view.opponent.picked, "R331: seat two sees THAT the browser picked").to.eq(true);
-        // R336: the opponent projection excludes its selected deck.
         expect(Object.keys(view.opponent).sort(), "R336: no pick and no deck in the opponent's projection").to.deep.eq([
           "decks",
           "picked",
@@ -526,7 +519,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // Game 1
     playAndWin(1, GAME_ONE_PICKS);
 
     // R330: a won deck is locked; a losing deck returns.
@@ -553,7 +545,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     playAndWin(2, GAME_TWO_PICKS);
 
-    // R332: auto-pick the browser's final deck.
     continueToPick(2);
     cy.get(ts(SERIES_PICKER)).should("have.attr", "data-state", "waiting").and("have.attr", "data-auto", "true");
     cy.get(ts(seriesDeckId(GAME_THREE_PICKS.browser))).should("have.attr", "data-picked", "true");
@@ -563,7 +554,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     });
     playAndWin(3, GAME_THREE_PICKS);
 
-    // Series result
     cy.get(ts(SERIES_BANNER_RESULT), { timeout: SERIES_POLL_TIMEOUT_MS }).should("have.attr", "data-outcome", "win");
     for (const slot of [0, 1, 2]) {
       cy.get(ts(seriesBannerYourDeckId(slot))).should("have.attr", "data-won", "true");
@@ -602,7 +592,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
     });
 
-    // Both players can queue again.
     for (const account of [seatOne, seatTwo]) {
       cy.then(() => {
         me(account).should((body) => {
@@ -640,7 +629,6 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(code, "R79: a room code").to.have.length(constants.ROOM_CODE_LENGTH);
       });
 
-    // R264: a Best-of-1 joiner is refused with the room mode.
     cy.then(() => {
       cy.request<ErrorBody>({
         method: "POST",

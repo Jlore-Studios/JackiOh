@@ -1,10 +1,7 @@
-// The card creator (#920, SPEC §12.9): the account's custom cards and an editor for one (the frame
-// form, the builder or the code view, K3) with its problems, a preview and save, delete and "Try it".
+// The card creator (#920, SPEC §12.9): the account's custom cards and an editor for one (K3).
 // The checks guide and the server decides (CLAUDE.md rule 7): a script with a problem from
 // `checkCustomCard` (loaded on first use, R915009) is not saved, since the server never compiles one.
-// R2119000: Delete asks nothing; its DELETE waits for the undo window (`undo/hold.ts`), and a new
-// card's first save sends a held DELETE first, so the card it frees a place for is gone before the
-// server counts.
+// R2119000: Delete asks nothing; its DELETE waits for the undo window (`undo/hold.ts`).
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -116,7 +113,6 @@ function withCardAt(cards: readonly CustomCard[], card: CustomCard, at: number):
 /** The script's problems, checked a moment after the last edit; stale answers are dropped. The second value asks again after a check that failed, with no edit. */
 function useScriptCheck(card: CustomCard, check: CreatorApi["check"]): [ScriptCheck, () => void] {
   const [result, setResult] = useState<ScriptCheck>({ kind: "checking" });
-  /** Bumped by the failed check's Try again, which asks again for the same script. */
   const [attempt, setAttempt] = useState(0);
   const asked = useRef(0);
   const source = card.source;
@@ -354,7 +350,6 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved, un
   const [pendingOpen, setPendingOpen] = useState<CustomCard | "new" | null>(null);
   const saved = draft.id === null ? null : (cards.find((card) => card.id === draft.id) ?? null);
   const dirty = isDirty(draft, saved);
-  /** Changes a leave would lose: a dirty draft, unless it is a new card nobody has touched. */
   const unsaved = dirty && !isUntouchedNew(draft);
   const reopenAfterReload = useRef<string | null>(null);
   // R2119000: a held DELETE answers after renders have moved on; it reads the list and token as they are then.

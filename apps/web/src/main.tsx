@@ -1,7 +1,6 @@
 // Entry point and the route table. The client is a `PlayerView` renderer (CLAUDE.md rule 7, SPEC
 // §10.8): this file picks a route, applies §9.4's gate once, and gets out of the way. The pathname
-// comes from `usePathname()` (`net/navigate.ts`) because a redirect has to re-render: the gate moves
-// the URL with `history.replaceState` and this component follows it.
+// comes from `usePathname()` (`net/navigate.ts`) because the gate's redirects must re-render it.
 //
 // THE GATE IS UX, NOT SECURITY (SPEC §9.4): the server refuses a pending account everywhere but
 // `/api/auth/me` and `/api/codes/*`. `Gated` reads `GET /api/auth/me` and sends the browser to the
@@ -18,13 +17,8 @@
 // ONE SOCKET PER SESSION (R194): the match screen is keyed by the provider session its token belongs
 // to, so a renewal keeps its socket and only a different session, or account, opens a new one.
 //
-// Before the route switch runs, an emailed link (R193) is scrubbed from the address bar on any path,
-// `/login` too, whose screen is a lazy chunk that may fail to load, and one that landed elsewhere
-// (Supabase's Site URL fallback) is handed to `/login`. A room link on /play is kept for this tab
-// (R767, net/roomLink.ts), so the gate's way to /login cannot lose it.
-//
-// THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) watches the account on
-// every screen but `/play`, and takes the player to the game when the queue pairs them.
+// THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) takes the player to the
+// game from every screen but `/play` when the queue pairs them.
 //
 // THE ENGINE LOADS ALONGSIDE (#778): the page paints once the language is in, and EngineGate holds
 // every screen that calls the engine until its module is in, with a retry if it never arrives.
@@ -95,7 +89,6 @@ import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 import "./index.css";
 import "./auth/tavern.css";
 
-// #2116: each screen's code is a chunk of routes/chunks.tsx's, which a prefetch on intent shares.
 const HotseatRoute = routeChunks.hotseat?.Screen ?? null;
 const DevDuosRoute = routeChunks.duosDev?.Screen ?? null;
 const DuosRoute = routeChunks.duos.Screen;
@@ -123,11 +116,7 @@ const CreatorRoute = routeChunks.creator.Screen;
 const TogetherRoute = routeChunks.together.Screen;
 const WatchRoute = routeChunks.watch.Screen;
 
-/**
- * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
- * `auth/testids.ts` so Cypress specs can import them; re-exported here so existing imports keep
- * working.
- */
+/** This file's chrome testids, kept in `auth/testids.ts` for Cypress and re-exported for existing imports. */
 export { shellTestid };
 
 /** The tab title and canonical link live in `net/head.ts`, so the build can name pages as the app does. */
@@ -192,7 +181,7 @@ function SignOutButton(): ReactElement {
 
 /** A path the client serves nothing at. Said in a player's words; the path is shown, never followed. */
 function NotFound({ path }: { path: string }): ReactElement {
-  // Split around the path, so the sentence is one entry and English reads as it always did.
+  // Split around the path, so the sentence is one dictionary entry.
   const [nothingBefore = "", nothingAfter = ""] = t("There is nothing at {path}. The link may be wrong or out of date.").split(
     "{path}",
   );
@@ -396,10 +385,7 @@ function EngineGate({ children }: { children: ReactNode }): ReactElement {
 export type ReadyAccount = { token: string; me: MeResponse };
 
 export type GatedProps = {
-  /**
-   * `/invite` is the one screen a pending account may see, so it opens the gate to both statuses.
-   * Everything else is `active`-only.
-   */
+  /** `/invite`, the one screen a pending account may see, opens to both statuses; all else is `active`-only. */
   allowPending?: boolean;
   /**
    * R757001: `/account` opens whether or not the account owes the consent screen, so a player who
@@ -424,11 +410,9 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
 
 /**
  * R1435: the profiles this page has let past the username prompt: one a gated screen was shown to
- * while active, and one that answered the prompt here. The prompt meets an account before its first
- * screen, never after; each route mounts a gate of its own, so a gate's own state would forget and
- * raise it over the next screen (the match a queue just paired, mid-mulligan). A redemption on
- * `/invite` showed its screen to a pending account, so the prompt still follows it. An answer counts
- * at once, whatever the re-read after it finds.
+ * while active, and one that answered the prompt here. Page-wide, since each route mounts a gate of
+ * its own, whose state would forget and raise it over the next screen (the match a queue just
+ * paired). A pending account's `/invite` screen does not count, so the prompt still follows it.
  */
 const usernamePromptPassed = new Set<string>();
 
@@ -495,8 +479,7 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
   const playing = account.me.currentMatchId !== null || (account.me.currentSeriesId ?? null) !== null;
   // R757000, R757001: an account owing the age check or agreement to the terms in force meets the
   // consent screen first, a pending one before the code screen, whose redemption the server refuses
-  // until it is answered. Never on `/account`, never while in a match or a series, and never over a
-  // screen this gate already showed an active account.
+  // until it is answered.
   const consentOwed = account.me.ageCheckOwed === true || account.me.termsOwed === true;
   if (
     consentOwed &&
@@ -592,7 +575,9 @@ export function App(): ReactElement {
   // The whole tree redraws in the new language when the reader switches (#711): the screens' `t()`
   // calls run again, and nothing below remounts, so a match in progress keeps its socket.
   useLocale();
-  // Before the first read of the path: an emailed link is scrubbed, and moved to `/login` (R193).
+  // Before the first read of the path, on any path (`/login`'s screen is a lazy chunk that may fail to
+  // load): an emailed link is scrubbed, and one that landed elsewhere (Supabase's Site URL fallback)
+  // moved to `/login` (R193).
   useState(() => adoptAuthRedirect(paths.login));
   // R767: a room link leaves the address bar and waits in this tab before the gate can send a signed-out visitor to sign in.
   useState(adoptRoomLink);
@@ -861,10 +846,10 @@ if (import.meta.env.MODE !== "test") {
   // R757000: a sign-up's held birth answer past its time leaves this browser.
   dropStaleSignUpConsent();
   // The language's dictionary is in before the first paint, so a Chinese reader never sees English flash by (#711).
-  // R1916000: one more boot on this device's language; once it has settled, the language button leaves the top bar and the board.
+  // R1916000: one more boot on this device's language.
   countLocaleVisit();
   const localeReady = initLocale();
-  // #778: the engine's module downloads alongside; EngineGate reports a failure, and asks again, on the screens that need it.
+  // #778: see THE ENGINE LOADS ALONGSIDE above.
   void loadWasm().catch(() => undefined);
   void localeReady.then(() => {
     createRoot(host).render(

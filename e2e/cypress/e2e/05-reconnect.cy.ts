@@ -212,9 +212,8 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       seatTwoDeck = installed.deckIds[0];
     });
 
-    // Seat 1 creates and seat 2 claims the seeded room (§9.5). R143 requires the E2E server to
-    // honor the optional §9.3 seed; bodies wait for the installed deck ids. R1989000 pins seat 1
-    // to p1 beside the seed, so the spec keeps the seats it was written for.
+    // Seat 1 creates and seat 2 claims the seeded room (§9.5); R143 has the E2E server honor the §9.3
+    // seed. R1989000 pins seat 1 to p1 beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
@@ -289,7 +288,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
         optionKeysOf(print).length,
         '#65 base offers three options: "exile the bottom card of your library, lose 3 health, or summon a Spikey Pillow"',
       ).to.eq(3);
-      // Compare the populated R169 badge list, not a fragile deterministic instance id.
+      // The populated R169 badge list, not a fragile instance id.
       const badges = print.modifiers[modifiersId("you")] ?? [];
       expect(badges, "R169's badge list reached the fingerprint").to.have.length(1);
       expect(badges[0] ?? "", "…carrying R48's live caption, not just an id").to.have.string(
@@ -415,8 +414,8 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       waitForMyTurn();
     });
 
-    // §9.5: the grace countdown is stored on the match so both clients show it. Seat 2's socket
-    // drops, and seat 1's board names whose reconnect window it counts down.
+    // §9.5: the grace countdown is stored on the match so both clients show it: with seat 2's socket
+    // dropped, seat 1's board names whose reconnect window it counts down.
     cy.then(() => {
       cy.wsPlayer({ action: "disconnect", name: SEAT_TWO });
     });

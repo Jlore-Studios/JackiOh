@@ -11,9 +11,7 @@ export const patchTestid = {
   empty: "patch-notes-empty",
   /** One release line, `data-set` its id (R724000). */
   set: "patch-set",
-  /** A release line's open / shut control. */
   setToggle: "patch-set-toggle",
-  /** A release line's technical changes. */
   technical: "patch-technical",
   /** A patch's lines from the technical log (R1369000). */
   technicalLog: "patch-technical-log",
@@ -25,7 +23,6 @@ export const patchTestid = {
   noteSection: "patch-note-section",
   /** A patch's Show / Hide the cards control. */
   toggle: "patch-toggle",
-  /** A patch's cards, once shown. */
   cards: "patch-cards",
   cardsLoading: "patch-cards-loading",
   cardsError: "patch-cards-error",

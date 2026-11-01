@@ -1,14 +1,11 @@
 // The two bars of an opening (#1658, part of #1651, SPEC §14.5, R1305000, R1953000): the card token
 // bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
-// on screen. Each slot's points (R1999000) fly from the slot into the HUD, tinted by rarity; once the
-// last has landed each bar fills, a full one pulsing as it bursts and revealing its fill's reward.
-//
+// on screen. Each slot's points (R1999000) fly from the slot into the HUD, tinted by rarity.
 // THE SERVER DECIDES (CLAUDE.md rule 7). `bars` is the server's answer, what the cosmetic bar paid
 // (R1305001) and each slot's points included; nothing here counts a point or picks a reward, and both
 // bars are drawn whether or not the opening moved them.
-//
-// REDUCED MOTION, or the effects' intensity off, flies, sweeps and pulses nothing: the bars show their
-// final fill at once, every reward revealed (`still` carries the intensity off to FillBar).
+// REDUCED MOTION, or the effects' intensity off, flies, sweeps and pulses nothing (`still` carries
+// the intensity off to FillBar).
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -64,7 +61,6 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
   const [rewards, setRewards] = useState<readonly RevealItem[]>([]);
   const hud = useRef<HTMLDivElement | null>(null);
 
-  // The opening plays: its points take off, or with none to fly the bars fill.
   useEffect(() => {
     if (phase === "waiting" && play) setPhase(next);
   }, [phase, play, next]);

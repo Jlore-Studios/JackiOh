@@ -1,8 +1,7 @@
-// The emote session (R643, R644): what is on screen, who is muted, and when the next send is admitted,
-// as pure data plus a notify, so the unit tests run the same object the routes drive. `send` is judged
-// by the shared `emoteGate`, the function the actor runs (R643), and shows at once, without the relay
-// (issue §7). A muted player's emote is never kept and its sound never scheduled (issue §5). No timers
-// here (tests inject `now`): `useEmotes` owns expiry and sound.
+// The emote session (R643, R644) as pure data plus a notify, so the unit tests run the same object the
+// routes drive. `send` is judged by the shared `emoteGate`, the actor's own (R643), and shows at once,
+// without the relay (issue §7). A muted player's emote is never kept and its sound never scheduled
+// (issue §5). No timers here (tests inject `now`): `useEmotes` owns expiry and sound.
 
 import type { EmoteId, PlayerId } from "@jackioh/shared";
 import { emoteGate, type EmoteGate } from "@jackioh/shared";
@@ -12,21 +11,17 @@ export type EmoteShow = {
   /** Bumped on every show, so the same emote twice still re-mounts the bubble. */
   key: number;
   emote: EmoteId;
-  /** The voice line's text; null for an emoji emote (the sticker carries no words). */
+  /** The voice line's text; null for an emoji emote. */
   text: string | null;
   /** `now` at which the bubble leaves. */
   until: number;
 };
 
 export type EmoteSession = {
-  /**
-   * `player` asked for `emote`. Admitted: it shows and returns true, and the caller transmits it.
-   * Dropped by the gate (R643): false, nothing shown or sent.
-   */
+  /** Admitted (R643): shows and returns true, and the caller transmits it; dropped: false, nothing shown. */
   send: (player: PlayerId, emote: EmoteId, text: string | null, holdMs: number) => boolean;
   /** An emote arrived from `player`: shown unless muted; returns whether it was shown. */
   receive: (player: PlayerId, emote: EmoteId, text: string | null, holdMs: number) => boolean;
-  /** What `player`'s portrait displays, or null. */
   visible: (player: PlayerId) => EmoteShow | null;
   /** The gate state for `player` at `now`: the menu's grey-out data. */
   gate: (player: PlayerId, now?: number) => EmoteGate;

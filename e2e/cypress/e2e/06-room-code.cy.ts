@@ -2,7 +2,6 @@
 // R79/R104 define the imported room-code length and alphabet; R110 makes finished players queueable.
 // Seat 2 claims `POST /api/rooms/:code/join` before opening its socket (§9.5).
 // CLAUDE.md rule 7/§10.8: Node sees the opponent's hand count, while the browser renders its own.
-// R767 covers a guest following the room link and choosing its deck.
 
 import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
@@ -151,9 +150,8 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // ASK: create through §9.5's endpoint until the room screen has testids. R143 requires the
-    // E2E server to honor this §9.3 seed; R264 makes a Best-of-1 room carry one deck id.
-    // R1989000 pins the host to p1 beside the seed, so the spec keeps the seats it was written for.
+    // ASK: create through §9.5's endpoint until the room screen has testids. R143: the E2E server honors
+    // this §9.3 seed; R264: a Best-of-1 room carries one deck id; R1989000 keeps the host p1, as written.
     cy.then(() => {
       cy.request<{ code: string; expiresAt: number; mode: string }>({
         method: "POST",
@@ -377,7 +375,6 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // Host makes a Best-of-1 room and hands over its link.
     cy.then(() => {
       cy.request<{ code: string; mode: string }>({
         method: "POST",

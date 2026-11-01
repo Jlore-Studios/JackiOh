@@ -1,13 +1,10 @@
-// R1584000: the floor's showcase, one stat at a time: its title, its card as a real card face, the
-// player's number and the board's own animation for it, played on a one-card stage (showcaseStage.ts)
-// that carries the board's testids, so the board's keyframes and effects run on it unchanged.
-//
-// It steps every `SHOWCASE_INTERVAL_MS` or by hand (a click, a tap, Enter or Space), and holds like
-// the home hand (R639) under reduced motion, a pointer or focus on it, or a hidden page. It reads only
-// what the device logged and the Pocket Pick's public rates (CLAUDE.md rule 7).
-//
-// R1743000: the stats come in a shuffled bag (`nextInBag`), each once before any repeats. No arrow and
-// no dot (a dot for each would give away how many there are): the showcase is itself the one control.
+// R1584000: the floor's showcase, one stat at a time, its card playing the board's own animation for it on
+// a one-card stage (showcaseStage.ts) that carries the board's testids, so the board's keyframes and effects
+// run on it unchanged. It steps every `SHOWCASE_INTERVAL_MS` or by hand (a click, a tap, Enter or Space), and
+// holds like the home hand (R639) under reduced motion, a pointer or focus on it, or a hidden page. It reads
+// only what the device logged and the Pocket Pick's public rates (CLAUDE.md rule 7).
+// R1743000: the stats come in a shuffled bag (`nextInBag`), each once before any repeats. No arrow and no
+// dot (a dot each would give away how many there are): the showcase is itself the one control.
 
 import {
   useEffect,
@@ -49,11 +46,11 @@ const NO_SHAKE: FxShakeSink = { apply: () => undefined, clear: () => undefined }
 type Step = "enter" | number | "rest";
 
 export type StatShowcaseProps = {
-  /** The stats to show, in order; the showcase draws nothing while there are none. */
+  /** In order; nothing is drawn while there are none. */
   stats: readonly ShowcaseStat[];
   /** The page's reduced motion (landing.tsx's); the effects setting's is read here. */
   reduced: boolean;
-  /** R1743000: where the order of the stats is drawn from; `Math.random` on the page, a seeded source in tests. */
+  /** R1743000: where the order of the stats is drawn from (a seeded source in tests). */
   random: RandomSource;
 };
 
@@ -134,7 +131,7 @@ export function StatShowcase({ stats, reduced, random }: StatShowcaseProps): Rea
 
 type StatStageProps = { stat: ShowcaseStat; still: boolean; fxOn: boolean; intensity: number };
 
-/** One stat's card and its animation: it comes in, plays each beat of its script in turn, then rests. */
+/** One stat's card and its animation. */
 function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactElement | null {
   // By what it plays, not by the stat's identity: a Pocket Pick arriving rebuilds every stat and must not restart this one.
   const { animation, cardId: defId, side: stageSide } = stat;
@@ -146,7 +143,6 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
 
-  // The beats come one after another once the card is in, each held for its animation and a gap.
   useEffect(() => {
     if (still) return undefined;
     const timers: number[] = [];

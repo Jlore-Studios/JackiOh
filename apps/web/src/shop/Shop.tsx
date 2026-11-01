@@ -1,10 +1,8 @@
 // The Jlore shop (#1309, #1667, SPEC §14.1, §14.3): the wallet and one shelf row per pack kind, each
 // a `PackObject` with its count, its price and Buy.
-//
 // THE SERVER DECIDES (CLAUDE.md rule 7): the price comes from `GET /api/packs` and the balance from
-// `GET /api/wallet`, and a refused buy shows the server's words through `t()` (R711000) with nothing
-// changed: no optimistic update, the wallet and the counts move only on the answer.
-//
+// `GET /api/wallet`; a refused buy shows the server's words through `t()` (R711000), and nothing moves
+// before the answer.
 // ONE SPEND AT A TIME (R2378000): while any spend of the tab is out (`net/spending.ts`), every Buy
 // waits, disabled and turning a loading wheel (`economy/spend.css`), and a press sends nothing.
 
@@ -31,7 +29,6 @@ import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf } from "./shop.ts";
 import "./shop.css";
 
-/** What a failed request says: the server's words, else the error's. */
 function wordsOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
@@ -48,10 +45,7 @@ function withBought(
     .map((pack) => ({ pack, count: counts.get(pack) ?? 0 }));
 }
 
-/**
- * The panel. `revision` is how many times the page has asked it to read again (another panel
- * changed the account); `onChanged` tells the page a bought pack changed it.
- */
+/** `revision` counts the page's asks to read again; `onChanged` tells it a bought pack changed the account. */
 export default function Shop({
   token,
   revision = 0,

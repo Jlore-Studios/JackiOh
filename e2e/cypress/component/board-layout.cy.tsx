@@ -1,7 +1,6 @@
-// BUILD M5-T1 measures the 10-unit, 10-backrow, stacked-pile fixture in a real browser.
-// B28 and B46 extend it to the mobile and tablet viewports without horizontal or vertical overflow.
-// Mount `Game` in `.app-shell--wide`, its narrowest product container; a bare `Board` gets space it
-// never has.
+// BUILD M5-T1 measures the 10-unit, 10-backrow, stacked-pile fixture in a real browser; B28 and B46
+// extend it to the mobile and tablet viewports, without overflow either way. Mount `Game` in
+// `.app-shell--wide`, its narrowest product container; a bare `Board` gets space it never has.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
@@ -105,7 +104,6 @@ describe("BUILD M5-T1 — the full fixture board fits 1280x720, 844x390, 768x102
         expect(m.bodyScrollWidth, `the body fits ${where}`).to.be.at.most(viewport.width);
         expect(m.boardScrollWidth, `the board's contents fit ${where}`).to.be.at.most(viewport.width);
         expect(m.boardRight, `the board's right edge is inside ${where}`).to.be.at.most(viewport.width);
-        // B46: the game screen fills the viewport without vertical scrolling.
         expect(m.documentScrollHeight, `the document fits ${where} vertically`).to.be.at.most(viewport.height);
 
         // Prevent a collapsed board from trivially fitting.
@@ -173,9 +171,8 @@ describe("R504 an empty hand keeps its place at every size", () => {
   }
 });
 
-// #2330: where the board has the room the four rows are one height and the lanes fill the field,
-// and a DEF card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. At every
-// size no field card, a turned DEF card included, leaves its zone.
+// #2330: where the board has the room the four rows are one height, the lanes fill the field and a DEF
+// card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. No field card leaves its zone.
 describe("#2330 equal board rows, and DEF cards only as small as their zone needs", () => {
   /** The issue's sizes; `roomy` is the 761px-and-up layouts (a desktop, a tablet held upright). */
   const SIZES = [

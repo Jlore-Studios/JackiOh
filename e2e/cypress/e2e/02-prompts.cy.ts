@@ -111,7 +111,6 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     pickerOpensOnce("mulligan");
 
     cy.gameState().then((state) => {
-      // R265: simultaneous mulligans live in `state.mulligan`, not `state.pending` (§10.1).
       expect(state.pending, "R265: the mulligans are not `state.pending`").to.eq(null);
       expect(state.mulligan, "R265: both seats' mulligans are open").to.not.eq(undefined);
       expect(state.mulligan?.p1.keep, "player 1 owes its mulligan").to.eq(null);
@@ -143,7 +142,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
         expect(mid.phase, "the game is still in the mulligan").to.eq("mulligan");
       });
 
-      // BUILD M5-T3 switches to player 2's already-open picker, so it must not be absent.
+      // BUILD M5-T3 switches to player 2's already-open picker.
       cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
       pickerOpensOnce("mulligan");
       cy.get(promptOf("mulligan"))
@@ -157,7 +156,6 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
       cy.gameState().should((after) => {
         const now = handOf(after, "p1");
-        // R10 adds turn one's draw to R9's replacements.
         expect(now, "the kept card and R9's replacements, plus R10's turn-1 draw").to.have.length(
           constants.OPENING_DRAW[0] + 1,
         );
@@ -198,7 +196,6 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     openGame(SEEDS.discover);
     ensureSeat("p1");
 
-    // A resolving Cry opens a `PendingChoice` (§9.3).
     select("Jewelosco Scarab");
     pickerOpensOnce("zone");
     cy.answerPrompt("zone", { zones: [{ side: "you", row: "units", lane: 1 }] });
@@ -263,7 +260,6 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
     cy.handCardByName("Jewelosco Scarab").then((scarab) => {
       select("Glowy Jelly Bean");
-      // R81 makes a declared hand pick a play choice.
       pickerOpensOnce("hand");
       cy.gameState().should((state) => {
         expect(state.pending, "R81: a declared hand pick is not a PendingChoice").to.eq(null);
@@ -367,7 +363,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     cy.fieldCardByName("Tempo Timmy").then((timmy) => {
       select("Silly Silas");
 
-      // R81 direction is a play choice before the M5-T2 zone click.
+      // The direction comes before the M5-T2 zone click.
       pickerOpensOnce("direction");
       cy.gameState().should((state) => {
         expect(state.pending, "R81: a declared direction travels in the play action").to.eq(null);

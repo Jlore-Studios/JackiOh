@@ -1,9 +1,7 @@
-// A stubbed `fetch` for the Play together tests (#936): every request is recorded and answered by the
-// test's handler, or by a 404 `not_found` when it has none. Beside it, the helpers most of the web's
-// tests share (#1799). Test support only; no component imports it.
-// A refusal carries its code twice, inside `error` (as `crates/server/src/api/http.rs` answers and
-// `net/api.ts` reads) and at the top level (SPEC S6/S7's `409 {code:"full"}`), so a wrapper reading
-// either finds it.
+// A stubbed `fetch` for the Play together tests (#936): each request is recorded and answered by the
+// test's handler, else by a 404 `not_found`; beside it, the helpers most web tests share (#1799). A
+// refusal carries its code both inside `error` (as `crates/server/src/api/http.rs` answers and
+// `net/api.ts` reads) and at the top level (SPEC S6/S7's `409 {code:"full"}`), for either reader.
 
 import { vi } from "vitest";
 
@@ -75,7 +73,7 @@ function bodyOf(init: RequestInit | undefined): unknown {
   }
 }
 
-/** Replace `fetch` with the handler. Undo with `vi.unstubAllGlobals()` in an `afterEach`. */
+/** Undo with `vi.unstubAllGlobals()` in an `afterEach`. */
 export function stubServer(handler: Handler): StubServer {
   const calls: Call[] = [];
   vi.stubGlobal(
@@ -108,15 +106,12 @@ export function must<T>(value: T | null | undefined, what: string): T {
   return value;
 }
 
-/** Move the page to `path` (with any query and hash) without a navigation or a history entry. */
+/** Move the page to `path` without a navigation or a history entry. */
 export function at(path: string): void {
   window.history.replaceState(null, "", path);
 }
 
-/**
- * Sign a test player in: the e2e session the M8 specs seed in `cy.visit`'s `onBeforeLoad`
- * (`net/session.ts`, e2e/README.md A6).
- */
+/** Sign a test player in with the e2e session the M8 specs seed (`net/session.ts`, e2e/README.md A6). */
 export function signIn(token = "e2e-token"): void {
   window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
 }
@@ -139,9 +134,8 @@ export function showsNumber(text: string | null | undefined, n: number): boolean
 }
 
 /**
- * A text matcher for words the page draws across elements, such as a username's base and tag
- * (`auth/Username.tsx`, R1436), which `getByText` never finds: it matches the innermost elements
- * whose whole text holds `text`.
+ * Matches the innermost elements whose whole text holds `text`: words the page draws across elements,
+ * such as a username's base and tag (`auth/Username.tsx`, R1436), which `getByText` never finds.
  */
 export function wholeText(text: string): (content: string, element: Element | null) => boolean {
   return (_content, element) =>

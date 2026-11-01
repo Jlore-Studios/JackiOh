@@ -300,7 +300,6 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(Object.keys(sent)).toEqual(["cosmetics"]);
     expect(sent["cosmetics"]?.values).toEqual({ ...DEFAULT_CARD_COSMETICS, table: "table-felt", cardBack: "card-back-blueprint" });
 
-    // A new device loads them back.
     for (const sync of started.splice(0)) sync.stop();
     __resetSettingsSyncForTests();
     localStorage.clear();

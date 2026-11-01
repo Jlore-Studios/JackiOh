@@ -1,12 +1,8 @@
 /**
- * The deployed stack, in a real Chromium, with two real accounts.
- *
- * Every other spec drives a LOCAL client against fixtures (ASSUMPTION A6 hands them ready-made
- * tokens), so none exercises what actually breaks in a deployment — Vercel serving the bundle,
- * Supabase issuing a token to a real password, Render verifying it, and Postgres behind Render.
- * This spec signs in through the form like a person does and asserts each of those in turn.
- *
- * SKIPPED BY DEFAULT: the suite is behind `--env online=true` and is never part of the M8 gate.
+ * The deployed stack, in a real Chromium, with two real accounts. Every other spec drives a LOCAL
+ * client against fixtures (ASSUMPTION A6), so none exercises what breaks in a deployment: Vercel
+ * serving the bundle, Supabase issuing a token to a real password, Render verifying it, Postgres
+ * behind Render. SKIPPED BY DEFAULT: behind `--env online=true`, never part of the M8 gate.
  *
  * Run it with:
  *   E2E_BASE_URL=https://jackioh.com pnpm exec cypress run --browser chrome \
@@ -59,10 +55,9 @@ function secondDeckId(token: string): Cypress.Chainable<string> {
 }
 
 /**
- * Clears queue AND match state, so the spec is re-runnable: a live match left behind makes every
- * later `POST /api/rooms` a `409 Conflict`. There is no HTTP route out of a match — only the
- * socket's `concede`, R79's clocks, or the reaper — so the reset goes through the database
- * (`support/tasks/onlineReset.ts`), which is inert unless `E2E_DATABASE_URL` is set.
+ * Clears queue AND match state, so the spec is re-runnable: a live match left behind makes every later
+ * `POST /api/rooms` a 409, and no HTTP route leaves a match (only `concede`, R79's clocks or the reaper),
+ * so it goes through the database (`support/tasks/onlineReset.ts`), inert unless `E2E_DATABASE_URL` is set.
  */
 function resetOnlineState(): void {
   cy.task("onlineReset").then((result) => {
@@ -200,7 +195,6 @@ function signInThroughForm(email: string): void {
       }),
     );
 
-    // Player 1 opens the room.
     cy.then(() =>
       cy
         .request({
@@ -234,10 +228,9 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * Both accounts in the browser, not just on the wire: sign in through the form, open a room on
-   * one, claim it on the other, and require the real board to render for each. Sequential, since
-   * Cypress drives one browser; the host does not navigate on its own when its room is claimed, so
-   * player 1 visits /match/<id> directly instead of waiting for a redirect.
+   * Both accounts in the browser, not just on the wire, one after the other since Cypress drives one
+   * browser. The host does not navigate on its own when its room is claimed, so player 1 visits
+   * /match/<id> directly.
    */
   it("both accounts reach the real board in the browser", () => {
     let code = "";
@@ -245,7 +238,6 @@ function signInThroughForm(email: string): void {
 
     resetOnlineState();
 
-    // Player 1 signs in and opens a room, through the UI.
     signInThroughForm(P1);
     cy.visit("/play");
     cy.get('[data-testid="play-create-room"]').click();
@@ -332,7 +324,6 @@ function signInThroughForm(email: string): void {
           body: { mode: "bo1", deckId: d2 },
         })
         .then((res) => {
-          // This is the assertion the bug broke: a 500 here still left a live match behind.
           expect(res.status, "second enqueue — 500 was the bug").to.eq(200);
           expect(String(res.body.matchId ?? ""), "the pairing is reported to the caller").to.have
             .length.greaterThan(0);
@@ -341,9 +332,8 @@ function signInThroughForm(email: string): void {
   });
 
   /**
-   * The player who WAITED gets into the match without being told the id by anyone: only one side's
-   * HTTP response carries the match id, so `/play` waits on `/api/auth/me`'s `currentMatchId` (§9.5,
-   * cleared by every ending). Player 1 queues IN THE BROWSER and is never handed an id; player 2 is
+   * Only one side's HTTP response carries the match id, so `/play` waits on `/api/auth/me`'s
+   * `currentMatchId` (§9.5, cleared by every ending). Player 1 queues IN THE BROWSER; player 2 is
    * paired from outside it, so nothing but the poll can move player 1.
    */
   it("the player who waited is taken to the board with no id handed to them", () => {
@@ -370,7 +360,6 @@ function signInThroughForm(email: string): void {
       });
     });
 
-    // Only the poll can do this.
     cy.location("pathname", { timeout: 60_000 }).should("match", /^\/match\//);
     cy.get('[data-testid="board"]', { timeout: 60_000 }).should("exist");
   });

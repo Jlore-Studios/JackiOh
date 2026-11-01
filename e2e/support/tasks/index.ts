@@ -23,11 +23,11 @@ export function registerTasks(
     replayHash(payload: ReplayHashPayload) {
       return replayHash(config.projectRoot, payload);
     },
-    /** Specs 22 and 23: the tutorial's lessons, seeds and decks as apps/web's source states them. */
+    /** Specs 22 and 23: the tutorial's lessons as apps/web's source states them. */
     tutorialLessons() {
       return tutorialLessons(config.projectRoot);
     },
-    /** 99-online-smoke only: clear queue and match state; inert unless `E2E_DATABASE_URL` is set (CI never). */
+    /** 99-online-smoke only; inert unless `E2E_DATABASE_URL` is set (CI never). */
     onlineReset() {
       return onlineReset();
     },

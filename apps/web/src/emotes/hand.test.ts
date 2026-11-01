@@ -12,8 +12,8 @@ import type { EmoteId as GeneratedEmoteId } from "../wire/generated/EmoteId.ts";
 import { dealEmoteHands } from "./deal.ts";
 import { DEFAULT_EMOTE_HAND, handFor, isEmoteHand } from "./hand.ts";
 
-// R1340: the hand-kept TypeScript union and the one ts-rs writes from Rust's `EmoteId` are the same
-// set of strings, or this file does not typecheck.
+// R1340: the hand-kept union and the one ts-rs writes from Rust's `EmoteId` are the same set of
+// strings, or this file does not typecheck.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const POOL_TYPES_AGREE: Same<EmoteId, GeneratedEmoteId> = true;
 

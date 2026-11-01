@@ -191,7 +191,7 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string; seat: PlayerId | "" };
 
-/** Play the first offered kind, ending and handing over turns until one is available. */
+/** Plays the first offered kind, ending and handing over turns until one is. */
 function playOffered(kinds: ReadonlySet<string>, played: Played, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered such a card inside the turn budget").to.be.greaterThan(0);
@@ -253,7 +253,7 @@ function aiHasPlayed(win: Cypress.AUTWindow): boolean {
   );
 }
 
-/** Read prompt and turn from a settled snapshot so a prompt is never answered twice. */
+/** Reads prompt and turn from one settled snapshot, so no prompt is answered twice. */
 function waitForShowcaseOrHuman(): Cypress.Chainable<Waited> {
   const classify = (win: Cypress.AUTWindow): Waited | null => {
     if (aiHasPlayed(win)) return "showcase";
@@ -526,8 +526,7 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
 
     cy.playByName("KY's Trial");
 // R831004: three sets first, each with its mark; the names below are Core's, so Core when offered.
-// The engine asks a `mode` prompt, which the board draws as a Discover pop-up, since it offers
-// DISCOVER_OPTION_LIMIT options or fewer (`boardKind` in support/playthrough.ts).
+// The `mode` prompt draws as a Discover pop-up, offering DISCOVER_OPTION_LIMIT or fewer (`boardKind` in support/playthrough.ts).
     cy.get(promptOf("discover"), { timeout: timeouts.view }).should("be.visible");
     cy.get(`${promptOf("discover")} [data-set]`).should("have.length", 3);
     cy.get(promptOf("discover")).then(($sets) => {

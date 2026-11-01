@@ -1,20 +1,16 @@
 // The Chrome the e2e run launches as `chrome`, when the one Cypress found is a major known to break
 // under it. Node-side only: cypress.config.ts's setupNodeEvents calls `pinChrome`.
 //
-// Cypress 16 pauses and answers every request the page makes over the DevTools protocol
-// (`Fetch.enable`); `forceHttp1: true`, the only way back to the HTTP/1 proxy, never delivered the
-// engine's .wasm. Chrome 155 made a request id reused under DevTools request interception fatal
-// (Chromium CL 8359730), and Chrome reuses one when a request restarts, so now and then the browser
-// kills its own network service: every fetch in flight fails and every socket drops, while
-// `cy.request`, which runs in Node, never notices. CL 8411428 (crbug.com/559770861) fixed it in
-// Chrome 156; 154 has neither change. On 155 `e2e smoke` failed 8 runs in 15, against none in 7 on 154.
+// Cypress 16 answers every request the page makes over the DevTools protocol (`Fetch.enable`;
+// `forceHttp1: true` never delivered the engine's .wasm). Chrome 155 made a request id reused under
+// that interception fatal (Chromium CL 8359730), and a restarted request reuses one, so now and then
+// the browser kills its network service: every fetch and socket fails while Node's `cy.request` never
+// notices. CL 8411428 (crbug.com/559770861) fixed it in 156; on 155 `e2e smoke` failed 8 runs in 15.
 //
-// So on CI (or when E2E_CHROME_PIN=1 asks) a `chrome` entry of a major in BROKEN_CHROME_MAJORS is
-// pointed at Chrome for Testing PINNED_CHROME_MILESTONE, downloaded once into the repository's
-// .cache/ (gitignored). It keeps the name `chrome` and replaces the entry rather than joining it,
-// since Cypress picks the highest version of a name. A failed download leaves the system Chrome in
-// place and says why. Remove 155 from BROKEN_CHROME_MAJORS once the runner image ships 156, and
-// this file with it.
+// So on CI (or with E2E_CHROME_PIN=1) such a `chrome` entry is replaced, keeping its name since Cypress
+// picks a name's highest version, by Chrome for Testing PINNED_CHROME_MILESTONE cached in .cache/; a
+// failed download keeps the system Chrome and says why. Remove 155 from BROKEN_CHROME_MAJORS once the
+// runner image ships 156, and this file with it.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";

@@ -44,7 +44,6 @@ function releaseSet(id: string): HTMLElement {
   return found;
 }
 
-/** Opens every release line that is shut. */
 function openEverySet(): void {
   for (const toggle of screen.getAllByTestId(patchTestid.setToggle)) {
     if (toggle.getAttribute("aria-expanded") === "false") fireEvent.click(toggle);
@@ -301,8 +300,7 @@ describe("R388 the Patch notes page over the real history", () => {
     // (R646), so the page's list is the file's, whatever the newest patch is called today.
     expect(entries.map((element) => element.dataset.version)).toEqual(shipped.map((patch) => patch.version).reverse());
     // Only the newest opens on load (R507), so v0.2.0, the frozen patch this test reads, is opened by
-    // hand. v0.2.3 added the Mask's faces, v0.2.4 aimed random casts and v0.2.5 removes the faces again
-    // (R743's names for issues #113, #181 and #218): whichever is newest opens with every card it changed.
+    // hand; whichever is newest (R743's names for issues #113, #181 and #218) opens with every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     // A newest patch that changed no card has no cards to open: its entry says so instead.
     if ((shipped.at(-1)?.changes ?? []).length === 0) {
@@ -346,7 +344,6 @@ describe("R388 the Patch notes page over the real history", () => {
       ["Classic+", 78],
       ["Classic+ tokens", 38],
     ]);
-    // The older patches wait to be opened.
     expect(within(patchEntry("v0.1.0")).queryByTestId(patchTestid.cards)).toBeNull();
   }, 30_000);
 });
@@ -475,7 +472,6 @@ describe("R724000 the Patch notes page by release line", () => {
       expect(within(entry).getByTestId(patchTestid.note)).toBeInTheDocument();
       expect(entry).not.toHaveTextContent(patch?.source ?? "");
     }
-    // Every line that has technical changes shows them once it is opened.
     expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(RELEASES.slice(0, ids.length).filter((release) => release.technical.length > 0).length);
   }, 30_000);
 });

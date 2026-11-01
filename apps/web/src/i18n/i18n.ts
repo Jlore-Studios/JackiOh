@@ -4,17 +4,11 @@
 //
 // The English stays inline, wrapped in `t()`, and reads as itself where the language has no entry.
 // The engine's and the server's English arrives complete from Rust, so a key holding `{name}` tokens
-// also matches a filled-in sentence ("Choose 2 cards" finds "Choose {n} cards"). Every literal the
-// client wraps in `t()` has a `zh-CN.json` entry, which `i18n.test.ts` checks (R711000).
-//
-// A language is one dictionary file (`<tag>.json`), its card tables (`cards/chinese.ts`) and one line
-// of LOCALES; a dictionary loads on demand, so the English bundle carries none. The choice is the
-// device's; the browser's pick is not written down, so only a click on the language button fixes it.
+// also matches a filled-in sentence; `i18n.test.ts` checks each literal in `t()` has a `zh-CN.json` entry.
+// A language is one `<tag>.json`, its card tables (`cards/chinese.ts`) and one line of LOCALES; each
+// dictionary loads on demand, so the English bundle carries none. Only the language button writes
+// the choice down, never the browser's pick. The button stays until the device settles (R1916000).
 // Never call `t()` at module scope: it would freeze the language the module loaded in.
-//
-// The language button stays until the device has settled on its language (R1916000): the boots are
-// counted (countLocaleVisit, main.tsx), and every language change and the settings' reset restart
-// the count. Storage that throws never settles.
 
 import { useSyncExternalStore } from "react";
 
@@ -40,7 +34,7 @@ type LocaleSpec = {
   day?: Intl.DateTimeFormatOptions;
 };
 
-/** Every language the client reads, in the order the button cycles them. A new one is a line here. */
+/** Every language the client reads, in the order the button cycles them. */
 export const LOCALES = {
   en: { name: "English", short: "EN", load: () => Promise.resolve({}) },
   "zh-CN": {
@@ -101,7 +95,7 @@ function stateFor(locale: Locale, dictionary: Dictionary): State {
 let state: State = stateFor(DEFAULT_LOCALE, {});
 let latest = 0;
 const listeners = new Set<() => void>();
-/** R1916000: whether this boot found the device settled on its language; a language change clears it. */
+/** Whether this boot found the device settled (R1916000); a language change clears it. */
 let settled = false;
 
 const TOKEN = /\{(\w+)\}/g;
@@ -122,24 +116,21 @@ function patternsOf(dictionary: Dictionary): Pattern[] {
     let enclosed = true;
     for (const match of key.matchAll(TOKEN)) {
       const end = match.index + match[0].length;
-      // A token in parentheses ("({cost}) Cost") holds only what stands inside them, never words.
       const inParentheses = key[match.index - 1] === "(" && key[end] === ")";
       enclosed &&= inParentheses;
       source += escapeRegex(key.slice(last, match.index)) + (inParentheses ? "([^()]+?)" : "(.+?)");
       names.push(match[1] ?? "");
       last = end;
     }
-    // A key whose own words are fewer than two ("{n} cards") would take any sentence that ends the
-    // same way and leave it half translated, so it only ever answers its own calls, unless each of
-    // its tokens is held in parentheses ("({cost}) Cost" takes "(3) Cost" and nothing longer).
+    // A key with fewer than two words of its own ("{n} cards") would half-translate any sentence that
+    // ends the same way, so it answers only its own calls, unless each of its tokens is in parentheses.
     const own = (key.replace(TOKEN, " ").match(/\p{L}+/gu) ?? []).length;
     if (names.length > 0 && (own >= MIN_PATTERN_WORDS || (enclosed && own > 0))) {
       const regex = new RegExp(`^${source}${escapeRegex(key.slice(last))}$`, "s");
       patterns.push({ key, names, regex, literal: key.replace(TOKEN, "").length });
     }
   }
-  // The most specific key first: "In the {mode} queue. …" is tried before a shorter key that would
-  // also match the same sentence.
+  // The most specific key first, before a shorter key that would also match the same sentence.
   return patterns.sort((a, b) => b.literal - a.literal);
 }
 
@@ -154,9 +145,8 @@ export function words(entry: Entry, locale: Locale, params: Params | undefined):
 }
 
 /**
- * The sentence a complete English sentence reads as when a `{name}` key matches it. Each value is
- * looked up in turn, since the engine nests its sentences ("{label} (next turn)", "Next {type} costs
- * {amount} less"); a value is shorter than the sentence it came from, so the lookup ends.
+ * When a `{name}` key matches a complete English sentence, each value is looked up in turn, as the
+ * engine nests its sentences; a value is shorter than the sentence it came from, so the lookup ends.
  */
 function matched(english: string): string | null {
   state.patterns ??= patternsOf(state.dictionary);
@@ -176,7 +166,7 @@ function matched(english: string): string | null {
 /**
  * The chosen language's words for this exact English sentence, `{name}`s filled from `params`; the
  * English, filled the same way, when the language has none. Without `params` a key with `{name}`
- * tokens may also match a finished sentence (the engine's and the server's).
+ * tokens may also match a finished sentence.
  */
 export function t(english: string, params?: Params): string {
   const { dictionary } = state;
@@ -250,14 +240,13 @@ export function countLocaleVisit(): void {
     visits = parseVisits(window.localStorage.getItem(LOCALE_VISITS_STORAGE_KEY)) + 1;
     window.localStorage.setItem(LOCALE_VISITS_STORAGE_KEY, String(visits));
   } catch {
-    // Storage is unavailable: the device never settles and the button stays.
     setSettled(false);
     return;
   }
   setSettled(visits >= LANGUAGE_SETTLED_VISITS);
 }
 
-/** A language change: the count starts again and the button is back until the device settles again (R1916000). */
+/** A language change: the count starts again and the button is back (R1916000). */
 function restartLocaleVisits(): void {
   try {
     window.localStorage.setItem(LOCALE_VISITS_STORAGE_KEY, "0");
@@ -363,7 +352,7 @@ export function formatNumber(value: number, options?: Intl.NumberFormatOptions):
   return new Intl.NumberFormat(formatTag(), options).format(value);
 }
 
-/** A span of seconds as the clock reads it: "5s", "7200s", "5秒"; never grouped. */
+/** A span of seconds as the clock reads it, never grouped. */
 export function formatSeconds(seconds: number): string {
   return new Intl.NumberFormat(state.locale, { style: "unit", unit: "second", unitDisplay: "narrow", useGrouping: false }).format(seconds);
 }

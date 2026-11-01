@@ -1,6 +1,6 @@
 // Spec 13 (V19): practice against the AI without a server (SPEC §9.9, R187; B40).
 // It observes R265 mulligan thinking, R745 log retention, R181/R180 handicaps, R668 reload, and R765 save/leave.
-// BUILD M8 uses deterministic seeds, retried testids, and no `cy.wait(ms)`; recorder history and reduced motion make BUILD M5-T4 AI turns observable.
+// The recorder's history and reduced motion make the AI's BUILD M5-T4 turns observable.
 
 import { AI_DIFFICULTY } from "../../../apps/web/src/wire/engineConfig.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -48,19 +48,13 @@ import type { Action, Lane, PlayerId } from "../../support/types.ts";
 /** The seed the replay, reload and save games below derive theirs from (`${SEED}:replay`, …). */
 const SEED = seedFor("13-practice-t");
 
-/**
- * BUILD M8 seed keeps the Easy game alive despite R635's cost-bucket deal: `SEED`'s Easy deal kills
- * the passive human on turn 7, so this game has its own.
- */
+/** `SEED`'s Easy deal (R635's cost buckets) kills the passive human on turn 7, so this game has its own. */
 const EASY_SEED = seedFor("13-practice-z");
 
 /** The Hard seed yields an observable first AI turn. */
 const HARD_SEED = `${seedFor("13-practice")}:hard`;
 
-/**
- * The human turns the Easy game ends after its first. The passive human must outlive every AI a
- * training lane promotes, so the game plays only the turns its checks need (R745's own proof is `Log.test.tsx`).
- */
+/** Few human turns: the passive human must outlive any AI a training lane promotes (R745: `Log.test.tsx`). */
 const HUMAN_TURNS = 1;
 
 /** The worker loads engine, card scripts, and AI before its first answer. */
@@ -204,8 +198,8 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
 // Drive the page.
 
 function practiceUrl(seed: string, difficulty: Difficulty, seat: PlayerId): string {
-  // Issue #1113: the seeded games deal the AI from the frozen fixture pool, so a shadow-ban
-  // change re-deals none of them. The frozen pool copies the table as it stood when they were dealt.
+  // Issue #1113: the seeded games deal the AI from the frozen fixture pool (the table as it stood when
+  // they were dealt), so a shadow-ban change re-deals none of them.
   const params = new URLSearchParams({ seed, difficulty, deck: "random", seat, pace: "fast", aipool: "fixture" });
   return `/practice?${params.toString()}`;
 }
@@ -469,13 +463,13 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.concede();
     cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
 
-    // Watch the replay: step 0, a step forward and back, and Back returns to the dialog.
+    // Watch the replay, then Back to the dialog.
     cy.get(ts(PRACTICE_WATCH_REPLAY)).click();
     stepForwardAndBack();
     cy.get(ts(REPLAY_BACK)).click();
     cy.get(ts(PRACTICE_RESULT)).should("be.visible");
 
-    // Share the last turn: the last step, its turn's GIF made and downloaded; then leave.
+    // Share the last turn's GIF, then leave.
     cy.get(ts(PRACTICE_SHARE_LAST_TURN)).click();
     expectLastTurnGif();
     cy.get(ts(REPLAY_BACK)).click();

@@ -1,5 +1,4 @@
-// R915010, #920 (K3): the editor's draft moves between the builder and the code view without losing
-// the card; a card edited in code beyond what its model writes is code-only, and says why.
+// R915010, #920 (K3): the editor's draft, between the builder and the code view.
 
 import { describe, expect, it } from "vitest";
 

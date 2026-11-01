@@ -218,7 +218,7 @@ export function VibrationSwitch(): ReactElement {
   );
 }
 
-/** R711000: the reader's language, each named in its own words; the button at the top switches it too, until the device settles (R1916000). */
+/** R711000: each language named in its own words. */
 const LANGUAGE_OPTIONS = Object.entries(LOCALES).map(([value, spec]) => ({ value, label: spec.name }));
 
 /** R711000: the language every screen and card reads in, on this device; the one control left once the device has settled (R1916000). */

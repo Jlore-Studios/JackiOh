@@ -1,6 +1,5 @@
-// A visible rank in a player's words (SPEC §9.12, R612). The hidden rating never reaches the client,
-// so these words are all there is; the leaderboard and the account, match and Play screens share them
-// so they cannot disagree about what a rank says. `RankCrest.tsx` draws these ranks as crests (#1650).
+// A visible rank in a player's words (SPEC §9.12, R612); the hidden rating never reaches the client.
+// Every screen shares these words so they cannot disagree. `RankCrest.tsx` draws them as crests (#1650).
 
 import { t } from "../i18n/i18n.ts";
 import type { GrapeTier, PeakBadge, VisibleRank } from "../net/api.ts";

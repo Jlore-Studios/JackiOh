@@ -1,6 +1,4 @@
-// R2119000: the undo hold and its toast, on a manual clock: a deletion's request waits for
-// `UNDO_WINDOW_MS`, goes at once when another takes the toast, when the page hides (with keepalive)
-// or when the screen goes away, and Undo sends nothing. Each screen's own tests check what its
+// R2119000: the undo hold and its toast, on a manual clock. Each screen's own tests check what its
 // request and its Undo do (the workshop, the creator, Play together).
 
 import { readFileSync } from "node:fs";

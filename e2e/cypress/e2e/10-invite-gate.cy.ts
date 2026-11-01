@@ -1,8 +1,7 @@
 // BUILD M8: §9.4 and §9.8 require identical bad-code responses; R107 hides branch timing.
-// The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption; M6-T1 tests timing tightly.
-// R111's activation grant is the starter cards (R1310000, §14.12): enough
-// for a deck Best of 1 accepts (L2, L3, L5, L6; R250, R253), not for a trio's three DECK_SIZE decks of
-// distinct cards (L4).
+// The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption.
+// R111's activation grant is the starter cards (R1310000, §14.12): enough for a deck Best of 1 accepts
+// (L2, L3, L5, L6; R250, R253), not for a trio's three DECK_SIZE decks of distinct cards (L4).
 // Test order leaves the fixture active.
 
 import {
@@ -187,9 +186,8 @@ describe("10 invite gate — a pending account", () => {
     }
 
     cy.visitAs(accounts.pending(), routes.deckbuilder());
-    // The redirect is the gate's own read of /api/auth/me (net/gate.ts), which the requests above
-    // just answered as pending. When it never comes, say which panel held the page: still checking
-    // (the read never answered), the gate's error (it failed), or no app at all.
+    // The redirect is the gate's own read of /api/auth/me (net/gate.ts), just answered as pending.
+    // When it never comes, say which panel held the page: still checking, the gate's error, or no app.
     cy.window().should((win) => {
       const shown = win.document.body.innerText.replace(/\s+/gu, " ").slice(0, 400);
       expect(win.location.pathname, `the gate sends a pending account to /invite; the page shows: ${shown}`).to.eq(
@@ -214,8 +212,7 @@ describe("10 invite gate — a pending account", () => {
     cy.get(ts(INVITE_PAUSED)).should("not.exist");
     cy.get(ts(INVITE_NOT_NEEDED)).should("not.exist");
 
-    // R104 normalizes lower-case input to the canonical formatted code.
-    // §9.4 permits exactly this UI failure before the three HTTP failures and valid redemption.
+    // R104 normalizes lower-case input; this is §9.4's one screen failure.
     cy.get(ts(INVITE_CODE_INPUT)).type(inviteCodes.missing().toLowerCase());
     cy.get(ts(INVITE_CODE_INPUT)).should("have.value", inviteCodes.missing());
     cy.get(ts(INVITE_SUBMIT)).should("not.be.disabled").click();

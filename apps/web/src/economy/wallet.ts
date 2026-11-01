@@ -1,8 +1,7 @@
 // The Jlore wallet as every screen of the tab shows it (#1659, part of #1651; SPEC §14.1, §14.3).
 // CLAUDE.md rule 7: the server owns the balance. This keeps the last answer a server gave this
-// session's token (`GET /api/wallet` or another answer's `jlore`, `announceWallet`), never a sum.
-// A read starts on first use, on `jackioh:navigated`, when the page is visible again and on every
-// `announceWallet()`; a failed one leaves what was known, so an account never read shows no pill.
+// session's token, never a sum; a failed read leaves what was known, so an account never read shows
+// no pill.
 
 import { useEffect, useSyncExternalStore } from "react";
 
@@ -101,7 +100,6 @@ export function useWallet(token: string | null): number | null {
   return jlore;
 }
 
-/** Forgets every answer and read, so one test's balance is never the next one's. */
 export function __resetWalletForTests(): void {
   known = null;
   inflight = null;

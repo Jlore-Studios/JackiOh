@@ -1,9 +1,7 @@
 // BUILD M8 07: P2's #96 My Pawn (§8.5) cancels P1's lethal declaration and lets the §10.7 AI finish it.
 // R44 defines lethal; the fixture excludes armor #84/#1/#73. R99 keeps the trap armed until lethal.
-// R121 makes forced attackers #9/#60 ineligible; attacks here are player-declared. R33/§10.8 hide
-// the face-down trap from seat 1. Use testids and settled/retried waits, never fixed sleeps.
+// R121 makes forced attackers #9/#60 ineligible; attacks here are player-declared.
 // The fixture depends on the §9.4 L6 catalog contract and the §4.2 step-4 trap window (B-1).
-// Lethal uses clicks instead of `cy.attack` because its `cy.settled()` would hide queued AI animation.
 
 import { CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -37,7 +35,7 @@ const GRINDERS: readonly { defId: string; name: string; attack: number; cost: nu
   { defId: catalogId(25), name: nameOf(25), attack: 7, cost: 4 },
 ];
 
-/** SPEC §8's name for card #index, which is what the client prints on a card (BUILD M5-T1). */
+/** SPEC §8's name for card #index, as the client prints it (BUILD M5-T1). */
 function nameOf(index: number): string {
   const name = CARD_NAMES[index];
   if (name === undefined) throw new Error(`no SPEC §8 card #${index}`);
@@ -68,12 +66,12 @@ function handOf(state: GameStateLike, player: PlayerId): { id: string; defId: st
   return peek(state, player).hand ?? [];
 }
 
-/** §3.2: only the top card of a unit pile is active, so that is the one this spec ever clicks. */
+/** §3.2: only a unit pile's top card is active, so it is the one this spec clicks. */
 function unitAt(state: GameStateLike, player: PlayerId, lane: Lane) {
   return (peek(state, player).units ?? [])[lane - 1]?.[0];
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: hand the hotseat device to the seat that has to act. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat names the seat holding the device").to.not.eq(undefined);
@@ -168,7 +166,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
                   expect(heroHealth(after, "p2"), "a non-lethal swing deals its full attack").to.eq(
                     before - grinder.attack,
                   );
-                  // R99: the condition was not met, so the trap was NOT spent by the event.
+                  // R99: the condition was not met, so the event did not spend the trap.
                   expect(
                     (peek(after, "p2").backrow ?? [])[TRAP_LANE - 1]?.id,
                     "R99: a non-lethal declaration leaves My Pawn armed in its zone",
@@ -200,7 +198,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             expect(health, "R44: the projected damage now reaches the hero").to.be.at.most(grinder.attack);
             const turn = before.turn;
 
-            // Do not settle `cy.attack`: §4.2's two clicks expose the queued animation.
+            // Clicks, not `cy.attack`: its `cy.settled()` would hide the queued AI animation (§4.2).
             cy.get(ts(cardId(attackerId))).click();
             cy.get(ts(heroId("opponent"))).click();
 

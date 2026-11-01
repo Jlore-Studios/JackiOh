@@ -1,8 +1,7 @@
-// `cy.task("tutorialLessons")`: the tutorial's lessons as the web source states them (SPEC §9.10).
-// Specs 22 and 23 assert each lesson's seed, seat, two fixed decks (R291) and handicap (R290); those
-// lists are content another team edits, so this task reads apps/web/src/tutorial/lessons.ts (and
-// AI_TUTORIAL, and the catalog's Quickdraw tag) at spec time under the repo's own tsx, as replay.ts
-// folds a log. The client under test must be built from the same source.
+// `cy.task("tutorialLessons")`: the tutorial's lessons as the web source states them (SPEC §9.10),
+// for specs 22 and 23 (R291, R290). That content is another team's, so this reads
+// apps/web/src/tutorial/lessons.ts (and AI_TUTORIAL, and the catalog's Quickdraw tag) at spec time
+// under the repo's own tsx; the client under test must be built from the same source.
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -26,7 +25,6 @@ export type TutorialData = {
   lessons: TutorialLessonData[];
   /** AI_TUTORIAL (crates/engine/src/config.rs, R290). */
   aiTutorial: Record<string, number>;
-  /** Catalog ids tagged Quickdraw. */
   quickdraw: string[];
 };
 

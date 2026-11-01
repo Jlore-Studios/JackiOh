@@ -87,7 +87,6 @@ describe("Share as GIF", () => {
     expect(screen.getByTestId(gifTestid.clip)).toHaveTextContent("Clip: this turn");
     expect(screen.getByTestId(gifTestid.turn)).toBeDisabled();
     expect(screen.getByTestId(gifTestid.shape)).toHaveValue("landscape");
-    // The toolbar's own buttons are the player's, and the panel is not among them.
     expect(screen.getByTestId(replayTestid.controls)).not.toContainElement(screen.getByTestId(gifTestid.panel));
   });
 
@@ -160,7 +159,6 @@ describe("Share as GIF", () => {
     expect(hi - lo + 1).toBeLessThanOrEqual(REPLAY_GIF_MAX_STEPS);
     expect(screen.getByTestId(gifTestid.clip)).toHaveTextContent(`Clip: steps ${String(lo + 1)} to ${String(hi + 1)}`);
 
-    // This turn puts the marks away.
     click(gifTestid.turn);
     expect(screen.getByTestId(gifTestid.clip)).toHaveTextContent("Clip: this turn");
   });
@@ -173,7 +171,6 @@ describe("Share as GIF", () => {
     expect(screen.getByTestId(gifTestid.tooBig)).toBeInTheDocument();
     expect(screen.queryByTestId(gifTestid.share)).toBeNull();
     expect(screen.getByTestId(gifTestid.make)).toBeEnabled();
-    // Changing the clip clears it.
     click(gifTestid.start);
     expect(screen.queryByTestId(gifTestid.tooBig)).toBeNull();
   });

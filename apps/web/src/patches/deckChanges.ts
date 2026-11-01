@@ -1,6 +1,5 @@
-// R2097000: what the newest shipped patch changed of a deck. A deck whose latest save predates
-// the newest patch wears a badge when it holds a card that patch changed; the badge opens exactly
-// those cards, each with its change. Presentation only (CLAUDE.md rule 7).
+// R2097000: a deck saved before the newest shipped patch wears a badge when it holds a card that
+// patch changed, opening exactly those cards, each with its change. Presentation only (CLAUDE.md rule 7).
 
 import { patchCards, versionBefore } from "./history.ts";
 import type { CardDelta } from "./diff.ts";

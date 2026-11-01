@@ -1,6 +1,5 @@
 // R388: what a patch changed in a card, diffed between the snapshot before the patch and the patch's
-// own. Hand-made fixtures in the real files' shape first (fixtures.ts), then the real history
-// (crates/cards/patches/, through the real source).
+// own: hand-made fixtures (fixtures.ts), then the real history (crates/cards/patches/).
 
 import { describe, expect, it } from "vitest";
 

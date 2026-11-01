@@ -1,8 +1,7 @@
 // Polish 6: the pixel half of the card faces (docs/polish/6-cards.md, behaviors B15 and B21).
-// jsdom has no layout, so apps/web/src/cards/CardFace.test.tsx can only check the DOM. Whether a
-// name and a rules box fit their boxes is a question for a real layout engine, and so is whether
-// the board still fits BUILD M5-T1's two viewports once every card on it wears a full face with the
-// real catalog's names. Both are measured here, in Chrome, on real client components:
+// jsdom has no layout, so apps/web/src/cards/CardFace.test.tsx can only check the DOM; whether a name
+// and a rules box fit their boxes, and whether the board still fits BUILD M5-T1's two viewports with
+// the real catalog's names, is measured here, in Chrome, on real client components:
 //   B15  every catalog card, base and radiant face, as a full CardFace 270 px and 170 px wide.
 //   R1017002  every card the homescreen's hand can deal (`rotationPool`, the widest pool).
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`).

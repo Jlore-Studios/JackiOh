@@ -1,5 +1,4 @@
-// The code view's syntax highlighting (#920): a card-kit script cut into tokens the view colors.
-// It reads Luau's lexical shape only (comments, strings, numbers, keywords, names) and the kit's own
+// The code view's syntax highlighting (#920). It reads Luau's lexical shape only and the kit's own
 // marks (`c:verb`, `n.key`, `Card`), never what a script means: the Luau module's check judges it.
 
 export type TokenKind = "comment" | "string" | "number" | "keyword" | "kit" | "param" | "name" | "punct" | "space";

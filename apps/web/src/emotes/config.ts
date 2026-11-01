@@ -2,12 +2,12 @@
 // layer (`src/wire/emotes.ts`, beside `crates/engine/src/wire/emotes.rs`) because the server enforces
 // them too (R643).
 
-/** An emoji sticker's whole show: pop, bounce, hold and fade (issue §4, "2s total"). */
+/** An emoji sticker's whole show: pop, bounce, hold and fade (issue §4). */
 export const EMOTE_EMOJI_MS = 2000;
 
-/** A voice-line bubble stays at least this long, whatever the line is (issue §3, "minimum 2s"). */
+/** A voice-line bubble stays at least this long, whatever the line is (issue §3). */
 export const EMOTE_BUBBLE_MIN_MS = 2000;
-/** …and never longer (issue §3, "maximum 4s"). */
+/** …and never longer. */
 export const EMOTE_BUBBLE_MAX_MS = 4000;
 
 /** How often an open menu re-reads the limiter, so its greyed items' wait counts down. */
@@ -28,13 +28,13 @@ export const PORTRAIT_REACT_MS = 320;
 
 /** How many motes drift over each portrait's oval (R1332). */
 export const PORTRAIT_MOTE_COUNT = 6;
-/** One mote's drift, from rising out of the oval's lower half to fading at its top (R1332). */
+/** One mote's drift, from rising out of the oval's lower half to fading at its top. */
 export const PORTRAIT_MOTE_DRIFT_MS = 6000;
-/** One breath of a portrait's light, dim to bright (R1332). */
+/** One breath of a portrait's light, dim to bright. */
 export const PORTRAIT_BREATH_MS = 4200;
-/** A mote starts at least this many percent of the oval inside its edge, on each axis (R1332). */
+/** A mote starts at least this many percent of the oval inside its edge, on each axis. */
 export const PORTRAIT_MOTE_EDGE_PCT = 14;
-/** The smallest mote, in percent of the oval's width (R1332). */
+/** The smallest mote, in percent of the oval's width. */
 export const PORTRAIT_MOTE_MIN_PCT = 5;
-/** The largest mote, in percent of the oval's width (R1332). */
+/** The largest mote, in percent of the oval's width. */
 export const PORTRAIT_MOTE_MAX_PCT = 10;

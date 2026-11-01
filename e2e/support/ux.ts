@@ -1,9 +1,7 @@
-// UX support contract: S6 attributes, S8 settings testids, and S9 drag overlay. Specs use these
-// constants rather than raw selectors.
-//
-// Drag events use viewport coordinates; drops are hit-tested by `elementsFromPoint`, so Cypress
-// scrolling stays disabled after a point is read.
-// S9 events set `pointerId`, `clientX`, and `clientY`, leaving `isPrimary` and `pointerType` at defaults.
+// UX support contract, which specs use rather than raw selectors: S6 attributes, S8 settings testids
+// and S9 drag overlay. Drag events use viewport coordinates and drops are hit-tested by
+// `elementsFromPoint`, so Cypress scrolling stays disabled after a point is read; `isPrimary` and
+// `pointerType` stay at their defaults.
 
 import { timeouts } from "./config.ts";
 
@@ -49,7 +47,6 @@ export const SETTINGS_PANEL = "settings-panel";
 export const SETTINGS_SCRIM = "settings-scrim";
 export const SETTINGS_CLOSE = "settings-close";
 export const SETTINGS_RESET = "settings-reset";
-/** Reset only the open tab. */
 export const SETTINGS_RESET_TAB = "settings-reset-tab";
 export const SETTINGS_TABLIST = "settings-tablist";
 

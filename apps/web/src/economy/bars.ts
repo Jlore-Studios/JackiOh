@@ -1,7 +1,6 @@
-// The pure parts of the bar that fills and the reward reveal (#1658, part of #1651, SPEC §14.5): a
-// `FillBar`'s segments, the slots' points flying into an opening's bars (R1953000, R1999000), the
-// reward a fill reveals and the sting a reward plays. No DOM or clock; the components keep the timers.
-// THE SERVER DECIDES (CLAUDE.md rule 7): these only lay the server's answer out in time.
+// The pure parts of the bar that fills and the reward reveal (#1658, part of #1651, SPEC §14.5). No
+// DOM or clock; the components keep the timers. THE SERVER DECIDES (CLAUDE.md rule 7): these only lay
+// the server's answer out in time.
 
 import type { PrintedRarity } from "@jackioh/shared";
 
@@ -20,7 +19,6 @@ export const BURST_MS = 500;
 /** The pause before each reward flies out, after the one before it (or after it was handed in). */
 export const REVEAL_STAGGER_MS = 350;
 
-/** How long one reward takes to fly out. */
 export const REVEAL_FLY_MS = 450;
 
 /** How long a slot's points take to fly from the slot into the bars. */
@@ -29,7 +27,6 @@ export const BAR_FLIGHT_MS = 650;
 /** The pause between one slot's points taking off and the next's. */
 export const BAR_FLIGHT_STAGGER_MS = 180;
 
-/** One stretch of a bar's animation: a sweep from one number of points to another. */
 export type Segment = {
   from: number;
   to: number;
@@ -37,7 +34,6 @@ export type Segment = {
   burst: boolean;
 };
 
-/** A bar's state in an opening's answer: its points before and after, its size and how often it paid. */
 export type OpeningBar = OpeningBarsAnswer["card"];
 
 /**
@@ -51,7 +47,6 @@ export type BarFlight = {
   source: string;
 };
 
-/** What a reward is, which the reveal draws and the sting follows. */
 export type RevealKind = "cardToken" | "cosmeticToken" | "cosmeticPack" | "jlore" | "setPack" | "level";
 
 /** One reward in the reveal; `label` is already through `t()`. */
@@ -95,7 +90,6 @@ export function segments(size: number, value: number, from: number, fills: numbe
   return out;
 }
 
-/** How long a segment's sweep takes: its share of the bar, of `FILL_MS`. */
 export function segmentMs(segment: Segment, size: number): number {
   if (!(size > 0)) return 0;
   return Math.round((FILL_MS * Math.abs(segment.to - segment.from)) / size);
@@ -117,7 +111,6 @@ export function flightsOf(
   );
 }
 
-/** How long `count` flights take, the last one's take-off its stagger after the one before; none for none. */
 export function flightsMs(count: number): number {
   return count > 0 ? (count - 1) * BAR_FLIGHT_STAGGER_MS + BAR_FLIGHT_MS : 0;
 }

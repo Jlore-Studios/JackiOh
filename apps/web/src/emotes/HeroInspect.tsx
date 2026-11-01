@@ -1,9 +1,7 @@
 // A hero's inspect view (R1330, issue #544): the dialog a hold on either portrait opens, or a
 // right-click, the context-menu key or Shift+F10 on it (R1449; a click hangs the menu off the
-// portrait instead). It shows the portrait large (`PortraitArt`, R1332), its printed name, title and
-// flavour line (R660), and the hero's health and Armor, and holds the click's menu inline: your
-// emotes, or the opponent's one-item Mute emotes menu (R643).
-//
+// portrait instead). It shows the portrait large (`PortraitArt`, R1332), its printed words (R660) and
+// the hero's health and Armor, and holds the click's menu inline (R643).
 // It is the touch sheet's kind of overlay (`useModalOverlay`, cards/inspect/InspectSheet.tsx). It
 // reads only the portrait's id and the viewer's own `PlayerView` (CLAUDE.md rule 7); a portrait and
 // its words are public (R642).

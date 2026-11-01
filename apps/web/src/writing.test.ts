@@ -65,17 +65,14 @@ const MARKS: readonly { word: string; pattern: RegExp }[] = [
 const BRITISH =
   /colour|behaviour|centre|honour|favour|armour|licence|defence|catalogue|labell(ed|ing)|cancell(ed|ing)|modell(ed|ing)|travell(ed|ing)|(serial|normal|recogn|optim|organ)is[eai]/i;
 
-/** Every string or JSX text in a non-test source that zh-CN.json translates. */
 function playerTexts(): { at: string; text: string }[] {
   return sources(SRC).flatMap(wordsIn).filter(({ text }) => Object.hasOwn(zhCN, text) || Object.hasOwn(zhCN, text.trim()));
 }
 
-/** The names of the JARGON entries a text trips. */
 function jargonIn(text: string): string[] {
   return JARGON.filter(({ pattern }) => pattern.test(text)).map(({ word }) => word);
 }
 
-/** The names of the MARKS entries a text trips. */
 function marksIn(text: string): string[] {
   return MARKS.filter(({ pattern }) => pattern.test(text)).map(({ word }) => word);
 }

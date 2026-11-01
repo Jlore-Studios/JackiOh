@@ -1,8 +1,7 @@
 // R1827000: the hero portraits (R641) an account owns, which the deck builder's picker offers. Every
 // portrait is an account cosmetic, `portrait-<id>` in the registry; `vanilla` is a starter (§14.2).
 // The client reads `GET /api/cosmetics` and decides nothing (CLAUDE.md rule 7). `routes/decks.tsx`
-// mounts `PortraitsOwned` while ownership decides (`FULL_ART_GATED`, R1310004); with none above it
-// every portrait is offered. A deck's own pick is always offered, so an editor never hides what it wears.
+// mounts `PortraitsOwned` while ownership decides (`FULL_ART_GATED`, R1310004).
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
@@ -27,7 +26,7 @@ export function portraitOfCosmetic(id: string): PortraitId | null {
 /** The registry ids every account owns with no row: the starters. */
 const STARTER_IDS: ReadonlySet<string> = new Set(COSMETICS.filter((cosmetic) => cosmetic.starter).map((cosmetic) => cosmetic.id));
 
-/** The portraits an account owns, in roster order: the starters, and those `account` (`GET /api/cosmetics`' list) holds. */
+/** The portraits an account owns, in roster order: the starters, and those `account` holds. */
 export function ownedPortraits(account: readonly string[]): readonly PortraitId[] {
   return PORTRAIT_IDS.filter((portrait) => {
     const id = portraitCosmeticId(portrait);
@@ -40,12 +39,12 @@ export type PortraitOwnership = "every" | readonly PortraitId[];
 
 const PortraitOwnershipContext = createContext<PortraitOwnership>("every");
 
-/** The pickers below it offer the portraits `owned` holds, and each its deck's own. */
+/** The pickers below it offer the portraits `owned` holds. */
 export function PortraitsOwned({ owned, children }: { owned: PortraitOwnership; children?: ReactNode }): ReactElement {
   return createElement(PortraitOwnershipContext.Provider, { value: owned }, children);
 }
 
-/** The portraits a picker offers, in roster order: every one, else the owned ones and `current`, the deck's own pick. */
+/** The portraits a picker offers, in roster order: every one, else the owned ones and `current`, the deck's own pick, so an editor never hides what it wears. */
 export function useOfferedPortraits(current: PortraitId): readonly PortraitId[] {
   const owned = useContext(PortraitOwnershipContext);
   if (owned === "every") return PORTRAIT_IDS;

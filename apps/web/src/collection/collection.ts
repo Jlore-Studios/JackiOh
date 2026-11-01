@@ -88,7 +88,7 @@ export function setCompletions(collection: CollectionResponse, defs: readonly Ca
   });
 }
 
-/** What a level pays, the parts above 0 in a player's words: "25 Jlore, 2 × Core pack, 3 × card token". */
+/** What a level pays, the parts above 0 in a player's words. */
 export function rewardWords(rewards: TrackRewards, setId: SetName): string {
   const parts: string[] = [];
   if (rewards.jlore > 0) parts.push(t("{jlore} Jlore", { jlore: formatNumber(rewards.jlore) }));

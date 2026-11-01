@@ -1,7 +1,6 @@
-// The emote hand on the client (R1341–R1343): the eight emotes a seat may send this game. A match's
-// arrive in the server's portraits frame (R1342); a game played on this device deals its own through
-// WASM (`./deal.ts`). This module never touches the engine, so the board, the menus and the socket
-// client can import it without the WebAssembly module.
+// The emote hand on the client (R1341–R1343): the eight emotes a seat may send this game, from the
+// server's portraits frame (R1342) or, in a game on this device, WASM (`./deal.ts`). This module
+// never touches the engine, so the board, the menus and the socket client import it without WASM.
 
 import type { EmoteId, PlayerId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, VOICE_EMOTE_IDS, isEmoteId } from "@jackioh/shared";
@@ -10,9 +9,8 @@ import { EMOJI_EMOTE_IDS, EMOTE_HAND_SIZE, EMOTE_HAND_VOICE, VOICE_EMOTE_IDS, is
 export type EmoteHands = Readonly<Partial<Record<PlayerId, readonly EmoteId[]>>>;
 
 /**
- * R1343: the hand a seat shows before a deal reaches it: the first EMOTE_HAND_VOICE voice lines and
- * emoji in the pool's order, the shape of every dealt hand, and only ids of R643's ten, which any
- * server relays.
+ * R1343: the hand a seat shows before a deal reaches it: a dealt hand's shape, in the pool's order,
+ * and only ids of R643's ten, which any server relays.
  */
 export const DEFAULT_EMOTE_HAND: readonly EmoteId[] = [
   ...VOICE_EMOTE_IDS.slice(0, EMOTE_HAND_VOICE),
@@ -29,7 +27,6 @@ export function isEmoteHand(value: unknown): value is EmoteId[] {
   return new Set(value).size === value.length;
 }
 
-/** `player`'s hand: the one dealt, else the default (R1343). */
 export function handFor(hands: EmoteHands | null | undefined, player: PlayerId): readonly EmoteId[] {
   return hands?.[player] ?? DEFAULT_EMOTE_HAND;
 }

@@ -2,9 +2,8 @@
 // the scene, the pack object and the odds and pity the Purchases page shows (#1651).
 //
 // EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7): nothing here rolls, counts or decides,
-// and the constants below are timings and looks, never a rate. `CardShowcase` and `FxLayer` read a
-// game's `PlayerView`, and a pack has none, so the scene draws `CardFace` and mounts the fx director
-// itself (`PackOpening.tsx`), over the cues built here.
+// and the constants below are timings and looks, never a rate. A pack has no `PlayerView`, so the scene
+// draws `CardFace` and mounts the fx director itself (`PackOpening.tsx`), over the cues built here.
 
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 import type { PrintedRarity } from "@jackioh/shared";
@@ -90,7 +89,7 @@ export const packTestid = {
   equip: (index: number) => `pack-slot-${String(index)}-equip`,
 } as const;
 
-/** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros: 0.29 is "29%", 0.082 "8.2%". */
+/** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros. */
 export function percent(rate: number): string {
   return `${String(Number((rate * 100).toFixed(PACK_ODDS_DECIMALS)))}%`;
 }
@@ -114,7 +113,6 @@ export function bestRarity(slots: readonly PackSlot[]): PrintedRarity {
   );
 }
 
-/** Whether a card of this rarity turns over only after a hold: Epic and above. */
 export function holdsToFlip(rarity: PrintedRarity): boolean {
   return RARITY_ORDER.indexOf(rarity) >= RARITY_ORDER.indexOf("Epic");
 }
@@ -156,7 +154,7 @@ export function withOpening(info: PacksResponse, opened: OpenedPackResponse): Pa
   };
 }
 
-/** The sting a reveal plays on the existing audio buses: the played-card sting below Legendary, the entrance from it up. */
+/** The sting a reveal plays on the existing audio buses. */
 export function playStinger(rarity: PrintedRarity): void {
   const audio = getAudioEngine();
   switch (rarity) {
@@ -178,7 +176,7 @@ export function playStinger(rarity: PrintedRarity): void {
   }
 }
 
-/** A reveal's effects on the card at `testid`: none for Common, a burst for Rare and Epic, rays and a burst above. */
+/** A reveal's effects on the card at `testid`. */
 export function revealCues(rarity: PrintedRarity, testid: string, intensity: number): FxCue[] {
   const at = tid(testid);
   switch (rarity) {

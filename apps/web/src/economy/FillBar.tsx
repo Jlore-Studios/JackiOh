@@ -1,14 +1,10 @@
 // The bar that fills (#1658, part of #1651, SPEC §14.5): a track and a fill, shared by the token
 // bars, the pack opening's two-bar animation and the store's and XP's bars.
-//
 // THE SERVER DECIDES (CLAUDE.md rule 7): `size`, `value` and `fills` are the server's; the bar only
 // plays them (`bars.ts::segments` lays the sweeps out).
-//
-// THE MOTION is transform and opacity only: the fill is a `scaleX` whose keyframes (`economy.css`)
-// take their durations from `bars.ts`' constants through a custom property. REDUCED MOTION, or
-// `still` (its owner's own switch, R1953000), draws the end state at once and reports every fill,
-// then `onDone`. A visually hidden native `<progress>` always rests at `value` for screen readers
-// and the e2e specs; the track, the picture, is hidden from them.
+// THE MOTION is transform and opacity only (`economy.css`, its durations `bars.ts`' constants).
+// REDUCED MOTION, or `still` (R1953000), draws the end state at once and reports every fill. A
+// visually hidden native `<progress>` always rests at `value` for screen readers and the e2e specs.
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -96,7 +92,6 @@ function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, sti
     setPosition({ step: plan.length - 1, phase: "done" });
   }, [from, reduced, plan]);
 
-  // Motion on: each sweep and each burst waits its time, then the bar moves to the next.
   useEffect(() => {
     if (from === undefined || reduced || position.phase === "done") return undefined;
     const segment = plan[position.step]!;
@@ -119,7 +114,6 @@ function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, sti
     };
   }, [from, reduced, plan, position, size]);
 
-  // The segment on screen; none when the bar is at rest, from the start or at the end.
   const segment = from === undefined || reduced || position.phase === "done" ? undefined : plan[position.step];
   const sweeping = segment !== undefined && position.phase === "sweep";
   const bursting = segment !== undefined && position.phase === "burst";

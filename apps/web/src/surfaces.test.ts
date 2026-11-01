@@ -1,7 +1,7 @@
-// #2109: the board's corners, stacking and neutral shadows come from one named surface scale,
-// surfaces.css, and no stylesheet gains a radius, a shadow or a layer of its own unless this file
-// says so. Gradients stay only where they mean something: card faces (src/cards/), the main
-// button (--primary-face*), the table (game/table.css and board.css's playmat, `.field`) and the named texture keeps below.
+// #2109: the board's corners, stacking and neutral shadows come from one named surface scale, surfaces.css;
+// no stylesheet gains a radius, a shadow or a layer of its own unless this file says so. Gradients stay only
+// on card faces (src/cards/), the main button (--primary-face*), the table (game/table.css and board.css's
+// `.field`) and the named texture keeps below.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -56,12 +56,11 @@ const GRADIENT_KEEP = [
   /calc\(50% [-+] 1\.5px\)/, // the countered badge's struck-circle strike
 ];
 
-/** The playmat and its marks. The default table (the tavern) is `.field` in board.css, not table.css,
- * and each playmat's tap marks and sand cracks are its own cosmetic (SandSurface's TAP_FAMILY): the
- * issue keeps the table's gradients, so these rules keep their shapes, gradients and shadows. */
+/** The playmat and its marks: the tavern table is board.css's `.field`, and each playmat's tap marks and
+ * sand cracks are its own cosmetic (SandSurface's TAP_FAMILY); these rules keep their gradients and shadows. */
 const TABLE_RULE = /^\.(field|sand-mark(--\w+)?|tap-mark--\w+)$/;
 
-/** `css` without the table's rules (a rule whose every selector is one of TABLE_RULE's). */
+/** `css` without the rules whose every selector matches TABLE_RULE. */
 function withoutTable(css: string): string {
   return css.replace(/([^{}]+)\{[^{}]*\}/g, (rule, selector: string) => {
     const parts = selector.split(",").map((part) => part.trim());
@@ -187,8 +186,8 @@ describe("#2109 the surface scale", () => {
       ...SHADOWS.map((shadow) => `--shadow-${shadow[0]}`),
       ...LAYERS.map((layer) => `--z-${layer[0]}`),
     ]);
-    // Outside board scope, and frozen: the inspect overlay (src/cards/) named its own two layers before
-    // the scale existed. No sheet gains a name of its own; one that loses its names empties its entry.
+    // Outside board scope, and frozen: the inspect overlay's (src/cards/) own two layers. No sheet gains a
+    // name of its own; one that loses its names empties its entry.
     const FOREIGN: Record<string, string[]> = {
       "cards/inspect/inspect.css": ["--z-inspect-hover", "--z-inspect-modal"],
     };

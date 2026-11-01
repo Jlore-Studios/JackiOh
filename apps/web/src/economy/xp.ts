@@ -1,9 +1,7 @@
 // What a finished game paid, as the server answers it (#1664, part of #1651; SPEC §14.7–§14.9,
-// R1483000, R1502000): its Jlore and XP, every set track it moved with each level reached and what
-// that paid, and every quest it completed. It mirrors `crates/server/src/economy/rewards.rs`'
-// `GameEconomy`, which the match socket's `view` frame, the co-op frame and the paid practice claim
-// carry. THE SERVER DECIDES (CLAUDE.md rule 7): the client computes no curve; `stagesOf` only lays the
-// answer out as `FillBar`'s bars.
+// R1483000, R1502000). It mirrors `crates/server/src/economy/rewards.rs`' `GameEconomy`, which the
+// match socket's `view` frame, the co-op frame and the paid practice claim carry. THE SERVER DECIDES
+// (CLAUDE.md rule 7): the client computes no curve; `stagesOf` only lays the answer out as bars.
 
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
 
@@ -13,10 +11,7 @@ import { isRecord } from "../wire/json.ts";
 /** How long a level's number takes to pop when its bar fills (`xp.css`, through `--pop-ms`). */
 export const LEVEL_POP_MS = 450;
 
-/**
- * Where a track stands: its level and XP, the XP its level spans and the XP to the next level (both
- * null on the last level, R1302005).
- */
+/** Where a track stands; `levelXp` and `xpToNext` are null on the last level (R1302005). */
 export type TrackPoint = { level: number; xp: number; levelXp: number | null; xpToNext: number | null };
 
 /** A level a game reached and what it paid. */
@@ -104,7 +99,7 @@ export function economyField(value: unknown): { economy?: GameEconomy } {
   return economy === null ? {} : { economy };
 }
 
-/** The XP a track's level has taken so far: `levelXp − xpToNext` of `levelXp` (null on the last level). */
+/** The XP a track's level has taken so far; null on the last level. */
 function pointsOf(point: TrackPoint): number | null {
   return point.levelXp === null || point.xpToNext === null ? null : point.levelXp - point.xpToNext;
 }
@@ -116,11 +111,9 @@ function pointsOf(point: TrackPoint): number | null {
 export type Stage = { level: number; size: number; from: number | null; value: number; fills: 0 | 1 };
 
 /**
- * The bars a track's gain plays, one per level it passes through: the level it stood on from where
- * it stood to full, each level between full, and the last from empty to where it stands. The answer
- * gives only the first and last spans, so a bar between takes the last's size, which only sets how
- * long it sweeps. A track reaching its last level ends full at the XP it holds (that level has no
- * span); one that stood there already never moves.
+ * The bars a track's gain plays, one per level it passes through. The answer gives only the first
+ * and last spans, so a bar between takes the last's size, which only sets how long it sweeps. A track
+ * reaching its last level ends full at the XP it holds (that level has no span).
  */
 export function stagesOf({ before, after }: TrackGain): Stage[] {
   const start = pointsOf(before);

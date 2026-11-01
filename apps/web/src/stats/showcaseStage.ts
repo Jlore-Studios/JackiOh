@@ -1,10 +1,8 @@
-// R1584000: the one-card stage the landing's stat showcase plays a board animation on. It makes no
-// animation of its own: it hands the board event a stat names to the board's planner (`planEntries`,
-// game/animations.ts) against a view with that card on one lane, and plays the entry it gets back. The
-// stage's elements carry the board's testids, so the entry's frames land on them unchanged.
-// It decides no rule and keeps no state (CLAUDE.md rule 7): the events are made here, for show, and
-// nothing reads them back. `planStage` (fx/stage.ts) is left out: it acts on the board's elements,
-// and the landing has none.
+// R1584000: the one-card stage the landing's stat showcase plays a board animation on. It hands the board
+// event a stat names to the board's planner (`planEntries`, game/animations.ts) against a view with that card
+// on one lane, and plays the entry back on elements carrying the board's testids. It decides no rule and keeps
+// no state (CLAUDE.md rule 7): its events are for show, read back by nothing. `planStage` (fx/stage.ts) is
+// left out: it acts on the board's elements, and the landing has none.
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerId, PlayerView, SideView, UnitView } from "@jackioh/shared";
@@ -98,7 +96,7 @@ export function stageView(defId: string, side: Side): PlayerView {
   };
 }
 
-/** The board events a stat's animation is made of, each with the side whose zone the card is in when it plays. */
+/** The board events a stat's animation is made of, each with the side whose zone holds the card. */
 function stageEvents(animation: StageAnimation, defId: string, side: Side): readonly (readonly [GameEvent, Side])[] {
   const other: Side = side === "you" ? "opponent" : "you";
   const p = STAGE_PLAYERS[side];
@@ -125,7 +123,7 @@ function stageEvents(animation: StageAnimation, defId: string, side: Side): read
   }
 }
 
-/** The beats a card on `side` plays for `animation`: the board's entries for the events a stat stands for. */
+/** The beats a card on `side` plays for `animation`. */
 export function stageScript(animation: StageAnimation, defId: string, side: Side): StageScript {
   const view = stageView(defId, side);
   const beats = stageEvents(animation, defId, side).flatMap(([event, beatSide]) =>

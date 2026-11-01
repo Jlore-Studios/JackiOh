@@ -1,7 +1,5 @@
 // BUILD M8: §5.2 swaps a field card's §10.4 printed stats without rebuilding it, so its damage remains.
 // R60 makes Knockoff Temu deterministic after #94 leaves Mr. Vanilla as the sole non-Radiant candidate.
-// BUILD M5-T4: use `radiantSet` for the animation; `contain.text` is necessary until testids has stat selectors.
-// `cy.playByName` settles before the animation; Knockoff Temu's click is expanded to observe it.
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor } from "../../support/config.ts";
@@ -39,7 +37,7 @@ function nameOf(index: number): string {
   return name;
 }
 
-/** The state peek drives actions; assertions against player-visible state use `viewFor` (CLAUDE.md rule 7). */
+/** The state peek drives actions; visible assertions use `viewFor` (CLAUDE.md rule 7). */
 type Held = { id: string; defId: string; radiant?: boolean };
 type FieldUnit = Held & { damage?: number; buffs?: { attack: number; health: number } };
 type SidePeek = {
@@ -124,7 +122,6 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
   });
 
   it("§5.2 flips a hand card and a damaged field unit, keeping the damage on the field card", () => {
-    // Damage Mr. Vanilla before testing its Radiant flip.
     waitToPlay("p1", CARDS.mrVanilla);
     cy.playByName(nameOf(8), { zone: { side: "you", row: "units", lane: UNIT_LANE } });
 
@@ -196,7 +193,8 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
         );
       });
 
-      // #28 has one candidate and no play-time choice; expand its click to observe the animation.
+      // #28 has one candidate and no play-time choice, and `cy.playByName` settles before the
+      // animation, so its click is expanded to observe it.
       cy.instanceInHand("p1", CARDS.knockoffTemu).then((temuId) => {
         cy.get(ts(handCardId(temuId))).click();
 

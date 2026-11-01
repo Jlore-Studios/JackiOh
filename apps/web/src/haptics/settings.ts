@@ -1,7 +1,6 @@
-// The viewer's vibration switch (R669, issue #259): a presentation preference of this device, kept in
-// this browser's `localStorage` only. The haptics player reads it at every buzz, so it applies at once.
-// Storage is optional: any storage failure falls back to the default or to the in-memory value, and
-// nothing here throws.
+// The viewer's vibration switch (R669, issue #259), kept in this browser's `localStorage` only. The
+// haptics player reads it at every buzz, so it applies at once. A storage failure falls back to the
+// default or the in-memory value; nothing here throws.
 
 import { useSyncExternalStore } from "react";
 
@@ -36,7 +35,6 @@ export function readHapticsSettings(): HapticsSettings {
   return current;
 }
 
-/** Merges `patch` over the current value, persists it in try/catch and notifies. */
 export function writeHapticsSettings(patch: Partial<HapticsSettings>): HapticsSettings {
   const next = parseHapticsSettings({ ...readHapticsSettings(), ...patch });
   current = next;

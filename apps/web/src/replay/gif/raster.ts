@@ -157,8 +157,7 @@ function mote(ctx: Ctx2D, m: ArtSpec["motes"][number], shape: ArtSpec["moteShape
 
 /**
  * A card's procedural art in the window `(x, y, w, h)`, in the order `artSvg` (cards/art/svg.ts)
- * lays its picture out: the sky, the glow, a Radiant card's rays, the ridges, the motif's glyphs,
- * the emblem and its accent, the motes and the vignette, the box scaled to cover the window.
+ * lays its picture out, the box scaled to cover the window.
  */
 export function drawArt(ctx: Ctx2D, spec: ArtSpec, x: number, y: number, w: number, h: number): void {
   ctx.save();

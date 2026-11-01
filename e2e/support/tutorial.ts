@@ -1,6 +1,5 @@
-// Tutorial e2e driver (SPEC §9.10; specs 22 and 23). The driver never dispatches; it performs the
-// coach's suggested legal actions through the UI and only reads the practice view to await
-// snapshots and locate cards. Cypress-retried waits observe the board and coach settling (BUILD M8).
+// Tutorial e2e driver (SPEC §9.10; specs 22 and 23): it never dispatches, but performs the coach's
+// legal actions through the UI, reading the practice view only to await snapshots and find cards (BUILD M8).
 
 import { timeouts, TUTORIAL_PROGRESS_KEY } from "./config.ts";
 import {
@@ -26,8 +25,6 @@ import {
   zoneId,
 } from "./testids.ts";
 import type { Action, ActionBody, Lane, PlayerId, Row, Selection, Side } from "./types.ts";
-
-// Constants
 
 export const PRACTICE_PATH = "/practice";
 
@@ -381,7 +378,7 @@ function optionFor(options: readonly PendingOptionLike[], selection: Selection):
   });
 }
 
-/** Prefer a reachable board target; otherwise use the picker. */
+/** Whether a tap at the element's center reaches it: if not, the picker is used. */
 function reachable(element: Element): boolean {
   const box = element.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) return false;
@@ -485,7 +482,6 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
         break;
       case "target":
       case "hand": {
-        // Prefer a reachable board target to a picker option.
         const next = (play.targets ?? []).find((selection) => {
           const where = boardTestidOf(view, selection);
           return where === null || $body.find(`${ts(where)}[data-selected="true"]`).length === 0;

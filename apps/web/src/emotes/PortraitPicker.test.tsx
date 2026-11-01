@@ -1,7 +1,6 @@
-// The deck builder's portrait picker (issue §8, R641, R644): the deck's current portrait as the
-// collapsed control, a grid of the roster on open, and each tile's Preview panel whose emotes play
-// exactly as in a match. `setAudioEngineForTests` installs the recording fake, so "played on the
-// voice channel" is a `playVoice` call and "on the effects channel" a `playSfx` one.
+// The deck builder's portrait picker (issue §8, R641, R644). `setAudioEngineForTests` installs the
+// recording fake, so "played on the voice channel" is a `playVoice` call and "on the effects channel"
+// a `playSfx` one.
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -152,7 +151,6 @@ describe("the portraits an account owns (R1827000)", () => {
     expect(portraitOfCosmetic("portrait-ulfric")).toBeNull();
     expect(portraitOfCosmetic("table-wood")).toBeNull();
     expect(portraitOfCosmetic("gary")).toBeNull();
-    // The registry holds one portrait cosmetic per roster id, and only `vanilla`'s is a starter.
     const registry = COSMETICS.filter((cosmetic) => cosmetic.kind === "portrait");
     expect(registry.map((cosmetic) => portraitOfCosmetic(cosmetic.id))).toEqual([...PORTRAIT_IDS]);
     expect(registry.filter((cosmetic) => cosmetic.starter).map((cosmetic) => cosmetic.id)).toEqual(["portrait-vanilla"]);
@@ -349,7 +347,6 @@ describe("the picker in the deck editor (R641)", () => {
       "d1",
     );
 
-    // The collapsed control is the deck's portrait: its card's name, its oval art.
     const current = screen.getByTestId("portrait-current");
     expect(current).toHaveAttribute("title", `Hero portrait: ${PORTRAIT_DEFS.gary.def.name}`);
     expect(current.querySelector(".cf-art--oval")).not.toBeNull();

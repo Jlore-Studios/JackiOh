@@ -1,7 +1,6 @@
-// #2115, R2115000: the shape of what a menu panel waits for, drawn in place of its "Loading …" line.
-// The words stay as a status line a screen reader hears; the blocks are aria-hidden, and their shimmer
-// stops under Reduce motion (skeleton.css). Presentation only (CLAUDE.md rule 7): a fixed number of
-// blank blocks, never a count from the read. The blocks are brass (#2108, R2108000).
+// #2115, R2115000: the shape of what a menu panel waits for, in place of its "Loading …" line, which stays
+// a status line a screen reader hears. The brass blocks (#2108, R2108000) are aria-hidden, their shimmer off
+// under Reduce motion (skeleton.css); presentation only (CLAUDE.md rule 7), a fixed number, never the read's.
 
 import { useEffect, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -21,10 +20,10 @@ export const SKELETON_TABLE_COLUMNS = 4;
 /** A panel's lines under its heading bar. */
 export const SKELETON_PANEL_LINES = 2;
 
-/** #2108, R2108000: how long a wait runs before it shows, so a read that answers sooner never flashes a skeleton. */
+/** How long a wait runs before it shows, so a read that answers sooner never flashes a skeleton. */
 export const SKELETON_DELAY_MS = 300;
 
-/** #2108, R2108000: true once `SKELETON_DELAY_MS` has passed since mounting. A timer, not a CSS delay: Reduce motion zeroes every CSS delay (index.css). */
+/** True once `SKELETON_DELAY_MS` has passed: a timer, as Reduce motion zeroes every CSS delay (index.css). */
 export function useShownAfterDelay(): boolean {
   const [shown, setShown] = useState(false);
   useEffect(() => {

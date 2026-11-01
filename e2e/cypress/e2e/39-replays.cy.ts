@@ -1,10 +1,5 @@
 // 39 — an online match's replay, between the browser and cy.task("wsPlayer") (#768; §9.5, R768, R768000).
-//
-// Seat 1 is the browser and seat 2 the Node client, in a Best-of-1 room as spec 06 makes one. Seat 1
-// concedes once both mulligans are in, and the match's result panel opens its replay: "Watch the
-// replay" at step 0, a step forward and back, and Back to the board; "Share the last turn" at the
-// last step, whose turn's GIF is made, downloaded (a headless browser has no share sheet), a GIF and
-// under the cap. Then the recent games (`/replays`) list the match and open its replay.
+// The last turn's GIF is downloaded, not shared: a headless browser has no share sheet.
 //
 // Daily only: a pull request's `e2e smoke` plays SMOKE in scripts/shard-specs.mjs, which does not hold
 // 39. Every wait is a retried DOM assertion; the GIF's waits on its Download button.

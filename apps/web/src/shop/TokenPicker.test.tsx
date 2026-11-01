@@ -124,7 +124,6 @@ describe("#1309 the token picker", () => {
     expect(screen.queryByTestId(poolCardId("core-001"))).toBeNull();
     expect(screen.queryByTestId(poolCardId("core-004"))).toBeNull();
     expect(screen.queryByTestId(poolCardId("core-051-1"))).toBeNull();
-    // Exactly the cards `unownedCards` returns, whatever the catalog holds.
     expect(document.querySelectorAll('[data-testid^="card-pool-"]')).toHaveLength(unownedCards(smallCollection()).length);
 
     // "Bigot" is core-002's whole name; core-003's face does not match it.
@@ -141,7 +140,7 @@ describe("#1309 the token picker", () => {
     fireEvent.click(await screen.findByTestId(poolCardId("core-002")));
     expect(await screen.findByTestId(INSPECT_DETAIL)).toBeInTheDocument();
 
-    // The Unlock button carries the old Pick's test id, inside the open detail.
+    // Unlock carries the `cardPick` test id, inside the open detail.
     fireEvent.click(screen.getByTestId(T.cardPick("core-002")));
     const dialog = await screen.findByTestId(T.cardDialog);
     expect(dialog).toHaveTextContent(CATALOG["core-002"]!.name);
@@ -157,7 +156,6 @@ describe("#1309 the token picker", () => {
     fireEvent.click(screen.getByTestId(T.cardCancel));
     expect(screen.queryByTestId(T.cardDialog)).toBeNull();
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(0);
-    // The detail is still open and the pool unchanged: nothing was spent.
     expect(screen.getByTestId(INSPECT_DETAIL)).toBeInTheDocument();
     expect(screen.getByTestId(T.cardPick("core-002"))).toBeEnabled();
     expect(screen.getByTestId(poolCardId("core-002"))).toBeInTheDocument();
@@ -174,7 +172,6 @@ describe("#1309 the token picker", () => {
     fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
 
-    // Opened again, the card offers Unlock, not the question it was asking.
     fireEvent.click(screen.getByTestId(poolCardId("core-002")));
     expect(await screen.findByTestId(T.cardPick("core-002"))).toBeEnabled();
     expect(screen.queryByTestId(T.cardDialog)).toBeNull();
@@ -311,7 +308,6 @@ describe("#1309 the token picker", () => {
     expect(cosmetic).toHaveTextContent("Cosmetic token bar");
     expect(cosmetic.querySelector("progress")).toHaveProperty("value", 30);
     expect(cosmetic.querySelector("progress")).toHaveProperty("max", 150);
-    // Drawn at the points with no animation, and the cycle's next step beside the cosmetic bar.
     expect(card).toHaveAttribute("data-state", "resting");
     expect(cosmetic).toHaveAttribute("data-state", "resting");
     expect(cosmetic.querySelector<HTMLElement>(".fill-bar__fill")?.style.transform).toBe("scaleX(0.2)");
@@ -352,10 +348,9 @@ describe("#1309 the token picker", () => {
 
     expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
     expect(screen.getByTestId(T.cosmeticBar)).toHaveTextContent("30 / 150");
-    // The Unlock button carries the old Pick's test id, inside the open detail.
+    // Unlock carries the `cardPick` test id, inside the open detail.
     fireEvent.click(await screen.findByTestId(poolCardId("core-002")));
     expect(await screen.findByTestId(T.cardPick("core-002"))).toBeInTheDocument();
-    // The held cosmetic tokens still show, and a link says where they are spent.
     expect(screen.getByTestId(T.heldRare)).toHaveTextContent("Rare tokens held: 2");
     expect(screen.getByTestId(T.heldEpic)).toHaveTextContent("Epic tokens held: 1");
     expect(screen.getByTestId(T.cosmeticSpend)).toHaveAttribute("href", paths.collection);
@@ -376,7 +371,6 @@ describe("#1309 the token picker", () => {
     fireEvent.click(await screen.findByTestId(T.cardConfirm));
 
     expect(await screen.findByTestId(T.tokenError)).toHaveTextContent("that card is already owned");
-    // The confirm closed and sent once, but the pool and the held count are unchanged.
     expect(screen.queryByTestId(T.cardDialog)).toBeNull();
     expect(screen.getByTestId(poolCardId("core-002"))).toBeInTheDocument();
     expect(screen.getByTestId(T.heldCard)).toHaveTextContent("1");
@@ -445,7 +439,6 @@ describe("#1309 the token picker", () => {
 
     answers.bars = { status: 200, body: tokenBars() };
     fireEvent.click(screen.getByTestId(T.tokenRetry));
-    // The read is out: the button waits for it, and a second press sends nothing.
     expect(screen.getByTestId(T.tokenRetry)).toBeDisabled();
     fireEvent.click(screen.getByTestId(T.tokenRetry));
 

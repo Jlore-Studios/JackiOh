@@ -1,5 +1,4 @@
-// R768, issue #508: what a replay shows, through the WebAssembly module. A game the random policy
-// plays is opened with `replayOpen` and read with `replayPage`; every step of both seats is
+// R768, issue #508: what a replay shows, through the WebAssembly module. Every step of both seats is
 // `viewFor` of the state the client held after that many actions.
 
 import { describe, expect, it } from "vitest";

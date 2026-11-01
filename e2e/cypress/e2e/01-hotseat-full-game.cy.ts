@@ -1,7 +1,6 @@
 // BUILD M8: a seeded hotseat game completes through the UI; its final hash matches replay (V19).
-// The browser records actions, then `jackioh replay` folds and hashes them; equality proves accepted client actions in order (M5-T3).
-// The seed is overridable for §4's 20-seed run.
-// Fixture decks are choice-free, so generic play and attack open no `PendingChoice` (R81); seedGame and board clicks answer M5-T2.
+// `jackioh replay` hashes the browser's recorded actions: a match proves them accepted in order (M5-T3).
+// Fixture decks are choice-free, so play and attack open no `PendingChoice` (R81).
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -15,7 +14,7 @@ import {
 } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Row } from "../../support/types.ts";
 
-/** BUILD M8's seed; `--expose seed=…` overrides it for the nightly sweep. */
+/** BUILD M8's seed; `--expose seed=…` overrides it for §4's 20-seed nightly sweep. */
 const SEED = seedFor("01-hotseat");
 
 /** §2.5 / R2 cap player turns; allow slack for `turnAutoEnded`. */
@@ -60,7 +59,7 @@ function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null
   });
 }
 
-/** BUILD M5-T3: hand the hotseat device to the active seat. */
+/** BUILD M5-T3: hand the device to the active seat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
@@ -117,7 +116,6 @@ function takeTurns(remaining: number): void {
   cy.gameState().then((state) => {
     expect(remaining, "the game reached a result inside the turn budget").to.be.greaterThan(0);
     if (state.result !== null) return;
-    // Fixture decks are choice-free; a prompt here means contract drift.
     expect(state.pending, "01-aggro-a/b open no prompt once the mulligan is answered").to.eq(null);
 
     const me = state.active;
@@ -156,7 +154,7 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
       cy.get(ts(RESULT_OVERLAY)).should("have.attr", "data-reason", result.reason);
     });
 
-    // `cy.replayCheck` folds the log with `jackioh replay` and compares `hashState` (§12).
+    // §12: `jackioh replay` folds the log and compares `hashState`.
     cy.replayCheck("01-hotseat-full-game");
   });
 });

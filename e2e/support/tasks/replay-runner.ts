@@ -1,6 +1,5 @@
-// Runs under the repo's tsx from its root, folds a replay, and compares it with browser state.
-// The Rust CLI folds registered scripts; the browser hash mirrors canonical JSON/FNV-1a only for
-// comparison (SURFACE §5.2, §12).
+// Runs under the repo's tsx from its root: the Rust CLI folds a replay, and its state is compared with
+// the browser's by canonical JSON/FNV-1a hash (SURFACE §5.2, §12).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -23,7 +22,7 @@ type CliAnswer = { hash: string; errors: unknown[] };
 
 const CLI = path.resolve("target", "release", process.platform === "win32" ? "jackioh.exe" : "jackioh");
 
-/** Canonical JSON has sorted keys, so equal states produce identical text (SURFACE §5.2). */
+/** Sorted keys: equal states, identical text. */
 function canonical(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -34,10 +33,7 @@ function canonical(value: unknown): string {
   return `{${entries.join(",")}}`;
 }
 
-/**
- * Hash canonical state without bookkeeping `applied`, a Glitch-redrawn opening (R676) or the Created
- * cards' generators (R1956001), the keys the engine's `replay::hash_state` leaves out.
- */
+/** Canonical state's hash without `applied`, a Glitch-redrawn opening (R676) or Created cards' generators (R1956001), as `replay::hash_state` leaves them out. */
 function hashState(state: unknown): string {
   const { applied: _applied, opening: _opening, generators: _generators, ...rest } = state as Record<string, unknown>;
   const text = canonical(rest);

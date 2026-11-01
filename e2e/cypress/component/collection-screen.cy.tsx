@@ -1,9 +1,8 @@
 // #1307: the collection screen fits a phone. jsdom cannot measure layout, so this mounts the route
-// in a browser, serves the reads it makes from the fixtures, and checks that nothing on the
-// page is wider than the viewport at 360 px and 390 px.
-// R1579000: the hub and each section fit one screen at those two sizes and on a desktop's: the
-// page never scrolls, and the card list's body is what scrolls. A door is never clicked here:
-// `navigate` would move the iframe's own path, so each test sets `?section=` itself.
+// in a browser, serves its reads from the fixtures, and checks nothing is wider than 360 px and 390 px.
+// R1579000: the hub and each section fit one screen at those two sizes and on a desktop's, only the
+// card list's body scrolling. A door is never clicked here: `navigate` would move the iframe's own
+// path, so each test sets `?section=` itself.
 
 import { newestShippedSet } from "@jackioh/shared";
 

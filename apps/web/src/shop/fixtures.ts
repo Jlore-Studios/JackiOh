@@ -1,7 +1,6 @@
-// Fixture responses for the shop's tests (#1309): what `GET /api/wallet`, `GET /api/tokens`,
-// `GET /api/cosmetic-packs`, `GET /api/collection` and `GET /api/cosmetics` answer, as the
-// server's JSON. No number is a shipped one where a test reads it, so a test that finds one on
-// screen has found the response's value and not a copy of the server's config.
+// Fixture responses for the shop's tests (#1309), as the server's JSON. No number is a shipped one where
+// a test reads it, so a test that finds one on screen has found the response's value and not a copy of
+// the server's config.
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -14,15 +13,12 @@ import type {
   WalletResponse,
 } from "../net/api.ts";
 
-/** `GET /api/wallet` for an account holding 37 Jlore: short of every pack's price. */
+/** `GET /api/wallet`: 37 Jlore, short of every pack's price. */
 export function walletInfo(): WalletResponse {
   return { jlore: 37 };
 }
 
-/**
- * `GET /api/tokens`: the card bar one point from full, the cosmetic bar at 30 of 150, the
- * cycle's next step Epic, one card token, one Rare token, no Epic token and one cosmetic pack.
- */
+/** `GET /api/tokens`, the card bar one point from full. */
 export function tokenBars(): TokenBarsResponse {
   return {
     cardBar: { points: 149, size: 150 },
@@ -40,19 +36,19 @@ function cosmeticPackOdds(): CosmeticPacksResponse["odds"] {
   };
 }
 
-/** `GET /api/cosmetic-packs` with the shard bar one pack short of full and two packs unopened. */
+/** `GET /api/cosmetic-packs`, the shard bar one pack short of full. */
 export function cosmeticPacksInfo(): CosmeticPacksResponse {
   return { shardBar: { points: 19, size: 20 }, unopened: 2, odds: cosmeticPackOdds() };
 }
 
-/** `GET /api/cosmetic-packs` with a full shard bar and one pack unopened. */
+/** `GET /api/cosmetic-packs` with a full shard bar. */
 export function cosmeticPacksFull(): CosmeticPacksResponse {
   return { shardBar: { points: 20, size: 20 }, unopened: 1, odds: cosmeticPackOdds() };
 }
 
 /**
- * `GET /api/collection`: `core-001` and `core-004` owned at `MAX_COPIES` (1), `core-002` absent.
- * `core-051-1` (a token) is listed only so a test can prove the picker skips it.
+ * `GET /api/collection`, quantity 1 being `MAX_COPIES`. `core-051-1` (a token) is listed only so a test
+ * can prove the picker skips it.
  */
 export function collectionOf(
   over: Partial<CollectionResponse> = {},
@@ -93,8 +89,7 @@ export function ownedCosmeticsOf(
 }
 
 /**
- * `POST /api/cosmetic-packs/open`: an Epic full art for an owned card, an account cosmetic and a
- * spent slot, the shard bar one further on (to full) and one pack left, the spent slot adding its 4
+ * `POST /api/cosmetic-packs/open`: the shard bar one further on, to full; the spent slot adds its 4
  * points to both token bars without filling either (R1953000).
  */
 export function openedCosmeticPack(): OpenedCosmeticPackResponse {

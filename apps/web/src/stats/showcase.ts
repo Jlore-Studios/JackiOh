@@ -1,9 +1,7 @@
-// R1584000: the stats the floor below the tavern's showcase shows, one at a time: each with a title,
-// the card it is about and the player's number for it. A stat the device holds no data for is left
-// out. StatShowcase.tsx draws them and showcaseStage.ts animates them; only the stage's types are
-// taken from it, so the effects layer stays off the first screen until the showcase is drawn.
-// R1743000: a stat's card is never a token nor one the catalog no longer holds; the order they come
-// in is `nextInBag`'s, a shuffled bag drawn from the page's random source.
+// R1584000: the stats the floor below the tavern's showcase shows, one at a time, each a title, a card and
+// the player's number; one with no data is left out. Only showcaseStage.ts's types are taken, so the effects
+// layer stays off the first screen until the showcase is drawn. R1743000: a stat's card is never a token nor
+// one the catalog no longer holds; the order is `nextInBag`'s, a shuffled bag drawn from the page's random source.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
@@ -91,7 +89,6 @@ export function pocketLine(pick: PocketPick): string {
   return t("you play it {n}× as often as everyone else", { n: Math.round((pick.playerRate / pick.baseRate) * 10) / 10 });
 }
 
-/** R1743000: a stat's card is one the catalog holds and that is not a token. */
 function showable(id: string): boolean {
   const def = CATALOG[id];
   return def !== undefined && !def.token;
@@ -121,9 +118,9 @@ function topCard(stats: PlayerStats, counter: CardCounter, at = 0): CardTally | 
 type Share = { readonly id: string; readonly part: number; readonly whole: number };
 
 /**
- * R1743000: the showable card with the highest `part` per `whole`, among those with a `whole` of at
- * least SHOWCASE_MIN_PLAYS and a `part` above 0. The part is capped at the whole (a card can be
- * destroyed more often than it was played); a tie goes to the lower id.
+ * R1743000: the showable card with the highest `part` per `whole` (a `whole` of at least SHOWCASE_MIN_PLAYS,
+ * a `part` above 0), the part capped at the whole (a card can be destroyed more often than it was played);
+ * a tie goes to the lower id.
  */
 function topShare(
   stats: PlayerStats,
@@ -168,7 +165,7 @@ function countsOf(stats: PlayerStats, id: string): CardCounters {
   return stats.cards[id] ?? NO_COUNTS;
 }
 
-/** R1584000: the Pocket Pick, once its request has answered with a card the catalog holds (a token never is one, R1743000); none before a game. */
+/** R1584000: the Pocket Pick once its request answers with a showable card; none before a game. */
 export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): ShowcaseStat[] {
   if (stats.games === 0 || pocket === null || !showable(pocket.id)) return [];
   return [
@@ -185,9 +182,8 @@ export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): Showc
 
 /**
  * One stat for each the device has data for, none before the first finished game. The Pocket Pick
- * (R1583000's request) is absent until that answers with a card the catalog holds; a caller may add
- * it after the draw with `pocketStat`, so its answer redraws nothing. R1743000: the order is not the
- * stats'; each stat that picks a card at random draws once from `random`, only when it has a candidate.
+ * (R1583000) may come after the draw through `pocketStat`, so its answer redraws nothing. R1743000: the
+ * order is not the stats'; each stat that picks at random draws once from `random`, only with a candidate.
  */
 export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, random: RandomSource): ShowcaseStat[] {
   if (stats.games === 0) return [];
@@ -343,7 +339,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
   return out;
 }
 
-/** R1743000: the order the showcase tells its stats in: what is left of this round, and the stat shown now. */
+/** R1743000: the showcase's order: what is left of this round, and the stat shown now. */
 export type ShowcaseBag = { readonly shown: ShowcaseKey | null; readonly left: readonly ShowcaseKey[] };
 
 export const EMPTY_BAG: ShowcaseBag = Object.freeze({ shown: null, left: Object.freeze([]) });

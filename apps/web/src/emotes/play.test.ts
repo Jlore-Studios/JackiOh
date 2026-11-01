@@ -1,7 +1,6 @@
-// What a shown emote sounds and reads like (play.ts, R644): a voice-line emote is its portrait's
-// own line on the voice channel at react priority, the way R204's death line cuts in, captioned for
-// its audible span; an emoji is a synthesized effect (R1345) and a sticker with no words. The
-// SoundSink is a two-method seam, so the engine here is a pair of spies.
+// What a shown emote sounds and reads like (play.ts, R644): a voice line cuts in the way R204's death
+// line does; an emoji is a synthesized effect (R1345). The SoundSink is a two-method seam, so the
+// engine here is a pair of spies.
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -86,7 +85,6 @@ describe("R644 the voice emotes", () => {
         );
       }
     }
-    // A voice emote never reaches the effects channel.
     expect(engine.playSfx).not.toHaveBeenCalled();
   });
 
@@ -134,7 +132,6 @@ describe("R644 the emoji emotes", () => {
       expect(engine.playSfx).toHaveBeenCalledWith(EMOJI_RECIPE[emote]);
       expect(EMOJI_SFX[emote]).toBe(EMOJI_RECIPE[emote]);
     }
-    // An emoji has no line: the voice channel is never touched, whichever portrait sent it.
     expect(engine.playVoice).not.toHaveBeenCalled();
     // Each sticker its own sound: no two emoji share a recipe.
     expect(new Set(Object.values(EMOJI_SFX)).size).toBe(EMOJI_EMOTE_IDS.length);

@@ -14,8 +14,7 @@ export const REPLAY_PREFETCH_STEPS = REPLAY_PAGE_STEPS;
 
 /**
  * R768000: a finished match's result is written just after its last view is sent, so its replay can
- * answer "not finished" for a moment. Opening it from the result panel asks again this many times in
- * all, this many milliseconds apart.
+ * answer "not finished" for a moment; the result panel asks this many times in all, this many ms apart.
  */
 export const REPLAY_OPEN_ATTEMPTS = 5;
 export const REPLAY_OPEN_RETRY_MS = 1000;

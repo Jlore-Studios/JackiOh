@@ -4,14 +4,12 @@
 //   craft   ME-CRAFT (Meditative #17, R880): the block editor docked as one sheet
 //   market  ME-MARKET (Meditative #42): the night market's stall
 // A long-press on the card a sheet shows picks nothing: a lot is read, not bought.
-// The play-time choices (R81) the set adds are no prompt kind of their own: a card's modes, declared
-// with the play, picked in a "Choose one" before it is sent (#617): #22 Mind Games' secret choice
-// (ME-SECRET), #22.1 Fortify Mind's guess at it and #98 Showdown's lane. Each opens from a tap on the
-// card in hand as the same sheet; its options are words, so the card is read from its name in the title.
-// The mount is mobile-ux.cy.tsx's (`Game` inside `.app-shell.app-shell--wide`, the narrowest box the
-// board is ever given), with the real catalog, since the market draws its lots from it. The block
-// editor's meters and face are the engine's own `craftPreview`, so the WebAssembly module is loaded
-// first, as `main.tsx` loads it before anything renders.
+// The play-time choices (R81) are no prompt kind of their own: a card's modes, picked in a "Choose one"
+// before the play is sent (#617): #22 Mind Games' secret choice (ME-SECRET), #22.1 Fortify Mind's guess
+// and #98 Showdown's lane. Their options are words, so the card is read from its name in the title.
+// The mount is mobile-ux.cy.tsx's (the narrowest box the board is given), with the real catalog, since
+// the market draws its lots from it. The block editor's meters and face are the engine's `craftPreview`,
+// so the WebAssembly module loads first, as `main.tsx` loads it before anything renders.
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PendingOption, PlayerView } from "@jackioh/shared";
@@ -129,14 +127,14 @@ const KINDS: readonly Kind[] = [
   choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"]),
 ];
 
-/** Opens the kind's sheet: it is open on mount, or a tap on the card in hand opens a play-time choice. */
+/** Opens the kind's sheet: open on mount, or a play-time choice opened by a tap on the card in hand. */
 function openSheet(entry: Kind): void {
   mount(entry.view(), entry.legal);
   if (entry.open !== undefined) cy.get(entry.open).click();
   cy.get(`${PROMPT}[data-prompt-kind="${entry.shows}"]`).should("be.visible");
 }
 
-/** Holds a touch on the element until its inspect sheet opens, then lifts it where it was. */
+/** Holds a touch until the inspect sheet opens, then lifts it where it was. */
 function longPress(selector: string): void {
   cy.get(selector).should("be.visible");
   cy.get(selector).then(($face) => {
@@ -146,11 +144,10 @@ function longPress(selector: string): void {
   });
   // The hold opens the sheet after LONG_PRESS_MS; the retry is the wait.
   cy.get(ts(INSPECT_SHEET)).should("be.visible");
-  // The sheet now covers the finger, and the press lifts where it began: forced, since Cypress would
-  // otherwise refuse an element under the sheet, which is exactly where a real finger is.
+  // Forced: the sheet now covers the finger, and Cypress would refuse an element under it.
   cy.get(selector).trigger("pointerup", { eventConstructor: "PointerEvent", pointerType: "touch", pointerId: 7, isPrimary: true, button: 0, force: true });
-  // The lift's own click, as the browser sends it after a long-press: a lone click event, since
-  // `cy.click()` would play a fresh tap (a new pointerdown first) that no finger made.
+  // The lift's lone click, as the browser sends it after a long-press: `cy.click()` would play a
+  // fresh tap (a new pointerdown first) that no finger made.
   cy.get(selector).trigger("click", { force: true });
 }
 

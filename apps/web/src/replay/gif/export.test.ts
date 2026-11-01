@@ -77,7 +77,6 @@ describe("the GIF export's tries", () => {
     expect(result.file.type).toBe("image/gif");
     expect(result.file.name).toBe(`jackioh-replay-${String(FIRST + 1)}-${String(LAST + 1)}.gif`);
     expect(result.file.size).toBe(GIF.length);
-    // Progress names the try and the plan's frames.
     const plan = planFrames(clip, { ...REPLAY_GIF_SIZES.square, fps: REPLAY_GIF_FPS, catalogVersion: "", portraits: { p1: "vanilla", p2: "vanilla" } });
     expect(seen).toEqual([
       { frame: 1, frames: planFrames(clip, { ...REPLAY_GIF_SIZES.landscape, fps: REPLAY_GIF_FPS, catalogVersion: "", portraits: { p1: "vanilla", p2: "vanilla" } }).frames.length, attempt: 1, attempts: 3 },
@@ -102,7 +101,6 @@ describe("the GIF export's tries", () => {
     controller.abort();
     expect(await running).toEqual({ kind: "canceled" });
 
-    // Already canceled: nothing is drawn.
     const { render, asked } = recorder([]);
     expect(await exportGif({ clip, preset: "square", lookup }, { signal: controller.signal, onProgress: () => undefined }, render)).toEqual({ kind: "canceled" });
     expect(asked).toEqual([]);

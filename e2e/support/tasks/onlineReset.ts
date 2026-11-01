@@ -1,7 +1,5 @@
-// Reset only 99-online-smoke: no HTTP leave-match route or match id means abandoned matches block
-// room and queue calls, so reset needs the database (R79).
-// It ends rather than deletes matches because append-only `(seed, log)` is match truth (SPEC §9.3).
-// `app.end_match` is the idempotent path (§9.5), using a ceiling draw and unchanged ratings.
+// Reset for 99-online-smoke only (R79): no HTTP route leaves a match, so this ends abandoned ones by
+// `app.end_match` (§9.5) rather than deleting them: append-only `(seed, log)` is match truth (SPEC §9.3).
 // CI leaves `E2E_DATABASE_URL` off, so frozen M8 specs cannot call this task.
 
 import { Client } from "pg";
@@ -37,8 +35,7 @@ export async function onlineReset(): Promise<OnlineResetResult> {
     );
     let ended = 0;
     for (const row of live.rows) {
-      // An unclaimed room cannot use `end_match`: its p2 constraint rejects it as over. With no
-      // actions, deleting it is safe (§9.5).
+      // An unclaimed room's p2 constraint rejects `end_match`; with no actions, deleting it is safe (§9.5).
       if (row.p2 === null) {
         await client.query("delete from public.matches where id = $1::uuid and p2_profile_id is null", [
           row.id,
@@ -55,8 +52,7 @@ export async function onlineReset(): Promise<OnlineResetResult> {
       const p1Rating = row.p1 === null ? 1000 : (byId.get(row.p1) ?? 1000);
       const p2Rating = row.p2 === null ? p1Rating : (byId.get(row.p2) ?? p1Rating);
       if (row.server_owned) {
-        // Server-owned matches need server-only result writes; record a ceiling draw with unchanged
-        // ratings, then end the related series so its players are freed.
+        // Server-owned matches need server-only result writes: a ceiling draw, then its series ended to free its players.
         await client.query(
           `insert into public.results (
              match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason, turns,

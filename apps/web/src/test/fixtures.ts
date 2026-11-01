@@ -348,9 +348,9 @@ function fusedFaceOf(faces: readonly CardFace[]): CardFace {
 }
 
 /**
- * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179; the Token tag only when
- * every ingredient is a token, as `token` is: R1177000). Fixture only: the engine's builder is the one
- * the game runs, and hidden-information.test.ts pins what the view carries of it.
+ * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179; the Token tag only when every
+ * ingredient is a token, R1177000). The game runs the engine's builder; hidden-information.test.ts pins
+ * what the view carries of it.
  */
 export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
   const first = ingredients[0];

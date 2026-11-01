@@ -76,8 +76,6 @@ const EVERYTHING: ActionBody[] = [
   { type: "concede" },
 ];
 
-// B11: idle
-
 describe("B11 the idle glow: playable cards, ready attackers and the power", () => {
   it("B11 holds every hand card a play names, every unit an attack names, and power", () => {
     const view = seatedView();
@@ -137,8 +135,6 @@ describe("B11 the idle glow: playable cards, ready attackers and the power", () 
     expect(glowOf(highlight)).toEqual([]);
   });
 });
-
-// B12: playing
 
 describe("B12 the playing glow: the remaining candidates' zones, tributes and declared targets", () => {
   it("B12 is exactly the candidate zones, never the selected card or the other playable cards", () => {
@@ -205,8 +201,6 @@ describe("B12 the playing glow: the remaining candidates' zones, tributes and de
   });
 });
 
-// B13: attacking
-
 describe("B13 the attacking glow: the selected attacker's targets only", () => {
   it("B13 is exactly the enemy unit and the hero the attacker may hit, never another attacker", () => {
     const view = seatedView();
@@ -242,8 +236,6 @@ describe("B13 the attacking glow: the selected attacker's targets only", () => {
     expectGlowWithinLegal(highlight);
   });
 });
-
-// B14: an open prompt, and the stale-interaction fallback
 
 describe("B14 the prompt glow and the empty-legal fallback", () => {
   const targetPrompt = pendingFor("target", [
@@ -304,8 +296,6 @@ describe("B14 the prompt glow and the empty-legal fallback", () => {
     expect(highlightFor(view, [], stale)).toBe(NO_HIGHLIGHT);
   });
 });
-
-// B15: end-turn
 
 describe("B15 end-turn glows only when nothing else can act", () => {
   it("B15 glows when endTurn is legal and nothing else is playable, attack-ready or activatable", () => {
@@ -383,8 +373,6 @@ describe("B15 end-turn glows only when nothing else can act", () => {
     expect(glowOf(highlight)).toEqual([]);
   });
 });
-
-// B16/B17: glow.ts's pure attribute helpers.
 
 describe("B16 glowAttr: data-glow is 'ready' exactly for a testid in highlight.glow", () => {
   const highlight: Highlight = {

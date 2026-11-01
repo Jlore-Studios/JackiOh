@@ -301,7 +301,7 @@ export const DECK_CONFLICTS = "deck-conflicts";
 
 export const DECK_VERDICT = "deck-verdict";
 
-/** R1297000: the header button that opens the deck's playmat, backdrop and card back picks. */
+/** R1297000: the header button opening the deck's cosmetics picks. */
 export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
 
 /** L1–L6 verdict sentences. */
@@ -474,7 +474,6 @@ export const TUTORIAL_HUD = "tutorial-hud";
 export const TUTORIAL_STEP = "tutorial-step";
 export const TUTORIAL_EXIT = "tutorial-exit";
 export const TUTORIAL_OUTCOME = "tutorial-outcome";
-/** Coach state, step and anchors. */
 export const COACH = "coach";
 export const COACH_ACK = "coach-ack";
 export const COACH_RING = "coach-ring";
@@ -603,7 +602,7 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All Random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
-/** R1578000: the Play hub, its primary online panel, the nav of the other ways to play and their tiles. */
+/** R1578000: the Play hub, its online panel, the other ways to play and their tiles. */
 export const PLAY_SCREEN = "play-screen";
 export const PLAY_ONLINE = "play-online";
 export const PLAY_WAYS = "play-ways";
@@ -826,7 +825,7 @@ export const CHAT_REPORT_REASON = "chat-report-reason";
 export const CHAT_REPORT_SEND = "chat-report-send";
 export const CHAT_REPORTED = "chat-reported";
 export const CHAT_JOIN = "chat-join";
-/** #1831: the Friends button every signed-in screen has at the top right, its badge and its panel. */
+/** #1831: the Friends button on every signed-in screen, its badge and its panel. */
 export const FRIENDS_BUTTON = "friends-button";
 export const FRIENDS_BADGE = "friends-badge";
 export const FRIENDS_PANEL = "friends-panel";

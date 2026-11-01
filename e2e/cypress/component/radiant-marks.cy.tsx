@@ -1,8 +1,7 @@
 // The Radiant pass's marks on a card face, in a real browser (SPEC §10.10, R277, R279, R280).
-// apps/web's vitest suite proves the DOM: which words a Radiant face marks, which names are
-// references, where a value's braces go. What only a layout and style engine can say is measured
-// here: the gold mark's look and its contrast on the Radiant parchment (from the computed colors), a
-// reference's tooltip inside the viewport, and a computed value inside the rules box.
+// apps/web's vitest suite proves the DOM; this measures what only layout and style can: the gold
+// mark's look and contrast on the parchment, a reference's tooltip in the viewport, a computed value
+// inside the rules box.
 
 import { CATALOG } from "@jackioh/cards";
 import { CardDefsProvider, CardDetail, CardFace, faceModel } from "../../../apps/web/src/cards/index.ts";

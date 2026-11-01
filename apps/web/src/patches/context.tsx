@@ -1,7 +1,6 @@
 // The patch source a screen reads (source.ts), and the hook that loads from it. The real source is the
-// default, so the deck builder's detail view and the Patch notes page need no provider; a test wraps
-// what it renders in `PatchSourceProvider` with `sourceFromData` fixtures (or `EMPTY_PATCH_SOURCE`),
-// which is the only way anything but the real files reaches a screen.
+// default, so screens need no provider; only a test's `PatchSourceProvider` (with `sourceFromData` or
+// `EMPTY_PATCH_SOURCE`) brings anything but the real files to a screen.
 
 import { createContext, useContext, useEffect, useState, type ReactElement, type ReactNode } from "react";
 
@@ -28,8 +27,7 @@ type Settled<T> = { key: string; attempt: number } & ({ ok: true; value: T } | {
 
 /**
  * Runs `load` for `key` (again whenever `key` changes, or after `retry`) and reports where it is.
- * A read that settles after its key has moved on is dropped, so a quick change never shows the
- * answer to an older question.
+ * A read that settles after its key has moved on is dropped, never shown.
  */
 export function useLoaded<T>(key: string, load: () => Promise<T>): Loaded<T> {
   const [attempt, setAttempt] = useState(0);

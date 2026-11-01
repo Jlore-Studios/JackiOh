@@ -1,6 +1,5 @@
 // R1953001 (#1953): a held cosmetic token is offered on a locked cosmetic its tier covers (R1305003),
-// in a card's view and the account's tiles; it redeems through `POST /api/tokens/redeem-cosmetic` and
-// the cosmetic shows owned on the re-read; a refusal shows the server's words and changes nothing.
+// in a card's view and the account's tiles.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -177,7 +176,6 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
 
     const offer = await screen.findByTestId(T.tokenOffer("table-marble"));
     expect(offer).toHaveTextContent("Unlock with an Epic token (1 held)");
-    // A chase tile is locked with no offer, and a starter tile is owned.
     expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-owned", "false");
     expect(screen.queryByTestId(T.tokenOffer("table-astral"))).toBeNull();
     expect(screen.queryByTestId(T.tokenOffer("table-felt"))).toBeNull();

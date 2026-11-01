@@ -72,9 +72,8 @@ function defIdOn(sides: readonly SideView[], instanceId: string | null): string 
 }
 
 /**
- * R1582000: a card of the viewer's that the opponent's Allure took. The steal and the `allure` mark
- * leaving that card come in one action's events, so in one batch. A face-down Trap taken reads as the
- * sentinel (R33) and counts nothing, as does a steal no Allure mark left.
+ * R1582000: a card of the viewer's the opponent's Allure took; the steal and the `allure` mark leaving it
+ * are one batch. A face-down Trap taken reads as the sentinel (R33) and counts nothing, nor a steal with no mark.
  */
 export function countAllured(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
   const lifted = new Set<string>();
@@ -93,9 +92,8 @@ export function countAllured(log: GameLog, view: PlayerView, fresh: readonly Gam
 }
 
 /**
- * R1582000: at the `gameOver` of a game the viewer won, each Unit on their side survived, a copy each;
- * and when the opponent's hero died, the card on the viewer's side that dealt it the last damage before
- * the end dealt the lethal blow. `gameOver` arrives once, so a game is counted once.
+ * R1582000: at the `gameOver` of a game the viewer won, each Unit on their side survived; if the opponent's
+ * hero died, the viewer's card that dealt it the last damage dealt the lethal blow. `gameOver` comes once.
  */
 export function countWin(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
   const end = fresh.findIndex((event) => event.type === "gameOver");
@@ -116,7 +114,7 @@ export function countWin(log: GameLog, view: PlayerView, fresh: readonly GameEve
   return id === null ? next : logWith(next, "lethal", id);
 }
 
-/** The health the first of `side`'s hero and units that `targetId` names has; null for anything else, the sentinel included. */
+/** The health of the first hero or unit that `targetId` names; null otherwise, the sentinel included. */
 function healthIn(view: PlayerView, targetId: string): number | null {
   if (targetId === HIDDEN_ID) return null;
   for (const side of [view.you, view.opponent]) {
@@ -129,9 +127,8 @@ function healthIn(view: PlayerView, targetId: string): number | null {
 }
 
 /**
- * R1743000: the viewer's cards' attacks, damage, biggest hit and overkill in one batch. A target's
- * health is read from `before` less the batch's earlier hits; with no view before, or a target it does
- * not show, there is no overkill. A hidden or opposing source counts nothing.
+ * R1743000: the viewer's cards' attacks, damage, biggest hit and overkill in one batch; overkill reads the
+ * target's health in `before` less earlier hits, none without it. An opposing or hidden source counts nothing.
  */
 export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   const left = new Map<string, number>();
@@ -153,9 +150,8 @@ export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEv
 }
 
 /**
- * R1743000: `healed` names no source, so a heal counts toward the viewer's card whose `cardPlayed`,
- * `activated` or `trapFired` came last before it in the batch. With none, or one of the opponent's
- * (or a hidden card's), it counts nothing.
+ * R1743000: `healed` names no source, so a heal counts toward the viewer's card whose `cardPlayed`, `activated`
+ * or `trapFired` came last before it in the batch; with none, or an opposing or hidden one, nothing.
  */
 export function countHealing(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
   let next = log;

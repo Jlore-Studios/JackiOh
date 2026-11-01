@@ -1,5 +1,5 @@
-// R438: browser layout assertions for MinionFace keyword treatments at board sizes.
-// The stylesheet test covers DOM and CSS; this suite measures legibility, overlap, animation, and reduced motion.
+// R438: MinionFace keyword treatments, laid out in a browser at board sizes.
+// The stylesheet test covers DOM and CSS; this, legibility, overlap, animation and reduced motion.
 
 import { CATALOG } from "@jackioh/cards";
 import { KEYWORD_KINDS, type Keyword, type KeywordKind, type UnitView } from "@jackioh/shared";
@@ -10,7 +10,7 @@ import { unit } from "../../../apps/web/src/test/fixtures.ts";
 
 const SHOTS = ["1", "true"].includes(String(Cypress.expose("shots") ?? ""));
 
-/** Minion boxes the board gives a unit (board.css `--card-h` and the zone's 5:7-ish shape). */
+/** Unit boxes on the board (board.css `--card-h`, the zone's 5:7-ish shape). */
 const SIZES = [
   { label: "desktop", width: 43, height: 60 },
   { label: "tablet", width: 58, height: 80 },
@@ -20,10 +20,10 @@ const SIZES = [
 /** A glyph disc's floor (keywords.css `--kw-glyph`). */
 const GLYPH_MIN_PX = 12;
 
-/** Keep the zone-corner switch target clear of glyphs. */
+/** The zone-corner switch target, kept clear of glyphs. */
 const SWITCH = { min: 14, share: 0.28, max: 18, inset: 2 } as const;
 
-/** How far a box may poke past the card's own edge (the card clips it anyway). */
+/** Overhang a box may have past the card; the card clips it. */
 const EDGE_SLACK_PX = 1;
 
 const DEF_ID = "core-004";
@@ -54,10 +54,10 @@ const ROWS: readonly Row[] = [
   { id: "Stack, 2 buried", unit: { keywords: [{ kind: "Stack" }], buried: 2 } },
 ];
 
-/** R636/R637: derive grid height from row count so added keywords remain reachable. */
+/** R636/R637: grid height follows the row count, so new keywords stay reachable. */
 const GRID_ROW_PX = 131;
 const GRID_SLACK_PX = 100;
-/** The viewport stays under this however many rows there are: the hit test scrolls each cell into view. */
+/** Cap: the hit test scrolls each cell into view. */
 const VIEWPORT_MAX_PX = 4000;
 const GRID_VIEWPORT = { width: 1000, height: Math.min(VIEWPORT_MAX_PX, ROWS.length * GRID_ROW_PX + GRID_SLACK_PX) } as const;
 
@@ -93,7 +93,7 @@ function Grid({ zoom = 1, rows = ROWS, sizes = SIZES }: GridProps) {
   );
 }
 
-/** Hit-testing needs the face to take the pointer, which it never does in the app. Test page only. */
+/** Hit tests need the face to take the pointer; in the app it never does. */
 function HitTestable() {
   return <style>{".cf, .cf * { pointer-events: auto !important; }"}</style>;
 }
@@ -136,7 +136,6 @@ describe("R438 keyword visuals on the board minion", () => {
           }
         }
       }
-      // Every glyph a row shows, the last included, stops short of the switch button's corner.
       for (const cell of doc.querySelectorAll<HTMLElement>("[data-row]")) {
         const card = cell.getBoundingClientRect();
         const switchLeft = card.right - SWITCH.inset - Math.min(SWITCH.max, Math.max(SWITCH.min, card.width * SWITCH.share));
@@ -170,7 +169,7 @@ describe("R438 keyword visuals on the board minion", () => {
             problems.push(`${where}: no ${selector}`);
             continue;
           }
-          // A point outside the viewport hits nothing, so bring the element into it first.
+          // elementFromPoint misses points outside the viewport.
           el.scrollIntoView({ block: "center", inline: "center" });
           const r = el.getBoundingClientRect();
           const hit = doc.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -217,7 +216,6 @@ describe("R438 keyword visuals on the board minion", () => {
   });
 
   if (SHOTS) {
-    // Capture the smallest and largest cards at magnification for visual review.
     const CHUNK = 2;
     const ZOOM = 3;
     for (let start = 0; start < ROWS.length; start += CHUNK) {

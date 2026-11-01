@@ -1,6 +1,6 @@
 // R2101000: a ranked win streak as a flame with its count, on the profile and a ranked match's
 // line only. Presentation only (CLAUDE.md rule 7): it draws the server's count, from
-// `RANK_STREAK_FLAME_LENGTH` on. Like `RankCrest.tsx` it draws its own art.
+// `RANK_STREAK_FLAME_LENGTH` on.
 
 import type { ReactElement } from "react";
 

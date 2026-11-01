@@ -50,10 +50,8 @@ export const MAX_COUNTERS = ["biggestHit", "overkill"] as const;
 export type MaxCounter = (typeof MAX_COUNTERS)[number];
 
 /**
- * Per-card viewer counts: seen, player/opponent plays, player/opponent destroyed cards, (R1582000) the
- * player's cards the opponent's Allure took, lethal blows, Traps fired and survivors, and (R1743000)
- * damage dealt, the biggest hit and the most overkill (each a maximum), attacks, healing, draws, Radiant
- * changes and the games won and lost with the card played.
+ * Per-card viewer counts: each of `GameLog`'s, summed or kept at its maximum across games (R1582000,
+ * R1743000), and the games won and lost with the card played.
  */
 export type CardCounters = Readonly<Record<CardCounter, number>>;
 
@@ -114,29 +112,29 @@ export type GameLog = {
   readonly playedAgainst: Readonly<Record<string, number>>;
   readonly destroyed: Readonly<Record<string, number>>;
   readonly defeated: Readonly<Record<string, number>>;
-  /** R1582000: the player's cards the opponent's Allure took. */
+  /** The player's cards the opponent's Allure took. */
   readonly allured: Readonly<Record<string, number>>;
-  /** R1582000: the cards that dealt the lethal blow of a game the player won. */
+  /** The cards that dealt the lethal blow of a game the player won. */
   readonly lethal: Readonly<Record<string, number>>;
-  /** R1582000: the player's Traps that fired. */
+  /** The player's Traps that fired. */
   readonly sprung: Readonly<Record<string, number>>;
-  /** R1582000: the player's Units standing when a game they won ended. */
+  /** The player's Units standing when a game they won ended. */
   readonly survived: Readonly<Record<string, number>>;
-  /** R1743000: the damage the player's cards dealt. */
+  /** The damage the player's cards dealt. */
   readonly damageDealt: Readonly<Record<string, number>>;
-  /** R1743000: the largest single hit of each of the player's cards. */
+  /** The largest single hit of each of the player's cards. */
   readonly biggestHit: Readonly<Record<string, number>>;
-  /** R1743000: the most by which one hit of each of the player's cards went past its target's health. */
+  /** The most by which one hit of each of the player's cards went past its target's health. */
   readonly overkill: Readonly<Record<string, number>>;
-  /** R1743000: the attacks the player's cards declared. */
+  /** The attacks the player's cards declared. */
   readonly attacks: Readonly<Record<string, number>>;
-  /** R1743000: the healing the player's cards caused. */
+  /** The healing the player's cards caused. */
   readonly healing: Readonly<Record<string, number>>;
-  /** R1743000: the player's draws that showed the card. */
+  /** The player's draws that showed the card. */
   readonly drawn: Readonly<Record<string, number>>;
-  /** R1743000: the player's cards made Radiant. */
+  /** The player's cards made Radiant. */
   readonly radiant: Readonly<Record<string, number>>;
-  /** R1743000: the highest turn a `turnStarted` named in this game. */
+  /** The highest turn a `turnStarted` named in this game. */
   readonly turns: number;
 };
 
@@ -177,7 +175,7 @@ export function logWith(log: GameLog, counter: SummedCounter, id: string, by = 1
   return { ...log, [counter]: bump(log[counter], id, by) };
 }
 
-/** R1743000: raises a card's `counter` to `value` when that is more than it holds; else the log itself. */
+/** R1743000: raises a card's `counter` to `value` if that is more than it holds; else the log itself. */
 export function logMax(log: GameLog, counter: MaxCounter, id: string, value: number): GameLog {
   if (value <= (log[counter][id] ?? 0)) return log;
   return { ...log, [counter]: { ...log[counter], [id]: value } };
@@ -262,8 +260,8 @@ export function formatPlayedDelta(delta: number | null): string | null {
 }
 
 /**
- * R654, R1147000: a server-calculated rate to show, or null when there is none or its games are below
- * the sample floor: the cards table's Radiant and Normal rates, and (R2089000) the Created cards' rates.
+ * R654, R1147000: a server-calculated rate to show, null when none or below the sample floor: the cards
+ * table's Radiant and Normal rates, and the Created cards' (R2089000).
  */
 export function faceRate(
   games: number | undefined,

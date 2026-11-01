@@ -28,7 +28,6 @@ import { REPLAY_FAILURE_TEXT, ReplayFailure } from "./source.ts";
 
 const steps = foldedReplaySteps();
 const LAST = steps.length - 1;
-/** Each turn's first step, read off the steps themselves. */
 const TURN_STARTS = steps.flatMap((step, index) => (index === 0 || steps[index - 1]?.turn !== step.turn ? [index] : []));
 const lookup = lookupFromDefs(CATALOG);
 
@@ -88,7 +87,6 @@ async function jump(index: number): Promise<void> {
   await flush();
 }
 
-/** The step on the board, as the player says it. */
 function shownStep(): number {
   return Number(screen.getByTestId(replayTestid.player).getAttribute("data-step"));
 }
@@ -131,7 +129,6 @@ describe("the replay player", () => {
     };
     const [, second = 0, third = 0] = TURN_STARTS;
 
-    // The first step: nothing goes back.
     for (const id of ids.backs) expect(screen.getByTestId(id), id).toBeDisabled();
     for (const id of ids.forwards) expect(screen.getByTestId(id), id).toBeEnabled();
 
@@ -231,7 +228,6 @@ describe("the replay player", () => {
     expect(shownStep()).toBe(third);
     await key({ key: "ArrowLeft", shiftKey: true });
     expect(shownStep()).toBe(second);
-    // At either end a key goes nowhere.
     await key({ key: "ArrowLeft", shiftKey: true });
     await key({ key: "ArrowLeft" });
     await key({ key: "ArrowLeft" });
@@ -276,7 +272,6 @@ describe("the replay player", () => {
     await advance(REPLAY_PLAY_GAP_MS);
     expect(shownStep()).toBe(2);
 
-    // Twice the speed halves the gap.
     act(() => {
       setFxSettings({ speed: 2 });
     });
@@ -292,7 +287,6 @@ describe("the replay player", () => {
     await advance(4 * REPLAY_PLAY_GAP_MS);
     expect(shownStep(), "paused").toBe(4);
 
-    // A move of the viewer's own stops it too.
     await press(replayTestid.play);
     await press(replayTestid.forwardStep);
     expect(shownStep()).toBe(5);
@@ -300,7 +294,6 @@ describe("the replay player", () => {
     await advance(4 * REPLAY_PLAY_GAP_MS);
     expect(shownStep()).toBe(5);
 
-    // Playing runs out at the last step and stops there.
     await jump(LAST - 1);
     await press(replayTestid.play);
     await advance(REPLAY_PLAY_GAP_MS / 2);
@@ -323,7 +316,7 @@ describe("the replay player", () => {
   });
 });
 
-/** The first step, from the third on (the first two have almost nothing to log), whose own events animate: a step forward onto it runs the queue. */
+/** The first step from the third on (the first two log almost nothing) whose own events animate. */
 function firstAnimatedStep(): number {
   const found = steps.findIndex(
     (step, index) =>
@@ -511,7 +504,6 @@ describe("R2211000 a replay shows the seat's own choices, read-only", () => {
     expect(modal()).toHaveAttribute("data-collapsed", "true");
     expect(options()).toEqual([]);
 
-    // Unfolded, every card is greyed and a click on it picks nothing.
     fireEvent.click(screen.getByTestId("prompt-peek"));
     expect(options()).toHaveLength(opening.options.length);
     expect(options().length).toBeGreaterThan(0);
@@ -525,7 +517,6 @@ describe("R2211000 a replay shows the seat's own choices, read-only", () => {
     expect(screen.queryByTestId("prompt-submit")).toBeNull();
     expect(shownStep()).toBe(0);
 
-    // The toolbar is in reach and does what it does anywhere else.
     await press(replayTestid.forwardStep);
     expect(shownStep()).toBe(1);
     await press(replayTestid.backStep);

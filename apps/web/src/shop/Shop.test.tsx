@@ -1,8 +1,7 @@
-// The Jlore shop and the cosmetic packs (#1309, #1667), from fixture responses: buying, opening and
-// the Chase Shard bar, an opening's spent slot's points flying into both bars (R1953000), and Buy
-// waiting with a wheel while another spend of the tab is out (R2378000). The tier filters are pure
-// tests over crafted registries, since the shipped registry holds no Legendary or Mythic a token
-// could reach.
+// The Jlore shop and the cosmetic packs (#1309, #1667), from fixture responses: a spent slot's points fly
+// into both bars (R1953000), and Buy waits with a wheel while another spend of the tab is out (R2378000).
+// The tier filters are pure tests over crafted registries: the shipped registry holds no Legendary or Mythic a
+// token could reach.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
@@ -410,7 +409,6 @@ describe("#1309 the Jlore shop", () => {
 
     answers.wallet = { status: 200, body: walletInfo() };
     fireEvent.click(screen.getByTestId(T.retry));
-    // The read is out: the button waits for it, and a second press sends nothing.
     expect(screen.getByTestId(T.retry)).toBeDisabled();
     fireEvent.click(screen.getByTestId(T.retry));
 
@@ -528,7 +526,7 @@ describe("#1309 the cosmetic packs", () => {
     // R2125000: the second visit is a first one, not a revisit that opens on the kept 19 / 20.
     clearReadCache();
 
-    // Full, with every Legendary and Mythic already owned (every chase a starter): the empty sentence, and still no choice.
+    // Full, every Legendary and Mythic owned (every chase a starter): the empty sentence, still no choice.
     cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
     render(<CosmeticPacks token={TOKEN} registry={REGISTRY.filter((cosmetic) => !cosmetic.chase || cosmetic.starter)} />);
     expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("20 / 20");
@@ -683,10 +681,8 @@ describe("#1309 the cosmetic packs", () => {
     const art = slot.querySelector('[data-portrait-art="timmy"]');
     expect(art).not.toBeNull();
     expect(art).toHaveClass("pack-slot__portrait");
-    // The art follows the outcome's words.
     const outcome = slot.querySelector(".pack-slot__outcome");
     expect(outcome?.nextElementSibling).toBe(art);
-    // Every other slot shows none.
     expect(screen.getByTestId(T.slot(1)).querySelector("[data-portrait-art]")).toBeNull();
   });
 
@@ -837,7 +833,6 @@ describe("#1309 the cosmetic packs", () => {
 
     answers.packs = { status: 200, body: cosmeticPacksInfo() };
     fireEvent.click(screen.getByTestId(T.packsRetry));
-    // The read is out: the button waits for it, and a second press sends nothing.
     expect(screen.getByTestId(T.packsRetry)).toBeDisabled();
     fireEvent.click(screen.getByTestId(T.packsRetry));
 
@@ -847,7 +842,7 @@ describe("#1309 the cosmetic packs", () => {
   });
 });
 
-/** The one chase the registry given to the panel offers: a Legendary account cosmetic the fixture's account lacks. */
+/** The registry's one chase: a Legendary account cosmetic the fixture's account lacks. */
 const AURORA: RegistryCosmetic = {
   id: "table-aurora",
   kind: "table",
@@ -1058,7 +1053,6 @@ function blocks(text: string): Block[] {
   return out;
 }
 
-/** The property names a declaration list holds. */
 function properties(body: string): string[] {
   return body
     .split(";")

@@ -1,9 +1,6 @@
 // R1297000: the deck slots in a real browser. apps/web's vitest suite proves which attributes the
 // board writes (game/cosmetics.test.tsx) and what the stylesheet declares (cards/cosmetics.test.tsx);
 // what only a style engine can say is measured here, one test per item of the nine.
-//
-// A table's look is what the cosmetics can reach, read off the computed styles: the mat the field's
-// `::before` paints, and a zone's background, border and slot mark.
 
 import { CardBack } from "../../../apps/web/src/cards/CardBack.tsx";
 import {

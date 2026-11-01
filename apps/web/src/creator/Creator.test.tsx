@@ -1,6 +1,4 @@
-// R915010, #920: the card creator as a player uses it: building a card with the blocks, seeing its
-// script in the code view, saving it to the account, the checks' and the server's errors shown where
-// they belong, and a card written in code kept in code. R2119000: deleting a card is undone, not asked.
+// R915010, #920: the card creator as a player uses it. R2119000: deleting a card is undone, not asked.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

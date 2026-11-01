@@ -1,9 +1,7 @@
-// The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
-// emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. The picker offers
-// the seat's dealt hand and nothing else (R1343). A hold on a portrait opens the hero's inspect view
-// (`HeroInspect.tsx`), which draws the same menu `inline` (R1449, R1330). Placement is inside the
-// hero element, so it needs no board coordinates: `.emote-*` in emotes.css owns the geometry.
-// Everything here is cosmetic (R643): a menu pick reports the emote and the caller decides how it travels.
+// The emote UI (issue §2, §5): your portrait's picker of the seat's dealt hand only (R1343), drawn
+// `inline` by `HeroInspect.tsx` too (R1449, R1330), the opponent's "Mute emotes" menu, and a hero's
+// bubble/sticker, placed inside the hero so emotes.css owns the geometry. All cosmetic (R643): a pick
+// reports the emote and the caller decides how it travels.
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactElement, type RefObject } from "react";
 
@@ -26,8 +24,7 @@ export const VOICE_LABEL: Record<VoiceEmoteId, string> = {
 
 /**
  * The arc the voice buttons sit on: an item `d` places from the middle dips `ARC_CURVE_PX × d²`
- * below the arc's crown. Each item carries its drop as `--emote-arc-drop`, which emotes.css turns
- * into a translateY, and flattens on a phone held upright, where the voice lines wrap onto two rows.
+ * below the crown, as `--emote-arc-drop`, emotes.css's translateY (flat on an upright phone).
  */
 const ARC_CURVE_PX = 3.5;
 
@@ -38,10 +35,9 @@ export function arcDrop(index: number, count: number): number {
 }
 
 /**
- * Closes on an outside press, Escape or a drag beginning elsewhere (the issue's menu lifetime). A
- * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1449): that click
- * toggles the menu shut itself, and a hold there turns it into the hero's inspect view, so closing
- * on its pointerdown would have the click open the menu again.
+ * Closes on an outside press, Escape or a drag beginning elsewhere. A press on the portrait the
+ * menu hangs off (`menu`'s parent) is not outside it (R1449): its click toggles the menu itself,
+ * so closing on its pointerdown would have the click open it again.
  */
 function useMenuLifetime(open: boolean, onClose: () => void, menu: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
@@ -77,11 +73,10 @@ export function menuShift(rect: { left: number; right: number }, viewportWidth: 
 }
 
 /**
- * Keeps an open menu on the screen (#219): once laid out the menu measures itself and slides
- * sideways by `menuShift` through `--emote-menu-shift`, which the CSS adds to its centering
- * transform. A layout effect, so the menu never paints off the screen. The measure first puts the
- * variable back to 0: StrictMode replays this effect in dev, and a re-run that read the applied
- * shift would take the slid menu for centered and write 0 back (the rect carries the transform).
+ * Keeps an open menu on the screen (#219) by `menuShift` through `--emote-menu-shift`, which the CSS
+ * adds to its centering transform; a layout effect, so it never paints off. The measure first puts the
+ * variable back to 0: a StrictMode replay that read the applied shift would take the slid menu for
+ * centered and write 0 back (the rect carries the transform).
  */
 function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>, enabled: boolean): void {
   useLayoutEffect(() => {
@@ -209,7 +204,7 @@ export function MuteMenu({
   muted: boolean;
   onMute: () => void;
   onClose: () => void;
-  /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
+  /** As `EmoteMenu`'s `inline` (R1330). */
   inline?: boolean;
 }): ReactElement {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -255,9 +250,8 @@ function bubbleText(show: EmoteShowState): string | null {
 }
 
 /**
- * What a hero shows while its player emotes: the speech bubble for a voice line, or the sticker
- * that pops out and bounces for an emoji (issue §4). The show's remaining span rides
- * `--emote-hold` so the CSS animates exactly as long as the session keeps it up.
+ * What a hero shows while its player emotes: a voice line's bubble or an emoji's sticker (issue §4).
+ * The show's remaining span rides `--emote-hold` so the CSS animates as long as the session keeps it.
  */
 export function EmoteShow({ show }: { show: EmoteShowState }): ReactElement {
   const isVoice = isVoiceEmote(show.emote);

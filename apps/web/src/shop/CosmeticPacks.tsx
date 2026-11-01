@@ -1,13 +1,9 @@
-// The cosmetic packs (#1309, #1667, SPEC §14.6): the unopened pack as a `PackObject` above Open, a
-// reveal of an opening's slots with both token bars pinned at the top while it is on screen
-// (`OpeningBars`, R1953000, R1999000), and the Chase Shard bar, which bursts when full and reveals its
-// Legendary-or-Mythic choice as a moment of its own (`RewardReveal`).
-//
-// THE SERVER DECIDES (CLAUDE.md rule 7): the packs held, every slot and every bar come from the
-// answers. The shard bar plays from the points read before the opening to the answer's, with no
-// `fills`: a full bar holds (R1306002). The odds are on `/purchases` (R1665000). A refused open or
-// chase shows the server's words through `t()` (R711000) with nothing changed on screen. A slot's new
-// cosmetic is equipped from the reveal too (R1955000, collection/EquipButton.tsx).
+// The cosmetic packs (#1309, #1667, SPEC §14.6): the pack above Open, an opening's slots with both token
+// bars pinned at the top (`OpeningBars`, R1953000, R1999000), and the Chase Shard bar (`RewardReveal`).
+// THE SERVER DECIDES (CLAUDE.md rule 7): packs, slots and bars come from the answers. The shard bar plays
+// from the points read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
+// Odds are on `/purchases` (R1665000). A refusal shows the server's words through `t()` (R711000) with
+// nothing changed; a slot's new cosmetic is equipped from the reveal (R1955000, collection/EquipButton.tsx).
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -52,16 +48,14 @@ import {
 } from "./shop.ts";
 import "./shop.css";
 
-/** What a failed request says: the server's words, else the error's. */
 function wordsOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
 /**
- * The panel. `revision` is how many times the page has asked it to read again (another panel
- * changed the account); `onChanged` tells the page an opening or a chase changed it. `registry` is
- * the cosmetics the chase choice reads, the shipped one unless a test passes its own (no shipped
- * Legendary or Mythic is buyable yet).
+ * `revision` counts the page's asks to read again (another panel changed the account); `onChanged` tells
+ * the page an opening or a chase changed it. `registry` is what the chase choice reads, the shipped one
+ * unless a test passes its own (no shipped Legendary or Mythic is buyable yet).
  */
 export default function CosmeticPacks({
   token,
@@ -89,8 +83,7 @@ export default function CosmeticPacks({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cardFor, setCardFor] = useState<Record<string, string>>({});
-  // The shard points the panel read before the last opening: where the bar plays from; none when the
-  // bar was just read, or emptied by a chase, and it rests.
+  // The points read before the last opening, where the bar plays from; none when it rests.
   const [shardFrom, setShardFrom] = useState<number | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(true);
@@ -142,8 +135,7 @@ export default function CosmeticPacks({
         setShardFrom(next.shardBefore);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
         onChanged?.();
-        // The collection and the owned cosmetics moved too: read them back, so the chase
-        // choice prices what the account holds now.
+        // The collection and owned cosmetics moved too: read them back so the chase choice prices them now.
         Promise.all([getCollection(token), getOwnedCosmetics(token)]).then(
           ([nextCollection, nextOwned]) => {
             setCollection(nextCollection);
@@ -232,8 +224,7 @@ export default function CosmeticPacks({
           {opened === null ? null : (
             <div className="pack-slots" data-testid={shopTestid.reveal}>
               {opened.slots.map((slot, index) => {
-                // R1827000, R1833000: a cosmetic shows its look: a portrait's art, an account cosmetic's
-                // board or back, a per-card one on its card.
+                // R1827000, R1833000: a cosmetic shows its look, a per-card one on its card.
                 const look =
                   slot.grant.kind === "cosmetic" && hasLook(slot.grant.cosmeticId, slot.grant.cardId)
                     ? { id: slot.grant.cosmeticId, cardId: slot.grant.cardId }
@@ -304,7 +295,7 @@ export default function CosmeticPacks({
   );
 }
 
-/** The moment a full bar reveals: the chase choice, as a reward flies out of the bar (`kind` and `rarity` set its sting and look). */
+/** The chase choice's moment, a reward flying out of the bar (`kind` and `rarity` set its sting and look). */
 function chaseReveal(): RevealItem[] {
   return [
     { key: "chase", kind: "cosmeticToken", label: t("The bar is full — pick a chase:"), rarity: "Legendary" },
@@ -312,9 +303,8 @@ function chaseReveal(): RevealItem[] {
 }
 
 /**
- * The Chase Shard bar, and the Legendary-or-Mythic choice only when full. An opening that took the
- * bar from short of full to full plays the sweep, then the bar bursts and the choice is revealed as a
- * moment of its own; a bar read full, or one a further opening only held full, shows its choice at once.
+ * The Chase Shard bar, and its choice only when full. An opening that filled it plays the sweep, then the
+ * bar bursts and reveals the choice; a bar read full, or held full by a further opening, shows it at once.
  */
 function ShardBar({
   info,

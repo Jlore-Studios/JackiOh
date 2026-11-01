@@ -3,8 +3,8 @@
 // R1320: player-facing text says Nerf and Buff, not Degrade or Upgrade.
 // R781000: Magnetic is Equip; the old word is left only where the past is shown as it was.
 // R278: the faction is Jlockeed; no name or face spells it with an h.
-// The source guards parse strings, templates and JSX, excluding comments and lower-case machine words.
-// `cards/glossary.ts` retains SPEC text and converts it through `inPlayerWords`.
+// The guards parse strings, templates and JSX, not comments or lower-case machine words;
+// `cards/glossary.ts` puts SPEC text through `inPlayerWords`.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -118,7 +118,6 @@ describe("R432 a cost is \"(N) Cost\" as a noun and \"costs (N)\" as a verb", ()
   });
 });
 
-/** Retired words and variants. */
 const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "bounce", pattern: /\bbounce(s|d)?\b/i },
   { name: "backrow zone", pattern: /\bbackrow zone\b/i },
@@ -235,7 +234,6 @@ describe("R1320 players read Nerf and Buff", () => {
     expect(saysOldTuningWord("degraded")).toBe(false);
     expect(saysOldTuningWord("upgrade")).toBe(false);
     expect(saysOldTuningWord("upgraded")).toBe(false);
-    // New wording and non-tuning "grade" stay.
     expect(saysOldTuningWord("Book of Buff was buffed")).toBe(false);
     expect(saysOldTuningWord("Nerfed")).toBe(false);
     expect(OLD_TUNING_WORDS.test("go up a grade and trigger every step")).toBe(false);
@@ -248,7 +246,6 @@ function playerNoteTexts(): { at: string; text: string }[] {
     version: string;
     player?: Record<string, string | string[]>;
   }[];
-  // R1369000: the technical log's player lines are a note's lines too.
   const technical = JSON.parse(readFileSync(join(SRC, "../../../crates/cards/patches/technical.json"), "utf8")) as {
     version: string;
     commit: string;

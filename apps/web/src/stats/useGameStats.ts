@@ -1,7 +1,7 @@
-// Log a game as it is played (SPEC R639). `Game` calls this beside `useGameAudio`: it collects what the
-// player was shown (track.ts) and adds the game to the device's totals (store.ts) once, when it is over.
-// It counts only a game the caller says is the player's own (online and practice, not a tutorial
-// lesson, a hotseat game or a test fixture). Nothing it does reaches the board.
+// Log a game as it is played (SPEC R639), beside `useGameAudio` in `Game`: what the player was shown
+// (track.ts) goes into the device's totals (store.ts) once, when it is over, and only for a game the caller
+// says is the player's own (online and practice, not a tutorial, hotseat game or test fixture).
+// Nothing it does reaches the board.
 
 import { useEffect, useRef } from "react";
 import type { PlayerView } from "@jackioh/shared";
@@ -24,14 +24,14 @@ export function useGameStats(view: PlayerView, enabled: boolean): void {
 
     const outcome = outcomeOfView(view);
     if (outcome === null) {
-      // A new game on the same board: the last one was logged, so start a log of its own.
+      // A new game on the same board: the last was logged, so start a fresh log.
       if (recorded.current) {
         recorded.current = false;
         log.current = EMPTY_LOG;
       }
     }
-    // `view.events` is a sliding window over the match (SPEC §10.8), so only what is new is counted,
-    // as the board's animation queue does; the first view of a seat has no earlier one to compare.
+    // `view.events` is a sliding window (SPEC §10.8), so only what is new is counted; a seat's first view
+    // has no earlier one to compare.
     const fresh = before === null || before.viewer !== view.viewer ? [] : newEventsSince(before.events, view.events);
     log.current = observe(log.current, view, fresh, before);
 

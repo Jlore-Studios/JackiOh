@@ -1,8 +1,6 @@
-// Node second-player client for BUILD M6 and BUILD M6-T4 spec 06 (e2e/README.md A8).
-// `protocol.rs` fixes hello (fresh full view, §9.5), action, view (SPEC §10.8), ack (nonce/seq,
-// SPEC §9.3), error, prompt (record only, §10.6) and clock (R79, §9.5). HTTP joins atomically;
-// the actor stamps `playerId`'s authenticated seat.
-// BUILD M8 runs these specs individually and as one suite.
+// Node second-player client for BUILD M6 and M6-T4 spec 06 (e2e/README.md A8), run alone and in one
+// suite (BUILD M8). `protocol.rs` fixes hello (fresh full view, §9.5), action, view (SPEC §10.8), ack
+// (nonce/seq, SPEC §9.3), error, prompt (record only, §10.6) and clock (R79). HTTP joins atomically.
 
 import { WebSocket } from "ws";
 
@@ -55,7 +53,7 @@ export type WsPlayerResult = {
   messages?: WsMessage[];
   /** §9.3: the reducer's reason, relayed verbatim — never restated. */
   error?: string;
-  /** The `SocketErrorCode` that came with it (`illegal_action`, `rate_limited`, …). */
+  /** The `SocketErrorCode` that came with it. */
   code?: string;
   /** §9.3: the append-only log seq an accepted action was written at (`ack.seq`). */
   seq?: number;
@@ -228,7 +226,7 @@ async function send(command: Extract<WsPlayerCommand, { action: "send" }>): Prom
   };
 }
 
-/** R738, R643: an aim or an emote goes out as it is, with no nonce, and nothing is awaited. */
+/** An aim or an emote: no nonce, nothing awaited. */
 function sendFrame(command: Extract<WsPlayerCommand, { action: "sendFrame" }>): WsPlayerResult {
   const record = client(command.name);
   if (record.socket.readyState !== WebSocket.OPEN) {
@@ -262,7 +260,7 @@ async function concedeIfLive(record: Client): Promise<void> {
   try {
     await send({ action: "send", name: record.name, body: { type: "concede" } });
   } catch {
-    // The socket went away, the actor had already stopped, or the match was over after all.
+    // The socket went away, the actor had stopped, or the match was over after all.
   }
 }
 

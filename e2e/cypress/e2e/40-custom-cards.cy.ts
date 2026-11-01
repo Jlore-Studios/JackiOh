@@ -1,9 +1,6 @@
-// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12).
-// A fixture account builds "Cry: deal 2 damage to an enemy unit" with the no-code builder, reads it
-// in the code view and saves it (R915010, R915008); finds it again after a reload; puts it in a deck,
-// which the workshop marks practice only (R915005); starts practice with that deck, which runs in
-// the Luau module (R915009); plays the card and sees the damage; and folds the browser's log, its
-// custom card with it, with `jackioh replay` to the same hash (R915006), as specs 01 and 13 do.
+// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12). The
+// browser's log, its custom card with it, folds with `jackioh replay` to the same hash (R915006), as
+// specs 01 and 13 do.
 
 import { allCardIds } from "../../support/cards.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
@@ -197,12 +194,10 @@ function reachHumanTurn(prompts = PROMPT_BUDGET): void {
 
 type Play = { card: string; target: string; health: number; lane: number };
 
-/** SPEC §6: whether the Cry's damage reaches the unit whole: no Armor and no shielding keyword. */
 function takesWholeHit(unit: NonNullable<UnitLike>): boolean {
   return unit.armor === 0 && !unit.keywords.some((keyword) => SHIELDING_KEYWORDS.includes(keyword.kind));
 }
 
-/** The card in hand, an enemy unit the Cry's damage reaches whole, an empty lane of the human's and the mana to pay. */
 function playable(view: ViewLike, customId: string, cost: number): Play | null {
   const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
   const card = hand.find((held) => held.defId === customId);
@@ -212,7 +207,6 @@ function playable(view: ViewLike, customId: string, cost: number): Play | null {
   return { card: card.instanceId, target: enemy.instanceId, health: enemy.health, lane: lane + 1 };
 }
 
-/** Pass turns until the custom card can be played at an enemy unit, then say how. */
 function untilPlayable(customId: string, cost: number, turns = TURN_BUDGET): Cypress.Chainable<Play> {
   reachHumanTurn();
   return practiceHandle().then((handle) => {
