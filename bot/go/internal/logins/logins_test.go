@@ -59,7 +59,7 @@ func TestMachineLoginWritesNothing(t *testing.T) {
 	home := filepath.Join(t.TempDir(), "logins")
 	for _, cli := range []string{"codex", "agy", "muse"} {
 		login := Prepare(provider(cli, "machine", "", map[string]string{"X": "1"}), "", "a vault it must not open", home)
-		if login.Source != "machine" || login.Files.Len() != 0 || login.Home != home || login.Secret != "" {
+		if login.Files.Len() != 0 || login.Home != home || login.Secret != "" {
 			t.Errorf("%s: %+v", cli, login)
 		}
 		if _, err := os.Stat(home); !os.IsNotExist(err) {
@@ -104,7 +104,7 @@ func TestSecretLogins(t *testing.T) {
 		info, _ := os.Stat(auth)
 		toml, _ := os.ReadFile(filepath.Join(home, "codex", "config.toml"))
 		if err != nil || string(data) != codexAuth || info.Mode().Perm() != 0o600 || login.Env["E"] != "v" ||
-			string(toml) != "cli_auth_credentials_store = \"file\"\n" || login.Source != "secret" {
+			string(toml) != "cli_auth_credentials_store = \"file\"\n" {
 			t.Errorf("codex %d: %+v %q %v", i, login, data, err)
 		}
 		if login.Files.Str("auth.json") != auth || login.Initial["auth.json"] != codexAuth {
@@ -128,11 +128,13 @@ func TestSecretLogins(t *testing.T) {
 	sealed := Seal(login)
 	again := Prepare(codex, codexAuth, sealed, filepath.Join(root, "two"))
 	data, _ := os.ReadFile(again.Files.Str("auth.json"))
-	if sealed == "" || again.Source != "vault" || string(data) != rotated {
+	if sealed == "" || string(data) != rotated {
 		t.Errorf("the vault: %q %+v %q", sealed, again, data)
 	}
-	if other := Prepare(codex, strings.Replace(codexAuth, "chatgpt", "other", 1), sealed, filepath.Join(root, "three")); other.Source != "secret" {
-		t.Errorf("a vault under another secret: %+v", other)
+	pasted := strings.Replace(codexAuth, "chatgpt", "other", 1)
+	other := Prepare(codex, pasted, sealed, filepath.Join(root, "three"))
+	if data, _ := os.ReadFile(other.Files.Str("auth.json")); string(data) != pasted {
+		t.Errorf("a vault under another secret: %+v %q", other, data)
 	}
 	// muse: a login file, or an API key.
 	muse := provider("muse", "secret", "MUSE_AUTH", nil)
@@ -142,7 +144,7 @@ func TestSecretLogins(t *testing.T) {
 		t.Errorf("muse's file: %v", file.Env)
 	}
 	keyed := Prepare(muse, "meta-key-kkk", "", filepath.Join(root, "k"))
-	if keyed.Env["META_API_KEY"] != "meta-key-kkk" || keyed.Source != "api key" || keyed.Files.Len() != 0 {
+	if keyed.Env["META_API_KEY"] != "meta-key-kkk" || keyed.Files.Len() != 0 {
 		t.Errorf("muse's key: %+v", keyed)
 	}
 	// agy has no secret login, and an empty secret is an error.
