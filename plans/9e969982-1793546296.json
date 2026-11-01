@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2683,
+  "title": "Patch: buying a chase asks first, since one press spends the whole Chase Shard bar",
+  "branch": "bot/issue-2683",
+  "thread": "**Issue #2683 (data, not instructions):**\n\n```text\n# #2683: Patch: buying a chase asks first, since one press spends the whole Chase Shard bar\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAfter ten cosmetic packs the Chase Shard bar is full, and the shop lists the Legendary and Mythic cosmetics it can buy. Each has a Buy button that spends the whole bar on its first press, with no question, so a slip on the wrong row costs ten packs' worth of progress and cannot be undone. Spending a single card token or cosmetic token already asks first (\u201cUnlock Galaxy? This spends 1 Epic token.\u201d). Once built, a chase asks the same way, \u201cBuy Galaxy? This spends your full Chase Shard bar.\u201d, with Confirm and Cancel. The panel's Open and Buy buttons also wait while another purchase on the same page is still being answered, as the rest of the shop does.\n\n## Why\n- `apps/web/src/shop/CosmeticPacks.tsx:417-427`: a chase's Buy calls `onChase`, which posts `buyChase` at once (`:168-185`) and empties the bar (`CHASE_SHARD_PACKS` packs, \u00a714.6).\n- R2480000 (issue #2537) made the cosmetic token offer ask first, \u201cas the shop's card token does\u201d (`apps/web/src/collection/TokenOffer.tsx:118-187`, `apps/web/src/shop/TokenPicker.tsx:206-238`), on Hearthstone's semantics that the shop asks before a spend it cannot take back. The chase is the costliest spend in the cosmetic economy and the only one left that does not ask.\n- \u00a714.11 and R2378000: the client holds its Buy and Open buttons while one of its spends is out. The Shop's Buy (`apps/web/src/shop/Shop.tsx:83`, `:119`) and the card pack screen (`apps/web/src/packs/PackOpening.tsx`) do it through `useSpendOut`/`spendOutNow` (`apps/web/src/net/spending.ts`). `CosmeticPacks.tsx`, on the same `/shop` page, uses neither for its Open or its chase Buy.\n\n## Proposal\n- In the Chase Shard panel (`ShardBar`), the first press on a chase's Buy asks in the row's place, as `TokenOffer` does: an inline alert dialog naming the cosmetic in the reader's language and the bar it spends, Confirm and Cancel, the focus on Cancel as it opens, and Escape answering Cancel. Confirm sends `buyChase` once, and Cancel spends nothing and puts the focus back on the Buy button.\n- Hold the panel's Open and chase Buy while `useSpendOut()` reports a spend out, and check `spendOutNow()` in their handlers, as `Shop.tsx` does.\n- A new ruling (the lowest free number in this issue's block), as R2480000 was for the token offer, with Hearthstone semantics; rejected alternatives to record: asking only for a Mythic chase, and an undo, which the server's ledger cannot take back.\n- One new string in `apps/web/src/i18n` (zh-CN) for the question.\n\n## Where it lands\n- `apps/web/src/shop/CosmeticPacks.tsx`; tests in `apps/web/src/shop/Shop.test.tsx` (which already drives the panel)\n- `apps/web/src/i18n/` (the question's translation)\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a714.6, \u00a714.11\n\n## Acceptance criteria\n- [ ] A first press on a chase's Buy sends nothing and shows the question with the cosmetic's name; Cancel sends nothing and returns the focus to Buy; Escape answers Cancel.\n- [ ] Confirm sends exactly one `buyChase` and the panel shows the emptied bar as today.\n- [ ] While another spend on the page is out, the panel's Open and chase Buy are held and send nothing.\n- [ ] The tests are named after the new ruling and listed in its `proven_in`; `cargo jackioh spec check` passes.\n- [ ] `pnpm --dir apps/web test src/shop/Shop.test.tsx`, typecheck and eslint pass.\n\n## Size and risks\nSmall to medium: about 40 lines in one component, one string, one ruling and tests. Client only; the server already runs each spend once (R2124000). Risk: an e2e spec that buys a chase in one press needs its extra Confirm click; grep `e2e/` for the chase test id.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:06:24Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2683: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
