@@ -1132,6 +1132,7 @@
   "Remove {name} from your friends?": "要将 {name} 从好友中移除吗？",
   "Friend removed": "已移除好友",
   "Block {name}? You stop being friends, and neither of you can reach the other.": "要拉黑 {name} 吗？你们将不再是好友，双方也都无法再联系对方。",
+  "Block {name}? Their request goes, and neither of you can reach the other.": "要拉黑 {name} 吗？对方的好友请求将被移除，双方也都无法再联系对方。",
   "{name} wants to be friends": "{name} 想加你为好友",
   "Waiting for {name}": "等待 {name} 回应",
   "Friends": "好友",
