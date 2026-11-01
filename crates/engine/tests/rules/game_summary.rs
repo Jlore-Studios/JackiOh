@@ -114,8 +114,6 @@ fn turn_start_in(events: &[GameEvent]) -> isize {
 }
 
 struct Recorded {
-    #[allow(dead_code)]
-    before: GameState,
     after: GameState,
     events: Vec<GameEvent>,
 }
@@ -135,7 +133,6 @@ impl Stepper {
             panic!("{} refused: {error}", action.action_type());
         }
         self.steps.push(Recorded {
-            before: self.state.clone(),
             after: result.state.clone(),
             events: result.events.clone(),
         });

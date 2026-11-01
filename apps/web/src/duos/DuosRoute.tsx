@@ -27,6 +27,7 @@ import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import { connectionWords } from "../game/connectionWords.ts";
 import { awaitsYou, installDevHandle, pageWake, remainingMs, viewDerivedState } from "../game/net.ts";
 import { readPlayLean } from "../game/playLean.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
@@ -44,22 +45,6 @@ import { useDuosMatch, type DuosClockReading, type DuosConnection } from "./sock
 import { duosTestid } from "./testids.ts";
 
 const DEV_ONLY = import.meta.env.MODE !== "production";
-
-/** A connection state in a player's words. */
-function connectionWords(state: DuosConnection): string {
-  switch (state) {
-    case "open":
-      return t("Connected");
-    case "connecting":
-      return t("Connecting…");
-    case "reconnecting":
-      return t("Reconnecting…");
-    case "refused":
-      return t("This match isn't available");
-    case "closed":
-      return t("Disconnected");
-  }
-}
 
 /** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
 function ConnectionLine({ state, onReconnect }: { state: DuosConnection; onReconnect: () => void }): ReactElement {

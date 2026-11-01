@@ -38,6 +38,7 @@ import {
   searchMatches,
   shippedTags,
   sortPool,
+  tileCost,
   visiblePool,
   type CostBucket,
   type PoolFilter,
@@ -297,6 +298,16 @@ describe("costBucket and costOrder (B31)", () => {
     expect(costOrder(100)).toBe(100);
     expect(costOrder({ base: 2, embiggen: 4 })).toBe(2);
     expect(costOrder("X")).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe("tileCost (#2644)", () => {
+  it("prints a number, X, an embiggen card's base price, and nothing for no cost", () => {
+    expect(tileCost(3)).toBe("3");
+    expect(tileCost(10)).toBe("10");
+    expect(tileCost("X")).toBe("X");
+    expect(tileCost({ base: 4, embiggen: 2 })).toBe("4");
+    expect(tileCost(undefined)).toBe("");
   });
 });
 

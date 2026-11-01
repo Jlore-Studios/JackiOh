@@ -30,6 +30,7 @@ import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
+import { connectionWords } from "../game/connectionWords.ts";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { OnceRevealed } from "../game/Result.tsx";
@@ -101,22 +102,6 @@ export const matchTestid = {
   /** #936 B51: how many friends watch this match (`data-count`), shown while any do. */
   watchers: "match-watchers",
 } as const;
-
-/** A connection state in a player's words, for the match bar and the wait before the board. */
-export function connectionWords(state: ConnectionState): string {
-  switch (state) {
-    case "open":
-      return t("Connected");
-    case "connecting":
-      return t("Connecting…");
-    case "reconnecting":
-      return t("Reconnecting…");
-    case "refused":
-      return t("This match isn't available");
-    case "closed":
-      return t("Disconnected");
-  }
-}
 
 /** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
 function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReconnect: () => void }): ReactElement {

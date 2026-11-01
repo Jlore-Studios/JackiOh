@@ -134,8 +134,9 @@ fn series_game() -> ApiError {
     )
 }
 
-/// R1638000: a card patch went live since the match began. `details` are the co-op join's.
-fn cards_changed(app: &App, played_on: &str) -> ApiError {
+/// R1638000: a card patch went live since the match began, for a 1v1 rematch and a co-op Play again.
+/// `details` are the co-op join's.
+pub(crate) fn cards_changed(app: &App, played_on: &str) -> ApiError {
     ApiError::with_details(
         ApiErrorCode::UpdateRequired,
         "The cards changed since this game. Start a new one.",

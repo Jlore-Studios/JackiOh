@@ -39,7 +39,6 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::LeanPick;
 use jackioh_engine::wire::DuosSeat;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use tokio::sync::Notify;
 use tokio::sync::futures::OwnedNotified;
 
@@ -48,6 +47,7 @@ use crate::api::collection::caller_profile;
 use crate::api::decks::{assert_free_to_play, assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::new_uuid;
+use crate::api::rematch::cards_changed;
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{FrozenDeck, Profile};
@@ -253,17 +253,6 @@ fn already_in_match() -> ApiError {
     ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
 }
 
-/// R1638000: a match played on a catalog version other than the server's offers no Play again. An
-/// offer on it is `409 update_required` before it is recorded, as the co-op room's join refuses a
-/// stale catalog (§13.9): a new game would deal today's cards under the old rules.
-fn cards_changed(app: &App, played_on: &str) -> ApiError {
-    ApiError::with_details(
-        ApiErrorCode::UpdateRequired,
-        "The cards changed since this game. Start a new one.",
-        json!({ "expected": app.catalog.version, "received": played_on }),
-    )
-}
-
 // Offers
 
 /// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
@@ -439,7 +428,10 @@ pub async fn offer_again(app: &Arc<App>, req: Req) -> ApiResult {
             "that co-op game cannot be played again",
         ));
     }
-    // R1638000: refused before the offer is recorded, so nothing is kept and no game is made.
+    // R1638000: a match played on a catalog version other than the server's offers no Play again, as
+    // the co-op room's join refuses a stale catalog (§13.9): a new game would deal today's cards under
+    // the old rules. It is `409 update_required` before the offer is recorded, so nothing is kept and
+    // no game is made.
     if match_row.options.catalog_version != app.catalog.version {
         return Err(cards_changed(app, &match_row.options.catalog_version));
     }
