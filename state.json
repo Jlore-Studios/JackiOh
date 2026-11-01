@@ -12244,8 +12244,15 @@
     "what": "revise #2677 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-01T12:43:39Z",
-    "notes": [],
+    "at": "2026-11-01T12:51:00Z",
+    "notes": [
+      "#2678 needs a plan",
+      "started plan #2678 on claude-6 (run 41308542687)",
+      "started revise #2677 on claude-8 (run 41308598185)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days",
+      "#2678: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -12950,7 +12957,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T12:43:39Z",
+  "loop_tick": "2026-11-01T12:51:00Z",
   "machine_disk": {
     "issue": null,
     "reading": {
