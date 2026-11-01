@@ -11880,15 +11880,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/showcase/plan.ts"
+          ],
+          "from": "db04e5a14ebe07fc1c5e40fc5e47687abc2127e7",
+          "main": "734e41346d9cf103b38c3f1d3b32df9b1b0bdb95"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41264214476",
+            "run": "41298623044",
             "tier": "strong"
           }
         ],
-        "sha": "db04e5a14ebe07fc1c5e40fc5e47687abc2127e7",
+        "sha": "f86e16bf1dcf68ab44cabd63b43d5be6a98b9ec7",
         "tiers": {
           "claude": "strong"
         }
