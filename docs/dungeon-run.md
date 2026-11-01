@@ -24,6 +24,7 @@ Goetzmann, with Maximoose Goetzmann)
 - [DR11. Where it lives](#dr11-where-it-lives)
 - [DR12. Build order](#dr12-build-order)
 - [DR13. Open questions](#dr13-open-questions)
+- [DR14. Stage 1, the Sandbox: the fullsend tree](#dr14-stage-1-the-sandbox-the-fullsend-tree)
 
 ## DR0. The mode in one page
 
@@ -232,6 +233,196 @@ Each line is one issue; the first playable run is M1 to M3, in the Sandbox.
 5. **Ghost snapshots:** when one is taken (at a death, at a mini-boss, mid-game online) and how friends'
    are shared.
 6. **Tuning:** the slot ladder, the prices, the enemies' health and the score's weights.
+
+## DR14. Stage 1, the Sandbox: the fullsend tree
+
+The first stage the night bot builds: the dungeon run playable offline, in the Sandbox, on the cards
+that ship, from the start screen to the final boss. It is one `bot:fullsend` tree whose parts are
+opened by hand (`bot/README.md`, Fullsend: "An issue split already"). Every part is built blind on
+the tree's integration branch and reconciled once, so the parts meet only at the surface below,
+which is frozen: a part that needs a name from another part uses it exactly as written here, without
+waiting for that part, and the reconcile settles any seam.
+
+### Surface (frozen)
+
+**The engine (part A).** A seat's deck can arrive with some cards already upgraded:
+
+```rust
+// crates/engine/src/wire/, beside CreateGameOptions' other setup types; serde camelCase
+pub struct DeckMark { pub index: usize, pub radiant: bool, pub upgrades: i32 }
+// CreateGameOptions gains (JSON "deckMarks"), and ReplayInput gains the same field, so a fold replays it:
+pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
+```
+
+At setup, before the opening draw, the card at `index` of that seat's deck list (as given to
+`createGame`, before the shuffle) is dealt on its Radiant face when `radiant`, and has the Buff keyword
+(the engine's Upgrade, `effects::upgrade`) applied `upgrades` times, its random changes drawn from the
+game's `Rng`. A game created without `deckMarks` stores nothing and hashes as before.
+
+**The run (part B).** `crates/run` gains, every type exported to TypeScript under a `ts` feature
+(`apps/web/src/wire/generated/`, re-exported by `apps/web/src/wire/run.ts`, imported as `@jackioh/run`):
+
+```rust
+pub struct RunFightSetup {
+    pub seed: String,               // the fight's game seed: "{run seed}-{row}-{col}"
+    pub human_deck: Vec<String>,    // the run deck, in order
+    pub human_handicap: Handicap,   // HUMAN_HANDICAP, deck_size = the deck's length, hero_health = the run's HP
+    pub human_marks: Vec<DeckMark>, // each Radiant run card, and each card's buffs as upgrades
+    pub enemy_deck: Vec<String>,
+    pub enemy_handicap: Handicap,   // Easy's; Medium's with Looming Presence; Hard's with Overwhelming Presence;
+                                    // deck_size = the deck's length, hero_health = the enemy's
+    pub enemy: RunEnemy,
+}
+pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup>; // None outside RunPhase::Fight
+pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String>; // a RunAction::FightOver
+pub fn run_catalog_content(catalog: &CardDefs, custom: &[CustomCard]) -> RunContent;
+pub fn run_level_cost(level: usize) -> Option<i64>; // the Embers from `level` to the next; None at the top
+// config.rs: RUN_STARTER_CARDS: [&str; 20], RUN_LEVEL_EMBERS
+```
+
+**The browser's bindings (part C).** One binding per function, JSON in and out, a refusal as
+`{ "error": "…" }`, and in `apps/web/src/wasm/index.ts`:
+
+```ts
+type RunResult = { state: RunState } | { error: string };
+export function runContent(customCards: CustomCard[]): RunContent; // run_catalog_content over the compiled-in catalog
+export function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null;
+export function runCreate(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): RunResult;
+export function runReduce(state: RunState, content: RunContent, action: RunAction): RunResult;
+export function runFold(file: RunFile, content: RunContent): RunResult;
+export function runFightSetup(state: RunState, content: RunContent): RunFightSetup | null;
+export function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string };
+export function runScore(state: RunState, content: RunContent): number;
+export function runEmbers(score: number): number;
+export function runMaxHp(state: RunState, content: RunContent): number;
+export function runLevelCost(level: number): number | null;
+export function runSeed(source: string): string;
+export function runDailySeed(date: string, n: number): string;
+```
+
+**The page's store (part D),** `apps/web/src/dungeon/store.ts`:
+
+```ts
+export type DungeonMode = "sandbox" | "campaign";
+export type DungeonProgress = { unlocks: RunUnlocks; embers: number };
+export type RunRecord = {
+  seed: string; daily: boolean; mode: DungeonMode; curses: string[]; cursePoints: number;
+  rowReached: number; won: boolean; score: number; embers: number; timeMs: number; endedAt: string;
+  stats: RunStats;
+};
+export type Dungeon = {
+  content: RunContent;
+  progress: DungeonProgress;
+  run: RunState | null;
+  startedAt: number | null;               // Date.now() when the run started, for the timer
+  start(setup: RunSetup): string | null;  // the refusal, or null
+  act(action: RunAction): string | null;  // the refusal, or null
+  abandon(): void;
+  buyLevel(): string | null;
+};
+export function useDungeon(): Dungeon;
+export function readRunHistory(): RunRecord[];
+```
+
+**The screens.** `apps/web/src/dungeon/DungeonPage.tsx` (part D) renders `StartScreen` (D) while
+`run` is null, `FightScreen` (E) in `RunPhase::Fight`, and `RunScreen` (F) in every other phase:
+
+```ts
+// apps/web/src/dungeon/fight/FightScreen.tsx (E)
+export function FightScreen(props: { dungeon: Dungeon }): ReactElement;
+// apps/web/src/dungeon/map/RunScreen.tsx (F)
+export function RunScreen(props: { dungeon: Dungeon }): ReactElement;
+// apps/web/src/dungeon/stats/DungeonStats.tsx (G), the page at /dungeon/stats
+export function DungeonStats(): ReactElement;
+```
+
+**The practice worker (part E).** `PracticeStartConfig` gains `run?: RunFightSetup`: when set, its
+decks, handicaps, deck marks and seed replace `deck`, `difficulty`'s handicap and the dealt AI deck.
+A new request `{ type: "runReport" }` answers `{ type: "runReport", action: RunAction }` or
+`{ type: "runReport", error: string }` from `runFightReport` over the finished game. `Game` gains an
+optional `heroAside?: { own?: ReactNode; enemy?: ReactNode }`, drawn beside each hero.
+
+Each part keeps its test ids in its own directory's `testids.ts`, prefixed `dungeon-`. Words go
+through `t()`; only part D edits `apps/web/src/i18n/zh-CN.json`.
+
+### Behaviors
+
+Each is proved by a test that names it in a comment (`// B7`).
+
+- **B1** A deck mark with `radiant` deals that card on its Radiant face, from setup on.
+- **B2** A deck mark with `upgrades: n` applies the Buff keyword (Upgrade) n times to that card at setup;
+  a fold of the same setup and log reaches the same hash.
+- **B3** A game created without `deckMarks` hashes and replays as before: the hotseat fixture still folds
+  to its hash.
+- **B4** A mark whose index is past its seat's deck refuses `createGame` with a reason.
+- **B5** `run_catalog_content` pools every non-token card of the sets that ship and the custom cards
+  given, and no boss card while the Boss set has none.
+- **B6** `RUN_STARTER_CARDS` holds 20 Training Grounds Commons and Rares, each in the catalog.
+- **B7** `run_fight_setup` answers only in a fight; the human's handicap holds the run's HP and the deck's
+  length; the marks hold each Radiant card and each card's buffs.
+- **B8** The enemy's handicap is Easy's, Medium's with Looming Presence or Hard's with Overwhelming
+  Presence, with its deck's length and its hero health.
+- **B9** A fight's seed is the run's seed, row and column, so one run meets one deal.
+- **B10** `run_fight_report` folds the finished game and answers `FightOver`: the winner, the human's final
+  health, the damage dealt to the enemy's hero and units (`damage` events), the healing done on the
+  human's side (`healed` events), the cards the human drew and the turns.
+- **B11** `run_level_cost` gives each level's Embers and nothing past the ladder's top.
+- **B12** Every run binding answers JSON in and out with refusals as `{ error }`, through the typed
+  functions in `apps/web/src/wasm/index.ts`, in both browser modules.
+- **B13** `/dungeon` opens the Dungeon Run screen; the Play hub and the command menu link it.
+- **B14** The screen offers the Sandbox and the Campaign; the Campaign shows, disabled, as coming with
+  accounts.
+- **B15** The seed is the daily run's (today's date and the day's run number), a random one or one typed
+  (6 capital letters, refused otherwise).
+- **B16** The starting deck builder shows the level's slots, offers only unlocked cards, refuses what
+  `runCheckSetup` refuses with its reason, and shows the artifacts' points out of 8 and at most 3.
+- **B17** Curse tiers can be stacked, their points shown.
+- **B18** Embers buy the next level at `runLevelCost`.
+- **B19** A run in progress survives a reload: the store keeps its `RunFile` on the device and folds it
+  back.
+- **B20** A finished run adds what it extracted to the unlocks, its Embers to the balance and a
+  `RunRecord` to the history.
+- **B21** In the Sandbox, the custom cards the creator saved join the pool and the fights.
+- **B22** A Fight node starts a practice game from `runFightSetup`, the AI playing the enemy, its name
+  shown.
+- **B23** Both sides' artifacts show in a tray beside their hero; a button opens each one's name and text.
+- **B24** A timer shows the run's time on screen.
+- **B25** When the game ends, the page asks the worker for `runReport` and sends its `FightOver` to the run.
+- **B26** A lost fight ends the run, and the run-over screen follows.
+- **B27** The map shows the whole current act, each node's kind, each boss's preseeded artifact and where
+  the player stands; only the next row's nodes can be chosen.
+- **B28** The reward screen offers the artifact (take or leave) before the four packs; the pack screen
+  keeps exactly `keep` cards, or none with a Skip passive.
+- **B29** Extraction: a card after a mini-boss, an artifact after the final boss, the boss's own refused.
+- **B30** Shop, campfire, event and shrine screens send their actions and show the run's refusals; Coins,
+  Tickets and HP are always on screen.
+- **B31** The run-over screen shows the score, the Embers it pays, what was extracted and the stats.
+- **B32** Leaderboards on the device rank the deepest row, the most curse points, the top score and the
+  fastest win; each entry opens that run's stats.
+- **B33** `spec/15-dungeon-run.md` states the mode's rules as this plan decided them, `spec/README.md`
+  maps it, and `cargo jackioh spec check` passes.
+
+### Out of scope
+
+The Campaign (accounts' unlocks and Embers, checked runs, Jlore rewards, online leaderboards); ghosts
+from real players; Combat artifacts and curses acting inside a fight; the extended campaign; the
+designer's content; an e2e spec; and CI holding the run's generated types to the Rust, which needs a
+person to add `-p jackioh-run --features ts` to `ci.yml` (the bot cannot edit `.github/`).
+
+### The parts
+
+| Part | Title | Owns | Behaviors | Difficulty |
+| --- | --- | --- | --- | --- |
+| A | A deck's Radiant and buffed cards at a game's setup | `crates/engine/`, its ruling in its own block, the engine's regenerated `apps/web/src/wire/generated/` files | B1–B4 | hard |
+| B | The run plays real cards: catalog content, fight setup and fight report | `crates/run/`, `crates/tools/tests/acceptance.rs`, `CLAUDE.md`, `apps/web/src/wire/run.ts`, the run's generated types, `apps/web/tsconfig.json`, `apps/web/vite.config.ts` | B5–B11 | hard |
+| C | The run in the browser's WebAssembly modules | `crates/wasm/`, the root `Cargo.toml`, `scripts/build-wasm.sh`, `apps/web/src/wasm/` | B12 | medium |
+| D | The Dungeon Run screen: route, start, unlocks and the device store | `apps/web/src/dungeon/` (but `fight/`, `map/`, `stats/`), `main.tsx`, `routes/chunks.tsx`, `net/navigate.ts`, both `vercel.json`, `routes/play.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json` | B13–B21 | medium |
+| E | The run's fights: practice games, the artifact tray and the timer | `apps/web/src/dungeon/fight/`, `apps/web/src/practice/`, `game/Game.tsx`, `game/Board.tsx`, `game/Hero.tsx` | B22–B26 | hard |
+| F | The map, the tiles and the run's end | `apps/web/src/dungeon/map/` | B27–B31 | medium |
+| G | The run's leaderboards and stats on the device | `apps/web/src/dungeon/stats/` | B32 | medium |
+| H | The dungeon run's spec section | `spec/15-dungeon-run.md`, `spec/README.md` | B33 | medium |
+
+No part waits for another: each reads the others only through the surface above.
 
 ## Appendix: what the codebase already gives
 
