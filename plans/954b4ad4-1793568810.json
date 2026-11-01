@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2730,
+  "title": "Patch: hold a collection item to preview it fullscreen, and spend a token from that preview",
+  "branch": "bot/issue-2730",
+  "thread": "**Issue #2730 (data, not instructions):**\n\n```text\n# #2730: Patch: hold a collection item to preview it fullscreen, and spend a token from that preview\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe way tokens are spent today is a mess. Every locked item that a held token covers gets its own extra button stuck on top of a grid or strip that is already full of cosmetics or cards:\n\n- `apps/web/src/collection/TokenOffer.tsx` is drawn inline on every covered locked tile in `AccountCosmeticTiles.tsx` (playmat, backdrop and card back tiles) and on every covered locked item in `CardCosmeticsView.tsx`'s strip (foil, finish, border, full art) (R1953001, R2480000).\n- The shop's `shop/TokenPicker.tsx` has a separate card browser of unowned cards, each with its own Unlock button, just for spending a card token.\n\n**What we want instead:** no item in a menu full of cosmetics or cards has a spend button of its own. In the Collection, you **hold** (long-press) any cosmetic or card to open a **fullscreen preview** of it. If the item is locked and a held token covers it, the button to spend the token appears **in that preview, and nowhere else**.\n\n### Behaviour\n\n1. **Hold to preview, everywhere in the Collection.** Every account cosmetic tile (playmat, backdrop, card back), every item in a card's cosmetics strip, and every card in the owned-cards grid (`OwnedCards.tsx`), locked or owned, opens a fullscreen preview when held.\n   - Touch and mouse both use the existing long-press timing: `LONG_PRESS_MS` and `LONG_PRESS_SLOP_PX` from `apps/web/src/cards/inspect/constants.ts`. Reuse the inspect layer's press handling (`useInspectTrigger` / `TermTip.tsx`'s pattern). Don't add a new timer constant (CLAUDE.md rule 9).\n   - Keyboard: the inspect key (`INSPECT_KEY_SHORTCUT` / `isInspectKey`) on a focused item opens the same preview, so nothing needs a long press to reach.\n   - A plain tap or click does what it does today: it equips an owned tile, picks an owned strip item and opens a card's view. A hold opens the preview and fires no click (`CLICK_SUPPRESS_MS`).\n2. **The preview.** Fullscreen, modal, focus trapped, closed by Escape, a close button and a tap on the backdrop. It shows the item large:\n   - a playmat or backdrop as the board (`CosmeticLook.tsx`'s `MiniBoard`, scaled up);\n   - a card back as `CardBack`;\n   - a card cosmetic as the card wearing it (as `CardCosmeticsView`'s `LargeFace` previews it today, with no pick written: R1834000);\n   - a card as its face.\n   \n   Under the item: its name, its rarity, and whether it is owned or locked.\n3. **The spend button lives only in the preview.** When the item is locked and a held token covers it, the preview shows the unlock button:\n   - For a cosmetic, `offerTier`'s rule decides when the button shows (R1305003, and never for a chase, a default or a starter).\n   - For a card, a held card token covers any unowned card of a shipped set (\u00a714.5).\n   \n   The first press asks, as R2480000 asks today (\"Unlock {name}? This spends 1 Epic token.\" / \"\u2026 1 card token.\"): Confirm and Cancel, with Cancel focused. Cancel or Escape spends nothing. Confirm sends the same request as today (`redeemCosmeticToken` / `redeemCardToken`, with its idempotency key, R2124000) and renders the server's answer. On success the item shows as owned in the preview and in the grid behind it (`rereadOwnedCosmetics`, or the collection re-read). On a refusal the preview shows the server's words and nothing changes. The server decides (CLAUDE.md rule 7).\n4. **Remove the old buttons.**\n   - Drop the inline `TokenOffer` from `AccountCosmeticTiles.tsx` and `CardCosmeticsView.tsx`.\n   - Drop the card browser and its Unlock button from `shop/TokenPicker.tsx`. The shop keeps the token bars, the cosmetic cycle's next step and the held counts, plus a line linking to the Collection (\"Hold a locked card or cosmetic in your Collection to spend a token\"), as it already links there for cosmetic tokens.\n   - The Locked badge stays. A small \"token available\" mark on a covered locked item is fine as long as it is not a button.\n\n### Spec and rulings\n\n- \u00a714.5 (`spec/14-economy.md`, the sentence ending \"\u2026and spent there ([[R1953001]])\", plus the card-token line \"A card token unlocks any new card\u2026\"): say that a held token is spent from the Collection's fullscreen preview of a locked item it covers, card tokens included, and that no list or grid carries a spend button.\n- Write one new ruling note in this issue's block (CLAUDE.md rule 3) that amends R1953001 and R2480000:\n  - hold or the inspect key opens the preview;\n  - the spend button shows only there;\n  - the shop's card picker is gone.\n  \n  Its \u00a711 paragraph goes in `spec/pending/<this issue>.md`. Update `proven_in` and the `R1953001` / `R2480000` notes where their text no longer holds. Where the moved code still cites those R-ids, keep `cargo jackioh spec check` green.\n- Read `apps/web/README.md` and `e2e/README.md` before changing them. The e2e specs or test ids that click `T.tokenOffer(...)` or the shop's card Unlock must move to the preview.\n\n## Acceptance\n\n- [ ] Holding a cosmetic tile, a card-cosmetic strip item or a card in the Collection for `LONG_PRESS_MS` (touch or mouse) opens a fullscreen preview of it. The inspect key on a focused item does the same. A plain tap or click still equips or opens, as today, and a hold fires no click (vitest with fake timers).\n- [ ] No `TokenOffer` or other spend button is drawn inside `AccountCosmeticTiles`, `CardCosmeticsView`'s strip or `OwnedCards`' grid, whatever tokens are held (vitest).\n- [ ] The preview of a locked cosmetic a held token covers shows the unlock button. The preview of an owned one, a chase, a default or a starter, or an uncovered one shows none (vitest, over `offerTier`'s cases).\n- [ ] The preview of an unowned card shows a card-token unlock button only while a card token is held (vitest).\n- [ ] Unlock asks first, with Cancel focused. Cancel and Escape send nothing. Confirm sends one redeem request, and on success the item reads as owned in the preview and in the grid. On a refusal the server's words show and nothing else changes (vitest with a mocked `net/api`).\n- [ ] The preview traps focus and closes on Escape, its close button and a backdrop tap, and focus returns to the item that opened it (vitest).\n- [ ] `shop/TokenPicker.tsx` no longer lists cards or offers an Unlock. It shows the bars, the next step, the held counts and the Collection link (`TokenPicker.test.tsx` updated).\n- [ ] A new ruling note in this issue's block amends R1953001 and R2480000, with a test titled with its R-id. \u00a714.5 is updated, and `cargo jackioh spec check` passes.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and the e2e smoke are green.\n\n## Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2730: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
