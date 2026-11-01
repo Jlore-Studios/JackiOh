@@ -277,6 +277,11 @@ pub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFigh
 pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String>; // a RunAction::FightOver
 pub fn run_catalog_content(catalog: &CardDefs, custom: &[CustomCard]) -> RunContent;
 pub fn run_level_cost(level: usize) -> Option<i64>; // the Embers from `level` to the next; None at the top
+pub struct RunConstants {           // the numbers the screens show, so the client states none (rule 9)
+    pub slot_ladder: Vec<[usize; 6]>, pub starter_size: usize, pub starter_artifacts_max: usize,
+    pub starter_artifact_points: i32, pub tier_points: Vec<(RunTier, i32)>,
+}
+pub fn run_constants() -> RunConstants;
 // config.rs: RUN_STARTER_CARDS: [&str; 20], RUN_LEVEL_EMBERS
 ```
 
@@ -296,6 +301,7 @@ export function runScore(state: RunState, content: RunContent): number;
 export function runEmbers(score: number): number;
 export function runMaxHp(state: RunState, content: RunContent): number;
 export function runLevelCost(level: number): number | null;
+export function runConstants(): RunConstants;
 export function runSeed(source: string): string;
 export function runDailySeed(date: string, n: number): string;
 ```
@@ -366,7 +372,8 @@ Each is proved by a test that names it in a comment (`// B7`).
 - **B10** `run_fight_report` folds the finished game and answers `FightOver`: the winner, the human's final
   health, the damage dealt to the enemy's hero and units (`damage` events), the healing done on the
   human's side (`healed` events), the cards the human drew and the turns.
-- **B11** `run_level_cost` gives each level's Embers and nothing past the ladder's top.
+- **B11** `run_level_cost` gives each level's Embers and nothing past the ladder's top, and
+  `run_constants` answers the config's own numbers.
 - **B12** Every run binding answers JSON in and out with refusals as `{ error }`, through the typed
   functions in `apps/web/src/wasm/index.ts`, in both browser modules.
 - **B13** `/dungeon` opens the Dungeon Run screen; the Play hub and the command menu link it.
