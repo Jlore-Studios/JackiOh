@@ -1,6 +1,5 @@
-// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12). The
-// browser's log, its custom card with it, folds with `jackioh replay` to the same hash (R915006), as
-// specs 01 and 13 do.
+// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12). The browser's
+// log, its custom card with it, folds with `jackioh replay` to the same hash (R915006).
 
 import { allCardIds } from "../../support/cards.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
@@ -48,7 +47,6 @@ function me(): E2EAccount {
 
 const SEED = seedFor("40-custom-cards");
 
-/** The card the builder makes. */
 const NAME = "Spark Lancer";
 const DAMAGE = 2;
 
@@ -229,9 +227,9 @@ function deckWith(customId: string): string[] {
 /** Seeds tried, each a fresh deal, before the spec gives up on the card's coming to the human's opening hand. */
 const SEED_BUDGET = 25;
 
+
 /** The localStorage key under which practice keeps a game in progress. */
 const RESUME_KEY = "jackioh.practice.game";
-
 /**
  * Start practice on the saved deck, on the first of `SEED`'s deals that puts the custom card in the human's
  * opening hand, and say its seed. The deck is DECK_SIZE cards and the passive human is beaten on turn 9, so
@@ -331,8 +329,8 @@ describe("40 custom cards — made in the creator, kept on the account, played i
 
       untilPlayable(customId, 1).then((play) => {
         cy.playCard(play.card, { zone: { side: "you", row: "units", lane: play.lane as 1 | 2 | 3 | 4 | 5 } });
-        // R81: the Cry's declared target. With one enemy unit the board takes it as the only one;
-        // with more, it asks, and the spec names the unit it measured.
+        // R81: the Cry's declared target. With one enemy unit the board takes it; with more, it asks for
+        // the unit the spec measured.
         cy.get("body").then(($body) => {
           if ($body.find(promptOf("target")).length > 0) cy.answerPrompt("target", { cards: [play.target] });
         });

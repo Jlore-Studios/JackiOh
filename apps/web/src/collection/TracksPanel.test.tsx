@@ -41,7 +41,6 @@ describe("#1664 the tracks panel's XP bar", () => {
       expect(within(row).getByTestId(T.trackRewards(set))).toBeInTheDocument();
       expect(within(row).getByRole("progressbar")).toBeInTheDocument();
     }
-    // A locked track has its lock line, an unlocked one does not.
     expect(screen.getByTestId(T.track(newest))).toHaveAttribute("data-unlocked", "true");
     expect(screen.queryByTestId(T.trackLock(newest))).toBeNull();
     expect(screen.getByTestId(T.trackLock("Core"))).toBeInTheDocument();

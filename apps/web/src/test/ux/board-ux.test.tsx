@@ -479,7 +479,7 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
     expect(start).toBeGreaterThan(-1);
     // "End turn" took 63px on one line in a 44px button at 390px, and ran over Offer draw.
     expect(portrait).toMatch(/\.board \.control-bar \.control-end-turn\s*\{[^}]*white-space:\s*normal;/);
-    // An empty strip is hidden the visually-hidden way, not with display: none, so its live region still announces.
+    // An empty strip is hidden the visually-hidden way, so its live region still announces.
     const empty = portrait.match(/\.board \.control-bar \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
     expect(empty).not.toBeNull();
     expect(empty?.[1]).toMatch(/position:\s*absolute;/);
@@ -495,7 +495,6 @@ describe("#1831 the Friends button in the board's phone bars", () => {
     const portrait = text.slice(start, text.indexOf("@media", start + 1));
 
     expect(start).toBeGreaterThan(-1);
-    // A button of the bar at its natural size, as the language button is.
     expect(text).toMatch(/\.board \.control-bar \.friends-button--game\s*\{\s*flex:\s*0 0 auto;/);
     // An online match's rail row holds it at its end: the rail gives up 50px (its 44px button and a gap).
     expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) > \.board-rail\s*\{\s*order:\s*-2;\s*flex-basis:\s*calc\(100% - 50px\);/);
@@ -563,7 +562,6 @@ describe("#990 an online match's rail on a phone", () => {
 
     expect(start).toBeGreaterThan(-1);
     expect(landscape).toMatch(/\.match-ranks\s*\{\s*flex-basis:\s*100%;/);
-    // Hidden the visually-hidden way, so the notices' live region still announces.
     const empty = landscape.match(/\.board \.control-bar:has\(> \.board-rail\) \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
     expect(empty).not.toBeNull();
     expect(empty?.[1]).toMatch(/position:\s*absolute;/);

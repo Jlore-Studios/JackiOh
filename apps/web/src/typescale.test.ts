@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
-/** The scale's size limit: a new step raises it in the same change, in plain sight. */
+/** The scale's size limit: a new step raises it in the same change. */
 const TYPE_MAX = 10;
 /** The step the board's body is set in; every other step's em form is a fraction of it. */
 const BODY_STEP = "md";
@@ -21,7 +21,6 @@ const STEP = /var\(--type-[a-z0-9]+(?:-em)?\)/;
 const FLUID = /\d*\.?\d+(?:vw|vh|vmin|vmax|dvh|svh|lvh|cqw|cqh|cqi|cqb|cqmin|cqmax)\b/g;
 const KEYWORD = /\b(?:xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|smaller|larger)\b/;
 
-/** Every font-size, font-family and font shorthand `css` states off the scale, outside its comments. */
 function offScale(css: string): string[] {
   const code = css.replace(/\/\*[\s\S]*?\*\//g, " ");
   const found: string[] = [];

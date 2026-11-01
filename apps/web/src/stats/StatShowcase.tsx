@@ -131,7 +131,6 @@ export function StatShowcase({ stats, reduced, random }: StatShowcaseProps): Rea
 
 type StatStageProps = { stat: ShowcaseStat; still: boolean; fxOn: boolean; intensity: number };
 
-/** One stat's card and its animation. */
 function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactElement | null {
   // By what it plays, not by the stat's identity: a Pocket Pick arriving rebuilds every stat and must not restart this one.
   const { animation, cardId: defId, side: stageSide } = stat;

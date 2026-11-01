@@ -398,7 +398,6 @@ export type StaticPagesInput = {
   pages: readonly PublicPage[];
   cards: CardDefs;
   patches: readonly Patch[];
-  /** R1369000: the technical log, `technical.json`. */
   technical?: readonly TechnicalEntry[];
   outDir: string;
   origin: string;

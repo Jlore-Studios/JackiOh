@@ -1,5 +1,5 @@
 // BUILD M8: a seeded hotseat game completes through the UI; its final hash matches replay (V19).
-// `jackioh replay` hashes the browser's recorded actions: a match proves them accepted in order (M5-T3).
+// `jackioh replay` (§12) hashes the browser's recorded actions: a match proves them accepted in order (M5-T3).
 // Fixture decks are choice-free, so play and attack open no `PendingChoice` (R81).
 
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -50,7 +50,7 @@ function unitsOf(state: GameStateLike, player: PlayerId): string[] {
   });
 }
 
-/** Ask client `data-legal`, which mirrors engine `legalActions` (BUILD M5-T2). */
+/** `data-legal` mirrors engine `legalActions` (BUILD M5-T2). */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
@@ -59,7 +59,6 @@ function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null
   });
 }
 
-/** BUILD M5-T3: hand the device to the active seat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
@@ -89,7 +88,7 @@ function playWhilePossible(budget: number): void {
   });
 }
 
-/** Target an offered hero or unit; Taunt (§4.2 step 3) steers the run. */
+/** Taunt (§4.2 step 3) steers the run. */
 function attackWith(attackers: readonly string[], index: number): void {
   const attacker = attackers[index];
   if (attacker === undefined) return;
@@ -154,7 +153,6 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
       cy.get(ts(RESULT_OVERLAY)).should("have.attr", "data-reason", result.reason);
     });
 
-    // §12: `jackioh replay` folds the log and compares `hashState`.
     cy.replayCheck("01-hotseat-full-game");
   });
 });

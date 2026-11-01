@@ -104,12 +104,10 @@ export const RELEASES: readonly Release[] = [
   },
 ];
 
-/** The title the page shows for a patch: its player note's, or its record's when it has no note. */
 export function playerTitle(patch: Patch): string {
   return patch.player?.title ?? patch.title;
 }
 
-/** A card id's set, as an id spells it: the part before its first dash. */
 function idSet(id: string): string {
   const dash = id.indexOf("-");
   return dash === -1 ? id : id.slice(0, dash);

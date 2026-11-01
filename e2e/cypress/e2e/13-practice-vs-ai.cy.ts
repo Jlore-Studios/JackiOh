@@ -1,6 +1,6 @@
 // Spec 13 (V19): practice against the AI without a server (SPEC §9.9, R187; B40).
 // It observes R265 mulligan thinking, R745 log retention, R181/R180 handicaps, R668 reload, and R765 save/leave.
-// The recorder's history and reduced motion make the AI's BUILD M5-T4 turns observable.
+// BUILD M8 uses deterministic seeds, retried testids, and no `cy.wait(ms)`; recorder history and reduced motion make BUILD M5-T4 AI turns observable.
 
 import { AI_DIFFICULTY } from "../../../apps/web/src/wire/engineConfig.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
@@ -198,8 +198,7 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
 // Drive the page.
 
 function practiceUrl(seed: string, difficulty: Difficulty, seat: PlayerId): string {
-  // Issue #1113: the seeded games deal the AI from the frozen fixture pool (the table as it stood when
-  // they were dealt), so a shadow-ban change re-deals none of them.
+  // Issue #1113: seeded games deal the AI from the frozen fixture pool, so a shadow-ban change re-deals none.
   const params = new URLSearchParams({ seed, difficulty, deck: "random", seat, pace: "fast", aipool: "fixture" });
   return `/practice?${params.toString()}`;
 }
@@ -282,7 +281,6 @@ function waitForHuman(): Cypress.Chainable<Waited> {
     });
 }
 
-/** Reach the human main phase, resolving at most PROMPT_BUDGET prompts. */
 function reachHumanTurn(prompts = PROMPT_BUDGET): void {
   waitForHuman().then((waited) => {
     expect(waited, "the game is still on when the human is due to act").to.not.eq("over");
@@ -359,7 +357,6 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
     cy.get(ts(PRACTICE_SETUP)).should("not.exist");
 
-    // R265: the AI answers its mulligan while the human picker remains open.
     cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(promptOf("mulligan"))
       .find(ts(MULLIGAN_OPPONENT_READY), { timeout: timeouts.view })
@@ -463,13 +460,11 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.concede();
     cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
 
-    // Watch the replay, then Back to the dialog.
     cy.get(ts(PRACTICE_WATCH_REPLAY)).click();
     stepForwardAndBack();
     cy.get(ts(REPLAY_BACK)).click();
     cy.get(ts(PRACTICE_RESULT)).should("be.visible");
 
-    // Share the last turn's GIF, then leave.
     cy.get(ts(PRACTICE_SHARE_LAST_TURN)).click();
     expectLastTurnGif();
     cy.get(ts(REPLAY_BACK)).click();

@@ -52,14 +52,14 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
       cy.get(control).should("have.attr", "data-legal", "true");
       cy.get(ts(activateUsesId(thrive))).should("have.text", "1");
 
-      // R81 and R384: Activate opens the mode picker.
+      // R81, R384: Activate opens the mode picker.
       cy.get(control).click();
       cy.waitForPrompt("discover");
       for (const mode of THRIVE_MODES) cy.get(promptOf("discover")).find(ts(promptOptionId(mode))).should("exist");
       cy.get(promptOf("discover")).find(ts(promptOptionId("reduce"))).click();
       // R831009: the hand card is chosen as the activation resolves.
       cy.waitForPrompt("hand");
-      // An engine prompt is answered in its picker, by PendingOption.key (`instance:<id>`), not on the hand.
+      // Answered in its picker by PendingOption.key (`instance:<id>`), not on the hand.
       cy.handCardByName("Mr. Vanilla").then((vanilla) => {
         cy.answerPrompt("hand", { options: [`instance:${vanilla}`] });
       });
@@ -103,7 +103,7 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
 
         cy.get(ts(activateUsesId(turtinator))).should("have.text", "0");
         cy.get(control).should("have.attr", "data-legal", "false");
-        // The control capitalises the engine's refusal (ActivateControl.tsx, `capitalised`).
+        // ActivateControl.tsx capitalises the engine's refusal.
         cy.get(control).invoke("attr", "title").should("contain", "That ability has already been used this turn");
         cy.get(control).click();
         cy.get(PROMPT).should("not.exist");

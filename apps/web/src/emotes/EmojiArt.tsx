@@ -32,7 +32,6 @@ function Sticker({ children }: { children: ReactElement }): ReactElement {
   );
 }
 
-/** The stickers. */
 export function EmojiArt({ emoji }: { emoji: EmojiEmoteId }): ReactElement {
   switch (emoji) {
     case "sob":

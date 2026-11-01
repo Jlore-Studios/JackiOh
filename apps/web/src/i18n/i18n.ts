@@ -261,7 +261,6 @@ export function isLocaleSettled(): boolean {
   return settled;
 }
 
-/** isLocaleSettled(); the component re-renders when it changes. */
 export function useLocaleSettled(): boolean {
   return useSyncExternalStore(subscribeLocale, isLocaleSettled, isLocaleSettled);
 }
@@ -347,7 +346,6 @@ function formatTag(): string | undefined {
   return state.locale === DEFAULT_LOCALE ? undefined : state.locale;
 }
 
-/** A number in the reader's language. */
 export function formatNumber(value: number, options?: Intl.NumberFormatOptions): string {
   return new Intl.NumberFormat(formatTag(), options).format(value);
 }

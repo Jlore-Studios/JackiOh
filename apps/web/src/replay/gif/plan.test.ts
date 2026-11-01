@@ -1,6 +1,4 @@
-// The frame plan of a shared GIF (#513, R513000, decision D5): the same clip and options give the
-// same plan whatever the device's settings or clock, a frame draws only what its step's view shows,
-// and no account name can reach it.
+// The frame plan of a shared GIF (#513, R513000, decision D5).
 
 import type { ReplayStep } from "@jackioh/engine";
 import type { PlayerView } from "@jackioh/shared";
@@ -131,7 +129,6 @@ describe("R513000 what a shared GIF holds", () => {
     expect(texts).toContain("You");
     expect(texts).toContain("Opponent");
 
-    // A name planted wherever a view could carry one comes out nowhere.
     const view = fullBoardView({ result: { winner: "p1", reason: "concede" } });
     const planted = { ...view, name: "Ada Lovelace", you: { ...view.you, name: "Ada Lovelace" }, opponent: { ...view.opponent, name: "Ada Lovelace" } };
     const json = JSON.stringify(planFrames([{ step: 0, turn: view.turn, view: planted }], OPTS));
@@ -154,7 +151,6 @@ describe("R513000 what a shared GIF holds", () => {
     expect(new Set(plan.frames.map((frame) => frame.step)).size).toBeLessThanOrEqual(REPLAY_GIF_MAX_STEPS);
     expect([plan.width, plan.height, plan.fps]).toEqual([800, 450, REPLAY_GIF_FPS]);
 
-    // Half the frame rate, half the frames of each entry, and a tick twice as long.
     const slow = planFrames(clip, { ...OPTS, fps: REPLAY_GIF_FALLBACK_FPS });
     expect(slow.frames.filter(ringed)).toHaveLength(entryFrames.length / 2);
     for (const frame of slow.frames.filter(ringed)) expect(frame.delayCs).toBe(tickCs * 2);

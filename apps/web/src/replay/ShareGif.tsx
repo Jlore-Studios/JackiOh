@@ -48,7 +48,6 @@ export type GifExport = {
   /** The marked ends, null while unmarked; one mark alone is a clip of that step. */
   from: number | null;
   to: number | null;
-  /** The shown step. */
   current: number;
   preset: ReplayGifPreset;
   phase: GifPhase;
@@ -68,7 +67,6 @@ function isAbort(cause: unknown): boolean {
   return cause instanceof DOMException && cause.name === "AbortError";
 }
 
-/** The clip marked on the scrubber, clamped to its cap, or null while nothing is marked. */
 export function markedClip(from: number | null, to: number | null): [number, number] | null {
   if (from === null && to === null) return null;
   const a = from ?? to ?? 0;
@@ -162,9 +160,9 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
       setPhase(IDLE);
     },
     send: () => {
-      // Share, or Try again after a share that failed: the made GIF either way, never drawn again.
       const ready = phase.kind === "ready" ? phase : phase.kind === "failed" ? phase.ready : null;
       if (ready === null || loaded.current === null) return;
+      // Share, or Try again after a share that failed: the made GIF either way, never drawn again.
       setPhase(ready);
       loaded.current.shareGif(ready.file).catch((cause: unknown) => {
         // A dismissed share sheet is the viewer's answer, not a failure.

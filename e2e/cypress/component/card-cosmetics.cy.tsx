@@ -76,7 +76,6 @@ function moving(cf: HTMLElement): boolean {
   return cf.getAnimations({ subtree: true }).some((animation) => animation.playState === "running");
 }
 
-/** Clears the card's own picks, so its face wears the defaults. */
 function clearPicks(): void {
   for (const kind of CARD_SLOT_KINDS) writeCardPick(DEF_ID, kind, null);
 }

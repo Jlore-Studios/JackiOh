@@ -47,7 +47,7 @@ export function onlineGame(row: OnlineReplayListing): ReplayJsonGame {
   return { kind: "online", matchId, mode, seat, endedAt, result, turns, steps, portraits };
 }
 
-/** Every step of `source`, in order, a page at a time; rejects with the first page's `ReplayFailure`. */
+/** Every step of `source`, a page at a time; rejects with the first page's `ReplayFailure`. */
 export function allSteps(source: ReplaySource): Promise<ReplayStep[]> {
   return loadClip(createStepCache(source), 0, source.total - 1);
 }
@@ -65,7 +65,6 @@ export async function replayJsonFile(game: ReplayJsonGame, source: ReplaySource,
   return new File([JSON.stringify(json)], name, { type: "application/json" });
 }
 
-/** Hands `file` to the browser's downloads; its address is let go `REPLAY_GIF_REVOKE_MS` after the click. */
 export function downloadFile(file: File): void {
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");
@@ -82,7 +81,6 @@ export const NOT_A_REPLAY = "This file is not a JackiOh replay file.";
 export const UNSUPPORTED = "This replay file uses an unsupported format.";
 export const OTHER_PATCH = "This replay file is from another patch and cannot be opened here.";
 
-/** A file's parsed JSON, held to the byte caps and to being an object, before its shape is read. */
 export async function readReplayJsonFile(file: File): Promise<Record<string, unknown>> {
   if (file.size > REPLAY_JSON_MAX_BYTES) throw new ReplayFailure("error", TOO_BIG);
   const text = await file.text();
@@ -99,9 +97,8 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
 
 /**
  * The steps of a file `replayJsonFile` wrote (#1160), or a `ReplayFailure` saying why it is refused
- * (a file from a newer build is refused as a stale one is, since its views may differ). Its steps are
- * held to the cap before they are kept, each checked for its index, a turn that never goes back and a
- * view that is an object; the catalog gate makes that enough, and the page never enforces rules (rule 7).
+ * (a file from a newer build is refused as a stale one is, since its views may differ). The catalog
+ * gate makes the steps' checks enough, and the page never enforces rules (rule 7).
  */
 export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
   const unmarked = json.version === REPLAY_JSON_UNMARKED_VERSION;
@@ -122,7 +119,6 @@ export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
   return checked;
 }
 
-/** The steps of a downloaded replay file, read and checked in the page. */
 export async function parseReplayJsonFile(file: File): Promise<ReplayStep[]> {
   return replayStepsOf(await readReplayJsonFile(file));
 }

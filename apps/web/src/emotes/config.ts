@@ -1,6 +1,5 @@
-// The emote client's numbers (CLAUDE.md rule 9). The send limits are not here: they live in the wire
-// layer (`src/wire/emotes.ts`, beside `crates/engine/src/wire/emotes.rs`) because the server enforces
-// them too (R643).
+// The emote client's numbers (CLAUDE.md rule 9). The send limits are in the wire layer
+// (`src/wire/emotes.ts`), since the server enforces them too (R643).
 
 /** An emoji sticker's whole show: pop, bounce, hold and fade (issue §4). */
 export const EMOTE_EMOJI_MS = 2000;
@@ -13,7 +12,7 @@ export const EMOTE_BUBBLE_MAX_MS = 4000;
 /** How often an open menu re-reads the limiter, so its greyed items' wait counts down. */
 export const EMOTE_MENU_TICK_MS = 250;
 
-/** An open emote menu keeps at least this far inside the viewport's left and right edges (#219). */
+/** An open emote menu's least gap to the viewport's left and right edges (#219). */
 export const EMOTE_MENU_EDGE_PX = 8;
 
 /**
@@ -23,12 +22,12 @@ export const EMOTE_MENU_EDGE_PX = 8;
 export const SAPI_BASELINE_WPM = 180;
 export const FELINORS_ECHO_TAIL_MS = 120;
 
-/** The board portrait's reaction to opening its menu or its inspect view: the squash and the glint (R1331). */
+/** The portrait's squash and glint when its menu or inspect view opens (R1331). */
 export const PORTRAIT_REACT_MS = 320;
 
 /** How many motes drift over each portrait's oval (R1332). */
 export const PORTRAIT_MOTE_COUNT = 6;
-/** One mote's drift, from rising out of the oval's lower half to fading at its top. */
+/** One mote's drift, from rising in the oval's lower half to fading at its top. */
 export const PORTRAIT_MOTE_DRIFT_MS = 6000;
 /** One breath of a portrait's light, dim to bright. */
 export const PORTRAIT_BREATH_MS = 4200;
@@ -36,5 +35,4 @@ export const PORTRAIT_BREATH_MS = 4200;
 export const PORTRAIT_MOTE_EDGE_PCT = 14;
 /** The smallest mote, in percent of the oval's width. */
 export const PORTRAIT_MOTE_MIN_PCT = 5;
-/** The largest mote, in percent of the oval's width. */
 export const PORTRAIT_MOTE_MAX_PCT = 10;

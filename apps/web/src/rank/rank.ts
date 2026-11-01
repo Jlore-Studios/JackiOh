@@ -4,7 +4,6 @@
 import { t } from "../i18n/i18n.ts";
 import type { GrapeTier, PeakBadge, VisibleRank } from "../net/api.ts";
 
-/** Every tier a rank can name, in a player's words. */
 export function tierName(tier: VisibleRank["tier"] | GrapeTier): string {
   switch (tier) {
     case "raisin":
@@ -24,7 +23,7 @@ export function tierName(tier: VisibleRank["tier"] | GrapeTier): string {
   }
 }
 
-/** Every tier a rank can name, shortened for a phone's rank line (no "Grape"). */
+/** Every tier, shortened for a phone's rank line (no "Grape"). */
 export function tierShortName(tier: VisibleRank["tier"] | GrapeTier): string {
   switch (tier) {
     case "raisin":
@@ -44,7 +43,7 @@ export function tierShortName(tier: VisibleRank["tier"] | GrapeTier): string {
   }
 }
 
-/** A Grape division (3 at the bottom, 1 at the top) as the numeral the client prints. */
+/** A Grape division (3 at the bottom, 1 at the top) as a numeral. */
 export function divisionNumeral(division: number): string {
   switch (division) {
     case 3:
@@ -58,7 +57,6 @@ export function divisionNumeral(division: number): string {
   }
 }
 
-/** What a player is shown as: placements, a tier with its division and pips, or a position. */
 export function rankWords(rank: VisibleRank): string {
   if (rank.tier === "raisin") {
     return t("Raisin · {played}/{games} placements", {
@@ -75,7 +73,7 @@ export function rankWords(rank: VisibleRank): string {
   });
 }
 
-/** The words beside a crest (#1650): the tier and its division numeral, or the tier alone for Raisin and Jlorious. The crest draws the pips, placements and position. */
+/** The words beside a crest (#1650), which draws the pips, placements and position. */
 export function rankCaption(rank: VisibleRank | PeakBadge): string {
   if (rank.tier === "raisin" || rank.tier === "jlorious") return tierName(rank.tier);
   return `${tierName(rank.tier)} ${divisionNumeral(rank.division)}`;

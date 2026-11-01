@@ -25,7 +25,6 @@ export type RankCrestProps =
   // The ladder's headings and rows, which carry no pipsPerDivision.
   | { tier: GrapeTier; division?: number; size: RankCrestSize };
 
-/** Studs per Grape division: one more at each step from III to I, in every tier. */
 const DIVISION_STUDS: Readonly<Record<number, number>> = { 3: 1, 2: 2, 1: 3 };
 
 /** The one division rule (#1650): the studs, and one inner frame line fewer. */

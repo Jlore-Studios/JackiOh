@@ -348,17 +348,14 @@ export type DuosState = { readonly [duosStateBrand]: never };
 export type DuosCreateArgs = {
   seed: string;
   decks: { a1: readonly string[]; a2: readonly string[]; b1: readonly string[]; b2: readonly string[] };
-  /** Deal from these definitions instead of the registered catalog (tests). */
   catalog?: CardDefs;
   /** Each team's rules; absent, DUOS_HUMAN_TEAM for both. */
   teams?: { a: DuosTeamRules; b: DuosTeamRules };
   /** §9.9's per-seat handicaps; an absent seat is a human's. */
   handicaps?: Partial<Record<DuosSeat, Handicap>>;
-  /** R433: the seats whose deck was dealt rather than built. */
   dealt?: readonly DuosSeat[];
 };
 
-/** `error` is the engine's refusal, and then `state` is the input. */
 export type DuosReduceResult = { state: DuosState; events: DuosEvent[]; error?: string };
 
 function duosStateJson(state: DuosState): string {

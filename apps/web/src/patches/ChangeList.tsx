@@ -1,8 +1,7 @@
 // What one patch did to one card, as both screens print it (R388, R507), a value in R432's cost style.
-// A changed text prints whole, its new words bold and underlined as R277 marks a Radiant face (so the
-// mark does not rest on color alone), but teal with a double underline, never R277's gold nor R279's
-// dotted reference line. A screen reader hears "new:" and "removed:" before each mark (patches.css),
-// since `<ins>` and `<del>` alone are not announced by every screen reader.
+// New words are bold and underlined as R277 marks a Radiant face (so the mark does not rest on color
+// alone), but teal with a double underline, never R277's gold nor R279's dotted reference line. A screen
+// reader hears "new:" and "removed:" (patches.css), since not every one announces `<ins>` and `<del>`.
 
 import type { ReactElement, ReactNode } from "react";
 
@@ -12,7 +11,6 @@ import { isZhCn, t } from "../i18n/i18n.ts";
 import { NONE, NOT_RECORDED, type CardDelta, type FieldChange, type TextChange } from "./diff.ts";
 import { patchTestid } from "./testids.ts";
 
-/** A text with some stretches wrapped: `<ins>` for what a patch added, `<del>` for what it took away. */
 export function MarkedText({
   text,
   ranges,
@@ -139,7 +137,6 @@ function ChangeLine({ change }: { change: FieldChange }): ReactElement {
   );
 }
 
-/** Every change of one card in one patch; a card the patch added or removed says so. */
 export function ChangeList({ delta }: { delta: CardDelta }): ReactElement {
   if (delta.kind === "added") return <p className="patch-change-note">{t("Added in this patch.")}</p>;
   if (delta.kind === "removed") return <p className="patch-change-note">{t("Removed in this patch.")}</p>;

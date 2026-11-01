@@ -88,7 +88,6 @@ function passTurn(): void {
   });
 }
 
-/** Take turns until `ready` holds, then leave the device on the seat that has to act. */
 function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): void {
   const step = (left: number): void => {
     cy.gameState().then((state) => {
@@ -108,7 +107,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
   });
 
   it("R99/R44 cancels the attack, locks P1 out, animates the AI turn and ends it", () => {
-    // 1. Seat 2 sets My Pawn face-down.
     const myPawn = catalogId(96);
     advanceUntil(
       "p2 holds My Pawn on its own turn",
@@ -119,7 +117,6 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
 
     // §10.8/R33 hide the face-down trap's id from seat 1, so capture it here.
     cy.instanceAt("p2", "backrow", TRAP_LANE).then((trapId) => {
-      // 2. Seat 1 summons an available grinder.
       advanceUntil("p1 can summon a grinder", (state) => {
         if (state.active !== "p1") return false;
         const mana = peek(state, "p1").mana?.current ?? 0;
@@ -142,7 +139,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
         cy.playByName(grinder.name, { zone: { side: "you", row: "units", lane: GRINDER_LANE } });
 
         cy.instanceAt("p1", "units", GRINDER_LANE).then((attackerId) => {
-          // 3. Below R44 lethal, R99 must leave the trap armed; §4.2 makes the hero the only target.
+          // Below R44 lethal, R99 must leave the trap armed; §4.2 makes the hero the only target.
           const swing = (left: number): void => {
             cy.gameState().then((state2) => {
               expect(state2.result, "the grind did not end the game").to.eq(null);
@@ -166,10 +163,10 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
                   expect(heroHealth(after, "p2"), "a non-lethal swing deals its full attack").to.eq(
                     before - grinder.attack,
                   );
-                  // R99: the condition was not met, so the event did not spend the trap.
                   expect(
                     (peek(after, "p2").backrow ?? [])[TRAP_LANE - 1]?.id,
                     "R99: a non-lethal declaration leaves My Pawn armed in its zone",
+                  // R99: the condition was not met, so the event did not spend the trap.
                   ).to.eq(trapId);
                   expect(
                     (peek(after, "p2").graveyard ?? []).some((card) => card.defId === myPawn),
@@ -185,7 +182,7 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
           };
           swing(SWING_BUDGET);
 
-          // 4. R44 now reaches lethal; §4.2 fires the trap after exertion.
+          // R44 now reaches lethal; §4.2 fires the trap after exertion.
           advanceUntil("p1 can declare the lethal swing", (s) => {
             if (s.active !== "p1") return false;
             const unit = unitAt(s, "p1", GRINDER_LANE);
@@ -224,10 +221,10 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             cy.gameState().should((after) => {
               expect(heroHealth(after, "p2"), "the canceled attack dealt no damage").to.eq(health);
               expect(after.result, "the canceled swing did not end the game").to.eq(null);
-              // §5.1 spends the trap to its owner's graveyard.
               expect(
                 (peek(after, "p2").backrow ?? [])[TRAP_LANE - 1],
                 "My Pawn left the backrow when it fired",
+              // §5.1 spends the trap to its owner's graveyard.
               ).to.eq(null);
               expect(
                 (peek(after, "p2").graveyard ?? []).some((card) => card.defId === myPawn),

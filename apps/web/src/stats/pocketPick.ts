@@ -9,7 +9,7 @@ import type { PlayerStats } from "./model.ts";
 /** The card, the share of the player's games it was played in, and the base's. */
 export type PocketPick = { readonly id: string; readonly playerRate: number; readonly baseRate: number };
 
-/** A higher player-to-base ratio (cross-multiplied, so a base rate of 0 ranks first), then a higher player rate, then the lower id. */
+/** Cross-multiplied, so a base rate of 0 ranks first. */
 function beats(a: PocketPick, b: PocketPick): boolean {
   const ours = a.playerRate * b.baseRate;
   const theirs = b.playerRate * a.baseRate;
@@ -18,7 +18,6 @@ function beats(a: PocketPick, b: PocketPick): boolean {
   return a.id < b.id;
 }
 
-/** Null below `POCKET_PICK_MIN_GAMES` games or when no listed card qualifies. */
 export function pocketPick(stats: PlayerStats, rates: PlayRatesResponse): PocketPick | null {
   if (stats.games < POCKET_PICK_MIN_GAMES) return null;
   let best: PocketPick | null = null;

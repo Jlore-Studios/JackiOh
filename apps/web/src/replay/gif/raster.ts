@@ -35,7 +35,7 @@ export type Ctx2D = CanvasState &
   CanvasPathDrawingStyles &
   CanvasImageData;
 
-/** What a card face needs to be drawn: its name, type, rarity and procedural art (null for a Glitch). */
+/** A card face to draw; its art is null for a Glitch. */
 export type GifFace = { name: string; type: CardType; rarity: Rarity | null; art: ArtSpec | null };
 
 export type GifAssets = {
@@ -44,7 +44,6 @@ export type GifAssets = {
   portraits: Partial<Record<PortraitId, { art: ArtSpec; rim: string }>>;
 };
 
-/** What the worker is asked: the plan, its assets and the byte cap. */
 export type RasterRequest = { plan: GifPlan; assets: GifAssets; maxBytes: number };
 
 /** What the worker answers, in order: a `frame` per frame drawn, then one of the other four. */
@@ -95,7 +94,7 @@ const RIM_MIN = 2;
 const DEGREES = Math.PI / 180;
 const FULL_CIRCLE = Math.PI * 2;
 
-/** A 2D context over a canvas of the given size: an `OffscreenCanvas` where there is one, else a canvas element. */
+/** An `OffscreenCanvas`'s 2D context where there is one, else a canvas element's. */
 export function canvasContext(width: number, height: number): Ctx2D | null {
   if (typeof OffscreenCanvas === "function") {
     return new OffscreenCanvas(width, height).getContext("2d", { willReadFrequently: true });
@@ -297,7 +296,6 @@ function drawPortrait(ctx: Ctx2D, item: Extract<GifItem, { kind: "portrait" }>, 
   ctx.stroke();
 }
 
-/** One frame's items, in order, onto `ctx`. */
 export function drawFrame(ctx: Ctx2D, frame: GifFrame, assets: GifAssets): void {
   ctx.textBaseline = "middle";
   for (const item of frame.items) {
@@ -347,7 +345,7 @@ export type RasterOptions = {
   between?: () => Promise<void>;
 };
 
-/** The plan drawn and encoded: the GIF's bytes, or null when they pass `maxBytes`. */
+/** The GIF's bytes, or null when they pass `maxBytes`. */
 export async function rasterize(ctx: Ctx2D, plan: GifPlan, assets: GifAssets, options: RasterOptions): Promise<Uint8Array<ArrayBuffer> | null> {
   const encoder = createGifEncoder(plan.width, plan.height);
   for (const [index, frame] of plan.frames.entries()) {

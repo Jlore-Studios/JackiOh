@@ -1,10 +1,6 @@
-// R373: player-facing client text says Deck and Tribute, never library or sacrifice.
-// R432: a cost is "(N) Cost" as a noun and "costs (N)" as a verb.
-// R1320: player-facing text says Nerf and Buff, not Degrade or Upgrade.
-// R781000: Magnetic is Equip; the old word is left only where the past is shown as it was.
-// R278: the faction is Jlockeed; no name or face spells it with an h.
-// The guards parse strings, templates and JSX, not comments or lower-case machine words;
-// `cards/glossary.ts` puts SPEC text through `inPlayerWords`.
+// Player-facing text in today's words, one describe per ruling. R781000: the old word Magnetic is left
+// only where the past is shown as it was. The guards parse strings, templates and JSX, not comments or
+// lower-case machine words; `cards/glossary.ts` puts SPEC text through `inPlayerWords`.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -79,7 +75,6 @@ describe("R373 players read Deck and Tribute", () => {
   });
 });
 
-/** R432: player-visible legacy cost phrasings. */
 const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcosting \(/i, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\bcosts? $/i];
 
 function oldCostWords(text: string): boolean {
@@ -180,7 +175,6 @@ function saysOldTuningWord(text: string): boolean {
   return OLD_TUNING_WORDS.test(trimmed) && /[\sA-Z]/.test(trimmed);
 }
 
-/** Voice text as written in `card-audio.json5`. */
 function voiceLineTexts(): string[] {
   const file = readFileSync(join(SRC, "audio/card-audio.json5"), "utf8");
   return [...file.matchAll(/\btext:\s*"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1] ?? "");
@@ -273,7 +267,6 @@ describe("R724001 players read a patch's note in today's words", () => {
   });
 });
 
-/** R781000: the keyword's old name, in any form. */
 const OLD_EQUIP_WORD = /\bmagnetic\b/i;
 
 /** R781000: a player note may say the old name only to say what it became. */

@@ -191,7 +191,6 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string; seat: PlayerId | "" };
 
-/** Plays the first offered kind, ending and handing over turns until one is. */
 function playOffered(kinds: ReadonlySet<string>, played: Played, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered such a card inside the turn budget").to.be.greaterThan(0);

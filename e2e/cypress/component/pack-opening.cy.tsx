@@ -22,7 +22,6 @@ const TOUCH_PX = 44;
 /** #1999: a compact HUD takes at most this share of a phone's height. */
 const HUD_MAX_SHARE = 0.1;
 
-/** #1999: the two phones, portrait. */
 const PHONES = [
   { width: 375, height: 667 },
   { width: 360, height: 640 },

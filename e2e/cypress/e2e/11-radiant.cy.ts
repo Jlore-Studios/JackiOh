@@ -86,7 +86,6 @@ function passTurn(): void {
   });
 }
 
-/** Take turns until `ready`, leaving the device with the actor. */
 function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): void {
   const step = (left: number): void => {
     cy.gameState().then((state) => {
@@ -100,7 +99,6 @@ function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): 
   step(TURN_BUDGET);
 }
 
-/** Wait for the player to hold `defId` and afford its SPEC §8 cost. */
 function waitToPlay(player: PlayerId, defId: string): void {
   const cost = COSTS[defId] ?? 0;
   advanceUntil(`${player} can pay ${cost} for ${defId}`, (state) => {
@@ -157,17 +155,17 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
           cy.playCard(beanId, { answers: [{ kind: "hand", cards: [target.id] }] });
         });
 
-        // BUILD M5-T4's `radiantSet` confirms §5.2's hand flip.
         cy.get(`${ts(handCardId(target.id))}${RADIANT}`).should("exist");
         cy.gameState().then((after) => {
+        // BUILD M5-T4's `radiantSet` confirms §5.2's hand flip.
           const held = handOf(after, "p1").find((card) => card.id === target.id);
           expect(held?.radiant, "§5.2: Radiant is a flag on the instance").to.eq(true);
         });
       });
 
-      // #94 leaves Knockoff Temu as the sole candidate.
       waitToPlay("p1", GENNS_GREED);
       cy.playByName(nameOf(94));
+      // #94 leaves Knockoff Temu as the sole candidate.
 
       cy.gameState().then((state) => {
         const side = peek(state, "p1");

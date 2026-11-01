@@ -1,14 +1,12 @@
 // 36 — every Meditative card played once through the browser, with the set previewed (#552, MN09).
-//
 // The cards come from the catalog at run time (`crates/cards/catalog.json`): every Meditative entry a
 // deck may hold once the set is previewed (R1420), so a card a later part adds is played the day it
-// lands, with no list or fixture to edit. They are dealt into seeded /dev/hotseat games whose engine
-// previews the set (`cy.seedGame`'s `preview`, the WebAssembly module's `previewSets`), a few cards a
-// seat (support/playthrough.ts `SEAT_SHARE`, so no row fills), and played by that file's driver.
+// lands, with no list or fixture to edit. They are dealt a few a seat (support/playthrough.ts
+// `SEAT_SHARE`, so no row fills) into seeded /dev/hotseat games that preview the set (`cy.seedGame`'s
+// `preview`, the module's `previewSets`), and played by that file's driver.
 // A card cast as it is drawn (Meditative #37 CN in a Bottle, R58) is never played from a hand: it is
 // done once it lands in a graveyard. Prestige (Meditative #53, R1851003) De-Radiants a Radiant card,
-// so its seat is dealt CN in a Bottle too, which casts as it is drawn and leaves a Radiant card in hand.
-//
+// so its seat is dealt CN in a Bottle too, which leaves a Radiant card in hand.
 // After every play the animations and cues (which ride the runner's entries, SPEC §10.11) have run, the
 // log reads as English (`englishProblems`; a card shown in Chinese is named in Chinese, R1301), and the
 // card's hover preview prints no id or unfilled value (`noteProblems`). Each prompt a card opens is
@@ -110,9 +108,8 @@ function readInspect(selector: string, where: string): void {
 }
 
 /**
- * Whether the game is done with: every card played, a card won it (a Wincon, such as #8 Reach the
- * Summit's tenth Ascent: the cards it did not play go to the next game), a turn past the limit, or
- * two empty-handed ends with empty decks.
+ * Whether the game is done with: every card played, a card won it (a Wincon: the cards it did not
+ * play go to the next game), a turn past the limit, or two empty-handed ends with empty decks.
  */
 function finished(game: Game, step: PlayStep): boolean {
   if (game.toPlay.size === 0) return true;

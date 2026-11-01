@@ -15,7 +15,6 @@ import Game from "../../../apps/web/src/game/Game.tsx";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import { fullBoardView } from "../../../apps/web/src/test/fixtures.ts";
 
-/** A hand-sized card back box, 5:7. */
 const BACK_BOX = { width: 150, height: 210 } as const;
 
 /** The items of one kind: every entry but its default. */

@@ -33,7 +33,7 @@ export const routes = {
   practice: () => env("practiceRoute", "/practice"),
   /** R768000. */
   replays: () => env("replaysRoute", "/replays"),
-  /** §14: the account page, whose Dev tools toggle spec 45 opens. */
+  /** §14: spec 45 opens its Dev tools toggle. */
   account: () => env("accountRoute", "/account"),
   /** #1307. */
   collection: () => env("collectionRoute", "/collection"),
@@ -124,7 +124,7 @@ export type MenuViewport = (typeof viewports)[keyof typeof viewports];
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {
-  /** §2.6 L2, the engine's own (`crates/engine/src/config.rs`, generated into the web's wire layer). */
+  /** §2.6 L2, the engine's own (`crates/engine/src/config.rs`, via the web's wire layer). */
   DECK_SIZE,
   MAX_COPIES: 1,
   MAX_MANA: 4,

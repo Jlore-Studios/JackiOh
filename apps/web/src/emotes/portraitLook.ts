@@ -13,7 +13,6 @@ import {
   PORTRAIT_MOTE_MIN_PCT,
 } from "./config.ts";
 
-/** One portrait's colors. */
 export type PortraitLook = {
   /** The oval's own gradient background, light at the upper left to dark at the foot. */
   ground: readonly [string, string];

@@ -66,7 +66,6 @@ function byRate(a: RatedCard, b: RatedCard): number {
   return b.winRate - a.winRate || b.games - a.games || a.id.localeCompare(b.id);
 }
 
-/** Each set with games on the patch, highest pooled win rate first. */
 export function setRows(cards: readonly PublicCardStat[], minSample: number): SetRow[] {
   const sets = new Map<string, PublicCardStat[]>();
   for (const card of cards) {
@@ -102,7 +101,6 @@ export function setRows(cards: readonly PublicCardStat[], minSample: number): Se
 
 export type Leaders = { pooled: string | null; mean: string | null; median: string | null };
 
-/** The set with the highest of each measure, or null when no set has it. */
 export function leaders(rows: readonly SetRow[]): Leaders {
   const top = (measure: (row: SetRow) => number | null): string | null => {
     let best: SetRow | null = null;
@@ -126,7 +124,6 @@ export function changes(rows: readonly SetRow[], previous: readonly SetRow[]): M
   return out;
 }
 
-/** The cards `SET_STATS_OUTLIER_Z` or more standard errors from 50%, at most `SET_STATS_CARDS_LISTED` a side, furthest first. */
 export function outliers(
   cards: readonly PublicCardStat[],
   minSample: number,

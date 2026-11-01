@@ -15,13 +15,13 @@ import {
   type SettingsSection,
 } from "../../support/ux.ts";
 
-/** The tabs, in the order the dialog shows them (SECTIONS in apps/web/src/settings/SettingsPanel.tsx). */
+/** In the dialog's order (SECTIONS in apps/web/src/settings/SettingsPanel.tsx). */
 const TABS: readonly SettingsSection[] = ["gameplay", "visuals", "audio"];
 
-/** The audio controls' background-music switch (MUSIC_FLAGS in apps/web/src/audio/AudioControls.tsx). */
+/** From MUSIC_FLAGS in apps/web/src/audio/AudioControls.tsx. */
 const MUSIC_BACKGROUND = "audio-music-background";
 
-/** Where the audio store keeps its settings (`AUDIO_SETTINGS_KEY` in apps/web/src/audio/constants.ts). */
+/** `AUDIO_SETTINGS_KEY` in apps/web/src/audio/constants.ts. */
 const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
 
 const SYNC_TIMEOUT = 20_000;

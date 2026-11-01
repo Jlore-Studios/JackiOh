@@ -88,7 +88,6 @@ function serveFixtures(): void {
   });
 }
 
-/** The page does not scroll, either way. */
 function expectNoPageScroll(viewport: Viewport): void {
   cy.window({ log: false }).should((win) => {
     const where = `${String(viewport.width)}x${String(viewport.height)}`;

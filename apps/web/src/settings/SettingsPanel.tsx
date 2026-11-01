@@ -29,7 +29,7 @@ import "./settings.css";
 
 export type SettingsPanelProps = {
   onClose: () => void;
-  /** The controls other tasks mount. Defaults to `SETTINGS_SLOTS`. */
+  /** The controls other tasks mount. */
   slots?: readonly SettingsSlot[];
   /** Opens this tab ahead of the remembered one when it exists. */
   initialTab?: SettingsSectionId;

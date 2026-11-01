@@ -44,7 +44,6 @@ function config(seed: string): PracticeStartConfig {
   return { seed, difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" } };
 }
 
-/** A game started and conceded at once: the human loses, and the worker keeps it. */
 async function concededGame(host: PracticeHost, seed: string): Promise<void> {
   await host.request({ type: "start", config: config(seed) });
   const done = await host.request({ type: "act", action: { type: "concede" } });
@@ -177,7 +176,6 @@ describe("the online source", () => {
       const failure = await failureOf(onlineReplaySource(TOKEN, listing).page(0, REPLAY_PAGE_STEPS));
       expect(failure.reason).toBe(reason);
     }
-    // A refusal that names no reason of part 1's is an error with the server's own words.
     const nameless = onlineFailure(new ApiRequestError(422, { code: "replay_unavailable", message: "no reason given" }));
     expect([nameless.reason, nameless.message]).toEqual(["error", "no reason given"]);
   });
@@ -220,7 +218,7 @@ describe("the online source", () => {
       p1: { seat: DEFAULT_CARD_COSMETICS, cards: {} },
       p2: { seat: theirs, cards: { "core-004": { foil: item("foil") } } },
     });
-    // A later page adds its cards to what the earlier ones gave; a malformed entry is skipped.
+    // A later page adds to the earlier ones' cards; a malformed entry (seat p3) is skipped.
     await source.page(REPLAY_PAGE_STEPS, REPLAY_PAGE_STEPS);
     expect(source.loadouts?.()).toEqual({
       p1: { seat: DEFAULT_CARD_COSMETICS, cards: { "core-008": { fullArt: true } } },

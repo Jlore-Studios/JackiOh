@@ -777,7 +777,6 @@ describe("B44 a play's board pick on a phone held upright", () => {
       expect(bar.top, "below the hand").to.be.at.least(hand.bottom - EPSILON);
       expect(bar.top, "below the card that was tapped").to.be.at.least(lifted.bottom - EPSILON);
     });
-    // With no options, the prompt describes board targets within the bar.
     cy.get(ts("prompt-modal"))
       .find(".prompt-board-hint")
       .should("be.visible")

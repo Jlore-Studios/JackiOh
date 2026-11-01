@@ -369,7 +369,6 @@ describe("the board a replay draws", () => {
     // The one thing a click does is the hand's own lift of the card it touched, a look and not a move.
     expect(board.innerHTML.replaceAll(' data-lifted="true"', "")).toBe(before);
 
-    // Looking still works: resting the pointer on a card in hand opens it large.
     fireEvent.pointerEnter(screen.getByTestId(testid.handCard(hand.instanceId)), { pointerType: "mouse" });
     act(() => {
       vi.advanceTimersByTime(HOVER_DELAY_MS);
@@ -384,7 +383,6 @@ describe("the board a replay draws", () => {
     const board = shownBoard();
     expect(screen.queryByTestId("animation-queue")).toBeNull();
 
-    // Forward: the same board takes the next view, and the queue plays its events.
     await press(replayTestid.forwardStep);
     expect(shownStep()).toBe(animated);
     expect(shownBoard()).toBe(board);
@@ -394,7 +392,6 @@ describe("the board a replay draws", () => {
     expect(gaps()).toBe(0);
     expect(document.querySelectorAll("[data-event]").length, "the log has lines to read").toBeGreaterThan(0);
 
-    // Back: a fresh board on the earlier view, with nothing in flight.
     await press(replayTestid.backStep);
     expect(shownStep()).toBe(animated - 1);
     expect(shownBoard()).toBe(board + 1);
@@ -402,7 +399,6 @@ describe("the board a replay draws", () => {
     expect(gaps()).toBe(0);
     expect(document.querySelectorAll("[data-event]").length).toBeGreaterThan(0);
 
-    // A jump, forward or back, is the same.
     await jump(LAST);
     expect(shownBoard()).toBe(board + 2);
     expect(screen.queryByTestId("animation-queue")).toBeNull();
@@ -412,7 +408,6 @@ describe("the board a replay draws", () => {
     expect(screen.queryByTestId("animation-queue")).toBeNull();
     expect(gaps()).toBe(0);
 
-    // And a step forward after them carries on from the board they left.
     await press(replayTestid.forwardStep);
     expect(shownBoard()).toBe(board + 3);
   });
@@ -471,7 +466,6 @@ function withModifiersAt(at: number): ReplayStep[] {
   }));
 }
 
-/** `steps` with `pending` at step `at`, as that step's view carries it. */
 function withPendingAt(at: number, pending: PendingView): ReplayStep[] {
   return steps.map((step, index) => (index === at ? { ...step, view: { ...step.view, pending } } : step));
 }

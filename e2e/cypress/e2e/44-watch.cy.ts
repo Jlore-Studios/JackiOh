@@ -1,29 +1,16 @@
 // #1050 44: watching a friend's live game (#936, SPEC S7, §9.5 "Watching a friend"; B50, B56).
-//
-// Three accounts, because a watcher holds no seat (`watchable_in` refuses one that does): `one`
-// hosts an unranked room and is the friend watched (seat p1), `pending` joins it as seat p2, and
-// `two` is the friend who watches, in the browser. Neither seat attaches a socket (R744: a seat that
-// never attached starts no grace), so the match just stands while it is watched. `pending` is the
-// fixture account waiting at the invite gate, so `before` reseeds the server (R144) and redeems the
-// good code for it, which leaves nothing for a spec after this one: only spec 10 reads that account
-// and it reseeds first.
-//
-// Every frame read is one the watch screen's own socket received: an account is one watcher and a
-// newer socket replaces the older, so the spec opens none itself.
-//
-// "Full" (`SPECTATORS_PER_MATCH`) is not covered here: an account is one watcher, so filling a match
-// takes nine friend accounts and the E2E server seeds three. The server's own test covers it
-// (`b50_b51_a_full_match_is_forbidden_to_one_watcher_more`) and the client shows it as any other
-// `forbidden` (WatchRoute.test.tsx).
-//
-// The first view is due `SPECTATE_DELAY_MS` after the join, and a watcher who comes later is sent it
-// at once, so the waiting panel shows only to one who comes sooner. A page visit alone can take that
-// long, so the browser is on Play together before the join: `one` asks `two` to be friends, and `two`
-// accepts there just after it, which reads the friends list again with `one` in the match.
-//
-// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only,
-// as every spec outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed
-// at compile time, and the spec waits it out.
+// Three accounts, because a watcher holds no seat (`watchable_in` refuses one that does): `one` hosts an
+// unranked room and is the friend watched (seat p1), `pending` joins as seat p2, and `two` watches in the
+// browser. Neither seat attaches a socket (R744: a seat that never attached starts no grace), so the match
+// just stands while it is watched. `pending` is the fixture account waiting at the invite gate, so `before`
+// reseeds the server and redeems the good code for it: only spec 10 reads that account, and it reseeds first. The spec opens no socket itself: an account is one watcher and a
+// newer socket replaces the older.
+// "Full" (`SPECTATORS_PER_MATCH`) takes nine friend accounts and the E2E server seeds three: the server's
+// `b50_b51_a_full_match_is_forbidden_to_one_watcher_more` covers it, and WatchRoute.test.tsx its `forbidden`.
+// A watcher who comes after `SPECTATE_DELAY_MS` is sent the first view at once, so the waiting panel shows
+// only to one who comes sooner; a page visit alone can take that long, so the browser is on Play together
+// before the join. Networked (`E2E=1 cargo run --release -p jackioh-server`); daily only, as every spec
+// outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed at compile time.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
@@ -43,10 +30,10 @@ import {
   ts,
 } from "../../support/testids.ts";
 
-/** Play together's route, mirroring `paths.together` in apps/web/src/net/navigate.ts. */
+/** Mirrors `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
 
-/** The watch socket's path, `WATCH_PATH` in apps/web/src/together/WatchRoute.tsx. */
+/** `WATCH_PATH` in apps/web/src/together/WatchRoute.tsx. */
 const WATCH_SOCKET_PATH = "/ws/watch";
 
 /** The room's host is seat p1 (§9.5), so the friend watched sees the board from there. */
@@ -208,9 +195,8 @@ describe("44 watching a friend's live game", () => {
       cy.get(incomingRequestRow(oneId), { timeout: timeouts.view }).should("be.visible");
     });
 
-    // An unranked match: `one` hosts the room (seat p1), `pending` joins it (p2). No deck to bring:
-    // the server deals both seats one (R257). The seed fixes the deal (R143), and R1989000 pins the
-    // host to p1 beside it, so the spec keeps the seats it was written for.
+    // No deck to bring: the server deals both seats one (R257). The seed fixes the deal (R143), and R1989000
+    // pins the host to p1 beside it, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",

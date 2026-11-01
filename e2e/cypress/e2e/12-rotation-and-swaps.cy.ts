@@ -1,7 +1,7 @@
 // BUILD M8: R14 and §3.1 rotate each row's ten zones as one ring; crossing its center changes control (§3.2), not ownership (R12).
 // Only a face-down trap's controller sees it (R33, §10.8). R73 swaps each lane across the board, ownership intact.
 // R81 declared `direction` and `mode` choices travel in `play`, with no §10.6 prompt.
-// Fixtures: #1 Big D-fender, #20, #32 Prem Panther, #45 Deft Duelist, #56, #91 Fed Fauci and #96 My Pawn.
+// Fixtures: #1, #20, #32, #45, #56, #91 and #96.
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";
@@ -107,7 +107,6 @@ function passTurn(): void {
   });
 }
 
-/** Take turns until `ready`, leaving the device with the actor. */
 function advanceUntil(label: string, ready: (state: GameStateLike) => boolean): void {
   const step = (left: number): void => {
     cy.gameState().then((state) => {
@@ -125,7 +124,6 @@ function canPay(state: GameStateLike, player: PlayerId, cost: number): boolean {
   return (peek(state, player).mana?.current ?? 0) >= cost;
 }
 
-/** Play the held SPEC §8 card by id, preserving its pre-play id for later assertions. */
 function playWhenDrawn(
   player: PlayerId,
   defId: string,
@@ -199,16 +197,15 @@ function expectTrapHidden(instanceId: string, zone: ZoneRef, name: string): void
 
 // BUILD M5-T1 layout: overflow at both viewports.
 
-/** BUILD M5-T1 viewports. */
 const VIEWPORTS = [
   { label: "desktop", width: 1280, height: 720 },
   { label: "phone", width: 390, height: 844 },
 ] as const;
 
-/** BUILD M5-T1: each viewport must fit without clipping the tracked cards. */
 function expectFitsViewport(
   viewport: { label: string; width: number; height: number },
   cards: readonly string[],
+/** BUILD M5-T1: each viewport must fit without clipping the tracked cards. */
 ): void {
   cy.viewport(viewport.width, viewport.height);
   cy.get(ts(BOARD)).should("be.visible");
@@ -311,7 +308,6 @@ describe("BUILD M8 12 — Silly Silas rotates one step around the ring and Pocke
     // §10.5 puts Silas on field before its §8 #52 Cry rotates it.
     playWhenDrawn("p1", CARDS.sillySilas, {
       zone: { side: "you", row: "units", lane: 3 },
-      // R81: the declared direction travels in `modes`.
       answers: [{ kind: "direction", options: ["right"] }],
     }).then((id) => {
       ids.silas = id;

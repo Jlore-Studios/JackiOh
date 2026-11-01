@@ -1,5 +1,4 @@
-// The steps the replay player has been given so far (#511): pages of a `ReplaySource`, held by step
-// number, asked for only when a step is wanted and fetched ahead of the one shown. The player reads
+// The steps the replay player has been given so far (#511), held by step number. The player reads
 // every step through this and no source directly, so a page is fetched once however it is reached.
 
 import type { ReplayStep } from "@jackioh/engine";
@@ -11,11 +10,10 @@ import type { ReplaySource } from "./source.ts";
 
 export type StepCache = {
   readonly total: number;
-  /** The step, when a page has brought it. */
   get(index: number): ReplayStep | undefined;
   /** The step, fetching the page that holds it; rejects with a `ReplayFailure`. */
   load(index: number): Promise<ReplayStep>;
-  /** Starts the page after the shown step when its steps are not held yet. A failure is left for `load` to report. */
+  /** Starts the page after the shown step if not held yet; a failure is left for `load` to report. */
   prefetch(index: number): void;
   /** The first step of the next turn after `index`'s, or the last step when none follows. */
   nextTurn(index: number): Promise<number>;
@@ -97,14 +95,13 @@ export function createStepCache(source: ReplaySource): StepCache {
   };
 }
 
-/** A clip's first and last step, in order, the last no further than `REPLAY_GIF_MAX_STEPS` steps on (#513). */
+/** A clip's first and last step, in order, capped at `REPLAY_GIF_MAX_STEPS` steps (#513). */
 export function clampClip(a: number, b: number): [number, number] {
   const lo = Math.min(a, b);
   const hi = Math.max(a, b);
   return [lo, Math.min(hi, lo + REPLAY_GIF_MAX_STEPS - 1)];
 }
 
-/** The first and last step of the turn `index` is in, the clip clamped to its cap (#513). */
 export async function turnRange(cache: StepCache, index: number): Promise<[number, number]> {
   const turn = (await cache.load(index)).turn;
   let first = index;
@@ -114,7 +111,6 @@ export async function turnRange(cache: StepCache, index: number): Promise<[numbe
   return clampClip(first, last);
 }
 
-/** Steps `from` to `to`, both included, loading the pages that hold them (#513). */
 export async function loadClip(cache: StepCache, from: number, to: number): Promise<ReplayStep[]> {
   const steps: ReplayStep[] = [];
   for (let index = from; index <= to; index += 1) steps.push(await cache.load(index));

@@ -1,6 +1,5 @@
 // BUILD M8: P2's Sheepish interrupts then resumes P1's play (R1, R17, R23, R118, R427; §10.3).
-// #15 Me and Mr Token triggers it; #3 Right-house defender is the later play (#81 Radiant Saintess,
-// at (2) by #2220, costs more than the one mana Me and Mr Token leaves on player-turn 2).
+// #15 Me and Mr Token triggers it; #3 is the later play (#81 costs (2) by #2220, over the one mana left).
 // The trap checks hidden information (R33; CLAUDE.md rule 7, §10.8), the modifier face-up views (R169).
 
 import { seedFor } from "../../support/config.ts";
@@ -25,7 +24,6 @@ const CURVATURE_SEED = seedFor("03-curvature-4");
 /** #3, a choice-free (1) Unit in player 1's hand on player-turn 2 (R118). */
 const LATER_PLAY = "Right-house defender";
 
-/** §8 #77's card label. */
 const CURVATURE = "Professor Curvature";
 
 /** R48 / R65: exact text distinguishes a dormant discount from a live one. */
@@ -205,9 +203,9 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
           .find(MODIFIER_BADGE)
           .should("have.text", CURVATURE_DORMANT);
 
-        // The controller's next turn activates the existing badge.
         cy.advanceToTurn(5);
         ensureSeat("p1");
+        // The controller's next turn activates the existing badge.
         cy.get(ts(modifiersId("you"))).should("have.attr", "data-count", "1");
         cy.get(ts(modifiersId("you"))).find(modifierBadgeOf(modifierId)).should("exist");
         cy.get(ts(modifiersId("you"))).find(MODIFIER_BADGE).should("have.text", CURVATURE_DISCOUNT);

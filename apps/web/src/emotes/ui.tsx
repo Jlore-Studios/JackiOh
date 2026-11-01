@@ -28,7 +28,6 @@ export const VOICE_LABEL: Record<VoiceEmoteId, string> = {
  */
 const ARC_CURVE_PX = 3.5;
 
-/** The drop of the `index`th of `count` voice items on the arc. */
 export function arcDrop(index: number, count: number): number {
   const fromMiddle = index - (count - 1) / 2;
   return Math.round(ARC_CURVE_PX * fromMiddle * fromMiddle);

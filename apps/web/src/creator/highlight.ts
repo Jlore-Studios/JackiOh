@@ -1,5 +1,4 @@
-// The code view's syntax highlighting (#920). It reads Luau's lexical shape only and the kit's own
-// marks (`c:verb`, `n.key`, `Card`), never what a script means: the Luau module's check judges it.
+// The code view's syntax highlighting (#920): Luau's lexical shape and the kit's marks, never meaning.
 
 export type TokenKind = "comment" | "string" | "number" | "keyword" | "kit" | "param" | "name" | "punct" | "space";
 
@@ -30,7 +29,7 @@ const KEYWORDS = new Set([
   "while",
 ]);
 
-/** The patterns, tried in order at each position; the first to match there wins. */
+/** Tried in order at each position; the first to match there wins. */
 const RULES: readonly (readonly [TokenKind, RegExp])[] = [
   ["comment", /--\[(=*)\[[\s\S]*?(?:\]\1\]|$)/y],
   ["comment", /--[^\n]*/y],
@@ -82,7 +81,7 @@ export function tokenize(source: string): Token[] {
   return tokens;
 }
 
-/** The tokens line by line (a token across a line break is cut there), for a view that numbers its lines. */
+/** The tokens line by line (a token across a line break is cut there). */
 export function tokenLines(source: string): Token[][] {
   const lines: Token[][] = [[]];
   for (const token of tokenize(source)) {

@@ -41,7 +41,6 @@ type Phase = "waiting" | "flights" | "fill";
 /** Where a flight takes off and how far it travels to the HUD's center, in viewport pixels. */
 type Course = { x: number; y: number; dx: number; dy: number };
 
-/** The center of an element's box on the viewport. */
 function centerOf(element: Element): { x: number; y: number } {
   const box = element.getBoundingClientRect();
   return { x: box.left + box.width / 2, y: box.top + box.height / 2 };

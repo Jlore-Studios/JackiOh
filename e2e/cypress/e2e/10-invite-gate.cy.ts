@@ -122,8 +122,7 @@ describe("10 invite gate — a pending account", () => {
     ]) {
       expectWellFormedInviteCode(code);
     }
-    // R144: the server puts back the account this file activates and the code it spends, so the
-    // file passes run after run against one server, with no restart.
+    // R144: the server reseeds the account and code this file spends, so it passes run after run.
     cy.request<ReseedBody>({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).should((response) => {
       expect(response.status, "R144: an E2E server reseeds on demand").to.eq(200);
       expect(response.body.codes, "the good, expired and exhausted codes; never the missing one").to.deep.eq([
@@ -187,7 +186,7 @@ describe("10 invite gate — a pending account", () => {
 
     cy.visitAs(accounts.pending(), routes.deckbuilder());
     // The redirect is the gate's own read of /api/auth/me (net/gate.ts), just answered as pending.
-    // When it never comes, say which panel held the page: still checking, the gate's error, or no app.
+    // When it never comes, the message names the panel that held the page.
     cy.window().should((win) => {
       const shown = win.document.body.innerText.replace(/\s+/gu, " ").slice(0, 400);
       expect(win.location.pathname, `the gate sends a pending account to /invite; the page shows: ${shown}`).to.eq(
@@ -297,8 +296,7 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.needsInviteCode).to.eq(false);
     });
 
-    // Read R111's grant from the §9.1 ledger: `STARTER_CARDS` (R1310000), every one a non-token card
-    // of the catalog the server serves.
+    // Read R111's grant from the §9.1 ledger: `STARTER_CARDS` (R1310000).
     cy.request<CatalogBody>({ method: "GET", url: apiUrl("/api/catalog") }).then((response) => {
       for (const id of STARTER_CARDS) {
         const def = response.body.defs[id];
@@ -327,9 +325,9 @@ describe("10 invite gate — a pending account", () => {
       granted = JSON.stringify(entries);
     });
 
-    // R111 is idempotent; §9.4 makes repeat redemption an account-state conflict.
     redeem(inviteCodes.good()).should((response) => {
       expect(response.status, "an already-active account is 409, not a code failure").to.eq(409);
+    // R111 is idempotent; §9.4 makes repeat redemption an account-state conflict.
       expect(
         response.body.error?.message,
         "§9.4's identical error covers the three code kinds, not the account's own state",

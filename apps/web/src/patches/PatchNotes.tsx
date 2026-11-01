@@ -229,7 +229,7 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   );
 }
 
-/** R724001: a patch's note under the page's fixed headings; nothing when it has none or no line. */
+/** R724001: a patch's note under the page's fixed headings. */
 function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElement | null {
   const sections = note === undefined ? [] : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0);
   if (note === undefined || sections.length === 0) return null;
@@ -326,9 +326,8 @@ function PatchEntry({
 }
 
 /**
- * #2052: the detail's place while a card opened from a patch loads, or after it failed: its status line,
- * Try again when it failed, and Close. A dialog as the detail is (`useModalOverlay`), so Escape, the
- * scrim and Back close it too; a dialog's wait stays text (R2108000).
+ * #2052: the detail's place while a card opened from a patch loads, or after it failed. A dialog as the
+ * detail is (`useModalOverlay`), so Escape, the scrim and Back close it too; its wait stays text (R2108000).
  */
 function OpeningCard({ read, onClose }: { read: Exclude<Loaded<CardDef | null>, { status: "ready" }>; onClose: () => void }): ReactElement {
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -372,7 +371,7 @@ function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Pa
   return <OpeningCard read={read} onClose={onClose} />;
 }
 
-/** R724000: one release line as a bubble: its name, span and count, and, opened, its summary, technical changes and patches. */
+/** R724000: one release line as a bubble. */
 function ReleaseBubble({
   release,
   group,
@@ -454,7 +453,7 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   const defs: Loaded<CardDefs | null> = useLoaded(`defs:${newest?.version ?? ""}`, () =>
     newest === undefined ? Promise.resolve(null) : source.snapshot(newest.version),
   );
-  // The technical log is a patch's extra lines: until it loads, or if it fails, the page reads without them.
+  // Until the technical log loads, or if it fails, the page reads without its lines.
   const log = useLoaded("technical", () => source.technical());
   const technical = technicalLines(log.status === "ready" ? log.value : []);
   const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));

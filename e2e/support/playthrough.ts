@@ -32,7 +32,6 @@ type StateLike = {
 
 type Handle = Required<Pick<JackiOhDevHandle, "view" | "legal" | "setSeat">> & JackiOhDevHandle;
 
-/** The seat that owes the next move. */
 export function seatToAct(state: StateLike): PlayerId {
   if (state.mulligan !== undefined) {
     const owing = (["p1", "p2"] as const).find((seat) => state.mulligan?.[seat]?.keep === null);

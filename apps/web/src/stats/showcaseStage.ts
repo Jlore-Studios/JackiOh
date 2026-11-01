@@ -123,7 +123,6 @@ function stageEvents(animation: StageAnimation, defId: string, side: Side): read
   }
 }
 
-/** The beats a card on `side` plays for `animation`. */
 export function stageScript(animation: StageAnimation, defId: string, side: Side): StageScript {
   const view = stageView(defId, side);
   const beats = stageEvents(animation, defId, side).flatMap(([event, beatSide]) =>

@@ -27,7 +27,7 @@ export function memoryReplaySource(steps: readonly ReplayStep[]): ReplaySource {
 
 /**
  * Why a replay cannot be shown: part 1's two refusals (R768), `expired` (its log was purged, or the
- * practice game is no longer kept) and `error`, anything else, which carries its own message.
+ * practice game is no longer kept) and `error`, anything else.
  */
 export type ReplayFailureReason = ReplayRefusal | "expired" | "error";
 
@@ -48,13 +48,11 @@ export const REPLAY_FAILURE_TEXT: Record<Exclude<ReplayFailureReason, "error">, 
   expired: "This replay has expired.",
 };
 
-/** `cause` as a failure: itself when it is one, otherwise an `error` carrying the cause's message. */
 export function replayFailureOf(cause: unknown): ReplayFailure {
   if (cause instanceof ReplayFailure) return cause;
   return new ReplayFailure("error", cause instanceof Error ? cause.message : String(cause));
 }
 
-/** What the player tells the viewer: the reason's sentence, or an `error`'s own message. */
 export function replayFailureText(failure: ReplayFailure): string {
   return t(failure.reason === "error" ? failure.message : REPLAY_FAILURE_TEXT[failure.reason]);
 }

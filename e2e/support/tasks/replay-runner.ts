@@ -12,7 +12,7 @@ type Payload = {
   state: unknown;
   /** R180: pass handicaps to the fold untouched. */
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
-  /** R433: pass dealt seats to the fold untouched. */
+  /** R433: dealt seats, likewise. */
   dealt?: ("p1" | "p2")[];
   /** R915006: a practice game's custom cards, which the CLI folds through the card kit. */
   customCards?: unknown[];
@@ -33,7 +33,7 @@ function canonical(value: unknown): string {
   return `{${entries.join(",")}}`;
 }
 
-/** Canonical state's hash without `applied`, a Glitch-redrawn opening (R676) or Created cards' generators (R1956001), as `replay::hash_state` leaves them out. */
+/** Leaves out `applied`, a Glitch-redrawn opening (R676) and Created cards' generators (R1956001), as `replay::hash_state` does. */
 function hashState(state: unknown): string {
   const { applied: _applied, opening: _opening, generators: _generators, ...rest } = state as Record<string, unknown>;
   const text = canonical(rest);

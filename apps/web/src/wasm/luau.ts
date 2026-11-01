@@ -8,7 +8,6 @@
 
 import type { JackiohWasmLuauModule } from "./pkg/luau/jackioh_wasm_luau.js";
 
-/** The normal module's exports, as `index.ts` calls them, and the creator's check. */
 export type LuauBindings = {
   init(): void;
   catalog(): string;

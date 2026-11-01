@@ -1,9 +1,7 @@
-// The token picker (#1309, SPEC §14.5): both token bars, the cosmetic cycle's next step, the card
-// token's pick of an unowned card and the cosmetic tokens held. R1953001: a cosmetic token is spent in
-// the Collection (collection/TokenOffer.tsx), so the shop keeps no pick of one and links there.
-// THE SERVER DECIDES (CLAUDE.md rule 7): the bars, their sizes, the next step and the held counts
-// come from `GET /api/tokens`; a refused redemption shows the server's words through `t()` (R711000)
-// with nothing changed.
+// The token picker (#1309, SPEC §14.5). R1953001: a cosmetic token is spent in the Collection
+// (collection/TokenOffer.tsx), so the shop keeps no pick of one and links there. THE SERVER DECIDES
+// (CLAUDE.md rule 7): the bars, the next step and the held counts come from `GET /api/tokens`; a
+// refused redemption shows the server's words through `t()` (R711000) with nothing changed.
 
 import { useEffect, useId, useMemo, useState, type ReactElement } from "react";
 
@@ -155,7 +153,6 @@ export default function TokenPicker({
   );
 }
 
-/** The picker's body, once every read has answered. */
 function TokenBody({
   bars,
   collection,
@@ -171,10 +168,10 @@ function TokenBody({
   const [filter, setFilter] = useState<PoolFilter>({ ...DEFAULT_FILTER, ownedOnly: false });
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
-  // Whether the open detail asks before it spends the token.
   const [asking, setAsking] = useState(false);
   const questionId = useId();
   const locale = useLocale();
+  // Whether the open detail asks before it spends the token.
   const catalog = useMemo(() => ({ version: collection.catalogVersion, cards: CATALOG }), [collection.catalogVersion]);
   const unowned = useMemo(() => unownedCards(collection), [collection]);
   const pool = useMemo(() => tokenPoolIds(unowned, catalog, filter, sort), [unowned, catalog, filter, sort, locale]);

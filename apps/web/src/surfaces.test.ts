@@ -28,7 +28,7 @@ const SHEETS = files(SRC, ".css").map((path) => relative(SRC, path).replaceAll("
 const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//g, " ");
 
-/** The board's stylesheets, as palette.test.ts has them: index.css and game/'s, but the deck builder's and table.css. */
+/** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
@@ -46,7 +46,7 @@ const LAYERS = [...read("surfaces.css").matchAll(/^\s*--z-([a-z-]+):\s*(-?\d+);$
   Number(match[2]),
 ]);
 
-/** A background gradient the board keeps, each named beside it. Everything else goes flat. */
+/** The background gradients the board keeps. Everything else goes flat. */
 const GRADIENT_KEEP = [
   /^linear-gradient\(\s*to top,\s*var\(--bg-sunken\) 0%,\s*var\(--bg-sunken\) 36%,/, // B45's burn front: its sunken lower part eats the card as it climbs
   /repeating-(linear|radial|conic)-gradient/, // the locked-zone and facedown hatch weaves
@@ -60,7 +60,6 @@ const GRADIENT_KEEP = [
  * sand cracks are its own cosmetic (SandSurface's TAP_FAMILY); these rules keep their gradients and shadows. */
 const TABLE_RULE = /^\.(field|sand-mark(--\w+)?|tap-mark--\w+)$/;
 
-/** `css` without the rules whose every selector matches TABLE_RULE. */
 function withoutTable(css: string): string {
   return css.replace(/([^{}]+)\{[^{}]*\}/g, (rule, selector: string) => {
     const parts = selector.split(",").map((part) => part.trim());
@@ -74,7 +73,6 @@ const GLOW =
 /** The fuse spark's thrown particles (clock.css): offset dots in ember, not a shadow with a blur. */
 const SPARK_PARTICLE = /^-?[\d.]+px -?[\d.]+px 0( -?[\d.]+(px)?)? var\(--clock-ember/;
 
-/** Every `box-shadow` layer `css` states off the tokens, outside its comments. */
 function offShadow(css: string): string[] {
   const found: string[] = [];
   for (const match of css.matchAll(/(?<![\w-])box-shadow\s*:\s*([^;]+)/g)) {
@@ -104,7 +102,6 @@ function offShadow(css: string): string[] {
   return found;
 }
 
-/** Every `border-radius`, `z-index` and `background` gradient `css` states off the tokens. */
 function offSurface(css: string): string[] {
   const found: string[] = [];
   for (const match of css.matchAll(/(?<![\w-])(?:border(?:-top|-bottom)?-(?:left|right)-radius|border-radius)\s*:\s*([^;}]+)/g)) {

@@ -15,7 +15,6 @@ describe("R2095000 both boards styles", () => {
   it("R2095000 duos.css hides the Both toggle and falls back to one board below the phone breakpoint", () => {
     const text = css();
 
-    // Wide: a row of the two boards, the teammate's narrower so it draws smaller.
     expect(text).toMatch(/\.duos-both\s*\{\s*display:\s*flex;/);
     expect(text).toMatch(/\.duos-board-teammate\s*\{[^}]*flex:\s*0 0 40%;/);
 
@@ -24,8 +23,8 @@ describe("R2095000 both boards styles", () => {
     const wideHide = /\.duos-board\[data-both="true"\]\[data-showing="own"\] \.duos-portal\s*\{\s*display:\s*none;/;
     expect(text).toMatch(wideHide);
 
-    // Narrow: the toggle hides, the portal returns under the same selector (winning by source order),
-    // and only the showing board, which carries the rail (DuosBoard.test.tsx), draws.
+    // Narrow: the portal returns under the same selector (winning by source order), and only the
+    // showing board, which carries the rail (DuosBoard.test.tsx), draws.
     const narrow = text.slice(text.indexOf("@media (max-width: 600px)"));
     expect(text.search(wideHide)).toBeLessThan(text.indexOf("@media (max-width: 600px)"));
     expect(narrow).toMatch(/\.duos-both-toggle\s*\{\s*display:\s*none;/);

@@ -140,7 +140,6 @@ function signInThroughForm(email: string): void {
     cy.get('[data-testid="login-password"]').type(PASSWORD, { log: false });
     cy.get('[data-testid="login-submit"]').click();
 
-    // Issue #479: a sign-in lands on the main menu.
     cy.location("pathname", { timeout: 40_000 }).should("eq", "/");
     cy.get('[data-testid="landing-account"]', { timeout: 40_000 }).should("exist");
     cy.get('[data-testid="login-error"]').should("not.exist");
@@ -364,7 +363,6 @@ function signInThroughForm(email: string): void {
     cy.get('[data-testid="board"]', { timeout: 60_000 }).should("exist");
   });
 
-  /** The account screen: who is signed in, their record, and signing out. */
   it("the account screen shows who you are signed in as, and your record", () => {
     signInThroughForm(P1);
     cy.visit("/account");
@@ -390,7 +388,6 @@ function signInThroughForm(email: string): void {
       expect(win.localStorage.getItem("jackioh.session"), "and none is left in localStorage").to.eq(null);
     });
 
-    // And the gate now refuses a guarded screen.
     cy.visit("/decks");
     cy.location("pathname", { timeout: 40_000 }).should("eq", "/login");
   });

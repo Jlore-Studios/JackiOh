@@ -1,6 +1,5 @@
-// BUILD M9-T12 `29-animated-trap.cy.ts`: P2's Tesla animates during P1's turn (R383).
-// #77 Professor Curvature triggers it; #8 Mr. Vanilla arrives later and is not hit (R831007), and
-// #11 Tempo Timmy triggers it while #62 Friend of Felinors fills the unit row.
+// BUILD M9-T12: P2's Tesla animates during P1's turn (R383).
+// #77 triggers it; #8 arrives later and is not hit (R831007); #11 triggers it while #62 fills the unit row.
 // Read each seat's DOM only (CLAUDE.md rule 7).
 
 import { seedFor } from "../../support/config.ts";
@@ -26,7 +25,6 @@ const HERO_HEALTH = 30;
 /** Tesla animates into its own lane when open (R383). */
 const TESLA_LANE = 3;
 
-/** BUILD M5-T3: act from the required hotseat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     if (handle.seat !== player) cy.handOver();

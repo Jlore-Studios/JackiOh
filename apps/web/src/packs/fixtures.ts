@@ -1,12 +1,11 @@
 // Fixture responses for the pack screen's tests and its component spec (#1308), as the server's JSON.
-// Neither uses the shipped numbers, so a test that finds one on screen has found the response's value
-// and not a copy of the server's config.
+// Their numbers are not the shipped ones, so a test that finds one on screen read the response.
 
 import { GLOBAL_PACK_NAME, PACK_PRICE_JLORE, PACK_SLOTS } from "@jackioh/server-config";
 
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 
-/** `GET /api/packs` for an account holding one global pack and two Core packs. */
+/** `GET /api/packs`. */
 export function packsInfo(): PacksResponse {
   return {
     price: PACK_PRICE_JLORE,
@@ -26,10 +25,7 @@ export function packsInfo(): PacksResponse {
   };
 }
 
-/**
- * `POST /api/packs/open` for a Core pack with a Mythic, an Epic, a cosmetic, a bar and a card, the
- * duplicate adding its 4 points to both token bars without filling either (R1953000).
- */
+/** `POST /api/packs/open`: the duplicate adds its 4 points to both token bars, filling neither (R1953000). */
 export function openedPack(): OpenedPackResponse {
   return {
     pack: "Core",

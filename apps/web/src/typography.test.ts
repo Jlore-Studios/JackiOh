@@ -100,7 +100,6 @@ function parseSheet(css: string): Sheet {
   return sheet;
 }
 
-/** Selector text with quotes dropped and the whitespace that carries no meaning removed. */
 function normSelector(selector: string): string {
   return selector
     .replace(/['"]/g, "")
@@ -117,7 +116,7 @@ function sheet(path: string): Sheet {
   return parseSheet(readFileSync(join(SRC, path), "utf8"));
 }
 
-/** The declarations every rule listing `selector` (compared normalized) gives it, later rules winning. */
+/** The declarations every rule listing `selector` gives it, later rules winning. */
 function declsFor(parsed: Sheet, selector: string): Map<string, string> {
   const wanted = normSelector(selector);
   const merged = new Map<string, string>();

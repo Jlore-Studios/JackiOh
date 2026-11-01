@@ -123,11 +123,9 @@ function waitForMyTurn(): void {
 // The view fingerprint.
 
 type ViewFingerprint = {
-  /** Every `data-testid` in the document, sorted. */
   testids: string[];
-  /** The open prompt's kind, or null when none is open (BUILD M5-T4 `data-prompt-kind`). */
+  /** BUILD M5-T4 `data-prompt-kind`. */
   promptKind: string | null;
-  /** Per-side counters and mana, read through the testids support/testids.ts builds. */
   counters: Record<string, string>;
   /** R169 badges include captions: R48's suffix is computed when the view is read. */
   modifiers: Record<string, string[]>;
@@ -271,7 +269,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     cy.endTurn();
     seatTwoEndsTurn();
 
-    // Player-turn 7: the prompt is over a populated badge list.
     cy.waitForPrompt("discover");
 
     // R169's badge must be present for this self-comparison; R48's suffix is now gone.
@@ -350,7 +347,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       cy.get(ts(zoneId("you", "backrow", lane))).should("exist");
     }
 
-    // The clock kept running.
     cy.then(() => {
       cy.wsPlayer({ action: "messages", name: SEAT_TWO }).should((result) => {
         const seen = (result.messages ?? []).filter((message) => message.type === "clock").length;
@@ -414,8 +410,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       waitForMyTurn();
     });
 
-    // §9.5: the grace countdown is stored on the match so both clients show it: with seat 2's socket
-    // dropped, seat 1's board names whose reconnect window it counts down.
+    // §9.5: the grace countdown is stored on the match so both clients show it.
     cy.then(() => {
       cy.wsPlayer({ action: "disconnect", name: SEAT_TWO });
     });
@@ -433,7 +428,6 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       ).to.be.at.most(DISCONNECT_GRACE_SECONDS * 1000);
     });
 
-    // Seat 2 comes back inside the window, and the line goes with its grace.
     cy.then(() => {
       cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
     });

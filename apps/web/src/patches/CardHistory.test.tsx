@@ -174,8 +174,7 @@ describe("R388 the History section over the real history", () => {
     const versions = entries.map((element) => element.dataset.version);
     // Newest first, and a promotion that touches the Mask prepends (R646): the shipped five are the tail.
     expect(versions.slice(-5)).toEqual(["v0.2.2", "v0.2.0", "v0.1.1", "v0.1.0d", "v0.1.0"]);
-    // Issue #218's v0.2.5 removes the Mask's Animated face: pending today as a fragment, once
-    // promoted its entry sits above the v0.2.3 one it undoes.
+    // Issue #218's removal of the Animated face, once promoted, sits above the v0.2.2 entry it undoes.
     if (versions.includes("v0.2.3")) expect(versions.indexOf("v0.2.3")).toBeLessThan(versions.indexOf("v0.2.2"));
     const cost = within(entry("v0.2.0")).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
     expect(cost).toHaveTextContent("(2) Cost → becomes (1) Cost");

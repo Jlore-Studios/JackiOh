@@ -135,7 +135,6 @@ function sameJson(a: unknown, b: unknown): boolean {
   return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
 
-/** Whether the draft differs from the card it was read from. */
 export function isDirty(draft: Draft, saved: CustomCard | null): boolean {
   if (saved === null) return true;
   const card = cardOf(draft);

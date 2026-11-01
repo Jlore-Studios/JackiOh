@@ -1,7 +1,7 @@
 // Every number and key the player statistics state (CLAUDE.md rule 9; SPEC R639), the browser's own: the
 // engine owns the rules numbers, the server a game record's (SPEC §9.11, R376). The statistics stay on the device.
 
-/** localStorage (stats/store.ts's shape), read and written inside try/catch. */
+/** localStorage, in stats/store.ts's shape. */
 export const PLAYER_STATS_KEY = "jackioh.stats.v1";
 
 /** The stored shape's version; anything else reads as no statistics. */
@@ -53,7 +53,7 @@ export const POCKET_PICK_MIN_PLAYS = 3;
 export const CARD_STATS_MIN_SAMPLE = 20;
 
 
-/** R654: the players tab's search debounce before it asks the server, in ms. */
+/** R654: the players tab's search debounce, in ms. */
 export const PLAYER_SEARCH_DEBOUNCE_MS = 300;
 
 /** R1966000: how many standard errors from 50% a card's win rate must be for the Sets tab to count it strong or weak. */

@@ -20,7 +20,7 @@ const SHEETS = files(SRC, ".css").map((path) => relative(SRC, path).replaceAll("
 const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 const codeOf = (sheet: string): string => read(sheet).replace(/\/\*[\s\S]*?\*\//g, " ");
 
-/** The board's stylesheets, as palette.test.ts has them: index.css and game/'s, but the deck builder's and table.css. */
+/** The board's stylesheets, as palette.test.ts has them. */
 const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );
@@ -81,7 +81,6 @@ function layers(value: string): string[] {
   return out;
 }
 
-/** Every `name: value` in `css` whose name is one of `names`, its whitespace collapsed. */
 function decls(css: string, names: string): { name: string; value: string }[] {
   return [...css.matchAll(new RegExp(`(?<![\\w-])(${names})\\s*:\\s*([^;{}]+)`, "g"))].map((match) => ({
     name: match[1] ?? "",
@@ -91,8 +90,7 @@ function decls(css: string, names: string): { name: string; value: string }[] {
 
 const KEYFRAMES = /@(?:-webkit-)?keyframes\s+[\w-]+\s*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g;
 
-/** Every transition or animation layer in `css` naming no curve or one of its own. A keyframe
- * stop cannot read a var() (the browser falls back to `ease`), so it spells a curve's value out. */
+/** A keyframe stop cannot read a var() (the browser falls back to `ease`), so it spells a curve's value out. */
 function offCurve(css: string): string[] {
   const values = new Set(CURVES.map((curve) => curve[1]));
   const found: string[] = [];
@@ -113,7 +111,7 @@ function offCurve(css: string): string[] {
 /** BUILD's durations: the event table's, in animations.css (animations.ts, M5-T4). */
 const BUILD_DURATION = /calc\(\d+ms \* var\(--anim-scale\) \* var\(--anim-squeeze, 1\)\)/g;
 
-/** Every non-zero time a duration or shorthand in `css` states that is no token, not BUILD's and not fed in by a var(). */
+/** The non-zero times in `css` that are no token, not BUILD's and not fed in by a var(). */
 function ownTimes(sheet: string, css: string): string[] {
   const found: string[] = [];
   for (const decl of decls(css, "transition|transition-duration|animation|animation-duration")) {

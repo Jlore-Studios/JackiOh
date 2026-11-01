@@ -1,8 +1,7 @@
 // BUILD M8: each picker is answered whether it is a `play` choice or a `PendingChoice` (R81, R123; §10.6).
 // Mulligans are simultaneous per seat (R9, R265; §2.1, §10.2); short mode menus use Discover.
 // Seeded one-kind specs avoid the hand cap (R4; §2.4).
-// Fixtures: #7 Jewelosco Scarab, #15 Me and Mr Token, #17 Flood, #24 Efficiency Dividend, and
-// #30 Archivist cover choices; #46 Suppressive Aura, #55 Lava Golem, and #67 Zoomerbin Oomen cover zones.
+// Fixture cards #7, #15, #17, #24 and #30 cover choices; #46, #55 and #67 cover zones.
 
 import { constants, seedFor } from "../../support/config.ts";
 import {
@@ -60,7 +59,6 @@ function pendingOptions(): Cypress.Chainable<NonNullable<PendingPeek["options"]>
   });
 }
 
-/** BUILD M5-T3: hand the hotseat to the actor. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     expect(handle.seat, "window.__jackioh.seat (the hotseat handle names the seat holding it)").to.not.eq(
@@ -74,7 +72,7 @@ function openGame(seed: string, mulligan: "keep" | "manual" = "keep"): void {
   cy.seedGame({ seed, a: "02-prompts-a", b: "02-prompts-b", mulligan });
 }
 
-/** Reach player 1's turn `k` (odd player-turn; §10.1) with its mana (§2.3). */
+/** Reach player 1's turn `k` (odd player-turn; §10.1). */
 function toP1Turn(k: number, budget = 12): void {
   cy.gameState().then((state) => {
     expect(budget, `player 1's turn ${k} is reachable inside the budget`).to.be.greaterThan(0);
@@ -88,7 +86,6 @@ function toP1Turn(k: number, budget = 12): void {
   });
 }
 
-/** M5-T2: card click starts the R81 play. */
 function select(name: string): void {
   cy.handCardByName(name).then((instanceId) => {
     cy.get(ts(handCardId(instanceId))).click();
@@ -133,10 +130,10 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
         .should("have.length", hand.length);
       cy.answerPrompt("mulligan", { cards: returned, submit: true });
 
-      // R266: the first answer is sealed without moving its hand.
       cy.gameState().should((mid) => {
         expect(mid.pending, "still no `state.pending` while player 2 owes its mulligan").to.eq(null);
         expect(mid.mulligan?.p1.keep, "R266: player 1's sealed answer is the ids it keeps").to.deep.eq(kept);
+      // R266: the first answer is sealed without moving its hand.
         expect(mid.mulligan?.p2.keep, "player 2 still owes its own").to.eq(null);
         expect(handOf(mid, "p1"), "R266: a sealed answer changes no hand yet").to.deep.eq(hand);
         expect(mid.phase, "the game is still in the mulligan").to.eq("mulligan");
@@ -175,10 +172,10 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     openGame(SEEDS.zone);
     ensureSeat("p1");
 
-    // A permanent chooses an unlocked zone (§3.2).
     select("Zoomerbin Oomen");
     pickerOpensOnce("zone");
     cy.gameState().should((state) => {
+    // A permanent chooses an unlocked zone (§3.2).
       expect(state.pending, "R81: a zone is a play choice, so nothing is paused").to.eq(null);
     });
 
@@ -316,10 +313,10 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 4 } });
 
     toP1Turn(3);
-    // Identify the token by lane because its name occurs in the card text.
     cy.instanceAt("p1", "units", 1).then((mrToken) => {
       cy.instanceAt("p1", "units", 3).then((timmy) => {
         cy.instanceAt("p1", "units", 4).then((vanilla) => {
+    // Identify the token by lane because its name occurs in the card text.
           select("Lava Golem");
           pickerOpensOnce("tribute");
           cy.gameState().should((state) => {

@@ -127,7 +127,6 @@ const KINDS: readonly Kind[] = [
   choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"]),
 ];
 
-/** Opens the kind's sheet: open on mount, or a play-time choice opened by a tap on the card in hand. */
 function openSheet(entry: Kind): void {
   mount(entry.view(), entry.legal);
   if (entry.open !== undefined) cy.get(entry.open).click();

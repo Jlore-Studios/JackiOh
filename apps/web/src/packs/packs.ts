@@ -176,7 +176,6 @@ export function playStinger(rarity: PrintedRarity): void {
   }
 }
 
-/** A reveal's effects on the card at `testid`. */
 export function revealCues(rarity: PrintedRarity, testid: string, intensity: number): FxCue[] {
   const at = tid(testid);
   switch (rarity) {

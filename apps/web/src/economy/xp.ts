@@ -14,7 +14,6 @@ export const LEVEL_POP_MS = 450;
 /** Where a track stands; `levelXp` and `xpToNext` are null on the last level (R1302005). */
 export type TrackPoint = { level: number; xp: number; levelXp: number | null; xpToNext: number | null };
 
-/** A level a game reached and what it paid. */
 export type LevelReached = { level: number; rewards: TrackRewards };
 
 /** How far a game moved one set's track: where it stood before and after, and each level it paid, in order. */
@@ -23,7 +22,6 @@ export type TrackGain = { setId: SetName; before: TrackPoint; after: TrackPoint;
 /** A quest the game completed (§14.9), with what it paid. */
 export type QuestPaid = { questId: string; title: string; jlore: number; xp: number };
 
-/** What one game paid its account. */
 export type GameEconomy = {
   jlore: number;
   xp: number;

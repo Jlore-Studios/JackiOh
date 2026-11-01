@@ -1,6 +1,5 @@
-// R1141000, issue #1160: a replay file the page wrote opens again. `parseReplayJsonFile` gives back the
-// steps `replayJsonFile` was given, in order, and refuses anything but the documented shape of this
-// build's catalog, under named caps; `memoryReplaySource` pages them like the source they came from.
+// R1141000, issue #1160: a replay file the page wrote opens again; anything but the documented shape of
+// this build's catalog is refused, under named caps.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import { describe, expect, it } from "vitest";
@@ -66,7 +65,6 @@ describe("R1141000 opening a downloaded replay", () => {
     const backward = await walk(original, "previousTurn", last);
     expect(backward.length).toBeGreaterThan(3);
     expect(await walk(opened, "previousTurn", last)).toEqual(backward);
-    // A page holds 1 to `count` steps from `from`, and none past the end.
     const source = memoryReplaySource(steps);
     expect(await source.page(2, 3)).toEqual(steps.slice(2, 5));
     expect(await source.page(steps.length, 3)).toEqual([]);

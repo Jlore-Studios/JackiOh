@@ -21,7 +21,6 @@ const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
   "core-092",
 ]);
 
-/** Player-turn budget for finding an offered unit. */
 const TURN_BUDGET = 8;
 
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
@@ -93,7 +92,6 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string };
 
-/** Ends turns until a unit is offered and plays it, clearing the log just before its click. */
 function playOfferedUnit(played: Played, beforePlay: () => void, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered a unit inside the turn budget").to.be.greaterThan(0);

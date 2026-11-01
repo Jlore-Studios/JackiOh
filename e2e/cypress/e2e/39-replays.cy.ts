@@ -94,7 +94,6 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
       cy.wsPlayer({ action: "awaitView", name: SEAT_TWO, where: { hasResult: true } });
     });
 
-    // Watch the replay: step 0, a step forward and back, and Back to the board and its result panel.
     cy.get(ts(MATCH_WATCH_REPLAY), { timeout: timeouts.view }).click();
     stepForwardAndBack();
     cy.get(ts(REPLAY_BACK)).click();
@@ -105,7 +104,6 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
     cy.get(ts(REPLAY_BACK)).click();
     cy.get(ts(MATCH_WATCH_REPLAY), { timeout: timeouts.view }).should("be.visible");
 
-    // The recent games list the match, and open its replay at step 0.
     cy.then(() => {
       cy.visitAs(seatOne, routes.replays(), { onBeforeLoad: spyOnDownloads });
     });

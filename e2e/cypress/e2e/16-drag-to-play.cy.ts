@@ -157,7 +157,6 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     cy.get(ts(SETTINGS_PANEL)).should("not.exist");
     cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "off");
 
-    // Reload restores the same seed, decks, and setting.
     cy.reload();
     cy.jackioh().should((handle) => {
       expect(handle.seed, "the same seed after the reload").to.eq(SEED);

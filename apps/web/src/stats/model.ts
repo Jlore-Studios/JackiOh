@@ -27,7 +27,6 @@ export const CARD_COUNTERS = [
 ] as const;
 export type CardCounter = (typeof CARD_COUNTERS)[number];
 
-/** R1743000: the counters a game's log adds to a card's total. */
 export const SUMMED_COUNTERS = [
   "played",
   "playedAgainst",
@@ -49,10 +48,7 @@ export type SummedCounter = (typeof SUMMED_COUNTERS)[number];
 export const MAX_COUNTERS = ["biggestHit", "overkill"] as const;
 export type MaxCounter = (typeof MAX_COUNTERS)[number];
 
-/**
- * Per-card viewer counts: each of `GameLog`'s, summed or kept at its maximum across games (R1582000,
- * R1743000), and the games won and lost with the card played.
- */
+/** Per-card viewer counts, summed or kept at their maximum across games (R1582000, R1743000). */
 export type CardCounters = Readonly<Record<CardCounter, number>>;
 
 export const NO_COUNTS: CardCounters = Object.freeze({
@@ -85,7 +81,6 @@ export type PlayerStats = {
   readonly cards: Readonly<Record<string, CardCounters>>;
   /** R1743000: the games won in a row now; a loss or a draw resets it. */
   readonly streak: number;
-  /** R1743000: the most games won in a row. */
   readonly bestStreak: number;
   /** R1743000: the most turns any finished game ran. */
   readonly longestGame: number;
@@ -120,17 +115,12 @@ export type GameLog = {
   readonly sprung: Readonly<Record<string, number>>;
   /** The player's Units standing when a game they won ended. */
   readonly survived: Readonly<Record<string, number>>;
-  /** The damage the player's cards dealt. */
   readonly damageDealt: Readonly<Record<string, number>>;
-  /** The largest single hit of each of the player's cards. */
   readonly biggestHit: Readonly<Record<string, number>>;
   /** The most by which one hit of each of the player's cards went past its target's health. */
   readonly overkill: Readonly<Record<string, number>>;
-  /** The attacks the player's cards declared. */
   readonly attacks: Readonly<Record<string, number>>;
-  /** The healing the player's cards caused. */
   readonly healing: Readonly<Record<string, number>>;
-  /** The player's draws that showed the card. */
   readonly drawn: Readonly<Record<string, number>>;
   /** The player's cards made Radiant. */
   readonly radiant: Readonly<Record<string, number>>;

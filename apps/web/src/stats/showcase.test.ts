@@ -219,7 +219,6 @@ describe("R1743000 a token is never a stat's card", () => {
     const tokenPick: PocketPick = { id: TOKENS[0], playerRate: 0.9, baseRate: 0.1 };
     const stats = showcaseStats(WITH_TOKENS, tokenPick, seeded(4));
     const without = showcaseStats(RICH, null, seeded(4));
-    // Tokens change nothing: the same 34 stats, on the same cards with the same words.
     expect(seen(stats)).toEqual(seen(without));
     expect(stats.map((stat) => stat.key)).toEqual(SHOWCASE_KEYS.filter((key) => key !== "pocketPick"));
     for (const stat of stats) expect(CATALOG[stat.cardId]?.token).toBe(false);
@@ -324,7 +323,6 @@ describe("R1743000 the new stats", () => {
     // A better share beats a bigger sample, and a count past the plays is capped at them.
     expect(statOf(tally({ ...base, "core-005": { played: SHOWCASE_MIN_PLAYS, destroyed: SHOWCASE_MIN_PLAYS } }), "glassCannon")?.cardId).toBe("core-005");
     expect(statOf(tally({ "core-001": { played: 5, destroyed: 9 } }), "glassCannon")?.line()).toBe("destroyed 5 of the 5 times you played it");
-    // Below the floor, never destroyed, or no plays: left out.
     expect(statOf(tally({ "core-002": base["core-002"] }), "glassCannon")).toBeUndefined();
     expect(statOf(tally({ "core-001": { played: 10 }, "core-002": { destroyed: 4 } }), "glassCannon")).toBeUndefined();
   });
@@ -469,7 +467,6 @@ describe("R1743000 the new stats", () => {
     const all = counting();
     showcaseStats(tally({ "core-001": { played: 1, seen: 3 } }), null, all.random);
     expect(all.calls()).toBe(3);
-    // The stats are a function of the tally and the seed.
     expect(seen(showcaseStats(RICH, null, seeded(5)))).toEqual(seen(showcaseStats(RICH, null, seeded(5))));
   });
 
@@ -502,7 +499,6 @@ describe("R1743000 the new stats", () => {
     expect([comeback?.cardId, comeback?.line()]).toEqual(["core-003", "won 9 of the 11 games you played it in"]);
     expect([jinx?.cardId, jinx?.line()]).toEqual(["core-005", "lost 7 of the 9 games you played it in"]);
     expect([comeback?.animation, jinx?.animation]).toEqual(["radiant", "death"]);
-    // Under the floor, or with nothing won (or lost): left out.
     expect(statOf(tally({ "core-004": base["core-004"], "core-007": base["core-007"] }), "comebackKid")).toBeUndefined();
     expect(statOf(tally({ "core-004": base["core-004"], "core-007": base["core-007"] }), "jinx")).toBeUndefined();
     expect(statOf(tally({ "core-001": { playedInLoss: 8 } }), "comebackKid")).toBeUndefined();
@@ -576,7 +572,6 @@ describe("R1743000 the bag", () => {
         expect(bag.shown).not.toBe(last);
         last = bag.shown;
       }
-      // A bag spent on exactly one stat refills without it.
       const spent: ShowcaseBag = { shown: "toppled", left: [] };
       expect(nextInBag(spent, ["toppled", "coveted"], seeded(seed)).shown).toBe("coveted");
     }

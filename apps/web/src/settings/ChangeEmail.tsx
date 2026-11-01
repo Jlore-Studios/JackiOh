@@ -1,6 +1,5 @@
 // Email changes are confirmed by the auth provider (R663; SPEC §9.2); the address changes only
-// when its link returns to `/login` (`AUTH_NOTICES.emailChanged`). Provider failures surface as
-// `AuthError`; a rejected expired token is renewed once (R194).
+// when its link returns to `/login` (`AUTH_NOTICES.emailChanged`).
 
 import { useState, type FormEvent, type ReactElement } from "react";
 
@@ -26,7 +25,7 @@ export const changeEmailTestid = {
   error: "settings-email-error",
 } as const;
 
-/** Reads the unverified `email` claim for display only; null if unreadable. */
+/** Reads the unverified `email` claim, for display only. */
 export function tokenEmail(token: string): string | null {
   const payload = token.split(".")[1];
   if (payload === undefined) return null;
@@ -45,7 +44,7 @@ function failureMessage(cause: unknown): string {
   return cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service;
 }
 
-/** The request, renewed once if the provider refused the token as expired (R194). */
+/** Renewed once if the provider refused the token as expired (R194). */
 async function sendChange(email: string): Promise<void> {
   const session = readSession();
   if (session === null) throw new AuthError("sessionEnded");
@@ -66,7 +65,7 @@ export default function ChangeEmail(): ReactElement | null {
   const session = readSession();
   if (session === null || authConfig() === null) return null;
   const currentEmail = tokenEmail(session.accessToken);
-  // "Signed in as a@b.c.": split around the address, so English keeps the text nodes it had.
+  // "Signed in as a@b.c.": split around the address, so English keeps its text nodes.
   const [signedInBefore = "", signedInAfter = ""] = t("Signed in as {email}.").split("{email}");
 
   async function onSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {

@@ -14,13 +14,10 @@ export type CustomCardsState =
   | { kind: "none" }
   | { kind: "loading" }
   | { kind: "ready"; cards: CustomCard[]; limit: number }
-  /** The read failed; `retryAfterMs` is the wait a rate limit stated (R192), which Try again counts down (#1691). */
+  /** `retryAfterMs` is the wait a rate limit stated (R192), which Try again counts down (#1691). */
   | { kind: "failed"; retryAfterMs?: number };
 
-/**
- * An active account's custom cards, read once per token and again on `reload`; `token` null reads
- * nothing. `load` is the route's, so a test hands its own.
- */
+/** Read once per token and again on `reload`; `load` is the route's, so a test hands its own. */
 export function useCustomCards(
   token: string | null,
   load: (token: string) => Promise<CustomCardsResponse> = getCustomCards,
@@ -61,7 +58,7 @@ export function useCustomCards(
     setLoaded((current) => (current !== null && current.state.kind === "failed" ? null : current));
     setGeneration((value) => value + 1);
   }, []);
-  /** After a save or a delete: the list as the server now holds it, without a second read. */
+  /** After a save or a delete: the server's list, without a second read. */
   const replace = useCallback(
     (cards: CustomCard[]) => {
       if (token === null) return;
@@ -79,7 +76,7 @@ export function useCustomCards(
   return { state, reload, replace };
 }
 
-/** Each card's definition by its id (`customDef`); a card whose frame the engine refuses is left out. */
+/** Each card's definition by its id; a card whose frame the engine refuses is left out. */
 export function customDefsOf(cards: readonly CustomCard[]): CardDefs {
   const defs: Record<string, CardDef> = {};
   for (const card of cards) {
@@ -92,10 +89,10 @@ export function customDefsOf(cards: readonly CustomCard[]): CardDefs {
   return defs;
 }
 
-/** The custom cards a deck names, in the order it first names them; ids it names that are gone are `missing`. */
 export function customCardsOfDeck(
   deck: readonly string[],
   cards: readonly CustomCard[],
+/** The custom cards a deck names, in the order it first names them; ids it names that are gone are `missing`. */
 ): { cards: CustomCard[]; missing: string[] } {
   const byId = new Map(cards.map((card) => [card.id, card]));
   const found: CustomCard[] = [];
@@ -111,7 +108,7 @@ export function customCardsOfDeck(
   return { cards: found, missing };
 }
 
-/** Whether a deck names a custom card: R915005's practice deck, which no online path offers. */
+/** R915005's practice deck: one that names a custom card, which no online path offers. */
 export function namesCustomCard(deck: readonly string[]): boolean {
   return deck.some((id) => id.startsWith(CUSTOM_ID_PREFIX));
 }

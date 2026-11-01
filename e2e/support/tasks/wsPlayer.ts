@@ -51,7 +51,7 @@ export type WsPlayerResult = {
   seat?: string;
   view?: Record<string, unknown> | null;
   messages?: WsMessage[];
-  /** §9.3: the reducer's reason, relayed verbatim — never restated. */
+  /** §9.3: the reducer's reason, verbatim. */
   error?: string;
   /** The `SocketErrorCode` that came with it. */
   code?: string;
@@ -250,7 +250,7 @@ async function awaitView(command: Extract<WsPlayerCommand, { action: "awaitView"
   return { ok: true, name: command.name, view: isRecord(message.view) ? message.view : null };
 }
 
-/** §2.5 concede clears both seats' in-match state (§9.5); cleanup is best-effort for closed or over matches. */
+/** §2.5 concede clears both seats' in-match state (§9.5); best-effort for closed or over matches. */
 async function concedeIfLive(record: Client): Promise<void> {
   if (record.matchId === null) return;
   if (record.socket.readyState !== WebSocket.OPEN) return;

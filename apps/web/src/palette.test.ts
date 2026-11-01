@@ -22,7 +22,6 @@ const LITERAL = new RegExp(
   "gi",
 );
 
-/** Every color `css` states itself, outside its comments, strings and url()s. */
 function colorLiterals(css: string): string[] {
   const code = css
     .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -42,7 +41,7 @@ function cssFiles(dir: string): string[] {
 const SHEETS = cssFiles(SRC).map((path) => relative(SRC, path).replaceAll("\\", "/")).sort();
 const read = (sheet: string): string => readFileSync(join(SRC, sheet), "utf8");
 
-/** The board's stylesheets: index.css and game/'s, but the deck builder's (a menu) and table.css's playmats (cosmetics, R1297000). */
+/** The board's: not the deck builder's (a menu) nor table.css's playmats (cosmetics, R1297000). */
 const BOARD_SHEETS = SHEETS.filter(
   (sheet) => sheet === "index.css" || (sheet.startsWith("game/") && !sheet.startsWith("game/deckbuilder/") && sheet !== "game/table.css"),
 );

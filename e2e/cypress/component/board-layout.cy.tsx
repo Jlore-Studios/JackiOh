@@ -24,7 +24,6 @@ const BOARD = '[data-testid="board"]';
 const FIELD_CARDS = `${BOARD} .field .card`;
 const FIELD_CARD_COUNT = 20;
 
-/** One measured viewport, as it reaches the terminal. */
 type Measurement = {
   viewport: string;
   viewportWidth: number;

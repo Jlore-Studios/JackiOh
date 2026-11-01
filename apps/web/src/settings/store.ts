@@ -12,10 +12,10 @@ export type Settings = {
   /** R82/R345: auto-ends only when ending is left. */
   autoEndTurn: boolean;
   hoverPreviews: boolean;
-  /** R2102000: the lethal hint in games against the practice AI (R2291000); default on. */
+  /** R2102000: the lethal hint against the practice AI (R2291000). */
   lethalHint: boolean;
   reduceMotion: boolean;
-  /** R644 (§5): mute opponents' emotes, default off per device. */
+  /** R644 (§5): kept per device. */
   muteOpponentEmotes: boolean;
 };
 

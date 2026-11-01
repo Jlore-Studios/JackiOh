@@ -115,7 +115,6 @@ function waitForMyTurn(): void {
   cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
 }
 
-/** How many hand cards the client is rendering right now. */
 function renderedHandCards(): Cypress.Chainable<number> {
   cy.settled();
   return cy.get("body", { log: false }).then(
@@ -181,7 +180,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Seat 2 atomically claims the room (§9.5).
     cy.then(() => {
       cy.request<{ matchId: string; seriesId: string | null; code: string; seat: string; mode: string }>({
         method: "POST",
@@ -261,9 +259,9 @@ describe("06 room code — a networked match between a browser and a Node client
       .its("length")
       .should("be.within", 1, constants.MAX_MANA);
 
-    // CLAUDE.md rule 7: browser renders only seat 1's hand.
     cy.then(() => {
       cy.wsPlayer({ action: "view", name: SEAT_TWO }).then((result) => {
+    // CLAUDE.md rule 7: browser renders only seat 1's hand.
         const held = opponentHandCount(result.view);
         expect(held, "an opening hand (§2.1: OPENING_DRAW)").to.be.within(
           constants.OPENING_DRAW[0],

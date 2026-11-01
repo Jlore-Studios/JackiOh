@@ -16,7 +16,6 @@ import type { PlayerId } from "../../support/types.ts";
 
 const SEED = seedFor("04-combat-1604");
 
-/** BUILD M5-T4 card hooks. */
 const attackIs = (n: number): string => `[data-attack="${n}"]`;
 const healthIs = (n: number): string => `[data-health="${n}"]`;
 const maxHealthIs = (n: number): string => `[data-max-health="${n}"]`;
@@ -51,7 +50,6 @@ function expectHighlight(testid: string, legal: boolean, why: string): void {
   });
 }
 
-/** BUILD M5-T2 attack selection. */
 function selectAttacker(instanceId: string): void {
   cy.get(ts(cardId(instanceId))).click();
 }

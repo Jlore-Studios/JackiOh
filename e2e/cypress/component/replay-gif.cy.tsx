@@ -28,7 +28,6 @@ const MIN_ART_COLORS = 3;
 const ART_GRID = 5;
 /** Sample points in a rectangle, as fractions of its size: the middle first, then outwards. */
 const CANDIDATE_FRACTIONS = [0.5, 0.25, 0.75, 0.125, 0.875, 0.375, 0.625] as const;
-/** Candidates sampled per rectangle, at most. */
 const SAMPLES_PER_RECT = 3;
 /** A glyph is at most this wide in ems, and the box around text is padded by this much. */
 const TEXT_EM_WIDTH = 0.7;
