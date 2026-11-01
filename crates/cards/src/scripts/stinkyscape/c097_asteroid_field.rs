@@ -5,9 +5,11 @@
 //!            Stinkyscape Resource|random Radiant Stinkyscape Resources}." (2, 1; 2, 2 until #2657)
 //!
 //! Cast on draw (§6.2, `StaticFlags.cast_on_draw`): drawn, it is cast free and counted as played (R70),
+//! its owner then drawing again (R58); setup never deals it (R635). Its cast is one `damage_all` hit on
 //! every Unit of both sides and then each hero, one state check after them all (R59), its caster's Spell
 //! Damage raising each (§4.4 step 0); then `gain_resources` of `resources` random Resources into the
-//! are the declared `damage` and `resources` (R386).
+//! hand, a full hand burning them (R2250000). Radiant: the enemy Units and the enemy hero only, and
+//! Radiant Resources. The numbers are the declared `damage` and `resources` (R386).
 
 use jackioh_engine::effects::{damage_all, gain_resources};
 use jackioh_engine::prelude::*;

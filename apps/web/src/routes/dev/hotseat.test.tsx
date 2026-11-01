@@ -416,6 +416,7 @@ describe("the seat", () => {
   });
 });
 
+// R1341 emote hands
 describe("R1341 the hotseat's emote hands", () => {
   function offered(): (string | undefined)[] {
     fireEvent.click(screen.getByTestId("hero-you"));

@@ -13,9 +13,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #8 Mr. Vanilla — SPEC §8.1 row 8, BUILD M4-T4 must-pass: "A 4/4 with no text: Sheepish turns it
-// into a Sheep like any unit; radiant a 12/12 with no text, and made Radiant on the field it takes the
-// 12/12 face at once, keeping its damage".
+// #8 Mr. Vanilla — SPEC §8.1 row 8, BUILD M4-T4 must-pass.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

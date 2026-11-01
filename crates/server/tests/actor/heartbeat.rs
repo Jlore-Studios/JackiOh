@@ -10,10 +10,9 @@
 //!    request budget, which every upgrade counts against (R2478000), never refuses.
 //!
 //! The first two run the real `/ws/match` upgrade and the real registry on tokio's paused clock. Real
-//! TCP races a paused clock (the header of `actor/ws_server.rs`), so the connection is an in-memory
-//! pipe (`MemoryListener`): `axum::serve` accepts the server end of a `tokio::io::duplex`, and the
-//! test is the client on the other. Every duration is read from `config.rs`, so these tests state
-//! R1441's numbers nowhere.
+//! TCP races a paused clock, so the connection is an in-memory pipe (`MemoryListener`): `axum::serve`
+//! accepts the server end of a `tokio::io::duplex`, and the test is the client on the other. Every
+//! duration is read from `config.rs`, so these tests state R1441's numbers nowhere.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};

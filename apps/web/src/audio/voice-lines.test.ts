@@ -1,29 +1,11 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`,
 // with its words from `voice-text.json` (written from crates/cards/card-text.yaml, #2498), against
-// the catalog it voices.
-//
-//   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
-//        (the file never states it); a unit carries a `play` and a `death` line (a hook with a voice
-//        and a text) and no `cast` hook, a spell or trap a `cast` line and no `play`, `attack` or
-//        `death` hook; no hook outside CARD_HOOK_NAMES and no field on a hook but voice, text and
-//        effect; and every voice a line names exists, usable for its backend (a `say` voice with
-//        in-range rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and
-//        a filter chain, and neither carrying the other's fields), with web values and (where set)
-//        loudness trim `gain`, 0-2.
-//   B34  every line is non-empty, uses only /^[A-Za-z ,.'!?-]+$/, stays within
-//        VOICE_MAX_WORDS[hook] words (a word is a token that contains a letter), and uses a
-//        BANNED_RULES_WORDS entry as a whole word, in any case, in fewer than BANNED_WORDS_MAX_SHARE
-//        (2%) of the lines (issue #115). The lines that do are named in the failure and in the
-//        passing test's title count, so none is lost by being under the allowance.
-//   R655 the sections are voices, effects and cards, in that order; each card's entry names the card
-//        in a comment on the line of its id, in catalog order; comments and trailing commas parse;
-//        every effect a hook names is in the bank, every bank effect is a recipe sfx.ts has, and
-//        every one is used; and the file writes no words, which are card-text.yaml's.
+// the catalog it voices. B34's lines that use a BANNED_RULES_WORDS entry (issue #115) are named in
+// the failure and in the passing test's title count, so none is lost by being under the allowance.
 //
 // The files are read off disk rather than imported, so this checks the committed files themselves,
 // joined by `voiceData.ts`'s `withVoiceText` as the client joins them, and not what its parser
-// makes of them. Each test collects every offender before asserting, so
-// a red run names all of them at once instead of the first.
+// makes of them. Each test collects every offender before asserting, so a red run names them all.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

@@ -1,15 +1,14 @@
 // A card's flavour line and artist credit (R660), read from the sidecar beside the catalog
-// (`@jackioh/cards/flavour.json`, which the aliases resolve to crates/cards/flavour.json), the way
-// the catalog itself is read from its JSON: the bundle carries the words, and no server is asked.
-// Presentation only (CLAUDE.md rule 7). The sidecar is keyed by catalog id, so the hidden sentinel
-// and a match-made definition (a Fuse's, R77) have no entry and nothing is shown for them.
+// (`@jackioh/cards/flavour.json`, which the aliases resolve to crates/cards/flavour.json): the bundle
+// carries the words, and no server is asked. Presentation only (CLAUDE.md rule 7). The sidecar is
+// keyed by catalog id, so the hidden sentinel and a match-made definition (a Fuse's, R77) have no
+// entry and nothing is shown for them.
 //
 // A card's flavour line and its artist are words about the card, not the card, so an edit to them
 // changes no rule, no def and no patch. They are written in each card's entry of
 // crates/cards/card-text.yaml (#2498), which crates/tools/tests/export_card_text.rs turns into
 // `flavour.json`; its `"//"` entry says so and is dropped here. The Rust catalog checks hold the file
-// to its contract (each string trimmed, non-empty, single-line and under its cap below);
-// `flavour.test.tsx` also proves the lines speak no rules words, as the voice lines must not.
+// to its contract; `flavour.test.tsx` also proves the lines speak no rules words.
 
 import flavourJson from "@jackioh/cards/flavour.json";
 

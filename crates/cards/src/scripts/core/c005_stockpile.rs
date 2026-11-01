@@ -27,8 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5: "Draw 2, heal 2 (hero may exceed 30); hand cap burns;
-// radiant 4/4".
+// SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5.
 // `library[0]` is the top of the library (the next card drawn).
 #[cfg(test)]
 mod tests {

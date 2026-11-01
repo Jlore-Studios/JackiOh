@@ -1,4 +1,5 @@
 // R318 / §2.4: overflow notices render redacted fatigue, library-full, and hand-full events on both seats.
+// R97 hides unreadable cards; R200 keeps notices from owning animation state, R240 renders zero hits, and R201 scales durations.
 
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";

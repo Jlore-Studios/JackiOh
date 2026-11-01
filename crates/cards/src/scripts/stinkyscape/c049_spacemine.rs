@@ -6,6 +6,8 @@
 //! Engine: Death (§6.2), on the snapshot it died with (R89): its Attack then, buffs included, as
 //! one hit to each of N different random enemies — the hero or a Unit — drawn from the match rng
 //! (R60), fewer when fewer stand, through the new `damage_random_enemies` verb (`damage_split`
+//! re-draws per hit and can hit one enemy twice); at 0 Attack, nothing (R63). Then its copy fuses
+//! into the Dormant Starship (R1852000). The Radiant face runs the same script: its target count
 //! is the declared `targets` (R386), and its doubled stats double the hit.
 
 use jackioh_engine::prelude::*;

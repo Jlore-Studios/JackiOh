@@ -5,6 +5,7 @@
 //! End of turn (R62): a forced attack (R53, `forced_attack_random`) on one enemy, the hero or a Unit,
 //! drawn from the match rng (R60) among those it may attack under §4.2 step 2, so Flying's restriction
 //! holds (R783002); position, summoning sickness and Taunt are not read, no exertion is spent, and the
+//! target strikes back. R1878001: the Embiggened version is a Starship Piece, a keyword its text lends
 //! the card stamped embiggened (`conditionalKeywords`, as Core #56 Jilliax's Equip comes with its price,
 //! R831013), so its death fuses a copy into its owner's Dormant Starship (R1852000). The Radiant face's
 

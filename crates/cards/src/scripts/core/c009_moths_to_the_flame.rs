@@ -30,9 +30,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass: "Each enemy unit attacks it in
-// lane order at controller's start of turn, no exertion spent, sick units included, each attack is
-// its own combat, stops when Moths dies (R53); radiant Armor 1 reduces each hit (R53)".
+// #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass (R53).
 //
 // `start_turn()` is the controller's own start of turn, so it is the whole trigger here. #7, #12, #2
 // and #13 have Cry or end-of-turn text only, which never fires when placed or forced to attack.

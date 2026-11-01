@@ -116,6 +116,8 @@ mod r276_every_card_has_a_radiant_face_spec_5_2 {
     #[test]
     fn r276_changes_every_card_by_making_it_radiant_text_stats_or_keywords_differ() {
         // R349: a card that prints no Radiant form (`radiantFallback`, the Ghoul Token) changes by
+        // doubling its stats, the X/X it is summoned with included, so its printed 0/0 reads alike on
+        // both faces; `t_ghoul.rs`'s tests prove the doubling in play. Every other card differs in
         // print. A face's text is read with its own `params` values filled in (B3.4 rule 5).
         let unchanged: Vec<String> = entries()
             .into_iter()

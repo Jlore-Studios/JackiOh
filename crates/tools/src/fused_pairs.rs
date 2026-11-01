@@ -1,36 +1,17 @@
 //! `cargo jackioh fused-pairs [--pair <body>+<text>] [--day N] [--pairs N]` (#2381): each card whose text
 //! has a Death, a trigger, a start- or end-of-turn hook, an aura or a fused hook (Field Spells and Traps
-//! too: Wormhole and Job Application are no Units) fused onto each fusable Unit, and played until the
-//! board settles.
+//! too) fused onto each fusable Unit, and played until the board settles. A random game meets a given
+//! pair by luck, and such pairs were some of a month's worst bugs: an endless turn (#1562, R1121000), a
+//! 288-card fusion (#998), games that never ended (#2243, R1884003), boards that never settled
+//! (R1884004; #2356, R2197005) and a fused copier's targeting cost that panicked (R1850000).
 //!
-//! Why: some of the worst bugs of a month were one card fused into another, and a random game meets a
-//! given pair by luck. #1562 (R1121000): a fused Book of Stats and Autocomplete replayed without end in
-//! one turn. #998: a fusion grew to 288 cards and a fuzz seed ran out of memory. #2243: Wormhole's text
-//! on a Unit kept games from ending (R1884003), a fused Job Application at 0 health never settled
-//! (R1884004) and a fused copier's targeting cost panicked (R1850000). #2356 (R2197005): Floodgates and
-//! Job Application fused, and "the board did not settle". The fuzz's only deliberate fusion is one pair
-//! of Units on a manufactured last board (`fuzz.rs`'s `manufactured_board`), which games read only
-//! through the few cards that bring one back; this walks the pairs on purpose.
-//!
-//! A pair plays like this. The body, a `FUSABLE_UNITS` card (no token, no Immutable card: R23), stands
-//! on seat 1's board with a Vanilla beside it on seat 2's; the text is fused onto it as R77 has it, the
-//! body keeping its instance, and `fused_into` runs (R179 rebuilds the same card from its id). Then a
-//! fixed script: seat 1 casts a Spell, ends the turn, seat 2 destroys the fused Unit if its Spell may
-//! reach it, ends the turn, seat 1 ends the next. Then a random-policy run, seeded from the pair, of
-//! `PAIR_TURNS` more turns. Every action runs under the invariant monitor (I1 to I10, as the fuzz checks
-//! them) and the fuzz's growth bounds, and the pair fails on a panic, an engine cap, an invariant breach,
-//! runaway growth, a prompt nobody can answer or `PAIR_STEP_BOUND` actions: a turn that never ends.
-//! Both ids, the seed and the command that plays the pair alone are in the report.
-//!
-//! Two samples. A day's sample, `DAILY_PAIRS` of the pairs drawn from the day's number, is the daily
-//! run's (`the_days_sample_of_fused_pairs_settles`, `#[ignore = "daily: …"]`): the whole walk is too
-//! much compute to play each day, and a new sample each day reaches them all over time. A pull request
-//! plays a fixed stride sample of `PR_PAIRS`, the pinned pairs of #2356 and R1884004, and a planted text
-//! that loops on its own death, which must fail.
-//!
-//! The clock only picks which pairs a day plays (`today`): a pair's game comes from its ids alone, so
-//! `--pair` plays a failure again on any day. A failing pair is fixed, or filed and put on `KNOWN_OPEN`
-//! with its open issue; the list only shrinks, as the fuzz's `POOL_EXCLUSIONS` does.
+//! The body (a `FUSABLE_UNITS` card: no token, no Immutable card, R23) takes the text as R77 has it
+//! (`fused_into`, R179), plays a fixed script then `PAIR_TURNS` random-policy turns under the invariant
+//! monitor and the fuzz's growth bounds, and fails on a panic, an engine cap, a breach, runaway growth,
+//! an unanswerable prompt or `PAIR_STEP_BOUND` actions. The daily run plays `DAILY_PAIRS` drawn from the
+//! day's number; a pull request a stride sample of `PR_PAIRS`, the pinned pairs and a planted looping
+//! text that must fail. The clock only picks the day's pairs: a pair's game comes from its ids alone, so
+//! `--pair` plays a failure again on any day.
 //!
 //! ```text
 //! cargo jackioh fused-pairs                                    # today's sample
@@ -64,7 +45,8 @@ use crate::fuzz::{FUSABLE_UNITS, acting_card, growth_breach, is_immutable, weigh
 /// The random-policy turns a pair plays after its fixed script.
 const PAIR_TURNS: i32 = 6;
 
-/// Actions one pair may take before treating as a stall (R1884003).
+/// The actions one pair may take: `PAIR_TURNS` turns of the AI's playout cap each, so it fires only on
+/// a turn that never ends, like R1884003's loop.
 const PAIR_STEP_BOUND: usize = PAIR_TURNS as usize * AI_PLAYOUT_STEP_CAP;
 
 /// Pairs a day's sample plays (#2381).
@@ -73,7 +55,8 @@ const DAILY_PAIRS: usize = 2_000;
 /// The seconds in a day, which `today` counts the clock in.
 const SECONDS_PER_DAY: u64 = 86_400;
 
-/// Standing stats for 0-health bodies (Classic+ #69 Buff Billy).
+/// What a body printed at 0 health stands with, as an X Unit is summoned with one: without it Classic+
+/// #69 Buff Billy and the Dormant Starship die in the setup, before anything is fused onto them.
 const STANDING_STATS: AttackHealth = AttackHealth { attack: 1, health: 1 };
 
 /// Seat 1's Spell in the fixed script: Stockpile, which takes no target.
@@ -88,7 +71,8 @@ const VANILLA: &str = "core-008";
 /// What both libraries hold, so a draw has a card to take.
 const LIBRARY: [&str; 4] = ["core-008", "core-011", "core-019", "core-005"];
 
-/// A pair known to fail, tracked by open issue until fixed.
+/// A pair the sweep knows fails, and the open issue that owns its fix. The fix removes the entry, so
+/// the list only shrinks, as the fuzz's `POOL_EXCLUSIONS` does; the pair leaves `all_pairs`.
 pub struct KnownOpen {
     /// The Unit the text is fused onto.
     pub body: &'static str,

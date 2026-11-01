@@ -67,9 +67,9 @@ macro_rules! q {
     };
 }
 
-/// The cases listed, once against each store: `memory::<case>` always (`cargo test`'s half,
-/// `contract.memory.test.ts`), `postgres::<case>` when `DATABASE_URL` is set (`tests/db/run.sh`'s
-/// half, `contract.postgres.spec.ts`). Each starts with the harness's `reset`, TS's `beforeEach`.
+/// The cases listed, once against each store: `memory::<case>` always (`cargo test`'s half),
+/// `postgres::<case>` when `DATABASE_URL` is set (`tests/db/run.sh`'s half). Each starts with the
+/// harness's `reset`.
 macro_rules! both_stores {
     ($($case:ident),+ $(,)?) => {
         /// Against the in-memory fake (`db/fake.rs`). A failure here means the FIXTURE broke the
@@ -106,7 +106,7 @@ macro_rules! both_stores {
     };
 }
 
-// A fixture catalog big enough for a legal loadout (← test/db/harness.ts)
+// A fixture catalog big enough for a legal loadout
 
 /// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
 pub const CATALOG_VERSION: &str = "core-1";
@@ -121,9 +121,8 @@ pub fn token_ids() -> Vec<String> {
     vec!["core-001.1".to_string(), "core-002.1".to_string()]
 }
 
-/// TS's `fixtureCatalog(): CatalogInfo`. The contract never renders a card, so it had no defs:
-/// `CatalogInfo` was consulted here only for `cardIds`, `isToken` and `isBanned` (the three R111
-/// reads), which are all the fake's `FakeCatalog` holds. The version is `CATALOG_VERSION`.
+/// The contract never renders a card, so its catalog holds no defs: only what the three R111 reads
+/// consult, which is all the fake's `FakeCatalog` holds. The version is `CATALOG_VERSION`.
 pub fn fixture_catalog() -> FakeCatalog {
     let all: Vec<String> = playable_ids().into_iter().chain(token_ids()).collect();
     let tokens: IndexSet<String> = token_ids().into_iter().collect();
@@ -134,7 +133,7 @@ pub fn fixture_catalog() -> FakeCatalog {
     }
 }
 
-// The harness the contract drives (← test/db/harness.ts)
+// The harness the contract drives
 
 /// The Postgres runs of every suite in this binary share one database; they take this first.
 pub static PG_SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -587,7 +586,7 @@ fn sorted(ids: &[String]) -> Vec<String> {
     ids
 }
 
-/// A port value from TS's object literal (its JSON shape, SURFACE §5.1).
+/// A port value from its JSON shape (SURFACE §5.1).
 fn from<T: DeserializeOwned>(value: Value) -> T {
     let shown = value.to_string();
     serde_json::from_value(value)
@@ -624,8 +623,7 @@ fn without(base: Value, key: &str) -> Value {
     base
 }
 
-/// TS's `toBeUndefined()` on an optional field: absent from the JSON (or, where a Rust type keeps
-/// the key, null).
+/// An optional field left unset: absent from the JSON (or, where a Rust type keeps the key, null).
 fn absent(value: &Value, key: &str) -> bool {
     matches!(value.get(key), None | Some(Value::Null))
 }
@@ -704,7 +702,7 @@ async fn pending_profile(harness: &StoreHarness, email: Option<&str>) -> Profile
         .map(str::to_string)
         .unwrap_or_else(|| format!("{}@example.test", id()));
     let user_id = harness.new_user_id(&email).await;
-    // Exactly what `resolveCaller` (src/api/http.ts) does.
+    // Exactly what `resolve_caller` (src/api/http.rs) does.
     if let Some(existing) = q!(harness, t => t.profiles_get_by_user_id(&user_id)) {
         return existing;
     }
@@ -814,9 +812,8 @@ mod profiles {
         let other = active_profile(harness, None).await;
         q!(harness, t => t.matches_create(&match_row(&match_id, &profile.id, &other.id, harness, harness.now())));
 
-        // TS wrote the rating alone with `setRating`, which has no caller and is not ported
-        // (SURFACE §11.2): the rating moves through `setGlicko`, at a new profile's deviation and
-        // volatility (R603), which is the same row.
+        // The port has no rating-only write (SURFACE §11.2): the rating moves through
+        // `profiles_set_glicko`, at a new profile's deviation and volatility (R603).
         let rating: Glicko = from(json!({ "rating": 1032, "deviation": 350, "volatility": 0.06 }));
         q!(harness, t => t.profiles_set_glicko(&profile.id, &rating));
         q!(harness, t => t.profiles_set_in_match(&profile.id, Some(match_id.as_str())));
@@ -913,14 +910,10 @@ mod profiles {
         assert_eq!(moved["ratingDeviation"].as_f64(), Some(330.5));
         assert_eq!(moved["ratingVolatility"].as_f64(), Some(0.059995));
 
-        // TS went on to check `setRating`, the rating-only write the old SQL paths used, leaving the
-        // other two alone; it has no caller and is not ported (SURFACE §11.2), so neither is that
-        // check.
-
         assert!(call!(harness, t => t.profiles_set_glicko(&id(), &after)).is_err());
     }
 
-    /// R111, and the reason `e2e-store.ts` carries a trigger at all: "Becoming `active` grants one
+    /// R111, and the reason `db/fake.rs` carries a trigger at all: "Becoming `active` grants one
     /// copy of [each starter card, R1310000], written by a trigger on the `pending → active`
     /// transition and idempotent, so a repeated redemption cannot double a collection." Both stores
     /// grant the same cards: the fixture catalog's that `STARTER_CARDS` names.
@@ -1510,10 +1503,9 @@ mod codes {
 
 /// `Store.redeem` is the whole of §9.4's six steps, and the two implementations of it are as far
 /// apart as this port gets: one `select app.redeem_invite_code(...)` against migration 0001's
-/// plpgsql, and the fake's `createInMemoryRedeem` walking the same six steps over its tables.
-/// Nothing above this block would notice if they disagreed — `api/codes.rs` calls the port and the
-/// whole server suite runs on the fake — so every result code the port declares is exercised here,
-/// against both.
+/// plpgsql, and the fake's `redeem` walking the same six steps over its tables. Nothing above this
+/// block would notice if they disagreed — `api/codes.rs` calls the port and the whole server suite
+/// runs on the fake — so every result code the port declares is exercised here, against both.
 mod redeem {
     use super::*;
 
@@ -1775,7 +1767,7 @@ mod redeem {
     }
 
     /// §9.4 step 6 again, from the other side: "Two concurrent callers cannot both win the last
-    /// use" (ports.ts). One code, two accounts, one activation.
+    /// use". One code, two accounts, one activation.
     async fn lets_a_single_use_code_activate_exactly_one_account(harness: &StoreHarness) {
         let first = pending_profile(harness, None).await;
         let second = pending_profile(harness, None).await;
@@ -1865,7 +1857,7 @@ mod collection {
             2
         );
 
-        // "SETS each card's quantity to the absolute value given; it does not add to it" (ports.ts).
+        // "SETS each card's quantity to the absolute value given; it does not add to it".
         q!(harness, t => t.collection_upsert_quantities(&profile.id, &[entry(&first, 5)]));
         let after = q!(harness, t => t.collection_get(&profile.id));
         assert_eq!(
@@ -10302,12 +10294,7 @@ mod economy {
         assert!(!q!(harness, t => t.economy_practice_seed_release(&owner.id, "seed-open")));
     }
 
-    /// R2422000: a burn keeps its claim until the claim settles, and it settles once. The sweep's
-    /// list holds every profile's claims kept and unsettled, claimed before its time, oldest first,
-    /// and no seed claimed before migration 0071 (no claim kept) nor any unclaimed one; a settle by
-    /// another profile, of an unclaimed seed, or in a transaction rolled back changes nothing; the
-    /// prune keeps an unsettled claim; two settles at once mark the seed once, so only one pays; and
-    /// a settled claim drops its log, leaves the list, and goes with the next prune.
+    /// R2422000: a burn keeps its claim until the claim settles, and it settles once.
     async fn r2422000_a_practice_claim_is_kept_until_it_settles_once(harness: &StoreHarness) {
         let owner = pending_profile(harness, None).await;
         let other = pending_profile(harness, None).await;
@@ -11125,10 +11112,9 @@ mod r1523000_seat_epoch {
 mod tx {
     use super::*;
 
-    /// The inner `store.tx` of the TS case. A Rust transaction is one `Tx` handle, so a nested
-    /// transaction is the outer handle passed down: it can only join, never open a second one.
+    /// The inner transaction. A Rust transaction is one `Tx` handle, so a nested transaction is the
+    /// outer handle passed down: it can only join, never open a second one.
     async fn inner(t: &mut Tx<'_>, profile_id: &str) -> Result<(), String> {
-        // TS wrote `setRating(profile.id, 1234)`; `setRating` is not ported (SURFACE §11.2).
         let rating: Glicko = from(json!({ "rating": 1234, "deviation": 350, "volatility": 0.06 }));
         t.profiles_set_glicko(profile_id, &rating)
             .await

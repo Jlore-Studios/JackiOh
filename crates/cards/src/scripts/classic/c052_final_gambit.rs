@@ -95,6 +95,7 @@ pub fn script_v0_4_0f() -> CardScripts {
 }
 
 // C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
+// step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
 // caps (R44); fatigue counts, while losing health (R18) and set health (C #29) never open it; the hit
 // is canceled and deals nothing (R1704001); then heal 10 and draw 3; a copy that stays on the field
 // cancels one hit a turn; radiant: heal 20 and draw your whole deck (R58), most of it burning (R317);

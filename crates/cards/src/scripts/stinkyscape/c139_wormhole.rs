@@ -141,6 +141,7 @@ mod tests {
     }
 
     /// R102, R1884003, R2226000: Wormhole's text fused onto a Unit stands in a unit zone on a card that is
+    /// no trap, so it never fires there: its controller's own Spell aimed at their own Unit resolves, and
     /// so does the opponent's, which R1884003's reading of its condition countered before.
     #[test]
     fn r1884003_r2226000_fused_onto_a_unit_it_answers_no_spell_from_its_unit_zone() {

@@ -112,11 +112,10 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
 
 /// §2.4's pipeline, with the riders applied around it as `apply_radiant_rider` explains.
 ///
-/// TS wrote the riders through the live card object. Here `card` is the card as found (or the fresh
-/// instance), so the radiant rider goes on it before it moves, and on the card in its pile too when
-/// it already is in one; the cost riders go on the card where the move put it. Whether it reached the
-/// hand is `crate::draw::add_to_hand`'s outcome: a card a full hand burns (§2.4, R4, R1143,
-/// `query::room_in`) takes no price.
+/// `card` is the card as found (or the fresh instance), so the radiant rider goes on it before it
+/// moves, and on the card in its pile too when it already is in one; the cost riders go on the card
+/// where the move put it. Whether it reached the hand is `crate::draw::add_to_hand`'s outcome: a card
+/// a full hand burns (§2.4, R4, R1143, `query::room_in`) takes no price.
 fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders: &HandRiders) {
     apply_radiant_rider(&mut card, riders);
     if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
@@ -187,7 +186,7 @@ fn exact_riders(copy: &mut CardInstance, source: &CardInstance, priced: bool) {
     }
 }
 
-/// `add_to_hand`'s arguments (TS's inline object).
+/// `add_to_hand`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -321,7 +320,7 @@ fn pool_query(ctx: &EffectContext<'_>, args: Option<&CatalogQueryArgs>) -> Catal
     excluding_def_id(Some(&*ctx.state), args, generating)
 }
 
-/// `add_random_from_catalog`'s arguments (TS's inline object).
+/// `add_random_from_catalog`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -405,7 +404,7 @@ pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
     })
 }
 
-/// `add_random_from_graveyard`'s arguments (TS's inline object).
+/// `add_random_from_graveyard`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]

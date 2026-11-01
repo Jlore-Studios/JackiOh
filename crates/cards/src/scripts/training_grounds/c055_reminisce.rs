@@ -67,8 +67,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #72 Reminisce — SPEC §8.3, BUILD M4-T4: "Discover from the GY including spell tokens (R50);
-// chosen card −1 (radiant 0); exiled; empty GY → nothing".
+// #72 Reminisce — SPEC §8.3, BUILD M4-T4 (R50).
+// Each test asserts both halves (where the pick went and its cost, and that Reminisce was exiled);
+// one covers each path of the Cry's list: prompt opened (tail parked), graveyard empty (tail ran).
 // core-013 Jlockeed Shredder-10 (printed cost 3) is the Discover subject in the cost tests.
 #[cfg(test)]
 mod tests {

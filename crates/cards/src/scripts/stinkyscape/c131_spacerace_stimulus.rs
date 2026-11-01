@@ -5,6 +5,9 @@
 //! Base:    "Animated, Starship Piece\nReveals when either player launches a Starship."
 //! Radiant: "Animated, Starship Piece\nReveals when either player launches a Starship or plays a
 //!          Starship Piece."
+//! Engine: set face-down in its backrow zone, it answers `starshipLaunched` of either player's Starship
+//! (R1852003) and, on the Radiant face, `cardPlayed` of a card that is a Starship Piece as it is played
+//! (`is_starship_piece`), either player's, its own play left out; a card set face-down has no text in
 //! force, so it is no piece played (R1859003) and its play reveals nothing (CLAUDE.md rule 7). It fires
 
 use jackioh_engine::effects::{animate, remember};

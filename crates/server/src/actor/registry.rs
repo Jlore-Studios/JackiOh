@@ -2,8 +2,11 @@
 //!
 //! Manages match lifecycles and rebuilds:
 //!  - `start` writes `matches` row and creates the actor (§9.2: one actor per match).
-//!  - `actor_for` rebuilds missing actors by folding the log (SPEC §9.5, §9.3).
-//!  - `stop` drops the in-memory actor, leaving the log alone.
+//!  - `actor_for` rebuilds missing actors by folding `(seed, log)` (SPEC §9.5), sound because §9.3
+//!    makes `reduce` pure and the log append-only.
+//!  - `stop` drops the in-memory actor, leaving the log alone: what a crash looks like outside.
+//!
+//! `api/queue.rs` and `rooms.rs` call only `start`, `has`, `stop` and `presence_of`.
 //!
 //! Finished actors remain in memory while rematch presence reads sockets, until `reap_finished`
 //! drops them after the rematch window with no open sockets, or a restart drains them (SURFACE §11.3).
@@ -107,8 +110,9 @@ fn initial_clocks(now: i64, ceiling_minutes: i64) -> MatchClocks {
     }
 }
 
-/// R258, R433: All Random matches deal both decks, recorded via queue mode for initial
-/// setup, rebuild folds, and log replays (R1442). Other modes use constructed decks.
+/// R258, R433: an All Random match deals both decks, so `create_game` and every `fold` are told both
+/// were dealt. The row has no mode, so it is read off what made the match (`matches_mode_of`), the
+/// same at start and rebuild, as `timing-backfill` folds too (R1442).
 pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     if matches!(mode, Some(QueueMode::Random)) {
         Some(PLAYER_IDS.to_vec())
@@ -117,8 +121,8 @@ pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     }
 }
 
-/// R388, R767000: catalog live match is played under. Falls back to this build's catalog
-/// with error logged if version cannot be folded.
+/// R388, R767000: catalog live match is played under. One this build cannot fold falls back to this
+/// build's, logged: without an actor its players would be held until the ceiling.
 pub(crate) fn pinned_for(match_row: &MatchRow) -> engine::Pinned {
     engine::Pinned::of(&match_row.catalog_version).unwrap_or_else(|reason| {
         tracing::error!(
@@ -197,12 +201,13 @@ impl Registry {
                     .await?
                     .unwrap_or_default(),
             );
-            // R678: two other players' last server boards sampled once and frozen on row so
-            // rebuild folds same Glitch.
+            // R678: two other players' last boards, never a seat's own, sampled once and frozen on
+            // the row so every rebuild folds the same Glitch.
             let sampled = t
                 .last_boards_sample_others(&profile_ids, GLITCH_BOARDS_SAMPLED as i64)
                 .await?;
-            // R433: mode read from tickets/room/series. R672: rematch states mode directly.
+            // R433: mode read from tickets/room/series, the same before the row is written as
+            // `rebuild` reads it after. R672: a rematch states its mode.
             let derived_mode = match input.mode {
                 Some(mode) => Some(mode),
                 None => t.matches_mode_of(&input.match_id).await?,
@@ -268,9 +273,9 @@ impl Registry {
             ))
         })?;
 
-        // The opening draw runs before writing the row so a game the engine cannot begin leaves
-        // nothing behind (§9.3). An open skeleton stays `open` so `matches_discard_open` (R263) can
-        // release it. Engine panics are caught as errors.
+        // The opening draw is the engine's, not the log's (§9.3). It runs before the row is written,
+        // so a game the engine cannot begin leaves no `live` row nothing but the ceiling could end;
+        // an `open` skeleton stays for `matches_discard_open` (R263). The engine's panic is the error.
         let (last_boards, glitch) = last_boards_of(&match_row);
         let args = engine::create_game_args(&match_row.seed, &match_row.decks, last_boards, glitch, dealt);
         let state = std::panic::catch_unwind(AssertUnwindSafe(|| {
@@ -460,7 +465,8 @@ impl Registry {
             None => PerPlayer::new(None, None),
         };
         if !folded.errors.is_empty() {
-            // Determinism break: engine refused already accepted action (§9.3); log for night bot.
+            // Determinism break: engine refused already accepted action (§9.3). Rebuild anyway, a
+            // live match beats a dead one, but file it for the night bot.
             tracing::error!(event = "match.fold.errors", matchId = %match_id, errors = ?folded.errors);
             app.bug_reports.file(
                 app.env.deployed_commit.as_deref(),
@@ -549,9 +555,9 @@ impl Registry {
         tracing::info!(event = "match.stopped", matchId = %match_id);
     }
 
-    /// #861 drain: stops every in-memory actor, halts open sockets with 1001, and drains queues.
-    /// Checkpoints are stored before halt frames (#1169). Unreturned seats start grace (R744);
-    /// next process rebuilds from log (§9.5).
+    /// #861 drain: stops every actor as `stop` does, 1001 to open sockets, its queue drained so a
+    /// result being written lands. `halt` sets `stopped` first, so `on_socket_gone` stores no grace.
+    /// Next process rebuilds from log (§9.5) or checkpoint (#1169); unreturned seats start grace (R744).
     pub async fn stop_all(&self) -> usize {
         let actors: Vec<(String, MatchActor)> = lock(&self.actors).drain(..).collect();
         let count = actors.len();
@@ -592,6 +598,7 @@ impl Registry {
 
     /// R672: drops finished actors past rematch window (`REMATCH_OFFER_TTL_MS`) with no open sockets.
     /// Reaper calls every tick (`api::results::run_reaper`). Rebuilding handles returning sockets (§9.5).
+    /// An open socket keeps its actor; the check and the removal share the map's lock.
     pub async fn reap_finished(&self, now: i64) -> Vec<String> {
         let reaped: Vec<(String, MatchActor)> = {
             let mut actors = lock(&self.actors);
@@ -628,8 +635,8 @@ impl Registry {
 // Social: watching and shared replays (#939, #940)
 
 impl Registry {
-    /// B50: hands a watcher's socket to friend's seat, rebuilding if not in memory (`social::watch`).
-    /// Friends without seats read as missing match; capacity limits error.
+    /// B50: hands a watcher's socket to friend's seat, rebuilding if not in memory; `social::watch`
+    /// has judged it may watch. A seatless friend reads as a missing match, a full match a conflict.
     pub async fn attach_watcher(
         &self,
         app: &Arc<App>,
@@ -661,7 +668,8 @@ impl Registry {
         actors.iter().map(|actor| actor.revoke_watchers(&revoked)).sum()
     }
 
-    /// R1351000: mutes emotes between blocked users across live matches; returns count muted.
+    /// R1351000: mutes emotes between blocked users across live matches; returns count muted. A
+    /// match not in memory reads the block as its rebuilt actor arms.
     pub fn mute_emotes_between(&self, x: &str, y: &str) -> usize {
         let actors: Vec<MatchActor> = lock(&self.actors).values().cloned().collect();
         actors

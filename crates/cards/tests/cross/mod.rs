@@ -39,6 +39,8 @@ pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
 }
 
 /// §8 #99 Craft a Card's result, made the way the card makes it (R77) without its two Discovers: the
+/// definitions go into `subsystems.fuse` as ingredients that were never cards, and the result is a fresh,
+/// non-Radiant hand card costing 0. A test about the fused card, not about which two offers the Discovers
 /// make, builds it here, so a card or keyword joining the pools (R380) moves nothing it depends on
 /// (issue #848). `re_entry.rs`'s `craft` is the same body.
 pub fn craft_fused(

@@ -1,11 +1,14 @@
-//! BUILD M8's `E2E=1` test server: fixture accounts, fixture codes, and R144 reseed at boot
-//! and `POST /api/e2e/reseed` (SURFACE §11.1).
+//! BUILD M8's `E2E=1` test server: the fixture accounts and invite codes and R144's reseed, at boot
+//! and on `POST /api/e2e/reseed`; `crate::auth::E2eAuth` (SURFACE §11.1), built from `E2E_ACCOUNTS`
+//! here, honors the fixture tokens. `e2e-p1` and `e2e-p2` are active and own every card (a
+//! redemption grants only the starter cards, R1310000, so they are granted the rest), `e2e-pending`
+//! is pending, and R1310004's `e2e-econ` is a dev account in end-to-end mode alone ([`is_e2e_dev`]).
 //!
-//! SPEC §11 R144: reseeds fixture accounts (`e2e-p1`, `e2e-p2`, `e2e-pending`, and `e2e-econ` with
-//! R1310004, R1310000) and invite codes (good, missing, expired, exhausted) so tests are repeatable.
-//! Contract matches `e2e/support/config.ts`.
-//!
-//! Unreachable in production (`env.rs` refuses `E2E` with `NODE_ENV=production`):
+//! SPEC §11 R144: the reseed makes a spec that activates the pending account or spends a code
+//! repeatable against one server with no restart. The values below are a contract with
+//! `e2e/support/config.ts`, transcribed from its defaults; CI may override them there, so the two
+//! move together. Nothing here is reachable in production: `app.rs` builds it only under `env.e2e`,
+//! and `env.rs` refuses `E2E` with `NODE_ENV=production`:
 //! ```text
 //! "E2E: must not be set together with NODE_ENV=production — BUILD M8's fixture accounts and
 //!  seeded games must never be reachable in a production deployment."
@@ -216,8 +219,10 @@ pub async fn seed_e2e_fixtures(app: &App) -> Result<E2ESeedSummary, ApiError> {
     seed_e2e_fixtures_with(app, E2ESeedOptions::default()).await
 }
 
-/// R144: wipes and rewrites fixtures so test runs are idempotent. Active accounts trigger R111
-/// starter cards (R1310000) and are granted remaining catalog cards (R1310004).
+/// R144. Wipes every row and rewrites the fixtures, so running it twice leaves the state running it
+/// once does. Accounts are created `pending` and flipped with `profiles_set_status`, where the
+/// in-memory store carries R111's trigger, so an active fixture holds a redemption's starter grant
+/// (R1310000); R1310004 then grants it the rest of the catalog.
 pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Result<E2ESeedSummary, ApiError> {
     let accounts = options.accounts;
     let codes = options.codes;
@@ -306,8 +311,10 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
 /// posts to, like the fixtures above.
 pub const E2E_RESEED_PATH: &str = "/api/e2e/reseed";
 
-/// `POST /api/e2e/reseed` (`AuthLevel::None`, R144): on-demand reseed returning `E2ESeedSummary`.
-/// Returns 404 outside end-to-end mode (`env.rs` forbids E2E in production).
+/// `POST /api/e2e/reseed` (`AuthLevel::None`): R144's reseed on demand, answering the
+/// `E2ESeedSummary`. Outside end-to-end mode it answers what `api::http::dispatch` answers for a
+/// path nobody serves, so a production server neither runs it nor shows that it exists. It wipes
+/// every row: the specs run one at a time, and spec 10 calls it before any request of its own.
 pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
     if !app.env.e2e {
         return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));

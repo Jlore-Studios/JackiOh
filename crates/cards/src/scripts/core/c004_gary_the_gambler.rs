@@ -40,11 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
-// (radiant 10 at +1 each); second coin grants Divine Shield on heads, Rush on tails, identical on
-// both faces; with no Lucky the 5 coins and the second coin take exactly 6 seeded draws (R32/R130);
-// with Lucky X each coin flips 1 + X times keeping heads (R1440), so a given Lucky 1 (R1438) takes
-// 12 draws and lands more heads over many seeds".
+// SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4 (R32, R130, R1440, R1438).
 //
 // The flips land as ONE layer-4 buff, so `buffs.attack` is the heads total and `buffs.health` the
 // tails total, accounting for every flip whatever the seed; a fixed seed's exact numbers are asserted

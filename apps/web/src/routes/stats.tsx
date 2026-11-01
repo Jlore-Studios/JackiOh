@@ -406,11 +406,9 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md,
-  // B25): the focus moves to its Close when it opens, Tab and Shift+Tab stay inside, Escape and Back
-  // (R2127000, `DrillDownBackLayer`) close it, and the control that opened it has the focus back once
-  // it closes. That control is kept when it is pressed, not read off the focus, which a click on a
-  // button does not move in every browser.
+  // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25; Escape and Back
+  // close it, R2127000). The control that opened it is kept when it is pressed, not read off the
+  // focus, which a click on a button does not move in every browser.
   const drillDownOpener = useRef<HTMLElement | null>(null);
   const drillDownDialog = useRef<HTMLDivElement>(null);
   const drillDownCloseButton = useRef<HTMLButtonElement>(null);

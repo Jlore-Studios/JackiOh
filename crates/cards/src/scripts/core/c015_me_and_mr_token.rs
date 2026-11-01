@@ -33,8 +33,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #15 Me and Mr Token (SPEC §8.1, BUILD M4-T4 row 15): "1 Rush Token; radiant 3; fewer when the
-// board is nearly full".
+// #15 Me and Mr Token (SPEC §8.1, BUILD M4-T4 row 15).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -107,6 +107,7 @@ fn names_word(text: &str, phrase: &str) -> bool {
 }
 
 /// R1303, R279: `text` with the names of the cards its card names (`refs`) blanked, each as R279 links
+/// it (the name, or the name before a closing parenthesis, as whole words, a plural "s" with it), so a
 /// term inside a name ("Shadow Word Death", the Stinkyscape set's S #12 token, holds "Death") asks
 fn without_named_cards(card: &CardDef, text: &str) -> String {
     let mut names: Vec<&str> = card
@@ -289,6 +290,7 @@ mod r1303_the_chinese_tables {
     }
 
     /// R280's labels in Chinese. A key is the English label written with the face's `{key}`s where it
+    /// prints a number; its value is the Chinese label, written the same way. The client fills both with
     /// the numbers the face is filled with, so a tuned number (R386) moves in the Chinese label too.
     #[test]
     fn r1303_every_preview_label_a_view_carries_has_a_chinese_label_in_the_chinese_face() {

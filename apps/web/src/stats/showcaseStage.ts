@@ -1,15 +1,10 @@
 // R1584000: the one-card stage the landing's stat showcase plays a board animation on.
 //
-// It makes no animation of its own. A stat names the board event its card would have taken part in
-// (a unit destroyed, a mark and a steal, a trap fired, ...); the stage hands that event to the
-// board's own planner (`planEntries`, game/animations.ts) against a view with that card on one lane,
-// and the entry it gets back is what the board would play: its duration, the `data-animating` type
-// animations.css keys a keyframe on, and the cues the effects layer's `planFx` draws. The stage's
-// elements carry the board's testids, so the entry's frames land on them unchanged.
-//
-// It decides no rule and keeps no state (CLAUDE.md rule 7): the events are made here, for show, and
-// nothing reads them back. `planStage` (fx/stage.ts) is left out: it acts on the board's elements,
-// and the landing has none.
+// It makes no animation of its own: the stage hands the board event a stat names to the board's own
+// planner (`planEntries`, game/animations.ts) against a view with that card on one lane, and plays the
+// entry it gets back. The stage's elements carry the board's testids, so the entry's frames land on
+// them unchanged. `planStage` (fx/stage.ts) is left out: it acts on the board's elements, and the
+// landing has none. It decides no rule and keeps no state (CLAUDE.md rule 7).
 //
 // R2648000: `cast` is the board's `cardPlayed` entry (`jk-card-played`), for a Spell's lunge stat.
 

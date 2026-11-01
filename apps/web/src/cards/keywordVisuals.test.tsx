@@ -1,8 +1,5 @@
-// R438: keyword visuals on the board (issue #40). Every keyword kind that acts on the field (R2577000) has a treatment on the board
-// minion, each drawn by shape and found by `data-keyword-fx`; several compose inside their layers'
-// caps with at most AMBIENT_MAX loops; reduced motion (the media query and the settings panel's
-// attribute) stops every loop and leaves the still mark; a Vanilla unit shows only what its view
-// lists. The pixel half (sizes, overlaps, the picture) is e2e/cypress/component/keyword-visuals.cy.tsx.
+// R438: keyword visuals on the board (issue #40), for every keyword kind that acts on the field
+// (R2577000). The pixel half (sizes, overlaps, the picture) is e2e/cypress/component/keyword-visuals.cy.tsx.
 //
 // Vitest stubs CSS imports, so keywords.css is read as text and parsed the way fx/css.test.ts reads
 // fx.css: into rules (selectors, declarations, the @media they sit in) and keyframes bodies.

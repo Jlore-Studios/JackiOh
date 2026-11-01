@@ -4198,8 +4198,8 @@ use crate::db::store::{
     FriendRequestRow, FriendshipRow,
 };
 
-/// The tables migration 0038 adds. Its `profiles.allow_spectators` is read no longer (R2615000), so
-/// the fake holds none of it.
+/// The tables migration 0038 adds. Its `profiles.allow_spectators` is not read (R2615000), so the
+/// fake holds none of it.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SocialTables {
     pub friend_requests: Vec<FriendRequestRow>,

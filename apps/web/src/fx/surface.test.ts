@@ -1,4 +1,5 @@
 // docs/polish/1-animations.md, behavior B28: the DPR-aware canvas surface (S5).
+//
 // jsdom has no 2D context (and logs "Not implemented" if asked), so `createSurface` must refuse to
 // run there without calling `getContext`; the rest runs on stubs with a browser's user agent.
 

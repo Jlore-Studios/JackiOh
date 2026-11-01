@@ -7,6 +7,8 @@
 //! Engine: a declared target, any Unit or hero on either side (§8 Conventions, R81); one hit of the
 //! declared damage (§4.4: Armor, Divine Shield and Spell Damage all apply), then `freeze` on the
 //! target — a hero passed by, since heroes are never Frozen (§6.1), and a Unit the hit destroyed
+//! passed by with it. The Radiant face also hits each Unit beside the target in its row on its side
+//! (Cleave's adjacency, §3.1; none beside a hero) with its own instance of the declared damage,
 //! all before one state check (R59); the neighbours are never Frozen (R1867004).
 
 use jackioh_engine::prelude::*;

@@ -50,10 +50,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// M #90 Spell Basket — SPEC §8.8 row 90, BUILD M10 row M 90: "Adds three random non-token Spells (the
-// Spell type only, never a Field Spell) of any set, never itself, at their printed costs, hidden, each
-// Temporary 2; the hand cap burns the rest; cards and temporary read through `param()`; radiant they are
-// Radiant".
+// M #90 Spell Basket — SPEC §8.8 row 90, BUILD M10 row M 90.
 #[cfg(test)]
 mod tests {
     use super::ID;

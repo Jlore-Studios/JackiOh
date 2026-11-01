@@ -1,5 +1,5 @@
 // #1442: each flavor's look, and a Ranged attacker firing its flavor's shot instead of lunging.
-// Every plan here runs with flavor live (`FX_FLAVOR_LIVE`), against a view's public facts alone (R202).
+// Every plan here runs with flavor live (`FX_FLAVOR_LIVE`, #1444), against a view's public facts alone (R202).
 
 import type { CardDef, Flavor, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #86 "Miss" Mrow (SPEC §8.4, BUILD M4-T4 row 86): "Cannot attack; Death takes control of the Unit
-// that destroyed it (R42's killer, R361), placed per R15, and nothing when no Unit on the field
-// destroyed it; radiant has Rush instead".
+// #86 "Miss" Mrow (SPEC §8.4, BUILD M4-T4 row 86) (R42, R361, R15).
 #[cfg(test)]
 mod tests {
     use super::*;

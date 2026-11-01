@@ -1,14 +1,19 @@
-//! `jackioh-wasm-luau`: the Luau browser module (#919, SPEC §12.10, R915009). Wraps the same
-//! bodies as `crates/wasm` (SURFACE §10.1) with the card kit linked (`custom::with_custom_scripts(KitHost)`),
-//! adding `check_custom_card` and custom-card setup validation (R915005, R915006).
+//! `jackioh-wasm-luau`: the Luau browser module (#919, SPEC §12.10, R915009): the normal module's
+//! bindings (`crates/wasm`, SURFACE §10.1), each run with the card kit lent to the engine
+//! (`custom::with_custom_scripts(KitHost)`), so a game without a custom card runs exactly as there. Its
+//! own are `check_custom_card` and the setup check that takes a game's custom cards (R915005, R915006).
+//! The web loads it lazily (`apps/web/src/wasm/luau.ts`), only for a practice game with a custom card and
+//! for the creator.
 //!
-//! Linked through `emcc` as C ABI functions over NUL-terminated strings freed with `jackioh_free`.
-//! Failing calls return NULL (or -1/1) and stow error for `jackioh_last_error`.
-//! `reduce` reports illegal actions via `ReduceResult.error` (SURFACE §6.1). Panics indicate broken
-//! engine invariants (SURFACE §4.4.9).
+//! The boundary is C: `mlua` builds Luau for WebAssembly only through `wasm32-unknown-emscripten`, which
+//! `wasm-bindgen` cannot target, so the module links through `emcc` and every binding is an `extern "C"`
+//! function over NUL-terminated UTF-8 strings, with the names and JSON SURFACE §10.1 gives, so nothing
+//! above `index.ts` changes. A call that fails returns NULL (or -1, 1) and stows its message for
+//! `jackioh_last_error`; `reduce`'s refusal of an illegal action is the `ReduceResult`'s `error`
+//! (SURFACE §6.1). A panic is an engine invariant broken (SURFACE §4.4.9), printed before the abort.
 //!
-//! Bodies, JSON helpers and state cache live in `jackioh-wasm-core` (#1505); pure crates read no
-//! clock (CLAUDE.md rule 4, SURFACE §3).
+//! Every body, the JSON helpers and the state cache live in `jackioh-wasm-core` (#1505). The pure crates
+//! read no clock (CLAUDE.md rule 4, SURFACE §3): `ai_decide` hands the body `wall_now_ms`.
 
 use std::cell::RefCell;
 use std::ffi::{CStr, CString, c_char};
@@ -25,7 +30,8 @@ use serde_json::json;
 
 // The C boundary: strings in, an owned string (or NULL) out
 
-// The message of the last binding call that failed on this thread. Valid until the next failing call.
+// The message of the last binding call that failed, on this thread: valid until the next failing
+// call, so `index.ts` copies it at once.
 thread_local! {
     static LAST_ERROR: RefCell<CString> = RefCell::new(CString::new("").expect("empty error"));
 }
@@ -46,7 +52,10 @@ pub extern "C" fn jackioh_last_error() -> *const c_char {
     LAST_ERROR.with(|last| last.borrow().as_ptr())
 }
 
-/// Free a string this module returned, or an argument buffer.
+/// Free a string this module returned, or an argument buffer `index.ts` is done with. Both live on the
+/// one emscripten heap (Rust's allocator here is libc's `malloc`, the `_malloc` the glue's
+/// `stringToNewUTF8` writes through), and every argument is `JSON.stringify` output, valid UTF-8 with no
+/// interior NUL, so a buffer the glue allocated reads back as exactly the `CString` this frees.
 ///
 /// # Safety
 ///
@@ -71,7 +80,8 @@ fn arg<'a>(what: &str, text: *const c_char) -> Result<&'a str, String> {
         .map_err(|error| format!("{what}: the argument is not UTF-8: {error}"))
 }
 
-/// Run a binding's body with the card kit lent to the engine (R915002).
+/// Run a binding's body with the card kit lent to the engine (R915002): the owned string on success,
+/// NULL (with the message stowed) on failure.
 fn boundary(body: impl FnOnce() -> Result<String, String>) -> *mut c_char {
     out(with_custom_scripts(Rc::new(KitHost), body))
 }
@@ -86,9 +96,13 @@ fn out(result: Result<String, String>) -> *mut c_char {
     }
 }
 
-/// Setup checks run before `create_game` to avoid traps (SURFACE §6.1), ordering R180 handicaps before R184 deck sizes.
+/// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
+/// and a panic in WebAssembly is an abort the page cannot catch. R180's handicaps come first, so a bad
+/// deck size is named as the handicap's fault, then each deck against its seat's size (R184); the
+/// functions are the engine's own (`state.rs`), so the messages are the engine's verbatim.
 fn check_setup(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
-    // R915005, R915006: custom cards checked and judged with their definitions.
+    // R915005, R915006: the game's custom cards, each valid and given once, and every custom id a deck
+    // names among them; the decks are then judged with their definitions.
     let customs: &[CustomCard] = args.custom_cards.as_deref().unwrap_or(&[]);
     check_custom_setup(customs, &args.decks)?;
     let custom_defs: IndexMap<String, CardDef> = customs
@@ -98,7 +112,8 @@ fn check_setup(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
     wasm_core::check_decks(args, &custom_defs, kind)
 }
 
-// Panic hook writes through emscripten on browser, or stderr elsewhere.
+// The panic hook writes through emscripten, straight to the JavaScript console. Off the browser
+// (a host `cargo test` or `clippy` run) there is no such symbol, so the hook writes to stderr there.
 #[cfg(target_os = "emscripten")]
 unsafe extern "C" {
     /// Write a NUL-terminated UTF-8 string to the JavaScript console as an error.
@@ -121,7 +136,8 @@ fn console_error(message: &CStr) {
     eprintln!("jackioh-wasm-luau panic: {}", message.to_string_lossy());
 }
 
-/// Once, before any other binding: registers panic hook and catalog.
+/// Once, before any other binding: panics print on the console, and the catalog and the card scripts
+/// are registered with the engine (`jackioh_cards::register_all`, idempotent).
 #[unsafe(no_mangle)]
 pub extern "C" fn init() {
     static HOOK: Once = Once::new();
@@ -148,7 +164,8 @@ pub extern "C" fn catalog_version() -> *mut c_char {
     out(Ok(wasm_core::catalog_version()))
 }
 
-/// R767000: shipped versions this module carries for replays, oldest first.
+/// R767000: the shipped versions this module carries for replays, oldest first: in the browser, those
+/// from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM` on.
 #[unsafe(no_mangle)]
 pub extern "C" fn carried_versions() -> *mut c_char {
     out(wasm_core::carried_versions())
@@ -219,7 +236,9 @@ pub extern "C" fn fold(args_json: *const c_char) -> *mut c_char {
     })
 }
 
-/// R768: `ReplayOpen`. Setup is checked under the catalog the game was played on (R767000).
+/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was played
+/// on (R767000): this build's own or one it carries. A game of any other version is refused as
+/// `earlier_patch` before its decks are read.
 #[unsafe(no_mangle)]
 pub extern "C" fn replay_open(args_json: *const c_char, record_json: *const c_char) -> *mut c_char {
     boundary(|| {
@@ -284,7 +303,10 @@ pub extern "C" fn deal_emote_hand(seed: *const c_char, seat: *const c_char) -> *
     })
 }
 
-/// R1420 preview: treats `sets` as shipped sets for module lifetime (#552).
+/// R1420's preview, in the browser: from this call on, for the module's life (WebAssembly runs one
+/// thread), `sets` (`SetName[]`) count as sets that ship. Only a module built with the `preview` feature
+/// can preview (`scripts/build-wasm.sh`'s development, unit-test and e2e builds); any other refuses a set
+/// (#552's play-through). Answers 0 on success, 1 with the message stowed for `jackioh_last_error`.
 #[unsafe(no_mangle)]
 pub extern "C" fn preview_sets(sets_json: *const c_char) -> i32 {
     match arg("previewSets: the sets", sets_json).and_then(wasm_core::preview_sets) {
@@ -298,7 +320,8 @@ pub extern "C" fn preview_sets(sets_json: *const c_char) -> i32 {
 
 // The AI (SURFACE §9)
 
-/// Whether `seat` owes an action the AI should take now (R187, R188).
+/// Whether `seat` owes an action the AI should take now (R187, R188): 1 for yes, 0 for no, and -1 with
+/// the message stowed for `jackioh_last_error` on failure, which `index.ts` throws.
 #[unsafe(no_mangle)]
 pub extern "C" fn ai_to_act(state_json: *const c_char, seat: *const c_char) -> i32 {
     match (|| {
@@ -323,7 +346,10 @@ fn wall_now_ms() -> f64 {
         .unwrap_or(0.0)
 }
 
-/// `{ decision: Decision | null, rngCursor }`. Search stops once clock passes `deadline_ms`.
+/// `{ decision: Decision | null, rngCursor }`. The AI draws only from its own stream, rebuilt from
+/// `(rngSeed, rngCursor)`; the cursor it stopped at comes back so the caller resumes it there. Once the
+/// wall clock passes `deadline_ms` the search answers with its best so far; `deadline_ms <= 0` means no
+/// clock, so the decision depends only on `(state, seed, cursor, budget)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn ai_decide(
     state_json: *const c_char,
@@ -339,7 +365,10 @@ pub extern "C" fn ai_decide(
     })
 }
 
-/// R2102000: whether `seat` has a sure win this turn by what it can see (lethal hint, R915002).
+/// R2102000: whether `seat` has a sure win this turn by what it can see, the practice AI's lethal hint:
+/// 1, 0, or -1 with the message stowed, as `ai_to_act` answers. `deadline_ms` is a clock as
+/// `ai_decide`'s is. Its solver plays lines through the engine, so the card kit is lent to it (R915002),
+/// as `boundary` lends it.
 #[unsafe(no_mangle)]
 pub extern "C" fn lethal_hint(state_json: *const c_char, seat: *const c_char, deadline_ms: f64) -> i32 {
     match with_custom_scripts(Rc::new(KitHost), || {
@@ -356,13 +385,16 @@ pub extern "C" fn lethal_hint(state_json: *const c_char, seat: *const c_char, de
     }
 }
 
-/// `{ deck, rngCursor }`: builds an AI deck. An absent `leanSet` implies no lean (R1370).
+/// `{ deck, rngCursor }`. Every key but `rngSeed`, `rngCursor` and `size` is `AiDeckOptions`' own, read
+/// by its own serde, so an absent `banned` (the shadow ban), an absent `theme` (roll one) and a `null`
+/// one (none) keep their meanings, and so does an absent `leanSet` (no lean, R1370).
 #[unsafe(no_mangle)]
 pub extern "C" fn build_ai_deck(options_json: *const c_char) -> *mut c_char {
     boundary(|| wasm_core::build_ai_deck(arg("buildAiDeck", options_json)?))
 }
 
-/// `{ action: ActionBody | null, rngCursor }`: §10.7's random policy drawing from `(rng_seed, rng_cursor)`.
+/// `{ action: ActionBody | null, rngCursor }`: §10.7's random policy, whose default skip set is
+/// `jackioh_ai::random_action`'s, drawing from `(rng_seed, rng_cursor)`.
 #[unsafe(no_mangle)]
 pub extern "C" fn choose_action(
     state_json: *const c_char,
@@ -378,7 +410,10 @@ pub extern "C" fn choose_action(
     })
 }
 
-/// Constants for practice, tutorial harness, leanMinShare (R1370), and fixtures (#1113).
+/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
+/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
+/// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
+/// fixtures were dealt.
 #[unsafe(no_mangle)]
 pub extern "C" fn constants() -> *mut c_char {
     out(wasm_core::constants())
@@ -386,7 +421,9 @@ pub extern "C" fn constants() -> *mut c_char {
 
 // The engine's tables the web's tests read (`subsystems.*`)
 
-/// ME-CRAFT (Meditative #17, R880): engine verdict on recipe at cost (CLAUDE.md rule 7, R1563007).
+/// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
+/// block editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
+/// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (R1563007).
 #[unsafe(no_mangle)]
 pub extern "C" fn craft_preview(
     recipe_json: *const c_char,
@@ -400,7 +437,8 @@ pub extern "C" fn craft_preview(
     })
 }
 
-/// Engine tables for chaos effects and hero powers.
+/// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], chaosMedEffects: [{label}], heroPowerNames,
+/// heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }`.
 #[unsafe(no_mangle)]
 pub extern "C" fn engine_tables() -> *mut c_char {
     boundary(wasm_core::engine_tables)
@@ -408,7 +446,8 @@ pub extern "C" fn engine_tables() -> *mut c_char {
 
 // The validator (SPEC §9.4: one module, client and server)
 
-/// One validator call by name, with JSON argument and result (SURFACE §10.1).
+/// One validator call by its TypeScript name; the input and the output are that function's argument
+/// and result, as JSON (SURFACE §10.1).
 #[unsafe(no_mangle)]
 pub extern "C" fn validator(call: *const c_char, input_json: *const c_char) -> *mut c_char {
     boundary(|| {
@@ -418,12 +457,17 @@ pub extern "C" fn validator(call: *const c_char, input_json: *const c_char) -> *
     })
 }
 
-/// Program entry for emscripten binary.
+/// The program's entry: it does nothing; the client instantiates the module, then calls `init()`. A
+/// `cdylib` link through `emcc` produces a bare `.wasm` with no JavaScript glue; only a program link
+/// emits the `MODULARIZE` factory the client loads, so the bindings live in a binary.
 fn main() {}
 
 // Custom cards (#913, #919, SPEC §12)
 
-/// Creator check of custom card (R915001, #913, R915000).
+/// The creator's check of one custom card, `{ frame, script, def }`: the frame's issues by the engine's
+/// validator (`CustomIssue[]`, R915001), the script's problems, each on its line when it has one
+/// (`{ line?, message }[]`, #913), and the definition the frame builds (R915000), which the creator's
+/// preview draws. Both lists empty for a card that may be saved and played. No game is started.
 #[unsafe(no_mangle)]
 pub extern "C" fn check_custom_card(card_json: *const c_char) -> *mut c_char {
     boundary(|| {

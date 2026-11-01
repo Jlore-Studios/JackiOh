@@ -93,8 +93,7 @@ pub struct SummonPlacement {
     pub memory: Option<IndexMap<String, Value>>,
 }
 
-/// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
-/// placement's keys beside the rest, as TS writes the literal).
+/// `summon`'s arguments, the placement's keys beside the rest.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]

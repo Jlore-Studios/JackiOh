@@ -58,6 +58,7 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         register_all();
         // R43: "one created later rolls when it is created"; R151: it rolls "as it arrives anywhere a
         // card can be looked at". #95's "summon 5 random Field Spells or Traps into your backrow" puts a
+        // Heroic Power straight onto the field — never through a hand or a library, the only arrivals
         // that roll. (Carnivorous Cube's copies were this test's route until R428 took backrow meals
         // away from the Cube.) The roll is searched for: the play's first rng draw is #95's roll, and the
         // first backrow pick follows it, from the pool of every set (R380). The seed is arbitrary; the

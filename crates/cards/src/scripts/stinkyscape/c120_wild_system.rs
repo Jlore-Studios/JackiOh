@@ -6,6 +6,7 @@
 //! Engine: `melee` (R1848005): forced attacks (R53) between pairs drawn from the match rng, allies
 //! as good a target as enemies, each its own combat and state check, until one Unit or none is left,
 //! none may attack another, or `MELEE_MAX_ATTACKS` (20) attacks are made; no hero is a target
+//! (ST-S14-9). Then `next_turn_mana` of `mana` on its caster (R1848004). The designer wrote one text
 //! on both faces, which R276 refuses, so the Radiant face's declared number is 2 (R1857001): both
 
 use jackioh_engine::prelude::*;

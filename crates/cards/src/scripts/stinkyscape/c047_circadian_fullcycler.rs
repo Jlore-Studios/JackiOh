@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #47 Circadian Fullcycler — SPEC §8.10 row 47, BUILD M12 row S 47: "each of your turns while it stands
-// is the autopilot's, within its bound (R1844000, R1183003); End of turn: a Drone Corvette summoned;
-// Brittle 3 crumbles it (R385); radiant: a Radiant Corvette".
+// S #47 Circadian Fullcycler — SPEC §8.10 row 47, BUILD M12 row S 47 (R1844000, R1183003, R385).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

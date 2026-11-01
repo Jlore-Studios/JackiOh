@@ -5,6 +5,9 @@
 //!            in each of your zones it covers. F(x, y) = (x² − y, xy)."
 //!
 //! a zone's point is its center. The caster chooses any zone (`choose_cell`, B5 E18). The unit square
+//! mapped through the Jacobian of F at that point, J = [[2x, −1], [y, x]], with its corner at the zone,
+//! is the parallelogram of the points (x, y) + s·(2x, y) + t·(−1, x), s and t in 0 to 1, edges included
+//! (`covers`; at (1, −2) J is singular and it is a segment). Each unit zone whose point lies in it, open
 //! and not Locked, gets one random Starship Piece Unit (`query::starship_pieces()`, R1878000, narrowed to
 //! Units as S #26's is, so S #131 Spacerace Stimulus, a Field Trap, is never one) summoned
 //! for the player whose zone it is (`summon_random`: no Cry, R1; R387), the caster's zones first, each

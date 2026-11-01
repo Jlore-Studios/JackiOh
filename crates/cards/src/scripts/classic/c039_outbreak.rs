@@ -106,12 +106,8 @@ pub fn script_v0_4_4b() -> CardScripts {
     outbreak(false)
 }
 
-// C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39: "A declared target, any permanent
-// either side, face-down included; one placement of 1 (C #27 doubles it); then, if it is an enemy
-// permanent with at least as many Plague Counters as its cost (R65 on the field; an X card its X, 0 with
-// none chosen, R396), steal it (§6.3, R15), an entry (R171); no free zone → it stays with them and
-// from then on (R33); a face-down option, and the placement on it, never name it to you (R177);
-// radiant: 2 tokens; its tuned number (tokens) reads through `param()` (R386)".
+// C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39 (#27, R65, R396, §6.3, R15, R171, R33, R177,
+// R386).
 // The R396 cases read costs through the engine's `costNow`. A Plague Chalice played for X enters with
 // X Plague Counters (SPEC §8.6 row 87), so any placement brings it to its X; the cases that need an X card
 // played for 3 with fewer tokens than its X use C+ #69 Buff Billy, the other X permanent R396 names.

@@ -1,14 +1,11 @@
-// GitHub releases: the Patch notes page in Markdown, one release per shipped version. A release
-// reads as its patch reads on the page (R724000, R724001): its player note under the page's headings,
-// the technical log's lines players read for it (R1369000) and its cards as the page lists them, each
-// changed card with what changed; a release line's major also carries the line's summary and
-// technical changes. `.github/workflows/releases.yml` publishes them through
-// `apps/web/scripts/github-releases.ts`.
+// GitHub releases: the Patch notes page in Markdown, one release per shipped version, each reading as
+// its patch reads on the page (R724000, R724001), with the technical log's lines players read for it
+// (R1369000). `.github/workflows/releases.yml` publishes them through `apps/web/scripts/github-releases.ts`.
 //
-// A version production's patches.json holds is a release. One only main holds is a pre-release: it
-// is on staging until the next production merge (docs/deploy-cloudflare.md). Every tag is the
-// commit that brought the patch to main, as `shipped.json` records it (R646), so the releases sit
-// in the order and on the days the patches shipped. Public data only (CLAUDE.md rule 7).
+// A version only main's patches.json holds, not production's, is a pre-release: it is on staging until
+// the next production merge (docs/deploy-cloudflare.md). Every tag is the commit that brought the patch
+// to main, as `shipped.json` records it (R646), so the releases sit in the order and on the days the
+// patches shipped. Public data only (CLAUDE.md rule 7).
 
 import type { TextRange } from "../cards/radiantDiff.ts";
 import { changeSummary } from "./ChangeList.tsx";

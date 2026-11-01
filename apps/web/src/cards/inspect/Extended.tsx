@@ -1,7 +1,6 @@
-// The extended description (issue #1017, after #814's "on the left of the card it should show the
-// full description"): a face that prints less than its whole text — a short form or a clamp
-// (CardFace.tsx `faceText`, shortText.ts) — has its whole text at reading size on its left in the
-// hover preview, and under it in the touch sheet. Its numbers (R280), marks (R277) and references
+// The extended description (issues #1017, #814): a face that prints less than its whole text — a
+// short form or a clamp (CardFace.tsx `faceText`, shortText.ts) — has its whole text at reading size
+// on its left in the hover preview, and under it in the touch sheet. Its numbers (R280), marks (R277) and references
 // (R279) are the face's own, a Resource's Credits line follows it (R2521009), and in play the keywords
 // it has gained and its granted abilities follow.
 

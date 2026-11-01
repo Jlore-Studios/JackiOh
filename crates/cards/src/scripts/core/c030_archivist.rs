@@ -83,8 +83,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #30 Archivist (SPEC §8.2, BUILD M4-T4 row 30): "Mode chosen with the play (R81); highest/lowest
-// by current cost, ties nearest top, X counts 0 (R24); radiant draws both".
+// #30 Archivist (SPEC §8.2, BUILD M4-T4 row 30) (R81, R24).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

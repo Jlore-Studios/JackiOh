@@ -1,49 +1,30 @@
 // The practice game itself: the one `GameState`, both seats' actions and the AI (SPEC §9.9, R187).
 //
 // This is the ONLY practice file that imports `@jackioh/engine`, `@jackioh/cards` or `@jackioh/ai`
-// — the Rust engine and AI, compiled to WebAssembly and reached through `src/wire/` (docs/v0.3.0/
-// SURFACE.md §10.4) — and only two things load it: the worker entry (`practice.worker.ts`) and the
-// in-thread host that jsdom tests use (`host.ts`), each of which loads the module (`loadWasm`)
-// before its first request. The page never does. That is the whole of rule 7 here: the state,
-// both hands and both libraries live on this side of `handle`, and what crosses it is a
-// `PracticeSnapshot` — `viewFor(state, human)`, the human's `legalActions`, whether the AI owes an
-// action, and the engine's refusal of the human's last action. The worker stands where §9.1 puts
-// the server. In every game it adds whether the human has a sure win this turn (R2102000, R2291000),
-// which the Rust side asks of the human's own redaction, so the AI's hidden cards never steer it.
+// (the WebAssembly engine and AI, docs/v0.3.0/SURFACE.md §10.4), and only the worker entry
+// (`practice.worker.ts`) and jsdom's in-thread host (`host.ts`) load it; the page never does. That is
+// rule 7 here: the state and both hands stay on this side of `handle`, and what crosses it is a
+// `PracticeSnapshot`, the worker standing where §9.1 puts the server. The sure-win check (R2102000,
+// R2291000) is asked of the human's own redaction, so the AI's hidden cards never steer it.
 //
-// Nonces: `h<n>` for the human's accepted actions and `a<n>` for the AI's, each counting only
-// actions the engine accepted, so a refused action spends nothing and the log folds exactly
-// (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws from its own stream,
-// `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
-// The Rust AI draws from that stream as `(seed, cursor)` and hands the cursor back, and `decide`
-// draws this object forward to it (`wire/ai.ts`), so `rng.cursor` is where the AI left it.
+// Nonces (`h<n>` human, `a<n>` AI) count only accepted actions, so a refused action spends nothing and
+// the log folds exactly (R187, R508, R433). The AI draws from its own stream, `${seed}:ai`, never the
+// match rng; `decide` draws this object forward to the cursor the Rust AI hands back (`wire/ai.ts`).
 //
-// Resume (R668). The worker dies with the page, so after every answer a free game in progress is
-// written to the env's save store (`saveStore.ts`, IndexedDB in a worker), as the match actor's log
-// outlives a server restart: the config, the log, the AI stream's cursor, the catalog version and
-// the state's hash. The save never crosses to the page, whose log would name the AI's hidden cards.
-// After a reload the page sends `resume` with the setup it remembers, and the log is folded again
-// through `apply`, action by action, under the same nonces, to the same hash; the AI picks its
-// stream up at the saved cursor.
+// Resume (R668): the worker dies with the page, so after every answer a free game in progress is
+// saved (`saveStore.ts`), and after a reload its log is folded again through `apply`, under the same
+// nonces, to the same hash. The save never crosses to the page: its log names the AI's hidden cards.
 //
-// Replays (R768). A free game that has just ended (not a tutorial lesson, and not one Glitch voided,
-// R679) is kept in the same store, the newest PRACTICE_REPLAYS_KEPT of them: its config, its log,
-// the catalog version, the final state's hash, the seat the human ended in and a summary for a list.
-// `replays` answers the summaries, newest first, and folds none of them, which would stall the worker
-// game after game: each is marked unavailable with part 1's reason when it was played on another
-// catalog, or when opening it has found it no longer folds to its hash; `replay` answers a page of the
-// human's steps, `viewFor` of the seat the human played at each step (R677), and the total, from a
-// fold the worker holds for the last PRACTICE_REPLAYS_CACHED games opened. Both are refused while a
-// game is in progress. Like the save, a kept game never crosses to the page: a response holds
-// summaries and views, never the log, the seed, the decks or a state.
+// Replays (R768): the newest PRACTICE_REPLAYS_KEPT free games that ended (not a lesson, nor one Glitch
+// voided, R679) are kept in the same store. `replays` folds none of them, which would stall the worker
+// game after game; `replay` answers `viewFor` of the seat the human played at each step (R677). Like
+// the save, a kept game never crosses to the page: never the log, the seed, the decks or a state.
 //
-// Claims (R1303000). A free game on a server seed (`earning: true`) answers `claim` once it is over:
-// its seed, the result for the human and the whole log, which the page sends to the server to be
-// folded (R2560000) before it pays. The log crosses only after the end, so it can no
-// longer help the human play, and the page already holds the seed, since it asked the server for it
-// (rule 7). Any other game, and a game still running, is refused. A game resumed after a reload
-// (R668) claims on the seed it began on, which its saved config carries (R1303001). The server does not
-// re-run the AI's moves (R2560000), so such a game decides under PRACTICE_AI_CLOCK_MS like any other.
+// Claims (R1303000): a free game on a server seed (`earning: true`) answers `claim` once it is over
+// with its seed, result and log, which the server folds (R2560000) before it pays. The log crosses only
+// after the end, so it can no longer help the human play, and the page asked the server for the seed
+// (rule 7). A resumed game claims on the seed it began on (R1303001) and decides under
+// PRACTICE_AI_CLOCK_MS like any other, since the server does not re-run the AI's moves.
 
 import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import {

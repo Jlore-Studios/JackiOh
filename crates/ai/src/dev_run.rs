@@ -1,8 +1,15 @@
-//! SPEC §9.11, R378: internal AI development runs. Pre-release AI-vs-AI games filed as game
-//! records (R376) under All Random (R258) with unhandicapped resources (R180).
-//! Unbanned decks (shadow ban R186 dealt normally).
-//! Supports forced card evaluation (R1284000, `forced_dev_game_config`).
-//! Pure and seeded (CLAUDE.md rule 4).
+//! SPEC §9.11, R378: an internal AI development run: AI-against-AI games played on a build before its
+//! patch ships, each filed as a game record (R376) of its own source, "dev", which no live figure
+//! counts unless asked, so a patch's pre-release card win rates can be compared with its live games'.
+//!
+//! A development game is an All Random game (R258) with two AI pilots: both decks are dealt with
+//! nothing banned from the game seed and the seat (`${seed}:p1-deck`, `${seed}:p2-deck`), exactly as
+//! the server deals a live one, on this spec's own resources, no handicap (R180), at the browser's
+//! budget. A card the shadow ban (R186) keeps out of the AI's decks is dealt here too and is one the
+//! AI plays badly, so its figures say more about the AI than the card. A run can instead force one
+//! card into one seat's deck (R1284000, `forced_dev_game_config`), for `cargo jackioh stats compare`.
+//!
+//! Pure and seeded (CLAUDE.md rule 4): `cargo jackioh stats` loops over the games and writes the file.
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
@@ -48,8 +55,10 @@ pub struct DevRunOptions {
     /// this build's AI generation (`ai_generation`); `None` files no build.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
-    /// #1697: setup inputs for each game beyond decks (§9.3): dealt seats (R433), last boards
-    /// (R417, R564), and Glitch boards (R678).
+    /// #1697: the setup inputs every game of the run is created with beyond its decks (§9.3): dealt
+    /// seats (R433), last boards (R417, R564) and Glitch boards (R678), in seat order. The same in
+    /// every game, so a record stays a pure function of its number and the options (`cargo jackioh
+    /// stats` plays them in parallel).
     #[serde(flatten)]
     pub setup: MatchSetup,
 }
@@ -104,7 +113,7 @@ fn dev_match(seed: String, decks: (Vec<String>, Vec<String>), budget: Option<Sea
     }
 }
 
-/// Game n of a series with dealt decks and AI pilots.
+/// Game n of a series: its seed, its two dealt decks, and two AI seats at this spec's resources.
 pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> MatchConfig {
     let seed = format!("{series}:{n}");
     let decks = (dev_deck(&seed, "p1", &[]), dev_deck(&seed, "p2", &[]));
@@ -116,8 +125,10 @@ fn forced_seat(n: i32) -> PlayerId {
     if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
 }
 
-/// Game n of a series with `card` forced into one seat's deck (R1284000, R258).
-/// Replaces the card at slot `${seed}:force`.
+/// Game n of a series with `card` in one seat's deck (R1284000). Both decks are R258's deal with `card`
+/// banned, so the other seat never holds it and no deal depends on the card's own numbers; the
+/// holder's card at the slot `${seed}:force` picks is replaced by `card`, which must be a deckable
+/// card: the caller resolves it (`cargo jackioh stats --force`).
 pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>, card: &str) -> MatchConfig {
     let seed = format!("{series}:{n}");
     let banned = [card.to_string()];
@@ -144,12 +155,14 @@ pub fn dev_run_config(n: i32, options: &DevRunOptions) -> MatchConfig {
     }
 }
 
-/// R378: development record ID `dev:<patch>:<seed>`.
+/// R378: a development record's id, `dev:<patch>:<seed>`. The patch is part of it, so the same seeds
+/// played again for another patch are other records, which `stats:import` adds rather than skipping.
 pub fn dev_record_id(patch: &str, seed: &str) -> String {
     format!("{DEV_RECORD_ID_PREFIX}{patch}:{seed}")
 }
 
-/// R376, R378: plays game n and returns a finished GameRecord.
+/// R376, R378: plays game n and files it. `None` when the game did not finish (the match's action
+/// limit, or an AI panicked), since only a finished game is a record.
 pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
     let config = dev_run_config(n, options);
     let played = play_match(&config, &mut MatchHooks::default());

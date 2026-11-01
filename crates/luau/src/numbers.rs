@@ -1,5 +1,12 @@
-//! Integers at boundary (#442 L6). Every value leaving Luau passes `walk` to become Rust value.
-//! `J.div` and `J.rem` truncate toward zero as Rust does.
+//! Integers at the boundary (#442 L6). Every value that leaves Luau passes `walk` before it becomes a
+//! Rust value: a hook's return and every argument a host function reads. The rules count in `i32`, while
+//! a Luau number is an `f64`, so a number crosses only when it is integral, finite and inside `i32`;
+//! anything else is refused, naming the value. Tables cross as JSON: a list (keys exactly `1..=n`) in
+//! index order, a record (string keys only) with its keys sorted, so nothing that crosses depends on
+//! Luau's hash order.
+//!
+//! `J.div` and `J.rem` are the only division a script has: they truncate toward zero as Rust's `/` and
+//! `%` do, where Luau's own `//` and `%` floor.
 
 use std::fmt;
 
@@ -10,7 +17,8 @@ use serde_json::{Map, Value as Json};
 use crate::config::{LUAU_VALUE_DEPTH, LUAU_VALUE_NODES};
 use crate::{LuauError, Site};
 
-/// Why a value could not cross: non-integer or unrepresented value.
+/// Why a value could not cross: a number that is not an `i32`, or a value of another kind no Rust
+/// value stands for.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Refusal {
     Number(String),
@@ -26,7 +34,9 @@ impl fmt::Display for Refusal {
     }
 }
 
-/// Luau number as `i32` or failure text.
+/// A Luau number as an `i32`, or the number's text when it is not one (a fraction, `NaN`, an infinity,
+/// a value outside `i32`). mlua hands an integral number over as `Value::Integer`, anything else as
+/// `Value::Number`.
 pub fn number_to_i32(value: &Value) -> Result<i32, String> {
     match value {
         Value::Integer(n) => i32::try_from(*n).map_err(|_| n.to_string()),
@@ -79,7 +89,10 @@ fn count(nodes: &mut usize) -> Result<(), Refusal> {
     Ok(())
 }
 
-/// Walks table as list or record. Empty tables without metatables walk as records (#464 gap 1).
+/// A table as a list, a record or, empty, one of the two empty shapes. An empty table with a metatable
+/// is one mlua serialized from a Rust sequence, so it walks as an empty list; one without (a script's
+/// `{}`) walks as an empty record, which the typed boundary (`arg`, `typed`) coerces to whichever empty
+/// shape the target type wants (#464 gap 1).
 fn walk_table(table: &Table, depth: usize, nodes: &mut usize) -> Result<Json, Refusal> {
     let refused = |error: Error| Refusal::Value(error.to_string());
     let mut keys = Vec::new();
@@ -145,7 +158,8 @@ pub fn to_i32(value: &Value, site: Site) -> Result<i32, LuauError> {
     number_to_i32(value).map_err(|value| LuauError::Number { site, value })
 }
 
-/// Host function argument walked and deserialized as `T`.
+/// A host function's argument, walked and then read as `T`. Every reader and `J` function reads its
+/// arguments through this, so they cross by the same rules as a hook's return.
 pub fn arg<T: DeserializeOwned>(value: Value) -> mlua::Result<T> {
     let json = walk(&value, 0, &mut 0).map_err(Error::runtime)?;
     match serde_json::from_value(json.clone()) {
@@ -171,7 +185,8 @@ pub fn coerce_empty_objects(value: &Json) -> Json {
     }
 }
 
-/// `J.div`: Rust's `/`, truncating toward zero. `None` where Rust's would panic.
+/// `J.div`: Rust's `/`, truncating toward zero. `None` where Rust's would panic: a zero divisor, or
+/// `i32::MIN / -1`.
 pub fn div(a: i32, b: i32) -> Option<i32> {
     a.checked_div(b)
 }

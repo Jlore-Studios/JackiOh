@@ -52,8 +52,7 @@ pub fn script_v0_4_4b() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #69 Call to Arms — SPEC §8.3, BUILD M4-T4: "Three top-down recruits of cost ≤1, library order
-// otherwise kept, stops when the board fills; radiant ≤2".
+// #69 Call to Arms — SPEC §8.3, BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -42,6 +42,7 @@ pub fn script() -> CardScripts {
 // from your graveyard to hand, with no prompt (R684; fewer if fewer; an empty graveyard: nothing);
 // the resolving Spell is never one of its own returns; a full hand burns the overflow (R317); the
 // returned cards follow R97 in the opponent's view once in your hand; cast by C #47 the returns are
+// still its caster's; radiant: up to 4 from your graveyard or your exile; its tuned number (cards)
 // reads through `param()` (R386)".
 // The C #47 case casts this card from C #47 Recurring Felinor's Cry (B5 E12).
 #[cfg(test)]

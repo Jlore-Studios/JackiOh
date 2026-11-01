@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #32 Selfless Protector — SPEC §8.11 row 32, BUILD M13 row TG 32: "Death: every other Unit of yours on
-// the field has Divine Shield; enemy Units do not; Units dying in the same check get none; a pile's lower
-// Unit is not reached (R13). radiant Cry: your Units, this one included, gain Divine Shield; Death as base".
+// TG #32 Selfless Protector — SPEC §8.11 row 32, BUILD M13 row TG 32 (R13).
 #[cfg(test)]
 mod tests {
     use super::ID;

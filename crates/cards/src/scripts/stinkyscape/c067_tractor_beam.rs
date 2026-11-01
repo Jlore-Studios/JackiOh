@@ -3,6 +3,7 @@
 //!   Radiant: "Starship Piece, Equip\nStart of turn: Gain a random Radiant Stinkyscape Resource." (0/4)
 //!
 //! Starship Piece and Equip are printed keywords, the engine's: its death fuses a copy into its owner's
+//! Dormant Starship (R1852000), and played onto one of its controller's Units it fuses into that Unit,
 //! the host taking its Start of turn line and staying no piece (R1086, R1852001). Start of turn (R62):
 //! `gain_resources` of one random Resource into its controller's hand (R1840000, R1840002's roll), a
 //! ninth sold at once (R1840001); the first gain opens the Marketplace (R1853000). Radiant: a Radiant

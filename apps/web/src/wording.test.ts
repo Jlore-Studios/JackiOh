@@ -1,4 +1,5 @@
-// Player-facing text in today's words, one describe per ruling. R781000: the old word Magnetic is left
+// Player-facing text in today's words, one describe per ruling (R373: Deck and Tribute, never library
+// or sacrifice). R781000: the old word Magnetic is left
 // only where the past is shown as it was. The guards parse strings, templates and JSX, not comments or
 // lower-case machine words; `cards/glossary.ts` puts SPEC text through `inPlayerWords`.
 
@@ -75,6 +76,7 @@ describe("R373 players read Deck and Tribute", () => {
   });
 });
 
+/** R432: player-visible legacy cost phrasings. */
 const OLD_COST_WORDS: readonly RegExp[] = [/\bCost \(/, /\bcosting \(/i, /\bcost(s|ing)? \d/i, /\b\d+-cost\b/i, /\bcosts? $/i];
 
 function oldCostWords(text: string): boolean {

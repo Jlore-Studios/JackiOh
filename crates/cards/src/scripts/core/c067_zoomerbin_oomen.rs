@@ -61,8 +61,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4: "Random trap face-down and unpaid into own lane's
-// backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps, radiant all six".
+// #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4 (R47).
 // Radiant: every trap of every set, summoned Radiant, hidden face and all (R33, R97, R177).
 #[cfg(test)]
 mod tests {

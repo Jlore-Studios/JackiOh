@@ -1,10 +1,15 @@
-//! Custom cards on the account (SPEC §12.9, R915008; issue #918).
+//! Custom cards on the account (SPEC §12.9, R915008; issue #918): up to `CUSTOM_CARDS_PER_ACCOUNT`
+//! per active account (§12.1, R915000), only the owner reads them and only these routes write them.
+//! - A create (`POST`) mints the id (`custom-` and 32 hex digits) at version 1: the server's, never
+//!   the client's, so no player can name a card into another's id space.
+//! - An update (`PUT`) replaces the card whole and names the version it replaces; one another save
+//!   has moved past is a 409 naming the current one, so a stale tab never overwrites a newer save.
+//! - Every save is judged by `jackioh_engine::custom::validate_custom_card` (R915001), the check the
+//!   creator, the practice worker and a game's setup make too; its issues are the `details`.
 //!
-//! Active accounts store up to `CUSTOM_CARDS_PER_ACCOUNT` private cards (§12.1, R915000).
-//! - `POST`: mints server-controlled `custom-<hex32>` id at version 1.
-//! - `PUT`: optimistic concurrency via version checking; stale saves 409.
-//! - Validation: all saves checked by `validate_custom_card` (R915001).
-//! - Server stores script source text bounded by `CUSTOM_SOURCE_MAX_BYTES` without executing Luau (#902 V4).
+//! The server never compiles or runs a script: it does not link `jackioh-luau` (#902 V4), and a
+//! source is text bounded by `CUSTOM_SOURCE_MAX_BYTES`. A deleted card leaves the decks that name it
+//! as they are, failing their practice game's setup until it is replaced.
 
 use std::sync::Arc;
 

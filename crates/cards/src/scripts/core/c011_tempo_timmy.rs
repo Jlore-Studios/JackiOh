@@ -16,8 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #11 Tempo Timmy (SPEC §8.1, BUILD M4-T4 row 11): "Attacks a unit on summon turn, not the hero;
-// kills a 3-health unit unharmed; radiant may hit the hero".
+// #11 Tempo Timmy (SPEC §8.1, BUILD M4-T4 row 11).
 //
 // The card scripts nothing, so every clause is a keyword: §4.1's Rush and Charge, §4.3's First Strike.
 #[cfg(test)]

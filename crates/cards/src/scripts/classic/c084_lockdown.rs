@@ -61,6 +61,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #84 Lockdown (SPEC §8.6 row 84). (2) Field Spell, Rare: Indestructible; after a permanent is
+// played, Lock its zone; Activate: Tribute this. Radiant: after your opponent plays a permanent.
 // Countered cards use C #72 Grand Counterspell; a fixture Spell tests that a cast counts (R70).
 #[cfg(test)]
 mod tests {

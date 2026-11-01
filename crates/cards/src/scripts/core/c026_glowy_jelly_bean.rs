@@ -27,9 +27,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #26 Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 26): "Chosen hand card gets radiant flag,
-// picked as part of the play rather than a prompt (R81); radiant chooses 2, or the one card
-// available".
+// #26 Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 26) (R81).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

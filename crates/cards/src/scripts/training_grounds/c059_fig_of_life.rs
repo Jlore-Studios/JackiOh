@@ -51,8 +51,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
-// radiant 40".
+// #47 Fig of Life — SPEC §8.2, BUILD M4-T4 (R19).
 // §8's "an empty target set fizzles" cannot arise: both heroes are always legal targets. The props
 // have no script beyond printed keywords.
 #[cfg(test)]

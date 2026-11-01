@@ -531,6 +531,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         );
 
         // The deal's events reach p1's view (R168), redacted (R97). Were a Quickdraw card dealt with an
+        // `addedToHand` alone, it would stand out among p2's `drawn` events and count p2's Quickdraw
         // cards, which are p2's hand (§9.1); R225 reports it as a draw, `drawn` then `addedToHand`.
         assert_eq!(types_of(&without), types_of(&with_power));
         same_view(
@@ -615,6 +616,7 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
 
         // p2 may count p1's hand and library (§10.8), but whether p1's deck holds a Quickdraw card is
         // p1's to keep (§9.1). Had the Heroic Power left the library for the hand before the other
+        // draws, "instead of" a draw that has not happened yet, the counts would say so; it waits for
         // the last opening draw (R225), so both games count the same.
         same_view(
             &view_for(&with_power, PlayerId::P2),
@@ -718,6 +720,7 @@ mod r155_r241_a_card_setup_casts_belongs_to_no_turn_of_its_caster_s_2_1_6_2 {
             assert_eq!(state.result, None);
 
             // R155: the return belongs to the turn the Spell was played on, and a Spell played outside its
+            // controller's turn "stays in the graveyard rather than coming back at the end of a later turn
             // it was not played on". Setup is turn 0 and nobody's turn (§2.1, §2.2): a setup cast's
             let in_hand = state.players[seat]
                 .hand

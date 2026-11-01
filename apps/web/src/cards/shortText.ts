@@ -6,40 +6,32 @@
 // Issue #1017 measured the limit (constants.ts FACE_TEXT_LIMIT) and cut every catalog face under it,
 // but for these. Each card's text is a list no box holds, or a face still a line over after the cut:
 // - `n` (a number): its first n lines, which its text puts first, "…" in place of the last full
-//   stop: #98 Heroic Power's thirteen powers, Meditative #8 Reach the Summit's eleven levels,
-//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Prime's list
-//   of Cries; and a few faces that fit, whose last line is a reminder or the designer's flavour
-//   that the click-in carries (Tesla, Jade Beauty, Jlockeed's Evil Blueprints);
+//   stop: lists such as #98 Heroic Power's thirteen powers, and a few faces that fit, whose last
+//   line is a reminder or the designer's flavour that the click-in carries;
 // - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
 //   must stay whole in the catalog (each roll's label is a clause of it, R436);
 // - "clamp": its whole text, cut by the rules box at its last line with "…": seven faces still about
-//   a line over after the cut (Yile's Virus and Knowledge Breaker, and the Radiant faces of KY's Gift,
-//   Feng Shui and Windfast), which a 200 px tile prints whole, three #1563 left a line over
-//   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition),
-//   one #1704 did (The House's Radiant face, its Cry and its Activate), and #1828's Can't attack put
-//   both faces of Jungle Loser a line over.
+//   a line over after the cut, which a 200 px tile prints whole, three #1563 left a line over, one
+//   #1704 did, and #1828's Can't attack put both faces of Jungle Loser a line over.
 // The Stinkyscape set (R1857000) printed its rows before its cards were built: its two Call to
 // Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
 // put over the limit clamps, unless the card's part (docs/stinkyscape-set.md ST13) wrote its own.
 // Where a face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and
 // #26 ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
-// The set's two staged Quests, #7 The Greatest Heist and #112 Job Application, print one stage (questFace.ts,
-// R2450000), measured as they print it: Heist's base face fits whole, and its Radiant face and both
-// of Job Application's, a line or two over, clamp.
+// The set's two staged Quests, #7 The Greatest Heist and #112 Job Application, print one stage
+// (questFace.ts, R2450000), measured as they print it.
 // The held Training Grounds set (R2194000) does the same while it is built: its Call to Chaos edition (#39) takes
 // "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
 // card's part (docs/training-grounds-set.md TG5) writes its own.
-// Issue #2521's texts: Classic+ #34 Memory Leak's base face, with Crater, and Meditative+ #1 Bob's Plan's,
-// with Star Chart's plan, clamp; ZolarKeth's Radiant face prints its first line, as its base face does;
-// and Swear Loyalities' faces, shorter, fit whole.
+// Issue #2521's texts: Classic+ #34 Memory Leak's base face and Meditative+ #1 Bob's Plan's clamp,
+// and ZolarKeth's Radiant face prints its first line, as its base face does.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
 // In play the Summit prints its header and only the next Ascent line (#814): the level the engine's
 // preview carries under "Ascent level" (R280, c008_reach_the_summit.rs), which is the play count on
-// the instance. A face in play that runs past the hover preview's limit (a fused card's ingredients,
-// a heavily Buffed card's keywords) clamps rather than shrinking its art, and its whole text stands
-// on its left too.
+// the instance. A face in play that runs past the hover preview's limit clamps rather than shrinking
+// its art, and its whole text stands on its left too.
 
 import type { PreviewValue } from "@jackioh/shared";
 

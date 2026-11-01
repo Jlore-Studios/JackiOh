@@ -1,10 +1,6 @@
-//! The helpers every server test file carried its own copy of (#1491, #2385): the fake store behind the
-//! test app (`fake`, `fake_ref`, `fake_lock`), its tables (`table`, `fake_read`) and its injected faults
-//! (`fail_on`, `stop_failing`) and its call log (`record_calls`), one store call in a transaction of
-//! its own (`q!`, `store!`, `try_store!`), a value as JSON and back (`to_json`, `from`), a
-//! client-minted id (`uuid`), an HMAC-SHA256 as hex (`hmac_sha256_hex`) and three steps of tokio's
-//! paused clock (`advance`, `advance_and_yield`, `sleep_settled`). A copy that behaved differently keeps a name of its own;
-//! `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`) refuses a new copy.
+//! The helpers every server test file carried its own copy of (#1491, #2385). A copy that behaved
+//! differently keeps a name of its own; `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`)
+//! refuses a new copy.
 
 use std::sync::Arc;
 use std::time::Duration;

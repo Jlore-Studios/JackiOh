@@ -27,9 +27,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// M #93.3 Growing Felinor Super Senior — SPEC §8.8 row 93.3, BUILD M10 row M 93.3: "It can't switch
-// to Defense; it summons nothing when it dies, ending the chain (MD-E19); radiant 8/8, Divine Shield,
-// Rush".
+// M #93.3 Growing Felinor Super Senior — SPEC §8.8 row 93.3, BUILD M10 row M 93.3.
 #[cfg(test)]
 mod tests {
     use super::{ID, script_v0_5_9f};

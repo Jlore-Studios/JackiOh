@@ -48,10 +48,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// S #34 Drone Core VIII — SPEC §8.10 row 34, BUILD M12 row S 34: "a Float of 2 at its owner's end of turn
-// makes it cost (4) in hand, never in the deck (R2657002), the opponent's Float nothing (R1563000); played, it summons an
-// Interceptor into every empty unit zone of its caster, then every empty backrow zone (R2248000); radiant
-// Radiant ones".
+// S #34 Drone Core VIII — SPEC §8.10 row 34, BUILD M12 row S 34 (R2657002, R1563000, R2248000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

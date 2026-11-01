@@ -73,10 +73,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #65 Ace in the Hole — SPEC §8.6 row 65, BUILD M9 Classic row C 65: "Face-down (R33); at the end of
-// its controller's turn, in the end-of-turn trap window (R62), flip a coin from the match rng: heads
-// opponent's view, and heads fires it and Recruits 3; a recruited trap lands face-down (R33); its tuned
-// number (recruits) reads through `param()` (R386)".
+// C #65 Ace in the Hole — SPEC §8.6 row 65, BUILD M9 Classic row C 65 (R33, R62, R386).
+//
+// The coin is the match rng's next draw as its controller's turn ends (the trap's end-of-turn hook,
 // which R62 runs before the window the trap fires in), so each case picks a seed whose next coin is the
 #[cfg(test)]
 mod tests {

@@ -306,6 +306,7 @@ mod r214_step_3_applies_the_face_step_1_checked_whatever_step_2_put_on_the_board
         let vanilla = must(s.unit(PlayerId::P1, 3), "p1's Mr. Vanilla");
         let gifted = must(s.backrow(PlayerId::P1, 1), "p1's Gifted Program");
         // #99's result: Lava Golem + Bigot, a Unit with Tribute 3 costing 0, whose base face names an
+        // enemy non-Human unit to destroy and whose radiant face destroys every enemy non-Human unit
         // and names nothing (R102, R214).
         let lava_golem = s.card(LAVA_GOLEM).clone();
         let bigot = s.card(BIGOT).clone();

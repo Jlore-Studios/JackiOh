@@ -1,9 +1,6 @@
 // Earning in practice (SPEC §14.8, R1303000): the page's door onto `crates/server/src/api/practice.rs`.
-//
-// A free practice game an active account starts asks the server for its seed first, and the server
-// keeps the setup beside it; once the game is over the page sends the worker's log, and the server
-// folds it to its result before it pays anything (R2560000). The page decides
-// nothing here (CLAUDE.md rule 7): a refusal's reason is the server's, relayed.
+// The server hands a free game its seed and keeps the setup beside it, then folds the finished game's
+// log to its result before it pays (R2560000). The page decides nothing here (CLAUDE.md rule 7).
 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { LeanPick, PlayerId } from "@jackioh/shared";

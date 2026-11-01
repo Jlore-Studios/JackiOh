@@ -4,7 +4,11 @@
 //!
 //! Engine: Equip (R1086): played onto one of your Units it fuses into it, the host keeping its zone
 //! and taking its stats, keywords and text (R77, R102), Starship Piece only into a piece (R1852001);
+//! played alone its death fuses a copy into its owner's Dormant Starship (R1852000); an equipped
+//! host gains the text and the Divine Shield. The survival is read by two hooks: `after_attack`,
 //! after an attack it made, when its facts say `survived`, and `after_attacked` (R1026), after an
+//! attack made on it, declared or forced, when it still stands after that combat's state check —
+//! read as the absence of `SELF_KEY` in the hook's data (present means the defender died and runs
 //! on its snapshot, R78, R89); a Cleave splash is no attack on it. Then `buff` +N/+N on itself,
 //! lasting. The Radiant face runs the same script: its numbers are the declared `buff` (R386).
 

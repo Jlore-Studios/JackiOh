@@ -1,25 +1,8 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B41 to B43 and R655: the lookups in
-// `voiceData.ts` that the engine, the cue table and the hook read, its parser of `card-audio.json5`,
-// and the file's layout.
-//
-//   B41  `voiceKey` joins "<defId>-<line>" (defIds contain "-"), `voiceUrl` serves it from
-//        BASE_URL's `audio/voice/`, and `lineFor` returns the line's text with the voice its hook
-//        names, or null for the sentinel, an unknown id, a hook the card's kind does not have, or a
-//        hook that is only an effect.
-//   B42  `parseCardAudio` accepts the shipped file, adding only each card's kind and each effect's
-//        default pitch and gain, and rejects a malformed one with `card-audio.json5: <path>:
-//        <problem>`; it does not check word limits or the lines every card must have (B33, B34 do).
-//   B43  `voiceKeysForView` lists, deduped and in this order, the viewer's hand (unit -> play,
-//        spell -> cast, traps none), every unit on both boards (death), the viewer's own units
-//        (attack, R655) and the viewer's own face-up backrow traps (cast); a card it cannot name, or
-//        a hook with no line, adds nothing.
-//   R655 every shape error names its path, JSON5's comments and trailing commas parse, a card's kind
-//        comes from its catalog type, and `hookFor`, `lineFor` and `effectFor` read a hook that is a
-//        line, an effect or both. `withVoiceText` joins the words of `voice-text.json` (written from
-//        crates/cards/card-text.yaml, #2498) to the hooks and portraits that speak them, refusing a
-//        line the table writes itself, a line no voice speaks and a voice with nothing to speak.
-//
-// Plus the file's layout: voices sorted by name, cards in catalog order, a trailing newline.
+// `voiceData.ts` that the engine, the cue table and the hook read (B41, B43), its parser of
+// `card-audio.json5` (B42, R655), and the file's layout. The parser does not check word limits or
+// the lines every card must have (B33, B34 do). `withVoiceText` joins the words of `voice-text.json`
+// (written from crates/cards/card-text.yaml, #2498) to the hooks and portraits that speak them.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

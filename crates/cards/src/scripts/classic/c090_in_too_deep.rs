@@ -218,6 +218,7 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
                     "hook": RESUME_HOOK,
                 })))];
                 // The discard is the reward earned and comes even if this card is gone (R76); the
+                // quest it leads to is this stay's, so it waits behind it watching this card and is
                 // forgotten if the card leaves the field meanwhile (R174, R78).
                 if let Some(card) = &ctx.self_ {
                     effects.push(delay(json_as(json!({

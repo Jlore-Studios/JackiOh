@@ -4,20 +4,13 @@
 //! An honest claim pays `JLORE_PRACTICE_WIN` or `JLORE_PRACTICE_LOSS` and the practice XP; a
 //! forged result, an AI move the engine refuses, another seed's log, an unfinished log, a sandbox
 //! tool, a seed claimed before, a lapsed seed and a pruned one pay nothing and say why
-//! (R1303000–R1303003, whose proving tests live here), while a log that folds to its result pays
-//! even when an AI move in it is not the AI's own choice (R2560000). A seed given back frees its place, and only the caller's unclaimed seed can be (R2379000). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
-//! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
-//! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
-//! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000). A pay the store fails is
-//! tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and pays once or not at all (R1688000). A
-//! claim whose pay never landed (every try failed, or a crash took the settle) is paid once by the
-//! retention loop's sweep past `PRACTICE_SETTLE_GRACE_SECONDS`, a refused one is marked so and never
-//! swept, and a shutdown waits for a claim whose caller has gone (R2422000).
+//! (R1303000–R1303003, whose proving tests live here). A paid game moves the account's quests by
+//! what it did, as a ladder game does (R1304001).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
-//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI (the server no
-//! longer re-runs it, R2560000); the fixture test plays one the browser's worker recorded instead. Every amount
-//! is read through its constant and the hook's own math, so the tests hold whatever #1333 sets.
+//! `economy::practice`'s own `opening` and this file's `ai_move`, the worker's AI; the fixture test
+//! plays one the browser's worker recorded instead. Every amount is read through its constant and
+//! the hook's own math, so the tests hold whatever #1333 sets.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};

@@ -161,6 +161,7 @@ mod c10_rapid_replenish_lights_up_at_combo_3_r195_b5 {
 
         assert_eq!(s.state().active, PlayerId::P2);
         // "This turn" starts afresh for both players (§6.2), so p1's three plays no longer count on
+        // p2's turn. That the hand is not even asked outside its own main phase, where a hook would
         // answer true, is R195's rule 3.
         assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
         assert!(!hand_glows(&s, &spell));

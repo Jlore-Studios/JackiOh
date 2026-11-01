@@ -44,7 +44,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #53 Reno (SPEC §8.3, §6.3 Heal, §3, R19; BUILD M4-T4 row 53: "12 → 30; 35 stays 35; radiant 60").
+// #53 Reno (SPEC §8.3, §6.3 Heal, §3, R19; BUILD M4-T4 row 53.
 //
 // R195's yellow glow (`condition_met`): both answers of this card's hook, checked against the branch
 // its resolution then takes, are in condition_active.rs with the other hooked cards (README §5).

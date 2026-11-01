@@ -1,13 +1,11 @@
 // The Trade control (R1838000, SPEC §10.10): the Duos pass control borrowed for a Tradable hand card.
 //
-// Pointing at one of the viewer's own hand cards (a mouse over it, a tap on it, the keyboard's focus
-// on it) puts a small bar above it, as the Duos card bar does (`duos/CardActions.tsx`, the same
-// `game/cardBar.ts` underneath): "Trade", with the Trades left the view's `trades`
-// gives. It is offered only on a card `legal` lists a `trade` for, or whose view carries a
-// `tradeReason`; it is live exactly when `legal` lists that card's `trade`, and otherwise greyed, its
-// tooltip the engine's reason, sending nothing (CLAUDE.md rule 7: no keyword, cost or count is read
-// here to decide anything). On a Duos board the Trade button rides the card bar beside the pass
-// control instead, and Game's own bar is off (`tradeBar`).
+// Pointing at one of the viewer's own hand cards puts a small bar above it, as the Duos card bar does
+// (`duos/CardActions.tsx`, the same `game/cardBar.ts` underneath). It is offered only on a card
+// `legal` lists a `trade` for, or whose view carries a `tradeReason`; it is live exactly when `legal`
+// lists that card's `trade`, and otherwise greyed, its tooltip the engine's reason, sending nothing
+// (CLAUDE.md rule 7: no keyword, cost or count is read here to decide anything). On a Duos board the
+// Trade button rides the card bar beside the pass control instead, and Game's own bar is off (`tradeBar`).
 
 import { useMemo, type ReactElement } from "react";
 

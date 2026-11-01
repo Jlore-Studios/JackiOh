@@ -4,8 +4,11 @@
 //!   Radiant: "… Cry: Replace both players' hands with random complicated cards. Make yours Radiant." — 3
 //!
 //! The Aura is M #65 Keymaster Keenus's (R781004): §10.4's layers read with no rng, so the keywords are
+//! drawn as it arrives on the field (played, summoned, Flickered, back through Reborn) by
+//! `draw_combat_keywords`, different ones from the combat keyword pool, none it has, and kept on it until
 //! it leaves the field (R78); the Aura reads them back (`conditionalKeywords`), so a Vanilla takes them.
 //! Cry (R1): C+ #65.5's `replace_hand_with_random` for each player, its controller's first: each hand is
+//! moved to its owner's graveyard (no discard) and as many random cards of `{ complicated: true }`
 //! (R1846000) added, repeats allowed (R60), never this card (R387); an empty hand gets none (R129). The
 //! pool is the sets that ship, as no `everySet` is asked (R1846001). The Radiant face makes its
 //! controller's new cards Radiant, the opponent's not. The count is the declared `keywords` (R386).

@@ -1356,6 +1356,7 @@ mod r174_10_5_step_3_step_3_s_hooks_are_the_stays_the_step_began_with {
         assert_eq!(s.card(&pinger.id).reborn_spent, Some(true));
         s.expect_in_zone(&pinger.id, "field");
         // R174: the stay step 3 began with has ended, and the body is a new arrival that was not a holder
+        // when the play reached step 3 (as a start-of-turn hook queued before a death does not fire for
         // the Reborn body, R174), so it deals nothing for this play.
         s.expect_health(P2, 30);
     }
@@ -1505,6 +1506,7 @@ mod r174_r17_sheepish_owed_the_play_behind_a_trap_that_took_the_unit_off_the_fie
         // The first trap resolved to completion (§10.3): Timmy is back in p1's hand.
         assert!(s.state().pending.is_none());
         // R174: a trap answering a play meets it as no longer in play once an earlier trap answering the
+        // same play has taken the card off the field. Sheepish transforms the unit the opponent played
         // (§8 #41), on the field; it never reaches into a hand to rewrite a card there.
         assert!(
             !s.hand(P1).iter().any(|card| card.def_id == SHEEP_TOKEN),
@@ -2123,6 +2125,7 @@ mod s10_3_r99_a_trap_that_declined_an_event_is_not_offered_it_again_because_a_la
         s.answer(json!("ok"));
 
         // §10.3: the traps check the event as it is dispatched, each once. The lane-1 trap was offered
+        // the play before the lane-2 trap fired and declined it; the question only paused the dispatch
         // after that (R113 resumes where it stopped), so it does not get a second look at the same play.
         s.expect_health(P1, 29);
         s.expect_in_zone(&guard.id, "field");
@@ -2578,6 +2581,8 @@ mod r226_10_1_a_card_being_played_is_never_left_in_two_zones_by_a_question_its_t
         }
 
         // §10.1: every card is in exactly one zone. Offered while it waits between step 2 and step 4 in
+        // its owner's hand, the card being played is discarded to the graveyard by the answer; step 4
+        // then puts it on the field too, so it stands in lane 2 and lies in the graveyard at once.
         // Either the question does not offer the card being played (it is leaving the hand, as R90 says
         assert_eq!(
             piles_holding(s.state(), &played.id).len(),
@@ -3145,6 +3150,7 @@ mod r59_a_sacrifice_whose_death_asks_inside_a_list {
         assert!(s.state().pending.is_none());
 
         // §4.5 and R59: the check runs after "a card's whole Cry, spell, trap or triggered script",
+        // never between the effects of one. The Death's question splits the list across two actions
         // (R113), which changes nothing: the heal lands before the check, as it does without a question.
         s.expect_in_zone(&plain.id, "field");
         assert_eq!(unit_view(s.state(), s.card(&plain.id)).health, 5);

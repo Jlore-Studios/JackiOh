@@ -158,7 +158,7 @@ describe("the networked board", () => {
     expect(screen.getByTestId("end-turn")).not.toBeDisabled();
   });
 
-  /** A failed network never leaves the board naming def ids. */
+  /** #1378: a failed network never leaves the board naming def ids. */
   it("#1378 names the board's cards from the shipped catalog on the first view, asking for no catalog, while every request fails", () => {
     const requests = vi.fn((input: unknown) => Promise.reject(new TypeError(`Failed to fetch ${String(input)}`)));
     vi.stubGlobal("fetch", requests);

@@ -75,8 +75,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #70 Spiteful Stab — SPEC §8.3, BUILD M4-T4: "2 + floor(missing/5) + exile count"; radiant
-// 4 + floor(missing/3) + 2 × exile (R275 doubled the exile term).
+// #70 Spiteful Stab — SPEC §8.3, BUILD M4-T4. ; radiant 4 + floor(missing/3) + 2 × exile (R275 doubled the
+// exile term).
 #[cfg(test)]
 mod tests {
     use crate::js;

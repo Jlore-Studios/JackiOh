@@ -27,8 +27,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4: "Next spell echoes once (radiant twice); consumed to GY on use (R30); survives
-// cleanup".
+// BUILD M4-T4 (R30).
 //
 // The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes each resolution
 // a number: one extra resolution is +2 instead of +1, two extra is +3.

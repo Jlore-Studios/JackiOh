@@ -48,12 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3: "15 to a chosen Unit, its excess going to one
-// neighbor drawn at random, then the other (R1848001), each counting it only up to its Health; a
-// neighbor's Divine Shield stops the rest; a neighbor Immune to Spells is passed by; with no
-// neighbor the excess is lost; the target's zone is Locked whether it died or not, and no card can
-// be played into it; damage reads through `param()`; radiant 15 (#2521), and what passes both
-// neighbors hits the target's controller's hero".
+// S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3 (R1848001, #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

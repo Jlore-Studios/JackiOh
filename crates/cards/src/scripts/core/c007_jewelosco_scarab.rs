@@ -61,8 +61,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #7 Jewelosco Scarab — SPEC §8.1 row 7, BUILD M4-T4 must-pass: "Discover offers 3 distinct 2-cost
-// non-token cards, never #7; radiant 3-cost pick costs 2".
+// #7 Jewelosco Scarab — SPEC §8.1 row 7, BUILD M4-T4 must-pass.
 //
 // Options are read out of `view_for`, not `state.pending`, because only the chooser sees them (§10.8).
 #[cfg(test)]

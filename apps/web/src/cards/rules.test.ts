@@ -269,9 +269,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
 ];
 
 /**
- * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT,
- * then R1086's MG, then #783's RG FL CK CR FB, then R1838000's TD, R1852000's SP SS and R2657000's CD.
+ * The marks as Card.tsx drew them, kept unchanged, among them R346's PI, R636's WF, R637's TE, R1220's
+ * UT, R1086's MG, #783's RG FL CK CR FB, R1838000's TD, R1852000's SP SS and R2657000's CD.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",

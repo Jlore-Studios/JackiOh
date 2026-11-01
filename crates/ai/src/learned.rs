@@ -1,9 +1,15 @@
 //! The learned evaluation in the search (#466, #1010; `docs/learned-eval.md` D4, D6, D7, D9): a small
-//! network over `features`, fitted by `training/ml`, that corrects the hand eval where the search scores.
-//! With `EvalKind::Learned`, `finalist_score` scores finalists (`LEARNED_REACH` R1012002, `share` R1012001).
-//! Skip connection maps back to eval points, preserving constants and ladder bot temperature (R1452).
-//! Duos (R964000) and tutorial opponents (R1012003) retain hand eval.
-//! Sparse keys missing from the table default to dense stats alone (#915). Integer weights used in #1011.
+//! network over `features`, fitted by `training/ml`, that corrects the hand eval where the search
+//! finally scores a line. `AI_EVAL_KIND` (`config.rs`) chooses; with `EvalKind::Learned`,
+//! `finalist_score` scores the finalists after the opponent's reply (D6's option B), and `LEARNED_REACH`
+//! (R1012002) takes it further. A finalist takes `LEARNED_CORRECTION_SHARE` of the correction
+//! (R1012001), mapped back onto the hand eval's points (D4's skip connection, `Network::points`), so
+//! `unspent_mana`, the lethal constants and a ladder bot's `temperature` (R1452) keep their meaning.
+//! 1v1 only: a Duos duel keeps the hand eval (D9, R964000), since the network never saw a team's pool,
+//! and so does the tutorial's opponent (R1012003), whose lessons are scripts written for it. The float
+//! network is `f64`, every loop in one fixed order, ReLU written as comparisons and no libm function:
+//! the determinism the hand eval's own `f64` rests on (D7). A feature key the weights' table lacks is
+//! no input, so a new or custom card (#915) is valued by its dense stats alone (D5).
 
 use jackioh_engine::{AI_TUTORIAL, GameState, Handicap, PlayerId};
 

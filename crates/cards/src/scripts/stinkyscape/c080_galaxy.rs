@@ -72,10 +72,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80: "Tribute 2: two of your Units sacrificed
-// as it is played (R101); its Cry asks two Discovers in turn, each three of the five Radiant Miners it does
-// not hold, and fuses each pick into it (R1841002); radiant 20/20 and all five Radiant Miners fused, no
-// prompt". Since #2521 it is no Starship Piece, its Miners leaving it none (R1852001).
+// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80 (R101, R1841002). Since #2521 it is no
+// Starship Piece, its Miners leaving it none (R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;

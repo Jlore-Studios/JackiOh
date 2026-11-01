@@ -5,10 +5,6 @@
 //!
 //! Fixtures: the vanilla catalog (`fx-1` up to twice `DECK_SIZE`), the Hinder and Going Long fixtures, and two
 //! cast-on-draw Spells of this file's own (`hc-`, from 2800) for R183's draw chain.
-//!
-//! `create_game` and `fold` panic, caught by `refusal`; `validate_handicap` answers `Result`. A value
-//! `Handicap`'s `i32`s cannot hold is built as JSON and counts as refused when it does not deserialize
-//! (`handicap_refused`).
 
 use jackioh_engine::testkit::*;
 

@@ -8,6 +8,7 @@
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! R1862003: the Activate's target is a declared enemy Unit, never a hero (R81), once a turn (R384).
 //! While the enemy has a Taunt Unit, only those may be chosen (§4.2 step 3 read for the choice): its
+//! Taunt read through the layers, so an Indestructible one has none (R347), and one no attack may name
 //! (Can't be attacked, a carrier's Unit) binds nobody (B5 E35). Then §7's Rush Token is summoned into
 
 use jackioh_engine::effects::{forced_attacks, summon};

@@ -1,8 +1,13 @@
-//! Invite codes and SPEC §9.4's six-step redemption transaction (`Tx::redeem`, §9.8, migration 0001 §6).
+//! Invite codes and SPEC §9.4's six-step redemption transaction: all six steps are `Tx::redeem`, one
+//! store call (migration 0001 §6 in Postgres), whose ordering consequences `db/store.rs`'s `redeem`
+//! states. §9.8's brute-force row names the same mitigations.
 //!
-//! Implements R107's constant-time response floor, R106's circuit breaker (`GET /api/codes/status`),
-//! and R145's distinct refusals. R1310000: activation pays starting rewards when economy is live.
-//! R2124000: idempotent redemptions replay committed answers; all outcomes are padded to floor.
+//! Still this file's: R107's response floor ("identical time" is padding, and SQL cannot pad);
+//! R106's circuit breaker, which disables redemption before the store is touched; R145's distinct
+//! refusals, decided here from the router's profile. R1310000: a redemption that makes the account
+//! active pays its tracks' first rewards in its transaction, while the economy is live. R2124000: a
+//! redemption repeating an `Idempotency-Key` answers what it committed, before the breaker and R145's
+//! checks (`economy::idempotency`); every outcome is padded.
 
 use std::sync::{Arc, Mutex};
 
@@ -31,8 +36,10 @@ use crate::economy::rewards::pay_starting_rewards;
 // Matches `invite_codes.max_uses int not null default 1` in migration 0001.
 pub const DEFAULT_INVITE_CODE_MAX_USES: i32 = 1;
 
-// R145: code-dependent outcomes share REDEMPTION_IDENTICAL_ERROR, while account-dependent
-// outcomes report distinctly without leaking the code space.
+// R145: outcomes that depend on the code share one identical error, while those that depend only
+// on the caller's own account are reported distinctly, as they leak nothing about the code space;
+// the rate-limit and breaker refusals are the same kind. The strings are not in SPEC: a client
+// branches on the `ApiError` code, never the sentence.
 const RATE_LIMITED_MESSAGE: &str = "Too many invite code attempts. Try again later.";
 const BREAKER_MESSAGE: &str = "Invite redemption is temporarily unavailable. Try again later.";
 const ALREADY_ACTIVE_MESSAGE: &str = "This account is already active.";
@@ -68,7 +75,8 @@ fn limits() -> Limits {
 }
 
 /// §9.4: "Missing, expired and exhausted codes return an identical error in identical time."
-/// Serializes identically for missing, expired, exhausted, revoked or malformed codes (§9.8).
+/// One constructor and no `details`, so every such refusal, a revoked or malformed code's too
+/// (§9.8), is the same bytes. The reason stays in `code_attempts.reason`, never returned.
 fn identical_code_error() -> ApiError {
     ApiError::new(ApiErrorCode::InvalidCode, REDEMPTION_IDENTICAL_ERROR)
 }
@@ -203,8 +211,9 @@ pub struct RedeemInput<'a> {
     /// Whatever the client typed; normalized and hashed here, never stored.
     pub plain_code: &'a str,
     pub ip_hash: &'a str,
-    /// §9.4 step 1's "verified email", from `AuthUser.email_verified` (auth provider's
-    /// `email_confirmed_at`, R159). `Profile` carries no verification flag.
+    /// §9.4 step 1's "verified email", from `AuthUser.email_verified`, which `auth.rs` takes from the
+    /// auth server's `email_confirmed_at`, never a user-editable claim. How long a yes may be
+    /// remembered is R159 (`EMAIL_CONFIRMED_CACHE_TTL_MS`).
     pub email_verified: bool,
     /// Omitted by a direct caller, in which case this redemption gets a breaker of its own.
     pub breaker: Option<&'a Mutex<BreakerState>>,
@@ -297,9 +306,10 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
         )));
     }
 
-    // §9.4: codes are stored hashed. R191 normalizes input (NFKC, uppercase, R104 alphabet);
-    // malformed codes travel as `None` so §9.4 logs the attempt (step 4) before lookup (step 5).
-    // Hashed with keyed SHA-256 HMAC under code pepper.
+    // §9.4: codes are "stored hashed". R191 fixes the reading, shared with the client's code field
+    // (NFKC, upper case, separators removed, exactly the code's length in R104's alphabet). A code
+    // that could never exist travels as `None`, not refused early: §9.4 logs the attempt (step 4)
+    // before the lookup (step 5), so a malformed code must cost the same row.
     let code_hash = canonical_invite_code(input.plain_code)
         .map(|canonical| hashes_for_pepper(&app.env.code_pepper).code(&canonical));
 
@@ -366,8 +376,9 @@ fn outcome_for(result: RedeemResult, limits: &Limits) -> RedeemOutcome {
             ApiErrorCode::EmailUnverified,
             EMAIL_UNVERIFIED_MESSAGE,
         )),
-        // §9.4 steps 2 & 3: IP and profile windows are not distinguished to prevent address leaks.
-        // R192: rate limit returns wait time, not folded into R145's identical error.
+        // §9.4 steps 2 and 3, not told apart: the per-IP one would say something about other accounts
+        // behind the address. R192: a rate limit with its wait (the whole window, an upper bound),
+        // never folded into R145's identical error.
         RedeemResult::RateLimitedProfile | RedeemResult::RateLimitedIp => {
             RedeemOutcome::Refused(rate_limited(RATE_LIMITED_MESSAGE, limits.redeem_window_ms))
         }
@@ -484,9 +495,10 @@ pub async fn redeem(app: &Arc<App>, req: Req) -> ApiResult {
     }
 }
 
-/// `GET /api/codes/status` (`AuthLevel::User`). Reports whether redemption is enabled (circuit breaker).
-/// `attemptsRemaining` and `attemptsRetryAfterMs` (R192) report tries and cooldown for this profile
-/// in §9.4 step 2's window without leaking address-level info.
+/// `GET /api/codes/status` (`AuthLevel::User`): lets the code screen say "redemption is paused".
+/// `attemptsRemaining` and `attemptsRetryAfterMs` (R192): this profile's tries left in §9.4 step 2's
+/// window and the wait, its own only (the address's would leak). The `+ 1` is config.rs's reading of
+/// step 2's strict "more than". Advisory: the per-IP window can refuse sooner, as a 429 with its wait.
 pub async fn get_status(app: &Arc<App>, req: Req) -> ApiResult {
     let limits = limits();
     let now = crate::app::now_ms();

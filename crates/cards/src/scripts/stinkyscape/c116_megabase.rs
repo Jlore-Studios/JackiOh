@@ -102,11 +102,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116: "played as a Unit from hand into an open
-// unit zone, never attacking or in Defense Position, no Spell targeting it; its Activate gives each
-// player the chosen 5, 10 or 15 Credits, once a turn; destroyed, each player gains 100; a Tribute
-// cannot take it; it starts in the opening hand (R640); radiant 0/40, Armor 30, the opponent gaining 5
-// fewer, and 200 each on its Death".
+// S 116 Megabase — SPEC §8.10 row 116, BUILD M12 row S 116 (R640).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{destroy, summon};

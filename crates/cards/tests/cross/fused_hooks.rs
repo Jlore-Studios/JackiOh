@@ -138,6 +138,7 @@ mod r113_r122_a_pause_inside_an_answered_step_is_owed_ahead_of_what_was_already_
      {
         // The fused hook is [ask A's first, ask B's first] (R77: #85 fuses p2's Mask onto p1's, built
         // directly here), and R102 brings each answer back to the Mask that asked, so an answered first
+        // pick is [A's pick, ask A's second]. That pause during a resumption is owed "ahead of everything
         // still owed" (R113): B's first question and the rest of the start of turn come after it.
         let mut s = scenario(json!({
             "p1": {

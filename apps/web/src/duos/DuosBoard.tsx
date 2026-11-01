@@ -2,46 +2,29 @@
 // it the life strip, the teammate strip, the portal, the Both boards toggle, the pass control and
 // the pings.
 //
-// GAME.TSX STAYS THE ONE BOARD (CLAUDE.md). The seat's own duel is `<Game view={view.own}>` with the
-// duel moves `legal` lists unwrapped from their `{kind: "duel"}` envelopes, and every move it reports
-// goes back out wrapped in one. The portal (`duos-portal`) flips the board to `<Game view={view.teammate}>`
-// — the teammate's own view, their hand and face-down cards included, which is the team's to see
-// (B23) — with no legal action and a no-op `onAction` (`replay`, so it raises no prompt and lifts no
-// card): read-only (B63). Each has its own key, so neither board animates the other duel's events.
-// On a wide screen R2095000's toggle (`duos-both`) shows that same read-only board beside the own
-// one instead, silent (Game's `silent`, so two mounted boards play one duel's cues), in
-// `duos-board-teammate` next to `duos-board-own`; the portal stays mounted and CSS hides it there.
-// On a narrowed screen CSS hides the toggle and draws only the board the portal names, which
-// carries the rail as the single board does, so the visible portal flips again.
+// GAME.TSX STAYS THE ONE BOARD. The own duel is `<Game view={view.own}>`, its moves unwrapped from and
+// rewrapped in `{kind: "duel"}`. The portal flips it to `<Game view={view.teammate}>`, the teammate's
+// own view, which is the team's to see (B23), as `replay` with no legal action: read-only (B63). Each
+// has its own key, so neither board animates the other duel's events. On a wide screen the toggle
+// (`duos-both`) shows that board beside the own one instead, `silent` so two mounted boards play one
+// duel's cues; on a narrow one CSS hides the toggle and the portal flips again.
 //
 // CLAUDE.md rule 7: nothing here decides a rule. The pass control is live exactly when `legal` lists
-// that card's `pass` (B19), the concede offer when it lists `concede` (B11), and a duel's own concede
-// is never sent: the board's Concede means the team's (B10), so it goes out as `{kind: "concede"}`.
-// Game's R345 preference is pinned off, as every Duos duel already holds it (B9), so the board never
-// asks for it. Draw offers are refused in Duos (B10): `legal` never lists one, so those controls stay
-// dark, and duos.css hides them with the board's own Concede, which the rail's offer stands in for.
+// that card's `pass` (B19), the concede offer when it lists `concede` (B11), and the board's Concede
+// means the team's (B10), so it goes out as `{kind: "concede"}`. Game's R345 preference is pinned off,
+// as every Duos duel already holds it (B9). Draw offers are refused in Duos (B10): duos.css hides them.
 //
-// PASSING (B62; R2095000, #2619): the pass control on a hand card of the seat's own (`CardActions.tsx`)
-// sends that card's listed `pass`; anything not listed sends nothing. It is the only way to pass: a
-// hand card dropped on the portal or the teammate's board passes nothing. The Trade control
-// (R1838000) rides the same bar on a Tradable one, in place of Game's own Trade bar.
+// PASSING (B62; R2095000, #2619): the pass control on the seat's own hand card is the only way to
+// pass: a card dropped on the portal or the teammate's board passes nothing. The Trade control
+// (R1838000) rides the same bar, in place of Game's own.
 //
-// PINGS (B64): the ping wheel on a hero, zone or hand card of either board sends a ping (`onPing`); a
-// ping marks its place (`duos-ping-marker`) for PING_SHOW_MS on whichever board shows its duel, the
-// teammate's ping plays its sound once, and one on the board not showing flashes the portal.
+// PINGS (B64): a ping marks its place for PING_SHOW_MS on whichever board shows its duel, and one on
+// the board not showing flashes the portal.
 //
-// REPLAY (#965): `replay` draws a finished game's step for `DuosReplay.tsx`. The own duel's Game is
-// `replay` too, with no legal action and a no-op `onAction`, as the teammate's already is; no card
-// bar, concede, waiting line or result panel is drawn, the rail's round line names the team's result,
-// and the portal still flips.
-//
-// THE RESULT (#1755): the team's result panel takes focus on its first way on as it comes in, and
-// "View the board" folds it to the rail's "Result", which takes the focus and opens it again, its
-// XP reveal and replay door with it, as the 1v1 result folds to its chip (Result.tsx).
-//
-// PLAY AGAIN (R2092000): the panel draws the chrome's `playAgain` and decides nothing: the route's
-// last status read and the last offer's refusal pick the line, and the button only sends the offer.
-// A replay or /dev/duos hangs no `playAgain`, so draws no button.
+// REPLAY (#965): `replay` draws a finished game's step for `DuosReplay.tsx`, both Games read-only.
+// THE RESULT (#1755): "View the board" folds the team's result panel to the rail's "Result", as the
+// 1v1 result folds to its chip (Result.tsx). PLAY AGAIN (R2092000): the panel draws the chrome's
+// `playAgain` and decides nothing; a replay or /dev/duos hangs none, so draws no button.
 
 import {
   useCallback,

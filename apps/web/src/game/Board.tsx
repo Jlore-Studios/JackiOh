@@ -10,27 +10,21 @@
 // not been told what is legal".
 //
 // Polish task 7 (docs/polish/7-mobile-ux.md S6, S11): the green glow is `data-glow`, written from
-// `highlight.glow` (a subset of `legal`); `data-legal` stays the only click gate. The board reads
-// two settings: `dragToPlay` becomes `data-drag` on the root (drag.css keys touch-action off it),
-// and `confirmEndTurn` makes End turn ask twice while something is still playable (Hand.tsx reads
-// the third, `hoverPreviews`). The layout itself is board.css's grid, which keeps the children
-// below in this order. A phone has no room for the log beside the field, so board.css hides it
-// there and shows `log-toggle` instead, which opens it over the top of the board
-// (`data-log="open"`) until it is pressed again.
+// `highlight.glow` (a subset of `legal`); `data-legal` stays the only click gate. `dragToPlay`
+// becomes `data-drag` on the root (drag.css keys touch-action off it). The layout itself is
+// board.css's grid, which keeps the children below in this order. A phone has no room for the log
+// beside the field, so board.css hides it there and shows `log-toggle` instead.
 //
-// #2645: on a phone (`usePhoneBar`, the same two layouts) the control bar keeps to one row: End turn, the
-// Marketplace's toggle while `market` is given and the view carries one, the log toggle, ⋯ and the gear.
-// Offer draw, Concede and Friends are the rows of ⋯'s menu (`MatchMenu.tsx`), the same controls the
-// desktop bar holds as buttons, built once; the menu and the shop are never open together, and neither
-// decides anything.
+// #2645: on a phone (`usePhoneBar`) the control bar keeps to one row. Offer draw, Concede and Friends
+// are the rows of ⋯'s menu (`MatchMenu.tsx`), the same controls the desktop bar holds as buttons,
+// built once.
 //
 // While a hand card of yours is hovered or selected, the field rings the cards its preview names
 // (#991, SPEC §10.10).
 //
 // R1297000: the viewer's half wears the playmat and backdrop the wearer picked. R1834004: an online
-// board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts), as a second mat
-// under the opponent's rows (`data-their-table`) and a second backdrop behind them
-// (`data-their-backdrop`); a watched or replayed game's lower half wears its own seat's too.
+// board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts); a watched or
+// replayed game's lower half wears its own seat's too.
 
 import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 

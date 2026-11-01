@@ -427,6 +427,7 @@ mod r2067000_one_action_casts_at_most_cast_on_draw_action_cap_cards {
         // Fuzz seed 9688 found the loop: each Hinder cast was a play #33 answered with three more Hinders
         // (R70), so the library never ran dry, and its discard was answered by #64's draw, a chain of its
         // own (R217). A cast on draw is no play since #2179 (R2179002), so #33 copies none and one library
+        // runs dry first: p1's end of turn (M #7's draw) casts 58 of its 60 (the 21st of each chain of 20,
         // R58, goes to the hand and the next chain's first cast discards it). The same action then starts
         let mut s = scenario(json!({
             "p1": {

@@ -1,6 +1,5 @@
 // Lesson 3 data (SPEC §9.10, R291, R2434001, R2533001); ../lessons.ts defines its fields and
-// ../scripts/casting.ts is the coach. The player's deck is ten Training Grounds units the first two
-// lessons taught and ten spells; the AI's is seven Training Grounds units and five spells. No Aura, Death,
+// ../scripts/casting.ts is the coach: units the first two lessons taught and spells, no Aura, Death,
 // backrow card, Legendary or Mythic, the pool hold on. Deck order fixes this seed's deal
 // (`scripts/lesson-deal.ts casting`).
 

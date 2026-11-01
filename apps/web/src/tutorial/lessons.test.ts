@@ -1,8 +1,7 @@
 // R291 lessons are deterministic R187 practice games with the R290 handicap; the practice core exposes
-// only the human's view (rule 7). R2205003, R2434001: five lessons, one subject each; the human's
-// decks Training Grounds cards; no Legendary or Mythic card in either deck before the last and the
-// pool hold on both seats there; the last lesson's human deck holding the set's Legendary and Mythic
-// cards. R2533001: the AI's decks Training Grounds cards too, never Legendary or Mythic.
+// only the human's view (rule 7). R2205003, R2434001, R2533001: five lessons, one subject each, of
+// Training Grounds cards, with Legendary and Mythic cards only in the last lesson's human deck and
+// the pool hold on before it.
 
 import { describe, expect, it } from "vitest";
 

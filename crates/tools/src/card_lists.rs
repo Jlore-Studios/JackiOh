@@ -1,4 +1,7 @@
-//! BUSTED and complicated card lists (R1846000, R1846003, R2173000, R2173001).
+//! R2173000, R2173001 (R1846003's obligation): the BUSTED and complicated lists (R1846000) read off a
+//! tree's card scripts by `jackioh_cards::code_lines`, the counter `build.rs` compiles the build's lists
+//! with. `patches ship` keeps each version's in `card_metrics/<version>.json`, and `classify` counts a
+//! card moved across a threshold as a change to how those cards play.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

@@ -7977,13 +7977,11 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 }
 // ---- end Social: watching and shared replays ----
 
-// =============================================================================
-// KNOWN DIVERGENCES from `src/db/fake.rs` (TS: `src/api/e2e-store.ts`)
+// ---- KNOWN DIVERGENCES from `src/db/fake.rs` ----
 //
 // Every one of these is a place where the port and the schema (which this file may not change:
 // the migrations are append-only and checksum-locked) do not hold the same information. They are
-// listed here, asserted in `tests/store/contract.rs` where they are observable, and repeated in the
-// report that came with this file.
+// listed here and asserted in `tests/store/contract.rs` where they are observable.
 //
 //  * redemption limits. §9.4's "more than 5 attempts", "more than 20" and "the last hour" are
 //    written into `app.redeem_invite_code`'s body, and the breaker's knobs into `app.settings`;
@@ -7992,16 +7990,16 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //    `default_limits()` copies into `ApiLimits`, so the two agree at today's values and a test can
 //    shrink them on the fake path only. Changing a number for a real deployment means
 //    `app.settings` and a new migration, not `src/config.rs`.
-//  * attempt reason. `CodeAttempt.reason` ("a coarse reason for operators") has no column in
-//    `public.code_attempts`, which stores only `succeeded`. It is dropped on write, so a store
-//    round-trip cannot return it. Nothing reads it back today (the code store has no attempt read),
-//    and `redeem` returns a result code rather than a reason for the same reason: the
-//    granularity the fake can record is granularity Postgres cannot.
+//  * attempt reason. `CodeAttempt.reason` has no column in `public.code_attempts`, which stores
+//    only `succeeded`. It is dropped on write, so a store round-trip cannot return it. Nothing
+//    reads it back today (the code store has no attempt read), and `redeem` returns a result code
+//    rather than a reason for the same reason: the granularity the fake can record is granularity
+//    Postgres cannot.
 //  * redemption's email check. `app.redeem_invite_code` reads `auth.users.email_confirmed_at`
 //    itself; the in-memory store has no such table and answers through
 //    `RedemptionSettings.email_verified`, true unless a caller says otherwise. The server refuses an
 //    unverified caller from the access token (R159) before either store is reached, so this only
-//    shows up in a test that calls the port directly — which `tests/store/contract.rs` does.
+//    shows up in a test that calls the port directly.
 //  * redemption's circuit breaker. The SQL function refuses when `app.settings.redemption_enabled`
 //    is false OR when its own count of recent failures crosses R106's threshold. The in-memory
 //    store implements the switch and not the counter, because the server's own R106 breaker
@@ -8032,17 +8030,15 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //    `tutorial_lesson_id_max_length` characters, and a choice with no time; and a profile with no
 //    `public.profiles` row fails its foreign key. The in-memory store checks none of these, because
 //    `src/api/tutorial.rs` refuses a malformed body first and its route is `active`. The merge
-//    itself (the union, the strictly-newer choice, the `limit` outcome) is the same in both and is
-//    asserted in `tests/store/contract.rs`. Its cap is the smaller of the caller's and
+//    itself is the same in both. Its cap is the smaller of the caller's and
 //    `app.settings.tutorial_lessons_max`, as for the deck caps below.
 //  * player settings strictness (R633). `app.merge_player_settings` (0018) refuses — by raising — a
 //    profile that is not active and a group that is not `{ at: whole milliseconds, values: an
 //    object }`; the in-memory store checks neither, because `src/api/settings.rs` refuses a
-//    malformed body first and its route is `active`. The merge itself (the strictly-later group,
-//    the groups a write leaves alone, the `limit` outcome) is the same in both and is asserted in
-//    `tests/store/contract.rs`. Its caps are the smaller of the caller's and `app.settings`'
-//    `player_settings_groups_max` / `player_settings_bytes_max`. The byte cap counts the text
-//    jsonb prints, which the in-memory store reproduces (`jsonb_text_bytes`) for ordinary values.
+//    malformed body first and its route is `active`. The merge itself is the same in both. Its caps
+//    are the smaller of the caller's and `app.settings`' `player_settings_groups_max` /
+//    `player_settings_bytes_max`. The byte cap counts the text jsonb prints, which the in-memory
+//    store reproduces (`jsonb_text_bytes`) for ordinary values.
 //  * custom card strictness (R915008). `app.create_custom_card` and `app.update_custom_card` (0037)
 //    refuse, by raising, a profile that is missing or not active, and `public.custom_cards`' checks
 //    refuse an id that is not `custom-` and 1 to 57 lowercase letters, digits and hyphens, a
@@ -8087,20 +8083,18 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //  * deleted accounts. Migration 0012 sets a deleted profile's seat on its finished matches,
 //    results and series to NULL, and migration 0022 does the same on `rated_games`' sides while
 //    cascading its `season_ranks` away, so `matches_get`, `results_get_by_match`, `series_get` and
-//    `ranked_game` can read back a null where the port types a profile id. TS handed that null on in
-//    a string-typed slot; a Rust `String` cannot hold it, so a deleted seat reads back as the empty
-//    string, either seat of a match included (`to_match`). An open room, whose second seat nobody
-//    has taken, never reaches `to_match`: `matches_get` and the replays read only `live` and
-//    `over` rows, and `matches_live` skips a row with no second seat. The in-memory store keeps
-//    the id (it has no foreign keys). Many reads hand a finished match's seats on (a replay, R768,
-//    the rematch routes, the ranks read, the match socket's reopen, a game record's refile), so a
-//    read that binds a profile id takes an id that is not a uuid, the empty one among them, as
-//    naming nothing (`profiles_get_many`, `ranked_standings_subset`, `blocks_between`, the
-//    economy's `game_jlore_totals`) instead of handing it to Postgres. A live match or series
-//    cannot lose a seat: the delete is refused, by constraint here and by `DELETE /api/account`
-//    first.
+//    `ranked_game` can read back a null where the port types a profile id. A Rust `String` cannot
+//    hold it, so a deleted seat reads back as the empty string, either seat of a match included
+//    (`to_match`). An open room, whose second seat nobody has taken, never reaches `to_match`:
+//    `matches_get` and the replays read only `live` and `over` rows, and `matches_live` skips a
+//    row with no second seat. The in-memory store keeps the id (it has no foreign keys). Many
+//    reads hand a finished match's seats on (a replay, R768, the rematch routes, the ranks read,
+//    the match socket's reopen, a game record's refile), so a read that binds a profile id takes
+//    an id that is not a uuid, the empty one among them, as naming nothing (`profiles_get_many`,
+//    `ranked_standings_subset`, `blocks_between`, the economy's `game_jlore_totals`) instead of
+//    handing it to Postgres. A live match or series cannot lose a seat: the delete is refused, by
+//    constraint here and by `DELETE /api/account` first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
 //    `grace_deadline_at` plus two `*_disconnected_at`. The per-player deadlines are stored in the
 //    two `*_disconnected_at` columns and `grace_deadline_at` keeps the nearer of them. A migration
 //    adding `p1_grace_deadline_at` / `p2_grace_deadline_at` would retire this.
-// =============================================================================

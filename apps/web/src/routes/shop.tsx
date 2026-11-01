@@ -32,9 +32,8 @@ type ShopPanel = "opening" | "shop" | "tokens" | "cosmetics";
 type PanelReads = Record<ShopPanel, number>;
 
 /**
- * The reads after `by` changed the account (a pack bought or opened, a token redeemed, a chase
- * bought): every other panel reads again, since a buy fills the opening's packs and an opening
- * fills the bars, the collection and the cosmetics. `by` already holds its answer.
+ * The reads after `by` changed the account: every other panel reads again, since a buy fills the
+ * opening's packs and an opening fills the bars, the collection and the cosmetics.
  */
 function readAgain(reads: PanelReads, by: ShopPanel): PanelReads {
   return {

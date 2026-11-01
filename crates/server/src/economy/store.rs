@@ -10,15 +10,12 @@
 //! Same shape as `duos::store`: every store method is one method on `Tx`, named
 //! `economy_<table>_<verb>`, whose body dispatches to this file's `pg::<name>` or `fake::<name>`.
 //! A grant writes its holding and its ledger row together, in the caller's transaction, and a grant
-//! the holding cannot take (a spend the wallet cannot cover, a quest not held, a cosmetic already
-//! owned) answers `None` or `false` and writes nothing (§14.1, §14.5). A grant the schema refuses
-//! by its checks (a zero change, a `dev` reason without the `dev` mark, a key its item does not
-//! take) is refused here first, before either store, as `StoreError::Other("economy: …")`, so both
-//! answer it alike.
+//! the holding cannot take answers `None` or `false` and writes nothing (§14.1, §14.5). A grant the
+//! schema refuses by its checks is refused here first, before either store, as
+//! `StoreError::Other("economy: …")`, so both answer it alike.
 //!
 //! Lists come in their key's byte order (Postgres's `collate "C"`), a count that fell to zero
-//! included; ledgers come oldest first. Integers are `i64`, times epoch milliseconds, as everywhere
-//! in the store.
+//! included; ledgers come oldest first.
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};

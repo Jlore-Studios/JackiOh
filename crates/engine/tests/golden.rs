@@ -4,9 +4,8 @@
 //! checks too (#1641); a log recorded before the Equip rename still folds (R781000); and neither game
 //! moves whatever the card metrics' lists hold (R1846003).
 //!
-//! The 240 golden traces this file once replayed, recorded from the TypeScript engine, were retired in
-//! #2578. A change is held to its base build by `golden record` on the head and `golden check --file`
-//! on the base build (`luau diff`, `classify --parent-bin`), with nothing committed.
+//! A change is held to its base build by `golden record` on the head and `golden check --file` on the
+//! base build (`luau diff`, `classify --parent-bin`), with nothing committed (#2578).
 
 use std::collections::BTreeSet;
 
@@ -182,13 +181,9 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 }
 
 // R781000: Magnetic is now Equip. A log recorded before the rename spells the play's flag `magnetic`
-// (golden seed 43's log as the retired golden traces held it for R1156000, its Equip flag spelled
-// `magnetic` as logs before the rename spell it, its Sentient Cat Ears played onto a Unit at step 7), and
-// it reads as `equip`: the old log and the same log renamed fold to one state, the old-name play
-// accepted. Since Player 1 opens on three cards again (R2368000) the log holds its first nine actions,
-// p1's mulligan keeping c20 alone, its fourth card c10 now a replacement, so every action folds. Under
-// #2521's catalog p2's opening hand is another, so p2 sends all of it back: its Last Hurrah still draws
-// its deck, the Cat Ears with it.
+// (golden seed 43's log, R1156000, its Sentient Cat Ears played onto a Unit at step 7), and it reads as
+// `equip`: the old log and the same log renamed fold to one state. Since Player 1 opens on three cards
+// (R2368000) the log holds its first nine actions, and under #2521's catalog p2 sends its whole hand back.
 const PRE_EQUIP_LOG: &str = include_str!("golden/pre-equip-log.json");
 
 mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
@@ -236,7 +231,7 @@ mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
 /// reader (Stinkyscape #109 xxFreshJack and #111 Shockwave447, the only cards that ask for a BUSTED or
 /// complicated pool, R1846001) folds to one hash whatever the lists hold: every card in both, or none,
 /// on this thread's override of the compiled metrics. The two committed logs deal no reader and make
-/// none (#2578 retired the golden games this once replayed a shard of).
+/// none.
 mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
     use super::*;
     use jackioh_engine::testkit::golden::hashed_state_text;

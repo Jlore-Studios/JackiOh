@@ -232,9 +232,9 @@ const RESUME_KEY = "jackioh.practice.game";
 
 /**
  * Start practice on the saved deck, on the first of `SEED`'s deals that puts the custom card in the human's
- * opening hand, and say its seed. The deck is DECK_SIZE cards and the passive human is beaten on turn 9, so
- * a card left to the draws (about one deal in three) arrives too late: a deal is found, not assumed, so
- * a change to the deck, the shuffle or the AI moves it without breaking the spec (#1803).
+ * opening hand, and say its seed. The passive human is beaten on turn 9, so a card left to the draws
+ * arrives too late; a deal is found, not assumed, so a change to the deck, the shuffle or the AI moves
+ * it without breaking the spec (#1803).
  */
 function startWithCardInHand(customId: string, attempt = 0): Cypress.Chainable<string> {
   expect(attempt, `the custom card is in the opening hand of one of ${String(SEED_BUDGET)} deals`).to.be.lessThan(SEED_BUDGET);

@@ -45,9 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #36 Magic Jammed (SPEC §8.2, BUILD M4-T4): "Destroy backrow and lock zone, locked zone rejects
-// play; radiant steals into same-lane zone else first free, original zone locked, trap identity
-// visible to thief (R33)."
+// #36 Magic Jammed (SPEC §8.2, BUILD M4-T4) (R33).
 #[cfg(test)]
 mod tests {
     use super::script;

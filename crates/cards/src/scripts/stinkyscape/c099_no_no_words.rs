@@ -6,6 +6,7 @@
 //! Engine: an X Spell (R348), its player choosing X as they play it, or its set X on S #102's copies
 //! (R1848003). A declared target, any Unit whose Attack, read through the layers (§10.4), is strictly
 //! below `per` × X (ST-S14-4): the check is asked of the card with the play's X stamped (R1868000), so
+//! `legalActions` pairs each X with the Units it reaches and the reducer refuses any other pick. The
 //! pick is needed (R703), as S #12.1 and #12.2's are: an X no Unit is below is no play. It is not
 
 use jackioh_engine::prelude::*;

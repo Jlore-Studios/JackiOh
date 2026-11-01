@@ -1,30 +1,48 @@
 //! Every number the Luau host states (CLAUDE.md rule 9).
 
-/// #442 L5: how many interrupts one hook call may take before it is stopped.
+/// #442 L5: how many interrupts one hook call may take before it is stopped, naming its card. A card's
+/// hook, which runs a few loops over the board, never comes near it, and a loop that never ends stops
+/// within a few milliseconds.
 pub const LUAU_HOOK_INTERRUPTS: u32 = 1_000_000;
 
-/// R915004 (K7): custom card hook call interrupt budget.
+/// R915004 (K7): a custom card's hook call's budget, in the same interrupts: a tenth of an official
+/// script's. A card that does what the kit offers never nears it, and one that loops stops within a
+/// millisecond or two, while a turn's AI search runs its hooks thousands of times.
 pub const CUSTOM_HOOK_INTERRUPTS: u32 = 100_000;
 
-/// #442 L5: how deep hook calls may nest before the innermost is stopped.
+/// #442 L5: how deep hook calls may nest (a hook running another card's hook from a reader) before the
+/// innermost is stopped, naming its card. A hook that runs itself would otherwise overflow the thread's
+/// stack, which aborts the process, well before it spent `LUAU_HOOK_INTERRUPTS`.
 pub const LUAU_HOOK_DEPTH: usize = 16;
 
-/// #843: maximum bytes a thread's VM may hold.
+/// #843: how many bytes a thread's VM may hold, all told. An allocation that would pass it fails, and so
+/// does the hook call that asked, naming its card, so a call that builds one huge string or table
+/// without looping (`string.rep`), which spends no interrupts, is bounded too.
 pub const LUAU_MEMORY_BYTES: usize = 64 * 1024 * 1024;
 
-/// #843: threshold to collect garbage before an outermost hook call begins.
+/// #843: how many bytes the VM may hold when an outermost hook call begins before the call first
+/// collects all its garbage. Luau collects nothing when an allocation fails, so the garbage of a call
+/// that ran out of memory would fail the next one too.
 pub const LUAU_MEMORY_COLLECT_BYTES: usize = LUAU_MEMORY_BYTES / 2;
 
-/// #442 L5: optimization level for Luau's compiler.
+/// #442 L5: the optimization level `compile` asks of Luau's compiler: mlua's default, stated so that a
+/// bump of `mlua` cannot change it. Level 2 folds `math`'s constants (`math.pi`, `math.huge`, …) into
+/// the bytecode without reading the global the sandbox removed.
 pub const LUAU_OPTIMIZATION_LEVEL: u8 = 1;
 
-/// #442 L6: maximum nesting depth for values returned from Luau.
+/// #442 L6: how deep a value from Luau may nest before the walk refuses it. A table that holds itself
+/// would otherwise never end; an effect's arguments nest a few levels at most.
 pub const LUAU_VALUE_DEPTH: usize = 32;
 
-/// #442 L6: maximum node count across all keys and values in one return table.
+/// #442 L6: how many values and keys, all told, one value from Luau may hold before the walk refuses
+/// it. Under `LUAU_VALUE_DEPTH` a table can still hold another twice over at every level, which would
+/// walk to billions of values.
 pub const LUAU_VALUE_NODES: usize = 10_000;
 
-/// #464 gap 7: engine config constants exposed as `J.config.<NAME>` (CLAUDE.md rule 9).
+/// #464 gap 7: the engine config constants card scripts read as `J.config.<NAME>`, so a script never
+/// restates one (CLAUDE.md rule 9): every `i32` constant of the engine's `config.rs` a card script names.
+/// A script needing another adds it here, never a literal; the runtime table (`api::module`) and the
+/// typed module (`tests/export_api`) both read this list, so the two cannot drift.
 pub const CONFIG_I32: &[(&str, i32)] = &[
     (
         "ACTIVATE_UNLIMITED_CAP",

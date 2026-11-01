@@ -46,8 +46,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #66 The Rock — SPEC §8.3, BUILD M4-T4: "Play refused without a tribute; Indestructible; radiant
-// Immutable".
+// #66 The Rock — SPEC §8.3, BUILD M4-T4.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

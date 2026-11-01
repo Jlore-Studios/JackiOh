@@ -49,6 +49,7 @@ fn keyword_label(keyword: &Keyword) -> String {
 }
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
+/// embiggen card's Embiggened version is labeled with its Embiggened cost, one label per cost a card
 /// prints (R1175000). The Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
 /// "Activate 3:" to "Activate 6:" (R1857003).
 pub(super) const LABELS: &[&str] = &[
@@ -74,6 +75,7 @@ pub(super) const LABELS: &[&str] = &[
 ];
 
 /// R746 (issue #354): Bounce is a permanent's return from the field (R692). These faces return a card
+/// to hand from anywhere else (a Spell after it resolves or at the end of the turn, a card from the
 /// graveyard or exile) and say "Return … to hand", as they did before patch v0.2.10. Core #37
 /// Gravedigger's base face joined them in #911: it said "Add a random card from your graveyard to
 const RETURNS_OFF_THE_FIELD: &[&str] = &[
@@ -1392,6 +1394,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
         let (shipped, after) = after_patch("v0.2.3c");
         // The current catalog also carries every other pending patch's claims (R646), which are theirs
+        // to prove. Those claims live in `patches/pending/`, a directory this test cannot list (a pure
         // crate's tests read no files, SURFACE §3); `cargo jackioh patches check` proves them. v0.2.7
         assert!(
             shipped,
@@ -1520,6 +1523,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 }
 
 // R1175000 (issue #1175): a card with two prices is an embiggen card. Played at the cheaper price it is
+// its normal version; at the dearer one, its Embiggened cost, it is its Embiggened version, and its
 // text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …".
 
 mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
@@ -1744,6 +1748,7 @@ mod patch_v0_2_9_wording_issue_44 {
     #[test]
     fn r751_no_printed_face_names_a_target_it_picks() {
         // Issue #355 swept Core as issue #88 swept Classic and Classic+: "Deal 3 damage.", "Destroy a
+        // Unit.", "Steal an enemy permanent." "Heal a target N" stays, as Book of Heal's did, and so does
         // "target" the verb (R394), which no pattern here reads.
         let wrong: Vec<String> = swept()
             .iter()
@@ -1903,6 +1908,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
 }
 
 /// R1320 (patch v0.3.4, issue #543): players read Nerf for the engine's Degrade and Buff for its
+/// Upgrade (`degrade`, `upgrade`, `tune_once` and the events `degraded` and `upgraded` keep their
 /// names, as R373 kept `library`). Every entry of every set is read, the sets that have not shipped
 mod r1320_players_read_nerf_and_buff_issue_543 {
     use super::*;

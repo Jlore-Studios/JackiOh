@@ -1,19 +1,11 @@
-// The Friends button (#1831): at the top right of every screen a signed-in account has, beside the
-// language button and the settings gear (`placement="nav"` in `routes/nav.tsx`'s top bar and the
-// landing's corner, `"game"` in a board's control bar, `"menu"` as a labeled row of a phone's match menu,
-// #2645), so friends are one press away wherever the
-// player is, a match included. It is badged with what waits for the player: friend requests (as the
-// friends list was last read), challenges and unread messages. The badge reads what the shell's one poll
-// published (`socialPoll.ts`), so the button adds no request of its own.
+// The Friends button (#1831): on every screen a signed-in account has, a match included
+// (`placement`: `routes/nav.tsx`'s top bar, a board's control bar, a phone's match menu, #2645), so
+// friends are one press away. Its badge reads what the shell's one poll published (`socialPoll.ts`),
+// so the button adds no request of its own.
 //
-// The panel it opens is a popover (a sheet at phone width) holding the player's own username to copy,
-// the add form, the incoming requests, and the friends, online first, with Challenge, Watch and Chat as
-// Play together decides them (`FriendRows.tsx`), then a link to all of Play together. The friends list
-// is read only while the panel is open, at once and then every `FRIENDS_POLL_MS`. Chat and Challenge
-// close the panel and open their own modal over the screen, which is left as it was.
-//
-// A modal like the client's others (`ChallengeDialog.tsx`, `game/ConfirmConcede.tsx`): the focus moves
-// into the panel, Tab stays inside, Escape closes it, and the focus returns to this button on close.
+// The panel it opens reads the friends list only while it is open, every `FRIENDS_POLL_MS`. Chat and
+// Challenge close it and open their own modal over the screen, which is left as it was. A modal like
+// the client's others (`ChallengeDialog.tsx`): the focus stays inside and returns to this button.
 //
 // CLAUDE.md rule 7: nothing here is a rule. Which friend can be challenged or watched is the server's
 // status; Challenge is off while the player is in a game only to say what the server would, and the

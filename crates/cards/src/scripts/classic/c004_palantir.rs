@@ -135,11 +135,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4: "Aura: the opponent's draws beyond 1 in a
-// moves, no fatigue, nothing is cast on draw (§2.4); a draw made earlier that turn counts; with another
-// included, R70) opens the announce window (§10.5), where the base face steals with no "you may":
-// and you cast it, every choice at random and aimed your way (R831001), the card ending in your
-// limit, never below 1; radiant threshold) read through `param()` (R386)".
+// C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4 (§2.4, R70, §10.5, R831001, R386).
 // Spells are C #24 Book of Knowledge ("Draw 3") and #5 Stockpile ("Draw 2. Heal your hero 2."), whose
 #[cfg(test)]
 mod tests {

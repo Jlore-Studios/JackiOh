@@ -108,9 +108,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     giga(Float::HandAndDeck)
 }
 
-// #29 GIGA Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 29): "Uncastable at 4 mana, castable at 6
-// after gains; whole hand radiant; radiant also permanents; each Float of its owner's lowers its cost in
-// hand, never in the deck (R1563000, R2657002)".
+// #29 GIGA Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 29) (R1563000, R2657002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -462,6 +462,7 @@ fn stored_attacker_id(ctx: &EffectContext<'_>) -> String {
 }
 
 /// A face-down trap in the §4.2 step-4 window that asks its controller about the opponent's declared
+/// attack, and whose answer then does `then` to the attacker — so the window pauses, and step 5 is
 /// owed to the answer's action (R113).
 fn asking_window_trap(s: &mut Scenario, id: &str, then: &'static str) {
     let prompt = format!("{id}: a question");

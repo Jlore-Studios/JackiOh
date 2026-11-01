@@ -68,10 +68,8 @@ pub fn script() -> CardScripts {
 }
 
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-// R14, R33, R78, R81, R88). BUILD M4-T4 row 52: "Rotate both rings either direction, control changes
-// on crossing, damage travels, Silas moves too; a Locked destination takes the card (R831000); radiant
-// bounces crossing cards to their owner's hand at cost 0 (R14)". The ring, from p1's seat (§3.1): p1
-// lanes 1→5, then p2 lanes 5→1, back to p1 lane 1; "right" is one step forward along it, "left" one back.
+// R14, R33, R78, R81, R88). BUILD M4-T4 row 52 (R831000). The ring, from p1's seat (§3.1): p1 lanes 1→5, then
+// p2 lanes 5→1, back to p1 lane 1; "right" is one step forward along it, "left" one back.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

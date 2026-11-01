@@ -2,18 +2,14 @@
 // the game once either player gains a Resource or Credits.
 //
 // A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits, the
-// offers rolled for them at the start of their turn (R2250002), each on the face it is sold on with its
-// price and the copies the viewer may still buy, and each card in their hand that sells from there
-// (R1861000) with its quote. "Buy" is
-// live exactly when `legal` lists that lot's `marketBuy`, and a sale exactly when `legal` lists its
-// `marketSell`; each sends the listed body. Otherwise the button is greyed, a lot's tooltip the
-// engine's reason (`reason`), and sends nothing. Every number shown is the view's: nothing here
-// prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is
-// closed, and then nothing is drawn. Escape and Back (R2127000) close the panel.
+// offers rolled for them at the start of their turn, and each card in their hand that sells from
+// there (R1861000) with its quote. "Buy" is live exactly when `legal` lists that lot's `marketBuy`,
+// and a sale exactly when `legal` lists its `marketSell`; each sends the listed body. Otherwise the
+// button is greyed, a lot's tooltip the engine's reason, and sends nothing. Every number shown is the
+// view's: nothing here prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while
+// the Marketplace is closed, and then nothing is drawn. Escape and Back (R2127000) close the panel.
 //
-// The toggle is a button of the control bar (Board.tsx, #2645), which owns whether the panel is open
-// (the match menu and the shop are never open together): an icon on a phone, the pill's label where the
-// board has its sidebar (market.css). The panel opens upward from the bar's top edge.
+// The toggle is a button of the control bar (Board.tsx, #2645), which owns whether the panel is open.
 
 import { useCallback, useId, useRef, type ReactElement } from "react";
 

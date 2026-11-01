@@ -5,8 +5,12 @@
 //!            Cry: Summon The Greatest Heist. Complete the current stage on all your Quests."
 //!
 //! Tradable is a catalog keyword the engine plays (R1838000). Cry (R1): `complete_quests` (R1854001),
+//! every Quest-tagged card its controller has acting on the field, in lane order, has the quests open on
 //! it completed, a staged quest's current stage and C #90 In Too Deep's open quests alike, each reward
+//! given at the next state check; a line hearing back or done has nothing open, and the opponent's
+//! Quests and an untagged card are passed by. R1873000: the Radiant face first summons S #7 The
 //! Greatest Heist into its controller's leftmost open backrow zone (R64). The summon names it, so its
+//! Cry (its Discover) runs there, as League of Losers' Mid Loser's does (R411), a face-up Field Spell's
 //! Cry being triggered as a Unit's is (R1873003); its first stage, opened as it entered, is then
 
 use jackioh_engine::prelude::*;

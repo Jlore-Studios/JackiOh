@@ -1,9 +1,11 @@
-//! The daily super run's last runs (SPEC §9.11, R1935000, R1973000; CLAUDE.md rule 13).
+//! The daily super run's last runs (SPEC §9.11, R1935000). R1973000 took `/stats`'s Daily runs tab
+//! off the page; the route stays for whatever calls it (CLAUDE.md rule 13).
 //!
-//! `GET /api/stats/ci`: the last `CI_RUNS_LISTED` runs of `CI_RUNS_WORKFLOW` on `CI_RUNS_BRANCH`,
-//! newest first, read from GitHub's Actions API (cached for `CI_RUNS_CACHE_TTL_SECONDS`, R1583000).
-//! Finished attempts' failed jobs are cached permanently. Deployments use `CREATE_ISSUES_TOKEN`
-//! if set; e2e server lists no runs.
+//! `GET /api/stats/ci` is open: the last `CI_RUNS_LISTED` runs of `CI_RUNS_WORKFLOW` on
+//! `CI_RUNS_BRANCH`, newest first, from GitHub's Actions API, kept `CI_RUNS_CACHE_TTL_SECONDS` as
+//! R1583000 keeps the play rates (a failed read is kept for no one and answers `unavailable`). A
+//! finished attempt's jobs never change, so they are read once and kept while the run is listed. A
+//! deployment reads with `CREATE_ISSUES_TOKEN` when set; the end-to-end server lists no run.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

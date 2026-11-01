@@ -61,8 +61,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #88 Twisting Nether (SPEC §8.5, BUILD M4-T4 row 88): "Every permanent on both rows destroyed,
-// Indestructibles survive; radiant enemy-only mode".
+// #88 Twisting Nether (SPEC §8.5, BUILD M4-T4 row 88).
 #[cfg(test)]
 mod tests {
     use super::*;

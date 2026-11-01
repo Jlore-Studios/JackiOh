@@ -1,17 +1,11 @@
-// What a challenge is made or accepted with (#1831, R1831000): the picks the challenge dialog
-// (`ChallengeDialog.tsx`) and the toast's Accept (`ChallengeToast.tsx`) share, and the last of them
-// remembered for the browser, so a repeat challenge or an accept starts on the pick the player made
-// before. A per-viewer convenience like the lobby's own (`PLAY_CHOICE_KEY`, `routes/play.tsx`), kept
-// beside the settings and not in them, which sync to the account (R634).
+// What a challenge is made or accepted with (#1831, R1831000): the picks the challenge dialog and the
+// toast's Accept share, and the last of them remembered for the browser. A per-viewer convenience like
+// the lobby's own (`PLAY_CHOICE_KEY`), kept beside the settings and not in them, which sync to the
+// account (R634). CLAUDE.md rule 7: whether a deck may be played is the server's, at the room.
 //
-// CLAUDE.md rule 7: a pick is only what the player chose; whether a deck may be played is the
-// server's, at the room.
-//
-// R915005: a deck naming a custom card, or a trio holding one, plays only in practice, so no pick here is
-// one (`deckPracticeOnly`, `trioPracticeOnly`); the pickers list it off, "(practice only)", as the lobby's do.
-//
-// R2031000: All Random's "More cards from" pick is not kept here but in the device's online pick
-// (`readPlayLean`, `game/LeanNewest.tsx`), the lobby's and the rematch's.
+// R915005: a deck naming a custom card, or a trio holding one, plays only in practice, so no pick here
+// is one. R2031000: All Random's "More cards from" pick is kept in the device's online pick
+// (`readPlayLean`, `game/LeanNewest.tsx`), not here.
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 import type { LeanPick } from "@jackioh/shared";

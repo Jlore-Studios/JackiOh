@@ -120,9 +120,7 @@ pub fn script_v0_5_2() -> CardScripts {
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #35 Prep — SPEC §8.6 row 35, BUILD M9 Classic row C 35: "Your next Spell this turn costs (2) less
-// (#35 Lunar Eclipse's modifier: the Spell type only, floored at (0), R65); a Unit, Field Spell or
-// (R70); radiant: (4) less; its tuned number (discount) reads through `param()` (R386)".
+// C #35 Prep — SPEC §8.6 row 35, BUILD M9 Classic row C 35 (R65, R70, R386).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -177,6 +177,7 @@ const R119_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 const R119_SEED: &str = "r9-c2c-0";
 
 /// A cursor at which #95's one roll is "summon 5 random Field Spells or Traps" and a Quickstriker is
+/// among the five picks: the roll is one draw over the ten, each pick one draw over the backrow pool
 /// (`summonRandom`, R60), in that order.
 fn quickstriker_cursor() -> u32 {
     let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
@@ -246,6 +247,7 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
         s.expect_mana(P1, 4);
         assert_eq!(combo_draws(&s), 2);
         // R119: the rider /fullsend installs does not answer /fullsend's own play. Its first resolution
+        // is counted before the rider exists (step 5's granted parts precede its script), and the repeat
         // is the same play re-resolving (§6.2 Echo: "the same instance re-resolves"), so it draws
         assert_eq!(drawn_count(s.last_events()), 0);
         assert_eq!(s.hand(P1).len(), 0);

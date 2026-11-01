@@ -1,21 +1,14 @@
-//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). The Meditative set was one while
-//! issue #496 built it and shipped in v0.3.5 (issue #553), so it now draws, deals and leans like Core;
-//! the gate stays for the next set, which these tests stand in for with fixture cards of the reserved
-//! Boss set, a set `SHIPPED_SETS` does not list. Such a set's cards are in no pool that names no set,
-//! in no deck, and in no random deck, until the patch that lists the set; a pool that names the set,
-//! or names its cards, reaches them; and the testkit's preview opens the set on one thread, as the
-//! fuzz tool does. Also R1421 (a Prime pool holds the Prime tokens) and R1422 (`anyTags`), the pool
-//! pieces the set's cards share, and R1371 (the newest shipped set, which a preview never moves).
-//! R1178000: the Meditative+ set (issue #1173) was the next held set, in the catalog order after
-//! Meditative, and shipped in v0.3.15 (issue #1187), so its fixture cards here now draw, deal and lean
-//! like Meditative's, and the gate's tests stay on the Boss set; its Potion tag names no tribe.
-//! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
-//! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
-//! lean like Meditative+'s; its four tags name no tribe, nor do the two issue #2521 adds after them
-//! (Resource and Faction).
-//! R2194000: the Training Grounds set (issue #2193) was the fourth held set, after Stinkyscape in the
-//! catalog order, and shipped with its release (#2204), so its fixture cards here now draw, deal and
-//! lean like Stinkyscape's, and it is the newest set.
+//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). The gate's tests stand in for the
+//! next set with fixture cards of the reserved Boss set, a set `SHIPPED_SETS` does not list. Such a
+//! set's cards are in no pool that names no set, in no deck, and in no random deck, until the patch
+//! that lists the set; a pool that names the set, or names its cards, reaches them; and the testkit's
+//! preview opens the set on one thread, as the fuzz tool does. Also R1421 (a Prime pool holds the
+//! Prime tokens) and R1422 (`anyTags`), the pool pieces the set's cards share, and R1371 (the newest
+//! shipped set, which a preview never moves).
+//! The Meditative (issue #496), Meditative+ (R1178000, issue #1173), Stinkyscape (R1857000) and
+//! Training Grounds (R2194000, the newest) sets were held and have shipped, so their fixture cards here
+//! draw, deal and lean like Core's. Meditative+'s Potion tag names no tribe, nor do Stinkyscape's four
+//! tags, nor the two issue #2521 adds after them (Resource and Faction).
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
 use jackioh_engine::catalog::{deckable, set_is_open};

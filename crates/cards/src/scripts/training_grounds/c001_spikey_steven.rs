@@ -12,8 +12,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #1 Spikey Steven — SPEC §8.11 row 1, BUILD M13 row TG 1: "base: a 5/2 Human with no text and no
-// keyword; it is summoning-sick on its turn (no Rush); radiant a 15/6 Human with no text".
+// TG #1 Spikey Steven — SPEC §8.11 row 1, BUILD M13 row TG 1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

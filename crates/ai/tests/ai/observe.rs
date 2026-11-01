@@ -1,6 +1,15 @@
 //! What the AI may know (SPEC §9.9, R185; docs/polish/3-ai.md B9–B12; docs/v0.3.0/README.md V11).
-//! Proves redaction and determinization preserve public information and conceal hidden cards.
-//! Tests against fixture pairs (B9, B11; #11, #53, #20, #41, #60) and random mutations (SURFACE §2).
+//!
+//! `redact(state, seat)` is the only code that reads a true state, and `determinize` turns what it
+//! leaves into one concrete world. The proofs here are all observable: two true states that differ
+//! only in what the seat cannot see redact to the same hash and give the same decision; a
+//! determinized world shows the seat exactly the view the true state shows it; and every card the
+//! seat can read comes through a determinization untouched.
+//!
+//! The fixed pair (B9, B11) is the one the design names: p2's hand #2 Bigot and #11 Tempo Timmy
+//! against #53 Reno and #20 Pointmaster, a face-down #41 Sheepish against a face-down #60 Bear
+//! Honeypot. The mutation property generalises it to random mutations of random real games: with no
+//! property-test crate in the workspace (SURFACE §2), its 150 cases run from a seeded `Rng`.
 
 use std::sync::OnceLock;
 
@@ -88,12 +97,10 @@ fn is_hidden_backrow(state: &GameState, card: &CardInstance, seat: PlayerId) -> 
 }
 
 /// B9's mutation: rewrite everything `seat` may not know and nothing else. The opponent's hand and
-/// library get new identities (and Radiant flags) and a new order, every backrow card the seat
-/// cannot read gets another Trap that shows the same cost (R351: the seat reads that much, since patch
-/// v0.1.1 gave #85 a cost of its own) and leaves the seat's view unchanged (R403, R602: a live
-/// face-down aura shows on the board), or, when it is no Trap (a Unit set face down), another card of
-/// the pool on the same terms, the seat's own library is reordered, and seed, cursor and the nonce log
-/// are replaced.
+/// library get new identities, Radiant flags and order; a backrow card the seat cannot read gets another
+/// Trap (another card of the pool, if it is no Trap) that shows the same cost (R351: the seat reads that
+/// much, #85's own included) and leaves the seat's view unchanged (R403, R602: a live face-down aura
+/// shows on the board); the seat's own library is reordered; seed, cursor and the nonce log are replaced.
 fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     let mut out = clone(state);
     let mut rng = create_rng(&format!("observe-mutate:{seed}"), 0);
@@ -115,8 +122,10 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
             if !is_hidden_backrow(state, &card, seat) {
                 continue;
             }
+            // R403, R602: a face-down trap with no reveal condition is live, so a trap of the same cost
             // can still change what the seat reads off the board (an aura over its units; C #88 Siphon
             // Squad's sleeps until it is revealed, R1149000). That is not hidden from it, so the swap
+            // must leave the seat's view as it was.
             let shown = effective_cost(&out, &card, Default::default());
             let original = card.def_id.clone();
             let seen = view_without_events(&out, seat);
@@ -239,6 +248,7 @@ mod redact_b9 {
     }
 
     /// R1956001: the opponent's Created cards' generators, a hidden hand card's among them, are no
+    /// seat's to read, and redact drops them; the seat's own stay, as its view names them
     #[test]
     fn r1956001_redact_keeps_the_seats_own_generators_and_drops_the_opponents() {
         let (a, _) = pair();
@@ -477,6 +487,7 @@ mod redact_b9 {
     #[test]
     fn r266_b9_a_sealed_answer_owed_behind_the_seats_own_paused_resolution_reaches_it_as_keeping_everything()
     {
+        // A cast-on-draw Spell that asks its caster (no Core one asks, so a fixture): p1's replacement
         // draw casts it, and p2's sealed answer waits in setup's owed item until p1 answers (R224, R265).
         jackioh_cards::register_all();
         let asking = "ai-r266-cod-asks";
@@ -750,6 +761,7 @@ mod determinize_loses_nothing_the_seat_can_see_b10 {
         assert!(states.iter().filter(|state| state.result.is_none()).count() > 20);
         for (at, state) in states.iter().enumerate() {
             // R434: a finished game's view shows the opponent's hand in full, which a redaction cannot
+            // keep. No seat is to act in one, so the AI never determinizes it.
             if state.result.is_some() {
                 continue;
             }
@@ -818,6 +830,7 @@ mod lethal_hint_r2102000 {
     use super::*;
 
     /// R2102000: the lethal hint gives one answer for random mutations of real states, asked for the
+    /// seat whose main phase it is
     #[test]
     fn r2102000_the_lethal_hint_gives_one_answer_for_random_mutations_of_real_states() {
         let candidates: Vec<&GameState> = real_states()
@@ -933,7 +946,9 @@ mod determinize_b12 {
      {
         jackioh_cards::register_all();
         let face_down = ["core-018", "core-041", "core-060", "core-071", "core-085"];
+        // Every card a hidden backrow card may be (a trap of any set, or a card that prints Cloaked,
         // R783009: Cloaked Toe Cracker) is shown but four traps, so four unseen traps are left for
+        // five lanes.
         let unshown = ["core-018", "core-060", "core-071", "core-085"];
         let mut candidates = trap_pool();
         candidates.extend(jackioh_engine::alt_play::printed_cloaked_def_ids());
@@ -1137,6 +1152,7 @@ mod r923_placeholder_carries_no_granted_tag {
     use super::*;
 
     /// MD-B15, R923: a granted tag is read by rules, so a placeholder — which stands in for a
+    /// card the seat cannot read — carries none.
     #[test]
     fn r923_a_placeholder_carries_no_granted_tag() {
         let (mut a, _) = pair();
@@ -1160,6 +1176,7 @@ mod r1176000_placeholder_is_not_in_chinese {
 
     /// R1176000: a card in Chinese is CN, and whether a hidden card is in Chinese goes with its face
     /// (R1301), so a placeholder is not in Chinese: translating the cards a seat cannot read changes
+    /// nothing it may know.
     #[test]
     fn r1176000_a_placeholder_is_not_in_chinese() {
         let (mut a, _) = pair();
@@ -1183,6 +1200,7 @@ mod r1181003_placeholder_names_no_embiggened_price {
 
     /// R1181003: the price of an embiggen card's Embiggened version alone (Meditative+ #23 Enormous
     /// Elderberry's (0)) is the card's, so a placeholder carries none: which hidden cards the
+    /// Elderberry added is nothing the seat may know.
     #[test]
     fn r1181003_a_placeholder_names_no_embiggened_price() {
         let (mut a, _) = pair();

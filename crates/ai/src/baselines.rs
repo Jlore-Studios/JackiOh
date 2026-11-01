@@ -1,4 +1,5 @@
-//! Baseline quality gate agents (SURFACE §9, SPEC §10.7, R185): random policy and one-ply greedy.
+//! The two baselines the quality gates measure the AI against (SURFACE §9): SPEC §10.7's random
+//! policy, and a one-ply greedy player that sees exactly what the AI sees (R185).
 
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for, subsystems};
 

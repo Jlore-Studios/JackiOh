@@ -1,5 +1,6 @@
 // #936 review (finding 8): how often the social screens ask the server again. The friends list is the
-// social layer's dearest read; an open conversation keeps CHAT_POLL_MS (`ChatPanel.test.tsx`).
+// social layer's dearest read, so off its screen it is read only while the friends panel is open
+// (#1831); an open conversation keeps CHAT_POLL_MS (`ChatPanel.test.tsx`).
 // The server is a stubbed `fetch` (`test/stubServer.ts`) and time is vitest's fake clock.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";

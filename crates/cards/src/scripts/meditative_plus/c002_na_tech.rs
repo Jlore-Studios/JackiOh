@@ -71,12 +71,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2: "with a fixture win-rate table, fuses the
-// trailer and the leader (both eligible past the games floor, ties as R1100) into one transient card
-// (summed stats, union of keywords, both scripts, R77) added to your hand at (2); with an empty table
-// Infinite Reserves and Lunar Eclipse stand in, an end named by the table that is the other's fallback
-// leaving that end random (R2521007); a full hand burns it; setCost reads through `param()`; radiant
-// both ingredients Radiant and it costs (0)".
+// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77, R2521007).
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -59,12 +59,11 @@ pub fn script_v0_5_11() -> CardScripts {
     }
 }
 
-// #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "Not dealt into the opening hand by setup (#2521 took its
-// Quickdraw away); embiggen 2 → Armor 2, 4 → Armor 5 on the hero; radiant 4 / 10" (Armor 4 and 8 until #2657) (patch v0.1.1: the paid-4
-// numbers were 5 and 10). The four numbers:
-//   base 2 / 5, radiant 4 / 10 (paid 2 / paid 4). The Armor is asserted through a real damage instance
-// on the protected hero (§4.4 step 2); attackers are placed by `field`, so no Cry fires (R1). A card placed by setup is
-// "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit that is 0 after Armor emits no `damage`.
+// #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4 (#2521). (Armor 4 and 8 until #2657) (patch v0.1.1: the
+// paid-4 numbers were 5 and 10). The four numbers: base 2 / 5, radiant 4 / 10 (paid 2 / paid 4). The Armor is
+// asserted through a real damage instance on the protected hero (§4.4 step 2); attackers are placed by
+// `field`, so no Cry fires (R1). A card placed by setup is "paid 2"; "paid 4" is PLAYED with `embiggen:
+// true`. R63: a hit that is 0 after Armor emits no `damage`.
 #[cfg(test)]
 mod tests {
     use super::*;

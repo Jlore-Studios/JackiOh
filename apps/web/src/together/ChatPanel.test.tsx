@@ -1,6 +1,6 @@
 // #936 S8 B58: `ChatPanel`, the conversation with one friend. A refusal (B53: empty, too long, not
 // friends, rate-limited) shows in the server's words without adding a message. The Friends button's
-// panel (#1831) lists friends, each opening this panel.
+// panel (#1831) lists friends, each opening this panel. #1898: a failed read says why with Try again.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -10,6 +10,8 @@
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! The Activate's target is a declared enemy Unit or the enemy hero (R81, R1862000), once a turn and
 //! on the Radiant face twice (R384, R1857003). R1862005: the target takes the 2 the Auspicious Rock
+//! (M #39.1) costs its caster (`damage`, whole on a hero), then the Rock's reward: one roll on the
+//! Rock's own table (`add_rolled`, R960) adds a Dud, a Jade or a Red Jade to its controller's hand, a
 //! full hand burning it (§2.4). The Launcher prints no Lucky, but the roll keeps a best, so its
 //! controller's Luck rolls it again (§6.1 Luck X, R987). No Rock is made or cast, and no health is lost. The number is the
 //! declared `damage` (R386), read through `param`.

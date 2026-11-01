@@ -50,7 +50,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #27 Clip-Farming Lawyer — SPEC §8.8 row 27, BUILD M10 row M 27 (MD-B4).
+// M #27 Clip-Farming Lawyer — SPEC §8.8 row 27, BUILD M10 row M 27 (MD-B4); with no Locked zone no
+// random number is drawn (R129).
 #[cfg(test)]
 mod tests {
     use super::*;

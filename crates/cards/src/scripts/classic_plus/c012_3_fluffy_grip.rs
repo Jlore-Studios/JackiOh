@@ -37,7 +37,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.3 Fluffy Grip — SPEC §8.7 row 12.3, BUILD M9 Classic+ row C+ 12.3 (R12, R60, R97).
+// C+ #12.3 Fluffy Grip — SPEC §8.7 row 12.3, BUILD M9 Classic+ row C+ 12.3 (R12, R60, R97); a
+// unit-token card follows R11.
 #[cfg(test)]
 mod tests {
     use crate::def_ids;

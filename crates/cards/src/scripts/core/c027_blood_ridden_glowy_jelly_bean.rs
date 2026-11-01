@@ -32,9 +32,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27): "Cast on draw; a random
-// non-Radiant hand card becomes Radiant (R60); 7 health lost ignoring Going Long (R18); radiant
-// 2 cards".
+// #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27) (R60, R18).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

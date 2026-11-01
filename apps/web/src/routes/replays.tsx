@@ -147,10 +147,9 @@ function DownloadJson({ testKey, game, open }: { testKey: string; game: ReplayJs
 }
 
 /**
- * R1141000: Open replay JSON. The chosen file is parsed here and mounted through `onOpen`; one this
- * build refuses (`replayStepsOf`, or a co-op file's `parseDuosReplayJson`) says why beside the
- * control and mounts nothing. The input is emptied after every choice so the same file can be chosen
- * again, and it waits for `ready`: the card data a replay's cards are named from.
+ * R1141000: Open replay JSON. A file this build refuses says why beside the control and mounts nothing.
+ * The input is emptied after every choice so the same file can be chosen again, and it waits for
+ * `ready`: the card data a replay's cards are named from.
  */
 function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Open) => void }): ReactElement {
   const [reading, setReading] = useState(false);

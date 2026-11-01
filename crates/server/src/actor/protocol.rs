@@ -2,8 +2,9 @@
 //!
 //! Message names: hello, view, action, ack, error, prompt, clock.
 //!  - §9.1: client sends intent, never state; `view` carries `PlayerView` and legal actions.
-//!  - §9.3: actions carry client nonce, deduped server-side; `ack` reports nonce and seq.
-//!  - §9.5: `clock` carries `MatchClocks` and server `now` so client avoids clock skew.
+//!  - §9.3: actions carry client nonce, deduped server-side; `ack` reports nonce and seq; `error`
+//!    relays the reducer's reason verbatim.
+//!  - §9.5: `clock` carries `MatchClocks` (the shape `matches.clocks` persists) and the server's `now`.
 //!  - §10.6, §10.8: `prompt` is split on `forYou`; opponent only sees prompt is open.
 //!
 //! Security asymmetry: client `action` frame has `playerId` discarded; actor stamps authenticated seat.
@@ -72,8 +73,8 @@ pub struct MalformedMessage {
     pub reason: String,
 }
 
-/// R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only ("never sent by a client");
-/// parsing rejects them outright.
+/// R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only: one from a socket could
+/// end the opponent's turn or the match, so parsing rejects them outright.
 /// MD-D29, R1127: `emote` is server-minted after R643 rate gate, never accepted directly.
 pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
     ActionType::Timeout,
@@ -87,7 +88,7 @@ pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
 pub const PRACTICE_ONLY_ACTION_TYPES: &[ActionType] = &[ActionType::Sandbox];
 
 /// Actions a socket may carry (§10.2 union). R384's `activate` covers Activate abilities and
-/// Heroic Powers (R752, #491).
+/// Heroic Powers (R752); without it all are refused online (#491).
 pub const CLIENT_ACTION_TYPES: &[ActionType] = &[
     ActionType::Mulligan,
     ActionType::Play,
@@ -130,9 +131,10 @@ pub enum SocketErrorCode {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ServerMessage {
-    /// §10.8 `PlayerView`, plus viewer's `legalActions` (BUILD M5-T2, §10.2, §9.1: never opponent's).
-    /// `jlore_capped`: viewer's daily cap status (R1483000).
-    /// `economy`: post-game rewards (#1657) for the viewer.
+    /// §10.8 `PlayerView`, plus the viewer's own `legalActions` (BUILD M5-T2, §10.2), here so they
+    /// never disagree and BUILD §1 needs no seventh name; never the opponent's, which would name its
+    /// hand (§9.1). `jlore_capped` (R1483000) and `economy`, the result's pay (#1657), are only the
+    /// receiving seat's, never a watcher's or a bot's, and are left off until set.
     View {
         view: Box<PlayerView>,
         legal: Vec<ActionBody>,
@@ -180,11 +182,12 @@ pub enum ServerMessage {
     /// R738: the opponent's aim, relayed — never to the sender, never part of `PlayerView`, and only
     /// once the actor has checked that every end names something the receiver may see.
     Aim { from: PlayerId, aim: Option<Aim> },
-    /// R1834002, R1834003: both seats' loadouts as the match froze them (R1953001 defaults);
-    /// sent on join, reconnect and to watchers. Never in `PlayerView` (CLAUDE.md rule 7).
+    /// R1834002, R1834003: both seats' loadouts as the match froze them, naming no card (R1953001
+    /// defaults); sent on join and reconnect before the view, and to watchers. Never in `PlayerView`
+    /// (CLAUDE.md rule 7).
     Loadouts { p1: SeatLoadout, p2: SeatLoadout },
-    /// R1834003: card picks for `seat`'s deck, sent after views reveal them without leaking
-    /// unrevealed cards (§10.8).
+    /// R1834003: card picks for `seat`'s deck, each sent after the first view showing it, not again
+    /// until a hello or attach (`loadout::cards_due`); an unshown card never travels (§10.8).
     CardLoadouts { seat: PlayerId, cards: Vec<CardPicks> },
 }
 
@@ -667,13 +670,14 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
 pub const MAX_NONCE_LENGTH: usize = 128;
 
 /// SPEC §11 R270: prefix for server-minted nonces (`timeout`, `disconnectExpired`, `ceilingReached`).
-/// Clients may not send one; swallowing expiries would stall the match.
+/// Clients may not send one: a known nonce is acked and not applied, so it would swallow an expiry.
 pub const SERVER_NONCE_PREFIX: &str = "srv-";
 
-/// Frames exceeding this are rejected before parsing (§9.8; 1009 close in SURFACE §11.3).
+/// Frames exceeding this are rejected before parsing (§9.8), the transport's 1009 bound (SURFACE
+/// §11.3) held again so the parser stays total on its own.
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
 
-/// Total client message parser; every kept field is rebuilt.
+/// Total client message parser, never panics; every kept field is rebuilt.
 pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessage> {
     if text.encode_utf16().count() > MAX_FRAME_BYTES {
         return Err(malformed("that frame is too large"));
@@ -713,7 +717,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
             }
             Ok(ClientMessage::Hello(message))
         }
-        // SURFACE §11.3: joining a room is HTTP `POST /api/rooms/:code/join` (`rooms.rs`).
+        // SURFACE §11.3: joining a room is HTTP (`rooms.rs`): its single-claim is an HTTP concern.
         "joinRoom" => Err(malformed(
             "join a room with POST /api/rooms/:code/join, not over the socket",
         )),
@@ -755,7 +759,8 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
             }
         }
         "aim" => {
-            // R738: shape check only. Visibility is the actor's call (`match_actor.rs`).
+            // R738: shape check only; a missing `aim` (not `null`) is malformed. Visibility is the
+            // actor's call (`match_actor.rs`).
             match parsed.get("aim").and_then(parse_aim) {
                 Some(aim) => Ok(ClientMessage::Aim(AimMessage { aim })),
                 None => Err(malformed(

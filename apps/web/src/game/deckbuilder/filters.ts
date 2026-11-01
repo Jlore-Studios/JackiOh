@@ -16,10 +16,9 @@
 //
 // Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
 // chip shows only while a card of a shipped set carries its tag (`shippedTags`), so a set's chip and
-// its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's, the Stinkyscape
-// set's and its four, R1883000) arrive with the set and never before. Issue #2521's two tags reach
-// cards of a set that already ships, so their chips show from the patch that adds them: Faction in
-// both lists, Resource in the almanac's alone.
+// its tags' arrive with the set and never before. Issue #2521's two tags reach cards of a set that
+// already ships, so their chips show from the patch that adds them: Faction in both lists, Resource
+// in the almanac's alone.
 
 import { CATALOG } from "@jackioh/cards";
 import {

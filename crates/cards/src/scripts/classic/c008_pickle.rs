@@ -136,6 +136,7 @@ fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effe
     let state: &GameState = &*ctx.state;
     let mut options: Vec<&str> = Vec::new();
     // R800's guard stops a forced discard only while its holder is not active, so the read stays:
+    // it filters "discard" for a guarded holder answering off their turn (the kept v0.3.16
     // questions) and sleeps on the holder's own turn (R1279000), where every new question opens.
     if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0
         && !jackioh_engine::draw::discard_guarded(state, enemy)
@@ -259,10 +260,7 @@ pub fn script_v0_3_16() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8: "Three mode prompts held by the opponent,
-// are not active (R1279000): they discard a card at random (R682), they exile the bottom card of
-// their turn clock and a timeout answers it with the AI policy (R79); your view names none of their
-// tuned numbers (choices, discard, exile, draw) read through `param()` (R386)".
+// C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8 (R1279000, R682, R79, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

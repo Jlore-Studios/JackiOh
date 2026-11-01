@@ -235,6 +235,8 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
      {
         // The played #95 stands in for the 19th link of a chain, as 095's own tests pin R28's counter. Its
         // roll casts the 20th link, which R87 sends to the graveyard as it resolves, and #72 Reminisce takes
+        // it back. Played from hand it is a new play, a new chain from nothing, so its "cast a random Call
+        // to Chaos" casts one where the old link at the cap cast nothing.
         // The seed is arbitrary: each play's cursor is searched for a roll that casts #95 itself.
         let seed = "inv-r5-chaos-chain";
         let at_cap = |cursor: u32| {

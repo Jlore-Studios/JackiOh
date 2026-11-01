@@ -42,9 +42,8 @@ export const STARSHIP_PIECES: ReadonlySet<string> = new Set(
 );
 
 /**
- * The ships #2521 took the Starship Piece keyword from (Phalanx, the Prototypes, the Paragons, Halo,
- * Galaxy, Radix, Ozark, Falcon, Yuma, the Badgers and Stratos): still ships, so still drawn as the fleet
- * they shipped as (R503).
+ * The ships #2521 took the Starship Piece keyword from: still ships, so still drawn as the fleet they
+ * shipped as (R503).
  */
 const FORMER_STARSHIP_PIECES: ReadonlySet<string> = new Set(
   ["068", "069", "072", "073", "074", "075", "076", "077", "078", "080", "081", "082", "083", "085", "086"].map(

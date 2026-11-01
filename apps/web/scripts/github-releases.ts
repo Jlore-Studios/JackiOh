@@ -1,13 +1,12 @@
 // Prints every shipped version's GitHub release as JSON, `{ latest, releases: [{ tag, target, name,
-// prerelease, body }] }`, written by src/patches/github.ts from crates/cards/patches/; writes nothing.
+// prerelease, body }] }`, written by src/patches/github.ts; writes nothing.
 // .github/workflows/releases.yml publishes what it prints.
 //
 //   pnpm --dir apps/web exec tsx scripts/github-releases.ts [--production <patches.json>]
-//   pnpm --dir apps/web exec tsx scripts/github-releases.ts --production <patches.json> | jq -r '.releases[-1].body'
 //
-// `--production` is the patches.json production holds (`git show origin/production:crates/cards/patches/patches.json`):
-// a version it lacks is a pre-release, on staging. Without it every version reads as on production.
-// The hosts are the web's own: production's from .env.production, staging's `SITE_ORIGIN`.
+// `--production` is the patches.json production holds: a version it lacks is a pre-release, on
+// staging. Without it every version reads as on production. The hosts are the web's own:
+// production's from .env.production, staging's `SITE_ORIGIN`.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

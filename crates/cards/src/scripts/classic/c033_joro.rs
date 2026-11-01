@@ -49,12 +49,7 @@ pub fn script() -> CardScripts {
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #33 Joro — SPEC §8.6 row 33, BUILD M9 Classic row C 33: "From your hand only (R394): when your
-// opponent targets one of your Units with a Spell (R651), by a declared target of a Spell played or
-// cast (§10.5 step 1) or by a Spell's prompt answer, Joro is summoned into your leftmost open zone
-// (no Cry, summoning sick) and the pick moves to it (`redirected`); an attack (§4.2 step 2), a Unit's
-// sign of Joro in your hand until it is summoned (R97); radiant 2/2: Indestructible, so it survives
-// the redirected hit, with no Taunt (R347); no tuned numbers".
+// C #33 Joro — SPEC §8.6 row 33, BUILD M9 Classic row C 33 (R394, R651, §10.5, §4.2, R97, R347).
 // "A friendly unit is targeted" is one replacement point, run for an attack (§4.2 step 2), a play's
 // declared targets (§10.5 step 1) and every target prompt; each carries the targeting card's type,
 // and `by: "spell"` answers only a Spell's. The Cry case uses C #76 Plague Bringer, the activation

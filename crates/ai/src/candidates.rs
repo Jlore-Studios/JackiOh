@@ -1,5 +1,6 @@
 //! The moves the search considers, in the order it considers them. `legal_actions` is the only source
-//! minus skipped actions (R84, R188: concede, draw offers) and mulligan.
+//! (so the AI can never offer what the reducer refuses), minus R84's skipped actions (R188: the AI
+//! never concedes, offers or accepts a draw) and minus the mulligan, which `decide` answers itself.
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
@@ -15,7 +16,7 @@ use crate::config::{AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
 use crate::evaluate::{Prices, can_swing, deft_in_defense};
 use crate::reply::trade_value;
 
-/// Canonical JSON of an action body (SURFACE §5.2).
+/// Canonical JSON of an action body (keys sorted, SURFACE §5.2), for equality across determinizations.
 pub fn action_key(action: &ActionBody) -> String {
     canonical(&serde_json::to_value(action).unwrap_or(Value::Null))
 }
@@ -94,7 +95,10 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
     .join("/")
 }
 
-/// Collapses identical plays across lanes by placement (`placement_key`), prioritizing midlanes (R685, #22, R2203001) up to `cap` (#1635).
+/// Per otherwise-identical play, keep one lane of each placement (`placement_key`): its first in lane
+/// order, or its first in the seat's midlane, which a Cry may read (R685: C #22 Mid Runner, TG #5
+/// Midlane Menace; R2203001), until `cap` lanes are kept (`None`: every placement, the search root's,
+/// #1635). Everything else keeps legal_actions order.
 fn collapse_zones(
     state: &GameState,
     seat: PlayerId,
@@ -331,8 +335,7 @@ fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: 
 /// #1779: what an attack on a unit is worth when it kills its target, or with Cleave a neighbour
 /// (#1821), at an even trade or better by the opponent model's static read (`trade_value`: the
 /// target's worth, less the attacker's when it dies too), else `None`. Each attacker's best one goes
-/// just after the winning trades (`in_move_order`). Its screen, 400 games of improve-dev against the
-/// parent (`496b5cd87`), read 199-201, edge -0.005 (-0.034 to 0.024).
+/// just after the winning trades (`in_move_order`).
 fn even_trade(state: &GameState, attacker_id: &str, target_id: &str, prices: &Prices) -> Option<f64> {
     let trade = trade_value(state, find_instance(state, attacker_id)?, target_id, prices);
     ((trade.kills || trade.splash_kills) && trade.value >= 0.0).then_some(trade.value)
@@ -556,8 +559,10 @@ struct Way {
     first_seen: usize,
 }
 
-/// Tier 2: round-robin across source instances ordered by cost descending (Activate abilities B3.2).
-/// Interleaves play variants (#1778) and alternates enemy-aimed targets first (`enemy_first`, #1062).
+/// Tier 2: round-robin across source instances (every source's first variant, then every second, …),
+/// each round by current cost, highest first; a field card with an Activate ability is a source (B3.2).
+/// A source's variants are interleaved across its ways of being played (#1778), and inside each way
+/// aimed at the enemy first (`enemy_first`, #1062), so the seat's own targets cannot crowd them out.
 fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
     let mut sources: Vec<Source> = Vec::new();
     let mut by_id: IndexMap<String, usize> = IndexMap::new();
@@ -730,7 +735,9 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
         .collect()
 }
 
-/// Unordered candidate set: legal actions minus skipped actions (R84) and mulligan, with collapsed zones (R2203001).
+/// The candidates' membership, before their order is fixed: legal_actions minus AI_SKIPPED_ACTIONS
+/// (R84) and `mulligan`, with `play` zone variants collapsed (`collapse_zones`, R2203001).
+/// `candidate_actions` orders it; a caller that only asks membership is spared the ordering's reads.
 pub fn candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     candidate_pool(state, seat, legal_actions(state, seat))
 }
@@ -901,7 +908,10 @@ pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
         .any(|enemy| could_attack_next_turn(state, enemy, &target) && kills_and_survives(state, enemy, unit))
 }
 
-/// R2021000: whether `enemy` can attack `target` next turn (Deft R49, freeze R1174000, dormant R1839000, flying/ranged R783002).
+/// R2021000: whether `enemy` could attack `target` on its controller's next turn: it is in Attack
+/// Position, or Defense Position with Deft (R49); it may swing at all (`can_swing`: not Frozen through
+/// that turn, R1174000); and no restriction bars it from `target` (a Dormant card, R1839000, or a
+/// Flying unit only a Flying or Ranged unit may attack, R783002).
 fn could_attack_next_turn(state: &GameState, enemy: &CardInstance, target: &AttackTarget) -> bool {
     let view = unit_view(state, enemy);
     (view.position == Position::Atk || deft_in_defense(&view))

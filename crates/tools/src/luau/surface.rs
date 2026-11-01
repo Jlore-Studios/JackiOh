@@ -1,8 +1,12 @@
-//! `cargo jackioh luau surface` (#560, #442, #448): reports engine API calls in card scripts.
+//! `cargo jackioh luau surface [--json] [--card <id>]…` (#560, groundwork for #442's part 6, #448): the
+//! engine API every card script calls. Per face: the `Script` hooks it sets (and whether the Radiant
+//! face reuses the base's), the effect verbs, read helpers and random pools it uses; then a summary of
+//! each with its cards. The cards that stay in Rust (#442's L14) are marked and counted apart.
 //!
-//! Scans script files above `#[cfg(test)]` for hooks, effect verbs, read helpers, and pools.
-//! Flags L14 cards remaining in Rust (#442) and summarizes API surface.
-//! Treats scripts as text; classifies known syntax forms and marks unreadable entries.
+//! It reads source text and is not a Rust parser: comments, literals and everything from `#[cfg(test)]`
+//! on are blanked first. A name it cannot classify is listed as unclassified and a card it cannot read
+//! as unreadable with its reason; neither fails the command. Only the report is printed: no file is
+//! written, so it cannot go stale.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;

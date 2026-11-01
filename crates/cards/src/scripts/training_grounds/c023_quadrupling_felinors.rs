@@ -25,11 +25,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #23 Quadrupling Felinors — SPEC §8.11 row 23, BUILD M13 row TG 23: "on an empty row: four 3/4
-// Felinors, the copies in the leftmost free zones; the copies' Cries do not fire (exactly three copies);
-// with two free zones left: two copies, no error; a buff on the hand instance is carried, damage is not
-// (R57); summoned or copied itself: no Cry, no copies; the count reads through `param()`. radiant four
-// Radiant 6/8s".
+// TG #23 Quadrupling Felinors — SPEC §8.11 row 23, BUILD M13 row TG 23 (R57).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

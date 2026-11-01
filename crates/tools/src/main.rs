@@ -1,4 +1,6 @@
-//! `jackioh`, command-line tools (SURFACE §12), run as `cargo jackioh <cmd>`.
+//! `jackioh`, the project's command-line tools (SURFACE §12), run as `cargo jackioh <cmd>`, one
+//! subcommand per row of §12's table. Exit codes: 0 on success, 1 on a failed check (a `run` that
+//! returns `Err`), 2 on bad usage (clap). Output goes to stdout; nothing is interactive.
 
 mod agent;
 mod arena;

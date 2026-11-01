@@ -6,13 +6,9 @@
 //!
 //! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real
 //! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
-//! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
-//! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030,
-//! the Meditative+ set's Potion (R1178000) from 0043, #1837's Terminus, Quest, Otherworldly,
-//! Other-Origins and Jelly Bean (R1837000) from 0058, and the Stinkyscape set's Drone Core, Weapon,
-//! War Doctrine and Swarm (R1857000) from 0065, the Training Grounds Legacy cards' Legacy
-//! (R2511000) from 0069, and #2521's Resource and Faction from 0070. The seed runs in one
-//! transaction, so one such row fails the whole catalog. The first half compares the tags with the migrations' text; the
+//! admits each later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010
+//! and Book, Pancake and AI (B2.4) from 0015 among them. The seed runs in one transaction, so one
+//! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
 //! second checks that the database really accepts them. Both count the catalog of the sets that ship
 //! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
 //! Meditative+ set and the Stinkyscape set (R1420).
@@ -344,12 +340,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         );
     }
 
-    /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
-    /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), 0065, which
-    /// ships the Stinkyscape set (R1857000), 0069, which admits Legacy (R2511000), and 0070, which
-    /// admits #2521's Resource and Faction. The check admits exactly the tags the engine names, in
-    /// its order, Wincon, Potion, the five, the four, Legacy and the two among them, so every entry
-    /// of every set the catalog holds seeds the day its set ships, the Meditative, Meditative+ and
+    /// R1411: the check admits exactly the tags the engine names, in its order, so every entry of
+    /// every set the catalog holds seeds the day its set ships, the Meditative, Meditative+ and
     /// Stinkyscape sets' included.
     #[tokio::test]
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
@@ -910,8 +902,7 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
 /// passed over. Two people's accounts are active, one of them a dev account, when a new catalog
 /// version of one starter card is seeded: the stamp grants neither of them the card, `seed-catalog`
 /// writes the starter cards (R1310000) beside it, and a person activated after the stamp is granted
-/// it, so the card was one a grant could give. The tables and the stamp are put back after, for the
-/// cases that run next.
+/// it, so the card was one a grant could give.
 mod r1310001_r1300001_db_a_new_version_grants_nobody {
     use super::*;
     use jackioh_server::cli::seed_catalog::{CatalogEntry, seed_catalog};

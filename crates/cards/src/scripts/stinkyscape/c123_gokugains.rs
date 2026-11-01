@@ -5,6 +5,9 @@
 //!
 //! Cloaked is the engine's (R783004): set face-down, its Cry runs as it is revealed (R783006). Cry (R1):
 //! `degrade_secretly { scope: the enemy's hand Units, random: 1, times }` (R1845000): one random Unit
+//! card of the opponent's hand that can take Nerfs (not Immutable) gets a hidden count, nothing drawn or
+//! reported, no view showing it to either seat, Gokugains' controller included. It lands as that card is
+//! next played, at §10.5 step 3, each Nerf drawn from every row but the cost's (R1845001). A hand with no
 //! such Unit takes nothing and draws nothing (R129). The count is the declared `times` (R386), its Cry's.
 //! The play pipeline runs the Cry of a card it sets face-down too (§10.5 step 5), so, as S #103 Vxyl's,
 

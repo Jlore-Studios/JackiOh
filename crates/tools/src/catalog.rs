@@ -1,28 +1,19 @@
 //! `cargo jackioh catalog check`, `cargo jackioh catalog loc <path>` and `cargo jackioh
 //! catalog-version` (SURFACE §12).
 //!
-//! `catalog check` is the port of `packages/cards/scripts/validate-catalog.ts`: structural
-//! validation of `crates/cards/catalog.json` against SPEC §5, §6.1, §7 and §8, and patch v0.2.0's
-//! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
+//! `catalog check` validates `crates/cards/catalog.json`'s shape and census against SPEC §5, §6.1, §7
+//! and §8 and patch v0.2.0's sets and fields (docs/classic-sets.md B2, B3.4, E36, E40), set by set
+//! (Core to Stinkyscape, R1857000, and the held Training Grounds set, R2194000): every card and token
+//! once, every enum value in the engine's wire unions, stats only on Units and Animated backrow cards
+//! (B3.1, a whole line or none, R2280000), each set's rarities as `jackioh_cards::census` carries them.
+//! It does NOT re-read the §8 cells (`crates/cards/tests/cross/catalog.rs` does); the pending-fragment
+//! proof is `patches check`.
 //!
-//! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
-//! Meditative, Meditative+, Stinkyscape, R1857000, and the held Training Grounds set, R2194000): that it holds every card and every token exactly once, that every enum value is in
-//! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
-//! B3.1, which print a whole line or none, R2280000) and nowhere else, that the rarity distribution
-//! each set prints is the one the census carries (`jackioh_cards::census`), and that the v0.2.0 fields (`printedRarity`, `params`,
-//! `loc`, a face's `type` and `xStats`) are well formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
-//! an independent transcription. The pending-fragment proof is its own command, `patches check`
-//! (TS's `pnpm validate:catalog` ran both).
+//! `catalog loc <path>` prints a card script's lines of code (SURFACE §7.5): `loc` is frozen gameplay
+//! data, so nothing recomputes it; a test holds each entry written since the newest snapshot to it.
 //!
-//! `catalog loc <path>` prints a card script's lines of code (SURFACE §7.5): `loc` is frozen
-//! gameplay data in `catalog.json`, so nothing recomputes it; a card added after v0.3.0 takes its
-//! number from here. A test below holds every entry to carrying a `loc`, and each one written since
-//! the newest shipped snapshot (a new entry, or a `loc` other than the snapshot's) to this count.
-//!
-//! `catalog-version` is the port of `scripts/catalog-version.mjs`: it prints the catalog version
-//! this checkout ships, the newest entry of `crates/cards/patches/patches.json` (R388). The version
-//! is read as data: the list's order is the order of versions, never a comparison of strings
-//! (R105). It fails, printing nothing on stdout, when the list names no newest version.
+//! `catalog-version` prints the newest entry of `crates/cards/patches/patches.json` (R388), read by the
+//! list's order, never a comparison of strings (R105); it fails, printing nothing on stdout, with none.
 
 use std::fs;
 use std::io::Write as _;
@@ -40,6 +31,8 @@ use crate::patches::repo_root;
 use crate::spec::is_ident_char;
 
 /* unions */
+
+// The engine's `ALL` lists are the unions themselves, so they are exhaustive by construction.
 
 /// `CARD_TYPES`.
 fn card_types() -> Vec<&'static str> {
@@ -69,7 +62,7 @@ fn keyword_kinds() -> Vec<&'static str> {
 /// §6.1, R385, E6: the keywords that carry a number; every other kind is bare.
 const NUMBERED_KEYWORDS: &[&str] = &["Armor", "Lucky", "Brittle", "Spell Damage"];
 
-/* ------------------------------------------------------------------------------- expectations */
+/* expectations */
 
 /// The id segment of each set the catalog holds (B2.2: `classicplus` holds no hyphen).
 struct SetExpectation {
@@ -149,9 +142,8 @@ fn flavors() -> Vec<&'static str> {
 /// B3.1: a backrow card that becomes a Unit prints the Unit's attack and health.
 const ANIMATED_KEYWORDS: &[&str] = &["Animated", "Animated on your turn"];
 
-/* ------------------------------------------------------------------------------------ helpers */
+/* helpers */
 
-/// TS kept the failures in a module-level list; here each check is handed the list.
 fn fail(failures: &mut Vec<String>, at: &str, message: &str) {
     failures.push(format!("{at}: {message}"));
 }
@@ -202,9 +194,7 @@ fn is_camel_word(key: &str) -> bool {
     bytes.next().is_some_and(|b| b.is_ascii_lowercase()) && bytes.all(|b| b.is_ascii_alphanumeric())
 }
 
-/// A text with every param placeholder removed (TS's
-/// `text.replace(/\{[A-Za-z][A-Za-z0-9]*(?:\|[^|{}]*\|[^|{}]*)?\}/g, "")`, `PARAM_PLACEHOLDER`'s
-/// own pattern).
+/// A text with every param placeholder removed (`PARAM_PLACEHOLDER`'s own pattern).
 fn strip_placeholders(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut at = 0;
@@ -216,8 +206,7 @@ fn strip_placeholders(text: &str) -> String {
     out
 }
 
-/// `new Set(items).size !== items.length` over JSON values: strings, numbers, booleans and `null`
-/// by value, objects and arrays by identity (so never equal to another).
+/// Whether a value repeats: scalars by value, objects and arrays by identity (never equal to another).
 fn repeats_a_value(items: &[Json]) -> bool {
     let same = |a: &Json, b: &Json| match (a, b) {
         (Json::Null, Json::Null) => true,
@@ -232,7 +221,7 @@ fn repeats_a_value(items: &[Json]) -> bool {
         .any(|(i, a)| items[i + 1..].iter().any(|b| same(a, b)))
 }
 
-/* ---------------------------------------------------------------------------------------- faces */
+/* faces */
 
 fn validate_face(
     failures: &mut Vec<String>,
@@ -426,7 +415,6 @@ fn validate_face(
                 &format!("unknown keyword field(s) {}", extra.join(", ")),
             );
         }
-        // TS narrowed the object to `Keyword` here; the checks above are that shape.
     }
 
     // ME-GRANT (MD-D13, R1107): the Death abilities a face grants, by key, each its quoted text.
@@ -466,7 +454,10 @@ fn validate_face(
     }
 }
 
-/// Validates params (B3.4 rule 5): camelCase keys in `[min, max]`, step, `tunedOn` (R749, R1431, R824000), `power` (R1430).
+/// B3.4 rule 5: `params` holds distinct camelCase keys, integer values within [min, max], a direction
+/// and a positive step, each written `{key}` in some face's text, and every `{key}` a text writes is
+/// declared. A number one face alone writes is tuned on that face only (`tunedOn`, R749, R1431,
+/// R824000); one that belongs to a power names its Activate ability's id (`power`, R1430).
 fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let params = value.get("params");
     let texts: Vec<String> = ["base", "radiant"]
@@ -806,9 +797,7 @@ fn validate_fallback(failures: &mut Vec<String>, at: &str, value: &Object) {
     else {
         return;
     };
-    // `{ ...base, attack: doubled(base.attack), health: doubled(base.health) }`: a stat the base
-    // face carries keeps its place, doubled when it is a number; one it lacks is `undefined`, which
-    // `JSON.stringify` leaves out.
+    // A stat the base face carries keeps its place, doubled when it is a number; one it lacks stays out.
     let mut expected = base.clone();
     for stat in ["attack", "health"] {
         if let Some(Json::Number(n)) = expected.get_mut(stat) {
@@ -828,7 +817,7 @@ fn validate_fallback(failures: &mut Vec<String>, at: &str, value: &Object) {
     }
 }
 
-/* ----------------------------------------------------------------------------------------- main */
+/* main */
 
 /// What `catalog check` found: every failure, and the census it prints when there is none.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -845,7 +834,7 @@ pub struct CatalogReport {
     pub unshipped_count: usize,
 }
 
-/// `validate-catalog.ts`'s top level over a parsed catalog (an object keyed by card id).
+/// The catalog check over a parsed catalog (an object keyed by card id).
 pub fn check_catalog(catalog: &Object) -> CatalogReport {
     check_catalog_against(catalog, sets())
 }
@@ -871,8 +860,7 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
     let mut failures: Vec<String> = Vec::new();
     let entries = catalog.len();
 
-    // 1. The census's entry total, R1420's unshipped sets aside. (TS checks the total here and again
-    // after the loop, so a wrong total fails twice; kept.)
+    // 1. The census's entry total, R1420's unshipped sets aside (checked again after the loop).
     let unshipped_entries = catalog
         .values()
         .filter(|value| {
@@ -1211,8 +1199,7 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             param_count += 1;
         }
 
-        // E36: generated lines of code (now `cargo jackioh catalog loc`, SURFACE §7.5), a
-        // non-negative integer when present.
+        // E36: lines of code (`cargo jackioh catalog loc`, SURFACE §7.5), a non-negative integer.
         if let Some(loc) = value.get("loc") {
             loc_count += 1;
             if !loc.is_integer() || loc.as_f64().is_some_and(|loc| loc < 0.0) {
@@ -1433,7 +1420,7 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
     }
 }
 
-/* ------------------------------------------------------------------------------------------ loc */
+/* loc */
 
 /// One string literal the scanner is inside, across lines: a plain `"…"` (with escapes) or a raw
 /// `r#"…"#` closed by that many `#`s.
@@ -1443,7 +1430,6 @@ pub(crate) enum Quote {
     Raw(usize),
 }
 
-/// An identifier character, which a raw string's `r` may not follow.
 /// A raw string opening at `i` (`r"`, `r#"`, `br"`, `cr##"` …): its length up to and including
 /// the quote, and its `#` count.
 pub(crate) fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
@@ -1494,7 +1480,7 @@ fn starts_use(code: &str) -> bool {
 /// SURFACE §7.5: the lines of code in one card script — every line that holds code once comments
 /// are removed, except the lines of a `use` declaration — above the file's `#[cfg(test)]`. Strings
 /// (plain, raw, byte) and character literals are read as such, so a `//` inside a string is code,
-/// not a comment; block comments nest, as Rust's do. `gen-loc.ts`'s `countLoc`, for Rust.
+/// not a comment; block comments nest, as Rust's do.
 pub fn count_loc(source: &str) -> usize {
     code_lines(source).len()
 }
@@ -1642,7 +1628,9 @@ fn is_require(code: &str) -> bool {
         .is_some_and(|(_, value)| value.trim_start().starts_with("require("))
 }
 
-/// SURFACE §7.5 for Luau card scripts (#442): counts code lines excluding comments and requires.
+/// SURFACE §7.5 for a Luau card script (#442): the lines holding code once comments (`--`, `--[[ … ]]`
+/// of any level, `--!strict`) are removed, less its `require` imports, as `count_loc` leaves out `use`.
+/// Strings are read as such, so a `--` inside one is code.
 pub fn count_luau_loc(source: &str) -> usize {
     #[derive(Clone, Copy)]
     enum In {
@@ -1730,7 +1718,7 @@ pub fn count_luau_loc(source: &str) -> usize {
     count
 }
 
-/* -------------------------------------------------------------------------------- catalog-version */
+/* catalog-version */
 
 /// The newest version `patches.json` at `path` names: its last entry's `version`. The list's
 /// order is the order of versions (R105, R388).
@@ -1760,7 +1748,7 @@ pub fn newest_version(path: &Path) -> anyhow::Result<String> {
     }
 }
 
-/* ---------------------------------------------------------------------------------------- the CLI */
+/* the CLI */
 
 /// `cargo jackioh catalog …` (SURFACE §12).
 #[derive(clap::Args)]

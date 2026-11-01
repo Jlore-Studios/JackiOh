@@ -49,8 +49,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4: "Trap window at the end of any turn with library >
-// opponent's → recruit ≤1 (R62); fires again next qualifying turn; radiant ≤2".
+// #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4 (R62).
 //
 // Library fillers are Spells (core-005, core-035), which Recruit never takes (§6.3); core-001 costs
 // 2, core-003 and core-004 cost 1, none with a turn trigger, and Recruit fires no Cry (R1). Both

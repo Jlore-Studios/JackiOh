@@ -1,8 +1,6 @@
-// R1953001 (#1953): a held cosmetic token is offered where a locked cosmetic is shown, a card's own
-// cosmetics view and the account's tiles, and only where its tier covers the cosmetic (R1305003):
-// the offer redeems it through `POST /api/tokens/redeem-cosmetic` and the cosmetic shows owned once
-// the screen's ownership reads again; a refusal shows the server's words and changes nothing.
-// R2480000 (#2480): the offer asks first; Confirm redeems, Cancel and Escape spend nothing.
+// R1953001 (#1953): a held cosmetic token is offered where a locked cosmetic is shown, and only where
+// its tier covers it (R1305003); a redemption shows the cosmetic owned once the screen's ownership reads
+// again, and a refusal shows the server's words. R2480000 (#2480): the offer asks first.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

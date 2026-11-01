@@ -5,6 +5,7 @@
 //! (damage 1; R1860001, R1860002).
 //!
 //! first if they have none (R1852000). Cry (R1): R689's placement, `place_plague_tokens`: the
+//! counters all on the one permanent a single prompt names, either side, face-down cards included,
 //! this one among them; on another permanent they do nothing for it. End of turn (R62): one hit of
 //! damage × the counters on it to the enemy hero and to every enemy Unit (`damage_all`, R59), none
 //! with no counter on it. Tagged Plague by §5's rule for a card that uses Plague Counters

@@ -1,9 +1,7 @@
 // Client view of SPEC §9.4's server gate (CLAUDE.md rule 7): `/api/auth/me` sends pending accounts
-// to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401; refusal
-// ends a session as `expired`, and transient failure leaves it retryable. R632 re-reads a tab-owned
-// session after storage or back/forward-cache changes; background reads keep a ready screen when safe.
-// R2630000: a new screen's gate starts from the page's last answer for an active account that owes
-// nothing (kept with the menus' answers, `readCache.ts`) and reads again behind it.
+// to `/invite` and anonymous ones to `/login`. R194 renews once near expiry or after a 401. R632
+// re-reads a tab-owned session after storage or back/forward-cache changes. R2630000: a new screen's
+// gate starts from the page's last answer for an active account that owes nothing and reads again.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -132,8 +130,7 @@ const ME_PATH = "/api/auth/me";
 
 /**
  * R2630000: an answer a new screen may open on before the server answers again: an active account
- * that owes nothing. A redirect (pending, anonymous), the banned panel and the consent and username
- * prompts always wait for the read, so none of them ever rests on a kept answer.
+ * that owes nothing. A redirect, the banned panel and a prompt never rest on a kept answer.
  */
 function opensAtOnce(me: MeResponse): boolean {
   return (

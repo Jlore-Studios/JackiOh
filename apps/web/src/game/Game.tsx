@@ -11,21 +11,18 @@
 //  - `shown` — that held-back view.
 //
 // Everything else is `props.view` and `props.legal`. `onAction` goes straight out to the caller,
-// which is the only thing that talks to the engine (CLAUDE.md rule 7). Two pieces of chrome sit
-// beside the board and hold no rule either: the Concede control asks "Concede this game?" before it
-// sends anything (ConfirmConcede.tsx; `concedeFor` is the seat that asked), and the draw offer's
-// notices, with the answering seat's Accept and Decline, come from the view (DrawOffer.tsx). So does
-// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), R1838000's Trade
-// control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx),
-// and R1853003's Marketplace shop, its buys and sales live exactly as `legal` lists them
-// (Marketplace.tsx, which the board draws in its control bar, #2645: `market` hands it `legal` and
-// `dispatch`).
+// which is the only thing that talks to the engine (CLAUDE.md rule 7). The chrome beside the board
+// holds no rule either: the Concede control asks before it sends anything (ConfirmConcede.tsx), and
+// the draw offer's notices come from the view (DrawOffer.tsx). So do R915004's notice that a custom
+// card's script failed (ScriptFailedNotice.tsx), R1838000's Trade control (TradeControl.tsx) and
+// R1853003's Marketplace shop (Marketplace.tsx, in the board's control bar, #2645), each live exactly
+// as `legal` lists its moves.
 //
 // `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
-// While the runner holds it back (the AI's last attack still playing out, say), the board draws the
-// older position, and the newer position's moves on it lit End turn and glowed the hand before the
-// player could see the turn was theirs: a click there ended a turn they had not seen. So until the
-// board catches up, every consumer of `legal` gets none.
+// While the runner holds it back, the board draws the older position, and the newer position's moves
+// on it lit End turn and glowed the hand before the player could see the turn was theirs: a click
+// there ended a turn they had not seen. So until the board catches up, every consumer of `legal`
+// gets none.
 
 import {
   useCallback,

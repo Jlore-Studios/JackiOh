@@ -27,9 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28): "2 different non-Radiant
-// cards across library+hand+field (R60); a field unit swaps base stats in place keeping damage
-// (R22); radiant 4".
+// #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28) (R60, R22).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

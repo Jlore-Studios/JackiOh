@@ -72,7 +72,7 @@ impl DelayPlayer {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DelayAt {
-    /// Only `Phase::Start` or `Phase::End` (TS `DelayedEffect["at"]["phase"]`).
+    /// Only `Phase::Start` or `Phase::End`.
     pub phase: Phase,
     pub player: DelayPlayer,
 }
@@ -289,7 +289,7 @@ fn maker_of(ctx: &EffectContext<'_>) -> (String, bool) {
 }
 
 /// `destroyAtNextTurnStart`'s argument: one unit by a `TargetSpec`, or a board scope read when it
-/// resolves (TS `{ target; mark? } | { scope; mark? }`, told apart by `"scope" in args`).
+/// resolves.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]

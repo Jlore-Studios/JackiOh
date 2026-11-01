@@ -39,8 +39,7 @@ pub fn script() -> CardScripts {
 
 // #77 Professor Curvature — SPEC §8.3, R48, R65, R363.
 //
-// BUILD M4-T4: "Next turn only: cards whose current cost is 4 or more −1 (radiant −2); not this turn;
-// expires (R48, R363)".
+// BUILD M4-T4 (R48, R363).
 // The clauses are read off the hand's cost from `mana::effective_cost` (§10.8, R65), the number the
 // play validator charges, and confirmed by paying for the cost-4 card on the live turn.
 #[cfg(test)]

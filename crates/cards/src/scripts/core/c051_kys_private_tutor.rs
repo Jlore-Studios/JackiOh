@@ -303,8 +303,7 @@ pub fn script() -> CardScripts {
 }
 
 // #51 KY's Private Tutor — SPEC §8.3 row 51, §6.3 (Discover), §10.5 steps 5-6, §10.6, §10.8, §5.1;
-// R4, R60, R65, R113. BUILD M4-T4 row 51: "Only types and brackets with a match offered; 3 random
-// matches revealed; no match → Notebook; Field Trap counts as Trap; radiant runs twice".
+// R4, R60, R65, R113. BUILD M4-T4 row 51.
 #[cfg(test)]
 mod tests {
     use crate::js;

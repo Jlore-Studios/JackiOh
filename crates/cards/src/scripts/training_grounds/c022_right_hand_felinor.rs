@@ -50,11 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #22 Right-Hand Felinor — SPEC §8.11 row 22, BUILD M13 row TG 22: "played into lane N with a friendly
-// Unit in lane N−1: both gain +3/+3; a Unit only in lane N+1 (to its right): nothing; lane 1: nothing; an
-// enemy Unit in lane N−1 of the other side: nothing; a Unit beneath a Stack in lane N−1 is not it, the
-// pile's top is; summoned or copied (no play): no Cry (R1); the buff reads through `param()`. radiant 6/6,
-// +6/+6 to both".
+// TG #22 Right-Hand Felinor — SPEC §8.11 row 22, BUILD M13 row TG 22 (R1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -46,9 +46,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-axnit — SPEC §7, BUILD M12 row S T-axnit: "played from the hand at a chosen enemy, 3 damage and
-// its caster's hero healed 3; damage reads through `param()`; radiant it resolves twice, a target asked
-// each time". Tagged Resource and Token (issue #2521).
+// S T-axnit — SPEC §7, BUILD M12 row S T-axnit. Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

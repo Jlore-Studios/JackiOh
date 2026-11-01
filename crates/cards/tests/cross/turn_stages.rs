@@ -350,6 +350,7 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
 
         // The first steal takes Mr. Vanilla. §10.3: its event goes to the traps, which fire at once —
         // a delayed effect is a whole effect like any other (R59), and a trap is a response — so p2's
+        // trap returns Tempo Timmy to p2's hand before the second delayed effect runs, and that steal
         // fizzles on a target that has left the field (R76, R174).
         assert!(any_event(&s, |event| matches!(
             event,
@@ -482,6 +483,7 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
 
         // The first steal takes Timmy, which dies in the check after that delayed effect (§4.5, R59).
         // §10.3, R68: a trap is a response, so it fires before the next delayed effect resolves and
+        // returns Mr. Vanilla to p2's hand; the second steal then fizzles on a target that has left the
         // field (R76, R174).
         assert!(any_event(&s, |event| matches!(
             event,
@@ -509,6 +511,7 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
     fn r62_a_this_turn_discount_made_while_cleanup_s_events_are_answered_ends_with_that_turn_instead_of_lasting_for_good_2_2()
      {
         // (§2.2) and reports the removal. p1's fixture unit answers one of p1's modifiers ending, on turn
+        // N only, with "this turn your cards cost 1 less" (/fullsend's rider) for the turn that is ending.
         // Cleanup's events are answered at the end of turn N (R62), which is where it lands.
         let mut s = scenario(json!({
             "p1": { "hand": [LUNAR_ECLIPSE, RENO, RENO], "library": [RENO, RENO, RENO] },
@@ -698,6 +701,7 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
     fn r241_r155_r70_a_spell_cast_on_the_opponent_s_turn_with_78_s_at_end_of_turn_exile_your_hand_does_not_exile_its_caster_s_hand_at_the_end_of_the_caster_s_next_turn_6_2()
      {
         // attack it: the Panther survives, so p1 draws 2 on p2's turn (#32, R426). The top card is a
+        // cast-on-draw Spell whose `delay` at the end of its controller's turn re-enters an `exileHand`
         // step, so p1 casts it on p2's turn (§2.4, R70).
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
@@ -744,6 +748,8 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
         );
 
         // p1's own turn ends. §6.2 makes "End of turn" the controller's turn end, and R155 reads it for
+        // a Spell cast on the other player's turn: that turn's end is not its controller's, so the clause
+        // does not run at the end of a later turn it was not played on. Its "this turn" riders ended with
         // p2's turn (§2.2), and #39's "every other card you played this turn" reads no log of its own (R71).
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P2);
@@ -865,6 +871,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
         assert_eq!(s.state().players.p2.fatigue_count, 1);
         assert_eq!(s.view(PlayerId::P1).opponent.fatigue_count, 1);
         // §10.3: "every visible state change emits an event", so the draw reports itself — R1362: by
+        // the pipeline's `damageAbsorbed` from no source on p2's hero, once, the whole 1 absorbed, and
         // by nothing else: no `damage` (not even the 0 R240 once wrote), and R3 draws no card, so
         assert_eq!(hits_on_p2_hero(s.last_events()), vec![absorbed_fatigue_report()]);
         assert!(!s.last_events().iter().any(|event| matches!(

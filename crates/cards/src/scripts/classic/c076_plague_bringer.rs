@@ -31,10 +31,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #76 Plague Bringer — SPEC §8.6 row 76, BUILD M9 Classic row C 76: "Rush; Cry: two placements of one
-// Plague Counter, both on the one permanent a single prompt names (R689), on any permanent either side
-// (a face-down option carries only its id, R177), then draw 1; radiant 8/8: four placements, draw 2;
-// its tuned numbers (tokens, draw) read through `param()` (R386)".
+// C #76 Plague Bringer — SPEC §8.6 row 76, BUILD M9 Classic row C 76 (R689, R177, R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

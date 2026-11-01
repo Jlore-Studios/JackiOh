@@ -6,6 +6,7 @@
 //! Engine: `exile_all_piles` over both sides' unit zones and backrows, in R68's order: each Stack pile
 //! goes whole, the cards it uncovers on the next pass, and a face-down card goes as a face-up one does;
 //! a Dormant card stays, since no effect reaches it (R1839000). Then `exile_matching` over each
+//! graveyard, its caster's first; the Radiant face then each hand and library the same way, so each
 //! player's next draw is a fatigue draw (R1870001). An exile fires no Death (§6.2), and a unit token
 
 use jackioh_engine::effects::{exile_all_piles, exile_matching};

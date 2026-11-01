@@ -43,9 +43,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, true)
 }
 
-// M #93 Growing Felinor — SPEC §8.8 row 93, BUILD M10 row M 93: "It can't switch to Defense; its
-// Death summons a base Growing Felinor Sr (M 93.1) into your leftmost open zone (MD-E19), none at
-// a full board; radiant 2/2, Divine Shield, Rush, and the Sr is Radiant".
+// M #93 Growing Felinor — SPEC §8.8 row 93, BUILD M10 row M 93.
 #[cfg(test)]
 mod tests {
     use super::{ID, NEXT, script_v0_5_9f};

@@ -302,6 +302,7 @@ mod candidate_actions_b14 {
     }
 
     /// B14: a play keeps one lane of each placement (the lowest, or its midlane lane, R2203001): every one at the search's root (#1635), none
+    /// past AI_SEARCH.zone_variants deeper (#1014)
     #[test]
     fn b14_a_play_keeps_one_lane_of_each_placement_every_one_at_the_root_none_past_the_cap_deeper() {
         jackioh_cards::register_all();
@@ -345,6 +346,7 @@ mod candidate_actions_b14 {
     /// #1635: only the search's root keeps every placement. The lethal solver (lethal.rs
     /// `lethal_moves`, which reads `candidate_actions`), the opponent's reply (reply.rs, which reads
     /// `candidate_actions_in`) and a line's later actions (`candidate_set`) keep the lowest
+    /// AI_SEARCH.zone_variants.
     #[test]
     fn the_lethal_solver_and_the_reply_keep_zone_variants_lanes_and_only_the_root_keeps_every_one() {
         let crowded = crowded_row();
@@ -420,6 +422,7 @@ mod candidate_actions_b14 {
     /// R1759000: three units, each with a hero attack, a trade and a stand-down, and three cards to play
     /// push every position switch past a level's `branching` moves. The cut keeps the first
     /// `AI_SEARCH.position_switches` of the stand-downs beside endTurn, and keeps none twice where the
+    /// width holds them all.
     #[test]
     fn r1759000_position_switches_survive_truncation_up_to_named_constant() {
         jackioh_cards::register_all();
@@ -469,6 +472,7 @@ mod candidate_actions_b14 {
     }
 
     /// R1759000: the stand-downs kept are the first the cut left out, not the first overall. With one
+    /// stand-down inside the width, the next `AI_SEARCH.position_switches` after it are added.
     #[test]
     fn r1759000_the_kept_stand_downs_are_the_first_the_cut_left_out() {
         jackioh_cards::register_all();
@@ -506,6 +510,7 @@ mod candidate_actions_b14 {
     }
 
     /// R1759000: a unit no enemy unit would beat is not stood down: the same board against an equal
+    /// 4/4 has three switches to Defense and none of them is a stand-down, so the cut drops them all.
     #[test]
     fn r1759000_a_unit_no_enemy_would_beat_is_not_stood_down() {
         jackioh_cards::register_all();
@@ -536,6 +541,7 @@ mod candidate_actions_b14 {
     }
 
     /// R1759000: only a stand-down is kept past the cut. A unit already in Defense Position keeps its
+    /// switch back to Attack where the cut leaves it.
     #[test]
     fn r1759000_a_switch_back_to_attack_is_cut_with_the_rest() {
         jackioh_cards::register_all();
@@ -599,6 +605,7 @@ mod candidate_actions_b14 {
     }
 
     /// R2021000: an Archivist in Attack Position, ready next turn, beats the Vanilla: a stand-down, as
+    /// under R1759000.
     #[test]
     fn r2021000_a_ready_enemy_that_beats_the_unit_stands_it_down() {
         assert!(stands_down_facing(json!("core-030"), |_, _, _| {}));
@@ -644,6 +651,7 @@ mod candidate_actions_b14 {
     }
 
     /// R2021000, R783002: a Flying unit in Attack Position is attacked only by a unit with Flying or
+    /// Ranged, so a ground Archivist never reaches it and one with either keyword does.
     #[test]
     fn r2021000_a_flying_unit_is_stood_down_only_against_a_flying_or_ranged_enemy() {
         let fly =
@@ -766,6 +774,7 @@ mod candidate_actions_b14 {
     #[test]
     fn r1282_a_wide_tribute_s_plays_are_cut_to_the_tribute_sets_cap_and_stay_legal() {
         jackioh_cards::register_all();
+        // 5 cheap units on each side: Tribute 5 chooses 5 out of 10, 252 sets, past the cap of 120.
         let s = scenario(json!({
             "preview": ["Meditative"],
             "p1": {
@@ -793,7 +802,6 @@ mod candidate_actions_b14 {
         let legal = legal_actions(state, AI);
         let candidates = candidate_actions(state, AI, Prices::NONE);
 
-        // Extract distinct tribute sets for Mega Church from candidate actions
         let church_id = &state.players.p1.hand[0].id;
         let mut candidate_tribute_sets = std::collections::BTreeSet::new();
         for action in &candidates {
@@ -881,6 +889,7 @@ mod lanes_that_play_differently {
     const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
 
     /// C #71 Lane Eater destroys every other card in its lane: with lanes 1, 3 and 5 free and the
+    /// enemy's 9/9 Taunt opposite lane 3, lane 3 is a candidate and `decide` plays it there.
     #[test]
     fn lane_eater_is_tried_opposite_the_enemy_taunt_and_decide_plays_it_there() {
         jackioh_cards::register_all();
@@ -912,6 +921,7 @@ mod lanes_that_play_differently {
     }
 
     /// M #23 Golly Bob Howdy turns the Units beside it into Sheep: with its own units in lanes 1 and 5,
+    /// the harmless lane 3 is a candidate, and the AI's turn sheeps neither unit.
     #[test]
     fn golly_bob_howdy_is_tried_between_its_own_units_and_the_turn_sheeps_neither() {
         jackioh_cards::register_all();
@@ -939,6 +949,7 @@ mod lanes_that_play_differently {
     }
 
     /// C+ #20 Mushroom Power buffs the Units beside it: with its own units in lanes 2 and 4, lane 3,
+    /// which buffs both, is a candidate.
     #[test]
     fn mushroom_power_is_tried_in_the_lane_between_the_two_units_it_buffs() {
         jackioh_cards::register_all();
@@ -970,6 +981,7 @@ mod lanes_that_play_differently {
 
     /// #1635: C #71 Lane Eater with the enemy's 9/9 Taunt opposite lane 4 and nothing else on the
     /// board. Lanes 1, 3, 4 and 5 are its placements (2 and 3 are one, played in the midlane, R2203001),
+    /// so the capped candidates stop short of lane 4; the search's root offers it, and `decide` plays it there.
     #[test]
     fn lane_eater_is_tried_opposite_a_taunt_past_the_first_two_placements_and_decide_plays_it_there() {
         let state = lane_eater_board();
@@ -996,6 +1008,7 @@ mod lanes_that_play_differently {
     }
 
     /// #1635: a finalist that opens with a play only the root offers is replayed on another world, not
+    /// cut at its first action: `score_line` checks a line's first action against the root's set.
     #[test]
     fn score_line_replays_a_first_action_only_the_root_offers() {
         let state = lane_eater_board();
@@ -1010,6 +1023,7 @@ mod lanes_that_play_differently {
     }
 
     /// #1635: C+ #20 Mushroom Power with its own units in lanes 3 and 5: lane 4, which buffs both, is
+    /// past the capped candidates' first two placements, and the search's root offers it.
     #[test]
     fn mushroom_power_is_tried_between_its_units_in_lanes_3_and_5_at_the_root() {
         jackioh_cards::register_all();
@@ -1047,6 +1061,7 @@ mod lanes_that_play_differently {
 
     /// #1797: two orders of the same two plays into the same lanes are one position, for the lethal
     /// solver (`search_signature`) and the beam (`unit_lanes` beside it); the second play into another
+    /// lane is the lethal solver's same position, and the beam's another.
     #[test]
     fn two_orders_of_two_plays_into_the_same_lanes_are_one_position_and_another_lane_is_another() {
         jackioh_cards::register_all();
@@ -1075,6 +1090,7 @@ mod lanes_that_play_differently {
 
     /// #1797: beside an enemy Cleaver, the beam keeps a line that plays the vanilla away from its
     /// neighbour (lane 3), which the duplicate check once merged into lane 2's, and opens with at most
+    /// `AI_SEARCH.zone_variants` of the vanilla's placements.
     #[test]
     fn the_beam_plays_a_vanilla_away_from_its_neighbour_and_opens_with_at_most_zone_variants_of_its_lanes() {
         let state = cleaver_board();
@@ -1110,9 +1126,9 @@ mod lanes_that_play_differently {
 
     /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line.
     /// At 3 mana with Midrange Menace (core-019, 3) and a vanilla (1) in hand and a beam one line wide,
-    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 3 (lanes 2 to 4
-    /// are one placement, played in the midlane, R2203001) is a line,
-    /// below lane 1's, and no line plays the vanilla at all. The same one depth deep, where lane 1's
+    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 3 (the midlane,
+    /// R2203001) is a line below lane 1's. The same one depth deep, where lane 1's line is closed after
+    /// the loop ends.
     #[test]
     fn a_lane_variant_is_closed_only_beside_a_line_the_beam_keeps_and_ranks_below_it() {
         jackioh_cards::register_all();
@@ -1162,6 +1178,7 @@ mod lanes_that_play_differently {
     }
 
     /// #1797: when the enemy Cleaver's reply would splash the vanilla's neighbour, the AI's turn plays
+    /// the vanilla away from it.
     #[test]
     fn decide_plays_a_vanilla_where_the_enemy_cleaver_cannot_splash_it_from_its_neighbour() {
         let state = cleaver_board();
@@ -1182,7 +1199,7 @@ mod lanes_that_play_differently {
 mod decides_determinism_and_budget_b15 {
     use super::*;
 
-    /// generated tests run.
+    /// The one body both B15 budget tests (AI_GATE_BUDGET, AI_BUDGET) run.
     fn same_inputs_same_decision(budget: SearchBudget) {
         let state = mid_game();
         let before = hash_state(&state);
@@ -1211,10 +1228,8 @@ mod decides_determinism_and_budget_b15 {
         same_inputs_same_decision(AI_BUDGET);
     }
 
-    /// B15: omitting the budget is AI_BUDGET
-    ///
-    /// Rust has no omitted field: `AiOptions.budget` defaults to AI_BUDGET where the caller builds it
-    /// (SURFACE §9), so the "implicit" decision is the one TS's `{ rng }` alone gave, built the way every
+    /// `AiOptions.budget` defaults to AI_BUDGET where the caller builds it (SURFACE §9), so the
+    /// "implicit" decision is built the way every caller without a budget builds it.
     #[test]
     fn b15_omitting_the_budget_is_ai_budget() {
         let state = mid_game();
@@ -1428,6 +1443,7 @@ mod enemy_targets_first {
     }
 
     /// #1062: with three units of its own and two face attacks, a Burn at the enemy is among the
+    /// first AI_BUDGET.branching candidates, so every step of the beam tries one.
     #[test]
     fn a_burn_at_the_enemy_is_within_branching_beside_three_own_units_and_two_face_attacks() {
         let state = burn_board();
@@ -1443,6 +1459,7 @@ mod enemy_targets_first {
     }
 
     /// #1062: one source's variants at the enemy (the enemy hero's first) alternate with the rest,
+    /// enemy first, each group in legal_actions order.
     #[test]
     fn a_sources_variants_alternate_enemy_first_with_the_enemy_hero_first() {
         let state = burn_board();
@@ -1457,6 +1474,7 @@ mod enemy_targets_first {
     }
 
     /// #1062: Golden Grape, which only aims at the AI's own field and hand, and Mr. Vanilla from hand,
+    /// which aims at nothing, keep legal_actions order.
     #[test]
     fn a_source_aimed_only_at_its_own_side_and_one_aimed_at_nothing_keep_legal_actions_order() {
         jackioh_cards::register_all();
@@ -1532,6 +1550,7 @@ mod own_prompt_lookahead {
     }
 
     /// #1112: beside AI_BUDGET.beam_width other plays, the best line casts Craft a Card, answers both
+    /// Discovers and plays the fused Unit: a line the beam cut at its first Discover before.
     #[test]
     fn craft_a_cards_best_line_casts_it_answers_both_discovers_and_plays_the_fused_unit() {
         let state = craft_turn();
@@ -1575,6 +1594,7 @@ mod own_prompt_lookahead {
     }
 
     /// #1112: at its first Discover, the lookahead scores the cast at least as well as the best state
+    /// its first answers reach, above the prompt state itself, one node per answer tried.
     #[test]
     fn a_child_at_its_own_prompt_scores_at_least_the_best_state_its_first_answers_reach() {
         let state = at_first_discover();
@@ -1598,6 +1618,7 @@ mod own_prompt_lookahead {
     }
 
     /// #1112: with no prompt of the seat's own open there is no lookahead, so the child keeps exactly
+    /// its `evaluate`, and no node is spent.
     #[test]
     fn a_child_with_no_prompt_of_the_seats_own_gets_no_lookahead_and_spends_no_node() {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
@@ -1633,6 +1654,7 @@ mod make_radiant_targets_1143 {
     /// #1143: at 3 crystals the 4-cost 7/7 cannot be played, so the turn is the Bean or Brother Lar.
     /// Before the face was read every Bean target scored the flat `radiant_in_hand`, below the Bean's
     /// own hand worth, and Brother Lar was played instead; now the Bean makes the 7/7 a 14/14 Reborn.
+    /// Brother Lar comes first in hand, so a tie between the Bean's targets would pick him.
     #[test]
     fn glowy_jelly_bean_is_cast_on_the_hand_unit_whose_radiant_face_adds_most() {
         jackioh_cards::register_all();
@@ -1708,7 +1730,7 @@ mod rescored_own_prompts_1636 {
 
     /// #1636: the line [Scarab, its answer] found on one world, scored on a world whose offer lacks
     /// that answer, answers that world's own Discover, ends its turn and is scored after the
-    /// opponent's reply, as a line that answers that world's offer is. Before, it stopped at the
+    /// opponent's reply, as a line that answers that world's offer is.
     #[test]
     fn a_discover_answer_another_world_does_not_offer_is_answered_there_and_the_line_replied_to() {
         let found_on = scarab_turn("search-rescore-a", 1);
@@ -1761,6 +1783,7 @@ mod rescored_own_prompts_1636 {
     }
 
     /// #1636: a line cut at a refused play, no prompt open, is scored as before: where it stopped,
+    /// its turn ended and the opponent's reply played, the rest of the line dropped.
     #[test]
     fn a_line_cut_at_a_refused_play_with_no_prompt_open_scores_as_before() {
         let world = scarab_turn("search-rescore-b", 1);
@@ -1786,6 +1809,7 @@ mod ways_of_being_played {
 
     /// Acceptance criterion 1: On a hand wide enough to fill the root (10 cards),
     /// root_expansion at AI_BUDGET.root_branching holds Buff Billy (classicplus-069)
+    /// at x == mana, an Embiggened play, and a Cloaked card's face-down set (#1778).
     #[test]
     fn buff_billy_embiggen_and_cloaked_set_survive_root_expansion() {
         jackioh_cards::register_all();
@@ -1906,6 +1930,7 @@ mod ways_of_being_played {
     #[test]
     fn tribute_sets_prefer_cheaper_units() {
         jackioh_cards::register_all();
+        // legal_actions lists the lane-1 3-cost unit's set first, so only the sort puts the cheap set first.
         let state = scenario(json!({
             "seed": "ways-tribute-prefer",
             "p1": {
@@ -1993,6 +2018,7 @@ mod ways_of_being_played {
 
 /// R1829000: a card a Stack pile uncovers keeps its id and is summoning sick again, so the search
 /// signature tells apart two positions that differ only in a unit's sickness (#1884): merged, a child
+/// whose unit cannot attack this turn stood for one whose unit can, and the lethal solver missed it.
 #[test]
 fn r1829000_two_positions_that_differ_only_in_summoning_sickness_sign_apart() {
     super::support::register_cards();

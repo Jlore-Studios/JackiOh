@@ -1,6 +1,8 @@
-//! The cosmetics an account owns (SPEC §14.2, SPEC §11 R1313000, R1655000). Caller's own only,
-//! keyed on verified token. Opponents' cosmetics are judged on their own seats (R1834002, R1834003;
-//! CLAUDE.md rule 7).
+//! The cosmetics an account owns (SPEC §14.2, SPEC §11 R1313000): read-only, and only the caller's
+//! own, keyed on the verified token's profile and never on a field of the request. The client reads
+//! it for what its own copies may wear (R1655000). Another player's ownership never travels here:
+//! their cosmetics reach a client only as the loadout the server froze for their seat (R1834002,
+//! R1834003; CLAUDE.md rule 7).
 
 use std::sync::Arc;
 

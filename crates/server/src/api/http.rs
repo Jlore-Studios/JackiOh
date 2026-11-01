@@ -1,8 +1,9 @@
 //! The HTTP layer: an axum `Request` in and an axum `Response` out.
 //!
-//! Handlers are async functions unit-testable without a listener, mounted as the fallback of
-//! `app.rs`'s axum `Router` (SURFACE §11.2). Route declarations carry their auth requirement
-//! (SPEC §9.4).
+//! Handlers are plain async functions, so every endpoint is unit-testable without a listener, and
+//! `app.rs` mounts `dispatch` as the one fallback of its axum `Router` (SURFACE §11.2). Route
+//! declarations carry their own auth requirement, so SPEC §9.4's "a pending account can see the code
+//! screen and nothing else" is enforced in one place instead of in every handler.
 //!
 //! Routes are tried in registration order (SURFACE §11.3), and a wrong method on a known path
 //! answers **404** `not_found` "method not allowed for this path".
@@ -216,7 +217,8 @@ impl std::fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
-/// A store failure answers 500. A fenced claim answers 503 (R1523000).
+/// A store failure is a 500. A fenced claim is the one store answer a person can do something
+/// about, a 503 (R1523000).
 impl From<StoreError> for ApiError {
     fn from(error: StoreError) -> ApiError {
         match error {
@@ -345,7 +347,8 @@ pub fn error_response(error: &ApiError) -> Response {
 /// - `caller`: set when the route declares `AuthLevel::User` or `Active`.
 /// - `params`: the `:name` segments of the route's path.
 /// - `query`: the URL's search parameters, the first value of each name.
-/// - `body`: the parsed JSON body; `{}` for a request without one.
+/// - `body`: the parsed JSON body; `{}` for a request without one. Anything but a JSON object is
+///   refused before a handler runs.
 /// - `address`: §9.4, §9.8: the client address is only ever seen hashed.
 pub struct Req {
     pub caller: Option<Caller>,
@@ -400,9 +403,12 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
 
 /// SPEC §11 R190: the address a per-IP limit counts (§9.4 step 3, R157).
 ///
-/// The client address is read from `X-Forwarded-For` at `entries[length - hops]`, or from the
-/// socket's peer address when hops is 0 or entries are fewer than trusted hops. `CF-Connecting-IP`
-/// and `X-Real-IP` are never read because nothing in this deployment writes them.
+/// Behind a proxy the client's address is read from `X-Forwarded-For`, only from the entry the
+/// deployment's own proxies wrote: each trusted hop appends one on the right, so the client is
+/// `entries[length - hops]`. Everything left of it the caller wrote, and reading it would let a
+/// caller pick a fresh bucket per request. `CF-Connecting-IP` and `X-Real-IP` are never read:
+/// nothing here writes them, so a caller can. With fewer entries than hops, or hops 0, the key is
+/// the socket's peer address, or `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
 pub fn client_address(headers: &HeaderMap, peer_address: Option<&str>, trusted_proxy_hops: usize) -> String {
     let entries = forwarded_entries(headers);
     if trusted_proxy_hops >= 1
@@ -477,10 +483,13 @@ pub fn rate_limit_address(raw: &str) -> String {
     rate_limit_address_with_prefix(raw, IPV6_RATE_LIMIT_PREFIX_BITS as i64)
 }
 
-/// SPEC §11 R190: the key a per-IP limit counts an address under, before it is hashed (§9.4, R157).
+/// SPEC §11 R190: the key a per-IP limit counts an address under, before it is hashed.
 ///
-/// IPv4 is itself. IPv6 is its first `prefix_bits` bits (/56 by default); IPv4-mapped IPv6 is the
-/// IPv4 address. Brackets, zone and IPv4 port are dropped.
+/// An IPv4 address is itself. An IPv6 address is its first `prefix_bits` bits (a /56 by default): a
+/// host holds at least a /64 and often a /56, so a finer key would give one host many fresh buckets
+/// for §9.4 step 3 and R157. An IPv4-mapped IPv6 address is the IPv4 address, so one caller is one
+/// key whichever way it arrived. Brackets, a zone and an IPv4 port are dropped first; anything else
+/// is keyed as written, lower-cased.
 pub fn rate_limit_address_with_prefix(raw: &str, prefix_bits: i64) -> String {
     let lowered = raw.trim().to_lowercase();
     let mut address: &str = &lowered;
@@ -622,13 +631,17 @@ pub fn string_list(body: &Value, key: &str) -> Result<Vec<String>, ApiError> {
 
 // Routes
 
-/// Handler return type: response or `ApiError`.
+/// What a handler returns: its response, or the error `dispatch` answers with. Every handler is
+/// `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; `app.rs` boxes each with `h!` and
+/// lists them in `ROUTES` as `(method, path, AuthLevel, handler)`.
 pub type ApiResult = Result<Response, ApiError>;
 
-/// Route authorization level (§9.4, BUILD M6-T1).
+/// What a route requires of its caller.
 ///
-/// `None` is open; `User` requires a valid profile; `Active` additionally requires
-/// `profiles.status == active`.
+/// - `None`: open (the catalog, the public statistics).
+/// - `User`: a valid access token and a profile, whatever its status: the code screen (§9.4).
+/// - `Active`: also `profiles.status == active`, which gives a pending account a 403 from
+///   collection, decks and queue (§9.4, BUILD M6-T1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AuthLevel {
     None,
@@ -729,12 +742,9 @@ fn parse_query(query: &str) -> IndexMap<String, String> {
 }
 
 /// Resolves the caller. A token that does not verify is 401; a verified user with no profile row
-/// gets one created lazily as `pending` (§9.4: the account exists the moment auth says so, and it
-/// stays pending until a code is redeemed).
-///
-/// SPEC §11 R2478000: a verified user whose account `known_profiles` knows and whose budget is spent
-/// is refused with R192's 429 before the store is read (`path` names the request in the log line);
-/// every profile resolved is remembered there.
+/// gets one created lazily as `pending` (§9.4: the account exists the moment auth says so).
+/// SPEC §11 R2478000: a user `known_profiles` knows whose budget is spent is refused with R192's 429
+/// before the store is read (`path` names it in the log line); every profile resolved is remembered.
 pub async fn resolve_caller(app: &App, headers: &HeaderMap, path: &str) -> Result<Caller, ApiError> {
     let Some(token) = bearer_token(headers) else {
         return Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first"));
@@ -806,11 +816,10 @@ pub fn address_key(ip_hash: &str) -> String {
     format!("address:{ip_hash}")
 }
 
-/// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, so a request
-/// from an account whose R109 budget is spent is refused before the store is read. At most `max`
-/// users, the one remembered longest ago dropped first. It only refuses early: every request it
-/// lets by still reads its profile, and a user it does not know reads the store as before. One
-/// per `App`, for the limiter's reason.
+/// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, so a request from
+/// an account whose R109 budget is spent is refused before the store is read; at most `max` users,
+/// the oldest dropped first. It only refuses early: every request it lets by still reads its
+/// profile. One per `App`, for the limiter's reason.
 pub struct KnownProfiles {
     max: usize,
     ids: Mutex<IndexMap<String, String>>,
@@ -868,11 +877,9 @@ fn spent_account(app: &App, user_id: &str, now: i64) -> Option<(String, i64)> {
 }
 
 /// SPEC §11 R2478000: the profile behind a socket upgrade whose token verified, the upgrade counted
-/// as one request against its account's R109 budget, the bucket `run_route` counts in. A known
-/// account whose budget is spent is refused before the store is read. Otherwise the profile is read
-/// (a socket never creates one: `Ok(None)`), remembered, and the upgrade counted, refused past the
-/// budget. A refusal is R192's `rate_limited`, logged and counted as the router's are (R1717000); a
-/// store fault is its error. `path` names the socket in the log line.
+/// as one request against its account's R109 budget, as `run_route` counts. A known account whose
+/// budget is spent is refused before the store is read; a socket never creates a profile (`Ok(None)`).
+/// A refusal is R192's `rate_limited`, logged and counted as the router's are (R1717000).
 pub async fn upgrade_profile(app: &App, user: &AuthUser, path: &str) -> Result<Option<Profile>, ApiError> {
     let now = now_ms();
     if let Some((key, wait)) = spent_account(app, &user.user_id, now) {
@@ -910,9 +917,13 @@ struct RateLimiterState {
     refusals_swept_at: i64,
 }
 
-/// Sliding-window rate limiter (§9.8, R109, §9.4, R1717000).
-/// Over-limit requests drain rather than pinning counters open; idle keys are swept once per
-/// window. Also tracks the router's R190 fewest forwarded entries.
+/// §9.8: "per-account rate limit at the API", R109: 300 requests per minute per account. One
+/// sliding window per key, the shape of the actor's per-seat `flood_exceeded` (`actor/match_actor.rs`),
+/// so the two halves of §9.8's row are one mechanism, not two that can drift. A request over the
+/// limit is not recorded: like §9.4's attempt log, the window drains, so a caller who keeps hammering
+/// cannot pin their counter open. R1717000: refusals are counted apart (`note_rejection`). Idle keys
+/// are swept once a window. It also holds the router's R190 signal (see `dispatch`). One lives on each
+/// `App`, so one test's flood cannot leak into the next.
 pub struct RateLimiter {
     limit: usize,
     window_ms: i64,
@@ -979,10 +990,9 @@ impl RateLimiter {
     }
 
     /// R1717000: counts one refused request against `key` and answers the count when it raises
-    /// `api.rejections.unusual`: once the key's window holds more than `API_REJECTION_ALERT_THRESHOLD`
-    /// refusals, and then not again until a whole `API_REJECTION_ALERT_WINDOW_MS` has passed since its
-    /// last alert; `None` otherwise. A key keeps at most `API_REJECTION_ALERT_THRESHOLD + 1` refusals,
-    /// and a key with none left in the window is swept once a window, so a flood holds bounded state.
+    /// `api.rejections.unusual`: once the window holds more than `API_REJECTION_ALERT_THRESHOLD`
+    /// refusals, then not again for `API_REJECTION_ALERT_WINDOW_MS`. Each key's record is capped and
+    /// swept once a window, so a flood holds bounded state.
     pub fn note_rejection(&self, key: &str, now: i64) -> Option<usize> {
         let window = API_REJECTION_ALERT_WINDOW_MS;
         let mut state = lock(&self.state);
@@ -1045,9 +1055,20 @@ impl Default for RateLimiter {
     }
 }
 
-/// Dispatches requests against `routes` (§9.8, §9.4, R109, R137, SPEC §11 R157).
-/// Unauthenticated requests are keyed by IP hash; accounts by `profiles.id`.
-/// Tracks fewest `X-Forwarded-For` hops as an operator signal (R190, docs/architecture.md §10).
+/// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, the one fallback of `app::router`,
+/// behind the CORS layer, which answers preflights first.
+///
+/// §9.8's per-account limit is `app.limiter`. R137's reasoning holds here: one shared counter lets
+/// one caller spend everybody's budget. So SPEC §11 R157 keys it on the account, `profiles.id` (the
+/// row §9.4 owns), not the auth user or the bearer token, of which a caller can hold several; a
+/// request that names no account (R109 says "per account") counts against its IP hash, in a
+/// namespace of its own.
+///
+/// R190's operator signal: the fewest `X-Forwarded-For` entries any request has carried. A caller can
+/// add entries but never remove the proxies' ones, so that is the hops they add, and
+/// `TRUSTED_PROXY_HOPS` must not be more (docs/architecture.md §10). One sample would not do (a
+/// scanner may come first), so a line is logged each time a request carries fewer than any before;
+/// counts past `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many". No address is ever logged.
 pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
@@ -1119,7 +1140,7 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
     error_response(&ApiError::new(ApiErrorCode::NotFound, "no such endpoint"))
 }
 
-/// Executes one matched route handler.
+/// One matched route, from the address hash to the handler.
 #[allow(clippy::too_many_arguments)]
 async fn run_route(
     app: &Arc<App>,
@@ -1142,11 +1163,9 @@ async fn run_route(
         trusted_proxy_hops,
     )));
 
-    // An address whose own budget is spent is refused BEFORE its token is resolved. Resolving a
-    // token that does not verify locally can cost a round trip to the auth provider, and a flood of
-    // bad tokens fills exactly this bucket (below), so without this check the limiter counted the
-    // flood but still paid for every request of it. Only looked at, not counted: a request that
-    // names an account is counted against the account, as R157 says.
+    // An address whose own budget is spent is refused BEFORE its token is resolved: resolving a bad
+    // token can cost a round trip to the auth provider, and a flood of bad tokens fills exactly this
+    // bucket. Only looked at, not counted: a request naming an account counts against it (R157).
     if auth != AuthLevel::None {
         let key = address_key(&address);
         let now = now_ms();
@@ -1237,7 +1256,9 @@ fn alert_unusual_api_rejections(key: &str, rejected: usize) {
 
 // Timing
 
-/// Epoch milliseconds clock (SURFACE §11.3). Re-exported so API modules read the same clock.
+/// Epoch milliseconds, the server's one clock: the wall clock anchored once and advanced by tokio's,
+/// so a test's `tokio::time::pause()` and `advance()` move it (SURFACE §11.3). Re-exported so every
+/// API module reads the same clock.
 pub use crate::app::now_ms;
 
 // Logging (SURFACE §11.3: `tracing` JSON lines with the same event names)

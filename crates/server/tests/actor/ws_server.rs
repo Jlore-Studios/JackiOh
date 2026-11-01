@@ -1,14 +1,8 @@
 //! `/ws/match` over a real listener and a real WebSocket client: what one client can cost the
 //! process before its token is even checked (§9.8), and how a client hands over its token.
 //!
-//!  - a frame over `MAX_FRAME_BYTES` is refused with 1009, so it is never buffered whole (the
-//!    library's default ceiling is far larger);
-//!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
-//!    included;
-//!  - the token travels as an offered `jackioh.bearer.` subprotocol (R1379000), and only
-//!    `WS_SUBPROTOCOL` is echoed;
-//!  - each upgrade counts against its account's R109 budget; one past it closes with 4429 before any
-//!    store call (R2478000).
+//! A frame over `MAX_FRAME_BYTES` is refused with 1009, so it is never buffered whole (the library's
+//! default ceiling is far larger).
 //!
 //! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
 //! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small

@@ -17,7 +17,7 @@ use crate::zones::{
     standing_units_of,
 };
 
-/// Which card or hero an effect names (TS `TargetSpec`, discriminated on `of`).
+/// Which card or hero an effect names (discriminated on `of`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "of", rename_all = "camelCase", rename_all_fields = "camelCase")]
@@ -222,7 +222,6 @@ pub enum ScopeSide {
 /// `resolve_target` answers with one `Option<DamageTarget>`, and every verb written in it — `damage`,
 /// `destroy`, `buff`, `transform` — is single-target by construction. So the scope is its own
 /// vocabulary, defined once here, and each board-wide verb is a thin walk over `cards_in_scope`.
-/// `buffAllUnits`, `stealAll` and `switchAllPositions` are the same shape from before it existed.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]

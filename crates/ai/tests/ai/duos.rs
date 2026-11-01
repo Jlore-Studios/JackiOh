@@ -1,6 +1,11 @@
-//! Duos co-op AI seats (#936, B26–B31, B32): `duos_decide` mulligans, prompts, and main-phase play
-//! using 1v1 `decide`, making passes (`duos_passes`) before ending turns without leaving owed actions.
-//! States use `duos_scenario` or `duos_create` with cheap decks (B9).
+//! Duos co-op's AI seats (#936, B26–B31): `duos_decide` answers a seat's mulligan and prompts with
+//! the 1v1 `decide`, plays its own turn with it, makes the passes `duos_passes` names before it ends
+//! that turn, owes nothing off its turn, and reads only its own team's knowledge. B32's gate plays
+//! whole games, so it runs in `ai_slow.rs` (`duos_gate.rs`).
+//!
+//! States come from the testkit's `duos_scenario` or from `duos_create` + `duos_begin`; a test that
+//! needs exact costs sets a seat's hand and mana by hand, minting with the engine's `new_instance`.
+//! Every deck is `CHEAP`, so no round seat is left with nothing to do (B9) before a test sets its hand.
 
 use std::cell::Cell;
 
@@ -388,6 +393,8 @@ fn play_turn(mut state: DuosState, seat: DuosSeat, seed: &str) -> (DuosState, Ve
     (state, taken, false)
 }
 
+// B26: the mulligan and prompts go to the 1v1 decide; a seat that owes nothing gets None
+
 #[test]
 fn b26_each_seat_answers_its_own_open_mulligan_with_the_1v1_decide() {
     let state = mulligans("duos-ai-mulligan");
@@ -476,6 +483,8 @@ fn b26_a_finished_game_owes_nothing() {
         assert!(!owes(&state, seat), "{seat} owes nothing once the game is over");
     }
 }
+
+// B27: its own turn is the 1v1 decide's, and its passes come before the turn's end
 
 #[test]
 fn b27_while_decide_still_plays_the_seat_plays_that_move_and_passes_nothing_yet() {
@@ -716,6 +725,7 @@ fn b28_off_its_own_turn_a_seat_passes_nothing() {
 
 #[test]
 fn b28_passes_stop_at_the_teams_pass_cap() {
+    // `cost` reads the catalog before `passing` registers it.
     register_cards();
     let rules = DuosTeamRules {
         pass_cap: SMALL_PASS_CAP,
@@ -933,6 +943,8 @@ fn b30_hard_ai_seats_keep_their_handicap_and_their_pool_and_answer_their_mulliga
     }
 }
 
+// B31: deterministic
+
 #[test]
 fn b31_the_same_state_and_options_give_the_same_action_twice() {
     let mulligan = mulligans("duos-ai-same-mulligan");
@@ -1035,6 +1047,8 @@ fn r964000_every_seat_starts_at_its_own_hp_and_its_teams_pool() {
     }
 }
 
+// R1127000: the Duos AI passes the card that gives its teammate the best next play
+
 /// Round 1 with A1 holding BIG (4-cost) and the Stab (3-cost) at pass mana, so it can afford
 /// neither, A2 at BIG mana with an empty hand, and B2 at an effective life of 3: the Stab deals 4
 /// and wins outright, while the 7/7 only threatens. A2's hand is cleared so its dealt cards cannot
@@ -1108,6 +1122,7 @@ fn r1127000_pass_limits_still_cap_a_scored_list() {
     let mut hand = vec![ONE_DROP, BIG];
     hand.extend(OTHER_BIGS);
     let seed = "duos-ai-best-pass-cap";
+    // `cost` reads the catalog before `passing` registers it.
     register_cards();
     let (state, ids) = passing(seed, team_a(rules), &hand, cost(BIG) - 1, cost(BIG));
     assert!(
@@ -1137,6 +1152,8 @@ fn r1127000_free_pass_next_turn_cards_keep_cost_order() {
 fn r1127000_the_passed_card_is_scored_under_the_teammates_next_id_not_the_one_it_held() {
     let seed = "duos-ai-best-pass-ids";
     let (mut state, first, second) = winning_pass_state(seed);
+    // Both duels number their cards from the same start, so a card minted now in A2's duel takes the
+    // id the first card of A1's hand holds.
     let (big, stab) = (second, first);
     let hand = &mut state.duels[0].players[PlayerId::P1].hand;
     hand[0].id = big.clone();
@@ -1151,6 +1168,7 @@ fn r1127000_a_passed_fused_card_is_scored_with_its_match_made_definitions_along(
     let seed = "duos-ai-best-pass-fused";
     let (mut state, big, stab) = winning_pass_state(seed);
     // A Fuse of a crafted card and BIG, minted in A1's duel alone (R77, R102): its definitions live
+    // only in duel 0's `transient_defs`, and it costs what BIG costs.
     let crafted = "craft:#duos-ai";
     let fused = format!("t-1:{crafted}+{BIG}");
     let mut crafted_def = def_of(None, BIG).clone();

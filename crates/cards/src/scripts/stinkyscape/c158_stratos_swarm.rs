@@ -36,10 +36,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158: "fills every open unit
-// zone of its caster's with Stratos, 3/1 Flying Ranged Units, no Cry, then every empty backrow zone
-// (R2248000); a Dormant card's zone is not filled; a full board, both rows, summons none; radiant
-// Radiant Stratos, 6/2" (#2521: no Starship Pieces).
+// Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158 (R2248000). (#2521: no Starship
+// Pieces).
 #[cfg(test)]
 mod tests {
     use super::*;

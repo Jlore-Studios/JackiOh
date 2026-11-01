@@ -24,8 +24,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #6 Mana Well — SPEC §8.1 row 6, BUILD M4-T4 must-pass: "Turn-4 player has 5 mana; leaves → back
-// to 4; radiant 6".
+// #6 Mana Well — SPEC §8.1 row 6, BUILD M4-T4 must-pass.
 //
 // The default `turn: 9` makes every scenario here a "turn-4 player" (§2.3's max is 4), and each side
 // keeps a small library so `start_turn()`'s draw is a draw, not fatigue (§2.4, R3).

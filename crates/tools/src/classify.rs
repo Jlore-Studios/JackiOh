@@ -1,44 +1,23 @@
 //! `cargo jackioh classify --base <rev> [--head <rev>] [--parent-bin <path>] [--json]` (#1365,
-//! R1365000): what a change between two commits does to the game, read from its effect rather than
-//! its paths, so a patch number moves exactly when the cards do (#1360). It names a **kind**, the
-//! highest the change reaches of Cards, AI, App and Internal, and for Cards a **tier** (major, patch
-//! or micro) and the card families that play differently. Nothing overrides it: no flag, title or
-//! label.
+//! R1365000): what a change does to the game, read from its effect rather than its paths, so a patch
+//! number moves exactly when the cards do (#1360). It names a **kind** (the highest of Cards, AI, App
+//! and Internal), for Cards a **tier** and the families that play differently; no flag, title or label
+//! overrides it. A patch takes `PATCH_MIN_REPRINTS` reprinted families, `PATCH_MIN_CARDS` that play
+//! differently or a changed rule every game meets (R2455000, R2499000); else a micro. R2529000: a
+//! change to how cards look (`CARD_VISUALS`) is a micro, a system the owner names (`SYSTEM_RELEASES`)
+//! a patch.
 //!
-//! A card change is a patch when `PATCH_MIN_REPRINTS` families are reprinted (their catalog entry
-//! changed and they play differently: a balance pass), when `PATCH_MIN_CARDS` families play
-//! differently by any route, or when a rule every game meets changed (R2455000, R2499000); anything
-//! smaller is a micro. R2529000: a change to how cards look (`CARD_VISUALS`) is a micro too, with no
-//! family, and a system the owner names (`SYSTEM_RELEASES`) ships as a patch, its fragment's claim.
+//! Stage 1 reads the diff: every catalog field but `WORDING_FIELDS` plays; a script's code is what
+//! `catalog loc` counts; a set that ships is a major unless the owner wraps it into an earlier set's
+//! line (`WRAPPED_SETS`, R2204000), and a card of an unshipped set is no change (R1420); other paths
+//! keep their `use` lines, since an import can change which code runs (R2050000). R2173001: moving a
+//! card across a BUSTED or complicated threshold (R1846000) plays every shipped reader differently.
 //!
-//! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
-//! player reads and no game does, every other field plays. Each card script's code, the lines
-//! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
-//! `SHIPPED_SETS` names on each side: a set that ships is a major, unless the owner wraps it into an
-//! earlier set's line (`WRAPPED_SETS`, R2204000), when it earns the tier its cards do; every card of a
-//! set that ships plays differently, and a card of a set that has not shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
-//! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
-//! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
-//! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
-//! (each side's scripts counted by `card_lists`, each side's thresholds) plays every such reader
-//! differently, so `--claims` asks for its fragment.
-//!
-//! Stage 2 (`--parent-bin`, the base's build, with this binary built from the head) asks the base
-//! build what the diff cannot say:
-//! - a card claimed only through its script keeps the claim only when its forced games diverge
-//!   between the builds (`luau diff`'s check), so a refactor claims nothing;
-//! - a change to code a card's play can rest on (`Area::PlayCode`) replays `UNFORCED_GAMES` unforced
-//!   games, and the cards each divergence touches play differently; divergences that touch no card
-//!   are a rule every game meets, and make a patch, once they reach `RULE_MIN_GAMES` of the games
-//!   (R2455000), and fewer count as no card;
-//! - a change to the AI plays the same self-play games on both builds: identical logs mean the AI
-//!   decides as it did, and the change is Internal. `--selfplay-side` plays one side's games into a
-//!   directory and `--selfplay-dir` compares two such runs instead, so CI plays each side in a job of
-//!   its own (#2651).
-//!
-//! It stops once `PATCH_MIN_CARDS` families play differently, the tier being a patch already.
-//! Without `--parent-bin`, stage 1's answer stands, and the output names what stage 2 would have
-//! checked: script claims count unconfirmed, a change to play code counts as none.
+//! Stage 2 (`--parent-bin`, the base's build) keeps a script-only claim only when its forced games
+//! diverge, so a refactor claims nothing; replays `UNFORCED_GAMES` games for play code, divergences
+//! touching no card being a rule at `RULE_MIN_GAMES` (R2455000); and compares self-play logs for an AI
+//! change, identical logs meaning Internal (`--selfplay-side`/`--selfplay-dir` split it across CI jobs,
+//! #2651). It stops at `PATCH_MIN_CARDS` families; without `--parent-bin`, stage 1's answer stands.
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -850,10 +829,8 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
 }
 
 /// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353): each
-/// plays its games on every core but then waits on its slowest, and one after the other they took
-/// `rust (classify)` past seven minutes. On four cores one run took 162 s, nearly all of it one game
-/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same. Or each in a CI
-/// job of its own (`--selfplay-side`, #2651).
+/// waits on its slowest game, and in turn they took `rust (classify)` past seven minutes (324 s against
+/// 226 s on four cores). Or each in a CI job of its own (`--selfplay-side`, #2651).
 fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
     fs::create_dir_all(out).with_context(|| format!("creating {}", out.display()))?;
     let games = SELFPLAY_GAMES.to_string();

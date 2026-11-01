@@ -77,10 +77,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53: "Summons 1-2 Rush Tokens (3/3
-// Rush), the count random, 1 at 60% and 2 at 40%, into your leftmost open zones, one on a nearly full board, none on a full
-// one; the count is no declared number, so tuning moves nothing; radiant 1-2 Radiant Rush Tokens
-// (6/6 Rush, Cleave)".
+// C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

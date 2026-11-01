@@ -52,10 +52,7 @@ pub fn script_v0_4_9() -> CardScripts {
 }
 
 // #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Shuffle into; R11, R50, R60, R1828002).
-// BUILD M4-T4 row 51.1: "Shuffles 3 random non-token KY cards of any set into your deck (R1828002; repeats
-// allowed, R60), each at a random place, a full deck turning the rest away (R80); never a KY token; the
-// count reads through `param()`; radiant the 3 are Radiant; the Notebook itself absent from every random
-// pool".
+// BUILD M4-T4 row 51.1 (R1828002, R60, R80).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

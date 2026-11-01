@@ -29,8 +29,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-gellium — SPEC §7, BUILD M12 row S T-gellium: "played from the hand, heals its caster's hero 4,
-// past 30 too; heal reads through `param()`; radiant 8". Tagged Resource and Token (issue #2521).
+// S T-gellium — SPEC §7, BUILD M12 row S T-gellium. Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

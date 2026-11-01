@@ -4491,6 +4491,8 @@ const MEDITATIVE: &[SpecRow] = &[
 ];
 
 /// R1420, R1178000: the Meditative+ set's rows, transcribed from docs/meditative-plus-set.md's card
+/// headers (MP6), in number order with each token after its card. The set does not ship yet: an
+/// entry it holds must equal its row, and a row with no entry is a card still being built, until it
 /// ships (issue #1187). #17 is Dogpile, Classic #60 holding the name Pile On (R381, R1178002); #20.1
 /// Lil' Kenny prints 0/0, its X/X its summon's (`xStats`, as C+ #69 Buff Billy's 3X/3X).
 const MEDITATIVE_PLUS: &[SpecRow] = &[
@@ -4810,6 +4812,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
 
 /// R1420, R1857000, R1857001: the Stinkyscape set's rows, transcribed from docs/stinkyscape-set.md
 /// ST13's header lines (issue #1857), in catalog order: each card's tokens after it, then the Dormant
+/// Starship (a card at a `T-` index), the shared tokens and the ten AI generated cards. The set is
 /// held, so a row waits for its card until the set ships (#1884). The designer's second #21 and #122
 /// are #174 Aerelret and #175 Frost Module.
 const STINKYSCAPE: &[SpecRow] = &[
@@ -7825,6 +7828,8 @@ fn fixture_report(set: SetName) -> String {
 }
 
 /// R1420, R1178000, R1857000: the ids of a held set's entries among `ids` that the catalog holds yet
+/// (a card still being built has none), or all of them once its set ships, when a missing one fails
+/// the list it is in. The ids of a shipped set pass unchanged. An id's set is the one its segment
 /// spells (B2.2: `meditativeplus-…`, `stinkyscape-…`).
 fn landed(ids: &[&str]) -> Vec<String> {
     ids.iter()
@@ -8755,10 +8760,12 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
 }
 
 /// SPEC §7, read at compile time (`include_str!`, no I/O at run time: CLAUDE.md rule 4). Unlike the
+/// transcriptions above this is the note itself on purpose: the test below asks that every token
 /// the catalog holds, of any set, has a row in §7's table, so a token added without one fails
 const TOKENS_NOTE: &str = include_str!("../../../../spec/07-tokens.md");
 
 /// The `(Token, Index, held)` cells of §7's token tables, row by row: the lines after each table's
+/// header row and its rule, up to the first line that is not a row. The first table holds the
 /// shipped sets' tokens; a later one (`held`) a set the catalog holds before it ships (R1420,
 /// R1178000), whose rows may wait for their cards as its census does.
 fn section_7_rows() -> Vec<(String, String, bool)> {
@@ -9321,6 +9328,8 @@ mod every_entry_has_a_radiant_face_of_its_own_spec_5_2_r276 {
     #[test]
     fn gives_no_entry_a_radiant_face_identical_to_its_base_face_the_five_that_had_none_included() {
         // R349: a card that prints no Radiant form has the fallback as its Radiant face, which doubles
+        // its stats — for an X/X token, the X it is summoned with (`layers::worn_stats_override`) — so
+        // it is the one entry whose printed faces may read alike. It is marked as such, and only a Unit.
         // A face's text is read with its own `params` values filled in (B3.4 rule 5): "Heal a target
         let printed = |entry: &CardDef, face: FaceKind| -> Value {
             let mut printed = json(entry.face(face));

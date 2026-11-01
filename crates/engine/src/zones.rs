@@ -1057,8 +1057,8 @@ fn next_beneath(state: &GameState, card: &CardInstance) -> Option<String> {
     beneath_at(state, at).first().map(|below| below.id.clone())
 }
 
-/// The off-field zones a card can be moved to (TS `OffFieldZone`: "hand" | "library" | "graveyard" |
-/// "exile"). Written by hand rather than with `wire::string_union!`: it is no wire type, and the macro
+/// The off-field zones a card can be moved to ("hand" | "library" | "graveyard" | "exile"). Written
+/// by hand rather than with `wire::string_union!`: it is no wire type, and the macro
 /// would export it to the web's generated types (SURFACE §5.1).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

@@ -40,9 +40,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #3 Book of Heal — SPEC §8.6 row 3, BUILD M9 Classic row C 3: "Heal a target 9, either side: a
-// Unit up to its max health, a hero with no cap (R19); a full-health Unit gains nothing; radiant 18;
-// its tuned number (heal, step 2) reads through `param()` (R386)".
+// C #3 Book of Heal — SPEC §8.6 row 3, BUILD M9 Classic row C 3 (R19, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

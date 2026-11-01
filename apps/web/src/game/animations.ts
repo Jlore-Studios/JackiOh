@@ -390,8 +390,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   // may not identify the card: an opponent's face-down trap has no `instanceId` in the view (§10.8,
   // R33) and so no `card-<instanceId>` to animate, but its zone is always on screen. The card
   // itself is preferred when the viewer can see it, which is the "trap name visible during the
-  // hold" the BUILD M5-T4 acceptance asks for. A Field Trap firing again reveals nothing and plays the
-  // `activated` row instead (`firesAgain`, R2657001).
+  // hold" the BUILD M5-T4 acceptance asks for.
   trapFired: {
     animation: "jk-trap-flip",
     durationMs: 700,

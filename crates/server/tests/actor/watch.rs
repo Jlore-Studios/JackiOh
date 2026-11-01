@@ -3,10 +3,7 @@
 //! views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`, whatever the friend's
 //! settings say (R2615000); full, non-friend and blocked are `forbidden` then closed; a watcher's
 //! frames never reach the reducer; a watcher leaving changes nothing in the match; the players' own
-//! match sockets hear `watchers {count}` when the count changes. A watcher already in is let go the
-//! same way (`forbidden`, then closed) once the two unfriend or either blocks the other. Once the match is over, a watcher that has had the view with the result is
-//! closed with 1000 (R1107000). A block made mid-match also mutes the two players' emotes toward
-//! each other (R1351000).
+//! match sockets hear `watchers {count}` when the count changes.
 //!
 //! The match is a real one on the registry, played with the server tests' cards
 //! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the

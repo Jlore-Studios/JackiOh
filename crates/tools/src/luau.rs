@@ -1,28 +1,18 @@
-//! `cargo jackioh luau diff` and `cargo jackioh luau bench` (#442's L13 and L15; groundwork for its
-//! part 7, #559), and `cargo jackioh luau surface` (groundwork for its part 6, #560), which is
-//! `surface.rs`'s.
+//! `cargo jackioh luau diff` and `luau bench` (#442's L13 and L15; groundwork for its part 7, #559), and
+//! `luau surface` (groundwork for part 6, #560), `surface.rs`'s. Both hold this build to a parent,
+//! `jackioh` built from the base commit, whatever the cards are written in.
 //!
-//! Both hold this build to a parent: `jackioh` built from the base commit, whatever the cards are
-//! written in. Nothing in either is specific to Luau.
+//! `diff --parent-bin <path> --cards <ids> [--games N] [--seed base]` records N games (200 by default,
+//! seeds from base, which `golden record` keeps within 1–240) with the cards forced into both decks; the
+//! parent's `golden check --file` replays them as the oracle and its report is printed as it is. Exit 1
+//! on any mismatch, the traces kept where the error says. `--traces <path>` checks a `golden record`
+//! file instead, and never deletes it.
 //!
-//! `diff --parent-bin <path> --cards <ids> [--games N] [--seed base]` plays N games (200 by default,
-//! seeds base..base+N-1, 1 by default, which `golden record` keeps within 1–240) with the cards forced
-//! into both decks, recorded by `golden record` on this build into a temporary file. The parent's
-//! `golden check --file` then replays the file as the oracle, and its report is printed as it is: each
-//! divergence's seed, step, which hash and the action. Exit 1 on any mismatch, with the traces kept
-//! where the error says. `--traces <path>` checks a `golden record` file instead of recording one, and
-//! never deletes it.
-//!
-//! `bench --parent-bin <path> [--record <path>]` is the performance gate (L13). It measures three
-//! numbers on the parent and then on this build, on the same machine in the same run: the wall time of
-//! `fuzz --seeds 200`; the slowest decision of `gate`'s perf gate, scaled as `gate` reports it; and the
-//! mean time of one golden step, `golden check --file` on one thread over golden seeds
-//! `BENCH_GOLDEN_FIRST..=BENCH_GOLDEN_LAST`, which this build records first. It exits 1 when this
-//! build's slowest decision is over `BENCH_BUDGETS.decision_ratio` times the parent's or not
-//! under `AI_GATE.max_decision_ms`, or when either other number is over its ratio times the parent's.
-//! `--record` writes the numbers, the machine and the date as JSON, whether the bench passed or not.
-//! Only `bench_failures`, a pure function of the two measurements and the budgets, is unit-tested; the
-//! timings are not.
+//! `bench --parent-bin <path> [--record <path>]` is the performance gate (L13): `fuzz --seeds 200`'s wall
+//! time, `gate`'s slowest decision and the mean golden step, on the parent then this build in one run.
+//! It exits 1 when a number is over its `BENCH_BUDGETS` ratio of the parent's or the slowest decision is
+//! not under `AI_GATE.max_decision_ms`. `--record` writes them as JSON, pass or fail. Only the pure
+//! `bench_failures` is unit-tested; the timings are not.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -191,7 +181,8 @@ fn run_diff(args: &DiffArgs) -> Result<()> {
     )
 }
 
-/// Parent build's `golden check --file` report over `traces` (R1365000).
+/// The parent build's `golden check --file` over `traces`: how many games diverged, and its report; an
+/// error when the parent could not check the file at all. `classify` reads it too (R1365000).
 pub(crate) fn parent_check(parent_bin: &Path, traces: &Path) -> Result<(u64, String)> {
     let parent = parent_bin.display();
     let output = Process::new(parent_bin)

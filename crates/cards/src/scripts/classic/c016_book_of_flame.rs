@@ -35,9 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #16 Book of Flame — SPEC §8.6 row 16, BUILD M9 Classic row C 16: "One targeted hit of 4 on any
-// Unit or hero, either side; it is the Book of Flame C #23 and C #29 make (`classic-016`, R381);
-// radiant 8; its tuned number (damage) reads through `param()` (R386)".
+// C #16 Book of Flame — SPEC §8.6 row 16, BUILD M9 Classic row C 16 (#23, #29, R381, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

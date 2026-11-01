@@ -1,10 +1,16 @@
-//! Finished match records for card statistics (SPEC §9.11, SURFACE §11.3, R376).
+//! The live half of the card statistics (SPEC §9.11, R376): the record a finished match leaves.
+//! `record_result` (`results.rs`) calls `record_finished_game` once a result has committed, with the
+//! fold `read_finished` made before the result's transaction, which its quests read too (#2213). The
+//! game half is read off `(seed, decks, log)` by the engine's `summarize_game` (SURFACE §11.3) and
+//! filed under the match's mode (R257), the patch it started on (R388, R767000), each seat's pilot
+//! (`human` even when the clock answered for one, R79; `ai` for a ladder bot, R1451, R1452; on the
+//! seat its account plays as the game ends, R677) and `source: "live"`, apart from the AI's (R378).
 //!
-//! Match summaries are derived from `(seed, decks, log)` via `summarize_game`, filed by mode (R257),
-//! patch version (R388, R767000), pilot (`human` vs bot `ai`, R79, R1451, R1452, R677), and source
-//! `live` (R378). Idempotent per match id; reaper ceiling draws leave none (R112).
-//! Telemetry runs post-transaction; failed filings retry via retention (R1596000).
-//! Records are folded into totals in-transaction; `fold_pending` handles backlog (R1044000).
+//! Telemetry never costs a result: it runs after the result's transaction, and every failure is
+//! logged and swallowed. It is keyed by match id, so a result written twice files the game once; the
+//! reaper's ceiling draws (R112) leave none. R1596000: a failed filing is made again by the retention
+//! loop while the log is held. R1044000: the store folds each record into the totals in the same
+//! transaction; `fold_pending` folds the ones written before the totals existed.
 
 use jackioh_engine::{
     FoldArgs, FoldError, GameMode, GameRecord, GameSource, GameSummary, PerPlayer, Pilot, PlayerId,
@@ -22,8 +28,10 @@ use crate::db::store::{
     Db, FoldedRecords, MatchActionRow, MatchRow, MatchSeat, Profile, ProfileKind, QueueMode, StoreError,
 };
 
-/// R1044000: folds unaggregated records into totals in batches of `STATS_FOLD_BATCH_RECORDS`.
-/// R1715000: sets aside unreadable records, alerting `game_records.fold_poison` post-commit.
+/// R1044000: folds every record not yet in the totals, `STATS_FOLD_BATCH_RECORDS` to a transaction.
+/// The retention loop runs it before each purge, so a purge never meets a record it may not empty
+/// (and `jackioh-server stats-fold` once after migration 0041). R1715000: a record whose detail does
+/// not read is set aside, alerted (`game_records.fold_poison`) once its batch has committed.
 pub async fn fold_pending(db: &Db) -> Result<FoldedRecords, StoreError> {
     let mut done = FoldedRecords::default();
     loop {
@@ -109,8 +117,10 @@ pub(crate) async fn read_finished(app: &App, match_id: &str) -> Result<Option<Fi
     Ok(Some(Finished { row, log, folded }))
 }
 
-/// Folds a match log off-runtime (#1035, #2213).
-/// If `read_swap` is set (refile path without credited seats, R677), detects seat swaps.
+/// #2213: one fold of a match's log, off the runtime (#1035): the summary and, for a log that reaches
+/// no result, the actions it refuses. `read_swap` is asked only by the refile path, which has no
+/// credited seats to read a Glitch's seat swap from (R677). The engine panics on decks it refuses,
+/// and the panic is the `Err`.
 async fn fold_log(
     app: &App,
     row: &MatchRow,
@@ -156,8 +166,9 @@ fn skipped(match_id: &str, found: bool) {
     tracing::warn!(event = "game.record.skipped", matchId = %match_id, reason = %reason);
 }
 
-/// Files one finished match for card statistics. Returns the record, or `None` if skipped,
-/// duplicate, unfinished, or on failure.
+/// Files one finished match for the card statistics: the record it wrote, or `None` when no series,
+/// room or ticket made the match, the log reaches no result, the record exists already, or
+/// something failed (logged, except the existing record).
 pub async fn record_live_game(app: &App, match_id: &str) -> Option<GameRecord> {
     file_live_game(app, match_id, app.env.deployed_commit.as_deref()).await
 }

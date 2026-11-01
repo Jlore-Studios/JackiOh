@@ -406,9 +406,8 @@ pub struct TuneMultiplier {
     pub degrade: Option<i32>,
 }
 
-/// A card's static flags. Data, so a card may write them as the TS object literal
-/// (`json_as(json!({ "castOnDraw": true }))`). `deftDuelist` (legacy, read nowhere) is not ported
-/// (SURFACE §7.2).
+/// A card's static flags. Data, so a card may write them as an object literal
+/// (`json_as(json!({ "castOnDraw": true }))`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -438,8 +437,7 @@ pub struct StaticFlags {
     /// (radiant 2X, dealt as one hit, R281). A number is how many times the card grants it: a card
     /// fused from two Quickstrikers carries both texts (R102), and `true` is once. The multiple of X
     /// each grant deals is not the flag's: it is `QUICKSTRIKER_COMBO_MULTIPLE` in `config.rs`, picked by
-    /// the granting instance's own face, as #84's Armor is (`HERO_ARMOR`), so a base and a Radiant
-    /// Quickstriker side by side deal X and then 2X.
+    /// the granting instance's own face, as #84's Armor is (`HERO_ARMOR`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quickstriker: Option<FlagOrCount>,
     /// #64 Gifted Program: while on the field, the first card costing this much or less its controller
@@ -478,8 +476,7 @@ pub struct StaticFlags {
     /// R429, R766 (issues #557, #572): this Spell's own end-of-turn return (§5.1, R155) gives back the
     /// climb its earlier returns gave it, and no other change to its price. R766 still takes the price
     /// off it in the graveyard it lands in, so §10.5 step 7 notes the climb it carried into its play
-    /// (`resolve::note_return_price`) for its return to read (`query::return_price_of`) — #31 KY's Math
-    /// Equation's climb, (2), (3), (4).
+    /// (`resolve::note_return_price`) for its return to read (`query::return_price_of`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_keeps_price: Option<bool>,
     // Static flags by workstream: field (B3.1, E20, E21, E22)
@@ -838,8 +835,8 @@ string_union! {
 
 /// E15: what a card on the field lays on prices while it acts there (`Script.costAura`). A rule with
 /// `ban: true` is "can't play" — it prices nothing and refuses a play of a card it reaches whose price
-/// is `minCost` or more (Classic #68 Radiant), and never a cast (R70). (TS `costRules.ts`:
-/// `CostRule & { whose; ban? }`, the rule's fields flattened beside these.)
+/// is `minCost` or more (Classic #68 Radiant), and never a cast (R70). The rule's fields are flattened
+/// beside these.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -856,8 +853,7 @@ pub type CostAuraArgs<'a> = HookArgs<'a>;
 
 pub type CostAuraHook = Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<CostAura> + Send + Sync>;
 
-/// E11, R454: what one card on the field lets its controller play from their own graveyard (TS
-/// `graveyardPlay.ts`).
+/// E11, R454: what one card on the field lets its controller play from their own graveyard.
 ///
 /// - `units`: Units only (Classic #74); absent, every card type (Classic #28, In Too Deep's reward L).
 /// - `minPrice`: the least price a play under it may have, as it would be paid — after every discount
@@ -1518,7 +1514,7 @@ string_union! {
 }
 
 /// What a replacement does instead. The moment fixes which keys it may set (see `ReplacementDef`);
-/// data, so a card may write it as the TS literal (`json_as(json!({ "to": "exile" }))`).
+/// data, so a card may write it as a literal (`json_as(json!({ "to": "exile" }))`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]

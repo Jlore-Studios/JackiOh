@@ -1,8 +1,6 @@
 // #2645: a test's answer to whether the board is on a phone layout (`usePhoneBar`, game/phoneBar.ts).
-//
-// jsdom has no media queries, so `window.matchMedia` is stubbed for the one query the hook reads
-// (`PHONE_BAR_QUERY`): it matches or not as the test says, and every other query goes to the original.
-// The returned function puts the original back; call it in an `afterEach`.
+// jsdom has no media queries, so `window.matchMedia` is stubbed for the one query the hook reads; the
+// returned function puts the original back, so call it in an `afterEach`.
 
 import { PHONE_BAR_QUERY } from "../game/config.ts";
 

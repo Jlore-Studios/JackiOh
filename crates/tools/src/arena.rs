@@ -1,8 +1,19 @@
-//! `cargo jackioh arena`: training arena (SURFACE §14.1, §14.2; docs/v0.3.0/README.md §8).
-//! Referee plays seeded games between two redacted agents (R185: `self`, `random`, or `bin:<path>`).
-//! Supports skilled AI (R747000, R2214000) and paired series swapping seats on each deal (R850000, R850001).
-//! Decks built via `build_ai_deck` (R180, R186, R976000), tracking fallbacks and search panics (R1489000).
-//! Finished games output as JSONL `GameRecord`s (R376, R378) with statistical summaries and Wilson intervals.
+//! `cargo jackioh arena`: the training arena (SURFACE §14.2; docs/v0.3.0/README.md §8). A referee
+//! holds the true state and plays seeded games between two agents, each seeing only `redact(state,
+//! seat)` (R185): `self` (this build's AI), `random` (SPEC §10.7's random policy, the gates' baseline)
+//! or `bin:<path>` (another build's AI, spawned as `<path> agent`, SURFACE §14.1).
+//!
+//! At skill `s` (R747000) an AI decision follows the agent with chance `s` and is the skill miss
+//! otherwise (R2214000), rolled on the seat's own stream. A paired series (`--paired`, R850000) plays
+//! each deal twice with the seats swapped; `--set improve-dev` is the improve lane's dev set (R850001).
+//! No base may name a training gate's own seeds (`<lane>` or `<lane>:…`). Each deck is `build_ai_deck`
+//! minus its agent's shadow ban (R186), Easy both (R180), unshaped (R976000). Fallbacks and caught
+//! search panics are counted per seat (R1489000). So a game is a function of its seed and its two
+//! agents, whatever the thread count.
+//!
+//! Each finished game leaves one `GameRecord` (R376, R378) on a JSONL line in `<--out>/<date>.jsonl`,
+//! else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout; a tally closes the duel lines with agent
+//! `a`'s share of the games won and its 95% Wilson interval (a paired series adds its edge).
 
 use std::cell::RefCell;
 use std::io::{BufRead, BufReader, Write};
@@ -324,8 +335,7 @@ pub(crate) struct ArenaGame {
     pub self_budget: SearchBudget,
 }
 
-/// What a game came to: match.ts's `MatchRecord` minus search statistics but its seats' fallbacks
-/// and caught panics, plus each seat's decision times.
+/// What a game came to, with its seats' fallbacks and caught panics and each seat's decision times.
 #[derive(Clone, Debug)]
 pub(crate) struct ArenaOutcome {
     pub game: ArenaGame,
@@ -626,8 +636,8 @@ impl BinAgent {
     }
 }
 
-/// One controller call's answer (match.ts's `ControllerChoice`): the action, `None` for "no move",
-/// and what an AI's decision told of itself (R1489000).
+/// One controller call's answer: the action, `None` for "no move", and what an AI's decision told of
+/// itself (R1489000).
 #[derive(Default)]
 struct Choice {
     action: Option<ActionBody>,
@@ -674,7 +684,10 @@ fn told_of(answer: &Value) -> (bool, usize) {
     (fell_back, sim_panics)
 }
 
-/// One controller call choosing an action; handles skill misses via random policy (R747000, R2214000).
+/// One controller call: the agent's action, `None` for "no move", or what it threw. `self` decides on
+/// `redact(state, seat)`; `random` plays on the referee's state. R747000: a decision the seat's roll
+/// does not give the AI is `jackioh_ai::skill_miss_action`'s (R2214000), handed the referee's state as
+/// `random` is and drawn on the same stream; a `bin:` agent is asked only when the roll keeps it.
 fn choose_for(
     live: &mut Live,
     skill: f64,
@@ -760,9 +773,9 @@ fn accept(
     None
 }
 
-/// Plays one game (match.ts's `playMatch`): the actor is `seat_to_act` (R265), its stream
-/// `createRng("<seed>:ctl:<seat>")`, the nonce `m<log length>`. "No move" is replaced by the random
-/// policy; a refused action is recorded in `rejected` and replaced; a throw ends the game.
+/// Plays one game: the actor is `seat_to_act` (R265), its stream `<seed>:ctl:<seat>`, the nonce `m<log
+/// length>`. "No move" is replaced by the random policy; a refused action is recorded in `rejected`
+/// and replaced; a throw ends the game.
 pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     let options = CreateGameOptions {
         seed: game.seed.clone(),
@@ -1082,7 +1095,7 @@ fn round_ms(ms: f64) -> i64 {
     (ms + 0.5).floor() as i64
 }
 
-/// duel.ts's per-game line: outcome from a's side, `aborted` (no result; no gate counts it a draw),
+/// The per-game duel line: outcome from a's side, `aborted` (no result; no gate counts it a draw),
 /// why it ended, hash, whether it replays, both seats' fallbacks and caught search panics, and a's
 /// decision count and times.
 fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> {

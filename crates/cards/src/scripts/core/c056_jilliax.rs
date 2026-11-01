@@ -26,7 +26,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant all four plus Reborn").
+// #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56.
 // A keywords-only card, so every test asserts either the computed keyword set (§10.4's keyword
 // layer, read through `view_for`) or the rule each keyword names in §6.1.
 #[cfg(test)]

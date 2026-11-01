@@ -1,10 +1,14 @@
-//! AI decks (SPEC §9.9, SURFACE §9, R184, R186, R380): curve- and tag-aware weighted random draw of non-token
-//! cards without replacement, meeting hard floors for themes, unit counts, and set leans (R1370).
+//! AI decks (SPEC §9.9, R184, R186, R380; SURFACE §9): a curve-aware, tag-aware random draw of
+//! distinct non-token cards of every set, minus the shadow ban.
 //!
-//! - Soft gate (R1390): excludes sets in `gated_sets` (default `AI_DECK_GATED_SETS`, #1884, #1885, #732).
-//! - Quickdraw cap (R817000): caps Quickdraw cards at `max_quickdraw`.
-//! - Strength (R1454, #750): weights cards by compiled win rate.
-//! - Shaping (R976000): unban lane dealt-quality shaping via `shaped_weight` (`shadow_ban.rs`).
+//! The draw is weighted sampling without replacement, each weight the product of AI_DECK's boosts. The
+//! floors are hard rather than weighted: once the cards they still owe need every slot left, only cards
+//! that meet them are eligible, so a themed deck meets `themeMinShare`, every deck `minUnitShare`, and a
+//! leaning deck its set's `leanMinShare` (R1370; the leaned set goes before the theme before the units).
+//! Everything comes from the rng passed in, so the same seed deals the same deck in any process. The
+//! soft gate (R1390) never deals a card of a set in `gated_sets` (it held Stinkyscape from #1884 until
+//! #1885, Meditative until #732). The Quickdraw cap (R817000), a ladder bot's `strength` (#750, R1454)
+//! and the unban lane's `shape` (R976000, `shadow_ban.rs`) add no rng draw.
 
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
@@ -44,7 +48,7 @@ impl CostBucket {
     }
 }
 
-/// One value per cost bucket.
+/// One value per cost bucket, serialized `{ "0-1": …, "2": …, "3": …, "4+": … }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
 pub struct ByBucket<T> {
     #[serde(rename = "0-1")]
@@ -89,7 +93,8 @@ pub struct AiDeckBoost {
     pub by: f64,
 }
 
-/// Deserializes optional nullable string: absent -> None, null -> Some(None), string -> Some(Some(s)).
+/// `theme` has three states: absent (roll one) is `None`; a present value, `null` (none) or a tag, is
+/// `Some`.
 fn present<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<Option<String>>, D::Error> {
     Option::<String>::deserialize(deserializer).map(Some)
 }
@@ -116,17 +121,24 @@ pub struct AiDeckOptions {
     /// R390: these ids' weights are multiplied by `by` (the sweep's pass 2, as `themeBoost` leans a theme).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub boost: Option<AiDeckBoost>,
-    /// R1370: set the deck leans on (`AI_DECK.leanMinShare` floor, `leanBoost`).
-    /// Named set allows previewing unreleased sets (R1420); newest set options (R1372, R1373) pass `newest_shipped_set()` (R1371).
+    /// R1370: a set the deck leans on: at least `ceil(size × AI_DECK.leanMinShare)` of its cards come
+    /// from it (a hard floor), weighing `leanBoost` more while the deck is short of them. `None` deals
+    /// exactly the deck it always did. It names the set (#549's `newest_share`) because a caller may lean
+    /// on one not shipped (R1420); "More cards from the newest set" (R1372, R1373) passes
+    /// `newest_shipped_set()` (R1371).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lean_set: Option<SetName>,
-    /// R1390: soft-gated sets excluded from random draw (default `AI_DECK_GATED_SETS`).
+    /// R1390: the sets the random draw never deals from. Default `AI_DECK_GATED_SETS`; pass
+    /// `Some(vec![])`, as `banned`, for a player's random deck. An `include` still reaches a gated card
+    /// (the sweep forces one in by name), and a gated `lean_set` leans on `ungated_lean`'s set instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gated_sets: Option<Vec<SetName>>,
-    /// #750 (R1454): weight scaling by compiled win rate from 0.0 to 1.0 (`AI_WIN_RATE`).
+    /// #750 (R1454): how far the draw leans on the cards that win (`AI_WIN_RATE`), from 0.0 to 1.0,
+    /// clamped. `None` and `Some(0.0)` deal exactly the deck the seed always dealt; it takes no rng draw.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strength: Option<f64>,
-    /// R976000: multiply weights by unban lane's dealt-quality table `shaped_weight` (`shadow_ban.rs`).
+    /// R976000: multiply each card's weight by `shaped_weight`, the unban lane's dealt-quality table
+    /// (`shadow_ban.rs`). Off by default, whatever `banned` holds, and no caller sets it.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub shape: bool,
 }
@@ -201,8 +213,11 @@ pub const AI_DECK: AiDeck = AiDeck {
     min_pool: 45,
     // R1370 (#549): "at least half the deck", 13 of a human's 25 and 18 of a Hard deck's 35 (R1705000).
     lean_min_share: 0.5,
-    // R1370: measured weight ensuring set cards are drawn naturally rather than forced by floor
-    // across pool sizes (#1187, #1705). Boost stops once floor is met.
+    // R1370, chosen by measurement (`r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card`
+    // holds it): 48 is the smallest weight at which every set that ships is forced into fewer than one
+    // deck in ten wherever the floor owes at most two of its cards in five (the 396-card pool since
+    // #1187, at the sizes since #1705). The boost stops once the floor is met, so the rest is dealt as
+    // without it.
     lean_boost: 48.0,
     // R817000 (#817): "less Quickdraw bloat".
     max_quickdraw: 2,
@@ -386,7 +401,9 @@ impl Tally<'_> {
     }
 }
 
-/// Narrowing for unleaned decks: forces theme and unit cards when slots left match owed counts.
+/// The narrowing a deck that leans on no set has always had, kept exactly so every seed still deals
+/// the deck it dealt: once the theme cards still owed reach the slots left only theme cards are
+/// eligible, and once the units still owed do, only the units among those (when there are any).
 fn narrow_unleaned<'a>(
     remaining: &[&'a CardDef],
     slots_left: i32,
@@ -450,7 +467,10 @@ fn class_of(def: &CardDef, theme: Option<&str>, lean: Option<SetName>) -> usize 
     class
 }
 
-/// R1370: fewest cards meeting all counts in `owed` given class availability (`avail`); `None` if unreachable.
+/// R1370: the fewest cards that still meet every count in `owed` (in `FLOOR_BITS` order), drawing at
+/// most `avail[class]` cards of each class; `None` when none can. Exact: a card of all three classes is
+/// never worse than any other, so as many as can help are taken first; then every count of the two
+/// pairs that serve the leaned set is tried, and the rest is worked out from what is left.
 fn min_slots(owed: [i32; 3], avail: &[i32; CLASSES]) -> Option<i32> {
     let [lean, theme, unit] = owed.map(|n| n.max(0));
     let all = avail[LEAN_BIT | THEME_BIT | UNIT_BIT].min(lean.max(theme).max(unit));
@@ -496,8 +516,10 @@ fn owed_within(owed: [i32; 3], kept: usize) -> [i32; 3] {
     within
 }
 
-/// R1370: filters eligible cards for leaning deck to preserve feasibility of remaining floors in `FLOORS_KEPT`.
-/// Restricts picks when slots left equal minimum cards required across active floors.
+/// R1370: the cards the next pick of a leaning deck may take. A floor short of cards owes only those.
+/// The floors kept are the first set in `FLOORS_KEPT` the slots left can still meet; while they can be
+/// met with a slot to spare every card may be taken, and once they need every slot left, only a card
+/// of a class some fewest way of meeting them takes, so the floors stay within reach to the last card.
 fn narrow_leaning<'a>(
     remaining: &[&'a CardDef],
     slots_left: i32,
@@ -555,8 +577,10 @@ fn narrow_leaning<'a>(
     remaining.to_vec()
 }
 
-/// #750: multiplies card weight by win-rate boost at `strength` (`AI_WIN_RATE`).
-/// Unmatched cards or those under `min_games` default to 1.0.
+/// #750: what a card's weight is multiplied by at `strength` (`AI_WIN_RATE`): 1.0 at strength 0 and for
+/// a card with no row or a row under `min_games` games; else `1 + strength × max_boost × (rate − 0.5) ×
+/// 2`, held between `floor` and `1 + max_boost`. Looked up by the pool's id, so a row for a card the
+/// catalog no longer holds is never read. No rng draw, so a seed's deck moves only by the weights.
 fn win_rate_weight(id: &str, strength: f64) -> f64 {
     if strength <= 0.0 {
         return 1.0;
@@ -572,14 +596,16 @@ fn win_rate_weight(id: &str, strength: f64) -> f64 {
         .clamp(AI_WIN_RATE.floor, 1.0 + AI_WIN_RATE.max_boost)
 }
 
-/// `build_ai_deck` result with count of picks forced by leaned set floor (R1370).
+/// `build_ai_deck`'s deck and how many of its picks the leaned set's floor forced (R1370): the
+/// measurement `AI_DECK.leanBoost` was chosen by.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TracedAiDeck {
     pub deck: Vec<String>,
     pub lean_forced: i32,
 }
 
-/// Builds a deterministic AI deck of `size` cards; panics if pool is too small.
+/// Distinct non-token ids of every set, exactly `size`, deterministic for the rng. Panics if the pool
+/// is too small.
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String> {
     build_ai_deck_traced(rng, size, options).deck
 }

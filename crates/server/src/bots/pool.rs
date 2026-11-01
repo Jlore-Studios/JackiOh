@@ -1,13 +1,14 @@
 //! The bot pool (SPEC §9.12, R1454): active ladder bot count, identities, decks and trios.
 //!
 //! The pool holds `clamp(BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people, BOT_POOL_MAX)`
-//! active bots, retiring youngest on excess and reinstating recently retired on shortfall.
+//! active bots, sized at boot and every refresh. An excess retires the youngest, which finish their
+//! match; a shortfall reinstates the latest retired first, so the ladder meets the same faces.
 //! New bots draw strength (R610), persona (R645), schedule, and username (`bots::names`).
-//! Bo1 decks draw from human decklists and random decks (R750000, R1453, R1705001), followed by
-//! Conquest trios (R641000, R253).
-//!
-//! Refreshes draw cosmetics (R1834005) and manage top-bot grinding against season leaders (R1555000).
-//! `release_stale_starts` frees bots held by unstarted claims before match reap grace (R1450).
+//! Bo1 decks draw from human decklists and random decks (R750000, R1453), each kept only when legal
+//! and dealt again on a new catalog or deck size (R1705001), then the Conquest trio (R641000, R253).
+//! Refreshes draw cosmetics (R1834005), kept on the `bots` row and never in the ledger, and manage
+//! top-bot grinding (R1555000). The queue's sweeper runs `release_stale_starts` whatever
+//! `LADDER_BOTS` says, as R1450's open-row sweep would hold a bot too long.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,10 +40,11 @@ use crate::db::store::{
 };
 use crate::username::{normalize_username, username_key};
 
+// Unit conversions, not configuration.
 const MS_PER_DAY: i64 = 86_400_000;
 const MS_PER_SECOND: i64 = 1000;
 
-/// R641000, R336: the internal name a bot's trio is frozen under.
+/// R641000: the name a bot's trio is frozen under; no client reads it (R336).
 const TRIO_NAME: &str = "Conquest";
 
 /// R1454: the pool's size for `weekly` people who finished a live game in the last
@@ -101,7 +103,8 @@ pub fn plan_pool(bots: &[BotRow], target: usize) -> PoolChange {
 }
 
 /// R1555000: active bots that should grind when the reference-rank person exceeds the top bot by
-/// `BOT_GRIND_GAP` (hysteresis `BOT_GRIND_HYSTERESIS`), taking top `BOT_GRINDERS` by rating.
+/// `BOT_GRIND_GAP` (less `BOT_GRIND_HYSTERESIS` while some grind, so it does not flap), taking top
+/// `BOT_GRINDERS` by rating.
 pub fn plan_grind(bots: &[BotRow], people: &[f64]) -> Vec<String> {
     let mut active: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
     active.sort_by(|a, b| {
@@ -233,8 +236,9 @@ pub fn bot_target_strength(strength: usize) -> f64 {
 }
 
 /// R1454, R750000: distinct live Best-of-1 human decklists (R1044000) partitioned into `ranked` (at least
-/// `CARD_STATS_MIN_SAMPLE` games, sorted by exact win rate, game count, and cards) and `unranked`.
-/// Lists not of `DECK_SIZE` cards are excluded (R1705001).
+/// `CARD_STATS_MIN_SAMPLE` games, sorted by exact win rate (no float decides it), game count, and
+/// cards) and `unranked`. Lists not of `DECK_SIZE` cards are excluded (R1705001): they fail L2, and
+/// would take every one of `draw_decks`' attempts.
 fn ranked_human_bo1_decklists(lists: &[ListTotal]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
     let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) = lists
         .iter()
@@ -252,7 +256,8 @@ fn ranked_human_bo1_decklists(lists: &[ListTotal]) -> (Vec<Vec<String>>, Vec<Vec
     )
 }
 
-/// R750000: ranked lists ordered nearest to the bot's strength percentile (1.0 = best, 0.0 = worst).
+/// R750000: ranked lists ordered nearest to the bot's strength percentile (1.0 = best, 0.0 = worst),
+/// ties to the better list; only the share is a float.
 fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
     let last = ranked.len().saturating_sub(1) as f64;
     let place = (1.0 - strength.clamp(0.0, 1.0)) * last;
@@ -266,8 +271,8 @@ fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
     placed.into_iter().map(|(_, deck)| deck).collect()
 }
 
-/// R1454: draws legal Best-of-1 decks for a bot: human lists first by strength (R750000) then shuffled,
-/// followed by random decks (R1453) leaning on winning cards by strength (R750000), up to
+/// R1454: draws legal Best-of-1 decks for a bot: human lists first, ranked by strength and the rest
+/// shuffled (R750000), then random decks (R1453) leaning on winning cards by strength, up to
 /// `BOT_DECK_DRAW_ATTEMPTS`. `lists` are live Best-of-1 human decklists (R1044000).
 pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: f64) -> Vec<BotDeck> {
     jackioh_cards::register_all();
@@ -310,7 +315,7 @@ pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: 
 
 /// R641000: draws a Conquest trio from disjoint decks in `own`, filling shortfalls with strength-weighted
 /// random decks excluding used cards (R750000), portraits from seed (R642). Returns `None` if fewer than
-/// 3 valid decks are found or if the trio fails rules (§9.4, R253).
+/// 3 valid decks are found or if the trio fails rules (§9.4, R253): no Conquest until next refresh.
 pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) -> Option<FrozenTrio> {
     jackioh_cards::register_all();
     let mut input = deck_input(catalog);
@@ -596,7 +601,8 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     })
 }
 
-/// R1454: runs periodic pool refresh every `BOT_POOL_REFRESH_INTERVAL_SECONDS` when ladder bots are enabled.
+/// R1454: refreshes the pool at boot and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`; a failed one is
+/// logged and the next tries again. `app.rs` spawns it only when `LADDER_BOTS=on`.
 pub async fn run_bot_pool(app: Arc<App>) {
     loop {
         match refresh_pool(&app, &new_seed(), now_ms()).await {

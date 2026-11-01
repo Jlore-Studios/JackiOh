@@ -1,5 +1,15 @@
-//! Duos co-op for the practice AI (#936, B26–B32, CLAUDE.md rule 4): the AI plays one seat of a `DuosState`
-//! using 1v1 `decide`, adding passing decisions before ending turns.
+//! Duos co-op for the practice AI (#936 S5, B26–B32): the AI plays one seat of a `DuosState`, two
+//! plain 1v1 duels side by side, by playing that seat's own duel with the 1v1 `decide` (B26, B27).
+//! When `decide` would end the turn, the seat first passes the cards `duos_passes` names, one per call
+//! (B27). Like `decide` it never concedes, so it never opens a team's concede offer.
+//!
+//! Knowledge (B29): `decide` reads its duel only through `redact` and its determinizations (R185), and
+//! `duos_passes` reads of the teammate only its own side. An opponent's hidden card never reaches a
+//! decision, so two states that differ only there decide alike under the same options.
+//!
+//! The gate (B32): `duos_gate` plays the Easy AI team against a `DuosOpponent` (#1760); a refused
+//! action, a fallback (#1385) or a caught panic (#1429) fails it. Pure and seeded (CLAUDE.md rule 4):
+//! a budget counts `reduce` calls, every stream is seeded from the game's seed and its seat.
 
 use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -45,8 +55,10 @@ const DUOS_GATE_MAX_ACTIONS: usize = 6000;
 
 // The AI seat
 
-/// The action an AI-played seat takes next, or None when it owes nothing (B26, B27).
-/// Deterministic for the same state and options (B31).
+/// The action an AI-played seat takes next, or None when it owes nothing: the 1v1 `decide`'s on its
+/// duel, or a pass `duos_passes` names before it ends the turn (B26, B27). Deterministic for the same
+/// state and options (B31): `options.rng` is `decide`'s only stream, and the caller reads its cursor
+/// back afterwards.
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody> {
     duos_decision(state, seat, options).map(|decision| decision.body)
 }
@@ -169,9 +181,15 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 
 // Passing
 
-/// The cards `seat` should pass now (at the end of its turn), best first (B28, R1127000).
-/// Named cards must be playable/affordable by the teammate and pass-positive (R1723000, `pass_gain`),
-/// bounded by available passes, hand space, and mana. Reads only redacted knowledge (B29, B20).
+/// The cards `seat` should pass now (at the end of its own turn), best first: ids of its hand cards
+/// (B28). A card qualifies when the seat cannot play it this turn and its teammate can (`has_zone_for`,
+/// else `mate_can_play`), or, with the team's `pass_cost` 0, when the teammate can afford it next turn
+/// and the seat cannot. The playable ones come first, ranked by the teammate's best bounded follow-up
+/// (R1127000), and are named only when worth passing (R1723000, `pass_gain`); never more than the
+/// passes left, the teammate's free hand slots or the passes the seat's mana pays for.
+///
+/// B29: it reads the redacted probe `decide` lists the seat's actions on and, of the teammate, only its
+/// own side and the determinized probe the follow-ups are scored on.
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
     catch_unwind(AssertUnwindSafe(|| passes_of(state, seat))).unwrap_or_default()
@@ -274,8 +292,10 @@ fn own_probe(duel: &GameState, player: PlayerId) -> GameState {
     )
 }
 
-/// A card's own price (R65, R396, B20): override or printed cost with cost modifier, read
-/// without player discounts or field auras.
+/// A card's own price (R65, R396): its override or printed cost with its cost modifier, floored, read
+/// as a card out of a hand. No player's discount, field aura or face-down card's aura reaches it, so it
+/// is the part of the price a pass keeps (B20). A cost hook reads the duel it is given, so the
+/// teammate's price is read on the teammate's probe (`received`).
 fn own_cost(duel: &GameState, card: &CardInstance) -> i32 {
     let mut off_hand = card.clone();
     off_hand.zone = Zone::Library { player: card.owner };
@@ -293,8 +313,10 @@ fn has_zone_for(card_state: &GameState, card: &CardInstance, mate_duel: &GameSta
     !open_zones(mate_duel, mate, row).is_empty()
 }
 
-/// B28: teammate has legal play on `receiving` probe: Stack (§6.2), Flying (R1081000), Equip (R1086),
-/// stack base (R1281), or Tribute (R391).
+/// B28: the teammate has a legal play of the passed card, read off the probe that holds it
+/// (`received`): the landings an open zone of its row misses, onto an occupied zone with Stack (§6.2),
+/// into the backrow with Flying (R1081000), onto a host with Equip (R1086), onto a stack base (R1281)
+/// or into the zone its own Tribute frees (R391), each as the engine lists it.
 fn mate_can_play(receiving: &GameState, given: &CardInstance, mate: PlayerId) -> bool {
     legal_actions(receiving, mate)
         .iter()
@@ -357,8 +379,10 @@ fn rank_now(
         .collect();
 }
 
-/// R1127000: teammate's best bounded follow-up with the passed card (B20): max `evaluate` over
-/// up to `DUOS_PASS_MAX_FOLLOWUPS` legal `Play` actions on `mate_probe`.
+/// R1127000: the teammate's best bounded follow-up with the passed card in hand (added as B20's pass
+/// adds it, `received`): the maximum of `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play`
+/// actions, each one engine step on `mate_probe`, else of the receiving probe. No hidden opponent card
+/// and no caller stream is ever read; a refused or panicking follow-up is skipped.
 fn pass_score(
     own_probe: &GameState,
     seat_player: PlayerId,
@@ -441,8 +465,11 @@ fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
     })
 }
 
-/// R1723000: what passing the card gains the team in eval points: teammate follow-up score (R1127000)
-/// less baseline, own hand card worth, pass cost margin, and min gain. Pass-positive when > 0.
+/// R1723000: what passing the card gains the team, in `evaluate`'s points: the teammate's best bounded
+/// follow-up with it (R1127000) or, when higher, the card's best play after the teammate's own best play
+/// (`mate_baseline`), since the mana that play leaves may pay for it too; less the baseline's value, the
+/// card's worth in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of the pass cost and
+/// `DUOS_PASS_MIN_GAIN`. The pass is worth making when this is above 0.
 fn pass_gain(
     own_probe: &GameState,
     seat_player: PlayerId,
@@ -562,8 +589,10 @@ fn policy_kind(body: &DuosActionBody) -> PolicyKind {
     }
 }
 
-/// B32's second opponent (#1760): 1v1 gates' one-ply greedy baseline on own duel (R185).
-/// Never passes to keep the yardstick independent. None when seat owes nothing.
+/// B32's second opponent (#1760): the 1v1 gates' one-ply greedy baseline (`greedy_action`) on the
+/// seat's own duel, else `duel_fallback`'s. It never passes: a yardstick that shared `duos_passes`
+/// would move with the AI it measures. It reads its duel through `greedy_action`'s `redact` alone
+/// (R185) and draws on `rng` only there. None when the seat has nothing to send.
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody> {
     if state.result.is_some() {
         return None;
@@ -658,7 +687,10 @@ impl DuosGateReport {
         }
     }
 
-    /// B32: AI team won at least its floor, with no rejected actions, fallbacks (#1385), or sim panics (#1429) (B31).
+    /// B32: the AI team won at least its opponent's floor (`DuosOpponent::win_floor`) of a run of at
+    /// least one game; no action was refused on either team (an AI bug or a gap between
+    /// `duos_legal_actions` and `duos_reduce`), no AI action came off a fallback path (#1385), and no AI
+    /// seat's search caught a panic (#1429): each fails it as it fails the 1v1 gates (B31).
     pub fn passes(&self) -> bool {
         self.games > 0
             && self.rejected == 0
@@ -753,8 +785,11 @@ pub fn duos_gate_game_at(
 /// shows what the gate catches (#1760).
 pub type DuosGateDecider = fn(&DuosState, DuosSeat, &mut AiOptions<'_>) -> Option<DuosDecision>;
 
-/// Simulates game `n` of the series with AI team against `opponent` up to `budget`.
-/// Tracks rejected actions, fallbacks, and panics across live turns.
+/// Game n (1-based) of the series: seed `opponent.seed(series, n)`, every seat on AI_DIFFICULTY.easy
+/// with a `build_ai_deck` deck, the AI team acting through `ai` at `budget` and the other through
+/// `opponent`'s policy, each on its own stream. A refused action is replaced by the random policy's and
+/// counted in `rejected`; a game no seat sends anything in stops unfinished. A pure function of `n`,
+/// `series`, `opponent`, `budget` and `ai`.
 pub fn duos_gate_game_with(
     n: usize,
     series: &str,

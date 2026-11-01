@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75: "attacking a Unit or the hero gains one random
-// Resource into its controller's hand, defending none; a forced attack gains one; no Starship Piece, so
-// its death fuses nothing (#2521); radiant 4/6, Radiant Resources".
+// S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75 (#2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

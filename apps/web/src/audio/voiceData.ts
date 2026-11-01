@@ -6,8 +6,7 @@
 // `voice-manifest.json` (which rendered files exist, written by `apps/web/scripts/gen-voice.mjs`)
 // are imported here and nowhere else. The table is JSON5, read as text, joined to its words and
 // parsed once at import against the catalog, so a malformed table fails loudly at load, naming the
-// path of the problem, instead of speaking garbage. Each card's kind comes from
-// its catalog type: the file never states it. Everything here reads a `PlayerView` or a defId
+// path of the problem, instead of speaking garbage. Everything here reads a `PlayerView` or a defId
 // and nothing else (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is
 // never in the table, so it never yields a sound.
 

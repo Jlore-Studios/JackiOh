@@ -9,13 +9,11 @@
 //! `seed_search.rs` is #848's seed search: `seed_where` and `cursor_where` find at run time the seed or
 //! the rng cursor where a pool's roll lands as a test needs, so no test pins one a pool change would move.
 //!
-//! `seams.rs` holds the two test seams made from outside the engine: a test-made work handler and
-//! stand-ins for three turn stages. `preview.rs` is R1420's preview of a set that does not ship yet.
-//! `duos_scenario.rs` is #936's: a begun Duos game, every mulligan kept, round 1 open.
+//! `preview.rs` is R1420's preview of a set that does not ship yet. `duos_scenario.rs` is #936's: a
+//! begun Duos game, every mulligan kept, round 1 open.
 //!
-//! `golden.rs` is the golden replay's pure half (§13.3, #1641): `cargo jackioh golden check --file` replays
-//! recorded games with it, and the engine's `tests/golden.rs` folds the hotseat fixture with it. It is not
-//! globbed in: a caller names `golden::<item>`.
+//! `golden.rs` is the golden replay's pure half (§13.3, #1641). It is not globbed in: a caller names
+//! `golden::<item>`.
 //!
 //! `pick.rs` holds the one-instance pick builders and `scenario.rs` the panicking `Scenario::unit_at`
 //! (#1826); like `golden`, callers name the module (`pick::<builder>`). `scenario.rs`'s `must` (an

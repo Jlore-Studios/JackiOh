@@ -258,8 +258,10 @@ fn query_ids(args: serde_json::Value) -> Vec<String> {
     query(&args).into_iter().map(|def| def.id.clone()).collect()
 }
 
-/// Precomputed public state data for determinization: seen opponent cards, trap/aura pools,
-/// and cloakable hand auras (R783007). Shared across determinizations of one decision.
+/// What a determinization reads off `public_state` before its first draw: identical for every
+/// determinization of one decision, so `decide` computes it once (`det_ground`). A side's `cloakable`
+/// reads only the auras that reach its own hand (R783007), so sampling the other side's slots first
+/// does not change it.
 pub struct DetGround {
     seen: IndexSet<String>,
     trap_pool: Vec<String>,

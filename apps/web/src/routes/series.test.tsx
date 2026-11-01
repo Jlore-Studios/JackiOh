@@ -1,6 +1,6 @@
 // `/series/<id>`: the Conquest series between its games (R330–R338, R262), from the mocked `SeriesView`:
-// what it leaves out never appears, a pick and a forfeit send only intent, and the clock counts from the
-// server's `now`.
+// what it leaves out (the opponent's pick and deck names, R336) never appears, a pick (chosen, then
+// locked in, R331) and a forfeit send only intent, and the clock counts from the server's `now`.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

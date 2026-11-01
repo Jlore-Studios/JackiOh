@@ -1,9 +1,9 @@
 // R291 lesson data (SPEC §9.10): fixed decks, seed and seat make R290 practice games repeatable.
-// R2205003, R2434001: five lessons, one subject each. The human's decks are Training Grounds cards, and
-// the AI's are too, none Legendary or Mythic (R2533001). Lessons 1–4 hold no Legendary or Mythic card and set `poolHold` (R2201001) on both
-// seats, so none is generated either; lesson 5 deals them to the human alone. Decks meet R184's sizes,
-// respect R186 and bring nothing a later lesson teaches. `lessons.test.ts` holds them to it.
-// R2434000: the ids of the lessons before #2434 read as the lesson in their place on the path.
+// R2205003, R2434001: five lessons, one subject each, every deck Training Grounds cards. Lessons 1–4
+// hold no Legendary or Mythic card and set `poolHold` (R2201001) on both seats, so none is generated
+// either; lesson 5 deals them to the human alone (R2533001). Decks meet R184's sizes, respect R186 and
+// bring nothing a later lesson teaches (`lessons.test.ts`). R2434000: the ids of the lessons before
+// #2434 read as the lesson in their place on the path.
 
 import { AI_TUTORIAL, TUTORIAL_HUMAN, type Handicap } from "@jackioh/engine/config";
 import type { PlayerId } from "@jackioh/shared";

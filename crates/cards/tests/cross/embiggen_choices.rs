@@ -39,6 +39,7 @@ const CURVATURE: &str = "core-077";
 const ALIGNMENT_TAX: &str = "classicplus-t-ai-07";
 
 /// A (1) Unit (Core #8), which p1 can afford under the tax, so R82 never ends p1's taxed turn for
+/// want of a play when the embiggen card's taxed price is past `MAX_MANA`, as the Stinkyscape
 /// set's #79 Orca's (4) is (R1857001).
 const AFFORDABLE: &str = "core-008";
 

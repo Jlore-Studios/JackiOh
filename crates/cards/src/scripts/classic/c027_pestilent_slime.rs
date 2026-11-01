@@ -66,12 +66,9 @@ pub fn script_v0_5_11() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #27 Pestilent Slime — SPEC §8.6 row 27, BUILD M9 Classic row C 27: "Every placement onto it is
-// doubled (tripled radiant), still one placement for "whenever Plague Counters are placed" triggers;
-// its tokens reset when it leaves (R78); its tuned number (multiplier) reads through `param()` (R386);
-// Death: each counter it held is one placement of 1 on a random permanent of its controller's, none
-// there lost, none held nothing (R2521005)". Placements come from C #39 Outbreak (one) and C #70 Book
-// of Plague (one per token, R689); the Slime dies to Core #35 Lunar Eclipse.
+// C #27 Pestilent Slime — SPEC §8.6 row 27, BUILD M9 Classic row C 27 (R78, R386, R2521005). Placements come
+// from C #39 Outbreak (one) and C #70 Book of Plague (one per token, R689); the Slime dies to Core #35 Lunar
+// Eclipse.
 #[cfg(test)]
 mod tests {
     use super::*;

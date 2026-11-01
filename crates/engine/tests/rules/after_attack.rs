@@ -5,8 +5,6 @@
 //! its user. "Whenever this attacks" (`afterAttackEvenIfGone`) runs the same hook at the same point for
 //! an attacker that died or left too, as the snapshot it fought with, once (R2396000): Core #32 Prem
 //! Panther (R426).
-//!
-//! Port of `packages/engine/test/after-attack.test.ts`.
 
 use jackioh_engine::effects::forced_attacks_on;
 use jackioh_engine::testkit::PlayerId::{P1, P2};

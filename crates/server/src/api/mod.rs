@@ -1,4 +1,4 @@
-//! The HTTP API (SURFACE §11.1, §1).
+//! The HTTP API (SURFACE §11.1). This file is written once (SURFACE §1).
 
 pub mod auth;
 pub mod card_picks;

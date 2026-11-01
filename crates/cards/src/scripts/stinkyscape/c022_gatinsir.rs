@@ -97,12 +97,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22: "set face-down, an enemy attack reveals it on a
-// roll under 30 and not on one above (a seed of each); on a miss it stays set and no event is seen;
-// revealed, two Warp Disruptors and then two Phalanxes arrive for its controller before the combat,
-// which goes on to its declared target; with one open unit zone one Phalanx arrives; chance, disruptors
-// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 6/6)". Each Phalanx it
-// summons runs its Cry (R411, R2176000), and a forced attack rolls nothing (R1875002).
+// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22. Each Phalanx it summons runs its Cry (R411,
+// R2176000), and a forced attack rolls nothing (R1875002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};

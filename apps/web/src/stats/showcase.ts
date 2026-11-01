@@ -1,12 +1,9 @@
-// R1584000: the stats the floor below the tavern's showcase shows, one at a time: each with a title,
-// the card it is about and the player's number for it. A stat the device holds no data for is left
-// out. This module only chooses and words them; StatShowcase.tsx draws them and showcaseStage.ts
-// plays the board's animation for each. It takes the stage's types and nothing else of it, so the
-// effects layer stays off the first screen until the showcase is drawn.
+// R1584000: the stats the floor below the tavern's showcase shows, one at a time. A stat the device
+// holds no data for is left out. This module only chooses and words them; it takes the stage's types
+// and nothing else of it, so the effects layer stays off the first screen until the showcase is drawn.
 //
-// R1743000: there are 35 of them, and a stat's card is never a token: every choice passes over a card
-// whose catalog entry is a token, as it does one the catalog no longer holds. The order they come in
-// is the showcase's (`nextInBag`), a shuffled bag drawn from the page's random source.
+// R1743000: a stat's card is never a token, nor one the catalog no longer holds. The order is a
+// shuffled bag (`nextInBag`) drawn from the page's random source.
 //
 // R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit; Hot
 // Streak, The Record and Ride or Die read the wins), and `animationFor` fits a lunge to the card's type.

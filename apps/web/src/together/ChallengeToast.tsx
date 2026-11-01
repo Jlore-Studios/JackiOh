@@ -1,25 +1,18 @@
 // The challenge toast (#936, B57; #1831): mounted once in the shell (`main.tsx`), it reads the open
-// challenges every `SOCIAL_POLL_MS` while the tab holds a session, on every screen (`socialPoll.ts`,
-// the one read the Friends button's badge and Play together share).
+// challenges every `SOCIAL_POLL_MS` while the tab holds a session (`socialPoll.ts`, the one read the
+// Friends button's badge and Play together share).
 //
-// AN INCOMING CHALLENGE is a toast with the challenge's mode and, but for All Random, a picker of
-// the player's deck (or trio) that starts on the one they last used for it in this browser
-// (`challengeChoice.ts`); for All Random, "More cards from" (R924000) for the player's own dealt
-// deck, starting from the device's online pick (`readPlayLean`, R2031000), shown once the engine is in
-// (`LeanSetPickerLazy.tsx`: the shell mounts the toast on every screen, #778). Accept joins the room by
-// its code with that pick, which accepts the challenge (B49), and takes the player to the game: one
-// press (R1831000). Decline declines it.
-// R915005: a deck naming a custom card (or a trio holding one) is listed off, "(practice only)", with the
-// lobby's note, and never picked.
-// Either way the toast goes. A screen holding unsaved work asks first, and the toast stays until
-// the player goes (R1754000). A join the server refuses is shown in its words, with "Open in lobby",
-// the way a room link opens `/play` with the room's code and mode filled in (R767), as it does when
-// there is no deck to join with.
+// AN INCOMING CHALLENGE is a toast with its mode and a picker of the player's deck (or trio), starting
+// on the last one used for it (`challengeChoice.ts`); for All Random, "More cards from" (R924000) on the
+// device's online pick (R2031000), shown once the engine is in (#778). Accept joins the room by its
+// code, which accepts the challenge (B49), and takes the player to the game: one press (R1831000).
+// R915005: a deck naming a custom card (or a trio holding one) is listed off, "(practice only)", and
+// never picked. A screen holding unsaved work asks first (R1754000). A refused join is shown in the
+// server's words, with "Open in lobby", as a room link opens `/play` (R767).
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
-// friend joins it, wherever the challenger is. While the last read held one of theirs (or one was just
-// sent from this tab, `follow.ts`), each read also asks `/api/auth/me` for a live game, and once it
-// names one the toast announces it as a pairing is announced ("Match found!", R765) and takes them there.
+// friend joins it, wherever the challenger is. While one is open (`follow.ts`), each read also asks
+// `/api/auth/me` for a live game, and the toast announces it as a pairing is announced (R765).
 //
 // Nothing here is a rule (CLAUDE.md rule 7): whom a player may challenge, whether a deck may be
 // played, and when a challenge lapses, are the server's. A session the server refuses outright is

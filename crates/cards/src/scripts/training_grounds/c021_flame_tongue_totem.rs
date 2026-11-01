@@ -42,11 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #21 Flame Tongue Totem — SPEC §8.11 row 21, BUILD M13 row TG 21: "a Unit in lane N−1 and one in lane
-// N+1 each read +3 Attack, Health unchanged; the Totem itself reads 0; a Unit two lanes away, an enemy Unit
-// in lane N, and a backrow card read nothing; a Unit beneath a Stack pile next to it gets nothing, and the
-// top does; the bonus leaves when the Totem leaves the field or when the neighbour moves away; a Vanilla'd
-// Totem gives nothing; the number reads through `param()`. radiant 0/8, +6 Attack to each neighbour".
+// TG #21 Flame Tongue Totem — SPEC §8.11 row 21, BUILD M13 row TG 21.
 #[cfg(test)]
 mod tests {
     use super::ID;

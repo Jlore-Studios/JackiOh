@@ -111,9 +111,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33: "After each play,
-// library +3 fresh copies with the radiant flag preserved; token spells copied (R34); nothing is
-// added to a 60-card library (R80)".
+// #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33 (R34, R80).
 // R119: a Clone Machine a play's own resolution put onto the field (#98's Recruit) starts counting
 // from the next play, as the played Clone Machine itself does.
 #[cfg(test)]

@@ -1,5 +1,6 @@
 // "Concede this game?" (ConfirmConcede.tsx), on its own and as Game.tsx mounts it for every mode:
 // the board's Concede control only asks, and only the dialog's Concede sends `{ type: "concede" }`.
+// Keep playing, Escape, Back (R2127000) and a click outside close it.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

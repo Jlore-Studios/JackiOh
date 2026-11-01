@@ -31,10 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #128 Jlockeed's Yamato Cannon — SPEC §8.10 row 128, BUILD M12 row S 128: "a 4/1 Ranged Cleave
-// Unit: its attack hits the Units beside its target too and it takes no strike back from a defender
-// without Ranged (R783000); played at (3) it is a Starship Piece, at (2) none; radiant 8/2 with Rush,
-// attacking a Unit the turn it lands" (#2521).
+// Stinkyscape #128 Jlockeed's Yamato Cannon — SPEC §8.10 row 128, BUILD M12 row S 128 (R783000). (#2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

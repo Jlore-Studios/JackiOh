@@ -6,12 +6,8 @@
 //!   death pass has returned its Reborn bodies and reported its graveyard (`state_check`'s last step), a
 //!   copy of it fuses into the Dormant Starship of the player whose graveyard it entered, who controlled it
 //!   as it died (R77, `subsystems::fuse`), summoning one first if they have none (R1852000, R1852002,
-//!   R2618000). The copy is the piece's base version (R2521000): a fresh card
-//!   of the piece it was printed as — for a fusion, the card the others were fused into, its last
-//!   ingredient, a fused one walked the same way (`base_piece_def`) — on its Radiant face if it was Radiant, with a
-//!   token's X/X and its language (R57's library copy), and without its tuning, so no Buff, Nerf or
-//!   Upgrade and no card fused into it reaches the Starship. A discard, a mill or any other way into a
-//!   graveyard fuses nothing.
+//!   R2618000). The copy is the piece's base version (`piece_copy`, R2521000). A discard, a mill or any
+//!   other way into a graveyard fuses nothing.
 //! - **The hull.** The Dormant Starship (`DORMANT_STARSHIP_DEF_ID`) is a 0/0 Unit that prints Dormant
 //!   (`slumber.rs`) and the hull (`StaticFlags.starship_hull`); entering the field it starts a memory
 //!   (`CardInstance.starship`), the pieces it holds (R1852005). It is summoned into its owner's backrow,
@@ -159,9 +155,7 @@ pub fn piece_number(ctx: &crate::script::EffectContext<'_>, def_id: &str, radian
     )
 }
 
-// ---------------------------------------------------------------------------------------------
 // A piece dies (R1852000–R1852002)
-// ---------------------------------------------------------------------------------------------
 
 /// R2521000: the definition a dead piece's copy is a fresh card of, the piece it was printed as. A
 /// fusion (`CardDef.ingredients`) is the card the others were fused into, its last ingredient — an

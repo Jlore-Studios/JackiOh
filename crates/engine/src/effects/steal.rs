@@ -6,8 +6,6 @@
 //! What a steal does change besides `controller` is R171's: the card has entered its new
 //! controller's side on this turn, so it takes the turn as its `summonedTurn` (summoning sick, §4.1)
 //! and a fresh exertion. A steal that does nothing (R15, R76) changes neither.
-//!
-//! Port of `packages/engine/src/effects/steal.ts`.
 
 use serde::{Deserialize, Serialize};
 

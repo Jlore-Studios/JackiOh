@@ -390,6 +390,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         let seven = g.card(SEVEN_SEVEN).id.clone();
 
         // p1 steals the 7/7 into its own lane 1 (R15). Rotating left, p1's lane 1 would move to p2's
+        // lane 1 — to the opponent — so radiant Silas bounces it "costing 0" to its CONTROLLER's hand
         // (R747), but that hand is full, so it is burned instead (§2.4, R4) into the graveyard of the
         g.play(MIND_CONTROL, json!({ "targets": pick::id(&seven) }));
         assert_eq!(
@@ -689,6 +690,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         until_active(&mut g, PlayerId::P1);
         until_active(&mut g, PlayerId::P2);
         // 3 -> 2), and lane 2 is held, so the prey is bounced to p1's hand (R14, R88); the Kpop part then
+        // schedules the steal of the prey, which has already left the field. The Lock alone bounced it
         // until patch v0.3.10 (a rotation enters a Locked zone now, R831000), so the zone is held here
         // as a dying Reborn unit's is (§3.2, R64).
         jackioh_engine::zones::reserve_zone(

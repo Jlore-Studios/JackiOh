@@ -42,8 +42,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #38 Quickstriker (SPEC §8.2, BUILD M4-T4): "First play deals 0, second 1, third 2 to the enemy
-// hero; nothing when not on the field". R662's yellow glow, both faces, is at the end of this file.
+// #38 Quickstriker (SPEC §8.2, BUILD M4-T4). R662's yellow glow, both faces, is at the end of this file.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

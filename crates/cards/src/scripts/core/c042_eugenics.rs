@@ -73,8 +73,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 
 // #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R65, R80, R831014).
 //
-// The must-pass row (BUILD M4-T4 #42): "every deck card that costs (2) or less exiled (R65's cost);
-// 30% per remaining card; radiant every remaining card Radiant."
+// The must-pass row (BUILD M4-T4 #42) (R65).
 
 #[cfg(test)]
 mod tests {

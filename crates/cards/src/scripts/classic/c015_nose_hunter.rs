@@ -50,6 +50,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: Activate Infinity (R392, R384): its
+// cost, a random discard, is paid as it activates, so an empty hand can't activate it; then exile the
 // bottom card of the opponent's deck (empty: nothing); usable the turn it is played, not a play (R384);
 // `param()` (R386).
 #[cfg(test)]

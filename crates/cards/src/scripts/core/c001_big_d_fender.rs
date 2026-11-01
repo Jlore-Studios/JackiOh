@@ -41,9 +41,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 1: "DEF ally takes 3 less (1 position + 2 aura), ATK ally unaffected; it never
-// attacks; radiant +4". Armor shows only in damage (§4.4 step 2): #25 (7/7, Armor 7) attacks #19
-// (9/9, Taunt, §4.2 step 3).
+// BUILD M4-T4 row 1. Armor shows only in damage (§4.4 step 2): #25 (7/7, Armor 7) attacks #19 (9/9, Taunt,
+// §4.2 step 3).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

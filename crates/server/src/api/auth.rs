@@ -1,13 +1,14 @@
-//! The endpoints the invite gate needs; provider half (Supabase Auth, the JWT tiers, R194's
+//! The endpoints the invite gate needs. The provider half (Supabase Auth, the JWT tiers, R194's
 //! liveness cache, R665's second factor) is `crate::auth`.
 //!
 //! SPEC §9.4 lets a pending account "log in, verify its email and see the code screen, and nothing
 //! else", so `/api/auth/me` is declared `AuthLevel::User` rather than `Active`: it is the code
 //! screen's only read. The gate itself lives in `http.rs` (`assert_active`), never here.
 //!
-//! Routes (SURFACE §11.3): `POST /api/auth/signin`, `POST /api/auth/username-signin` (R1443),
-//! `GET /api/profile`, `DELETE /api/account`, `GET /api/auth/me`. The age screen and terms
-//! (R757000, R757001) are in `consent.rs`.
+//! Routes (SURFACE §11.3): `POST /api/auth/signin` (it answers only under `E2E=1`, where the
+//! fixture provider knows passwords; Supabase answers 503), `POST /api/auth/username-signin`
+//! (R1443: a sign-in by username, on any provider), `GET /api/profile`, `DELETE /api/account`,
+//! `GET /api/auth/me`. The age screen and the terms (R757000, R757001) are `consent.rs`'s.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -130,9 +131,12 @@ fn attempt(app: &App, key: &str, now: i64) -> Result<(), ApiError> {
     ))
 }
 
-/// `POST /api/auth/username-signin` (`AuthLevel::None`), R1443: sign-in by username and password.
-/// Resolves name to email (R1434), returning session and 2FA state (R665) without exposing address.
-/// Refusals answer 401 (R160). Attempts count against address (R190) and name (R192).
+/// `POST /api/auth/username-signin` (`AuthLevel::None`), R1443: a sign-in by username and password.
+/// No player may learn another's address, so the server finds the profile holding the name (R1434's
+/// key and tag) and signs in with its address; it answers the session, whether the email is verified
+/// and the authenticator app R665 still needs, never the address. No such name and every refusal
+/// of the provider's are one 401 (R160). Every attempt counts against the caller's address (R190)
+/// and, once the name reads, against the name (R192).
 pub async fn username_sign_in(app: &Arc<App>, req: Req) -> ApiResult {
     let username = required_str(&req.body, "username")?;
     let password = required_str(&req.body, "password")?;
@@ -179,9 +183,10 @@ pub async fn username_sign_in(app: &Arc<App>, req: Req) -> ApiResult {
     }
 }
 
-/// `GET /api/profile` (`AuthLevel::Active`): account screen (who you are and match record).
-/// Separate from `/api/auth/me` because `me` is the gate's read; counting results history
-/// on every guarded route would put a scan behind every page load.
+/// `GET /api/profile` (`AuthLevel::Active`): the account screen: who you are signed in as, and how
+/// you have done. Separate from `/api/auth/me` because `me` is the gate's read, which every guarded
+/// route resolves through: counting a profile's results history there would put a scan behind every
+/// page load.
 pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     let profile = &caller.profile;
@@ -206,9 +211,11 @@ pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
     ))
 }
 
-/// `DELETE /api/account` (`AuthLevel::User`): deletes profile, owned data, and auth provider sign-in.
-/// `User`, not `Active`, so pending or banned accounts can leave too. Refuses with 409 if in a live
-/// match or Conquest series; profile deleted before auth provider so retries remain safe.
+/// `DELETE /api/account` (`AuthLevel::User`): deletes the caller's profile, everything only it owns
+/// and then its sign-in; 204 with no body. `User`, not `Active`, so a pending or banned account can
+/// leave too. A player in a live match or a Conquest series gets 409: the actor and the series rules
+/// own how a game ends. The profile goes first, so a provider that fails leaves only a sign-in, which
+/// the same request, retried, removes.
 pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
     remove_account(app, caller).await?;

@@ -35,8 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable, no target → enters
-// anyway; radiant clears every enemy non-Human, Humans survive".
+// BUILD M4-T4 row 2.
 // Non-Human: #25 and #12 (its Cry never fires on a placed board). Human: #8 and #20.
 #[cfg(test)]
 mod tests {

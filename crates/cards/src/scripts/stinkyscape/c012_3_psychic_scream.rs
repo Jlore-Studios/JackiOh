@@ -7,6 +7,8 @@
 //! reset (R78), a unit token ceasing (R11); a Dormant card and anything beneath a Stack pile never
 //! match the scope (R13, R1839000). The card becomes the opponent's, owner and controller alike
 //! (R12), so it lands in their deck (R311), a full one refusing the rest to the opponent's
+//! graveyard (R80, R316). The Radiant surcharge is R1704003's take-back figured in the hook:
+//! `surcharge` less the overshoot past SURCHARGE_UP_TO, whole from an X-cost card (an X is no cost
 //! a number may move), so the raise lands before the move and every card still stands for it (R174).
 
 use jackioh_engine::prelude::*;

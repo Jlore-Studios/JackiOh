@@ -6,47 +6,27 @@
 // Two kinds of face come out of it (SPEC §10.10). A face with no `inPlay` is the card as printed:
 // the collection's, both faces of it in the catalog's words. A face with `inPlay` is the card as the
 // view says it stands in a game (R243): the cost the view gives it, the stats of a Unit in its
-// owner's hand with what it gained there (#89 Corpse Eater), a hand card's keywords where the view
-// gives them (a Lucky given in hand, R1438), the numbers and keywords of a unit on the field, the
-// Vanilla marker, and inPlay.ts's words where play and print part ways — a #98 Heroic Power's rolled
-// power, "???" for Call to Chaos. A match-made definition (a Fuse's, R77) is just the `def` the
-// caller found in the view's `defs`, and prints its own name, text and stats.
+// owner's hand with what it gained there (#89 Corpse Eater), and inPlay.ts's words where play and
+// print part ways. A match-made definition (a Fuse's, R77) is just the `def` the caller found in the
+// view's `defs`, and prints its own name, text and stats.
 //
 // Nothing here is a rule (CLAUDE.md rule 7). The tones compare two numbers the view and the catalog
-// already carry — the live cost against the printed price, the live stats against the printed
-// stats — so a buffed unit reads green and a damaged one red, the way Hearthstone colors them.
+// already carry, so a buffed unit reads green and a damaged one red, the way Hearthstone colors them.
 //
-// Three marks ride on the text (SPEC §10.10). A Radiant face prints its whole catalog text with the
-// stretches its base face does not have marked (`text.marks`, radiantDiff.ts, R277); the names its
-// `refs` link are references (refs.ts, R279), which the renderer finds in the text; and in play the
-// numbers the view's `preview` carries are printed after their formulas (`values`, R280).
-//
-// Patch v0.2.0's per-card states ride on a face in play as the view gives them (cardState.ts draws
-// them): the Brittle count (B3.3, R385), the enchantments (B5 E39), the card standing in a unit zone
-// as a Unit (B3.1, R383), and what Degrade and Upgrade changed (B3.4, R386, tuning.ts), whose numbers
-// that moved are marked where the text prints them (`text.tuned`). The collection shows none of
-// them. Every face carries its definition's lines of code (`loc`, E36) for the inspect overlays.
+// Per-card states ride on a face in play as the view gives them (cardState.ts draws them). The
+// collection shows none of them.
 //
 // An Animated Field Spell or Trap that prints attack and health prints those of the Unit it becomes
 // (B3.1 rule 1; R2280000: it may print none), so its face carries them as a Unit's does, wherever it is.
 //
-// A face in play carries a quest line as the view gives it (`quest`, B5 E33, R404: In Too Deep's open
-// quests, their progress and rewards, its auras), which cardState.ts draws as badges. A copier (Classic
-// #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`), filled
-// with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
-// cost, type and art, and `copying` names the card it copies for the inspect notes.
+// A copier (Classic #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has
+// (`InPlay.copies`) in place of its own copying sentence; it keeps its own name, cost, type and art.
 //
 // ME-CN, R1301, R711000: a card the view says is Chinese (`FaceSource.chinese`), or any card when the
 // reader reads Chinese (`drawnInChinese`), prints its name and both faces' texts from the Chinese
-// table (chinese.ts), a copier's copied text and a fused card's
-// ingredients' included, filled with the same numbers; its preview labels are the table's too. A
-// Radiant face's gold diff compares the two Chinese faces (R1302). The English face's name and text
-// ride along (`englishName`, `englishText`), never printed: the art's motif and the glossary's terms
-// are read from them.
-//
-// R2521009: a Resource (its definition carries `resource`, R1840000) prints what it sells for on the
-// face shown, `credits` (the face's `sellMin` and `sellMax`), as one line under its text,
-// "Credits: 2–5" (`creditsLine`). Read off the definition alone, in play or out; no other card has it.
+// table (chinese.ts). A Radiant face's gold diff compares the two Chinese faces (R1302). The English
+// face's name and text ride along (`englishName`, `englishText`), never printed: the art's motif and
+// the glossary's terms are read from them.
 
 import {
   fillParams,
@@ -219,10 +199,6 @@ export type FaceModel = {
 };
 /** R2521009: what a Resource sells for on one face, its least and its most. */
 export type FaceCredits = { min: number; max: number };
-/**
- * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
- * `live` (a unit on the field) and `liveCost` stay where they were, beside it.
- */
 /** R1852005, R2249000: one Starship Piece fused into a Starship, on the face it fused on. */
 export type StarshipPieceRef = { defId: string; radiant: boolean };
 

@@ -47,9 +47,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26: "Draw 4 (§2.4: burns, fatigue, a
-// draw limit), then discard 4 cards at random (R682; 4 or fewer in hand → all of them), with no prompt;
-// radiant: draw 5, discard 4; its tuned numbers (draw, discard) read through `param()` (R386)".
+// C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26 (§2.4, R682, R386).
 // The draw-limit case puts C #4 Palantir in the opponent's backrow (B5 E3, R457).
 #[cfg(test)]
 mod tests {

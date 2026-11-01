@@ -5,6 +5,7 @@
 //! Engine: Cast on draw is the static flag §6.2's draw reads (R58, R70; C+ #36.1 Bone Storm's shape):
 //! drawn, it is cast at no cost and counted as played, and its player draws again; set aside through
 //! the setup (R635). Played from the hand at (0) it does the same. The Cry is `freeze_all` over
+//! every Unit of both sides (R1174000) — the Radiant face over the enemy's alone — a hero passed by
 //! and a Unit Immune to Spells too (R81). A Unit Frozen on its controller's turn loses that turn's
 
 use jackioh_engine::prelude::*;

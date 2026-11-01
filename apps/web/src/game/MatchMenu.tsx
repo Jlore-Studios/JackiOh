@@ -1,9 +1,8 @@
 // #2645: the match menu, the control bar's ⋯ on a phone (`usePhoneBar`, board.css's two phone layouts).
 //
 // The bar keeps to one row there, so Offer draw, Concede and Friends are rows of this menu instead of
-// buttons beside End turn: the menu opens upward from the bar, each row a full-width 44px target with
-// its whole label. It decides nothing (CLAUDE.md rule 7): its rows are the same controls the desktop bar
-// holds, built by Board.tsx, and it only shows or hides them.
+// buttons beside End turn. It decides nothing (CLAUDE.md rule 7): its rows are the same controls the
+// desktop bar holds, built by Board.tsx, and it only shows or hides them.
 //
 // It stays mounted while closed (`hidden`), so a Friends panel opened from it survives the menu closing
 // (the panel is the button's own state). A press on a row, on ⋯, Escape and Back (R2127000) close it, and

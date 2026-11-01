@@ -79,11 +79,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28: "Cry: exile your deck, then discard
-// your hand (C #64 sees it), landing before the Aura starts (R393); Aura: any card in your graveyard is
-// playable as from hand (R65's discounts); base: your cards are exiled instead of going to your
-// graveyard; no deck → fatigue (§2.4); radiant: no replacement, only cards priced (1)+ as paid; tuned
-// minimum price via `param()` (R386)".
+// C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28 (#64, R393, R65, §2.4, R386).
 #[cfg(test)]
 mod tests {
     use super::*;

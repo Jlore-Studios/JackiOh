@@ -73,11 +73,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4 row 97: "Scorer deterministic; a lethal-enabling card ranks first when lethal
-// exists; Discover offers the top 3 (R29); exiled; radiant picks are radiant; the pool is every set
-// that ships but #97 (R1446)". §10.7's dry run reads only what its player may read (R222). The pool is
-// the real catalog's, so a test that names cards reads Core's own top three, whose order the other
-// sets cannot move: Core comes first in the catalog order.
+// BUILD M4-T4 row 97 (R29, #97, R1446). §10.7's dry run reads only what its player may read (R222). The pool
+// is the real catalog's, so a test that names cards reads Core's own top three, whose order the other sets
+// cannot move: Core comes first in the catalog order.
 #[cfg(test)]
 mod tests {
     use super::*;

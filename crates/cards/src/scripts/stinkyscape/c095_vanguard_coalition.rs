@@ -46,9 +46,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #95 Faction: Vanguard Coalition — SPEC §8.10 row S 95, BUILD M12 row S 95: "adds the 6 named cards in
-// order, each on its base face at its printed cost; a hand with room for fewer keeps the first and burns the
-// rest; radiant all of them Radiant".
+// S #95 Faction: Vanguard Coalition — SPEC §8.10 row S 95, BUILD M12 row S 95.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

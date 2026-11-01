@@ -26,12 +26,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #77 Yuma — SPEC §8.10 row 77, BUILD M12 row S 77: "Cry (played): a countdown badge; at the
-// opponent's next turn start you pick a hand card, it goes to them, then they Discover one of their others
-// for you (R1845002); either hand empty, nothing asked; radiant 2/16 and Lucky 1 over the Discover's
-// options". The prompts' answerers (legal actions, the policy, the timeout, the AI) are the engine's
-// (R1845002); the Lucky draw's comparator is proven on the engine's fixture (R1877001). No Starship
-// Piece since #2521: its death fuses nothing.
+// Stinkyscape #77 Yuma — SPEC §8.10 row 77, BUILD M12 row S 77 (R1845002). The prompts' answerers (legal
+// actions, the policy, the timeout, the AI) are the engine's (R1845002); the Lucky draw's comparator is
+// proven on the engine's fixture (R1877001). No Starship Piece since #2521: its death fuses nothing.
 #[cfg(test)]
 mod tests {
     use super::*;

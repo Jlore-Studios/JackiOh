@@ -70,10 +70,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137 Starfleet Commander — SPEC §8.10 row 137, BUILD M12 row S 137: "with a Dormant Starship, its
-// Cry launches it free (its fused Cries, then the Doctrine before the When launched, R1859006; no launch
-// price spent, R1852006), then Discovers one of the four War Doctrines (three offered) and casts it for
-// its controller (R70); with none, nothing, no Discover; radiant 18/18 and the Doctrine Radiant".
+// S #137 Starfleet Commander — SPEC §8.10 row 137, BUILD M12 row S 137 (R1859006, R1852006, R70).
 #[cfg(test)]
 mod tests {
     use super::{ID, WAR_DOCTRINES};

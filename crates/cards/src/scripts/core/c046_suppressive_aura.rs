@@ -60,9 +60,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4: "Embiggen price chosen with the play (R81);
-// −1/−1 to all, 1-health units die, restored on leaving; paid 4 → −2/−2; radiant enemy only −2/−2,
-// paid 4 → −4/−4; enough of them together kill an enemy The Rock despite Indestructible (R69)"
+// #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4 (R81, R69).
 //
 // Stat assertions go through `expect_stats`, which reads the engine's `unitView`, so §10.4 layer 5
 // is already in the number. The props have no script beyond printed keywords, so only the aura

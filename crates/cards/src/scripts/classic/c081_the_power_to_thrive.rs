@@ -73,9 +73,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #81 The Power to Thrive — SPEC §8.6 row 81, BUILD M9 Classic row C 81: "Activate, once per turn
-// (R384), the mode carried in the `activate` action: heal your hero 3 (no cap, R19), draw 1, or a card of
-// through `param()` (R386)".
+// C #81 The Power to Thrive — SPEC §8.6 row 81, BUILD M9 Classic row C 81 (R384, R19, R386).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

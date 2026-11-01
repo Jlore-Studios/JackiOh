@@ -1,9 +1,18 @@
-//! `jackioh-wasm-core`: bodies both browser modules bind (#1505). JSON strings in and out,
-//! with state kept behind opaque `EngineState` brand (CLAUDE.md rule 7).
+//! `jackioh-wasm-core`: the bodies both browser modules bind (#1505). JSON strings in and out, nothing
+//! else crosses: the state is the `GameState` JSON object, which the client keeps behind its opaque
+//! `EngineState` brand (CLAUDE.md rule 7) and hands back on every call. `crates/wasm` wraps each body
+//! for wasm-bindgen, `crates/wasm/luau` for C; the exports stay identical.
 //!
-//! State cache (`STATE_CACHE`): parses JSON once and keeps recent states under exact text.
-//! Pure crates read no clock (`ai_decide` takes `now_ms`; CLAUDE.md rule 4, SURFACE §3).
-//! Setup check (`CheckSetup`): normal module refuses custom cards (R915009), Luau judges them (R915005, R915006).
+//! The state cache: the client hands the same state over and over, so the bodies keep the few states
+//! they parsed or produced last (`STATE_CACHE`), each under its exact JSON text, which for a returned
+//! state is the text `JSON.stringify` writes of the object `JSON.parse` made of it. A text that differs
+//! by one byte is parsed, so the answer never depends on the cache: parsing is deterministic, and the
+//! engine only reads the state it is given.
+//!
+//! Errors are `String`s, each module's own failure. The clock is the caller's: `ai_decide` takes
+//! `now_ms`, so this crate reads no clock (CLAUDE.md rule 4, SURFACE §3). The setup check is the
+//! caller's too (`CheckSetup`): the normal module refuses a game with custom cards (R915009), the Luau
+//! module judges them (R915005, R915006).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -35,11 +44,14 @@ pub fn player(text: &str) -> Result<PlayerId, String> {
     PlayerId::from_str(text).map_err(|error| error.to_string())
 }
 
-/// Number of states kept in `STATE_CACHE`.
+/// How many states the bindings keep, by their JSON text: the state a call is asked about, the one
+/// `reduce` returned from it, and a little room for a caller that keeps two games (the hotseat's replay
+/// check, a test's two cores).
 const STATE_CACHE: usize = 4;
 
 thread_local! {
-    /// Most recently used first. WebAssembly runs one thread; `thread_local!` keeps data without `static mut`.
+    /// Most recently used first. WebAssembly runs one thread; `thread_local!` is how a module keeps
+    /// data between calls without a `static mut`.
     static STATES: RefCell<Vec<(String, Rc<GameState>)>> = const { RefCell::new(Vec::new()) };
 }
 
@@ -55,7 +67,8 @@ fn cached_state(state_json: &str) -> Option<Rc<GameState>> {
     })
 }
 
-/// 8-byte chunk equality comparison for state cache text matching.
+/// `a == b`, eight bytes at a time: WebAssembly's `memcmp` (compiler-builtins) goes byte by byte, and
+/// the text a call is matched against is the whole ~80 KB state.
 fn same_text(a: &str, b: &str) -> bool {
     let (a, b) = (a.as_bytes(), b.as_bytes());
     if a.len() != b.len() {
@@ -79,7 +92,11 @@ fn remember(text: String, state: Rc<GameState>) {
     });
 }
 
-/// Envelope mark `["\u{a0}",<state>]` to accelerate string copying via `TextEncoder.encodeInto`.
+/// How `apps/web/src/wasm/index.ts` wraps a state's JSON, `["\u{a0}",<state>]`: wasm-bindgen's glue
+/// copies a string with a per-character JavaScript loop up to its first non-ASCII character and with
+/// `TextEncoder.encodeInto` after it, so the no-break space moves nearly all of the all-ASCII state onto
+/// `encodeInto`; for emscripten it is only the shape both modules share. A state's JSON is an object, so
+/// the plain text never looks like this.
 const STATE_ENVELOPE: (&str, &str) = ("[\"\u{a0}\",", "]");
 
 /// A state argument's JSON, out of its envelope when it came in one.
@@ -109,7 +126,8 @@ fn returned_state(state: GameState) -> Result<String, String> {
     Ok(text)
 }
 
-/// `ReduceResult` JSON with new state cached under its text.
+/// `ReduceResult`'s JSON, `{"state":…,"events":[…]}` plus `"error"` on a refusal, exactly as serde writes
+/// the struct (`error` is skipped when absent), with the new state cached under its own text.
 fn reduce_result_json(result: ReduceResult) -> Result<String, String> {
     let ReduceResult { state, events, error } = result;
     let events = to_json(&events)?;
@@ -128,10 +146,16 @@ fn reduce_result_json(result: ReduceResult) -> Result<String, String> {
 
 // The setup check each module runs before the engine sees a setup
 
-/// Setup check run before engine sees setup (R915009, R915005, R915006, R1705003).
+/// Each module's own setup check, which `create_game`, `fold` and `replay_open` run before the engine
+/// sees the setup: the normal module refuses a game with custom cards (R915009), the Luau module judges
+/// them (R915005, R915006) and hands their definitions to `check_decks`. The kind is `create_game`'s
+/// `New` or a fold's `Recorded` (R1705003).
 pub type CheckSetup = fn(&CreateGameArgs, SetupKind) -> Result<(), String>;
 
-/// Checks setup before `create_game` (SURFACE §6.1), ordering R180 handicaps before R184 deck sizes (R1705003).
+/// The setup checks, run before the engine is called: `create_game` panics on a bad setup (SURFACE §6.1),
+/// and a panic in WebAssembly is a trap the page cannot catch. R180's handicaps come first, then each
+/// deck against its seat's size (R184); the function is the engine's own (`state.rs`'s `validate_setup`),
+/// so its messages cross verbatim, and a recorded game's decks are held to the size it was made under.
 pub fn check_decks(
     args: &CreateGameArgs,
     customs: &IndexMap<String, CardDef>,
@@ -156,7 +180,8 @@ pub fn catalog_version() -> String {
     jackioh_cards::catalog_version().to_string()
 }
 
-/// R767000: shipped versions this module carries for replays, oldest first.
+/// R767000: the shipped versions this module carries for replays, oldest first: in the browser, those
+/// from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM` on.
 pub fn carried_versions() -> Result<String, String> {
     to_json(&jackioh_cards::carried_versions())
 }
@@ -216,7 +241,9 @@ pub fn fold(args_json: &str, check_setup: CheckSetup) -> Result<String, String> 
     to_json(&engine::fold(&args))
 }
 
-/// R768: `ReplayOpen`. Setup is checked under the catalog the game was played on (R767000).
+/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was played
+/// on (R767000): this build's own or one it carries. A game of any other version is refused as
+/// `earlier_patch` before its decks are read.
 pub fn replay_open(args_json: &str, record_json: &str, check_setup: CheckSetup) -> Result<String, String> {
     let record: ReplayRecord = parse("replayOpen: the record", record_json)?;
     let build = jackioh_cards::catalog_version();
@@ -262,7 +289,10 @@ pub fn deal_emote_hand(seed: &str, seat: &str) -> Result<String, String> {
     to_json(&engine::deal_emote_hand(seed, player(seat)?))
 }
 
-/// R1420 preview: treats `sets` as shipped sets for module lifetime (#552).
+/// R1420's preview, in the browser: from this call on, for the module's life (WebAssembly runs one
+/// thread), `sets` (`SetName[]`) count as sets that ship, as the testkit's `preview_sets` does on a test's
+/// thread. Only a module built with the `preview` feature can preview (the development, unit-test and e2e
+/// builds; the production bundle is built without it); any other refuses a set (#552's play-through).
 pub fn preview_sets(sets_json: &str) -> Result<(), String> {
     let sets: Vec<engine::SetName> = parse("previewSets: the sets", sets_json)?;
     preview(&sets)
@@ -294,7 +324,7 @@ pub fn ai_to_act(state_json: &str, seat: &str) -> Result<bool, String> {
     Ok(jackioh_ai::ai_to_act(&state, player(seat)?))
 }
 
-/// `ai_decide`'s options: AI stream, state, and search budget.
+/// `ai_decide`'s options: the AI's own stream, where it stands, and the budget (default `AI_BUDGET`).
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DecideOptions {
@@ -304,7 +334,10 @@ struct DecideOptions {
     budget: Option<jackioh_ai::SearchBudget>,
 }
 
-/// `{ decision: Decision | null, rngCursor }`. Search stops once clock passes `deadline_ms`.
+/// `{ decision: Decision | null, rngCursor }`. The AI draws only from its own stream, rebuilt here from
+/// `(rngSeed, rngCursor)`; the cursor it stopped at comes back so the caller resumes it there. Once
+/// `now_ms()` passes `deadline_ms` the search answers with its best so far; `deadline_ms <= 0` means no
+/// clock, so the decision depends only on `(state, seed, cursor, budget)`.
 pub fn ai_decide(
     state_json: &str,
     seat: &str,
@@ -330,7 +363,9 @@ pub fn ai_decide(
     to_json(&json!({ "decision": decision, "rngCursor": options.rng.cursor() }))
 }
 
-/// R2102000: whether `seat` has a sure win this turn by what it can see (lethal hint).
+/// R2102000: whether `seat` has a sure win this turn by what it can see (`jackioh_ai::lethal_hint`), the
+/// practice AI's lethal hint. A search still running once `now_ms()` passes `deadline_ms` lights nothing,
+/// and `deadline_ms <= 0` means no clock.
 pub fn lethal_hint(
     state_json: &str,
     seat: &str,
@@ -348,7 +383,9 @@ pub fn lethal_hint(
     Ok(jackioh_ai::lethal_hint(&state, seat, should_stop))
 }
 
-/// `{ deck, rngCursor }`: builds an AI deck. An absent `leanSet` implies no lean (R1370).
+/// `{ deck, rngCursor }`. Every key but `rngSeed`, `rngCursor` and `size` is `AiDeckOptions`' own, read
+/// by its own serde, so an absent `banned` (the shadow ban), an absent `theme` (roll one) and a `null`
+/// one (none) keep their meanings, and so does an absent `leanSet` (no lean, R1370).
 pub fn build_ai_deck(options_json: &str) -> Result<String, String> {
     let mut request: serde_json::Map<String, Value> = parse("buildAiDeck", options_json)?;
     let seed = match request.remove("rngSeed") {
@@ -373,7 +410,8 @@ pub fn build_ai_deck(options_json: &str) -> Result<String, String> {
     to_json(&json!({ "deck": deck, "rngCursor": rng.cursor() }))
 }
 
-/// `{ action: ActionBody | null, rngCursor }`: §10.7's random policy drawing from `(rng_seed, rng_cursor)`.
+/// `{ action: ActionBody | null, rngCursor }`: §10.7's random policy, whose default skip set is
+/// `jackioh_ai::random_action`'s, drawing from `(rng_seed, rng_cursor)`.
 pub fn choose_action(
     state_json: &str,
     seat: &str,
@@ -390,7 +428,10 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// Constants for practice, tutorial harness, leanMinShare (R1370), and fixtures (#1113).
+/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice, the tutorial
+/// harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
+/// `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113), `SHADOW_BAN_IDS` as it stood when the
+/// fixtures were dealt.
 pub fn constants() -> Result<String, String> {
     to_json(&json!({
         "AI_BUDGET": jackioh_ai::AI_BUDGET,
@@ -401,7 +442,10 @@ pub fn constants() -> Result<String, String> {
     }))
 }
 
-/// R1011000: learned evaluation parity fixture as computed by this build.
+/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`) as
+/// this build computes it: its integer network's correction for each case, in order. The web's tests
+/// hold the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` holds the
+/// native one.
 pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
     let fixture: serde_json::Value = serde_json::from_str(fixture_json)
         .map_err(|error| format!("the parity fixture is not JSON: {error}"))?;
@@ -411,7 +455,10 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
 
 // The engine's tables the web's tests read (`subsystems.*`)
 
-/// ME-CRAFT (Meditative #17, R880): engine verdict on recipe at cost (CLAUDE.md rule 7, R1563007).
+/// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, so the
+/// block editor shows what the reducer will say and the client decides nothing (CLAUDE.md rule 7).
+/// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (either absent), so the verdict is the
+/// one its answer gets: the mode's frame and the offer's blocks (R1563007).
 pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, String> {
     let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
     if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
@@ -426,7 +473,7 @@ pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<
     ))
 }
 
-/// Slice of craft prompt `craft_preview` reads.
+/// The slice of a craft prompt `craft_preview` reads: `PendingPromptView`'s own fields.
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CraftPrompt {
@@ -436,7 +483,8 @@ struct CraftPrompt {
     craft_offer: Option<engine::CraftOffer>,
 }
 
-/// Engine tables for chaos effects and hero powers.
+/// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], chaosMedEffects: [{label}], heroPowerNames,
+/// heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }`.
 pub fn engine_tables() -> Result<String, String> {
     use jackioh_engine::subsystems::{
         call_to_chaos, call_to_chaos_meditative, call_to_chaos_plus, hero_power,
@@ -479,7 +527,10 @@ pub fn engine_tables() -> Result<String, String> {
 
 // The validator (SPEC §9.4: one module, client and server)
 
-/// `checkDeckDraft`'s input as it crosses from the client.
+/// `checkDeckDraft`'s input as it crosses: TypeScript's two predicates cannot, so the page answers them
+/// first. `deckable` is every distinct card id of `cards` that `isDeckable` accepted; `portraitKnown` is
+/// `isPortrait(portrait)`, absent when the page had no `isPortrait` or no portrait to ask about (D5 then
+/// has nothing to check against).
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DeckDraftRequest {
@@ -514,7 +565,10 @@ fn check_deck_draft(input_json: &str) -> Result<String, String> {
     to_json(&validator::check_deck_draft(&input))
 }
 
-/// A loadout input whose `catalog.cards` may hold partial definitions laid over templates.
+/// A loadout input (`DeckInput`, `LoadoutInput`) whose `catalog.cards` may hold partial definitions. The
+/// rules read only `name`, `token` and `tags` (L3, `validator.rs`), and the web's tests hand
+/// `{ id, name, token, tags }` (`routes/play.test.tsx`), while `CardDef` requires every field: so each
+/// definition is laid over a registered one with `token: false` and no tags, its own fields winning.
 fn parse_loadout_input<T: DeserializeOwned>(call: &str, input_json: &str) -> Result<T, String> {
     let mut input: Value = parse(call, input_json)?;
     if let Some(cards) = input.pointer_mut("/catalog/cards").and_then(Value::as_object_mut) {
@@ -539,7 +593,8 @@ fn parse_loadout_input<T: DeserializeOwned>(call: &str, input_json: &str) -> Res
     serde_json::from_value(input).map_err(|error| format!("{call}: {error}"))
 }
 
-/// One validator call by name, with JSON argument and result (SURFACE §10.1).
+/// One validator call by its TypeScript name; the input and the output are that function's argument
+/// and result, as JSON (SURFACE §10.1). `checkDeckDraft` takes `DeckDraftRequest` above.
 pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
     use jackioh_engine::validator;
 
@@ -573,7 +628,8 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
             let raw: String = parse(call, input_json)?;
             to_json(&validator::normalize_name(&raw))
         }
-        // R915001, R915000: custom card frame validation and definition.
+        // R915001, R915000: a custom card's frame judged, and the definition it builds, with no Luau:
+        // the script is the Luau module's to check.
         "validateCustomCard" => {
             let card: jackioh_engine::CustomCard = parse(call, input_json)?;
             to_json(&jackioh_engine::custom::validate_custom_card(&card))
@@ -586,8 +642,12 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, String> {
     }
 }
 
-// Duos co-op (#936 SPEC S4, S8): bodies over two duels for `/dev/duos` hotseat.
-// Only the `duos` feature builds them; without it each body returns the reason.
+// Duos co-op (#936 SPEC S4, S8): the bodies over two duels, for `/dev/duos`'s four-seat hotseat. They
+// mirror the 1v1 ones (the same envelope, a setup refused first, an illegal action in `error`), but Duos
+// states are not cached: only the dev route plays them. Only the `duos` feature builds them, which
+// `scripts/build-wasm.sh` turns on for the dev server only (`JACKIOH_WASM_DUOS=1`, apps/web's `predev`),
+// keeping them out of the module a player loads and the e2e client; without it each body answers the
+// reason, as `preview_sets` does without `preview`, so the modules export the same functions either way.
 
 #[cfg(feature = "duos")]
 mod duos_bodies {
@@ -627,7 +687,9 @@ mod duos_bodies {
         }
     }
 
-    /// Setup check for four seats, validating handicaps then deck sizes.
+    /// The setup check for the four seats, in its order (every handicap, then every deck against its
+    /// seat's size): each duel is a `create_game`, which panics on a bad setup, so a refusal is named
+    /// here, with the engine's own message and the seat's name as its label.
     fn check_duos_setup(options: &DuosCreateOptions) -> Result<(), String> {
         let catalog: &CardDefs = match &options.catalog {
             Some(catalog) => catalog,

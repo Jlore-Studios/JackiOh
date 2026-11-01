@@ -53,8 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #37 Gravedigger (SPEC §8.2, BUILD M4-T4): "Random GY card to hand at start of turn before the
-// draw; empty GY nothing; radiant Discover at −1."
+// #37 Gravedigger (SPEC §8.2, BUILD M4-T4).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

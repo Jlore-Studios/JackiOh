@@ -8,6 +8,9 @@
 //! Engine: `scan_for_anomaly` (#1855's Anomaly scan, R1855003), one roll of 100 against its
 //! controller's chances, 5 for a Radiant Anomaly Found! and 20 more for a plain one, each earlier miss
 //! of that player's adding 1 and 4, the count per player and shared by both Probes (ST-S20-1); a find
+//! is added to the hand, a full hand burning it (§2.4), and keeps the count; a miss is silent. The
+//! roll is luck-based: the card's Lucky (Lucky 1, Lucky 3 on the Radiant face (ST8: the designer's "Luck 3" is Lucky 3)) and its controller's Luck roll again and keep
+//! the best, Radiant over plain over a miss (R1438, R987). Declares no numbers: the chances and their
 //! steps are the engine's (`ANOMALY_*`, R1748003).
 
 use jackioh_engine::prelude::*;
@@ -32,7 +35,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #167 Scanning Probe Mk2 — SPEC §8.10 row S 167, BUILD M12 row S 167: "Lucky 1: two rolls, the best kept (Radiant over plain over a miss), the bands those of its controller's misses so far, shared with S 166; radiant Lucky 3, four rolls" (R1855003).
+// S #167 Scanning Probe Mk2 — SPEC §8.10 row S 167, BUILD M12 row S 167. (R1855003).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::anomaly_chances;

@@ -436,11 +436,7 @@ pub fn query_cost(def: &CardDef) -> i32 {
 
 /// §5.1's `catalog.query({type, cost, costRange, tags, notTags, rarity, set, excludeDefId})`, plus the
 /// identity fields a card needs to name a pool by hand. Every field is a narrowing filter, and `{}` is
-/// every non-token card of every set (R380).
-///
-/// (TS `CatalogQuery & { defId?, token? }`: the wire query's fields written out beside the two of its
-/// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`; R1221's
-/// `tribute` came after the port, on this side only.)
+/// every non-token card of every set (R380). A card writes one as `json_as(json!({ … }))`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]

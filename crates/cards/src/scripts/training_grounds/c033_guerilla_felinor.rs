@@ -24,10 +24,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #33 Guerilla Felinor — SPEC §8.11 row 33, BUILD M13 row TG 33: "7 hits of 1, each on a random enemy
-// Unit, re-drawn per hit; a Unit killed by an earlier hit is never drawn again; the enemy hero is never
-// hit; no enemy Unit: nothing, and no random number drawn (R129); a Divine Shield eats one hit. radiant 14
-// hits; Pierce on the Unit and on the Cry's hits (Armor ignored)".
+// TG #33 Guerilla Felinor — SPEC §8.11 row 33, BUILD M13 row TG 33 (R129).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

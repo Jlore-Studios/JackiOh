@@ -4,7 +4,7 @@
 //!
 //! Every board here is a `scenario()` with the AI as p1 on turn 9. The AI ends its turn through the
 //! reducer, which hands p2 its turn 10; `simulateReply` then plays p2's reply.
-//! Tests opponent response using visible Activates (#1036).
+//! #1036's tests also show the opponent using the Activates it can see and never a face-down one.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -167,7 +167,9 @@ mod simulate_reply {
     /// #1796: kills a vanilla 4/4 rather than a Reborn 5/5, which comes straight back
     #[test]
     fn kills_a_vanilla_4_4_rather_than_a_reborn_5_5_that_comes_straight_back() {
+        // Professor Curvature's Radiant 6/6 kills either and survives. Mommy Barker's Radiant 4/4
         // Reborn, buffed to 5/5, comes back at its printed 4/4 on 1 health (§4.5 step 4), so its kill
+        // removes less than Mr. Vanilla's does, and Mr. Vanilla's beats 6 to the face.
         let mut state = handed_over(json!({
             "p1": { "field": [{ "def": BARKER, "radiant": true }, "core-008"] },
             "p2": { "field": [{ "def": "core-077", "radiant": true }] },
@@ -230,6 +232,7 @@ mod simulate_reply {
         assert!(!hidden.contains(&menace));
 
         // Flood bounces Midrange Menace. p1 has nothing left to do, so R82 ends its turn on the spot and
+        // p2 is into its turn 10, having drawn.
         let flood = s.hand(AI).first().map(|card| card.id.clone()).unwrap_or_default();
         let ended = act(
             s.state(),
@@ -688,6 +691,7 @@ mod open_lethal_1634 {
     use super::*;
 
     /// B41, #1634: two attackers whose hits only together reach the seat's hero take the face, not a
+    /// kill worth more than one hit.
     #[test]
     fn b41_takes_a_lethal_that_needs_both_attacks_over_a_kill_worth_more_than_one_hit() {
         let state = handed_over(json!({
@@ -727,6 +731,7 @@ mod open_lethal_1634 {
 
     /// #1634: at 8 health with Mr. Vanilla against two 4-mana 7/7s, lethal only together, the AI puts
     /// Mr. Vanilla in Defense Position, whose Taunt takes one swing, and survives the swing back. One
+    /// hit at a time, the reply sees a kill and a 7, and the AI swings at the face and dies.
     #[test]
     fn decide_blocks_one_of_two_attackers_that_are_lethal_only_together() {
         let run = run_puzzle(
@@ -769,6 +774,7 @@ mod defense_switch_1696 {
 
     /// #1696: Mr. Vanilla's one attack is into the seat's Defense-Position wall, worth nothing, and the
     /// seat's 7/7 in Attack Position would finish p2 at 7. Defense Position's Taunt takes that swing, so
+    /// p2 switches Mr. Vanilla to Defense and ends its turn.
     #[test]
     fn switches_a_unit_with_no_attack_worth_making_to_defense_when_its_evaluation_prefers_it() {
         let state = handed_over(json!({
@@ -790,6 +796,7 @@ mod defense_switch_1696 {
     }
 
     /// #1696: the seat's only unit is a Defense-Position wall, so there is no swing to stop and Defense
+    /// Position would only cost Mr. Vanilla half its attack: the trial switch is dropped.
     #[test]
     fn keeps_a_unit_with_no_attack_worth_making_in_attack_when_its_evaluation_prefers_that() {
         let state = handed_over(json!({
@@ -810,6 +817,7 @@ mod defense_switch_1696 {
     }
 
     /// #1696, R49: Deft Duelist hits the open face and, its switch still unspent, goes to Defense
+    /// Position, where its Taunt takes the swing of the seat's 7/7 that would finish p2 at 7.
     #[test]
     fn a_deft_unit_that_attacked_switches_to_defense_with_the_switch_it_has_left() {
         let state = handed_over(json!({

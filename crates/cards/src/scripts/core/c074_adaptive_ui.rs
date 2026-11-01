@@ -62,8 +62,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #74 Adaptive UI — SPEC §8.3, BUILD M4-T4: "X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token;
-// radiant 4 / 6 / 4 / 6-6; X=0 refused (R348)".
+// #74 Adaptive UI — SPEC §8.3, BUILD M4-T4 (R348).
 // Each hero starts below HERO_HEALTH (`health: 20`) so the heal shows as a number.
 #[cfg(test)]
 mod tests {

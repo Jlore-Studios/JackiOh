@@ -189,10 +189,7 @@ pub fn script_v0_3_7b() -> CardScripts {
     scripts_with(PLAIN_STEAL)
 }
 
-// #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Allure (R1045000): the target carries the pink `allure`
-// mark and is stolen at your next start of turn even if K-Pop Fanatic died (R76), or destroyed with no
-// open zone in its row, an Indestructible one staying; fizzles if the target left; radiant Divine
-// Shield".
+// #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4 (R1045000, R76).
 //
 // Every case crosses a turn boundary, so both sides keep a card in hand, a unit and library cards: R82
 // auto-ends a turn with nothing left and an empty library adds fatigue. Two `end_turn()`s return to p1's

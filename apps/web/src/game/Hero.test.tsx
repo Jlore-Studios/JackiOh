@@ -4,6 +4,9 @@
 // R847: a side whose Temporal Rift turn is granted wears "Rift turn used", on either seat. The engine
 // half — the flag set when a Rift grants a turn, public on the view — is proved in
 // crates/engine/tests/rules/extra_turns.rs.
+//
+// R1639000: a Heroic Power used this turn wears "Used", on either seat. R1840005: a seat's Credits are
+// a badge by the hero from their first gain, a count of 0 included.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

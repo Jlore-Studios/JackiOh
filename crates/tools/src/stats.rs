@@ -1,13 +1,8 @@
 //! `cargo jackioh stats [--games N] [--from N] [--patch v] [--series name] [--force id] [--out file]`
-//! (SPEC §9.11, R378; SURFACE §12): an internal AI development run of the build in this checkout. Port of
-//! `packages/ai/scripts/stats.ts` (`pnpm ai:stats`).
-//!
-//! Plays AI-against-AI All Random games (`devGameRecord`, `crates/ai/src/dev_run.rs`), writes each
-//! finished one as a game record, one JSON line per game, and prints the run's card win rates. The
-//! records are tagged `source: "dev"` and filed under the patch the run tests, so once they are
-//! loaded with `jackioh-server stats-import <file>`, `stats-cards --source=dev --patch=<version>`
-//! reads them, to compare with what `stats-cards --patch=<version>` reads of that patch's live games,
-//! and no live figure ever counts them unless asked.
+//! (SPEC §9.11, R378; SURFACE §12): an internal AI development run of the build in this checkout. It
+//! plays AI-against-AI All Random games (`crates/ai/src/dev_run.rs`), writes each as a game record, one
+//! JSON line, and prints the run's card win rates. The records are tagged `source: "dev"` under the
+//! patch the run tests, so no live figure ever counts them unless asked (`stats-cards --source=dev`).
 //!
 //! ```text
 //! cargo jackioh stats                               AI_DEV_RUN.games games of the "dev" series,
@@ -24,36 +19,18 @@
 //!                                                   compared on the seat that holds the card (R1284000)
 //! ```
 //!
-//! A game takes seconds at the browser's budget, so a full run takes a while; progress goes to
-//! stderr. `--out` is resolved against the directory the command was started in, and the file is
-//! written a line per game as the run goes, so a run that is stopped keeps the games it finished.
+//! Progress goes to stderr. Games play on rayon's pool in chunks of one game per thread, each chunk's
+//! records written in game order and flushed, so `--out` (resolved against the starting directory) is
+//! byte-identical to a serial run's file and a stopped run keeps every whole chunk.
 //!
-//! The games play on rayon's pool in chunks of one game per thread (RAYON_NUM_THREADS sets the
-//! width). Each chunk's records are written in game order and flushed before the next chunk starts,
-//! so --out is byte-identical to a serial run's file and a stopped run keeps every whole chunk.
-//!
-//! `cargo jackioh stats report <file>…` reads record files instead (what `--out` writes, what
-//! `jackioh-server stats-export` writes of the live games, what the training lanes keep) and prints
-//! R377's card win rates over them with no database, with `stats-cards`' flags: the figures a
-//! notebook computes over the same files (`analysis/`) are checked against these.
-//!
-//! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
-//! per patch, mode and source: how often the first seat won of the decided games (with its 95% Wilson
-//! interval; unknown when every game was drawn, R2567000), how the games ended, how long they lasted,
-//! and what R1256000's counts say of fatigue, Traps, position switches and Radiant upgrades. A record
-//! written before those counts is unknown for them, not zero. The training lanes keep these figures
-//! beside the card figures (`training/README.md`).
-//!
-//! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
-//! `stats report`, never for `stats-import` (R1284000).
-//!
-//! `cargo jackioh stats fit-dealt <file>…` refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena record
-//! files and prints them to paste (`dealt_fit.rs`).
-//!
-//! `cargo jackioh stats from-selfplay <log>… --out <file>` files `selfplay` logs, the learn lane's
-//! exports, as development records instead (`selfplay_records.rs`, R1676000).
-//!
-//! Tooling, so it may read files, the clock and the console; `crates/ai` stays pure.
+//! `stats report <file>…` prints R377's card win rates over record files with no database, with
+//! `stats-cards`' flags: the figures the `analysis/` notebooks compute are checked against these.
+//! `--games` prints the game figures per patch, mode and source instead: the first seat's wins of the
+//! decided games with a 95% Wilson interval (unknown when every game was drawn, R2567000), endings,
+//! lengths and R1256000's counts, unknown (not zero) in a record older than them. A forced run files
+//! under `dev-force-<id>`, for `compare` and `report`, never `stats-import` (R1284000). `fit-dealt`
+//! refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`); `from-selfplay` files
+//! `selfplay` logs as development records (`selfplay_records.rs`, R1676000).
 
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -125,9 +102,8 @@ fn from_count(raw: &str) -> Result<i32, String> {
     count("from", raw)
 }
 
-/// `cargo jackioh stats …` (TS `DevRunArgs`, read by clap where TS's `parseDevRunArgs` read
-/// `--flag=value` by hand; clap takes `--games 50` and `--games=50` alike, and refuses an option it
-/// does not know with exit 2).
+/// `cargo jackioh stats …`: clap takes `--games 50` and `--games=50` alike, and refuses an option it
+/// does not know with exit 2.
 #[derive(clap::Args, Debug, Clone, PartialEq)]
 #[command(args_conflicts_with_subcommands = true)]
 pub struct Args {

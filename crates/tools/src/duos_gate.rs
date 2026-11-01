@@ -1,7 +1,12 @@
-//! `cargo jackioh gate --duos` (#936, B32): runs Duos AI benchmark matchups against win floors.
+//! `cargo jackioh gate --duos [--games N]`: the Duos gate (#936 B32, S5). `jackioh_ai::duos` plays and
+//! measures the games; this file runs them, prints the report and fails under the floor.
 //!
-//! Evaluates AI against random policy (§10.7) and greedy baselines (#1760).
-//! Checks win rate floors and verifies zero action refusals, fallbacks, or search panics (#1429).
+//! Two matchups (#1760), one per `DuosOpponent`: the Easy AI team against §10.7's random policy and
+//! against a team on the 1v1 greedy baseline, `DUOS_GATE_GAMES_SMOKE` games each without `--games`. A
+//! game is a pure function of its opponent and number, so the games run in parallel. A matchup passes
+//! when the AI team wins at least `DuosOpponent::win_floor` of the games (a draw counts for nothing)
+//! with no refused action, AI fallback or caught search panic (#1429); else the gate exits 1, one
+//! message per failed matchup.
 
 use anyhow::{Result, anyhow};
 use rayon::prelude::*;

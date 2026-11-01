@@ -96,11 +96,9 @@ pub fn script() -> CardScripts {
 // #93 Combo-Index and #93.1 Combo-Fodder (SPEC §8 rows 93 / 93.1, §7, §2.2, §10.1, §10.4;
 // R4, R11, R27, R50, R60, R62, R63, R81, R85, R86).
 //
-// BUILD M4-T4 row 93:   "Grade 1 needs 1 play, grade 2 needs 2; cascade E→new grade in order;
-//                        E adds a copy (R27); S terminal (R27); radiant adds Combo-Fodder each
-//                        start of turn".
-// BUILD M4-T4 row 93.1: "2 damage with Lifesteal; no radiant change" (R276 gave it a Radiant face,
-//                        4 damage, R275). One file: #93.1 only exists through radiant #93.
+// BUILD M4-T4 row 93 (R27).
+// BUILD M4-T4 row 93.1. (R276 gave it a Radiant face, 4 damage, R275). One file: #93.1 only exists through
+// radiant #93.
 //
 // The grade is STATE, `counters.grade` as 1..6 for E..S (§10.1); the S step is "run E–A again".
 // R195's glow answers are checked in condition-active.test.ts with the other hooked cards (README §5).

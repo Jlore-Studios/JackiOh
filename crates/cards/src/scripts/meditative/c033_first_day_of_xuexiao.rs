@@ -37,7 +37,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #33 First Day of 学校 — SPEC §8.8 row 33, BUILD M10 row M 33, R65.
+// M #33 First Day of 学校 — SPEC §8.8 row 33, BUILD M10 row M 33: two random non-token CN cards of any
+// set (R380), an X card's cost untouched (R65).
 #[cfg(test)]
 mod tests {
     use super::*;

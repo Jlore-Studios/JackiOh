@@ -113,6 +113,8 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
     }
 
     /// Fuzz seed 7758 of the handicapped wave (#874): My Pawn canceled an attack (R44), the random rest
+    /// of the turn cast CN Peptides on the attacker, whose Buffs gave it Windfury, and it attacked again,
+    /// all inside the one outer action. A unit that gains Windfury after one attack may attack once more
     /// (R636), and a Buff's keyword row is a gain like a grant.
     #[test]
     fn r636_r386_two_declarations_after_a_mid_action_buff_into_windfury_are_one_legal_windfury_turn() {
@@ -862,6 +864,7 @@ mod r1062_fiery_waraxe_reanimated {
     }
 
     /// Fuzz seed 5644 (#1216): a face-down Field Trap fused with Fiery Waraxe, set on an earlier turn,
+    /// fires on its controller's turn and animates as its firing's last step, face-up for the first
     /// time: an entry (R383), as the engine's `summonedTurn` says, not the start-of-turn animation
     /// R1062 makes none.
     #[test]
@@ -945,6 +948,7 @@ mod r1126_the_canes_pareto_animation {
 
 /// R97, R419, R11: Core #85's trap fuses a played Unit onto p2's Rush Token, which keeps the token's
 /// id under a fused (non-token) definition; C+ #35 Rollback then puts the token back as it was, a
+/// token again; it dies attacking, a token ceasing to exist in the open. I6 judges a card in no pile
 /// by what it left as, so the events that name it after it went read to both seats, as R97 says.
 mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
     use super::*;
@@ -1247,7 +1251,9 @@ mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
 }
 
 /// R127, R436: a Cry run out of a graveyard runs with no card (`self` null), so the `chaosRolled` a
+/// Call to Chaos in it sends names its definition beside an empty `instanceId`. The empty id is no
 /// card, so I6 reads nothing hidden in it. Fuzz seed 7232 of the handicapped wave (#1645): a Radiant
+/// Rewind ran the Cry of a Meditative Call to Chaos fused into a Unit in p1's graveyard; every edition
 /// announces its roll the same way (`announce_chaos`), so Core #95 fused into Mr Vanilla stands in.
 mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
     use super::*;
@@ -1289,7 +1295,9 @@ mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
 }
 
 /// R1122, R2285002: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
+/// combat is fought there, so a Classic Golem's "when this attacks" transforms the Unit it was re-aimed
 /// at, and a Golem that kills the Unit that took its place killed its defender (R42) and may attack
+/// again: I4 reads it as readied through the redirect and the transform both. Fuzz seed 9123 of the
 /// handicapped wave (#1645) was the redirect; R424's self-transform was its first shape.
 mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
     use super::*;
@@ -1423,6 +1431,7 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
 
 /// R1829000 (issue #1829): a card a Stack pile uncovers has entered the field on that turn, though no
 /// event says so (R212). The monitor reads the uncovering off the piles of the states it is shown, a
+/// card dormant in the last one that acts now, and takes `summonedTurn`'s word only where an uncovering
 /// inside the one action was possible: a fusion's kept card keeps its turn (R77, R1086), and a card in
 mod r1829000_a_card_uncovered_beneath_a_stack {
     use super::*;
@@ -1574,6 +1583,9 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
 }
 
 /// R1869002, B5 E35: Stinkyscape #94 Tmack Trav attacks again after each Unit its attack destroys
+/// (`mayAttackAgain`, no transform), so I2 counts a kill credit beside its one attack, and I1 and I4 read
+/// the sickness the kill lifted as readied. Only an attacker whose text answers its attacks
+/// (`afterAttack`) earns one, and the state the action leaves takes it back when the attacker's attack
 /// is still spent. Fuzz seeds 15, 79, 85, 99 and 123 of the S16 build (#1869).
 mod r1869002_i2_a_kill_credit {
     use super::*;
@@ -1679,6 +1691,7 @@ mod r1869002_i2_a_kill_credit {
     }
 
     /// R636: a Fuse brings its ingredients' text, and with it a Windfury an aura of theirs gives, which no
+    /// `keywordGranted` reports; the fused unit has it from the fuse on, inside the one action that fused
     /// it and attacked twice (a handicapped seat's AI turn: M #65 Keymaster Keenus equipped onto S #113,
     #[test]
     fn r636_a_windfury_a_fuse_brings_allows_two_attacks_in_the_action_that_fused_it() {
@@ -1703,6 +1716,8 @@ mod r1869002_i2_a_kill_credit {
     }
 
     /// R636: a fusion whose text draws its keywords as it fuses (M #65 Keymaster Keenus' Aura) and that
+    /// leaves the field later in the same action took them away with its memory; two attacks it
+    /// declared after the fuse are one legal Windfury turn (Duos fuzz seed 679 of the Stinkyscape
     /// release: equipped onto C+ #26, two kills, then exiled).
     #[test]
     fn r636_a_keyword_drawing_fusion_gone_by_the_action_s_end_may_have_attacked_twice() {

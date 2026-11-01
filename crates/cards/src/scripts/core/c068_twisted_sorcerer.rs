@@ -49,9 +49,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #68 Twisted Sorcerer — SPEC §8.3, BUILD M4-T4: "4 damage, 8 when hero < 10 at resolution;
-// radiant 8 / 16". R195's glow: both answers of the hook are in `tests/cross/condition_active.rs`
-// (README §5).
+// #68 Twisted Sorcerer — SPEC §8.3, BUILD M4-T4. R195's glow: both answers of the hook are in
+// `tests/cross/condition_active.rs` (README §5).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

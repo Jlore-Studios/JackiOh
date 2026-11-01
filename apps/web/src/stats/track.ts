@@ -101,11 +101,9 @@ function seatOf(views: readonly (PlayerView | null)[], instanceId: string | null
 
 /**
  * R2648000: a death counts (`destroyed` for the viewer's card, `defeated` for the opponent's) only when the
- * seat across from its owner caused it: its `killerId` names a card on that side (in the view before the
- * batch, else this one), or the last `cardPlayed`, `activated`, `trapFired` or `attackDeclared` before it in
- * the batch was that seat's (a destroy Spell names no killer, R89). Never after a `crumbled` of the same
- * card (Brittle, R638), nor when the owner's side acted last with no killer of the other's (a Tribute, a
- * Sacrifice, its own sweeper), nor with no actor and no killer.
+ * seat across from its owner caused it: its `killerId` names a card on that side, or that seat acted last
+ * before it in the batch (a destroy Spell names no killer, R89). Never after a `crumbled` of the same card
+ * (Brittle, R638), nor when the owner's side acted last with no killer of the other's (a Tribute).
  */
 export function countDeaths(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
   const views = [before, view];
@@ -191,11 +189,9 @@ export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEv
 }
 
 /**
- * R1743000: `healed` names no source, so a heal counts toward the viewer's card whose `cardPlayed`,
- * `activated` or `trapFired` came last before it in the batch. With none, or one of the opponent's
- * (or a hidden card's), it counts nothing. R2648000: the viewer's attacker (`attackDeclared`), or the
- * viewer's card that dealt the damage (`damage`), becomes the source, so a Lifesteal hit's heal is its
- * card's; any other attack or damage clears it.
+ * R1743000: `healed` names no source, so a heal counts toward the viewer's card that acted last before
+ * it in the batch, and toward nothing after the opponent's or a hidden card. R2648000: the viewer's
+ * attacker, or card that dealt the damage, becomes the source, so a Lifesteal hit's heal is its card's.
  */
 export function countHealing(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
   let next = log;

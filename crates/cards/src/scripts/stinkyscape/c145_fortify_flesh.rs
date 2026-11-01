@@ -3,6 +3,8 @@
 //!   Radiant: "Lucky 1 / Your hero gains a random {least} to {most} Armor." — 3 to 7.
 //!
 //! Engine: one luck-based roll from the match rng, uniform from the declared least to the declared
+//! most, both ends included (a Buff that lifts the low end past the high one rolls between the
+//! two), then `gain_hero_armor`: the hero's Armor, §4.4 step 2's reduction of every hit kept for
 //! the rest of the game, stacking with any Armor already there (C+ #46's, R124). Lucky is the
 //! card's Lucky now plus its controller's Luck (C+ #25 Soul Shot's shape): the Radiant face prints
 //! Lucky 1, so it rolls once more and keeps the higher (§6.1 Lucky X, R1438, R987).

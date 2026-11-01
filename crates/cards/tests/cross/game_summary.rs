@@ -7,6 +7,7 @@ use jackioh_engine::catalog::deckable;
 use jackioh_engine::testkit::*;
 
 /// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
+/// the bigger pool moved what the forty games held, and none of them replaced a play any more; sixty
 /// games held every kind of play the test counts. Re-pinned again for #2250 (Resources in the hand):
 const GAMES: i32 = 100;
 const MAX_ACTIONS: usize = 3000;
@@ -72,6 +73,7 @@ fn fate_instance_id(event: &GameEvent) -> Option<&str> {
 
 /// an `addedToHand` names it (it reached the hand), a `burned` does (R4), or it was cast on its draw
 /// (§2.4: its `cardPlayed`, or the `countered` or `transformed` that took its place, R448, R449). A
+/// cast's choices are asked before its announce, so a draw a prompt holds waits in `waiting`. A
 /// Created card reaching the hand is kept by no seat (R2089000).
 fn draws_kept(
     events: &[GameEvent],
@@ -311,8 +313,10 @@ mod summarize_game_over_real_cards_s9_11 {
                                     })
                             {
                                 // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
+                                // it from the hand it stood in as the step began, counted as a play
                                 // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
                                 // Re-pinned for the Training Grounds release (#2204): summary-cards-45's
+                                // p2 draws its Dogpile in the very step that casts it, so a card the step
                                 // added to the hand counts the same way. Re-pinned for R2368000's
                                 plays[*caster].push(Play {
                                     id: card.id.clone(),
@@ -445,6 +449,7 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): a card turn 1 added to a hand
+                        // with no draw, and that the hand still holds, was in no opening hand either: the
                         // bigger pool deals summary-cards-36's p1 M #37 CN in a Bottle as turn 1's draw,
                         // which, cast on its draw (§2.4), adds a random card.
                         for event in &events[from..] {

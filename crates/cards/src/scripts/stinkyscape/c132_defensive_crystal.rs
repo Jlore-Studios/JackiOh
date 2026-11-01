@@ -5,6 +5,7 @@
 //! Engine: Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned
 //! first if they have none (R1852000). Death (§6.2): `gain_hero_armor`, §6.1's Armor on the hero,
 //! kept for the rest of the game and taken off each hit on the hero, as Meditative #95's "your
+//! hero gains 6 Armor" (R124). The Radiant face runs the same script: its Armor is the declared
 //! `heroArmor` (R386).
 
 use jackioh_engine::prelude::*;

@@ -1,5 +1,11 @@
-//! Prompt kinds added in v0.2.0 (docs/classic-sets.md B5 E18, R465).
-//! Testkit override is per-thread (SURFACE §8).
+//! The prompt kinds patch v0.2.0 added (docs/classic-sets.md B5 E18): `number`, `answer`, `cell`,
+//! `reward`, a budgeted `pick`, and a mode prompt held by the player who did not play the card. The AI
+//! needs nothing new for them: `legalActions` lists every answer, the beam scores each one through
+//! `reduce`, and `simulate` answers a prompt the other seat holds mid-line. Each test opens a kind for
+//! the AI's seat with a test-only continuation (the pattern of answer_key.rs, which proves R465's
+//! key-stripping) and checks that `decide` answers within its budget, with reason "prompt".
+//!
+//! The testkit's override is per thread (SURFACE §8), so every test calls `install()` first.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -109,7 +115,8 @@ fn continuations() -> Script {
     }
 }
 
-/// the fixture card, installed through the testkit's override for this thread.
+/// The real catalog and scripts plus the fixture card, installed through the testkit's override for
+/// this thread.
 fn install() {
     jackioh_cards::register_all();
     let mut catalog = registered_catalog().clone();
@@ -347,6 +354,7 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
     }
 
     /// R1182000, R1182001, R1563008: a potion prompt (Jazakus's, Jazakus Prime's) is answered with one
+    /// of its Potion presets, a Spell in the frame the prompt names.
     #[test]
     fn r1182000_r1182001_r1563008_the_ai_answers_a_potion_prompt_with_one_of_its_potions() {
         install();
@@ -508,7 +516,10 @@ mod e18_a_whole_game_with_the_new_prompts {
     #[test]
     fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback()
      {
-        // (no prompt since R684: its returns are random), beside cheap Units: eight cards and a hero
+        // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a
+        // pick of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are
+        // random), beside cheap Units: eight cards and a hero of 20, so that the game is short and the
+        // prompt cards are drawn.
         install();
         let deck: Vec<String> = [
             PICKLE,
@@ -525,9 +536,12 @@ mod e18_a_whole_game_with_the_new_prompts {
         .collect();
         let handicap = Handicap {
             deck_size: deck.len() as i32,
+            // R1279000: the deferred questions open a turn after the cast, so these
+            // games need full-size heroes to live long enough to ask them.
             hero_health: Some(30),
             ..HUMAN_HANDICAP
         };
+        // Which prompts a game opens hangs on how the AI plays it, which a retrained network moves
         // (#466): further seeds are played until both kinds have opened, every game held to the same.
         let mut opened: Vec<String> = Vec::new();
         for game in 0..E18_GAMES {
@@ -683,6 +697,7 @@ mod auto_answers_the_answerers_best {
     }
 
     /// Pickle's questions wait for the opponent's turn (R1279000): simulating the play
+    /// schedules them and answers nothing mid-line, so every pile stays whole.
     #[test]
     fn simulate_schedules_pickle_s_deferred_questions_answering_nothing_mid_line() {
         let (state, play) = pickle_turn();
@@ -764,6 +779,7 @@ mod auto_answers_the_answerers_best {
     /// #1382: "owner-hurt" comes after AI_SEARCH.max_auto_answer_options other answers, and the
     /// answers a prompt tries are drawn from all of them, so some world tries it and takes it. Each
     /// prompt still costs exactly AI_SEARCH.max_auto_answer_options nodes, and the chooser never
+    /// takes the answer that hurts it.
     #[test]
     fn an_answer_listed_after_the_first_max_auto_answer_options_is_tried_in_some_world() {
         let options = past_the_cap();
@@ -782,6 +798,7 @@ mod auto_answers_the_answerers_best {
     }
 
     /// #1382: the same answers listed in another order are tried and taken alike: every rotation of
+    /// the list reaches the same state for the same nodes.
     #[test]
     fn the_answers_a_prompt_tries_do_not_depend_on_the_order_it_lists_them_in() {
         let options = past_the_cap();
@@ -820,6 +837,7 @@ mod auto_answers_the_answerers_best {
 
     /// #1382: the beam's look past the seat's own prompt (`own_prompt_score`, #1112) draws its
     /// answers the same way: "hurt-enemy", listed after AI_SEARCH.max_auto_answer_options rewards
+    /// that do nothing, raises the score in some world, and every rotation of the list scores alike.
     #[test]
     fn the_look_past_the_seats_own_prompt_draws_from_every_answer_in_any_order() {
         let tried = AI_SEARCH.max_auto_answer_options as usize;

@@ -525,6 +525,7 @@ mod r1224_r1225_credit_line {
     #[test]
     fn r1225_a_redacted_face_down_card_lapses_nothing_on_its_controllers_turn() {
         // Core #41 Sheepish, set face-down: the other seat's redaction (R185) leaves a placeholder
+        // with no definition, which has no text and so no credit line.
         let state = board(json!({ "active": "p1", "p1": { "backrow": ["core-041"] }, "p2": {} }));
         let seen = redact(&state, HUMAN);
         let placeholder = seen.players[AI].backrow[0]
@@ -884,6 +885,7 @@ mod banked_state_1086 {
             AI_EVAL.extra_turn_in_hand * AI_EVAL.extra_turn,
             9,
         );
+        // R185: the enemy's hand is unseen, so an extra-turn card there moves nothing.
         let theirs = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [EVENT_HORIZON] } }));
         let ours = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [FAREWELL] } }));
         assert_eq!(eval(&theirs, AI), eval(&ours, AI));
@@ -900,6 +902,7 @@ mod banked_state_1086 {
                 "p2": { "hand": [VANILLA] },
             }));
             if def.type_ == CardType::Trap {
+                // S #4.4 Last Word owes its turn as it reveals, on lethal damage; its cast sets it.
                 continue;
             }
             s.play(card, json!({}));
@@ -920,6 +923,7 @@ mod banked_state_1086 {
             3.0 * AI_EVAL.anomaly_miss,
             9,
         );
+        // A miss is silent: the enemy's count is no fact the seat has.
         let mut theirs = clone(&plain);
         theirs.players[HUMAN].anomaly_misses = Some(3);
         assert_eq!(eval(&theirs, AI), eval(&plain, AI));
@@ -978,6 +982,7 @@ mod banked_state_1086 {
             AI_EVAL.temporary_discount * (eval(&kept, AI) - eval(&empty, AI)),
             9,
         );
+        // R185: the enemy's hand is unseen, so its Temporary cards move nothing.
         let mut theirs = clone(&kept);
         theirs.players[HUMAN].hand[0]
             .granted_keywords
@@ -1462,6 +1467,7 @@ mod shown_cost_fatigue_windfury_1602 {
     fn an_unrevealed_card_is_priced_by_the_cost_it_shows_alone_and_a_revealed_one_by_its_face() {
         let sheepish = backed(SHEEPISH, 4);
         let pawn = backed(PAWN, 4);
+        // Unrevealed: two cards that show the same cost score alike, and so do the seat's own view
         // (a placeholder that keeps only the shown cost, R185, R351) and a world sampled from it (R762).
         assert_eq!(scored(&sheepish, &PRICED), scored(&pawn, &PRICED));
         let view = redact(&sheepish, AI);

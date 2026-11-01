@@ -9,9 +9,7 @@
 //! the seat's hand takes none. What the seat holds on the field by other means is left alone (all
 //! R2433000 said, which still holds). Absent, the field reaches no game.
 //!
-//! Fixtures: the vanilla catalog (`fx-1` up, every one a Core Common) and this file's `tc-` cards:
-//! Training Grounds Units of every rarity, a Training Grounds token printed Legendary and one printed
-//! Common, a Classic Unit, and Spells whose Cry Discovers, summons from the hand or bounces.
+//! Fixtures: the vanilla catalog (`fx-1` up, every one a Core Common) and this file's `tc-` cards.
 
 use jackioh_engine::effects::{
     add_to_hand, bounce, chosen_options, discover_from_catalog, summon_random_from_hand,

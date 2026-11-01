@@ -20,6 +20,8 @@
 // `TEMPORARY_LAST_COUNT` (R637, R2179001) is discarded at its owner's next end of turn: fuchsia.
 // R1295000: a stolen unit keeps its owner's look; a card in the resolving strip, which names no owner,
 // wears the defaults. R1655000: the viewer's own card wears its own card's picks over the account's.
+// R384, R510: each of a card's `activations` is an Activate control beside the face, its click kept off
+// the card. R2321000: a unit wears a pill per count the view's `tallies` give it (cards/Tallies.tsx).
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 

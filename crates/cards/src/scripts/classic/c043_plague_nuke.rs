@@ -97,6 +97,7 @@ pub fn script() -> CardScripts {
 // token, except a Reborn one already back and one exiled instead of dying (C #50); tokens are gone
 // (R11); the tuned number reads through `param()` (R386).
 // The preview's proofs (R280) are in `../preview.test.ts`. The C #50 cases use Voidwalker's real
+// script, whose Aura exiles what would go to a graveyard while it is on the field; a Voidwalker the
 // Nuke kills exiles none of them (R398, R463).
 #[cfg(test)]
 mod tests {

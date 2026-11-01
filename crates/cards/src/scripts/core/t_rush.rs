@@ -20,8 +20,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// T-rush Rush Token (SPEC §7; R11, R74; §3.2, §5.1, §10.4). BUILD M4-T4's token row: "Vanish on
-// leaving the field; … none in random pools".
+// T-rush Rush Token (SPEC §7; R11, R74; §3.2, §5.1, §10.4). BUILD M4-T4's token row.
 #[cfg(test)]
 mod tests {
     use super::*;

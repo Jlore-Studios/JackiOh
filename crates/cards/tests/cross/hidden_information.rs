@@ -717,6 +717,7 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
     use super::*;
 
     /// card that costs (2) or less (§8 #42, R831014), so the 7/7 is the card left; the Radiant face then
+    /// makes each remaining library card Radiant (a 100% roll). The two games differ only in whether
     /// that one library card, which neither player can read (§9.1), was Radiant already.
     fn eugenics_game(left_card_radiant: bool) -> Scenario {
         let library: Vec<Value> = (0..8)
@@ -753,6 +754,7 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
         assert_eq!(faces(&radiant), vec![true]);
 
         // "Each card left in your deck becomes Radiant" (§8 #42): the already-Radiant card is rolled
+        // like any other, and a success on a card nobody may read is cued whether or not its flag
         // changed (R177). A cue for the changed cards only lets both seats count the Radiant ones.
         indistinguishable(PlayerId::P2, &base, &radiant);
         indistinguishable(PlayerId::P1, &base, &radiant);
@@ -763,6 +765,7 @@ mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
     use super::*;
 
     /// plays out p1's turn (R44). p2's turn starts inside that playout and Masochism Mask asks p2 (§8 #65),
+    /// so the trap window stops with a prompt open. The games differ only in p2's face-down lane-2 card.
     /// p2 answers, then plays Lunar Eclipse, whose modifier both seats read with its id (R169).
     fn pawn_game(lane_two: &str) -> Scenario {
         let mut s = scenario(json!({
@@ -945,6 +948,8 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
         }
 
         // §9.1 hides library order from both players, so R97 blanks `shuffledIn.position` and R177 hides
+        // a library card's cost. The discount went out one event per card in library order: read openly
+        // once Gary did, its place among them would say how deep Gary lay. The event was made where nobody
         // could read it (§3), so it stays unread for good and both seats read the same batch in both games.
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert_eq!(place_of_recruited(&on_top, viewer), -1);
@@ -958,6 +963,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
     use super::*;
 
     // cards in that order before §2.1 shuffles. `scenario()` numbers in its own setup order, so this
+    // plays the engine's own path: `createGame` → `beginGame` → mulligans → turns. p2's deck is 23
     // cheap cards, #98 Heroic Power and one it never shows: #1 (sorts first) or #100 (sorts last).
     const P1_DECK: [&str; DECK_SIZE as usize] = [
         "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
@@ -1103,6 +1109,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         );
 
         // §9.1 asks that the id tell p1 nothing. Numbered in the store's sort order, the power's id was
+        // its rank (c50 when p2's hidden card sorts before it, c49 after). The seed that orders the
         // numbers is as hidden as the one that shuffles the library (§2.1), so whatever id p1 reads, the
         let seeds = seeds();
         for hidden in ["core-001", "core-100"] {
@@ -1303,6 +1310,7 @@ mod r177_where_a_random_make_radiant_over_hidden_zones_landed {
     use super::*;
 
     /// p1 plays #28 ("2 random cards among your library, hand and field become Radiant", R60). p1's
+    /// hand then holds one Hit Job, Radiant already or not, and the library three 4-mana 7/7s, none
     /// Radiant; p1 has nothing on the field. Neither the hand nor the library is p2's to read (§9.1).
     fn knockoff_game(hand_radiant: bool) -> Scenario {
         let mut s = scenario(json!({
@@ -1816,6 +1824,7 @@ mod r242_28s_pick_over_public_and_hidden_cards {
     use super::*;
 
     /// p1 plays #28 with one card left in hand and two in the library, all base-face in world A and all
+    /// Radiant in world B, and one public unit on the field. Neither the hand nor the library is p2's to
     /// read (§9.1).
     fn odds_game(seed: &str, hidden_radiant: bool) -> Scenario {
         let mut s = scenario(json!({

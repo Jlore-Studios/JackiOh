@@ -171,11 +171,10 @@ describe("R504 an empty hand keeps its place at every size", () => {
   }
 });
 
-// #2330: where the board has the room the four rows are one height and the lanes fill the field,
-// and a DEF card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. At every
-// size no field card, a turned DEF card included, leaves its zone. #2556: on a phone, upright or on
-// its side, a DEF card's footprint fills its unit zone's inside, its width or its height, whichever
-// runs out first, unless the card is already at full size.
+// #2330: where the board has the room the four rows are one height and a DEF card is drawn at full
+// size; on a phone the backrow keeps B29's 44 px floor, and no field card leaves its zone. #2556: on a
+// phone a DEF card's footprint fills its unit zone's width or height, whichever runs out first, unless
+// it is already at full size.
 describe("#2330 equal board rows, and DEF cards only as small as their zone needs", () => {
   /** The issue's sizes; `roomy` is the 761px-and-up layouts (a desktop, a tablet held upright). */
   const SIZES = [

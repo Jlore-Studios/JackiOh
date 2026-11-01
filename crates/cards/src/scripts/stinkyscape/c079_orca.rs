@@ -6,6 +6,7 @@
 //!
 //! Miner v1 to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420):
 //! the pick is a fresh copy fused straight into this (R1086, R77), its Activate with it (R1751000). The
+//! Radiant face asks twice, the second offer once the first pick is in and without it. Embiggened
 //! (R1175000), the offer is Radiant (R469), the Cry reading the play's stamp (R81); its (5) is past
 //! `MAX_MANA`, so it is played so only with mana an effect gave (R1857001). Starship Piece and Flying are
 //! catalog keywords the engine plays; it stays a piece, the kept card being one (R1852001).

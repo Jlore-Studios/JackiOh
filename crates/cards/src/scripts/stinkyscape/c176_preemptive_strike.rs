@@ -65,10 +65,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #176 Preemptive Strike — SPEC §8.10 row 176, BUILD M12 row S 176: "with a Dormant Starship, it
-// launches it free (no launch price spent, R1852006), then Discovers one of the four War Doctrines (three
-// offered) and casts it for its caster (R70), before the Starship's When launched (R1859006); with none,
-// nothing, no Discover; radiant: the Doctrine Radiant".
+// S #176 Preemptive Strike — SPEC §8.10 row 176, BUILD M12 row S 176 (R1852006, R70, R1859006).
 #[cfg(test)]
 mod tests {
     use super::{ID, WAR_DOCTRINES};

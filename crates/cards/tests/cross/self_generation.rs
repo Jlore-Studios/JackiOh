@@ -138,6 +138,8 @@ fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
 }
 
 /// face-down takes a fresh id, which the events that set it name through `formerId`, R227), and for
+/// each event whether a card the play cast was resolving when it came (after that card's
+/// `cardPlayed`, before its `cardResolved`), and whether one still is. What a cast card makes is that
 /// card's own generation, swept under its own id, not the caster's (R387): C+ #47 Jogg's Box never
 /// casts itself, but a C+ #27 Zephrys Zealotism it casts deals a perfect hand that may hold one.
 struct Attribution {

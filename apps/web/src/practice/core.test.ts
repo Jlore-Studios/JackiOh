@@ -584,10 +584,9 @@ function humanAnswersFirst(d: Driver, started: PracticeSnapshot): PracticeSnapsh
 }
 
 /**
- * The seed an R265 run plays. Turn 1 is p1's, and R82 ends it at once when p1 has nothing to play on it.
- * Seated p1, the human turns that off (`holdTurns`, R345), so the run plays `prefix` itself. Seated p2,
- * the AI holds turn 1 and keeps R82 on, so the run plays the first seed under `prefix` on which `begin`,
- * the run's own two answers, reaches turn 1 (#2569).
+ * The seed an R265 run plays. R82 ends turn 1 at once when p1 has nothing to play: seated p1, the human
+ * turns that off (`holdTurns`, R345), so the run plays `prefix`; seated p2, the AI keeps R82 on, so the
+ * run plays the first seed under `prefix` on which `begin` reaches turn 1 (#2569).
  */
 function r265Seed(prefix: string, human: PlayerId, begin: (d: Driver, started: PracticeSnapshot) => PracticeSnapshot): string {
   if (human === "p1") return prefix;

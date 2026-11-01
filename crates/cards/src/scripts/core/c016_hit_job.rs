@@ -37,8 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16. Must-pass: "Target destroyed; Indestructible
-// survives; radiant also kills same-side neighbours, never across" (R46, §3.1).
+// #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16. Must-pass. (R46, §3.1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

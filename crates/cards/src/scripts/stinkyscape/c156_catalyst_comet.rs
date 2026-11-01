@@ -5,6 +5,7 @@
 //! Engine: one pick from the match rng (R60) among the Catalyst cards of the sets that ship
 //! (`add_random_from_catalog` with the tag, non-token cards, R380: C+ #38, C+ #46, M #45, M #49,
 //! M #91 and M+ #16, S #147 once the set ships), a full hand burning it (§2.4). Then the Comet
+//! itself, once it has resolved, into its owner's deck at a random position instead of staying in
 //! the graveyard (`shuffle_card_into` on the hook's own card, C #30 Recycle's verb, R80, R316: a
 //! full deck leaves it in the graveyard), the moved instance keeping its Radiant flag (R78).
 

@@ -73,9 +73,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89): "In hand it gains the dying unit's current
-// attack and max health from either side, tokens excluded (R11); stats per R38; stops once on the
-// field; radiant double".
+// #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89) (R11, R38).
 #[cfg(test)]
 mod tests {
     use super::*;

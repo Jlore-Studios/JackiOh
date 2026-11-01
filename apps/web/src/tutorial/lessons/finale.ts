@@ -1,12 +1,9 @@
 // Lesson 5 data (SPEC §9.10, R291, R2205003, R2434001, R2533001); ../scripts/finale.ts is the coach. The
-// final exam, everything at once: the first lesson to deal Legendary and Mythic cards, all four of
-// Training Grounds' to the player (Seance, Tutorial Master, Call to Chaos (Training-Grounds Edition) and
-// Goetzmann Game Design), and the only one with no pool hold, so random cards may be any card of every
-// shipped set (TG #40 draws from all of them). The AI's deck is twelve Training Grounds cards of every
-// kind the lessons taught, an Aura and a Death among them, none Legendary or Mythic (R2533001). Deck order
-// fixes this seed's deal (`scripts/lesson-deal.ts finale`). Seed "-38" until #2521, whose cards change what
-// Goetzmann Game Design's random effects find, so the coach's line there took 12 turns; "-59" deals
-// Seance, Tutorial Master and Call to Chaos as early and wins within the lesson's 11.
+// final exam: the first lesson to deal Legendary and Mythic cards, all four of Training Grounds' to the
+// player, and the only one with no pool hold, so random cards may be any card of every shipped set (TG
+// #40 draws from all of them). The AI's deck holds none Legendary or Mythic (R2533001). Deck order
+// fixes this seed's deal (`scripts/lesson-deal.ts finale`). Since #2521, whose cards change what
+// Goetzmann Game Design's random effects find, "-59" is the seed that wins within the lesson's 11 turns.
 
 import type { TutorialLesson } from "../lessons.ts";
 

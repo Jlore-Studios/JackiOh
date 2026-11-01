@@ -1,12 +1,19 @@
-//! The AI's one entry point (SPEC §9.9, SURFACE §9, SURFACE §4.4.9):
+//! The AI's one entry point (SPEC §9.9, SURFACE §9). The order below is the contract:
 //!
-//! 1. ai_to_act / redact — reads of true state (R185).
-//! 2. Declines unanswered draw offers (R188).
-//! 3. Mulligan keeps cheap cards; KY's Competition worked answers (R1184002).
-//! 4. Plays lone candidate with no search.
-//! 5. Exact lethal solver verified across determinizations (R1965000, R1452).
-//! 6. Beam search on world 0 scored with opponent replies; top actions re-scored across worlds.
-//! 7. Fallback when nothing could be scored (#1575, #1429).
+//! 1. ai_to_act / redact — the only two reads of the true state (R185).
+//! 2. an unanswered draw offer is declined at once (R188).
+//! 3. the mulligan keeps the cheap cards; a question of a sequence is answered with no search (R1184002).
+//! 4. a single candidate is played with no search, listed on a throwaway determinization: the seat's
+//!    own legal actions never depend on the hidden cards, so `options.rng` is untouched.
+//! 5. the exact lethal solver, verified on every determinization and trimmed to the actions it needs
+//!    (R1965000), unless a style passes over it (R1452).
+//! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best
+//!    first actions re-scored on the other determinizations; the best mean wins.
+//! 7. a fallback when nothing could be scored.
+//!
+//! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
+//! re-plans after every action. `decide` never panics out: a failure becomes a fallback counted in
+//! simErrors, a panic (an engine invariant, SURFACE §4.4.9) in simPanics too (#1429).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -67,8 +74,13 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
         .unwrap_or(ActionBody::EndTurn)
 }
 
-/// Step 3 (R1184002): answers sequence prompts (KY's Competition #20) via `worked_answer` without reading keys (R465, R79).
-/// Simulates player accuracy slips (`AI_KY_COMPETITION_ACCURACY`, R1563005). `None` if unworked.
+/// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
+/// Competition), the option its statement works out to (`worked_answer`) read off the redacted prompt,
+/// so the key is never read (R465); a search would spend a decision's budget on a guess, past the turn
+/// clock (R79). It never stops: a miss ends the sequence with the streak a Stop keeps. R1563005: it
+/// answers right `AI_KY_COMPETITION_ACCURACY` of the time (`AI_KY_COMPETITION_RADIANT_ACCURACY` on the
+/// Radiant face), else a wrong answer, both drawn from its own stream. `None` for any other prompt, or a
+/// statement it cannot work out, which the search then answers.
 fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
@@ -376,16 +388,17 @@ fn plan(
         return Plan::Immediate(only.clone(), DecisionReason::Forced);
     }
 
-    // Scale budget down for fat states (AI_SEARCH.fat_*, R186 sweep flag) into dedicated sub-counter.
+    // A decision's nodes cost more the wider the state is, so the searched part of the budget shrinks
+    // where the state is fat (AI_SEARCH.fat_*, R186). The whole searched section (the lethal solver's
+    // slice, the beam's, the replies') is drawn from one sub-counter of that size, so the replies
+    // cannot spend what the beam was denied.
     let budget = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000, R2564000, R2565000, R2603000: every Death the seat can read, every turn hook of
-    // the cards it can read on either board and of its hand's Field Spells and Units, and each Activate of
-    // a Unit on either field or of a face-up backrow card on either side, priced once on the probe world
-    // for the whole decision, their probes drawn from the searched section's nodes; all are priced before
-    // any is passed, so no probe reads a price, and every step below is passed them (`Prices`).
+    // R2424000, R2477000, R2564000, R2565000, R2603000: every Death, turn hook and Activate the seat can
+    // read, priced once on the probe world for the whole decision from the searched section's nodes; all
+    // are priced before any is passed, so no probe reads a price, and every step below is passed them.
     let deaths = death_prices(&probe, seat, counter);
     let turn_hooks = turn_hook_prices(&probe, seat, counter);
     let activations = activation_prices(&probe, seat, counter);
@@ -410,7 +423,10 @@ fn plan(
     }
     scratch.determinizations = k;
 
-    // 5. Lethal solver verified across determinizations (R1452 style override, trimmed via R1965000).
+    // 5. Lethal, verified on every determinization, unless the style passes over it (R1452): then the
+    // search plays on kept off every line that wins this turn. Played, it is first trimmed to the
+    // actions it needs (R1965000), else a lethal behind a free step that changes nothing would play that
+    // step at every decision; a trim the counter stops short of a first action leaves no lethal to play.
     let mut passed_over: Option<ActionBody> = None;
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes, &prices)
         && let Some(first_lethal) = lethal.first().cloned()
@@ -581,10 +597,16 @@ fn plan(
     }
 }
 
-/// The action body a decision submits, verified against the true state with runner-up fallback (#1575, R403).
+/// The body a decision submits: the chosen one when the reducer accepts it on the true state, else the
+/// first action of the first runner-up it accepts, best mean first (#1575), else the match's first
+/// replacement (`replacements_for`). A chosen action legal on every determinization can refuse on the
+/// true state (a face-down aura trap taxes the unseen hand, R403), and a submitted refusal is recorded
+/// against the AI and replaced anyway, so the replacement is better submitted directly.
 fn submitted(state: &GameState, seat: PlayerId, decision: Decision, runners_up: &[RunnerUp]) -> Decision {
     if holds_placeholder(state) {
-        // Redacted states with placeholders cannot verify true execution; match handles replacements.
+        // The worker and arena hand `decide` the redacted state, whose `ai:hidden` placeholders the
+        // reducer cannot resolve: only a true state proves a refusal, so the match's own replacement
+        // stands in for one.
         return decision;
     }
     let trial = |action: &ActionBody| {

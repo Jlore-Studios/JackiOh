@@ -71,8 +71,7 @@ pub fn script() -> CardScripts {
 
 // #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362).
 //
-// BUILD M4-T4 row 92: "Plays onto an occupied zone; card beneath is dormant; stats = printed + all
-// your Felinors including dormant ones (R13, R39); radiant printed + twice that sum (R362)".
+// BUILD M4-T4 row 92 (R13, R39, R362).
 // The two faces are checked in separate blocks below (CLAUDE.md rule 6).
 //
 // R39's floor is per sum, so "no Felinors at all" is its reachable boundary: a NEGATIVE total is

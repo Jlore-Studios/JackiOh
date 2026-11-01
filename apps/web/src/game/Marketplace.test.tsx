@@ -1,8 +1,7 @@
 // R1853003, R2250002: the Marketplace's shop (Marketplace.tsx), mounted by Game and read off the view and
-// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it (each of the
-// viewer's offers' index, face, price and copies left, the engine's `reason` on one it refuses, the
-// viewer's priced hand cards that sell, R1861000); the shop must send exactly the `marketBuy` or
-// `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
+// `legal` alone. The view is a fixture shaped as the engine's `marketplace_view` builds it, the
+// viewer's priced hand cards that sell among it (R1861000); the shop must send exactly the `marketBuy`
+// or `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
 // R2127000: Back closes the open shop, as Escape does.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";

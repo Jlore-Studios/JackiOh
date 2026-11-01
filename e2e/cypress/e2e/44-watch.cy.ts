@@ -1,36 +1,25 @@
 // #1050 44: watching a friend's live game (#936, SPEC S7, §9.5 "Watching a friend"; B50, B56).
 //
-// Three accounts, because a watcher holds no seat (`watchable_in` refuses one that does): `one`
-// hosts an unranked room and is the friend watched (seat p1), `pending` joins it as seat p2, and
-// `two` is the friend who watches, in the browser. Neither seat attaches a socket (R744: a seat that
-// never attached starts no grace), so the match just stands while it is watched. `pending` is the
-// fixture account waiting at the invite gate, so `before` reseeds the server (R144) and redeems the
-// good code for it, which leaves nothing for a spec after this one: only spec 10 reads that account
-// and it reseeds first.
+// Three accounts, because a watcher holds no seat: `one` hosts an unranked room (seat p1), `pending`
+// joins it as p2, and `two` watches in the browser. Neither seat attaches a socket (R744: a seat that
+// never attached starts no grace), so the match stands while it is watched. `pending` is the fixture
+// account waiting at the invite gate, so `before` reseeds the server (R144) and redeems the good code
+// for it, which leaves nothing for a later spec: only spec 10 reads that account and it reseeds first.
 //
-// What it asserts, by behavior (every frame read is one the watch screen's own socket received;
-// an account is one watcher and a newer socket replaces the older, so the spec opens none itself):
-// - B56: a friend's row in a live unranked match offers Watch, and the click opens `/watch/:matchId`
-//   with the friend in the query;
-// - B50: the screen waits (its waiting panel) until the first view, which comes `SPECTATE_DELAY_MS`
-//   after the state it shows, then draws the friend's board read-only from the friend's seat;
-// - B50, §10.8: every `view` frame carries `legal: []`, the friend's seat's hand in full and the
-//   other seat's hand as a count alone;
-// - R2615000: the account's settings carry no watching switch, so a friend may always watch;
-// - B50 (revocation): the friend removing the watcher mid-watch ends it with a `forbidden` frame and
-//   the refused screen, the friendship being the way out;
-// - B50 (refusal): with the two no longer friends, the watch link is refused the same way, and the
-//   way back leads to Play together.
+// What it asserts (every frame read is one the watch screen's own socket received: an account is one
+// watcher and a newer socket replaces the older, so the spec opens none itself):
+// - B56: a friend's row in a live unranked match offers Watch, which opens `/watch/:matchId`;
+// - B50: the waiting panel until the first view, then the friend's board read-only from their seat;
+// - B50, §10.8: every `view` frame carries `legal: []` and the other seat's hand as a count alone;
+// - R2615000: the settings carry no watching switch, so a friend may always watch;
+// - B50: the friend removing the watcher mid-watch, or the two no longer friends, ends it in the
+//   refused screen.
 //
-// "Full" (`SPECTATORS_PER_MATCH`) is not covered here: an account is one watcher, so filling a match
-// takes nine friend accounts and the E2E server seeds three. The server's own test covers it
-// (`b50_b51_a_full_match_is_forbidden_to_one_watcher_more`) and the client shows it as any other
-// `forbidden` (WatchRoute.test.tsx).
+// "Full" (`SPECTATORS_PER_MATCH`) is not covered: filling a match takes nine friend accounts and the
+// E2E server seeds three; the server's own test covers it.
 //
-// The first view is due `SPECTATE_DELAY_MS` after the join, and a watcher who comes later is sent it
-// at once, so the waiting panel shows only to one who comes sooner. A page visit alone can take that
-// long, so the browser is on Play together before the join: `one` asks `two` to be friends, and `two`
-// accepts there just after it, which reads the friends list again with `one` in the match.
+// The waiting panel shows only to a watcher who comes within `SPECTATE_DELAY_MS` of the join, and a
+// page visit alone can take that long, so the browser is on Play together before the join.
 //
 // Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only,
 // as every spec outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed

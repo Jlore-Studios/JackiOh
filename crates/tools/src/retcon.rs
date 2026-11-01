@@ -1,41 +1,20 @@
 //! `cargo jackioh patches retcon [--dry-run] [--records <dir>...]` (#1371, part 7 of #1360,
-//! R1371000): every shipped version renamed to what the classifier would have called it.
+//! R1371000): every shipped version renamed to what the classifier would have called it, by a map
+//! computed, never written by hand. In `patches.json`'s order each version's tier is stage 1 of
+//! `classify` over its snapshot against the one before (as `patches ship` reads it, R1366000), plus
+//! the scripts its shipping commits changed from the Rust scripts on (#306), which count only beside
+//! a catalog change, so the mass rewrites, shipped in no patch, claim nothing. No stage 2 runs.
 //!
-//! The map is computed, never written by hand. In `patches.json`'s order, each shipped version's
-//! tier is `classify::classify` over stage 1 (`classify::read_diff`) of its snapshot against the one
-//! before it, each with the sets its cards belong to (as `patches ship` reads it, R1366000), plus the
-//! card scripts its own shipping commits changed (`commits`, each against its first parent), from the
-//! Rust scripts on (v0.3.0, #306; the TypeScript scripts before them leave the snapshots, the recorded
-//! `changes`, to speak alone). A script change counts only when it shipped beside a catalog change,
-//! in the commit that shipped the patch: the mass rewrites (the Rust rewrite, the Luau port and its
-//! return) shipped in no patch, so they claim nothing. No stage 2 runs here. The names follow in order
-//! from `FIRST_VERSION`, each named after the one before it by `versions::name_by_tier`.
+//! The dry run prints the map. The write renames every stored version once: the files under
+//! `crates/cards/patches/` (`card_metrics/` too, R2173000) with `aliases.json`, the map, every
+//! `CATALOG_VERSION` site, other files' data and string literals (never comments or docs), and the
+//! database's through a generated migration. A tree holding `aliases.json` was retconned already, so a
+//! second run changes nothing. `--records <dir>` rewrites and marks record files outside the repository.
 //!
-//! The dry run prints the map. The write renames every version the repository stores, once:
-//! - `crates/cards/patches/`: the snapshots, `win_rates/<version>.json` and
-//!   `card_metrics/<version>.json` (R2173000) renamed, `patches.json`'s
-//!   versions with each patch's `tier` and `plays`, `shipped.json`, `index.json`, and
-//!   `aliases.json`, the map, which only readers of an unmarked file consult (R1371000);
-//! - every `CATALOG_VERSION` site (`patch::bump_sites`);
-//! - every other file that spells an old version (`rewrite_tree`): its data files whole, its code's
-//!   string literals, never its comments or its docs, which keep their old names (the map table in
-//!   `docs/issues-and-patches.md` translates them), and a file named after a version renamed;
-//! - the migration that renames every catalog version the database holds, `NNNN_version_retcon.sql`
-//!   under `crates/server/migrations/`, written from the map (`migration_sql`).
-//!
-//! A tree holding `aliases.json` was retconned already, and a second run changes nothing. `--records
-//! <dir>` rewrites the record files under a directory outside the repository (the training boxes'
-//! `~/training-out`) and marks each (`mark_record`), skipping any already marked.
-//!
-//! R2532000: `patches retcon --from <version> [--rule <version>]... [--dry-run]` is the v0.5 retcon
-//! (#2532), a second run over a tree whose `aliases.json` names an older scheme than
-//! `VERSIONS_SCHEME`. Every version before `--from` keeps its name, tier and plays; from it on each
-//! takes the tier the classifier names now (R2455000, R2499000), read as `patches ship` reads a
-//! patch: its snapshot against the one before it, the families its record plays, and a rule every
-//! game meets where `--rule` names it, as stage 2 measured against the base build (no record holds
-//! it). The write renames as the first run does, through the migration `NNNN_v0_5_retcon.sql`, and
-//! `aliases.json` keeps scheme 1's names, now mapped to today's, and gains `marked`: each older
-//! marked scheme's names this run renamed.
+//! R2532000: `--from <version> [--rule <version>]...` is the v0.5 retcon (#2532) over a tree whose
+//! `aliases.json` names an older scheme than `VERSIONS_SCHEME`: versions from `--from` on take the tier
+//! the classifier names now (R2455000, R2499000), `--rule` naming a rule every game meets, since no
+//! record holds it; `aliases.json` keeps scheme 1's names, mapped to today's, and gains `marked`.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -112,7 +91,9 @@ fn script_changes(repo_root: &Path, commits: &[String]) -> anyhow::Result<Vec<Fi
     Ok(files)
 }
 
-/// R1371000: computes tier and affected card families from previous snapshot and script changes.
+/// R1371000: one patch's tier and the families that play differently, from the snapshot before it
+/// (`None` for the first), its own, and its commits' script changes, which count only beside a
+/// catalog change.
 pub fn tier_of(
     previous: Option<&Catalog>,
     snapshot: &Catalog,
@@ -131,7 +112,8 @@ pub fn tier_of(
     (classification.tier.unwrap_or(Tier::Micro), classification.cards)
 }
 
-/// R1371000: computes map from snapshots and patch commits in `patches.json` order.
+/// R1371000: the map, in `patches.json`'s order, from the snapshots under `dir` and, where
+/// `repo_root` holds the history, the patches' own commits.
 pub fn compute_map(repo_root: &Path, dir: &Path) -> anyhow::Result<Vec<Renamed>> {
     let patches = read_patches(&dir.join("patches.json"))?;
     let mut previous: Option<Catalog> = None;
@@ -591,7 +573,9 @@ pub fn read_aliases(repo_root: &Path) -> anyhow::Result<Aliases> {
 
 /* the tree */
 
-/// Paths left untouched by tree rewrite.
+/// Paths the tree rewrite leaves alone: the patch history (rewritten field by field), the applied
+/// migrations (history the database already ran), the docs and the spec (which keep their old
+/// names), and what no agent may change.
 const SKIP_PREFIXES: &[&str] = &[
     ".github/",
     ".harness/",
@@ -604,7 +588,8 @@ const SKIP_PREFIXES: &[&str] = &[
     "crates/server/migrations/",
 ];
 
-/// Files with non-shipped version fixtures or migration tests (R743).
+/// Files whose versions are not the shipped ones: fixtures that name made-up versions, and the old
+/// retcon's test, which re-runs migration 0025 over its own names (R743).
 const SKIP_FILES: &[&str] = &[
     "crates/cards/src/versions.rs",
     "apps/web/src/replay/retcon.test.ts",
@@ -844,11 +829,10 @@ fn season_of(version: &str) -> Option<String> {
     ))
 }
 
-/// R1371000: the migration that renames every catalog version the database holds, once, through the
-/// map: a single statement per column joined to the map, so a name the map reuses (the old v0.3.4
-/// becomes v0.2.7b while the new v0.3.4 is the old v0.3.12) is renamed from its old value only. A
-/// column a key holds goes through a `~` name first, so no row meets a name another row still holds.
-/// R2532000: `retcon` names the run: the first (`FIRST_RETCON`) or the v0.5 retcon (`V05_RETCON`).
+/// R1371000: the migration that renames every catalog version the database holds, once: one statement
+/// per column joined to the map, so a name the map reuses is renamed from its old value only, and a key
+/// column goes through a `~` name first, so no row meets a name another still holds. R2532000:
+/// `retcon` names the run, the first (`FIRST_RETCON`) or the v0.5 retcon (`V05_RETCON`).
 pub fn migration_sql_for(number: u32, map: &[Renamed], retcon: &RetconSql) -> String {
     let RetconSql {
         issue, title, marker, ..
@@ -1778,10 +1762,9 @@ mod tests {
     }
 
     // R2532000: migration 0068 is what the generator writes from the map its own header lists, so a
-    // fix to the generator reaches the file (this run rewrites it when they differ: commit it). The
-    // first write renamed each co-played record id with a call per version, which ran for minutes
-    // over a season of totals and timed Render's release out; the generator renames a text in one
-    // pass per name, and only a renamed version's rows.
+    // fix to the generator reaches the file (this run rewrites it when they differ: commit it). It
+    // renames a text in one pass per name, and only a renamed version's rows: a call per version ran
+    // for minutes over a season of totals and timed Render's release out.
     #[test]
     fn r2532000_migration_0068_is_what_the_generator_writes() {
         let path = repo_root().join(MIGRATIONS_REL).join("0068_v0_5_retcon.sql");

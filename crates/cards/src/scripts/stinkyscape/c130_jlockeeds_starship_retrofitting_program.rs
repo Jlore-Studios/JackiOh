@@ -7,6 +7,7 @@
 //! The pool is the non-token cards tagged Jlockeed (R278) but this one (R387), from the sets that ship
 //! (R380, R1420). R1878003: the card is given Starship Piece as it reaches the hand (the
 //! `addRandomFromCatalog` keywords rider), which stays the card's own until it leaves the field (R78), so
+//! played as a Unit its death fuses a copy into its owner's Dormant Starship (R1852000); a Spell that
 //! resolves never dies, so it fuses nothing. A full hand burns it (§2.4). Radiant: the card is Radiant and
 //! costs `discount` less, never below (0) (R65).
 

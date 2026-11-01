@@ -175,7 +175,7 @@ fn find_on_board<'c>(ctx: &'c EffectContext<'_>, instance_id: &str) -> Option<&'
     None
 }
 
-/// `choose_mode`'s arguments (TS's inline object).
+/// `choose_mode`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -240,7 +240,7 @@ fn mode_option(option: &str, label: &str) -> PromptOption {
     }
 }
 
-/// `choose_target`'s arguments (TS's inline object).
+/// `choose_target`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -292,7 +292,7 @@ pub fn choose_target(args: ChooseTargetArgs) -> Effect {
 /// `choose_from_hand`'s `where`: only the cards this admits are offered.
 pub type HandFilter = Arc<dyn Fn(&EffectContext<'_>, &CardInstance) -> bool + Send + Sync>;
 
-/// `choose_from_hand`'s arguments (TS's inline object). `where_` is a callback, so serde skips it and a
+/// `choose_from_hand`'s arguments. `where_` is a callback, so serde skips it and a
 /// card sets it in Rust.
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -387,7 +387,7 @@ pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
 
 // B5 E17, E18 prompt kinds (docs/classic-sets.md B5)
 
-/// `choose_cost_in_hand`'s arguments (TS's inline object).
+/// `choose_cost_in_hand`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -441,7 +441,7 @@ pub fn choose_cost_in_hand(args: ChooseCostInHandArgs) -> Effect {
     })
 }
 
-/// `choose_number`'s arguments (TS's inline object).
+/// `choose_number`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -503,7 +503,7 @@ pub fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
     None
 }
 
-/// `choose_craft`'s arguments (TS's inline object).
+/// `choose_craft`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -585,8 +585,7 @@ pub fn chosen_recipe(ctx: &EffectContext<'_>) -> Option<crate::wire::CraftRecipe
 /// R465: the ids the options of an `answer` prompt carry, in the order they are shown.
 pub const ANSWER_OPTION_IDS: &[&str] = &["A", "B", "C", "D", "E", "F", "G", "H"];
 
-/// `choose_answer`'s arguments (TS's inline object). `correct` is an index into `options`, so the
-/// half of TS's guard that refused a negative one cannot arise.
+/// `choose_answer`'s arguments. `correct` is an index into `options`, so it cannot be negative.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -719,7 +718,7 @@ pub struct CellScope {
     pub except_lanes: Option<Vec<i32>>,
 }
 
-/// `choose_cell`'s arguments (TS's inline object).
+/// `choose_cell`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -832,7 +831,7 @@ pub struct RewardOption {
     pub label: String,
 }
 
-/// `choose_reward`'s arguments (TS's inline object).
+/// `choose_reward`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -979,7 +978,7 @@ fn pickable(state: &GameState, card: &CardInstance, filter: &PickFilter) -> bool
     true
 }
 
-/// `choose_pick`'s arguments (TS's inline object).
+/// `choose_pick`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -1090,9 +1089,8 @@ pub fn discovered_code_card(ctx: &EffectContext<'_>) -> Option<String> {
 /// `discover_from_catalog`'s pool as a function of the context.
 pub type CatalogQueryFn = Arc<dyn Fn(&mut EffectContext<'_>) -> CatalogQueryArgs + Send + Sync>;
 
-/// `discover_from_catalog`'s arguments (TS's inline object). TS's `query` is either a query or a
-/// function of the context; here the function is `query_fn`, a callback serde skips, which wins over
-/// `query` when it is set.
+/// `discover_from_catalog`'s arguments. The query may be a function of the context, `query_fn`, a
+/// callback serde skips, which wins over `query` when it is set.
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -1344,7 +1342,7 @@ fn offer_instances(
     );
 }
 
-/// `discover_from_library`'s arguments (TS's inline object).
+/// `discover_from_library`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -1393,7 +1391,7 @@ pub fn discover_from_library(args: DiscoverFromLibraryArgs) -> Effect {
     })
 }
 
-/// `discover_from_graveyard`'s arguments (TS's inline object).
+/// `discover_from_graveyard`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]

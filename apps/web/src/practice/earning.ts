@@ -1,9 +1,6 @@
 // Earning in practice, as the page sees it (SPEC §14.8, R1303000): which games ask the server for a
-// seed, and what the result dialog says about a claim.
-//
-// Page-safe: it never imports `core.ts`, and it decides no rule (CLAUDE.md rule 7). Whether a game
-// pays is the server's to say once it has folded the log to its result (R2560000); this only names
-// the setups the server is asked about and words its answer.
+// seed, and what the result dialog says about a claim. Page-safe: it never imports `core.ts`, and it
+// decides no rule (CLAUDE.md rule 7); whether a game pays is the server's to say (R2560000).
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 

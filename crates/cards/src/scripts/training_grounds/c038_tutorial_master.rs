@@ -35,8 +35,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #38 Tutorial Master — SPEC §8.11 row 38, BUILD M13 row TG 38: "Cry: 3 TG cards, each (1) less, never
-// Tutorial Master; Death: the same again; repeats allowed; a (0) card stays (0). radiant all Radiant".
+// TG #38 Tutorial Master — SPEC §8.11 row 38, BUILD M13 row TG 38.
 #[cfg(test)]
 mod tests {
     use super::ID;

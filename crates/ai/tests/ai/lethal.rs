@@ -23,11 +23,10 @@ use super::support::{
     AI, HUMAN, every_card, random_policy_states, register_cards, run_puzzle, scenario, trace,
 };
 
-/// p1 (the AI) on turn 9 with 4 crystals: Pointmaster 7/1, Mr. Vanilla 4/4 and Tempo Timmy 3/3
-/// ready on the field, a Radiant Lava Golem, Lunar Eclipse and KY's Math Equation in hand. p2 stands
-/// behind two Taunts, Midrange Menace 9/9 and a Lava Golem 10/5, at 10 health. The lethal: the Golem
-/// tributes both enemy Taunts and one of p1's two smaller units, then Pointmaster and the other hit
-/// the face for 10 or more. The Golem is Radiant because the base face paid with opposing units is summoned for the
+/// p1 (the AI), 4 crystals: Pointmaster 7/1, Mr. Vanilla 4/4 and Tempo Timmy 3/3 ready, a Radiant Lava
+/// Golem and two cheap spells in hand; p2 at 10 behind two Taunts. The lethal: the Golem tributes both
+/// enemy Taunts and one of p1's two smaller units, then Pointmaster and the other hit the face for 10
+/// or more. The Golem is Radiant because the base face paid with opposing units is summoned for the
 /// opponent (R360), where its Taunt would wall the face again.
 fn wide() -> Value {
     json!({
@@ -69,11 +68,10 @@ fn worlds(state: &GameState, seed: &str, count: usize) -> Vec<GameState> {
 /// `why_cannot_attack` makes).
 const TAUNT_WALL: &str = "a Taunt unit must be attacked first";
 
-/// ready_gap as it was first written: the attackers are the units `legal_actions` lists an attack for.
-/// lethal.rs now asks the engine unit by unit instead, which is cheaper on a wide hand; this is the
-/// reference it must agree with. Whether an attack may hit the hero is asked of the engine's whole
-/// test, since `legal_actions` lists no hero attack behind a Taunt: the hero is refused for nothing but
-/// the Taunt wall. `hero_ineligible_attacks` pins the numbers by hand (#1823).
+/// The reference ready_gap must agree with: the attackers are the units `legal_actions` lists an
+/// attack for. Whether one may hit the hero is asked of the engine's whole test, since `legal_actions`
+/// lists no hero attack behind a Taunt: the hero is refused for nothing but the Taunt wall.
+/// `hero_ineligible_attacks` pins the numbers by hand (#1823).
 fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
     if let Some(result) = state.result {
         return if result.winner == Winner::from(seat) {
@@ -195,6 +193,7 @@ mod the_lethal_solvers_walks {
         let mut states: Vec<GameState> = vec![wide_board()];
         states.extend(random_policy_states("lethal-ready-gap", 3, 600));
         states.extend(random_policy_states("lethal-ready-gap-2", 5, 600));
+        // The third and fourth series and the second played match keep the coverage floor below honest.
         states.extend(random_policy_states("lethal-ready-gap-3", 3, 600));
         states.extend(random_policy_states("lethal-ready-gap-4", 3, 600));
         for game_index in [1, 2] {
@@ -271,6 +270,7 @@ mod the_lethal_solvers_walks {
     #[test]
     fn the_depth_first_walk_alone_does_not_find_it_within_the_same_allowance() {
         // lethalQuickNodes at the whole allowance is the solver before the best-first walk existed. If a
+        // change to move order let it find this line, the board would no longer test the second walk.
         let dets = worlds(&wide_board(), "lethal-wide", 2);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         assert!(
@@ -508,6 +508,8 @@ mod the_positions_the_search_merges {
         assert_eq!(ready_gap(&once, AI), 10.0);
         assert_eq!(ready_gap(&once, AI), ready_gap_by_legal_actions(&once, AI));
 
+        // Both swings in one line: `simulate` numbers its actions from its counter, so a second call
+        // from `once` would repeat the first swing's action id.
         let twice = play_out(&fresh, &[swing.clone(), swing]);
         assert_eq!(twice.players[HUMAN].hero.health, 10);
         assert_eq!(ready_gap(&twice, AI), 10.0);
@@ -551,15 +553,11 @@ mod duos_life_r964000 {
 }
 
 /// R1965000 (issue #1965): C #90 In Too Deep's reward L lets the AI play cards from its graveyard
-/// (R454), so a (0) Spell there can be played again and again: C #37 Last Hurrah and M #62 Small Time
-/// Recruits, which do nothing with the deck empty, and The Coin, whose mana this turn has no cap. The
-/// board needs a lethal the depth-first walk does not find first: p2 stands at 6 behind a Felinor
-/// Token in Defense Position (Taunt, Armor 1), and p1's 4-mana 7/7 (Armor 7) would kill it and
-/// survive, the first attack in move order, but would leave Bigot's 4 short of the face. The lethal is
-/// Bigot into the Token, a trade down that comes after the plays in move order, then the 7/7 at the
-/// face. The best-first walk proved it behind replays of the Spells, and `decide`, playing a line's
-/// first action and planning again, replayed them without end; it now plays the line trimmed to the
-/// actions it needs (`trim_lethal`).
+/// (R454), so a (0) Spell there can be played again and again: C #37 Last Hurrah, M #62 Small Time
+/// Recruits and The Coin. The board's lethal, Bigot into the Felinor Token and then the 7/7 at the face,
+/// is one the depth-first walk does not find first. The best-first walk proved it behind replays of the
+/// Spells, and `decide`, playing a line's first action and planning again, replayed them without end;
+/// it plays the line trimmed to the actions it needs (`trim_lethal`).
 mod free_replays_r1965000 {
     use super::*;
     use std::cell::Cell;
@@ -719,9 +717,9 @@ mod free_replays_r1965000 {
     const CLOCKED_DECISIONS: usize = 30;
 
     /// A clock that stops a decision inside the trim (a slow device under the practice clock, a ladder
-    /// bot's acting clock) leaves no proved lethal to play: the decision ends the turn, as one the clock
-    /// stops inside the solver does. It never plays the untrimmed line's Coin, which a clock stopping
-    /// each decision at the same point would have played at every one. Every stop from the first node
+    /// bot's acting clock) leaves no proved lethal: the decision ends the turn, never playing the untrimmed
+    /// line's Coin, which a clock stopping each decision at the same point would play at every one. Every
+    /// stop to the unhurried decision's last node is tried, so the trim's window is among them.
     #[test]
     fn r1965000_a_clock_that_stops_the_trim_plays_no_coin_and_the_turn_ends() {
         let start = board(&[COIN]);
@@ -770,6 +768,7 @@ mod free_replays_r1965000 {
 
     /// A replay the lethal does need is kept: Base Camp, already played this turn and back in the
     /// graveyard, adds two Coins at no cost and moves no attack, and a Coin's mana pays for a Dogpile,
+    /// which casts the other at the enemy hero for 4. Every step is needed, so the trim keeps them all.
     #[test]
     fn r1965000_a_replay_the_lethal_needs_is_found_and_kept() {
         register_cards();

@@ -1,9 +1,16 @@
-//! `cargo jackioh positions`: self-play logs folded into training rows (#466, #1006).
+//! `cargo jackioh positions`: self-play logs folded into the learned evaluation's training rows (#466,
+//! #1006; `docs/learned-eval.md` D3, D4). Each game is folded from its seed under the catalog it was
+//! played on (`replay::catalog_for`, R767000) and its final hash checked: one that no longer reaches its
+//! hash, one on a catalog this build does not carry, one without a result (R1006003) or one its run
+//! marked with faults (R1489000) is dropped and counted, never guessed at.
 //!
-//! Folds games under replay catalog (R767000); drops faulty runs (R1489000) or games without results (R1006003).
-//! Writes `PositionRow`s with redacted features (R185) and simulated leaf scores (R1006004).
-//! Supports `--every reply` simulating opponent replies (R1006006).
-//! `--policy` (#1171) labels candidate moves from redacted views (R1171000).
+//! Each position is one JSON line (`PositionRow`): seed, seat, turn, step, `FEATURES_VERSION`, the
+//! seat's features (read only from `redact`, R185), the hand eval's score over the true state, a world
+//! the seat cannot tell from its determinizations (R1006004), and the seat's outcome (1, ½ or 0).
+//! `--every turn` (the default) writes the seat's first main-phase decision of its turn, `decision`
+//! every main-phase decision, `reply` the position after the opponent's reply as the search simulates
+//! it (R1006006). A header line (`PositionsHeader`) names the features. `--policy` (#1171) adds each
+//! decision's policy label, read from `redact` alone (R1171000).
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -161,7 +168,8 @@ fn position_seat(state: &GameState, every: Every, turned: &mut Vec<(i32, PlayerI
     }
 }
 
-/// R1006004: features over redacted state and hand eval over true state.
+/// R1006004: the row for `seat` at `state`: the features over `redact(state, seat)` and the hand
+/// eval over the true state, a world the seat cannot tell from its determinizations.
 pub(crate) fn row_at(
     state: &GameState,
     seat: PlayerId,
@@ -190,10 +198,13 @@ pub(crate) fn row_at(
     }
 }
 
-/// The node budget the reply a `--every reply` row plays out may spend.
+/// The node budget the reply a `--every reply` row plays out may spend: more than any reply takes, so
+/// every reply is played to its end.
 const REPLY_NODES: usize = 2000;
 
-/// R1006006: row for seat whose turn ended, evaluating simulated opponent reply.
+/// R1006006: the row for the seat whose turn just ended at `end`, after the opponent's reply as the
+/// search simulates it, scored as `reply_score` scores a line. `None` when the reply ends the game or
+/// runs out of nodes.
 fn reply_row(
     end: &GameState,
     seat: PlayerId,
@@ -213,7 +224,8 @@ fn reply_row(
     Ok(Some(row_at(&after, seat, step, game, outcome)))
 }
 
-/// R1006003: folds game under its catalog; carries policy label if requested (R1171000).
+/// R1006003: `game` folded under its catalog, its rows if it reaches its hash. With `policy`, a row
+/// whose seat plays the next action carries that decision's label (R1171000).
 pub(crate) fn fold_game(
     game: &SelfplayGame,
     every: Every,

@@ -526,7 +526,8 @@ describe("#1309 the cosmetic packs", () => {
     // R2125000: the second visit is a first one, not a revisit that opens on the kept 19 / 20.
     clearReadCache();
 
-    // Full, every Legendary and Mythic owned (every chase a starter): the empty sentence, still no choice.
+    // Full, every Legendary and Mythic owned (every chase a starter, as before R1833000): the empty
+    // sentence, still no choice.
     cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
     render(<CosmeticPacks token={TOKEN} registry={REGISTRY.filter((cosmetic) => !cosmetic.chase || cosmetic.starter)} />);
     expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("20 / 20");

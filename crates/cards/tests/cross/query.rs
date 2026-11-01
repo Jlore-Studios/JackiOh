@@ -778,6 +778,7 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         register();
         let units = query(&q(json!({ "type": "Unit" })));
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): its Units follow Meditative's, so the set
+        // ranks name it after Meditative rather than ranking every set after Classic+ alike. Re-pinned
         // for the Training Grounds release (#2204): its Units follow Stinkyscape's (`CATALOG_SETS`).
         let set_rank = |set: SetName| -> f64 {
             match set {
@@ -991,6 +992,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     use jackioh_engine::testkit::{preview_every_set, set_ships};
 
     // `stats` reads the printed base face (R1080): a face that prints none never matches, so Spells
+    // and stat-less backrow cards are out whatever else they are. Tokens join through `withTokens`.
     // A pool that names no set reaches every set that ships (R380, R1420), in `query`'s order: by
     const ONE_ONE_POOL: &[&str] = &[
         "core-003",

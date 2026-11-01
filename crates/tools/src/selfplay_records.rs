@@ -1,9 +1,16 @@
-//! `cargo jackioh stats from-selfplay` (SPEC §9.11, R378; #1676, R1676000): converts selfplay logs (R1006001)
-//! to dev `GameRecord` lines on All Random deals (R258).
+//! `cargo jackioh stats from-selfplay <log>… --out <file>`: the learn lane's self-play exports filed as
+//! development records for the card statistics (SPEC §9.11, R378; #1676, R1676000). Each game of a
+//! `selfplay` file (R1006001) becomes one `GameRecord` line, `source: "dev"`, `mode: "random"`, both
+//! pilots `ai`, as `stats` files a game of its own run (R258's All Random deals); `stats report` and
+//! `jackioh-server stats-import` read the file as they read a `stats --out` file.
 //!
-//! Folds games under replay catalog (R767000) and checks hashes (R1006003), dropping faults (R1489000).
-//! Uses current version names (R1371000) and build metadata (R1367000).
-//! Generates non-colliding IDs accepted by `stats-import` (R1284000).
+//! A game is folded under its catalog (R767000) and its hash and result checked, as `positions` folds
+//! it (R1006003): one that no longer reaches them, on an uncarried catalog, without a result or marked
+//! with faults (R1489000) files nothing and is counted. The patch is the version its game names, as
+//! named now (R1371000); the build (R1367000) is the commit and AI generation the log carries, so every
+//! checkout writes the same file. The id `dev:<patch>:selfplay:<seed>` collides with no `stats`, gather
+//! or arena run's and is no forced run's (R1284000), so `stats-import` takes it. Records follow the
+//! files' and games' order, so the output is byte-identical whatever the thread count.
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -66,7 +73,8 @@ impl Counts {
     }
 }
 
-/// R1676000: folds `game` under its catalog (R767000) and files as development record.
+/// R1676000: `game` folded under its catalog (R767000) and, when it reaches its hash with its
+/// result, filed as the development record `dev_game_record` files.
 pub(crate) fn record_of(game: &SelfplayGame, build_catalog: &str) -> Result<GameRecord, Dropped> {
     let shipped = catalog_for(game.catalog_now(), build_catalog).map_err(|_| Dropped::EarlierPatch)?;
     if game.result.is_none() {

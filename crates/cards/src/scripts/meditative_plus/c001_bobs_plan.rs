@@ -159,12 +159,7 @@ pub fn script_v0_4_0f() -> CardScripts {
     }
 }
 
-// Meditative+ #1 Bob's Plan — SPEC §8.9 row 1, BUILD M11 row M+ 1: "Quickdraw (R640); adds one
-// Wincon card from the shipped pool, M 8, M 20 or S 148, each seen over the seeds, by one rng pick that
-// replays; after M 8 a base Base Camp (M+ 1.1); after S 148 a Star Chart (M+ 1.5, R2521008); after M 20
-// a Discover of Spa Day, Garage Sale and Leg Day (M+ 1.2 to 1.4), the chosen one added (R1563003); a
-// full hand burns the helper, then the card; a Wincon card the plan table does not name (a fixture) is
-// added alone; radiant both are Radiant".
+// Meditative+ #1 Bob's Plan — SPEC §8.9 row 1, BUILD M11 row M+ 1 (R640, R2521008, R1563003).
 #[cfg(test)]
 mod tests {
     use super::*;

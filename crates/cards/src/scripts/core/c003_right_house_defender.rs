@@ -22,8 +22,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 3: "Shield eats first hit; dies → returns at 1 without Reborn; radiant Death
-// summons a base Right-house defender on both deaths while Reborn keeps its zone (R8, R64)".
+// BUILD M4-T4 row 3 (R8, R64).
 // Four #8 Mr. Vanilla (3/3, survives the retaliation) give four hits in one turn; the shield absorbs
 // a whole hit (§4.4 step 1), so each death costs two. The reborn body's shield is back (§4.5 step 4's
 // reset instance, R78, clears `divineShieldSpent`): R78's list does not name Divine Shield, so this

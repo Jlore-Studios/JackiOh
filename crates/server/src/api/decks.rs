@@ -1,12 +1,15 @@
-//! Saved decks and trios (SPEC §9.4, R250–R256), and queue/room loadouts (R253, R257, R264).
+//! Saved decks and trios (SPEC §9.4, R250–R256), and what a queue ticket or a room is made with
+//! (R253, R257, R264). Both are drafts (R250, R252): a save checks structure only, D1–D5 for a deck
+//! (its portrait owned, R641, R1827000; its cosmetics from the registry and owned, R1297000,
+//! R1833000) and T1–T3 for a trio, and legality (L1–L6) is judged at queue (R253). No rule is
+//! written here: every refusal passes `jackioh_engine::validator`'s issues through as `details`, so
+//! the deck builder and the server say the same words (§9.4).
 //!
-//! Profiles store up to `MAX_SAVED_DECKS` drafts (D1–D5, R250, R641, R1827000; cosmetics R1297000,
-//! R1833000) and `MAX_SAVED_TRIOS` drafts (T1–T3, R252). Legality (L1–L6) is judged at queue (R253).
-//! Refusals pass validator issues as `details` (§9.4).
-//!
-//! Client-minted ids make `PUT` an idempotent upsert (R256). Queue choice requires `mode`
-//! (SURFACE §11.3). R2100000: saves snapshot versions (debounced, capped at `DECK_VERSIONS_KEPT`);
-//! restores apply saved cards/name and keep existing cosmetics.
+//! Ids are minted by the client, which makes `PUT` an idempotent upsert a dropped connection can
+//! retry (R256); the store decides create-or-update, the cap and ownership in one locked statement.
+//! R257's legacy queue body (no `mode`) is refused (SURFACE §11.3). R2100000: every save keeps a
+//! version of its name and cards; a restore saves one as a new version, so the one it replaced
+//! stays, and keeps the deck's own portrait and cosmetic picks.
 
 use std::sync::Arc;
 
@@ -69,7 +72,7 @@ fn path_id_of(raw: Option<&String>, what: &str) -> Result<String, ApiError> {
 
 // What the client sees
 
-/// The deck row without its owner, who is the caller.
+/// `SavedDeck` in `apps/web/src/net/api.ts`: the row without its owner, who is the caller.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DeckView {
@@ -90,7 +93,7 @@ pub struct DeckView {
     pub updated_at: i64,
 }
 
-/// Saved trio view where `deckIds` is the three slots, each an id or null.
+/// `SavedTrio` in `apps/web/src/net/api.ts`: `deckIds` is the three slots, each an id or null.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TrioView {
@@ -139,7 +142,7 @@ fn slots_in(slots: &TrioSlots) -> Vec<Option<String>> {
     vec![slots.0.clone(), slots.1.clone(), slots.2.clone()]
 }
 
-/// R2100000: one earlier version of the caller's deck.
+/// R2100000: `DeckVersion` in `apps/web/src/net/api.ts`: one earlier version of the caller's deck.
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DeckVersionView {
@@ -195,8 +198,10 @@ pub const LIMITS: DeckLimits = DeckLimits {
     name_length: DECK_NAME_MAX_LENGTH as i64,
 };
 
-/// A save refused by D1–D4 or T1–T3: first issue as message, and up to `DRAFT_ISSUES_REPORTED_MAX`
-/// issues in `details`.
+/// Another profile's id is answered as if it did not exist (the store's `not_owner`), so an id
+/// reveals nothing about anyone else's decks. A save refused by D1–D4 or T1–T3: the first issue's
+/// sentence, and at most `DRAFT_ISSUES_REPORTED_MAX` issues in `details`, so a body of junk cannot
+/// buy an answer many times its own size.
 fn draft_refused(message: &str, issues: &[Value]) -> ApiError {
     let reported: Vec<Value> = issues.iter().take(DRAFT_ISSUES_REPORTED_MAX).cloned().collect();
     ApiError::with_details(ApiErrorCode::BadRequest, message, Value::Array(reported))
@@ -755,8 +760,10 @@ pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&json!({ "trio": trio_view(&saved) }))
 }
 
-/// `POST /api/trios/import` (R340, R341, R339, R253). Imports a trio and its decks in one transaction.
-/// Checks drafts and room caps (R340); retrying with identical ids updates without consuming slots.
+/// `POST /api/trios/import`. R340, R341: a trio code's decks and the trio naming them, all or
+/// nothing. The client decoded the code (R339) and minted every id; this checks it as any save
+/// would, then the room under both caps (R340), in one transaction, so a retry with the same ids
+/// takes no new slot. Unowned and shared cards are kept: both are judged at queue (R253).
 pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let input = import_of(&req.body)?;
@@ -922,8 +929,10 @@ pub enum FrozenChoice {
     },
 }
 
-/// R924000, R1420, R1371, R1372: reads `leanSet` ("newest" or shipping set) or legacy `leanNewest`
-/// for player's deal preference.
+/// R924000: a body's `leanSet`, the "More cards from" pick for the player's own dealt deck:
+/// `"newest"` or a set that ships (R1420); absent or `null` is no lean, anything else a 400. Newest
+/// is the server's to resolve when it deals (R1371). An older client's R1372 `leanNewest` still
+/// reads (`true` is newest); a body with both is read by `leanSet`.
 pub fn lean_of(body: &Value) -> Result<Option<LeanPick>, ApiError> {
     match body.get("leanSet") {
         None | Some(Value::Null) => {}
@@ -1008,8 +1017,10 @@ enum LoadoutScope {
     Trio,
 }
 
-/// Queue-time validation (§9.4, R253): validates deck (L2, L3, L5, L6) or trio (L1–L6) against
-/// collection entitlements and current catalog. First issue becomes error message with all issues in details.
+/// The single call to the shared validator at queue time (§9.4: "at save and again at queue").
+/// R253: `scope` picks the rules (L2, L3, L5, L6 for a deck, L1–L6 for a trio); L5 reads the
+/// collection, and L6 the current catalog, whatever version the deck was saved under. The first
+/// issue's message is the error's and every issue rides along as `details`, exactly as reported.
 fn assert_legal(
     app: &App,
     owned: &IndexMap<String, i64>,
@@ -1088,8 +1099,10 @@ fn assert_legal(
     ))
 }
 
-/// R915005, §9.4: checks L7 to ensure decks with custom cards only play in practice games,
-/// refusing rematches with `loadout_invalid` if custom cards are present.
+/// R915005: a deck with a custom card plays only in practice, so a path that starts a game from
+/// decks it does not judge again (a rematch replays the frozen decks, §9.4) still asks the shared
+/// validator its L7 and refuses as the queue does (`loadout_invalid`). L7 reads no catalog and no
+/// collection, so the check hands it neither and sets the other rules' verdicts aside.
 pub fn assert_no_custom_cards(decks: &[&[String]]) -> Result<(), ApiError> {
     let mut issues: Vec<Value> = Vec::new();
     for cards in decks {
@@ -1136,8 +1149,10 @@ fn freeze(deck: &SavedDeck) -> FrozenDeck {
     }
 }
 
-/// Freezes chosen deck or trio under R253, preventing edits while queued (§9.8). Empty trio slots
-/// fail L1 in validation. Random mode freezes only player's lean (R258, R1372, R924000).
+/// Loads the chosen deck or trio, checks it by R253 and returns the frozen copy the ticket or the
+/// room keeps, so editing it while queued cannot change the game (§9.8: "Deck swapped after
+/// matchmaking"). An empty trio slot is not skipped, so a two-deck trio fails L1 in the shared
+/// module's words. All Random freezes only the player's lean (R258, R1372, R924000).
 pub async fn freeze_choice(
     app: &App,
     profile_id: &str,

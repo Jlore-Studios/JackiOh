@@ -1,34 +1,30 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B35, B36 and B37: the pre-rendered voice set
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
 //
-//   B35  the expected files (one `<defId>-<hook>` per hook in card-audio.json5 that names a voice,
-//        which covers a play, an attack (R1448) and a death line per catalog Unit and one cast line
-//        per anything else)
+//   B35  the expected files (one `<defId>-<hook>` per hook in card-audio.json5 that names a voice)
 //        exist under apps/web/public/audio/voice/, each an MP4 with `ftyp` at byte 4 and brand
 //        `M4A ` at byte 8; the manifest lists exactly those keys with each file's size and its
-//        recomputed voiceHash; the directory holds nothing else.
-//        Each file's MP4 header (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
-//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501, 12 MiB since R1448, 16 MiB since R1884000).
+//        recomputed voiceHash; the directory holds nothing else. Each file's MP4 header
+//        (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
+//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (set by R501, R1448
+//        and R1884000 in turn).
 //   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
 //        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
 //        `core-004-play`.
-//   R655 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
-//        voice lines, each hashing as the manifest records; and a hook that is only an effect expects
-//        no file, though since R1448 a unit's attack hook names a voice like its play and death.
+//   R655 the manifest's keys are exactly the file's voice lines, each hashing as the manifest
+//        records; and a hook that is only an effect expects no file.
 //
 // The Surface's `--check` contract (every expected key has a manifest entry whose hash matches and
 // a file of that size, no orphan files or entries; otherwise one line per problem, each starting
-// with the key, and exit 1) is what the further B37 cases below exercise, one broken thing at a
-// time, each in its own copy of the tree.
+// with the key, and exit 1) is what the further B37 cases below exercise.
 //
 // voiceHash = sha1(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).hex.slice(0, 16), keys in
 // exactly that order, over the fields of the voice the hook names, for a voice rendered by macOS
-// `say`; and, since R501, sha1(JSON.stringify({ v: 1, backend: "sapi", voice, rate, semitones,
-// filter, text })) for one rendered by Windows SAPI and ffmpeg. Both are recomputed here from the
-// formula, never imported, so the script and this test cannot share a mistake. So is the join of a
-// line's words, which are voice-text.json's (written from crates/cards/card-text.yaml, #2498), to
-// the hook in card-audio.json5 that names its voice. The edits below parse a temp copy with JSON5
-// and write it back as JSON, which is JSON5 too.
+// `say`; and sha1(JSON.stringify({ v: 1, backend: "sapi", voice, rate, semitones, filter, text }))
+// for one rendered by Windows SAPI and ffmpeg (R501). Both are recomputed here from the formula,
+// never imported, so the script and this test cannot share a mistake. So is the join of a line's
+// words, which are voice-text.json's (#2498), to the hook in card-audio.json5 that names its voice.
+// The edits below parse a temp copy with JSON5 and write it back as JSON, which is JSON5 too.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";

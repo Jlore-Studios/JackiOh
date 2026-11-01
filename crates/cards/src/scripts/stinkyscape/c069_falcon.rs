@@ -16,9 +16,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69: "a 4/1 Charge Flying Unit,
-// attacking a hero the turn it is played; no Starship Piece, so its death fuses nothing (#2521);
-// radiant 8/2 with Pierce, its hits ignoring Armor (R346)".
+// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69 (#2521, R346).
 #[cfg(test)]
 mod tests {
     use super::*;

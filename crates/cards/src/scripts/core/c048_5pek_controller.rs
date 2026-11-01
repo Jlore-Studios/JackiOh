@@ -37,10 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #48 5pek Controller — SPEC §8.2, BUILD M4-T4: "Every unit switches, exertion untouched (R20),
-// Spikey Pillow stays ATK; radiant enemy-only mode". R20 is asserted twice: no `exertion.switched`
-// moved, and a unit that already attacked still flips (§4.1). R81 is asserted as an absence: the
-// declared mode opens no `PendingChoice`. #65.1 Spikey Pillow is §4.1's case; the rest are props.
+// #48 5pek Controller — SPEC §8.2, BUILD M4-T4 (R20). R20 is asserted twice: no `exertion.switched` moved,
+// and a unit that already attacked still flips (§4.1). R81 is asserted as an absence: the declared mode opens
+// no `PendingChoice`. #65.1 Spikey Pillow is §4.1's case; the rest are props.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

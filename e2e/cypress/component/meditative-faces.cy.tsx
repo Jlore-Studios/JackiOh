@@ -1,33 +1,23 @@
 // MN09 (#552): every Meditative face reads, measured in a real layout engine. The set is read off the
-// catalog (every entry of `Meditative`, its tokens included), so a card a later part adds is measured
-// the day it lands, with no list to update here.
+// catalog (its tokens included), so a card a later part adds is measured the day it lands.
 //
 //   FIT    every Meditative card's base and Radiant face, and its Chinese face on both (ME-CN, #516,
-//          R1301: `crates/cards/chinese.json` gives every Meditative card one), at the inspect view's
-//          two sizes — the hover preview's (PREVIEW_HEIGHT_PX tall) and the touch sheet's on the
-//          smallest phone (`.inspect-face--sheet`'s 56dvh of a 640 px screen) — keeps `.card-name` and
-//          `.card-text` inside their boxes on both axes (cards/fit.ts), and nothing clamps but a face
-//          named in LONG_FACES (which may clamp only on the sheet, at the
-//          reading floor, since the sheet prints the rules whole beside it).
-//   BOARD  the same cards where the board draws them: in the hand, as a Unit on the field and as a
-//          face-up Field Spell or Trap in the backrow, through `Game` with the real catalog at
-//          1280x720, 390x844 and 360x780. Every name stays inside its plate unclamped, except that a
-//          board minion's plate may end a long name in an ellipsis at its floor (cards.css, fit.ts:
-//          the hover preview shows it whole), and every face has a box.
-//   MARKS  the set mark (R503, the ensō) is on the face and clear of the gems, the name, the rules
-//          box, the stats and the crest at every size it shows, and gone below SET_MARK_MIN_FACE_PX;
-//          "All Tribes" (R1382) leads the tags line of a card with every tribal tag (R1424) and sits
-//          inside the face, clear of the rules box and the stats — on the catalog's cards that have
-//          them, and on a Meditative Unit given them, so the check holds before #87 lands.
-//   ART    each card's procedural art is its own: no two Meditative cards draw the same picture,
-//          base or Radiant.
+//          R1301), at the hover preview's and the smallest phone's touch sheet's sizes, keeps
+//          `.card-name` and `.card-text` inside their boxes (cards/fit.ts); only a LONG_FACES face may
+//          clamp, on the sheet, since the sheet prints the rules whole beside it.
+//   BOARD  the same cards in the hand, the field and the backrow, through `Game` at three sizes: every
+//          name stays inside its plate unclamped, but a board minion's may end in an ellipsis (the
+//          hover preview shows it whole), and every face has a box.
+//   MARKS  the set mark (R503) is on the face, clear of the gems, name, rules, stats and crest, and
+//          gone below SET_MARK_MIN_FACE_PX; "All Tribes" (R1382) leads the tags line of a card with every tribal tag (R1424), also on a
+//          Meditative Unit given them, so the check holds before #87 lands.
+//   ART    no two Meditative cards draw the same picture, base or Radiant.
 //
-// "With the set previewed": no face reads what ships (CardFace.tsx and cards/setMark.ts take the
-// set straight off the definition), so a face drawn from the catalog is the face a player will see
-// once the set ships (R1420); nothing here has to pretend `SHIPPED_SETS` lists it.
+// No face reads what ships (CardFace.tsx and cards/setMark.ts take the set off the definition), so a
+// face drawn from the catalog is the one a player will see once the set ships (R1420).
 //
-// The Created status (ME-CREATED, `CardView.created`, R943) is drawn on no face (R2647000):
-// meditative-prompts.cy.tsx checks a card in hand at phone width, and its hold's preview (#617).
+// The Created status (ME-CREATED, R943) is drawn on no face (R2647000): meditative-prompts.cy.tsx
+// checks a card in hand at phone width, and its hold's preview (#617).
 //
 // Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and each
 // carries a control (the face fills its box, the name has a box and reads the card's name), since a

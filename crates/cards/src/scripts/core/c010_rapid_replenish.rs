@@ -44,8 +44,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #10 Rapid Replenish — SPEC §8.1 row 10, BUILD M4-T4 must-pass: "2 prior plays → no draw; 3 →
-// draw 3; radiant 6; counts as played either way".
+// #10 Rapid Replenish — SPEC §8.1 row 10, BUILD M4-T4 must-pass.
 //
 // "2 prior plays" and "3" are `turnLog.cardsPlayed` of 3 and 4, this spell counted. No library card is
 // cast-on-draw (#21, #27, #90.1 are) but the last case's Hinder (hunt round 8). R195's yellow glow

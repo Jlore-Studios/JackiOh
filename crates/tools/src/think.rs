@@ -1,7 +1,14 @@
-//! `cargo jackioh think` (#834): inspects a saved position through the AI's redacted view (R185).
+//! `cargo jackioh think [--file F] [--at K] [--seat p1|p2] [--budget gate|full] [--json]` (#834): one
+//! saved game position through the AI's eyes. It reads a `ReplayInput` (what e2e spec 13's
+//! `PracticeDebug` dumps) from `--file` or stdin, folds `log[..K]` (default the whole log, rejects
+//! included), and prints what `seat` (default `seat_to_act`) sees: the board and its own hand as
+//! `redact` leaves them, the legal-action count, the `evaluate` score and `decide`'s answer. Nothing the
+//! seat cannot see is printed, the match seed included (R185), so the output can go into an issue.
 //!
-//! Folds up to step K and prints redacted boards, hand, legal action count, eval score, and decision line.
-//! Evaluates using deterministic AI streams; tier handicaps (R180) are applied with equal budget (§9.9).
+//! The decision is the AI's at the gates' budget, from the stream a gate match starts the seat's AI on
+//! (`{seed}:ctl:{seat}` at cursor 0), so a position gives the same answer on every run, though one
+//! inside a game may differ in its determinizations. There is no `--tier`: a tier is the handicaps the
+//! input carries (R180), and the AI's budget is the same at every tier (§9.9).
 
 use std::io::Read as _;
 use std::path::PathBuf;
@@ -153,7 +160,8 @@ fn inspect(
     })
 }
 
-/// R767000: inspects game JSON under pinned catalog from `catalogVersion`.
+/// R767000: `inspect` of a game's JSON under the catalog its `catalogVersion` names, as `replay`
+/// folds it; a version this build neither is nor carries is refused before anything is folded.
 fn inspect_game(
     game: Value,
     at: Option<usize>,

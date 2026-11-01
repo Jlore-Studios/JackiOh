@@ -1,14 +1,14 @@
-//! Matchmaking (BUILD M7-T3, SPEC §9.5) in three modes (R257, R330, R258).
+//! Matchmaking (BUILD M7-T3, SPEC §9.5) in three modes (R257): Best of 1, Conquest (a trio played
+//! as a series, R330, `series.rs`) and All Random (R258); a ticket pairs only within its mode.
+//! Pairing runs on enqueue plus a sweeper, the window widening every 10 s up to `MAX_FAIR_GAP`
+//! (R640001), in R166's order. R1453: a ticket past its fallback time with no person to pair with
+//! gets a ladder bot (for Conquest a series, R641000); R1555000: a queue holding no ticket kicks off
+//! one match between two grinding bots.
 //!
-//! Enqueue asserts active account, validates loadout, freezes decks (§9.4, §9.8), and returns ticket id.
-//! Sweeper widens rating window every 10s up to `MAX_FAIR_GAP` (R640001) in R166's order.
-//! Both tickets are claimed atomically via `tickets_claim_pair` (M7-T3).
-//! Modes become Best-of-1, All Random, or Conquest series (`series.rs`).
-//!
-//! Fallback pairs tickets with ladder bots after timeout (R1453, R641000). Empty queue kicks off
-//! bot-vs-bot ranked matches (R1555000).
-//! Routes (SURFACE §11.2): enqueue (`POST /api/queue`), dequeue (`DELETE`), and population
-//! (`GET /api/queue/population`) with wait readouts (R640002).
+//! Two invariants. The deck is frozen at enqueue (§9.4), so an edit while queued cannot change the
+//! game (§9.8). Both tickets are claimed in one atomic statement, `tickets_claim_pair`, before a
+//! match or series is made, so racing matchers cannot pair a ticket twice. Routes (SURFACE §11.2):
+//! `POST`/`DELETE /api/queue` and `GET /api/queue/population`, the readout (R640002).
 
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
@@ -64,7 +64,9 @@ pub(crate) fn json_list<T: serde::Serialize>(items: &[T]) -> String {
     serde_json::to_string(items).unwrap_or_default()
 }
 
-/// Reads an optional seed override in e2e test mode; rejected otherwise (SPEC §11 R143).
+/// SPEC §11 R143: a client never supplies a seed, except that in end-to-end mode the room and queue
+/// endpoints accept one so a networked spec can be seeded; elsewhere it is rejected, not ignored.
+/// Public so `actor/rooms.rs` reads the field through this same function.
 pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiError> {
     let Some(value) = body.get("seed") else {
         return Ok(None);
@@ -80,7 +82,9 @@ pub fn seed_override_of(app: &App, body: &Value) -> Result<Option<String>, ApiEr
     }
 }
 
-/// Ephemeral ticket id -> e2e seed override mapping (R143).
+/// Ticket id -> the seed its enqueue asked for (R143), until the ticket is paired or canceled.
+/// Module state because the sweeper runs `try_pair` too; not on `Ticket`, which would put a test-mode
+/// field into the shape `db/**` persists. `actor/rooms.rs` holds `room code -> seed` alike.
 static E2E_SEED_BY_TICKET: LazyLock<Mutex<IndexMap<String, String>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -99,7 +103,10 @@ fn forget_seed(ticket_id: &str) {
     seeds().shift_remove(ticket_id);
 }
 
-/// Reads an optional seat override in e2e test mode; rejected otherwise (SPEC §11 R1989000, R143).
+/// SPEC §11 R1989000: the seed's coin decides every 1v1 door's seats, so a networked spec pins its
+/// seats as it pins the seed (R143): `seat: "p1"` or `"p2"`, refused outside end-to-end mode. A
+/// honored pin skips the coin; in a conflict the precedence-first profile (the older ticket, the
+/// host) is pinned. Public so `actor/rooms.rs` reads the field through this same function.
 pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine::PlayerId>, ApiError> {
     use jackioh_engine::PlayerId;
     let Some(value) = body.get("seat") else {
@@ -117,7 +124,7 @@ pub fn seat_override_of(app: &App, body: &Value) -> Result<Option<jackioh_engine
     }
 }
 
-/// Ephemeral ticket id -> e2e seat override mapping (R1989000).
+/// Ticket id -> the seat its enqueue asked for (R1989000), kept off `Ticket` as the seed is.
 static E2E_SEAT_BY_TICKET: LazyLock<Mutex<IndexMap<String, jackioh_engine::PlayerId>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -136,7 +143,9 @@ fn forget_seat(ticket_id: &str) {
     seat_pins().shift_remove(ticket_id);
 }
 
-/// Deterministic seat flip from match/series seed: true if precedence-first side takes P1 (SPEC §11 R1989000).
+/// SPEC §11 R1989000: one draw of the seed on `{seed}:seats` at cursor 0; true seats the
+/// precedence-first side (the older ticket, the host, the person a bot pairs with, a kickoff's
+/// first grinder) as Player 1. Only the seed goes in, so a replay folds unchanged.
 pub fn seat_coin_p1_first(seed: &str) -> bool {
     jackioh_engine::Rng::new(&format!("{seed}:{SEAT_COIN_LABEL}"), 0).int(2) == 0
 }
@@ -164,8 +173,10 @@ fn take_seat_pin_for_pair(a: &Ticket, b: &Ticket) -> Option<bool> {
     })
 }
 
-/// In-memory presence tracking for queued callers (SPEC §11 R897000).
-/// Silent profiles expire before seating; swept on matchmaker ticks.
+/// SPEC §11 R897000: when each profile with an open ticket was last heard from. Every signed-in
+/// request refreshes its caller, which a queued client sends every `SERIES_POLL_SECONDS`, so a silent
+/// profile's ticket expires before it can seat anyone. A restart loses it; `enqueued_at` covers that.
+/// One per `App`, not module state: profile ids repeat across parallel tests.
 pub struct QueuePresence {
     born: i64,
     heard: Mutex<IndexMap<String, i64>>,
@@ -232,8 +243,9 @@ impl Default for QueuePresence {
     }
 }
 
-/// Cached queue population readout (SPEC §11 R1996000, R640002), valid for
-/// `QUEUE_READOUT_CACHE_TTL_SECONDS`.
+/// SPEC §11 R1996000: the readout last counted, kept `QUEUE_READOUT_CACHE_TTL_SECONDS` so every
+/// waiting client's polls share one count, one answer for all as it names nobody (R640002). Not
+/// shared in flight: readouts that miss together each count. One per `App`.
 #[derive(Default)]
 pub struct KeptReadout {
     kept: Mutex<Option<(i64, Value)>>,
@@ -294,12 +306,9 @@ fn take_seed_for_pair(a: &Ticket, b: &Ticket) -> Option<String> {
 
 // Enqueue
 
-/// §9.5's enqueue (the route's handler is `enqueue` below). The order of the checks is the order
-/// §9.5 writes them, and it matters: a player already in a match (or a series, R264) or already
+/// §9.5's enqueue, its checks in §9.5's order: a player already in a match (or a series, R264) or
 /// queued is told so before their deck is validated, so a stale client gets the useful error.
-///
-/// `seed` is R143's: the seed this enqueue asked for, or `None`. `seat` is R1989000's: the
-/// seat it asked for, or `None`. Only ever `Some` in end-to-end mode.
+/// `seed` (R143) and `seat` (R1989000) are only ever `Some` in end-to-end mode.
 async fn enqueue_ticket(
     app: &App,
     profile: &Profile,

@@ -76,6 +76,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #42 Transmutable Toxins — SPEC §8.6 row 42, BUILD M9 Classic row C 42: your Units +1/+1 per Plague
+// Counter, enemy Units −1/−1, recomputed on every change; an enemy can die of it, an Indestructible one
 // too once its max health reaches 0 (R69); Activate, once per turn (R384): one token on each of two
 // different random Units on the field, either side (R60); C #27 doubles its share; not a play; radiant
 // ±2; its tuned numbers (tokens, stats per token) read through `param()` (R386).

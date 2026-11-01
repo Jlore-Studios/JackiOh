@@ -34,8 +34,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
-// radiant 40".
+// #47 Fig of Life — SPEC §8.2, BUILD M4-T4 (R19).
 //
 // R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero"): the tests heal
 // an ally unit, an enemy unit, an own hero and an enemy hero.

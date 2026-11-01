@@ -41,9 +41,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     crate::never_defense_kept(script(), true, false)
 }
 
-// TG #36 Training Dummy — SPEC §8.11 row 36, BUILD M13 row TG 36: "cannot switch to Defense (action
-// refused, an effect's switch leaves it in Attack); Death: one random Radiant TG card to your hand; never
-// itself; hidden from the opponent (R97). radiant two; may be in Defense Position".
+// TG #36 Training Dummy — SPEC §8.11 row 36, BUILD M13 row TG 36 (R97).
 #[cfg(test)]
 mod tests {
     use super::ID;

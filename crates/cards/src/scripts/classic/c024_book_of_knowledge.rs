@@ -51,11 +51,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #24 Book of Knowledge — SPEC §8.6 row 24, BUILD M9 Classic row C 24: "Draw 2 or 3 (50/50): one roll,
-// then that many draws, each with its own cast-on-draw chain (R58), fatigue from an empty deck, a full
-// hand burning (R317), a draw limit stopping the rest (§2.4); the drawn cards are never named in the
-// opponent's view; radiant: draw 4 to 6 (25/50/25); its tuned numbers (least, most) read through
-// `param()` (R386)".
+// C #24 Book of Knowledge — SPEC §8.6 row 24, BUILD M9 Classic row C 24 (R58, R317, §2.4, R386).
 //
 // The pipeline cases set both ends to one count, so they draw it with no roll. The steal case puts C #4
 // Palantir in the opponent's backrow: the base face steals a (1) Cost Spell with no "you may" (balance

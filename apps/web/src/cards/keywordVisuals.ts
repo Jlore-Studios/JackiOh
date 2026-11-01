@@ -2,39 +2,31 @@
 // board minion, beside the two-letter chip that names it.
 //
 // R2577000 amends that: only a keyword that can still act while the card is on the field, or as it
-// leaves, is drawn there (`onField`). Equip, Tradable, Cloaked, Crater, Flashback, Stack and
-// Temporary are rules of the hand, the graveyard or the moment of play, so a unit on the field draws
-// neither a treatment nor a chip for them: they take no layer's slot, no loop and no room in the
-// chips' "+n" fold, and the hover preview and the inspect sheet still list them. Their drawings stay
-// in KeywordFx.tsx and keywords.css.
+// leaves, is drawn there (`onField`), so the others take no layer's slot, no loop and no room in the
+// chips' "+n" fold. Their drawings stay in KeywordFx.tsx and keywords.css.
 //
 // `KEYWORD_VISUALS` is a total map over `KeywordKind`, so a new keyword kind does not compile until
 // it has a treatment here and its drawing in KeywordFx.tsx and keywords.css. A treatment sits on one
 // of four layers of the minion, each a plane of its own, so several compose without covering each
 // other or the attack, health and name:
 //
-//   frame  around or behind the portrait: Taunt's steel shield, Divine Shield's bubble, the Reborn
-//          echo, the Immune to Spells ward, the Indestructible plating, the Stack's card edges.
-//   veil   over the portrait's art, clipped to its oval and under the name plate and the gems:
-//          chains, cracks, venom, veins, speed streaks, runes and clockwork.
-//   glyph  a small shaped emblem in the row along the top edge, after the cost gem: blade, spear,
-//          crescent, hoofprint, lock, clover.
+//   frame  around or behind the portrait.
+//   veil   over the portrait's art, clipped to its oval and under the name plate and the gems.
+//   glyph  a small shaped emblem in the row along the top edge, after the cost gem.
 //   stat   Armor's steel plate beside the health gem (a number of its own).
 //
 // Each layer holds at most so many treatments (`LAYER_CAP`), taken in `priority` order (1 first):
-// the keywords that decide what an opponent can do (Taunt, Divine Shield, Can't attack, Immune to
-// Spells, Poisonous) first, flavour last. A keyword past its layer's cap still has its chip (the
-// chips' own "+n" fold and the hover preview list every keyword), so nothing is lost, only not drawn
-// twice. And at most `AMBIENT_MAX` treatments on one unit move at a time, again by priority; the rest
-// hold still. Charge's and Rush's streaks move only while the view's `canAct` is true, as a mark of
-// the view's state and never as a claim about legality (that is `legalActions`', CLAUDE.md rule 7).
+// the keywords that decide what an opponent can do first, flavour last. A keyword past its layer's
+// cap still has its chip, so nothing is lost, only not drawn twice. And at most `AMBIENT_MAX`
+// treatments on one unit move at a time, again by priority; the rest hold still. Charge's and Rush's
+// streaks move only while the view's `canAct` is true, as a mark of the view's state and never as a
+// claim about legality (that is `legalActions`', CLAUDE.md rule 7).
 //
 // The treatments read the view and nothing else: the unit's keywords as the view lists them (a
-// Vanilla unit's list already leaves out what it lost, and a Vanilla unit shows nothing else),
-// `canAct`, `armor` (the plate's number), `brittle` (the Brittle count as it stands; the keyword's
-// number where the view has none) and `animated` (a backrow card standing in a unit zone as a Unit,
-// R383). Under reduced motion, the OS setting or the settings panel's, every loop stops and the
-// still mark stays (keywords.css).
+// Vanilla unit's list already leaves out what it lost), `canAct`, `armor`, `brittle` (the Brittle
+// count as it stands; the keyword's number where the view has none) and `animated` (a backrow card
+// standing in a unit zone as a Unit, R383). Under reduced motion, the OS setting or the settings
+// panel's, every loop stops and the still mark stays (keywords.css).
 
 import type { Keyword, KeywordKind, UnitView } from "@jackioh/shared";
 

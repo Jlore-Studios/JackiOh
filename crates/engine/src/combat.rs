@@ -48,7 +48,7 @@ pub struct SwitchPositionOptions {
     pub to: Option<Position>,
 }
 
-/// B5 E35: what a forced attack on "a random enemy" draws from (TS `"enemies" | "enemyUnits"`).
+/// B5 E35: what a forced attack on "a random enemy" draws from.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
