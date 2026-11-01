@@ -3,12 +3,11 @@
 //! attackers (`damage_past_taunts`); and the opponent's reply prices the splash, ranking a double
 //! kill above a single kill and a kill-plus-pop above a bare kill (`trade_value`).
 //!
-//! The cards: Nurse Cleaver (classic-073) 3/6 Cleave, Zoomerbin Oomen (core-067) 1/2, Paul Allen's
-//! Ghost (classic-089) 5/6 Divine Shield, Jay Fungus (classicplus-049) 3/6 Taunt, Midrange Menace
-//! (core-019) 9/9 Taunt, Voidwalker (classic-050) 6/3, and Tempo Timmy (core-011) 3/3, the non-Cleave
-//! control attacker. The shield is the Ghost rather than Jilliax, whose Taunt would bind every reply
-//! attack to itself and whose direct hit pops the shield even without Cleave. Field entries without a
-//! `lane` fill consecutive lanes; the reply boards pin lanes to leave lane 3 empty.
+//! The cards: Nurse Cleaver 3/6 Cleave, Zoomerbin Oomen 1/2, Paul Allen's Ghost 5/6 Divine Shield, Jay Fungus
+//! 3/6 Taunt, Midrange Menace 9/9 Taunt, Voidwalker 6/3, and Tempo Timmy 3/3, the non-Cleave control
+//! attacker. The shield is the Ghost rather than Jilliax, whose Taunt would bind every reply attack to itself
+//! and whose direct hit pops the shield even without Cleave. Field entries without a `lane` fill consecutive
+//! lanes; the reply boards pin lanes to leave lane 3 empty.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

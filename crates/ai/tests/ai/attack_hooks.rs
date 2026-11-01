@@ -4,14 +4,13 @@
 //! may attack, for either side's units alike. A face-down or hand card is never probed, hidden cards
 //! change no decision (R185), and a zero weight, the frozen baseline's, reads no price.
 //!
-//! The cards: The Propagation's Wasp (stinkyscape-091), (1) 3/3, "After this attacks, summon a copy of
-//! this, then evolve. / Evolve: Gain Flying."; The Propagation's Hornet (stinkyscape-092), (2) 3/4, Rush
-//! and the Wasp's text; Badger (stinkyscape-075), (1) 2/3, "When this attacks, gain a random
-//! Stinkyscape Resource."; Honey Badger (stinkyscape-076), (2) 4/6, Rush and the Badger's text; Tmack
-//! Trav (stinkyscape-094), (3) 9/9, Radiant 18/18 with Rush and Pierce, "After this destroys a Unit, it
-//! may attack again."; Polymorph (meditative-024), (3) "Transform a Unit into a Sheep Token"; Midrange
-//! Menace (core-019), (3) 9/9 Taunt; Mr. Vanilla (core-008), a (1) 4/4 with no text, set to the stats
-//! a test compares (`plain`); and the (1) Traps Sheepish (core-041) and My Pawn (core-096).
+//! The cards: The Propagation's Wasp, (1) 3/3, "After this attacks, summon a copy of this, then evolve.
+//! / Evolve: Gain Flying."; The Propagation's Hornet, (2) 3/4, Rush and the Wasp's text; Badger, (1)
+//! 2/3, "When this attacks, gain a random Stinkyscape Resource."; Honey Badger, (2) 4/6, Rush and the
+//! Badger's text; Tmack Trav, (3) 9/9, Radiant 18/18 with Rush and Pierce, "After this destroys a Unit,
+//! it may attack again."; Polymorph, (3) "Transform a Unit into a Sheep Token"; Midrange Menace, (3) 9/9
+//! Taunt; Mr. Vanilla, a (1) 4/4 with no text, set to the stats a test compares (`plain`); and the (1)
+//! Traps Sheepish and My Pawn.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

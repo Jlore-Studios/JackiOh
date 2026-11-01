@@ -245,8 +245,7 @@ impl TrapSampler<'_> {
     }
 }
 
-/// `rng.int(2 ** 31)`: 2³¹ is past `Rng::int`'s `i32`, so the same draw is made here by hand
-/// (`Math.floor(next() * n) % n`, rng.ts).
+/// `rng.int(2 ** 31)`: 2³¹ is past `Rng::int`'s `i32`, so the same draw is made here by hand.
 fn int_2_31(rng: &mut Rng) -> u64 {
     const N: f64 = 2_147_483_648.0;
     ((rng.next() * N).floor() as u64) % (N as u64)

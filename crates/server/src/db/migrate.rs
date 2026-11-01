@@ -334,7 +334,8 @@ comment on table app.migrations is
 /// 0013_retention_purge.sql: its first version's `set jackioh.retention_purge` clause on
 /// app.purge_expired_rows needs a superuser since Postgres 15, so it failed on Supabase.
 /// 0068_v0_5_retcon.sql (R2532000): its first version's PL/pgSQL call per renamed record id ran for
-/// minutes, past Render's `release` boot window. Where either was applied, it works as written.
+/// minutes, past Render's `release` boot window. Where applied, 0013 works as written and 0068's renames
+/// are the same.
 pub const REWRITTEN: &[(&str, &[&str])] = &[
     ("0013_retention_purge.sql", &["16b93e4d"]),
     ("0068_v0_5_retcon.sql", &["5827754e"]),

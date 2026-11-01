@@ -4,9 +4,9 @@
 //! of `face_threat`); the evaluation prices it by the unit it wakes as, less for each turn it waits
 //! (R2380000); and the search signature tells a position holding one apart from one without it.
 //!
-//! Most boards put a unit on the field to sleep by writing its status, as
-//! `slumber::start_slumber_on_field` would. The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy
-//! (core-011) 3/3 and Imprisoned Cosmality (stinkyscape-019), (2) 10/6 Pierce, Dormant for 2 turns.
+//! Most boards put a unit on the field to sleep by writing its status, as `slumber::start_slumber_on_field`
+//! would. The cards: Mr. Vanilla 4/4, Tempo Timmy 3/3 and Imprisoned Cosmality, (2) 10/6 Pierce, Dormant for
+//! 2 turns.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

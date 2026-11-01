@@ -230,10 +230,10 @@ impl FullArtPick {
 }
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
-/// wears of its own: a foil, a finish, a border and its full-art pick ([`FullArtPick`], R2655000). A
-/// kind with no pick is absent and wears its default (R1953001; the Full-art cards setting, for
-/// `full_art`). An id is kept as written, an unknown one (a newer client's) too, and judged only where
-/// it is worn (`loadout::freeze_loadout`, R1834002).
+/// wears of its own: a foil, a finish, a border and its full-art pick ([`FullArtPick`], R2655000). A kind
+/// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
+/// id is kept as written, an unknown one too, and judged only where it is worn (`loadout::freeze_loadout`,
+/// R1834002).
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPicks {

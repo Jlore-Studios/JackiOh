@@ -3,8 +3,8 @@
 //! free of the order the moves came in, so positions differing on them stop merging in the beam's
 //! duplicate check and the lethal solver's visited set.
 //!
-//! The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy (core-011) 3/3 Rush First Strike, Pointmaster
-//! (core-020) 7/1 First Strike and Midrange Menace (core-019) 9/9 Taunt.
+//! The cards: Mr. Vanilla 4/4, Tempo Timmy 3/3 Rush First Strike, Pointmaster 7/1 First Strike and Midrange
+//! Menace 9/9 Taunt.
 
 use indexmap::IndexMap;
 use jackioh_ai::*;

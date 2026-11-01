@@ -1287,7 +1287,7 @@ pub struct PlayerSettingsMergeInput {
     pub profile_id: String,
     /// Already checked by the handler: group ids, each a flat object of values.
     pub groups: IndexMap<String, PlayerSettingsGroup>,
-    /// As `TutorialMergeInput::at`: the server's clock, stamped for operators and never read back.
+    /// As `TutorialMergeInput.at`: the server's clock, stamped for operators and never read back.
     pub at: i64,
 }
 
@@ -1789,8 +1789,8 @@ impl Tx<'_> {
 
     /// §9.4 step 6: one atomic statement. Increments `uses` only while the code is unrevoked,
     /// unexpired and unexhausted; returns false otherwise. Two concurrent callers cannot both win
-    /// the last use. `redeem` does not call it: the fake builds step 6 out of it, and the contract
-    /// suite drives it.
+    /// the last use. Redemption does not call it (`redeem` is the whole transaction); it stays because
+    /// the fake builds step 6 out of it and the contract suite drives it.
     pub async fn codes_claim(&mut self, code_id: &str, now: i64) -> StoreResult<bool> {
         dispatch!(self, codes_claim(code_id, now))
     }

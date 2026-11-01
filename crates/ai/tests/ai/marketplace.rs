@@ -1,8 +1,8 @@
-//! The Marketplace in the AI's search (R1853004): `legal_actions` lists a buy, the move order tries it
-//! after the plays, answers and Trades and before End Turn, and the AI answers a turn with one on offer
-//! with a legal action. The opponent's own offers are hidden from the seat (`observe::redact`,
-//! R2250002), so they never steer the decision. The state's Marketplace is written by hand: one Mr.
-//! Vanilla (core-008) offer of the AI's at 40 Credits, and the AI holds 100.
+//! The Marketplace in the AI's search (R1853004): `legal_actions` lists a buy, the move order tries it after
+//! the plays, answers and Trades and before End Turn, and the AI answers a turn with one on offer with a
+//! legal action. The opponent's own offers are hidden from the seat (`observe::redact`, R2250002), so they
+//! never steer the decision. The state's Marketplace is written by hand: one Mr. Vanilla offer of the AI's at
+//! 40 Credits, and the AI holds 100.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

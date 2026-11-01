@@ -3,9 +3,8 @@
 //! the move order's winning trades (the hit and the strike back) and in the opponent's reply (its
 //! blows and its face hit). Defense Position's Armor 1 (§4.1) is the Armor most boards here pierce.
 //!
-//! Each board grants Pierce to a vanilla body on the field, as `ranged_flying.rs` grants Ranged. The
-//! cards: Mr. Vanilla (core-008) 4/4, Zoomerbin Oomen (core-067) 1/2, Plague Doctor (classic-059) 2/3
-//! and Plague Crawler (classic-053) 2/2.
+//! Each board grants Pierce to a vanilla body on the field, as `ranged_flying.rs` grants Ranged. The cards:
+//! Mr. Vanilla 4/4, Zoomerbin Oomen 1/2, Plague Doctor 2/3 and Plague Crawler 2/2.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

@@ -4,10 +4,9 @@
 //! landed one every attacker (R783003), in `face_threat` and the lethal solver's `ready_gap`, and
 //! `KeywordWeights` weighs each keyword #841 shipped.
 //!
-//! No card prints Ranged or Flying yet (§6.1: the random keyword pool only), so each board grants the
-//! keyword to a unit on the field. The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy (core-011) 3/3,
-//! Pointmaster (core-020) 7/1, Midrange Menace (core-019) 9/9 Taunt and Wrong-House Attacker
-//! (classicplus-006) 1/1 Rush, Lifesteal, Poisonous.
+//! No card prints Ranged or Flying yet (§6.1: the random keyword pool only), so each board grants the keyword
+//! to a unit on the field. The cards: Mr. Vanilla 4/4, Tempo Timmy 3/3, Pointmaster 7/1, Midrange Menace 9/9
+//! Taunt and Wrong-House Attacker 1/1 Rush, Lifesteal, Poisonous.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

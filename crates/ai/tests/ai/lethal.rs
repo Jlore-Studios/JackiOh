@@ -614,7 +614,6 @@ mod free_replays_r1965000 {
         s.state().clone()
     }
 
-    /// The AI's turn from `start`.
     fn ai_turn(start: &GameState) -> AiTurnResult {
         let mut ai = AiOptions::with_budget(create_rng("r1965000", 0), AI_BUDGET);
         play_ai_turn(start, AI, &mut ai)

@@ -5183,8 +5183,8 @@ pub async fn stats_decklists(t: &mut PgTx<'_>, patch: &str) -> Result<Vec<ListTo
     rows.iter().map(list_total_of).collect()
 }
 
-// Play telemetry (SPEC §9.11, R1442): migration 0029's three tables. No `app.*` function: each
-// write is one insert per table that skips a key already held, and each read a single select.
+// Play telemetry (SPEC §9.11, R1442): migration 0029's three tables. No `app.*` function: each read
+// is a single select.
 
 /// R1442: one `jsonb_to_recordset` insert per table that has rows, each skipping a key already
 /// held and a seat whose account is deleted (0012 empties its profile column on the match, and

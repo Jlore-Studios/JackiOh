@@ -537,7 +537,8 @@ pub struct RedemptionSettings {
     pub enabled: Arc<dyn Fn() -> bool + Send + Sync>,
     /// `auth.users.email_confirmed_at is not null` for this profile (§9.4 step 1), which `Profile` has no
     /// column for (KNOWN DIVERGENCES, redemption's email check). True by default: BUILD M8's three fixture
-    /// accounts are all verified (`src/api/e2e.rs`), and the server refuses an unverified caller (R159) first.
+    /// accounts are all verified (`src/api/e2e.rs`), and the server refuses an unverified caller (R159)
+    /// first.
     pub email_verified: Arc<dyn Fn(&str) -> bool + Send + Sync>,
 }
 

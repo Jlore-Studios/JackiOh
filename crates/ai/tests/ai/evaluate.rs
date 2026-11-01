@@ -1436,7 +1436,6 @@ mod shown_cost_fatigue_windfury_1602 {
         out
     }
 
-    /// `player`'s lane-1 unit.
     fn lane_one(state: &GameState, player: PlayerId) -> CardInstance {
         state.players[player].units[0]
             .as_ref()

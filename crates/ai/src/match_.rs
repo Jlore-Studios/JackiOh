@@ -52,7 +52,6 @@ pub enum SeatController {
 }
 
 impl SeatController {
-    /// `controller.kind`.
     pub fn kind(&self) -> &'static str {
         match self {
             SeatController::Ai { .. } => "ai",
