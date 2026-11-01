@@ -32,13 +32,13 @@ fn played(times: usize) -> (GameState, ActionBody) {
 #[test]
 fn a_card_played_fewer_times_than_the_cap_this_turn_is_a_candidate() {
     let (state, play) = played(AI_SAME_CARD_PLAYS_PER_TURN - 1);
-    assert!(candidate_actions(&state, AI).contains(&play));
+    assert!(candidate_actions(&state, AI, Prices::NONE).contains(&play));
 }
 
 #[test]
 fn a_card_played_the_cap_times_this_turn_is_no_candidate_and_the_ai_ends_its_turn() {
     let (state, play) = played(AI_SAME_CARD_PLAYS_PER_TURN);
-    let candidates = candidate_actions(&state, AI);
+    let candidates = candidate_actions(&state, AI, Prices::NONE);
     assert!(!candidates.contains(&play), "{candidates:?}");
     assert!(
         legal_actions(&state, AI).contains(&play),

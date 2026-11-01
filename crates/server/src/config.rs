@@ -215,7 +215,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-21";
+pub const TERMS_VERSION: &str = "2026-10-31/2026-10-31";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -585,6 +585,12 @@ pub const API_REJECTION_ALERT_THRESHOLD: usize = 20;
 /// and the least time between two alerts for one key. A minute, the API limit's own window, so a
 /// sustained flood alerts once a minute.
 pub const API_REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
+/// SPEC §11 R2478000: how many verified auth users the router remembers the profile id of
+/// (`api::http::KnownProfiles`), so a request from an account whose `API_REQUESTS_PER_MINUTE` is
+/// spent is refused before the store is read. Ten thousand: far more accounts than one server hears
+/// from in the minute a budget lasts, in about two megabytes; past it the user remembered longest
+/// ago is dropped and reads the store once more.
+pub const KNOWN_PROFILES_MAX: usize = 10_000;
 /// SPEC §11 R835002: how many malformed frames from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.
@@ -594,6 +600,12 @@ pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.
 /// Ten a second follows a hover from target to target and bounds what a scripted client can push.
 pub const AIM_RELAY_INTERVAL_MS: i64 = 100;
+/// SPEC §11 R2609000: the least time between two later hellos of one watcher's socket that the actor
+/// answers (R1103000); a hello sooner after the last answered one is dropped unanswered. A second: a
+/// page probes only once its socket has been quiet past `WS_PING_INTERVAL_SECONDS` and any answer
+/// ends the quiet (R1441), so a real page's probe never falls inside it, while a scripted flood
+/// costs one view a second.
+pub const WATCH_HELLO_INTERVAL_MS: i64 = 1_000;
 /// Match sockets one client address may hold at once, counting handshakes still in progress. Not in
 /// SPEC, and no R-row. A player needs one socket per match, plus one more for a moment while it
 /// reconnects; ten leaves room for several players behind one home or campus address. Past it the
@@ -924,10 +936,12 @@ pub const CARD_STATS_CURVE_TOP: i32 = 6;
 /// Cache-Control max-age in seconds for public card statistics endpoints.
 pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
 
-/// SPEC §11 R978000: how many computed per-patch reports (one per patch, `?source=` and `?pilot=`)
-/// the server keeps in memory at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping another
-/// drops the one kept longest ago. Room for every patch in `patches.json` (30 at v0.3.7b) under all
-/// three pilots, with as many again to grow into.
+/// SPEC §11 R978000, R2491000: how many computed reports each of the card statistics' kept stores
+/// (`api::stats::KeptReports`) holds at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping
+/// another drops the one kept longest ago. The card drill-down keeps at most 24 however many patches
+/// ship, a patch history and the current patch's report for each of three pilots and four modes, so
+/// the bound holds down the list route's windowed reports, one per patch, `?source=`, `?pilot=` and
+/// `?mode=` asked for.
 pub const CARD_STATS_KEPT_REPORTS: usize = 256;
 
 /// SPEC §11 R654: how many co-played cards a card's drill-down (`GET /api/stats/cards/:id`) lists,
@@ -2674,14 +2688,16 @@ pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
 /// retention loop sweeps them. A day outlasts any retry a player makes after a slow answer
 /// (`API_REQUEST_TIMEOUT_SECONDS`) while keeping the table to a day of spends.
 pub const IDEMPOTENCY_KEY_TTL_HOURS: i64 = 24;
-/// SPEC §14.11, R2378000: how many spends (a pack bought or opened, a token redeemed, a cosmetic
-/// pack opened, a chase bought) one account runs at once. A spend sent while they run waits its
-/// turn in this process, holding no database connection, so a burst of presses cannot hold the
-/// pool's connections waiting on the account's economy lock (issue #2378).
+/// SPEC §14.11, R2378000: how many of one account's economy requests run at once: its spends (a
+/// pack bought or opened, a token redeemed, a cosmetic pack opened, a chase bought) and the other
+/// routes that write under its economy lock (a card's picks saved or uploaded, a practice seed
+/// asked for or given back, a quest replaced; issue #2610). One sent while they run waits its turn
+/// in this process, holding no database connection, so a burst of presses cannot hold the pool's
+/// connections waiting on the account's economy lock (issue #2378).
 pub const ECONOMY_SPENDS_RUNNING_MAX: usize = 1;
-/// SPEC §14.11, R2378000: how many spends of one account may wait their turn behind the ones
-/// running. One sent past it is refused at once with 429 and spends nothing. Four cover a person's
-/// tabs and devices pressing together; a script's burst is refused past them.
+/// SPEC §14.11, R2378000: how many of one account's economy requests may wait their turn behind
+/// the ones running. One sent past it is refused at once with 429 and writes nothing. Four cover a
+/// person's tabs and devices pressing together; a script's burst is refused past them.
 pub const ECONOMY_SPENDS_WAITING_MAX: usize = 4;
 /// SPEC §14.11, R2378000: the wait the refusal of a spend sent past `ECONOMY_SPENDS_WAITING_MAX`
 /// states (`retryAfterMs`, R192).
@@ -2691,7 +2707,7 @@ pub const SPEND_BUSY_RETRY_AFTER_MS: i64 = 1_000;
 /// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
 pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
-/// game's log and a re-run of every AI move off the runtime (`economy::practice`). A claim past it
+/// game's log off the runtime (`economy::practice`, R2560000). A claim past it
 /// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
 /// the blocking pool free for the live matches' folds.
 pub const PRACTICE_VERIFY_CONCURRENCY: usize = 2;
@@ -2703,6 +2719,12 @@ pub const PRACTICE_PAY_ATTEMPTS: usize = 3;
 /// SPEC §14.8, R1688000: the wait before the second try at a practice claim's pay, doubled before
 /// each try after it (250 ms, then 500 ms), as `MATCH_RECORD_RESULT_BACKOFF_MS` waits.
 pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
+/// SPEC §14.8, R2422000: how long a practice claim may stay unsettled (neither paid nor refused)
+/// after it burned its seed before the retention loop settles it: a claim whose pay every try
+/// failed, or whose server stopped or crashed under it. Well past what a live settle takes (a wait
+/// for a verification permit, the check and the pay's tries), so the sweep never takes a claim a
+/// live settle is still working on; ten minutes, as `GAME_RECORD_REFILE_GRACE_SECONDS` waits.
+pub const PRACTICE_SETTLE_GRACE_SECONDS: i64 = 10 * 60;
 /// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
 /// (#1333's table: 5).
 pub const QUEST_INTERVAL_HOURS: i64 = 5;

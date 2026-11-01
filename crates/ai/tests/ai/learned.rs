@@ -186,6 +186,7 @@ fn r1012001_a_finalist_takes_the_correction_at_its_share() {
                 next,
                 EvalKind::Learned,
                 &Learned::Float(*network),
+                Prices::NONE,
             );
             assert_ne!(points, hand, "the network moves this position");
             assert_eq!(finalist, hand + LEARNED_CORRECTION_SHARE * (points - hand));
@@ -212,7 +213,14 @@ fn r1012002_the_reach_says_which_of_the_beam_s_scores_the_network_gives() {
         let network = Learned::Float(*network);
         let next = NextSwing::Enemy;
         let hand = evaluate(&solo, PlayerId::P1, next, &AI_EVAL);
-        let learned = finalist_score_with(&solo, PlayerId::P1, next, EvalKind::Learned, &network);
+        let learned = finalist_score_with(
+            &solo,
+            PlayerId::P1,
+            next,
+            EvalKind::Learned,
+            &network,
+            Prices::NONE,
+        );
         assert_ne!(learned, hand, "the network moves this position");
         for (reach, line, open) in [
             (LearnedReach::Finalists, hand, hand),
@@ -221,18 +229,26 @@ fn r1012002_the_reach_says_which_of_the_beam_s_scores_the_network_gives() {
         ] {
             let kind = EvalKind::Learned;
             assert_eq!(
-                line_score_with(&solo, PlayerId::P1, next, reach, kind, &network),
+                line_score_with(&solo, PlayerId::P1, next, reach, kind, &network, Prices::NONE),
                 line,
                 "{reach:?}: a complete line"
             );
             assert_eq!(
-                open_score_with(&solo, PlayerId::P1, next, reach, kind, &network),
+                open_score_with(&solo, PlayerId::P1, next, reach, kind, &network, Prices::NONE),
                 open,
                 "{reach:?}: an open line"
             );
             for score in [line_score_with, open_score_with] {
                 assert_eq!(
-                    score(&solo, PlayerId::P1, next, reach, EvalKind::Hand, &network),
+                    score(
+                        &solo,
+                        PlayerId::P1,
+                        next,
+                        reach,
+                        EvalKind::Hand,
+                        &network,
+                        Prices::NONE
+                    ),
                     hand
                 );
             }
@@ -261,6 +277,7 @@ fn r1010002_a_duos_duel_keeps_the_hand_eval() {
             NextSwing::Seat,
             EvalKind::Learned,
             &Learned::Float(*network),
+            Prices::NONE,
         );
         let features = features_of(&solo, PlayerId::P1);
         let points = network.points(hand, &features);
@@ -274,7 +291,8 @@ fn r1010002_a_duos_duel_keeps_the_hand_eval() {
                 PlayerId::P1,
                 NextSwing::Seat,
                 EvalKind::Learned,
-                &Learned::Float(*network)
+                &Learned::Float(*network),
+                Prices::NONE,
             ),
             duos_hand
         );
@@ -293,13 +311,34 @@ fn r1012003_the_tutorials_opponent_keeps_the_hand_eval_and_every_tier_takes_the_
         for next in [NextSwing::Enemy, NextSwing::Seat] {
             let hand = evaluate(&tutorial, PlayerId::P1, next, &AI_EVAL);
             assert_eq!(
-                finalist_score_with(&tutorial, PlayerId::P1, next, EvalKind::Learned, &network),
+                finalist_score_with(
+                    &tutorial,
+                    PlayerId::P1,
+                    next,
+                    EvalKind::Learned,
+                    &network,
+                    Prices::NONE
+                ),
                 hand
             );
-            let other = finalist_score_with(&tutorial, PlayerId::P2, next, EvalKind::Learned, &network);
+            let other = finalist_score_with(
+                &tutorial,
+                PlayerId::P2,
+                next,
+                EvalKind::Learned,
+                &network,
+                Prices::NONE,
+            );
             assert_eq!(
                 other,
-                finalist_score_with(&solo, PlayerId::P2, next, EvalKind::Learned, &network)
+                finalist_score_with(
+                    &solo,
+                    PlayerId::P2,
+                    next,
+                    EvalKind::Learned,
+                    &network,
+                    Prices::NONE
+                )
             );
         }
         for tier in [AI_DIFFICULTY.medium, AI_DIFFICULTY.hard] {
@@ -311,7 +350,8 @@ fn r1012003_the_tutorials_opponent_keeps_the_hand_eval_and_every_tier_takes_the_
                     PlayerId::P1,
                     NextSwing::Seat,
                     EvalKind::Learned,
-                    &network
+                    &network,
+                    Prices::NONE,
                 ),
                 evaluate(&practice, PlayerId::P1, NextSwing::Seat, &AI_EVAL),
                 "a tier's handicap takes the network's correction"
@@ -345,25 +385,34 @@ fn r1012003_r2201000_the_tutorials_opponent_keeps_the_hand_eval_with_a_floor_or_
         let network = Learned::Float(*network);
         for next in [NextSwing::Enemy, NextSwing::Seat] {
             assert_eq!(
-                finalist_score_with(&tutorial, PlayerId::P1, next, EvalKind::Learned, &network),
+                finalist_score_with(
+                    &tutorial,
+                    PlayerId::P1,
+                    next,
+                    EvalKind::Learned,
+                    &network,
+                    Prices::NONE
+                ),
                 evaluate(&tutorial, PlayerId::P1, next, &AI_EVAL)
             );
         }
     });
 }
 
-/// R1012003 with R2433000's Core-only bar: a lesson's opponent with the bar, and one recorded before
-/// the bar existed (AI_TUTORIAL without it), are both the tutorial's opponent.
+/// R1012003 with R2533000's bar and R2533001's copies: a lesson's opponent with them, and one recorded
+/// before them (AI_TUTORIAL without either, as R2433000's lessons read now), are both the tutorial's
+/// opponent.
 #[test]
-fn r1012003_r2433000_the_tutorial_opponent_is_read_with_or_without_its_core_only_bar() {
-    assert_eq!(AI_TUTORIAL.core_only, Some(true));
+fn r1012003_r2533000_the_tutorial_opponent_is_read_with_or_without_its_bar_and_copies() {
+    assert_eq!(AI_TUTORIAL.tutorial_cards_only, Some(true));
     assert!(is_tutorial_opponent(Some(AI_TUTORIAL)));
     assert!(is_tutorial_opponent(Some(Handicap {
-        core_only: None,
+        tutorial_cards_only: None,
+        deck_copies: None,
         ..AI_TUTORIAL
     })));
     assert!(!is_tutorial_opponent(Some(Handicap {
-        core_only: Some(true),
+        tutorial_cards_only: Some(true),
         ..HUMAN_HANDICAP
     })));
 }
@@ -387,7 +436,7 @@ fn r1010000_the_hand_switch_and_the_null_network_score_as_the_hand_eval() {
     for next in [NextSwing::Enemy, NextSwing::Seat] {
         let hand = evaluate(&state, PlayerId::P1, next, &AI_EVAL);
         assert_eq!(
-            finalist_score_with(&state, PlayerId::P1, next, EvalKind::Hand, &LEARNED),
+            finalist_score_with(&state, PlayerId::P1, next, EvalKind::Hand, &LEARNED, Prices::NONE),
             hand
         );
         let null = match LEARNED {
@@ -406,23 +455,34 @@ fn r1010000_the_hand_switch_and_the_null_network_score_as_the_hand_eval() {
         };
         if null {
             assert_eq!(
-                finalist_score_with(&state, PlayerId::P1, next, EvalKind::Learned, &LEARNED),
+                finalist_score_with(
+                    &state,
+                    PlayerId::P1,
+                    next,
+                    EvalKind::Learned,
+                    &LEARNED,
+                    Prices::NONE
+                ),
                 hand
             );
         }
     }
-    assert_eq!(finalist_score(&state, PlayerId::P1, NextSwing::Enemy), {
-        match AI_EVAL_KIND {
-            EvalKind::Hand => evaluate(&state, PlayerId::P1, NextSwing::Enemy, &AI_EVAL),
-            EvalKind::Learned => finalist_score_with(
-                &state,
-                PlayerId::P1,
-                NextSwing::Enemy,
-                EvalKind::Learned,
-                &LEARNED,
-            ),
+    assert_eq!(
+        finalist_score(&state, PlayerId::P1, NextSwing::Enemy, Prices::NONE),
+        {
+            match AI_EVAL_KIND {
+                EvalKind::Hand => evaluate(&state, PlayerId::P1, NextSwing::Enemy, &AI_EVAL),
+                EvalKind::Learned => finalist_score_with(
+                    &state,
+                    PlayerId::P1,
+                    NextSwing::Enemy,
+                    EvalKind::Learned,
+                    &LEARNED,
+                    Prices::NONE,
+                ),
+            }
         }
-    });
+    );
 }
 
 /// The integer network's parity fixture (`training/ml/jackioh_ml/quantize.py --parity`): a seeded

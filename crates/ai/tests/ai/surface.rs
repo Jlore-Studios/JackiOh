@@ -24,7 +24,7 @@ fn eval(state: &GameState, seat: PlayerId) -> f64 {
 /// A complete line's score where TS's `terminalScore` called `evaluate`: `line_score`, the same as
 /// `eval` while the switch is off and at any reach short of `Lines` (R1012002).
 fn line(state: &GameState, seat: PlayerId) -> f64 {
-    line_score(state, seat, NextSwing::Enemy)
+    line_score(state, seat, NextSwing::Enemy, Prices::NONE)
 }
 
 /// p1's main phase on turn 9: one attacker, a 1-drop in hand (so an attack alone does not leave the
@@ -65,7 +65,7 @@ fn worlds(state: &GameState, seed: &str, count: usize) -> Vec<GameState> {
 
 fn hero_attack(state: &GameState) -> ActionBody {
     let hero = format!("hero-{HUMAN}");
-    candidate_actions(state, AI)
+    candidate_actions(state, AI, Prices::NONE)
         .into_iter()
         .find(|action| matches!(action, ActionBody::Attack { target_id, .. } if *target_id == hero))
         .unwrap_or_else(|| panic!("no attack on the enemy hero"))
@@ -124,7 +124,10 @@ mod surface_terminal_score {
         assert_eq!(ended.players[AI].turn_log.unspent_at_end, Some(3));
 
         let counter = create_node_counter(10, None);
-        assert_eq!(terminal_score(&state, AI, TURN, &counter), passed_value(&ended));
+        assert_eq!(
+            terminal_score(&state, AI, TURN, &counter, Prices::NONE),
+            passed_value(&ended)
+        );
         assert!(counter.used() > 0);
     }
 
@@ -134,7 +137,10 @@ mod surface_terminal_score {
         let ended = ended_turn(&quiet_turn());
         assert_eq!(line_status(&ended, AI, TURN), LineStatus::Passed);
         let counter = create_node_counter(10, None);
-        assert_eq!(terminal_score(&ended, AI, TURN, &counter), passed_value(&ended));
+        assert_eq!(
+            terminal_score(&ended, AI, TURN, &counter, Prices::NONE),
+            passed_value(&ended)
+        );
         assert!(passed_value(&ended) < line(&ended, AI));
         assert_eq!(counter.used(), 0);
     }
@@ -144,9 +150,15 @@ mod surface_terminal_score {
     fn a_yielded_or_finished_line_is_the_plain_evaluation_with_no_node_spent() {
         let state = quiet_turn();
         let counter = create_node_counter(10, None);
-        assert_eq!(terminal_score(&state, HUMAN, TURN, &counter), line(&state, HUMAN));
+        assert_eq!(
+            terminal_score(&state, HUMAN, TURN, &counter, Prices::NONE),
+            line(&state, HUMAN)
+        );
         let over = act(&state, AI, &ActionBody::Concede);
-        assert_eq!(terminal_score(&over, AI, TURN, &counter), line(&over, AI));
+        assert_eq!(
+            terminal_score(&over, AI, TURN, &counter, Prices::NONE),
+            line(&over, AI)
+        );
         assert_eq!(eval(&over, AI), -AI_EVAL.win + f64::from(over.turn));
         assert_eq!(counter.used(), 0);
     }
@@ -156,7 +168,7 @@ mod surface_terminal_score {
     fn an_open_line_with_no_node_left_for_its_end_turn_is_scored_where_it_stands() {
         let state = quiet_turn();
         assert_eq!(
-            terminal_score(&state, AI, TURN, &create_node_counter(0, None)),
+            terminal_score(&state, AI, TURN, &create_node_counter(0, None), Prices::NONE),
             line(&state, AI)
         );
     }
@@ -181,9 +193,16 @@ mod surface_score_line {
                 &[bogus()],
                 &create_node_counter(20, None),
                 false,
-                None
+                None,
+                Prices::NONE,
             ),
-            Some(terminal_score(&state, AI, TURN, &create_node_counter(20, None))),
+            Some(terminal_score(
+                &state,
+                AI,
+                TURN,
+                &create_node_counter(20, None),
+                Prices::NONE
+            )),
         );
     }
 
@@ -192,7 +211,7 @@ mod surface_score_line {
     fn a_legal_line_is_played_its_turn_ended_and_the_end_scored_anything_after_a_non_candidate_is_dropped() {
         let state = quiet_turn();
         let attack = hero_attack(&state);
-        let stepped = match simulate(&state, AI, &attack, &create_node_counter(20, None)) {
+        let stepped = match simulate(&state, AI, &attack, &create_node_counter(20, None), Prices::NONE) {
             Some(Ok(next)) => next,
             _ => panic!("the attack was refused"),
         };
@@ -205,7 +224,8 @@ mod surface_score_line {
                 std::slice::from_ref(&attack),
                 &create_node_counter(20, None),
                 false,
-                None
+                None,
+                Prices::NONE,
             ),
             Some(expected)
         );
@@ -216,7 +236,8 @@ mod surface_score_line {
                 &[attack.clone(), bogus(), ActionBody::EndTurn],
                 &create_node_counter(20, None),
                 false,
-                None
+                None,
+                Prices::NONE,
             ),
             Some(expected)
         );
@@ -234,7 +255,8 @@ mod surface_score_line {
                 std::slice::from_ref(&attack),
                 &create_node_counter(0, None),
                 false,
-                None
+                None,
+                Prices::NONE,
             )
             .is_none()
         );
@@ -245,7 +267,8 @@ mod surface_score_line {
                 std::slice::from_ref(&attack),
                 &create_node_counter(1, None),
                 false,
-                None
+                None,
+                Prices::NONE,
             )
             .is_none()
         );
@@ -264,11 +287,14 @@ mod surface_beam_search {
             .next()
             .unwrap_or_else(|| panic!("no determinization"));
         let counter = create_node_counter(AI_GATE_BUDGET.nodes, None);
-        let lines = beam_search(&det, AI, &counter, AI_GATE_BUDGET);
+        let lines = beam_search(&det, AI, &counter, AI_GATE_BUDGET, Prices::NONE);
 
         assert!(!lines.is_empty());
         assert!(counter.used() <= AI_GATE_BUDGET.nodes);
-        let firsts: IndexSet<String> = root_candidate_actions(&det, AI).iter().map(action_key).collect();
+        let firsts: IndexSet<String> = root_candidate_actions(&det, AI, Prices::NONE)
+            .iter()
+            .map(action_key)
+            .collect();
         for (index, line) in lines.iter().enumerate() {
             assert!(!line.actions.is_empty());
             assert!(line.actions.len() <= AI_GATE_BUDGET.max_depth);
@@ -292,7 +318,16 @@ mod surface_beam_search {
             .into_iter()
             .next()
             .unwrap_or_else(|| panic!("no determinization"));
-        assert!(beam_search(&det, AI, &create_node_counter(0, None), AI_GATE_BUDGET).is_empty());
+        assert!(
+            beam_search(
+                &det,
+                AI,
+                &create_node_counter(0, None),
+                AI_GATE_BUDGET,
+                Prices::NONE
+            )
+            .is_empty()
+        );
     }
 }
 
@@ -308,7 +343,7 @@ mod surface_find_lethal {
     fn finds_a_line_that_kills_the_enemy_hero_on_every_determinization_within_its_node_limit() {
         let dets = worlds(&lethal_board(), "surface-lethal", 2);
         let counter = create_node_counter(AI_GATE_BUDGET.nodes, None);
-        let line = find_lethal(&dets, AI, &counter, AI_GATE_BUDGET.lethal_nodes);
+        let line = find_lethal(&dets, AI, &counter, AI_GATE_BUDGET.lethal_nodes, Prices::NONE);
         assert!(line.is_some());
         assert!(counter.used() <= AI_GATE_BUDGET.lethal_nodes);
 
@@ -317,7 +352,7 @@ mod surface_find_lethal {
             // One counter for the whole replay, so every step gets a nonce of its own.
             let replay = create_node_counter(20, None);
             for action in line.iter().flatten() {
-                state = match simulate(&state, AI, action, &replay) {
+                state = match simulate(&state, AI, action, &replay, Prices::NONE) {
                     Some(Ok(next)) => next,
                     _ => panic!("the lethal line was refused at {}", action.action_type()),
                 };
@@ -331,7 +366,7 @@ mod surface_find_lethal {
     fn with_a_limit_of_0_it_spends_nothing_and_finds_nothing() {
         let dets = worlds(&lethal_board(), "surface-lethal-zero", 2);
         let counter = create_node_counter(AI_GATE_BUDGET.nodes, None);
-        assert!(find_lethal(&dets, AI, &counter, 0).is_none());
+        assert!(find_lethal(&dets, AI, &counter, 0, Prices::NONE).is_none());
         assert_eq!(counter.used(), 0);
     }
 
@@ -340,7 +375,7 @@ mod surface_find_lethal {
     fn finds_nothing_on_a_board_with_no_lethal_and_stays_within_its_limit() {
         let dets = worlds(&quiet_turn(), "surface-no-lethal", 2);
         let counter = create_node_counter(AI_GATE_BUDGET.nodes, None);
-        assert!(find_lethal(&dets, AI, &counter, AI_GATE_BUDGET.lethal_nodes).is_none());
+        assert!(find_lethal(&dets, AI, &counter, AI_GATE_BUDGET.lethal_nodes, Prices::NONE).is_none());
         assert!(counter.used() <= AI_GATE_BUDGET.lethal_nodes);
     }
 }

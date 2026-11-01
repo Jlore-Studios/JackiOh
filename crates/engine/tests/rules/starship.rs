@@ -481,8 +481,9 @@ mod r1852001_equip_does_not_pass_the_keyword_on {
         s.play(clamp.id.as_str(), json!({ "zone": 1, "equip": true }));
         assert!(keywords_of(&s, &host).contains(&KeywordKind::StarshipPiece));
         bolt_at(&mut s, &host);
+        // R2521000: the booster alone fuses, its base version, never the clamp equipped onto it.
         let ship = ship_of(&s, P1);
-        s.expect_stats(ship.id.as_str(), json!({ "attack": 3, "health": 4 }));
+        s.expect_stats(ship.id.as_str(), json!({ "attack": 2, "health": 3 }));
         assert!(!keywords_of(&s, &ship.id).contains(&KeywordKind::StarshipPiece));
     }
 }
@@ -542,7 +543,7 @@ mod r1852002_a_stolen_piece {
     use super::*;
 
     #[test]
-    fn r1852002_a_stolen_piece_that_dies_fuses_into_its_owners_starship_not_its_controllers() {
+    fn r1852002_r2618000_a_stolen_piece_that_dies_fuses_into_its_controllers_starship_not_its_owners() {
         let mut s = board(
             "p2",
             json!([plain.id]),
@@ -555,19 +556,21 @@ mod r1852002_a_stolen_piece {
         assert_eq!(s.card(&piece).controller, P2);
         assert_eq!(s.card(&piece).owner, P1);
         s.play(bolt.id.as_str(), pick(&piece));
-        assert_eq!(s.card(&piece).zone, Zone::Graveyard { player: P1 });
-        assert!(!building_a_ship(s.state(), P2), "its controller builds no ship");
-        let ship = ship_of(&s, P1);
+        // R2618000: it died on p2's side, into p2's graveyard as p2's own card.
+        assert_eq!(s.card(&piece).zone, Zone::Graveyard { player: P2 });
+        assert_eq!(s.card(&piece).owner, P2);
+        assert!(!building_a_ship(s.state(), P1), "its old owner builds no ship");
+        let ship = ship_of(&s, P2);
         assert_eq!(
-            backrow_id(&s, P1, STARSHIP_LANE_ORDER[0]),
+            backrow_id(&s, P2, STARSHIP_LANE_ORDER[0]),
             ship.id,
-            "its owner's, on its owner's side"
+            "its controller's, on its controller's side"
         );
-        assert_eq!(ship.controller, P1);
+        assert_eq!(ship.controller, P2);
         assert_eq!(piece_defs(&ship), vec![booster.id.clone()]);
         assert!(s.last_events().iter().any(|event| matches!(
             event,
-            GameEvent::StarshipFused { player: P1, piece_id, .. } if *piece_id == piece
+            GameEvent::StarshipFused { player: P2, piece_id, .. } if *piece_id == piece
         )));
     }
 }

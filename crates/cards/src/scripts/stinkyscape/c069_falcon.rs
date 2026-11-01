@@ -1,9 +1,9 @@
 //! SPEC §8.10 Stinkyscape 69 Falcon, a card of the Stinkyscape set.
-//! (2) Unit, Rare, 4/1 → 8/2: Starship Piece, Charge, Flying.
-//! Radiant: Starship Piece, Charge, Flying, Pierce (8/2, ST9: Radiant stats doubled).
+//! (2) Unit, Rare, 4/1 → 8/2: Charge, Flying.
+//! Radiant: Charge, Flying, Pierce (8/2, ST9: Radiant stats doubled).
 //!
-//! Keywords only (§6.1): its script is empty. Starship Piece: its death fuses a copy into its
-//! owner's Dormant Starship, summoned first if they have none (R1852000).
+//! Keywords only (§6.1): its script is empty. Since #2521 it is no Starship Piece: its death fuses
+//! nothing (R1852000 reads the keyword).
 
 use jackioh_engine::prelude::*;
 
@@ -16,18 +16,20 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69: "a 4/1 Charge Flying Starship
-// Piece, attacking a hero the turn it is played; radiant 8/2 with Pierce, its hits ignoring Armor
-// (R346)".
+// Stinkyscape #69 Falcon — SPEC §8.10 row 69, BUILD M12 row S 69: "a 4/1 Charge Flying Unit,
+// attacking a hero the turn it is played; no Starship Piece, so its death fuses nothing (#2521);
+// radiant 8/2 with Pierce, its hits ignoring Armor (R346)".
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::testkit::*;
 
     use crate::scenario;
     use crate::filler;
 
     const FALCON: &str = "stinkyscape-069";
     const ARMORED: &str = "core-025"; // (4) Unit 7/7, Armor 7.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
@@ -41,11 +43,8 @@ mod tests {
     fn prints_charge_flying_4_1_radiant_8_2_with_pierce() {
         crate::register_all();
         let def = crate::card_def(FALCON);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Charge", "Flying"]);
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Charge", "Flying", "Pierce"]
-        );
+        assert_eq!(kinds_of(&def.base.keywords), vec!["Charge", "Flying"]);
+        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Charge", "Flying", "Pierce"]);
         assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
         assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
     }
@@ -61,6 +60,22 @@ mod tests {
         s.attack(FALCON, "hero");
 
         s.expect_health(PlayerId::P2, 26);
+    }
+
+    #[test]
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [FALCON], "library": filler(4) },
+            "p2": { "hand": [ANCHOR], "library": filler(4) },
+        }));
+        let me = s.card(FALCON).clone();
+        assert!(!has_keyword(&s.stats(&me).keywords, KeywordKind::StarshipPiece));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+
+        s.expect_in_zone(&me, "graveyard");
+        assert!(dormant_starship_of(s.state(), PlayerId::P1).is_none(), "no Dormant Starship");
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
     }
 
     #[test]

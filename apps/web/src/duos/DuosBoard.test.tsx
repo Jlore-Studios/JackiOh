@@ -1080,35 +1080,28 @@ describe("R2095000 pings and passes on the teammate's board", () => {
     expect(within(screen.getByTestId(ID.boardOwn)).queryByTestId(ID.pingMarker)).toBeNull();
   });
 
-  it("R2095000 dragging a listed pass onto the teammate's board passes it, an unlisted card sends nothing", () => {
+  it("R2095000 dragging a listed pass onto the portal or the teammate's board sends nothing (#2619)", () => {
     const board = renderDuosBoard({ legal: [END_TURN, PASS_H1] });
+    const dragOnto = (drop: Element): void => {
+      const restore = pointAt(drop);
+      try {
+        const own = screen.queryByTestId(ID.boardOwn) ?? screen.getByTestId("duos-board");
+        const start = within(own).getByTestId(testid.handCard("h1"));
+        fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
+        fireEvent.pointerUp(start, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
+      } finally {
+        restore();
+      }
+    };
+    dragOnto(screen.getByTestId(ID.portal));
     toggleBoth();
-    const mate = screen.getByTestId(ID.boardTeammate);
-    const restore = pointAt(mate);
-    try {
-      const start = within(screen.getByTestId(ID.boardOwn)).getByTestId(testid.handCard("h1"));
-      fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
-      fireEvent.pointerUp(start, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
-      expect(board.onAction).toHaveBeenCalledWith(PASS_H1);
-    } finally {
-      restore();
-    }
-    const passesBefore = passesSent(board).length;
-    board.rerender({ legal: [END_TURN] });
-    const restoreUnlisted = pointAt(screen.getByTestId(ID.boardTeammate));
-    try {
-      const start = within(screen.getByTestId(ID.boardOwn)).getByTestId(testid.handCard("h1"));
-      fireEvent.pointerDown(start, { pointerId: 3, clientX: 10, clientY: 10 });
-      fireEvent.pointerUp(start, { pointerId: 3, clientX: 10 + DRAG_THRESHOLD_PX + 4, clientY: 10 });
-    } finally {
-      restoreUnlisted();
-    }
-    expect(passesSent(board)).toHaveLength(passesBefore);
+    dragOnto(screen.getByTestId(ID.boardTeammate));
+    expect(passesSent(board)).toEqual([]);
   });
 });
 
 describe("R2095000 a drop on the teammate's board is no drop on the own board", () => {
-  it("R2095000 dragging a card onto the teammate's lane passes it and plays nothing on the own board", () => {
+  it("R2095000 dragging a card onto the teammate's lane plays nothing on the own board and passes nothing", () => {
     const play: DuosActionBody = {
       kind: "duel",
       body: { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
@@ -1129,7 +1122,7 @@ describe("R2095000 a drop on the teammate's board is no drop on the own board", 
       delete (document as Partial<Document>).elementsFromPoint;
       restore();
     }
-    expect(board.onAction).toHaveBeenCalledWith(PASS_H1);
+    expect(board.onAction).not.toHaveBeenCalledWith(PASS_H1);
     expect(board.onAction).not.toHaveBeenCalledWith(play);
   });
 });

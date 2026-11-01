@@ -55,7 +55,7 @@ fn r1853004_a_market_buy_is_a_candidate_before_end_turn() {
     let state = board("ai-market-candidates", VANILLA);
     let buy = ActionBody::MarketBuy { offer: 0 };
     assert!(is_legal(&state, AI, &buy));
-    let candidates = candidate_actions(&state, AI);
+    let candidates = candidate_actions(&state, AI, Prices::NONE);
     let at = candidates
         .iter()
         .position(|action| *action == buy)

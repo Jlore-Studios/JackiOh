@@ -1083,7 +1083,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
+      "text": "Rush\nWhenever this attacks, draw {draw} for each Unit that attack destroyed."
     },
     "radiant": {
       "attack": 10,
@@ -1096,7 +1096,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Rush, Cleave\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
+      "text": "Rush, Cleave\nWhenever this attacks, draw {draw} for each Unit that attack destroyed."
     }
   },
   "core-033": {
@@ -4351,7 +4351,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nAfter this attacks, draw {draw}."
+      "text": "Charge\nWhen this attacks, draw {draw}."
     },
     "radiant": {
       "attack": 4,
@@ -4361,7 +4361,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nAfter this attacks, Recruit {recruits|card|cards}."
+      "text": "Charge\nWhen this attacks, Recruit {recruits|card|cards}."
     }
   },
   "classic-014": {
@@ -5514,13 +5514,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Tribute 1\nCry and whenever this attacks: Draw {draw} and heal your hero {heal}."
+      "text": "Tribute 1\nCry and when this attacks: Draw {draw} and heal your hero {heal}."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Tribute 1\nCry and whenever this attacks: Draw {draw} and heal your hero {heal}."
+      "text": "Tribute 1\nCry and when this attacks: Draw {draw} and heal your hero {heal}."
     }
   },
   "classic-046": {
@@ -8278,7 +8278,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      "text": "Rush, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
       "attack": 8,
@@ -8291,7 +8291,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
+      "text": "Charge, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
     }
   },
   "classicplus-020": {
@@ -13576,7 +13576,7 @@
     "index": "49.3",
     "name": "AI Girlfriend",
     "set": "Meditative",
-    "type": "Field Spell",
+    "type": "Unit",
     "tags": [
       "CN",
       "Token"
@@ -13602,26 +13602,20 @@
       "health": 30,
       "keywords": [
         {
-          "kind": "Animated"
-        },
-        {
           "kind": "Can't attack"
         }
       ],
-      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker."
+      "text": "Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker."
     },
     "radiant": {
       "attack": 4,
       "health": 60,
       "keywords": [
         {
-          "kind": "Animated"
-        },
-        {
           "kind": "Can't attack"
         }
       ],
-      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker {times|time|times}."
+      "text": "Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker {times|time|times}."
     }
   },
   "meditative-050": {
@@ -15168,7 +15162,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Rush, Windfury\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+      "text": "Rush, Windfury\nWhen this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
     },
     "radiant": {
       "attack": 10,
@@ -15184,7 +15178,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, Windfury, First Strike\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+      "text": "Rush, Windfury, First Strike\nWhen this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
     }
   },
   "meditative-092": {
@@ -20829,22 +20823,14 @@
     "base": {
       "attack": 2,
       "health": 3,
-      "keywords": [
-        {
-          "kind": "Starship Piece"
-        }
-      ],
-      "text": "Starship Piece\nWhenever this attacks, gain a random Stinkyscape Resource."
+      "keywords": [],
+      "text": "When this attacks, gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 4,
       "health": 6,
-      "keywords": [
-        {
-          "kind": "Starship Piece"
-        }
-      ],
-      "text": "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource."
+      "keywords": [],
+      "text": "When this attacks, gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-076": {
@@ -20863,26 +20849,20 @@
       "health": 6,
       "keywords": [
         {
-          "kind": "Starship Piece"
-        },
-        {
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Rush\nWhenever this attacks, gain a random Stinkyscape Resource."
+      "text": "Rush\nWhen this attacks, gain a random Stinkyscape Resource."
     },
     "radiant": {
       "attack": 8,
       "health": 12,
       "keywords": [
         {
-          "kind": "Starship Piece"
-        },
-        {
           "kind": "Rush"
         }
       ],
-      "text": "Starship Piece, Rush\nWhenever this attacks, gain a random Radiant Stinkyscape Resource."
+      "text": "Rush\nWhen this attacks, gain a random Radiant Stinkyscape Resource."
     }
   },
   "stinkyscape-077": {
@@ -22196,7 +22176,7 @@
     "loc": 253,
     "base": {
       "keywords": [],
-      "text": "Get employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     },
     "radiant": {
       "keywords": [
@@ -22205,7 +22185,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nGet employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     }
   },
   "stinkyscape-112-1": {
@@ -22346,7 +22326,7 @@
     "index": "116",
     "name": "Megabase",
     "set": "Stinkyscape",
-    "type": "Field Spell",
+    "type": "Unit",
     "tags": [
       "Quickdraw"
     ],
@@ -22358,9 +22338,6 @@
       "attack": 0,
       "health": 20,
       "keywords": [
-        {
-          "kind": "Animated"
-        },
         {
           "kind": "Can't attack"
         },
@@ -22378,15 +22355,12 @@
           "n": 15
         }
       ],
-      "text": "Animated, Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
+      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
     },
     "radiant": {
       "attack": 0,
       "health": 40,
       "keywords": [
-        {
-          "kind": "Animated"
-        },
         {
           "kind": "Can't attack"
         },
@@ -22404,7 +22378,7 @@
           "n": 30
         }
       ],
-      "text": "Animated, Can't attack, Immune to Spells, Immutable, Untributable, Armor 30\nCan't be in Defense Position.\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
+      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 30\nCan't be in Defense Position.\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
     }
   },
   "stinkyscape-117": {
@@ -25970,7 +25944,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this destroys a Unit, it gains +{buff}/+{buff}."
+      "text": "Rush\nAfter this destroys a Unit, it gains +{buff}/+{buff}."
     },
     "radiant": {
       "attack": 14,
@@ -25980,7 +25954,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this destroys a Unit, it gains +{buff}/+{buff}."
+      "text": "Rush\nAfter this destroys a Unit, it gains +{buff}/+{buff}."
     }
   },
   "traininggrounds-010": {
@@ -27107,17 +27081,17 @@
   "traininggrounds-041": {
     "id": "traininggrounds-041",
     "index": "41",
-    "name": "Bigot",
+    "name": "Legacy: Bigot",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Legacy"
     ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
     "loc": 23,
-    "snapshotOf": "core-002",
     "base": {
       "attack": 4,
       "health": 1,
@@ -27134,10 +27108,12 @@
   "traininggrounds-042": {
     "id": "traininggrounds-042",
     "index": "42",
-    "name": "Stockpile",
+    "name": "Legacy: Stockpile",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 1,
@@ -27160,7 +27136,6 @@
       }
     ],
     "loc": 14,
-    "snapshotOf": "core-005",
     "base": {
       "keywords": [],
       "text": "Draw {draw}. Heal your hero {heal}."
@@ -27173,17 +27148,17 @@
   "traininggrounds-043": {
     "id": "traininggrounds-043",
     "index": "43",
-    "name": "Mr. Vanilla",
+    "name": "Legacy: Mr. Vanilla",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Legacy"
     ],
     "rarity": "Common",
     "token": false,
     "cost": 1,
     "loc": 6,
-    "snapshotOf": "core-008",
     "base": {
       "attack": 4,
       "health": 4,
@@ -27200,17 +27175,17 @@
   "traininggrounds-044": {
     "id": "traininggrounds-044",
     "index": "44",
-    "name": "Duplicating Felinors",
+    "name": "Legacy: Duplicating Felinors",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Felinor"
+      "Felinor",
+      "Legacy"
     ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
     "loc": 15,
-    "snapshotOf": "core-012",
     "base": {
       "attack": 3,
       "health": 4,
@@ -27227,11 +27202,12 @@
   "traininggrounds-045": {
     "id": "traininggrounds-045",
     "index": "45",
-    "name": "Jlockeed's Weapons",
+    "name": "Legacy: Jlockeed's Weapons",
     "set": "Training Grounds",
     "type": "Field Spell",
     "tags": [
-      "Jlockeed"
+      "Jlockeed",
+      "Legacy"
     ],
     "rarity": "Common",
     "token": false,
@@ -27247,7 +27223,6 @@
       }
     ],
     "loc": 26,
-    "snapshotOf": "core-014",
     "base": {
       "keywords": [],
       "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
@@ -27260,15 +27235,16 @@
   "traininggrounds-046": {
     "id": "traininggrounds-046",
     "index": "46",
-    "name": "Hit Job",
+    "name": "Legacy: Hit Job",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 3,
     "loc": 22,
-    "snapshotOf": "core-016",
     "base": {
       "keywords": [],
       "text": "Destroy a Unit."
@@ -27281,15 +27257,16 @@
   "traininggrounds-047": {
     "id": "traininggrounds-047",
     "index": "47",
-    "name": "Midrange Menace",
+    "name": "Legacy: Midrange Menace",
     "set": "Training Grounds",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 3,
     "loc": 15,
-    "snapshotOf": "core-019",
     "base": {
       "attack": 9,
       "health": 9,
@@ -27317,11 +27294,12 @@
   "traininggrounds-048": {
     "id": "traininggrounds-048",
     "index": "48",
-    "name": "Jlockeed Shredder-10",
+    "name": "Legacy: Jlockeed Shredder-10",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Jlockeed"
+      "Jlockeed",
+      "Legacy"
     ],
     "rarity": "Common",
     "token": false,
@@ -27337,7 +27315,6 @@
       }
     ],
     "loc": 12,
-    "snapshotOf": "core-013",
     "base": {
       "attack": 6,
       "health": 10,
@@ -27354,10 +27331,12 @@
   "traininggrounds-049": {
     "id": "traininggrounds-049",
     "index": "49",
-    "name": "Reoccurring Dream",
+    "name": "Legacy: Reoccurring Dream",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -27373,7 +27352,6 @@
       }
     ],
     "loc": 64,
-    "snapshotOf": "core-023",
     "base": {
       "keywords": [],
       "text": "{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
@@ -27391,17 +27369,17 @@
   "traininggrounds-050": {
     "id": "traininggrounds-050",
     "index": "50",
-    "name": "Glowy Jelly Bean",
+    "name": "Legacy: Glowy Jelly Bean",
     "set": "Training Grounds",
     "type": "Spell",
     "tags": [
-      "Jelly Bean"
+      "Jelly Bean",
+      "Legacy"
     ],
     "rarity": "Rare",
     "token": false,
     "cost": 3,
     "loc": 18,
-    "snapshotOf": "core-026",
     "base": {
       "keywords": [],
       "text": "Make a card in your hand Radiant."
@@ -27414,17 +27392,17 @@
   "traininggrounds-051": {
     "id": "traininggrounds-051",
     "index": "51",
-    "name": "Big Felinor",
+    "name": "Legacy: Big Felinor",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Felinor"
+      "Felinor",
+      "Legacy"
     ],
     "rarity": "Rare",
     "token": false,
     "cost": 4,
     "loc": 15,
-    "snapshotOf": "core-043",
     "base": {
       "attack": 3,
       "health": 10,
@@ -27441,15 +27419,16 @@
   "traininggrounds-052": {
     "id": "traininggrounds-052",
     "index": "52",
-    "name": "Snom Bunny Mind Control",
+    "name": "Legacy: Snom Bunny Mind Control",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 4,
     "loc": 26,
-    "snapshotOf": "core-049",
     "base": {
       "keywords": [],
       "text": "Steal an enemy Unit."
@@ -27462,17 +27441,17 @@
   "traininggrounds-053": {
     "id": "traininggrounds-053",
     "index": "53",
-    "name": "Prejudiced Postdoc",
+    "name": "Legacy: Prejudiced Postdoc",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Legacy"
     ],
     "rarity": "Rare",
     "token": false,
     "cost": 2,
     "loc": 28,
-    "snapshotOf": "core-061",
     "base": {
       "attack": 2,
       "health": 4,
@@ -27489,17 +27468,17 @@
   "traininggrounds-054": {
     "id": "traininggrounds-054",
     "index": "54",
-    "name": "The Rock",
+    "name": "Legacy: The Rock",
     "set": "Training Grounds",
     "type": "Unit",
     "tags": [
-      "Human"
+      "Human",
+      "Legacy"
     ],
     "rarity": "Common",
     "token": false,
     "cost": 4,
     "loc": 15,
-    "snapshotOf": "core-066",
     "base": {
       "attack": 10,
       "health": 10,
@@ -27527,10 +27506,12 @@
   "traininggrounds-055": {
     "id": "traininggrounds-055",
     "index": "55",
-    "name": "Reminisce",
+    "name": "Legacy: Reminisce",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Rare",
     "token": false,
     "cost": 1,
@@ -27555,7 +27536,6 @@
       }
     ],
     "loc": 32,
-    "snapshotOf": "core-072",
     "base": {
       "keywords": [],
       "text": "Discover a card from your graveyard. It costs ({discount}) less. Exile this."
@@ -27568,15 +27548,16 @@
   "traininggrounds-056": {
     "id": "traininggrounds-056",
     "index": "56",
-    "name": "Corpse Eater",
+    "name": "Legacy: Corpse Eater",
     "set": "Training Grounds",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 4,
     "loc": 39,
-    "snapshotOf": "core-089",
     "base": {
       "attack": 2,
       "health": 2,
@@ -27604,10 +27585,12 @@
   "traininggrounds-057": {
     "id": "traininggrounds-057",
     "index": "57",
-    "name": "Recycling Initiative",
+    "name": "Legacy: Recycling Initiative",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Epic",
     "token": false,
     "cost": 0,
@@ -27623,7 +27606,6 @@
       }
     ],
     "loc": 78,
-    "snapshotOf": "core-039",
     "base": {
       "keywords": [],
       "text": "Exile this.\nEnd of turn: Add a copy of each other card you played this turn to your hand."
@@ -27636,10 +27618,12 @@
   "traininggrounds-058": {
     "id": "traininggrounds-058",
     "index": "58",
-    "name": "True Strike",
+    "name": "Legacy: True Strike",
     "set": "Training Grounds",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 1,
@@ -27655,7 +27639,6 @@
     ],
     "dealsDamage": true,
     "loc": 19,
-    "snapshotOf": "core-044",
     "base": {
       "keywords": [
         {
@@ -27676,11 +27659,12 @@
   "traininggrounds-059": {
     "id": "traininggrounds-059",
     "index": "59",
-    "name": "Fig of Life",
+    "name": "Legacy: Fig of Life",
     "set": "Training Grounds",
     "type": "Spell",
     "tags": [
-      "Fruit"
+      "Fruit",
+      "Legacy"
     ],
     "rarity": "Common",
     "token": false,
@@ -27696,7 +27680,6 @@
       }
     ],
     "loc": 21,
-    "snapshotOf": "core-047",
     "base": {
       "keywords": [],
       "text": "Heal a target {heal}."
@@ -27709,10 +27692,12 @@
   "traininggrounds-060": {
     "id": "traininggrounds-060",
     "index": "60",
-    "name": "Rush Token Farm",
+    "name": "Legacy: Rush Token Farm",
     "set": "Training Grounds",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Legacy"
+    ],
     "rarity": "Common",
     "token": false,
     "cost": 2,
@@ -27731,7 +27716,6 @@
       }
     ],
     "loc": 33,
-    "snapshotOf": "core-058",
     "base": {
       "keywords": [],
       "text": "Start of turn: Summon a Rush Token."

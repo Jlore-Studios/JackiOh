@@ -1583,6 +1583,13 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub field_exits: Option<FieldExits>,
+    /// R2396000: the killers that answer "Whenever this destroys a Unit" even once gone, each as it
+    /// stood when it killed, by the id of the Unit it killed: written as the state check reports the
+    /// death (`state_check::collect`), taken as that `destroyed` is dispatched
+    /// (`triggers::dispatch_event_at`). Absent while none waits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub kill_snapshots: Option<IndexMap<String, CardInstance>>,
     // ---- v0.2.0 game fields, by workstream: field (B3.1 home zones, E21) ----
     /// B3.1 rule 6, R383: the backrow zone each animated "Animated on your turn" card goes back to at
     /// its controller's cleanup, held for it meanwhile as R64 holds a dying Reborn unit's zone
@@ -2185,7 +2192,7 @@ fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
         && handicap.hero_floor.is_none()
         && handicap.pool_hold != Some(true)
-        && handicap.core_only != Some(true)
+        && handicap.tutorial_cards_only != Some(true)
         && handicap.deck_copies.is_none_or(|copies| copies == MAX_COPIES)
 }
 
@@ -2200,20 +2207,32 @@ pub fn can_lose(state: &GameState, player: PlayerId) -> bool {
     hero_floor_of(state, player).is_none()
 }
 
-/// R2433000: whether `player` plays only Core cards (its handicap's `coreOnly`).
-pub fn plays_only_core(state: &GameState, player: PlayerId) -> bool {
+/// R2533000: whether `player` plays only the tutorial's cards (its handicap's `tutorialCardsOnly`).
+pub fn plays_only_tutorial_cards(state: &GameState, player: PlayerId) -> bool {
     state.players[player]
         .handicap
-        .is_some_and(|h| h.core_only == Some(true))
+        .is_some_and(|h| h.tutorial_cards_only == Some(true))
 }
 
-/// R2433000: whether `player` may not play `card`: the seat plays only Core cards and the card's
-/// definition is of another set. Asked of a card in its hand or its graveyard, however it got
-/// there; a card that reaches the field another way (a summon, a steal) is not played.
+/// R2533000: whether `def` is a card the tutorial opponent may play: of TUTORIAL_CARD_SET, its rarity
+/// none of TUTORIAL_BARRED_RARITIES, a token's read from its printed rarity.
+pub fn is_tutorial_card(def: &CardDef) -> bool {
+    let rarity = if def.rarity == crate::wire::Rarity::Token {
+        def.printed_rarity
+            .and_then(|printed| printed.as_str().parse::<crate::wire::Rarity>().ok())
+    } else {
+        Some(def.rarity)
+    };
+    def.set == crate::config::TUTORIAL_CARD_SET
+        && !rarity.is_some_and(|rarity| crate::config::TUTORIAL_BARRED_RARITIES.contains(&rarity))
+}
+
+/// R2533000 (replacing R2433000's Core-only bar): whether `player` may not play `card`: the seat plays
+/// only the tutorial's cards and this is not one. Asked of a card in its hand or its graveyard,
+/// however it got there; a card that reaches the field another way (a summon, a steal) is not played.
 pub fn barred_from_play(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
-    plays_only_core(state, player)
-        && !crate::catalog::find_def(Some(state), &card.def_id)
-            .is_some_and(|def| def.set == crate::wire::SetName::Core)
+    plays_only_tutorial_cards(state, player)
+        && !crate::catalog::find_def(Some(state), &card.def_id).is_some_and(is_tutorial_card)
 }
 
 /// R2201001: whether the game holds Legendary and Mythic cards out of its random pools: either
@@ -2305,8 +2324,6 @@ pub fn validate_deck_with(
         )));
     }
     let mut seen: Vec<&str> = Vec::with_capacity(deck.len());
-    // R2195000: each catalog card's pair key, with the id that brought it.
-    let mut pairs: Vec<(&str, &str)> = Vec::with_capacity(deck.len());
     for def_id in deck {
         if crate::custom::is_custom_id(def_id) {
             if !customs.contains_key(def_id) {
@@ -2325,17 +2342,6 @@ pub fn validate_deck_with(
         };
         too_many_copies(&seen, def_id, label, copies)?;
         seen.push(def_id);
-        let key = crate::catalog::pair_key(def);
-        // R2195000: a copy of the same id is no pair; R2433001 counts copies above.
-        if let Some((_, other)) = pairs
-            .iter()
-            .find(|(held, other)| *held == key && *other != def_id.as_str())
-        {
-            return Err(EngineError::new(format!(
-                "{label}: \"{other}\" and \"{def_id}\" are a Core card and its Training Grounds snapshot; a deck holds one of the two (§2.6 L3, R2195000)"
-            )));
-        }
-        pairs.push((key, def_id));
         if def.is_token() {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is a Token card and cannot be in a deck (§2.6 L3)"
@@ -2621,6 +2627,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         applied: Vec::new(),
         cast_chain: None,
         field_exits: None,
+        kill_snapshots: None,
         homes: None,
         casts_resolving: None,
         announcing: None,
@@ -2697,7 +2704,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
                 // R2201000, R2201001: each joins only when set, so no other game stores either.
                 hero_floor: handicap.hero_floor,
                 pool_hold: handicap.pool_hold.filter(|hold| *hold),
-                core_only: handicap.core_only.filter(|only| *only),
+                tutorial_cards_only: handicap.tutorial_cards_only.filter(|only| *only),
                 deck_copies: handicap.deck_copies.filter(|copies| *copies != MAX_COPIES),
             });
             side.hero.health = hero_health;
@@ -2824,6 +2831,14 @@ pub fn forget_hidden_nerfs(state: &mut GameState) {
     }
     for held in state.held.iter_mut().flatten() {
         held.card.hidden_nerfs = None;
+    }
+    // R2396000: nor a gone killer's snapshot, waiting for its kill's dispatch.
+    for killer in state
+        .kill_snapshots
+        .iter_mut()
+        .flat_map(|snapshots| snapshots.values_mut())
+    {
+        killer.hidden_nerfs = None;
     }
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {

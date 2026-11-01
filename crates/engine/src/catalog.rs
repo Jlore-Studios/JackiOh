@@ -967,9 +967,13 @@ pub fn deckable(def: &CardDef) -> bool {
     !def.is_token() && !made_by_a_rule(def) && set_is_open(def.set)
 }
 
-/// R2195000: the card a deck holds one of. A Training Grounds snapshot and the Core card it copies
-/// (`CardDef.snapshot_of`) share one key, the Core card's id, so §2.6 L3 lets a deck hold either but
-/// not both; every other card is its own key. The validators and every random deck read it.
+/// R2204001, R2511001: the key a Discover from the catalog offers once. A definition that names the
+/// Core card it copied (`CardDef.snapshot_of`) shares that card's key; every other card is its own.
+/// The build's catalog names none, so every card is its own key and an offer may show a Core card
+/// and its Legacy card both; the catalogs shipped from v0.5.5 to v0.5.7 name one for each of
+/// Training Grounds #41–#60, so a replay folded under one (R767000) offers what its game offered.
+/// Only the two Discovers read it (`effects::choose`'s offer and `subsystems::scorer::top_three`); a
+/// deck holds both cards (R2511001).
 pub fn pair_key(def: &CardDef) -> &str {
     def.snapshot_of.as_deref().unwrap_or(&def.id)
 }

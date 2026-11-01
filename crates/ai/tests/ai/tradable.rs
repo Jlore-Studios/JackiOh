@@ -42,7 +42,7 @@ fn r1838003_a_trade_is_a_candidate_after_the_plays_and_before_end_turn() {
     let trade = ActionBody::Trade {
         instance_id: showdown_of(&state),
     };
-    let candidates = candidate_actions(&state, AI);
+    let candidates = candidate_actions(&state, AI, Prices::NONE);
     let at = candidates
         .iter()
         .position(|action| *action == trade)

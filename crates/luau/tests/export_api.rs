@@ -686,6 +686,7 @@ mod generator {
             ForcedSide,
             ForcedTarget,
             TrampleOnto,
+            DamageOdds,
             GiveFromHandCards,
             RewardOption,
             CellScope,

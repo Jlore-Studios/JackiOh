@@ -20,7 +20,7 @@ import { listedFace } from "../game/faces.ts";
 import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
-import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
+import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { copyingWords } from "./inspect/StateNotes.tsx";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_HOVER, INSPECT_PRINTED, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
@@ -66,12 +66,9 @@ function hover(element: HTMLElement): HTMLElement {
   return screen.getByTestId(INSPECT_HOVER);
 }
 
-function longPress(element: HTMLElement): HTMLElement {
-  fireEvent.pointerDown(element, { pointerType: "touch", clientX: 10, clientY: 10 });
-  act(() => {
-    vi.advanceTimersByTime(LONG_PRESS_MS * 2);
-  });
-  fireEvent.pointerUp(element, { pointerType: "touch", clientX: 10, clientY: 10 });
+/** The I key on `element` opens its inspect sheet (a touch hold shows the preview, R2617000), and the sheet. */
+function sheetOf(element: HTMLElement): HTMLElement {
+  fireEvent.keyDown(element, { key: "i" });
   return screen.getByTestId(INSPECT_SHEET);
 }
 
@@ -136,7 +133,7 @@ describe("R399 R511 Echo prints the text it copies", () => {
     expect(within(preview).getByTestId(INSPECT_PRINTED).textContent).toContain(ECHO_SENTENCE);
     fireEvent.pointerLeave(root, { pointerType: "mouse" });
 
-    const sheet = longPress(root);
+    const sheet = sheetOf(root);
     expect(within(sheet).getByTestId(INSPECT_STATES).textContent).toContain("Copying: Book of Knowledge");
   });
 

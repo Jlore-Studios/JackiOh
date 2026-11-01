@@ -16,6 +16,10 @@
  * Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000). The
  * Stinkyscape set adds Drone Core (its #27 to #36), Weapon (#50 to #61 and #140 to #143),
  * War Doctrine (the four #137 tokens) and Swarm (its Swarm Units, #91 and #92): family tags that
- * no rule reads, which the server admits since the set's release (R1857000).
+ * no rule reads, which the server admits since the set's release (R1857000). Legacy marks the
+ * Training Grounds set's twenty Legacy cards, #41 to #60, frozen copies of Core cards: a family
+ * tag no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources:
+ * Reknite, Korrelite, Gellium, Axnit, Narcor and Red Narcor, tokens all) and Faction (the five
+ * Faction cards, #95 and #159 to #162), which the server admits from migration 0070.
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Token";

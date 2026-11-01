@@ -86,7 +86,7 @@ fn a_panicking_simulated_play_is_counted_apart_and_decide_still_answers_a_legal_
     let state = coin_in_hand(seed);
 
     let counter = create_node_counter(AI_BUDGET.nodes, None);
-    let step = simulate(&state, AI, &coin_play(&state), &counter);
+    let step = simulate(&state, AI, &coin_play(&state), &counter, Prices::NONE);
     assert_eq!(step, Some(Err(COIN_PANIC.to_string())));
     assert_eq!(counter.sim_errors(), 1);
     assert_eq!(counter.sim_panics(), 1);
@@ -108,7 +108,7 @@ fn a_refused_simulation_counts_in_sim_errors_and_not_in_sim_panics() {
     let state = coin_in_hand("sim-panics-refused");
     let counter = create_node_counter(AI_BUDGET.nodes, None);
     // p2 may not end p1's turn: the reducer refuses it, and nothing panics.
-    let step = simulate(&state, HUMAN, &ActionBody::EndTurn, &counter);
+    let step = simulate(&state, HUMAN, &ActionBody::EndTurn, &counter, Prices::NONE);
     assert!(matches!(step, Some(Err(_))), "{step:?}");
     assert_eq!(counter.sim_errors(), 1);
     assert_eq!(counter.sim_panics(), 0);
@@ -136,7 +136,8 @@ fn a_panic_in_the_opponents_reply_is_counted_and_keeps_its_message() {
     );
 
     let counter = create_node_counter(20, None);
-    let after = simulate_reply(&handed, AI, &counter, &hidden_card_ids(&handed, AI)).expect("a reply");
+    let after =
+        simulate_reply(&handed, AI, &counter, &hidden_card_ids(&handed, AI), Prices::NONE).expect("a reply");
     // Mr. Vanilla attacks, then its end of turn panics inside the reply's endTurn: the reply stops
     // where it stands, still p2's turn.
     assert_eq!(after.active, HUMAN);

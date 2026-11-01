@@ -54,10 +54,12 @@ unicode-normalization = { version = "0.1.25" }
 unicode-properties = { version = "0.1.4" }
 unicode-script = { version = "0.5.8" }
 unicode-segmentation = { version = "1.13.3" }
+# crates/tools/tests/export_card_text.rs reads crates/cards/card-text.yaml (#2498); no pure crate takes it (CLAUDE.md rule 4).
+yaml_serde = { version = "0.10.7" }
 
 # `cargo test` optimizes the rules and the cards (and the JSON they hash), keeping debug assertions
-# and overflow checks: the golden traces (SURFACE §13, V4) replay 240 games through `reduce`,
-# `legal_actions`, `view_for` and `hash_state` at every step, which takes hours unoptimized.
+# and overflow checks: the card, rules and tools tests play whole games through `reduce`, `legal_actions`,
+# `view_for` and `hash_state` (first set for SURFACE §13's 240 golden traces, retired in #2578).
 [profile.test.package.jackioh-engine]
 opt-level = 2
 

@@ -5,9 +5,9 @@
 //! Engine: `fill_board` with Stinkyscape #68 Stratos (Core #62 Friend of Felinors' verb): every
 //! open unit zone of its caster's, a Dormant card's zone not one (R1839000), then, as Stratos flies,
 //! every empty backrow zone, where each stands (R2248000), each a summoned card of its own
-//! definition, no Cry (R1), no token; Radiant `radiant: true`. Each is a Starship
-//! Piece, so each that dies fuses (R1852000). A Spell's resolution hangs off `cry` (Core #5
-//! Stockpile's shape).
+//! definition, no Cry (R1), no token; Radiant `radiant: true`. Each is a 3/1 (Radiant 6/2) Flying,
+//! Ranged Unit; since #2521 none is a Starship Piece, so one that dies fuses nothing. A Spell's
+//! resolution hangs off `cry` (Core #5 Stockpile's shape).
 
 use jackioh_engine::prelude::*;
 
@@ -37,9 +37,9 @@ pub fn script() -> CardScripts {
 }
 
 // Stinkyscape #158 Stratos Swarm — SPEC §8.10 row 158, BUILD M12 row S 158: "fills every open unit
-// zone of its caster's with Stratos, Flying Starship Pieces, no Cry, then every empty backrow zone
+// zone of its caster's with Stratos, 3/1 Flying Ranged Units, no Cry, then every empty backrow zone
 // (R2248000); a Dormant card's zone is not filled; a full board, both rows, summons none; radiant
-// Radiant Stratos".
+// Radiant Stratos, 6/2" (#2521: no Starship Pieces).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -49,8 +49,9 @@ mod tests {
     use crate::filler;
 
     const SWARM: &str = "stinkyscape-158";
-    const STRATOS: &str = "stinkyscape-068"; // 3/3 Flying Starship Piece.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
     const WELL: &str = "core-006"; // Mana Well, a Field Spell to fill a backrow zone.
 
@@ -96,10 +97,28 @@ mod tests {
                 assert_eq!(lane, &Some(STRATOS.to_string()));
             }
             assert_eq!(backrow(&s), vec![Some(STRATOS.to_string()); 5], "it flies (R2248000)");
-            // Each summoned Stratos is base and a Starship Piece.
+            // Each summoned Stratos is base, a 3/1 Flying Ranged Unit and no Starship Piece.
             let token = s.unit(PlayerId::P1, 2).expect("a Stratos");
             assert!(!token.radiant);
-            s.expect_stats(token.id.as_str(), json!({ "attack": 3, "health": 3 }));
+            s.expect_stats(token.id.as_str(), json!({ "attack": 3, "health": 1 }));
+            let keywords = s.stats(token.id.as_str()).keywords;
+            assert!(has_keyword(&keywords, KeywordKind::Flying));
+            assert!(has_keyword(&keywords, KeywordKind::Ranged));
+            assert!(!has_keyword(&keywords, KeywordKind::StarshipPiece));
+        }
+
+        #[test]
+        fn a_stratos_that_dies_fuses_nothing() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [SWARM, HIT_JOB, ANCHOR], "mana": 10, "field": [VANILLA], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            s.play(SWARM, json!({}));
+            let token = s.unit_at(PlayerId::P1, 2);
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&token) }));
+            s.expect_in_zone(&token, "graveyard");
+            assert!(dormant_starship_of(s.state(), PlayerId::P1).is_none(), "no Dormant Starship");
         }
 
         #[test]
@@ -208,7 +227,7 @@ mod tests {
                 assert!(token.radiant, "lane {lane} is Radiant");
             }
             let token = s.unit(PlayerId::P1, 2).expect("a Stratos");
-            s.expect_stats(token.id.as_str(), json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(token.id.as_str(), json!({ "attack": 6, "health": 2 }));
         }
     }
 }

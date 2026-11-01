@@ -1,5 +1,6 @@
 // The Games panel of /stats (SPEC §9.11, R1994000): how the patch's games went, for the match type
-// shown. The first player's win share with its margin (half its 95% interval), the median game's
+// shown. The first player's win share of the decided games with its margin (half its 95% interval),
+// or that it is unknown when no game was won, and no draw figure (R2567000); the median game's
 // length in turns and the share of games that reach fatigue, each on its own line, and nothing of the
 // set traps (R2446000); a patch with fewer games than the sample floor says only that. When some of
 // the patch's games were recorded before these figures were kept, a note says how many of them it
@@ -82,10 +83,12 @@ export function GamesPanel({ patch, mode }: { patch: string; mode: string }): Re
           ) : (
             <ul className="stats-games-lines">
               <li>
-                {t("First player wins {share}% (±{margin})", {
-                  share: Math.round(shown.firstShare * PERCENT),
-                  margin: Math.round(((shown.firstHigh - shown.firstLow) / 2) * PERCENT),
-                })}
+                {shown.firstShare === null
+                  ? t("First player wins: unknown, no game was won")
+                  : t("First player wins {share}% of decided games (±{margin})", {
+                      share: Math.round(shown.firstShare * PERCENT),
+                      margin: Math.round(((shown.firstHigh - shown.firstLow) / 2) * PERCENT),
+                    })}
               </li>
               <li>{t("Median {turns} turns", { turns: formatNumber(shown.turnQuartiles[1]) })}</li>
               {shown.fatigueShare !== null && (

@@ -38,8 +38,8 @@ use crate::catalog::set_is_open;
 use crate::config::{DECK_SIZE, MAX_COPIES};
 use crate::wire::{CardDefs, is_js_space, string_union};
 
-/// §9.4: exactly 3 decks per loadout. Not in engine config, so it lives here.
-pub const LOADOUT_DECKS: usize = 3;
+// §9.4's decks per loadout is the engine config's (CLAUDE.md rule 9), named here as it always was.
+pub use crate::config::LOADOUT_DECKS;
 
 /// R252: a trio is §9.4's loadout of three decks, so it holds `LOADOUT_DECKS` of them.
 pub const TRIO_DECKS: usize = LOADOUT_DECKS;
@@ -316,8 +316,6 @@ fn check(
             }
         }
 
-        // R2195000: each card's pair key in this deck, with the first id that brought it.
-        let mut pairs: IndexMap<&str, &CardId> = IndexMap::new();
         for card_id in &deck_order {
             // L7 (R915005) — a custom card plays only in practice. It is judged by this rule alone.
             if crate::custom::is_custom_id(card_id) {
@@ -364,26 +362,6 @@ fn check(
                     deck: Some(deck_number),
                     card_id: Some(card_id.clone()),
                 });
-            }
-
-            // L3 (R2195000) — a Core card or its Training Grounds snapshot, never both.
-            if let Some(def) = def {
-                match pairs.get(crate::catalog::pair_key(def)) {
-                    Some(other) => errors.push(LoadoutError {
-                        rule: LoadoutRule::L3,
-                        message: format!(
-                            "{} cannot contain both {} and {}: a deck holds a Core card or its Training Grounds snapshot, not both.",
-                            label_at(index),
-                            label(other),
-                            label(card_id)
-                        ),
-                        deck: Some(deck_number),
-                        card_id: Some(card_id.clone()),
-                    }),
-                    None => {
-                        pairs.insert(crate::catalog::pair_key(def), card_id);
-                    }
-                }
             }
 
             // L3 (copies) — at most MAX_COPIES of a card per deck.

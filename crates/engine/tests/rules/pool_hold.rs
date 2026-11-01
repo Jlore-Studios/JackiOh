@@ -389,3 +389,67 @@ mod r2201001_the_hold_is_the_calls_own {
         assert!(state::holds_pools(&begun));
     }
 }
+
+mod r2386001_a_held_game_ranks_no_legendary_or_mythic_card {
+    use super::*;
+
+    fn row(id: &str, wins: i32, games: i32) -> WinRateRow {
+        WinRateRow {
+            id: id.to_string(),
+            wins,
+            games,
+        }
+    }
+
+    fn table(rows: Vec<WinRateRow>) -> WinRateTable {
+        WinRateTable {
+            patch: "v0.2.7".to_string(),
+            source: WinRateSource::Provisional,
+            cards: rows,
+        }
+    }
+
+    #[test]
+    fn r2386001_the_leader_and_the_trailer_are_the_best_and_the_worst_of_the_cards_a_held_pool_keeps() {
+        register();
+        let held = playing("r2386001-ends", true);
+        let unheld = playing("r2386001-ends", false);
+        // The Legendary leads the table and the Mythic trails it; the Epic, Common and Rare rows are
+        // what a held game ranks.
+        register_win_rates(table(vec![
+            row("ph-unit-legendary", 40, 40),
+            row("ph-unit-epic", 30, 40),
+            row("ph-unit-common", 20, 40),
+            row("ph-unit-rare", 10, 40),
+            row("ph-unit-mythic", 0, 40),
+        ]));
+        let ends = |state: &GameState| {
+            with_pool_hold(state, || (win_rate_leader("none"), win_rate_trailer(&["none"])))
+        };
+        assert_eq!(
+            ends(&held),
+            (Some("ph-unit-epic".to_string()), Some("ph-unit-rare".to_string()))
+        );
+        // The same table in an unheld game, stepped after the held one: nothing is left out.
+        assert_eq!(
+            ends(&unheld),
+            (
+                Some("ph-unit-legendary".to_string()),
+                Some("ph-unit-mythic".to_string())
+            )
+        );
+        // With only held cards ranked, a held game names none; an unheld one still does.
+        register_win_rates(table(vec![
+            row("ph-unit-legendary", 40, 40),
+            row("ph-unit-mythic", 0, 40),
+        ]));
+        assert_eq!(ends(&held), (None, None));
+        assert_eq!(
+            ends(&unheld),
+            (
+                Some("ph-unit-legendary".to_string()),
+                Some("ph-unit-mythic".to_string())
+            )
+        );
+    }
+}

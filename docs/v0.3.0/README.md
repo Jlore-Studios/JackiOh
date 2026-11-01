@@ -6,14 +6,17 @@ number since #1360, and the folder keeps its name because code comments cite it.
 The plan for [#306](https://github.com/Jlore-Studios/JackiOh/issues/306), which merges #80 (the
 server, engine and AI rewrite) and #133 (spec adherence by structure, not prose), and adds the
 AI training lanes (the successor of #55, following #70 and #65) and a shorter CI. It is written so
-that a builder who reads only this file, [SURFACE.md](SURFACE.md), [PORT-MAP.md](PORT-MAP.md) and
+that a builder who reads only this file, [SURFACE.md](SURFACE.md), `PORT-MAP.md` and
 its own part's issue has no decision left to make.
 
 - **[SURFACE.md](SURFACE.md)** is the interface freeze: crate layout, pinned dependencies,
   translation rules, wire format, every cross-crate signature, CLI, file formats. It is the fullsend
-  `SPEC.md` for this run.
-- **[PORT-MAP.md](PORT-MAP.md)** lists every file in `packages/`, `apps/server/` and `ladder/`, the
-  Rust file it becomes (or that it is deleted, and why), and the part that owns it.
+  `SPEC.md` for this run, and the crates and the client still cite it as their boundary.
+- **`PORT-MAP.md`**, which listed every file in `packages/`, `apps/server/` and `ladder/` and the
+  Rust file it became, was removed once nothing of that layout was left;
+  `git show 3c5c7a81:docs/v0.3.0/PORT-MAP.md` prints it. So were `research/` (the read-only survey
+  the plan started from) and sections 3, 4, 5, 11 and 12 below, which said how the run was
+  orchestrated and frozen while it ran: `git show 3c5c7a81:docs/v0.3.0/README.md` prints them.
 - **The briefs** of the parts are the bodies of #306's sub-issues (the Issue column below); their
   copies in `parts/` were removed in #832 and stay in git history.
 
@@ -90,160 +93,15 @@ Each line is decided; a builder does not reopen it.
 
 ## 3. How the work runs: fullsend over one branch
 
-This is the fullsend skill (`.claude/skills/fullsend/SKILL.md`) stretched over sub-issues instead of
-one session's subagents. Every fullsend rule holds; the mapping is:
-
-| Fullsend | Here |
-|---|---|
-| `.fullsend/SPEC.md` | [SURFACE.md](SURFACE.md), plus the TS sources it names and the golden traces as the behaviors |
-| The feature branch | `staging`, cut from `main` by part 1 |
-| Phase 0: spec and freeze | this directory, plus part 1 (which turns the type freeze into compiled Rust) |
-| Phase 1: shatter | the parts table (§4) and [PORT-MAP.md](PORT-MAP.md): every file belongs to exactly one part per wave |
-| Phase 2: full send | Wave 1: parts 2–30 at once, every builder blind (no `cargo`, no `pnpm`), every one pushing straight to `staging` |
-| Spec-testers | the golden traces (part 23) and the test porters (parts 24–27), who port TS tests against SURFACE.md without reading the Rust being written |
-| Phase 3: contact | part 31, first half |
-| Phase 4: reconcile | part 31, second half |
-| Phase 5: green | Wave 3: part 32, then parts 33–36 |
-| Phase 6: cull | part 37 |
-
-### 3.1 Who builds a part
-
-Two kinds of builder share Wave 1 (the orchestrator's choice on #306, 2026-10-07):
-
-- **The night bot**, `difficulty:hard` (Opus builds and reviews), takes the 18 parts whose output
-  is new files only: 9–16 (cards), 17 (AI), 18–19 (server), 22 (CLI), 23 (golden traces), 24–27
-  (engine tests) and 29 (training). Its deliver step opens pull requests to `main`. That is safe:
-  the pull request adds files under `crates/` (and `training/`, `scripts/golden/`), which `main`'s
-  TypeScript CI neither builds nor reads. The orchestrator merges `main` into `staging` after each
-  bot merge. Where part 1 left an empty placeholder at the same path, `main`'s file wins. A bot
-  part whose pull request stalls is harvested: its branch's files are merged into `staging` by hand.
-- **Subagents of the orchestrator's session**, each in its own git worktree, take every other part
-  (1–8, 20, 21, 28, 30 and Waves 2–5). They push to `staging` by §3.2.
-
-The bot parts read the plan's documents from the plan branch (their issues say how), since `main`
-does not carry `docs/v0.3.0/` until the cutover. Parts marked
-**person** touch `.github/`, `.harness/`, `.squishy/` or `bot/`, which no bot may change; a person
-builds them, or runs a session of their own to do it.
-
-The sub-issues are **unlabeled** until a person says they are ready (#306's comment: "hold off
-labeling things until it's ready"). No `bot:*`, `squishy:*` or `method:*` label goes on them from
-this plan. The Plan section of each is between `<!-- jackioh-bot:plan -->` markers, so that if a
-person later queues one for a bot, it builds from that plan without planning again.
-
-### 3.2 The push protocol (every Wave 1–3 part)
-
-```sh
-git fetch origin staging && git checkout -B work origin/staging   # start
-# … write only the files your part owns …
-git add <only your files> .fullsend/notes/part-<NN>.md .fullsend/notes/part-<NN>.assumptions
-git commit -m "v0.3.0 part <n>: <what>"
-for i in 1 2 3 4 5; do git pull --rebase origin staging && git push origin HEAD:staging && break; sleep $((i*4)); done
-```
-
-- **Ownership is the only coordination.** A part writes only the paths its brief lists. Two parts
-  never own one file in the same wave, so a rebase never conflicts. A rebase that does conflict
-  means a part wrote outside its paths: drop your change to that file (`git checkout --theirs`) and
-  list it under `GAPS`.
-- **Commit early and often**: at least every 10 files. A session cut off mid-part leaves its work on
-  `staging`, and the next session for that part starts with "skip every file that already exists".
-- **Never run the build in Wave 1.** No `cargo`, `rustc`, `rustfmt`, `pnpm`, `tsc` or test runner
-  (fullsend builder rule 1). Count any you ran in `BUILDS-RUN`.
-- The build on `staging` is expected to be broken from part 2's first push until Wave 3.
-
-### 3.3 Notes
-
-Each part leaves `.fullsend/notes/part-<NN>.md` and `.fullsend/notes/part-<NN>.assumptions` (SURFACE.md
-§16). Part 31 reads them all. `.fullsend/` stays on `staging` and is deleted by part 37.
+Removed: how the run was orchestrated, done once v0.3.0 merged (`git show 3c5c7a81:docs/v0.3.0/README.md`).
 
 ## 4. The waves and the parts
 
-Forty parts, one sub-issue each, titled `v0.3.0 (part n of 40): …` (`docs/issues-and-patches.md`). The waves run in order; inside a wave every part runs at once. "Opus" parts carry the cross-cutting design; "Sonnet+" parts are mechanical translations any strong model can do from their brief. Line counts per part are in [PORT-MAP.md](PORT-MAP.md).
-
-- **Wave 0** (part 1): `staging`, the workspace, the module tree, the type freeze. Nothing else starts before it.
-- **Wave 1** (parts 2–30, at once): every builder and test porter, blind, pushing straight to `staging`. Part 30 is a person's and may run any time in Waves 1–3.
-- **Wave 2** (part 31): contact and reconcile.
-- **Wave 3** (part 32, then parts 33–36 at once): green.
-- **Wave 4** (part 37, then part 38): cull and docs, then the cutover to `main`.
-- **Wave 5** (parts 39 and 40): the bot machines and the training lanes switched on.
-
-| Part | Title | Wave | Starts after | Builder | Mode | Issue |
-|---|---|---|---|---|---|---|
-| 1 | bootstrap: staging, the Cargo workspace and the type freeze | Wave 0 | — | Opus | setup | #389 |
-| 2 | engine 1: the model and the board | Wave 1 | 1 | Sonnet+ | builder | #390 |
-| 3 | engine 2: combat, damage and the resolution loop | Wave 1 | 1 | Opus | builder | #391 |
-| 4 | engine 3: the play pipeline and casting | Wave 1 | 1 | Sonnet+ | builder | #392 |
-| 5 | engine 4: turn, setup, reduce, view, validator, wire helpers and the testkit | Wave 1 | 1 | Opus | builder | #393 |
-| 6 | engine 5: effect verbs, first half | Wave 1 | 1 | Sonnet+ | builder | #394 |
-| 7 | engine 6: effect verbs, second half | Wave 1 | 1 | Sonnet+ | builder | #395 |
-| 8 | engine 7: subsystems | Wave 1 | 1 | Opus | builder | #396 |
-| 9 | cards lane 1: Core #1–#48 | Wave 1 | — | night bot (Opus) | builder | #397 |
-| 10 | cards lane 2: Core #49–#81 | Wave 1 | — | night bot (Opus) | builder | #398 |
-| 11 | cards lane 3: Core #82–#100 and the Core tokens to Ghoul | Wave 1 | — | night bot (Opus) | builder | #399 |
-| 12 | cards lane 4: Core tokens Rush to Sheep, Classic #1–#32 | Wave 1 | — | night bot (Opus) | builder | #400 |
-| 13 | cards lane 5: Classic #33–#68 | Wave 1 | — | night bot (Opus) | builder | #401 |
-| 14 | cards lane 6: Classic #69–#90 and tokens, Classic+ #1–#18 | Wave 1 | — | night bot (Opus) | builder | #402 |
-| 15 | cards lane 7: Classic+ #19–#49 | Wave 1 | — | night bot (Opus) | builder | #403 |
-| 16 | cards lane 8: Classic+ #50–#78 and the AI tokens | Wave 1 | — | night bot (Opus) | builder | #404 |
-| 17 | the AI in Rust (generation 0) | Wave 1 | — | night bot (Opus) | builder | #405 |
-| 18 | server 1: the HTTP API and auth | Wave 1 | — | night bot (Opus) | builder | #406 |
-| 19 | server 2: the match lifecycle and the WebSocket | Wave 1 | — | night bot (Opus) | builder | #407 |
-| 20 | server 3: persistence, migrations, CLIs and the Docker deploy | Wave 1 | 1 | Opus | builder | #408 |
-| 21 | the WASM bindings and the web client on them | Wave 1 | 1 | Opus | builder | #409 |
-| 22 | the jackioh CLI: fuzz, catalog, patches, gates, sweep, stats | Wave 1 | — | night bot (Opus) | builder | #410 |
-| 23 | golden traces recorded from the TypeScript engine | Wave 1 | — | night bot (Opus) | oracle | #411 |
-| 24 | engine tests 1: effect verbs and fixtures | Wave 1 | — | night bot (Opus) | tester | #412 |
-| 25 | engine tests 2: rulings, subsystems, prompts and triggers | Wave 1 | — | night bot (Opus) | tester | #413 |
-| 26 | engine tests 3: view, turn, setup, combat | Wave 1 | — | night bot (Opus) | tester | #414 |
-| 27 | engine tests 4: play pipeline and cross-card rules | Wave 1 | — | night bot (Opus) | tester | #415 |
-| 28 | the spec graph and structural spec checks (#133) | Wave 1 | 1 | Sonnet+ | builder | #416 |
-| 29 | the training arena, the promotion gate and the lane prompts | Wave 1 | — | night bot (Opus) | builder | #417 |
-| 30 | CI: essential checks per pull request, the daily super run | Wave 1 | 1 | person | person | #418 |
-| 31 | contact and reconcile | Wave 2 | 2–29 | Opus | reconciler | #419 |
-| 32 | green 1: the engine compiles and replays the golden traces | Wave 3a | 31 | Opus | green | #420 |
-| 33 | green 2: the cards | Wave 3b | 32 | Sonnet+ | green | #421 |
-| 34 | green 3: the AI, the tools and the training arena | Wave 3b | 32 | Sonnet+ | green | #422 |
-| 35 | green 4: the server and the database | Wave 3b | 32 | Opus | green | #423 |
-| 36 | green 5: the web client and e2e | Wave 3b | 32 | Sonnet+ | green | #424 |
-| 37 | cull: delete the TypeScript, rewrite the docs | Wave 4 | 33, 34, 35, 36 | Opus | culler | #425 |
-| 38 | cutover: staging into main, deploys and the bots' settings | Wave 4 | 37, 30 | person | ops | #426 |
-| 39 | the bot machines: six normal lanes and two training lanes | Wave 5 | 38 | person | person | #427 |
-| 40 | generation 0, the sweep of record, and the lanes switched on | Wave 5 | 38, 39 | Sonnet+ | ops | #428 |
+Removed: how the run was orchestrated, done once v0.3.0 merged (`git show 3c5c7a81:docs/v0.3.0/README.md`).
 
 ## 5. The orchestrator's runbook
 
-The orchestrator is one person, or one Claude Code session a person runs (it needs the
-`create_session` tool of the `claude-code-remote` server). It never writes product code. Its steps:
-
-1. **Before Wave 0.** Post on #306 that the freeze of §11 starts. Merge this plan's branch into
-   `main`, or keep it on its branch; part 1 copies `docs/v0.3.0/` into `staging` either way.
-2. **Wave 0.** Create one session for part 1 (prompt template below). Wait for it to finish and for
-   its Done when (the workspace checks with no error but unresolved names into still-empty modules,
-   and the tag `v0.3.0-wave-0` is pushed). Nothing else starts before.
-3. **Wave 1.** Merge `main` into `staging` once (`git merge origin/main`, web and docs only, per
-   §11). Create every Wave 1 session at once, parts 2–29 (part 30 is a person's). Do not watch them;
-   do not correct them mid-flight (fullsend Phase 2). The wave ends when every session has stopped
-   or 24 hours have passed. A part whose session stopped short gets one more session with the same
-   prompt; it resumes from what is on `staging`.
-4. **Wave 2.** Create the part 31 session. It ends with `.fullsend/damage.md` and
-   `.fullsend/notes/reconcile-decisions.md` committed.
-5. **Wave 3.** Create part 32's session first (the engine must compile before anything downstream
-   can be checked); when it is green, create parts 33–36 at once. If a part reaches
-   its fourth iteration (fullsend: "the spec has a hole"), stop it, patch SURFACE.md from
-   `.fullsend/notes/spec-gaps.md`, and rerun.
-6. **Wave 4.** Part 37, then part 38 (the cutover pull request from `staging` to `main`).
-7. **Wave 5.** Parts 39 and 40 (39 is a person's).
-
-Session prompt template (`create_session`, with `outcome_branch: "staging"`,
-`source_revision: "staging"` (for part 1 only: `source_revision: "main"`, since part 1 creates
-`staging`), `permission_mode` as the orchestrator's, the model §4's table names):
-
-```
-You are building part <n> of the JackiOh v0.3.0 rewrite (GitHub issue #<sub-issue>, parent #306).
-Read, in this order: docs/v0.3.0/README.md §3, docs/v0.3.0/SURFACE.md, issue #<sub-issue>'s body
-and the research file it cites, if any. Your brief is the issue's body; its "Files to touch" table is the complete list of paths you may write.
-Follow its steps exactly. Push to staging with the protocol of README §3.2. Do not ask questions:
-decide, and record the decision in your notes. Stop when your brief's "Done when" list holds.
-```
+Removed: how the run was orchestrated, done once v0.3.0 merged (`git show 3c5c7a81:docs/v0.3.0/README.md`).
 
 ## 6. Acceptance: the behaviors v0.3.0 is held to
 
@@ -255,7 +113,7 @@ with BUILD.md's). Parts cite them; part 37's coverage check lists any V that no 
 | V1 | `cargo build --workspace` and `cargo clippy --workspace --all-targets -- -D warnings` pass | CI `rust` job |
 | V2 | The pure crates depend on nothing but serde, serde_json, indexmap and each other | `clippy.toml` + Cargo.toml review in part 37 |
 | V3 | `Rng::new("golden", 0)`'s first ten draws equal TS's | `crates/engine/src/rng.rs` unit test |
-| V4 | Every game in `games.jsonl` replays with identical view hashes, event hashes and legal sets | `crates/engine/tests/golden.rs` |
+| V4 | Every golden trace (the 240 games, retired in #2578) replays with identical view hashes, event hashes and legal sets | `crates/engine/tests/golden.rs` |
 | V5 | Every TS card test, ported, passes | `cargo test -p jackioh-cards` |
 | V6 | Every §11 ruling has a proving Rust test named `r<n>_…`, and every cited R-id exists | `cargo jackioh spec check` |
 | V7 | `cargo jackioh fuzz --seeds 1000` finds no invariant breach and every game folds back to its hash | daily super run (CI: 200 seeds) |
@@ -346,7 +204,7 @@ three sets minus its own AI's shadow-ban list, and promotes on:
 
 **CI re-verifies.** A pull request from an `ai/*` branch may change only `crates/ai/**`,
 `training/history/**` and the practice game the AI's moves are recorded in,
-`crates/server/tests/fixtures/practice-claim.json` (R1303002), and its `generation.json` must be `main`'s plus one; the `training-gate` job
+`crates/server/tests/fixtures/practice-claim.json` (which the web's claim test plays move for move, R2560000), and its `generation.json` must be `main`'s plus one; the `training-gate` job
 builds `main`'s binary and the branch's and re-runs `promote --lane <lane>` with the same seeds. A
 lane's own claim is never trusted. Branch protection's "require branches to be up to date" makes a
 lane whose parent moved re-run.
@@ -418,31 +276,8 @@ file and line.
 
 ## 11. Freeze rules for `main` while this runs
 
-From the day part 1 starts until part 38 merges:
-
-- `main` takes **no** change under `packages/engine`, `packages/cards` (catalog, scripts, patches),
-  `packages/ai`, `packages/shared`, `packages/validator` or `apps/server`. Every such change would
-  have to be ported twice. A person holds or relabels such issues; the night bot is told by keeping
-  them out of its queue (no `bot:build`), not by a code change.
-- Web-only, docs and bot changes may land on `main`. The orchestrator merges `main` into `staging`
-  at the start of each wave; a conflict in `apps/web` goes to part 21's (or 36's) owner.
-- A rules emergency on `main` (a crash in a live match) is fixed on `main` and in the Rust on
-  `staging` in the same day, with a new golden trace from part 23's recorder if it changes behavior.
+Removed: how the run was orchestrated, done once v0.3.0 merged (`git show 3c5c7a81:docs/v0.3.0/README.md`).
 
 ## 12. Risks and abort criteria
 
-| Risk | Sign | Answer |
-|---|---|---|
-| The type freeze (part 1) is wrong in a way every lane copies | part 31 finds the same seam in most notes | patch SURFACE.md and part 1's types, re-run Wave 2; the lanes' code stays |
-| A JS semantic slips past §4.4 | golden divergence in Wave 3 | the divergence names seed, step and hash; `record.ts --dump-step` gives the TS side |
-| Card lanes are too big for one session | a session stops with cards left | the next session for that part resumes at the first card whose `.rs` is missing (briefs say so) |
-| Wave 3 needs a fourth iteration | fullsend's abort rule | stop, patch SURFACE.md from `spec-gaps.md`, rerun the bucket |
-| `main` moves under the freeze | a port of a TS change is owed | §11; the change lands in both, with a trace |
-| Vercel has no Rust toolchain | the web build fails on Vercel | `vercel.json`'s install step adds a minimal toolchain; `scripts/build-wasm.sh` fetches the `wasm-bindgen` binary (part 21) |
-| WASM is blocked by the CSP | the client cannot instantiate the module | `'wasm-unsafe-eval'` in `script-src` in `vercel.json` (and the Cloudflare headers, held equal by their test) (part 21) |
-| Devin's SWE-2 is free only until 2026-10-16 | the lanes' cost changes | `DEVIN_MODEL` is an env in the unit; a person decides the model after that date |
-| The improve lane never promotes | `training/history/improve.jsonl` stays empty for weeks | expected at 85/100 (§8); part 40 reports measured rates so a person can decide |
-
-Abort the run (roll `staging` back to the last wave's tag, `v0.3.0-wave-<n>`, which the orchestrator
-pushes at each wave's end) if a fullsend failure-table row fires twice, or if nobody can say what
-state `staging` is in.
+Removed: how the run was orchestrated, done once v0.3.0 merged (`git show 3c5c7a81:docs/v0.3.0/README.md`).

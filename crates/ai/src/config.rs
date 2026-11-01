@@ -419,11 +419,25 @@ pub struct EvalWeights {
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
     /// killing a unit whose Death pays its owner is worth less than its body.
     pub death: f64,
+    /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
+    /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
+    /// seat can read, either side's, and `unit_worth` adds for each unit on the field. A face-down card
+    /// is priced as before.
+    pub turn_hook: f64,
+    /// R2564000: the share of what one use of a unit's Activate gives its controller
+    /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units
+    /// and the enemy's alike. R2603000: `material` adds it, inside the card's Brittle share, for each
+    /// backrow card the seat can read, on either side.
+    pub activation: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
     pub backrow_base: f64,
     pub backrow_per_cost: f64,
+    /// R2490000: a Unit standing in the backrow is priced once, as the Unit the unit walk priced
+    /// — the backrow walk skips it. Off, it keeps the old backrow price on top, as the frozen
+    /// baseline did.
+    pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
     /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
@@ -561,9 +575,17 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     slumber_waiting_share: 0.5,
     // R2424000: an untuned start for the training lanes, as R2380000's shares are.
     death: 0.5,
+    // R2477000: an untuned start for the training lanes, as R2424000's is. At 0.5 the smoke gate read
+    // 20, 16 and 17 of 20; at 1.0, 19, 16 and 16, Hard against Easy on its floor of 16.
+    turn_hook: 0.5,
+    // R2564000: an untuned start for the training lanes, as R2477000's is. At 0.5 the smoke gate read
+    // 20, 16 and 20 of 20; at 0, 19, 16 and 20.
+    activation: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
+    // R2490000: a Unit standing in the backrow counts once, as the Unit it is.
+    standing_unit_priced_once: true,
     enemy_face_down: 2.0,
     // #1602: off. At 0.8 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
     // 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen); the
@@ -595,6 +617,17 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
 /// R2424000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two per field
 /// unit with a Death, three or four per own hand Unit with one.
 pub const AI_DEATH_PROBE_NODES: usize = 24;
+
+/// R2477000, R2565000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`)
+/// spend: one per turn hook of each card on either board the seat can read with one, and a spawn
+/// (three nodes on a full unit row) more per own hand Unit or Field Spell with one. 24, as the Death
+/// probes', for a board with a few engines on both sides and the hand's.
+pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
+
+/// R2564000, R2603000: the most nodes a decision's activation probes (`evaluate::activation_prices`)
+/// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
+/// face-up backrow cards together.
+pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -750,9 +783,15 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     slumber_waiting_share: 0.0,
     // R2424000 came after the gates were fixed: nothing, as it gave a Death.
     death: 0.0,
+    // R2477000 came after the gates were fixed: nothing, as it gave a turn hook.
+    turn_hook: 0.0,
+    // R2564000 came after the gates were fixed: nothing, as it gave an Activate.
+    activation: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
+    // The baseline is frozen: it priced a standing Unit again as a backrow card, as it did.
+    standing_unit_priced_once: false,
     enemy_face_down: 2.0,
     // #1602's shown cost and fatigue came after the gates were fixed too: nothing, as it gave them.
     enemy_face_down_per_cost: 0.0,

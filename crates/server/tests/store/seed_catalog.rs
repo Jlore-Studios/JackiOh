@@ -10,8 +10,9 @@
 //! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030,
 //! the Meditative+ set's Potion (R1178000) from 0043, #1837's Terminus, Quest, Otherworldly,
 //! Other-Origins and Jelly Bean (R1837000) from 0058, and the Stinkyscape set's Drone Core, Weapon,
-//! War Doctrine and Swarm (R1857000) from 0065. The seed runs in one transaction, so one
-//! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
+//! War Doctrine and Swarm (R1857000) from 0065, the Training Grounds Legacy cards' Legacy
+//! (R2511000) from 0069, and #2521's Resource and Faction from 0070. The seed runs in one
+//! transaction, so one such row fails the whole catalog. The first half compares the tags with the migrations' text; the
 //! second checks that the database really accepts them. Both count the catalog of the sets that ship
 //! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set, the
 //! Meditative+ set and the Stinkyscape set (R1420).
@@ -293,8 +294,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0065_stinkyscape_set.sql",
-            "0065 re-adds the check with the Stinkyscape set's four tags (R1857000)"
+            file, "0070_resource_and_faction_tags.sql",
+            "0070 re-adds the check with #2521's Resource and Faction, after 0069's Legacy (R2511000)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -323,8 +324,16 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             carried.iter().any(|carried| carried == "Potion"),
             set_ships(SetName::MeditativePlus)
         );
-        // R1837000: and the five tags #1837 puts on shipped cards.
-        for tag in ["Terminus", "Quest", "Otherworldly", "Other-Origins", "Jelly Bean"] {
+        // R1837000: and the five tags #1837 puts on shipped cards; #2521: and Resource and Faction.
+        for tag in [
+            "Terminus",
+            "Quest",
+            "Otherworldly",
+            "Other-Origins",
+            "Jelly Bean",
+            "Resource",
+            "Faction",
+        ] {
             assert!(
                 carried.iter().any(|carried| carried == tag),
                 "the catalog carries {tag}"
@@ -342,16 +351,17 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     }
 
     /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
-    /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), and 0065, which
-    /// ships the Stinkyscape set (R1857000). The check admits exactly the tags the engine names, in
-    /// its order, Wincon, Potion, the five and the four among them, so every entry of every set the
-    /// catalog holds seeds the day its set ships, the Meditative, Meditative+ and Stinkyscape sets'
-    /// included.
+    /// Meditative+ set (R1178000), 0058, which admits #1837's five tags (R1837000), 0065, which
+    /// ships the Stinkyscape set (R1857000), 0069, which admits Legacy (R2511000), and 0070, which
+    /// admits #2521's Resource and Faction. The check admits exactly the tags the engine names, in
+    /// its order, Wincon, Potion, the five, the four, Legacy and the two among them, so every entry
+    /// of every set the catalog holds seeds the day its set ships, the Meditative, Meditative+ and
+    /// Stinkyscape sets' included.
     #[tokio::test]
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0065_stinkyscape_set.sql");
+        assert_eq!(file, "0070_resource_and_faction_tags.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -364,6 +374,9 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             "Weapon",
             "War Doctrine",
             "Swarm",
+            "Legacy",
+            "Resource",
+            "Faction",
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
         }
@@ -454,8 +467,9 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         if set_ships(SetName::Stinkyscape) { n } else { 0 }
     }
 
-    /// R2204000: `n` once the Training Grounds set ships, and nothing before. Its snapshots (#41–#60)
-    /// carry their Core card's tags (R2195000), so they count beside its own cards.
+    /// R2204000: `n` once the Training Grounds set ships, and nothing before. Its Legacy cards
+    /// (#41–#60) carry their Core card's tags (R2195003) beside Legacy (R2511000), so they count
+    /// beside its own cards.
     fn training_grounds(n: usize) -> usize {
         if set_ships(SetName::TrainingGrounds) { n } else { 0 }
     }
@@ -572,7 +586,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             ]);
         }
         // R2204000: the Training Grounds set's two, #45 Jlockeed's Weapons and #48 Jlockeed
-        // Shredder-10, the snapshots of Core #14 and #13 that carry its tags (R2195000), once it ships.
+        // Shredder-10, the Legacy cards of Core #14 and #13 that carry its tags (R2195003), once it ships.
         if set_ships(SetName::TrainingGrounds) {
             expected.extend(["traininggrounds-045", "traininggrounds-048"]);
         }
@@ -621,7 +635,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // Bean); and, once it ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), its two
         // Quests (#7 The Greatest Heist and #112 Job Application), its three Otherworldlies (#10 to
         // #12) and their nine spells (Other-Origins); and, once it ships, on the Training Grounds
-        // set's #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean, a snapshot (R2195000).
+        // set's #27 Hopeful Jelly Bean and #50 Legacy: Glowy Jelly Bean, a Legacy card (R2195003).
         for (tag, count, stinky, grounds) in [
             ("Terminus", 1, 6, 0),
             ("Quest", 1, 2, 0),
@@ -645,6 +659,17 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             ("War Doctrine", 4),
             ("Swarm", 2),
         ] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
+        }
+        // R2511000: Legacy, the tag 0069 admits, is on the Training Grounds set's twenty Legacy
+        // cards, #41 to #60, alone.
+        assert_eq!(rows_tagged("Legacy"), tagged("Legacy"));
+        assert_eq!(tagged("Legacy"), training_grounds(20));
+        // #2521: the two tags 0070 admits, the Stinkyscape set's alone: its six Resources, Reknite,
+        // Korrelite, Gellium, Axnit, Narcor and Red Narcor, every one a token (Resource), and its
+        // five Faction cards, #95 and #159 to #162 (Faction).
+        for (tag, count) in [("Resource", 6), ("Faction", 5)] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), stinkyscape(count), "{tag}");
         }

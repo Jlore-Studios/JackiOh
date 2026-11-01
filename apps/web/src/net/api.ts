@@ -1147,10 +1147,9 @@ export type PlayerSettingsGroup = { at: number; values: Record<string, PlayerSet
 
 /**
  * `PlayerSettingsView` in `crates/server/src/api/settings.rs`: group id to group, empty before the
- * first write. `allowSpectators` (#936 S7, B50) is the account's own "Let friends watch my games", not a
- * device group: `PUT` takes it beside `groups`. Optional because a server from before #936 omits it.
+ * first write. It carries no watching switch: friends may always watch (R2615000).
  */
-export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup>; allowSpectators?: boolean };
+export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup> };
 
 /** `GET /api/settings` (`active`): the account's copy, empty before its first write. */
 export async function getPlayerSettings(token: string): Promise<PlayerSettingsAccountCopy> {
@@ -1701,7 +1700,9 @@ export function getCardDrillDown(
 
 /**
  * R1994000: how a patch's games went, over the games whose records carry the figures. Shares are
- * 0..1 to three places; `firstLow` and `firstHigh` bound the first seat's win share at 95% (Wilson).
+ * 0..1 to three places; `firstShare` is the first seat's share of the decided games (`games - draws`),
+ * null when every game was drawn (R2567000); `firstLow` and `firstHigh` bound it at 95% (Wilson), 0 and 1
+ * when it is null.
  * The fatigue, trap, position and Radiant figures count only the `counted` games whose records keep
  * them, and are null when there are none.
  */
@@ -1709,7 +1710,7 @@ export type PublicGameFigures = {
   games: number;
   draws: number;
   firstWins: number;
-  firstShare: number;
+  firstShare: number | null;
   firstLow: number;
   firstHigh: number;
   /** Every way a game ended ("hero-death", "turn-cap", …) to its games. */

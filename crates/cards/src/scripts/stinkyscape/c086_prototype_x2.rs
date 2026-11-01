@@ -1,8 +1,8 @@
 //! Stinkyscape #86 Prototype-X2 (SPEC §8.10 row 86). Unit 8/8 → 16/16, cost 4, Mythic.
-//!   Base:    "Tribute 5, Starship Piece
+//!   Base:    "Tribute 5
 //!            Float reduces Tribute requirement by 1.
 //!            Cry: Discover 3 Epic Weapons and Equip them into this."
-//!   Radiant: "Tribute 5, Starship Piece
+//!   Radiant: "Tribute 5
 //!            Float reduces Tribute requirement by 1.
 //!            Cry: Discover 3 Legendary Weapons and Equip them into this."
 //!
@@ -12,9 +12,9 @@
 //! turn from the Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them
 //! whether or not the set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused
 //! into this with its Activate (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the
-//! face its kept host wears (R77), so a Radiant Prototype wields its Weapons' Radiant faces. Starship
-//! Piece is a catalog keyword the engine plays: this one's death fuses a copy into its owner's Dormant
-//! Starship (R1852000), and the Weapons it takes leave it a piece (R1852001).
+//! face its kept host wears (R77), so a Radiant Prototype wields its Weapons' Radiant faces. Since #2521
+//! it is no Starship Piece, and the Weapons it takes, each a piece, leave it none (R1852001), so its
+//! death fuses nothing (R1852000 reads the keyword).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -57,7 +57,8 @@ pub fn script() -> CardScripts {
 // Stinkyscape #86 Prototype-X2 — SPEC §8.10 row 86, BUILD M12 row S 86: Tribute 5, lowered 1 by each of
 // its owner's Floats while it waits, never below 0 (R1841003); its Cry asks 3 Discovers in turn, each
 // three Epic Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
-// (R1841002, R1751000); radiant 16/16 and Legendary Weapons.
+// (R1841002, R1751000); radiant 16/16 and Legendary Weapons. Since #2521 it is no Starship Piece
+// (R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,6 +71,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    const FILLER: &str = "core-005"; // (1) Spell.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     /// A full unit row of Vanillas, the Tribute 5.
     const FIVE: [&str; 5] = [VANILLA; 5];
 
@@ -143,11 +146,12 @@ mod tests {
         (s, host)
     }
 
-    /// The host takes its Weapons' Activates that turn, and is still a Starship Piece (R1852001).
+    /// The host takes its Weapons' Activates that turn, and is no Starship Piece: each Weapon is one,
+    /// the kept host none (R1852001).
     fn armed(s: &Scenario, host: &str) {
         let card = s.card(host).clone();
         assert!(!activate_actions_for(s.state(), P1, &card).is_empty());
-        assert!(unit_has(s.state(), &card, KeywordKind::StarshipPiece));
+        assert!(!unit_has(s.state(), &card, KeywordKind::StarshipPiece));
     }
 
     mod base {
@@ -157,6 +161,20 @@ mod tests {
         fn r1862002_the_cry_discovers_n_weapons_of_its_rarity_in_turn_and_equips_each() {
             let (s, host) = arms(false, &EPIC);
             armed(&s, &host);
+        }
+
+        #[test]
+        fn its_death_fuses_nothing_it_is_no_starship_piece() {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [HIT_JOB, FILLER], "field": [ID], "library": crate::filler(4) },
+                "p2": { "hand": [FILLER], "library": crate::filler(4) },
+            }));
+            let me = s.card(ID).clone();
+            assert!(!unit_has(s.state(), &me, KeywordKind::StarshipPiece));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+            s.expect_in_zone(&me, "graveyard");
+            assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship");
+            assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
         }
 
         #[test]

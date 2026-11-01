@@ -40,11 +40,13 @@ fn r1174000_a_frozen_units_attack_and_switch_are_never_candidates() {
     let mut state = board();
     let unit = active_units_of(&state, AI)[0].id.clone();
     let acts = |state: &GameState| {
-        candidate_actions(state, AI).iter().any(|action| match action {
-            ActionBody::Attack { attacker_id, .. } => *attacker_id == unit,
-            ActionBody::SwitchPosition { instance_id } => *instance_id == unit,
-            _ => false,
-        })
+        candidate_actions(state, AI, Prices::NONE)
+            .iter()
+            .any(|action| match action {
+                ActionBody::Attack { attacker_id, .. } => *attacker_id == unit,
+                ActionBody::SwitchPosition { instance_id } => *instance_id == unit,
+                _ => false,
+            })
     };
     assert!(acts(&state), "a ready unit attacks or switches");
     let turn = state.turn;

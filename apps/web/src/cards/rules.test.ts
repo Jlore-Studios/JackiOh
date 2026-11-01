@@ -101,8 +101,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Chance to reveal",
     // R2199000: Training Grounds', rules only: TG #31 Level Up! prints no such term.
     "After one of your Units attacks",
-    // R2285000, R2285001: the two attack timings, rules only; the cards print them in their own words.
+    // R2285000, R2285001, R2396000: the three attack timings, rules only; the cards print them in their
+    // own words.
     "When this attacks",
+    "Whenever this attacks",
     "After this attacks",
   ],
   "§6.3": [
@@ -743,6 +745,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       "End the turn": ["end the turn"],
       Allure: ["Allured"],
       Launch: ["launch", "launches"],
+      // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
+      Activate: ["Activated"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);

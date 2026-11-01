@@ -103,6 +103,13 @@ playReason?: string,
  */
 tradeReason?: string, 
 /**
+ * R2574000, §10.8: whether this hand card of the viewer's is Tradable (`trade::is_tradable`),
+ * whether by its printed face, a granted keyword or an aura over its controller's hand.
+ * Present, and `true`, only on the viewer's own hand card in a live game; absent otherwise,
+ * never `false`, never on the opponent's cards or post-game hands.
+ */
+tradable?: true, 
+/**
  * #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
  * dropped some of the choice combinations they are built from, so the list is a slice whose first
  * plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on

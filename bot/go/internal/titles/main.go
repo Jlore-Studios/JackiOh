@@ -1,7 +1,6 @@
 package titles
 
-// The command line, `harness titles shipped|retcon …` (patches-ship.yml,
-// title-retcon.yml): `main`, with what its argparse parser does (usage, help, errors and exit
+// The command line, `harness titles shipped …` (patches-ship.yml): `main`, with what its argparse parser does (usage, help, errors and exit
 // codes, as Python 3.13's prints them at 80 columns, as on a runner).
 
 import (
@@ -18,7 +17,6 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
-	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 )
 
 // stdout and stderr are where `main` prints; variables so the tests can read them.
@@ -45,44 +43,6 @@ func Main(argv []string /* = None */) (code int) {
 		}
 	}()
 	client := gh.NewGitHub(environ("GITHUB_REPOSITORY"), environ("GH_TOKEN"), false, nil, nil, "")
-	if args.command == "retcon" {
-		threads := client.Paginate("repos/"+client.Repo+"/issues", pyjson.New("state", "all"), "", 100_000, false)
-		where := joinPath(py.Strip(runGit("rev-parse", "--show-toplevel")), PatchesJSON)
-		data, err := os.ReadFile(where)
-		if err != nil {
-			herr.Raise(err)
-		}
-		patches, err := pyjson.Loads(data)
-		if err != nil {
-			herr.Raise(&py.Error{Type: "json.decoder.JSONDecodeError", Msg: err.Error()})
-		}
-		rows := PlanRetcon(patchList(threads), VersionsByThread(patchList(patches), client, subjectOfCommit))
-		if args.numbers != "" {
-			wanted := map[int]bool{}
-			for _, n := range strings.Split(args.numbers, ",") {
-				if py.Strip(n) != "" {
-					wanted[py.MustInt(n)] = true
-				}
-			}
-			kept := []*Retitle{}
-			for _, row := range rows {
-				if wanted[row.Number] {
-					kept = append(kept, row)
-				}
-			}
-			rows = kept
-		}
-		if args.limit != 0 {
-			rows = rows[:sliceEnd(len(rows), args.limit)]
-		}
-		WriteCsv(rows, args.csv)
-		fmt.Fprintf(stdout, "titles: %d of %d threads change; the CSV is %s\n", len(rows), len(threads), args.csv)
-		if args.write {
-			fmt.Fprintf(stdout, "titles: wrote %d thread(s)\n", ApplyRetcon(client, rows, args.pause, nil))
-		}
-		return 0
-	}
-
 	entries := Shipped(patchesAt(args.before), patchesAt(args.after))
 	if len(entries) == 0 {
 		fmt.Fprintln(stdout, "titles: nothing shipped in this push")
@@ -103,27 +63,6 @@ func environ(name string) string {
 	}
 	return value
 }
-
-// sliceEnd is where `xs[:end]` stops, with Python's negative end.
-func sliceEnd(n, end int) int {
-	if end < 0 {
-		end += n
-	}
-	return max(0, min(end, n))
-}
-
-// joinPath is os.path.join(a, b).
-func joinPath(a, b string) string {
-	if strings.HasPrefix(b, "/") || a == "" {
-		return b
-	}
-	if strings.HasSuffix(a, "/") {
-		return a + b
-	}
-	return a + "/" + b
-}
-
-func writeFile(path, text string) error { return os.WriteFile(path, []byte(text), 0o666) }
 
 // gitOutput is `_git`.
 func gitOutput(args ...string) string {
@@ -186,30 +125,25 @@ func exceptionLine(r any) string {
 type arguments struct {
 	command       string
 	before, after string
-	write         bool
-	numbers, csv  string
-	limit         int
-	pause         float64
 }
 
 const prog = "harness titles"
 
-const topUsage = "usage: harness titles [-h] {shipped,retcon} ...\n"
+const topUsage = "usage: harness titles [-h] {shipped} ...\n"
 
 const topHelp = topUsage + `
 positional arguments:
-  {shipped,retcon}
-    shipped         retitle what a push to main shipped
-    retcon          retitle every issue and pull request (#1372)
+  {shipped}
+    shipped   retitle what a push to main shipped
 
 options:
-  -h, --help        show this help message and exit
+  -h, --help  show this help message and exit
 `
 
-// option is one of a parser's options; kind is "flag" (store_true), "str", "int" or "float".
+// option is one of a parser's options, each taking one value.
 type option struct {
-	flag, kind string
-	required   bool
+	flag     string
+	required bool
 }
 
 type parser struct {
@@ -227,25 +161,7 @@ options:
   --before BEFORE
   --after AFTER
 `,
-		options: []option{{"--before", "str", true}, {"--after", "str", true}},
-	},
-	"retcon": {
-		prog: prog + " retcon",
-		usage: "usage: harness titles retcon [-h] [--write] [--numbers NUMBERS]\n" +
-			"                             [--limit LIMIT] [--csv CSV] [--pause PAUSE]\n",
-		help: `
-options:
-  -h, --help         show this help message and exit
-  --write            write the titles; without it, only the CSV
-  --numbers NUMBERS  only these threads, comma-separated
-  --limit LIMIT      at most this many threads
-  --csv CSV
-  --pause PAUSE      seconds between writes
-`,
-		options: []option{
-			{"--write", "flag", false}, {"--numbers", "str", false}, {"--limit", "int", false},
-			{"--csv", "str", false}, {"--pause", "float", false},
-		},
+		options: []option{{"--before", true}, {"--after", true}},
 	},
 }
 
@@ -286,9 +202,9 @@ func parseArgs(argv []string) (*arguments, int, bool) {
 	command := argv[i]
 	sub := subparsers[command]
 	if sub == nil {
-		return fail(topUsage, prog, "argument command: invalid choice: "+py.Repr(command)+" (choose from 'shipped', 'retcon')")
+		return fail(topUsage, prog, "argument command: invalid choice: "+py.Repr(command)+" (choose from 'shipped')")
 	}
-	args := &arguments{command: command, csv: "title-retcon.csv", pause: 2.0}
+	args := &arguments{command: command}
 	seen := map[string]bool{}
 	rest := argv[i+1:]
 	for j := 0; j < len(rest); {
@@ -310,15 +226,6 @@ func parseArgs(argv []string) (*arguments, int, bool) {
 			fmt.Fprint(stdout, sub.usage+sub.help)
 			return nil, 0, false
 		}
-		if opt.kind == "flag" {
-			if hasExplicit {
-				return fail(sub.usage, sub.prog, "argument "+opt.flag+": ignored explicit argument "+py.Repr(explicit))
-			}
-			args.write = true
-			seen[opt.flag] = true
-			j++
-			continue
-		}
 		value := explicit
 		switch {
 		case hasExplicit:
@@ -329,30 +236,11 @@ func parseArgs(argv []string) (*arguments, int, bool) {
 		default:
 			return fail(sub.usage, sub.prog, "argument "+opt.flag+": expected one argument")
 		}
-		switch opt.kind {
-		case "int":
-			n, err := py.Int(value)
-			if err != nil {
-				return fail(sub.usage, sub.prog, "argument "+opt.flag+": invalid int value: "+py.Repr(value))
-			}
-			args.limit = n
-		case "float":
-			f, err := py.Float(value)
-			if err != nil {
-				return fail(sub.usage, sub.prog, "argument "+opt.flag+": invalid float value: "+py.Repr(value))
-			}
-			args.pause = f
-		default:
-			switch opt.flag {
-			case "--before":
-				args.before = value
-			case "--after":
-				args.after = value
-			case "--numbers":
-				args.numbers = value
-			case "--csv":
-				args.csv = value
-			}
+		switch opt.flag {
+		case "--before":
+			args.before = value
+		case "--after":
+			args.after = value
 		}
 		seen[opt.flag] = true
 	}

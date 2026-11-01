@@ -59,7 +59,7 @@ mod r783000_move_order {
 
     /// Where `candidate_actions` puts the attack on `target` and the first play.
     fn places(state: &GameState, target: &str) -> (usize, usize) {
-        let actions = candidate_actions(state, AI);
+        let actions = candidate_actions(state, AI, Prices::NONE);
         let attack = actions
             .iter()
             .position(|action| matches!(action, ActionBody::Attack { target_id, .. } if target_id == target))
@@ -120,6 +120,7 @@ mod r783000_reply {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(state, AI),
+            Prices::NONE,
         )
         .expect("a reply")
     }
@@ -212,7 +213,8 @@ mod keyword_weights {
         ] {
             let mut granted = plain.clone();
             granted.granted_keywords.push(keyword);
-            let diff = unit_worth(&state, &granted, &AI_EVAL) - unit_worth(&state, &plain, &AI_EVAL);
+            let diff = unit_worth(&state, &granted, &AI_EVAL, Prices::NONE)
+                - unit_worth(&state, &plain, &AI_EVAL, Prices::NONE);
             assert!((diff - weight).abs() < 1e-9, "{diff} against {weight}");
             assert!(diff > 0.0);
         }

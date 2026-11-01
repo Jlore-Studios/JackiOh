@@ -69,7 +69,6 @@ import {
   deckVerdict,
   holdersOf,
   joinNames,
-  pairHolders,
   practiceOnly,
   removeCard,
   trioLabel,
@@ -182,12 +181,6 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   const compared = useMemo(() => comparedDecks(compare, deck.id, decks, trios), [compare, deck.id, decks, trios]);
   const holders = useMemo(() => holdersOf(compared, limits.nameLength), [compared, limits.nameLength]);
-  // R2195000: the other of each Core card and snapshot pair the deck holds, unavailable as a compared
-  // deck's cards are; a compared deck's holder names it first.
-  const poolHolders = useMemo(
-    () => new Map([...pairHolders(deck.id, deck.cards, catalog), ...holders]),
-    [deck.id, deck.cards, catalog, holders],
-  );
   const inDeck = useMemo(() => new Set(deck.cards), [deck.cards]);
   const conflicts = useMemo(() => {
     const clashing = new Map<string, Holder>();
@@ -236,7 +229,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
 
   const add = useCallback(
     (cardId: string) => {
-      const move = addCard(deck.cards, cardId, poolHolders);
+      const move = addCard(deck.cards, cardId, holders);
       if (!move.ok) {
         setRefusedCardId(cardId);
         if (move.reason === "here") setStatus({ say: () => t("{card} is already in this deck.", { card: nameOf(cardId) }) });
@@ -253,7 +246,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
         onSaveNow();
       }
     },
-    [deck.cards, poolHolders, label, nameOf, onCards, onSaveNow],
+    [deck.cards, holders, label, nameOf, onCards, onSaveNow],
   );
 
   const remove = useCallback(
@@ -332,7 +325,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const others = decks.filter((candidate) => candidate.id !== deck.id);
   const errors = verdict.ok ? [] : verdict.errors;
   const detailPlace: "deck" | Holder | null =
-    detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (poolHolders.get(detailCardId) ?? null);
+    detailCardId === null ? null : inDeck.has(detailCardId) ? "deck" : (holders.get(detailCardId) ?? null);
   const detailOwned = detailCardId === null || collection === null ? null : (collection[detailCardId] ?? 0) > 0;
   const full = deck.cards.length >= DECK_SIZE;
   const atCap = decks.length >= limits.decks;
@@ -611,7 +604,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             deckName: label,
             collection,
             inDeck,
-            holders: poolHolders,
+            holders,
             refusedCardId,
             onAdd: add,
             onDragStart: startDrag,

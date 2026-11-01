@@ -47,7 +47,7 @@ use crate::config::{
     AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
 };
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
-use crate::evaluate::{DeathPricing, death_prices};
+use crate::evaluate::{Prices, activation_prices, death_prices, turn_hook_prices};
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
@@ -401,7 +401,7 @@ fn plan(
         DeterminizeOptions::default(),
         &ground,
     );
-    scratch.candidates = candidate_actions(&probe, seat);
+    scratch.candidates = candidate_actions(&probe, seat, Prices::NONE);
     if scratch.candidates.len() == 1
         && let Some(only) = scratch.candidates.first()
     {
@@ -417,9 +417,19 @@ fn plan(
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000: every Death the seat can read, priced once on the probe world for the whole decision,
-    // its probes drawn from the searched section's nodes; the prices are held until the plan returns.
-    let _deaths = DeathPricing::hold(death_prices(&probe, seat, counter));
+    // R2424000, R2477000, R2564000, R2565000, R2603000: every Death the seat can read, every turn hook of
+    // the cards it can read on either board and of its hand's Field Spells and Units, and each Activate of
+    // a Unit on either field or of a face-up backrow card on either side, priced once on the probe world
+    // for the whole decision, their probes drawn from the searched section's nodes; all are priced before
+    // any is passed, so no probe reads a price, and every step below is passed them (`Prices`).
+    let deaths = death_prices(&probe, seat, counter);
+    let turn_hooks = turn_hook_prices(&probe, seat, counter);
+    let activations = activation_prices(&probe, seat, counter);
+    let prices = Prices {
+        deaths,
+        turn_hooks,
+        activations,
+    };
 
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.
@@ -443,12 +453,12 @@ fn plan(
     // every decision. A trim the counter stops before it has a first action it can vouch for leaves
     // no lethal to play: the decision goes on below as if none were found, its counter as spent.
     let mut passed_over: Option<ActionBody> = None;
-    if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
+    if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes, &prices)
         && let Some(first_lethal) = lethal.first().cloned()
     {
         if passes_over_lethal(style, rng) {
             passed_over = Some(first_lethal);
-        } else if let Some(trimmed) = trim_lethal(&dets, seat, lethal, counter)
+        } else if let Some(trimmed) = trim_lethal(&dets, seat, lethal, counter, &prices)
             && let Some(first) = trimmed.first().cloned()
         {
             return Plan::Searched {
@@ -485,7 +495,7 @@ fn plan(
     // node through the slice afterwards, so it is the reason TS read off it at the end.
     let (found, beam_stopped_by) = {
         let beam_counter = create_sub_counter(counter, remaining - reserve);
-        let found = beam_search(det0, seat, &beam_counter, budget);
+        let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };
     scratch.lines = found.len();
@@ -520,7 +530,7 @@ fn plan(
     let hidden0 = hidden_card_ids(det0, seat);
     let mut replied: Vec<Scored<'_>> = Vec::new();
     for line in shortlist {
-        let Some(score) = reply_score(&line.end, seat, root_turn, counter, &hidden0) else {
+        let Some(score) = reply_score(&line.end, seat, root_turn, counter, &hidden0, &prices) else {
             break;
         };
         replied.push(Scored { line, score });
@@ -550,6 +560,7 @@ fn plan(
                 counter,
                 !replied.is_empty(),
                 Some(&hidden),
+                &prices,
             ) else {
                 break;
             };

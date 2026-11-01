@@ -7,9 +7,8 @@
 // token in BOT_GITHUB_TOKEN, GITHUB_TOKEN or GH_TOKEN, or a logged-in `gh`.
 //
 // Two more commands stand for the workflows' other ways into the harness, and are not in the
-// help, which stays `harness`'s: `titles shipped|retcon …` is `python3 -m
-// harness.titles …` (patches-ship.yml, title-retcon.yml), and `pr-title --title=…` is the inline
-// check of pr-title.yml.
+// help, which stays `harness`'s: `titles shipped …` is `python3 -m harness.titles …`
+// (patches-ship.yml), and `pr-title --title=…` is the inline check of pr-title.yml.
 package cli
 
 import (

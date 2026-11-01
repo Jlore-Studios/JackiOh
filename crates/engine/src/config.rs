@@ -34,6 +34,9 @@ pub const MEDIUM_EXTRA_DECK_CARDS: i32 = 5;
 pub const HARD_EXTRA_DECK_CARDS: i32 = 10;
 /// §2.6, §9.4
 pub const MAX_COPIES: i32 = 1;
+/// §9.4 L1, R252: the decks a Conquest loadout (a trio) holds, exactly. The validator's L1 reads it,
+/// and so does the web's trio editor, through `engineConfig.ts`.
+pub const LOADOUT_DECKS: usize = 3;
 /// §2.3
 pub const MAX_MANA: i32 = 4;
 /// §2
@@ -107,7 +110,8 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// lacking one. Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos,
 /// Quickdraw, Wincon, Potion (Meditative+, R1178000), Terminus, Quest, Otherworldly, Other-Origins,
 /// Jelly Bean (#1837, R1837000), Drone Core, Weapon, War Doctrine, Swarm (the Stinkyscape set,
-/// R1857000) and Token name families and mechanics, not tribes.
+/// R1857000), Resource and Faction (#2521: the six Resources, and the five Faction cards themselves,
+/// not their members) and Token name families and mechanics, not tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
 /// R1176000: the tag every card in Chinese has. A card instance whose `chinese` flag is set (R1300)
@@ -350,15 +354,17 @@ pub struct Handicap {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub pool_hold: Option<bool>,
-    /// R2433000: this seat plays only Core cards. It never plays, sets or casts a card whose set is
-    /// not Core, from its hand or its graveyard, however the card got there. Absent means no bar, so
-    /// every other game hashes as before the field existed. Only the tutorial opponent sets it.
+    /// R2533000 (replacing R2433000's `coreOnly`): this seat plays only the tutorial's cards, those of
+    /// TUTORIAL_CARD_SET whose rarity is none of TUTORIAL_BARRED_RARITIES. It never plays, sets or
+    /// casts another card, from its hand or its graveyard, however the card got there. Absent means
+    /// no bar, so every other game hashes as before the field existed. Only the tutorial opponent
+    /// sets it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub core_only: Option<bool>,
+    pub tutorial_cards_only: Option<bool>,
     /// R2433001: the most copies of one card id this seat's deck may hold, in place of MAX_COPIES.
     /// Absent means MAX_COPIES, so every other game hashes as before the field existed. Only a
-    /// lesson's human sets it (`TUTORIAL_HUMAN`).
+    /// lesson's two seats set it (`TUTORIAL_HUMAN`, and `AI_TUTORIAL` since R2533001).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub deck_copies: Option<i32>,
@@ -374,7 +380,7 @@ pub const HUMAN_HANDICAP: Handicap = Handicap {
     hero_health: None,
     hero_floor: None,
     pool_hold: None,
-    core_only: None,
+    tutorial_cards_only: None,
     deck_copies: None,
 };
 
@@ -424,7 +430,7 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
         hero_floor: None,
         pool_hold: None,
-        core_only: None,
+        tutorial_cards_only: None,
         deck_copies: None,
     },
     hard: Handicap {
@@ -436,7 +442,7 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
         hero_floor: None,
         pool_hold: None,
-        core_only: None,
+        tutorial_cards_only: None,
         deck_copies: None,
     },
 };
@@ -444,7 +450,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
 /// §9.10, R290: the tutorial opponent's handicap, the one below Easy. It is a handicap like the
 /// three tiers (R180) and lowers the AI seat's resources instead of raising them: a 12-card deck
 /// (each lesson's own list, R291, so it runs out and fatigues sooner), at most 3 mana crystals, and
-/// a hero that starts at 20 health; and it plays only Core cards (R2433000). The AI's search,
+/// a hero that starts at 20 health; it plays only Training Grounds cards that are not Legendary or
+/// Mythic (R2533000), and its deck may hold TUTORIAL_DECK_COPIES copies of a card (R2533001). The AI's search,
 /// evaluation and budget are the ones every tier plays with, but with the learned evaluation on this
 /// seat keeps the hand eval (R1012003). It is not in `DIFFICULTIES`: nobody picks it, the tutorial
 /// deals it.
@@ -457,9 +464,11 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     hero_health: Some(20),
     hero_floor: None,
     pool_hold: None,
-    // R2433000: the tutorial opponent plays only Core cards, whatever reaches its hand.
-    core_only: Some(true),
-    deck_copies: None,
+    // R2533000: the tutorial opponent plays only Training Grounds cards that are not Legendary or
+    // Mythic, whatever reaches its hand.
+    tutorial_cards_only: Some(true),
+    // R2533001: lesson 1's opponent holds copies of the set's vanilla units, as its human does.
+    deck_copies: Some(TUTORIAL_DECK_COPIES),
 };
 
 /// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds
@@ -475,9 +484,16 @@ pub const TUTORIAL_HUMAN: Handicap = Handicap {
     ..HUMAN_HANDICAP
 };
 
-/// §9.10, R2433001: the most copies of one card a lesson's human deck holds. Lesson 1 is mostly
-/// vanilla Units, and Training Grounds has only three with no text.
+/// §9.10, R2433001, R2533001: the most copies of one card a lesson's deck holds, the human's and the
+/// opponent's. Lesson 1 is mostly vanilla Units, and Training Grounds has only three with no text.
 pub const TUTORIAL_DECK_COPIES: i32 = 4;
+
+/// R2533000: the set a seat whose handicap sets `tutorialCardsOnly` plays from: the tutorial's own.
+pub const TUTORIAL_CARD_SET: SetName = SetName::TrainingGrounds;
+
+/// R2533000: the rarities of TUTORIAL_CARD_SET that such a seat never plays. A token is judged by
+/// its printed rarity (TG #39.1 Training-Grounds Golem prints Legendary).
+pub const TUTORIAL_BARRED_RARITIES: &[Rarity] = &[Rarity::Legendary, Rarity::Mythic];
 
 /// §9.10, R2201000: the least health a lesson's human hero can fall to.
 pub const TUTORIAL_HERO_FLOOR: i32 = 1;
@@ -1490,8 +1506,10 @@ pub const REPLAY_PAGE_STEPS: usize = 16;
 
 /// R1371000: the scheme a file's catalog versions are named by, its `versions` marker. A replay,
 /// game-record or self-play file that carries no marker names them as they were before the version
-/// retcon (#1371), and its reader maps each through `patches/aliases.json`.
-pub const VERSIONS_SCHEME: u32 = 2;
+/// retcon (#1371), and its reader maps each through `patches/aliases.json`. R2532000: 3 since the
+/// v0.5 retcon (#2532); a file marked 2 names the v0.5 line as it was before it, and its reader maps
+/// those names through the same file's `marked`.
+pub const VERSIONS_SCHEME: u32 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).
@@ -2231,6 +2249,23 @@ pub const ANOMALY_ROLL_SIDES: i32 = 100;
 /// R1845002: the offer comes due at the start of the opponent's next turn, counted in their own turns
 /// (R1181000), so its badge counts down on the offerer's side while it waits.
 pub const TRADE_OFFER_TURNS: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// Emotes (SPEC §9.5, §10.10; R643, R1341): the dealt hand and the rate limit, which the server and
+// the web enforce alike (`wire::emotes`, `apps/web/src/wire/emotes.ts`)
+// ---------------------------------------------------------------------------------------------
+
+/// How many emotes a seat is dealt each game (R1341): the menu shows these and nothing else.
+pub const EMOTE_HAND_SIZE: usize = 8;
+/// How many of a hand are voice lines (R1341); the other `EMOTE_HAND_SIZE - EMOTE_HAND_VOICE` are
+/// emoji. A fixed split, so every hand speaks in its portrait's voice and the menu keeps one shape.
+pub const EMOTE_HAND_VOICE: usize = 3;
+/// R643: the pause between two emotes from one player.
+pub const EMOTE_COOLDOWN_MS: i64 = 1500;
+/// R643: the rolling window the cap is counted over.
+pub const EMOTE_WINDOW_MS: i64 = 20_000;
+/// R643: at most this many emotes in a window.
+pub const EMOTE_WINDOW_MAX: usize = 5;
 
 #[cfg(test)]
 mod tests {

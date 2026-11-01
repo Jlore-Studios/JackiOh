@@ -9,17 +9,19 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardType, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardType, type Keyword, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardFace, TOKEN_GLYPH, TOKEN_WORD, faceText, typeLine } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
 import { GLITCH_WORDS } from "./glitch.ts";
+import { HoverPreview } from "./inspect/HoverPreview.tsx";
+import { INSPECT_FACE, INSPECT_GLOSSARY } from "./inspect/testids.ts";
 import { MinionFace } from "./MinionFace.tsx";
 import { RulesText } from "./RulesText.tsx";
 import {
@@ -1289,3 +1291,25 @@ function FitProbe({ content }: { content: string }): ReactElement {
     </span>
   );
 }
+
+/* ----------------------------------------------------------------------------------- R2577000 */
+
+const PREVIEW_ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
+
+describe("R2577000: the preview lists the keywords the board minion hides", () => {
+  it("R2577000 a unit with Equip and Taunt hides Equip on the board, and its hover preview and full face still list it", () => {
+    const id = "meditative-065";
+    const keywords: Keyword[] = [{ kind: "Taunt" }, { kind: "Equip" }];
+    const u = unit("p1", { defId: id, keywords });
+    const face = faceModel({ defId: id, def: def(id), radiant: false, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords } });
+    const board = render(<MinionFace face={face} unit={u} />);
+    expect(board.container.querySelector('.keywords > [data-keyword="Equip"]')?.getAttribute("data-chip")).toBe("hidden");
+    expect(board.container.querySelector('[data-keyword-fx="Equip"]')).toBeNull();
+    cleanup();
+    render(<HoverPreview face={face} anchor={PREVIEW_ANCHOR} />);
+    const glossary = screen.getByTestId(INSPECT_GLOSSARY);
+    expect(glossary.querySelector('[data-glossary-term="Equip"]')).not.toBeNull();
+    expect(glossary.querySelector('[data-glossary-term="Taunt"]')).not.toBeNull();
+    expect(screen.getByTestId(INSPECT_FACE).querySelector('.card-text strong.cf-term[data-term="Equip"]')).not.toBeNull();
+  });
+});

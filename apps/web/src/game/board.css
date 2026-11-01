@@ -882,10 +882,19 @@ button.modifier-badge[data-open="true"] {
 
 /* Fixed rows, not `minmax(0, …)`: each lane is its own grid, so an empty zone must still hold
    its row open or the four bands would stop lining up across the five lanes. `--def-scale` is how
-   far a DEF card shrinks (Card.tsx turns it with `rotate(90deg) scale(var(--def-scale, 1))`): on a
-   phone a card turned sideways is wider than its lane, so it is drawn at 72%. */
+   far a DEF card shrinks (Card.tsx turns it with `rotate(90deg) scale(var(--def-scale, 1))`). A
+   card on its side is as wide as it was tall and as tall as it was wide, so on a phone it is drawn
+   as large as its unit zone's inside lets it, and never over its own size (#2556). The inside is
+   the lane less the zone's 1 px sides, and the row less its 1 px edge and the 2 px line on a unit
+   row's center-line side; the card fills that height and is that wide, or `--card-w` if less.
+   The lane is an inline-size container, so `100cqw` at the card is the lane's width, while `cqh`
+   passes it by and `--card-h` still comes off the board's height (no phone layout's `--card-h`
+   reads `cqw`). `tan(atan2(a, b))` is `a / b` as a number, which `calc()` cannot make of two
+   lengths in every browser yet. */
 .lane {
-  --def-scale: 0.72;
+  --zone-inside-w: calc(100cqw - 2px);
+  --zone-inside-h: calc(var(--card-h) - 3px);
+  --def-scale: min(1, tan(atan2(var(--zone-inside-w), var(--zone-inside-h))), tan(atan2(var(--zone-inside-h), min(var(--zone-inside-w), var(--card-w)))));
 
   position: relative;
   z-index: var(--z-content);
@@ -893,6 +902,7 @@ button.modifier-badge[data-open="true"] {
   grid-template-rows: repeat(4, var(--card-h));
   gap: var(--gap);
   min-width: 0;
+  container-type: inline-size;
 }
 
 /* Wherever the board has the room (a desktop, a tablet held upright), the four rows are one height
@@ -917,6 +927,9 @@ button.modifier-badge[data-open="true"] {
     height: 100%;
     max-height: calc(var(--row-max) * 4 + var(--gap) * 3);
     grid-template-rows: repeat(4, minmax(var(--card-h), 1fr));
+    /* Not a container here: a desktop's `--card-h` comes off the board's width (`cqw`), which a
+       container lane would answer in the board's place for every card inside it. */
+    container-type: normal;
   }
 
   .zone[data-row="units"] > .card.cf-host--minion {

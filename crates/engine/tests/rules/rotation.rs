@@ -226,7 +226,8 @@ mod r14_rotation_m3_t7 {
     }
 
     #[test]
-    fn r12_a_rotated_card_changes_controller_but_never_owner_and_still_leaves_to_its_owners_zones() {
+    fn r12_r2618000_a_rotated_card_changes_controller_but_never_owner_and_dies_to_its_controllers_graveyard()
+    {
         let mut state = game("rotate-ownership");
         let card = put(
             &mut state,
@@ -239,7 +240,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(live(&state, &card).controller, PlayerId::P2);
         assert_eq!(live(&state, &card).owner, PlayerId::P1);
 
-        // Off the field a card always belongs to its owner (R12, §3.2).
+        // It goes to the graveyard of the side it is on, as that player's card (R2618000).
         let mut moving = live(&state, &card).clone();
         move_to_zone(
             &mut state,
@@ -247,10 +248,11 @@ mod r14_rotation_m3_t7 {
             OffFieldZone::Graveyard,
             Default::default(),
         );
-        let graveyard: Vec<String> = state.players.p1.graveyard.iter().map(|c| c.id.clone()).collect();
+        let graveyard: Vec<String> = state.players.p2.graveyard.iter().map(|c| c.id.clone()).collect();
         assert_eq!(graveyard, vec![card.id.clone()]);
-        assert_eq!(state.players.p2.graveyard.len(), 0);
-        assert_eq!(live(&state, &card).controller, PlayerId::P1);
+        assert_eq!(state.players.p1.graveyard.len(), 0);
+        assert_eq!(live(&state, &card).owner, PlayerId::P2);
+        assert_eq!(live(&state, &card).controller, PlayerId::P2);
     }
 
     #[test]

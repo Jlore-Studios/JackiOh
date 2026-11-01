@@ -6,7 +6,9 @@
 //!            Immutable card is left alone (R23); a face-down card's applications are reported as R440
 //!            reports hidden ones. Tunes: times 2 ↑ (Radiant 4; never above 5, R884000)."
 //!
-//! One script serves both faces: only the declared `times` (2, Radiant 4) and the health differ.
+//! One script serves both faces: only the declared `times` (2, Radiant 4) and the health differ. S #26
+//! ZolarKeth's "Activate your Universities" runs this ability as its own effect when it has not been
+//! used this turn, then spends every use it has this turn (`spendUse`, R2521003).
 
 use jackioh_engine::prelude::*;
 

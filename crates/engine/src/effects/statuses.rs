@@ -59,12 +59,18 @@ pub fn go_berserk(args: GoBerserkArgs) -> Effect {
 #[serde(rename_all = "camelCase")]
 pub struct MayAttackAgainArgs {
     pub target: TargetSpec,
+    /// R2521002 (Stinkyscape #94 Tmack Trav): the fresh exertion alone — a unit still summoning sick
+    /// stays sick, so Rush keeps it off the hero on its summon turn. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keep_sick: Option<bool>,
 }
 
 /// B5 E35: the unit may attack again this turn (Classic+ #73.1 Classic Golem's "after it destroys a
 /// Unit"): a fresh exertion — both halves, §4.1 — and no summoning sickness for the rest of this turn,
 /// so a unit that has just entered the field may attack at once. It does not grant an attack a unit
 /// could not otherwise make: Attack Position, attack above 0 and the unit restrictions still apply.
+/// R2521002: with `keep_sick` the sickness is left as it is, so a unit that entered this turn attacks
+/// again as its keywords let it: a Rush unit a Unit only (§6.1), never the hero.
 pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
     Effect::new("mayAttackAgain", move |ctx| {
         let Some(unit) = instance_of(ctx, &args.target) else {
@@ -81,8 +87,9 @@ pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
                 switched: false,
                 attacks: None,
             };
-            // §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which this lifts for the turn.
-            if live.summoned_turn == Some(turn) {
+            // §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which this lifts for the
+            // turn — unless the text keeps it (R2521002).
+            if args.keep_sick != Some(true) && live.summoned_turn == Some(turn) {
                 live.summoned_turn = None;
             }
         }

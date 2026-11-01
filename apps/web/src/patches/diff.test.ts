@@ -20,7 +20,7 @@ import {
 } from "./diff.ts";
 import { FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./fixtures.ts";
 import { versionBefore } from "./history.ts";
-import { realPatchSource, type Snapshot } from "./source.ts";
+import { realPatchSource, type PatchChange, type Snapshot } from "./source.ts";
 
 function changed(delta: CardDelta | null): readonly FieldChange[] {
   if (delta?.kind !== "changed") throw new Error(`expected a changed card, got ${delta?.kind ?? "nothing"}`);
@@ -37,6 +37,19 @@ function text(changes: readonly FieldChange[], name: "base.text" | "radiant.text
   const found = field(changes, name);
   if (found.kind !== "text") throw new Error(`${name} is not a text change`);
   return found;
+}
+
+/** patches.json names the raw fields; the diff reads a face's attack, health and X stats as its stats. */
+function asDiffField(name: string): string {
+  return name.replace(/^(base|radiant)\.(attack|health|xStats)$/, "$1.stats");
+}
+
+/** R388: a record and a card's diff agree: its kind, and for a changed card exactly the fields it names. */
+function expectRecorded(record: PatchChange, delta: CardDelta | null, at: string): void {
+  expect(delta?.kind, at).toBe(record.kind);
+  if (delta?.kind === "changed") {
+    expect(new Set(delta.changes.map((change) => change.field)), at).toEqual(new Set((record.fields ?? []).map(asDiffField)));
+  }
 }
 
 async function real(version: string): Promise<Snapshot> {
@@ -115,6 +128,21 @@ describe("R388 a card's changes, from two snapshots", () => {
     const before = { ...pal, refs: [] };
     const changes = changed(diffCard(before, pal, { after: FIXTURE_SNAPSHOTS[V3] }));
     expect(field(changes, "refs")).toMatchObject({ label: "Cards it names", before: "none", after: "Syrup Token" });
+  });
+
+  it("R388 R2511001 a copy's Core card (snapshotOf) is data only, under the name patches ship records, the card by its name", () => {
+    const golem = fixtureDef(V3, "core-004");
+    const copy = { ...golem, snapshotOf: "core-002" };
+    const delta = diffCard(copy, golem, { before: FIXTURE_SNAPSHOTS[V3] });
+    expect(changed(delta)).toEqual([{ kind: "value", field: "snapshotOf", label: "Copy of", before: "Test Bolt", after: "none" }]);
+    expect(delta !== null && dataOnly(delta)).toBe(true);
+  });
+
+  it("R388 a fused definition's ingredients diff under their own name, as data only", () => {
+    const bolt = fixtureDef(V3, "core-002");
+    const delta = diffCard(bolt, { ...bolt, ingredients: [] });
+    expect(changed(delta)).toEqual([{ kind: "value", field: "ingredients", label: "Ingredients", before: "none", after: "[]" }]);
+    expect(delta !== null && dataOnly(delta)).toBe(true);
   });
 
   it("R388 shows a card by its Radiant face when every printed change is the Radiant face's", () => {
@@ -245,22 +273,35 @@ describe("R388 the real history's changes", () => {
     expect(words.removed[0]).toBe("Two");
   });
 
+  it("R388 R2521009 a Resource's prices diff under the name patches ship records, resource, and print on its face", async () => {
+    const korrelite = defIn(await real("v0.5.0"), "stinkyscape-t-korrelite");
+    const resource = korrelite.resource;
+    if (resource === undefined) throw new Error("Korrelite is no Resource");
+    const repriced = { ...korrelite, resource: { ...resource, base: { ...resource.base, sellMax: 6 } } };
+    const delta = diffCard(korrelite, repriced);
+    expect(changed(delta)).toEqual([
+      {
+        kind: "value",
+        field: "resource",
+        label: "Resource prices",
+        before: "Common, sells for 2–5 Credits, bought for 5 Credits; Radiant sells for 4–10 Credits, bought for 10 Credits",
+        after: "Common, sells for 2–6 Credits, bought for 5 Credits; Radiant sells for 4–10 Credits, bought for 10 Credits",
+      },
+    ]);
+    expect(delta !== null && dataOnly(delta)).toBe(false);
+    expect(delta === null ? null : faceShown(delta)).toBe("base");
+    expectRecorded({ id: korrelite.id, name: korrelite.name, kind: "changed", fields: ["resource"] }, delta, korrelite.id);
+  });
+
   it("R388 every card every patch records diffs to what the record says: its kind and exactly its fields", async () => {
     const patches = await realPatchSource.patches();
     expect(patches.length).toBeGreaterThan(0);
-    // patches.json names the raw fields; the diff reads a face's attack, health and X stats as its stats.
-    const asDiffField = (name: string): string => name.replace(/^(base|radiant)\.(attack|health|xStats)$/, "$1.stats");
     for (const patch of patches) {
       const after = await real(patch.version);
       const previous = versionBefore(patches, patch.version);
       const before = previous === null ? {} : await real(previous);
       for (const record of patch.changes) {
-        const delta = diffCard(before[record.id], after[record.id]);
-        expect(delta?.kind, `${patch.version} ${record.id}`).toBe(record.kind);
-        if (delta?.kind === "changed") {
-          const fields = new Set((record.fields ?? []).map(asDiffField));
-          expect(new Set(delta.changes.map((change) => change.field)), `${patch.version} ${record.id}`).toEqual(fields);
-        }
+        expectRecorded(record, diffCard(before[record.id], after[record.id]), `${patch.version} ${record.id}`);
       }
     }
   }, 30_000);

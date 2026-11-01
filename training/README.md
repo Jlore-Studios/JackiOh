@@ -190,8 +190,8 @@ the latest pass, and its comments say what happened:
 ## What a lane may change
 
 Only `crates/ai/**` and `training/history/**`, and one file outside them:
-`crates/server/tests/fixtures/practice-claim.json`, a practice game whose AI moves the server's test
-re-runs move for move (R1303002). Every AI change plays it differently, so a promotion records it
+`crates/server/tests/fixtures/practice-claim.json`, a practice game the web's claim test plays move
+for move and the server's test folds and pays (R2560000). Every AI change plays it differently, so a promotion records it
 again once its gate passes (`JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run
 src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it with `generation.json`.
 The learn lane's workflow does it itself; the improve and unban lanes' loop does not yet, so their

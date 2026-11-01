@@ -732,7 +732,7 @@ mod auto_answers_the_answerers_best {
     fn simulate_schedules_pickle_s_deferred_questions_answering_nothing_mid_line() {
         let (state, play) = pickle_turn();
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let after = match simulate(&state, AI, &play, &counter) {
+        let after = match simulate(&state, AI, &play, &counter, Prices::NONE) {
             Some(Ok(next)) => next,
             other => panic!("Pickle's play was refused: {other:?}"),
         };
@@ -745,7 +745,13 @@ mod auto_answers_the_answerers_best {
         assert_eq!(counter.used(), 1);
         assert_eq!(counter.sim_errors(), 0);
 
-        let again = simulate(&state, AI, &play, &create_node_counter(AI_BUDGET.nodes, None));
+        let again = simulate(
+            &state,
+            AI,
+            &play,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            Prices::NONE,
+        );
         assert_eq!(
             again.map(|step| step.map(|next| hash_state(&next))),
             Some(Ok(hash_state(&after)))
@@ -773,7 +779,7 @@ mod auto_answers_the_answerers_best {
         let options = ["chooser-hurt".to_string(), "owner-hurt".to_string()];
         let state = their_mode("auto-answer-reply", &options);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI))
+        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
             .unwrap_or_else(|| panic!("the reply ran out of nodes"));
         assert!(after.pending.is_none());
         assert!(after.players[AI].hero.health < state.players[AI].hero.health);
@@ -798,7 +804,7 @@ mod auto_answers_the_answerers_best {
     /// The opponent's reply to `state` and the nodes it spent.
     fn replied(state: &GameState) -> (GameState, usize) {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let after = simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI))
+        let after = simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI), Prices::NONE)
             .unwrap_or_else(|| panic!("the reply ran out of nodes"));
         (after, counter.used())
     }
@@ -856,7 +862,8 @@ mod auto_answers_the_answerers_best {
     /// `own_prompt_score` of `state`, which spends AI_SEARCH.max_auto_answer_options nodes.
     fn looked_past(state: &GameState) -> f64 {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let score = own_prompt_score(state, AI, &counter).unwrap_or_else(|| panic!("no lookahead score"));
+        let score = own_prompt_score(state, AI, &counter, Prices::NONE)
+            .unwrap_or_else(|| panic!("no lookahead score"));
         assert_eq!(counter.used(), AI_SEARCH.max_auto_answer_options as usize);
         score
     }

@@ -29,7 +29,7 @@ const SHEEPISH: &str = "core-041";
 const RUSH_TOKEN: &str = "core-t-rush";
 const APPROPRIATIONS: &str = "classicplus-040";
 
-use super::{craft_fused, scenario};
+use super::{craft_fused, fixture, in_hand, scenario};
 
 /// An event from TS's object literal.
 fn event(literal: Value) -> GameEvent {
@@ -1414,7 +1414,7 @@ mod r1122_r2285002_a_redirected_classic_golem_that_kills_its_new_defender {
                 GameEvent::Redirected { what: RedirectWhat::Attack, from_id, to_id, .. }
                     if *from_id == menace && *to_id == ally
             )),
-            "the trap re-aimed the attack at the Golem's neighbour: {:?}",
+            "the trap re-aimed the attack at the Golem's neighbor: {:?}",
             g.last_events()
         );
         assert!(killed_and_survived(&g, &golem, &ally).is_some());
@@ -1668,20 +1668,24 @@ mod r1869002_i2_a_kill_credit {
     }
 
     #[test]
-    fn r1869002_a_tmack_trav_played_this_turn_kills_and_attacks_the_hero_with_no_violation() {
+    fn r1869002_a_tmack_trav_played_this_turn_kills_and_attacks_a_unit_again_with_no_violation() {
         let mut g = scenario(json!({
             "p1": { "hand": [TMACK_TRAV, VANILLA] },
-            "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "hand": [VANILLA] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }], "hand": [VANILLA] },
         }));
         let prey = g.unit_at(PlayerId::P2, 1).id;
-        // The setup's card enters as the shadow begins, its bookkeeping to match (p2's, so no sickness
-        // of its is read on p1's turn).
+        let next = g.unit_at(PlayerId::P2, 2).id;
+        // The setup's cards enter as the shadow begins, their bookkeeping to match (p2's, so no sickness
+        // of theirs is read on p1's turn).
         let turn = g.state().turn;
-        find_instance_mut(g.state_mut(), &prey)
-            .expect("p2's Vanilla")
-            .summoned_turn = Some(turn);
+        for id in [&prey, &next] {
+            find_instance_mut(g.state_mut(), id)
+                .expect("p2's Vanilla")
+                .summoned_turn = Some(turn);
+        }
         let mut monitor = create_invariant_monitor(g.state());
         monitor.enter(&prey);
+        monitor.enter(&next);
         g.play(TMACK_TRAV, json!({ "zone": 1 }));
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         let tmack = g.unit_at(PlayerId::P1, 1).id;
@@ -1690,25 +1694,19 @@ mod r1869002_i2_a_kill_credit {
         assert_eq!(monitor.before(g.state(), PlayerId::P1, &first), no_violations());
         g.attack(tmack.as_str(), prey.as_str());
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
-        assert_eq!(
-            g.card(tmack.as_str()).summoned_turn,
-            None,
-            "the kill lifted its sickness"
-        );
+        // R2521002: the kill keeps its summoning sickness, so Rush lets it attack again a Unit only.
+        assert_eq!(g.card(tmack.as_str()).summoned_turn, Some(turn));
 
-        let second = attack(&tmack, "hero-p2");
+        let second = attack(&tmack, &next);
         assert_eq!(monitor.before(g.state(), PlayerId::P1, &second), no_violations());
-        g.attack(tmack.as_str(), "hero");
+        g.attack(tmack.as_str(), next.as_str());
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
 
-        // The sickness stays lifted for good (no `summonedTurn`), which I4 still reads as readied once
-        // the turn is over (fuzz seed 85).
         assert_eq!(
             monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn),
             no_violations()
         );
         g.end_turn();
-        assert_eq!(g.card(tmack.as_str()).summoned_turn, None);
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 
@@ -2045,5 +2043,377 @@ mod r678_a_glitch_s_boards_are_entered {
         let mut found = none.after(&[], g.state());
         found.extend(none.before(g.state(), PlayerId::P1, &ActionBody::EndTurn));
         assert_eq!(silent(&found), 1, "{found:?}");
+    }
+}
+
+/// R1279000, I10 (#2568): a prompt held for the opponent never opens while its holder is not the active
+/// player. The monitor reads one that does as a violation, and reads the three cards that defer theirs,
+/// and a prompt the asking card's own controller holds on the opponent's turn, as clean.
+mod r1279000_opponent_held_prompt_off_turn {
+    use super::*;
+
+    const PICKLE: &str = "classic-008";
+    const INCOME_TAX: &str = "classic-009";
+    const IN_TOO_DEEP: &str = "classic-090";
+    const PALANTIR: &str = "classic-004";
+    const FIXTURE_ASKER: &str = "i10-asks-the-opponent";
+
+    const CURSE: &str = "classic-001";
+    const STOCKPILE: &str = "core-005";
+    const TIMMY: &str = "core-011";
+    const FELINORS: &str = "core-012";
+    const MENACE: &str = "core-019";
+    const SEVEN: &str = "core-025";
+
+    /// Spells that need no board and cost nothing a side could lack: §2.5 never ends a turn on its own.
+    const SPARE_HAND: [&str; 3] = [CURSE, STOCKPILE, TIMMY];
+    const SPARE_LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
+    /// Pickle's piles, as its own tests have them: the caster's deck, and the opponent's hand and deck.
+    const CASTER_DECK: [&str; 4] = ["core-019", "core-025", "core-012", "core-020"];
+    const HOLDER_HAND: [&str; 3] = ["core-008", "core-011", "core-015"];
+    const HOLDER_DECK: [&str; 4] = ["core-006", "core-035", "core-048", "core-039"];
+
+    /// A scenario run under the monitor: every step goes through `act`, which hands the monitor that step's
+    /// events and keeps what it found.
+    struct Watched {
+        g: Scenario,
+        monitor: InvariantMonitor,
+        found: Vec<String>,
+        /// How many steps left a prompt open for the player who is not active: the asking card's own
+        /// controller's, since an opponent-held one would be a violation.
+        off_turn_prompts: usize,
+    }
+
+    impl Watched {
+        fn new(g: Scenario) -> Watched {
+            let monitor = create_invariant_monitor(g.state());
+            Watched {
+                g,
+                monitor,
+                found: Vec::new(),
+                off_turn_prompts: 0,
+            }
+        }
+
+        fn act(&mut self, step: impl FnOnce(&mut Scenario)) {
+            step(&mut self.g);
+            self.found
+                .extend(self.monitor.after(self.g.last_events(), self.g.state()));
+            let state = self.g.state();
+            if state
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id != state.active)
+            {
+                self.off_turn_prompts += 1;
+            }
+        }
+
+        /// Answers each prompt that is open with its first options, until none is.
+        fn answer_all(&mut self) {
+            while let Some(pending) = self.g.state().pending.clone() {
+                let picks: Vec<Selection> = pending
+                    .options
+                    .iter()
+                    .take(pending.min.max(1) as usize)
+                    .map(|option| option.selection.clone())
+                    .collect();
+                self.act(|g| {
+                    g.answer(json!(picks));
+                });
+            }
+        }
+
+        fn holder(&self) -> Option<PlayerId> {
+            self.g.state().pending.as_ref().map(|pending| pending.player_id)
+        }
+
+        fn is_clean(&self) -> bool {
+            self.found.is_empty()
+        }
+    }
+
+    /// `pickle` played by `caster` on their own turn, the opponent holding the chain.
+    fn pickle_board(caster: PlayerId) -> Scenario {
+        let holder = opponent_of(caster);
+        let mut setup = json!({ "active": caster });
+        setup[caster.as_str()] = json!({ "hand": [PICKLE, STOCKPILE], "library": CASTER_DECK });
+        setup[holder.as_str()] = json!({ "hand": HOLDER_HAND, "library": HOLDER_DECK });
+        scenario(setup)
+    }
+
+    /// p1's Palantir steals what p2 plays and casts it as p1 (R831001): p2 is active, and p1 the card's
+    /// controller, so what its Cry asks p2 for, p2 holds on its own turn.
+    fn palantir_board(p1: Value, p2: Value) -> Scenario {
+        let mut p1 = p1;
+        p1["backrow"] = json!([{ "def": PALANTIR, "faceUp": true }]);
+        scenario(json!({ "active": "p2", "p1": p1, "p2": p2 }))
+    }
+
+    /// Income Tax on `watcher`'s side, face down; `drawer` plays Stockpile, a second draw of their turn.
+    fn tax_board(drawer: PlayerId, radiant: bool) -> Scenario {
+        let watcher = opponent_of(drawer);
+        let mut setup = json!({ "active": drawer });
+        setup[drawer.as_str()] = json!({ "hand": [STOCKPILE, MENACE], "library": [FELINORS, SEVEN, TIMMY] });
+        setup[watcher.as_str()] = json!({
+            "hand": [VANILLA],
+            "backrow": [{ "def": INCOME_TAX, "faceUp": false, "radiant": radiant }],
+            "library": [VANILLA, VANILLA],
+        });
+        scenario(setup)
+    }
+
+    /// p1's In Too Deep at its quest 5 (15 damage dealt to the enemy), `progress` of it done.
+    fn deep_board(active: PlayerId, progress: i32) -> Scenario {
+        let mut g = scenario(json!({
+            "active": active,
+            "p1": {
+                "hand": SPARE_HAND,
+                "library": SPARE_LIBRARY,
+                "backrow": [IN_TOO_DEEP],
+                "field": [{ "def": VANILLA, "lane": 1 }],
+            },
+            "p2": {
+                "hand": [VANILLA, TIMMY, MENACE],
+                "library": SPARE_LIBRARY,
+                "field": [{ "def": TIMMY, "lane": 1 }],
+            },
+        }));
+        let line =
+            json!({ "active": ["5"], "progress": { "5": progress }, "done": [], "auras": [], "waiting": [] });
+        let id = g.card(IN_TOO_DEEP).id.clone();
+        find_instance_mut(g.state_mut(), &id)
+            .expect("In Too Deep in the state")
+            .memory
+            .insert(subsystems::QUEST_MEMORY_KEY.to_string(), line);
+        g
+    }
+
+    #[test]
+    fn r1279000_i10_a_fixture_card_asking_the_opponent_at_once_on_its_controller_s_turn_fails() {
+        let mut g = scenario(json!({
+            "p1": { "hand": [] },
+            "p2": { "hand": [] },
+        }));
+        fixture(
+            &mut g,
+            FIXTURE_ASKER,
+            CardType::Spell,
+            Script {
+                cry: Some(hook(|_ctx| {
+                    vec![effects::choose_mode(json_as(json!({
+                        "options": ["ok"],
+                        "step": "answered",
+                        "prompt": "i10: the opponent's question",
+                        "by": "enemy",
+                    })))]
+                })),
+                resume: [("answered", hook(|_ctx| vec![]))].into_iter().collect(),
+                ..Script::default()
+            },
+            None,
+        );
+        let card = in_hand(&mut g, FIXTURE_ASKER, PlayerId::P1);
+        let mut monitor = create_invariant_monitor(g.state());
+        g.play(&card.id, json!({}));
+
+        // p1 is active, and the question is p2's: the state the three cards left open until v0.3.16.
+        let pending = must(g.state().pending.clone(), "the question");
+        assert_eq!(g.state().active, PlayerId::P1);
+        assert_eq!(pending.player_id, PlayerId::P2);
+        let found = monitor.after(g.last_events(), g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("I10 opponent prompt off turn:"),
+            "{}",
+            found[0]
+        );
+        assert!(found[0].contains(&card.id), "names the card: {}", found[0]);
+        assert!(
+            found[0].contains(FIXTURE_ASKER),
+            "names its definition: {}",
+            found[0]
+        );
+        assert!(
+            found[0].contains(&format!("on turn {}", g.state().turn)),
+            "names the turn: {}",
+            found[0]
+        );
+        assert!(
+            found[0].contains("(§10.6, R1279000)"),
+            "cites the ruling: {}",
+            found[0]
+        );
+    }
+
+    /// The one violation `w` holds, of I10, naming `def_id`'s card.
+    fn assert_one_i10(w: &Watched, def_id: &str) {
+        assert_eq!(w.found.len(), 1, "{:?}", w.found);
+        assert!(
+            w.found[0].starts_with("I10 opponent prompt off turn:"),
+            "{}",
+            w.found[0]
+        );
+        assert!(w.found[0].contains(def_id), "{}", w.found[0]);
+    }
+
+    /// The monitor finds what the three cards did through v0.3.16, which the fuzz played for all those
+    /// patches without a word: their kept scripts, in the v0.4.0 catalog, ask at once.
+    #[test]
+    fn r1279000_i10_finds_the_three_cards_as_they_asked_at_once_through_v0_3_16() {
+        jackioh_cards::register_all();
+        let shipped = jackioh_cards::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            // Pickle's questions opened during p1's turn.
+            let mut w = Watched::new(pickle_board(PlayerId::P1));
+            w.act(|g| {
+                g.play(PICKLE, json!({}));
+            });
+            assert_eq!(w.holder(), Some(PlayerId::P2));
+            assert_one_i10(&w, PICKLE);
+
+            // Income Tax's keep opened at once on p2's turn, p1 being the one who drew.
+            let mut w = Watched::new(palantir_board(
+                json!({ "hand": [VANILLA, MENACE], "library": [FELINORS, SEVEN, TIMMY] }),
+                json!({
+                    "hand": [STOCKPILE, VANILLA],
+                    "backrow": [{ "def": INCOME_TAX, "faceUp": false }],
+                    "library": [VANILLA, VANILLA],
+                }),
+            ));
+            w.act(|g| {
+                g.play(STOCKPILE, json!({}));
+            });
+            assert_eq!(w.holder(), Some(PlayerId::P1));
+            assert_one_i10(&w, INCOME_TAX);
+
+            // In Too Deep's reward G asked p2 at once, in p1's turn.
+            let mut w = Watched::new(deep_board(PlayerId::P1, 15));
+            w.act(|g| {
+                g.play(CURSE, json!({}));
+            });
+            assert!(w.is_clean(), "the reward choice is p1's own: {:?}", w.found);
+            w.act(|g| {
+                g.answer(json!("G"));
+            });
+            assert_eq!(w.holder(), Some(PlayerId::P2));
+            assert_one_i10(&w, IN_TOO_DEEP);
+        });
+    }
+
+    #[test]
+    fn r1279000_i10_a_prompt_the_asking_card_s_controller_holds_passes_on_the_opponent_s_turn() {
+        // p2 attacks into p1's unit on their own turn, and the strike back is p1's cards dealing In Too
+        // Deep's last point of damage, so p1's reward choice opens while p2 is active.
+        let mut w = Watched::new(deep_board(PlayerId::P2, 14));
+        let timmy = w.g.unit_at(PlayerId::P2, 1);
+        let vanilla = w.g.unit_at(PlayerId::P1, 1);
+        w.act(|g| {
+            g.attack(&timmy, &vanilla);
+        });
+        assert_eq!(w.g.state().active, PlayerId::P2);
+        assert_eq!(
+            w.holder(),
+            Some(PlayerId::P1),
+            "the reward choice is p1's, held on p2's turn"
+        );
+        assert_eq!(w.off_turn_prompts, 1);
+        assert!(w.is_clean(), "{:?}", w.found);
+        // Reward G's discard is p2's own prompt, which p1 asked: it opens at once, p2 being active.
+        w.act(|g| {
+            g.answer(json!("G"));
+        });
+        assert_eq!(w.holder(), Some(PlayerId::P2));
+        w.answer_all();
+        assert!(w.is_clean(), "{:?}", w.found);
+    }
+
+    #[test]
+    fn r1279000_i10_pickle_passes_cast_on_either_players_turn() {
+        for caster in [PlayerId::P1, PlayerId::P2] {
+            // Cast on its own turn, Pickle waits for the start of the opponent's.
+            let mut w = Watched::new(pickle_board(caster));
+            w.act(|g| {
+                g.play(PICKLE, json!({}));
+            });
+            assert_eq!(
+                w.holder(),
+                None,
+                "{caster}'s Pickle asks nothing while the opponent is not active"
+            );
+            w.act(|g| {
+                g.end_turn();
+            });
+            assert_eq!(w.holder(), Some(opponent_of(caster)));
+            w.answer_all();
+            assert!(w.is_clean(), "{caster}: {:?}", w.found);
+        }
+
+        // Stolen and cast by p1's Palantir on p2's turn, it asks p2 at once, who is active.
+        let mut w = Watched::new(palantir_board(
+            json!({ "hand": [STOCKPILE], "library": CASTER_DECK }),
+            json!({ "hand": [PICKLE, STOCKPILE], "library": HOLDER_DECK }),
+        ));
+        w.act(|g| {
+            g.play(PICKLE, json!({}));
+        });
+        assert_eq!(w.holder(), Some(PlayerId::P2));
+        w.answer_all();
+        assert!(w.is_clean(), "{:?}", w.found);
+    }
+
+    #[test]
+    fn r1279000_i10_income_tax_passes_fired_on_either_players_turn() {
+        for drawer in [PlayerId::P1, PlayerId::P2] {
+            // The drawer is the one it asks, and active: the keep opens at once.
+            let mut w = Watched::new(tax_board(drawer, false));
+            w.act(|g| {
+                g.play(STOCKPILE, json!({}));
+            });
+            assert_eq!(w.holder(), Some(drawer));
+            w.answer_all();
+            assert!(w.is_clean(), "{drawer}: {:?}", w.found);
+        }
+
+        // p1's Palantir has p1 draw on p2's turn: the keep is p1's, so it waits for p1's turn.
+        let mut w = Watched::new(palantir_board(
+            json!({ "hand": [VANILLA, MENACE], "library": [FELINORS, SEVEN, TIMMY] }),
+            json!({
+                "hand": [STOCKPILE, VANILLA],
+                "backrow": [{ "def": INCOME_TAX, "faceUp": false, "radiant": true }],
+                "library": [VANILLA, VANILLA],
+            }),
+        ));
+        assert_eq!(w.g.state().active, PlayerId::P2);
+        w.act(|g| {
+            g.play(STOCKPILE, json!({}));
+        });
+        assert_eq!(w.holder(), None, "the keep waits while p1 is not active");
+        w.act(|g| {
+            g.end_turn();
+        });
+        assert_eq!(w.holder(), Some(PlayerId::P1));
+        w.answer_all();
+        assert!(w.is_clean(), "{:?}", w.found);
+    }
+
+    #[test]
+    fn r1279000_i10_in_too_deep_passes_with_its_quest_completed_on_either_players_turn() {
+        // On p1's own turn, reward G's discard is p2's choice and waits for p2's turn.
+        let mut w = Watched::new(deep_board(PlayerId::P1, 15));
+        w.act(|g| {
+            g.play(CURSE, json!({}));
+        });
+        assert_eq!(w.holder(), Some(PlayerId::P1), "the reward choice is p1's own");
+        w.act(|g| {
+            g.answer(json!("G"));
+        });
+        assert_eq!(w.holder(), None, "the discard waits while p2 is not active");
+        w.act(|g| {
+            g.end_turn();
+        });
+        assert_eq!(w.holder(), Some(PlayerId::P2));
+        w.answer_all();
+        assert!(w.is_clean(), "{:?}", w.found);
     }
 }

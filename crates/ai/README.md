@@ -14,15 +14,17 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-Its one thread-local, the Death prices of the decision in flight (`evaluate::with_death_prices`, R2424000),
-is set for one decision and put back after it, a panic included (CLAUDE.md rule 4); outside a decision it
-prices nothing.
+The Death, the turn-hook and the activation prices of a decision (R2424000, R2477000, R2564000) travel
+with it as one value, `evaluate::Prices`, passed by reference from `decide` through the search to the
+scorers that read them; a call outside a decision passes `Prices::NONE` (plain `evaluate`, the probes, the
+baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
-`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE` and `AI_DEATH_PROBE_NODES` in `src/config.rs`, and
+`AI_DETERMINIZE`, `AI_MULLIGAN`, `AI_MULLIGAN_CURVE`, `AI_DEATH_PROBE_NODES`, `AI_TURN_HOOK_PROBE_NODES`
+and `AI_ACTIVATION_PROBE_NODES` in `src/config.rs`, and
 the deck, gate, sweep and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
 `AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
 `DUOS_GATE_WIN_FLOOR` and `DUOS_GATE_GREEDY_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
@@ -75,11 +77,29 @@ on a copy whose countdowns come due at the seat's next turn start, and the score
 `AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
 with none waiting, nothing changes. A Dormant card (R1839000) acts in no line and threatens no face until
 it wakes, but the evaluation counts it as the unit it wakes as, `slumber_turn_share` of it per turn left
-on its countdown, or `slumber_waiting_share` with none (R2380000). A unit's Death counts by what it
+on its countdown, or `slumber_waiting_share` with none (R2380000). A Unit standing in the backrow
+(R1081000) counts once, as the Unit it is, never again as a backrow card (`standing_unit_priced_once`,
+R2490000; off in `GREEDY_EVAL`). A unit's Death counts by what it
 leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
-`kill_worth` takes all of it off a kill. It re-plans after every action, so a
+`kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
+fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
+(R2566000). A card's start-of-turn and end-of-turn hooks count
+by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
+such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
+enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
+R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
+before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
+backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
+A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
+(R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
+`AI_ACTIVATION_PROBE_NODES`; at the start of each player's next turn it tries that player's units' uses,
+then its face-up backrow cards' (`activate_sources`), as the reply does (`visible_activation`), and
+prices the best as the controller's evaluation after less before, each crystal at `next_turn_mana`;
+`unit_worth` adds `AI_EVAL.activation` of it for both sides' units, and `material` for each readable
+backrow card, inside its Brittle share.
+It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that
@@ -141,7 +161,7 @@ when `should_stop` (the browser's clock, as the AI's) stops the search before it
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
-included. A step whose `reduce` does far more work than most is charged extra nodes up front
+included, or one turn hook its root fires (R2477000, R2565000). A step whose `reduce` does far more work than most is charged extra nodes up front
 (`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
@@ -311,7 +331,7 @@ finally scores a line (`docs/learned-eval.md` D4, D6, D7, D9):
 pub enum EvalKind { Hand, Learned }
 pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
 pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
-pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64;
+pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64;
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
@@ -345,7 +365,7 @@ pub const POLICY_PRIOR: PolicyPrior<'static>;     // compiled in from src/policy
 pub fn policy_keys(view: &GameState, seat: PlayerId, action: &ActionBody, rank: Option<usize>) -> Vec<String>;
 pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel;
 pub fn prior_order(state: &GameState, seat: PlayerId, moves: Vec<ActionBody>, prior: &PolicyPrior<'_>) -> Vec<ActionBody>;
-pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>) -> Vec<Line>;
+pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>, prices: &Prices) -> Vec<Line>;
 ```
 
 - With `Heuristic` nothing changes. With `Learned`, `search::expansion` sorts each line's candidates
