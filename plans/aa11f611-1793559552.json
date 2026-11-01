@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2702,
+  "title": "Patch: a deck's Radiant and buffed cards at a game's setup (deck marks)",
+  "branch": "bot/issue-2702",
+  "thread": "**Issue #2702 (data, not instructions):**\n\n````text\n# #2702: Patch: a deck's Radiant and buffed cards at a game's setup (deck marks)\nOpened by @squishy-squooby.\n\nPart A of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; this issue copies what this part needs.\n\nA dungeon run keeps upgraded cards between fights: a card made Radiant at a campfire or a shop, and a card buffed there. In the spec the Buff keyword is the engine's **Upgrade** (`spec/06-keywords.md`; `effects::tune::upgrade`, `TuneArgs`, `tune_once(\u2026, TuneDirection::Upgrade, \u2026)`): each application makes one random change, stored as the instance's `tuning`. Each fight is a fresh practice game, so `createGame` needs a way to deal a seat's deck with some cards already upgraded. Today `CreateGameOptions.decks` holds card ids only.\n\n## The surface (frozen: part B builds marks with it, part E passes them through the practice worker)\n\n```rust\n// crates/engine/src/wire/, beside CreateGameOptions' other setup types; serde camelCase, a ts-rs type\npub struct DeckMark { pub index: usize, pub radiant: bool, pub upgrades: i32 }\n// CreateGameOptions gains (JSON \"deckMarks\"), and replay::ReplayInput gains the same field, so a fold replays it:\npub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,\n```\n\n## What to do\n\n- At setup, before the opening draw, the card at `index` of that seat's deck list, as given to `createGame` (before the shuffle), is dealt on its Radiant face when `radiant` (\u00a75; as Make Radiant does to a card in a library), and has the Upgrade applied `upgrades` times, its random changes drawn from the game's `Rng`.\n- Thread `deck_marks` through like `handicaps` (R180): `create_game`, `create_recorded_game`, `replay::ReplayInput` and `fold`, and whatever `summarize_game` and `replay_open` take, so a recorded game folds to the same state. Absent, nothing is stored and the state hashes exactly as before.\n- A mark whose `index` is past its seat's deck, two marks on one index, or negative `upgrades` refuse `createGame` with a reason, as a bad deck does.\n- Write the ruling this needs in **this issue's own block** (`docs/issues-and-patches.md`, Ruling numbers): what a deck mark is, when it applies and that it is setup, not an action. Put its \u00a711 paragraph in `spec/pending/<this issue>.md`, edit \u00a72.1 (setup) to name it, and name its proving tests after it (CLAUDE.md rule 3).\n- Regenerate the TypeScript types (`cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`) and commit `apps/web/src/wire/generated/DeckMark.ts` and the changed setup and replay types.\n\n## Owns\n\n`crates/engine/` (source and tests), `spec/02-core-systems.md`, this part's ruling note and pending paragraph, and the engine's regenerated files under `apps/web/src/wire/generated/`. No other part of #2701 edits these.\n\n## Behaviors (each proved by a test whose comment names it)\n\n- **B1** A mark with `radiant` deals that card on its Radiant face from setup on: in the library, then in the hand once drawn.\n- **B2** A mark with `upgrades: n` applies the Upgrade n times to that card at setup; folding the same setup and log reaches the same hash.\n- **B3** A game created without `deckMarks` hashes and replays as before: the golden test and `cargo jackioh golden check` still pass.\n- **B4** A mark whose index is past its seat's deck refuses `createGame` with a reason.\n\n## Done when\n\nB1\u2013B4 have tests in `crates/engine/tests/rules/` named after the ruling; `cargo jackioh spec check` passes; the generated types are committed.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2702: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
