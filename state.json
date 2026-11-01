@@ -12680,6 +12680,10 @@
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T16:51:20Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `crates/tools/README.md:15`: The `--duos` contract now says \"the I1\u2013I12 monitor runs over each duel's applicable events and states \u2026 I6 alone is sampled\", so it "
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 3
