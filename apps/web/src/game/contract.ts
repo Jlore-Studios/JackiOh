@@ -28,9 +28,10 @@ export type Side = "you" | "opponent";
 
 /**
  * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
- * while it offers this many options or fewer; more options keep the plain mode list.
+ * while it offers this many options or fewer; more options keep the plain mode list. #2646: so is
+ * every other choice of options that name no card, each option a choice card (ChoiceCard.tsx).
  */
-export const DISCOVER_OPTION_LIMIT = 5;
+export const DISCOVER_OPTION_LIMIT = 4;
 
 /**
  * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the
@@ -151,6 +152,14 @@ export function namedAbility(abilityCount: number, ability: string): string | un
 
 export function sideOf(view: PlayerView, player: PlayerId): Side {
   return player === view.viewer ? "you" : "opponent";
+}
+
+/** R370: the cost the view gives the face-down card in `player`'s backrow lane `lane`, while one stands there. */
+export function faceDownCost(view: PlayerView, player: PlayerId, lane: number): number | undefined {
+  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
+  const entry = seat.backrow[lane - 1];
+  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
+  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
 }
 
 export function playerOf(view: PlayerView, side: Side): PlayerId {

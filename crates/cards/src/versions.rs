@@ -83,16 +83,6 @@ pub fn rename_versions_with<'a>(text: &str, new_of: impl Fn(&str) -> Option<&'a 
     out
 }
 
-/// R1371000: an unmarked text's versions as they are named now.
-pub fn current_versions_in(unmarked: &str) -> String {
-    rename_versions_with(unmarked, version_alias)
-}
-
-/// R1371000: whether a file's object carries the marker.
-pub fn is_marked(value: &Value) -> bool {
-    value.get(VERSIONS_KEY).is_some()
-}
-
 /// R2532000: the scheme a file's object names its versions by: the `versions` it carries, else 1,
 /// the names from before any retcon.
 pub fn scheme_of(value: &Value) -> u32 {
@@ -187,7 +177,7 @@ mod tests {
         assert_eq!(current_version_name("v0.3.17"), "v0.4.0c");
         assert_eq!(current_version_name("v9.9.9"), "v9.9.9");
         assert_eq!(
-            current_versions_in("selfplay-learned-v0.3.17-1.jsonl"),
+            versions_now_in(1, "selfplay-learned-v0.3.17-1.jsonl"),
             "selfplay-learned-v0.4.0c-1.jsonl"
         );
     }

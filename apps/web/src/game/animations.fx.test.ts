@@ -193,6 +193,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
   // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
+  // Issue #2652 (R2652001).
+  rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -345,6 +347,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   held: null,
   // Issue #1855 (R1855000): the board tilts with no effect; the cards' own events carry theirs.
   boardReplaced: null,
+  // Issue #2652 (R2652001): one panel over the board for the whole batch of coins or dice.
+  rolled: "roll",
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -380,6 +384,7 @@ const FX_RECIPES = [
   "fatigue",
   "overflow",
   "chaos",
+  "roll",
   "brand",
   "rewind",
   "armor",
@@ -482,13 +487,14 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   starscapeTravelled: ["jk-badge-tick", 200, "hero-<side>"],
   held: ["jk-exile-fade", 350, "card-<instanceId>"],
   boardReplaced: ["jk-swap-cross", 500, "board"],
+  rolled: ["jk-banner", 1200, "turn-banner"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 64 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003) and #1843's two endings (R1843000, R1843002) carry fx with the listed recipe and the other 31 carry none", () => {
+  it("B1 exactly the 65 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) carry fx with the listed recipe and the other 28 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(64);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(65);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

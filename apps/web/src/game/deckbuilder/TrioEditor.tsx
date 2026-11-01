@@ -10,14 +10,13 @@
 
 import { useCallback, useId, useMemo, useState, type ReactElement } from "react";
 
-import type { CardCost } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardArt } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
-import { deckListOrder } from "./filters.ts";
+import { deckListOrder, tileCost } from "./filters.ts";
 import { UNTITLED_TRIO, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import {
   LOADOUT_ERRORS,
@@ -56,14 +55,6 @@ export type TrioEditorProps = {
   /** A phone's way back to the list. */
   onBack: () => void;
 };
-
-/** The tile's gem: the printed price, and an embiggen card's base price, as its full face shows. */
-function tileCost(cost: CardCost | undefined): string {
-  if (cost === undefined) return "";
-  if (typeof cost === "number") return String(cost);
-  if (cost === "X") return cost;
-  return String(cost.base);
-}
 
 export default function TrioEditor(props: TrioEditorProps): ReactElement {
   const { trio, decks, catalog, collection, limits, refusal, onRename, onSlots, onDelete, onOpenDeck, onBack } = props;

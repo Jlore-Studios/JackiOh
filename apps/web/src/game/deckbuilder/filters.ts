@@ -191,6 +191,11 @@ export function costOrder(cost: CardCost): number {
   return price === "X" ? Number.POSITIVE_INFINITY : price;
 }
 
+/** The deck tile's gem: the printed price, an embiggen card's base price, X as X, and nothing for no cost. */
+export function tileCost(cost: CardCost | undefined): string {
+  return cost === undefined ? "" : String(printedPrice(cost));
+}
+
 /** R711000: a card's words as a reader with a card table reads them (none for English): its name, its
  *  type, tags, rarity and keywords as the frame prints them, and each face's text with its numbers
  *  filled in. Read at each call, never cached across a language switch. */

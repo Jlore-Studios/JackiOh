@@ -36,7 +36,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs`, `cosmetics.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, the strengths' measured seed ratings, and a bot's wardrobe and the loadout it draws from it (R1453, R641000, R1454, R1452, R748000, R1834005) |
-| Cosmetics | `cosmetics.rs`, `cosmetics.json`, `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the hero cards' full arts, one per card, and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card and no default (R1295000, R1297000, R1313000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` and `owns_account_cosmetic` whether an account owns a portrait or another account cosmetic (R1833000), and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla and #1833's 18 playmats, backdrops and card backs on the shipped registry; `check_pick` refuses a pick that is not of its slot's kind or not owned where it is worn (R1834001). `loadout.rs` freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003) |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json`, `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the full arts, an Epic, a Legendary and a Mythic on each full-art card, the registry being the list of those cards (R2655000, R2655001), and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card, its id `full-art-…`, no default and no second full art of its rarity on its card (R1295000, R1297000, R1313000, R2655000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` and `owns_account_cosmetic` whether an account owns a portrait or another account cosmetic (R1833000), and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla and #1833's 18 playmats, backdrops and card backs on the shipped registry; `check_pick` refuses a pick that is not of its slot's kind or not owned where it is worn (R1834001), and `full_art_picked` reads which full art a card's pick names (`true` its Epic, R2655000). `loadout.rs` freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
@@ -199,7 +199,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `DELETE` | `/api/practice/seeds/:seed` | active | the caller's unclaimed seed given back, deleted under the account's economy lock so its place among `PRACTICE_SEEDS_OPEN_MAX` is free at once and a later claim of it is `unknown_seed`; 200 `{ released: true }`; 404, changing nothing, for another account's seed, a claimed one or one never issued (R2379000) |
 | `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded to its result, no AI move re-run (R2560000), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000; `tracks` each set track the game moved, its level and XP `before` and `after` and every level it reached with its rewards, and `quests` each quest it completed, `economy::rewards::GameEconomy`), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001); a pay the store fails is tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and one that never lands is a 500 that leaves the seed burned (R1688000); the claim is kept with its seed until it settles, paid or refused, once, and the retention loop pays one still unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after it was made, with no board (R2422000) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
-| `GET`, `PUT`, `POST` | `/api/card-picks`, `/api/card-picks/upload` | active | the caller's own per-card picks (`card_cosmetic_picks`, R1834000): `{ cards }`, each `{ cardId, foil?, finish?, border?, fullArt? }` as written; a `PUT` of one card's, `{ cardId, foil?, finish?, border?, fullArt? }`, a key left out kept and `null` cleared, 400 `bad_request` for a card not in the catalog or a pick not of its kind or not owned on that card (R1834001); the device's one-time upload, `{ cards }`, which never overwrites a card the account holds, keeps an id this build does not know and leaves out one it could never wear. Each answers `{ cards }` |
+| `GET`, `PUT`, `POST` | `/api/card-picks`, `/api/card-picks/upload` | active | the caller's own per-card picks (`card_cosmetic_picks`, R1834000): `{ cards }`, each `{ cardId, foil?, finish?, border?, fullArt? }` as written, `fullArt` `false`, `true` (the card's Epic full art) or a full art's id (R2655000); a `PUT` of one card's, `{ cardId, foil?, finish?, border?, fullArt? }`, a key left out kept and `null` cleared, 400 `bad_request` for a card not in the catalog or a pick not of its kind or not owned on that card (R1834001); the device's one-time upload, `{ cards }`, which never overwrites a card the account holds, keeps an id this build does not know and leaves out one it could never wear. Each answers `{ cards }` |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
@@ -634,25 +634,28 @@ series still makes its picks.
   rebuilt actor resumes the bot's seat with its streams started again (R1452). R639000: the think
   time also grows with the move's legal actions (`THINK_COMPLEXITY_SLOPE`) and on a lethal decision
   (`THINK_LETHAL_SHIFT`), and a mulligan, a draw answer and a concession have priors of their own
-  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, and it answers a draw
-  offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
-  (`never_played`). A rebuild reads the turn each bot last moved in off the log
+  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, only facing a lethal on
+  the opponent's board it cannot stop (`jackioh_ai::unstoppable_lethal`, inside the decision's
+  deadline, R2660000), and otherwise may offer a draw while well behind (`BOT_DRAW_OFFER`,
+  R2660001), and it answers a draw offer by `bots::signals` rather than the AI's refusal (R188 holds
+  for practice); the actor plays every move but an emote (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
   turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
   no draw at full or zero skill); a decision the roll does not give to the AI is the skill miss's
   (`skill_miss_action`, R2214000: a softmax over the greedy baseline's one-ply scores) with no search, whose
   draw-offer answer is still the bot's own roll's, and `r188_forbidden` filters either.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
-  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
-  `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
-  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit, only while it trails), a draw answer
-  (`BOT_DRAW_ANSWER_FIT`, only while it trails), an idle turn its clock times out
+  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-offer-draw`,
+  `bot-idle`, `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the
+  same: its concession temper (`BOT_CONCEDE_FIT.share`, whether it concedes at all, then only when
+  the caller's `unstoppable_lethal` holds, R2660000), a draw answer (`BOT_DRAW_ANSWER_FIT`, only
+  while it trails), a draw offer (`BOT_DRAW_OFFER`, hand-set, only while it trails by
+  `min_behind`, R2660001), an idle turn its clock times out
   (`BOT_TIMEOUT_FIT`), its plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
   it meets an offer, and when) and its aim's lead. Where it stands (`standing`) is read through
   `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
-  cannot look up a face-down placeholder: the deficit on R1442's scale, which the concession's
-  threshold is fitted on, and how far it trails its opponent, centered on an even board, which both
-  guards read.
+  cannot look up a face-down placeholder: the deficit on R1442's scale, and how far it trails its
+  opponent, centered on an even board, which the draw answer and the draw offer read.
 - `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
   person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
   through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and
@@ -1017,6 +1020,13 @@ to a claimed seed; the partial index `practice_seeds_unsettled` serves the reten
 `PRACTICE_SETTLE_GRACE_SECONDS` after `claimed_at`. The prune keeps an unsettled claim until it settles. A
 seed claimed before 0071 holds no claim, so nothing settles it and the prune deletes it as before.
 `tests/sql/39_practice_settles.sql` checks its columns, its index, its check and the re-apply.
+
+Migration 0072 adds `full_art_id` to `card_cosmetic_picks` (R2655000) and rewrites no row: the id of
+the full art a card's pick wears (its Epic, Legendary or Mythic), kept as written beside `full_art =
+true`; a row with the switch on and no id is the card's Epic, as every row before 0072 means it.
+`card_cosmetic_picks_full_art_id_check` holds the id to the switch being on and to a `full-art-…` slug
+of at most 40 characters. The store reads the two columns as one `FullArtPick` (`true`, `false` or the
+id). `tests/sql/40_full_art_tiers.sql` checks the id kept and the shapes refused.
 
 ## Tests
 

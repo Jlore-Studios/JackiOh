@@ -280,6 +280,110 @@ mod tests {
             assert_eq!(kinds, vec!["Divine Shield".to_string(), "Rush".to_string()]);
         }
 
+        /// The `rolled`, `buffed` and `keywordGranted` events of the last step, in order, as
+        /// `(type, coins in the batch)`.
+        fn reported(s: &Scenario) -> Vec<(GameEventType, usize)> {
+            s.last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Rolled { rolls, .. } => Some((GameEventType::Rolled, rolls.len())),
+                    GameEvent::Buffed { .. } => Some((GameEventType::Buffed, 0)),
+                    GameEvent::KeywordGranted { .. } => Some((GameEventType::KeywordGranted, 0)),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        /// The coins of the last step's `rolled` batches, in order.
+        fn batches(s: &Scenario) -> Vec<Vec<RollResult>> {
+            s.last_events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Rolled { rolls, .. } => Some(rolls.clone()),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        /// R2652001: the five stat coins are one batch shown before the buff, and the rider's coin a
+        /// second batch shown before its keyword; the heads the first batch kept are the attack gained,
+        /// and the rider's face is the keyword granted.
+        #[test]
+        fn r2652001_base_five_coins_then_the_rider_are_two_batches() {
+            crate::register_all();
+            for n in 1..=20 {
+                let mut s = scenario(json!({ "seed": format!("gary-rolled-{n}"), "p1": { "hand": ["core-004"] } }));
+                s.play("core-004", json!({}));
+                assert_eq!(
+                    reported(&s),
+                    vec![
+                        (GameEventType::Rolled, 5),
+                        (GameEventType::Buffed, 0),
+                        (GameEventType::Rolled, 1),
+                        (GameEventType::KeywordGranted, 0),
+                    ]
+                );
+                let rolled = batches(&s);
+                let heads = rolled[0].iter().filter(|coin| coin.heads()).count() as i32;
+                assert_eq!(gains(&s, "core-004"), (heads, 5 - heads));
+                let rider = if rolled[1][0].heads() { "Divine Shield" } else { "Rush" };
+                assert_eq!(granted_kind(&s, "core-004").as_deref(), Some(rider));
+                // No Lucky: each coin is the one face it drew.
+                assert!(rolled.iter().flatten().all(|coin| coin.faces.len() == 1 && coin.kept == 0));
+                let first = s.last_events().iter().find(|event| event.event_type() == GameEventType::Rolled);
+                assert!(matches!(first, Some(GameEvent::Rolled { kind: RollKind::Coin, sides: 2, def_id, .. }) if def_id == "core-004"));
+            }
+        }
+
+        /// R2652001: the Radiant face's ten coins are one batch, not ten, and the rider is the other.
+        #[test]
+        fn r2652001_radiant_ten_coins_are_one_batch() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "gary-rolled-radiant",
+                "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
+            }));
+            s.play("core-004", json!({}));
+            let rolled = batches(&s);
+            assert_eq!(rolled.iter().map(Vec::len).collect::<Vec<_>>(), vec![10, 1]);
+            let heads = rolled[0].iter().filter(|coin| coin.heads()).count() as i32;
+            assert_eq!(gains(&s, "core-004"), (heads, 10 - heads));
+        }
+
+        /// R2652001, R1361, R68: a report is answered by nothing and takes no number from
+        /// `next_seq`, so the play's numbers are the ones every other event of it took.
+        #[test]
+        fn r2652001_the_reports_take_no_number_from_the_trigger_loop() {
+            crate::register_all();
+            let mut s = scenario(json!({ "seed": "gary-rolled-seq", "p1": { "hand": ["core-004"] } }));
+            let before = s.state().next_seq;
+            s.play("core-004", json!({}));
+            let numbered = s
+                .last_events()
+                .iter()
+                .filter(|event| event.event_type() != GameEventType::Rolled)
+                .count() as u32;
+            assert_eq!(batches(&s).len(), 2);
+            assert_eq!(s.state().next_seq - before, numbered);
+        }
+
+        /// R2652001, §9.3: a state round-tripped through JSON flips the same coins and reports them the
+        /// same.
+        #[test]
+        fn r2652001_a_round_tripped_state_rolls_the_same_coins() {
+            crate::register_all();
+            let setup = json!({ "seed": "gary-rolled-thaw", "p1": { "hand": ["core-004"] } });
+            let mut live = scenario(setup.clone());
+            let mut thawed = scenario(setup);
+            *thawed.state_mut() =
+                serde_json::from_value(crate::js(thawed.state())).expect("the state round-trips through JSON");
+            live.play("core-004", json!({}));
+            thawed.play("core-004", json!({}));
+            assert_eq!(batches(&thawed), batches(&live));
+            assert_eq!(batches(&live).len(), 2);
+            assert_eq!(hash_state(thawed.state()), hash_state(live.state()));
+        }
+
         #[test]
         fn r386_an_upgrade_flips_6_coins_and_a_degrade_4() {
             for (upgrade, coins) in [(true, 6), (false, 4)] {
