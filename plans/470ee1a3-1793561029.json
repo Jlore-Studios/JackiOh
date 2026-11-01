@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2704,
+  "title": "Patch: the dungeon run in the browser's WebAssembly modules",
+  "branch": "bot/issue-2704",
+  "thread": "**Issue #2704 (data, not instructions):**\n\n````text\n# #2704: Patch: the dungeon run in the browser's WebAssembly modules\nOpened by @squishy-squooby.\n\nPart C of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; this issue copies what this part needs.\n\nThe run's rules are the pure crate `crates/run` (`jackioh-run`). The web reaches Rust only through the WebAssembly modules (`crates/wasm/README.md`: JSON strings in and out). This part gives the run its bindings and the typed functions the page and the practice worker call.\n\n## The surface (frozen: parts D, E and F call it)\n\nIn `apps/web/src/wasm/index.ts`, the types from `@jackioh/run` (part B's generated types) and `@jackioh/shared`:\n\n```ts\ntype RunResult = { state: RunState } | { error: string };\nexport function runContent(customCards: CustomCard[]): RunContent; // run_catalog_content over the compiled-in catalog\nexport function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null;\nexport function runCreate(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): RunResult;\nexport function runReduce(state: RunState, content: RunContent, action: RunAction): RunResult;\nexport function runFold(file: RunFile, content: RunContent): RunResult;\nexport function runFightSetup(state: RunState, content: RunContent): RunFightSetup | null;\nexport function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string };\nexport function runScore(state: RunState, content: RunContent): number;\nexport function runEmbers(score: number): number;\nexport function runMaxHp(state: RunState, content: RunContent): number;\nexport function runLevelCost(level: number): number | null;\nexport function runConstants(): RunConstants;\nexport function runSeed(source: string): string;\nexport function runDailySeed(date: string, n: number): string;\n```\n\nThey wrap `jackioh_run`'s `run_catalog_content` (over `jackioh_cards`' registered catalog), `run_check_setup`, `run_create`, `run_reduce`, `run_fold`, `run_fight_setup`, `run_fight_report`, `run_score`, `run_embers`, `run_max_hp`, `run_level_cost`, `run_constants`, `run_seed` and `run_daily_seed`. Part B adds the ones `crates/run` lacks today, as frozen in DR14; use them as written without waiting for it.\n\n## What to do\n\n- Make `jackioh-run` a workspace dependency (the root `Cargo.toml`) and a dependency of `crates/wasm/core`. Add `crates/run` to `scripts/build-wasm.sh`'s `MODULE_CRATES`, which `apps/web/src/net/build-wasm-cache.test.ts` checks.\n- Add each binding the way `build_ai_deck` is added. The body goes in `crates/wasm/core/src/lib.rs` (parse, call, `to_json`, a refusal as `{ \"error\": \"\u2026\" }`), with the wrapper in `crates/wasm/src/lib.rs` and the C export in `crates/wasm/luau/src/main.rs`. Add its type and binding in `apps/web/src/wasm/luau.ts`, since `index.ts`'s `Bindings` makes both modules carry it, and its typed function in `index.ts` with `call`, `json` and `parsed`. List the bindings in `crates/wasm/README.md`.\n\n## Owns\n\n`crates/wasm/`, the root `Cargo.toml`, `Cargo.lock`, `scripts/build-wasm.sh`, `apps/web/src/wasm/` and `apps/web/src/net/build-wasm-cache.test.ts`. No other part of #2701 edits these.\n\n## Behaviors (each proved by a test whose comment names it)\n\n- **B12** Every run binding answers JSON in and out with refusals as `{ error }`, through the typed functions in `apps/web/src/wasm/index.ts`, in both browser modules. Prove it with the core's unit tests for each body, plus a web test in `apps/web/src/wasm/` (after `replay.test.ts`) that creates a run with `runContent([])` and a starter of `RUN_STARTER_CARDS`, reduces a `go`, and gets a refusal for an illegal action.\n\n## Done when\n\nB12 is tested; `sh scripts/build-wasm.sh` builds both modules; `pnpm --dir apps/web typecheck` passes for `apps/web/src/wasm/`.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2704: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
