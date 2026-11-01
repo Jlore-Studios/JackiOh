@@ -33,6 +33,8 @@ export function screenNameFor(path: string): string | null {
       return "Terms";
     case paths.accessibility:
       return "Accessibility";
+    case paths.ai:
+      return "How JackiOh uses AI";
     case paths.copyright:
       return "Copyright";
     case paths.patchNotes:

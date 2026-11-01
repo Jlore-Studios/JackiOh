@@ -49,6 +49,10 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     description: "JackiOh's accessibility statement, and how to tell us about a barrier.",
   },
   {
+    path: paths.ai,
+    description: "How JackiOh uses AI: its computer opponents, what was made with AI, and what AI does with your data.",
+  },
+  {
     path: paths.copyright,
     description: "How to report content on JackiOh that infringes your copyright, and how to answer a report.",
   },
@@ -240,6 +244,35 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "Repeat infringers",
       "<p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>",
+    ),
+  [paths.ai]:
+    section(
+      "The computer opponents",
+      "<p>JackiOh has three kinds of computer opponent. Each plays by the same rules you do and sees only what a " +
+        "player in its seat could see.</p>" +
+        "<ul><li>In Practice, at the difficulty you pick, and in the tutorial, an opponent that runs in your browser.</li>" +
+        "<li>In ranked, when no one near your rating is free after a short wait, an AI opponent that our server " +
+        "plays. Nothing in the game marks it; the Terms say when it comes, what it looks like and how it plays.</li>" +
+        "<li>In co-op, the team you and a friend play against.</li></ul>" +
+        "<p>They choose their moves by searching the moves the rules allow, with a game-playing program we wrote " +
+        "and tune on games it plays against itself. They are not chatbots, and they say nothing to you but the " +
+        "emotes a player can send.</p>",
+    ) +
+    section(
+      "Made with AI",
+      "<ul><li>The music, every track and the few bars each Legendary and Mythic card plays, was composed by an AI " +
+        "model, Anthropic&rsquo;s Claude, written as code and played with free instrument sounds. No melody or " +
+        "recording was taken from another work. Where each track came from.</li>" +
+        "<li>The cards&rsquo; spoken lines are read by computer text-to-speech voices, not recorded by actors.</li>" +
+        "<li>Card art is drawn by code from each card&rsquo;s name, type and tags, not by an image-generation model.</li>" +
+        "<li>JackiOh&rsquo;s code is written with the help of AI coding assistants.</li></ul>",
+    ) +
+    section(
+      "What AI does with your data",
+      "<p>We don&rsquo;t send anything you write, or your account&rsquo;s details, to an AI service. Records of " +
+        "online games are used as the Privacy Policy says: for the card statistics, to time the ranked AI " +
+        "opponents&rsquo; moves and habits like a person&rsquo;s, and to choose the decks they bring from decks " +
+        "players have taken into ranked.</p>",
     ),
   [paths.accessibility]:
     section(

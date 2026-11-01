@@ -258,6 +258,8 @@ export const paths = {
   privacy: "/privacy",
   terms: "/terms",
   accessibility: "/accessibility",
+  /** R2631000: how JackiOh uses AI. */
+  ai: "/ai",
   /** Issue #757: the copyright and takedown page. */
   copyright: "/copyright",
   /** R388: patch notes and touched cards. */
