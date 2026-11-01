@@ -19,10 +19,9 @@ use sqlx::postgres::PgPoolOptions;
 
 use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
 use crate::app::now_ms;
+use crate::config::MS_PER_DAY;
 use crate::db::store::Db;
 use crate::env::{Env, js_number, load_env, quoted};
-
-const MS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
 
 const USAGE: &str = "Usage: jackioh-server mint-code [options]
        (from a checkout: cargo run --release -p jackioh-server -- mint-code [options])

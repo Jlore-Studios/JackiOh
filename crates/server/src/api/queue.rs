@@ -64,7 +64,7 @@ use crate::bots::fallback::{
     hour_of,
 };
 use crate::config::{
-    BOT_RECENT_OPPONENTS, BOT_VS_BOT_MAX_LIVE, MATCHMAKER_SWEEP_INTERVAL_SECONDS,
+    BOT_RECENT_OPPONENTS, BOT_VS_BOT_MAX_LIVE, MATCHMAKER_SWEEP_INTERVAL_SECONDS, MS_PER_SECOND,
     QUEUE_READOUT_CACHE_TTL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS,
     QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, SEAT_COIN_LABEL, rating_window,
 };
@@ -73,9 +73,6 @@ use crate::db::store::{
     TicketStatus,
 };
 use crate::seats::{Lease, Seat};
-
-/// Unit conversion, not configuration: `rating_window` speaks seconds, tickets are stamped in ms.
-const MS_PER_SECOND: f64 = 1000.0;
 
 // Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
 
@@ -326,7 +323,7 @@ pub struct KeptReadout {
 impl KeptReadout {
     /// The answer counted less than `QUEUE_READOUT_CACHE_TTL_SECONDS` before `now`, if one was.
     fn fresh(&self, now: i64) -> Option<Value> {
-        let ttl_ms = QUEUE_READOUT_CACHE_TTL_SECONDS * MS_PER_SECOND as i64;
+        let ttl_ms = QUEUE_READOUT_CACHE_TTL_SECONDS * MS_PER_SECOND;
         self.kept
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -484,7 +481,7 @@ async fn enqueue_ticket(
 /// §9.5's widening window, read for one ticket at one instant. It stops at `MAX_FAIR_GAP`
 /// (R640001), so two people further apart than that never pair, however long they wait.
 fn window_for(ticket: &Ticket, now: i64) -> f64 {
-    let waited_seconds = (now - ticket.enqueued_at).max(0) as f64 / MS_PER_SECOND;
+    let waited_seconds = (now - ticket.enqueued_at).max(0) as f64 / MS_PER_SECOND as f64;
     rating_window(waited_seconds)
 }
 
@@ -1626,7 +1623,7 @@ pub fn expected_wait_seconds(waits_ms: &[i64]) -> Option<i64> {
     let mut sorted = waits_ms.to_vec();
     sorted.sort_unstable();
     let rank = ((QUEUE_WAIT_QUANTILE * sorted.len() as f64).ceil() as usize).clamp(1, sorted.len());
-    let step_ms = QUEUE_WAIT_STEP_SECONDS * MS_PER_SECOND as i64;
+    let step_ms = QUEUE_WAIT_STEP_SECONDS * MS_PER_SECOND;
     Some((sorted[rank - 1].max(0) / step_ms + 1) * QUEUE_WAIT_STEP_SECONDS)
 }
 
@@ -1652,7 +1649,7 @@ async fn population_route(app: &App) -> ApiResult {
     if let Some(body) = app.queue_readout.fresh(now) {
         return Ok(json(200, body));
     }
-    let since = now - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND as i64;
+    let since = now - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND;
     let mut tx = app.db.begin(None).await?;
     let waits = tx.tickets_recent_waits(since).await?;
     let games = tx.results_count_since(since).await?;

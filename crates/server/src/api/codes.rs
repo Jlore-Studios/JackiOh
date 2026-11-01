@@ -27,7 +27,7 @@ use crate::api::crypto::{
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json, lock, rate_limited};
 use crate::app::App;
 use crate::config::{
-    CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, INVITE_CODE_LENGTH,
+    CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, INVITE_CODE_LENGTH, MS_PER_SECOND,
     REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_CIRCUIT_WINDOW_SECONDS, REDEMPTION_IDENTICAL_ERROR,
     REDEMPTION_RESPONSE_FLOOR_MS,
 };
@@ -59,9 +59,6 @@ const BANNED_MESSAGE: &str = "this account is banned";
 const EMAIL_UNVERIFIED_MESSAGE: &str = "Verify your email address before redeeming an invite code.";
 // R757000, R757001: the account owes the age screen or the terms box.
 const CONSENT_OWED_MESSAGE: &str = "Finish setting up your account first.";
-
-/// Unit conversion, not configuration.
-const MS_PER_SECOND: i64 = 1000;
 
 /// The redemption half of the API limits, straight from config.
 struct Limits {

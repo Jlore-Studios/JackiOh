@@ -41,7 +41,7 @@ use crate::api::series_rules::{
 use crate::app::{App, now_ms};
 use crate::bots::pick::{bot_pick, pick_is_due};
 use crate::config::{
-    SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
+    MS_PER_SECOND, SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
     SERIES_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
@@ -51,9 +51,6 @@ use crate::db::store::{
 use crate::seats::Seat;
 
 pub use crate::api::series_rules::NewSeriesInput;
-
-/// Unit conversion, not configuration: the series constants are stated in seconds.
-const MS_PER_SECOND: i64 = 1000;
 
 // Errors
 

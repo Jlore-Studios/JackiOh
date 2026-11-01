@@ -33,14 +33,12 @@ use time::OffsetDateTime;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, RateLimiter, Req, create_rate_limiter, json as json_response,
 };
-use crate::config::{CHALLENGES_PER_HOUR, CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_HOUR};
+use crate::config::{CHALLENGES_PER_HOUR, CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_HOUR, NANOS_PER_MS};
 use crate::db::store::{Profile, StoreError, Tx};
 
-/// Unit conversions, not configuration.
+/// Unit conversions, not configuration (a day's and a millisecond's are `crate::config`'s).
 pub(crate) const MS_PER_MINUTE: i64 = 60_000;
 pub(crate) const MS_PER_HOUR: i64 = 60 * MS_PER_MINUTE;
-pub(crate) const MS_PER_DAY: i64 = 24 * MS_PER_HOUR;
-const NANOS_PER_MS: i128 = 1_000_000;
 
 /// `Date.prototype.toISOString`'s form, which S7's time strings take: `2026-10-14T12:34:56.789Z`.
 const ISO_FORMAT: &str = "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z";

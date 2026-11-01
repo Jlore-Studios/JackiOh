@@ -71,7 +71,7 @@ use jackioh_engine::{Action, CustomCard, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
 use crate::bots::cosmetics::BotCosmetics;
-use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
+use crate::config::{NANOS_PER_MS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
@@ -180,9 +180,6 @@ fn db_error(error: sqlx::Error) -> StoreError {
 // Value conversions. The port speaks epoch milliseconds and plain JSON; Postgres speaks
 // timestamptz, jsonb, uuid and int8.
 // ---------------------------------------------------------------------------
-
-/// Nanoseconds in a millisecond: `OffsetDateTime` counts the one, the port the other.
-const NANOS_PER_MS: i128 = 1_000_000;
 
 /// `timestamptz` -> epoch ms. sqlx decodes it into an `OffsetDateTime` (TS: node-pg's `Date`, whose
 /// `getTime()` drops the microseconds the same way). The co-op and economy stores read theirs with
