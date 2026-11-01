@@ -389,8 +389,14 @@ mod tests {
         for word in [a_token_word(), an_anywhere_word()] {
             let fancy = small_capitals(word);
             assert_ne!(fancy, word, "premise: the word is written in look-alikes");
-            assert!(normalize_username(&fancy).is_err(), "premise: the name is refused");
-            assert_eq!(mask_blocked_words(&format!("gg {fancy}")), format!("gg {}", stars(&fancy)));
+            assert!(
+                normalize_username(&fancy).is_err(),
+                "premise: the name is refused"
+            );
+            assert_eq!(
+                mask_blocked_words(&format!("gg {fancy}")),
+                format!("gg {}", stars(&fancy))
+            );
         }
     }
 
@@ -398,14 +404,24 @@ mod tests {
     fn b53_masks_a_listed_word_with_a_number_beside_it_as_a_username_refuses_it() {
         let word = a_token_word();
         for joined in [format!("{word}1"), format!("1{word}")] {
-            assert!(normalize_username(&joined).is_err(), "premise: {joined} is refused as a name");
+            assert!(
+                normalize_username(&joined).is_err(),
+                "premise: {joined} is refused as a name"
+            );
             assert_eq!(mask_blocked_words(&joined), stars(&joined));
         }
     }
 
     #[test]
     fn b53_masks_a_word_exactly_when_the_username_filter_refuses_it() {
-        for word in ["Scunthorpe", "Cassandra", "Assassin", "Tit4n", "Bob455", "Bob_455"] {
+        for word in [
+            "Scunthorpe",
+            "Cassandra",
+            "Assassin",
+            "Tit4n",
+            "Bob455",
+            "Bob_455",
+        ] {
             let masked = mask_blocked_words(word) != word;
             assert_eq!(masked, normalize_username(word).is_err(), "{word}");
         }
