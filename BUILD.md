@@ -143,7 +143,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `CAST_ON_DRAW_CHAIN_CAP` | 20 | R58 |
 | `CAST_ON_DRAW_ACTION_CAP` | `LIBRARY_CAP` (60): cast-on-draw cards one action casts over all its chains | §2.4, R2067000 |
 | `LIBRARY_CAP` | 60 | R80 |
-| `ANTI_ONESHOT_CAP` | `{ base: 5, radiant: 3 }` | §8 #73 |
+| `ANTI_ONESHOT_CAP` | `{ base: 4, radiant: 3 }` (5 and 3 until #2657) | §8 #73 |
 | `QUICKSTRIKER_COMBO_MULTIPLE` | `{ base: 1, radiant: 2 }`: the X each Quickstriker's granted Combo deals, as one hit | §8 #38, R281 |
 | `RANDOM_KEYWORD_POOL` | Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample, in that order | R21, R346, R636, R49, R781005, R1025000, R1615000 |
 | `FIB` | `[0,1,1,2,3,5,8,13,21,34,55,89]`, index clamps at 11 | R25 |
@@ -164,7 +164,8 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `TUNE_MIN_AMOUNT` | 1: a tuned amount, an X, Activate X and Tribute X never go below it | §5, §6.3, R386 |
 | `BRITTLE_TICK` | 1: what each Brittle tick takes | §6.1, R385 |
 | `TUNE_COST_STEP` / `TUNE_ATTACK_FLOOR` / `TUNE_HEALTH_FLOOR` | 1 / 0 / 1: a cost change's size, and the floors a stats change stops at | §6.3, R386 |
-| `TUNE_HARMFUL_KEYWORDS` | Can't attack, Brittle, Untributable: keywords a Nerf never removes | §6.3, R386, R442, R1220 |
+| `TUNE_HARMFUL_KEYWORDS` | Can't attack, Brittle, Untributable, Can't Defend, Crater: keywords a Nerf never removes | §6.3, R386, R442, R1220, R2657005 |
+| `TUNE_BUFF_REMOVES` / `TUNE_BUFF_ANY_KEYWORDS` / `TUNE_NERF_HAND_KEYWORDS` | Can't attack and Can't Defend, which a Buff may remove / Flashback, which a Buff may add to any card / Crater, which a Nerf may add to a Unit, Field Spell or Trap in a hand | §6.3, R2657005 |
 | `MIN_PLAGUE_PAYMENT` / `PLAGUE_TOKEN_MANA` | 1 / 1: a play paid with Plague Counters spends at least one, each paying (1) | §6.3 Play, R454; C #74 |
 | `PLAGUE_MULTIPLIER_NONE` | 1: a card's Plague placement multiplier when it declares none | §6.3, R471 |
 | `RANDOM_CAST_CHAIN_CAP` | 20: casts one random cast and the casts inside it may make | §6.3 Cast, R452 |

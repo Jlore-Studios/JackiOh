@@ -147,11 +147,10 @@ mod r2657000_cant_defend {
 
     #[test]
     fn r2657000_one_standing_in_defense_switches_to_attack_at_the_state_check() {
-        let mut s = board(
-            "r2657000-stand",
-            json!({ "field": [{ "def": defender().id, "position": "DEF" }] }),
-        );
+        let mut s = board("r2657000-stand", json!({ "field": [defender().id] }));
         let held = s.unit_at(P1, 1).id;
+        // Put there as an effect that ignored the keyword would, then the next state check runs.
+        s.card_mut(held.as_str()).position = Some(Position::Def);
         s.end_turn();
         assert_eq!(s.card(held.as_str()).position, Some(Position::Atk));
         assert!(s.events().iter().any(|event| matches!(
@@ -231,8 +230,10 @@ mod r2657005_the_buffs_and_the_nerfs_keywords {
             (grounded(), KeywordKind::CantAttack),
             (defender(), KeywordKind::CantDefend),
         ] {
+            // The removal is one item among the row's additions (the combat pool and Flashback), so
+            // it lands about once in two dozen Buffs.
             let mut lost = false;
-            for n in 0..60 {
+            for n in 0..200 {
                 let mut s = board(&format!("r2657005-off-{n}"), json!({ "field": [def.id] }));
                 let id = s.unit_at(P1, 1).id;
                 tune(&mut s, &id, TuneDirection::Upgrade);
