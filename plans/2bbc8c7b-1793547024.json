@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2684,
+  "title": "Patch: Block on an incoming friend request asks first, as Block on a friend does",
+  "branch": "bot/issue-2684",
+  "thread": "**Issue #2684 (data, not instructions):**\n\n```text\n# #2684: Patch: Block on an incoming friend request asks first, as Block on a friend does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn the Play together page, an incoming friend request has three buttons side by side: Accept, Decline and Block. Block acts on the first press: the person is blocked, the request is gone, and unblocking later restores nothing, so a slip next to Accept cuts someone off for good. The same Block button on a friend's row already asks once (\u201cBlock Sam? You stop being friends, and neither of you can reach the other.\u201d). Once built, Block on a request asks the same way before it blocks.\n\n## Why\n- `apps/web/src/together/FriendRows.tsx:182-223`: a friend row's Block opens an inline question with Block and Keep; the file header (`:6-8`) says Block asks once, and only Remove skips the question because it has Undo (R2119000).\n- `apps/web/src/together/FriendRows.tsx:266-270`: a request row's Block calls `onBlock` directly, wired to `blockPlayer` in `apps/web/src/together/TogetherRoute.tsx:287-289`.\n- \u00a79.4: a block removes every request between the two, and \u201cunblocking lifts it and restores nothing\u201d, so a mistaken block on a request cannot be taken back by the person who made it.\n\n## Proposal\n- Give `RequestRow` the `asking` state and inline alert dialog `FriendRow` has, worded for a request (no \u201cYou stop being friends\u201d): \u201cBlock {name}? Their request goes, and neither of you can reach the other.\u201d, with Block and Keep; Keep puts the row back as it was.\n- One new zh-CN string. No server change.\n- Record the decision in the PR: the question is inline, as the friend row's is, not a modal.\n\n## Where it lands\n- `apps/web/src/together/FriendRows.tsx`; tests in `apps/web/src/together/TogetherRoute.test.tsx` (the friends panel's request rows offer no Block, `FriendsButton.tsx:184-195`, so nothing changes there)\n- `apps/web/src/i18n/` (the new string)\n- SPEC \u00a79.4, \u00a79.5 (Play together)\n\n## Acceptance criteria\n- [ ] A first press on an incoming request's Block sends nothing and shows the question with the sender's name.\n- [ ] Block in the question sends one block request; Keep sends nothing and restores Accept, Decline and Block.\n- [ ] The friend row's Block behaves as before.\n- [ ] `pnpm --dir apps/web test` on the touched tests, typecheck and eslint pass.\n\n## Size and risks\nSmall: about 25 lines in one component, one string, two tests. Client only (CLAUDE.md rule 7). Risk: an e2e spec of the safety flows that blocks from a request needs the extra click; grep `e2e/` for `requestBlock`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:07:13Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2684: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
