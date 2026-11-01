@@ -565,6 +565,8 @@ describe("scripts/ci-scope.sh", () => {
     ["scripts/build-wasm.sh", ["rust_tools_wasm"]],
     // The tools' export_card_text.rs writes it from crates/cards/card-text.yaml (#2498).
     ["apps/web/src/audio/voice-text.json", ["rust_tools_wasm"]],
+    // The tools' export_card_modes.rs writes it from the card scripts (#2646).
+    ["apps/web/src/game/cardModes.json", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
     ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
