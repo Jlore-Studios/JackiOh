@@ -11,7 +11,7 @@
 // registry holds no Legendary or Mythic a token could reach. The stylesheet is read as text, as
 // `economy/FillBar.test.tsx` reads its own, because Vitest stubs CSS imports.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -494,6 +494,45 @@ describe("R2378000 one spend at a time", () => {
     expect(await screen.findByText("150 Jlore")).toBeInTheDocument();
     expect(screen.getByTestId(T.buy("Core"))).toHaveAttribute("aria-busy", "false");
     expect(server.to("POST", "/api/packs/buy")).toHaveLength(1);
+  });
+
+  it("R2683000 cosmetic Open and chase Buy wait while another spend is out and send nothing", async () => {
+    const server = cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.chasePick("table-astral"));
+    expect(screen.getByTestId(T.open)).toHaveAttribute("aria-busy", "false");
+    expect(screen.getByTestId(T.chasePick("table-astral"))).toHaveAttribute("aria-busy", "false");
+
+    spendOutside();
+    for (const id of [T.open, T.chasePick("table-astral")]) {
+      expect(screen.getByTestId(id), id).toBeDisabled();
+      expect(screen.getByTestId(id), id).toHaveAttribute("aria-busy", "true");
+      expect(screen.getByTestId(id), id).toHaveClass("spend-wait");
+      fireEvent.click(screen.getByTestId(id));
+    }
+    expect(screen.queryByRole("alertdialog"), "a held Buy asks nothing").toBeNull();
+    expect(server.to("POST", "/api/cosmetic-packs/open")).toHaveLength(0);
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(0);
+
+    await settleOutside();
+    expect(screen.getByTestId(T.open)).toBeEnabled();
+    expect(screen.getByTestId(T.chasePick("table-astral"))).toBeEnabled();
+  });
+
+  it("R2683000 a spend out while the question is open holds Confirm and keeps the question", async () => {
+    const server = cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
+    render(<CosmeticPacks token={TOKEN} />);
+    fireEvent.click(await screen.findByTestId(T.chasePick("table-astral")));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    spendOutside();
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(screen.getByRole("alertdialog"), "the question stays for when the spend settles").toBeInTheDocument();
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(0);
+
+    await settleOutside();
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeEnabled();
   });
 
   it("R2378000 a short wallet's Buy turns no wheel while a spend is out", async () => {
@@ -999,8 +1038,9 @@ describe("#1667 the Chase Shard bar", () => {
     expect(screen.getByTestId(T.shardChoice)).toBeInTheDocument();
   });
 
-  it("a chase bought empties the bar, which rests at 0, and takes the choice with it", async () => {
-    const server = stubServer((call) => {
+  /** A full bar read, a chase buy answered with the emptied bar: the stub the chase's tests share. */
+  function chaseServer(): ReturnType<typeof stubServer> {
+    return stubServer((call) => {
       if (call.method === "GET" && call.path === "/api/cosmetic-packs") return { status: 200, body: cosmeticPacksFull() };
       if (call.method === "GET" && call.path === "/api/collection") return { status: 200, body: collectionOf() };
       if (call.method === "GET" && call.path === "/api/cosmetics") return { status: 200, body: ownedCosmeticsOf() };
@@ -1009,6 +1049,10 @@ describe("#1667 the Chase Shard bar", () => {
       }
       return undefined;
     });
+  }
+
+  it("R2683000 Confirm sends exactly one chase purchase, empties the bar, and takes the choice with it", async () => {
+    const server = chaseServer();
     render(<CosmeticPacks token={TOKEN} registry={[AURORA]} />);
     await flush();
     expect(screen.getByTestId(T.shardChoice)).toBeInTheDocument();
@@ -1016,11 +1060,62 @@ describe("#1667 the Chase Shard bar", () => {
     fireEvent.click(screen.getByTestId(T.chasePick(AURORA.id)));
     await flush();
 
+    expect(server.to("POST", "/api/cosmetic-packs/chase"), "the first press sends nothing").toHaveLength(0);
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Buy Aurora table? This spends your full Chase Shard bar.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await flush();
+
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(1);
     expect(server.to("POST", "/api/cosmetic-packs/chase")[0]?.body).toEqual({ cosmeticId: AURORA.id });
     expect(shardBar()).toHaveTextContent("0 / 20");
     expect(shardBar()).toHaveAttribute("data-state", "resting");
     expect(shardFill()).toBe("scaleX(0)");
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("R2683000 the first Buy asks in the row, in the reader's language, with Cancel focused, and sends nothing", async () => {
+    await setLocale("zh-CN");
+    const server = chaseServer();
+    render(<CosmeticPacks token={TOKEN} registry={[{ ...AURORA, name: "Cracked ice" }]} />);
+    await flush();
+
+    fireEvent.click(screen.getByTestId(T.chasePick(AURORA.id)));
+
+    const dialog = screen.getByRole("alertdialog", { name: "购买碎冰？这将消耗整个追猎碎片进度条。" });
+    expect(screen.queryByTestId(T.chasePick(AURORA.id)), "the question takes the Buy's place").toBeNull();
+    expect(screen.getByTestId(T.shardChoice)).toContainElement(dialog);
+    expect(screen.getByRole("button", { name: "取消" })).toHaveFocus();
+    expect(within(dialog).getByRole("button", { name: "确认" })).toBeEnabled();
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(0);
+  });
+
+  it("R2683000 Cancel and Escape spend nothing and return focus to Buy", async () => {
+    const server = chaseServer();
+    render(<CosmeticPacks token={TOKEN} registry={[AURORA]} />);
+    await flush();
+    const keydown = vi.fn();
+    window.addEventListener("keydown", keydown);
+
+    fireEvent.click(screen.getByTestId(T.chasePick(AURORA.id)));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByTestId(T.chasePick(AURORA.id)), "Cancel puts the focus back on Buy").toHaveFocus();
+    expect(screen.getByTestId(T.chasePick(AURORA.id))).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId(T.chasePick(AURORA.id)));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("button", { name: "Cancel" }), { key: "Escape" });
+
+    window.removeEventListener("keydown", keydown);
+    expect(keydown, "Escape answers Cancel and goes no further").not.toHaveBeenCalled();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByTestId(T.chasePick(AURORA.id)), "Escape puts the focus back on Buy").toHaveFocus();
+    expect(server.to("POST", "/api/cosmetic-packs/chase")).toHaveLength(0);
+    expect(shardBar()).toHaveTextContent("20 / 20");
   });
 
   it("under reduced motion the end state shows at once: the full bar, the choice and its moment", async () => {
