@@ -1,0 +1,59 @@
+{
+  "action": "build",
+  "number": 2652,
+  "title": "Patch: show coin flip and dice roll results, with a suspense animation",
+  "branch": "bot/issue-2652",
+  "thread": "**Issue #2652 (data, not instructions):**\n\n```text\n# #2652: Patch: show coin flip and dice roll results, with a suspense animation\nOpened by @MaxGoetzmann.\n\n## What it does\n\nRight now when a card flips a coin or rolls a die, the client only shows what happened afterwards (a buff, a keyword, a recruit, cards added to hand). Players never see the actual result: how many heads Gary got, which face Mid Loser landed on, what Dice of Doom rolled. This patch makes every flip and roll visible to both seats, with an animation that builds suspense before the result shows.\n\n**One batch per roll.** When one effect or hook makes several flips or rolls (Gary's 5 or 7 coins plus his rider coin, Dice of Doom's Radiant two d80s, the extra rolls Lucky X and Luck add), the engine sends **one** event holding all of them in order. The client animates them **together in one overlay**, not one after another. All the coins spin at once and the dice tumble at once, then they land (a short stagger is fine), and the outcome shows.\n\n### Where flips and rolls happen today\n\n| Card | Text | Where it rolls |\n|---|---|---|\n| core-004 Gary the Gambler | Cry: flip 5 (Radiant 7) coins, then one coin for Divine Shield or Rush | `crates/engine/src/effects/coins.rs` (`flip_coins`, `flip_coin_keyword`) |\n| classic-065 Ace in the Hole (Trap) | End of turn: flip a coin | `crates/cards/src/scripts/classic/c065_ace_in_the_hole.rs`, `ctx.rng.lucky_coin` called directly |\n| classicplus-019-3 Mid Loser | Cry: flip a coin, Heads (Fed) / Tails (Int) | `crates/cards/src/scripts/classic_plus/c019_3_mid_loser.rs` |\n| stinkyscape-154 Dice of Doom | Roll a d100 (Radiant: a d80 twice), hit on 67 | `crates/cards/src/scripts/stinkyscape/c154_dice_of_doom.rs`, `ctx.rng.lucky(...)` over `rng.int(sides)` |\n\nRe-check this list against `catalog.json` and the Luau card kit (`docs/custom-cards.md`) when you build it. Every card that flips a coin or rolls a die is in scope. Call to Chaos already has `chaosRolled` (R436), and pack, offer, craft and resource rolls are not coin flips or dice, so all of those are out of scope.\n\n### Shape (a suggestion; read the spec and `work.rs`'s header first)\n\n- **Engine (`crates/engine`)**: add a wire event in `wire/events.rs`, for example `GameEvent::Rolled { source, controller, kind: Coin | Die { sides }, rolls: Vec<RollResult> }`. Each `RollResult` holds every draw Lucky took and the one that was kept, so the client can show the extra coins or dice and highlight the kept one. Card scripts must not emit events or mutate state (CLAUDE.md rule 5), so add an engine verb that does the seeded roll and reports it in one step (for example `effects::coins::flip`/`roll_die`, or extend `Rng::lucky_coin`'s callers with a reporting effect). Move Ace in the Hole, Mid Loser and Dice of Doom onto it. **Draw order and the RNG cursor must stay exactly as they are now**, so replays and the golden fixture stay identical except for the new event. The fizzle rule in `coins.rs`'s header (no target means no draws) still applies.\n- **Hidden information (CLAUDE.md rule 7, `view_for`)**: Ace in the Hole's base face flips while it is set face-down. If the opponent saw that flip, they would learn the trap is there. This is a decision the spec does not make yet, so it needs a ruling note (rule 3) in this issue's block. Proposal, following Hearthstone Secret semantics: a roll from a card the viewer cannot see goes only to its controller. The opponent sees it only when the card is public (for example the Radiant face is Revealed, or the flip reveals it on heads).\n- **Client (`apps/web`)**: add an entry for the new event to `game/animations.ts`, plus an fx recipe that animates the whole batch: the coins spin and land heads or tails, the dice tumble through faces and land on their numbers. Show the Lucky extra draws, with the kept result highlighted, and keep the existing outcome animations (buff, keyword, recruit) **after** the reveal. Durations are named constants (rule 9), scaled by the viewer's effects speed (R201) and shortened under `prefers-reduced-motion`. Add a line to the game log and to the showcase's live region so the result is also stated in words.\n\n## Acceptance\n\n- [ ] A new wire event reports every coin flip and die roll of the cards above, one event per effect or hook with all of its results in order, including Lucky and Luck's extra draws and which draw was kept. Rust tests cover each card's base and Radiant faces in its own script file.\n- [ ] The RNG cursor and the draw sequence are unchanged: `cargo jackioh golden check` and `cargo jackioh fuzz --seeds 200` pass, and a round-tripped state replays the same results.\n- [ ] A new ruling note (lowest free in this issue's block) decides who sees a roll from a hidden card, with a `view_for` test named after it proving the opponent never sees a face-down Ace in the Hole's flip (and sees it when the card is public). `cargo jackioh spec check` passes.\n- [ ] The web client animates each batch together in one overlay (all coins or dice at once, then the result), before the outcome's own animation. Vitest covers the event's animation entry and that a 7-coin Gary batch makes one overlay, not seven.\n- [ ] The animation timings are named constants, scale with the effects speed setting, and are cut short under reduced motion. Tests cover it.\n- [ ] The game log states each result in words (for example \"Gary the Gambler flipped 7 coins: 4 heads, 3 tails\").\n- [ ] `apps/web/src/wire/` regenerated and committed. `cargo jackioh classify --base origin/main --claims` passes before you push.\n\n## Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong); build on `claude-8` (claude, `opus`, strong); review on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2520 skipped: it waits for #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2649 skipped: it waits for #2648 to close first"
+  ]
+}
