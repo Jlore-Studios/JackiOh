@@ -2,10 +2,8 @@
 //! behavior no other test names, so not R97 and R98 (proved where their notes' `proven_in` points)
 //! nor the server rulings R104 to R112. Every fixture is this file's own (defs prefixed `rc-`,
 //! indexes from 1901, registered over the shared catalog by `game()`), so none collides (BUILD §0).
-//!
 //! R91's "no error" and each side of R94 get tests of their own: an already-held position must be
 //! noticed *before* exertion is read, and the defender's attack too is read once, before the hit.
-//!
 //! Helpers hand back copies: re-find a card by id after the engine ran (`live`), write through `live_mut`.
 
 use std::collections::BTreeSet;
@@ -1551,7 +1549,6 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             None
         );
 
-        // The attacker's hit, then the two Cleave instances immediately after it, then the strike-back.
         assert_eq!(
             hits(&events.events),
             vec![
@@ -1644,7 +1641,6 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             combat::force_attacks_on(sink, &[gone.clone(), present.clone()], &on_unit(&victim), None);
         });
 
-        // No `attackDeclared` for the missing attacker, and nothing else names it either.
         assert_eq!(attackers_declared(&events.events), vec![present.id.clone()]);
         assert!(
             !events
@@ -1784,7 +1780,6 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         assert!(immediate.events.is_empty());
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
 
-        // The window delivers it, once.
         let mut window = Bench::new(&state);
         assert_eq!(
             window
@@ -1872,7 +1867,6 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
                 .contains("tributes 2, no more")
         );
 
-        // The enumeration says the same: the Sheep alone, or two bodies, and never three of anything.
         let sets = play_choices::legal_tribute_sets(&state, P1, &card);
         assert!(sets.contains(&vec![woolly.id.clone()]));
         assert!(sets.contains(&vec![one.id.clone(), two.id.clone()]));
@@ -2115,7 +2109,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         let mut shared = put(&mut state, FUSE_SHARED, slot(P1, Row::Units, 3)); // 7/3, the played permanent
         let mut sink = Bench::new(&state);
 
-        // The first fusion consumes the shared ingredient: 1/1 plus 7/3 is 8/4.
         let first = must(
             sink.run(&mut state, |engine| {
                 fuse(engine, fuse_args(&[&host_a, &shared], &host_a))
@@ -2126,7 +2119,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         let first_base = catalog::def_of(Some(&state), &first.def_id).base.clone();
         assert_eq!((first_base.attack, first_base.health), (Some(8), Some(4)));
 
-        // The premise: no pile holds it now, so nothing could look it up by id.
         assert!(find_instance(&state, &shared.id).is_none());
         assert!(zones::card_at(&state, slot(P1, Row::Units, 3)).is_none());
 
@@ -2140,7 +2132,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             "the second fusion",
         );
         assert_eq!(second.id, host_b.id);
-        // 2/2 plus the same 7/3 is 9/5: it contributed its definition a second time.
         let second_def = catalog::def_of(Some(&state), &second.def_id).clone();
         assert_eq!(
             (second_def.base.attack, second_def.base.health),
@@ -2148,7 +2139,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         );
         assert!(second_def.name.contains("fuse-shared"));
 
-        // Two fusions, two transient definitions, and the first host is untouched by the second.
         assert_ne!(second.def_id, first.def_id);
         let first_base = catalog::def_of(Some(&state), &first.def_id).base.clone();
         assert_eq!((first_base.attack, first_base.health), (Some(8), Some(4)));
@@ -2178,7 +2168,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         assert!(zones::card_at(&state, slot(P1, Row::Units, 2)).is_none());
         assert!(!ids(&state.players.p1.graveyard).contains(&eaten.id));
         assert!(!ids(&state.players.p1.exile).contains(&eaten.id));
-        // No Death trigger, and it does not count as destroyed.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         assert_eq!(state.counters.destroyed, before);
         assert_eq!(count_of(&sink.events, GameEventType::Destroyed), 0);
@@ -2446,7 +2435,6 @@ mod spec_11_r113_the_work_cursor_m3_gate {
         assert!(raised.contains("R113"));
         let raised = panic_text(|| sink.run(&mut state, |engine| work::run_work_item(engine, &orphan)));
         assert!(raised.contains("rc:no-such-sequence"));
-        // It is still owed rather than quietly gone.
         assert_eq!(
             state.work.iter().map(|item| item.id.clone()).collect::<Vec<_>>(),
             vec![orphan.id.clone()]
@@ -2524,7 +2512,6 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
             live(&control, &control_victim).last_damaged_by,
             Some(control_source.id.clone())
         );
-        // 3 off the unit plus 2 off the hero: the total healed is 5.
         assert_eq!(control.players.p1.hero.health - control_before, 5);
 
         // The ruling: an earlier instance takes the victim to exactly 0 health and the state check has not
@@ -2569,7 +2556,6 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
             )
         });
 
-        // Nothing to the unit: no damage, no `damage` event naming it, no `lastDamagedBy`, no Poisonous mark.
         assert_eq!(dealt, 0);
         assert_eq!(live(&state, &victim).damage, 3);
         assert!(live(&state, &victim).last_damaged_by.is_none());
@@ -2585,7 +2571,6 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                 .is_empty()
         );
 
-        // The whole amount becomes the step 9 instance on the victim's controller's hero.
         assert_eq!(hits(&events.events), vec![Hit::new(&source.id, "hero-p2", 5)]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 5);
 
@@ -2612,7 +2597,6 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         let ally = put(&mut state, MEASURED, slot(P1, Row::Units, 2)); // 3/4
         let view = |state: &GameState, card: &CardInstance| layers::unit_view(state, &live(state, card));
 
-        // Live: the aura reaches the ally and layer 2 sets the projector's own stats.
         assert_eq!(view(&state, &ally).attack, 3 + 2);
         assert_eq!(view(&state, &ally).max_health, 4 + 2);
         assert_eq!(view(&state, &source).attack, 2 + PROJECTOR_SETS);
@@ -2797,7 +2781,6 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         // The trap resolved first, then the play resumed after the paused step: the Cry fires once (R1).
         assert_eq!(notes(&answered), vec!["answered", "cry"]);
         assert!(answered.work.is_empty());
-        // And the card is where the play put it, so nothing about the pause unwound the play.
         assert_eq!(
             zones::card_at(&answered, slot(P1, Row::Units, 1)).map(|placed| placed.def_id.clone()),
             Some(CRIER.to_string())
@@ -2845,7 +2828,6 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         let mut held = paused.state;
         assert_eq!(held.pending.as_ref().map(|pending| pending.player_id), Some(P2));
         assert!(notes(&held).is_empty());
-        // The premise of the row: there is something owed, and the Spell is mid-resolution.
         assert!(!held.work.is_empty());
         assert_eq!(ids(&held.players.p1.resolving), vec![spell.id.clone()]);
         assert!(!ids(&held.players.p1.graveyard).contains(&spell.id));
@@ -2870,8 +2852,6 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
             None
         );
 
-        // The trap's continuation ran, then the owed play steps in R113's order: the Cry fired and the Spell
-        // reached its graveyard.
         assert_eq!(notes(&held), vec!["answered", "spell"]);
         assert!(held.pending.is_none());
         assert!(held.work.is_empty());
@@ -2935,7 +2915,6 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         );
         // The cost half alone is not the declaration: the pick is still required (R90).
         assert!(play(&state, json!({ "tributes": [one.id, two.id] })).is_some());
-        // And the pick alone does not pay the cost.
         assert_eq!(
             play(
                 &state,
@@ -2944,7 +2923,6 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
             Some(needs.clone())
         );
 
-        // `legalActions` enumerates them that way: every offered play carries both lists.
         let offered: Vec<Value> = play_choices::play_actions_for(&state, P1, &card)
             .iter()
             .map(as_json)
@@ -3036,7 +3014,6 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
      {
         let mut state = game("r124-armor-adds");
 
-        // Bare: step 2 has nothing to subtract, so the whole hit lands.
         assert_eq!(state.players.p2.hero.armor, 0);
         assert_eq!(hit_hero(&mut state, 6).0, 6);
 
@@ -3073,7 +3050,6 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
             Some(ANTI_ONESHOT_CAP.radiant)
         );
         const { assert!(ANTI_ONESHOT_CAP.radiant < ANTI_ONESHOT_CAP.base) };
-        // Two cards, and a 10 is clamped to the smaller of the two — not to 8, and not to 5.
         assert_eq!(hit_hero(&mut capped, 10).0, ANTI_ONESHOT_CAP.radiant);
     }
 
@@ -3112,7 +3088,6 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert!(hits(&sink.events).is_empty());
         assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
 
-        // The escalating Nth-draw damage eventually beats the Armor: the 4th draw is 4, so 1 gets through.
         assert!(matches!(
             sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
             DrawOutcome::Fatigue
@@ -3480,7 +3455,6 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
             })))],
         );
         assert_eq!(sink.rng.cursor() - before, 5);
-        // The two gains total the coins, so every flip was counted once and none was re-rolled.
         let buffs = live(&state, &target).buffs;
         assert_eq!(buffs.attack + buffs.health, 5);
     }
@@ -3549,7 +3523,6 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         // The sum is 7 + (-2) = 5, so the total is 10; a floor per Felinor would read 7 + 0 and give 12.
         assert_eq!(view(&state, &me).attack, 10);
 
-        // Each stat is floored on its own: the health sum is untouched by whatever the attack sum did.
         assert_eq!(view(&state, &me).max_health, 7 + 10 + 10);
 
         // And neither sum goes below 0: negative attack floors the attack contribution, not the health one.
@@ -3796,7 +3769,6 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         assert_eq!(view(&state, &summer).attack, 5);
         assert_eq!(view(&state, &summer).max_health, 7 + 10);
 
-        // And on a card's own stats, at the point of display.
         live_mut(&mut state, &donor).buffs = AttackHealth {
             attack: -99,
             health: 0,
@@ -3899,7 +3871,6 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         let mut roomy = game("r138-control");
         put(&mut roomy, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut roomy_sink = Bench::new(&roomy);
-        // Cast it straight out of the hand: `cast_card` takes it out of whatever pile holds it.
         let lands = must(
             in_hand(&mut roomy, CRIER, P1, 1).into_iter().next(),
             "a permanent to cast",
@@ -3910,7 +3881,6 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert!(unit_ids(&roomy, P1).contains(&lands.id));
         assert_eq!(notes(&roomy), vec!["cry"]);
 
-        // Now the row: every unit zone taken, so there is nowhere for it to go.
         let mut state = game("r138-no-zone");
         put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         for lane in [1, 2, 3, 4, 5] {
@@ -3928,12 +3898,11 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
             resolve::cast_card(engine, &cast, CastOptions::default())
         });
 
-        // A cast cannot be refused the way a play can (R70): it still counts as played...
+        // A cast cannot be refused the way a play can (R70): it counts as played, resolves its script,
+        // and, in no zone, goes to its owner's graveyard at §10.5 step 7.
         assert_eq!(state.players.p1.turn_log.cards_played, played_before + 1);
         assert!(state.players.p1.turn_log.played_ids.contains(&cast.id));
-        // ...and still resolves its script...
         assert_eq!(notes(&state), vec!["cry"]);
-        // ...and is in no zone, so §10.5 step 7 sends it to its owner's graveyard.
         assert!(!unit_ids(&state, P1).contains(&cast.id));
         assert!(ids(&state.players.p1.graveyard).contains(&cast.id));
         assert!(!ids(&state.players.p1.resolving).contains(&cast.id));
@@ -3969,12 +3938,10 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         );
         assert!(!used_this_turn(&state, &live(&state, &card)));
 
-        // So the player is told whose turn it is, not that the ability is spent.
         assert_eq!(
             refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
             Some("it is not your turn".to_string())
         );
-        // And on their own turn it is the mana, the check after the uses.
         state.active = P1;
         assert_eq!(
             refusal(why_cannot_activate_ability(&state, P1, &card.id, None)),
@@ -4002,7 +3969,6 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
             ))
         };
 
-        // The control: on an empty row the convenience path is fine, and a named zone is too.
         assert_eq!(play(&state, None), None);
         assert_eq!(play(&state, Some(3)), None);
 
@@ -4025,7 +3991,6 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         // accept a named one.
         assert!(must(play(&state, None), "a refusal").contains("no free units zone"));
 
-        // With one lane freed it takes the leftmost empty one: lane 4, with 1, 2, 3 and 5 still occupied.
         let mut freed = must(occupants.get(3).cloned(), "the lane-4 occupant");
         zones::remove_from_any_zone(&mut state, &mut freed);
         freed.zone = Zone::Graveyard { player: P1 };
@@ -4056,7 +4021,6 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         sink.run(&mut state, turn::end_turn);
         assert!(!state.players.p1.ai_turn);
 
-        // Cleared by the end of the turn it was set for: it is p2's turn now and p1 has started none since.
         assert_eq!(state.active, P2);
         assert!(state.turn > locked_on);
     }
@@ -4206,7 +4170,6 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         resolve::flag_return_to_hand_at_end_of_turn(&mut state, &unit.id);
         assert_ne!(live(&state, &unit).return_to_hand_at_end_of_turn, Some(true));
 
-        // A Spell whose face declares no end-of-turn return.
         let plain = must(
             in_hand(&mut state, SPELL_CRIER, P1, 1).into_iter().next(),
             "a Spell with no end-of-turn hook",
@@ -4273,7 +4236,6 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         assert!(unflagged.return_to_hand_at_end_of_turn.is_none());
         assert_eq!(end_of_turn_holders(&state), vec![flagged.id.clone()]);
 
-        // Flagging it is what admits it, so the gate is the flag and nothing else.
         live_mut(&mut state, &unflagged).return_to_hand_at_end_of_turn = Some(true);
         assert_eq!(
             end_of_turn_holders(&state),

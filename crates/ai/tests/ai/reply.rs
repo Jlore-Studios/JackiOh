@@ -1,4 +1,4 @@
-//! The opponent's reply (reply.ts, docs/polish/3-ai.md "The opponent's reply", SPEC §9.9): after a
+//! The opponent's reply (docs/polish/3-ai.md "The opponent's reply", SPEC §9.9): after a
 //! line hands the opponent the turn, the opponent swings by a fixed trading rule and ends its turn,
 //! every step a real `reduce` that costs one node, and the line is scored at the seat's next decision.
 //!

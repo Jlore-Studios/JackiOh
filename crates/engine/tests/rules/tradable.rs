@@ -182,7 +182,6 @@ fn r1838000_the_limit_is_the_players_own_figure_and_resets_each_turn() {
 #[test]
 fn r1838000_refused_off_turn_for_an_untradable_card_and_into_a_full_deck() {
     let (mut state, spell, unit) = holding("r1838000-refused");
-    // Not Tradable: neither listed nor taken.
     assert_eq!(
         trade(&state, P1, &unit, "t1").error.as_deref(),
         Some(format!("{} is not Tradable", plain_unit().name).as_str())

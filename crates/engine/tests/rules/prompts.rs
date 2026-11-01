@@ -668,7 +668,6 @@ mod prompts_s10_6_m3_t3 {
 
         // The prompt, its options and its continuation are all plain data.
         expect_plain_data(&pending);
-        // So is the parked tail the prompt interrupted.
         assert_eq!(state.work.len(), 1);
         expect_plain_data(&state.work);
 
@@ -725,10 +724,8 @@ mod prompts_s10_6_m3_t3 {
                     .unwrap_or_default()
                     .contains("not one of the options offered")
             );
-            // A refused answer changes nothing: the prompt is still there to answer.
             assert_eq!(sink.state.pending.as_ref(), Some(&pending));
 
-            // A selection of another kind is not an option either, whatever it carries.
             assert!(
                 refusal(&pending, P1, &pending.id, vec![instance("c1")])
                     .unwrap_or_default()
@@ -762,7 +759,6 @@ mod prompts_s10_6_m3_t3 {
                 .contains("exactly 1 pick")
             );
 
-            // The option the prompt did offer is accepted, and the prompt closes.
             assert_eq!(
                 answer_prompt(sink, &answer_input(P1, &pending.id, vec![offered]))
                     .err()
@@ -964,10 +960,8 @@ mod prompts_s10_6_m3_t3 {
 
             assert_eq!(answer(sink, &third, &["mode:tutor-f"]), None);
         });
-        // The chain is done: no prompt, no parked work, and the last step ran.
         assert!(state.pending.is_none());
         assert!(state.work.is_empty());
-        // The prize, not the decoy: all three picks reached the last step, in the order they were made.
         assert!(hand_defs(&state, P1).contains(&prize().id));
         assert!(!hand_defs(&state, P1).contains(&decoy().id));
         assert_eq!(state.players.p1.hand.len(), hand_before + 1);
@@ -1012,7 +1006,6 @@ mod prompts_s10_6_m3_t3 {
 
         with_sink(&mut state, |sink| {
             run_hook_resumable(sink, &card, "cry", Default::default());
-            // The first effect ran, the second opened the prompt, and the third is waiting in state.
             assert_eq!(sink.state.players.p2.hero.health, HERO_HEALTH - 1);
             let pending = sink.state.pending.clone().expect("the mid-list prompt");
             assert_eq!(sink.state.work.len(), 1);
@@ -1324,7 +1317,6 @@ mod prompts_s10_6_m3_t3 {
         );
         assert_eq!(trib_played.error, None);
         assert!(trib_played.state.pending.is_none());
-        // And it really was a Tribute: the unit that paid it is off the field.
         assert!(
             !trib_played
                 .state

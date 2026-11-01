@@ -1272,8 +1272,8 @@ where
 
 /// The listener `serve` answers on: `[::]`, which takes IPv4 too while `net.ipv6.bindv6only` is 0,
 /// or every IPv4 interface where the host has no IPv6. `localhost` names `::1` first on the CI runners
-/// and macOS, so an IPv4-only listener would leave Chrome hanging on a fallback. An IPv4 peer arrives
-/// as `::ffff:a.b.c.d`, which `rate_limit_address` keys as `a.b.c.d` (R190).
+/// and macOS, so an IPv4-only listener would leave Chrome depending on a fallback from a refused
+/// `::1`. An IPv4 peer arrives as `::ffff:a.b.c.d`, which `rate_limit_address` keys as `a.b.c.d` (R190).
 async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
     match tokio::net::TcpListener::bind((Ipv6Addr::UNSPECIFIED, port)).await {
         Ok(listener) => Ok(listener),

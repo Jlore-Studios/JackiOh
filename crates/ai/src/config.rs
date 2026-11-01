@@ -528,8 +528,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         crater: 0.0,
         // R783012: no card prints it yet (§6.1), so nothing until one does and the lanes measure it.
         flashback: 0.0,
-        // #1602: off. At 1.0 its screen (400 games of improve-dev against the parent) read 201-199, edge
-        // 0.005 (-0.005 to 0.015), which keeps nothing (training/improve.md, A screen).
+        // #1602: off. At 1.0 its screen read 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing
+        // (training/improve.md, A screen).
         windfury: 0.0,
     },
     spell_damage: 0.5,
@@ -566,8 +566,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     start_of_turn_effect: 3.0,
     alt_win: 60.0,
     doomed_hand_discount: 0.5,
-    // #1506: off. At 0.5 and 1.0 its screen (400 games of improve-dev against the parent) read 200-200,
-    // edge 0.0 (-0.024 to 0.024), which keeps nothing (training/improve.md, A screen).
+    // #1506: off. At 0.5 and 1.0 its screen read 200-200, edge 0.0 (-0.024 to 0.024), which keeps
+    // nothing (training/improve.md, A screen).
     dormant_share: 0.0,
     dormant_card: 0.0,
     // R2380000: untuned starts for the training lanes, as #1886's are. A turn's wait at half, so
@@ -590,13 +590,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: true,
     enemy_face_down: 2.0,
-    // #1602: off. At 0.8 its screen (400 games of improve-dev against the parent) read 201-199, edge
-    // 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen).
+    // #1602: off. At 0.8 its screen read 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing
+    // (training/improve.md, A screen).
     enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1602: off. At 1.0 its screen (400 games of improve-dev against the parent) read 199-201, edge
-    // -0.005 (-0.022 to 0.012), which keeps nothing (training/improve.md, A screen).
+    // #1602: off. At 1.0 its screen read 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing
+    // (training/improve.md, A screen).
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // R1224: a debt counts as unspent mana does.
@@ -631,8 +631,8 @@ pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
 
 /// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
-/// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with a
-/// "when this attacks" or an "after this attacks" hook, on either field.
+/// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with an
+/// attack hook, on either field.
 pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
@@ -837,8 +837,8 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
-    // #1634: off. On, its screen (400 games of improve-dev against the parent) read 203-197, edge 0.015
-    // (-0.002 to 0.032), which keeps nothing (training/improve.md, A screen).
+    // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing
+    // (training/improve.md, A screen).
     open_lethal: false,
     // #1696: on. Its screen (400 games of improve-dev against the parent) read 199-199 with deal 136
     // aborted at the action cap in both seatings (the parent aborts it against itself too), edge 0.0

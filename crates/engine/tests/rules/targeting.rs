@@ -752,7 +752,6 @@ mod r450_an_interception_classic_33_joro {
             card_at(&after, slot(PlayerId::P2, Row::Units, 1)).map(|card| card.damage),
             Some(0)
         );
-        // The redirect is public on both seats.
         assert_eq!(
             field_of(
                 &view_for(&after, PlayerId::P1).events,

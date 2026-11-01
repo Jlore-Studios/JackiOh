@@ -921,7 +921,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
             KeywordKind::Taunt
         ));
 
-        // The Indestructible Field Spell simply stays and the mark is dropped.
         assert_eq!(id_at(&state, slot(P1, BACKROW, 1)), Some(field.id.clone()));
         assert_eq!(instance_in(&state, &field.id).marked_destroyed, Some(false));
     }
@@ -2530,7 +2529,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut sink = sink_for(&mut state);
         assert_eq!(refusal(declare_attack(&mut sink, &rb, &unit_target(&wall))), None);
 
-        // It died in that combat and came back in its reserved zone, at 1 health.
         assert_eq!(id_at(sink.state, slot(P1, UNITS, 1)), Some(rb.id.clone()));
         let back = instance_in(sink.state, &rb.id);
         assert_eq!(unit_view(sink.state, &back).health, 1);

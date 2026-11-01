@@ -1100,10 +1100,10 @@ async fn start_bot_match(
         },
         deck_slots: if random { None } else { ticket.deck_slots.clone() },
     };
-    // Everything after the claim lets both go if it fails, or only the stale-start release (R1454)
-    // or the reaper's open-row sweep (R1450) would. §9.5's in-match state for the player,
-    // compare-and-set (R890000): a room join that seated them since loses the seat here; the
-    // transaction is over before the cleanup begins its own (the fake store's lock).
+    // Everything after the claim lets both go if it fails, as the claim already seated the bot;
+    // else only the stale-start release (R1454) or the open-row sweep (R1450) would. §9.5's in-match
+    // state for the player, compare-and-set (R890000): a room join that seated them since loses the
+    // seat here; the transaction is over before the cleanup begins its own (the fake store's lock).
     let seated: Result<bool, ApiError> = async {
         let mut tx = app.db.begin(None).await?;
         tx.seats_fence(app.seats.epoch()).await?;

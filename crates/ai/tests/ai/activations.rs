@@ -1,10 +1,9 @@
-//! A unit's Activate in the AI's evaluation (R2564000): at a decision's root the AI ends its own turn
-//! and then the enemy's on a copy, tries each visible unit's Activate at the start of its controller's
-//! next turn as the opponent's reply tries one, and prices the best use as its controller's evaluation
-//! after it less before it; `unit_worth` adds `AI_EVAL.activation` of the price for the seat's units
-//! and the enemy's alike. A face-down or hand card is never probed, so hidden cards change no decision
-//! (R185), the frozen baseline reads no price, and a call not passed a decision's prices reads none.
-//! R2603000 prices a face-up backrow card's Activate, a Field Spell's, the same way.
+//! A unit's Activate in the AI's evaluation (R2564000): the decision's root tries each visible unit's
+//! Activate at the start of its controller's next turn (`activation_prices`), and `unit_worth` adds
+//! `AI_EVAL.activation` of the best use's price, for either side's units. A face-down or hand card is
+//! never probed, so hidden cards change no decision (R185), the frozen baseline reads no price, and a
+//! call not passed a decision's prices reads none. R2603000 prices a face-up backrow card's Activate, a
+//! Field Spell's, the same way.
 //!
 //! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
 //! (R1852000), which can fire it again. So the removal below is a transform, which is no death, and the

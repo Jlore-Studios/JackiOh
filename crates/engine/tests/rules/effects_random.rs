@@ -474,7 +474,6 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         assert_eq!(rolled[0]["rolls"], Value::Array(expected));
         // "coins-known" starts T H: the first coin drew tails, then heads, and kept the heads.
         assert_eq!(rolled[0]["rolls"][0], json!({ "faces": [2, 1], "kept": 1 }));
-        // The kept faces are the ones the buff counted.
         assert_eq!(live(&state, &unit.id).buffs.attack, heads);
     }
 

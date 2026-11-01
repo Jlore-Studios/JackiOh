@@ -275,8 +275,8 @@ mod b3_2_activations_are_first_class_candidates {
     fn b3_2_an_activate_infinite_ability_is_used_again_in_the_same_turn_while_each_use_is_good_and_the_turn_still_ends()
      {
         install_pricey();
-        // Two Pointmasters (7/1, First Strike) face an Activate ♾️ Turtinator, Gary the Gambler and
-        // Jewelosco Scarab (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
+        // Two Pointmasters (7/1, First Strike) face an Activate ♾️ Turtinator, Gary the Gambler and Jewelosco
+        // Scarab (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
         // Turtinator pings one dead. Two uses, then the turn ends. Both libraries hold cards, so no
         // fatigue race (R82's auto-ended turns of an empty side) makes throwing Turtinator away a win.
         let run = run_puzzle(

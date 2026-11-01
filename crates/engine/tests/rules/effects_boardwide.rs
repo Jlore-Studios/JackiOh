@@ -579,7 +579,6 @@ mod damage_all_s6_3_s4_4_r59_m3_t1 {
         assert_eq!(run.card(&self_card).damage, 0);
         assert_eq!(run.state.players[PlayerId::P2].hero.health, HERO_HEALTH - 2);
         assert_eq!(run.state.players[PlayerId::P1].hero.health, HERO_HEALTH);
-        // Units in lane order first, then the hero of the scoped side.
         assert_eq!(
             run.damage_targets(),
             vec![

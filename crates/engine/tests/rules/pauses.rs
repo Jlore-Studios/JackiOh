@@ -371,7 +371,6 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
             run_hook_resumable(sink, &card, "cry", HookResumableOptions::default());
         });
 
-        // Paused on the second effect: the first has landed, the third has not, and it is owed.
         assert!(state.pending.is_some());
         assert_eq!(amounts(&played), vec![1]);
         assert_eq!(enemy_health(&state), 29);
@@ -382,7 +381,6 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
             &json!({ "defId": middle_asker().id, "hook": "cry", "instanceId": card.id })
         ));
         assert_eq!(owed.map(|item| item.owner), Some(P1));
-        // The continuation names where to pick up: the effect after the one that asked.
         assert_eq!(
             owed.and_then(|item| paused_of(&item.resume.data))
                 .map(|step| step.from),
@@ -584,7 +582,6 @@ mod the_work_queue_9_3_r68 {
         );
         assert_eq!(vec![inner.seq, outer.seq], vec![seq_before, seq_before + 1]);
         assert_eq!(sink.state.next_seq, seq_before + 2);
-        // The owner defaults to the active player and is otherwise the one given.
         assert_eq!(inner.owner, P1);
         assert_eq!(outer.owner, P2);
 
@@ -646,7 +643,6 @@ mod the_work_queue_9_3_r68 {
                 "modes": ["left"],
             })
         );
-        // The card's own captured data is still its own, beside the control block.
         assert_eq!(item.resume.data.get("seen"), Some(&json!(1)));
         assert!(unserializable(&item, "item").is_empty());
     }

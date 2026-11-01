@@ -685,7 +685,6 @@ mod s10_4_keyword_set {
             json!({}),
         );
 
-        // Printed Taunt, granted Lifesteal, the aura's Rush and First Strike, Defense Position's Armor.
         assert_eq!(
             kinds_of(&unit.id, &state),
             ["Armor", "First Strike", "Lifesteal", "Rush", "Taunt"]
@@ -783,7 +782,6 @@ mod s10_4_keyword_set {
             c.granted_keywords = vec![Keyword::Taunt];
             c.position = Some(Position::Def);
         });
-        // Granted Taunt and Defense Position's Taunt both give way to Indestructible; the Armor stays.
         assert!(!has(&state, &unit.id, KeywordKind::Taunt));
         assert!(has(&state, &unit.id, KeywordKind::Indestructible));
         assert_eq!(view(&state, &unit.id).armor, 1);

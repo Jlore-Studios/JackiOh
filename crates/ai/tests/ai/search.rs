@@ -2,8 +2,9 @@
 //!
 //! B14: `candidateActions` is `legalActions` minus the four action types the AI never searches
 //! (R84's concede, offerDraw and answerDraw, and the mulligan), with plays that differ only in their
-//! lane collapsed to the lowest lane of each placement (its midlane lane when it has one, R2203001), at most `AI_SEARCH.zone_variants` of them
-//! (#1014; the search's root keeps every placement, #1635), and endTurn last whenever it is legal.
+//! lane collapsed to the lowest lane of each placement (its midlane lane when it has one, R2203001),
+//! at most `AI_SEARCH.zone_variants` of them (#1014; the search's root keeps every placement, #1635),
+//! and endTurn last whenever it is legal.
 //!
 //! B15: `decide` is a pure function of (state, seat, rng seed, budget): the same inputs give a
 //! deep-equal Decision, it never spends more nodes than the budget, its action is always legal, and
@@ -1089,8 +1090,7 @@ mod lanes_that_play_differently {
     }
 
     /// #1797: beside an enemy Cleaver, the beam keeps a line that plays the vanilla away from its
-    /// neighbour (lane 3), which the duplicate check once merged into lane 2's, and opens with at most
-    /// `AI_SEARCH.zone_variants` of the vanilla's placements.
+    /// neighbour (lane 3) and opens with at most `AI_SEARCH.zone_variants` of the vanilla's placements.
     #[test]
     fn the_beam_plays_a_vanilla_away_from_its_neighbour_and_opens_with_at_most_zone_variants_of_its_lanes() {
         let state = cleaver_board();
@@ -1550,7 +1550,7 @@ mod own_prompt_lookahead {
     }
 
     /// #1112: beside AI_BUDGET.beam_width other plays, the best line casts Craft a Card, answers both
-    /// Discovers and plays the fused Unit: a line the beam cut at its first Discover before.
+    /// Discovers and plays the fused Unit.
     #[test]
     fn craft_a_cards_best_line_casts_it_answers_both_discovers_and_plays_the_fused_unit() {
         let state = craft_turn();
@@ -1651,10 +1651,9 @@ mod make_radiant_targets_1143 {
     /// (4) 7/7 Armor 7, Radiant 14/14 Armor 7, Reborn.
     const BIG: &str = "core-025";
 
-    /// #1143: at 3 crystals the 4-cost 7/7 cannot be played, so the turn is the Bean or Brother Lar.
-    /// Before the face was read every Bean target scored the flat `radiant_in_hand`, below the Bean's
-    /// own hand worth, and Brother Lar was played instead; now the Bean makes the 7/7 a 14/14 Reborn.
-    /// Brother Lar comes first in hand, so a tie between the Bean's targets would pick him.
+    /// #1143: at 3 crystals the 4-cost 7/7 cannot be played, so the turn is the Bean or Brother Lar: the
+    /// Bean, which makes the 7/7 a 14/14 Reborn. Brother Lar comes first in hand, so a tie between the
+    /// Bean's targets would pick him.
     #[test]
     fn glowy_jelly_bean_is_cast_on_the_hand_unit_whose_radiant_face_adds_most() {
         jackioh_cards::register_all();

@@ -359,7 +359,6 @@ mod a_prompt_inside_4_5_step_3s_death_hooks_r89_r113_r117_r122 {
             instance_ids(&events, GameEventType::Destroyed),
             vec![first.id.clone(), second.id.clone(), far.id.clone()]
         );
-        // Step 5 has not run: nothing has entered a graveyard yet.
         assert!(events_of_type(&events, GameEventType::EnteredGraveyard).is_empty());
 
         // R113, R117: the pass parked the asking card and the two after it, in R68's order.
@@ -632,7 +631,6 @@ mod a_state_check_that_begins_while_a_prompt_is_already_open_4_5_r113_r117_r156 
         assert_eq!(owed_ids(&parked.resume), Some(vec![dying.id.clone()]));
         survives_json(&parked);
 
-        // The standing prompt is untouched: the pass waited for it.
         assert_eq!(
             state.pending.as_ref().map(|pending| pending.prompt.as_str()),
             Some("an earlier question, still unanswered")

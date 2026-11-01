@@ -492,7 +492,6 @@ mod delay_coming_due_s2_2_r62_r76_r86_r126 {
         assert_eq!(entry.resume.instance_id, None);
         assert_eq!(entry.resume.def_id, "");
         assert_eq!(json_of(&entry.resume.data), json!({ "amount": 7 }));
-        // The scheduling half is complete: it is stored, it is owned, and it is due.
         assert_eq!(due_delayed(&state, Phase::End, P1).len(), 1);
     }
 }
@@ -579,7 +578,6 @@ mod delay_watching_hand_cards_r1140_r1141 {
         assert_eq!(state.delayed.len(), 1);
         let mut card = find_instance(&state, &ids[0]).cloned().expect("the card");
         let _ = move_to_zone(&mut state, &mut card, OffFieldZone::Library, Default::default());
-        // Watching nothing, the entry is gone, and with it the mark.
         assert!(state.delayed.is_empty());
         assert_eq!(view_for(&state, P1).opponent.hand_marked, None);
         let after = end_turns(&state, 2);

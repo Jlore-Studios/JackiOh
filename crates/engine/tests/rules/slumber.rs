@@ -463,7 +463,6 @@ mod r1839001_dormant_for_n_turns_counts_its_controllers_turns {
         s.end_turn();
         assert_eq!(awakened_ids(s.last_events()), vec![id.clone()]);
         assert_eq!(slumber_of(&s, &id), None);
-        // Awake, the Cry's "give this +2/+2" is long gone: it stays a 2/2.
         s.expect_stats(&id, json!({ "attack": 2, "health": 2 }));
     }
 }
@@ -554,7 +553,6 @@ mod r1839002_awakening_by_its_own_activate_and_the_awaken_verb {
             HERO_HEALTH - AWAKENING_DAMAGE,
             "its \"When this awakens\" answered once"
         );
-        // Awake, its aura is on: the plain beside it has +1 Attack.
         s.expect_stats(id_at(&s, P1, 2).as_str(), json!({ "attack": 4, "health": 3 }));
     }
 }

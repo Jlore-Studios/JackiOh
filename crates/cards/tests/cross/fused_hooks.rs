@@ -340,7 +340,7 @@ mod r77_5_2_a_keyword_a_fuse_newly_prints_applies_at_once {
         assert!(printed_kinds(&g, &fused.def_id).contains(&KeywordKind::DivineShield));
         // The fused definition prints Jilliax's Divine Shield, which K-Pop Fanatic's base face never
         // printed: a keyword the card newly gains applies at once (§5.2), exactly as radiant #50's
-        // printed shield does after a granted one was spent (`radiant.gainPrintedShield`).
+        // printed shield does after a granted one was spent.
         assert!(kinds(&g, &kpop).contains(&KeywordKind::DivineShield));
     }
 
@@ -408,7 +408,6 @@ fn fuse_seven_seven_onto(target: Value) -> (Scenario, CardInstance) {
     }));
     let kept = g.unit_at(P1, 1);
     g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
-    // The fusion happened: the target instance stands, carrying the summed stats (R77).
     assert!(
         g.events()
             .iter()
@@ -530,7 +529,6 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         );
         s.expect_in_zone(&pointmaster.id, "graveyard");
         s.expect_in_zone(&menace.id, "graveyard");
-        // The Mana Well beside them is no meal (R428): it stays where it is.
         assert_eq!(
             s.backrow(P1, 1).map(|card| card.def_id.clone()),
             Some(MANA_WELL.to_string())

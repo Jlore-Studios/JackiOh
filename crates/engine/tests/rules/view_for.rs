@@ -1011,7 +1011,6 @@ mod view_for_10_8_m3_t6 {
             ],
         }];
 
-        // While the card sits in p2's hand, p1 gets the cue and neither id.
         assert_eq!(
             drawn_for(&state, PlayerId::P1, PlayerId::P2),
             json!({ "type": "drawn", "player": "p2", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID })

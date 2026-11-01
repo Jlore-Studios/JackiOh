@@ -501,7 +501,6 @@ fn r915003_a_target_asked_mid_script_is_a_prompt_and_the_run_goes_on_with_its_an
         }));
         s.play("custom-ask", json!({ "zone": 2 }));
         assert_eq!(failures(&s), Vec::<String>::new());
-        // The draw before the question resolved, then the question opened.
         assert_eq!(
             s.state().players[P1].hand.len(),
             2,

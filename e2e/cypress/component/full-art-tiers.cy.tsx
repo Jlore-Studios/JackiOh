@@ -228,7 +228,6 @@ describe("R2655003 the full-art tiers on real faces", () => {
             const signature = cf.querySelector(".cf-signature")?.getBoundingClientRect();
             const text = cf.querySelector(".cf-signature text")?.getBoundingClientRect();
             expect(text?.width ?? 0, `${where}: the name is drawn`).to.be.greaterThan(0);
-            // The whole name shows inside the open wipe.
             expect(text?.left ?? 0, `${where}: the name starts inside`).to.be.at.least((signature?.left ?? 0) - 0.5);
             expect(text?.right ?? 0, `${where}: the name ends inside`).to.be.at.most((signature?.right ?? 0) + 0.5);
           }

@@ -1242,7 +1242,6 @@ mod r183_extra_draws_per_turn {
         let hand_before = ids(&state.players.p2.hand);
 
         let paused = pass_turn(&state);
-        // The first draw cast the asker and stopped: nothing further was drawn.
         assert_eq!(
             paused.state.pending.as_ref().map(|p| p.player_id),
             Some(PlayerId::P2)
@@ -1277,7 +1276,6 @@ mod r183_extra_draws_per_turn {
             ),
         );
 
-        // The rest of the first draw's chain, then the second draw: both cards, once each.
         assert_eq!(
             drawn_by(&answered.events, PlayerId::P2),
             vec![first.id.clone(), second.id.clone()]

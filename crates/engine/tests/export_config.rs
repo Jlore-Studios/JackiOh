@@ -210,7 +210,6 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Sixty-five constants, each on its own line, the way the client and the diff check read them.
     assert_eq!(text.matches("\nexport const ").count(), 65, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }

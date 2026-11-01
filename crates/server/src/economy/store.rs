@@ -6,11 +6,11 @@
 //! migration 0071's claim, kept with its seed until a pay or a refusal settles it, once (R2422000,
 //! `economy_practice_seed_settle`).
 //!
-//! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching
-//! to this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and ledger row together, in
-//! the caller's transaction; one the holding cannot take answers `None` or `false`, writing nothing
-//! (§14.1, §14.5); one the schema's checks refuse is refused here first, as `StoreError::Other("economy: …")`.
-//! Lists come in their key's byte order (Postgres's `collate "C"`), zero counts included; ledgers oldest first.
+//! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching to
+//! this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and ledger row together, in the
+//! caller's transaction; one the holding cannot take answers `None` or `false`, writing nothing (§14.1,
+//! §14.5); one the schema's checks refuse is refused here first, as `StoreError::Other("economy: …")`.
+//! Lists come in their key's byte order (`collate "C"`), zero counts included; ledgers oldest first.
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};

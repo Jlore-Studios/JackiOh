@@ -581,7 +581,6 @@ mod r1852003_the_launch {
         let mut s = built_ship(json!([]), None);
         let ship = ship_of(&s, P1);
         let enemy = id_at(&s, P2, 1);
-        // Its one ability is the launch, offered, and named with its price on its controller's view.
         assert!(offers_launch(&s, P1, &ship.id));
         let view = s.view(P1);
         let unit = ship_unit(&view.you, &ship.id);
@@ -670,7 +669,6 @@ mod r1852003_the_launch {
         let ability = &unit.activations.as_ref().expect("the launch is on the view")[0];
         assert!(!ability.usable);
         assert_eq!(ability.reason.as_deref(), Some(reason.as_str()));
-        // Nor may the other seat launch it, and it is offered nothing else.
         assert!(!offers_launch(&s, P2, &ship.id));
     }
 
@@ -852,7 +850,6 @@ mod r1852003_the_launch {
             "{theirs:?}"
         );
         assert_eq!(theirs[1]["defId"], json!(HIDDEN_ID));
-        // Its owner reads its own hand.
         assert!(
             starship_events(&s, P1)
                 .iter()
@@ -1062,7 +1059,6 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
         let health = health_of(&s, P2);
         assert_eq!(id_at(&s, P1, lane), ship.id);
         s.play(lander.id.as_str(), json!({ "zone": lane }));
-        // It was played, and exiled before its Cry.
         assert!(
             s.last_events()
                 .iter()
@@ -1111,7 +1107,6 @@ mod r1857001_the_dormant_starship_is_in_no_pool_and_no_deck {
         ] {
             assert!(!pool(args.clone()).contains(&hull.id), "{args}");
         }
-        // The pieces are cards like any other.
         assert!(pool(json!({ "type": "Unit" })).contains(&booster.id));
         assert_eq!(pool(json!({ "defId": [hull.id] })), vec![hull.id.clone()]);
         assert!(made_by_a_rule(&hull));
@@ -1210,7 +1205,6 @@ mod r2249000_a_dormant_starship_arrives_in_the_middle_of_the_backrow {
         let s = summoned_with(&[3], &backrow);
         assert_eq!(ship_zone(&s), (Row::Units, 2));
         let s = summoned_with(&[2, 3, 4, 5], &backrow);
-        // The bolted booster's own zone, lane 1, is the one left.
         assert_eq!(ship_zone(&s), (Row::Units, 1));
     }
 }

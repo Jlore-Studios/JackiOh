@@ -186,7 +186,6 @@ fn r1853000_r2250002_the_first_resource_gained_opens_it_and_rolls_each_player_th
             "{player:?}"
         );
     }
-    // The player whose turn it is first, then the other.
     assert_eq!(market(&state).offers[0].owner, Some(P1));
     assert_eq!(
         market(&state).offers.last().map(|offer| offer.owner),

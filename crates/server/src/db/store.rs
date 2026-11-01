@@ -1587,13 +1587,11 @@ impl Db {
         Db::Fake(Arc::new(tokio::sync::Mutex::new(fake::FakeData::default())))
     }
 
-    /// Opens one transaction. Postgres (`pg::begin`): `BEGIN`, then the role switch to
-    /// `service_role` and `request.jwt.claim.sub` set to `claim_sub` — the profile the call is
-    /// about, or `""` for the calls that are about nobody (`tickets_list_open`, `matches_live`, the
-    /// breaker's `codes_count_failures`) — in `db::pg`'s one `SESSION_SQL` statement. `SET LOCAL` is
-    /// a silent no-op outside a transaction, so this is the only way to a `Tx`: `BEGIN` first, and
-    /// no SQL runs outside a `Tx`. The fake: takes the tables' lock and a snapshot to restore if
-    /// the transaction is dropped uncommitted.
+    /// Opens one transaction, the only way to a `Tx`. Postgres (`pg::begin`): `BEGIN`, then `db::pg`'s
+    /// `SESSION_SQL` switches to `service_role` and sets `request.jwt.claim.sub` to `claim_sub`, the
+    /// profile the call is about, or `""` for a call about nobody (`tickets_list_open`, `matches_live`,
+    /// `codes_count_failures`). The fake: takes the tables' lock and a snapshot to restore if the
+    /// transaction is dropped uncommitted.
     pub async fn begin(&self, claim_sub: Option<&str>) -> Result<Tx<'_>, StoreError> {
         match self {
             Db::Pg(pool) => Ok(Tx::Pg(pg::begin(pool, claim_sub).await?)),
@@ -1759,13 +1757,12 @@ impl Tx<'_> {
         dispatch!(self, profiles_seated())
     }
 
-    /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
-    /// trios, custom cards (R915008), tutorial progress, its age check and terms acceptances
-    /// (R757000, R757001), queue tickets, rooms it opened that nobody joined, and its invite-code
-    /// attempts' link to it. Finished matches, results and series stay for the other player, with
-    /// this profile's seat left empty (migration 0012), and so do finished co-op matches for the
-    /// teammate (migration 0051, R1497000). False when there was no such profile. The caller refuses
-    /// a profile in a live match, series or co-op match first.
+    /// Deletes the profile and everything only its own: collection and ledger, decks, trios, custom cards
+    /// (R915008), tutorial progress, age check and terms acceptances (R757000, R757001), queue tickets,
+    /// rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches,
+    /// results and series stay for the other player, its seat left empty (migration 0012), as finished
+    /// co-op matches do for the teammate (migration 0051, R1497000). False when there was no such profile.
+    /// The caller refuses a profile in a live match, series or co-op match first.
     pub async fn profiles_remove(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_remove(profile_id))
     }
@@ -3142,9 +3139,7 @@ impl Tx<'_> {
         dispatch!(self, chat_reports_all())
     }
 }
-// ---- end Social ----
-// ---- Social: watching and shared replays (#939, #940) ----
-//
+// Social: watching and shared replays (#939, #940)
 // Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and
 // sharing a replay with one (B52) read and write them. Friends may always watch (R2615000): migration
 // 0073 drops 0038's watching setting from `profiles`.

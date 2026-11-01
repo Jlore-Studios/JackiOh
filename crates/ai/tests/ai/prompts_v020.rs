@@ -1,4 +1,4 @@
-//! The prompt kinds patch v0.2.0 added (docs/classic-sets.md B5 E18): `number`, `answer`, `cell`,
+//! The prompt kinds of docs/classic-sets.md B5 E18: `number`, `answer`, `cell`,
 //! `reward`, a budgeted `pick`, and a mode prompt held by the player who did not play the card. The AI
 //! needs nothing new for them: `legalActions` lists every answer, the beam scores each one through
 //! `reduce`, and `simulate` answers a prompt the other seat holds mid-line. Each test opens a kind for

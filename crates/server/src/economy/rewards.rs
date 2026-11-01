@@ -1,27 +1,25 @@
 //! The one reward hook (SPEC §14.8, #1302): a finished game's summary in, ledger rows out.
 //!
-//! Every payout goes through [`pay_game_rewards`], which pays a finished game's summary and moves
-//! the account's set tracks (§14.7) and its quests (§14.9, `quests::move_quests`, [[R1304001]]).
-//! Practice earning calls into this same hook: it owns no transaction of its own, so each caller pays
-//! in the transaction that records its game, and a failure rolls the game back with it. It answers what
-//! it paid as the game's [`GameEconomy`], which its callers hand the seat it paid (#1657).
+//! Every payout, practice earning's too, goes through [`pay_game_rewards`], which pays a finished game's
+//! summary and moves the account's set tracks (§14.7) and its quests (§14.9, `quests::move_quests`,
+//! [[R1304001]]). It owns no transaction: each caller pays in the transaction that records its game, so a
+//! failure rolls the game back with it. It answers what it paid as the game's [`GameEconomy`], which its
+//! callers hand the seat it paid (#1657).
 //!
 //! - Where the server ran the match, it counts the actions from its own log; the client reports
 //!   nothing. `api::results`'s write pays every 1v1 match it records (ladder, unranked and Conquest),
-//!   and `duos::finish_match` pays a co-op game, counting each person's own moves ([[R1502000]]). An
+//!   and `duos::finish_match` a co-op game, counting each person's own moves ([[R1502000]]). An
 //!   action counts when [`is_player_action`] says the player took it ([[R1302004]]).
-//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together, counted
-//!   over the UTC day the game ended in ([[R1483000]]). The game that crosses the cap is paid the part
-//!   that fits and the ones after it no Jlore, with no Jlore row; XP and quests are paid in full. Quest
-//!   and track Jlore neither count nor stop.
-//! - A new account starts with its tracks' first rewards ([`pay_starting_rewards`], [[R1310000]]);
-//!   an older set's track pays its first level when it unlocks ([`pay_xp`], [[R1302003]]).
+//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together, over the
+//!   UTC day the game ended in ([[R1483000]]): the game that crosses it is paid the part that fits, the
+//!   ones after it no Jlore (and no Jlore row); XP and quests are paid in full. Quest and track Jlore
+//!   neither count nor stop.
+//! - A new account starts with its tracks' first rewards ([`pay_starting_rewards`], [[R1310000]]); an
+//!   older set's track pays its first level when it unlocks ([`pay_xp`], [[R1302003]]).
 //!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on (the two above, and
-//! `api::codes`'s redemption for the starting rewards), so a build behind the switch changes nothing a
-//! player owns.
-//!
-//! Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
+//! `api::codes`'s redemption for the starting rewards). Every number is a [`crate::config`] constant
+//! (CLAUDE.md rule 9).
 
 use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
 use jackioh_engine::{ActionBody, PlayerId};

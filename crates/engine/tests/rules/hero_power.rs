@@ -747,7 +747,6 @@ mod heroic_power_the_powers_r753_r758 {
             assert_eq!(result.error, None);
             result.state.rng_cursor - cursor
         };
-        // The base face picks once; its controller's Luck 1 picks twice and keeps the better.
         assert_eq!(picks(false), 1);
         assert_eq!(picks(true), 2);
     }

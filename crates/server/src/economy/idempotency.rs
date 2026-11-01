@@ -5,14 +5,10 @@
 //! `/api/tokens/redeem-cosmetic`, `/api/cosmetic-packs/open`, `/api/cosmetic-packs/chase` and
 //! `/api/codes/redeem`) takes an optional `Idempotency-Key` header holding a UUID ([`RequestKey`]);
 //! anything else there is 400. A key belongs to its account. Under the account's economy lock
-//! (R1301003), in the spend's own transaction:
-//!
-//! - [`replayed`]: a key the account sent before answers as it committed, or with another route or
-//!   body is 422; either way nothing is spent.
-//! - [`keep`]: only a committed spend is kept: a refusal writes nothing, so the same key may run
-//!   again once the refusal no longer holds.
-//! - [`sweep_expired`]: run by the retention loop (`api::retention::run_purge`); deleting an account
-//!   takes its keys.
+//! (R1301003), in the spend's own transaction, a key sent before answers as it committed, or with another
+//! route or body is 422, spending nothing ([`replayed`]); only a committed spend is kept, so a refused key
+//! may run again once the refusal no longer holds ([`keep`]). The retention loop sweeps expired keys
+//! ([`sweep_expired`]); deleting an account takes its keys.
 //!
 //! The body is kept only as a keyed hash ([`RequestKey::of`]) under `CODE_PEPPER`'s `:body` domain, so
 //! no invite code a redemption sent is kept, even hashed under the code's own domain.

@@ -120,7 +120,6 @@ fn r1200_a_declared_target_is_drawn_and_replays() {
 
     let mut rec = recorder(&state);
     let result = rec.play(play_action(P1, &bolt.id));
-    // The 10 damage landed on exactly one legal target, whoever the draw named.
     assert_eq!(damaged(&result.events).len(), 1);
     assert!(replays_to(&start, &rec.log, rec.state()));
 }
@@ -232,7 +231,6 @@ fn r1200_choices_return_once_the_mayor_leaves() {
     put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
     assert_eq!(view_for(&state, P1).random_targets, Some(true));
 
-    // The Mayor leaves the field: off its zone, into its owner's graveyard.
     assert!(jackioh_engine::zones::remove_from_field(
         &mut state,
         &mayor,
@@ -375,7 +373,6 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
         Some(windfast.id.as_str()),
         "instead of Windfast"
     );
-    // The 1/4 dealt 1 to the hero — heroes strike nothing back — and went home.
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 1);
     assert!(
         result.state.players[P1]
@@ -384,7 +381,6 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
             .any(|card| card.id == offered.id),
         "bounced"
     );
-    // Windfast spent its exertion without emitting its own declaration.
     assert!(
         find_instance(&result.state, &windfast.id)
             .expect("Windfast")
@@ -517,7 +513,6 @@ fn r1202_windfury_summons_twice_and_the_invariant_monitor_is_clean() {
         );
         state = result.state;
     }
-    // Each of Windfury's two attacks summoned its own — the same Unit twice, bounced between.
     assert_eq!(fought, vec![offered.id.clone(), offered.id.clone()]);
     assert_eq!(state.players[P2].hero.health, HERO_HEALTH - 2);
     assert!(state.players[P1].hand.iter().any(|card| card.id == offered.id));
@@ -648,9 +643,7 @@ fn r1203_joiners_attack_first_in_lane_order() {
         })
         .collect();
     assert!(lanes[0] < lanes[1], "lane order: {lanes:?}");
-    // All three hit: 1 + 1 + 5.
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 7);
-    // The joiners stay; nothing returns.
     assert_eq!(
         result.state.players[P1].units.iter().flatten().count(),
         3,
@@ -694,7 +687,6 @@ fn r1203_a_fallen_target_cancels_the_attack_exertion_spent() {
             .exertion
             .attacked
     );
-    // … and the joiners never mustered: the pool is untouched.
     assert_eq!(result.state.players[P1].hand.len(), 1);
 }
 
@@ -767,7 +759,6 @@ fn r1203_r2248000_a_flying_joiner_musters_into_the_backrow_of_a_full_unit_row() 
             lane: 1
         }
     );
-    // 1 + 5.
     assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 6);
 }
 

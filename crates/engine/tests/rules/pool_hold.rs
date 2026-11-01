@@ -424,7 +424,6 @@ mod r2386001_a_held_game_ranks_no_legendary_or_mythic_card {
             ends(&held),
             (Some("ph-unit-epic".to_string()), Some("ph-unit-rare".to_string()))
         );
-        // The same table in an unheld game, stepped after the held one: nothing is left out.
         assert_eq!(
             ends(&unheld),
             (

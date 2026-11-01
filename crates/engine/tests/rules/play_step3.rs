@@ -183,7 +183,6 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             .collect();
         assert_eq!(Value::Array(played), json!([[book_id, 1]]));
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 4);
-        // The crier's Cry never happened and nothing stands in lane 3.
         assert!(zones::card_at(&after, slot(PlayerId::P1, Row::Units, 3)).is_none());
         assert_eq!(
             json!(after.players.p1.turn_log.played_by_type),

@@ -816,7 +816,6 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             at(SetName::Stinkyscape),
             at(SetName::MeditativePlus).map(|at| at + 1)
         );
-        // Shipped: it is open and a lean names it.
         assert!(set_ships(SetName::Stinkyscape));
         assert_eq!(SHIPPED_SETS.get(5), Some(&SetName::Stinkyscape));
         assert!(set_is_open(SetName::Stinkyscape));
@@ -1037,7 +1036,6 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
             at(SetName::Stinkyscape).map(|at| at + 1)
         );
         assert_eq!(CATALOG_SETS.last(), Some(&SetName::TrainingGrounds));
-        // Shipped: it is open, it is the newest set, and a lean names it.
         assert!(set_ships(SetName::TrainingGrounds));
         assert_eq!(SHIPPED_SETS.last(), Some(&SetName::TrainingGrounds));
         assert!(set_is_open(SetName::TrainingGrounds));

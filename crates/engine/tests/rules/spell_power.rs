@@ -724,7 +724,6 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         let in_hand = hand_card(&s, P1, PILER);
         s.play(BOLT, json!({ "targets": hero(P2) }));
         let named = answers(&s);
-        // The hand's answers the Bolt; its own cast calls the deck's top one, whose cast calls the last.
         assert_eq!(named[0].1.by, in_hand.id);
         assert_eq!(named.len(), 3);
         assert_eq!(hits_on(&s, "hero-p2"), vec![1, 2, 2, 2]);
@@ -744,7 +743,6 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         let named = answers(&s);
         assert_eq!(named.len(), 2);
         assert_eq!(named[0].1.by, first.id);
-        // The second answers the first's cast, not the Bolt.
         assert_eq!(named[1].0, first.id);
         assert_eq!(named[1].1.by, second.id);
         assert_eq!(hits_on(&s, "hero-p2"), vec![1, 2, 2]);
@@ -864,10 +862,8 @@ mod r1180006_the_answer_chain_is_bounded {
         s.play(BOLT, json!({ "targets": pick::instance(&body) }));
         let cap = usize::try_from(SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
         assert_eq!(named(s.events()), cap);
-        // The Bolt's hit, then one hit for each answer the chain named.
         assert_eq!(hits_on(&s, &body.id).len(), 1 + cap);
         assert_eq!(library_pilers(&s), 25 - cap);
-        // The chain has ended: nothing is left under way.
         assert_eq!(s.state().players[P1].answer_chain, None);
     }
 

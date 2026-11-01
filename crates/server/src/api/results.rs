@@ -569,7 +569,8 @@ pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool
 /// R679: what a Glitch's void outcome does instead of `record_result`. The match never happened: no
 /// `results` row, rating move, last board or game record; the store forgets the row and its log
 /// (`matches_forget_voided`), and one log line names the match and both profiles, for abuse checks.
-/// A voided Conquest game never started: the series restarts it at once (`resume_series`).
+/// A voided Conquest game counts as never started: the series starts it again at once, with the
+/// same seats, decks and seed (`resume_series`).
 pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), ApiError> {
     let mut tx = app.db.begin(None).await.map_err(failure)?;
     let series = tx.series_by_match(&input.match_id).await.map_err(failure)?;

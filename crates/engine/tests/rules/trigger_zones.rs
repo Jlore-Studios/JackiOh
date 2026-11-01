@@ -433,7 +433,6 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
         let mut state = playing("tz-gy-start");
         let spell = bury(&mut state, &wanderer().id, PlayerId::P1);
         card_mut(&mut state, &spell.id).return_to_hand_at_end_of_turn = Some(true);
-        // The same instance that answers `endOfTurn` above answers no `startOfTurn` at all.
         assert!(trigger_holders_with_hook(&state, HookName::StartOfTurn, Some(PlayerId::P1)).is_empty());
 
         let after_start = round_to_p1_start(&state);

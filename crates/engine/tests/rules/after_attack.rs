@@ -362,7 +362,6 @@ mod r2396000_whenever_this_attacks {
         game.play(input(json!({
             "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
         })));
-        // The body Reborn brought back stands in its lane, and the attack was answered once, as it died.
         assert_eq!(
             top_id(&game.state().players.p1.units[0]),
             Some(striker.id.as_str())

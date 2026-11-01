@@ -793,7 +793,6 @@ mod r280_preview_is_nowhere_else {
         assert_eq!(preview_of(&state, &at(&my_hand), P1, ConditionZone::Field), None);
         assert!(asked().is_empty());
 
-        // And the positive controls, asked once each.
         assert_eq!(
             preview_of(&state, &at(&their_trap), P2, ConditionZone::Field),
             Some(vec![value(&format!("n({})", their_trap.id), 12)])

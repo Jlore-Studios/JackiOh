@@ -9,9 +9,7 @@
 //!
 //! The turns live in this process, one set per `App` (`App::spends`), so parallel tests never share
 //! them; while a deploy hands over, two processes keep their own, and the economy lock still orders
-//! every writer of an account's economy. A spend's place is given back however its request ends,
-//! since dropping it gives it back. The mutex is held only for an in-memory check and write, never
-//! across an `.await`.
+//! every writer of an account's economy. The mutex is never held across an `.await`.
 
 use std::sync::{Arc, Mutex, MutexGuard};
 

@@ -4,8 +4,6 @@
 //! definition to read (an opponent's face-down trap keeps the price R351 showed), and on everything
 //! else, so the AI an arena plays decides exactly as the AI of the quality gates does on the true
 //! state.
-//!
-//! Without it every decision facing a face-down trap panicked with `unknown defId "ai:hidden"`.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

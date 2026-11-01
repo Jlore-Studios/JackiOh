@@ -545,7 +545,6 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             play_choices::declared_modes(&state, &card),
             Vec::<ModeDecl>::new()
         );
-        // One answer, and it is the empty one, so the card is still offered exactly once.
         assert!(is_one_empty_answer(&play_choices::play_choice_combinations(
             &state,
             PlayerId::P1,

@@ -313,12 +313,10 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
     #[test]
     fn r68_r59_r76_a_trap_answering_the_first_of_two_start_of_turn_delayed_steals_fires_before_the_second_steal_10_3()
      {
-        // Both steals are
-        // due at the start of p1's next turn, in that order (R68). p2's fixture trap answers the
-        // opponent taking one of p2's permanents by returning all of p2's units to p2's hand.
+        // Both steals are due at the start of p1's next turn, in that order (R68); p2's fixture trap
+        // returns all of p2's units to hand when the opponent takes one of p2's permanents.
         let mut s = scenario(json!({
-            // A (0) Spell keeps p1's turn open after the plays (R82), as the Fanatics' own switch to
-            // Defense Position did until Can't Defend (R2657000).
+            // A (0) Spell keeps p1's turn open after the plays (R82): the Fanatics Can't Defend (R2657000).
             "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO, "core-010"], "library": [RENO, RENO, RENO] },
             "p2": { "field": [VANILLA, TEMPO_TIMMY], "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
@@ -355,10 +353,9 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P1);
 
-        // The first steal takes Mr. Vanilla. §10.3: its event goes to the traps, which fire at once —
-        // a delayed effect is a whole effect like any other (R59), and a trap is a response — so p2's
-        // trap returns Tempo Timmy to p2's hand before the second delayed effect runs, and that steal
-        // fizzles on a target that has left the field (R76, R174).
+        // §10.3: the first steal's event goes to the traps at once (a delayed effect is a whole effect,
+        // R59, and a trap a response), so Timmy is back in hand before the second steal, which fizzles on
+        // a target that has left the field (R76, R174).
         assert!(any_event(&s, |event| matches!(
             event,
             GameEvent::TrapFired { .. }
@@ -381,10 +378,8 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
     #[test]
     fn r62_r152_a_trigger_answering_my_pawn_reaching_the_graveyard_at_cleanup_resolves_before_the_next_turn_starts_10_3()
      {
-        // p1's Tempo Timmy (3/3) swings at p2's hero at 3: lethal, so p2's My Pawn cancels it and the AI
-        // plays the rest of p1's turn (R44). p1 has nothing left to do, so the AI ends the turn, and
-        // R152 sends My Pawn to p2's graveyard at that turn's cleanup. p2's fixture unit answers a card
-        // entering p2's graveyard with 1 damage to the enemy hero, and p1 is at 1.
+        // A lethal swing: My Pawn cancels it and the AI ends p1's turn (R44), and R152 sends My Pawn to
+        // p2's graveyard at that cleanup, which p2's fixture unit answers with 1 damage to p1, at 1.
         let mut s = scenario(json!({
             "p1": { "field": [TEMPO_TIMMY], "health": 1, "library": [RENO, RENO] },
             "p2": { "health": 3, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "hand": [RENO], "library": [RENO, RENO] },
@@ -415,7 +410,6 @@ mod r62_10_3_cleanup_s_events_are_answered_before_the_turn_cap_check_and_the_nex
 
         s.attack(TEMPO_TIMMY, "hero");
 
-        // My Pawn reached p2's graveyard at p1's cleanup (R152), and the trigger answering it killed p1.
         assert!(any_event(&s, |event| matches!(
             event,
             GameEvent::EnteredGraveyard { instance_id, .. } if *instance_id == pawn.id
@@ -490,10 +484,8 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P1);
 
-        // The first steal takes Timmy, which dies in the check after that delayed effect (§4.5, R59).
-        // §10.3, R68: a trap is a response, so it fires before the next delayed effect resolves and
-        // returns Mr. Vanilla to p2's hand; the second steal then fizzles on a target that has left the
-        // field (R76, R174).
+        // §10.3, R68: Timmy dies in the check after the first steal (§4.5), and the trap, a response,
+        // returns Mr. Vanilla before the second steal, which fizzles (R76).
         assert!(any_event(&s, |event| matches!(
             event,
             GameEvent::Destroyed { instance_id, .. } if *instance_id == timmy.id
@@ -565,7 +557,6 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
             LUNAR_ECLIPSE,
             json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
         );
-        // p1 keeps 3 mana for Reno (no R82 auto-end), ends turn N; p2 ends turn N+1.
         s.end_turn();
         assert_eq!(s.state().turn, turn_n + 1);
         s.end_turn();
@@ -693,7 +684,6 @@ mod r155_a_return_spell_cast_after_cleanup_does_not_come_back_on_a_later_turn {
 
         s.end_turn();
         assert_eq!((s.state().turn, s.state().active), (turn_n + 2, PlayerId::P1));
-        // p2's turn end is not p1's (§6.2): the Spell is still in the graveyard as p1's turn N+2 begins.
         s.expect_in_zone(&boomerang.id, "graveyard");
         s.end_turn();
         assert_eq!(s.state().turn, turn_n + 3);
@@ -793,8 +783,7 @@ fn hits_on_p2_hero(events: &[GameEvent]) -> Vec<GameEvent> {
         .collect()
 }
 
-/// R240's report, R1362's form of it: `{ type: "damageAbsorbed", sourceId: null, targetId: "hero-p2",
-/// absorbed: 1, combat: false }`, the whole of the 1st fatigue hit taken by the Armor.
+/// R240's report in R1362's form: the whole of the 1st fatigue hit, taken by the Armor.
 fn absorbed_fatigue_report() -> GameEvent {
     GameEvent::DamageAbsorbed {
         source_id: None,
@@ -880,16 +869,14 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
 
         s.end_turn(); // p2's turn: its draw meets an empty library, and the 1st fatigue deals 1 (R3)
 
-        // Armor 2 takes the whole 1 (§4.4 step 2), so the hero keeps 30, and the hit is no damage
-        // instance (R63). The fatigue still happened: the count both seats read went from 0 to 1, and
-        // the next one deals 2.
+        // Armor 2 takes the whole 1 (§4.4 step 2), and the hit is no damage instance (R63), but the
+        // fatigue still happened.
         assert_eq!(s.state().players.p2.hero.health, 30);
         assert_eq!(s.state().players.p2.fatigue_count, 1);
         assert_eq!(s.view(PlayerId::P1).opponent.fatigue_count, 1);
         // §10.3: "every visible state change emits an event", so the draw reports itself — R1362: by
         // the pipeline's `damageAbsorbed` from no source on p2's hero, once, the whole 1 absorbed, and
-        // by nothing else: no `damage` (not even the 0 R240 once wrote), and R3 draws no card, so
-        // there is no `drawn` for p2.
+        // by nothing else: no `damage`, and R3 draws no card, so there is no `drawn` for p2.
         assert_eq!(hits_on_p2_hero(s.last_events()), vec![absorbed_fatigue_report()]);
         assert!(!s.last_events().iter().any(|event| matches!(
             event,
@@ -969,7 +956,6 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
 
         s.end_turn(); // p2's draw meets an empty library; Going Long's Armor 2 takes the whole 1
 
-        // The draw is reported by `damageAbsorbed` (R1362), and it is no damage instance (R63, R1361):
         assert_eq!(hits_on_p2_hero(s.last_events()), vec![absorbed_fatigue_report()]);
         assert!(!s.last_events().iter().any(|event| matches!(
             event,

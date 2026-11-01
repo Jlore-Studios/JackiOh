@@ -283,7 +283,6 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Node -> actor -> browser.
     cy.endTurn();
     cy.then(() => {
       // ASK: type `turnAtLeast`; a post-ack view is not pre-action.

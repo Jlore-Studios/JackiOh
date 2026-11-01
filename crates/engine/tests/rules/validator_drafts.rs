@@ -286,7 +286,6 @@ mod r641_d5_a_saved_decks_portrait_is_null_or_a_known_portrait_id {
 
     #[test]
     fn r641_checks_nothing_when_no_portrait_is_given_or_the_caller_knows_no_roster() {
-        // `portrait` absent: nothing for D5 to read.
         assert_eq!(draft(&[], "Aggro"), json!([]));
         assert_eq!(portrait_draft(None, Some(is_portrait())), json!([]));
         // No roster predicate from the caller: the field is taken as given.

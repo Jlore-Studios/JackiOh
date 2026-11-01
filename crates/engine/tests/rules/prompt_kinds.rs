@@ -224,7 +224,6 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         answer_keys(&mut state, &[format!("instance:{}", gone.id).as_str()]);
         assert_eq!(ids(&state.players.p2.hand), std::slice::from_ref(&kept.id));
         assert_eq!(ids(&state.players.p2.graveyard), std::slice::from_ref(&gone.id));
-        // Three choices, then no more.
         assert!(state.pending.is_none());
     }
 
@@ -267,7 +266,6 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         cast_now(&mut state, &pickle().id, P1, false);
         let before = state.pending.as_ref().expect("Pickle's first choice").id.clone();
         state = act(&state, input(json!({ "type": "timeout", "playerId": "p2" })));
-        // It answered that one prompt: the next choice is open, still theirs, and the turn is still p1's.
         assert_ne!(
             state.pending.as_ref().map(|pending| pending.id.clone()),
             Some(before)

@@ -1,11 +1,9 @@
-//! A backrow card's turn hooks in the AI's evaluation (R2477000): at a decision's root the AI fires
-//! once each start-of-turn and end-of-turn hook of its own backrow, and of its own hand's Field Spells
-//! (set first), and prices the firing as its controller's evaluation after it less before it, each
-//! crystal of mana gained at `AI_EVAL.next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of the price
-//! for each own readable backrow card. A hook that prompts is not priced, the frozen baseline reads no
-//! price, and a call not passed a decision's prices reads none. R2565000 prices the same hooks for a
-//! Unit on either field and for a Field Spell the seat can read in the enemy's backrow too; a face-down
-//! card of the enemy's is never probed (R185).
+//! A backrow card's turn hooks in the AI's evaluation (R2477000): the decision's root fires each
+//! start-of-turn and end-of-turn hook of the seat's backrow and hand Field Spells once
+//! (`turn_hook_prices`), and `material` adds `AI_EVAL.turn_hook` of the price. A hook that prompts is not
+//! priced, the frozen baseline reads no price, and a call not passed a decision's prices reads none.
+//! R2565000 prices the same hooks for a Unit on either field and for a Field Spell the seat can read in
+//! the enemy's backrow too; a face-down card of the enemy's is never probed (R185).
 //!
 //! The cards: Mana Well (Radiant 2), Rush Token Farm, Unbiased Immigration, Masochism Mask (a prompt),
 //! Ace in the Hole (a Trap), Gatling Pea, Gravedigger, Meltdown Layer (a token that harms its holder),

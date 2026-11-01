@@ -87,7 +87,6 @@ mod r265_the_mulligans_are_open_at_once {
             let first = answer_in(&begun, &[P1, P2], &keep);
             let second = answer_in(&begun, &[P2, P1], &keep);
 
-            // The same game, whichever answered first: the state after setup hashes the same.
             assert_eq!(hash_state(&second.state), hash_state(&first.state), "{seed}");
             assert_eq!(first.state.turn, 1);
             assert_eq!(first.state.phase, Phase::Main);
@@ -235,7 +234,6 @@ mod r266_an_answer_is_sealed_until_both_are_in {
             input(json!({ "type": "mulligan", "keep": [], "playerId": "p1" })),
         );
 
-        // Nothing moves until p2 answers: p1's hand is as it was dealt.
         assert_eq!(ids(&kept_none.players.p1.hand), hand);
 
         // p2's view is the same whatever p1 chose (§9.1, rule 7): p1 is ready, and that is all.
@@ -303,7 +301,6 @@ mod r266_an_answer_is_sealed_until_both_are_in {
             Some(two_cards)
         );
 
-        // Before anyone answers, each seat sees its own prompt; after, the window is gone from the view.
         assert_eq!(
             view_for(&begun, P1).mulligan,
             Some(MulliganView {

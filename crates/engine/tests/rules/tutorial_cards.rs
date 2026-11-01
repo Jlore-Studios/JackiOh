@@ -569,12 +569,10 @@ mod r2533000_a_seat_that_plays_only_the_tutorials_cards {
                 .collect::<Vec<_>>()
         };
         assert!(summoned(true, &[CORE_UNIT, TG_LEGENDARY, TG_MYTHIC]).is_empty());
-        // With a Training Grounds Common beside them, it takes that one.
         assert_eq!(
             summoned(true, &[CORE_UNIT, TG_LEGENDARY, TG_MYTHIC, TG_COMMON]),
             vec![TG_COMMON.to_string()]
         );
-        // Unbarred, the same summon takes a barred card.
         assert_eq!(summoned(false, &[TG_LEGENDARY]), vec![TG_LEGENDARY.to_string()]);
     }
 

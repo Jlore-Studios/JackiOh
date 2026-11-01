@@ -198,7 +198,6 @@ mod fused_scripts_belong_to_the_state_that_fused_them {
         assert_eq!(first_id, format!("t-1:{}+{}", alpha.id, beta.id));
         assert_eq!(second_id, format!("t-1:{}+{}", gamma.id, delta.id));
 
-        // The second fusion wrote beside the first, not over it.
         assert_eq!(markers(&first, &first_id), marker_list(&[&alpha, &beta]));
         assert_eq!(markers(&second, &second_id), marker_list(&[&gamma, &delta]));
 

@@ -81,7 +81,6 @@ mod r42_r412_with_kill_credit {
             destroyed(&ended.events),
             vec![(victim.id.clone(), Some(credited.id.clone()))]
         );
-        // The hit was the striker's: its damage event names it as the source.
         assert!(ended.events.iter().any(|event| matches!(
             event,
             GameEvent::Damage { source_id: Some(source), target_id, .. }

@@ -284,9 +284,8 @@ impl ActivationPrice {
 }
 
 /// R2688000: what a unit's next attack gives its controller through its "when this attacks" and
-/// "after this attacks" hooks, as a decision's root priced it (`attack_hook_prices`), and the card it
-/// prices: its definition, its face and its controller, so the same card the search moves or makes
-/// later reads the same price. The controller is in the key since each copy attacks a different board.
+/// "after this attacks" hooks, as a decision's root priced it (`attack_hook_prices`), keyed as
+/// `ActivationPrice` is, its controller included since each copy attacks a different board.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AttackHookPrice {
     pub def_id: String,
@@ -1633,8 +1632,7 @@ pub fn activation_prices(
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
 /// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires, and it is
-/// granted the keywords it prints, as tuning leaves them (`face_of`), so it fights as itself: Rush
-/// still lets it swing, Pierce still pierces.
+/// granted the keywords it prints, as tuning leaves them (`face_of`), so it fights as itself.
 fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
     let printed = face_of(turn, unit).keywords;
     let mut twin = turn.clone();

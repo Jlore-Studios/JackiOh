@@ -223,7 +223,6 @@ fn r766_r77_a_fused_card_reaching_the_graveyard_stays_fused_and_costs_its_fused_
     discard_it(&mut state, &crafted.id);
     let landed = live(&state, &crafted.id);
     assert_eq!(landed.zone, Zone::Graveyard { player: P1 });
-    // Still the fusion: its definition, never its ingredients again.
     assert_eq!(landed.def_id, crafted.def_id);
     assert!(state.transient_defs.contains_key(&crafted.def_id));
     assert_eq!(
@@ -236,7 +235,6 @@ fn r766_r77_a_fused_card_reaching_the_graveyard_stays_fused_and_costs_its_fused_
             .collect::<Vec<_>>(),
         vec![crafted.id.clone()]
     );
-    // That definition's printed card: no buffs, no price.
     assert_eq!(landed.buffs, AttackHealth { attack: 0, health: 0 });
     assert_eq!(price_of(&landed), (0, None));
     assert_eq!(price(&state, &crafted.id), 2);

@@ -87,7 +87,6 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         lose_health(&mut sink_for(&mut state), P1, 7);
 
         assert_eq!(hero_of(&state, P1).health, HERO_HEALTH - 7);
-        // The accessor is keyed on the player it is given: p2 took nothing.
         assert_eq!(hero_of(&state, P2).health, HERO_HEALTH);
     }
 
@@ -251,7 +250,6 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         assert!(was_played_this_turn(&state, P1, CardOrId::Id(&second.id)));
         assert!(!was_played_this_turn(&state, P1, CardOrId::Card(&unplayed)));
 
-        // The log is per player: p1's plays are not in p2's log, and p2 has played nothing.
         assert!(!was_played_this_turn(&state, P2, CardOrId::Card(&first)));
         assert_eq!(cards_played_this_turn(&state, P2), 0);
         assert_eq!(played_ids_this_turn(&state, P2), Vec::<String>::new());
@@ -289,7 +287,6 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
             "a card kept in hand",
         );
 
-        // Nothing played yet: a card in hand would be the first play.
         assert_eq!(
             played_earlier(&state, P1, CardOrId::Card(&live(&state, &held))),
             0
@@ -298,15 +295,12 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
         state = play_into(&state, &first, 1);
         state = play_into(&state, &second, 2);
 
-        // Its place in the log, by instance or by id: nothing before the first play, one before the second.
         assert_eq!(played_earlier(&state, P1, CardOrId::Id(&first.id)), 0);
         let on_field = must(top_of(&state, P1, 1), "the second card on the field");
         assert_eq!(played_earlier(&state, P1, CardOrId::Card(&on_field)), 1);
         // A card still in hand has not been played: both plays so far are earlier than its would be.
         assert_eq!(played_earlier(&state, P1, CardOrId::Id(&held.id)), 2);
-        // An id the log does not hold is read the same way.
         assert_eq!(played_earlier(&state, P1, CardOrId::Id("no-such-card")), 2);
-        // The log is per player: p1's plays are not earlier than anything of p2's.
         assert_eq!(played_earlier(&state, P2, CardOrId::Id(&first.id)), 0);
     }
 

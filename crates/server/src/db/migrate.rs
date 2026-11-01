@@ -2,9 +2,8 @@
 //! DATABASE_URL and records what it applied in `app.migrations`, so bring-up is one command against
 //! a fresh Supabase project (docs/architecture.md, step 4 of the bring-up checklist).
 //!
-//! Why not the Supabase CLI: `supabase db push` only reads `supabase/migrations/<timestamp>_<name>.sql`,
-//! and the canonical SQL lives at `crates/server/migrations/`. The SQL is plain Postgres, so either path
-//! works (docs/architecture.md has the CLI variant); this runner needs nothing but a connection string.
+//! Not the Supabase CLI: `supabase db push` reads only `supabase/migrations/<timestamp>_<name>.sql`, and
+//! the canonical SQL lives at `crates/server/migrations/` (docs/architecture.md has the CLI variant).
 //!
 //! The files are compiled into the binary with `include_str!` (SURFACE §11.3), so the Docker image
 //! needs no migrations directory at run time. `tests/store/migrations_pinned.rs` proves that every
@@ -332,14 +331,10 @@ comment on table app.migrations is
 /// applied file is still refused. Add an entry only when the earlier version can stay where it was applied
 /// and the new one is what every database that has not applied it needs.
 ///
-/// 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set jackioh.retention_purge`
-/// clause, which only a superuser may create since Postgres 15, so it failed on Supabase. Where a
-/// superuser applied it, it works as written.
-///
-/// 0068_v0_5_retcon.sql (R2532000): its first version renamed each record id a card's co-played map keeps
-/// with a PL/pgSQL call per id over every row of `card_totals`, which ran for minutes: Render's `release`
-/// outran its boot window and the transaction rolled back each deploy. Where applied, its renames are the
-/// same.
+/// 0013_retention_purge.sql: its first version's `set jackioh.retention_purge` clause on
+/// app.purge_expired_rows needs a superuser since Postgres 15, so it failed on Supabase.
+/// 0068_v0_5_retcon.sql (R2532000): its first version's PL/pgSQL call per renamed record id ran for
+/// minutes, past Render's `release` boot window. Where either was applied, it works as written.
 pub const REWRITTEN: &[(&str, &[&str])] = &[
     ("0013_retention_purge.sql", &["16b93e4d"]),
     ("0068_v0_5_retcon.sql", &["5827754e"]),

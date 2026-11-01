@@ -243,11 +243,10 @@ mod tactics_b18 {
     }
 
     /// #1062: five Tempo Timmys and four Burns (C #36) with no mana, into an empty board. Each Burn offers
-    /// the AI's five units and its hero before the enemy hero, so the 24 plays at its own side came first
-    /// and no Burn at the enemy was among any root's AI_BUDGET.root_branching candidates or any deeper
-    /// step's branching ones: the AI swung for 15 and ended its turn. It attacks first, and burns the face
-    /// below the root. How many Burns to fire is the evaluation's to judge: the next turn's swing reaches
-    /// the enemy either way, and a Burn kept can clear a blocker. A learned network keeps one (#466).
+    /// the AI's five units and its hero before the enemy hero, 24 plays at its own side ahead of any at
+    /// the enemy. It attacks first, and burns the face below the root. How many Burns to fire is the
+    /// evaluation's to judge: the next turn's swing reaches the enemy either way, and a Burn kept can clear
+    /// a blocker. A learned network keeps one (#466).
     #[test]
     fn five_attacks_then_four_burns_to_the_face_past_twenty_four_plays_at_its_own_side() {
         let run = puzzle(
