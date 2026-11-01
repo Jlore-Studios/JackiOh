@@ -8,8 +8,40 @@
 > and every default is also a question in DR12. Answer by number ("Q11: B, Q36: default, …"). A bare
 > "default" accepts the proposal.
 
+## Decided so far
+
+The owner's answers to round 1 (2026-11-01). Where they disagree with a default below, they win; the
+sections below are rewritten from them once round 2 is answered.
+
+- **Offline.** A run is played in the browser like a practice game against the AI: no account and no
+  server. Its stats and leaderboards stay on the device. Later, a signed-in player's runs may be checked
+  so that they earn rewards ("make an account to save your progress"), and a competitive mode may come.
+- **Seeds.** Every run has a seed that deals its map, bosses and events. A seed can be shared so friends
+  play the same map ("I did this on this hard map, try it").
+- **Extraction.** An extracted card or artifact is unlocked for every future starting deck, forever. It
+  leaves the current run at once: this run's strength traded for progress. A mini-boss gives a card
+  extraction; the final boss gives an artifact extraction.
+- **The starting deck is slots, not points.** Each slot takes cards up to a rarity: a Common or Rare slot
+  takes a Common or a Rare, an Epic slot an Epic or lower, an Anything slot any card. About 10 slots at the
+  start (8 Rare and 2 Anything, to confirm). Levels turn Rare slots into Epic ones and add Anything
+  slots. The cards unlocked at the start are about 20 of the simplest Training Grounds Commons and Rares,
+  placeholders until the designer's list.
+- **Starting artifacts.** Up to 3, under an artifact point budget the designer will set.
+- **The deck grows.** You keep 3 cards after every fight, so the deck gets big. Shops, events, campfires
+  (the rest tiles) and artifacts thin it.
+- **Custom cards.** A for-fun mode allows custom cards and lifts many limits. It earns nothing.
+- **Curses.** Tiers like Slay the Spire's Ascension, each worth points as Hades' Heat is; stacking more of
+  them is the challenge.
+- **Currencies.** Robux and Tix are spent inside a run. Jlore stays the account's cosmetic currency. A new
+  permanent dungeon currency (its name to come) upgrades the card slots and artifacts and buys buffs; it
+  may be sold later.
+- **Leaderboards.** Deepest floor reached, most curses stacked, a score, and the fastest win, with a timer
+  on screen.
+- **Content.** Placeholder cards and temporary bosses until the designer sends the lists.
+
 ## Contents
 
+- [Decided so far](#decided-so-far)
 - [DR0. What was asked](#dr0-what-was-asked)
 - [DR1. What the codebase already gives](#dr1-what-the-codebase-already-gives)
 - [DR2. The run's shape](#dr2-the-runs-shape)
