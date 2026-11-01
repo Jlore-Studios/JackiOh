@@ -13377,11 +13377,11 @@
       "pending_at": "2026-11-01T18:22:31Z",
       "pending_by": "jgoetzmann",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "round_tier": "",
-      "run_id": "41348476775",
+      "run_id": "pending:fef0935e-1793567703",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-01T20:45:22Z",
+      "started_at": "2026-11-01T21:15:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -13747,9 +13747,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T20:53:44Z",
+    "at": "2026-11-01T21:15:22Z",
     "url": "",
-    "what": "review #2737 on claude-8"
+    "what": "plan #2723 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-01T21:00:27Z",
