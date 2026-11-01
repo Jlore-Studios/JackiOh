@@ -12439,14 +12439,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T15:37:53Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
+      "pr": 2699,
       "provider": "gpt",
+      "question": "",
       "queued_at": "2026-11-01T15:07:32Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "41326475359",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T16:27:59Z",
@@ -12454,7 +12458,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6559731540"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "2685": {
       "action": "build",
