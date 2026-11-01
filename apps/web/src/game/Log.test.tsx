@@ -607,6 +607,19 @@ describe("#552 the log reads as English on the Meditative cards' events", () => 
     ]);
   });
 
+  it("R2657001 a Field Trap firing again is logged as a trigger, not a trap firing, on either seat", () => {
+    const first: GameEvent = { type: "trapFired", instanceId: "c1", defId: "core-018", controller: "p1", row: "backrow", lane: 1 };
+    expect(
+      lines(
+        withEvents(baseView(), [
+          first,
+          { ...first, again: true } as GameEvent,
+          { type: "trapFired", instanceId: "c9", defId: "classic-005", controller: "p2", row: "backrow", lane: 3, again: true },
+        ]),
+      ),
+    ).toEqual([`Your trap ${nameOf("core-018")} fired`, `Your ${nameOf("core-018")} triggered`, `The opponent's ${nameOf("classic-005")} triggered`]);
+  });
+
   it("R880 a craft prompt reads as a card to craft", () => {
     expect(lines(withEvents(baseView(), [{ type: "promptOpened", player: "p2", choiceId: "ch1", kind: "craft" }]))).toEqual([
       "Opponent must choose a card to craft",

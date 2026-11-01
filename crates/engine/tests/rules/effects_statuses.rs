@@ -145,7 +145,7 @@ mod e35_may_attack_again {
     }
 
     #[test]
-    fn a_unit_that_has_attacked_gets_a_fresh_exertion_one_that_entered_this_turn_is_no_longer_sick() {
+    fn r2657004_a_unit_that_has_attacked_gets_a_fresh_exertion_one_that_entered_this_turn_stays_sick() {
         let mut state = playing("dc-again");
         let striker = put(
             &mut state,
@@ -189,9 +189,11 @@ mod e35_may_attack_again {
             );
         }
         assert!(has_attack(&now, &striker.id));
-        // TS asked about the live object it had read before the effects ran, which the effect wrote
-        // through: the card under its id now.
-        assert!(can_attack(&now, &live(&now, &fresh.id), &enemy_hero()));
+        // R2657004: the refresh leaves summoning sickness as it is, so the unit that entered this turn
+        // (no Rush, no Charge) still may not attack.
+        assert_eq!(live(&now, &fresh.id).summoned_turn, Some(turn));
+        assert!(!can_attack(&now, &live(&now, &fresh.id), &enemy_hero()));
+        assert!(!has_attack(&now, &fresh.id));
     }
 
     #[test]

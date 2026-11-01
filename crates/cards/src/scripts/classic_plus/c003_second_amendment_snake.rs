@@ -140,7 +140,7 @@ mod tests {
         }
 
         #[test]
-        fn e19_at_its_controller_s_end_of_turn_places_2_plague_counters_on_itself_in_one_placement_not_at_the_opponent_s()
+        fn e19_at_its_controller_s_end_of_turn_places_3_plague_counters_on_itself_in_one_placement_not_at_the_opponent_s()
         {
             crate::register_all();
             let mut s = with_snake(0, json!({}), Extra::default());
@@ -148,7 +148,7 @@ mod tests {
 
             s.end_turn();
 
-            assert_eq!(s.card(&snake).counters.plague, Some(2));
+            assert_eq!(s.card(&snake).counters.plague, Some(3));
             let changes: Vec<Value> = s
                 .events()
                 .iter()
@@ -156,11 +156,11 @@ mod tests {
                 .map(|event| serde_json::to_value(event).unwrap())
                 .collect();
             assert_eq!(changes.len(), 1);
-            assert!(matches_object(&changes[0], &json!({ "counter": "plague", "value": 2 })));
+            assert!(matches_object(&changes[0], &json!({ "counter": "plague", "value": 3 })));
 
             s.end_turn();
             assert_eq!(s.state().active, P1);
-            assert_eq!(s.card(&snake).counters.plague, Some(2));
+            assert_eq!(s.card(&snake).counters.plague, Some(3));
         }
 
         #[test]
@@ -281,7 +281,7 @@ mod tests {
             let mut s = with_snake(0, json!({}), Extra::default());
             step_param(s.card_mut(SNAKE), "tokens", 1);
             s.end_turn();
-            assert_eq!(s.card(SNAKE).counters.plague, Some(3));
+            assert_eq!(s.card(SNAKE).counters.plague, Some(4));
 
             let mut t = with_snake(2, json!({}), Extra::default());
             step_param(t.card_mut(SNAKE), "damage", 1);
@@ -301,18 +301,18 @@ mod tests {
         }
 
         #[test]
-        fn places_3_plague_counters_at_its_controller_s_end_of_turn_and_its_death_deals_3_hits() {
+        fn places_6_plague_counters_at_its_controller_s_end_of_turn_and_its_death_deals_6_hits() {
             crate::register_all();
             let mut s = with_snake(0, json!({}), Extra { radiant: true, ..Extra::default() });
             let snake = s.card(SNAKE).clone();
 
             s.end_turn();
-            assert_eq!(s.card(&snake).counters.plague, Some(3));
+            assert_eq!(s.card(&snake).counters.plague, Some(6));
             s.end_turn();
 
             kill_snake(&mut s);
-            assert_eq!(snake_hits(&s, &snake.id).len(), 3);
-            s.expect_health(P2, 27);
+            assert_eq!(snake_hits(&s, &snake.id).len(), 6);
+            s.expect_health(P2, 24);
         }
     }
 
@@ -337,12 +337,12 @@ mod tests {
         }
 
         #[test]
-        fn follows_the_tokens_0_on_a_fresh_snake_2_after_one_end_of_turn() {
+        fn follows_the_tokens_0_on_a_fresh_snake_3_after_one_end_of_turn() {
             crate::register_all();
             let mut s = with_snake(0, json!({}), Extra::default());
             assert_eq!(preview_json(&snake_preview(&s, P1)), json!([{ "label": HITS_LABEL, "value": 0 }]));
             s.end_turn();
-            assert_eq!(preview_json(&snake_preview(&s, P2)), json!([{ "label": HITS_LABEL, "value": 2 }]));
+            assert_eq!(preview_json(&snake_preview(&s, P2)), json!([{ "label": HITS_LABEL, "value": 3 }]));
         }
 
         #[test]

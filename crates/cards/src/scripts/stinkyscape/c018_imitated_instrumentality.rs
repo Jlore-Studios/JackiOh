@@ -132,10 +132,10 @@ mod tests {
 
         #[test]
         fn r1866000_r1843000_three_votes_at_your_next_start_of_turn_remove_you() {
-            // At 10 health with no Unit against two, after a turn that left 1 mana unspent: each Brain's
-            // condition holds at p1's next start of turn.
+            // At 10 health with no Unit against two, after a turn that left 1 mana unspent (5 mana for the
+            // (4) it costs since #2657): each Brain's condition holds at p1's next start of turn.
             let mut s = scenario(json!({
-                "p1": { "hand": [INSTRUMENTALITY, FILLER], "health": 10, "library": filler(4) },
+                "p1": { "hand": [INSTRUMENTALITY, FILLER], "health": 10, "library": filler(4), "mana": 5 },
                 "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA], "library": filler(4) },
             }));
             s.play(INSTRUMENTALITY, json!({}));

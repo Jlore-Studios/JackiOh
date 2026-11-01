@@ -593,6 +593,13 @@ pub enum GameEvent {
         controller: PlayerId,
         row: Row,
         lane: i32,
+        /// R2657001: a face-up Field Trap firing again, which reveals nothing: a Field Trap reveals
+        /// once, the first time it fires, and each later firing is a plain trigger, so the client
+        /// plays no reveal and "when one of your Traps reveals" does not answer it. Only ever
+        /// `Some(true)`, so a first firing serializes and hashes as it did.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        again: Option<bool>,
     },
     AttackDeclared {
         attacker_id: String,

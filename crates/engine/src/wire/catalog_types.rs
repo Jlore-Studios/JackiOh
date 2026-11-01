@@ -567,6 +567,10 @@ pub enum Keyword {
     /// R1852003: what a launched Starship takes as it launches. No rule of its own; the cards that
     /// name "your Starship" read it.
     Starship,
+    /// R2657000: a Unit that can't be in Defense Position, by its own switch or an effect's, the
+    /// keyword that took over from "Can't be in Defense Position" (`StaticFlags::never_defense`).
+    #[serde(rename = "Can't Defend")]
+    CantDefend,
 }
 
 string_union! {
@@ -615,6 +619,7 @@ string_union! {
         /// Stinkyscape's Starship (R1852000, R1852003).
         StarshipPiece = "Starship Piece",
         Starship = "Starship",
+        CantDefend = "Can't Defend",
     }
 }
 
@@ -669,6 +674,7 @@ impl Keyword {
             Keyword::Tradable => KeywordKind::Tradable,
             Keyword::StarshipPiece => KeywordKind::StarshipPiece,
             Keyword::Starship => KeywordKind::Starship,
+            Keyword::CantDefend => KeywordKind::CantDefend,
         }
     }
 
@@ -728,6 +734,7 @@ impl Keyword {
             KeywordKind::Tradable => Keyword::Tradable,
             KeywordKind::StarshipPiece => Keyword::StarshipPiece,
             KeywordKind::Starship => Keyword::Starship,
+            KeywordKind::CantDefend => Keyword::CantDefend,
         }
     }
 }

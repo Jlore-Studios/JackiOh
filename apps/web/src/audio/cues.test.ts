@@ -720,6 +720,13 @@ describe("R203: audio reveals no more than the screen", () => {
     expect(shape(trapFired(HIDDEN_DEF_ID, "p2"))).toEqual([sfx("trapSting")]);
   });
 
+  it("R2657001 a Field Trap firing again gives an activation's shimmer, with no sting and no line, on either seat", () => {
+    const again = (controller: PlayerId): GameEvent => ({ ...trapFired(FIELD_TRAP, controller), again: true } as GameEvent);
+    expect(shape(again("p1"))).toEqual([sfx("spell")]);
+    expect(shape(again("p2"))).toEqual([sfx("spell")]);
+    expect(voices(again("p1"))).toEqual([]);
+  });
+
   it("R203 (B20) the sentinel never speaks, even from a table that has an entry under that name", () => {
     const poisoned: CardAudioTable = {
       ...LINES,

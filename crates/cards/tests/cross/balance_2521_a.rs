@@ -144,7 +144,8 @@ const NOT_PIECES: [&str; 15] = [
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
     ("stinkyscape-050", "Beam v3", 5, 10),
     ("stinkyscape-054", "Beam v4", 7, 14),
-    ("stinkyscape-058", "Beam v5", 12, 24),
+    // #2657 took Beam v5 to 11 and 22.
+    ("stinkyscape-058", "Beam v5", 11, 22),
     (CANNON_V3, "Cannon v3", 5, 10),
     ("stinkyscape-056", "Cannon v4", 7, 14),
     ("stinkyscape-060", "Cannon v5", 9, 18),
@@ -156,8 +157,8 @@ const FLAK_V5: &str = "stinkyscape-061";
 /// B20: each Flak and its rounds an activation.
 const FLAKS: [(&str, usize); 3] = [(FLAK_V3, 1), ("stinkyscape-057", 2), (FLAK_V5, 3)];
 /// B20: the enemies a Flak volley hits each round, p2's two Radiant Big Felinors (6/20, so none dies of a
-/// volley) and p2's hero.
-const ENEMIES_A_ROUND: usize = 3;
+/// volley); p2's hero too until #2657 took it off the Flaks' rounds.
+const ENEMIES_A_ROUND: usize = 2;
 const ENEMY_HERO: &str = "hero-p2";
 
 // ---------------------------------------------------------------------------------------------------
@@ -1609,7 +1610,7 @@ fn b19_repeater_v3_activates_3_times_a_turn_and_the_4th_is_refused() {
 }
 
 #[test]
-fn b20_each_flak_round_hits_the_enemy_units_then_the_enemy_hero_v3_once_v4_twice_v5_three_times() {
+fn b20_each_flak_round_hits_the_enemy_units_and_no_hero_v3_once_v4_twice_v5_three_times() {
     for (def, rounds) in FLAKS {
         for radiant in [false, true] {
             for i in 0..10 {
@@ -1621,9 +1622,9 @@ fn b20_each_flak_round_hits_the_enemy_units_then_the_enemy_hero_v3_once_v4_twice
                     shot.hits
                 );
                 for round in shot.hits.chunks(ENEMIES_A_ROUND) {
-                    assert_eq!(
-                        round[2].0, ENEMY_HERO,
-                        "{def}: the hero last in each round, {:?}",
+                    assert!(
+                        round.iter().all(|(target, _)| target != ENEMY_HERO),
+                        "{def}: no hero hit since #2657, {:?}",
                         shot.hits
                     );
                     let mut units = vec![round[0].0.clone(), round[1].0.clone()];
@@ -1652,8 +1653,8 @@ fn b20_flak_never_deals_outside_least_to_most_nor_hits_its_own_side_over_many_se
                         "{def} (radiant {radiant}), seed {i}: {amount} is outside {least}..={most}"
                     );
                     assert!(
-                        target == ENEMY_HERO || holds(&shot.units, target),
-                        "{def} (radiant {radiant}), seed {i}: {target} is no enemy"
+                        holds(&shot.units, target),
+                        "{def} (radiant {radiant}), seed {i}: {target} is no enemy Unit"
                     );
                 }
             }
@@ -1711,13 +1712,14 @@ fn b20_each_target_and_each_round_of_a_flak_rolls_its_own_amount() {
                 targets_differ = true;
             }
         }
-        let on_hero: Vec<i32> = shot
+        let first = shot.units[0].clone();
+        let on_first: Vec<i32> = shot
             .hits
             .iter()
-            .filter(|(target, _)| target == ENEMY_HERO)
+            .filter(|(target, _)| *target == first)
             .map(|(_, amount)| *amount)
             .collect();
-        if on_hero.iter().any(|amount| *amount != on_hero[0]) {
+        if on_first.iter().any(|amount| *amount != on_first[0]) {
             rounds_differ = true;
         }
     }
@@ -1727,7 +1729,7 @@ fn b20_each_target_and_each_round_of_a_flak_rolls_its_own_amount() {
     );
     assert!(
         rounds_differ,
-        "in 40 volleys some round dealt the hero another amount than the first"
+        "in 40 volleys some round dealt a Unit another amount than the first"
     );
 }
 

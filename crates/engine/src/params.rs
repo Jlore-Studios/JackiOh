@@ -356,6 +356,18 @@ impl ParamContext for CostArgs<'_> {
 /// (Classic #57 Echo) running a copied Spell's text reads that Spell's declared numbers, on its own
 /// instance — and by the instance otherwise.
 pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
+    param_read(ctx, key, None)
+}
+
+/// R2657006: `param`, or `printed` when the definition the card folds under declares no `key` — a
+/// number a card declares since a later patch, read by a script that a replay of an older version runs
+/// with that version's definition (R767000), which printed `printed` as a plain number. A card that
+/// declares it reads it exactly as `param` does.
+pub fn param_or<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: i32) -> i32 {
+    param_read(ctx, key, Some(printed))
+}
+
+fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>) -> i32 {
     let state = ctx.param_state();
     let self_ = ctx.param_self();
     // R1850000: a copier with no running text named reads the numbers of the text it copied, on the
@@ -391,6 +403,11 @@ pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
                 );
             }
         }
+    }
+    if let Some(printed) = printed
+        && param_decl_of(state, &def_id, key).is_none()
+    {
+        return printed;
     }
     param_value(
         state,

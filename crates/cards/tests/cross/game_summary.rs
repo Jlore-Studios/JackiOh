@@ -320,7 +320,12 @@ mod summarize_game_over_real_cards_s9_11 {
                             // R2179002: a card cast on its draw is no play, though it stood in the hand as the
                             // step began: a Trade shuffles it in and draws it straight back (summary-cards-28's
                             // p1 CN in a Bottle, since issue #2280's rules change took that game down a new path).
+                            // R831001: nor is a card a Counter sent to a hand in this step, its countering
+                            // player's cast, even when a second Counter sends it back to the hand it was played
+                            // from (summary-cards-87's p2 Book of Pain between two Palantirs, since #2657's
+                            // patch took that game down a new path).
                             } else if *on_draw != Some(true)
+                                && !stolen_here.contains(&instance_id.as_str())
                                 && let Some(card) = state.players[*caster]
                                     .hand
                                     .iter()

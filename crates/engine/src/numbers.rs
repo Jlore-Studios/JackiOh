@@ -2,7 +2,8 @@
 //! #41 KY's Constant read and move — the card's own cost (never an X), its attack and health (a Unit,
 //! or a card with stats, R2280000), a numbered keyword's value
 //! (Armor, Lucky, Spell Damage, Brittle, Echo, Activate, Tribute) and a declared number (`params.rs`).
-//! This module reads them; `effects/tune.rs` moves them.
+//! R2657006: KY's Constant also reads a Temporary card's count and the Plague Counters a card carries,
+//! which a Degrade and an Upgrade do not move. This module reads them; `effects/tune.rs` moves them.
 //!
 //! Every read is a pure function of the card as it stands, so a card script may ask it (KY's
 //! Constant's "a card in your hand with a number that isn't already 3" is a `targetChecks` predicate
@@ -55,8 +56,16 @@ pub enum NumberRef {
     Cost,
     Attack,
     Health,
-    Keyword { key: NumberedKey },
-    Param { key: String },
+    Keyword {
+        key: NumberedKey,
+    },
+    Param {
+        key: String,
+    },
+    /// R2657006: a Temporary card's count (R2179001).
+    Temporary,
+    /// R2657006: the Plague Counters on the card (§6.3).
+    Plague,
 }
 
 /// One number on a card as `numbers_on` lists it: `id` names it in a prompt's option and in a
@@ -236,6 +245,8 @@ pub fn number_ref_id(ref_: &NumberRef) -> String {
         NumberRef::Cost => "cost".to_string(),
         NumberRef::Attack => "attack".to_string(),
         NumberRef::Health => "health".to_string(),
+        NumberRef::Temporary => "temporary".to_string(),
+        NumberRef::Plague => "plague".to_string(),
     }
 }
 
@@ -255,6 +266,8 @@ pub fn parse_number_ref(id: &str) -> Option<NumberRef> {
         "cost" => return Some(NumberRef::Cost),
         "attack" => return Some(NumberRef::Attack),
         "health" => return Some(NumberRef::Health),
+        "temporary" => return Some(NumberRef::Temporary),
+        "plague" => return Some(NumberRef::Plague),
         _ => {}
     }
     if let Some(key) = id.strip_prefix("keyword:") {
@@ -281,13 +294,16 @@ pub fn number_key(ref_: &NumberRef) -> String {
         NumberRef::Cost => "cost".to_string(),
         NumberRef::Attack => "attack".to_string(),
         NumberRef::Health => "health".to_string(),
+        NumberRef::Temporary => "temporary".to_string(),
+        NumberRef::Plague => "plague".to_string(),
     }
 }
 
 /// B3.4, Classic+ #41 KY's Constant: every number on the card now, in a fixed order — cost, attack,
 /// health, the numbered keywords, the declared numbers in reach (`params::param_in_reach`: the ones its
-/// face prints, R749, R1431, and its power's now, R1430). An Immutable card has none a change may reach
-/// (B3.4 rule 2), so it lists none.
+/// face prints, R749, R1431, and its power's now, R1430), then R2657006's Temporary count and Plague
+/// Counters, each while the card has one. An Immutable card has none a change may reach (B3.4 rule 2),
+/// so it lists none.
 pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
     let keywords = if in_unit_row(state, card) {
         unit_view(state, card).keywords
@@ -337,6 +353,15 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
             param.key.clone(),
             value,
         );
+    }
+    // R2657006: a Temporary card's count, as its keyword shows it (R2179001), and the Plague Counters
+    // it carries.
+    if let Some(count) = crate::temporary::temporary_number(&keywords) {
+        add(&mut out, NumberRef::Temporary, "Temporary".to_string(), count);
+    }
+    let plague = crate::plague::plague_on(card);
+    if plague > 0 {
+        add(&mut out, NumberRef::Plague, "Plague Counters".to_string(), plague);
     }
     out
 }

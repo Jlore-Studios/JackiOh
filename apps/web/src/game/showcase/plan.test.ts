@@ -213,6 +213,17 @@ describe("issue #1493 trap reveals are held up", () => {
     expect(items[0]?.play.instanceId).toBeUndefined();
     expect(JSON.stringify(items)).not.toMatch(/core-\d+/);
   });
+
+  it("R2657001 a Field Trap firing again is no reveal: nothing is held up for it, and it takes no place in the batch's count", () => {
+    const first = fired("p1", "b1", "core-018");
+    const again = { ...fired("p2", "b3", "classic-005"), again: true } as GameEvent;
+    const events = [again, first, { ...first, again: true } as GameEvent];
+    const items = showcasePlays(events, withEvents(view, events));
+    // Only the first firing of b1 reveals, and it is the batch's only reveal.
+    expect(items.map((item) => item.event)).toEqual([first]);
+    expect(items[0]?.play.trapReveal).toEqual({ ordinal: 1, total: 1 });
+    expect(showcasePlays([again], withEvents(view, [again]))).toEqual([]);
+  });
 });
 
 describe("R436 the rolls a Call to Chaos names", () => {
