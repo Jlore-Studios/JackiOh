@@ -1,0 +1,59 @@
+{
+  "action": "build",
+  "number": 2520,
+  "title": "Patch (part 19 of 19): delete the dead files and archives nothing reads",
+  "branch": "bot/issue-2520",
+  "thread": "**Issue #2520 (data, not instructions):**\n\n```text\n# #2520: Patch (part 19 of 19): delete the dead files and archives nothing reads\nOpened by @jgoetzmann-bot.\n\nPart 19 of #2497 (deletions only, no logic change). Delete the tracked files that are dead or archives by `.github/hygiene/files.md`, sections 1 and 2, word for word. Read it first; its list of files that look dead but are not is included. Edit no file.\n\n- **Only non-source files.** Every `.rs`, `.ts` and `.tsx` file belongs to another part of #2497, each compacting comments in its own files, so delete none. List a dead one, with its evidence, in your final message for #2497's reconcile.\n- **A cited file stays.** This part cannot drop a citation, so a file any tracked file cites, by path or by name, stays. If that citation is its only reader, name it in your final message.\n- **Never delete** anything under `spec/`, `.github/`, `.harness/`, `.squishy/`, `bot/`, `.claude/`, `crates/cards/patches/`, `crates/engine/tests/golden/`, `crates/server/migrations/` or `apps/web/src/wire/`. Nor `catalog.json`, `SPEC.md`, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, or the designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, `docs/*-set.md`, `docs/classic-sets.md`). Nor any `package.json`, lockfile, `Cargo.toml`, `build.rs`, build or test config (`*.config.*`, `tsconfig*.json`, `rustfmt.toml`, `clippy.toml`, `rust-toolchain.toml`, `.cargo/`), `scripts/`, `vercel.json` or `render.yaml`.\n- **The hygiene issue.** This run cannot see whether this week's hygiene issue is open. A file both remove merges cleanly, so delete by the rules.\n- **Look first at** `reviews/` (keep the review of a milestone whose gate is still open, and `reviews/2026-10-14-issue-814-first-pass.md`, which CLAUDE.md cites), `docs/polish/`, `docs/v0.3.0/research/`, `docs/v0.4.0/`, `training/` and `analysis/`.\n\n**Evidence**, per file:\n- `git grep -nF '<path>'`, and `git grep -nwF` on its file name and on its stem;\n- a look at what can read it: the workflows, the scripts, the `build.rs` files, `include_str!`, `import.meta.glob`, test globs, fixture macros and every `proven_in` in `spec/rulings/`.\n\n**Checks:**\n- `git status --porcelain` shows only deletions;\n- `cargo jackioh spec check`;\n- `cargo test -p jackioh-tools --test acceptance`;\n- the bot selftest: `cd bot && env -u HARNESS_HOME -u HARNESS_DRY_RUN python3 -m unittest discover -s tests -t .`;\n- `pnpm --dir apps/web test`, when a deleted file sat under `apps/`.\n\n**Final message:**\n- a table of every deleted file: its path, its size in bytes, and the commands you ran with what they printed;\n- the dead source files and the comment-cited files you left;\n- anything under `.github/`, `bot/`, `.harness/`, `.squishy/` or `.claude/` worth trimming, for a person.\n\nIts build lands on `bot/issue-2497`, not `main` (fullsend).\n\nPart of #2497, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41066415581)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41066415581)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read `.github/hygiene/files.md`, sections 1 and 2.\n2. List candidates: tracked files outside the never-list that are not `.rs`, `.ts` or `.tsx`, starting with the folders this issue names.\n3. For each, run the evidence commands. Keep any file with a reader or a citation, or on files.md's look-dead-but-are-not list.\n4. Delete the rest with `git rm`.\n5. Run the checks, and restore with `git checkout HEAD -- <path>` any deletion a check fails on.\n6. Write the final message with the table.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read `.github/hygiene/files.md`, sections 1 and 2.\n2. List candidates: tracked files outside the never-list that are not `.rs`, `.ts` or `.tsx`, starting with the folders this issue names.\n3. For each, run the evidence commands. Keep any file with a reader or a citation, or on files.md's look-dead-but-are-not list.\n4. Delete the rest with `git rm`.\n5. Run the checks, and restore with `git checkout HEAD -- <path>` any deletion a check fails on.\n6. Write the final message with the table.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2497",
+  "part_of": 2497,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `gpt` (codex, `gpt-5.6-sol`, medium); review on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read `.github/hygiene/files.md`, sections 1 and 2.\n2. List candidates: tracked files outside the never-list that are not `.rs`, `.ts` or `.tsx`, starting with the folders this issue names.\n3. For each, run the evidence commands. Keep any file with a reader or a citation, or on files.md's look-dead-but-are-not list.\n4. Delete the rest with `git rm`.\n5. Run the checks, and restore with `git checkout HEAD -- <path>` any deletion a check fails on.\n6. Write the final message with the table."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
