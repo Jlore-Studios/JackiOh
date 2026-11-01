@@ -2547,7 +2547,20 @@ pub struct PackUnownedWeights {
 pub enum CosmeticTokenStep {
     Rare,
     Epic,
+    Legendary,
     CosmeticPack,
+}
+
+impl CosmeticTokenStep {
+    /// SPEC §14.5, R2728000: the cosmetic token bar's points this step takes to pay.
+    pub const fn bar_size(self) -> i64 {
+        match self {
+            Self::Rare => COSMETIC_TOKEN_BAR_SIZE_RARE,
+            Self::Epic => COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            Self::Legendary => COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+            Self::CosmeticPack => COSMETIC_TOKEN_BAR_SIZE_PACK,
+        }
+    }
 }
 
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
@@ -2618,11 +2631,29 @@ pub const PITY_MYTHIC_PACKS: usize = 30;
 /// SPEC §14.5, R1953000, R1999000: the points that fill the card token bar (#1953: 200). On any
 /// collection a card pack's slots add about 8.65 points under `CARD_TIER_WEIGHTS` (four slots at
 /// 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
-/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`).
+/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`). The cosmetic token bar takes a size of
+/// its own at each step of its cycle (`CosmeticTokenStep::bar_size`, R2728000).
 pub const CARD_TOKEN_BAR_SIZE: i64 = 200;
-/// SPEC §14.5, R1953000: the points that fill the cosmetic token bar (#1953: 200), the same points
-/// as the card token bar's, so likewise about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS` packs.
-pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 200;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Rare cosmetic token
+/// (#2728: 50), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_RARE: i64 = 50;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay an Epic cosmetic token
+/// (#2728: 75), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_EPIC: i64 = 75;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a Legendary cosmetic token
+/// (#2728: 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_LEGENDARY: i64 = 100;
+/// SPEC §14.5, R2728000: the points the cosmetic token bar takes to pay a cosmetic pack (#2728:
+/// 100), about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE_PACK: i64 = 100;
+// SPEC §14.5, R2728000: a step of no points would pay for ever
+// (`economy::tokens::settle_cosmetic_bar`).
+const _: () = assert!(
+    COSMETIC_TOKEN_BAR_SIZE_RARE > 0
+        && COSMETIC_TOKEN_BAR_SIZE_EPIC > 0
+        && COSMETIC_TOKEN_BAR_SIZE_LEGENDARY > 0
+        && COSMETIC_TOKEN_BAR_SIZE_PACK > 0
+);
 /// SPEC §14.5, R1953000, R1999000: the points each opened slot of a card pack adds to each token
 /// bar, whatever it grants, by the card rarity its slot rolled, pity's force included (#1953: 1,
 /// 2, 3, 5 and 10).
@@ -2647,16 +2678,27 @@ pub const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY: RarityPoints = RarityPoints {
 /// #1953's points and size: 23, `CARD_TOKEN_BAR_SIZE` over the mean points of a pack, rounded,
 /// held by `economy/math.rs`).
 pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 23;
-/// SPEC §14.5: the card packs the cosmetic token bar takes to fill, on average (#1953: 23, as the
-/// card token bar's).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS: usize = 23;
-/// SPEC §14.5: the steps the cosmetic token bar pays, in order, verbatim.
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Rare step, on
+/// average (#2728: 6, `COSMETIC_TOKEN_BAR_SIZE_RARE` over the mean points of a pack, rounded, held
+/// by `economy/math.rs`).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE: usize = 6;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Epic step, on
+/// average (#2728: 9).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC: usize = 9;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its Legendary step, on
+/// average (#2728: 12).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY: usize = 12;
+/// SPEC §14.5, R2728000: the card packs the cosmetic token bar takes to pay its cosmetic pack step,
+/// on average (#2728: 12).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK: usize = 12;
+/// SPEC §14.5, R2728000: the steps the cosmetic token bar pays, in order, verbatim (#2728), each at
+/// its own size (`CosmeticTokenStep::bar_size`).
 pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
     CosmeticTokenStep::Rare,
     CosmeticTokenStep::Epic,
+    CosmeticTokenStep::Legendary,
     CosmeticTokenStep::Rare,
     CosmeticTokenStep::Epic,
-    CosmeticTokenStep::Rare,
     CosmeticTokenStep::CosmeticPack,
 ];
 /// SPEC §14.6: a cosmetic pack's slots (#1333's table: 5), each rolling `COSMETIC_TIER_WEIGHTS`,

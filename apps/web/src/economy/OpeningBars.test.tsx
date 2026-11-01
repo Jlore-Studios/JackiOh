@@ -168,6 +168,43 @@ describe("#1658 the opening's two bars", () => {
     expect(screen.getByTestId(`${ID}-rewards-cosmetic-2`)).toHaveTextContent("Cosmetic pack");
   });
 
+  it("R2728000 the cosmetic bar waits on its step's size, fills each step at its own and reveals a Legendary token", () => {
+    const bars = paid({
+      card: { before: 5, after: 9, size: 20, pays: 0 },
+      cosmetic: { before: 60, after: 10, size: 50, pays: 2 },
+      cosmeticPaid: ["epic", "legendary"],
+      cosmeticSizes: [75, 100, 50],
+    });
+    const { rerender } = render(<OpeningBars bars={bars} play={false} testid={ID} />);
+    const cosmetic = (): HTMLElement => screen.getByTestId(`${ID}-cosmetic`);
+
+    // Held back, it rests at its points before on the bar of the step it stood at.
+    expect(cosmetic().querySelector("progress")).toHaveProperty("max", 75);
+    expect(cosmetic()).toHaveTextContent("60 / 75");
+
+    rerender(<OpeningBars bars={bars} testid={ID} />);
+    advance(segmentMs({ from: 60, to: 75, burst: true }, 75));
+    advance(REVEAL_STAGGER_MS);
+    expect(screen.getByTestId(`${ID}-rewards-cosmetic-1`)).toHaveTextContent("Epic token");
+    advance(BURST_MS);
+    advance(segmentMs({ from: 0, to: 100, burst: true }, 100));
+    advance(REVEAL_STAGGER_MS);
+
+    expect(kinds()).toEqual(["cosmeticToken", "cosmeticToken"]);
+    const legendary = screen.getByTestId(`${ID}-rewards-cosmetic-2`);
+    expect(legendary).toHaveTextContent("Legendary token");
+    expect(legendary).toHaveAttribute("data-rarity", "Legendary");
+    expect(engine.playSfx).toHaveBeenCalledWith("entrance");
+
+    // It rests at the answer's points after, on the step after's bar.
+    advance(BURST_MS);
+    advance(segmentMs({ from: 0, to: 10, burst: false }, 50));
+    expect(cosmetic()).toHaveAttribute("data-state", "resting");
+    expect(cosmetic()).toHaveAttribute("data-bursts", "2");
+    expect(cosmetic().querySelector("progress")).toHaveProperty("max", 50);
+    expect(progress("cosmetic")).toBe(10);
+  });
+
   it("bars that moved without paying fill to their points and reveal nothing", () => {
     render(
       <OpeningBars

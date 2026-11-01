@@ -839,3 +839,60 @@ async fn r1310003_filling_a_bar_pays_its_token_marked_dev() {
     assert_eq!(answer["error"]["code"], json!("not_found"));
     assert_eq!(ledger(&app, DEV).await, before);
 }
+
+/// `delta` more of the account-wide `counter` for `DEV`, as an opening would leave it.
+async fn grant_counter_of(app: &App, counter: Counter, delta: i64) {
+    let mut tx = app.db.begin(Some(DEV)).await.expect("begin");
+    tx.economy_counters_grant(&CounterGrant {
+        profile_id: DEV.to_string(),
+        counter,
+        pack: String::new(),
+        delta,
+        reason: EconomyReason::PackOpen,
+        reference: None,
+        dev: false,
+        at: now_ms(),
+    })
+    .await
+    .expect("the counter")
+    .expect("a count");
+    tx.commit().await.expect("commit");
+}
+
+#[tokio::test]
+async fn r2728000_a_dev_fill_fills_the_cosmetic_bar_to_its_current_step_s_size() {
+    let (app, dev, _other) = dev_app().await;
+
+    // At the cycle's Legendary step with 30 points: the fill tops the bar up to that step's size,
+    // pays a Legendary token and keeps nothing, the cycle's place moved on.
+    grant_counter_of(&app, Counter::CosmeticTokenCycle, 2).await;
+    grant_counter_of(&app, Counter::CosmeticTokenBar, 30).await;
+    let answer = ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 3 }));
+    assert_eq!(
+        held(&app, DEV, InventoryItem::CosmeticToken, "Legendary").await,
+        1
+    );
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 3);
+
+    // The next step is the second lap's Rare at its own size: an empty bar fills whole to it, its
+    // points needing no row.
+    let answer = ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 2 }));
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Rare").await, 1);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 4);
+
+    // A bar the 200-point bar left past its step's size (R1953000) pays every step it holds
+    // first, as an opening would, then tops up the step it rests on: at the Epic step, 199 points
+    // pay Epic (75) and the pack (100), keeping 24, and the fill tops up the next Rare (50).
+    grant_counter_of(&app, Counter::CosmeticTokenBar, 199).await;
+    let answer = ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 5 }));
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Epic").await, 1);
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticPack, "").await, 1);
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Rare").await, 2);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 7);
+}

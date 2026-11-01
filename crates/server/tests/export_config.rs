@@ -238,7 +238,23 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PITY_LEGENDARY_PACKS", json!(c::PITY_LEGENDARY_PACKS)),
         ("PITY_MYTHIC_PACKS", json!(c::PITY_MYTHIC_PACKS)),
         ("CARD_TOKEN_BAR_SIZE", json!(c::CARD_TOKEN_BAR_SIZE)),
-        ("COSMETIC_TOKEN_BAR_SIZE", json!(c::COSMETIC_TOKEN_BAR_SIZE)),
+        // #2728's cosmetic bar, a size for each step of its cycle (R2728000).
+        (
+            "COSMETIC_TOKEN_BAR_SIZE_RARE",
+            json!(c::COSMETIC_TOKEN_BAR_SIZE_RARE),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_SIZE_EPIC",
+            json!(c::COSMETIC_TOKEN_BAR_SIZE_EPIC),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_SIZE_LEGENDARY",
+            json!(c::COSMETIC_TOKEN_BAR_SIZE_LEGENDARY),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_SIZE_PACK",
+            json!(c::COSMETIC_TOKEN_BAR_SIZE_PACK),
+        ),
         (
             "TOKEN_BAR_POINTS_BY_CARD_RARITY",
             json!(c::TOKEN_BAR_POINTS_BY_CARD_RARITY),
@@ -252,8 +268,20 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::CARD_TOKEN_BAR_TARGET_PACKS),
         ),
         (
-            "COSMETIC_TOKEN_BAR_TARGET_PACKS",
-            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS),
+            "COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE",
+            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC",
+            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY",
+            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK",
+            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK),
         ),
         ("COSMETIC_TOKEN_CYCLE", json!(c::COSMETIC_TOKEN_CYCLE)),
         ("COSMETIC_PACK_SLOTS", json!(c::COSMETIC_PACK_SLOTS)),
@@ -357,10 +385,12 @@ fn every_name_is_listed_once() {
         // COSMETIC_PACK_RATES), its ECONOMY_LIVE switch (R1313000), the pack roll's one (#1301, less
         // #1339's two rates), the cosmetic pack's one (#1306, less #1339's guaranteed rates), the
         // going live's starter cards (R1310000), #1339's tiered roll's six (R1339000), #1661's
-        // global cosmetic roll's two (R1661001), the Daily runs tab's refresh (R1935000), the win-streak flame's threshold (R2101000) and the
-        // daily quest replace's allowance (R2210000).
+        // global cosmetic roll's two (R1661001), the Daily runs tab's refresh (R1935000), the win-streak flame's threshold (R2101000), the
+        // daily quest replace's allowance (R2210000) and #2728's four per-step cosmetic bar sizes and
+        // four targets in place of COSMETIC_TOKEN_BAR_SIZE and COSMETIC_TOKEN_BAR_TARGET_PACKS
+        // (R2728000).
         listed,
-        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1,
+        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -376,8 +406,9 @@ fn every_name_is_listed_once() {
          (#1306), STARTER_CARDS (R1310000), and #1339's TIER_WEIGHT_TOTAL, CARD_TIER_WEIGHTS, \
          COSMETIC_TIER_WEIGHTS, PACK_FLOORED_SLOT, PACK_FLOOR_RARITY and COSMETIC_PACK_FLOOR_RARITY \
          (R1339000), #1661's GLOBAL_COSMETIC_ROLL_WEIGHT and GLOBAL_COSMETIC_FLOOR_RARITY \
-         (R1661001), CI_RUNS_CACHE_TTL_SECONDS (R1935000), RANK_STREAK_FLAME_LENGTH (R2101000) and \
-         QUEST_REPLACES_PER_DAY (R2210000)"
+         (R1661001), CI_RUNS_CACHE_TTL_SECONDS (R1935000), RANK_STREAK_FLAME_LENGTH (R2101000), \
+         QUEST_REPLACES_PER_DAY (R2210000) and #2728's four per-step cosmetic bar sizes and four \
+         targets in place of COSMETIC_TOKEN_BAR_SIZE and COSMETIC_TOKEN_BAR_TARGET_PACKS (R2728000)"
     );
 }
 

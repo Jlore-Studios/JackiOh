@@ -1,5 +1,6 @@
 // R1953001 (#1953): a held cosmetic token is offered where a locked cosmetic is shown, a card's own
-// cosmetics view and the account's tiles, and only where its tier covers the cosmetic (R1305003):
+// cosmetics view and the account's tiles, and only where its tier covers the cosmetic (R1305003; a
+// Legendary token a Legendary chase too, and no token a Mythic, R2728000):
 // the offer redeems it through `POST /api/tokens/redeem-cosmetic` and the cosmetic shows owned once
 // the screen's ownership reads again; a refusal shows the server's words and changes nothing.
 // R2480000 (#2480): the offer asks first; Confirm redeems, Cancel and Escape spend nothing.
@@ -40,7 +41,7 @@ afterEach(() => {
 
 /** Held cosmetic tokens, none but those given. */
 function held(over: Partial<HeldTokens> = {}): HeldTokens {
-  return { card: 0, cosmeticRare: 0, cosmeticEpic: 0, cosmeticPack: 0, ...over };
+  return { card: 0, cosmeticRare: 0, cosmeticEpic: 0, cosmeticLegendary: 0, cosmeticPack: 0, ...over };
 }
 
 /** The bars answer, holding `tokens`. */
@@ -129,7 +130,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     expect(screen.queryByTestId(T.tokenOffer("foil-galaxy"))).toBeNull();
   });
 
-  it("R1953001 a chase never shows the offer", async () => {
+  it("R1953001 a chase shows no Rare or Epic token's offer", async () => {
     const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9 });
     const chases = COSMETICS.filter((cosmetic) => cosmetic.chase);
     expect(chases.length).toBeGreaterThan(0);
@@ -146,7 +147,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
 
   it("R2655000 a locked Epic full art offers an Epic token, and its animated and signed full arts none", async () => {
     const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9 });
-    // Every card's Epic full art is one an Epic token buys; no token buys a Legendary or Mythic one.
+    // Every card's Epic full art is one an Epic token buys; no Rare or Epic token buys a Legendary or Mythic one.
     const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
     expect(fullArts).toHaveLength(21 * 3);
     for (const fullArt of fullArts) expect(offerTier(fullArt, plenty), fullArt.id).toBe(fullArt.rarity === "Epic" ? "Epic" : null);
@@ -201,7 +202,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
 
     const offer = await screen.findByTestId(T.tokenOffer("table-marble"));
     expect(offer).toHaveTextContent("Unlock with an Epic token (1 held)");
-    // A chase tile is locked with no offer, and a starter tile is owned.
+    // A chase tile is locked with no Epic token's offer, and a starter tile is owned.
     expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-owned", "false");
     expect(screen.queryByTestId(T.tokenOffer("table-astral"))).toBeNull();
     expect(screen.queryByTestId(T.tokenOffer("table-felt"))).toBeNull();
@@ -229,6 +230,78 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     expect(screen.getByTestId(T.tile("table-marble"))).toHaveAttribute("data-owned", "false");
     expect(screen.queryByTestId(T.tokenOffer("table-marble"))).toBeNull();
     expect(server.to("GET", "/api/tokens")).toHaveLength(0);
+  });
+});
+
+describe("R2728000 a held Legendary token, offered in place", () => {
+  it("R2728000 a Legendary token covers up to Legendary, a chase included, and never a Mythic", async () => {
+    const legendary = held({ cosmeticLegendary: 1 });
+    for (const id of ["foil-glitter", "foil-galaxy", "foil-molten-gold", "table-obsidian-slab", "full-art-big-d-fender-animated"]) {
+      expect(offerTier(entry(id), legendary), id).toBe("Legendary");
+    }
+    const all = held({ cosmeticRare: 9, cosmeticEpic: 9, cosmeticLegendary: 9 });
+    const mythics = COSMETICS.filter((cosmetic) => cosmetic.rarity === "Mythic");
+    expect(mythics.length).toBeGreaterThan(0);
+    for (const mythic of mythics) expect(offerTier(mythic, all), mythic.id).toBeNull();
+    // A Legendary starter is every account's already.
+    expect(offerTier(entry("foil-cracked-ice"), all)).toBeNull();
+    // With all three held, the cheapest that covers it is offered.
+    expect(offerTier(entry("foil-sunburst"), all)).toBe("Rare");
+    expect(offerTier(entry("foil-galaxy"), all)).toBe("Epic");
+    expect(offerTier(entry("foil-molten-gold"), all)).toBe("Legendary");
+
+    const server = tokenServer({ cosmeticLegendary: 2 }, { status: 200, body: barsHolding({ cosmeticLegendary: 1 }) });
+    const read = vi
+      .fn<(token: string) => Promise<OwnedByCard>>()
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValue(new Map([["core-001", new Set(["foil-molten-gold"])]]));
+    cardViewOf(read);
+
+    const offer = await screen.findByTestId(T.tokenOffer("foil-molten-gold"));
+    expect(offer).toHaveTextContent("Unlock with a Legendary token (2 held)");
+    expect(screen.getByTestId(T.stripItem("foil-void-shimmer"))).toHaveAttribute("data-owned", "false");
+    expect(screen.queryByTestId(T.tokenOffer("foil-void-shimmer"))).toBeNull();
+
+    fireEvent.click(offer);
+    expect(screen.getByRole("alertdialog", { name: "Unlock Molten gold? This spends 1 Legendary token." })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("foil-molten-gold")));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(T.stripItem("foil-molten-gold"))).toHaveAttribute("data-owned", "true");
+    });
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({
+      token: "Legendary",
+      cosmeticId: "foil-molten-gold",
+      cardId: "core-001",
+    });
+  });
+
+  it("R2728000 a locked Legendary playmat tile offers a Legendary token", async () => {
+    const server = tokenServer({ cosmeticLegendary: 1 }, { status: 200, body: barsHolding({}) });
+    const read = vi
+      .fn<(token: string) => Promise<ReadonlySet<string>>>()
+      .mockResolvedValueOnce(new Set())
+      .mockResolvedValue(new Set(["table-obsidian-slab"]));
+    render(
+      <ViewerAccountCosmetics token={TOKEN} gated read={read}>
+        <AccountCosmeticTiles token={TOKEN} />
+      </ViewerAccountCosmetics>,
+    );
+
+    const offer = await screen.findByTestId(T.tokenOffer("table-obsidian-slab"));
+    expect(offer).toHaveTextContent("Unlock with a Legendary token (1 held)");
+    // A Mythic tile is locked with no offer.
+    expect(screen.getByTestId(T.tile("table-astral"))).toHaveAttribute("data-owned", "false");
+    expect(screen.queryByTestId(T.tokenOffer("table-astral"))).toBeNull();
+
+    fireEvent.click(offer);
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("table-obsidian-slab")));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(T.tile("table-obsidian-slab"))).toHaveAttribute("data-owned", "true");
+    });
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Legendary", cosmeticId: "table-obsidian-slab" });
   });
 });
 

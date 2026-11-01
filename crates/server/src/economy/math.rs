@@ -144,8 +144,11 @@ pub fn level_span_xp(total_xp: i64) -> i64 {
 mod tests {
     use super::*;
     use crate::config::{
-        CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, COSMETIC_TOKEN_BAR_SIZE,
-        COSMETIC_TOKEN_BAR_TARGET_PACKS, PACK_FLOOR_RARITY, TIER_WEIGHT_TOTAL,
+        CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
+        COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_SIZE_RARE,
+        COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC, COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY,
+        COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK, COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE, PACK_FLOOR_RARITY,
+        TIER_WEIGHT_TOTAL,
     };
     use crate::economy::roll::slot_tiers;
     use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds};
@@ -396,9 +399,9 @@ mod tests {
     /// rarity, a pack's mean points are its slots' rarity odds (`card_odds`, the fallback
     /// included) weighted by each rarity's points: `PACK_SLOTS - 1` slots at 1.61 and the floored
     /// one at 2.21, so 8.65. Each bar then fills once every its target packs on average: its size
-    /// over that mean, rounded.
+    /// over that mean, rounded, the cosmetic bar's at each step of its cycle (R2728000).
     #[test]
-    fn r1953000_the_bars_fill_at_their_target_packs_on_average() {
+    fn r1953000_r2728000_the_bars_fill_at_their_target_packs_on_average() {
         let mean = |odds: TierOdds| {
             [
                 (odds.common, Common),
@@ -416,7 +419,13 @@ mod tests {
         assert!((per_pack - 8.65).abs() < 1e-9, "{per_pack} points a pack");
         for (size, target) in [
             (CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS),
-            (COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_TARGET_PACKS),
+            (COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE),
+            (COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC),
+            (
+                COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+                COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY,
+            ),
+            (COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK),
         ] {
             let packs = size as f64 / per_pack;
             assert_eq!(

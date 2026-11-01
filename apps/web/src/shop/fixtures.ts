@@ -21,14 +21,15 @@ export function walletInfo(): WalletResponse {
 
 /**
  * `GET /api/tokens`: the card bar one point from full, the cosmetic bar at 30 of 150, the
- * cycle's next step Epic, one card token, one Rare token, no Epic token and one cosmetic pack.
+ * cycle's next step Epic, one card token, one Rare token, no Epic or Legendary token and one
+ * cosmetic pack.
  */
 export function tokenBars(): TokenBarsResponse {
   return {
     cardBar: { points: 149, size: 150 },
     cosmeticBar: { points: 30, size: 150 },
     nextStep: "epic",
-    tokens: { card: 1, cosmeticRare: 1, cosmeticEpic: 0, cosmeticPack: 1 },
+    tokens: { card: 1, cosmeticRare: 1, cosmeticEpic: 0, cosmeticLegendary: 0, cosmeticPack: 1 },
   };
 }
 

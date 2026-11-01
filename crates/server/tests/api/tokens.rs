@@ -18,8 +18,9 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_cata
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX,
-    PACK_PRICE_JLORE, SPEND_BUSY_RETRY_AFTER_MS,
+    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+    COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_CYCLE,
+    ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_PRICE_JLORE, SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
 use jackioh_server::db::store::CollectionEntry;
@@ -344,33 +345,44 @@ async fn r1305000_a_bar_pays_when_full_and_keeps_the_overflow() {
 }
 
 #[tokio::test]
-async fn r1305001_the_cycle_pays_rare_epic_rare_epic_rare_pack_then_restarts() {
+async fn r1305001_r2728000_the_cycle_pays_rare_epic_legendary_rare_epic_pack_twice_over() {
     let (app, token) = setup().await;
     grant_entire_catalog(&app, PROFILE, None)
         .await
         .expect("R111's grant");
-    for _ in 0..7 {
+    let laps = 2 * COSMETIC_TOKEN_CYCLE.len();
+    for _ in 0..laps {
         buy(&app, &token).await;
     }
-    // Each opening spends every slot, adding at least a point and less than a size (R1953000), so
-    // prefilling to one point short pays exactly one step.
-    let fill = COSMETIC_TOKEN_BAR_SIZE - 1;
-    for at in 0..6 {
-        set_counter(&app, Counter::CosmeticTokenBar, fill).await;
-        open_pack(
+    // Each opening spends every slot, adding at least a point and less than any step's size
+    // (R1953000), so prefilling to one point short of the step's own size pays exactly that step
+    // (R2728000), and the bar rests on the next step's size.
+    for at in 0..laps {
+        let step = COSMETIC_TOKEN_CYCLE[at % COSMETIC_TOKEN_CYCLE.len()];
+        let next = COSMETIC_TOKEN_CYCLE[(at + 1) % COSMETIC_TOKEN_CYCLE.len()];
+        set_counter(&app, Counter::CosmeticTokenBar, step.bar_size() - 1).await;
+        let opened = open_pack(
             &app,
             PROFILE,
             PackKind::Set(SetName::Core),
             &[],
-            &format!("r1305001-{at}"),
+            &format!("r2728000-{at}"),
         )
         .await
         .expect("the opening");
+        assert_eq!(opened.bars.cosmetic_paid, vec![step], "{at}");
+        assert_eq!(
+            opened.bars.cosmetic_sizes,
+            vec![step.bar_size(), next.bar_size()],
+            "{at}"
+        );
+        assert_eq!(opened.bars.cosmetic.size, next.bar_size(), "{at}");
     }
-    assert_eq!(counter_of(&app, Counter::CosmeticTokenCycle).await, 6);
-    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 3);
-    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 2);
-    assert_eq!(held(&app, InventoryItem::CosmeticPack, "").await, 1);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenCycle).await, laps as i64);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 4);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 4);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 2);
+    assert_eq!(held(&app, InventoryItem::CosmeticPack, "").await, 2);
     let steps: Vec<(String, String)> = ledger(&app)
         .await
         .inventory
@@ -384,31 +396,20 @@ async fn r1305001_the_cycle_pays_rare_epic_rare_epic_rare_pack_then_restarts() {
         })
         .map(|row| (format!("{:?}", row.item), row.key.clone()))
         .collect();
-    assert_eq!(
-        steps,
-        vec![
-            ("CosmeticToken".to_string(), "Rare".to_string()),
-            ("CosmeticToken".to_string(), "Epic".to_string()),
-            ("CosmeticToken".to_string(), "Rare".to_string()),
-            ("CosmeticToken".to_string(), "Epic".to_string()),
-            ("CosmeticToken".to_string(), "Rare".to_string()),
-            ("CosmeticPack".to_string(), String::new()),
-        ]
-    );
-
-    // The seventh fill restarts at Rare: the Cosmetic Pack step added an unopened pack.
-    set_counter(&app, Counter::CosmeticTokenBar, fill).await;
-    open_pack(
-        &app,
-        PROFILE,
-        PackKind::Set(SetName::Core),
-        &[],
-        "r1305001-restart",
-    )
-    .await
-    .expect("the opening");
-    assert_eq!(counter_of(&app, Counter::CosmeticTokenCycle).await, 7);
-    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 4);
+    let lap = [
+        ("CosmeticToken", "Rare"),
+        ("CosmeticToken", "Epic"),
+        ("CosmeticToken", "Legendary"),
+        ("CosmeticToken", "Rare"),
+        ("CosmeticToken", "Epic"),
+        ("CosmeticPack", ""),
+    ];
+    let expected: Vec<(String, String)> = lap
+        .iter()
+        .chain(lap.iter())
+        .map(|(item, key)| (item.to_string(), key.to_string()))
+        .collect();
+    assert_eq!(steps, expected);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -576,7 +577,7 @@ async fn r1305003_an_epic_token_buys_common_rare_and_epic_but_not_legendary() {
     }
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 0);
 
-    // Legendary and Mythic sit above every token's tier: no token reaches them.
+    // Legendary and Mythic sit above an Epic token's tier.
     grant_item(&app, InventoryItem::CosmeticToken, "Epic", 2).await;
     let before = everything(&app).await;
     for cosmetic_id in ["foil-fixture-legendary", "foil-fixture-mythic"] {
@@ -659,7 +660,8 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
         // A per-card cosmetic for a card not owned, and with no card at all.
         (CosmeticRarity::Epic, "foil-fixture-epic", Some(cards[2].as_str())),
         (CosmeticRarity::Epic, "foil-fixture-epic", None),
-        // A chase, a default and a starter are owned or unbuyable by every account.
+        // A chase is above a Rare token's tier, and a default and a starter are owned by every
+        // account.
         (
             CosmeticRarity::Rare,
             "foil-fixture-chase",
@@ -680,10 +682,10 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
         let refused = redeem_cosmetic_token(&app, PROFILE, &registry, token, cosmetic_id, card_id).await;
         assert_eq!(refused.unwrap_err().status(), 409, "{cosmetic_id}");
     }
-    // A token outside Rare and Epic, and an unknown cosmetic, are bad requests.
+    // A token outside Rare, Epic and Legendary (R2728000), and an unknown cosmetic, are bad
+    // requests.
     for (token, cosmetic_id) in [
         (CosmeticRarity::Common, "foil-fixture-common"),
-        (CosmeticRarity::Legendary, "foil-fixture-legendary"),
         (CosmeticRarity::Mythic, "foil-fixture-mythic"),
     ] {
         let refused =
@@ -746,8 +748,8 @@ async fn r1833000_a_rare_token_buys_foil_sunburst_not_table_marble_and_no_token_
     assert!(owned(&ledger(&app).await, Some(&cards[0]), "foil-sunburst"));
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);
 
-    // Its Epic playmat is above a Rare token's tier, and its Mythic foil is a chase, which no
-    // token buys (R1305003): refused, and every token kept.
+    // Its Epic playmat is above a Rare token's tier, and its Mythic foil above every token's
+    // (R1305003, R2728000): refused, and every token kept.
     let before = everything(&app).await;
     let (status, answer) = redeem(json!({ "token": "Rare", "cosmeticId": "table-marble" })).await;
     assert_eq!(status, 409, "{answer}");
@@ -756,12 +758,14 @@ async fn r1833000_a_rare_token_buys_foil_sunburst_not_table_marble_and_no_token_
             redeem(json!({ "token": token, "cosmeticId": "foil-void-shimmer", "cardId": cards[0] })).await;
         assert_eq!(status, 409, "{token}: {answer}");
     }
-    // A token of a chase's tier is no token at all.
-    for token in ["Legendary", "Mythic"] {
-        let (status, answer) =
-            redeem(json!({ "token": token, "cosmeticId": "foil-void-shimmer", "cardId": cards[0] })).await;
-        assert_eq!(status, 400, "{token}: {answer}");
-    }
+    // A Legendary token is one the account holds none of here (R2728000), and a Mythic token is
+    // no token at all.
+    let (status, answer) =
+        redeem(json!({ "token": "Legendary", "cosmeticId": "foil-void-shimmer", "cardId": cards[0] })).await;
+    assert_eq!(status, 409, "{answer}");
+    let (status, answer) =
+        redeem(json!({ "token": "Mythic", "cosmeticId": "foil-void-shimmer", "cardId": cards[0] })).await;
+    assert_eq!(status, 400, "{answer}");
     assert_eq!(everything(&app).await, before);
 
     // An Epic token buys the Epic playmat, on the account.
@@ -784,9 +788,15 @@ async fn r1305004_get_tokens_reads_bars_cycle_and_tokens() {
         body,
         json!({
             "cardBar": { "points": 0, "size": CARD_TOKEN_BAR_SIZE },
-            "cosmeticBar": { "points": 0, "size": COSMETIC_TOKEN_BAR_SIZE },
+            "cosmeticBar": { "points": 0, "size": COSMETIC_TOKEN_BAR_SIZE_RARE },
             "nextStep": "rare",
-            "tokens": { "card": 0, "cosmeticRare": 0, "cosmeticEpic": 0, "cosmeticPack": 0 },
+            "tokens": {
+                "card": 0,
+                "cosmeticRare": 0,
+                "cosmeticEpic": 0,
+                "cosmeticLegendary": 0,
+                "cosmeticPack": 0,
+            },
         })
     );
 
@@ -802,9 +812,15 @@ async fn r1305004_get_tokens_reads_bars_cycle_and_tokens() {
         body,
         json!({
             "cardBar": { "points": 10, "size": CARD_TOKEN_BAR_SIZE },
-            "cosmeticBar": { "points": 20, "size": COSMETIC_TOKEN_BAR_SIZE },
+            "cosmeticBar": { "points": 20, "size": COSMETIC_TOKEN_BAR_SIZE_EPIC },
             "nextStep": "epic",
-            "tokens": { "card": 2, "cosmeticRare": 1, "cosmeticEpic": 0, "cosmeticPack": 3 },
+            "tokens": {
+                "card": 2,
+                "cosmeticRare": 1,
+                "cosmeticEpic": 0,
+                "cosmeticLegendary": 0,
+                "cosmeticPack": 3,
+            },
         })
     );
 
@@ -817,6 +833,204 @@ async fn r1305004_get_tokens_reads_bars_cycle_and_tokens() {
     let (status, _, body) = call(&app, "GET", "/api/tokens", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
     assert_eq!(body["nextStep"], json!("rare"));
+}
+
+#[tokio::test]
+async fn r2728000_get_tokens_answers_the_current_step_s_size_and_legendary_tokens() {
+    let (app, token) = setup().await;
+    set_counter(&app, Counter::CosmeticTokenBar, 40).await;
+    // The cosmetic bar's size is the step it stands at, counted from the stored position, laps
+    // included: Legendary at 2, the pack at 5, Rare at 6, Legendary again at 8.
+    for (cycle, next_step, size) in [
+        (2, "legendary", COSMETIC_TOKEN_BAR_SIZE_LEGENDARY),
+        (5, "cosmeticPack", COSMETIC_TOKEN_BAR_SIZE_PACK),
+        (6, "rare", COSMETIC_TOKEN_BAR_SIZE_RARE),
+        (8, "legendary", COSMETIC_TOKEN_BAR_SIZE_LEGENDARY),
+    ] {
+        set_counter(&app, Counter::CosmeticTokenCycle, cycle).await;
+        let (status, _, body) = call(&app, "GET", "/api/tokens", Some(&token), Value::Null).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["nextStep"], json!(next_step), "{cycle}");
+        assert_eq!(
+            body["cosmeticBar"],
+            json!({ "points": 40, "size": size }),
+            "{cycle}"
+        );
+    }
+    assert_eq!(
+        [
+            COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+            COSMETIC_TOKEN_BAR_SIZE_PACK,
+            COSMETIC_TOKEN_BAR_SIZE_RARE
+        ],
+        [100, 100, 50]
+    );
+    // The Legendary tokens held.
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 2).await;
+    let (status, _, body) = call(&app, "GET", "/api/tokens", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["tokens"]["cosmeticLegendary"], json!(2));
+    assert_eq!(body["tokens"]["cosmeticEpic"], json!(0));
+}
+
+// ---------------------------------------------------------------------------------------------
+// R2728000: a Legendary token buys up to a Legendary chase, never a Mythic
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn r2728000_a_legendary_token_buys_up_to_a_legendary_chase() {
+    let (app, token) = setup().await;
+    let cards = three_cards(&app);
+    own(&app, &cards[..2]).await;
+    let full_art_card = "classicplus-019".to_string();
+    own(&app, std::slice::from_ref(&full_art_card)).await;
+    let registry = registry(&cards);
+
+    // Common, Rare, Epic and Legendary per-card cosmetics on an owned card, and a Legendary chase.
+    let buys = [
+        ("foil-fixture-common", cards[0].as_str()),
+        ("foil-fixture-rare", cards[0].as_str()),
+        ("foil-fixture-epic", cards[0].as_str()),
+        ("foil-fixture-legendary", cards[0].as_str()),
+        ("foil-fixture-chase", cards[1].as_str()),
+    ];
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 5).await;
+    for (left, (cosmetic_id, card_id)) in (0..buys.len() as i64).rev().zip(buys) {
+        redeem_cosmetic_token(
+            &app,
+            PROFILE,
+            &registry,
+            CosmeticRarity::Legendary,
+            cosmetic_id,
+            Some(card_id),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("a Legendary token buys {cosmetic_id}: {error}"));
+        assert_eq!(
+            held(&app, InventoryItem::CosmeticToken, "Legendary").await,
+            left,
+            "{cosmetic_id}"
+        );
+    }
+
+    // Through the route over the shipped registry: a Legendary chase playmat on the account, and
+    // a Legendary chase full art on its own owned card.
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 2).await;
+    for (left, body) in [
+        (
+            1,
+            json!({ "token": "Legendary", "cosmeticId": "table-obsidian-slab" }),
+        ),
+        (
+            0,
+            json!({
+                "token": "Legendary",
+                "cosmeticId": "full-art-league-of-losers-animated",
+                "cardId": full_art_card,
+            }),
+        ),
+    ] {
+        let (status, _, answer) = call(
+            &app,
+            "POST",
+            "/api/tokens/redeem-cosmetic",
+            Some(&token),
+            body.clone(),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}: {answer}");
+        assert_eq!(answer["tokens"]["cosmeticLegendary"], json!(left), "{answer}");
+    }
+    let ledger = ledger(&app).await;
+    let owned = |card_id: Option<&str>, cosmetic_id: &str| {
+        ledger
+            .cosmetics
+            .iter()
+            .any(|row| row.card_id.as_deref() == card_id && row.cosmetic_id == cosmetic_id)
+    };
+    for (cosmetic_id, card_id) in buys {
+        assert!(owned(Some(card_id), cosmetic_id), "{cosmetic_id}");
+    }
+    assert!(owned(None, "table-obsidian-slab"));
+    assert!(owned(Some(&full_art_card), "full-art-league-of-losers-animated"));
+    // Every buy spent one token, under `token_redeem`.
+    let spent = ledger
+        .inventory
+        .iter()
+        .filter(|row| {
+            row.reason == EconomyReason::TokenRedeem
+                && row.item == InventoryItem::CosmeticToken
+                && row.key == "Legendary"
+        })
+        .map(|row| row.delta)
+        .collect::<Vec<_>>();
+    assert_eq!(spent, vec![-1; buys.len() + 2]);
+}
+
+#[tokio::test]
+async fn r2728000_a_legendary_token_refuses_a_mythic_an_owned_one_and_an_unowned_card() {
+    let (app, token) = setup().await;
+    let cards = three_cards(&app);
+    own(&app, &cards[..2]).await;
+    let full_art_card = "classicplus-019".to_string();
+    own(&app, std::slice::from_ref(&full_art_card)).await;
+    let registry = registry(&cards);
+    grant_item(&app, InventoryItem::CosmeticToken, "Legendary", 3).await;
+    redeem_cosmetic_token(
+        &app,
+        PROFILE,
+        &registry,
+        CosmeticRarity::Legendary,
+        "foil-fixture-legendary",
+        Some(&cards[0]),
+    )
+    .await
+    .expect("the first buy");
+
+    // A Mythic, the Legendary already owned on that card, and a per-card one on a card the
+    // account does not own: each 409, spending nothing.
+    let before = everything(&app).await;
+    for (cosmetic_id, card_id) in [
+        ("foil-fixture-mythic", Some(cards[0].as_str())),
+        ("foil-fixture-legendary", Some(cards[0].as_str())),
+        ("foil-fixture-legendary", Some(cards[2].as_str())),
+    ] {
+        let refused = redeem_cosmetic_token(
+            &app,
+            PROFILE,
+            &registry,
+            CosmeticRarity::Legendary,
+            cosmetic_id,
+            card_id,
+        )
+        .await;
+        assert_eq!(refused.unwrap_err().status(), 409, "{cosmetic_id}");
+    }
+    // Through the route: the shipped Mythic playmat and Mythic full art.
+    for body in [
+        json!({ "token": "Legendary", "cosmeticId": "table-astral" }),
+        json!({
+            "token": "Legendary",
+            "cosmeticId": "full-art-league-of-losers-signed",
+            "cardId": full_art_card,
+        }),
+    ] {
+        let (status, _, answer) = call(
+            &app,
+            "POST",
+            "/api/tokens/redeem-cosmetic",
+            Some(&token),
+            body.clone(),
+        )
+        .await;
+        assert_eq!(
+            (status, answer["error"]["code"].clone()),
+            (409, json!("conflict")),
+            "{body}: {answer}"
+        );
+    }
+    assert_eq!(everything(&app).await, before);
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Legendary").await, 2);
 }
 
 #[tokio::test]
@@ -1036,7 +1250,8 @@ async fn r2378000_a_redemption_sent_past_the_waiting_ones_is_refused_at_once_and
 }
 
 #[tokio::test]
-async fn r2655000_an_epic_token_buys_a_new_card_s_epic_full_art_and_no_token_its_legendary_or_mythic() {
+async fn r2655000_an_epic_token_buys_a_new_card_s_epic_full_art_and_no_rare_or_epic_token_its_legendary_or_mythic()
+ {
     let (app, token) = setup().await;
     let card = "classicplus-019".to_string();
     own(&app, std::slice::from_ref(&card)).await;
@@ -1051,8 +1266,9 @@ async fn r2655000_an_epic_token_buys_a_new_card_s_epic_full_art_and_no_token_its
         }
     };
 
-    // League of Losers' animated and signed full arts are chases, which no token buys (R1305003),
-    // and a token of a chase's tier is no token at all: refused, and every token kept.
+    // League of Losers' animated and signed full arts are chases, which no Rare or Epic token
+    // buys (R1305003); a Legendary token is one the account holds none of here (R2728000), and a
+    // Mythic token is no token at all: refused, and every token kept.
     let before = everything(&app).await;
     for cosmetic in [
         "full-art-league-of-losers-animated",
@@ -1063,11 +1279,12 @@ async fn r2655000_an_epic_token_buys_a_new_card_s_epic_full_art_and_no_token_its
                 redeem(json!({ "token": token, "cosmeticId": cosmetic, "cardId": card })).await;
             assert_eq!(status, 409, "{cosmetic} for {token}: {answer}");
         }
-        for token in ["Legendary", "Mythic"] {
-            let (status, answer) =
-                redeem(json!({ "token": token, "cosmeticId": cosmetic, "cardId": card })).await;
-            assert_eq!(status, 400, "{cosmetic} for {token}: {answer}");
-        }
+        let (status, answer) =
+            redeem(json!({ "token": "Legendary", "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 409, "{cosmetic} for Legendary: {answer}");
+        let (status, answer) =
+            redeem(json!({ "token": "Mythic", "cosmeticId": cosmetic, "cardId": card })).await;
+        assert_eq!(status, 400, "{cosmetic} for Mythic: {answer}");
     }
     // Its Epic full art is above a Rare token's tier.
     let (status, answer) =

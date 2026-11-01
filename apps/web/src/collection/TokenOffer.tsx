@@ -1,8 +1,8 @@
 // R1953001 (#1953): a held cosmetic token, offered where a locked cosmetic is shown (a card's own
 // cosmetics view, the playmat, backdrop and card back tiles), in place of the shop's picker it
-// replaces. A Rare token covers Common and Rare, an Epic token Epic and below, and no token a chase,
-// a default or a starter (R1305003, §14.2), so the offer shows only where a held token covers the
-// cosmetic.
+// replaces. A Rare token covers Common and Rare, an Epic token Epic and below, a Legendary token
+// Legendary and below, a Legendary chase included (R2728000), and no token a Mythic, a default or a
+// starter (R1305003, §14.2), so the offer shows only where a held token covers the cosmetic.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). The held counts are `GET /api/tokens`' and the offer only
 // hides what the server would refuse: its Confirm sends `POST /api/tokens/redeem-cosmetic` and renders
@@ -28,22 +28,30 @@ import "./tokenOffer.css";
 export type HeldTokens = TokenBarsResponse["tokens"];
 
 /** The tokens that buy a cosmetic, the lowest first, so an offer spends the cheapest that covers it. */
-const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic"];
+const OFFERED_TOKENS: readonly CosmeticTokenTier[] = ["Rare", "Epic", "Legendary"];
 
 function heldOf(held: HeldTokens, tier: CosmeticTokenTier): number {
-  return tier === "Rare" ? held.cosmeticRare : held.cosmeticEpic;
+  switch (tier) {
+    case "Rare":
+      return held.cosmeticRare;
+    case "Epic":
+      return held.cosmeticEpic;
+    case "Legendary":
+      return held.cosmeticLegendary;
+  }
 }
 
 /**
  * The token a locked `cosmetic` is offered for: the lowest held one whose tier covers its rarity on
- * the cosmetic's own scale (R1305003). Null for a chase, a default or a starter, and where nothing
- * held covers it or the held tokens are unread.
+ * the cosmetic's own scale (R1305003), so a chase only a Legendary token covers, and a Mythic none
+ * (R2728000). Null for a default or a starter, and where nothing held covers it or the held tokens
+ * are unread.
  */
 export function offerTier(
-  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter" | "chase">,
+  cosmetic: Pick<RegistryCosmetic, "rarity" | "default" | "starter">,
   held: HeldTokens | null,
 ): CosmeticTokenTier | null {
-  if (held === null || cosmetic.chase || cosmetic.default || cosmetic.starter) return null;
+  if (held === null || cosmetic.default || cosmetic.starter) return null;
   return OFFERED_TOKENS.find((tier) => cosmeticTier(cosmetic.rarity) <= cosmeticTier(tier) && heldOf(held, tier) > 0) ?? null;
 }
 
@@ -73,16 +81,26 @@ export function useHeldTokens(token: string | null | undefined): [HeldTokens | n
 
 /** What the offer's button says: the token it spends and how many of it are held. */
 function offerWords(tier: CosmeticTokenTier, count: number): string {
-  return tier === "Rare"
-    ? t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) })
-    : t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
+  switch (tier) {
+    case "Rare":
+      return t("Unlock with a Rare token ({count} held)", { count: formatNumber(count) });
+    case "Epic":
+      return t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
+    case "Legendary":
+      return t("Unlock with a Legendary token ({count} held)", { count: formatNumber(count) });
+  }
 }
 
 /** What the offer asks before it spends (R2480000): the cosmetic, and the token it spends. */
 function questionWords(tier: CosmeticTokenTier, name: string): string {
-  return tier === "Rare"
-    ? t("Unlock {name}? This spends 1 Rare token.", { name })
-    : t("Unlock {name}? This spends 1 Epic token.", { name });
+  switch (tier) {
+    case "Rare":
+      return t("Unlock {name}? This spends 1 Rare token.", { name });
+    case "Epic":
+      return t("Unlock {name}? This spends 1 Epic token.", { name });
+    case "Legendary":
+      return t("Unlock {name}? This spends 1 Legendary token.", { name });
+  }
 }
 
 /**

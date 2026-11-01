@@ -9,8 +9,9 @@
 //
 // Cosmetic rarity is its own scale (Common to Mythic), so a token buys at its tier or below on
 // the COSMETIC's rarity, not the card's: a Rare token reaches Common and Rare, an Epic token adds
-// Epic, and Legendary and Mythic are unreachable, since no token exceeds Epic (R1305003). It is
-// its own type, `CosmeticRarity`, never a card's `PrintedRarity`, so the two cannot mix (R1333000).
+// Epic, a Legendary token adds Legendary, a Legendary chase included, and Mythic is unreachable,
+// since no token exceeds Legendary (R1305003, R2728000). It is its own type, `CosmeticRarity`,
+// never a card's `PrintedRarity`, so the two cannot mix (R1333000).
 
 import { CATALOG } from "@jackioh/cards";
 import { MAX_COPIES } from "@jackioh/engine/config";
@@ -20,7 +21,7 @@ import { SHIPPED_SETS, setShips, type CardDef } from "@jackioh/shared";
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { CatalogSnapshot } from "@jackioh/validator";
 import { t } from "../i18n/i18n.ts";
-import type { CollectionResponse, CosmeticSlot, OwnedCosmeticsResponse } from "../net/api.ts";
+import type { CollectionResponse, CosmeticSlot, CosmeticTokenStep, OwnedCosmeticsResponse } from "../net/api.ts";
 import { matchesFilter, sortPool, type PoolFilter, type PoolSort } from "../game/deckbuilder/filters.ts";
 
 /** One registry entry, structurally: what the filters read. */
@@ -80,6 +81,7 @@ export const shopTestid = {
   heldCard: "token-held-card",
   heldRare: "token-held-rare",
   heldEpic: "token-held-epic",
+  heldLegendary: "token-held-legendary",
   heldPack: "token-held-pack",
   cosmeticSpend: "token-cosmetic-spend",
   cardPick: (id: string) => `token-card-pick-${id}`,
@@ -209,12 +211,14 @@ export function chaseCandidates(
 }
 
 /** The cycle's next step in a player's words. */
-export function nextStepWords(step: "rare" | "epic" | "cosmeticPack"): string {
+export function nextStepWords(step: CosmeticTokenStep): string {
   switch (step) {
     case "rare":
       return t("Rare token");
     case "epic":
       return t("Epic token");
+    case "legendary":
+      return t("Legendary token");
     case "cosmeticPack":
       return t("Cosmetic pack");
   }

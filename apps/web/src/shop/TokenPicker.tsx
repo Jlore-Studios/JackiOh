@@ -300,6 +300,9 @@ function TokenBody({
       <p className="token-held" data-testid={shopTestid.heldEpic}>
         {t("Epic tokens held: {count}", { count: bars.tokens.cosmeticEpic })}
       </p>
+      <p className="token-held" data-testid={shopTestid.heldLegendary}>
+        {t("Legendary tokens held: {count}", { count: bars.tokens.cosmeticLegendary })}
+      </p>
       <p>
         <a href={paths.collection} data-testid={shopTestid.cosmeticSpend} onClick={followInApp(paths.collection)}>
           {t("Spend cosmetic tokens on a locked cosmetic in your Collection")}

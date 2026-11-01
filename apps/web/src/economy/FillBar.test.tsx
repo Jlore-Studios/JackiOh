@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { REDUCED_MOTION_QUERY } from "../game/animations.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { BURST_MS, segmentMs } from "./bars.ts";
+import { BURST_MS, FILL_MS, segmentMs } from "./bars.ts";
 import FillBar from "./FillBar.tsx";
 
 beforeEach(() => {
@@ -173,6 +173,55 @@ describe("#1658 a bar that fills", () => {
     advance(TO_VALUE_MS);
     expect(calls).toEqual(["fill 1", "fill 2", "done"]);
     expect(bar()).toHaveAttribute("data-bursts", "2");
+  });
+
+  it("R2728000 with a size for each fill, each sweep fills its own step's bar and it rests on the last", () => {
+    const calls: string[] = [];
+    render(
+      <FillBar
+        label="Bar"
+        size={50}
+        value={10}
+        from={60}
+        fills={2}
+        sizes={[75, 100, 50]}
+        testid={ID}
+        onFill={(fill) => calls.push(`fill ${String(fill)}`)}
+        onDone={() => calls.push("done")}
+      />,
+    );
+    const sweepMs = (): string => bar().querySelector<HTMLElement>(".fill-bar__fill")!.style.getPropertyValue("--fill-ms");
+
+    // 60 of the first step's 75, while the native progress rests at the server's 10 of 50.
+    expect(fillTransform()).toBe("scaleX(0.8)");
+    expect(progress().value).toBe(10);
+    expect(progress().max).toBe(50);
+    const first = segmentMs({ from: 60, to: 75, burst: true }, 75);
+    expect(sweepMs()).toBe(`${String(first)}ms`);
+    advance(first - 1);
+    expect(calls).toEqual([]);
+    advance(1);
+    expect(calls).toEqual(["fill 1"]);
+    expect(fillTransform()).toBe("scaleX(1)");
+
+    // The second step's bar of 100 takes a whole sweep's time from 0.
+    advance(BURST_MS);
+    expect(fillTransform()).toBe("scaleX(0)");
+    expect(sweepMs()).toBe(`${String(FILL_MS)}ms`);
+    advance(FILL_MS - 1);
+    expect(calls).toEqual(["fill 1"]);
+    advance(1);
+    expect(calls).toEqual(["fill 1", "fill 2"]);
+
+    // Then it rests at 10 of the step after, 50.
+    advance(BURST_MS);
+    advance(segmentMs({ from: 0, to: 10, burst: false }, 50));
+    expect(calls).toEqual(["fill 1", "fill 2", "done"]);
+    expect(bar()).toHaveAttribute("data-state", "resting");
+    expect(bar()).toHaveAttribute("data-bursts", "2");
+    expect(fillTransform()).toBe("scaleX(0.2)");
+    expect(progress().max).toBe(50);
+    expect(bar()).toHaveTextContent("10 / 50");
   });
 
   it("a bar that paid nothing sweeps from where it was to where it is and bursts never", () => {

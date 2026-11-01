@@ -424,8 +424,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
                         stored pick draws as the default (R1833000); a locked tile or strip item a held
-                        Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
-                        POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
+                        Rare, Epic or Legendary cosmetic token covers offers it in place (collection/TokenOffer.tsx,
+                        POST /api/tokens/redeem-cosmetic, R1953001, R2728000), and ownership is read again;
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
@@ -446,7 +446,8 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
                         client sum); `JlorePill.tsx`, the pill in routes/nav.tsx's top bar and the
                         landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
-                        to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
+                        to after, bursts when full and restarts with the overflow, each fill on its own
+                        step's size where the answer gives one (R2728000); `RewardReveal.tsx`, a
                         filled bar's reward flown out one at a time; `OpeningBars.tsx`, the opening's
                         token bars pinned at the top of the screen, each slot's points (`slotPoints`)
                         flying from its card into them and a full bar pulsing before its reward

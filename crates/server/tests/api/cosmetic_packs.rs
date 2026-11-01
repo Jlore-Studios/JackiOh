@@ -18,8 +18,9 @@ use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
-    COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX,
-    PACK_FLOORED_SLOT, SPEND_BUSY_RETRY_AFTER_MS,
+    COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE,
+    CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_FLOORED_SLOT,
+    SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
 use jackioh_server::db::store::CollectionEntry;
@@ -662,10 +663,11 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
             cosmetic: BarSettle {
                 before: 0,
                 after: cosmetic_gain,
-                size: COSMETIC_TOKEN_BAR_SIZE,
+                size: COSMETIC_TOKEN_BAR_SIZE_RARE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            cosmetic_sizes: vec![COSMETIC_TOKEN_BAR_SIZE_RARE],
             slot_points: pack.bars.slot_points.clone(),
         }
     );
@@ -693,7 +695,7 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
     assert_eq!(status, 200, "{body}");
     let bars = &body["bars"];
     assert_eq!(bars["card"]["before"], json!(pack.bars.card.after));
-    assert_eq!(bars["cosmetic"]["size"], json!(COSMETIC_TOKEN_BAR_SIZE));
+    assert_eq!(bars["cosmetic"]["size"], json!(COSMETIC_TOKEN_BAR_SIZE_RARE));
     assert_eq!(bars["cosmeticPaid"], json!([]));
     assert_eq!(opened(&body).bars.cosmetic.before, pack.bars.cosmetic.after);
 }
@@ -703,24 +705,29 @@ async fn a_cosmetic_pack_answers_the_cycle_s_next_step_when_its_cosmetic_bar_pay
     let (app, _) = setup().await;
     grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
     // One step into the cycle, so the next is its second (an Epic token), and the bar one point
-    // short: the spent slots add at least that and less than a second size (R1953000).
+    // short of that step's size: the spent slots add at least that and less than the next step's
+    // size (R1953000, R2728000), so the bar rests on the Legendary step.
     set_counter(&app, Counter::CosmeticTokenCycle, 1).await;
-    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE - 1).await;
+    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE_EPIC - 1).await;
     let pack = open_cosmetic_pack(&app, PROFILE, &[], "bars-cycle")
         .await
         .expect("the opening");
     let gain = points(&pack);
-    assert!(gain < COSMETIC_TOKEN_BAR_SIZE, "{gain}");
+    assert!(gain - 1 < COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, "{gain}");
     assert_eq!(
         pack.bars.cosmetic,
         BarSettle {
-            before: COSMETIC_TOKEN_BAR_SIZE - 1,
+            before: COSMETIC_TOKEN_BAR_SIZE_EPIC - 1,
             after: gain - 1,
-            size: COSMETIC_TOKEN_BAR_SIZE,
+            size: COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
             pays: 1,
         }
     );
     assert_eq!(pack.bars.cosmetic_paid, vec![CosmeticTokenStep::Epic]);
+    assert_eq!(
+        pack.bars.cosmetic_sizes,
+        vec![COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY]
+    );
     assert_eq!(
         serde_json::to_value(&pack.bars).expect("the bars")["cosmeticPaid"],
         json!(["epic"])
@@ -775,10 +782,11 @@ async fn r1999000_a_cosmetic_pack_of_new_cosmetics_adds_every_slot_s_points_to_b
             cosmetic: BarSettle {
                 before: 11,
                 after: 11 + gained,
-                size: COSMETIC_TOKEN_BAR_SIZE,
+                size: COSMETIC_TOKEN_BAR_SIZE_RARE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            cosmetic_sizes: vec![COSMETIC_TOKEN_BAR_SIZE_RARE],
             slot_points: expected,
         }
     );

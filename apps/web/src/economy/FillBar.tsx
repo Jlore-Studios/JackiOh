@@ -1,10 +1,11 @@
 // The bar that fills (#1658, part of #1651, SPEC §14.5): a track and a fill, shared by the token
 // bars, the pack opening's two-bar animation and the store's and XP's bars.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). `size` and `value` are the server's, and so is `fills`; the
-// bar only plays them. Without `from` it is drawn at `value` and never moves. With `from` it sweeps
-// to `size`, bursts, reports the fill, restarts at 0 for each further fill, then sweeps to `value`
-// and reports it is done (`bars.ts::segments` lays the sweeps out).
+// THE SERVER DECIDES (CLAUDE.md rule 7). `size` and `value` are the server's, and so are `fills` and
+// `sizes`; the bar only plays them. Without `from` it is drawn at `value` and never moves. With `from`
+// it sweeps to `size` (with `sizes`, each fill to its own step's, R2728000), bursts, reports the fill,
+// restarts at 0 for each further fill, then sweeps to `value` and reports it is done
+// (`bars.ts::segments` lays the sweeps out).
 //
 // THE MOTION is transform and opacity only: the fill is a `scaleX` (`economy.css` holds the
 // keyframes, each taking its duration from `bars.ts`' constants through a custom property), and the
@@ -21,7 +22,7 @@ import { useFxSettings } from "../fx/settings.ts";
 import { reducedMotionNow } from "../game/animations.ts";
 import { useOsReducedMotion } from "../game/useOsReducedMotion.ts";
 import { useSetting } from "../settings/store.ts";
-import { BURST_MS, fraction, segmentMs, segments } from "./bars.ts";
+import { BURST_MS, fraction, segmentMs, segments, sizeAt } from "./bars.ts";
 import "./economy.css";
 
 export type FillBarProps = {
@@ -35,6 +36,8 @@ export type FillBarProps = {
   from?: number;
   /** How many times the bar fills and restarts on its way from `from` to `value`; 0 when absent. */
   fills?: number;
+  /** Each sweep's bar size, one per fill then the resting one (R2728000), the server's; `size` when absent. */
+  sizes?: readonly number[];
   /** The small text beside the label; `{value} / {size}` when absent. */
   caption?: string;
   /** Called with the fill's number (from 1) as the bar bursts. */
@@ -68,17 +71,20 @@ function sweepStyle(from: number, to: number, ms: number): CSSProperties {
 }
 
 /**
- * The bar. A new `size`, `value`, `from` or `fills` starts it afresh: a bar given a new answer plays
- * that answer, not the rest of the last one.
+ * The bar. A new `size`, `value`, `from`, `fills` or `sizes` starts it afresh: a bar given a new
+ * answer plays that answer, not the rest of the last one.
  */
 export default function FillBar(props: FillBarProps): ReactElement {
-  const { size, value, from, fills = 0 } = props;
-  return <Bar key={`${String(size)}:${String(value)}:${String(from ?? "-")}:${String(fills)}`} {...props} />;
+  const { size, value, from, fills = 0, sizes } = props;
+  return <Bar key={`${String(size)}:${String(value)}:${String(from ?? "-")}:${String(fills)}:${sizes?.join(",") ?? ""}`} {...props} />;
 }
 
-function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, still = false, testid }: FillBarProps): ReactElement {
+function Bar({ label, size, value, from, fills = 0, sizes, caption, onFill, onDone, still = false, testid }: FillBarProps): ReactElement {
   const reduced = useReducedMotion() || still;
-  const plan = useMemo(() => (from === undefined ? [] : segments(size, value, from, fills)), [size, value, from, fills]);
+  const plan = useMemo(
+    () => (from === undefined ? [] : segments(size, value, from, fills, sizes)),
+    [size, value, from, fills, sizes],
+  );
   const [position, setPosition] = useState<Position>({ step: 0, phase: from === undefined ? "done" : "sweep" });
   const told = useRef(0);
   const finished = useRef(false);
@@ -105,7 +111,7 @@ function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, sti
   useEffect(() => {
     if (from === undefined || reduced || position.phase === "done") return undefined;
     const segment = plan[position.step]!;
-    const wait = position.phase === "sweep" ? segmentMs(segment, size) : BURST_MS;
+    const wait = position.phase === "sweep" ? segmentMs(segment, sizeAt(size, sizes, position.step)) : BURST_MS;
     const timer = window.setTimeout(() => {
       if (position.phase === "burst") {
         setPosition({ step: position.step + 1, phase: "sweep" });
@@ -122,17 +128,19 @@ function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, sti
     return () => {
       window.clearTimeout(timer);
     };
-  }, [from, reduced, plan, position, size]);
+  }, [from, reduced, plan, position, size, sizes]);
 
   // The segment on screen; none when the bar is at rest, from the start or at the end.
   const segment = from === undefined || reduced || position.phase === "done" ? undefined : plan[position.step];
   const sweeping = segment !== undefined && position.phase === "sweep";
   const bursting = segment !== undefined && position.phase === "burst";
   const bursts = segment === undefined ? Math.max(0, plan.length - 1) : position.step + (bursting ? 1 : 0);
+  // R2728000: a sweep or burst is drawn on its own step's bar; at rest the bar is `size`.
+  const across = segment === undefined ? size : sizeAt(size, sizes, position.step);
 
   const fillStyle: CSSProperties = sweeping
-    ? sweepStyle(fraction(segment.from, size), fraction(segment.to, size), segmentMs(segment, size))
-    : { transform: `scaleX(${String(fraction(bursting ? segment.to : value, size))})` };
+    ? sweepStyle(fraction(segment.from, across), fraction(segment.to, across), segmentMs(segment, across))
+    : { transform: `scaleX(${String(fraction(bursting ? segment.to : value, across))})` };
 
   return (
     <div

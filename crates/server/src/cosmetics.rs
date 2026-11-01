@@ -39,9 +39,9 @@
 //! R1833000: #1833 appends 36 cosmetics, six of each kind a player picks, none a default or a
 //! starter, so every account earns them (§14.12) and none is granted to an account that exists. Its
 //! fifteen Legendary and Mythic ones are the first chases and Mythics that can drop: a duplicate's
-//! global roll, a cosmetic pack slot and the Chase Shard bar reach them, and no token does. A deck's
-//! save refuses a playmat, backdrop or card back its account does not own
-//! ([`owns_account_cosmetic`]), as it does a portrait.
+//! global roll, a cosmetic pack slot and the Chase Shard bar reach them, a Legendary token reaches
+//! a Legendary one, and no token a Mythic (R2728000). A deck's save refuses a playmat, backdrop or
+//! card back its account does not own ([`owns_account_cosmetic`]), as it does a portrait.
 //!
 //! R1834001: every write of a pick (a deck's slots, the `cosmetics` settings group, a card's own
 //! picks) is held to [`check_pick`]: an id of the registry of the slot's kind that the account
@@ -215,9 +215,9 @@ pub struct Cosmetic {
     #[serde(default)]
     pub starter: bool,
     /// §14.2: a chase cosmetic. The mark agrees with the rarity, true exactly for a Legendary or
-    /// Mythic one, and [`problems`] refuses a registry where it does not (R1333000). No token pays
-    /// for one; the Chase Shard bar buys one, and one drops when a duplicate's roll or a cosmetic
-    /// pack slot lands on its tier (§14.6).
+    /// Mythic one, and [`problems`] refuses a registry where it does not (R1333000). A Legendary
+    /// token buys a Legendary one, and no token a Mythic (R2728000); the Chase Shard bar buys one,
+    /// and one drops when a duplicate's roll or a cosmetic pack slot lands on its tier (§14.6).
     #[serde(default)]
     pub chase: bool,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000). A card

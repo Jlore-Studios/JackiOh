@@ -21,8 +21,9 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_cata
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE,
-    CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
+    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
+    COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE, CosmeticTokenStep,
+    ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, GLOBAL_COSMETIC_FLOOR_RARITY,
     GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS,
     PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SPEND_BUSY_RETRY_AFTER_MS, TIER_WEIGHT_TOTAL,
 };
@@ -592,11 +593,12 @@ async fn an_opening_answers_the_bars_it_left() {
         json!({
             "before": 0,
             "after": gained,
-            "size": COSMETIC_TOKEN_BAR_SIZE,
+            "size": COSMETIC_TOKEN_BAR_SIZE_RARE,
             "pays": 0,
         })
     );
     assert_eq!(bars["cosmeticPaid"], json!([]));
+    assert_eq!(bars["cosmeticSizes"], json!([COSMETIC_TOKEN_BAR_SIZE_RARE]));
     assert_eq!(bars["slotPoints"], json!(slot_bar_points(&slots)));
     assert_eq!(
         counter(&app, Counter::CardTokenBar).await,
@@ -644,10 +646,11 @@ async fn r1999000_an_opening_of_new_cards_adds_every_slot_s_points_to_both_bars(
             cosmetic: BarSettle {
                 before: 11,
                 after: 11 + gained,
-                size: COSMETIC_TOKEN_BAR_SIZE,
+                size: COSMETIC_TOKEN_BAR_SIZE_RARE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            cosmetic_sizes: vec![COSMETIC_TOKEN_BAR_SIZE_RARE],
             slot_points: expected,
         }
     );
@@ -756,7 +759,7 @@ async fn spent_duplicates_carrying_the_card_bar_past_its_size_answer_one_pay() {
         BarSettle {
             before: 0,
             after: card_gain,
-            size: COSMETIC_TOKEN_BAR_SIZE,
+            size: COSMETIC_TOKEN_BAR_SIZE_RARE,
             pays: 0,
         }
     );
@@ -825,7 +828,7 @@ async fn r1953000_spent_duplicates_of_each_rarity_add_21_to_each_bar() {
 }
 
 #[tokio::test]
-async fn the_cosmetic_bar_answers_the_cycle_steps_it_paid_in_order() {
+async fn r2728000_one_opening_pays_every_step_it_crosses_each_at_its_own_size() {
     let (app, token) = setup().await;
     grant_entire_catalog(&app, PROFILE, None)
         .await
@@ -839,15 +842,13 @@ async fn the_cosmetic_bar_answers_the_cycle_steps_it_paid_in_order() {
     )
     .expect("the roll");
     let gain = points(&rolled.slots);
-    // Past two sizes short of this opening's gain, at the cycle's last step: the bar pays twice,
-    // the cosmetic pack and, the cycle restarting, a Rare token.
-    set_counter(&app, Counter::CosmeticTokenCycle, 5).await;
-    set_counter(
-        &app,
-        Counter::CosmeticTokenBar,
-        2 * COSMETIC_TOKEN_BAR_SIZE - gain,
-    )
-    .await;
+    // At the cycle's Epic step, short of this opening's gain from the Epic, Legendary and Rare
+    // steps' sizes together: the bar pays all three in order, each at its own size, and rests on
+    // the next Epic step (R2728000).
+    let crossed =
+        COSMETIC_TOKEN_BAR_SIZE_EPIC + COSMETIC_TOKEN_BAR_SIZE_LEGENDARY + COSMETIC_TOKEN_BAR_SIZE_RARE;
+    set_counter(&app, Counter::CosmeticTokenCycle, 1).await;
+    set_counter(&app, Counter::CosmeticTokenBar, crossed - gain).await;
     buy(&app, &token, "Core").await;
     let opened = open_pack(
         &app,
@@ -863,26 +864,49 @@ async fn the_cosmetic_bar_answers_the_cycle_steps_it_paid_in_order() {
     assert_eq!(
         opened.bars.cosmetic,
         BarSettle {
-            before: 2 * COSMETIC_TOKEN_BAR_SIZE - gain,
+            before: crossed - gain,
             after: 0,
-            size: COSMETIC_TOKEN_BAR_SIZE,
-            pays: 2,
+            size: COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            pays: 3,
         }
     );
     assert_eq!(
         opened.bars.cosmetic_paid,
-        vec![CosmeticTokenStep::CosmeticPack, CosmeticTokenStep::Rare]
+        vec![
+            CosmeticTokenStep::Epic,
+            CosmeticTokenStep::Legendary,
+            CosmeticTokenStep::Rare
+        ]
     );
-    assert_eq!(to(&opened.bars)["cosmeticPaid"], json!(["cosmeticPack", "rare"]));
+    assert_eq!(opened.bars.cosmetic_sizes, vec![75, 100, 50, 75]);
+    assert_eq!(
+        opened.bars.cosmetic_sizes,
+        vec![
+            COSMETIC_TOKEN_BAR_SIZE_EPIC,
+            COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
+            COSMETIC_TOKEN_BAR_SIZE_RARE,
+            COSMETIC_TOKEN_BAR_SIZE_EPIC
+        ]
+    );
+    assert_eq!(
+        to(&opened.bars)["cosmeticPaid"],
+        json!(["epic", "legendary", "rare"])
+    );
+    assert_eq!(to(&opened.bars)["cosmeticSizes"], json!([75, 100, 50, 75]));
     assert_eq!(opened.bars.card.pays, 0);
+    assert_eq!(counter(&app, Counter::CosmeticTokenCycle).await, 4);
 
     let (status, _, body) = call(&app, "GET", "/api/tokens", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
-    assert_eq!(body["tokens"]["cosmeticPack"], json!(1));
     assert_eq!(body["tokens"]["cosmeticRare"], json!(1));
-    assert_eq!(body["tokens"]["cosmeticEpic"], json!(0));
+    assert_eq!(body["tokens"]["cosmeticEpic"], json!(1));
+    assert_eq!(body["tokens"]["cosmeticLegendary"], json!(1));
+    assert_eq!(body["tokens"]["cosmeticPack"], json!(0));
     assert_eq!(body["nextStep"], json!("epic"));
-    assert_eq!(body["cosmeticBar"]["points"], json!(0));
+    assert_eq!(
+        body["cosmeticBar"],
+        json!({ "points": 0, "size": COSMETIC_TOKEN_BAR_SIZE_EPIC })
+    );
 }
 
 #[tokio::test]

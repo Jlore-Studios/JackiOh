@@ -371,6 +371,28 @@ describe("#1309 the token picker", () => {
     expect(server.to("GET", "/api/cosmetics"), "the shop reads no owned cosmetics").toHaveLength(0);
   });
 
+  it("R2728000 the shop shows Legendary tokens held and a Legendary next step at its size", async () => {
+    const bars = tokenBars();
+    tokenServer({
+      bars: {
+        status: 200,
+        body: {
+          ...bars,
+          cosmeticBar: { points: 40, size: 100 },
+          nextStep: "legendary",
+          tokens: { ...bars.tokens, cosmeticLegendary: 2 },
+        } satisfies TokenBarsResponse,
+      },
+    });
+    render(<TokenPicker token={TOKEN} />);
+
+    const cosmetic = await screen.findByTestId(T.cosmeticBar);
+    expect(cosmetic).toHaveTextContent("40 / 100");
+    expect(cosmetic.querySelector("progress")).toHaveProperty("max", 100);
+    expect(screen.getByTestId(T.nextStep)).toHaveTextContent("Legendary token");
+    expect(screen.getByTestId(T.heldLegendary)).toHaveTextContent("Legendary tokens held: 2");
+  });
+
   it("a refused redemption shows its reason and changes nothing on screen", async () => {
     const server = tokenServer({ redeem: refusal(409, "conflict", "that card is already owned") });
     const onChanged = vi.fn<() => void>();
