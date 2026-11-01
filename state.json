@@ -12062,10 +12062,10 @@
     "what": "build #2518 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-01T00:21:37Z",
+    "at": "2026-11-01T00:29:01Z",
     "notes": [
-      "delivered build #2517 on claude-4 (run 41254991164): part",
-      "started build #2518 on claude-6 (run 41256489306)",
+      "delivered build #2518 on claude-6 (run 41256489306): interrupted",
+      "started build #2518 on claude-8 (run 41257014104)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -12772,7 +12772,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T00:21:37Z",
+  "loop_tick": "2026-11-01T00:29:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
