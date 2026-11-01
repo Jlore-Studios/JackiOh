@@ -12,11 +12,9 @@
 // read lists no profile, so the next sign-in tries again, and a failed send leaves the pick worn here.
 // The screens share one sync per profile, as the settings' does (`settings/accountSync.ts`).
 
-import { useEffect, useRef } from "react";
-
 import { getCardPicks, putCardPick, uploadCardPicks, type CardPicksEntry, type CardPicksResponse, type CardPickPut } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { SETTINGS_SYNC_GRACE_MS } from "../settings/accountSync.ts";
+import { SETTINGS_SYNC_GRACE_MS, useAccountSync } from "../settings/accountSync.ts";
 import { isRecord } from "../wire/json.ts";
 import {
   readAllCardPicks,
@@ -211,21 +209,7 @@ function attach(profileId: string, token: () => string, api: () => CardPicksAcco
 
 /** R1834000: an active account's per-card picks are kept level with this device's, on every gated screen. */
 export function useCardPicksAccountSync(account: Account, api: CardPicksAccountApi = cardPicksAccountApi): void {
-  const active = account.kind === "ready" && account.me.profile.status === "active";
-  const profileId = active ? account.me.profile.id : null;
-  const token = useRef<string>("");
-  token.current = active ? account.token : "";
-  const requests = useRef(api);
-  requests.current = api;
-
-  useEffect(() => {
-    if (profileId === null) return;
-    return attach(
-      profileId,
-      () => token.current,
-      () => requests.current,
-    );
-  }, [profileId]);
+  useAccountSync(account, api, attach);
 }
 
 /** Test seam: a new page, with no sync running. */

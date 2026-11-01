@@ -383,8 +383,17 @@ function attach(profileId: string, token: () => string, api: () => SettingsAccou
   };
 }
 
-/** R634: active screens share one sync; changing profiles restarts it, while renewed tokens are reused. */
-export function useSettingsAccountSync(account: Account, api: SettingsAccountApi = settingsAccountApi): void {
+/**
+ * R634: while `account` is an active one, this screen holds a place in a page-wide sync, which
+ * `attach` joins or starts for the profile and whose leave it returns. A renewed token and a new
+ * `api` reach the running sync through its readers; another profile restarts it. The settings'
+ * sync and the card picks' (`cards/cardPicksSync.ts`) each pass their own `attach`.
+ */
+export function useAccountSync<Api>(
+  account: Account,
+  api: Api,
+  attach: (profileId: string, token: () => string, api: () => Api) => () => void,
+): void {
   const active = account.kind === "ready" && account.me.profile.status === "active";
   const profileId = active ? account.me.profile.id : null;
   const token = useRef<string>("");
@@ -400,6 +409,11 @@ export function useSettingsAccountSync(account: Account, api: SettingsAccountApi
       () => requests.current,
     );
   }, [profileId]);
+}
+
+/** R634: active screens share one sync; changing profiles restarts it, while renewed tokens are reused. */
+export function useSettingsAccountSync(account: Account, api: SettingsAccountApi = settingsAccountApi): void {
+  useAccountSync(account, api, attach);
 }
 
 export function __resetSettingsSyncForTests(): void {
