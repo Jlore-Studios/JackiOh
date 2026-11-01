@@ -581,3 +581,42 @@ describe("the cards a hand card's preview counts (#991)", () => {
     expect(screen.queryByTestId(testid.card("hidden-trap"))).toBeNull();
   });
 });
+
+describe("B23 a route's slot beside each hero (heroAside, #2706)", () => {
+  it("B23 heroAside draws `own` right after the viewer's hero and `enemy` beside the opponent's", () => {
+    const { container } = render(
+      <Board
+        view={fullBoardView()}
+        heroAside={{
+          own: <span data-testid="aside-own">own</span>,
+          enemy: <span data-testid="aside-enemy">enemy</span>,
+        }}
+      />,
+    );
+    const own = screen.getByTestId("aside-own").closest(".hero-aside");
+    expect(own?.parentElement).toBe(container.querySelector(".seat-you"));
+    expect(own?.previousElementSibling).toBe(screen.getByTestId(testid.hero("you")));
+    expect(own).toHaveAttribute("data-side", "you");
+    const enemy = screen.getByTestId("aside-enemy").closest(".hero-aside");
+    expect(enemy?.parentElement).toBe(container.querySelector(".seat-opponent"));
+    expect(enemy?.previousElementSibling).toBe(screen.getByTestId(testid.hero("opponent")));
+    // A click in the aside is the route's: the board reports nothing.
+    const onClick = vi.fn();
+    const { unmount } = render(<Board view={fullBoardView()} onClick={onClick} heroAside={{ own: <button type="button">relics</button> }} />);
+    fireEvent.click(screen.getByRole("button", { name: "relics" }));
+    expect(onClick).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("B23 without heroAside, or with a side left out, no aside is drawn there", () => {
+    const { container, rerender } = render(<Board view={fullBoardView()} />);
+    expect(container.querySelector(".hero-aside")).toBeNull();
+    rerender(<Board view={fullBoardView()} heroAside={{ enemy: <span>enemy</span> }} />);
+    expect(container.querySelectorAll(".hero-aside")).toHaveLength(1);
+    expect(container.querySelector(".seat-you .hero-aside")).toBeNull();
+  });
+
+  it("B23 on a desktop seat the aside stands right of the hero, in the plate's one row", () => {
+    expect(boardCss).toMatch(/\.seat > \.hero-aside \{\s*grid-column: 3;\s*grid-row: 1;\s*justify-self: start;\s*\}/);
+  });
+});

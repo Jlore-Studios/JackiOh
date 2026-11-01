@@ -68,7 +68,7 @@ import {
   type AnimationEntry,
   type AnimationQueue,
 } from "./animations.ts";
-import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
+import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget, type HeroAside } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
@@ -132,6 +132,8 @@ export type GameProps = {
   matchStatus?: ReactNode;
   /** Route navigation and match-series information, mounted in the board rail. */
   boardRail?: ReactNode;
+  /** DR14 (#2706): route chrome drawn beside each hero, as `boardRail` is in the rail (a dungeon run's relics). */
+  heroAside?: HeroAside;
   /** A route warning mounted in the board rail. */
   boardNotice?: ReactNode;
   /**
@@ -242,6 +244,7 @@ export default function Game({
   turnClock,
   matchStatus,
   boardRail,
+  heroAside,
   boardNotice,
   emotes,
   trackStats = false,
@@ -725,6 +728,7 @@ export default function Game({
         turnClock={turnClock}
         matchStatus={matchStatus}
         boardRail={boardRail}
+        heroAside={heroAside}
         market={replay ? undefined : { legal, onAction: dispatch }}
         boardNotices={
           <>

@@ -131,6 +131,10 @@ function routeHost(options: HostOptions = {}): RouteHost {
           // R1303000: a lesson is never on a server seed, so it never claims.
           response = { id: mine, type: "failed", message: "a lesson earns nothing" };
           break;
+        case "runReport":
+          // R2706000: a lesson is no dungeon run's fight, so it reports nothing to a run.
+          response = { id: mine, type: "failed", message: "this practice game is not a dungeon run's fight" };
+          break;
         case "debug":
           response = {
             id: mine,

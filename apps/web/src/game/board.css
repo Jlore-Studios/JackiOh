@@ -2369,6 +2369,14 @@ button.modifier-badge[data-open="true"] {
     justify-self: start;
   }
 
+  /* A route's chrome beside the hero (`heroAside`: a dungeon run's relics, #2706) stands right of it,
+     where a card mid-resolution also shows; that card, drawn later, covers it while it resolves. */
+  .seat > .hero-aside {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: start;
+  }
+
   .seat .hero-health,
   .seat .hero-armor,
   .seat .hero-luck {
