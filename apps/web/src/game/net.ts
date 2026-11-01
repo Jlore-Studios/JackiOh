@@ -261,6 +261,62 @@ export function createWakeProbe<S extends WakeProbeTarget>(options: WakeProbeOpt
   return { hear, cancel, listen, onWake, dispose };
 }
 
+/**
+ * R1441: a socket client's reconnect backoff: `RECONNECT_DELAYS_MS`, the last step repeating, each
+ * step plus up to `RECONNECT_JITTER` of itself.
+ */
+export type Backoff = {
+  /** Calls `open` after the next step, unless `disabled` holds or a step already waits. */
+  schedule: () => void;
+  /** Drops a waiting step. */
+  cancel: () => void;
+  /** Starts the steps over, as an opened socket does. */
+  reset: () => void;
+};
+
+export function createBackoff(open: () => void, disabled: () => boolean, timers: Timers, random: () => number): Backoff {
+  let retry = 0;
+  let pending: unknown = null;
+  return {
+    schedule: () => {
+      if (disabled() || pending !== null) return;
+      const step = RECONNECT_DELAYS_MS[Math.min(retry, RECONNECT_DELAYS_MS.length - 1)] ?? 0;
+      const delay = Math.floor(step * (1 + RECONNECT_JITTER * random()));
+      retry += 1;
+      pending = timers.setTimeout(() => {
+        pending = null;
+        open();
+      }, delay);
+    },
+    cancel: () => {
+      if (pending === null) return;
+      timers.clearTimeout(pending);
+      pending = null;
+    },
+    reset: () => {
+      retry = 0;
+    },
+  };
+}
+
+/**
+ * Lets go of `stale` without waiting for it (a dead peer never answers a close): drops its handlers,
+ * runs `next`, then closes it with `reason`. R1441: a replace opens the successor in `next`, before
+ * the old socket is closed, so the server meets the successor first when both reach it.
+ */
+export function letGo(stale: SocketLike, reason: string, next?: () => void): void {
+  stale.onopen = null;
+  stale.onmessage = null;
+  stale.onerror = null;
+  stale.onclose = null;
+  next?.();
+  try {
+    stale.close(1000, reason);
+  } catch {
+    // Already gone.
+  }
+}
+
 // Frame parsing: total and protocol-shaped
 
 const isString = (value: unknown): value is string => typeof value === "string";
@@ -593,10 +649,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   const listeners = new Set<() => void>();
   let snapshot: MatchSnapshot = INITIAL;
   let socket: SocketLike | null = null;
-  let retry = 0;
-  let pendingRetry: unknown = null;
   /** A deliberate close must not reconnect. */
   let stopped = false;
+  const backoff = createBackoff(open, () => stopped, timers, random);
   /** R643: repeated emotes still notify. */
   let emoteSeq = 0;
   /** Set when a socket is created; its first `view` proves the server answered (§9.5), so an error from before it is stale. */
@@ -623,23 +678,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   function patch(next: Partial<MatchSnapshot>): void {
     snapshot = { ...snapshot, ...next };
     emit();
-  }
-
-  function cancelRetry(): void {
-    if (pendingRetry === null) return;
-    timers.clearTimeout(pendingRetry);
-    pendingRetry = null;
-  }
-
-  function scheduleRetry(): void {
-    if (stopped || pendingRetry !== null) return;
-    const step = RECONNECT_DELAYS_MS[Math.min(retry, RECONNECT_DELAYS_MS.length - 1)] ?? 5000;
-    const delay = Math.floor(step * (1 + RECONNECT_JITTER * random()));
-    retry += 1;
-    pendingRetry = timers.setTimeout(() => {
-      pendingRetry = null;
-      open();
-    }, delay);
   }
 
   function handleFrame(frame: ServerFrame): void {
@@ -709,7 +747,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         error: cause instanceof Error ? cause.message : String(cause),
         errorCode: "transport",
       });
-      scheduleRetry();
+      backoff.schedule();
       return;
     }
     socket = created;
@@ -720,7 +758,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     created.onopen = () => {
       if (socket !== created) return;
       wakeProbe.hear();
-      retry = 0;
+      backoff.reset();
       patch({ connection: "open" });
       // §9.5: `hello` requests a fresh full view.
       try {
@@ -773,29 +811,18 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         return;
       }
       patch({ connection: "reconnecting" });
-      scheduleRetry();
+      backoff.schedule();
     };
   }
 
-  /**
-   * R1441: lets go of `live` without waiting for it (a dead peer never answers a close) and opens
-   * its successor, which sends `hello` as any new socket does. The new socket opens before the old
-   * one is closed, so the server meets the successor first when both reach it.
-   */
+  /** R1441: lets go of `live` and opens its successor, which sends `hello` as any new socket does. */
   function replace(live: SocketLike): void {
     socket = null;
-    live.onopen = null;
-    live.onmessage = null;
-    live.onerror = null;
-    live.onclose = null;
-    wakeProbe.cancel();
-    patch({ connection: "reconnecting", ...(snapshot.aim === null ? {} : { aim: null }) });
-    open();
-    try {
-      live.close(1000, "replaced");
-    } catch {
-      // Already gone.
-    }
+    letGo(live, "replaced", () => {
+      wakeProbe.cancel();
+      patch({ connection: "reconnecting", ...(snapshot.aim === null ? {} : { aim: null }) });
+      open();
+    });
   }
 
   return {
@@ -809,7 +836,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     connect: () => {
       stopped = false;
       // A backoff still waiting is cut short: the socket opens now (the match bar's Reconnect now).
-      cancelRetry();
+      backoff.cancel();
       wakeProbe.listen();
       open();
     },
@@ -851,21 +878,11 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     },
     close: () => {
       stopped = true;
-      cancelRetry();
+      backoff.cancel();
       wakeProbe.dispose();
       const live = socket;
       socket = null;
-      if (live !== null) {
-        live.onopen = null;
-        live.onmessage = null;
-        live.onerror = null;
-        live.onclose = null;
-        try {
-          live.close(1000, "leaving the match");
-        } catch {
-          // Already gone.
-        }
-      }
+      if (live !== null) letGo(live, "leaving the match");
       patch({ connection: "closed" });
     },
     url: () => socketUrlFor(base, options.matchId),
