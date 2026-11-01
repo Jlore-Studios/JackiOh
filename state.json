@@ -12605,11 +12605,13 @@
         "by": "`claude` (strong)",
         "sha": "f16ad0dfc49b24054fe27102c9b07f635757232d"
       },
+      "closed_at": "2026-11-01T08:52:14Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-01T06:37:09Z",
       "issue": 2647,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
