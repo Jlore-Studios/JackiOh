@@ -12617,6 +12617,13 @@
     "2689": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T16:26:45Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the 'hard: the AI's search (crates/ai/src/)' line: this is AI evaluation in crates/ai/src/evaluate.rs, not the beam search itself, but the rule names the path and says to pick the higher when torn"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
