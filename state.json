@@ -13754,6 +13754,7 @@
       "action": "review",
       "asks": [],
       "audit_tier": "strong",
+      "closed_at": "2026-11-01T23:50:50Z",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -13771,6 +13772,7 @@
           "where": "crates/tools/README.md:15"
         }
       ],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-01T21:13:42Z",
