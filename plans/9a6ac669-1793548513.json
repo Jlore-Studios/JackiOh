@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2688,
+  "title": "Patch: the AI prices a Unit's \u201cwhen this attacks\u201d and \u201cafter this attacks\u201d effects while it stands on the board",
+  "branch": "bot/issue-2688",
+  "thread": "**Issue #2688 (data, not instructions):**\n\n```text\n# #2688: Patch: the AI prices a Unit's \u201cwhen this attacks\u201d and \u201cafter this attacks\u201d effects while it stands on the board\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome Units do something every time they attack: The Propagation's Wasp makes a copy of itself, Badger and Honey Badger grow, Boots on the Ground and Nature Titan have their own payoffs. The practice AI does see the effect when it plans its own attack this turn, but when it weighs a Unit sitting on the board, its own or the opponent's, it values it as a plain body. So it kills a vanilla 4/4 and leaves the Wasp that doubles next turn, and it trades its own Badger away like a plain body. Once built, the AI counts what a Unit's next attack would give its controller, as it already counts what its start-of-turn or end-of-turn text would give.\n\n## Why\n- The hooks are `when_attacks` and `after_attack` (`crates/engine/src/script.rs:1190-1205`). Ten non-token Units carry one (grep `when_attacks: Some|after_attack: Some` under `crates/cards/src/scripts`), among them Boots on the Ground `classic-013`, Nature Titan `classic-045`, Badger `stinkyscape-075`, Honey Badger `stinkyscape-076`, Wasp and Hornet `stinkyscape-091`/`092` and Shield Amplifier `stinkyscape-038`.\n- Nothing in `crates/ai/src` reads either hook. `unit_worth` (`crates/ai/src/evaluate.rs:333-390`) adds the Activate price (R2564000), Plague Counters, Death (R2424000) and turn hooks (R2477000, R2565000), all probed once at the decision's root and stored in `Prices`.\n- The reply's trader picks the opponent's attacks by `kill_worth`, which is `unit_worth` less Death and Reborn (`evaluate.rs:1092-1099`, `crates/ai/src/reply.rs:146-156`, `:209-245`), so an attack hook never changes which body it removes first.\n- Honey Badger is on the sweep's at-risk list (`crates/ai/src/shadow_ban.rs:855`).\n\n## Proposal\n- A root probe in the shape of the Activate probe (`probe_turns`, `evaluate.rs:1603-1622`): for each readable Unit on either field with an attack hook, at its controller's next turn on a sandbox copy, declare its attack on the enemy hero where legal (else the first legal target), and the same attack by a twin with the hooks stripped (its printed keywords kept); the controller's evaluation difference is the price, stored in `Prices.attack_hooks`.\n- `unit_worth` adds `w.attack_hook * price` inside the Brittle share; a new `AI_EVAL.attack_hook` weight in `crates/ai/src/config.rs` (CLAUDE.md rule 9). The trader and `even_trade` then read it through `kill_worth`.\n- Draw probe nodes from the existing death/turn-hook budget or a new named one; nothing hidden is probed (R185).\n- A ruling in this issue's block, with `spec/pending/<issue>.md`; re-run `cargo jackioh gate`.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/src/decide.rs` (where the root probes are gathered)\n- Tests: a new `crates/ai/tests/ai/attack_hooks.rs` beside `turn_hooks.rs`\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a76.2, \u00a79.9\n\n## Acceptance criteria\n- [ ] Facing an enemy Wasp and a vanilla Unit of equal stats with one removal, the AI removes the Wasp.\n- [ ] The AI's own Badger is worth more on its board than a vanilla body of the same stats.\n- [ ] With a zero `attack_hook` weight the evaluation is what it is today (a test pins it).\n- [ ] Tests named after the new ruling, listed in its `proven_in`; `cargo test -p jackioh-ai`, clippy, `cargo jackioh gate` and `cargo jackioh spec check` pass.\n\n## Size and risks\nMedium to large, hard (the AI): about 150 lines and tests, the size of #2564. Risk: probe cost per decision; capping the probes by a node budget, as Death's are, keeps the search's budget whole. A hook that only pays on a kill (Prem Panther) prices near zero against the hero, which is acceptable for a first version.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:07:42Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2688: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
