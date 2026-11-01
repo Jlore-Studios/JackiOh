@@ -1,12 +1,17 @@
-//! #73 Anti-oneshot Armor (SPEC §8.3): "Your hero can't take more than 5 damage in one instance.
-//! Cry: draw 1", radiant "Your hero can't take more than 3 damage in one instance. Cry: draw 2" (§8's
-//! cell "Cap 3; Cry: draw 2", R275: the cap is tightened AND the Cry draws twice as many).
+//! #73 Anti-oneshot Armor (SPEC §8.3): "Your hero can't take more than 4 damage in one instance.
+//! Cry: draw 1", radiant "Your hero can't take more than 3 damage in one instance. Your hero has
+//! Armor 1. Cry: draw 2" (§8's cell "Cap 3; your hero has Armor 1; Cry: draw 2", R275: the cap is
+//! tightened, the hero armoured AND the Cry draws twice as many). The cap was 5 and the Radiant face
+//! gave no Armor through v0.5.9f (`script_v0_5_9f`, kept, R767000).
 //!
 //! The cap is not an effect or an aura: it is step 3 of the §4.4 damage pipeline, so the card only
 //! contributes a static flag. `damage.rs hero_damage_cap` reads `static_flags.anti_oneshot` on the
 //! player's side, takes `ANTI_ONESHOT_CAP.radiant` for a radiant instance (else `.base`) and clamps with
 //! the smallest. It is per damage instance and hero-only; the radiant number comes from
 //! `jackioh_engine::config`, so "Cap 3" needs no radiant-specific code here.
+//!
+//! The Radiant face's Armor is #84 Going Long's layer (`heroArmor`, §4.4 step 2, R124), its number the
+//! declared `armor` the Radiant face alone prints (R749), which `damage::hero_armor_of` reads.
 //!
 //! R18: "lose health" is not damage, and `lose_health` never calls `hero_damage_cap`, so #27 Blood
 //! Ridden Glowy Jelly Bean's "you lose 7 health" goes through in full past this card.
@@ -21,10 +26,12 @@ pub const ID: &str = "core-073";
 /// The cap is read by the pipeline (`damage::hero_damage_cap`) as the card's declared number `cap`
 /// (R386), 5 and 3 on the Radiant face, and the Cry's "draw 1" (radiant "draw 2") is the declared
 /// number `draw`: both faces run this one script.
-fn anti_oneshot_armor() -> Script {
+/// `hero_armor`: "Your hero has Armor {armor}", the Radiant face's since #2657.
+fn anti_oneshot_armor(hero_armor: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             anti_oneshot: Some(true),
+            hero_armor: hero_armor.then_some(FlagOrCount::Flag(true)),
             ..StaticFlags::default()
         }),
         cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
@@ -33,13 +40,23 @@ fn anti_oneshot_armor() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = anti_oneshot_armor();
+    CardScripts {
+        base: anti_oneshot_armor(false),
+        radiant: anti_oneshot_armor(true),
+    }
+}
+
+/// R767000: through v0.5.9f its Radiant face gave its hero no Armor; `KEPT_SCRIPTS` folds those
+/// replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    let base = anti_oneshot_armor(false);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
-// hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health bypasses the cap".
+// #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 4 (radiant 3, its hero's Armor 1
+// taking 1 more first), per instance, hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health
+// bypasses the cap".
 // The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2 since patch
 // v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health" is read against both caps:
 // 7 is over the base cap of 5 and the radiant cap of 3, so either face tells a clamp from a bypass.
@@ -77,7 +94,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s4_4_step_3_a_12_damage_hit_on_the_protected_hero_becomes_5() {
+        fn s4_4_step_3_a_12_damage_hit_on_the_protected_hero_becomes_4() {
             let mut s = setup(json!({
                 "seed": "core-073-cap-12",
                 "active": "p2",
@@ -89,12 +106,12 @@ mod tests {
 
             s.attack(&bigot, "hero");
 
-            s.expect_health(P1, 25);
-            assert_eq!(damage_to(&s, "hero-p1"), [5]);
+            s.expect_health(P1, 26);
+            assert_eq!(damage_to(&s, "hero-p1"), [4]);
         }
 
         #[test]
-        fn the_cap_is_per_damage_instance_so_two_12_hits_cost_5_each() {
+        fn the_cap_is_per_damage_instance_so_two_12_hits_cost_4_each() {
             let mut s = setup(json!({
                 "seed": "core-073-per-instance",
                 "active": "p2",
@@ -112,8 +129,8 @@ mod tests {
 
             s.attack(&first, "hero").attack(&second, "hero");
 
-            s.expect_health(P1, 20);
-            assert_eq!(damage_to(&s, "hero-p1"), [5, 5]);
+            s.expect_health(P1, 22);
+            assert_eq!(damage_to(&s, "hero-p1"), [4, 4]);
         }
 
         #[test]
@@ -130,7 +147,7 @@ mod tests {
 
             s.attack(&bigot, &menace);
 
-            // A capped 5 would have left a 9-health unit alive; the full 12 kills it.
+            // A capped 4 would have left a 9-health unit alive; the full 12 kills it.
             assert_eq!(damage_to(&s, &menace.id), [12]);
             s.expect_in_zone(&menace, "graveyard").expect_health(P1, 30);
         }
@@ -147,7 +164,7 @@ mod tests {
 
             s.attack(&bigot, "hero");
 
-            // 12 − 10 armor = 2, and min(2, 5) is 2 — not the cap's 5.
+            // 12 − 10 armor = 2, and min(2, 4) is 2 — not the cap's 4.
             s.expect_health(P1, 28);
             assert_eq!(damage_to(&s, "hero-p1"), [2]);
         }
@@ -172,7 +189,7 @@ mod tests {
         }
 
         #[test]
-        fn r18_lose_health_is_not_damage_so_the_base_cap_of_5_never_sees_it() {
+        fn r18_lose_health_is_not_damage_so_the_base_cap_of_4_never_sees_it() {
             let mut s = setup(json!({
                 "seed": "core-073-r18-base",
                 "p1": { "backrow": ["core-073"], "hand": ["core-027", "core-005"], "library": ["core-035"] },
@@ -182,7 +199,7 @@ mod tests {
             // #27 Blood Ridden Glowy Jelly Bean: "you lose 7 health".
             s.play("core-027", json!({}));
 
-            // Were the cap to apply, this would be 25. R18 says it does not.
+            // Were the cap to apply, this would be 26. R18 says it does not.
             s.expect_health(P1, 23).expect_events(json!(["healthLost"]));
             // Not a damage instance at all: nothing for the pipeline to clamp.
             assert!(damage_to(&s, "hero-p1").is_empty());
@@ -191,6 +208,31 @@ mod tests {
 
     mod anti_oneshot_armor_radiant {
         use super::*;
+
+        #[test]
+        fn r124_its_hero_has_armor_1_while_it_stands_the_base_face_none() {
+            let radiant = setup(json!({
+                "p1": { "backrow": [{ "def": "core-073", "radiant": true }], "hand": ["core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            assert_eq!(jackioh_engine::damage::hero_armor_of(radiant.state(), P1), 1);
+            let base = setup(json!({
+                "p1": { "backrow": ["core-073"], "hand": ["core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            assert_eq!(jackioh_engine::damage::hero_armor_of(base.state(), P1), 0);
+            crate::under_kept("core-073", super::super::script_v0_5_9f(), || {
+                let kept = setup(json!({
+                    "p1": { "backrow": [{ "def": "core-073", "radiant": true }], "hand": ["core-005"] },
+                    "p2": { "hand": ["core-005"] },
+                }));
+                assert_eq!(
+                    jackioh_engine::damage::hero_armor_of(kept.state(), P1),
+                    0,
+                    "v0.5.9f's Radiant face gave none"
+                );
+            });
+        }
 
         #[test]
         fn radiant_caps_at_3_the_same_12_damage_hit_becomes_3() {
@@ -294,8 +336,8 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_lowers_the_cap_to_4_and_a_degrade_raises_it_to_6() {
-            for (upgrade, cap) in [(true, 4), (false, 6)] {
+        fn r386_an_upgrade_lowers_the_cap_to_3_and_a_degrade_raises_it_to_5() {
+            for (upgrade, cap) in [(true, 3), (false, 5)] {
                 let mut s = setup(json!({
                     "seed": "core-073-tuned-cap",
                     "active": "p2",

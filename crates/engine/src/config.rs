@@ -200,8 +200,9 @@ impl ByFace {
     }
 }
 
-/// §8 #73: largest single damage instance a hero with Anti-oneshot Armor takes.
-pub const ANTI_ONESHOT_CAP: ByFace = ByFace { base: 5, radiant: 3 };
+/// §8 #73: largest single damage instance a hero with Anti-oneshot Armor takes (the base face's 5 until
+/// #2657).
+pub const ANTI_ONESHOT_CAP: ByFace = ByFace { base: 4, radiant: 3 };
 
 /// `{ normal, embiggened }`: #84 Going Long's Armor by the version played, its normal version at the
 /// cheaper price or its Embiggened version at its Embiggened cost (R1175000).
@@ -235,15 +236,16 @@ impl HeroArmor {
 /// §8 #84 Going Long: the Armor it gives its controller's hero (§4.4 step 2), by face and by which
 /// version was played — "Armor 2. Embiggened (4): Armor 4", radiant "Armor 4. Embiggened (4): Armor 8"
 /// (patch v0.1.1, R1175000). `normal` is the normal version's, at the printed cost 2, `embiggened` the
-/// Embiggened version's, at its Embiggened cost 4 (R81 records which on the instance).
+/// Embiggened version's, at its Embiggened cost 4 (R81 records which on the instance): 5 and 10 since
+/// #2657, 4 and 8 before.
 pub const HERO_ARMOR: HeroArmor = HeroArmor {
     base: HeroArmorPrice {
         normal: 2,
-        embiggened: 4,
+        embiggened: 5,
     },
     radiant: HeroArmorPrice {
         normal: 4,
-        embiggened: 8,
+        embiggened: 10,
     },
 };
 /// §8 #38 Quickstriker, R281: the multiple of X each granted Combo deals to the enemy hero, by the
@@ -528,14 +530,26 @@ pub const TUNE_STAT_TOTAL: i32 = 4;
 pub const TUNE_ATTACK_FLOOR: i32 = 0;
 /// B3.4 rule 3, the designer's "not below 1 health": a Degrade never takes current health below this.
 pub const TUNE_HEALTH_FLOOR: i32 = 1;
-/// B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card —
-/// "Cannot be in Defense Position" is a static flag (§8 #65.1), not a keyword, so it is never offered.
-/// R1220: Untributable is harmful the same way — losing it would let a Tribute take the card.
+/// B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card. R1220:
+/// Untributable is harmful the same way — losing it would let a Tribute take the card. R2657005: so are
+/// Can't Defend, which took over from the static flag "Cannot be in Defense Position" (§8 #65.1), and
+/// Crater, which a Nerf may add (`TUNE_NERF_HAND_KEYWORDS`).
 pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::CantAttack,
     KeywordKind::Brittle,
     KeywordKind::Untributable,
+    KeywordKind::CantDefend,
+    KeywordKind::Crater,
 ];
+/// R2657005: the harmful keywords a Buff's keyword row may take off a card that has them of its own, in
+/// this order. A Nerf never adds either.
+pub const TUNE_BUFF_REMOVES: &[KeywordKind] = &[KeywordKind::CantAttack, KeywordKind::CantDefend];
+/// R2657005: the keywords a Buff's keyword row may add to a card of any type that lacks them, after the
+/// row's other keywords.
+pub const TUNE_BUFF_ANY_KEYWORDS: &[KeywordKind] = &[KeywordKind::Flashback];
+/// R2657005: the harmful keywords a Nerf's keyword row may add to a Unit, a Field Spell, a Trap or a
+/// Field Trap that lacks them, while it is in a hand.
+pub const TUNE_NERF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Crater];
 /// R1748001: the keywords a Buff's keyword row may add to a Field Spell, in this order; R2436000 added
 /// Immutable after Indestructible.
 pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible, KeywordKind::Immutable];

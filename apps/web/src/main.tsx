@@ -28,7 +28,9 @@
 // ONE GATE PER SCREEN. Every gated route renders `<Gated>` at the same place in the tree, so React
 // would reuse one instance (and the account it read) across in-app moves: a redemption on
 // `/invite` went on to `/decks` still holding the "pending" account it read before, and bounced
-// straight back. Each route's gate is keyed by its path, so a move re-reads `/api/auth/me`.
+// straight back. Each route's gate is keyed by its path, so a move re-reads `/api/auth/me`. It opens
+// at once on the page's last answer only for an active account that owes nothing, and reads behind
+// it (R2630000); a pending account, a redirect or a prompt always waits for the read.
 //
 // ONE SOCKET PER SESSION (R194). The gate renews a session shortly before its token expires and
 // hands the new token down. The match screen is keyed by the provider session the token belongs to,
@@ -51,6 +53,8 @@
 // THE ENGINE LOADS ALONGSIDE (#778). The engine's module is 2.31 MB gzipped, and the landing, sign-in,
 // the reset and code screens and the legal pages never call it. The page paints once the language is
 // in; EngineGate holds every other screen until the module is in, with a retry if it never arrives.
+// A gated screen that calls it (`<Gated engine>`) asks for it, and for its own code, as its gate
+// mounts, beside the account read (R2630001).
 //
 // SCREEN CODE ON INTENT (#2116, R2116000). The screens are chunks of one map
 // (`routes/chunks.tsx`), which the prefetch shares: intent toward a control starts its screen's
@@ -96,6 +100,7 @@ import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
+  currentPath,
   duosIdOf,
   loginPath,
   matchIdOf,
@@ -115,7 +120,7 @@ import { watchFriendOf } from "./together/watchLink.ts";
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
 import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
-import { routeChunks, watchRouteIntent } from "./routes/chunks.tsx";
+import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
@@ -142,6 +147,7 @@ const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
 const AccessibilityRoute = routeChunks.accessibility.Screen;
+const AiRoute = routeChunks.ai.Screen;
 const CopyrightRoute = routeChunks.copyright.Screen;
 const PatchNotesRoute = routeChunks.patchNotes.Screen;
 const AlmanacRoute = routeChunks.almanac.Screen;
@@ -441,6 +447,11 @@ export type GatedProps = {
    * will not agree can still delete their account or sign out there.
    */
   consentExempt?: boolean;
+  /**
+   * R2630001: the screen calls the engine (its children open with `EngineGate`), so the gate asks for
+   * the engine's module as it mounts, beside `/api/auth/me`, along with the screen's own code.
+   */
+  engine?: boolean;
   children: (account: ReadyAccount) => ReactElement;
 };
 
@@ -481,8 +492,14 @@ export function resetUsernamePromptForTests(): void {
   consentAnswered.clear();
 }
 
-export function Gated({ allowPending = false, consentExempt = false, children }: GatedProps): ReactElement {
+export function Gated({ allowPending = false, consentExempt = false, engine = false, children }: GatedProps): ReactElement {
   const account = useAccount();
+  // R2630001: the screen's code, and the engine when it calls it, start beside the account read
+  // (whose effect `useAccount` has already queued), not once it answers; with no session the gate
+  // sends the player to sign in, so nothing starts. Keyed by path, a gate mounts once per screen.
+  useEffect(() => {
+    if (readSession() !== null) startScreen(currentPath(), engine);
+  }, [engine]);
   // R757001: this gate has shown its screen to an active account that owed nothing. A later read
   // that finds the terms owed (they changed while the player was here) leaves the screen up, and
   // the next screen asks. Per gate, since each screen mounts its own (ONE GATE PER SCREEN).
@@ -667,7 +684,7 @@ export function App(): ReactElement {
     }
     if (path === paths.decks) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {() => (
             <EngineGate>
               <DecksRoute />
@@ -682,7 +699,7 @@ export function App(): ReactElement {
       // stored session, even a stale one, still meets the gate.
       if (!signedIn && readRoomLink() === null) return <PlayRoute token={null} />;
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <PlayRoute token={account.token} />
@@ -696,7 +713,7 @@ export function App(): ReactElement {
     // this route exists to remove.
     if (path === paths.account) {
       return (
-        <Gated key={path} allowPending consentExempt>
+        <Gated key={path} allowPending consentExempt engine>
           {(account) => (
             <EngineGate>
               <AccountRoute token={account.token} me={account.me} />
@@ -716,7 +733,7 @@ export function App(): ReactElement {
     // #920: the card creator keeps its cards on the account, so it is behind the gate like the decks.
     if (path === paths.creator) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <CreatorRoute token={account.token} />
@@ -727,7 +744,7 @@ export function App(): ReactElement {
     }
     if (path === paths.leaderboard) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <LeaderboardRoute token={account.token} />
@@ -738,7 +755,7 @@ export function App(): ReactElement {
     }
     if (path === paths.collection) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <CollectionRoute token={account.token} />
@@ -760,6 +777,7 @@ export function App(): ReactElement {
     // R1665000: the page is public, its disclaimer anyone's; with a session it reads the odds and the account's counters itself.
     if (path === paths.purchases) return <PurchasesRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
+    if (path === paths.ai) return <AiRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) {
@@ -792,7 +810,7 @@ export function App(): ReactElement {
     // #936 B54: Play together asks for an active account the way `/play` does.
     if (path === paths.together) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {() => (
             <EngineGate>
               <TogetherRoute />
@@ -805,7 +823,7 @@ export function App(): ReactElement {
     const matchId = matchIdOf(path);
     if (matchId !== null) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <MatchRoute key={sessionKeyOf(account.token)} matchId={matchId} token={account.token} />
@@ -819,7 +837,7 @@ export function App(): ReactElement {
     const seriesId = seriesIdOf(path);
     if (seriesId !== null) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <SeriesRoute seriesId={seriesId} token={account.token} />
@@ -834,7 +852,7 @@ export function App(): ReactElement {
     if (watchId !== null) {
       const friendId = watchFriendOf(window.location.search);
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {() => (
             <EngineGate>
               <WatchRoute key={friendId} matchId={watchId} friendId={friendId} />
@@ -848,7 +866,7 @@ export function App(): ReactElement {
     const duosId = duosIdOf(path);
     if (duosId !== null) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <DuosRoute key={sessionKeyOf(account.token)} matchId={duosId} token={account.token} />

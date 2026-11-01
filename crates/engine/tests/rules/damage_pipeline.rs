@@ -228,7 +228,7 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
         assert_eq!(hero_damage_divisor(&state, P2), 8);
         assert_eq!(hero_hit_amount(&state, P2, 5, false), 1);
         assert_eq!(hero_hit_amount(&state, P2, 17, false), 3);
-        // Caps: Anti-oneshot's 5 and Anime Armor's 1 — the lowest wins.
+        // Caps: Anti-oneshot's 4 (5 until #2657) and Anime Armor's 1 — the lowest wins.
         let mut capped = playing("dc-caps");
         put(
             &mut capped,
@@ -236,11 +236,12 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
             slot(P2, Row::Backrow, 1),
             json!({}),
         );
-        assert_eq!(hero_damage_cap(&capped, P2), Some(5));
+        assert_eq!(hero_damage_cap(&capped, P2), Some(4));
         put(&mut capped, &anime_armor.id, slot(P2, Row::Units, 1), json!({}));
         assert_eq!(hero_damage_cap(&capped, P2), Some(1));
         assert_eq!(hero_hit_amount(&capped, P2, 30, false), 1);
-        // A divisor comes before the cap: 30 / 2 = 15, capped at 1 either way; with only Anti-oneshot, 5.
+        // A divisor comes before the cap: 30 / 2 = 15, capped at 1 either way; with only Anti-oneshot, 4,
+        // and 6 / 2 = 3 stays under it.
         let mut both = playing("dc-caps-order");
         put(&mut both, &argus.id, slot(P2, Row::Backrow, 1), json!({}));
         put(
@@ -249,8 +250,8 @@ mod e6_hero_divisors_and_caps_s4_4_steps_2_and_3 {
             slot(P2, Row::Backrow, 2),
             json!({}),
         );
-        assert_eq!(hero_hit_amount(&both, P2, 8, false), 4);
-        assert_eq!(hero_hit_amount(&both, P2, 30, false), 5);
+        assert_eq!(hero_hit_amount(&both, P2, 6, false), 3);
+        assert_eq!(hero_hit_amount(&both, P2, 30, false), 4);
     }
 
     #[test]

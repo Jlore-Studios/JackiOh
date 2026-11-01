@@ -12,6 +12,7 @@ import { BackLink } from "../routes/nav.tsx";
 import type { Challenge, Friend, FriendRequest, PlayerRef } from "../net/social.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { baseView } from "../test/fixtures.ts";
+import { stubPhoneBar } from "../test/phoneBar.ts";
 import { forgetRoomLink } from "../net/roomLink.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
 import { pressBack } from "../test/history.ts";
@@ -162,6 +163,42 @@ describe("#1831 where the Friends button sits", () => {
       expect(screen.queryByTestId(friendsTestid.button)).toBeNull();
     },
     60_000,
+  );
+});
+
+describe("#2645 the board's Friends button on a phone", () => {
+  it(
+    "#2645 on a phone the board's Friends button is a labeled row of the match menu, and its panel opens as the menu closes",
+    async () => {
+      signIn("tok-friends");
+      serve(world());
+      const restore = stubPhoneBar(true);
+      try {
+        render(<><ChallengeToast /><Board view={baseView()} highlight={NO_HIGHLIGHT} /></>);
+        const row = await button();
+        const menu = screen.getByTestId("match-menu-panel");
+
+        expect(menu).toContainElement(row);
+        expect(row).toHaveClass("friends-button--menu");
+        expect(row).toHaveTextContent("Friends");
+        expect(row.closest(".control-bar")).not.toBeNull();
+
+        fireEvent.click(screen.getByTestId("match-menu"));
+        expect(menu).toBeVisible();
+        fireEvent.click(row);
+
+        expect(await screen.findByTestId(friendsTestid.panel, undefined, SLOW)).toBeInTheDocument();
+        expect(menu).not.toBeVisible();
+
+        // Closing the panel puts the focus on ⋯, the row being out of reach in the closed menu.
+        fireEvent.click(screen.getByTestId(friendsTestid.close));
+        expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+        expect(screen.getByTestId("match-menu")).toHaveFocus();
+      } finally {
+        restore();
+      }
+    },
+    TEST_MS,
   );
 });
 

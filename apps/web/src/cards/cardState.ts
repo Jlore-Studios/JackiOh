@@ -316,7 +316,7 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       },
     });
   }
-  // MD-B6, R943: a Created card, made during the game.
+  // MD-B6, R943: a Created card, made during the game. R2647000: only the inspect state notes list it (CardStates.tsx draws it on no face).
   if (face.created === true) {
     badges.push({
       kind: "created",

@@ -15,16 +15,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-083";
 
-/// "Discover 3".
+/// "Discover 3": the declared `weapons` since #2657 (R2657006), printed before, as a replay of an
+/// older version reads it (`param_or`).
 const PICKS: i32 = 3;
 
 /// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
 fn arm(rarity: Rarity) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             vec![equip_picks(json_as(json!({
                 "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
-                "times": PICKS,
+                "times": param_or(&*ctx, "weapons", PICKS),
             })))]
         })),
         ..Script::default()

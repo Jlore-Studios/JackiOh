@@ -116,7 +116,7 @@ fn r39_gives_felinor_fiender_printed_stats_plus_the_sum_of_your_felinors_never_b
 
 #[test]
 fn r44_projects_lethal_after_armor_the_anti_oneshot_cap_and_trample_excess_then_cancels_the_attack() {
-    assert_eq!(config::ANTI_ONESHOT_CAP.base, 5);
+    assert_eq!(config::ANTI_ONESHOT_CAP.base, 4); // 5 until #2657
     assert_eq!(config::ANTI_ONESHOT_CAP.radiant, 3);
 }
 
@@ -157,7 +157,7 @@ fn r118_lets_a_traps_prompt_interrupt_a_play_without_eating_its_cry() {
 
 #[test]
 fn r124_adds_hero_armor_up_across_its_sources_where_the_anti_oneshot_cap_takes_the_smallest() {
-    assert_eq!(config::ANTI_ONESHOT_CAP.base, 5);
+    assert_eq!(config::ANTI_ONESHOT_CAP.base, 4); // 5 until #2657
     assert_eq!(config::ANTI_ONESHOT_CAP.radiant, 3);
 }
 

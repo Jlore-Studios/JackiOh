@@ -21,7 +21,8 @@ pub const ID: &str = "stinkyscape-085";
 /// "Tribute 2" (R101).
 const TRIBUTE: i32 = 2;
 
-/// "Discover 2".
+/// "Discover 2": the declared `weapons` since #2657 (R2657006), printed before, as a replay of an
+/// older version reads it (`param_or`).
 const PICKS: i32 = 2;
 
 /// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
@@ -31,10 +32,10 @@ fn arm(rarity: Rarity) -> Script {
             tribute: Some(TRIBUTE),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             vec![equip_picks(json_as(json!({
                 "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
-                "times": PICKS,
+                "times": param_or(&*ctx, "weapons", PICKS),
             })))]
         })),
         ..Script::default()

@@ -50,7 +50,7 @@ fn straaza(radiant: bool, max: i32) -> Script {
         cry: Some(hook(move |ctx| {
             vec![add_random_from_catalog(json_as(json!({
                 "query": unit_pool(max),
-                "count": COUNT,
+                "count": param_or(&*ctx, "cards", COUNT),
                 "costOverride": param(&*ctx, "setCost"),
                 "radiant": radiant,
             })))]

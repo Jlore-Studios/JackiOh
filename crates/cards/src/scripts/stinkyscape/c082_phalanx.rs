@@ -1,8 +1,9 @@
-//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 4/4 → 8/8, cost 4, Epic.
-//!   Base:    "Armor 3
-//!            Cry: Discover 2 Rare Weapons and Equip them into this."
-//!   Radiant: "Armor 6
-//!            Cry: Discover 2 Epic Weapons and Equip them into this."
+//! Stinkyscape #82 Phalanx (SPEC §8.10 row 82). Unit 3/3 → 6/6, cost 4, Epic (4/4 → 8/8 with Armor 3 and 6
+//! until #2657).
+//!   Base:    "Armor 2
+//!            Cry: Discover {weapons|Rare Weapon|Rare Weapons} and Equip them into this." — weapons 2
+//!   Radiant: "Armor 4
+//!            Cry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this." — weapons 2
 //!
 //! R1862002: the Cry is `equip_picks` (R1841002), 2 Discovers of three in turn from the Weapon-tagged
 //! cards of the rarity, the pool naming its set so that it reaches them whether or not the set ships (R1420,
@@ -17,16 +18,17 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-082";
 
-/// "Discover 2".
+/// "Discover 2": the declared `weapons` since #2657 (R2657006), printed before, as a replay of an
+/// older version reads it (`param_or`).
 const PICKS: i32 = 2;
 
 /// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
 fn arm(rarity: Rarity) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             vec![equip_picks(json_as(json!({
                 "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
-                "times": PICKS,
+                "times": param_or(&*ctx, "weapons", PICKS),
             })))]
         })),
         ..Script::default()
@@ -144,7 +146,7 @@ mod tests {
         #[test]
         fn r1862002_the_cry_discovers_n_weapons_of_its_rarity_in_turn_and_equips_each() {
             let (s, host) = arms(false, &RARE);
-            armed(&s, &host, 3);
+            armed(&s, &host, 2);
         }
 
         #[test]
@@ -168,7 +170,7 @@ mod tests {
         #[test]
         fn r1862002_the_cry_discovers_n_epic_weapons_in_turn_and_equips_each() {
             let (s, host) = arms(true, &EPIC);
-            armed(&s, &host, 6);
+            armed(&s, &host, 4);
         }
     }
 }

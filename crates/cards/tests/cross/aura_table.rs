@@ -109,7 +109,8 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         (
             "p2 lane 1 Spikey Pillow",
             s.unit_at(P2, 1),
-            view(0, 1, vec![], 0, Position::Atk),
+            // Can't Defend since #2657 (R2657000).
+            view(0, 1, vec![Keyword::CantDefend], 0, Position::Atk),
         ),
         (
             "p2 lane 2 Mr. Vanilla",

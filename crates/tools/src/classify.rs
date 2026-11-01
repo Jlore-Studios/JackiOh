@@ -32,7 +32,9 @@
 //!   are a rule every game meets, and make a patch, once they reach `RULE_MIN_GAMES` of the games
 //!   (R2455000), and fewer count as no card;
 //! - a change to the AI plays the same self-play games on both builds: identical logs mean the AI
-//!   decides as it did, and the change is Internal.
+//!   decides as it did, and the change is Internal. `--selfplay-side` plays one side's games into a
+//!   directory and `--selfplay-dir` compares two such runs instead, so CI plays each side in a job of
+//!   its own (#2651).
 //!
 //! It stops once `PATCH_MIN_CARDS` families play differently, the tier being a patch already.
 //! Without `--parent-bin`, stage 1's answer stands, and the output names what stage 2 would have
@@ -140,6 +142,35 @@ pub struct Args {
     /// does not show. Needs `--parent-bin` whenever stage 1 leaves something unchecked.
     #[arg(long)]
     claims: bool,
+    /// #2651: play one side of stage 2's AI check, `SELFPLAY_GAMES` self-play games on
+    /// `SELFPLAY_SEED` (`head` on this binary, `base` on `--parent-bin`), into
+    /// `<--selfplay-dir>/<side>` and stop, so each side plays in a CI job of its own. Nothing plays
+    /// unless stage 1 finds a change to the AI and none to the cards (`plays_selfplay`).
+    #[arg(long, value_enum, requires = "selfplay_dir")]
+    selfplay_side: Option<SelfplaySide>,
+    /// #2651: with `--selfplay-side`, where that side's games go; beside `--parent-bin` alone, where
+    /// stage 2's AI check reads both sides' games (`<dir>/head`, `<dir>/base`) instead of playing them.
+    #[arg(long, value_name = "DIR")]
+    selfplay_dir: Option<PathBuf>,
+}
+
+/// One side of stage 2's AI check (`--selfplay-side`, #2651).
+#[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+enum SelfplaySide {
+    /// The head's games, on this binary.
+    Head,
+    /// The base's games, on `--parent-bin`.
+    Base,
+}
+
+impl SelfplaySide {
+    /// The side's directory under `--selfplay-dir`, and under stage 2's own temporary one.
+    fn dir_name(self) -> &'static str {
+        match self {
+            SelfplaySide::Head => "head",
+            SelfplaySide::Base => "base",
+        }
+    }
 }
 
 /// `--json --claims`: the classification, the labels CI puts on the pull request, and what the
@@ -823,7 +854,8 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
 /// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353): each
 /// plays its games on every core but then waits on its slowest, and one after the other they took
 /// `rust (classify)` past seven minutes. On four cores one run took 162 s, nearly all of it one game
-/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same.
+/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same. Or each in a CI
+/// job of its own (`--selfplay-side`, #2651).
 fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
     fs::create_dir_all(out).with_context(|| format!("creating {}", out.display()))?;
     let games = SELFPLAY_GAMES.to_string();
@@ -836,9 +868,8 @@ fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
         .with_context(|| format!("running {} selfplay", bin.display()))
 }
 
-/// A self-play run's games, once it has finished, as the comparison reads them: seed, log, final hash
-/// and result (not the catalog version or the commit, which name the build).
-fn selfplay_games(bin: &Path, out: &Path, run: Child) -> Result<Vec<Value>> {
+/// Waits for a self-play run `start_selfplay` started, and fails when the run did.
+fn finish_selfplay(bin: &Path, run: Child) -> Result<()> {
     let output = run
         .wait_with_output()
         .with_context(|| format!("running {} selfplay", bin.display()))?;
@@ -849,7 +880,18 @@ fn selfplay_games(bin: &Path, out: &Path, run: Child) -> Result<Vec<Value>> {
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
-    let file = out.join(format!("selfplay-{SELFPLAY_SEED}-1-{SELFPLAY_GAMES}.jsonl"));
+    Ok(())
+}
+
+/// The file a self-play run of `SELFPLAY_GAMES` on `SELFPLAY_SEED` writes into `out`.
+fn selfplay_file(out: &Path) -> PathBuf {
+    out.join(format!("selfplay-{SELFPLAY_SEED}-1-{SELFPLAY_GAMES}.jsonl"))
+}
+
+/// A self-play run's games, in `out`, as the comparison reads them: seed, log, final hash and result
+/// (not the catalog version or the commit, which name the build).
+fn selfplay_games(out: &Path) -> Result<Vec<Value>> {
+    let file = selfplay_file(out);
     let text = fs::read_to_string(&file).with_context(|| format!("reading {}", file.display()))?;
     text.lines()
         .map(|line| {
@@ -914,8 +956,15 @@ fn every_game(cardless: &BTreeSet<String>) -> bool {
     cardless.len() >= RULE_MIN_GAMES
 }
 
+/// Whether stage 2's AI check can run on stage 1's reading: the AI changed and, by the diff alone,
+/// no card did (a catalog field, wording, the cards' look, a set that ships). `check` also skips it
+/// when its own checks find a card change; `--selfplay-side` plays nothing when this is false.
+fn plays_selfplay(diff: &Diff) -> bool {
+    diff.ai && diff.play.is_empty() && diff.wording.is_empty() && !diff.visual && diff.sets.is_empty()
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
-fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
+fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -> Result<Checked> {
     let mut checked = Checked::default();
     let enough = |checked: &Checked| {
         diff.play.len() + checked.scripts.len() + checked.touched.len() >= PATCH_MIN_CARDS || checked.rule
@@ -970,25 +1019,59 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         }
         let _ = fs::remove_file(&traces);
     }
-    let cards_changed = !diff.play.is_empty()
-        || !diff.wording.is_empty()
-        || diff.visual
-        || !diff.sets.is_empty()
-        || !checked.scripts.is_empty()
-        || !checked.touched.is_empty()
-        || checked.rule;
-    if diff.ai && !cards_changed {
-        let dir = temp_traces().with_extension("selfplay");
-        let current = std::env::current_exe().context("this binary's path")?;
-        let (head_out, base_out) = (dir.join("head"), dir.join("base"));
-        let ours = start_selfplay(&current, &head_out);
-        let theirs = start_selfplay(parent, &base_out);
-        let ours = ours.and_then(|run| selfplay_games(&current, &head_out, run));
-        let theirs = theirs.and_then(|run| selfplay_games(parent, &base_out, run));
-        let _ = fs::remove_dir_all(&dir);
-        checked.ai = Some(ours? != theirs?);
+    let found = !checked.scripts.is_empty() || !checked.touched.is_empty() || checked.rule;
+    if plays_selfplay(diff) && !found {
+        checked.ai = Some(match selfplay_dir {
+            // #2651: each side was played in a job of its own (`--selfplay-side`).
+            Some(dir) => {
+                selfplay_games(&dir.join(SelfplaySide::Head.dir_name()))?
+                    != selfplay_games(&dir.join(SelfplaySide::Base.dir_name()))?
+            }
+            None => {
+                let dir = temp_traces().with_extension("selfplay");
+                let current = std::env::current_exe().context("this binary's path")?;
+                let (head_out, base_out) = (
+                    dir.join(SelfplaySide::Head.dir_name()),
+                    dir.join(SelfplaySide::Base.dir_name()),
+                );
+                // Both start before either is waited on, so they play side by side (#2353).
+                let ours = start_selfplay(&current, &head_out);
+                let theirs = start_selfplay(parent, &base_out);
+                let ours = ours
+                    .and_then(|run| finish_selfplay(&current, run))
+                    .and_then(|()| selfplay_games(&head_out));
+                let theirs = theirs
+                    .and_then(|run| finish_selfplay(parent, run))
+                    .and_then(|()| selfplay_games(&base_out));
+                let _ = fs::remove_dir_all(&dir);
+                ours? != theirs?
+            }
+        });
     }
     Ok(checked)
+}
+
+/// `--selfplay-side`: one side of stage 2's AI check, played into `<dir>/<side>` for another run's
+/// `--selfplay-dir` to compare (#2651): `head` on this binary, `base` on `parent`. It plays only
+/// when `plays_selfplay` holds, and prints one JSON line saying whether it played.
+fn play_side(side: SelfplaySide, diff: &Diff, parent: Option<&Path>, dir: &Path) -> Result<()> {
+    let out = dir.join(side.dir_name());
+    let played = plays_selfplay(diff);
+    if played {
+        let bin = match side {
+            SelfplaySide::Head => std::env::current_exe().context("this binary's path")?,
+            SelfplaySide::Base => parent
+                .context("--selfplay-side base needs --parent-bin, the base's build")?
+                .to_path_buf(),
+        };
+        let run = start_selfplay(&bin, &out)?;
+        finish_selfplay(&bin, run)?;
+    }
+    println!(
+        "{}",
+        serde_json::json!({ "selfplay": side.dir_name(), "played": played, "out": out.display().to_string() })
+    );
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1037,12 +1120,22 @@ pub fn run(args: Args) -> Result<()> {
     let (before, after) = (side_at(&root, &base)?, side_at(&root, &head)?);
     let diff = read_diff(&before, &after, &files);
 
+    if let Some(side) = args.selfplay_side {
+        if side == SelfplaySide::Head && rev("HEAD")? != head {
+            bail!("--selfplay-side head plays this build as the head's, but the checkout is not at {head}");
+        }
+        let dir = args
+            .selfplay_dir
+            .as_deref()
+            .context("--selfplay-side needs --selfplay-dir")?;
+        return play_side(side, &diff, args.parent_bin.as_deref(), dir);
+    }
     let checked = match &args.parent_bin {
         Some(parent) => {
             if rev("HEAD")? != head {
                 bail!("stage 2 runs this build as the head's, but the checkout is not at {head}");
             }
-            Some(check(&diff, &after, parent)?)
+            Some(check(&diff, &after, parent, args.selfplay_dir.as_deref())?)
         }
         None => None,
     };
@@ -1853,5 +1946,98 @@ mod tests {
         let decks = || anyhow::anyhow!("p1: deck must hold exactly 20 cards (§2.6 L2), got 25");
         assert!(read_refusal(decks(), false).expect("a rule"));
         assert!(read_refusal(decks(), true).expect("a rule"));
+    }
+
+    // #2651: each side of stage 2's AI check can play in a job of its own.
+    #[derive(clap::Parser, Debug)]
+    struct Cli {
+        #[command(flatten)]
+        args: Args,
+    }
+
+    fn parse(argv: &[&str]) -> Result<Args, clap::Error> {
+        use clap::Parser;
+        Cli::try_parse_from(std::iter::once("classify").chain(argv.iter().copied())).map(|cli| cli.args)
+    }
+
+    #[test]
+    fn the_selfplay_flags_parse_and_a_side_needs_its_dir() {
+        let args = parse(&["--base", "b", "--selfplay-side", "base", "--selfplay-dir", "d"]).unwrap();
+        assert_eq!(args.selfplay_side, Some(SelfplaySide::Base));
+        assert_eq!(args.selfplay_dir, Some(PathBuf::from("d")));
+        assert!(parse(&["--base", "b", "--selfplay-side", "head"]).is_err());
+        assert!(parse(&["--selfplay-side", "left", "--selfplay-dir", "d", "--base", "b"]).is_err());
+        let args = parse(&["--base", "b", "--parent-bin", "p", "--selfplay-dir", "d"]).unwrap();
+        assert_eq!(
+            (args.selfplay_side, args.selfplay_dir),
+            (None, Some(PathBuf::from("d")))
+        );
+    }
+
+    /// The AI's file changed and nothing else: stage 1 finds an AI change and no card.
+    fn ai_only() -> (Side, Diff) {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = read_diff(
+            &both,
+            &both,
+            &[file("crates/ai/src/evaluate.rs", "fn a() { 1 }", "fn a() { 2 }")],
+        );
+        (both, diff)
+    }
+
+    #[test]
+    fn a_selfplay_dir_is_compared_by_seed_log_hash_and_result() {
+        let (both, diff) = ai_only();
+        let dir = temp_traces().with_extension("selfplay-test");
+        // A side's one game, its log and the build's name as given.
+        let play = |side: SelfplaySide, log: Value, build: &str| {
+            let out = dir.join(side.dir_name());
+            fs::create_dir_all(&out).unwrap();
+            let game = json!({
+                "seed": "classify:1", "decks": [[], []], "log": log, "hash": "h", "result": null,
+                "turns": 1, "catalog": build, "commit": build
+            });
+            fs::write(selfplay_file(&out), format!("{game}\n")).unwrap();
+        };
+        let log = || json!([{ "type": "endTurn" }]);
+        let checked = || check(&diff, &both, Path::new("no-parent-is-run"), Some(&dir));
+        // The builds' names differ and nothing else does: the AI decides as it did.
+        play(SelfplaySide::Head, log(), "head-build");
+        play(SelfplaySide::Base, log(), "base-build");
+        assert_eq!(checked().unwrap().ai, Some(false));
+        // One log differs: the AI decides differently.
+        play(SelfplaySide::Base, json!([]), "base-build");
+        assert_eq!(checked().unwrap().ai, Some(true));
+        // A side that never played is an error, not "the same".
+        fs::remove_dir_all(&dir).unwrap();
+        assert!(checked().is_err());
+    }
+
+    #[test]
+    fn a_side_plays_only_when_the_ai_check_can_run() {
+        let (both, ai_diff) = ai_only();
+        assert!(plays_selfplay(&ai_diff));
+        // The AI changed, and so did a card's wording: stage 2 skips the AI check.
+        let reworded = read_diff(
+            &side(cards(1, 1, "Old."), SHIPPED),
+            &side(cards(1, 1, "New."), SHIPPED),
+            &[file("crates/ai/src/evaluate.rs", "fn a() { 1 }", "fn a() { 2 }")],
+        );
+        assert!(reworded.ai && !plays_selfplay(&reworded));
+        let server = read_diff(
+            &both,
+            &both,
+            &[file("crates/server/src/main.rs", "fn a() { 1 }", "fn a() { 2 }")],
+        );
+        assert!(!plays_selfplay(&server));
+
+        let dir = temp_traces().with_extension("selfplay-side-test");
+        // Nothing to play: it says so and writes nothing.
+        play_side(SelfplaySide::Base, &server, None, &dir).unwrap();
+        assert!(!dir.exists());
+        // The base's side without the base's build is an error. (The head's side would run this
+        // test binary as `selfplay`, so it is not tried.)
+        assert!(play_side(SelfplaySide::Base, &ai_diff, None, &dir).is_err());
+        assert!(!dir.exists());
     }
 }

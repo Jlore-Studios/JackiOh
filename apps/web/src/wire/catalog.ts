@@ -194,7 +194,9 @@ export type Keyword =
   /** #1852, R1852000: when it dies, a copy of it fuses into its owner's Dormant Starship. */
   | { kind: "Starship Piece" }
   /** #1852, R1852003: a launched Starship. */
-  | { kind: "Starship" };
+  | { kind: "Starship" }
+  /** #2657, R2657000: never in Defense Position; the successor to the status "Cannot be in Defense Position". */
+  | { kind: "Can't Defend" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -235,6 +237,7 @@ export const KEYWORD_KINDS = [
   "Tradable",
   "Starship Piece",
   "Starship",
+  "Can't Defend",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

@@ -85,6 +85,7 @@ var Workflows = map[string]string{
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
 	"pr-title.yml":           "holds a pull request's title to the convention",
 	"promote-production.yml": "merges main into production once a day",
+	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",
 	"selfplay-shards.yml":    "one round of a self-play export's shards",
 	"selfplay.yml":           "a self-play export, on the owner's PC unless asked otherwise",
 	"spec-fold.yml":          "folds the pending §11 paragraphs and rewrites the rulings index once a day",

@@ -2055,11 +2055,19 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   SS
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Can't Defend"
+                  title="Can't Defend"
+                >
+                  CD
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend"
                 >
                   +
-                  23
+                  24
                 </span>
               </span>
               <span

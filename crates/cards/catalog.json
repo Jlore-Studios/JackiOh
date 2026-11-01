@@ -990,7 +990,7 @@
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "cards",
@@ -1023,7 +1023,7 @@
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
-    "cost": 7,
+    "cost": 6,
     "loc": 20,
     "base": {
       "keywords": [],
@@ -1670,8 +1670,12 @@
     "base": {
       "attack": 1,
       "health": 1,
-      "keywords": [],
-      "text": "Cry: Allure an enemy permanent."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nCry: Allure an enemy permanent."
     },
     "radiant": {
       "attack": 2,
@@ -1679,9 +1683,12 @@
       "keywords": [
         {
           "kind": "Divine Shield"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+      "text": "Divine Shield, Can't Defend\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
     }
   },
   "core-051": {
@@ -1822,6 +1829,15 @@
     "cost": 4,
     "params": [
       {
+        "key": "cards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      },
+      {
         "key": "setCost",
         "base": 1,
         "radiant": 0,
@@ -1836,13 +1852,13 @@
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Add 2 random (3) Cost Units to your hand. They cost ({setCost})."
+      "text": "Cry: Add {cards|random (3) Cost Unit|random (3) Cost Units} to your hand. They cost ({setCost})."
     },
     "radiant": {
       "attack": 16,
       "health": 16,
       "keywords": [],
-      "text": "Cry: Add 2 random Radiant (3) Cost Units to your hand. They cost ({setCost})."
+      "text": "Cry: Add {cards|random Radiant (3) Cost Unit|random Radiant (3) Cost Units} to your hand. They cost ({setCost})."
     }
   },
   "core-055": {
@@ -2069,12 +2085,21 @@
         "step": 1,
         "min": 1,
         "tunedOn": "base"
+      },
+      {
+        "key": "tokens",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a ({costLimit}) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
+      "text": "Reveals when your opponent plays a ({costLimit}) Cost or less card, if you have an empty unit zone: Summon {tokens|Rush Token|Rush Tokens}. If it's a Unit, they attack it."
     },
     "radiant": {
       "keywords": [],
@@ -2279,14 +2304,22 @@
     "base": {
       "attack": 0,
       "health": 2,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} Attack."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nAura: Your Units have −{drain} Attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} Attack."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nAura: Your Units other than Spikey Pillows have −{drain} Attack."
     }
   },
   "core-066": {
@@ -2590,11 +2623,20 @@
       },
       {
         "key": "cap",
-        "base": 5,
+        "base": 4,
         "radiant": 3,
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "armor",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -2604,7 +2646,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at a time.\nYour hero has Armor {armor}.\nCry: Draw {draw}."
     }
   },
   "core-074": {
@@ -3012,8 +3054,8 @@
       },
       {
         "key": "paidArmor",
-        "base": 4,
-        "radiant": 8,
+        "base": 5,
+        "radiant": 10,
         "better": "up",
         "step": 1,
         "min": 1
@@ -3178,7 +3220,7 @@
     "rarity": "Rare",
     "flavor": "Toxic",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "core-090-1"
     ],
@@ -4893,7 +4935,15 @@
     "cost": 1,
     "params": [
       {
-        "key": "draw",
+        "key": "least",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "most",
         "base": 3,
         "radiant": 6,
         "better": "up",
@@ -4904,11 +4954,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Draw {least}-{most}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Draw {least}-{most}."
     }
   },
   "classic-025": {
@@ -5270,7 +5320,7 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw the highest cost Spell from your deck."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw a random Spell from your deck."
     },
     "radiant": {
       "keywords": [],
@@ -7386,8 +7436,8 @@
     "params": [
       {
         "key": "tokens",
-        "base": 2,
-        "radiant": 3,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -8291,10 +8341,13 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 3
+          "n": 2
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Armor 3\nCan't be in Defense Position. Only Units in this lane can attack this."
+      "text": "Armor 2, Can't Defend\nOnly Units in this lane can attack this."
     },
     "radiant": {
       "attack": 8,
@@ -8302,13 +8355,16 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 6
+          "n": 4
         },
         {
           "kind": "Immune to Spells"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Armor 6, Immune to Spells\nCan't be in Defense Position. Only Units in this lane can attack this."
+      "text": "Armor 4, Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
     }
   },
   "classicplus-019-2": {
@@ -8489,8 +8545,8 @@
     "params": [
       {
         "key": "attackGain",
-        "base": 4,
-        "radiant": 8,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -9122,7 +9178,7 @@
     "rarity": "Legendary",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 15,
     "base": {
       "keywords": [],
@@ -9724,8 +9780,12 @@
     "base": {
       "attack": 0,
       "health": 3,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockeed card to your hand. It costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nDeath: Add a random Jlockeed card to your hand. It costs ({setCost})."
     },
     "radiant": {
       "attack": 0,
@@ -9835,20 +9895,26 @@
       "health": 2,
       "keywords": [
         {
-          "kind": "First Strike"
+          "kind": "Ranged"
+        },
+        {
+          "kind": "Flying"
         },
         {
           "kind": "Rush"
         }
       ],
-      "text": "First Strike, Rush\nCan't be in Defense Position. Can't be attacked."
+      "text": "Ranged, Flying, Rush\nCan't be attacked."
     },
     "radiant": {
       "attack": 14,
       "health": 4,
       "keywords": [
         {
-          "kind": "First Strike"
+          "kind": "Ranged"
+        },
+        {
+          "kind": "Flying"
         },
         {
           "kind": "Rush"
@@ -9857,7 +9923,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "First Strike, Rush, Divine Shield\nCan't be in Defense Position. Can't be attacked."
+      "text": "Ranged, Flying, Rush, Divine Shield\nCan't be attacked."
     }
   },
   "classicplus-052": {
@@ -11713,16 +11779,16 @@
     "params": [
       {
         "key": "heal",
-        "base": 3,
-        "radiant": 6,
+        "base": 1,
+        "radiant": 2,
         "better": "up",
-        "step": 2,
+        "step": 1,
         "min": 1
       },
       {
         "key": "draw",
         "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -11737,8 +11803,8 @@
       },
       {
         "key": "damage",
-        "base": 2,
-        "radiant": 4,
+        "base": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -12235,7 +12301,7 @@
     "printedRarity": "Epic",
     "flavor": "Dark",
     "token": true,
-    "cost": 0,
+    "cost": 1,
     "refs": [
       "meditative-019-1"
     ],
@@ -12934,11 +13000,11 @@
     "loc": 43,
     "base": {
       "keywords": [],
-      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card, which costs (0). Summon {units} random CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card, which costs (1). Summon {units} random CN Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card, which costs (0). Summon {units} random Radiant CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card, which costs (1). Summon {units} random Radiant CN Units."
     }
   },
   "meditative-033": {
@@ -13794,7 +13860,7 @@
     "printedRarity": "Mythic",
     "flavor": "Tech",
     "token": true,
-    "cost": 10,
+    "cost": 8,
     "refs": [
       "classic-018",
       "classic-t-glitch",
@@ -13859,41 +13925,25 @@
         "min": 1,
         "tunedOn": "radiant",
         "cry": true
-      },
-      {
-        "key": "radiants",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
       }
     ],
     "loc": 149,
     "base": {
       "attack": 8,
       "health": 20,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nStart of turn: Make a random permanent of yours Radiant.\nFloat reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "keywords": [],
+      "text": "Float reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     },
     "radiant": {
       "attack": 16,
       "health": 40,
       "keywords": [
         {
-          "kind": "Can't attack"
-        },
-        {
           "kind": "Armor",
           "n": 5
         }
       ],
-      "text": "Can't attack, Armor 5\nStart of turn: Make {radiants|random permanent|random permanents} of yours Radiant.\nFloat reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Armor 5\nFloat reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     }
   },
   "meditative-049-2": {
@@ -14646,6 +14696,14 @@
     "cost": 4,
     "params": [
       {
+        "key": "counters",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
         "key": "price",
         "base": 4,
         "radiant": 4,
@@ -14667,13 +14725,13 @@
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "When you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from their field, hand, deck and graveyard."
+      "text": "When you spend mana, place {counters|Plague Counter|Plague Counters} on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from their field, hand, deck and graveyard."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "When you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from their field, hand, deck and graveyard."
+      "text": "When you spend mana, place {counters|Plague Counter|Plague Counters} on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from their field, hand, deck and graveyard."
     }
   },
   "meditative-070": {
@@ -15490,16 +15548,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "temporary",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 19,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random Spell|random Spells} to your hand."
+      "text": "Add {cards|random Spell|random Spells} to your hand. Give each Temporary {temporary}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random Radiant Spell|random Radiant Spells} to your hand."
+      "text": "Add {cards|random Radiant Spell|random Radiant Spells} to your hand. Give each Temporary {temporary}."
     }
   },
   "meditative-091": {
@@ -15658,8 +15724,12 @@
     "base": {
       "attack": 1,
       "health": 1,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Sr."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nDeath: Summon a Growing Felinor Sr."
     },
     "radiant": {
       "attack": 2,
@@ -15670,9 +15740,12 @@
         },
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Sr."
+      "text": "Divine Shield, Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr."
     }
   },
   "meditative-093-1": {
@@ -15699,8 +15772,12 @@
     "base": {
       "attack": 2,
       "health": 2,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Sr Sr."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nDeath: Summon a Growing Felinor Sr Sr."
     },
     "radiant": {
       "attack": 4,
@@ -15711,9 +15788,12 @@
         },
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Sr Sr."
+      "text": "Divine Shield, Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr Sr."
     }
   },
   "meditative-093-2": {
@@ -15739,8 +15819,12 @@
     "base": {
       "attack": 3,
       "health": 3,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Super Senior."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nDeath: Summon a Growing Felinor Super Senior."
     },
     "radiant": {
       "attack": 6,
@@ -15751,9 +15835,12 @@
         },
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Super Senior."
+      "text": "Divine Shield, Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Super Senior."
     }
   },
   "meditative-093-3": {
@@ -15775,8 +15862,12 @@
     "base": {
       "attack": 4,
       "health": 4,
-      "keywords": [],
-      "text": "Can't be in Defense Position."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend"
     },
     "radiant": {
       "attack": 8,
@@ -15787,9 +15878,12 @@
         },
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position."
+      "text": "Divine Shield, Rush, Can't Defend"
     }
   },
   "meditative-094": {
@@ -16677,7 +16771,7 @@
     "rarity": "Mythic",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "refs": [
       "meditativeplus-001-1",
       "meditative-008",
@@ -18643,7 +18737,7 @@
     "rarity": "Epic",
     "flavor": "Dark",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "refs": [
       "stinkyscape-012-1",
       "stinkyscape-012-2",
@@ -18978,7 +19072,7 @@
     "rarity": "Legendary",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-018-1",
       "stinkyscape-018-2",
@@ -19412,13 +19506,13 @@
       "attack": 2,
       "health": 9,
       "keywords": [],
-      "text": "Cry: Summon a University. It can't use its own Activate.\nActivate: Choose one: summon a random Starship Piece, or Activate your Universities.\nA University can be Activated at most once each turn."
+      "text": "Cry: Choose one: summon a University, or this gains \"Activate: Summon a random Starship Piece.\""
     },
     "radiant": {
       "attack": 4,
       "health": 18,
       "keywords": [],
-      "text": "Cry: Summon a University. It can't use its own Activate.\nActivate: Summon a random Radiant Starship Piece, then Activate your Universities.\nA University can be Activated at most once each turn."
+      "text": "Cry: Choose one: summon a Radiant University, or this gains \"Activate: Summon a random Radiant Starship Piece.\""
     }
   },
   "stinkyscape-027": {
@@ -20034,7 +20128,7 @@
     "rarity": "Mythic",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "refs": [
       "stinkyscape-027"
     ],
@@ -20129,7 +20223,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "stinkyscape-t-drone-corvette"
     ],
@@ -20138,19 +20232,19 @@
       "keywords": [
         {
           "kind": "Brittle",
-          "n": 5
+          "n": 3
         }
       ],
-      "text": "Brittle 5\nAura: The AI plays each of your turns.\nEnd of turn: Summon a Drone Corvette."
+      "text": "Brittle 3\nAura: The AI plays each of your turns.\nEnd of turn: Summon a Drone Corvette."
     },
     "radiant": {
       "keywords": [
         {
           "kind": "Brittle",
-          "n": 5
+          "n": 3
         }
       ],
-      "text": "Brittle 5\nAura: The AI plays each of your turns.\nEnd of turn: Summon a Radiant Drone Corvette."
+      "text": "Brittle 3\nAura: The AI plays each of your turns.\nEnd of turn: Summon a Radiant Drone Corvette."
     }
   },
   "stinkyscape-048": {
@@ -20437,7 +20531,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first)."
+      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
     },
     "radiant": {
       "attack": 0,
@@ -20454,7 +20548,7 @@
           "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first)."
+      "text": "Starship Piece, Equip, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit."
     }
   },
   "stinkyscape-054": {
@@ -20653,7 +20747,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first), twice."
+      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
     },
     "radiant": {
       "attack": 0,
@@ -20670,7 +20764,7 @@
           "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first), twice."
+      "text": "Starship Piece, Equip, Lucky 1\nActivate: Deal a random {least} to {most} damage to each enemy Unit, twice."
     }
   },
   "stinkyscape-058": {
@@ -20689,8 +20783,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 12,
-        "radiant": 24,
+        "base": 11,
+        "radiant": 22,
         "better": "up",
         "step": 2,
         "min": 1
@@ -20869,7 +20963,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first), three times."
+      "text": "Starship Piece, Equip\nActivate: Deal a random {least} to {most} damage to each enemy Unit, three times."
     },
     "radiant": {
       "attack": 0,
@@ -20886,7 +20980,7 @@
           "n": 1
         }
       ],
-      "text": "Starship Piece, Equip, Lucky 1\nActivate 3: Deal a random {least} to {most} damage to each enemy (60%, 30%, 10%, lowest first), three times."
+      "text": "Starship Piece, Equip, Lucky 1\nActivate 3: Deal a random {least} to {most} damage to each enemy Unit, three times."
     }
   },
   "stinkyscape-062": {
@@ -21640,18 +21734,29 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "weapons",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 19,
     "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Discover {weapons|Rare Weapon|Rare Weapons} and Equip them into this."
+    },
+    "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Discover 2 Rare Weapons and Equip them into this."
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "Cry: Discover 2 Epic Weapons and Equip them into this."
+      "text": "Cry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this."
     }
   },
   "stinkyscape-082": {
@@ -21665,28 +21770,39 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "weapons",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 19,
     "base": {
-      "attack": 4,
-      "health": 4,
+      "attack": 3,
+      "health": 3,
       "keywords": [
         {
           "kind": "Armor",
-          "n": 3
+          "n": 2
         }
       ],
-      "text": "Armor 3\nCry: Discover 2 Rare Weapons and Equip them into this."
+      "text": "Armor 2\nCry: Discover {weapons|Rare Weapon|Rare Weapons} and Equip them into this."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
+      "attack": 6,
+      "health": 6,
       "keywords": [
         {
           "kind": "Armor",
-          "n": 6
+          "n": 4
         }
       ],
-      "text": "Armor 6\nCry: Discover 2 Epic Weapons and Equip them into this."
+      "text": "Armor 4\nCry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this."
     }
   },
   "stinkyscape-083": {
@@ -21700,18 +21816,29 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "weapons",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 19,
     "base": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Discover 3 Rare Weapons and Equip them into this."
+      "text": "Cry: Discover {weapons|Rare Weapon|Rare Weapons} and Equip them into this."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Discover 3 Epic Weapons and Equip them into this."
+      "text": "Cry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this."
     }
   },
   "stinkyscape-084": {
@@ -21783,18 +21910,29 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "weapons",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 24,
     "base": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Tribute 2\nCry: Discover 2 Epic Weapons and Equip them into this."
+      "text": "Tribute 2\nCry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Tribute 2\nCry: Discover 2 Legendary Weapons and Equip them into this."
+      "text": "Tribute 2\nCry: Discover {weapons|Legendary Weapon|Legendary Weapons} and Equip them into this."
     }
   },
   "stinkyscape-086": {
@@ -21808,18 +21946,29 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
+    "params": [
+      {
+        "key": "weapons",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "cry": true
+      }
+    ],
     "loc": 26,
     "base": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Tribute 5\nFloat reduces Tribute requirement by 1.\nCry: Discover 3 Epic Weapons and Equip them into this."
+      "text": "Tribute 5\nFloat reduces Tribute requirement by 1.\nCry: Discover {weapons|Epic Weapon|Epic Weapons} and Equip them into this."
     },
     "radiant": {
       "attack": 16,
       "health": 16,
       "keywords": [],
-      "text": "Tribute 5\nFloat reduces Tribute requirement by 1.\nCry: Discover 3 Legendary Weapons and Equip them into this."
+      "text": "Tribute 5\nFloat reduces Tribute requirement by 1.\nCry: Discover {weapons|Legendary Weapon|Legendary Weapons} and Equip them into this."
     }
   },
   "stinkyscape-087": {
@@ -21995,7 +22144,7 @@
     "cost": 2,
     "loc": 21,
     "base": {
-      "attack": 4,
+      "attack": 3,
       "health": 4,
       "keywords": [
         {
@@ -22005,7 +22154,7 @@
       "text": "Rush\nAfter this attacks, summon a copy of this, then evolve.\nEvolve: Gain Flying."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 6,
       "health": 8,
       "keywords": [
         {
@@ -22182,8 +22331,8 @@
       },
       {
         "key": "resources",
-        "base": 2,
-        "radiant": 2,
+        "base": 1,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -22966,9 +23115,12 @@
         {
           "kind": "Armor",
           "n": 15
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
+      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 15, Can't Defend\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
     },
     "radiant": {
       "attack": 0,
@@ -22989,9 +23141,12 @@
         {
           "kind": "Armor",
           "n": 30
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 30\nCan't be in Defense Position.\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
+      "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 30, Can't Defend\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
     }
   },
   "stinkyscape-117": {
@@ -24128,7 +24283,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Cast a random harmful Book on an enemy.\nActivate: Cast a random helpful Book on an ally."
+      "text": "Starship Piece, Equip\nActivate: Choose a target. If it's an enemy, cast a random harmful Book, on it if it can be. If it's an ally, cast a random helpful Book, on it if it can be."
     },
     "radiant": {
       "attack": 0,
@@ -24141,7 +24296,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Starship Piece, Equip\nActivate: Cast a random Radiant harmful Book on an enemy.\nActivate: Cast a random Radiant helpful Book on an ally."
+      "text": "Starship Piece, Equip\nActivate: Choose a target. If it's an enemy, cast a random Radiant harmful Book, on it if it can be. If it's an ally, cast a random Radiant helpful Book, on it if it can be."
     }
   },
   "stinkyscape-144": {
@@ -24347,7 +24502,7 @@
     "rarity": "Mythic",
     "flavor": "Dark",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "refs": [
       "stinkyscape-148-1"
     ],
@@ -24420,7 +24575,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant Call to Chaos to your hand."
+      "text": "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant Call to Chaos to your hand. It costs (0)."
     }
   },
   "stinkyscape-150": {
@@ -24789,7 +24944,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-068"
     ],
@@ -24953,7 +25108,7 @@
     "rarity": "Epic",
     "flavor": "Hustle",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "exileChance",
@@ -25002,7 +25157,7 @@
     "rarity": "Rare",
     "flavor": "Hustle",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "trades",
@@ -25156,9 +25311,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
     },
     "radiant": {
       "attack": 0,
@@ -25166,9 +25324,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
     }
   },
   "stinkyscape-170": {
@@ -25208,9 +25369,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
     },
     "radiant": {
       "attack": 0,
@@ -25218,9 +25382,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
     }
   },
   "stinkyscape-171": {
@@ -25260,9 +25427,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
     },
     "radiant": {
       "attack": 0,
@@ -25270,9 +25440,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
     }
   },
   "stinkyscape-172": {
@@ -25312,9 +25485,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Stinkyscape Resource|random Stinkyscape Resources}.\nActivate: Take {selfDamage} damage. Tribute this."
     },
     "radiant": {
       "attack": 0,
@@ -25322,9 +25498,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Gain {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources}.\nActivate: Tribute this."
     }
   },
   "stinkyscape-173": {
@@ -25337,7 +25516,7 @@
     "rarity": "Rare",
     "flavor": "Brute",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "stinkyscape-089"
     ],
@@ -25366,9 +25545,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Add {spices|Spice|Spices} to your hand.\nActivate: Take {selfDamage} damage. Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Add {spices|Spice|Spices} to your hand.\nActivate: Take {selfDamage} damage. Tribute this."
     },
     "radiant": {
       "attack": 0,
@@ -25376,9 +25558,12 @@
       "keywords": [
         {
           "kind": "Can't attack"
+        },
+        {
+          "kind": "Can't Defend"
         }
       ],
-      "text": "Can't attack\nCan't be in Defense Position.\nDeath: Add {spices|Radiant Spice|Radiant Spices} to your hand.\nActivate: Take {selfDamage} damage. Tribute this."
+      "text": "Can't attack, Can't Defend\nDeath: Add {spices|Radiant Spice|Radiant Spices} to your hand.\nActivate: Take {selfDamage} damage. Tribute this."
     }
   },
   "stinkyscape-174": {
@@ -27713,8 +27898,12 @@
     "base": {
       "attack": 0,
       "health": 3,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand."
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        }
+      ],
+      "text": "Can't Defend\nDeath: Add {cards|random Radiant Training Grounds card|random Radiant Training Grounds cards} to your hand."
     },
     "radiant": {
       "attack": 0,

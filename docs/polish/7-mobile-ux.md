@@ -543,10 +543,13 @@ nothing in it carries a `hand-card-*` or `card-*` testid:
   - Tablet portrait (761–899 px either way, 900–1024 px portrait): a single column, with the
     controls and the log sharing the last row.
   - Phone portrait: a single column, with the opponent's hand beside the opponent's seat. The
-    control bar is one row: End turn takes what Offer draw, Concede, the log toggle and the gear
-    leave.
+    control bar is one row: End turn takes what the Marketplace's toggle (while the view carries
+    one), the log toggle, ⋯ and the gear leave. ⋯ is the match menu (#2645), which opens upward
+    from the bar and holds Offer draw, Concede and Friends as full-width 44 px rows.
   - Phone landscape: seats in a left column, the field in the middle, the opponent's hand and
-    the controls in a right column, and your hand along the bottom.
+    the controls in a right column, and your hand along the bottom. The column's 176 px hold
+    End turn and the gear on one row and the Marketplace's toggle, the log toggle and ⋯ on the
+    next.
   - On both phones the log's place is `display: none`, and `log-toggle` (a 44 px icon button in
     the control bar) opens it as an opaque sheet over the top of the board until it is pressed
     again (B43).

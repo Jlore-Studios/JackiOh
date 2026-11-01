@@ -432,6 +432,8 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 let book = s.card(BOOK).clone();
+                // Book of Knowledge draws 2 or 3 since #2657: both ends at 3, so it draws 3.
+                set_param(s.card_mut(book.id.as_str()), "least", 3);
 
                 s.play(&book, json!({}));
 
