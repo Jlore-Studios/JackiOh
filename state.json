@@ -12404,6 +12404,13 @@
     "2684": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:37:51Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Lines 1-8 hold (3 files in apps/web, ~90 lines, unit-tested, no spec), but line 9 is in doubt: the open WIP branch bot/issue-2497 edits comment lines in FriendRows.tsx and TogetherRoute.test.tsx"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
