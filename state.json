@@ -11845,6 +11845,8 @@
       "verdict_rounds": 1
     },
     "2658": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "at": "2026-11-01T04:49:39Z",
         "by": "`claude` (strong)",
@@ -11855,10 +11857,16 @@
       "feedback_since": "2026-11-01T02:12:20Z",
       "issue": 2644,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-01T10:41:32Z",
+      "run_id": "pending:0453d8cd-1793529506",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-11-01T10:41:53Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -12080,9 +12088,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T09:55:19Z",
+    "at": "2026-11-01T10:41:53Z",
     "url": "",
-    "what": "build #2520 on gpt"
+    "what": "revise #2658 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-01T10:29:27Z",
