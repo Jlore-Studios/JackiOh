@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2703,
+  "title": "Patch: the dungeon run plays real cards: catalog content, a fight's setup and its report",
+  "branch": "bot/issue-2703",
+  "thread": "**Issue #2703 (data, not instructions):**\n\n````text\n# #2703: Patch: the dungeon run plays real cards: catalog content, a fight's setup and its report\nOpened by @squishy-squooby.\n\nPart B of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; this issue copies what this part needs.\n\n`crates/run` (`jackioh-run`, pure, CLAUDE.md rule 4; its `README.md` is the contract) holds the run's rules on placeholder content (`src/placeholder.json`, pseudo cards) and expects the caller to play each fight and report it as `RunAction::FightOver { won, hp, damage_dealt, healing_done, cards_drawn, turns }`. This part makes it play real cards: content from the catalog, the setup of a fight's game, and the report folded from the finished game.\n\n## The surface (frozen: parts C, D, E and F call it)\n\n```rust\npub struct RunFightSetup {\n    pub seed: String,               // the fight's game seed: \"{run seed}-{row}-{col}\"\n    pub human_deck: Vec<String>,    // the run deck, in order\n    pub human_handicap: Handicap,   // HUMAN_HANDICAP, deck_size = the deck's length, hero_health = the run's HP\n    pub human_marks: Vec<DeckMark>, // each Radiant run card, and each card's buffs as upgrades\n    pub enemy_deck: Vec<String>,\n    pub enemy_handicap: Handicap,   // Easy's; Medium's with Looming Presence; Hard's with Overwhelming Presence;\n                                    // deck_size = the deck's length, hero_health = the enemy's\n    pub enemy: RunEnemy,\n}\npub fn run_fight_setup(state: &RunState, content: &RunContent) -> Option<RunFightSetup>; // None outside RunPhase::Fight\npub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String>; // a RunAction::FightOver\npub fn run_catalog_content(catalog: &CardDefs, custom: &[CustomCard]) -> RunContent;\npub fn run_level_cost(level: usize) -> Option<i64>; // the Embers from `level` to the next; None at the top\npub struct RunConstants {           // the numbers the screens show, so the client states none (rule 9)\n    pub slot_ladder: Vec<[usize; 6]>, pub starter_size: usize, pub starter_artifacts_max: usize,\n    pub starter_artifact_points: i32, pub tier_points: Vec<(RunTier, i32)>,\n}\npub fn run_constants() -> RunConstants;\n// config.rs: RUN_STARTER_CARDS: [&str; 20], RUN_LEVEL_EMBERS\n```\n\nIt uses part A's frozen `DeckMark { index: usize, radiant: bool, upgrades: i32 }` (`jackioh_engine`'s wire types) and `ReplayInput.deck_marks`, exactly as written, without waiting for part A.\n\n## What to do\n\n- **Content.** `run_catalog_content`: the pool is every non-token card of the sets that ship (`SHIPPED_SETS`), with its rarity, set, type and tags from the catalog, plus the custom cards given (the Sandbox's). `starter_access` is `RUN_STARTER_CARDS`. The enemies, passives, events and curses come from `placeholder.json`, its pseudo cards dropped and the enemies' pseudo boss cards taken out of their decks, so no boss card appears while the Boss set has none. `run_placeholder_content` and its tests stay.\n- **The starting cards.** `RUN_STARTER_CARDS`: 20 of the simplest Training Grounds Commons and Rares (fewest code lines by the card metrics, or vanilla units first), placeholders until the designer's list.\n- **Levels.** `RUN_LEVEL_EMBERS`, one cost per step of `RUN_SLOT_LADDER`, and `run_level_cost`. `run_constants` answers the config's own values.\n- **A fight's setup.** `run_fight_setup` per the surface. The handicaps come from `jackioh_engine::config` (`HUMAN_HANDICAP`, `AI_DIFFICULTY`'s Easy, Medium and Hard), with `deck_size` set to the deck's length, since the tiers' sizes would refuse the run's decks. The enemy's artifact ids are `looming-presence` and `overwhelming-presence`.\n- **A fight's report.** `run_fight_report` folds the finished game (the engine's `fold`, stepping as `summarize_game` does) and answers `FightOver`. `won` is the human's win. `hp` is the human hero's final health. `damage_dealt` sums the `damage` events whose target the enemy controls (its hero or a unit), `healing_done` the `healed` events on the human's side, `cards_drawn` the human's draws and `turns` the game's. An unfinished game is refused.\n- **TypeScript.** A `ts` feature (`ts = [\"dep:ts-rs\", \"jackioh-engine/ts\"]`, ts-rs optional as in the engine) derives `TS` on every public type, exported to `apps/web/src/wire/generated/`. Add `apps/web/src/wire/run.ts`, re-exporting them, and the alias `@jackioh/run` in `apps/web/tsconfig.json` and `apps/web/vite.config.ts`'s `jackiohAliases`. Generate them with `cargo test -p jackioh-run --features ts` and commit them. Let `crates/tools/tests/acceptance.rs`' V2 check allow an optional `ts-rs` in `run` as in `engine` and `luau`, and say so in CLAUDE.md rule 4.\n- The README's entry points and \"not yet\" list follow. The pull request says that CI does not hold the run's generated types to the Rust until a person adds the feature to `ci.yml`.\n\n## Owns\n\n`crates/run/`, `crates/tools/tests/acceptance.rs`, `CLAUDE.md`, `apps/web/src/wire/run.ts`, the run's generated files under `apps/web/src/wire/generated/`, `apps/web/tsconfig.json` and `apps/web/vite.config.ts`. No other part of #2701 edits these.\n\n## Behaviors (each proved by a test whose comment names it)\n\n- **B5** `run_catalog_content` pools every non-token card of the sets that ship and the custom cards given, and no boss card while the Boss set has none.\n- **B6** `RUN_STARTER_CARDS` holds 20 Training Grounds Commons and Rares, each in the catalog (`jackioh-cards` as a dev-dependency registers it).\n- **B7** `run_fight_setup` answers only in a fight. The human's handicap holds the run's HP and the deck's length, and the marks hold each Radiant card and each card's buffs.\n- **B8** The enemy's handicap is Easy's, Medium's with Looming Presence or Hard's with Overwhelming Presence, with its deck's length and its hero health.\n- **B9** A fight's seed is the run's seed, row and column, so one run meets one deal.\n- **B10** `run_fight_report` folds a finished game into `FightOver` with the winner, the final health, the damage, the healing, the draws and the turns (a scripted game of known totals).\n- **B11** `run_level_cost` gives each level's Embers and nothing past the ladder's top, and `run_constants` answers the config's own numbers.\n\n## Done when\n\nB5\u2013B11 have tests in `crates/run`; `cargo clippy -p jackioh-run --all-targets -- -D warnings` is clean; the generated types are committed.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2703: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
