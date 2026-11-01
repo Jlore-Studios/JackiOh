@@ -2151,9 +2151,7 @@ fn keep_instance(
     if let Some(live) = find_instance_mut(state, &kept.id) {
         live.summoned_turn = arrived;
     }
-    find_instance(state, &kept.id)
-        .cloned()
-        .unwrap_or_else(|| kept.clone())
+    crate::zones::live_or(state, kept)
 }
 
 /// §5.2: "newly gained keywords apply at once". The fused face can print a keyword the kept card's

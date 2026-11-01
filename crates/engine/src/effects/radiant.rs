@@ -66,9 +66,7 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 ///
 /// `card` is a snapshot; the card is read again by its id, as it stands now, and written there.
 pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
-    let card = find_instance(ctx.state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone());
+    let card = crate::zones::live_or(ctx.state, card);
     if card.radiant {
         if hidden_from_someone(ctx, &card) {
             ctx.events.push(GameEvent::RadiantSet {
@@ -172,9 +170,7 @@ pub fn clear_radiant(args: RadiantTarget) -> Effect {
         else {
             return;
         };
-        let card = find_instance(ctx.state, &card.id)
-            .cloned()
-            .unwrap_or_else(|| card.clone());
+        let card = crate::zones::live_or(ctx.state, card);
         if !card.radiant {
             return;
         }
