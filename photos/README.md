@@ -12,6 +12,7 @@ game shows into `apps/web/public/brand` (the web README says how).
 |---|---|
 | `jackioh-logo.png` | The mark and the wordmark on one line, transparent (2714×881) |
 | `jackioh-logo-stacked.png` | The mark above the wordmark, transparent (1536×1306) |
+| `jackioh-logo-wood.png` | The mark above the wordmark on the tavern's wood, as the loading screens show it (1600×1200) |
 | `jackioh-mark.png`, `jackioh-mark-256.png` | The mark alone, transparent (1024 and 256 px) |
 | `jackioh-mark-small-32.png` | The front card alone, for 16 to 48 px |
 | `jackioh-icon-512.png`, `jackioh-icon-180.png` | The mark on dark wood, opaque, for app and avatar icons |

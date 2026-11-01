@@ -15,12 +15,14 @@ gold over a #3a1f0c edge. The colors are the palette's (src/palette.css) and the
 
     jackioh-logo.*          the mark and the wordmark on one line (transparent)
     jackioh-logo-stacked.*  the mark above the wordmark (transparent)
+    jackioh-logo-wood.*     the mark above the wordmark on the tavern's wood, opaque, as the loading screens show it
     jackioh-mark.*          the mark alone, 1024 and 256 px (transparent)
     jackioh-mark-small.*    the front card alone, for 16 to 48 px, where the back card is noise
     jackioh-icon.*          the mark on the tavern's dark wood, opaque, for app and avatar icons
 """
 
 import json
+import random
 import subprocess
 from pathlib import Path
 
@@ -170,8 +172,8 @@ def logo_horizontal():
     inner = (f'<g transform="scale(0.86)">{mark_group()}</g>' + word)
     return svg(round(total_w), round(h), inner), round(total_w), round(h)
 
-def logo_stacked():
-    """The mark above the wordmark."""
+def stacked_inner():
+    """The mark above the wordmark: its contents and size."""
     size = 420
     _, (x0, y0, x1, y1) = wordmark(0, 0, size)
     ww = x1 - x0
@@ -181,7 +183,57 @@ def logo_stacked():
     word, _ = wordmark((W - ww) / 2 - x0, baseline, size)
     H = baseline + y1 + 60
     inner = (f'<g transform="translate({(W - 860) / 2} 0) scale({860 / 1024})">{mark_group()}</g>' + word)
+    return inner, W, H
+
+def logo_stacked():
+    """The mark above the wordmark."""
+    inner, W, H = stacked_inner()
     return svg(round(W), round(H), inner), round(W), round(H)
+
+# The tavern's wood (src/auth/tavern.css): its tones, the night at the edges and the flame's light.
+WOOD = ["#5a341b", "#63391d", "#4f2d17", "#5e371c", "#553019"]
+WOOD_NIGHT, WOOD_FLAME = "#120b07", "#ffb347"
+
+def logo_wood():
+    """The stacked logo on the tavern's wood, as the loading screens show it: planks with staggered
+    joints and a grain, a warm light behind the logo and the dark at the edges."""
+    W, H, plank = 1600, 1200, 120
+    rng = random.Random(2747)  # fixed, so a re-run draws the same planks
+    planks = []
+    for row, y in enumerate(range(0, H, plank)):
+        x = -rng.randint(40, 360)
+        while x < W:
+            length = rng.randint(380, 640)
+            tone = WOOD[(row * 3 + len(planks)) % len(WOOD)]
+            planks.append(f'<rect x="{x}" y="{y}" width="{length}" height="{plank}" fill="{tone}"/>'
+                          f'<rect x="{x}" y="{y}" width="3" height="{plank}" fill="{WOOD_NIGHT}" fill-opacity="0.7"/>')
+            x += length
+        planks.append(f'<rect x="0" y="{y + plank - 3}" width="{W}" height="3" fill="{WOOD_NIGHT}" fill-opacity="0.75"/>'
+                      f'<rect x="0" y="{y}" width="{W}" height="2" fill="#8a5a33" fill-opacity="0.35"/>')
+    defs = (f'<defs>'
+            f'<filter id="grainDark" x="0" y="0" width="100%" height="100%">'
+            f'<feTurbulence type="fractalNoise" baseFrequency="0.0022 0.085" numOctaves="3" seed="11"/>'
+            f'<feColorMatrix type="matrix" values="0 0 0 0 0.07  0 0 0 0 0.04  0 0 0 0 0.02  0 0 0 1.6 -0.62"/></filter>'
+            f'<filter id="grainLight" x="0" y="0" width="100%" height="100%">'
+            f'<feTurbulence type="fractalNoise" baseFrequency="0.003 0.16" numOctaves="2" seed="29"/>'
+            f'<feColorMatrix type="matrix" values="0 0 0 0 0.54  0 0 0 0 0.35  0 0 0 0 0.2  0 0 0 1.2 -0.6"/></filter>'
+            f'<radialGradient id="woodLight" cx="0.5" cy="0.45" r="0.5">'
+            f'<stop offset="0" stop-color="{WOOD_FLAME}" stop-opacity="0.32"/><stop offset="1" stop-color="{WOOD_FLAME}" stop-opacity="0"/></radialGradient>'
+            f'<radialGradient id="woodEdge" cx="0.5" cy="0.47" r="0.72">'
+            f'<stop offset="0.45" stop-color="{WOOD_NIGHT}" stop-opacity="0"/><stop offset="1" stop-color="{WOOD_NIGHT}" stop-opacity="0.9"/></radialGradient>'
+            f'<filter id="logoGlow" x="-20%" y="-20%" width="140%" height="140%">'
+            f'<feDropShadow dx="0" dy="0" stdDeviation="40" flood-color="{WOOD_FLAME}" flood-opacity="0.35"/></filter>'
+            f'</defs>')
+    inner, lw, lh = stacked_inner()
+    scale = H * 0.78 / lh
+    logo = (f'<g filter="url(#logoGlow)" transform="translate({(W - lw * scale) / 2:.1f} {(H - lh * scale) / 2:.1f}) '
+            f'scale({scale:.4f})">{inner}</g>')
+    body = (defs + "".join(planks) +
+            f'<rect width="{W}" height="{H}" filter="url(#grainDark)"/>'
+            f'<rect width="{W}" height="{H}" filter="url(#grainLight)"/>'
+            f'<ellipse cx="{W / 2}" cy="{H * 0.45}" rx="{W * 0.42}" ry="{H * 0.42}" fill="url(#woodLight)"/>'
+            f'<rect width="{W}" height="{H}" fill="url(#woodEdge)"/>' + logo)
+    return svg(W, H, body), W, H
 
 RENDER = r"""
 const { chromium } = require("playwright");
@@ -204,8 +256,10 @@ def main():
     PNG_OUT.mkdir(parents=True, exist_ok=True)
     logo, lw, lh = logo_horizontal()
     stacked, sw, sh = logo_stacked()
+    wood, ww, wh = logo_wood()
     svgs = {"jackioh-logo": (logo, [(lw, lh, "")]),
             "jackioh-logo-stacked": (stacked, [(sw, sh, "")]),
+            "jackioh-logo-wood": (wood, [(ww, wh, "")]),
             "jackioh-mark": (mark(), [(1024, 1024, ""), (256, 256, "-256")]),
             "jackioh-mark-small": (mark_small(), [(32, 32, "-32")]),
             "jackioh-icon": (app_icon(), [(512, 512, "-512"), (180, 180, "-180")])}

@@ -35,7 +35,7 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`). A number that changes in place or stands in a column (the clock, a count, a price, a wallet, a bar, a rank, a stats table) takes `font-variant-numeric: tabular-nums`; headings and dialog and toast titles balance their lines and paragraphs wrap pretty (`index.css`, `text-wrap-style`); a card face takes neither, since `cards/fit.ts` measures its text (`src/typography.test.ts`).
 
 The logo is `public/brand`: the mark (two fanned cards, a gold J), the wordmark beside it or under it,
-and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
+the two on the tavern's wood, and opaque app icons, as SVGs, which a screen shows (smaller, and sharp at any size). Their PNGs are in
 the repository's `photos/logo`, which no build reads. `scripts/brand-logo.py` draws them all, outlining
 the wordmark from the self-hosted Alegreya, so no SVG needs a font; run it by hand and commit what it
 writes.
