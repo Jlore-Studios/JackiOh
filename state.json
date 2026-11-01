@@ -12360,6 +12360,13 @@
     "2683": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:29:31Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "Easy rule 3 fails because this adds R2683000 and edits spec notes; it has no hard-tier engine, AI, migration, or cross-crate design work."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
