@@ -232,11 +232,20 @@ and nothing while the view carries none; a count of 0 still shows. A Resource is
 `Credits: <min>–<max>` under its text, its face's `resource` prices (`cards/model.ts`, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
-a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
+a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
+its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+
+**The match menu** (#2645). On a phone (`game/phoneBar.ts`, board.css's two phone layouts) the control bar
+keeps to one row: End turn, the Marketplace toggle while the view carries a marketplace, the log toggle,
+⋯ (`match-menu`) and the gear. ⋯'s menu (`match-menu-panel`, `game/MatchMenu.tsx`) holds Offer draw,
+Concede and Friends, each a full-width 44px row with its whole label; it decides nothing, so Concede still
+only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot while a declined offer blocks
+it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
+Tablets and desktops keep the buttons in the bar.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
