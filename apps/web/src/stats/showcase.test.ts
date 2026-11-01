@@ -14,6 +14,7 @@ import type { PocketPick } from "./pocketPick.ts";
 import {
   EMPTY_BAG,
   SHOWCASE_KEYS,
+  animationFor,
   nextInBag,
   pocketLine,
   pocketStat,
@@ -48,7 +49,7 @@ function tally(cards: Record<string, Partial<CardCounters>>, games = 12, over: P
 const PICK: PocketPick = { id: "core-005", playerRate: 0.8, baseRate: 0.2 };
 
 const ALL = tally({
-  "core-001": { defeated: 5, allured: 2, played: 9, playedAgainst: 8, destroyed: 6, seen: 12, lethal: 3, sprung: 4, survived: 7 },
+  "core-001": { defeated: 5, allured: 2, played: 9, playedAgainst: 8, destroyed: 6, seen: 12, lethal: 3, sprung: 4, survived: 7, playedInWin: 9 },
   "core-002": { defeated: 1, played: 2 },
 });
 
@@ -93,7 +94,7 @@ describe("R1584000 showcaseStats", () => {
       "12 games: 7 won, 4 lost, 1 drawn (58% won)",
       "dealt the winning blow 3×",
       "sprung 4×",
-      "survived to the end 7×",
+      "standing at the end of a win 7×",
     ]);
     expect(stats.map((stat) => stat.cardId)).toEqual(Array.from({ length: 10 }, (_unused, i) => (i === 2 ? "core-005" : "core-001")));
     expect(stats.map((stat) => [stat.animation, stat.side])).toEqual([
@@ -115,16 +116,14 @@ describe("R1584000 showcaseStats", () => {
     expect(showcaseStats(tally({ "core-001": { defeated: 3 } }, 0), PICK, seeded(1))).toEqual([]);
     expect(keys(tally({ "core-001": { played: 2, seen: 5 }, "core-002": { played: 0 } }))).toEqual([
       "faithful",
-      "record",
-      "unbreakable",
       "familiarFace",
       "explorer",
       "collector",
     ]);
     expect(keys(tally({}))).toEqual([]);
     // The Pocket Pick is left out until its request answers, and when its card is not in the catalog.
-    expect(keys(tally({ "core-001": { played: 2 } }), null)).toEqual(["faithful", "unbreakable", "explorer"]);
-    expect(keys(tally({ "core-001": { played: 2 } }), { ...PICK, id: "gone-001" })).toEqual(["faithful", "unbreakable", "explorer"]);
+    expect(keys(tally({ "core-001": { played: 2 } }), null)).toEqual(["faithful", "explorer"]);
+    expect(keys(tally({ "core-001": { played: 2 } }), { ...PICK, id: "gone-001" })).toEqual(["faithful", "explorer"]);
   });
 
   it("R1584000 the card of a counter is the one with its most, a tie going to the lower id", () => {
@@ -134,10 +133,10 @@ describe("R1584000 showcaseStats", () => {
   });
 
   it("R1584000 a card the catalog no longer holds is passed over for the next", () => {
-    const stats = showcaseStats(tally({ "gone-001": { played: 9 }, "core-002": { played: 3 } }), null, seeded(1));
+    const stats = showcaseStats(tally({ "gone-001": { played: 9 }, "core-002": { played: SHOWCASE_MIN_PLAYS } }), null, seeded(1));
     expect(stats.map((stat) => [stat.key, stat.cardId, stat.line()])).toEqual([
-      ["faithful", "core-002", "played 3×"],
-      ["unbreakable", "core-002", "played 3×, never destroyed"],
+      ["faithful", "core-002", `played ${String(SHOWCASE_MIN_PLAYS)}×`],
+      ["unbreakable", "core-002", `played ${String(SHOWCASE_MIN_PLAYS)}×, never destroyed`],
       ["explorer", "core-002", "1 different card played"],
     ]);
     expect(keys(tally({ "gone-001": { played: 9 } }))).toEqual([]);
@@ -274,7 +273,7 @@ describe("R1743000 the new stats", () => {
       "Medic",
       "Card Shark",
       "Shine On",
-      "Comeback Kid",
+      "Lucky Charm",
       "Jinx",
       "Hot Streak",
       "Marathon",
@@ -301,19 +300,19 @@ describe("R1743000 the new stats", () => {
       ["shield", "you"], // Medic
       ["entrance", "you"], // Card Shark
       ["radiant", "you"], // Shine On
-      ["radiant", "you"], // Comeback Kid
+      ["radiant", "you"], // Lucky Charm
       ["death", "you"], // Jinx
       ["radiant", "you"], // Hot Streak
       ["entrance", "you"], // Marathon
     ]);
   });
 
-  it("R1743000 a tally with only a seen card shows The Record, Familiar Face and Collector, and a new total alone shows its stat", () => {
-    expect(keys(tally({ "core-001": { seen: 1 } }))).toEqual(["record", "familiarFace", "collector"]);
-    expect(keys(tally({ "core-001": { seen: 1 } }, 12, { bestStreak: 2 }))).toEqual(["record", "familiarFace", "collector"]);
-    expect(keys(tally({ "core-001": { played: 3 } }, 12, { bestStreak: 2, longestGame: 4 }))).toEqual([
+  it("R1743000 R2648000 a tally with only a seen card shows Familiar Face and Collector, and a new total alone shows its stat", () => {
+    expect(keys(tally({ "core-001": { seen: 1 } }))).toEqual(["familiarFace", "collector"]);
+    expect(keys(tally({ "core-001": { seen: 1 } }, 12, { bestStreak: 2 }))).toEqual(["familiarFace", "collector"]);
+    expect(keys(tally({ "core-001": { played: 3, playedInWin: 1 } }, 12, { bestStreak: 2, longestGame: 4 }))).toEqual([
       "faithful",
-      "unbreakable",
+      "record",
       "explorer",
       "hotStreak",
       "marathon",
@@ -325,7 +324,7 @@ describe("R1743000 the new stats", () => {
     const found = statOf(tally(base), "glassCannon");
     expect([found?.cardId, found?.line()]).toEqual(["core-003", "destroyed 8 of the 10 times you played it"]);
     // A better share beats a bigger sample, and a count past the plays is capped at them.
-    expect(statOf(tally({ ...base, "core-005": { played: SHOWCASE_MIN_PLAYS, destroyed: SHOWCASE_MIN_PLAYS } }), "glassCannon")?.cardId).toBe("core-005");
+    expect(statOf(tally({ ...base, "core-007": { played: SHOWCASE_MIN_PLAYS, destroyed: SHOWCASE_MIN_PLAYS } }), "glassCannon")?.cardId).toBe("core-007");
     expect(statOf(tally({ "core-001": { played: 5, destroyed: 9 } }), "glassCannon")?.line()).toBe("destroyed 5 of the 5 times you played it");
     // Below the floor, never destroyed, or no plays: left out.
     expect(statOf(tally({ "core-002": base["core-002"] }), "glassCannon")).toBeUndefined();
@@ -380,12 +379,18 @@ describe("R1743000 the new stats", () => {
     expect(statOf(tally({ "core-041": { played: 7 } }), "hairTrigger")).toBeUndefined();
   });
 
-  it("R1743000 Ride or Die is the card that was still standing most per play, at least SHOWCASE_MIN_PLAYS", () => {
-    const base = { "core-009": { played: 6, survived: 5 }, "core-003": { played: 6, survived: 5 }, "core-004": { played: SHOWCASE_MIN_PLAYS - 1, survived: SHOWCASE_MIN_PLAYS - 1 } };
+  it("R1743000 R2648000 Ride or Die is the card still standing most per win it was played in, at least SHOWCASE_MIN_PLAYS", () => {
+    const base = {
+      "core-009": { playedInWin: 6, survived: 5 },
+      "core-003": { playedInWin: 6, survived: 5 },
+      "core-004": { playedInWin: SHOWCASE_MIN_PLAYS - 1, survived: SHOWCASE_MIN_PLAYS - 1 },
+    };
     const found = statOf(tally(base), "rideOrDie");
-    expect([found?.cardId, found?.line()]).toEqual(["core-003", "still standing 5 of the 6 times you played it"]);
+    expect([found?.cardId, found?.line()]).toEqual(["core-003", "still standing at the end of 5 of the 6 wins you played it in"]);
     expect(statOf(tally({ "core-004": base["core-004"] }), "rideOrDie")).toBeUndefined();
-    expect(statOf(tally({ "core-004": { played: 9 } }), "rideOrDie")).toBeUndefined();
+    expect(statOf(tally({ "core-004": { playedInWin: 9 } }), "rideOrDie")).toBeUndefined();
+    // Survived only counts in a won game, so plays alone name no card.
+    expect(statOf(tally({ "core-004": { played: 6, survived: 5 } }), "rideOrDie")).toBeUndefined();
   });
 
   it("R1743000 Familiar Face is the card seen in most games, worded with the games, and singular for one", () => {
@@ -491,7 +496,7 @@ describe("R1743000 the new stats", () => {
     expect(statOf(tally({ [TOKENS[0]]: { [counter]: n } }), key)).toBeUndefined();
   });
 
-  it("R1743000 Comeback Kid and Jinx are the highest win and loss shares of the games a card was played in, at least SHOWCASE_MIN_PLAYS", () => {
+  it("R1743000 R2648000 Lucky Charm and Jinx are the highest win and loss shares of the games a card was played in, at least SHOWCASE_MIN_PLAYS", () => {
     const base = {
       "core-009": { playedInWin: 9, playedInLoss: 2 },
       "core-003": { playedInWin: 9, playedInLoss: 2 },
@@ -500,22 +505,22 @@ describe("R1743000 the new stats", () => {
       "core-006": { playedInWin: 2, playedInLoss: 7 },
       "core-007": { playedInLoss: SHOWCASE_MIN_PLAYS - 1 },
     };
-    const comeback = statOf(tally(base), "comebackKid");
+    const comeback = statOf(tally(base), "luckyCharm");
     const jinx = statOf(tally(base), "jinx");
     expect([comeback?.cardId, comeback?.line()]).toEqual(["core-003", "won 9 of the 11 games you played it in"]);
     expect([jinx?.cardId, jinx?.line()]).toEqual(["core-005", "lost 7 of the 9 games you played it in"]);
     expect([comeback?.animation, jinx?.animation]).toEqual(["radiant", "death"]);
     // Under the floor, or with nothing won (or lost): left out.
-    expect(statOf(tally({ "core-004": base["core-004"], "core-007": base["core-007"] }), "comebackKid")).toBeUndefined();
+    expect(statOf(tally({ "core-004": base["core-004"], "core-007": base["core-007"] }), "luckyCharm")).toBeUndefined();
     expect(statOf(tally({ "core-004": base["core-004"], "core-007": base["core-007"] }), "jinx")).toBeUndefined();
-    expect(statOf(tally({ "core-001": { playedInLoss: 8 } }), "comebackKid")).toBeUndefined();
+    expect(statOf(tally({ "core-001": { playedInLoss: 8 } }), "luckyCharm")).toBeUndefined();
     expect(statOf(tally({ "core-001": { playedInWin: 8 } }), "jinx")).toBeUndefined();
   });
 
-  it("R1743000 Hot Streak is the most played card and the best streak, singular for one win, left out with no streak or no card", () => {
-    const found = statOf(tally({ "core-009": { played: 4 }, "core-003": { played: 4 } }, 12, { bestStreak: 6 }), "hotStreak");
+  it("R1743000 R2648000 Hot Streak is the card played in the most wins and the best streak, singular for one win, left out with no streak or no card", () => {
+    const found = statOf(tally({ "core-009": { playedInWin: 4 }, "core-003": { playedInWin: 4 } }, 12, { bestStreak: 6 }), "hotStreak");
     expect([found?.cardId, found?.line()]).toEqual(["core-003", "best streak: 6 wins"]);
-    expect(statOf(tally({ "core-003": { played: 4 } }, 12, { bestStreak: 1 }), "hotStreak")?.line()).toBe("best streak: 1 win");
+    expect(statOf(tally({ "core-003": { playedInWin: 4 } }, 12, { bestStreak: 1 }), "hotStreak")?.line()).toBe("best streak: 1 win");
     expect(statOf(tally({ "core-003": { played: 4 } }, 12, { streak: 3 }), "hotStreak")).toBeUndefined();
     expect(statOf(tally({ "core-003": { seen: 4 } }, 12, { bestStreak: 6 }), "hotStreak")).toBeUndefined();
   });
@@ -540,6 +545,87 @@ describe("R1743000 the new stats", () => {
     await setLocale("zh-CN");
     expect(found?.title()).toBe("玻璃大炮");
     expect(found?.line()).toBe("打出 12 次，被摧毁 8 次");
+  });
+});
+
+describe("R2648000 a stat names the right kind of card", () => {
+  it("R2648000 Unbreakable passes over a Spell, a Trap, an Indestructible Unit and a Unit under the floor", () => {
+    const base = {
+      "core-005": { played: 30 }, // a Spell
+      "core-041": { played: 25 }, // a Trap
+      "core-066": { played: 20 }, // a Unit that prints Indestructible
+      "classic-033": { played: 15 }, // a Unit that prints Indestructible on its Radiant face
+      "core-001": { played: SHOWCASE_MIN_PLAYS - 1 }, // a Unit under the floor
+    };
+    expect(statOf(tally(base), "unbreakable")).toBeUndefined();
+    const found = statOf(tally({ ...base, "core-002": { played: SHOWCASE_MIN_PLAYS } }), "unbreakable");
+    expect([found?.cardId, found?.line()]).toEqual(["core-002", `played ${String(SHOWCASE_MIN_PLAYS)}×, never destroyed`]);
+  });
+
+  it("R2648000 Glass Cannon and Workhorse pass over a Spell", () => {
+    const spell = { "core-005": { played: 10, destroyed: 9, damageDealt: 50 } };
+    for (const key of ["glassCannon", "workhorse"] as const) expect(statOf(tally(spell), key)).toBeUndefined();
+    const both = tally({ ...spell, "core-001": { played: 10, destroyed: 2, damageDealt: 3 } });
+    const cannon = statOf(both, "glassCannon");
+    const horse = statOf(both, "workhorse");
+    expect([cannon?.cardId, cannon?.line()]).toEqual(["core-001", "destroyed 2 of the 10 times you played it"]);
+    expect([horse?.cardId, horse?.line()]).toEqual(["core-001", "dealt 3 damage"]);
+  });
+
+  it("R2648000 Hot Streak's card differs from Old Faithful's when the most-played card is not the one with the most wins", () => {
+    const stats = tally({ "core-001": { played: 9, playedInWin: 1 }, "core-002": { played: 3, playedInWin: 3 } }, 12, { bestStreak: 2 });
+    expect(statOf(stats, "faithful")?.cardId).toBe("core-001");
+    const hot = statOf(stats, "hotStreak");
+    expect([hot?.cardId, hot?.line()]).toEqual(["core-002", "best streak: 2 wins"]);
+  });
+
+  it("R2648000 The Record and Familiar Face can differ", () => {
+    const stats = tally({ "core-001": { seen: 30, playedInWin: 1 }, "core-002": { seen: 4, playedInWin: 3, playedInLoss: 2 } });
+    const record = statOf(stats, "record");
+    expect([record?.cardId, record?.line()]).toEqual(["core-002", "12 games: 7 won, 4 lost, 1 drawn (58% won)"]);
+    expect(statOf(stats, "familiarFace")?.cardId).toBe("core-001");
+    // No game with a card played in names no card for the record.
+    expect(statOf(tally({ "core-001": { seen: 30, played: 3 } }), "record")).toBeUndefined();
+  });
+
+  it("R2648000 Survivor's line says a win", () => {
+    expect(statOf(tally({ "core-001": { survived: 7 } }), "survivor")?.line()).toBe("standing at the end of a win 7×");
+  });
+
+  it("R2648000 Lucky Charm keeps Comeback Kid's card", () => {
+    expect(SHOWCASE_KEYS).toContain("luckyCharm");
+    expect(SHOWCASE_KEYS as readonly string[]).not.toContain("comebackKid");
+    const found = statOf(RICH, "luckyCharm");
+    expect([found?.title(), found?.cardId, found?.line()]).toEqual(["Lucky Charm", "core-001", "won 9 of the 12 games you played it in"]);
+  });
+
+  it.each([
+    ["a Spell", "cast", "core-005", "core-021"],
+    ["a Field Spell", "cast", "core-006", "core-040"],
+    ["a Trap", "trap", "core-041", "core-060"],
+    ["a Field Trap", "trap", "core-018", "core-071"],
+    ["a Unit", "lunge", "core-001", "core-002"],
+    ["an Animated card", "lunge", "classic-038", "classic-005"],
+  ] as const)("R2648000 every lunge stat on %s plays %s", (_what, animation, a, b) => {
+    const stats = tally({
+      [a]: { played: 6, playedAgainst: 9, lethal: 6, biggestHit: 4, overkill: 2, attacks: 3 },
+      [b]: { playedAgainst: 12 },
+    });
+    const lunges = ["nemesis", "lastLaugh", "grudgeMatch", "neverTried", "closer", "heavyHitter", "overkill", "brawler"] as const;
+    for (const key of lunges) {
+      const found = statOf(stats, key);
+      expect(found, key).toBeDefined();
+      expect([key, found?.animation]).toEqual([key, animation]);
+    }
+  });
+
+  it("R2648000 animationFor changes only a lunge", () => {
+    expect(animationFor("core-005", "death")).toBe("death");
+    expect(animationFor("core-041", "radiant")).toBe("radiant");
+    expect(animationFor("gone-001", "lunge")).toBe("lunge");
+    expect(animationFor("core-005", "lunge")).toBe("cast");
+    expect(animationFor("core-041", "lunge")).toBe("trap");
+    expect(animationFor("core-001", "lunge")).toBe("lunge");
   });
 });
 

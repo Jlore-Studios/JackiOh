@@ -1,13 +1,13 @@
 // From views to a game's log (SPEC R639): only what the viewer was shown is counted.
 
-import type { GameEvent, GameOverReason } from "@jackioh/shared";
+import type { GameEvent, GameOverReason, PlayerView } from "@jackioh/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { ALLURE_MARK } from "../cards/marks.ts";
 import { HIDDEN_ID } from "../game/animations.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
-import { EMPTY_LOG, logWith } from "./model.ts";
-import { countAllured, countEvent, countHealing, countHits, countWin, observe, outcomeOfView, seenIn } from "./track.ts";
+import { EMPTY_LOG, logWith, type GameLog } from "./model.ts";
+import { countAllured, countDeaths, countEvent, countHealing, countHits, countWin, observe, outcomeOfView, seenIn } from "./track.ts";
 
 beforeEach(() => {
   resetIds();
@@ -21,15 +21,15 @@ const played = (player: "p1" | "p2", defId: string): GameEvent => ({
   costPaid: 1,
 });
 
-const destroyed = (owner: "p1" | "p2", defId: string): GameEvent => ({
+const destroyed = (owner: "p1" | "p2", defId: string, killerId: string | null = null, instanceId = "i2"): GameEvent => ({
   type: "destroyed",
-  instanceId: "i2",
+  instanceId,
   defId,
   owner,
   controller: owner,
   attack: 1,
   maxHealth: 1,
-  killerId: null,
+  killerId,
 });
 
 describe("R639 what the viewer was shown", () => {
@@ -85,12 +85,12 @@ describe("R639 what the events count", () => {
 
   it("R639 a face-down play the sentinel hides counts for nobody", () => {
     expect(countEvent(EMPTY_LOG, played("p2", HIDDEN_ID), "p1")).toBe(EMPTY_LOG);
-    expect(countEvent(EMPTY_LOG, destroyed("p2", HIDDEN_ID), "p1")).toBe(EMPTY_LOG);
+    expect(countDeaths(EMPTY_LOG, baseView(), [played("p1", "core-001"), destroyed("p2", HIDDEN_ID)], null)).toBe(EMPTY_LOG);
   });
 
-  it("R639 a destroyed card is the viewer's loss when it was theirs, and a takedown when it was the opponent's", () => {
-    let log = countEvent(EMPTY_LOG, destroyed("p1", "core-001"), "p1");
-    log = countEvent(log, destroyed("p2", "core-002"), "p1");
+  it("R639 R2648000 a destroyed card the other seat caused is the viewer's loss when it was theirs, and a takedown when it was the opponent's", () => {
+    let log = countDeaths(EMPTY_LOG, baseView(), [played("p2", "core-009"), destroyed("p1", "core-001")], null);
+    log = countDeaths(log, baseView(), [played("p1", "core-009"), destroyed("p2", "core-002")], null);
     expect(log.destroyed).toEqual({ "core-001": 1 });
     expect(log.defeated).toEqual({ "core-002": 1 });
   });
@@ -427,11 +427,121 @@ describe("R1743000 the damage, attacks, healing, draws, Radiant changes and turn
       damageDealt: { "core-004": 5 },
       biggestHit: { "core-004": 5 },
       overkill: { "core-004": 3 },
-      healing: { "core-030": 2 },
+      healing: { "core-004": 2 },
       radiant: { "core-004": 1 },
     });
     // Without the view before, as for a seat's first view, the rest still counts.
     expect(observe(EMPTY_LOG, view, [hit("mine", "enemy", 5)]).overkill).toEqual({});
+  });
+});
+
+/** R2648000's board: the viewer's Unit "mine" and a spell "bolt" in their graveyard; the opponent's Unit "enemy". */
+const board = baseView({
+  you: emptySide("p1", {
+    units: [unit("p1", { instanceId: "mine", defId: "core-004" }), null, null, null, null],
+    graveyard: [card({ instanceId: "bolt", defId: "core-030" })],
+  }),
+  opponent: emptySide("p2", {
+    units: [unit("p2", { instanceId: "enemy", defId: "core-007", health: 4 }), null, null, null, null],
+  }),
+});
+
+const attacked = (attackerId: string, targetId: string): GameEvent => ({ type: "attackDeclared", attackerId, targetId, forced: false });
+
+describe("R2648000 a death counts only when the other seat caused it", () => {
+  const crumbled = (owner: "p1" | "p2", instanceId = "i2"): GameEvent => ({
+    type: "crumbled",
+    instanceId,
+    defId: "core-001",
+    owner,
+    zone: "field",
+  });
+  const activated = (player: "p1" | "p2"): GameEvent => ({ type: "activated", player, instanceId: "i1", defId: "core-041", ability: "a" });
+  const fired = (controller: "p1" | "p2"): GameEvent => ({
+    type: "trapFired",
+    instanceId: "t1",
+    defId: "core-060",
+    controller,
+    row: "backrow",
+    lane: 0,
+  });
+  const deaths = (fresh: GameEvent[], before: PlayerView | null = null, view: PlayerView = board): GameLog =>
+    countDeaths(EMPTY_LOG, view, fresh, before);
+
+  it("R2648000 a Tribute's and a Sacrifice's deaths, the owner's own play with no killer, count neither destroyed nor defeated", () => {
+    // R119: a Tribute's death comes before its play.
+    expect(deaths([destroyed("p1", "core-001"), played("p1", "core-021")])).toBe(EMPTY_LOG);
+    expect(deaths([played("p1", "core-021"), destroyed("p1", "core-001")])).toBe(EMPTY_LOG);
+    expect(deaths([activated("p1"), destroyed("p1", "core-001")])).toBe(EMPTY_LOG);
+    expect(deaths([destroyed("p2", "core-007"), played("p2", "core-021")])).toBe(EMPTY_LOG);
+    expect(deaths([played("p2", "core-021"), destroyed("p2", "core-007")])).toBe(EMPTY_LOG);
+    expect(deaths([activated("p2"), destroyed("p2", "core-007")])).toBe(EMPTY_LOG);
+    // A killer on the owner's own side is no cause from the other.
+    expect(deaths([played("p1", "core-021"), destroyed("p1", "core-001", "bolt")])).toBe(EMPTY_LOG);
+    // No actor and no killer at all: nobody caused it.
+    expect(deaths([destroyed("p1", "core-001")])).toBe(EMPTY_LOG);
+  });
+
+  it("R2648000 a Brittle crumble counts neither", () => {
+    expect(deaths([played("p2", "core-021"), crumbled("p1"), destroyed("p1", "core-001")])).toBe(EMPTY_LOG);
+    expect(deaths([played("p1", "core-021"), crumbled("p2"), destroyed("p2", "core-007")])).toBe(EMPTY_LOG);
+    // A crumble of another card leaves this death to count.
+    expect(deaths([played("p2", "core-021"), crumbled("p1", "other"), destroyed("p1", "core-001")]).destroyed).toEqual({ "core-001": 1 });
+  });
+
+  it("R2648000 an enemy attacker's kill and an enemy destroy Spell's count destroyed", () => {
+    expect(deaths([attacked("enemy", "mine"), destroyed("p1", "core-004", "enemy", "mine")]).destroyed).toEqual({ "core-004": 1 });
+    // A destroy Spell names no killer (R89): the opponent's last play, ability or Trap is the cause.
+    expect(deaths([played("p2", "core-021"), destroyed("p1", "core-001")]).destroyed).toEqual({ "core-001": 1 });
+    expect(deaths([activated("p2"), destroyed("p1", "core-001")]).destroyed).toEqual({ "core-001": 1 });
+    expect(deaths([fired("p2"), destroyed("p1", "core-001")]).destroyed).toEqual({ "core-001": 1 });
+    // A trade: each killer is looked up in the view before the batch, though both died in it.
+    const trade = deaths(
+      [attacked("mine", "enemy"), destroyed("p1", "core-004", "enemy", "mine"), destroyed("p2", "core-007", "mine", "enemy")],
+      board,
+      baseView(),
+    );
+    expect(trade.destroyed).toEqual({ "core-004": 1 });
+    expect(trade.defeated).toEqual({ "core-007": 1 });
+    expect(observe(EMPTY_LOG, board, [played("p2", "core-021"), destroyed("p1", "core-001")]).destroyed).toEqual({ "core-001": 1 });
+  });
+
+  it("R2648000 the mirror cases count defeated", () => {
+    expect(deaths([attacked("mine", "enemy"), destroyed("p2", "core-007", "mine", "enemy")]).defeated).toEqual({ "core-007": 1 });
+    expect(deaths([played("p1", "core-021"), destroyed("p2", "core-007")]).defeated).toEqual({ "core-007": 1 });
+    expect(deaths([activated("p1"), destroyed("p2", "core-007")]).defeated).toEqual({ "core-007": 1 });
+    expect(deaths([fired("p1"), destroyed("p2", "core-007")]).defeated).toEqual({ "core-007": 1 });
+    expect(deaths([destroyed("p2", "core-007", "bolt")]).defeated).toEqual({ "core-007": 1 });
+    // A hidden card names nothing, and a killer or attacker the views do not show is no cause.
+    expect(deaths([played("p1", "core-021"), destroyed("p2", HIDDEN_ID)])).toBe(EMPTY_LOG);
+    expect(deaths([destroyed("p2", "core-007", "gone")])).toBe(EMPTY_LOG);
+    expect(deaths([attacked("gone", "enemy"), destroyed("p2", "core-007")])).toBe(EMPTY_LOG);
+  });
+});
+
+describe("R2648000 a Lifesteal hit's heal", () => {
+  const hit = (sourceId: string | null, targetId: string, amount: number): GameEvent => ({
+    type: "damage",
+    sourceId,
+    targetId,
+    amount,
+    combat: true,
+  });
+  const healed = (amount: number): GameEvent => ({ type: "healed", targetId: "hero-p1", amount });
+  const count = (fresh: GameEvent[]): Record<string, number> => ({ ...countHealing(EMPTY_LOG, board, fresh).healing });
+
+  it("R2648000 a Lifesteal Unit's attack credits its healed to the attacker, and the opponent's attack credits nothing", () => {
+    expect(count([attacked("mine", "enemy"), hit("mine", "enemy", 3), healed(3)])).toEqual({ "core-004": 3 });
+    // It replaces the play before it as the source.
+    expect(count([played("p1", "core-040"), attacked("mine", "enemy"), hit("mine", "enemy", 3), healed(3)])).toEqual({ "core-004": 3 });
+    // A hit alone names its source, the hero it struck included.
+    expect(count([hit("mine", "hero-p2", 4), healed(4)])).toEqual({ "core-004": 4 });
+    // The opponent's attack clears the viewer's earlier play as the source.
+    expect(count([played("p1", "core-040"), attacked("enemy", "hero-p1"), hit("enemy", "hero-p1", 3), healed(3)])).toEqual({});
+    // An enemy hit after the viewer's own takes the source, so its heal is not the viewer's card's.
+    expect(count([attacked("mine", "enemy"), hit("mine", "enemy", 2), healed(2), hit("enemy", "mine", 3), healed(3)])).toEqual({
+      "core-004": 2,
+    });
   });
 });
 
