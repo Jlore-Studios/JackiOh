@@ -12968,15 +12968,18 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-01T17:55:09Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "41334797851",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T18:05:36Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2720": {
       "failures": 0,
