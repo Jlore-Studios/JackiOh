@@ -28,7 +28,8 @@ use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, host_busy,
+    join_refusal, read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
@@ -484,13 +485,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let lease = app
         .seats
         .reserve(&[&profile_id, &room.host_profile_id], seat)
-        .map_err(|taken| {
-            if taken.profile == profile_id {
-                in_game(&taken.seat)
-            } else {
-                host_busy()
-            }
-        })?;
+        .map_err(|taken| join_refusal(&profile_id, &taken))?;
 
     // The atomic single-claim: whoever wins this statement is the guest, and there is no second
     // winner (§9.5, mirroring `tickets_claim_pair`). Fenced first (R1523000): once a newer server's
@@ -657,15 +652,9 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             fenced?;
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             if host_seated {
-                return Err(ApiError::new(
-                    ApiErrorCode::AlreadyInMatch,
-                    "finish your current match first",
-                ));
+                return Err(already_in_match());
             }
-            return Err(ApiError::new(
-                ApiErrorCode::Conflict,
-                "The host of that room is playing another game right now.",
-            ));
+            return Err(host_busy());
         }
     }
     // R1523000: the record holds both seats now, so the ledger does: a start that fails from here

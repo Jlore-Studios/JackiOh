@@ -53,7 +53,7 @@ use jackioh_engine::LeanPick;
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json};
 use crate::api::series::start_series;
@@ -513,13 +513,6 @@ fn trio_of(ticket: &Ticket) -> Result<FrozenTrio, ApiError> {
     }
 }
 
-/// R890000: a seat the compare-and-set refused — the player found another game between the
-/// sweep's read and the claim. Answered through the sweep's failed-start path, like any start
-/// that failed after the claim.
-fn seat_taken() -> ApiError {
-    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
-}
-
 /// R890000: undoes a pair's start — or a seat the compare-and-set refused — by letting go only of
 /// the seats that point at this match, then forgetting the `open` skeleton. The clears are
 /// conditional, so a rival match that seated a player meanwhile keeps its flag; the tickets stay
@@ -572,7 +565,7 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
             if let Err(cleanup) = discard_open(app, match_id).await {
                 tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
             }
-            return Err(seat_taken());
+            return Err(already_in_match());
         }
     };
     // R143 and R259: the server mints the series seed (each game's is `{seed_base}:{n}`), unless an
@@ -677,7 +670,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         Err(taken) => {
             tracing::info!(event = "queue.seat_taken", matchId = %match_id, profileId = %taken.profile);
             cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
-            return Err(seat_taken());
+            return Err(already_in_match());
         }
     };
     // R143: the server mints the seed, unless an end-to-end enqueue supplied one.
@@ -756,7 +749,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             // fake store's lock is held by this transaction, and the cleanup begins its own.
             drop(tx);
             cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
-            return Err(seat_taken());
+            return Err(already_in_match());
         }
         tx.commit().await?;
     }
@@ -1277,7 +1270,7 @@ async fn start_bot_match(
             // Before any commit, so nothing was written: undo the claim and let the fallback
             // record the failed start (the ticket stays claimed).
             cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;
-            return Err(seat_taken());
+            return Err(already_in_match());
         }
         Err(error) => {
             cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;

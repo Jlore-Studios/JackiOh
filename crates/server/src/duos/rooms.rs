@@ -43,7 +43,7 @@ use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, lean_of,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, join_refusal, lean_of,
     read_mode_choice,
 };
 use crate::api::http::{
@@ -437,15 +437,9 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             seed: take_seed(&room.code, joiner_seed),
             claim_room: Some(room.code.clone()),
         },
-        |taken| {
-            // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers,
-            // and a host who holds one the host's (R1065000).
-            if taken.profile == profile.id {
-                in_game(&taken.seat)
-            } else {
-                host_busy()
-            }
-        },
+        // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers, and a
+        // host who holds one the host's (R1065000).
+        |taken| join_refusal(&profile.id, &taken),
     )
     .await?;
     match outcome {
