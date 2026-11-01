@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
-import { getMe, type MeResponse, type QueueMode } from "./api.ts";
+import { getMe, isQueueMode, type MeResponse, type QueueMode } from "./api.ts";
 import { pageWake } from "../game/net.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
@@ -111,12 +111,10 @@ export const QUEUE_STORAGE_KEY = "jackioh.play.queued";
 /** Fired for this tab's writes, which `storage` events do not cover. */
 const QUEUE_CHANGED = "jackioh:queue-changed";
 
-const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
-
 /** The mode this tab is queued in, or null. */
 export function readQueued(): QueueMode | null {
   const raw = getStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
-  return (QUEUE_MODES as readonly (string | null)[]).includes(raw) ? (raw as QueueMode) : null;
+  return isQueueMode(raw) ? raw : null;
 }
 
 function changed(): void {

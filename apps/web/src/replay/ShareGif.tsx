@@ -15,7 +15,7 @@ import type { ReplayGifPreset } from "./config.ts";
 import type * as Gif from "./gif/export.ts";
 import { clampClip, loadClip, turnRange } from "./steps.ts";
 import type { StepCache } from "./steps.ts";
-import { messageOf } from "../net/errors.ts";
+import { isAbort, messageOf } from "../net/errors.ts";
 
 export const gifTestid = {
   toggle: "replay-gif",
@@ -66,10 +66,6 @@ export type GifExport = {
 };
 
 const IDLE: GifPhase = { kind: "idle" };
-
-function isAbort(cause: unknown): boolean {
-  return cause instanceof DOMException && cause.name === "AbortError";
-}
 
 /** The clip marked on the scrubber, clamped to its cap, or null while nothing is marked. */
 export function markedClip(from: number | null, to: number | null): [number, number] | null {

@@ -35,6 +35,7 @@ import {
   getOpenRooms,
   getOwnRank,
   getPopulation,
+  isQueueMode,
   joinRoom,
   roomModeOf,
   type ModeChoice,
@@ -160,10 +161,6 @@ const LOADOUT_INVALID = "loadout_invalid";
 // Remembered choice
 
 type StoredChoice = { mode?: QueueMode; deckId?: string; trioId?: string };
-
-function isQueueMode(value: unknown): value is QueueMode {
-  return value === "bo1" || value === "bo3" || value === "random";
-}
 
 function readStoredChoice(): StoredChoice {
   try {

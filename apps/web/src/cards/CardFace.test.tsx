@@ -36,7 +36,7 @@ import {
 import { flushFits, nameTier, textTier, useFitText, type LengthTier } from "./fit.ts";
 import { faceModel, type FaceSource } from "./model.ts";
 import { termsIn } from "./rules.ts";
-import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
+import { SET_MARK_MIN_FACE_PX, glyphUri, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
 import { fusedDef, unit } from "../test/fixtures.ts";
@@ -148,6 +148,17 @@ const TYPE_CARD: readonly (readonly [CardType, string, string])[] = [
 ];
 
 /* ----------------------------------------------------------------------------------------- B12 */
+
+describe("glyphUri", () => {
+  it("draws a glyph's body on a 24-unit square, as the set marks are drawn (#2160)", () => {
+    const body = "<circle cx='12' cy='12' r='3'/>";
+    const uri = glyphUri(body);
+    expect(uri.startsWith("data:image/svg+xml,")).toBe(true);
+    expect(decodeURIComponent(uri.slice("data:image/svg+xml,".length))).toBe(
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'>${body}</svg>`,
+    );
+  });
+});
 
 describe("cx", () => {
   it("joins the parts that are non-empty strings, in order (#2160)", () => {

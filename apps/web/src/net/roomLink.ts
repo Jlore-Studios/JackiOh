@@ -6,7 +6,7 @@
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
-import type { QueueMode } from "./api.ts";
+import { isQueueMode, type QueueMode } from "./api.ts";
 import { currentPath, paths } from "./navigate.ts";
 import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
@@ -19,10 +19,6 @@ export const ROOM_LINK_STORAGE_KEY = "jackioh.play.roomLink";
 export const ROOM_LINK_SHARE_TITLE = "Join my JackiOh room";
 
 export type RoomLink = { code: string; mode: QueueMode | null };
-
-function isQueueMode(value: unknown): value is QueueMode {
-  return value === "bo1" || value === "bo3" || value === "random";
-}
 
 export function roomLinkPath(code: string, mode: QueueMode): string {
   const query = new URLSearchParams({ [ROOM_PARAM]: code, [MODE_PARAM]: mode });

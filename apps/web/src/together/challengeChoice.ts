@@ -18,7 +18,7 @@ import type { LeanPick } from "@jackioh/shared";
 
 import { namesCustomCard } from "../creator/useCustomCards.ts";
 import { t } from "../i18n/i18n.ts";
-import type { ModeChoice, QueueMode, SavedDeck, SavedTrio } from "../net/api.ts";
+import { isQueueMode, type ModeChoice, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
 import { getStored, setStored } from "../net/storage.ts";
 
 export const CHALLENGE_CHOICE_KEY = "jackioh.challenge.choice";
@@ -99,7 +99,7 @@ export function readChallengeChoice(): StoredChallengeChoice {
     if (typeof parsed !== "object" || parsed === null) return none;
     const { mode, deckId, trioId } = parsed as { mode?: unknown; deckId?: unknown; trioId?: unknown };
     return {
-      mode: mode === "bo1" || mode === "bo3" || mode === "random" ? mode : none.mode,
+      mode: isQueueMode(mode) ? mode : none.mode,
       deckId: typeof deckId === "string" ? deckId : null,
       trioId: typeof trioId === "string" ? trioId : null,
     };

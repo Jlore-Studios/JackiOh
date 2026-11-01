@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiRequestError } from "./api.ts";
-import { attempt, messageOf } from "./errors.ts";
+import { attempt, isAbort, messageOf } from "./errors.ts";
 
 describe("messageOf", () => {
   it("reads an Error's message, a server refusal's included", () => {
@@ -19,6 +19,15 @@ describe("messageOf", () => {
     expect(messageOf(404)).toBe("404");
     expect(messageOf(undefined)).toBe("undefined");
     expect(messageOf({ message: "not an Error" })).toBe("[object Object]");
+  });
+});
+
+describe("isAbort", () => {
+  it("is true for an AbortError and nothing else", () => {
+    expect(isAbort(new DOMException("canceled", "AbortError"))).toBe(true);
+    expect(isAbort(new DOMException("blocked", "NotAllowedError"))).toBe(false);
+    expect(isAbort(new Error("AbortError"))).toBe(false);
+    expect(isAbort("AbortError")).toBe(false);
   });
 });
 

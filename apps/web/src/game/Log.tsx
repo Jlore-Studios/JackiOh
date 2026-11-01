@@ -44,7 +44,7 @@ import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { faceDownCost, sideOf, testid } from "./contract.ts";
 import { curveEquation } from "./curveEquation.ts";
-import { cardInView, namedFace } from "./faces.ts";
+import { cardInView, faceDownCostAt, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
 import { PREDICTED_WORDS, SECRET_WORDS } from "./secrets.ts";
 import { CHAOS_TEXT } from "./showcase/constants.ts";

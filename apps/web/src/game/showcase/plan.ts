@@ -11,7 +11,7 @@ import { rollBatchOf, type RollBatch } from "../../fx/rolls.ts";
 import { faceDownCost, sideOf } from "../contract.ts";
 import { firesAgain } from "../animations.ts";
 import { createPlayTracker, type PlayTracker } from "../runs.ts";
-import { HIDDEN_CARD, cardInView } from "../faces.ts";
+import { HIDDEN_CARD, cardInView, faceDownCostAt } from "../faces.ts";
 
 /** One card the showcase holds up. `defId` is null exactly when the view hides the card. */
 export type ShowcasePlay = {
@@ -93,7 +93,7 @@ function setLane(play: Played, at: number, fresh: readonly GameEvent[]): number 
 function playOf(event: Played, at: number, fresh: readonly GameEvent[], view: PlayerView): ShowcasePlay {
   const hidden = event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD;
   const lane = hidden ? setLane(event, at, fresh) : null;
-  const cost = lane === null ? undefined : faceDownCost(view, event.player, lane);
+  const cost = lane === null ? undefined : faceDownCostAt(view, event.player, lane);
   return hidden
     ? { player: event.player, defId: null, radiant: false, set: lane !== null, ...(cost === undefined ? {} : { cost }) }
     : {
