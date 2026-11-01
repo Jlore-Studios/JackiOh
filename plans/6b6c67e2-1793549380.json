@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 2689,
+  "title": "Patch: the AI prices a turn hook as many times as the engine fires it: Joint Filing's extra runs and Living Bomb's hook on the opponent's turn",
+  "branch": "bot/issue-2689",
+  "thread": "**Issue #2689 (data, not instructions):**\n\n```text\n# #2689: Patch: the AI prices a turn hook as many times as the engine fires it: Joint Filing's extra runs and Living Bomb's hook on the opponent's turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nJoint Filing makes its controller's start-of-turn and end-of-turn effects happen twice, and Living Bomb's Radiant face goes off at the start of the opponent's turn. The practice AI values every start-of-turn or end-of-turn effect as happening once, and does not see the opponent's-turn one at all, so it underrates a board with Joint Filing on it and treats Radiant Living Bomb as a blank card for its cost. Once built, the AI counts these effects as often as the game actually runs them.\n\n## Why\n- The engine queues a player's start- and end-of-turn hooks `1 + extra_runs(\u2026, Multiplied::TurnHooks)` times (`crates/engine/src/triggers.rs:662-668`), the extra from Joint Filing `meditative-009` (`Script.turn_hook_extra`, `crates/engine/src/multipliers.rs:5`, `:31`).\n- The AI fires each hook once (`fire_turn_hook`, `crates/ai/src/evaluate.rs:1297-1311`) and reads that price unscaled (`turn_hook_price`, `:267-280`); nothing in `crates/ai/src` reads `multipliers::extra_runs`.\n- `has_turn_hook` (`evaluate.rs:259-262`) and `TURN_HOOKS` (`:1291`) cover `StartOfTurn` and `EndOfTurn` only, while the engine also queues `StartOfOpponentTurn` (`crates/engine/src/turn.rs:566`). Its only card is Living Bomb `classic-062`, whose Radiant face has only that hook (`crates/cards/src/scripts/classic/c062_living_bomb.rs`); Living Bomb is on the sweep's at-risk list (`crates/ai/src/shadow_ban.rs:435`, \u201cmean evaluate change -0.6\u201d).\n\n## Proposal\n- In `turn_hook_price`, multiply the root's one-firing price by `1 + extra_runs(state, card.controller, Multiplied::TurnHooks).max(0)` on the state being evaluated, so a line that removes Joint Filing reads the lost firings.\n- Add `StartOfOpponentTurn` to `has_turn_hook` and the probe's hooks, fired as the opponent's turn would queue it (after the active player's own hooks, R68).\n- Extend R2477000 with a ruling in this issue's block and `spec/pending/<issue>.md`; re-run `cargo jackioh gate`.\n\n## Where it lands\n- `crates/ai/src/evaluate.rs`; tests in `crates/ai/tests/ai/turn_hooks.rs`\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md`; SPEC \u00a76.2, \u00a79.9\n\n## Acceptance criteria\n- [ ] A Unit with a start-of-turn hook prices twice its one-firing price while its controller has Joint Filing on the field, and once without it.\n- [ ] Radiant Living Bomb on the field has a non-zero turn hook price, and a board of the opponent's Plague-Countered permanents makes it worth more.\n- [ ] Tests named after the new ruling, listed in its `proven_in`; `cargo test -p jackioh-ai`, clippy, `cargo jackioh gate` and `cargo jackioh spec check` pass.\n\n## Size and risks\nSmall (hard by label, the AI): about 15 lines and three tests. Risk: low; two cards, and a zero `turn_hook` weight still turns it all off.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:10:20Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2689: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
