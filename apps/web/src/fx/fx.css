@@ -1494,6 +1494,237 @@
   text-shadow: 0 0 10px color-mix(in srgb, var(--fx-gold) 70%, transparent);
 }
 
+/* -------------------------------------- roll: a card's coins or dice, one batch (R2652001) --- */
+
+/* One panel over the board for the whole batch: "Coin flip" or "Dice roll" over a tray of every coin
+   or die at once. Each is a window one face tall over a reel of its tumble faces; a coin spins on its
+   vertical axis and a die tumbles while the reel runs, and both land on the kept face at their own
+   `--fx-land-ms`, which flares gold. When Lucky drew more than one face, the faces it drew show
+   under it once it lands, the kept one bright and the rest dimmed. The words ride in `data-text`
+   (fx/dom.ts). Ten coins fit a 360 px phone in two rows. */
+
+@keyframes fx-roll-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  8% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  14% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  88% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.02);
+    opacity: 0;
+  }
+}
+
+@keyframes fx-roll-scroll {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(var(--fx-steps, 0) * -1.6em));
+  }
+}
+
+@keyframes fx-roll-spin {
+  from {
+    transform: rotateY(0turn);
+  }
+  to {
+    transform: rotateY(4turn);
+  }
+}
+
+@keyframes fx-roll-tumble {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-22deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(16deg) scale(0.95);
+  }
+  75% {
+    transform: rotate(-9deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes fx-roll-land {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+@keyframes fx-roll-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-0.3em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fx-roll {
+  left: 50%;
+  top: 45%;
+  translate: -50% -50%;
+  z-index: 5;
+  display: grid;
+  justify-items: center;
+  gap: 0.35em;
+  width: max-content;
+  max-width: 94vw;
+  padding: 0.45em 1em 0.7em;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(color-mix(in srgb, var(--fx-ink) 92%, transparent), color-mix(in srgb, var(--fx-ink) 92%, transparent)) padding-box,
+    linear-gradient(120deg, var(--fx-gold), var(--fx-gold-pale), var(--fx-gold-deep), var(--fx-gold)) border-box;
+  box-shadow:
+    0 12px 40px color-mix(in srgb, var(--fx-ink) 65%, transparent),
+    0 0 26px color-mix(in srgb, var(--fx-gold) 45%, transparent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(var(--type-md), 3.4vw, var(--type-3xl));
+  line-height: 1.3;
+  animation: fx-roll-in var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fx-roll::before {
+  content: attr(data-text);
+  color: var(--fx-gold);
+  font-size: var(--type-sm-em);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fx-roll-tray {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45em;
+  max-width: min(18em, 90vw);
+}
+
+.fx-roll-item {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.2em;
+}
+
+.fx-roll-face {
+  position: relative;
+  width: 3.2em;
+  height: 1.6em;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--fx-gold-deep), var(--fx-ink));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fx-gold) 70%, transparent);
+  text-align: center;
+  font-size: var(--type-2xs-em);
+}
+
+.fx-roll-item[data-kind="coin"] .fx-roll-face {
+  width: 3.4em;
+  height: 1.6em;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, var(--fx-gold-pale), var(--fx-gold) 55%, var(--fx-gold-deep));
+  animation: fx-roll-spin var(--fx-land-ms, 0ms) cubic-bezier(0.2, 0.6, 0.3, 1) both;
+}
+
+.fx-roll-item[data-kind="die"] .fx-roll-face {
+  border-radius: 6px;
+  background: linear-gradient(160deg, var(--fx-white), var(--fx-steel));
+  animation: fx-roll-tumble var(--fx-land-ms, 0ms) ease-out both;
+}
+
+.fx-roll-item::after {
+  content: "";
+  position: absolute;
+  inset: -0.15em;
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px var(--fx-gold),
+    0 0 14px color-mix(in srgb, var(--fx-gold) 70%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: fx-roll-land 600ms ease-out var(--fx-land-ms, 0ms) both;
+}
+
+.fx-roll-reel {
+  animation: fx-roll-scroll var(--fx-land-ms, 0ms) cubic-bezier(0.12, 0.62, 0.22, 1) both;
+}
+
+.fx-roll-cell {
+  display: block;
+  height: 1.6em;
+  line-height: 1.6em;
+  padding: 0 0.3em;
+  overflow: hidden;
+  color: var(--fx-ink);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fx-roll-cell::after {
+  content: attr(data-text);
+}
+
+.fx-roll-draws {
+  display: flex;
+  gap: 0.2em;
+  font-size: var(--type-3xs-em);
+  animation: fx-roll-reveal 300ms ease-out var(--fx-land-ms, 0ms) both;
+}
+
+.fx-roll-kept,
+.fx-roll-extra {
+  padding: 0 0.35em;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.fx-roll-kept::after,
+.fx-roll-extra::after {
+  content: attr(data-text);
+}
+
+.fx-roll-kept {
+  color: var(--fx-white);
+  box-shadow: inset 0 0 0 1px var(--fx-gold);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--fx-gold) 70%, transparent);
+}
+
+.fx-roll-extra {
+  color: var(--fx-steel);
+  opacity: 0.55;
+}
+
 /* ------------------------------------------- fog: a sweep rolls over a row (issue #124) --- */
 
 /* A bank of cloud rolls left to right over the whole row of units a sweep reached, in the colors of

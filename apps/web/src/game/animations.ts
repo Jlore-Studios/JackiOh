@@ -154,6 +154,13 @@ function zoneOfCard(view: PlayerView, zone: Zone, instanceId: string): string {
  * ------------------------------------------------------------------------------------------- */
 
 /**
+ * Issue #2652 (R2652001): how long a batch of coin flips or die rolls holds the board, BUILD M5-T4's
+ * `rolled` row: long enough for every coin to spin and every die to tumble before the result lands,
+ * where a banner is 600 ms. The effects speed divides it (R201) and reduced motion makes it 0.
+ */
+export const ROLLED_ENTRY_MS = 1_200;
+
+/**
  * `eventType → { animation, durationMs, testid }` with exactly one row per `GameEvent["type"]`
  * (BUILD M5-T4). Every duration is the BUILD table's; `animations.test.ts` pins all
  * forty-three literally so a drift in either direction fails.
@@ -946,6 +953,16 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "board",
     target: () => testid.board,
   },
+  // Issue #2652 (R2652001): one panel over the board holds a card's whole batch of coins or dice,
+  // every coin spinning and every die tumbling at once and landing on its kept face (fx/rolls.ts),
+  // before the entry of what it decided; the log and the showcase's live region say it in words.
+  rolled: {
+    animation: "jk-banner",
+    durationMs: ROLLED_ENTRY_MS,
+    testid: "turn-banner",
+    fx: { recipe: "roll" },
+    target: () => testid.banner,
+  },
 };
 
 /**
@@ -1101,9 +1118,12 @@ export function pileTestid(pile: Pile): string {
   return pile.pile === "graveyard" ? animTestid.graveyard(pile.side) : animTestid.exile(pile.side);
 }
 
-/** Entries the burst budget never squeezes: each stands for many events, or holds a cast up to be read. */
+/**
+ * Entries the burst budget never squeezes: each stands for many events, holds a cast up to be read, or
+ * is a batch of coins or dice whose suspense is the point (R2652001).
+ */
 function pinned(entry: AnimationEntry): boolean {
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined;
+  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.type === "rolled";
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {

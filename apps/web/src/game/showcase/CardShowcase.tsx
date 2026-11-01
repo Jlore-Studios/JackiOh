@@ -3,7 +3,7 @@
 // A card another card casts (C+ #47 Jogg's Box) replaces the current display on its runner entry; per-viewer
 // `runs.ts` tracking identifies those casts. Issue #1493: a revealed trap reuses that generated-cast close-up
 // on both seats, gated to its `trapFired` runner entry. R436 announces Call to Chaos and shows it still when
-// effects do not draw.
+// effects do not draw. R2652001 says in words how a card's coins or dice landed, gated to their panel.
 // Per-viewer windows let a hotseat player catch up; the portal is click-through and holds practice's AI via `data-showcase`.
 // Reduced motion preserves the information without animation.
 
@@ -25,9 +25,10 @@ import { CardBack, CardFace, costPhrase } from "../../cards/index.ts";
 import { chineseName, drawnInChinese } from "../../cards/chinese.ts";
 import { TheirCopy } from "../../cards/loadouts.ts";
 import { chaosNames, type ChaosRoll } from "../../fx/chaos.ts";
+import { rollWords, type RollBatch } from "../../fx/rolls.ts";
 import { FX_BANNER_TAIL_MS } from "../../fx/constants.ts";
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
-import { ANIMATIONS, reducedMotionNow, type AnimationQueue, type RunnerSignal } from "../animations.ts";
+import { ANIMATIONS, HIDDEN_ID, reducedMotionNow, type AnimationQueue, type RunnerSignal } from "../animations.ts";
 import { CatalogContext } from "../catalog.ts";
 import { sideOf, type Side } from "../contract.ts";
 import { namedFace } from "../faces.ts";
@@ -49,7 +50,7 @@ import {
   showcaseTestid,
   type ShowcaseKind,
 } from "./constants.ts";
-import { capQueue, chaosRollsIn, eventsSince, showcasePlays, type ShowcasePlay } from "./plan.ts";
+import { capQueue, chaosRollsIn, eventsSince, rollsIn, showcasePlays, type ShowcasePlay } from "./plan.ts";
 import { t } from "../../i18n/i18n.ts";
 import "./showcase.css";
 
@@ -168,6 +169,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   const [showing, setShowing] = useState<Showing | null>(null);
   const [chaos, setChaos] = useState<ChaosShowing | null>(null);
   const [chaosSaid, setChaosSaid] = useState<readonly string[] | null>(null);
+  const [rollSaid, setRollSaid] = useState<string | null>(null);
   const current = useRef<Showing | null>(null);
   const waiting = useRef<ShowcasePlay[]>([]);
   const seen = useRef(new Map<PlayerId, readonly GameEvent[]>());
@@ -225,6 +227,23 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     setChaosSaid(names);
     setChaos({ names, seq: counter.current, holdMs: chaosHoldMs(getFxSettings().speed), still: !effectsDrawing() });
   }, []);
+
+  // R2652001: how a card's coins or dice landed, named as the reader reads the card (R711000), said
+  // when the runner reaches its panel; a card the view hides is a hidden card (R97).
+  const announceRoll = useCallback(
+    (batch: RollBatch) => {
+      const defs = viewRef.current.defs;
+      let who = t("a hidden card");
+      if (batch.defId !== HIDDEN_ID) {
+        const info = lookup?.(batch.defId, false);
+        const english = info?.name ?? defs?.[batch.defId]?.name ?? batch.defId;
+        who = drawnInChinese(false) ? chineseName(batch.defId, english, info?.def ?? defs?.[batch.defId]) : english;
+      }
+      const words = rollWords(batch, who);
+      setRollSaid(`${words.charAt(0).toUpperCase()}${words.slice(1)}`);
+    },
+    [lookup],
+  );
 
   const dismiss = useCallback(() => {
     waiting.current = [];
@@ -327,7 +346,8 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     }
     hold(now);
     for (const { roll, event } of chaosRollsIn(fresh)) gate(event, () => announceChaos(roll));
-  }, [view, queue, hold, replace, gate, announceChaos, takeDown]);
+    for (const { batch, event } of rollsIn(fresh)) gate(event, () => announceRoll(batch));
+  }, [view, queue, hold, replace, gate, announceChaos, announceRoll, takeDown]);
 
   useEffect(() => {
     if (showing === null) return undefined;
@@ -419,6 +439,9 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
       </p>
       <p className="showcase-live" data-testid={showcaseTestid.chaosLive} role="status" aria-live="polite">
         {chaosSaid === null ? "" : t(`${CHAOS_TEXT.said}: {names}`, { names: chaosSaid.map((name) => t(name)).join(t(", ")) })}
+      </p>
+      <p className="showcase-live" data-testid={showcaseTestid.rollLive} role="status" aria-live="polite">
+        {rollSaid ?? ""}
       </p>
       {chaos !== null && chaos.still ? <ChaosBanner key={chaos.seq} names={chaos.names} seq={chaos.seq} /> : null}
       {showing !== null && kind !== null

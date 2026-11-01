@@ -86,6 +86,8 @@ export const showcaseTestid = {
   chaosLine: "chaos-banner-line",
   /** R436: the polite live region that says what a Call to Chaos rolled, on both seats, in every mode. */
   chaosLive: "chaos-live",
+  /** R2652001: the polite live region that says how a card's coins or dice landed, in every mode. */
+  rollLive: "roll-live",
 } as const;
 
 /** `data-showcase` holds the practice AI; casts apply to either seat (R502). */

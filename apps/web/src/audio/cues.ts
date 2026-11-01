@@ -710,6 +710,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // ---- Issue #1855: Anomalies, the board swap (R1855000) ----
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
   boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+
+  // ---- Issue #2652: coin flips and die rolls (R2652001) ----
+  // The batch spins as the slot machine's reel does, before the outcome sounds its own result.
+  rolled: { sfx: "chaosRoll", cues: () => [sfx("chaosRoll")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

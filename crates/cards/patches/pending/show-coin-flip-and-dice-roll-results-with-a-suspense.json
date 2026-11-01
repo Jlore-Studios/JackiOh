@@ -1,0 +1,33 @@
+{
+  "title": "Patch: show coin flip and dice roll results, with a suspense animation",
+  "sources": "#2652",
+  "notes": "Every coin flip and die roll of Gary the Gambler, Ace in the Hole, Mid Loser and Dice of Doom is reported as a `rolled` batch, one per verb call or hook, holding each coin or die in draw order with every face Lucky and Luck drew and the one kept (R2652001). The draws, the rng cursor and every state hash are unchanged: the report is answered by nothing and takes no number in R68's order. A batch a face-down trap made reaches its controller alone unless the trap fires in the same action (R2652000). The other families classify names are cards whose games hold such a roll in the same action (Gachaholic's luck-based cards, InfiniScepter's copies, and the like); their own play is unchanged.",
+  "player": {
+    "title": "See how every coin and die lands",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "When Gary the Gambler, Mid Loser, Ace in the Hole or Dice of Doom flips coins or rolls dice, both players now watch every coin spin and every die tumble at once.",
+      "Each lands on its result before the buff, keyword or cards it decides, with Lucky's extra rolls shown beside it.",
+      "The game log says each result in words, such as \"Gary the Gambler flipped 5 coins: 3 heads, 2 tails\".",
+      "A face-down Ace in the Hole's flip stays hidden from your opponent unless it lands heads and the trap fires."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classic-007",
+    "classic-015",
+    "classic-065",
+    "classic-083",
+    "classicplus-019",
+    "core-004",
+    "meditative-101",
+    "meditativeplus-007",
+    "stinkyscape-032",
+    "stinkyscape-066",
+    "stinkyscape-079",
+    "stinkyscape-154"
+  ]
+}

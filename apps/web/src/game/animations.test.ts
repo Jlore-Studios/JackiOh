@@ -147,6 +147,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   held: 350,
   // Issue #1855 (R1855000).
   boardReplaced: 500,
+  // Issue #2652 (R2652001).
+  rolled: 1200,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -282,6 +284,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
   boardReplaced: { type: "boardReplaced", player: "p1" },
+  rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -352,7 +355,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(92);
+    expect(rows).toHaveLength(93);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -920,9 +923,14 @@ describe("createAnimationQueue", () => {
       expect(ms, "no entry is lengthened").toBeLessThanOrEqual(timed[index]?.durationMs ?? 0);
       expect(ms, "and none is squeezed below the floor").toBeGreaterThanOrEqual(MIN_ENTRY_MS);
     }
+    // R2652001: a batch of coins or dice is pinned, keeping its time out of the budget, as a cast is.
+    const pinned = timed.flatMap((entry, index) => (entry.type === "rolled" ? [index] : []));
+    expect(pinned.length, "the stream holds rolls").toBeGreaterThan(0);
+    for (const index of pinned) expect(scheduled[index]).toBe(timed[index]?.durationMs);
+    const squeezed = scheduled.filter((_, index) => !pinned.includes(index));
     // The floor is what a stream of this length costs; without it the budget would be exact.
-    expect(scheduled.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(
-      Math.max(BURST_BUDGET_MS, timed.length * MIN_ENTRY_MS),
+    expect(squeezed.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(
+      Math.max(BURST_BUDGET_MS, squeezed.length * MIN_ENTRY_MS),
     );
     expect(queue.idle()).toBe(true);
   });
