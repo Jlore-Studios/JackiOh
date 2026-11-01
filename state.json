@@ -12637,6 +12637,13 @@
     "2690": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T16:26:16Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The hard threshold was the uncertain line: this touches crates/engine/src, but only its feature-gated testkit oracle, not engine rules or the resolution loop, so it fails easy without becoming hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
