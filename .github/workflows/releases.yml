@@ -24,8 +24,13 @@
 #                       pre-releases become releases
 #   workflow_dispatch   by hand (Actions -> releases -> Run workflow)
 #
-# The Actions token writes the tags and releases, so nothing they make starts a workflow; none listens
-# for tags or releases, and scripts/vercel-ignore.sh reads only its own two tags.
+# The tags and releases go out with the bot's token (BOT_GITHUB_TOKEN), because GitHub refuses the
+# Actions token a tag on any commit whose tree holds a workflow file, which is every commit but the
+# first: the first run created v0.1.0, at the initial commit, and was refused v0.1.0b with "HTTP 403:
+# Resource not accessible by integration" (promote-production.yml meets the same refusal). A tag or
+# release made with that token can start a workflow, and none listens for one: every `push` trigger
+# names branches, nothing runs on `create` or `release`, and scripts/vercel-ignore.sh reads only its
+# own two tags.
 name: releases
 
 on:
@@ -46,8 +51,9 @@ concurrency:
   group: releases
   cancel-in-progress: false
 
+# The checkout's; the releases are written with the bot's token.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   publish:
@@ -76,7 +82,7 @@ jobs:
 
       - name: create what is missing and edit what moved
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           # GitHub limits how fast one token creates content, and the first run created 90 releases.
           PAUSE_SECONDS: "2"
