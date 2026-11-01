@@ -103,7 +103,7 @@ set -f
 for file in $files; do
   case "$file" in
     scripts/build-wasm.sh | scripts/vercel-install.sh | crates/server/Cargo.toml | crates/tools/Cargo.toml) exit 1 ;;
-    bot/* | .harness/* | .squishy/* | .github/* | docs/* | reviews/* | e2e/* | spec/* | training/* | scripts/*) ;;
+    bot/* | .harness/* | .squishy/* | .github/* | docs/* | reviews/* | e2e/* | spec/* | training/* | scripts/* | photos/*) ;;
     crates/server/* | crates/tools/* | render.yaml) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     apps/web/*.test.ts | apps/web/*.test.tsx | apps/web/src/test/* | apps/web/scripts/* | apps/web/README.md) ;;

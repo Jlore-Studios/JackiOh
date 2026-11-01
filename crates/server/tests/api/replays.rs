@@ -954,6 +954,18 @@ mod r768_bounded_cost {
         assert_eq!(cache.held(ttl_ms), 0);
         assert!(cache.get("m-new", ttl_ms).is_none());
     }
+
+    /// The retention purge's clear (the co-op registry's cache is this one, over a co-op match's
+    /// steps): every replay goes, however recently it was opened.
+    #[test]
+    fn the_cache_forgets_every_replay_when_cleared() {
+        let cache = ReplayCache::default();
+        cache.put("m-1", refused(), 0);
+        cache.put("m-2", refused(), 0);
+        cache.clear();
+        assert_eq!(cache.held(0), 0);
+        assert!(cache.get("m-1", 0).is_none());
+    }
 }
 
 // Older shipped versions (R767000)
@@ -1199,6 +1211,7 @@ mod off_the_runtime {
 /// R1834002, R1834003: replay pages carry frozen seat loadouts and revealed card picks without leaking hidden cards.
 mod r1834003_a_replays_pages_carry_the_loadouts {
     use super::*;
+    use crate::support::store::named_cards;
     use std::collections::BTreeSet;
 
     use jackioh_server::actor::engine::dealt_cards;
@@ -1212,27 +1225,6 @@ mod r1834003_a_replays_pages_carry_the_loadouts {
             "finish": "finish-plain",
             "border": "border-standard",
         })
-    }
-
-    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
-    fn named_cards(view: &Value) -> Vec<(String, String)> {
-        let mut named = Vec::new();
-        let mut stack = vec![view];
-        while let Some(value) = stack.pop() {
-            match value {
-                Value::Object(fields) => {
-                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
-                        (fields.get("instanceId"), fields.get("defId"))
-                    {
-                        named.push((instance.clone(), def.clone()));
-                    }
-                    stack.extend(fields.values());
-                }
-                Value::Array(entries) => stack.extend(entries),
-                _ => {}
-            }
-        }
-        named
     }
 
     /// One entry per distinct card of `deck`, sorted, wearing `id` as its `key`.

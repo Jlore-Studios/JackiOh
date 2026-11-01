@@ -15,21 +15,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::work::script_step_for;
 
 use crate::rules::fixtures::call_to_chaos_stinkyscape::{
-    ARCTIC_CITADEL, DANDY_LAD, ETHICS, GOLEM, VANGUARD, register_chaos_stinkyscape,
+    ARCTIC_CITADEL, DANDY_LAD, ETHICS, GOLEM, VANGUARD, stinkyscape_game as game,
 };
-use crate::rules::fixtures::harness::{new_game, put, set_library, slot};
-
-fn game(seed: &str) -> GameState {
-    let mut state = new_game(seed, None);
-    register_chaos_stinkyscape();
-    state.turn = 4;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state.players.p1.hand = Vec::new();
-    state.players.p2.hand = Vec::new();
-    set_library(&mut state, P1, &[] as &[&str]);
-    state
-}
+use crate::rules::fixtures::harness::{put, slot};
 
 fn entry(name: &str) -> Effect {
     let found = CHAOS_STINKY_EFFECTS

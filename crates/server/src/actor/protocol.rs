@@ -292,7 +292,11 @@ pub fn prompt_for_opponent(pending_for: PlayerId, deadline: Option<i64>) -> Serv
 /// `voided`, and the close tells the client the match is gone rather than to reconnect.
 pub const MATCH_VOIDED_CLOSE_REASON: &str = "voided";
 
-/// A frame's JSON text, the match socket's and the co-op one's.
+/// R1253000: what an action the reducer panicked on is answered with (`internal`), first and on
+/// every resend of its nonce, on a match's socket and on a co-op match's.
+pub const ACTION_PANICKED_MESSAGE: &str = "the server could not apply this action; it has been reported";
+
+/// TS `JSON.stringify(message)`: a frame's JSON text, the match socket's and the co-op one's.
 pub fn encode<M: Serialize>(message: &M) -> String {
     serde_json::to_string(message).unwrap_or_else(|error| {
         // Every field of every frame is plain data; this cannot fail. Answer a frame the client
@@ -317,8 +321,8 @@ fn is_bool(value: Option<&Value>) -> Option<bool> {
 }
 
 /// `typeof value === "number" && Number.isInteger(value)`: a JSON number with no fraction (JS reads
-/// `3.0` as the integer 3).
-fn is_int(value: Option<&Value>) -> Option<f64> {
+/// `3.0` as the integer 3). The co-op parser reads its pings' numbers with it (`duos::protocol`).
+pub(crate) fn is_int(value: Option<&Value>) -> Option<f64> {
     let number = value?.as_f64()?;
     if number.is_finite() && number.fract() == 0.0 {
         Some(number)
@@ -335,7 +339,8 @@ fn is_row(value: Option<&Value>) -> Option<Row> {
     }
 }
 
-fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
+/// `"p1"` or `"p2"`; the co-op parser reads a ping's side with it (`duos::protocol`).
+pub(crate) fn is_player_id(value: Option<&Value>) -> Option<PlayerId> {
     match value.and_then(Value::as_str) {
         Some("p1") => Some(PlayerId::P1),
         Some("p2") => Some(PlayerId::P2),
@@ -671,8 +676,28 @@ pub const MAX_NONCE_LENGTH: usize = 128;
 /// Clients may not send one: a known nonce is acked and not applied, so it would swallow an expiry.
 pub const SERVER_NONCE_PREFIX: &str = "srv-";
 
-/// Frames exceeding this are rejected before parsing (§9.8), the transport's 1009 bound (SURFACE
-/// §11.3) held again so the parser stays total on its own.
+/// SPEC §9.3, §9.8 and R270's rules for a client's nonce: a non-empty string of at most
+/// `MAX_NONCE_LENGTH`, outside the server's own namespace. The co-op parser holds them too, and its
+/// round's namespace on top (`duos::protocol`).
+pub(crate) fn client_nonce(value: Option<&Value>) -> Result<&str, MalformedMessage> {
+    let nonce = match is_string(value) {
+        Some(nonce) if !nonce.is_empty() => nonce,
+        _ => return Err(malformed("every action carries a client nonce (SPEC §9.3)")),
+    };
+    if nonce.encode_utf16().count() > MAX_NONCE_LENGTH {
+        return Err(malformed("that nonce is too long"));
+    }
+    if nonce.starts_with(SERVER_NONCE_PREFIX) {
+        return Err(malformed(format!(
+            r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
+        )));
+    }
+    Ok(nonce)
+}
+
+/// A frame larger than this is rejected before it is parsed (§9.8). The transport closes a larger
+/// frame with 1009 (SURFACE §11.3, `ws_server.rs`); this check is the same bound, held again here
+/// so the parser stays total on its own.
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
 
 /// Total client message parser, never panics; every kept field is rebuilt.
@@ -724,18 +749,7 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
                 return Err(malformed(r#""action" must be an object"#));
             };
             // SURFACE §11.3: the nonce is read inside `action` only (the client's form).
-            let nonce = match is_string(raw.get("nonce")) {
-                Some(nonce) if !nonce.is_empty() => nonce,
-                _ => return Err(malformed("every action carries a client nonce (SPEC §9.3)")),
-            };
-            if nonce.encode_utf16().count() > MAX_NONCE_LENGTH {
-                return Err(malformed("that nonce is too long"));
-            }
-            if nonce.starts_with(SERVER_NONCE_PREFIX) {
-                return Err(malformed(format!(
-                    r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
-                )));
-            }
+            let nonce = client_nonce(raw.get("nonce"))?;
             let body = parse_action_body(raw)?;
             Ok(ClientMessage::Action(ActionMessage {
                 nonce: nonce.to_string(),

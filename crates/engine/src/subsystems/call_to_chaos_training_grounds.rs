@@ -67,7 +67,7 @@ fn entry(
 }
 
 fn def_id_of(set: SetName, index: &str) -> Option<String> {
-    crate::catalog::def_by_index(set, index).map(|def| def.id.clone())
+    crate::catalog::def_id_by_index(set, index)
 }
 
 /// `count` summons of a card by index, placed per R64; a full row takes fewer.

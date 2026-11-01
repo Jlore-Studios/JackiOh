@@ -3,6 +3,10 @@
 // enforces nothing (CLAUDE.md rule 7; the server 403s `account_pending` at every door): asserted
 // here is only that the browser is sent to the screen §9.4 says the account may see.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
@@ -264,6 +268,26 @@ describe("R2108000 the shell's wait", () => {
   it("R2108000 a sentence that waits on nothing shows at once", () => {
     render(<Loading what="Sign in to continue." />);
     expect(screen.getByTestId("gate-loading").closest(".shell-panel")).toHaveAttribute("data-shown", "true");
+  });
+
+  it("R2108000 the shell's panel is headed by the logo on the tavern's wood, both shown only with the panel", () => {
+    render(<Loading what="Checking your account…" slow skeleton="panel" />);
+    const heading = screen.getByRole("heading", { level: 1, name: "JackiOh" });
+    const logo = heading.querySelector("img");
+    expect(logo).toHaveAttribute("src", "/brand/jackioh-logo-stacked.svg");
+    expect(heading.closest(".shell-panel")).toBe(screen.getByTestId("gate-loading").closest(".shell-panel"));
+
+    const here = dirname(fileURLToPath(import.meta.url));
+    expect(readFileSync(join(here, "..", "..", "public", "brand", "jackioh-logo-stacked.svg"), "utf8")).toContain("<svg");
+    const css = readFileSync(join(here, "..", "auth", "tavern.css"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\s+/g, " ");
+    expect(css).toContain('.tavern.shell-panel[data-shown="false"] :is(.panel, .shell-panel__brand) { visibility: hidden; }');
+    // The wood is drawn only on a panel that shows, never on one still waiting out SKELETON_DELAY_MS.
+    const wood = css.indexOf("repeating-linear-gradient( 180deg, var(--tavern-wood) 0 var(--plank)");
+    expect(wood).toBeGreaterThan(-1);
+    const rule = css.lastIndexOf("{", wood);
+    expect(css.slice(css.lastIndexOf("}", rule) + 1, rule).trim()).toBe('.tavern.shell-panel[data-shown="true"]');
   });
 });
 

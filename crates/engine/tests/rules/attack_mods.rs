@@ -8,8 +8,9 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, cleaver, plain, trampler};
 use crate::rules::fixtures::combat_judge::{combat_judge_game, herald, herald_poison};
-use crate::rules::fixtures::harness::{live, put, sink_for, slot};
+use crate::rules::fixtures::harness::{live, put, run_on_sink as run, slot};
 
+/// A game at turn 4, P1's main phase, with the combat-judge fixtures registered.
 fn board(seed: &str) -> GameState {
     let mut state = combat_judge_game(seed, None);
     state.turn = 4;
@@ -20,13 +21,6 @@ fn board(seed: &str) -> GameState {
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
-    let mut sink = sink_for(state);
-    let out = f(&mut sink);
-    let events = sink.events.clone();
-    (out, events)
 }
 
 /// `declare_attack` with both read live off the sink.

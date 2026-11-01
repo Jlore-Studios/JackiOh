@@ -21,14 +21,14 @@ use crate::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, Exp
 use crate::api::http::lock;
 use crate::app::now_ms;
 use crate::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS,
-    TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MS_PER_SECOND, MULLIGAN_CLOCK_SECONDS,
+    PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
 };
 use crate::db::store::MatchClocks;
 use jackioh_engine::config::KY_COMPETITION_SECONDS;
 
-// Lifecycle durations come from `crate::config` (R79).
-const MS_PER_SECOND: i64 = 1000;
+// Unit conversion, not configuration: the definition of a minute (a second's is `crate::config`'s),
+// and every lifecycle *duration* comes from `crate::config` (R79) rather than from here.
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
 
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);

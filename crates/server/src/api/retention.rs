@@ -35,13 +35,12 @@ use crate::api::practice::Swept;
 use crate::app::App;
 use crate::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, GAME_RECORD_REFILE_GRACE_SECONDS,
-    GAME_RECORD_REFILE_WINDOW_SECONDS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
-    RETENTION_PURGE_INTERVAL_SECONDS,
+    GAME_RECORD_REFILE_WINDOW_SECONDS, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY, MS_PER_SECOND,
+    PLAY_TELEMETRY_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 
-const MS_PER_DAY: i64 = 86_400_000;
-const MS_PER_SECOND: i64 = 1_000;
+/// The epoch: a range's start every match ended after.
 const EPOCH_MS: i64 = 0;
 
 pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError> {

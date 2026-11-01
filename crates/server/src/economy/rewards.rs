@@ -36,13 +36,10 @@ use super::track_rewards::{LevelReward, reward_for_level};
 use crate::config::{
     JLORE_CONQUEST_LOSS, JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP,
     JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, JLORE_UNRANKED_LOSS,
-    JLORE_UNRANKED_WIN, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_COOP_SCALE,
-    XP_GAME_CAP, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
+    JLORE_UNRANKED_WIN, MS_PER_DAY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL,
+    XP_COOP_SCALE, XP_GAME_CAP, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
 use crate::db::store::{StoreResult, Tx};
-
-/// Milliseconds in a UTC day, the span `JLORE_GAMES_DAILY_CAP` counts over ([[R1483000]]).
-const MS_PER_UTC_DAY: i64 = 86_400_000;
 
 /// Which kind of game finished, so the hook pays its rates (SPEC §14.8).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -249,8 +246,8 @@ pub fn game_jlore(mode: GameMode, won: Option<bool>) -> i32 {
 
 /// The UTC day `at` (milliseconds) falls in, as `[start, end)` ([[R1483000]]).
 pub fn utc_day_bounds(at: i64) -> (i64, i64) {
-    let start = at.div_euclid(MS_PER_UTC_DAY) * MS_PER_UTC_DAY;
-    (start, start.saturating_add(MS_PER_UTC_DAY))
+    let start = at.div_euclid(MS_PER_DAY) * MS_PER_DAY;
+    (start, start.saturating_add(MS_PER_DAY))
 }
 
 /// Pays one finished game's rewards in the caller's transaction: its Jlore, held to the account's

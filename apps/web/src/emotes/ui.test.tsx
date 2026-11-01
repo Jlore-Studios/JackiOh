@@ -1,8 +1,9 @@
 // The emote UI (ui.tsx): what a shown emote draws (R644) and what the two menus do (issue §2, §5,
-// with R643's grey-out). The components are cosmetic, so the tests render them bare, against a
-// hand-read `gate`, with no session and no clock.
+// with R643's grey-out). The components are cosmetic — a pick reports the emote upward and the
+// session decides whether anything shows — so the tests render them bare, against a hand-read
+// `gate`, with no session and no clock but the bubble's `--emote-hold` span.
 
-import { StrictMode } from "react";
+import { StrictMode, useState, type ReactElement } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,6 +21,9 @@ import {
   type EmoteId,
 } from "@jackioh/shared";
 
+import { guardLeaving, paths, usePathname } from "../net/navigate.ts";
+import { pressBack } from "../test/history.ts";
+import { at } from "../test/stubServer.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { EMOTE_MENU_EDGE_PX } from "./config.ts";
 import { DEFAULT_EMOTE_HAND } from "./hand.ts";
@@ -169,6 +173,103 @@ describe("R643 the Mute emotes menu", () => {
     expect(item).toBeDisabled();
     fireEvent.click(item);
     expect(onMute).not.toHaveBeenCalled();
+  });
+});
+
+describe("R2127000 Back closes the portrait's emote menus", () => {
+  /** Reads the path: its `usePathname` installs `navigate.ts`'s `popstate` listener, where the leave guard is read. */
+  function Path(): ReactElement {
+    return <p data-testid="path">{usePathname()}</p>;
+  }
+
+  type MenuKind = "picker" | "mute";
+
+  /** A menu as the hero hangs it off a portrait: open while its owner's state says so, shut by its `onClose`. */
+  function MenuHost({ kind, onClose }: { kind: MenuKind; onClose: () => void }): ReactElement {
+    const [open, setOpen] = useState(true);
+    const close = (): void => {
+      setOpen(false);
+      onClose();
+    };
+    return (
+      <>
+        {open && kind === "picker" ? (
+          <EmoteMenu side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={close} />
+        ) : null}
+        {open && kind === "mute" ? <MuteMenu muted={false} onMute={noop} onClose={close} /> : null}
+        <Path />
+      </>
+    );
+  }
+
+  const TESTID: Record<MenuKind, string> = { picker: "emote-menu", mute: "emote-mute-menu" };
+
+  /** The match's address with the deck builder's under it, as a player arrives in a game. */
+  function arrive(): void {
+    at("/decks");
+    window.history.pushState(null, "", paths.match("m1"));
+  }
+
+  async function backClosesBeforeTheGuard(kind: MenuKind): Promise<void> {
+    arrive();
+    const held: (() => void)[] = [];
+    const release = guardLeaving((leave) => {
+      held.push(leave);
+    });
+    const onClose = vi.fn();
+    try {
+      render(<MenuHost kind={kind} onClose={onClose} />);
+      expect(screen.getByTestId(TESTID[kind])).toBeInTheDocument();
+      await pressBack();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId(TESTID[kind])).toBeNull();
+      expect(held).toHaveLength(0);
+      expect(window.location.pathname).toBe(paths.match("m1"));
+      // The layer is spent: the next Back is the page's, and the leave guard holds it.
+      await pressBack();
+      expect(held).toHaveLength(1);
+      expect(window.location.pathname).toBe(paths.match("m1"));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      release();
+    }
+  }
+
+  it("R2127000 Back closes the emote picker before the live-match leave guard, and a second Back meets it", async () => {
+    await backClosesBeforeTheGuard("picker");
+  });
+
+  it("R2127000 Back closes the Mute menu before the live-match leave guard, and a second Back meets it", async () => {
+    await backClosesBeforeTheGuard("mute");
+  });
+
+  it("R2127000 inline hero-inspect emote menus add no Back layer of their own", async () => {
+    arrive();
+    const held: (() => void)[] = [];
+    const release = guardLeaving((leave) => {
+      held.push(leave);
+    });
+    const closePicker = vi.fn();
+    const closeMute = vi.fn();
+    try {
+      render(
+        <>
+          <EmoteMenu inline side="you" hand={HAND} gate={() => OPEN} onPick={noop} onClose={closePicker} />
+          <MuteMenu inline muted={false} onMute={noop} onClose={closeMute} />
+          <Path />
+        </>,
+      );
+      await pressBack();
+      // Back never reached a layer of theirs: it met the leave guard, and the menus stand (the inspect view owns them).
+      expect(held).toHaveLength(1);
+      expect(closePicker).not.toHaveBeenCalled();
+      expect(closeMute).not.toHaveBeenCalled();
+      expect(screen.getByTestId("emote-menu")).toBeInTheDocument();
+      expect(screen.getByTestId("emote-mute-menu")).toBeInTheDocument();
+      expect(window.location.pathname).toBe(paths.match("m1"));
+    } finally {
+      release();
+    }
   });
 });
 

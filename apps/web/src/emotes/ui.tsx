@@ -9,6 +9,7 @@ import type { EmojiEmoteId, EmoteId, VoiceEmoteId } from "@jackioh/shared";
 import { isVoiceEmote, type EmoteGate } from "@jackioh/shared";
 
 import { DEFAULT_LOCALE, getLocale, t } from "../i18n/i18n.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { EMOTE_MENU_EDGE_PX, EMOTE_MENU_TICK_MS } from "./config.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
@@ -34,9 +35,13 @@ export function arcDrop(index: number, count: number): number {
 }
 
 /**
- * Closes on an outside press, Escape or a drag beginning elsewhere. A press on the portrait the
- * menu hangs off (`menu`'s parent) is not outside it (R1449): its click toggles the menu itself,
- * so closing on its pointerdown would have the click open it again.
+ * Closes on an outside press, Escape or a drag beginning elsewhere — the issue's menu lifetime —
+ * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against. A
+ * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1449): that click
+ * toggles the menu shut itself, and a hold there turns it into the hero's inspect view, so closing
+ * on its pointerdown would have the click open the menu again. Back closes a menu too (R2127000):
+ * each one mounts a `BackLayer`, which closes only on Back, so a tap never fires both closes; drawn
+ * `inline` in hero inspect it mounts none, since that view is the layer.
  */
 function useMenuLifetime(open: boolean, onClose: () => void, menu: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
@@ -149,6 +154,7 @@ export function EmoteMenu({
       // non-legal target and reopen the very menu the pick just closed (issue §2).
       onClick={(event) => event.stopPropagation()}
     >
+      {inline ? null : <BackLayer onClose={onClose} />}
       <div className="emote-voice-arc" role="none">
         {voices.map((emote, index) => (
           <button
@@ -222,6 +228,7 @@ export function MuteMenu({
       // the hero would toggle it straight back open.
       onClick={(event) => event.stopPropagation()}
     >
+      {inline ? null : <BackLayer onClose={onClose} />}
       <button
         type="button"
         role="menuitem"

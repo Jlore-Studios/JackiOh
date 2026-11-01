@@ -5,6 +5,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use serde_json::Value;
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::sync::mpsc;
 
 /// How many times `settle` yields to the scheduler: enough for a frame to cross the inbox, the
@@ -18,6 +19,28 @@ const FAKE_OUTBOX_FRAMES: usize = 1 << 16;
 
 /// The close code the transport reports when the connection drops without a close frame (1006).
 const ABNORMAL_CLOSE: u16 = 1006;
+
+/// The next frame on a hand-rolled RFC 6455 client's stream, as it stands on the wire (server frames
+/// are unmasked), or `None` at the end of the stream: the TCP clients of `actor/ws_server.rs` and the
+/// piped ones of `actor/heartbeat.rs` read with it.
+pub async fn read_frame_now<S: AsyncRead + Unpin>(stream: &mut S) -> Option<(u8, Vec<u8>)> {
+    let mut head = [0u8; 2];
+    stream.read_exact(&mut head).await.ok()?;
+    let opcode = head[0] & 0x0F;
+    let mut length = u64::from(head[1] & 0x7F);
+    if length == 126 {
+        let mut extended = [0u8; 2];
+        stream.read_exact(&mut extended).await.ok()?;
+        length = u64::from(u16::from_be_bytes(extended));
+    } else if length == 127 {
+        let mut extended = [0u8; 8];
+        stream.read_exact(&mut extended).await.ok()?;
+        length = u64::from_be_bytes(extended);
+    }
+    let mut payload = vec![0u8; usize::try_from(length).ok()?];
+    stream.read_exact(&mut payload).await.ok()?;
+    Some((opcode, payload))
+}
 
 /// Let the actor and every other task on this runtime run until they are idle.
 pub async fn settle() {

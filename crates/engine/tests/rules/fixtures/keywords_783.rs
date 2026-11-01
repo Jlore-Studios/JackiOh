@@ -8,6 +8,7 @@ use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
 use super::harness::{both, spread};
+use super::prompt_harness::board;
 
 /// A Core Common card at cost 1 whose faces both print `keywords`.
 fn def(index: u32, name: &str, type_: &str, cost: i32, keywords: Value) -> CardDef {
@@ -662,6 +663,13 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
     );
     table
 });
+
+/// p1's main phase on turn 3 with 4 mana a side (`prompt_harness::board`) and these cards registered.
+pub fn board_783(seed: &str) -> GameState {
+    let state = board(seed);
+    register_keywords_783();
+    state
+}
 
 /// Merge this file's cards into whatever catalog and scripts the test registered first.
 pub fn register_keywords_783() {

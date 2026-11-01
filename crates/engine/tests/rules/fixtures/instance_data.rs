@@ -843,6 +843,15 @@ pub fn instance_game(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> G
     })
 }
 
+/// `instance_game` on turn 5, in p1's main phase: where the instance-data effect tests start.
+pub fn instance_main_phase(seed: &str) -> GameState {
+    let mut state = instance_game(seed, None);
+    state.turn = 5;
+    state.active = PlayerId::P1;
+    state.phase = Phase::Main;
+    state
+}
+
 /// A DECK_SIZE-card deck of these fixtures and vanilla fillers, for the played-out replay games.
 pub fn instance_deck(player: PlayerId) -> Vec<String> {
     let mut own: Vec<String> = [

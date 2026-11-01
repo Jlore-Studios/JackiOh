@@ -16,9 +16,10 @@ use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, already_in_match, assert_free_to_play, freeze_choice, host_busy,
+    join_refusal, read_mode_choice,
 };
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_response};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, caller_of, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seat_coin_p1_first, seat_override_of, seed_override_of};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
@@ -164,14 +165,6 @@ fn wiring_fault(message: String) -> ApiError {
     ApiError::new(ApiErrorCode::Internal, "something went wrong")
 }
 
-fn profile_of(req: &Req) -> Result<String, ApiError> {
-    match req.caller.as_ref() {
-        Some(caller) => Ok(caller.profile.id.clone()),
-        // Unreachable on an `AuthLevel::Active` route; the router resolves the caller first.
-        None => Err(ApiError::new(ApiErrorCode::Unauthorized, "sign in first")),
-    }
-}
-
 /// A room the caller may join; missing, malformed and expired are one answer, so a scan cannot tell
 /// "wrong" from "too late" (§9.4).
 async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
@@ -298,8 +291,9 @@ pub struct OpenedRoom {
 
 /// Opens a room for `ttl_ms` unjoined; a challenge's lapses with it (B48, B49).
 pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, ApiError> {
-    let profile_id = profile_of(req)?;
-    // R257, R264: choice validated like queue.
+    // ---- end Social ----
+    let profile_id = caller_of(req)?.profile.id.clone();
+    // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
     // R143, R1989000: e2e seed and seat, read first so a refused one makes no room.
     let seed = seed_override_of(app, &req.body)?;
@@ -392,7 +386,7 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
 /// POST /api/rooms/:code/join — claim room and start game (§9.5, R264); `&Arc<App>`, not SURFACE
 /// §11.2's `&App`, since `Registry::start` takes one.
 pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
+    let profile_id = caller_of(&req)?.profile.id.clone();
     let choice = read_mode_choice(&req.body)?;
     // R143, R1989000: joiner seed and seat overrides in e2e mode.
     let joiner_seed = seed_override_of(app, &req.body)?;
@@ -436,15 +430,11 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let lease = app
         .seats
         .reserve(&[&profile_id, &room.host_profile_id], seat)
-        .map_err(|taken| {
-            if taken.profile == profile_id {
-                in_game(&taken.seat)
-            } else {
-                host_busy()
-            }
-        })?;
+        .map_err(|taken| join_refusal(&profile_id, &taken))?;
 
-    // Atomic single-claim (§9.5), fenced (R1523000): past a newer epoch nothing is claimed (503).
+    // The atomic single-claim: whoever wins this statement is the guest, and there is no second
+    // winner (§9.5, mirroring `tickets_claim_pair`). Fenced first (R1523000): once a newer server's
+    // epoch has overtaken this one, nothing is claimed and the join answers 503.
     let mut tx = app.db.begin(None).await?;
     tx.seats_fence(app.seats.epoch()).await?;
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
@@ -591,15 +581,9 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             fenced?;
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             if host_seated {
-                return Err(ApiError::new(
-                    ApiErrorCode::AlreadyInMatch,
-                    "finish your current match first",
-                ));
+                return Err(already_in_match());
             }
-            return Err(ApiError::new(
-                ApiErrorCode::Conflict,
-                "The host of that room is playing another game right now.",
-            ));
+            return Err(host_busy());
         }
     }
     // R1523000: commit seat lease once match row holds both seats.
@@ -672,7 +656,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
 /// DELETE /api/rooms/:code — the host frees an unjoined room via `release_room` (§9.5, R1075000);
 /// one an open challenge holds is 409, as its challenge's cancel frees it (B49).
 pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
+    let profile_id = caller_of(&req)?.profile.id.clone();
     let code = normalize_code(&req.params.get("code").cloned().unwrap_or_default());
     let mut tx = app.db.begin(None).await?;
     let Some(room) = tx.rooms_get(&code).await? else {
@@ -702,7 +686,7 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// GET /api/rooms — list caller's active unjoined rooms (§9.5, R1075000).
 pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
+    let profile_id = caller_of(&req)?.profile.id.clone();
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
     let open = tx.rooms_open_by_host(&profile_id, now).await?;

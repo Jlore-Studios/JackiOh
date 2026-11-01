@@ -432,6 +432,11 @@ pub struct EvalWeights {
     /// and the enemy's alike. R2603000: `material` adds it, inside the card's Brittle share, for each
     /// backrow card the seat can read, on either side.
     pub activation: f64,
+    /// R2688000: the share of what a unit's next attack gives its controller through its attack hooks,
+    /// "when this attacks" and "after this attacks" (`evaluate::attack_hook_price`), that `unit_worth`
+    /// adds, inside the Brittle share, while the unit may attack, the seat's units and the enemy's
+    /// alike.
+    pub attack_hook: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -578,6 +583,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // R2564000: an untuned start for the training lanes, as R2477000's is. At 0.5 the smoke gate read
     // 20, 16 and 20 of 20; at 0, 19, 16 and 20.
     activation: 0.5,
+    // R2688000: an untuned start for the training lanes, as R2564000's is. At 0.5 the smoke gate read
+    // 20, 20 and 20 of 20; at 0, 20, 20 and 20.
+    attack_hook: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -622,6 +630,11 @@ pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
 /// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
 /// face-up backrow cards together.
 pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
+
+/// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
+/// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with a
+/// "when this attacks" or an "after this attacks" hook, on either field.
+pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -756,6 +769,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     death: 0.0,
     turn_hook: 0.0,
     activation: 0.0,
+    // R2688000 came after the gates were fixed: nothing, as it gave an attack hook.
+    attack_hook: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

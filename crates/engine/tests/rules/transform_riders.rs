@@ -12,22 +12,10 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::spell_def;
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, live, put, run_effect, set_library, slot};
-use crate::rules::fixtures::instance_data::{body, instance_game, stoic};
+use crate::rules::fixtures::harness::{in_hand, live, put, run_as_p1 as run, set_library, slot};
+use crate::rules::fixtures::instance_data::{body, instance_main_phase as game, stoic};
 
 const P1: PlayerId = PlayerId::P1;
-
-fn game(seed: &str) -> GameState {
-    let mut state = instance_game(seed, None);
-    state.turn = 5;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state
-}
-
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
-}
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("a card")

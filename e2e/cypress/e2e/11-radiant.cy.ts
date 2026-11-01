@@ -1,18 +1,20 @@
 // BUILD M8: §5.2 swaps a field card's §10.4 printed stats without rebuilding it, so its damage remains.
-// R60 makes Knockoff Temu deterministic after #94 leaves Mr. Vanilla as the sole non-Radiant candidate.
+// R60 makes Knockoff Temu deterministic: seat 1's deck is #8, #26 and #28 alone, all three dealt by
+// §2.1's opening draw of 3, so once #26 has made #28 Radiant, Mr. Vanilla is the sole non-Radiant candidate.
+// BUILD M5-T4: use `radiantSet` for the animation; `contain.text` is necessary until testids has stat selectors.
+// `cy.playByName` settles before the animation; Knockoff Temu's click is expanded to observe it.
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor } from "../../support/config.ts";
 import { RADIANT, cardId, handCardId, ts } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
 
-/** BUILD M8 seed: the required #8, #26, #31 and #94 draws arrive before §2.3's mana cap. */
+/** BUILD M8 seed: seat 2 holds #31 from its opening hand; seat 1's three cards are its opening hand. */
 const SEED = seedFor("11-radiant-442");
 
 const TURN_BUDGET = 34;
 const UNIT_LANE: Lane = 1;
 
-const GENNS_GREED = catalogId(94);
 const MATH_EQUATION = catalogId(31);
 
 /** SPEC §8 #8 Mr. Vanilla's base and Radiant stats. */
@@ -25,8 +27,7 @@ const MATH_DAMAGE = 1;
 const COSTS: Record<string, number> = {
   [CARDS.mrVanilla]: 1,
   [CARDS.glowyJellyBean]: 3,
-  [CARDS.knockoffTemu]: 2,
-  [GENNS_GREED]: 4,
+  [CARDS.knockoffTemu]: 1,
   [MATH_EQUATION]: 1,
 };
 
@@ -140,40 +141,38 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
       ensureSeat("p1");
       expectShownHealth(vanillaId, VANILLA.health - MATH_DAMAGE, VANILLA.health);
 
-      // §8 #26's R81 declared `hand` choice remains its own §10.6 picker kind.
       waitToPlay("p1", CARDS.glowyJellyBean);
       cy.gameState().then((state) => {
-        // Avoid Radiant #94, #28, and Mr. Vanilla: each changes this test's setup.
-        const steered = [CARDS.mrVanilla, CARDS.glowyJellyBean, CARDS.knockoffTemu, GENNS_GREED];
-        const target = handOf(state, "p1").find((card) => !steered.includes(card.defId));
-        expect(target, "seat 1 holds a card for Glowy Jelly Bean to convert").to.not.eq(undefined);
-        if (target === undefined) return;
-
-        cy.get(`${ts(handCardId(target.id))}${RADIANT}`).should("not.exist");
-        // Use def id: §8 gives #26, #27, and #28 ambiguous names.
+        expect(
+          handOf(state, "p1").map((card) => card.defId).sort(),
+          "seat 1 holds Glowy Jelly Bean and Knockoff Temu, #26's one declared `hand` candidate (R81)",
+        ).to.deep.eq([CARDS.glowyJellyBean, CARDS.knockoffTemu].sort());
+      });
+      // Use def id: §8 gives #26, #27, and #28 ambiguous names. #26 makes #28 Radiant, so #28 never
+      // counts itself among its own candidates (R60). A play with one candidate is sent on the click,
+      // with no picker to answer (actions.ts `settle`); specs 21 and 43 answer #26's `hand` picker.
+      cy.instanceInHand("p1", CARDS.knockoffTemu).then((temuId) => {
+        cy.get(`${ts(handCardId(temuId))}${RADIANT}`).should("not.exist");
         cy.instanceInHand("p1", CARDS.glowyJellyBean).then((beanId) => {
-          cy.playCard(beanId, { answers: [{ kind: "hand", cards: [target.id] }] });
+          cy.playCard(beanId);
         });
 
         // BUILD M5-T4's `radiantSet` confirms §5.2's hand flip.
-        cy.get(`${ts(handCardId(target.id))}${RADIANT}`).should("exist");
+        cy.get(`${ts(handCardId(temuId))}${RADIANT}`).should("exist");
         cy.gameState().then((after) => {
-          const held = handOf(after, "p1").find((card) => card.id === target.id);
+          const held = handOf(after, "p1").find((card) => card.id === temuId);
           expect(held?.radiant, "§5.2: Radiant is a flag on the instance").to.eq(true);
         });
       });
 
-      // #94 leaves Knockoff Temu as the sole candidate.
-      waitToPlay("p1", GENNS_GREED);
-      cy.playByName(nameOf(94));
-
+      waitToPlay("p1", CARDS.knockoffTemu);
       cy.gameState().then((state) => {
         const side = peek(state, "p1");
-        expect(side.library ?? [], "#94 exiled the last of the library (every other card is odd-cost)")
+        expect(side.library ?? [], "§2.1 dealt seat 1's whole three-card deck, so its library is empty")
           .to.have.length(0);
         expect(
           handOf(state, "p1").map((card) => card.defId),
-          "#94 drew the deck's only 2-cost card and exiled the rest of the hand",
+          "Knockoff Temu is all seat 1 still holds",
         ).to.deep.eq([CARDS.knockoffTemu]);
         expect(
           unitsOf(state, "p1").map((unit) => unit.id),
@@ -185,9 +184,6 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
         ).to.have.length(0);
         expect(unitById(state, "p1", vanillaId).radiant, "Mr. Vanilla is still on its base face").to.eq(
           false,
-        );
-        expect(side.mana?.current, "#94's +2 mana pays for Knockoff Temu on the same turn").to.be.at.least(
-          COSTS[CARDS.knockoffTemu] ?? 2,
         );
       });
 

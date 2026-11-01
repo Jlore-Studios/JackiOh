@@ -86,7 +86,7 @@ pub fn perfect_pool(state: Option<&GameState>, self_def_id: Option<&str>) -> Vec
 
 /// R29, R1446: the candidate pool, the perfect pool less #97, left out by its id (R387).
 pub fn candidate_defs() -> Vec<&'static CardDef> {
-    let zephyrs = crate::catalog::def_by_index(SetName::Core, ZEPHYRS_INDEX).map(|def| def.id.clone());
+    let zephyrs = crate::catalog::def_id_by_index(SetName::Core, ZEPHYRS_INDEX);
     perfect_pool(None, zephyrs.as_deref())
 }
 

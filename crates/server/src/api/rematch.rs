@@ -1,10 +1,35 @@
-//! Rematch offers after finished non-series matches (SPEC §9.5, R672, docs/v0.3.0/SURFACE.md §11.2).
+//! Rematch offers after a finished non-series match (SPEC §9.5, R672).
 //!
-//! Either seat may offer normal or double-or-nothing rematches; games are created upon equal stakes.
-//! All Random rematches deal fresh decks with lean picks (R1372, R924000); Bo1 replays frozen decks.
-//! Refuses custom cards (R915005) and mismatched catalog versions (R1638000, §9.4).
-//! Responses carry only stakes, presence booleans, and IDs (CLAUDE.md rule 7).
-//! In-memory rendezvous state (`RematchOffers`) swept after `REMATCH_OFFER_TTL_MS`.
+//! Either seat may offer a rematch, normal or double-or-nothing; a new match is created only when
+//! both seats offer equal stakes. "The opponent is still here" is their match socket being open
+//! (`Registry::presence_of`). Games of a Conquest series offer nothing: the series' continue flow
+//! owns what comes next. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
+//!
+//! R1372, R924000: an All Random rematch deals fresh decks, each seat's offer carrying its player's
+//! "More cards from" pick (`leanSet`, absent = none, or R1372's `leanNewest` from an older client; the
+//! latest offer's stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
+//!
+//! R915005: the frozen decks are asked the validator's L7 before a rematch is made, so a deck with a
+//! custom card, which plays only in practice, is refused here as at the queue (`loadout_invalid`).
+//!
+//! R1638000: a match played on a catalog version other than the server's offers no rematch. An
+//! offer on it, a person's or a ladder bot's, is `409 update_required` before it is recorded, as a
+//! room's join refuses a stale catalog (§9.4): a rematch would play the old cards, or deal today's
+//! under the old rules.
+//!
+//! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
+//!
+//! R2685000: an offer is taken only within `REMATCH_OFFER_TTL_MS` of the finished match's end (its
+//! row's `finished_at`), as a co-op Play again's is (R1398000). Past it an offer lapses silently:
+//! nothing is recorded and no game is made, but an entry that already made one still answers its id.
+//! One entry's `at` is only its latest offer's time, so a seat's mismatched offers can no longer
+//! keep an older seat's offer alive past the match's window.
+//!
+//! The offers live in memory, one map per `App` (`RematchOffers`): rendezvous state for two sockets,
+//! not rows, so a restart drops them and both clients re-offer. An entry without a created game is
+//! swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so a late poller
+//! still learns where to go. The reaper's tick sweeps every entry past that window whose finished
+//! match no actor holds (`sweep_rematch_offers`).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -16,7 +41,7 @@ use serde_json::{Value, json};
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{assert_no_custom_cards, lean_of};
+use crate::api::decks::{already_in_match, assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -58,7 +83,8 @@ struct OfferEntry {
     offers: IndexMap<PlayerId, RematchStakes>,
     /// R1372, R924000: seat -> its latest offer's "More cards from" pick.
     leans: IndexMap<PlayerId, Option<LeanPick>>,
-    /// `now` of the latest offer; the sweep reads this.
+    /// `now` of the latest offer; the sweep reads this. It is not the offer window: R2685000 counts
+    /// that from the finished match's `finished_at`, and `offer_as` takes no offer past it.
     at: i64,
     /// The game equal stakes made, once made.
     match_id: Option<String>,
@@ -100,10 +126,6 @@ fn no_such_match() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "no such match")
 }
 
-fn already_in_match() -> ApiError {
-    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
-}
-
 fn series_game() -> ApiError {
     ApiError::new(
         ApiErrorCode::SeriesGame,
@@ -139,7 +161,8 @@ fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
 
 /// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
 /// game is never swept here: the id is how a late poller finds the game, until the reaper's
-/// `sweep_rematch_offers`.
+/// `sweep_rematch_offers`. This reads the latest offer's `at`; the window an offer is taken in is the
+/// finished match's, which `offer_as` checks first (R2685000).
 fn live_entry<'a>(
     offers: &'a mut IndexMap<String, OfferEntry>,
     match_id: &str,
@@ -510,6 +533,24 @@ async fn offer_as(
     }
 
     let now = now_ms();
+    // R2685000: the window is the finished match's, not an offer's. A finished row with no end is
+    // outside it, as it is for its socket (R1285000). The offer lapses silently, recording nothing,
+    // telling no actor and making no game; an entry that already made one keeps its id, so a seat
+    // that offers or polls late still learns where to go, and any other entry is dropped.
+    if match_row
+        .finished_at
+        .is_none_or(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
+    {
+        let mut map = offers(app);
+        let answered = match map.get(&match_row.id) {
+            Some(entry) if entry.match_id.is_some() => entry.match_id.clone(),
+            _ => {
+                map.shift_remove(&match_row.id);
+                None
+            }
+        };
+        return Ok(answered);
+    }
     // One new game per pair of equal offers: check and claim run under one lock, so two offers
     // landing together cannot mint two games; a failed create clears the claim.
     let (claimed, answered) = {

@@ -165,7 +165,7 @@ fn build_degrade() -> Effect {
 /// 8. The Classic Golem token, placed per R64.
 fn build_golem() -> Effect {
     entry("golem", |_ctx| {
-        let def_id = crate::catalog::def_by_index(GOLEM_SET, GOLEM_INDEX).map(|def| def.id.clone());
+        let def_id = crate::catalog::def_id_by_index(GOLEM_SET, GOLEM_INDEX);
         match def_id {
             None => vec![],
             Some(def_id) => vec![crate::effects::summon::summon(json_as(

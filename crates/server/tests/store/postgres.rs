@@ -14,6 +14,8 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
+use super::contract::{CATALOG_VERSION, playable_ids, seed_cards};
+
 /// One transaction around one store call: begin (the role switch and the subject), the call,
 /// commit. Answers the call's value, or the first error's text; an error drops the transaction.
 macro_rules! once {
@@ -30,14 +32,9 @@ macro_rules! once {
 
 // The fixture catalog and the database setup
 
-/// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
-const CATALOG_VERSION: &str = "core-1";
-const PLAYABLE_COUNT: usize = 80;
+/// The database suite's fixture catalog is `contract.rs`'s (`CATALOG_VERSION`, `playable_ids`,
+/// `seed_cards`, which also seeds its two tokens).
 const DECK_SIZE: usize = jackioh_engine::config::DECK_SIZE as usize;
-
-fn playable_ids() -> Vec<String> {
-    (1..=PLAYABLE_COUNT).map(|i| format!("core-{i:03}")).collect()
-}
 
 /// R1310000: how many of the fixture cards are starter cards, what R111's launch grant gives.
 fn starter_count() -> usize {
@@ -45,11 +42,6 @@ fn starter_count() -> usize {
         .iter()
         .filter(|id| STARTER_CARDS.contains(&id.as_str()))
         .count()
-}
-
-/// §9.4 L3: "no Token-tagged cards" — here so the R111 launch grant can be seen skipping them.
-fn token_ids() -> Vec<String> {
-    vec!["core-001.1".to_string(), "core-002.1".to_string()]
 }
 
 const TRUNCATE: &str = "truncate
@@ -63,26 +55,6 @@ const TRUNCATE: &str = "truncate
 /// `DATABASE_URL`, or `None` when it is unset: then there is no Postgres to prove anything against.
 fn database_url() -> Option<String> {
     std::env::var("DATABASE_URL").ok().filter(|url| !url.is_empty())
-}
-
-async fn seed_cards(admin: &PgPool) {
-    sqlx::query(
-        "insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
-     select c.id, c.ord::text, 'Fixture ' || c.id, 'Core', 'Unit', '{}'::text[],
-            case when c.token then 'Token' else 'Common' end, c.token, '1'::jsonb, $3::text
-       from (
-         select t.id, false as token, t.ord from unnest($1::text[]) with ordinality as t(id, ord)
-         union all
-         select t.id, true, 1000 + t.ord from unnest($2::text[]) with ordinality as t(id, ord)
-       ) as c
-     on conflict (id) do nothing",
-    )
-    .bind(playable_ids())
-    .bind(token_ids())
-    .bind(CATALOG_VERSION)
-    .execute(admin)
-    .await
-    .expect("seed the fixture cards");
 }
 
 // Small helpers

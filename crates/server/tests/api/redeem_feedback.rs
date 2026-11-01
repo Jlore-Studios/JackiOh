@@ -5,9 +5,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
-use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
-use sha2::Sha256;
 use tower::ServiceExt;
 
 use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
@@ -21,7 +19,7 @@ use jackioh_server::config::{
 use jackioh_server::db::store::CodeAttempt;
 
 use crate::support::deps::{add_user, test_app};
-use crate::support::store::{advance, fake_lock, from, to_json};
+use crate::support::store::{advance, fake_lock, from, hmac_sha256_hex, to_json};
 
 const MS_PER_SECOND: i64 = 1000;
 
@@ -143,14 +141,7 @@ struct Hashes {
 
 impl Hashes {
     fn ip(&self, raw: &str) -> String {
-        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:ip", self.pepper).as_bytes())
-            .expect("any key length");
-        mac.update(raw.trim().to_lowercase().as_bytes());
-        mac.finalize()
-            .into_bytes()
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect()
+        hmac_sha256_hex(&format!("{}:ip", self.pepper), &raw.trim().to_lowercase())
     }
 }
 

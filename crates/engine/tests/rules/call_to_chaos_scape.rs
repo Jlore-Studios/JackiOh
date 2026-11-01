@@ -13,22 +13,11 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::P1;
 
 use crate::rules::fixtures::call_to_chaos_stinkyscape::{
-    CORVETTE, INTERCEPTOR, MELTDOWN, PIECES, PROPAGATION, SHIELD, WEAPONS, register_chaos_stinkyscape,
+    CORVETTE, INTERCEPTOR, MELTDOWN, PIECES, PROPAGATION, SHIELD, WEAPONS, stinkyscape_game as game,
 };
-use crate::rules::fixtures::harness::{new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{put, slot};
 
-fn game(seed: &str) -> GameState {
-    let mut state = new_game(seed, None);
-    register_chaos_stinkyscape();
-    state.turn = 4;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state.players.p1.hand = Vec::new();
-    state.players.p2.hand = Vec::new();
-    set_library(&mut state, P1, &[] as &[&str]);
-    state
-}
-
+/// Run `effect` as p1's, from a resolving fixture card, then the state check.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     let me = new_instance(&mut *state, CORVETTE, P1, Zone::Resolving { player: P1 });
     let mut events: Vec<GameEvent> = Vec::new();

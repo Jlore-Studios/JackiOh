@@ -186,7 +186,7 @@ impl std::fmt::Debug for HeroPower {
 }
 
 fn token_def_id(index: &str) -> Option<String> {
-    crate::catalog::def_by_index(TOKEN_SET, index).map(|def| def.id.clone())
+    crate::catalog::def_id_by_index(TOKEN_SET, index)
 }
 
 /// R103: a token summon resolves the token by catalog index, and fizzles in silence without it.

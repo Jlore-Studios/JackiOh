@@ -1,18 +1,38 @@
-//! Duos co-op rooms (fullsend SPEC S6, B33, B34, B42): room routes with `AuthLevel::Active`.
+//! Duos co-op rooms (fullsend SPEC S6, B33, B34, B42): `POST /api/duos/rooms`, `GET` and `DELETE`
+//! `/api/duos/rooms/:code`, `POST /api/duos/rooms/:code/join` and `GET /api/duos/live`, every one
+//! `AuthLevel::Active`.
 //!
-//! A room uses a `ROOM_CODE_LENGTH` code (R79, R104, R149). The host's deck or random choice is
-//! frozen when made (R253). Players must be free to play (R1065000); join reserves both seats
-//! (R1523000) and starts the match with the host as a1 and guest as a2. Co-op matches are
-//! unranked; the result lives on the match row (B40).
+//! A room is the 1v1 room's twin (`actor/rooms.rs`): a code of `ROOM_CODE_LENGTH` from the room-code
+//! alphabet (R79, R104), minted by retrying a bounded number of times (R149), the host's deck or
+//! random choice frozen when it is made (R253, through the queue's own `freeze_choice`), and a join
+//! that claims it in one statement, so the loser of a race is told the room is full and never gets a
+//! second match. The join starts the match: the host is a1 and the guest a2, the AI plays b1 and b2
+//! (`duos::engine::match_options`), the row and the claim are written in one transaction, and the
+//! actor starts on the begun state (`duos::registry`). Both people learn the match id: the guest from
+//! the join, the host from the room (or `GET /api/duos/live`).
 //!
-//! Blocks (§9.4, §13.9) make rooms appear unknown. A joined room shows only to members.
-//! Stale catalogs return `409 update_required` (§9.4); matches are pinned to their catalog (R767000).
-//! Join refusals return `409` with code `full` or `own_room` (S6).
+//! A person in a 1v1 match, a Conquest series that is not over or a live co-op match can neither make
+//! nor join a room, and a join is refused while the host is in one: the same `assert_free_to_play`
+//! and refusals (`api::decks`, R1065000) every 1v1 door answers, and the join reserves both people's
+//! seats in the seat ledger before it claims the room (R1523000). The join's claim cancels both
+//! people's open tickets, as a series' start does. Co-op games are unranked: no rating moves and no
+//! results row is written; the result lives on the match's own row (B40).
+//!
+//! A code is no key past a block (§9.4, §13.9): to an account the host has blocked, or that has
+//! blocked the host, the room answers as an unknown code does, to read and to join. The join's claim
+//! checks the block again, so one made while a join is under way stops it too. Once joined, a room
+//! answers its host and its guest alone; anyone else reads it as unknown (a join still says it is
+//! full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join under
+//! another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is refused at
+//! every door into a match), and the match is pinned to the catalog it is dealt from (R767000,
+//! `DuosMatchOptions::catalog_version`).
+//!
+//! S6's two join refusals keep the error body every route answers with, the code being S6's:
+//! `409 { "error": { "code": "full" | "own_room", "message" } }`, as `social::refused` writes them.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex};
 
-use axum::response::Response;
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
@@ -23,7 +43,7 @@ use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, lean_of,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, join_refusal, lean_of,
     read_mode_choice,
 };
 use crate::api::http::{
@@ -37,7 +57,7 @@ use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
 use crate::seats::{Seat, Taken};
-use crate::social::no_content;
+use crate::social::{no_content, refused};
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -120,11 +140,6 @@ async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result
         FrozenChoice::Random { lean } => Ok(DuosChoice::Random { lean }),
         FrozenChoice::Bo3 { .. } => Err(ApiError::internal("a trio reached a co-op room")),
     }
-}
-
-/// S6's 409: the error body every route answers with, under S6's code.
-fn refusal(status: u16, code: &str, message: &str) -> Response {
-    json_response(status, json!({ "error": { "code": code, "message": message } }))
 }
 
 /// The code a path names, normalized, or none when it could never be a room code.
@@ -359,14 +374,14 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let joiner_seed = seed_override_of(app, &req.body)?;
     let room = room_of(app, &req, &profile.id).await?;
     if room.host == profile.id {
-        return Ok(refusal(
+        return refused(
             409,
             "own_room",
             "you made that room; wait for your teammate to join",
-        ));
+        );
     }
     if room.guest.is_some() {
-        return Ok(refusal(409, "full", "someone already joined that room"));
+        return refused(409, "full", "someone already joined that room");
     }
     // §9.4: a stale catalog is refused at every door into a match. The host's deck was checked
     // against the catalog it was frozen under, which may not deal it now.
@@ -395,22 +410,16 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             seed: take_seed(&room.code, joiner_seed),
             claim_room: Some(room.code.clone()),
         },
-        |taken| {
-            // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers,
-            // and a host who holds one the host's (R1065000).
-            if taken.profile == profile.id {
-                in_game(&taken.seat)
-            } else {
-                host_busy()
-            }
-        },
+        // R1523000: a guest who holds a game meets the refusal `assert_free_to_play` answers, and a
+        // host who holds one the host's (R1065000).
+        |taken| join_refusal(&profile.id, &taken),
     )
     .await?;
     match outcome {
         CoopStartOutcome::Started => {}
         CoopStartOutcome::Blocked => return Err(not_open()),
         CoopStartOutcome::Unavailable => {
-            return Ok(refusal(409, "full", "someone already joined that room"));
+            return refused(409, "full", "someone already joined that room");
         }
     }
     tracing::info!(
@@ -434,12 +443,12 @@ pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(not_open());
     };
     if room.guest.is_some() {
-        return Ok(refusal(409, "full", "someone already joined that room"));
+        return refused(409, "full", "someone already joined that room");
     }
     let deleted = one_tx!(app.db, |t| t.duos_rooms_delete(&code, &profile.id).await?)?;
     if !deleted {
         // A guest's claim landed between the read and the delete.
-        return Ok(refusal(409, "full", "someone already joined that room"));
+        return refused(409, "full", "someone already joined that room");
     }
     forget_seed(&code);
     tracing::info!(event = "duos.room.cancelled", code = %code);

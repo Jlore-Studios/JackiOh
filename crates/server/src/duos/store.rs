@@ -298,34 +298,15 @@ mod pg {
     use sqlx::Row;
     use sqlx::postgres::PgRow;
     use time::OffsetDateTime;
-    use uuid::Uuid;
 
     use jackioh_engine::config::Difficulty;
 
     use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
     use crate::auth::is_uuid;
-    use crate::db::pg::PgTx;
+    // `db::pg`'s session and row helpers: every method re-stamps its subject first (`run_as`), so it
+    // runs as `service_role` with `request.jwt.claim.sub` the profile the call is about (or none).
+    use crate::db::pg::{PgTx, ms_of, run_as, uuid_text, uuid_text_or_null};
     use crate::db::store::StoreError;
-
-    /// Sets acting role to `service_role` and JWT sub claim.
-    const SESSION_SQL: &str =
-        "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
-    const ACTING_ROLE: &str = "service_role";
-
-    const NANOS_PER_MS: i128 = 1_000_000;
-
-    async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
-        sqlx::query(SESSION_SQL)
-            .bind(ACTING_ROLE)
-            .bind(subject.unwrap_or(""))
-            .execute(&mut **t)
-            .await?;
-        Ok(())
-    }
-
-    fn ms_of(value: OffsetDateTime) -> i64 {
-        (value.unix_timestamp_nanos() / NANOS_PER_MS) as i64
-    }
 
     fn json_text<T: serde::Serialize + ?Sized>(value: &T) -> Result<String, StoreError> {
         Ok(serde_json::to_string(value)?)
@@ -333,14 +314,6 @@ mod pg {
 
     fn difficulty_of(text: &str) -> Result<Difficulty, StoreError> {
         text.parse::<Difficulty>().map_err(StoreError::Other)
-    }
-
-    fn uuid_text(row: &PgRow, column: &str) -> Result<String, StoreError> {
-        Ok(row.try_get::<Uuid, _>(column)?.to_string())
-    }
-
-    fn uuid_or_null(row: &PgRow, column: &str) -> Result<Option<String>, StoreError> {
-        Ok(row.try_get::<Option<Uuid>, _>(column)?.map(|id| id.to_string()))
     }
 
     macro_rules! room_columns {
@@ -354,13 +327,13 @@ mod pg {
         Ok(DuosRoom {
             code: row.try_get("code")?,
             host: uuid_text(row, "host")?,
-            guest: uuid_or_null(row, "guest")?,
+            guest: uuid_text_or_null(row, "guest")?,
             difficulty: difficulty_of(&row.try_get::<String, _>("difficulty")?)?,
             host_choice: serde_json::from_value(row.try_get::<Value, _>("host_choice")?)?,
             guest_choice: guest_choice
                 .map(serde_json::from_value::<DuosChoice>)
                 .transpose()?,
-            match_id: uuid_or_null(row, "match_id")?,
+            match_id: uuid_text_or_null(row, "match_id")?,
             created_at: ms_of(row.try_get("created_at")?),
             expires_at: ms_of(row.try_get("expires_at")?),
         })
@@ -377,9 +350,10 @@ mod pg {
         Ok(DuosMatch {
             id: uuid_text(row, "id")?,
             seed: row.try_get("seed")?,
-            // R1497000: deleted account seat reads back empty (migration 0051).
-            a1: uuid_or_null(row, "a1")?.unwrap_or_default(),
-            a2: uuid_or_null(row, "a2")?.unwrap_or_default(),
+            // R1497000: a deleted account's seat (migration 0051) reads back empty, as a 1v1 seat does
+            // (db::pg, KNOWN DIVERGENCES, deleted accounts).
+            a1: uuid_text_or_null(row, "a1")?.unwrap_or_default(),
+            a2: uuid_text_or_null(row, "a2")?.unwrap_or_default(),
             difficulty: difficulty_of(&row.try_get::<String, _>("difficulty")?)?,
             options: serde_json::from_value(row.try_get::<Value, _>("options")?)?,
             created_at: ms_of(row.try_get("created_at")?),

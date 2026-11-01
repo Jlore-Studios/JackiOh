@@ -653,6 +653,7 @@ mod tests {
     use crate::cosmetics::CosmeticKind;
     use crate::cosmetics::CosmeticRarity::{Common, Epic, Legendary, Mythic, Rare};
     use crate::economy::store::CardCosmetic;
+    use crate::economy::test_support::{foil, four_foils};
     use crate::economy::tiers::RATE_TOLERANCE;
     use jackioh_engine::wire::PrintedRarity;
 
@@ -680,10 +681,6 @@ mod tests {
         }
     }
 
-    fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
-        cosmetic(id, CosmeticKind::Foil, rarity)
-    }
-
     /// An account cosmetic a pack may drop: a playmat.
     fn table(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         cosmetic(id, CosmeticKind::Table, rarity)
@@ -694,16 +691,6 @@ mod tests {
             card: Some(card_id.to_owned()),
             ..cosmetic(id, CosmeticKind::FullArt, rarity)
         }
-    }
-
-    /// One droppable foil of each cosmetic rarity the registry has.
-    fn four_foils() -> Vec<Cosmetic> {
-        vec![
-            foil("foil-common", CosmeticRarity::Common),
-            foil("foil-rare", CosmeticRarity::Rare),
-            foil("foil-epic", CosmeticRarity::Epic),
-            foil("foil-legendary", CosmeticRarity::Legendary),
-        ]
     }
 
     fn pool_of(count: usize) -> Vec<PoolCard> {

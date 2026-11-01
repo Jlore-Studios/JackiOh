@@ -4,7 +4,7 @@
 
 use jackioh_engine::testkit::*;
 
-use super::harness::setup_catalog;
+use super::harness::{new_game, set_library, setup_catalog};
 
 /// `id`, a Stinkyscape card at `index` with no text: a Unit when `stats` are given.
 fn card(
@@ -95,6 +95,20 @@ fn defs() -> Vec<CardDef> {
         defs.push(unit(id, &(210 + at).to_string(), json!(["Weapon"])));
     }
     defs
+}
+
+/// A main phase on p1's turn 4, empty hands and library and these cards registered: where the two
+/// Stinkyscape tables' tests start.
+pub fn stinkyscape_game(seed: &str) -> GameState {
+    let mut state = new_game(seed, None);
+    register_chaos_stinkyscape();
+    state.turn = 4;
+    state.active = PlayerId::P1;
+    state.phase = Phase::Main;
+    state.players.p1.hand = Vec::new();
+    state.players.p2.hand = Vec::new();
+    set_library(&mut state, PlayerId::P1, &[] as &[&str]);
+    state
 }
 
 /// The harness's catalog and scripts, plus these cards.

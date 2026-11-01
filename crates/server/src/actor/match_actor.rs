@@ -32,10 +32,10 @@ use crate::actor::contracts::{
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
-    ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
-    ack_message, aim_relay_message, card_loadouts_message, clock_message, emote_relay_message, encode,
-    error_message, loadouts_message, parse_client_message, portraits_message, prompt_for_opponent,
-    prompt_for_you, view_message,
+    ACTION_PANICKED_MESSAGE, ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage,
+    SocketErrorCode, ack_message, aim_relay_message, card_loadouts_message, clock_message,
+    emote_relay_message, encode, error_message, loadouts_message, parse_client_message, portraits_message,
+    prompt_for_opponent, prompt_for_you, view_message,
 };
 use crate::actor::registry::panic_text;
 use crate::actor::telemetry::{self, Recorder};
@@ -264,7 +264,9 @@ struct Core {
     sockets: PerPlayer<Option<Socket>>,
     /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
     attached_once: PerPlayer<bool>,
-    /// R137, R835000, R835002: abuse guard per home seat (flood window, refusals, malformed frames).
+    /// R137, R835000, R835002, R2686000: each seat's abuse guard (`actor::guard`), by home seat: its
+    /// action flood window, its refusals toward the unusual-rejection alert, its malformed frames
+    /// and when its socket's last hello was answered.
     guards: PerPlayer<SeatGuard>,
     /// R835001: socket generation for queued unrun Hello per seat.
     hello_pending: PerPlayer<Option<u64>>,
@@ -409,11 +411,7 @@ fn persona_for(
 
 /// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
 fn panicked_answer(nonce: &str) -> ServerMessage {
-    error_message(
-        SocketErrorCode::Internal,
-        "the server could not apply this action; it has been reported",
-        Some(nonce),
-    )
+    error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
 }
 
 fn panic_message(error: tokio::task::JoinError) -> String {
@@ -1855,10 +1853,15 @@ impl MatchActor {
             Ok(ClientMessage::Hello(_)) => {
                 // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: a Hello
                 // while one for the same home and socket generation is still queued is absorbed —
-                // reconnect is idempotent — so a hello flood costs one view push. A newer
-                // generation (a reattach) always enqueues.
+                // reconnect is idempotent — so a hello flood costs one view push. R2686000: one
+                // that finds none queued is still dropped, unanswered and with the socket left
+                // open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered on
+                // this socket, so a client that sends again as each answer arrives costs one view
+                // per interval. A newer generation (a reattach) always enqueues.
                 let generation = core.socket_generation[home];
-                if core.hello_pending[home] != Some(generation) {
+                if core.hello_pending[home] != Some(generation)
+                    && core.guards[home].hello_answer_allowed(generation, now_ms())
+                {
                     core.hello_pending[home] = Some(generation);
                     self.enqueue(Task::Hello { home, generation });
                 }
@@ -2386,7 +2389,11 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // closed with 1008. Its leaving changes only the count the players are told.
 
 use crate::actor::protocol::watchers_frame;
-use crate::actor::ws_server::WS_CLOSE;
+// RFC 6455's normal closure and "going away" (`ws_server`'s): a watcher's socket is closed with the
+// first when a newer socket of the same account replaces it or once it has had a finished match's
+// last view (R1107000), and with the second when the actor goes (wire vocabulary, like
+// `CLOSE_POLICY_VIOLATED`).
+use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::parse_watch_hello;
 
@@ -2394,12 +2401,6 @@ use crate::social::watch::parse_watch_hello;
 /// (`social::watch`), so a socket learns that it may no longer watch, never which change said so.
 pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 
-/// RFC 6455's normal closure and "going away": a watcher's socket is closed with the first when a
-/// newer socket of the same account replaces it or once it has had a finished match's last view
-/// (R1107000), and with the second when the actor goes (wire vocabulary, like
-/// `CLOSE_POLICY_VIOLATED`).
-const CLOSE_NORMAL: u16 = 1000;
-const CLOSE_GOING_AWAY: u16 = 1001;
 /// R1107000: what a finished match's watcher's close says, once it has been sent its seat's last view.
 const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 
@@ -2657,8 +2658,9 @@ impl MatchActor {
         else {
             return;
         };
-        // R2609000: one answer per WATCH_HELLO_INTERVAL_MS; a hello sooner is dropped unanswered.
-        if !watcher.guard.hello_answer_allowed(now_ms()) {
+        // R2609000: one answer per WATCH_HELLO_INTERVAL_MS; a hello sooner is dropped unanswered. The
+        // watcher's id is its one generation (R2686000 gives a seat's socket the same gate).
+        if !watcher.guard.hello_answer_allowed(id, now_ms()) {
             return;
         }
         watcher.socket.send(record.frame.as_str());

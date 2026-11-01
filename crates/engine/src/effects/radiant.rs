@@ -10,7 +10,7 @@ use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, pl
 use crate::faces::card_type_of;
 use crate::rng::Rng;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance, find_instance_mut};
+use crate::state::{CardInstance, find_instance_mut};
 use crate::wire::{CardType, GameEvent, Keyword, OneOrMany, PlayerId, Row, Zone, ZoneName};
 use crate::zones::{StandingAt, acting_on};
 
@@ -59,9 +59,7 @@ fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
 /// hand or #26's pick was Radiant already, the face R177 hides (random picks take non-Radiant cards
 /// only, R60). `card` is a snapshot; the card is read again by its id and written there.
 pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> bool {
-    let card = find_instance(ctx.state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone());
+    let card = crate::zones::live_or(ctx.state, card);
     if card.radiant {
         if hidden_from_someone(ctx, &card) {
             ctx.events.push(GameEvent::RadiantSet {
@@ -160,9 +158,7 @@ pub fn clear_radiant(args: RadiantTarget) -> Effect {
         else {
             return;
         };
-        let card = find_instance(ctx.state, &card.id)
-            .cloned()
-            .unwrap_or_else(|| card.clone());
+        let card = crate::zones::live_or(ctx.state, &card);
         if !card.radiant {
             return;
         }

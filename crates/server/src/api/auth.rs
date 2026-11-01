@@ -17,7 +17,8 @@ use serde_json::{Value, json};
 
 use crate::api::consent::{age_check_owed, terms_owed};
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, log_info, now_ms, rate_limited,
+    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, caller_of, json, log_info, now_ms,
+    rate_limited,
 };
 use crate::api::username::own_username;
 use crate::app::App;
@@ -44,11 +45,7 @@ const ACCOUNT_DELETION_IN_MATCH_MESSAGE: &str =
 const ACCOUNT_DELETION_IN_SERIES_MESSAGE: &str =
     "Finish your Conquest series before you delete your account.";
 
-fn unauthorized() -> ApiError {
-    ApiError::new(ApiErrorCode::Unauthorized, "sign in first")
-}
-
-/// A non-empty string field, or a 400 naming it.
+/// TS `str(body, key)` (http.ts): a non-empty string field, or a 400 naming it.
 fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
     match body.get(key) {
         Some(Value::String(value)) if !value.is_empty() => Ok(value.clone()),
@@ -57,12 +54,6 @@ fn required_str(body: &Value, key: &str) -> Result<String, ApiError> {
             format!("\"{key}\" must be a string"),
         )),
     }
-}
-
-/// The caller of a route that declared `User` or `Active`; the guard is here because `Req` types it
-/// optional.
-fn caller_of(req: &Req) -> Result<&Caller, ApiError> {
-    req.caller.as_ref().ok_or_else(unauthorized)
 }
 
 /// Anything the provider rejects becomes a 401 rather than a 500: a rejected sign-in is an expected

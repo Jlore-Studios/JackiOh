@@ -1,6 +1,32 @@
-//! Rematch offers after finished non-series matches (SPEC §9.5, R672).
-//! Rulings: R672 (double-or-nothing Glicko delta), R1372/R924000 (All Random lean),
-//! R1638000 (stale catalog rejects rematch with 409).
+//! Rematch offers after a finished non-series match (SPEC §9.5, R672):
+//! `POST`/`GET /api/matches/:matchId/rematch` (`src/api/rematch.rs`), the rating move a
+//! double-or-nothing rematch makes (`src/api/ranked.rs`, `src/api/results.rs`), and the presence
+//! the registry reports off the live actor's sockets (`src/actor/registry.rs`,
+//! `src/actor/match_actor.rs`).
+//!
+//!  - **R672**: a double-or-nothing rematch is ranked-only and doubles each side's Glicko rating
+//!    delta, with deviation and volatility from the single update.
+//!  - Equal stakes from both seats create exactly one match with the finished decks, a fresh seed
+//!    and the same seats; mismatched stakes create nothing.
+//!  - A non-seat learns nothing (404); a live match (422), a series game (422) and a double from
+//!    an unranked match (422) are refused.
+//!  - Stale offers are ignored past `REMATCH_OFFER_TTL_MS`; `opponentHere` follows the opponent's
+//!    socket, false once it closes or the actor is gone.
+//!  - **R2685000**: an offer is taken only within `REMATCH_OFFER_TTL_MS` of the match's end, so a
+//!    seat's mismatched offers cannot keep an older one alive; a late one records nothing, though an
+//!    entry that made a game still answers its id.
+//!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
+//!    status names the mode the rematch plays.
+//!  - **R924000**: each seat's latest offer picks the set its deck leans on.
+//!  - **R1638000**: a match played on an earlier catalog offers no rematch: every offer, a ladder
+//!    bot's too, is 409 `update_required`, and nothing is kept or made.
+//!
+//! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
+//! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
+//! reached for real (sockets on a live actor; the order of the store's calls).
+//!
+//! The offers are held per app (`App::rematch_offers`), so a test's sweep reaches only its own
+//! offers; each test still names its own profiles and matches.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -652,34 +678,111 @@ mod rematch_offers {
         assert_eq!(code, 400);
     }
 
+    /// `REMATCH_OFFER_TTL_MS` as a clock advance.
+    fn ttl() -> Duration {
+        Duration::from_millis(u64::try_from(REMATCH_OFFER_TTL_MS).expect("a ttl"))
+    }
+
     #[tokio::test(start_paused = true)]
-    async fn a_stale_offer_is_ignored_past_the_ttl() {
+    async fn r2685000_an_offer_outside_the_matchs_window_records_nothing() {
         let app = test_app().await;
-        let (a, b, finished) = names("stale");
+        let (a, b, finished) = names("r2685-late");
         let token_a = active_profile(&app, &a, 1000.0).await;
         let token_b = active_profile(&app, &b, 1000.0).await;
         finished_match(&app, &finished, &a, &b, json!({})).await;
 
+        // A offered inside the window; one millisecond past it B's offer is the first the server
+        // reads: it lapses silently, so no game is made and A's offer is gone, not B's to meet.
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
-        tokio::time::advance(Duration::from_millis(
-            u64::try_from(REMATCH_OFFER_TTL_MS).expect("a ttl") + 1,
-        ))
-        .await;
-
-        // A's offer lapsed, so B's is the first live one: no game, and A must offer again.
-        assert_eq!(
-            offer(&app, &token_b, &finished, STAKE_NORMAL).await.1["matchId"],
-            Value::Null
-        );
+        assert_eq!(rematch_offer_count(&app), 1);
+        tokio::time::advance(ttl() + Duration::from_millis(1)).await;
+        let (code, answer) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!((code, &answer["matchId"]), (200, &Value::Null));
         assert!(live_ids(&app).await.is_empty());
+        assert_eq!(rematch_offer_count(&app), 0);
+        let (_, seen_by_a) = status(&app, &token_a, &finished).await;
+        assert_eq!(seen_by_a["youOffered"], Value::Null);
+        assert_eq!(seen_by_a["opponentOffer"], Value::Null);
+        assert_eq!(seen_by_a["matchId"], Value::Null);
+
+        // A finished row with no end is outside every window, as for its socket (R1285000): it
+        // takes no offer, even one sent at once, and keeps nothing.
+        let (c, d, endless) = names("r2685-endless");
+        let token_c = active_profile(&app, &c, 1000.0).await;
+        active_profile(&app, &d, 1000.0).await;
+        finished_match(&app, &endless, &c, &d, json!({ "finishedAt": null })).await;
+        let (code, answer) = offer(&app, &token_c, &endless, STAKE_NORMAL).await;
+        assert_eq!((code, &answer["matchId"]), (200, &Value::Null));
+        assert_eq!(rematch_offer_count(&app), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2685000_mismatched_offers_cannot_extend_the_window_from_the_matchs_end() {
+        let app = test_app().await;
+        let (a, b, finished) = names("r2685-refresh");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+        let minutes = |count: u64| Duration::from_secs(60 * count);
+
+        // Minute 1: A offers and leaves. Minute 9: B offers other stakes, which a shared clock
+        // would count as a fresh offer. Minute 11: B asks A's stakes, past the ten minutes the
+        // match's end gave A's offer.
+        tokio::time::advance(minutes(1)).await;
         assert_eq!(
-            status(&app, &token_a, &finished).await.1["youOffered"],
+            offer(&app, &token_a, &finished, STAKE_NORMAL).await.1["matchId"],
             Value::Null
         );
+        tokio::time::advance(minutes(8)).await;
+        assert_eq!(
+            offer(&app, &token_b, &finished, STAKE_DOUBLE).await.1["matchId"],
+            Value::Null
+        );
+        tokio::time::advance(minutes(2)).await;
+        let (code, answer) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!((code, &answer["matchId"]), (200, &Value::Null));
+
+        assert!(live_ids(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, &a).await, Value::Null);
+        assert_eq!(in_match_of(&app, &b).await, Value::Null);
+        assert_eq!(rematch_offer_count(&app), 0);
+        let (_, seen_by_a) = status(&app, &token_a, &finished).await;
+        assert_eq!(seen_by_a["youOffered"], Value::Null);
+        assert_eq!(seen_by_a["opponentOffer"], Value::Null);
+        assert_eq!(seen_by_a["matchId"], Value::Null);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2685000_a_late_offer_keeps_the_id_of_a_rematch_already_made() {
+        let app = test_app().await;
+        let (a, b, finished) = names("r2685-made");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        // The match ended `TTL - 1` ms ago: the equal offers below are the last the window takes.
+        let ended = now_ms() - REMATCH_OFFER_TTL_MS + 1;
+        finished_match(&app, &finished, &a, &b, json!({ "finishedAt": ended })).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
 
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
-        let (_, created) = status(&app, &token_b, &finished).await;
-        assert_ne!(created["matchId"], Value::Null);
+        let (_, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        let rematch = created["matchId"].clone();
+        assert_ne!(rematch, Value::Null);
+        let live = live_ids(&app).await;
+        assert_eq!(live, vec![rematch.clone()]);
+
+        // The window has closed: a retried offer and a poll still find the one game, and the late
+        // offer neither makes a second nor changes the entry.
+        tokio::time::advance(Duration::from_millis(2)).await;
+        let (code, retried) = offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        assert_eq!((code, &retried["matchId"]), (200, &rematch));
+        let (_, other) = offer(&app, &token_b, &finished, STAKE_DOUBLE).await;
+        assert_eq!(other["matchId"], rematch);
+        let (_, seen_by_b) = status(&app, &token_b, &finished).await;
+        assert_eq!(seen_by_b["matchId"], rematch);
+        assert_eq!(seen_by_b["youOffered"], json!(STAKE_NORMAL));
+        assert_eq!(live_ids(&app).await, live);
+        assert_eq!(rematch_offer_count(&app), 1);
     }
 }
 

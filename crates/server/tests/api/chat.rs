@@ -10,8 +10,8 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{CHAT_MAX_CHARS, CHAT_MESSAGES_PER_MINUTE, CHAT_PAGE, CHAT_RETENTION_DAYS};
 use jackioh_server::db::store::{ChatMessageRow, StoreError};
 
-use crate::support::deps::{add_user, call, empty_test_app};
-use crate::support::store::{advance, fake, uuid};
+use crate::support::deps::{call, empty_test_app};
+use crate::support::store::{Account, account, advance, befriend, fake};
 
 /// Unit conversions, not configuration.
 const MINUTE_MS: u64 = 60_000;
@@ -48,32 +48,6 @@ fn encode_query(raw: &str) -> String {
         .collect()
 }
 
-struct Account {
-    id: String,
-    name: String,
-    token: String,
-}
-
-async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    let id = uuid(n);
-    let user_id = format!("user-{n}");
-    let tag = i64::from(n);
-    fake(app).lock().await.seed_profile(json!({
-        "id": id,
-        "userId": user_id,
-        "status": "active",
-        "username": base,
-        "usernameTag": tag,
-        "usernamePrompted": true,
-    }));
-    let token = add_user(app, &user_id, &format!("{user_id}@example.test"), true);
-    Account {
-        id,
-        name: format!("{base}#{tag}"),
-        token,
-    }
-}
-
 async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
     (status, body)
@@ -88,28 +62,6 @@ fn code_is(body: &Value, code: &str) -> bool {
     ]
     .iter()
     .any(|value| value.as_str() == Some(code))
-}
-
-async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
-    let (status, body) = api(
-        app,
-        "POST",
-        "/api/friends/requests",
-        &a.token,
-        json!({ "username": b.name }),
-    )
-    .await;
-    assert_eq!(status, 201, "{body}");
-    let request_id = body["requestId"].as_str().expect("a request id").to_string();
-    let (status, body) = api(
-        app,
-        "POST",
-        &format!("/api/friends/requests/{request_id}/accept"),
-        &b.token,
-        Value::Null,
-    )
-    .await;
-    assert_eq!(status, 200, "{body}");
 }
 
 async fn send(app: &Arc<App>, from: &Account, to: &Account, body: &str) -> (u16, Value) {

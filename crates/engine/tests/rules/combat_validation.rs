@@ -6,35 +6,17 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{
     big_dfender, charger, deft_duelist, pacifist, plain, rusher, stacker, taunter, zero_attack,
 };
-use crate::rules::fixtures::harness::{act, events_of_type, new_game, next_nonce, put, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, new_game, next_nonce, past_the_mulligans as playing, put, slot,
+};
 
-/// An `ActionInput` from a JSON body (SURFACE §8).
-fn input(body: Value) -> ActionInput {
-    json_as(body)
-}
-
+/// An attack action from p1 (TS `attackVia(state, attackerId, targetId, player = "p1")`; no caller
+/// names another player).
 fn attack_via(state: &GameState, attacker_id: &str, target_id: &str) -> ReduceResult {
     let action: Action = json_as(json!({
         "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p1", "nonce": next_nonce()
     }));
     reduce(state, &action)
-}
-
-/// Past the mulligans, in the main phase of p1's first turn.
-fn playing(seed: &str) -> GameState {
-    let mut state = begin_game(&new_game(seed, None)).state;
-    for player in [P1, P2] {
-        let keep: Vec<String> = state.players[player]
-            .hand
-            .iter()
-            .map(|card| card.id.clone())
-            .collect();
-        state = act(
-            &state,
-            input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
-        );
-    }
-    state
 }
 
 fn on_unit(instance: &CardInstance) -> AttackTarget {

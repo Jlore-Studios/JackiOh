@@ -22,7 +22,7 @@ use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, JLORE_COOP_LOSS,
     JLORE_GAMES_DAILY_CAP, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS,
     MATCH_SERVER_ACTION_RETRY_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
-    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
+    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS, WATCH_HELLO_INTERVAL_MS,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
@@ -31,9 +31,9 @@ use jackioh_server::economy::rewards::{GameMode, game_xp};
 use jackioh_server::economy::store::{JloreGrant, JloreReason};
 
 use super::ws_server::encode_query;
-use crate::support::deps::{add_user, call, empty_test_app, record_logs};
+use crate::support::deps::{call, empty_test_app, record_logs};
 use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
-use crate::support::store::{fake, uuid};
+use crate::support::store::{Account, account, fake, uuid};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -416,35 +416,9 @@ impl WsClient {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
 // Accounts and requests
-
-/// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.
-pub(super) struct Account {
-    pub(super) id: String,
-    pub(super) name: String,
-    pub(super) token: String,
-}
-
-/// An active account, username `base#n`.
-pub(super) async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    let id = uuid(n);
-    let user_id = format!("user-{n}");
-    let tag = i64::from(n);
-    fake(app).lock().await.seed_profile(json!({
-        "id": id,
-        "userId": user_id,
-        "status": "active",
-        "username": base,
-        "usernameTag": tag,
-        "usernamePrompted": true,
-    }));
-    let token = add_user(app, &user_id, &format!("{user_id}@example.test"), true);
-    Account {
-        id,
-        name: format!("{base}#{tag}"),
-        token,
-    }
-}
+// ---------------------------------------------------------------------------------------------
 
 pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
@@ -2068,7 +2042,89 @@ mod hello_coalescing {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// R2686000 — a person's later hellos are answered once per interval, as a watcher's are
+// ---------------------------------------------------------------------------------------------
+
+mod r2686000_player_hello_limit {
+    use super::*;
+
+    /// A script's burst of hellos on one socket, each sent after the previous reply had arrived.
+    const HELLO_BURST: usize = 10;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2686000_duos_hellos_are_answered_once_per_interval_actions_continue_and_a_new_generation_answers_at_once()
+     {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        h.ai_mulligans_answered(&a1).await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let interval = ms(WATCH_HELLO_INTERVAL_MS);
+        let from = a1.received();
+
+        // Ten hellos on one socket, each sent after the last had been run and answered, so each would
+        // cost its own view were only R835001's coalescing of queued hellos holding them: one is
+        // answered, and the socket stays open.
+        let started = Instant::now();
+        for _ in 0..HELLO_BURST {
+            a1.send_json(hello(&h.match_id)).await;
+            settle().await;
+            actor.idle().await;
+            settle().await;
+        }
+        assert_eq!(a1.of_type_since(from, "view").len(), 1, "{:?}", a1.frames());
+        assert_eq!(a1.close_code(), None);
+        assert_eq!(Instant::now(), started, "the clock stood still for the burst");
+
+        // The hello that comes a moment short of the interval is dropped, the one at it answered.
+        tokio::time::advance(interval - Duration::from_millis(1)).await;
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(a1.of_type_since(from, "view").len(), 1);
+        tokio::time::advance(Duration::from_millis(1)).await;
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(a1.of_type_since(from, "view").len(), 2);
+        assert_eq!(a1.close_code(), None);
+
+        // The gate is closed again, and an action is neither delayed nor refused by it.
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        let before = Instant::now();
+        h.keep(&a1, "keep-r2686000").await;
+        assert_eq!(Instant::now(), before, "the ack came without the clock moving");
+
+        // A reattach is a new socket generation: its first later hello is answered at once, however
+        // recent the old socket's last answer, and its second, so soon after, is not.
+        let revived = h.seat(&h.host).await;
+        settle().await;
+        let seen = revived.received();
+        revived.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(
+            revived.of_type_since(seen, "view").len(),
+            1,
+            "{:?}",
+            revived.frames()
+        );
+        revived.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(revived.of_type_since(seen, "view").len(), 1);
+        assert_eq!(revived.close_code(), None);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // B40, §9.1 — a rebuild, and none for a socket that holds no seat
+// ---------------------------------------------------------------------------------------------
 
 mod b40_the_rebuild {
     use super::*;
@@ -2700,6 +2756,53 @@ mod r2478000_co_op_and_watch_upgrades_count_against_the_accounts_budget {
                 "{path}"
             );
             assert!(client.of_type("view").is_empty(), "{path}: {:?}", client.frames());
+        }
+    }
+}
+
+mod an_account_that_is_not_active_is_refused_the_co_op_and_watch_sockets {
+    //! §9.4's gate on `/ws/duos` and `/ws/watch`, as on `/ws/match` (`ws_server.rs`): a pending or
+    //! banned account's upgrade is answered `forbidden` with the gate's own words and closed with
+    //! R148's 4403, before any hello is read.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_pending_or_banned_accounts_co_op_or_watch_upgrade_is_closed_with_4403() {
+        let app = empty_test_app().await;
+        let served = serve(&app);
+        for (n, status, message) in [
+            (1u32, "pending", "redeem an invite code to activate this account"),
+            (2, "banned", "this account is banned"),
+        ] {
+            let user_id = format!("user-{n}");
+            fake(&app).lock().await.seed_profile(json!({
+                "id": uuid(n),
+                "userId": user_id,
+                "status": status,
+            }));
+            let token = add_user(&app, &user_id, &format!("{user_id}@example.test"), true);
+            for path in [DUOS_PATH, WATCH_PATH] {
+                let client = served.connect(path, &token).await;
+                let (_, _, refusal) = client
+                    .wait_for(0, PROMPTLY, |frame| {
+                        frame["type"] == "error" && frame["code"] == "forbidden"
+                    })
+                    .await
+                    .unwrap_or_else(|| panic!("{status} {path}: no forbidden: {:?}", client.frames()));
+                assert_eq!(refusal["message"], message, "{status} {path}");
+                assert_eq!(
+                    client.wait_closed(PROMPTLY).await,
+                    Some(WS_CLOSE.forbidden),
+                    "{status} {path}"
+                );
+                assert!(
+                    client.of_type("view").is_empty(),
+                    "{status} {path}: {:?}",
+                    client.frames()
+                );
+            }
         }
     }
 }

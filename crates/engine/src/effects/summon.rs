@@ -278,9 +278,7 @@ fn summon_onto(
             });
         }
     }
-    let placed = find_instance(ctx.state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone());
+    let placed = crate::zones::live_or(ctx.state, card);
     if card_type_of(ctx.state, &placed) == CardType::FieldSpell
         && let Some(live) = find_instance_mut(ctx.state, &card.id)
     {

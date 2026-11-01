@@ -180,6 +180,7 @@ pub(crate) const RATE_TOLERANCE: f64 = 0.02;
 mod tests {
     use super::*;
     use crate::config::{COSMETIC_PACK_FLOOR_RARITY, PACK_FLOOR_RARITY};
+    use crate::economy::test_support::card_place;
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
 
     /// The draws a seeded run takes per table.
@@ -203,13 +204,6 @@ mod tests {
             counts[place(tier)] += 1;
         }
         counts
-    }
-
-    fn card_place(rarity: PrintedRarity) -> usize {
-        PrintedRarity::ALL
-            .iter()
-            .position(|each| *each == rarity)
-            .expect("a printed rarity")
     }
 
     fn cosmetic_place(rarity: CosmeticRarity) -> usize {

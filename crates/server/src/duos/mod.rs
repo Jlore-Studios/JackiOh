@@ -29,7 +29,7 @@ use crate::actor::protocol::SERVER_NONCE_PREFIX;
 use crate::app::{App, now_ms};
 use crate::config::{
     DUOS_ROOM_TTL_MS, JLORE_GAMES_DAILY_CAP, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
-    MATCH_REAPER_INTERVAL_SECONDS,
+    MATCH_REAPER_INTERVAL_SECONDS, MS_PER_DAY,
 };
 use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::duos::store::{DuosActionRow, DuosMatch, action_of};
@@ -39,9 +39,6 @@ use crate::economy::rewards::{
 };
 
 pub use registry::{DuosRegistry, registry};
-
-/// Unit conversion, not configuration.
-const MS_PER_DAY: i64 = 86_400_000;
 
 /// When `row`'s match reaches the hard ceiling (§9.5, R79). R1047000: derived from the row and never
 /// stored, so a rebuilt actor keeps the match's own deadline.

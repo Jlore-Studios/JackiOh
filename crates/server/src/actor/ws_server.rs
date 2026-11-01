@@ -43,7 +43,7 @@ use crate::config::{
     DEFAULT_TRUSTED_PROXY_HOPS, REMATCH_OFFER_TTL_MS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
     WS_MAX_CONNECTIONS_PER_ADDRESS, WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
-use crate::db::store::MatchStatus;
+use crate::db::store::{MatchStatus, Profile};
 
 /// SPEC §9.2: one WebSocket per player, upgraded on the same listener the API serves.
 pub const WS_PATH: &str = "/ws/match";
@@ -85,11 +85,12 @@ pub const WS_CLOSE: WsClose = WsClose {
 /// RFC 6455's "message too big".
 const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
 
-/// RFC 6455's normal closure.
-const CLOSE_NORMAL: u16 = 1000;
+/// RFC 6455's normal closure: the default close, and the match and co-op actors' for a socket they
+/// are done with (replaced, detached, or a finished match's watcher).
+pub const CLOSE_NORMAL: u16 = 1000;
 
-/// RFC 6455's "going away": the server is shutting down (#861).
-const CLOSE_GOING_AWAY: u16 = 1001;
+/// RFC 6455's "going away": the server is shutting down (#861), or an actor is going.
+pub const CLOSE_GOING_AWAY: u16 = 1001;
 
 /// How long a socket the server closed waits for the peer's half of the closing handshake before
 /// the connection is dropped.
@@ -357,13 +358,14 @@ async fn pump(mut ws: WebSocket, socket: Socket, mut frames: mpsc::Receiver<Sock
 // The upgrade
 
 /// What refused a socket after its upgrade: a refusal with its close code and message, or a fault.
-enum UpgradeFailure {
+/// `/ws/duos` and `/ws/watch` are refused with it too (`duos::ws`, `social::watch`).
+pub(crate) enum UpgradeFailure {
     Refused { code: u16, message: String },
     Threw(String),
 }
 
 impl UpgradeFailure {
-    fn refused(code: u16, message: &str) -> UpgradeFailure {
+    pub(crate) fn refused(code: u16, message: &str) -> UpgradeFailure {
         UpgradeFailure::Refused {
             code,
             message: message.to_string(),
@@ -446,13 +448,16 @@ async fn seats_finished_match(
     Ok(in_window && (match_row.players.0 == profile_id || match_row.players.1 == profile_id))
 }
 
-/// The authentication and the attach; any failure is reported to `refuse`.
-async fn upgrade_socket(
+/// The account behind an upgrade's token (R1379000), as every socket authenticates it: no token, one
+/// the auth refuses or no profile is 4401 "sign in first"; past the account's R109 budget 4429
+/// (R2478000); and §9.4's gate refuses with its own words and 4403. `path` names the socket in the
+/// budget's log line. `/ws/duos` and `/ws/watch` authenticate through it (`duos::ws`,
+/// `social::watch`).
+pub(crate) async fn authenticate_upgrade(
     app: &Arc<App>,
-    socket: &Socket,
-    query: &[(String, String)],
     token: Option<String>,
-) -> Result<(), UpgradeFailure> {
+    path: &str,
+) -> Result<Profile, UpgradeFailure> {
     let Some(token) = token else {
         return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first"));
     };
@@ -462,7 +467,7 @@ async fn upgrade_socket(
     };
 
     // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
-    let profile = match upgrade_profile(app, &user, WS_PATH).await {
+    let profile = match upgrade_profile(app, &user, path).await {
         Ok(Some(profile)) => profile,
         Ok(None) => return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first")),
         Err(error) if error.code == ApiErrorCode::RateLimited => {
@@ -473,6 +478,17 @@ async fn upgrade_socket(
 
     // §9.4's gate, from the same function the HTTP router uses.
     assert_active(&profile).map_err(|error| UpgradeFailure::api(&error))?;
+    Ok(profile)
+}
+
+/// The authentication and the attach; any failure is reported to `refuse`.
+async fn upgrade_socket(
+    app: &Arc<App>,
+    socket: &Socket,
+    query: &[(String, String)],
+    token: Option<String>,
+) -> Result<(), UpgradeFailure> {
+    let profile = authenticate_upgrade(app, token, WS_PATH).await?;
 
     let asked = query_param(query, "matchId");
     let Some(match_id) = asked.or_else(|| profile.in_match_id.clone()) else {

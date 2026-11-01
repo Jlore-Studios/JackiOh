@@ -21,7 +21,7 @@ use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
-use crate::support::store::{advance, fake_read, fake_ref, store, to_json};
+use crate::support::store::{advance, assert_match, fake_read, fake_ref, store, to_json};
 
 const ALICE: &str = "profile-alice";
 const BOB: &str = "profile-bob";
@@ -38,23 +38,11 @@ const ALICE_ACCOUNT: (&str, &str) = ("e2e-p1", "e2e-token-p1");
 const BOB_ACCOUNT: (&str, &str) = ("e2e-p2", "e2e-token-p2");
 const STRANGER_ACCOUNT: (&str, &str) = ("e2e-pending", "e2e-token-pending");
 
+// ---------------------------------------------------------------------------
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
+// ---------------------------------------------------------------------------
 
-fn assert_match(actual: &Value, expected: &Value) {
-    fn matches(actual: &Value, expected: &Value) -> bool {
-        match (actual, expected) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
-            }
-            _ => actual == expected,
-        }
-    }
-    assert!(matches(actual, expected), "expected {actual} to match {expected}");
-}
-
+/// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     Value::Array(
         array

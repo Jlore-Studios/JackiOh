@@ -237,9 +237,7 @@ pub fn is_spent(state: &GameState, trap: &CardInstance) -> bool {
 /// §3.2: backrow cards go to the owner's graveyard when their effect ends, a Field Trap excepted, which is
 /// face-up to both players from then on (R33). R61: a trap that fired is consumed whatever its effects did.
 pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
-    let mut card = find_instance(sink.state, &instance.id)
-        .cloned()
-        .unwrap_or_else(|| instance.clone());
+    let mut card = crate::zones::live_or(sink.state, instance);
     card.face_up = Some(true);
     if let Some(live) = find_instance_mut(sink.state, &instance.id) {
         live.face_up = Some(true);

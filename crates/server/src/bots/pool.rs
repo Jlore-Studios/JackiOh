@@ -33,18 +33,15 @@ use crate::config::{
     BOT_GRIND_GAP, BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY,
     BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
     BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
-    CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
+    CARD_STATS_MIN_SAMPLE, MS_PER_DAY, MS_PER_SECOND, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
     BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::username::{normalize_username, username_key};
 
-// Unit conversions, not configuration.
-const MS_PER_DAY: i64 = 86_400_000;
-const MS_PER_SECOND: i64 = 1000;
-
-/// R641000: the name a bot's trio is frozen under; no client reads it (R336).
+/// R641000: the name a bot's trio is frozen under. No client reads it: a series shows a player only
+/// which of the opponent's slots have won (R336).
 const TRIO_NAME: &str = "Conquest";
 
 /// R1454: the pool's size for `weekly` people who finished a live game in the last

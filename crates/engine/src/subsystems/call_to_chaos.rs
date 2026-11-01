@@ -58,7 +58,7 @@ fn sink_of<'c>(ctx: &'c mut EffectContext<'_>) -> EngineSink<'c> {
 
 /// §7: a token's def id, from its Core catalog index.
 fn token_def_id(index: &str) -> Option<String> {
-    crate::catalog::def_by_index(TOKEN_SET, index).map(|def| def.id.clone())
+    crate::catalog::def_id_by_index(TOKEN_SET, index)
 }
 
 /// An entry's part kind, spelled out since a kind is a `&'static str`.

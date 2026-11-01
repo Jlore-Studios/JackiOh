@@ -30,7 +30,7 @@ use jackioh_server::economy::store::CardPicks;
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::{fake, from, q, to_json};
+use crate::support::store::{fake, from, named_cards, q, to_json};
 
 const MATCH_ID: &str = "match-bot-seat";
 const PERSON: &str = "profile-person";
@@ -1167,27 +1167,6 @@ async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
     let first = drawn_think_ms(&m.seed, bot, 0, kind, true, legal, None);
     assert_ne!(later, first, "PREMISE: the two priors draw apart");
     assert_eq!(at - rebuilt_at, later, "{action}");
-}
-
-/// Every `(instanceId, defId)` a view JSON names, wherever it names one.
-fn named_cards(view: &Value) -> Vec<(String, String)> {
-    let mut named = Vec::new();
-    let mut stack = vec![view];
-    while let Some(value) = stack.pop() {
-        match value {
-            Value::Object(fields) => {
-                if let (Some(Value::String(instance)), Some(Value::String(def))) =
-                    (fields.get("instanceId"), fields.get("defId"))
-                {
-                    named.push((instance.clone(), def.clone()));
-                }
-                stack.extend(fields.values());
-            }
-            Value::Array(entries) => stack.extend(entries),
-            _ => {}
-        }
-    }
-    named
 }
 
 /// How many of the person's turns the game below runs, at most, for the bot to show its cards.

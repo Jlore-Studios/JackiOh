@@ -6,10 +6,8 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
-use hmac::{Hmac, KeyInit, Mac};
 use indexmap::IndexMap;
 use serde_json::{Value, json};
-use sha2::Sha256;
 use tower::ServiceExt;
 
 use jackioh_engine::config::DECK_SIZE;
@@ -34,7 +32,7 @@ use jackioh_server::db::store::{
 use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{call, test_app};
-use crate::support::store::{from, store, to_json, try_store, uuid};
+use crate::support::store::{from, hmac_sha256_hex, store, to_json, try_store, uuid};
 
 // Two starter cards and two that are not (core-003 and core-004 became starters with #1705, R1705002).
 const PLAYABLE: [&str; 4] = ["core-001", "core-002", "core-006", "core-007"];
@@ -124,14 +122,7 @@ struct Hashes {
 
 impl Hashes {
     fn code(&self, plain: &str) -> String {
-        let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(format!("{}:code", self.pepper).as_bytes())
-            .expect("any key length");
-        mac.update(normalize_code(plain).as_bytes());
-        mac.finalize()
-            .into_bytes()
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect()
+        hmac_sha256_hex(&format!("{}:code", self.pepper), &normalize_code(plain))
     }
 }
 

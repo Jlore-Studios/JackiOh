@@ -11,24 +11,14 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_effect, set_library, slot};
-use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game, translator};
+use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_as_p1 as run, set_library, slot};
+use crate::rules::fixtures::instance_data::{
+    body, brittle_trap, instance_game, instance_main_phase as game, translator,
+};
 use crate::rules::fixtures::scripts::cn_virus;
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-
-fn game(seed: &str) -> GameState {
-    let mut state = instance_game(seed, None);
-    state.turn = 5;
-    state.active = P1;
-    state.phase = Phase::Main;
-    state
-}
-
-fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_effect(state, effect, P1)
-}
 
 /// Show the card in Chinese, as `translate` does.
 fn translate_card(state: &mut GameState, id: &str) {

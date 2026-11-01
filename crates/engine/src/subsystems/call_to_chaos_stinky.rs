@@ -8,7 +8,7 @@
 
 use serde_json::json;
 
-use crate::catalog::{def_by_index, query, query_cost};
+use crate::catalog::{def_id_by_index, query, query_cost};
 use crate::combat::{SwitchPositionOptions, switch_position};
 use crate::config::{
     CHAOS_STINKY_DEATH_WATCH_CAP, CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN, CHAOS_STINKY_FIELD_SPELLS,
@@ -68,7 +68,7 @@ fn entry(
 }
 
 fn def_id_at(index: &str) -> Option<String> {
-    def_by_index(SET, index).map(|def| def.id.clone())
+    def_id_by_index(SET, index)
 }
 
 /// A fresh hand card of the set's card at `index`; a full hand burns it (§2.4).

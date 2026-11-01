@@ -18,14 +18,12 @@ use crate::config::{
     BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_MIN_AGE_DAYS,
     BOT_COSMETIC_MIN_OWNERS, BOT_COSMETIC_PRIOR, BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
     BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS,
-    BOT_COSMETIC_SLOT_CHANGE_SHARE, CosmeticFit,
+    BOT_COSMETIC_SLOT_CHANGE_SHARE, CosmeticFit, MS_PER_DAY,
 };
 use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, owns};
 use crate::db::store::{BotDeck, BotRow, FrozenTrio};
 use crate::economy::store::{CardCosmetic, CardPicks, CosmeticOwners, FullArtPick, OwnedCosmetics};
 use crate::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots, setting_key};
-
-const MS_PER_DAY: i64 = 86_400_000;
 
 /// R1834005: what a bot may wear and what it wears (`bots.cosmetics`, migration 0061): its
 /// wardrobe, account picks, cards' picks, last draw timestamp, and wardrobe seed ([`draw_wardrobe`]).

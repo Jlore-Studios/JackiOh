@@ -43,8 +43,8 @@ use crate::api::http::{
 };
 use crate::app::{App, now_ms};
 use crate::config::{
-    PRACTICE_PAY_ATTEMPTS, PRACTICE_PAY_BACKOFF_MS, PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX,
-    PRACTICE_SETTLE_GRACE_SECONDS,
+    MS_PER_SECOND, PRACTICE_PAY_ATTEMPTS, PRACTICE_PAY_BACKOFF_MS, PRACTICE_SEED_TTL_SECONDS,
+    PRACTICE_SEEDS_OPEN_MAX, PRACTICE_SETTLE_GRACE_SECONDS,
 };
 use crate::db::store::{LastBoardKind, StoreResult};
 use crate::economy::practice::{ClaimRefusal, ClaimedResult, Verified, verify};
@@ -54,8 +54,6 @@ use crate::economy::store::{PracticeClaim, PracticeDeck, PracticeOutcome, Practi
 
 /// An issue's status: the seed is a new resource.
 const CREATED: u16 = 201;
-
-const MS_PER_SECOND: i64 = 1000;
 
 /// How long a seed waits to be claimed, in milliseconds.
 const SEED_TTL_MS: i64 = PRACTICE_SEED_TTL_SECONDS * MS_PER_SECOND;

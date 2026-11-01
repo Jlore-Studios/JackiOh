@@ -237,6 +237,9 @@ export function RequestRow({
   onBlock?: () => void;
 }): ReactElement {
   const other = direction === "incoming" ? request.from : request.to;
+  /** Block's inline question is open (an incoming request's only, #2684). */
+  const [asking, setAsking] = useState(false);
+  const questionId = useId();
   return (
     <li className="together-row" data-testid={togetherTestid.requestRow} data-direction={direction} data-request-id={request.requestId} data-profile-id={other.profileId}>
       <span className="together-row__who">
@@ -246,27 +249,65 @@ export function RequestRow({
           <Named text={t("Waiting for {name}")} name={other.username} />
         )}
       </span>
-      <span className="together-row__actions">
-        {direction === "incoming" ? (
-          <>
-            <button type="button" className="button-primary" data-testid={togetherTestid.requestAccept} disabled={busy} onClick={onAccept}>
-              {t("Accept")}
-            </button>
-            <button type="button" data-testid={togetherTestid.requestDecline} disabled={busy} onClick={onDecline}>
-              {t("Decline")}
-            </button>
-            {onBlock === undefined ? null : (
-              <button type="button" className="link-button" data-testid={togetherTestid.requestBlock} disabled={busy} onClick={onBlock}>
-                {t("Block")}
-              </button>
-            )}
-          </>
-        ) : onCancel === undefined ? null : (
-          <button type="button" data-testid={togetherTestid.requestCancel} disabled={busy} onClick={onCancel}>
-            {t("Cancel")}
+      {asking ? (
+        // An inline question, not a modal, as a friend row's: a block lifted later restores no request (§9.4, #2684).
+        <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
+          <span className="together-row__question" id={questionId}>
+            <Named text={t("Block {name}? Their request goes, and neither of you can reach the other.")} name={other.username} />
+          </span>
+          <button
+            type="button"
+            data-testid={togetherTestid.confirm}
+            disabled={busy}
+            onClick={() => {
+              setAsking(false);
+              onBlock?.();
+            }}
+          >
+            {t("Block")}
           </button>
-        )}
-      </span>
+          <button
+            type="button"
+            className="link-button"
+            data-testid={togetherTestid.keep}
+            onClick={() => {
+              setAsking(false);
+            }}
+          >
+            {t("Keep")}
+          </button>
+        </span>
+      ) : (
+        <span className="together-row__actions">
+          {direction === "incoming" ? (
+            <>
+              <button type="button" className="button-primary" data-testid={togetherTestid.requestAccept} disabled={busy} onClick={onAccept}>
+                {t("Accept")}
+              </button>
+              <button type="button" data-testid={togetherTestid.requestDecline} disabled={busy} onClick={onDecline}>
+                {t("Decline")}
+              </button>
+              {onBlock === undefined ? null : (
+                <button
+                  type="button"
+                  className="link-button"
+                  data-testid={togetherTestid.requestBlock}
+                  disabled={busy}
+                  onClick={() => {
+                    setAsking(true);
+                  }}
+                >
+                  {t("Block")}
+                </button>
+              )}
+            </>
+          ) : onCancel === undefined ? null : (
+            <button type="button" data-testid={togetherTestid.requestCancel} disabled={busy} onClick={onCancel}>
+              {t("Cancel")}
+            </button>
+          )}
+        </span>
+      )}
     </li>
   );
 }

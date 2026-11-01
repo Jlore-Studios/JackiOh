@@ -24,10 +24,9 @@ use crate::actor::guard::HelloGate;
 use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
-use crate::actor::ws_server::{Socket, WATCH_PATH, WS_CLOSE};
-use crate::api::http::{ApiErrorCode, assert_active, upgrade_profile};
+use crate::actor::ws_server::{Socket, UpgradeFailure, WATCH_PATH, WS_CLOSE, authenticate_upgrade};
 use crate::app::App;
-use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
+use crate::db::store::{MatchPhase, MatchStatus, StoreError, Tx};
 use crate::social::friends::are_friends;
 
 /// The watcher's one frame (S7).
@@ -96,6 +95,15 @@ impl From<StoreError> for WatchFailure {
     }
 }
 
+impl From<UpgradeFailure> for WatchFailure {
+    fn from(failure: UpgradeFailure) -> WatchFailure {
+        match failure {
+            UpgradeFailure::Refused { code, message } => WatchFailure::Refused { code, message },
+            UpgradeFailure::Threw(message) => WatchFailure::Threw(message),
+        }
+    }
+}
+
 /// A watch socket's life after `listen`: who it is, its hello, B50's checks, and the actor; or the
 /// one refusal.
 pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>, listener: WatchListener) {
@@ -123,7 +131,9 @@ async fn admit(
     token: Option<String>,
     listener: WatchListener,
 ) -> Result<(), WatchFailure> {
-    let watcher = authenticate(app, token).await?;
+    // The account behind the upgrade, read as `/ws/match` reads it: the token (R1379000), its
+    // profile, §9.4's gate.
+    let watcher = authenticate_upgrade(app, token, WATCH_PATH).await?;
     let Some(hello) = listener.wait().await else {
         // R835002: still open means no hello came in `WS_IDLE_TIMEOUT_SECONDS`; gone, or closed for
         // its malformed frames, has no one to answer.
@@ -165,27 +175,6 @@ async fn admit(
         }
         Err(AttachError::Internal(message)) => Err(WatchFailure::Threw(message)),
     }
-}
-
-/// The account behind the upgrade, read as `/ws/match` reads it.
-async fn authenticate(app: &Arc<App>, token: Option<String>) -> Result<Profile, WatchFailure> {
-    let Some(token) = token else {
-        return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
-    };
-    let Ok(user) = app.auth.verify(&token).await else {
-        return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
-    };
-    // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
-    let profile = match upgrade_profile(app, &user, WATCH_PATH).await {
-        Ok(Some(profile)) => profile,
-        Ok(None) => return Err(refused(WS_CLOSE.unauthorized, "sign in first")),
-        Err(error) if error.code == ApiErrorCode::RateLimited => {
-            return Err(refused(WS_CLOSE.rate_limited, &error.message));
-        }
-        Err(error) => return Err(WatchFailure::Threw(error.message)),
-    };
-    assert_active(&profile).map_err(|error| refused(WS_CLOSE.forbidden, &error.message))?;
-    Ok(profile)
 }
 
 /// B50, as the store answers it: `watcher_id` may watch `hello`'s friend in `hello`'s match. Room is

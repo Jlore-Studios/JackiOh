@@ -1,11 +1,23 @@
-// The cosmetic packs (#1309, #1667, SPEC §14.6): the pack above Open, an opening's slots with both token
-// bars pinned at the top (`OpeningBars`, R1953000, R1999000), and the Chase Shard bar (`RewardReveal`).
-// THE SERVER DECIDES (CLAUDE.md rule 7): packs, slots and bars come from the answers. The shard bar plays
-// from the points read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
-// Odds are on `/purchases` (R1665000). A refusal shows the server's words through `t()` (R711000) with
-// nothing changed; a slot's new cosmetic is equipped from the reveal (R1955000, collection/EquipButton.tsx).
+// The cosmetic packs (#1309, #1667, SPEC §14.6): the unopened pack as a `PackObject` above Open, a
+// simple reveal of an opening's slots with both token bars pinned at the top of the viewport while it
+// is on screen, each slot's points flying into them before they fill (`OpeningBars`, R1953000, R1999000),
+// and the Chase Shard bar, a `FillBar` that fills across an opening and, when it reaches full, bursts
+// and reveals its Legendary-or-Mythic choice as a moment of its own (`RewardReveal`).
+//
+// THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, every slot, both bars and the shard bar come
+// from the answers; the reveal only reads them out, slot by slot in order. The shard bar plays from the
+// points the panel read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
+// The odds are not here: they are on `/purchases` (R1665000). A refused open or chase shows the
+// server's words through `t()` (R711000) with nothing changed on screen. A slot's new cosmetic is
+// equipped from the reveal too (R1955000, collection/EquipButton.tsx); the link to the Collection
+// stays.
+//
+// A chase spends the whole bar and nothing takes it back, so its Buy asks first, inline in the row's
+// place, with Cancel focused and Escape answering Cancel; only Confirm sends the one `buyChase`
+// (R2683000, as the token offer's R2480000). Open and the chase Buy wait, as the Shop's Buy does,
+// while one of the tab's spends is out (R2378000, `net/spending.ts`), and their handlers check again.
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
@@ -16,6 +28,7 @@ import { BURST_MS, flightsOf, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
+import "../economy/spend.css";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
@@ -32,6 +45,7 @@ import {
 } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
+import { spendOutNow, useSpendOut } from "../net/spending.ts";
 import PackObject from "../packs/PackObject.tsx";
 import { COSMETIC_PACK } from "../packs/packs.ts";
 import { followInApp } from "../routes/nav.tsx";
@@ -87,6 +101,8 @@ export default function CosmeticPacks({
   const [shardFrom, setShardFrom] = useState<number | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(true);
+  // R2378000: Open and the chase Buy wait while one of the tab's spends is out.
+  const spendOut = useSpendOut();
 
   useEffect(() => {
     let canceled = false;
@@ -126,7 +142,7 @@ export default function CosmeticPacks({
   }, [token, revision, attempt]);
 
   const open = (): void => {
-    if (busy !== null || info === null) return;
+    if (busy !== null || info === null || spendOutNow()) return;
     setBusy("open");
     setError(null);
     openCosmeticPack(token).then(
@@ -155,7 +171,7 @@ export default function CosmeticPacks({
   };
 
   const chase = (cosmetic: RegistryCosmetic, cardId: string | undefined): void => {
-    if (busy !== null) return;
+    if (busy !== null || spendOutNow()) return;
     setBusy(cosmetic.id);
     setError(null);
     buyChase(token, cosmetic.id, cardId).then(
@@ -213,7 +229,14 @@ export default function CosmeticPacks({
                 testid={shopTestid.cosmeticPackObject}
               />
               <div className="account-actions">
-                <button type="button" data-testid={shopTestid.open} disabled={busy !== null} onClick={open}>
+                <button
+                  type="button"
+                  className="spend-wait"
+                  data-testid={shopTestid.open}
+                  disabled={busy !== null || spendOut}
+                  aria-busy={spendOut}
+                  onClick={open}
+                >
                   {busy === "open" ? t("Opening…") : t("Open")}
                 </button>
               </div>
@@ -280,6 +303,7 @@ export default function CosmeticPacks({
             collection={collection}
             owned={owned}
             busy={busy}
+            spendOut={spendOut}
             cardFor={cardFor}
             onCardFor={setCardFor}
             onChase={chase}
@@ -313,6 +337,7 @@ function ShardBar({
   collection,
   owned,
   busy,
+  spendOut,
   cardFor,
   onCardFor,
   onChase,
@@ -324,6 +349,8 @@ function ShardBar({
   collection: CollectionResponse;
   owned: OwnedCosmeticsResponse;
   busy: string | null;
+  /** Whether one of the tab's spends is out (R2378000). */
+  spendOut: boolean;
   cardFor: Record<string, string>;
   onCardFor: (next: Record<string, string>) => void;
   onChase: (cosmetic: RegistryCosmetic, cardId: string | undefined) => void;
@@ -336,6 +363,31 @@ function ShardBar({
   const reveal = useMemo(chaseReveal, []);
   const quantities = quantitiesOf(collection);
   const candidates = full && reached ? chaseCandidates(owned, quantities, registry) : [];
+  // R2683000: the first press on a Buy asks, in the row's place; `asking` is the cosmetic asked about,
+  // `asked` the one whose Buy takes the focus back when Cancel or Escape answers.
+  const [asking, setAsking] = useState<string | null>(null);
+  const [asked, setAsked] = useState<string | null>(null);
+  const questionId = useId();
+  const ask = (cosmeticId: string): void => {
+    if (busy !== null || spendOutNow()) return;
+    setAsked(cosmeticId);
+    setAsking(cosmeticId);
+  };
+  const cancel = (): void => {
+    setAsking(null);
+  };
+  // Escape answers Cancel and nothing else: a page above may close on an Escape that reaches the window.
+  const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    cancel();
+  };
+  // The spend is checked before the question closes, so a Confirm met by a spend out keeps the question.
+  const confirm = (cosmetic: RegistryCosmetic, cardId: string | undefined): void => {
+    if (busy !== null || spendOutNow()) return;
+    setAsking(null);
+    onChase(cosmetic, cardId);
+  };
   return (
     <>
       <div className="shard-bar">
@@ -371,6 +423,36 @@ function ShardBar({
               cardFor[cosmetic.id] !== undefined && open.includes(cardFor[cosmetic.id]!)
                 ? cardFor[cosmetic.id]!
                 : open[0];
+            const cardId = fits === null ? undefined : chosen;
+            if (asking === cosmetic.id) {
+              return (
+                <div
+                  key={`ask-${cosmetic.id}`}
+                  className="token-confirm"
+                  role="alertdialog"
+                  aria-labelledby={questionId}
+                  onKeyDown={cancelOnEscape}
+                >
+                  <p id={questionId}>
+                    {t("Buy {name}? This spends your full Chase Shard bar.", { name: t(cosmetic.name) })}
+                  </p>
+                  <div className="token-confirm__actions">
+                    <button
+                      type="button"
+                      disabled={busy !== null || spendOut}
+                      onClick={() => {
+                        confirm(cosmetic, cardId);
+                      }}
+                    >
+                      {t("Confirm")}
+                    </button>
+                    <button type="button" autoFocus onClick={cancel}>
+                      {t("Cancel")}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={cosmetic.id} className="token-row" data-rarity={cosmetic.rarity}>
                 <span>
@@ -404,10 +486,13 @@ function ShardBar({
                 <div className="account-actions">
                   <button
                     type="button"
+                    className="spend-wait"
                     data-testid={shopTestid.chasePick(cosmetic.id)}
-                    disabled={busy !== null || (fits !== null && chosen === undefined)}
+                    disabled={busy !== null || asking !== null || spendOut || (fits !== null && chosen === undefined)}
+                    aria-busy={spendOut && (fits === null || chosen !== undefined)}
+                    autoFocus={asked === cosmetic.id}
                     onClick={() => {
-                      onChase(cosmetic, fits === null ? undefined : chosen);
+                      ask(cosmetic.id);
                     }}
                   >
                     {busy === cosmetic.id ? t("Buying…") : t("Buy")}

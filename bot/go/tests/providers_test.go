@@ -1548,8 +1548,9 @@ func TestProviders_ARunInItsLastHourGoesOnPastTheCapUntilTheReset(t *testing.T) 
 // ---------------------------------------------------------------------------- LateWeekTests
 //
 // claude-5's late week (`late_week`): from Sunday 17:00 Central until its week resets (Monday
-// 09:00 UTC), it may spend all of its week instead of 60%, 80% of a 5-hour session instead of 40%,
-// and a session's last hour (`LastHourTests`), which it takes nowhere else.
+// 09:00 UTC), it may spend 90% of its week instead of 60%, 80% of a 5-hour session instead of 40%,
+// and a session's last hour (`LastHourTests`) up to its 90% hard cap (`HardCapTests`), which it
+// takes nowhere else.
 
 // providersSunday: Sunday 2026-11-01, the day the clocks go back: 17:00 CST is 23:00 UTC, ten
 // hours before its week resets at 03:00 CST.
@@ -1606,20 +1607,20 @@ func TestProviders_FromSunday1700UntilTheResetItsCapsGoUp(t *testing.T) {
 	}
 	late := claude5.LateWeek
 	assertEqual(t, []any{late.Describe(), late.Caps(), late.LastHour},
-		[]any{"Sun 17:00", pyjson.New("five_hour", 0.8, "seven_day", 1.0), true})
+		[]any{"Sun 17:00", pyjson.New("five_hour", 0.8, "seven_day", 0.9), true})
 	assertEqual(t, claude5.Limits.Stops(), pyjson.New("five_hour", 0.4, "seven_day", 0.6))
 	assertFalse(t, claude5.LastHour)
 	sunday := providersSunday
-	// The week: 60% until 17:00, then all of it (a build starts under 95%).
+	// The week: 60% until 17:00, then 90% (a build starts under 85%).
 	assertIn(t, "7-day usage is 70%, too close to its 60% cap", why(sunday.Add(-time.Minute), 0.7))
 	assertIsNone(t, why(sunday, 0.7))
-	assertIsNone(t, why(sunday.Add(9*time.Hour+59*time.Minute), 0.94))
-	assertIn(t, "7-day usage is 96%, too close to its 100% cap to start a long run (it "+
-		"starts under 95%)", why(sunday, 0.96))
-	// a review goes up to the cap
-	assertIsNone(t, why(sunday, 0.96, providersLateReading{Starting: ptr(false)}))
-	assertIn(t, "7-day usage is 100%, at or over its 100% cap",
-		why(sunday, 1.0, providersLateReading{Starting: ptr(false)}))
+	assertIsNone(t, why(sunday.Add(9*time.Hour+59*time.Minute), 0.84))
+	assertIn(t, "7-day usage is 86%, too close to its 90% cap to start a long run (it "+
+		"starts under 85%)", why(sunday, 0.86))
+	// a review goes up to a point under it, its hard cap (`HardCapTests`)
+	assertIsNone(t, why(sunday, 0.88, providersLateReading{Starting: ptr(false)}))
+	assertIn(t, "7-day usage is 89%, within 1% of its 90% hard cap",
+		why(sunday, 0.89, providersLateReading{Starting: ptr(false)}))
 	// The session: 40% until 17:00, then 80% (a build starts under 75%).
 	assertIn(t, "5-hour usage is 50%, too close to its 40% cap",
 		why(sunday.Add(-time.Minute), 0.3, providersLateReading{Session: ptr(0.5)}))
@@ -1637,8 +1638,8 @@ func TestProviders_FromSunday1700UntilTheResetItsCapsGoUp(t *testing.T) {
 	assertEqual(t, providers.LastHourOf(claude5, providersLateUsage(sunday, 0.3,
 		providersLateReading{Session: ptr(0.8), SessionResets: last}), sunday, providersZone), sunday.Add(last))
 	// Its week's cap still holds in that last hour.
-	assertIn(t, "7-day usage is 100%, too close to its 100% cap",
-		why(sunday, 1.0, providersLateReading{Session: ptr(0.8), SessionResets: last}))
+	assertIn(t, "7-day usage is 90%, too close to its 90% cap",
+		why(sunday, 0.9, providersLateReading{Session: ptr(0.8), SessionResets: last}))
 	// The new week holds to 60% and 40% again, with no last hour.
 	monday := time.Date(2026, 11, 2, 9, 30, 0, 0, time.UTC)
 	week := "2026-11-09T09:00:00Z"
@@ -1664,7 +1665,7 @@ func TestProviders_ItSaysWhenItStartsAndCountsItsRoom(t *testing.T) {
 	entry := pyjson.New("usage", pyjson.New("seven_day", providersReading(0.62, providersResets)))
 	assertEqual(t, providers.FreesAt(claude5, entry, noon, providersZone), providersSunday)
 	assertEqual(t, providers.Room(claude5, entry, noon, providersZone), 0.0)
-	assertAlmostEqual(t, providers.Room(claude5, entry, providersSunday, providersZone), 0.38)
+	assertAlmostEqual(t, providers.Room(claude5, entry, providersSunday, providersZone), 0.28/0.9)
 	ctx := ts.MakeCtx(nil, ts.Ctx{At: providersSunday, Cfg: ts.MakeConfig(ts.Config{CommittedHours: true})})
 
 	capText := func(window string, o providersLateReading) string {
@@ -1672,11 +1673,11 @@ func TestProviders_ItSaysWhenItStartsAndCountsItsRoom(t *testing.T) {
 	}
 
 	assertEqual(t, capText("seven_day", providersLateReading{}),
-		"cap 100% now (its late week, from Sun 17:00), 60% after the reset")
+		"cap 90% now (its late week, from Sun 17:00), 60% after the reset")
 	assertEqual(t, capText("five_hour", providersLateReading{Session: ptr(0.5)}),
 		"cap 80% now (its late week, from Sun 17:00), 40% after the reset")
 	assertEqual(t, capText("five_hour", providersLateReading{Session: ptr(0.8), SessionResets: 30 * time.Minute}),
-		"cap 100% now (its last hour), 80% after the reset")
+		"cap 90% now (its last hour), 80% after the reset")
 }
 
 func TestProviders_LateWeekTests_MistakesAreErrors(t *testing.T) {
@@ -1705,4 +1706,82 @@ func TestProviders_LateWeekTests_MistakesAreErrors(t *testing.T) {
 		"last_hour", true))
 	assertRaisesRegex[*herr.ConfigError](t, "late_week.last_hour: it lifts a 5-hour cap",
 		func() { providers.Parse(raw) })
+}
+
+// ---------------------------------------------------------------------------- HardCapTests
+//
+// claude-5's hard cap (`hard_cap`, 90%): no cap of its goes past it, its late week's and its last
+// hour's included, and a run going on stops a point under it (`HardCapMargin`), since a call the
+// cap stops can end a point past where it stopped: so no call spills past 90%.
+
+func TestProviders_Claude5NeverSpillsPastItsHardCap(t *testing.T) {
+	claude5 := providers.Load(ts.Root).Get("claude-5")
+	assertEqual(t, *claude5.HardCap, 0.9)
+	sunday, last := providersSunday, 30*time.Minute
+	resets := sunday.Add(last)
+	// Its late week's last hour lifts the 5-hour cap to the hard cap, not to 100%.
+	inLastHour := providersLateUsage(sunday, 0.3, providersLateReading{Session: ptr(0.8), SessionResets: last})
+	assertEqual(t, providers.LastHourOf(claude5, inLastHour, sunday, providersZone), resets)
+	assertEqual(t, claude5.CapsAt(sunday, providersZone, inLastHour, time.Time{}),
+		pyjson.New("five_hour", 0.9, "seven_day", 0.9))
+	// A run that took that last hour stops a point under 90%, though its session has time left.
+	later := sunday.Add(10 * time.Minute)
+	entry := func(session float64) *pyjson.Object {
+		return pyjson.New("usage", providersLateUsage(later, 0.3,
+			providersLateReading{Session: &session, SessionResets: 20 * time.Minute}))
+	}
+	assertIsNone(t, providers.Refusal(claude5, entry(0.88), later, providersZone, false, resets))
+	assertIn(t, "5-hour usage is 89%, within 1% of its 90% hard cap, where a run stops so that no "+
+		"call passes it", providers.Refusal(claude5, entry(0.89), later, providersZone, false, resets))
+	assertIn(t, "5-hour usage is 95%, at or over its 90% cap",
+		providers.Refusal(claude5, entry(0.95), later, providersZone, false, resets))
+	// The work job's checks between steps and during each call hold it there too (`make_probe`).
+	ctx := ts.MakeCtx(nil, ts.Ctx{At: later, Cfg: ts.MakeConfig(ts.Config{CommittedHours: true})})
+	probe := cli.MakeProbe(ctx, nil, claude5, func() time.Time { return resets })
+	_, _, stopped := probe(entry(0.88).Obj("usage"))
+	assertFalse(t, stopped)
+	reason, kind, stopped := probe(entry(0.89).Obj("usage"))
+	assertTrue(t, stopped)
+	assertEqual(t, kind, "usage")
+	assertIn(t, "`claude-5` stops: 5-hour usage is 89%, within 1% of its 90% hard cap", reason)
+}
+
+func TestProviders_AHardCapHoldsEveryWindowAndNothingLiftsIt(t *testing.T) {
+	// A late week set past it is held to it.
+	raw := providersRaw()
+	providersOf(raw, "claude-5").Set("late_week", pyjson.New("from", "Sun 17:00", "seven_day", 1.0,
+		"five_hour", 0.95, "last_hour", true))
+	claude5 := providers.Parse(raw).Get("claude-5")
+	usage := providersLateUsage(providersSunday, 0.3, providersLateReading{})
+	assertEqual(t, claude5.CapsAt(providersSunday, providersZone, usage, time.Time{}),
+		pyjson.New("five_hour", 0.9, "seven_day", 0.9))
+	// A session held at the hard cap already has no last hour to lift it.
+	usage = providersLateUsage(providersSunday, 0.3, providersLateReading{Session: ptr(0.9),
+		SessionResets: 30 * time.Minute})
+	assertTrue(t, providers.LastHourOf(claude5, usage, providersSunday, providersZone).IsZero())
+	// On a subscription with no weekly cap (claude-8: 85% of 5 hours), it caps the week too.
+	raw = providersRaw()
+	providersOf(raw, "claude-8").Set("hard_cap", 0.9)
+	claude8 := providers.Parse(raw).Get("claude-8")
+	assertEqual(t, claude8.CapsAt(ts.Day, providersZone, nil, time.Time{}),
+		pyjson.New("five_hour", 0.85, "seven_day", 0.9))
+	week := pyjson.New("usage", pyjson.New("seven_day", providersReading(0.89, clock.ISO(ts.Day.Add(24*time.Hour)))))
+	assertIn(t, "7-day usage is 89%, within 1% of its 90% hard cap",
+		providers.Refusal(claude8, week, ts.Day, providersZone, false, time.Time{}))
+	// Without one, nothing changes: claude-8's run goes on to its 85% cap and its week is free.
+	assertIsNone(t, providers.Refusal(providers.Load(ts.Root).Get("claude-8"), week, ts.Day, providersZone,
+		false, time.Time{}))
+	for _, c := range []struct {
+		providerID string
+		bad        any
+		message    string
+	}{
+		{"claude-5", 1.5, "providers.claude-5.hard_cap: 1.5 is outside"},
+		{"claude-5", 0, "providers.claude-5.hard_cap: 0 is outside"},
+		{"claude-3", 0.9, "hard_cap: it holds the caps on its usage, and claude-3 has none"},
+	} {
+		raw := providersRaw()
+		providersOf(raw, c.providerID).Set("hard_cap", c.bad)
+		assertRaisesRegex[*herr.ConfigError](t, c.message, func() { providers.Parse(raw) })
+	}
 }

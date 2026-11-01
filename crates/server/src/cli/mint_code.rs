@@ -14,14 +14,14 @@
 use anyhow::{Result, anyhow};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
 
 use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
 use crate::app::now_ms;
+use crate::cli::connect_one;
+use crate::config::MS_PER_DAY;
 use crate::db::store::Db;
 use crate::env::{Env, js_number, load_env, quoted};
-
-const MS_PER_DAY: i64 = 24 * 60 * 60 * 1000;
+use crate::social::try_iso;
 
 const USAGE: &str = "Usage: jackioh-server mint-code [options]
        (from a checkout: cargo run --release -p jackioh-server -- mint-code [options])
@@ -79,13 +79,9 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
 
     // One connection: this process runs a single insert and exits.
-    let pool = PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&env.database_url)
-        .await?;
-    let db = Db::Pg(pool.clone());
+    let db = connect_one(&env.database_url).await?;
     let minted = mint(&db, &env, &options).await;
-    pool.close().await;
+    db.close().await;
     minted
 }
 
@@ -121,7 +117,7 @@ async fn mint(db: &Db, env: &Env, options: &MintOptions) -> Result<()> {
     // captures the code alone.
     let expiry = match expires_at {
         None => "never expires".to_string(),
-        Some(at) => format!("expires {}", iso_string(at)?),
+        Some(at) => format!("expires {}", try_iso(at)?),
     };
     eprintln!(
         "codes:mint: id {}, max uses {}, {expiry}\n\
@@ -153,12 +149,4 @@ fn flag_of(arg: &str) -> Option<(&str, &str)> {
 
 pub(crate) fn is_integer(value: f64) -> bool {
     value.is_finite() && value.fract() == 0.0
-}
-
-fn iso_string(ms: i64) -> Result<String> {
-    let at = time::OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * 1_000_000)?;
-    let format = time::format_description::parse_borrowed::<1>(
-        "[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]Z",
-    )?;
-    Ok(at.format(&format)?)
 }

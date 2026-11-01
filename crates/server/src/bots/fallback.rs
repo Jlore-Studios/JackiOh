@@ -15,11 +15,11 @@ use jackioh_engine::{DECK_SIZE, Rng};
 use crate::api::queue::new_seed;
 use crate::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_ACTIVE_HOURS, BOT_HOURS_PER_DAY,
-    BOT_VS_BOT_MIN_GAP_SECONDS, MAX_FAIR_GAP,
+    BOT_VS_BOT_MIN_GAP_SECONDS, MAX_FAIR_GAP, MS_PER_SECOND,
 };
 use crate::db::store::{BotRow, FrozenTrio, QueueMode, RatedGameRow, Ticket};
 
-const MS_PER_SECOND: i64 = 1000;
+/// Unit conversion, not configuration: an hour in milliseconds.
 const MS_PER_HOUR: i64 = 3_600_000;
 
 /// R1453: the key every fallback time is drawn with beside its ticket's id, drawn as the process

@@ -10,7 +10,8 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::field::{flush, playing as field_playing, tower};
 use crate::rules::fixtures::harness::{
-    act, act_result, events_of_type, in_hand, json_of, live, matches_object, new_game, put, sink_for, slot,
+    act, act_result, events_of_type, in_hand, json_of, live, matches_object, past_the_mulligans as playing,
+    put, sink_for, slot,
 };
 
 /// An `ActionInput` from a JSON body (SURFACE §8).
@@ -44,23 +45,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn view_of(state: &GameState, id: &str) -> UnitView {
     unit_view(state, by_id(state, id))
-}
-
-/// Past the mulligans, in the main phase of turn 1.
-fn playing(seed: &str) -> GameState {
-    let mut state = begin_game(&new_game(seed, None)).state;
-    for player in [P1, P2] {
-        let keep: Vec<String> = state.players[player]
-            .hand
-            .iter()
-            .map(|card| card.id.clone())
-            .collect();
-        state = act(
-            &state,
-            input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
-        );
-    }
-    state
 }
 
 fn end_turns(state: &GameState, count: usize) -> GameState {

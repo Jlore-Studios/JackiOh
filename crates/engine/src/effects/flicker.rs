@@ -30,9 +30,8 @@ fn fresh_face_down_id_in_place(state: &mut GameState, instance_id: &str) -> Opti
 /// unit token comes back too (R444). A Trap re-enters face-down with a fresh id (§3.2, R33, R227); an
 /// animated card or a Field Spell stays face-up. Emits `flickered`, then the `summoned` it counts as.
 pub fn flicker_card(sink: &mut EngineSink<'_>, card: &CardInstance) -> bool {
-    let card = find_instance(sink.state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| card.clone());
+    // The card as it stands now (TS held the live object).
+    let card = crate::zones::live_or(sink.state, card);
     let Zone::Field { player, row, lane } = card.zone.clone() else {
         return false;
     };

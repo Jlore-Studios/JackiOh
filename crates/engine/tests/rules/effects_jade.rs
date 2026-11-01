@@ -11,7 +11,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::harness::{new_game, put, slot};
+use crate::rules::fixtures::harness::{new_game, put, run_with_targets as run, slot};
 use crate::rules::fixtures::jade::{JADE_SCRIPTS, jade_catalog};
 use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
@@ -31,32 +31,6 @@ fn resolving(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInsta
     let mut card = new_instance(state, def_id, player, Zone::Resolving { player });
     card.radiant = false;
     card
-}
-
-fn run(
-    state: &mut GameState,
-    effect: Effect,
-    self_: Option<&CardInstance>,
-    targets: Vec<Selection>,
-    controller: PlayerId,
-) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            self_,
-            HookOptions {
-                controller: Some(controller),
-                targets: Some(targets),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 fn add(state: &mut GameState, amount: i32, player: PlayerId) -> Vec<GameEvent> {

@@ -87,6 +87,12 @@ fn js_number(number: &serde_json::Number) -> String {
 /// FNV-1a 32 over the UTF-16 code units of `text`, printed as 8 lower-case hex digits. UTF-8 bytes
 /// would differ: state strings carry `× − – ♾ ³ ²`.
 pub fn fnv1a32_utf16(text: &str) -> String {
+    format!("{:08x}", fnv1a32_utf16_u32(text))
+}
+
+/// FNV-1a 32 over the UTF-16 code units of `text`, as the number `fnv1a32_utf16` prints (the
+/// portrait deal's hash starts from it too, `wire::emotes`).
+pub fn fnv1a32_utf16_u32(text: &str) -> u32 {
     let mut hash: u32 = 0x811c_9dc5;
     let mut step = |unit: u16| {
         hash ^= u32::from(unit);
@@ -111,7 +117,7 @@ pub fn fnv1a32_utf16(text: &str) -> String {
         }
         rest = &rest[ch.len_utf8()..];
     }
-    format!("{hash:08x}")
+    hash
 }
 
 /// FNV-1a over the canonical state, minus the nonce log (bookkeeping) and two fields whose arrival moved

@@ -188,6 +188,12 @@ pub fn def_by_index(set: SetName, index: &str) -> Option<&'static CardDef> {
         .find(|def| def.set == set && def.index == index)
 }
 
+/// The id of the card at `index` in `set`, as a token summon names it (R103: none when the
+/// registered catalog lacks it).
+pub fn def_id_by_index(set: SetName, index: &str) -> Option<String> {
+    def_by_index(set, index).map(|def| def.id.clone())
+}
+
 /// The registered catalog's version: "0" before one is registered, "test" while a test's override is
 /// in force, and while a replay folds under a shipped catalog, that one's (R767000).
 pub fn catalog_version() -> &'static str {

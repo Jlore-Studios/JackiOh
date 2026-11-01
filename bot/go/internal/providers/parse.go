@@ -141,7 +141,7 @@ var providerKeys = []string{"enabled", "cli", "family", "model", "effort", "tier
 	"limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
 	"self_check", "extra_models", "off_from", "off_reason", "usage_since",
 	"lanes", "build_last", "easy_first", "off_hours", "fix_effort",
-	"review_effort", "start_headroom", "fill_in", "last_hour", "late_week"}
+	"review_effort", "start_headroom", "fill_in", "last_hour", "late_week", "hard_cap"}
 
 // tier is _tier.
 func tier(value any, where string) string {
@@ -384,6 +384,11 @@ func provider(name string, raw any) *Provider {
 			configError("%s.late_week.last_hour: it lifts a 5-hour cap, and %s has none", where, name)
 		}
 	}
+	hardCap := fraction(obj.Get("hard_cap"), where+".hard_cap")
+	if hardCap != nil && found.Stops().Len() == 0 {
+		configError("%s.hard_cap: it holds the caps on its usage, and %s has none "+
+			"(limits five_hour or seven_day)", where, name)
+	}
 	// The keyword arguments in the Python's order, since each may raise.
 	p := &Provider{ID: name}
 	p.Enabled = pyjson.Truthy(obj.GetOr("enabled", true))
@@ -421,6 +426,7 @@ func provider(name string, raw any) *Provider {
 		where+".extra_models")
 	p.LastHour = pyjson.Truthy(obj.GetOr("last_hour", false))
 	p.LateWeek = late
+	p.HardCap = hardCap
 	return p
 }
 

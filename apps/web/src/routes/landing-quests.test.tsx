@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
 import type { QuestView, QuestsResponse } from "../net/api.ts";
+import { pressBack } from "../test/history.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { at, meBody, refusal, signIn, stubServer, type Reply, type StubServer } from "../test/stubServer.ts";
 import LandingRoute, { QUESTS_UNROLL_MS } from "./landing.tsx";
@@ -187,6 +188,33 @@ describe("R2035000 the landing's quests bookmark", () => {
     openPanel();
     fireEvent.pointerDown(screen.getByTestId(questsTestid.quest));
     expect(panel).toHaveAttribute("data-state", "open");
+  });
+
+  it("R2127000 Back rolls up the open Quests scroll, keeps the home screen and address, restores bookmark focus, and a second Back leaves", async () => {
+    at("/play");
+    window.history.pushState(null, "", "/");
+    signIn();
+    serve([book()]);
+    render(<LandingRoute />);
+    await screen.findByTestId(landingTestid.questsCount);
+
+    const bookmark = screen.getByTestId(landingTestid.questsBookmark);
+    const panel = screen.getByTestId(landingTestid.questsPanel);
+    fireEvent.click(bookmark);
+    expect(panel).toHaveAttribute("data-state", "open");
+    screen.getByTestId(landingTestid.play).focus();
+
+    await pressBack();
+    // The scroll is rolling up (or, on a loaded machine, rolled up): shut either way, on the same screen and address.
+    expect(bookmark).toHaveAttribute("aria-expanded", "false");
+    expect(panel).not.toHaveAttribute("data-state", "open");
+    expect(bookmark).toHaveFocus();
+    expect(landing()).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/");
+
+    // The layer is spent: the next Back is the page's and leaves the screen.
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
   });
 
   it("R2035000 a visitor gets no bookmark and no read", async () => {

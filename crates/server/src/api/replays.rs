@@ -33,13 +33,13 @@ use crate::api::http::{
 };
 use crate::app::App;
 use crate::config::{
-    REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
+    MS_PER_SECOND, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE,
+    REPLAY_REQUESTS_PER_MINUTE,
 };
 use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
 use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
 
-/// Unit conversions, not configuration.
-const MS_PER_SECOND: i64 = 1000;
+/// Unit conversion, not configuration.
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
 
 /// What the replay routes keep between requests, one per `App`: the opened replays and their own

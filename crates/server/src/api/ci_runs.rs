@@ -20,12 +20,9 @@ use crate::api::stats::cached_ok;
 use crate::app::App;
 use crate::config::{
     CI_RUNS_API_URL, CI_RUNS_BRANCH, CI_RUNS_CACHE_TTL_SECONDS, CI_RUNS_JOBS_PAGE, CI_RUNS_LISTED,
-    CI_RUNS_TIMEOUT_MS, CI_RUNS_WORKFLOW,
+    CI_RUNS_TIMEOUT_MS, CI_RUNS_WORKFLOW, MS_PER_SECOND,
 };
 use crate::env::Env;
-
-/// Unit conversion, not configuration.
-const MS_PER_SECOND: i64 = 1000;
 
 /// GitHub's conclusions of a job that did not fail: the workflow's report leaves these out.
 const JOB_PASSED: [&str; 3] = ["success", "skipped", "neutral"];

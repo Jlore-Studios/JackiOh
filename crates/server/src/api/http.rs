@@ -365,6 +365,15 @@ pub struct Caller {
     pub user: AuthUser,
 }
 
+/// The caller of a route that declared `User` or `Active`. The router resolved it before the
+/// handler ran; the guard is here because `Req` types it optional, and answers 401 "sign in
+/// first", as the router does.
+pub fn caller_of(req: &Req) -> Result<&Caller, ApiError> {
+    req.caller
+        .as_ref()
+        .ok_or_else(|| ApiError::new(ApiErrorCode::Unauthorized, "sign in first"))
+}
+
 /// What the host knows about the connection a request arrived on, which the request itself does
 /// not carry. `dispatch` fills it from axum's `ConnectInfo`; a test inserts one by hand.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1276,4 +1285,29 @@ pub fn log_warn(event: &str, data: Value) {
 /// marked `alert`.
 pub fn log_alert(event: &str, data: Value) {
     tracing::error!(event = event, alert = true, data = %data);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The guard the account, consent, code and room routes share: a request that reached a handler
+    /// with no caller is the router's own 401.
+    #[test]
+    fn a_request_with_no_caller_is_401_sign_in_first() {
+        let req = Req {
+            caller: None,
+            params: IndexMap::new(),
+            query: IndexMap::new(),
+            body: json!({}),
+            address: String::new(),
+            headers: HeaderMap::new(),
+        };
+        let Err(refused) = caller_of(&req) else {
+            panic!("no caller is no caller");
+        };
+        assert_eq!(refused.code, ApiErrorCode::Unauthorized);
+        assert_eq!(refused.message, "sign in first");
+        assert_eq!(refused.status(), 401);
+    }
 }

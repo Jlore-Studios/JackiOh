@@ -18,6 +18,7 @@ import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
@@ -382,6 +383,15 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
       className="landing-quests"
       style={{ "--quests-unroll": `${String(QUESTS_UNROLL_MS)}ms` } as CSSProperties}
     >
+      {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
+      {open ? (
+        <BackLayer
+          onClose={() => {
+            close();
+            bookmark.current?.focus();
+          }}
+        />
+      ) : null}
       <button
         ref={bookmark}
         type="button"

@@ -10,10 +10,10 @@ use jackioh_engine::{CardDefs, Rng, query_cost};
 use crate::api::series_rules::{
     SeriesRefusal, SeriesRefusalReason, first_seat_of, pick_deck, seat_index, trio_deck, unwon_slots,
 };
-use crate::config::{BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, SERIES_PICK_SECONDS};
+use crate::config::{
+    BOT_PICK_DELAY_MAX_MS, BOT_PICK_DELAY_MIN_MS, BOT_PICK_RULE_SHARE, MS_PER_SECOND, SERIES_PICK_SECONDS,
+};
 use crate::db::store::{SeriesRow, SeriesSeat, SeriesSide, SeriesStatus};
-
-const MS_PER_SECOND: i64 = 1000;
 
 /// Games are numbered from one (`SeriesGame.game_no`), as in `series_rules.rs`.
 const FIRST_GAME: i32 = 1;

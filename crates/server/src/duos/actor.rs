@@ -1,14 +1,52 @@
-//! One actor per Duos co-op match (fullsend SPEC S6, B35–B40): it holds `DuosState`, one socket per
-//! person (a1, a2), the clocks and the AI's seats, and appends every action to `duos_match_actions`.
-//! `duos_reduce`'s refusals are relayed verbatim (B35); a socket gets only its seat's view (B23).
-//! Every action takes `apply` (B40), under the dealt catalog (R767000). The AI plays b1, b2 and a
-//! person's seat past its grace (B37) or clock (B38), off the runtime (R1452), with R270's nonces,
-//! never conceding or drawing (R188). Clocks live here, never in the engine, so an expiry hands the
-//! seat to the AI and `(seed, log)` still folds; a lapsed mulligan keeps the hand (§13.2, R268). The
-//! ceiling (§9.5, R1047000) is the engine's own action. Seats keep the 1v1's guards (§9.1, R835001,
-//! R137, R835000, R835002); a panicking server action ends in the ceiling's draw (R1253000); pings
-//! reach the teammate only, never logged (B39). One serialized queue; the lock is never held across
-//! an `.await` or while a socket is closed (a close calls back into the actor).
+//! One actor per Duos co-op match (fullsend SPEC S6, B35–B40), as `actor/match_actor.rs` is one per
+//! 1v1 match: it holds the `DuosState` in memory, one socket per person (seats a1 and a2), the clocks
+//! and the AI's seats, and it appends every applied action to `duos_match_actions`.
+//!
+//!  - The rules are the engine's Duos wrapper (`duos::engine`): `duos_reduce` refuses an illegal
+//!    action and the actor relays its reason verbatim (B35); nothing here restates a rule.
+//!  - The only per-seat payload is `duos_view_for(state, seat)` with `duos_legal_actions` for the same
+//!    seat (B23), so a socket never sees an opponent's hidden card or another seat's array.
+//!  - Every action goes through one path, a person's and the AI's alike (`apply`): reduce, append one
+//!    row at the next gapless seq, then push. A rebuilt actor folds `(seed, options, log)`
+//!    (`duos_fold`, B40) and answers a nonce it has logged with its original ack.
+//!  - The AI plays b1 and b2 always, a person's seat whose disconnect outlived the grace until they
+//!    are back (B37), a seat whose round clock ran out (B38) and a prompt whose clock ran out: each
+//!    seat waits `DUOS_AI_STEP_DELAY_MS`, then `jackioh_ai::duos_decide` decides on the blocking pool,
+//!    off the runtime as a ladder bot's search is (R1452), and its move comes back through `apply`
+//!    with a server nonce (`srv-ai-<seq>`, R270's prefix). The AI never concedes and never offers or
+//!    takes a draw (R188).
+//!  - Clocks live here, never in the engine: the mulligan clock over the four open mulligans, a round
+//!    clock for a round with a person in it, a prompt clock for a prompt a person holds outside one, and
+//!    each person's disconnect grace (the 1v1's `DISCONNECT_GRACE_SECONDS`). None of them is an action
+//!    the engine sees: an expiry hands the seat to the AI, whose moves are ordinary logged actions, so
+//!    `(seed, log)` still folds the match exactly. The mulligan clock's expiry keeps each owing
+//!    person's whole hand (§13.2, R268): the AI's own mulligan never answers for a person (it may for a
+//!    seat past its grace, which the AI plays outright).
+//!  - The hard ceiling (§9.5, R1047000) is the one clock the engine does see: `MATCH_CEILING_MS` after
+//!    the row's `created_at`, never stored, the actor sends the engine's own `ceilingReached` as one
+//!    server action, and its `ceiling` draw ends the game and writes the result like any other end.
+//!    A rebuilt actor that arms past the deadline sends it at once, before anyone plays on.
+//!  - A move the AI decided is played only while the AI still plays the seat the way it decided it:
+//!    one decided for a seat past its grace is dropped once its person is back, whatever clock has
+//!    run out for them meanwhile, and the seat decides again (B37, B38).
+//!  - Every engine call runs under the catalog the match was dealt from (R767000, `Pinned`), so a
+//!    rebuilt actor plays on as the match began.
+//!  - A `hello` repeated while one for the same socket is still queued is absorbed by it (§9.1, as
+//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame. One that finds
+//!    none queued is dropped, unanswered, when the socket's last answered hello was less than
+//!    `WATCH_HELLO_INTERVAL_MS` ago (R2686000); a reattach's first hello is always answered.
+//!  - Each person's seat keeps the 1v1 seat's guards (`actor::guard::SeatGuard`; R137, R835000,
+//!    R835002): the action flood window, the malformed-frame budget, the count of refusals that
+//!    raises `match.rejections.unusual` and the hello interval. Only a person's own refusals count;
+//!    the AI's never do.
+//!  - A live `reduce` that panics changes nothing and is answered `internal` and filed; a server
+//!    action that panics ends the match as the ceiling's draw (R1253000).
+//!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
+//!    viewed (B39).
+//!
+//! Every task runs on one serialized queue (one tokio task draining an inbox, each task run as its
+//! own spawned task so one that panics is logged and the queue goes on), and the lock is never held
+//! across an `.await` or while a socket is closed (a close calls back into the actor).
 
 use std::collections::VecDeque;
 use std::panic::AssertUnwindSafe;
@@ -29,9 +67,9 @@ use jackioh_engine::{Rng, mulligan_owed};
 use crate::actor::clock::{Timer, after};
 use crate::actor::contracts::{SocketHandlers, one_tx};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
-use crate::actor::protocol::{SERVER_NONCE_PREFIX, SocketErrorCode};
+use crate::actor::protocol::{ACTION_PANICKED_MESSAGE, SERVER_NONCE_PREFIX, SocketErrorCode};
 use crate::actor::registry::panic_text;
-use crate::actor::ws_server::Socket;
+use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket};
 use crate::app::{App, now_ms};
 use crate::bots::seat::r188_forbidden;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
@@ -54,10 +92,6 @@ use crate::seats::Seat;
 
 /// Human player seats, host and guest (S6): the per-person arrays' order.
 pub const HUMAN_SEATS: [DuosSeat; 2] = [DuosSeat::A1, DuosSeat::A2];
-
-/// RFC 6455's normal closure and "going away".
-const CLOSE_NORMAL: u16 = 1000;
-const CLOSE_GOING_AWAY: u16 = 1001;
 
 /// A seat's index in `DUOS_SEATS` order (a1, a2, b1, b2).
 fn slot(seat: DuosSeat) -> usize {
@@ -355,11 +389,7 @@ struct Countdown {
 
 /// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
 fn panicked_answer(nonce: &str) -> DuosServerMessage {
-    error_message(
-        SocketErrorCode::Internal,
-        "the server could not apply this action; it has been reported",
-        Some(nonce),
-    )
+    error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
 }
 
 fn armed_by(countdown: Option<&Countdown>, timer: u64) -> bool {
@@ -389,7 +419,8 @@ struct Core {
     ai_busy: [bool; 4],
     /// Each seat's AI stream cursor; a rebuilt actor starts them again.
     ai_cursor: [u32; 4],
-    /// By `HUMAN_SEATS`: action flood (R137, §9.8), refusals (R835000), malformed frames (R835002).
+    /// By `HUMAN_SEATS`: the 1v1 seat's guards (`actor::guard`): §9.8's per-seat action window
+    /// (R137), R835000's refusals, R835002's malformed frames and R2686000's hello interval.
     guards: [SeatGuard; 2],
     /// By `HUMAN_SEATS`: B39's ping window.
     pings: [VecDeque<i64>; 2],
@@ -955,9 +986,14 @@ impl DuosActor {
                 }
             }
             Ok(DuosClientMessage::Hello { .. }) => {
-                // R835001: duplicate hello absorbed while previous queued.
+                // R835001: a hello while this socket's last one is still queued is absorbed by it.
+                // R2686000: one that finds none queued is dropped, unanswered and with the socket
+                // left open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered
+                // on this socket; a newer generation (a reattach) always enqueues.
                 let generation = core.socket_generation[index];
-                if core.hello_pending[index] != Some(generation) {
+                if core.hello_pending[index] != Some(generation)
+                    && core.guards[index].hello_answer_allowed(generation, now_ms())
+                {
                     core.hello_pending[index] = Some(generation);
                     self.enqueue(Task::Hello { seat, generation });
                 }

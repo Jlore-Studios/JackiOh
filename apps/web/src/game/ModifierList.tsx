@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import type { PlayerView } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import "./modifierList.css";
 
 /** The chip (`data-count`: the live modifiers on both sides) and the list it opens. `e2e/support/testids.ts` carries the same strings. */
@@ -86,6 +87,8 @@ export function ModifierList({ view, opponentLabel }: ModifierListProps): ReactE
           role="group"
           aria-label={t("Active modifiers")}
         >
+          {/* R2127000: Back closes the list, as Escape does. */}
+          <BackLayer onClose={() => setOpen(false)} />
           {[
             { key: "you", title: t("You"), list: yours },
             { key: "opponent", title: opponentLabel, list: theirs },
