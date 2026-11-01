@@ -12695,11 +12695,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-01T16:18:10Z",
+        "at": "2026-11-01T16:48:55Z",
         "difficulty": "hard",
-        "provider": "gpt",
-        "tier": "medium",
-        "why": "The least certain line is the hard rule's \u201cAI's search (`crates/ai/src/`)\u201d: this is redaction rather than beam search, but its path is explicitly in that parenthetical and the rule separately says AI work is never easy."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 5 (no crates/ai/src work) fails outright: the change is in the AI's redaction, plus a new ruling; it stays at the planner's hard"
       },
       "failures": 0,
       "forced": false,
