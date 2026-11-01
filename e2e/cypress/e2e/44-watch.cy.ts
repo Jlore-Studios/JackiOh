@@ -1,20 +1,12 @@
 // #1050 44: watching a friend's live game (#936, SPEC S7, §9.5 "Watching a friend"; B50, B56).
-//
 // Three accounts, because a watcher holds no seat: `one` hosts an unranked room (seat p1), `pending` joins it as p2,
 // and `two` watches in the browser. Neither seat attaches a socket (R744: a seat that never attached starts no grace),
 // so the match stands while it is watched. `pending` is the fixture account waiting at the invite gate, so `before`
 // reseeds the server (R144) and redeems the good code for it; only spec 10 reads that account and it reseeds first.
-//
-// It asserts: a friend's row in a live unranked match offers Watch (B56); the waiting panel, then the friend's board
-// read-only from their seat, every `view` frame with `legal: []` and the other hand as a count (B50, §10.8); no
-// watching switch in the settings (R2615000); the friend removing the watcher, or the two no longer friends, ends it in
-// the refused screen (B50). The waiting panel shows only to a watcher who comes within `SPECTATE_DELAY_MS` of the join,
-// so the browser is on Play together first. "Full" (`SPECTATORS_PER_MATCH`) is the server's test: the E2E server seeds
-// three friend accounts, not nine.
-//
+// The waiting panel shows only to a watcher who comes within `SPECTATE_DELAY_MS` of the join, so the browser is on
+// Play together first. "Full" (`SPECTATORS_PER_MATCH`) is the server's test: the E2E server seeds three friends.
 // Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only, as every spec
-// outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed at compile time, and the spec
-// waits it out.
+// outside scripts/shard-specs.mjs's SMOKE.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";

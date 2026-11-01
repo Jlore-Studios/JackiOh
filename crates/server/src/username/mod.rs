@@ -363,10 +363,9 @@ enum ReadBack {
 }
 
 /// R1433: an NFKC name with its substitution digits read back as letters where they sit in a run of
-/// letters (all of them, or only the inner ones: [`ReadBack`]), before it is split into tokens. A run
-/// is the letters, marks and substitution digits between underscores and other digits; a run with no
-/// letter keeps its digits, so the `455` of `Bob_455` is never read as `ass`. A letter read back takes
-/// the case of the nearest letter before it, or else after it, so it never makes a camelCase split.
+/// letters ([`ReadBack`]), before it is split into tokens. A run with no letter keeps its digits, so
+/// `Bob_455` is never read as `ass`. A letter read back takes the case of the nearest letter before
+/// it, or else after it, so it never makes a camelCase split.
 fn read_back_digits(name: &str, digits: ReadBack) -> String {
     fn flush(run: &mut Vec<char>, out: &mut String, digits: ReadBack) {
         if !run.iter().copied().any(is_letter) {
@@ -447,10 +446,8 @@ fn tokens(name: &str) -> Vec<String> {
 
 /// R1433: whether the light filter refuses an NFKC name, or a chat message's NFKC word (B53, SPEC
 /// §9.5: chat masks what the usernames' filter catches). The token list is matched against the
-/// tokens of the name with its digits read back both ways ([`read_back_digits`], [`ReadBack`]), so
-/// `a55`, `d1ck` and `Dick1` are each refused and `Tit4n` is not. A token without a letter is never
-/// matched against it: its digits would read back as letters (`455` as `ass`) and refuse an
-/// innocent `Bob_455`.
+/// name's tokens with its digits read back both ways ([`read_back_digits`], [`ReadBack`]); a token
+/// without a letter is never matched, so an innocent `Bob_455` stands.
 pub(crate) fn is_blocked(name: &str) -> bool {
     let folded = fold(name);
     if words(BLOCKLIST_ANYWHERE).any(|word| folded.contains(word)) {

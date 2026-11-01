@@ -604,7 +604,7 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
-// The patch history (B4.2, R388, R646), as `scripts/patches-io.ts` read it: `crates/cards/patches/`
+// The patch history (B4.2, R388, R646): `crates/cards/patches/`, compiled in.
 
 type Entry = IndexMap<String, Value>;
 

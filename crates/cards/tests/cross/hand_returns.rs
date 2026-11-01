@@ -236,9 +236,10 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
     #[test]
     fn r215_r28_r87_a_call_to_chaos_cast_at_the_end_of_a_chain_taken_back_from_the_graveyard_and_played_starts_a_chain_of_its_own()
      {
-        // The played #95 stands in for the 19th link (R28's counter); its roll casts the 20th, which R87 sends
-        // to the graveyard and #72 Reminisce takes back. Played from hand it starts a chain of its own, so its
-        // recast casts one where the link at the cap cast nothing. Any seed: the cursor is searched.
+        // The played #95 stands in for the 19th link (R28's counter); its roll casts the 20th, which R87
+        // sends to the graveyard and #72 Reminisce takes back. Played from hand it starts a chain of its
+        // own, so its recast casts one where the link at the cap cast nothing. Any seed: the cursor is
+        // searched.
         let seed = "inv-r5-chaos-chain";
         let at_cap = |cursor: u32| {
             let mut s = scenario(
@@ -317,9 +318,9 @@ mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
     #[test]
     fn r155_r70_a_return_spell_cast_on_the_opponents_turn_does_not_come_back_at_the_end_of_its_casters_next_turn_5_1_6_2()
      {
-        // p2's #9 Moths makes the Panther attack and kill it, so p1 draws 2 on p2's turn (R426): a cast-on-draw
-        // Spell with #23's end-of-turn return (R155's flag), cast on p2's turn (§2.4, R70). A cast on draw is
-        // no play (R2179002), so cleanup finds its flag in the graveyard rather than in a turn log.
+        // p2's #9 Moths makes the Panther attack and kill it, so p1 draws 2 on p2's turn (R426): a
+        // cast-on-draw Spell with #23's end-of-turn return (R155's flag), cast on p2's turn (§2.4, R70). A
+        // cast on draw is no play (R2179002), so cleanup finds its flag in the graveyard, not a turn log.
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },

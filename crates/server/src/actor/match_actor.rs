@@ -264,9 +264,8 @@ struct Core {
     sockets: PerPlayer<Option<Socket>>,
     /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
     attached_once: PerPlayer<bool>,
-    /// R137, R835000, R835002, R2686000: each seat's abuse guard (`actor::guard`), by home seat: its
-    /// action flood window, its refusals toward the unusual-rejection alert, its malformed frames
-    /// and when its socket's last hello was answered.
+    /// R137, R835000, R835002, R2686000: abuse guard per home seat (flood window, refusals, malformed
+    /// frames, last answered hello).
     guards: PerPlayer<SeatGuard>,
     /// R835001: socket generation for queued unrun Hello per seat.
     hello_pending: PerPlayer<Option<u64>>,
@@ -1852,12 +1851,9 @@ impl MatchActor {
             }
             Ok(ClientMessage::Hello(_)) => {
                 // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: a Hello
-                // while one for the same home and socket generation is still queued is absorbed —
-                // reconnect is idempotent — so a hello flood costs one view push. R2686000: one
-                // that finds none queued is still dropped, unanswered and with the socket left
-                // open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered on
-                // this socket, so a client that sends again as each answer arrives costs one view
-                // per interval. A newer generation (a reattach) always enqueues.
+                // while one for the same home and socket generation is still queued is absorbed, so
+                // a flood costs one view push. R2686000: one within WATCH_HELLO_INTERVAL_MS of the
+                // last answered is dropped, the socket left open; a reattach always enqueues.
                 let generation = core.socket_generation[home];
                 if core.hello_pending[home] != Some(generation)
                     && core.guards[home].hello_answer_allowed(generation, now_ms())
@@ -2389,10 +2385,8 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // closed with 1008. Its leaving changes only the count the players are told.
 
 use crate::actor::protocol::watchers_frame;
-// RFC 6455's normal closure and "going away" (`ws_server`'s): a watcher's socket is closed with the
-// first when a newer socket of the same account replaces it or once it has had a finished match's
-// last view (R1107000), and with the second when the actor goes (wire vocabulary, like
-// `CLOSE_POLICY_VIOLATED`).
+// A watcher's socket closes with `CLOSE_NORMAL` when a newer socket of its account replaces it or
+// after a finished match's last view (R1107000), and with `CLOSE_GOING_AWAY` when the actor goes.
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::parse_watch_hello;

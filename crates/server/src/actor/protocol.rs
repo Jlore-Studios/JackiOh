@@ -292,11 +292,10 @@ pub fn prompt_for_opponent(pending_for: PlayerId, deadline: Option<i64>) -> Serv
 /// `voided`, and the close tells the client the match is gone rather than to reconnect.
 pub const MATCH_VOIDED_CLOSE_REASON: &str = "voided";
 
-/// R1253000: what an action the reducer panicked on is answered with (`internal`), first and on
-/// every resend of its nonce, on a match's socket and on a co-op match's.
+/// R1253000: the `internal` answer to an action the reducer panicked on, on 1v1 and co-op sockets.
 pub const ACTION_PANICKED_MESSAGE: &str = "the server could not apply this action; it has been reported";
 
-/// TS `JSON.stringify(message)`: a frame's JSON text, the match socket's and the co-op one's.
+/// A frame's JSON text, the match socket's and the co-op one's.
 pub fn encode<M: Serialize>(message: &M) -> String {
     serde_json::to_string(message).unwrap_or_else(|error| {
         // Every field of every frame is plain data; this cannot fail. Answer a frame the client
@@ -695,9 +694,8 @@ pub(crate) fn client_nonce(value: Option<&Value>) -> Result<&str, MalformedMessa
     Ok(nonce)
 }
 
-/// A frame larger than this is rejected before it is parsed (§9.8). The transport closes a larger
-/// frame with 1009 (SURFACE §11.3, `ws_server.rs`); this check is the same bound, held again here
-/// so the parser stays total on its own.
+/// Frames exceeding this are rejected before parsing (§9.8), the transport's 1009 bound (SURFACE
+/// §11.3) held again so the parser stays total on its own.
 pub const MAX_FRAME_BYTES: usize = 64 * 1024;
 
 /// Total client message parser, never panics; every kept field is rebuilt.

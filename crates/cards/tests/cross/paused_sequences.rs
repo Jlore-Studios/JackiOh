@@ -995,7 +995,7 @@ mod r174_r113_a_list_s_tail_after_a_prompt_still_meets_the_stay_the_play_chose {
 
         // R174: the damage was aimed at the stay the play chose, which the sacrifice ended; the list is
         // one effect list whether or not a prompt split it (R113), so the damage fizzles as it does with
-        // no question between (a fused Cube+Sorcerer, re-entry.test.ts).
+        // no question between.
         s.expect_in_zone(&saintess.id, "field");
         s.expect_stats(&saintess.id, json!({ "health": 1 }));
     }
@@ -1286,8 +1286,7 @@ mod s5_2_r113_a_queued_trigger_s_parked_tail_runs_the_face_its_head_ran {
         );
         place_fixture(&mut s, "edge-r7-l7-radiates", P1, Row::Units, 1);
 
-        // The first
-        // makes it Radiant, so by the time its own trigger resolves it runs the radiant text (§5.2:
+        // The first queued trigger makes the lane-2 unit Radiant, so the second runs the radiant text (§5.2).
         s.play(RENO, json!({ "zone": 3 }));
         assert!(s.card(&faced.id).radiant);
         must(s.state().pending.clone(), "the lane-2 trigger's question");
@@ -1662,8 +1661,7 @@ mod r122_2_4_the_answer_to_a_cast_s_own_choice_goes_on_with_the_draw_chain_not_t
         // §2.4: the draw repeats as soon as the cast has resolved, so the sweep is drawn and cast inside
         // the same draw. R122: the answer goes on with what the prompt interrupted, the draw chain, and
         // not with the resolution loop. A cast on draw is no play (R2179002), so p2's Bear Honeypot
-        // answers neither cast (through v0.5.2 it met the first at the sweep's announce and its
-        // tokens took the sweep's 1 damage).
+        // answers neither cast.
         let events: Vec<GameEvent> = s.last_events().to_vec();
         let types = types_of(&events);
         let sweep_drawn = find_index(
@@ -1907,7 +1905,7 @@ mod r174_r113_the_step_a_prompt_s_answer_re_enters_reads_the_stays_the_resolutio
 
         // R174: the steal is aimed at the stay the play chose, which the sacrifice ended before the
         // question. The answer continues the same resolution (R113, §10.6), so it is never scheduled for
-        // the body that came back, as it is not when a fused card's parts do the same (re-entry.test.ts).
+        // the body that came back.
         let scheduled: Vec<DelayedEffect> = s
             .state()
             .delayed
@@ -2353,8 +2351,7 @@ mod r174_r113_an_effect_naming_a_card_by_id_after_a_prompt_meets_the_stay_the_ru
         assert!(reborn > died, "Reborn brought its body back");
         // R174: "they attack it" is aimed at the played unit's stay, which the answer ended before the
         // tail ran — the list is one run whether or not a prompt split it (R113), and the answered step
-        // and the tail share its mark. #60's tokens do not attack a Reborn body; before the fix the
-        // token attacked it and the 1-health body died a second time.
+        // and the tail share its mark, so #60's tokens do not attack the Reborn body.
         let attacked = events.iter().any(|event| {
             matches!(event, GameEvent::AttackDeclared { forced, target_id, .. } if *forced && *target_id == played.id)
         });
@@ -2504,7 +2501,7 @@ mod r174_10_6_a_card_picked_at_a_prompt_is_aimed_at_the_stay_the_prompt_offered 
             &spell.id,
             json!({ "targets": [{ "pick": "instance", "instanceId": victim.id }] }),
         );
-        // the prompt offers it, a unit on the field now (R83).
+        // Reborn put the body back before the prompt opened, so the prompt offers it (R83).
         assert_eq!(s.card(&victim.id).reborn_spent, Some(true));
         let pending = must(s.state().pending.clone(), "the Spell's target prompt");
         let offered = pending
@@ -2611,11 +2608,10 @@ mod r226_10_1_a_card_being_played_is_never_left_in_two_zones_by_a_question_its_t
             s.answer(json!(key));
         }
 
-        // §10.1: every card is in exactly one zone. Offered while it waits between step 2 and step 4 in
-        // its owner's hand, the card being played is discarded to the graveyard by the answer; step 4
-        // then puts it on the field too, so it stands in lane 2 and lies in the graveyard at once.
-        // Either the question does not offer the card being played (it is leaving the hand, as R90 says
-        // of the play's own choices), or a card discarded that way is not played.
+        // §10.1: every card is in exactly one zone. Discarded by the answer while it waits in hand
+        // between steps 2 and 4, the card being played would also land on the field at step 4, so either
+        // the question does not offer it (it is leaving the hand, as R90 says of the play's own
+        // choices), or a card discarded that way is not played.
         assert_eq!(
             piles_holding(s.state(), &played.id).len(),
             1,
@@ -2723,9 +2719,7 @@ mod r59_10_5_step_4_a_trigger_that_answered_the_play_and_asked_is_followed_by_th
         s.answer(json!("ok"));
 
         // R59: the check follows the whole trigger, answered step included, and step 4's loop is where
-        // the play left it (R113, R118) — so Timmy, at -2, dies before step 5. Before the fix the
-        // re-entered loop held the check (`holdCheck`) because nothing had resolved inside it yet, and
-        // the Cry counted a dead unit still on the field: p2 took 1.
+        // the play left it (R113, R118) — so Timmy, at -2, dies before step 5.
         s.expect_in_zone(&timmy.id, "graveyard");
         s.expect_health(P2, 30);
     }
@@ -2891,8 +2885,7 @@ mod r66_r113_a_card_s_list_resumed_after_a_prompt_keeps_the_effects_it_built {
         assert_eq!(second.map(|card| card.def_id.as_str()), Some(BIGOT));
         assert_eq!(top.map(|card| card.def_id.as_str()), Some(SEVEN_SEVEN));
 
-        // The fixture is
-        // drawn first and cast (§2.4), and its cast asks.
+        // The fixture is drawn first and cast (§2.4), and its cast asks.
         g.play(GENNS_GREED, json!({}));
         assert_eq!(pending_kind(&g), Some(PromptKind::Mode));
         g.answer(json!("a"));
@@ -3056,7 +3049,7 @@ mod r70_10_3_a_cast_s_step_4_window_inside_an_effect_offers_each_event_once {
         g.play("core-005", json!({}));
 
         // One play, Stockpile: the cast Unit is logged (`cardPlayed`) but is no play and wakes no trigger
-        // (R2179002; through v0.5.2 it was the second, R70). So one hit, not two.
+        // (R2179002), so one hit, not two.
         let played: Vec<String> = g
             .events()
             .iter()
@@ -3459,7 +3452,7 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
         assert_eq!(pending.kind, PromptKind::Target);
         assert_eq!(s.state().players.p2.hero.health, before - 1);
 
-        // A caller driving the engine directly answers through the engine's own `answerPrompt` (R122:
+        // A caller driving the engine directly answers through the engine's own `answerPrompt` (R122).
         let refused = with_sink(&mut s, |sink| {
             answer_prompt(
                 sink,

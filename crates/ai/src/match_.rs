@@ -24,7 +24,7 @@ use crate::observe::ai_to_act;
 use crate::skill::{plays_best, skill_miss_action};
 use crate::types::{AiOptions, Decision, DecisionReason, SearchBudget};
 
-/// `AI_MATCH`'s shape (module-private in TS).
+/// `AI_MATCH`'s shape.
 struct AiMatch {
     max_actions: usize,
 }
@@ -260,8 +260,7 @@ pub(crate) fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionB
     out
 }
 
-/// The defId of the hand card a `play` names, read before the play moves it. (TS read the hand through
-/// `zoneCards(state, seat, "hand")`, a copy of the same pile.)
+/// The defId of the hand card a `play` names, read before the play moves it.
 fn played_def_id(state: &GameState, seat: PlayerId, action: &ActionBody) -> Option<String> {
     let ActionBody::Play { instance_id, .. } = action else {
         return None;

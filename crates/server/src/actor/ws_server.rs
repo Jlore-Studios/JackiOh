@@ -85,8 +85,7 @@ pub const WS_CLOSE: WsClose = WsClose {
 /// RFC 6455's "message too big".
 const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
 
-/// RFC 6455's normal closure: the default close, and the match and co-op actors' for a socket they
-/// are done with (replaced, detached, or a finished match's watcher).
+/// RFC 6455's normal closure: the default, and the actors' for a socket they are done with.
 pub const CLOSE_NORMAL: u16 = 1000;
 
 /// RFC 6455's "going away": the server is shutting down (#861), or an actor is going.
@@ -448,11 +447,9 @@ async fn seats_finished_match(
     Ok(in_window && (match_row.players.0 == profile_id || match_row.players.1 == profile_id))
 }
 
-/// The account behind an upgrade's token (R1379000), as every socket authenticates it: no token, one
-/// the auth refuses or no profile is 4401 "sign in first"; past the account's R109 budget 4429
-/// (R2478000); and §9.4's gate refuses with its own words and 4403. `path` names the socket in the
-/// budget's log line. `/ws/duos` and `/ws/watch` authenticate through it (`duos::ws`,
-/// `social::watch`).
+/// The account behind an upgrade's token (R1379000): no token, one the auth refuses or no profile is
+/// 4401 "sign in first", past the account's R109 budget 4429 (R2478000), §9.4's gate 4403 with its own
+/// words. `path` names the socket in the budget's log line; `/ws/duos` and `/ws/watch` use it too.
 pub(crate) async fn authenticate_upgrade(
     app: &Arc<App>,
     token: Option<String>,

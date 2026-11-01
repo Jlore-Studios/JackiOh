@@ -560,8 +560,7 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
             "p2": { "backrow": [{ "def": HONEYPOT, "lane": 1 }], "hand": [RENO], "library": [RENO, RENO] },
         }));
         // A Unit with Reborn, and a 2-cost Spell whose list casts one (E12, R453) and then destroys every
-        // unit. (It drew a cast-on-draw one through v0.5.2; a cast on draw is no play since #2179,
-        // R2179002, so no trap answers it.)
+        // unit (a cast on draw would be no play, #2179, R2179002, so no trap would answer it).
         unit_fixture(
             &mut s,
             "edge-r10-cast-reborn-unit",

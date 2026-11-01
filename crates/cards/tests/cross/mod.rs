@@ -1,6 +1,5 @@
-//! The cross-card tests (SURFACE §1): one module per `packages/cards/test/<x>.test.ts` that is not
-//! a per-card file (those are the `mod tests` of their card's script). Written once by part 1; the
-//! files are parts 22–27's.
+//! The cross-card tests (SURFACE §1): those that are not a card's own (each card's are the `mod tests`
+//! of its script).
 //! The helpers the files share live here, beside `scenario`: `register_fixture_script`, `fixture`,
 //! `in_hand`, `targets_of`, `tributes_of` (#1826; crates/tools/tests/acceptance.rs refuses a copy)
 //! and `sidecar`.

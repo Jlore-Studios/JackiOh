@@ -432,10 +432,9 @@ pub struct EvalWeights {
     /// and the enemy's alike. R2603000: `material` adds it, inside the card's Brittle share, for each
     /// backrow card the seat can read, on either side.
     pub activation: f64,
-    /// R2688000: the share of what a unit's next attack gives its controller through its attack hooks,
-    /// "when this attacks" and "after this attacks" (`evaluate::attack_hook_price`), that `unit_worth`
-    /// adds, inside the Brittle share, while the unit may attack, the seat's units and the enemy's
-    /// alike.
+    /// R2688000: the share of what a unit's next attack gives its controller through its attack hooks
+    /// (`evaluate::attack_hook_price`) that `unit_worth` adds, inside the Brittle share, while the unit
+    /// may attack, the seat's units and the enemy's alike.
     pub attack_hook: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
@@ -700,8 +699,8 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
 /// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick. Every
-/// term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0
-/// here, and each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
+/// term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and each flag that
+/// opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
 /// `standing_unit_priced_once`) is off, as the baseline read none of them.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
@@ -769,7 +768,6 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     death: 0.0,
     turn_hook: 0.0,
     activation: 0.0,
-    // R2688000 came after the gates were fixed: nothing, as it gave an attack hook.
     attack_hook: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,

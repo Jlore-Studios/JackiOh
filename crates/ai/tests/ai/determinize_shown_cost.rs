@@ -143,7 +143,7 @@ mod determinize_at_the_shown_cost_r762 {
                 AI,
                 &mut AiOptions::new(create_rng(&format!("shown-cost-doom:{seed}"), 0)),
             );
-            // TS's `decision?.action ?? { type: "endTurn" }` never falls back: a null decision fails here.
+            // A null decision fails here: nothing falls back to ending the turn.
             let decision = decision.unwrap_or_else(|| panic!("seed {seed}: no decision"));
             assert_ne!(
                 decision.reason,

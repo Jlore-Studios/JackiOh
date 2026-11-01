@@ -1339,7 +1339,7 @@ pub async fn run_matchmaker(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCHMAKER_SWEEP_INTERVAL_SECONDS as u64)).await;
         // R1454: a bot (and its player) a cut-off start still holds is let go before the sweep,
-        // whatever `LADDER_BOTS` says now.
+        // whatever `LADDER_BOTS` says now, since a restart may have turned it off.
         if let Err(error) = crate::bots::pool::release_stale_starts(&app, now_ms()).await {
             tracing::warn!(event = "bots.start.release_failed", message = %error);
         }
@@ -1360,8 +1360,8 @@ pub async fn run_matchmaker(app: Arc<App>) {
 // Routes
 
 /// `POST /api/queue` (active, §9.4's gate: a pending account gets 403 before this runs): §9.5's
-/// enqueue, pairing inline so a player who pairs at once learns it from the response's status. SURFACE
-/// §11.2.
+/// enqueue, pairing inline so a player who pairs at once learns it from the response's status. Takes
+/// `&Arc<App>` where SURFACE §11.2 writes `&App`, as `Registry::start` does.
 pub async fn enqueue(app: &Arc<App>, req: Req) -> ApiResult {
     enqueue_route(app, req).await
 }

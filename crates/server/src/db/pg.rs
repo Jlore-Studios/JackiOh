@@ -1,16 +1,15 @@
-//! The production store (SPEC §9.2's `API functions -> Postgres` edge) over the migrations in
-//! `crates/server/migrations`, with sqlx (SURFACE §11.1, §11.2). One free async fn per store method, named
-//! `<substore>_<method>` (the root `redeem` and `purge_expired` keep their names), each taking the open
-//! transaction `Tx::Pg` holds; `db::store` dispatches to them. The SQL goes through `sqlx::query` with binds,
-//! never the compile-time `query!` macros (they need a live database at build time).
+//! The production store (SPEC §9.2's `API functions -> Postgres` edge) over `crates/server/migrations`, with
+//! sqlx (SURFACE §11.1, §11.2): one free async fn per store method, named `<substore>_<method>` (the root
+//! `redeem` and `purge_expired` keep their names), taking the open transaction `Tx::Pg` holds. The SQL goes
+//! through `sqlx::query` with binds, never the `query!` macros (they need a live database at build time).
 //!
 //! 1. Call the `app.*` functions, do not re-derive them: SPEC §9.4/§9.5's "one transaction", "one atomic
 //!    statement" and "append-only" live inside SECURITY DEFINER functions, so a method here is one call to
 //!    one where the port's shape admits it, and says why when it is not.
 //! 2. The server is `service_role`, never the owner: every transaction switches to it and stamps
-//!    `request.jwt.claim.sub` (the GUC `auth.uid()` reads) with the profile the call is about. `SET LOCAL` is
-//!    a silent no-op outside a transaction, so every method takes the transaction `begin` opened and
-//!    re-stamps its subject (`run_as`); `SESSION_SQL` alone sets either GUC (`tests/store/postgres.rs`).
+//!    `request.jwt.claim.sub` (the GUC `auth.uid()` reads) with the call's profile. `SET LOCAL` is a no-op
+//!    outside a transaction, so every method re-stamps its subject inside the one `begin` opened (`run_as`);
+//!    `SESSION_SQL` alone sets either GUC (`tests/store/postgres.rs`).
 //! 3. `src/db/fake.rs` is the behavioral specification: `tests/store/contract.rs` runs the invariants against
 //!    both stores; where they cannot agree the divergence is listed in `KNOWN DIVERGENCES` at the bottom.
 
@@ -109,13 +108,10 @@ fn db_error(error: sqlx::Error) -> StoreError {
     StoreError::Db(error)
 }
 
-// ---------------------------------------------------------------------------
 // Value conversions. The port speaks epoch milliseconds and plain JSON; Postgres speaks
 // timestamptz, jsonb, uuid and int8.
-// ---------------------------------------------------------------------------
 
-/// `timestamptz` -> epoch ms. sqlx decodes it into an `OffsetDateTime` (TS: node-pg's `Date`, whose
-/// `getTime()` drops the microseconds the same way). The co-op and economy stores read theirs with
+/// `timestamptz` -> epoch ms, the microseconds dropped. The co-op and economy stores read theirs with
 /// it too (`duos::store`, `economy::store`).
 pub(crate) fn ms_of(value: OffsetDateTime) -> i64 {
     (value.unix_timestamp_nanos() / NANOS_PER_MS) as i64
@@ -389,12 +385,10 @@ pub async fn commit(t: PgTx<'_>) -> Result<(), StoreError> {
     t.commit().await.map_err(db_error)
 }
 
-/// TS's `session.run(subject, …)` inside an open transaction: re-stamps the subject (the role is
-/// already `service_role` and stays that way until commit). `subject` is the profile the call is
-/// about — or `None` for the calls that are about nobody. Every statement the method issues after
-/// it is on the same connection and commits or rolls back together — which is what a method like
-/// `matches_create` (read-lock, then write) or `tickets_claim_pair` (claim, then link) needs to be
-/// safe at all, and what makes a mid-method error leave nothing behind. The co-op and economy stores'
+/// Re-stamps the subject inside an open transaction (the role stays `service_role` until commit): the
+/// profile the call is about, or `None` for a call about nobody. The method's later statements commit or
+/// roll back with it, which `matches_create` (read-lock, then write) and `tickets_claim_pair` (claim, then
+/// link) need to be safe, and a mid-method error leaves nothing behind. The co-op and economy stores'
 /// methods re-stamp theirs with it too (`duos::store`, `economy::store`).
 pub(crate) async fn run_as(t: &mut PgTx<'_>, subject: Option<&str>) -> Result<(), StoreError> {
     sqlx::query(SESSION_SQL)
@@ -7853,17 +7847,15 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //    and a round-trip cannot return it; `redeem` returns a result code, likewise.
 //  * redemption's email check. The SQL reads `auth.users.email_confirmed_at` itself; the in-memory store uses
 //    `RedemptionSettings.email_verified`. The server refuses an unverified caller (R159) before either store.
-//  * redemption's circuit breaker. The SQL also refuses on its own count of recent failures (R106's
-//    threshold); the in-memory store has the `app.settings.redemption_enabled` switch and not the counter:
-//    the server's R106 breaker (`src/api/codes.rs`) runs first, and a counting fake would trip BUILD
-//    M6-T1's 150-failure timing test.
+//  * redemption's circuit breaker. The SQL also refuses on its own count of recent failures (R106); the
+//    in-memory store has only the `app.settings.redemption_enabled` switch: the server's R106 breaker
+//    (`src/api/codes.rs`) runs first, and a counting fake would trip BUILD M6-T1's 150-failure timing test.
 //  * profile email. `public.profiles` has no email column (§9.4's managed auth provider owns it on
 //    `auth.users`), so `Profile.email` is read from there; `profiles_create` ignores its `email` argument and
 //    needs the `auth.users` row, because `profiles.id` references it.
 //  * foreign keys. `results.match_id`, `tickets.match_id`, `profiles.current_match_id`, `decks`, `trios` and
 //    both sides of `series` are foreign keys: a pointer to a row never created raises here and passes in the
-//    fake (callers in `src/api/**` write the target first). `series.next_match_id` has NONE, on purpose
-//    (R263).
+//    fake (`src/api/**` writes the target first). `series.next_match_id` has NONE, on purpose (R263).
 //  * deck and trio strictness. `app.upsert_deck` / `app.upsert_trio` (0007) raise on an inactive profile, a
 //    bad name (D1, T1), too many cards (D2) or copies of one id (D4) and a malformed cards value; the
 //    in-memory store checks none, because `check_deck_draft` / `check_trio_draft` refuse them first. Stricter
@@ -7904,15 +7896,14 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //    `match_id` goes back to null and a claimed room's code is free again. The fake keeps only the claim's
 //    time (`FakeTables.reserved`, R1450, R1454), which its `discard_open` drops; a matched ticket keeps the
 //    discarded id there. `matches_reap_open` (R1450) deletes the same in both stores.
-//  * deleted accounts. Migration 0012 sets a deleted profile's seat on its finished matches, results and
-//    series to NULL, and 0022 does the same on `rated_games`' sides (cascading its `season_ranks` away), so
-//    `matches_get`, `results_get_by_match`, `series_get` and `ranked_game` can read back a null where the
-//    port types a profile id. A Rust `String` cannot hold it, so a deleted seat reads back as the empty
-//    string, either seat of a match included (`to_match`); the in-memory store keeps the id (no foreign
-//    keys). Reads that hand a finished match's seats on (R768) bind a profile id, so those take one that is
-//    not a uuid, the empty one among them, as naming nothing (`profiles_get_many`, `ranked_standings_subset`,
-//    `blocks_between`, the economy's `game_jlore_totals`) instead of handing it to Postgres. A live match or
-//    series cannot lose a seat: the delete is refused, by constraint here and by `DELETE /api/account` first.
+//  * deleted accounts. Migrations 0012 and 0022 null a deleted profile's seat on its finished matches,
+//    results, series and `rated_games` sides (cascading its `season_ranks` away). A `String` cannot hold the
+//    null, so `matches_get`, `results_get_by_match`, `series_get` and `ranked_game` read such a seat, either
+//    one, back as the empty string (`to_match`); the in-memory store keeps the id (no foreign keys). Reads
+//    that bind the seats a finished match hands on (R768) take an id that is no uuid as naming nothing
+//    (`profiles_get_many`, `ranked_standings_subset`, `blocks_between`, the economy's `game_jlore_totals`).
+//    A live match or series cannot lose a seat: the delete is refused, by constraint here and by
+//    `DELETE /api/account` first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one `grace_deadline_at` plus
 //    two `*_disconnected_at`. The per-player deadlines live in the `*_disconnected_at` columns and
 //    `grace_deadline_at` keeps the nearer; a migration adding per-player deadline columns would retire this.

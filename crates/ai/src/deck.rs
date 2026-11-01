@@ -108,7 +108,7 @@ pub struct AiDeckOptions {
     /// Ids forced in (the sweep); must be non-token and not banned.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub include: Option<Vec<String>>,
-    /// A tag to lean on; `None` (TS undefined) = roll one (AI_DECK.themeChance), `Some(None)` (TS null) = none.
+    /// A tag to lean on; `None` = roll one (AI_DECK.themeChance), `Some(None)` = none.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -337,8 +337,8 @@ fn theme_candidates(defs: &[&CardDef]) -> Vec<String> {
     themes
 }
 
-/// One index into `weights`, chosen with probability proportional to its weight. TS answered
-/// `weights.length - 1` past the end, -1 for an empty list: here `None`. The draw is taken either way.
+/// One index into `weights`, chosen with probability proportional to its weight: the last when the roll
+/// runs past the end, `None` for an empty list. The draw is taken either way.
 fn weighted_index(weights: &[f64], rng: &mut Rng) -> Option<usize> {
     let total = weights.iter().fold(0.0, |sum, weight| sum + weight);
     let roll = rng.next() * total;

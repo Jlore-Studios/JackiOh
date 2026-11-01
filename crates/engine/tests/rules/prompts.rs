@@ -1,15 +1,11 @@
 //! `state.pending`, the ten prompt kinds and the serializable continuation that makes answering one
-//! re-enter the script that asked (SPEC §10.6, BUILD M3-T3).
-//!
-//! What this file has to prove, in the words of the acceptance list: a state with an open prompt
-//! survives a JSON round trip and answering still works; the opponent's `viewFor`
-//! shows `pendingFor: playerId` and no options; an `answer` with an option not in `options` errors;
-//! `legalActions` lists every option. Around those: `resume` is a script id, a step name and
-//! captured data and never a closure (§9.3), chained prompts run to the end of the chain (Private
-//! Tutor's three steps, Craft a Card's two Discovers), a prompt in the middle of an effect list
+//! re-enter the script that asked (SPEC §10.6, BUILD M3-T3): a state with an open prompt survives a
+//! JSON round trip and answering still works; the opponent's `viewFor` shows `pendingFor: playerId`
+//! and no options; an `answer` with an option not in `options` errors; `legalActions` lists every
+//! option. Around those: `resume` is a script id, a step name and captured data and never a closure
+//! (§9.3), chained prompts run to the end of the chain, a prompt in the middle of an effect list
 //! parks the tail rather than skipping it, R81's split between play choices and resolution choices,
 //! and R98's "a card that asks a question while it resolves is still itself".
-//!
 //! The fixture cards are this file's own, not a shared fixture's (BUILD §0).
 
 use serde::Serialize;

@@ -284,8 +284,7 @@ pub fn beam_search_with(
             continue;
         }
         let end = close_line(&state, seat, root_turn, counter, prices);
-        // TS asked whether `closeLine` handed back the very state it was given (no step was taken):
-        // a step always moves the state on, so equality answers the same question.
+        // Equality means `close_line` took no step: a step always moves the state on.
         let score = if end == state {
             line_score(&end, seat, NextSwing::Enemy, prices)
         } else {

@@ -1150,13 +1150,10 @@ struct E2eState {
     deletion: E2eDeletion,
 }
 
-/// The provider BUILD M8's fixture accounts sign in with, and the test double: the test support
-/// (`tests/support/deps.rs`) also registers users on it (`add_user`).
-///
-/// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts `emailVerified === true`
-/// on the *pending* account before it redeems, so every fixture is verified; what distinguishes
-/// `e2e-pending` and `e2e-econ` is their `profiles.status`. `app_metadata` stays empty: nothing here is
-/// an authorization claim.
+/// The provider BUILD M8's fixture accounts sign in with, and the test double (`tests/support/deps.rs`
+/// registers users on it with `add_user`). §9.4 makes a verified email a precondition of redemption,
+/// and spec 10 asserts it on the pending account, so every fixture is verified and `profiles.status`
+/// tells them apart. `app_metadata` stays empty: nothing here is an authorization claim.
 #[derive(Debug)]
 pub struct E2eAuth {
     state: Mutex<E2eState>,

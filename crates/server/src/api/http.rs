@@ -412,12 +412,10 @@ fn forwarded_entries(headers: &HeaderMap) -> Vec<String> {
 
 /// SPEC §11 R190: the address a per-IP limit counts (§9.4 step 3, R157).
 ///
-/// Behind a proxy the client's address is read from `X-Forwarded-For`, only from the entry the
-/// deployment's own proxies wrote: each trusted hop appends one on the right, so the client is
-/// `entries[length - hops]`. Everything left of it the caller wrote, so reading it would let a caller
-/// pick a fresh bucket per request. `CF-Connecting-IP` and `X-Real-IP` are never read: nothing here
-/// writes them, so a caller can. With fewer entries than hops, or hops 0, the key is the socket's peer
-/// address, or `UNKNOWN_CLIENT_ADDRESS` when the host gave none.
+/// Behind a proxy it is `X-Forwarded-For`'s `entries[length - hops]`, the entry the deployment's own
+/// proxies wrote: everything left of it the caller wrote, and reading it would let a caller pick a
+/// fresh bucket per request. `CF-Connecting-IP` and `X-Real-IP` are never read: nothing here writes
+/// them, so a caller can. With fewer entries than hops, or hops 0, it is the socket's peer address.
 pub fn client_address(headers: &HeaderMap, peer_address: Option<&str>, trusted_proxy_hops: usize) -> String {
     let entries = forwarded_entries(headers);
     if trusted_proxy_hops >= 1
@@ -493,10 +491,9 @@ pub fn rate_limit_address(raw: &str) -> String {
 
 /// SPEC §11 R190: the key a per-IP limit counts an address under, before it is hashed.
 ///
-/// An IPv4 address is itself. An IPv6 address is its first `prefix_bits` bits (a /56 by default): a
-/// host holds at least a /64 and often a /56, so a finer key would give one host many fresh buckets
-/// for §9.4 step 3 and R157. An IPv4-mapped IPv6 address is the IPv4 address, so one caller is one
-/// key whichever way it arrived. Brackets, a zone and an IPv4 port are dropped first; anything else
+/// An IPv6 address is its first `prefix_bits` bits: a host holds at least a /64 and often a /56, so
+/// a finer key would give one host many fresh buckets (§9.4 step 3, R157). An IPv4-mapped IPv6
+/// address is the IPv4 address. Brackets, a zone and an IPv4 port are dropped first; anything else
 /// is keyed as written, lower-cased.
 pub fn rate_limit_address_with_prefix(raw: &str, prefix_bits: i64) -> String {
     let lowered = raw.trim().to_lowercase();
@@ -826,9 +823,8 @@ pub fn address_key(ip_hash: &str) -> String {
 }
 
 /// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, so a request from
-/// an account whose R109 budget is spent is refused before the store is read; at most `max` users,
-/// the oldest dropped first. It only refuses early: every request it lets by still reads its
-/// profile. One per `App`, for the limiter's reason.
+/// an account whose R109 budget is spent is refused before the store is read. It only refuses early:
+/// every request it lets by still reads its profile. One per `App`, for the limiter's reason.
 pub struct KnownProfiles {
     max: usize,
     ids: Mutex<IndexMap<String, String>>,
@@ -926,13 +922,11 @@ struct RateLimiterState {
     refusals_swept_at: i64,
 }
 
-/// §9.8: "per-account rate limit at the API", R109: 300 requests per minute per account. One
-/// sliding window per key, the shape of the actor's per-seat `flood_exceeded` (`actor/match_actor.rs`),
-/// so the two halves of §9.8's row are one mechanism, not two that can drift. A request over the
-/// limit is not recorded: like §9.4's attempt log, the window drains, so a caller who keeps hammering
-/// cannot pin their counter open. R1717000: refusals are counted apart (`note_rejection`). Idle keys
-/// are swept once a window. It also holds the router's R190 signal (see `dispatch`). One lives on each
-/// `App`, so one test's flood cannot leak into the next.
+/// §9.8: "per-account rate limit at the API", R109: 300 requests per minute per account. One sliding
+/// window per key, the shape of the actor's per-seat `flood_exceeded` (`actor/match_actor.rs`), so
+/// §9.8's two halves are one mechanism. A request over the limit is not recorded, so a caller who
+/// keeps hammering cannot pin their counter open; refusals are counted apart (R1717000). It also
+/// holds the router's R190 signal. One per `App`, so one test's flood cannot leak into the next.
 pub struct RateLimiter {
     limit: usize,
     window_ms: i64,
@@ -1067,17 +1061,13 @@ impl Default for RateLimiter {
 /// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, the one fallback of `app::router`,
 /// behind the CORS layer, which answers preflights first.
 ///
-/// §9.8's per-account limit is `app.limiter`. R137's reasoning holds here: one shared counter lets
-/// one caller spend everybody's budget. So SPEC §11 R157 keys it on the account, `profiles.id` (§9.4),
-/// not the auth user or the bearer token, of which a caller can hold several; a request that names no
-/// account (R109 says "per account") counts against its IP hash, in a namespace of its own.
+/// §9.8's per-account limit is `app.limiter`, keyed (SPEC §11 R157) on `profiles.id` (§9.4), not the
+/// auth user or token a caller can hold several of, since one shared counter lets one caller spend
+/// everybody's budget (R137); a request naming no account (R109) counts against its IP hash.
 ///
-/// R190's operator signal: the fewest `X-Forwarded-For` entries any request has carried. A caller can
-/// add entries but never remove the proxies' ones, so that is the hops they add, and
-/// `TRUSTED_PROXY_HOPS` must not be more (docs/architecture.md §10). One sample would not do (the first
-/// request may be a scanner, and raising the hops to its count would hand the key back to the caller),
-/// so a line is logged each time a request carries fewer than any before; counts past
-/// `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many". No address is ever logged.
+/// R190's operator signal: a line each time a request carries fewer `X-Forwarded-For` entries than
+/// any before. A caller can add entries but never remove the proxies', so the fewest is the hops they
+/// add, and `TRUSTED_PROXY_HOPS` must not be more (docs/architecture.md §10). No address is logged.
 pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
@@ -1162,9 +1152,7 @@ async fn run_route(
     trusted_proxy_hops: usize,
     path: &str,
 ) -> ApiResult {
-    // §9.4, §9.8: the client address is only ever seen hashed. Read once, for the limiter and for
-    // the request alike, and read as R190 says: the rightmost trusted hop, then the peer, with an
-    // IPv6 client counted by its /56.
+    // §9.4, §9.8: the client address is only ever seen hashed, read once as R190 says.
     let hashes = crate::api::crypto::hashes_for_pepper(&app.env.code_pepper);
     let address = hashes.ip(&rate_limit_address(&client_address(
         &parts.headers,
@@ -1200,9 +1188,8 @@ async fn run_route(
         }
     }
 
-    // §9.8: "per-account rate limit at the API" (R109: 300 a minute). Checked before the body is
-    // read and before §9.4's gate, so a flood costs the least work this router can manage. A known
-    // account whose budget is spent is refused inside it, before the store (R2478000).
+    // §9.8 (R109): checked before the body is read and before §9.4's gate, so a flood costs the
+    // least work this router can manage.
     let key = match &caller {
         None => address_key(&address),
         Some(resolved) => account_key(&resolved.profile.id),
@@ -1223,9 +1210,8 @@ async fn run_route(
         assert_active(&resolved.profile)?;
     }
 
-    // SPEC §11 R897000: every signed-in request refreshes its caller's queue presence, piggybacked here
-    // so no new route and no client change is needed: a queued client already polls `GET /api/auth/me`
-    // every `SERIES_POLL_SECONDS`. Only requests passing auth and the gate refresh.
+    // SPEC §11 R897000: every signed-in request passing auth and the gate refreshes its caller's
+    // queue presence; a queued client already polls `GET /api/auth/me`.
     if let Some(resolved) = &caller {
         app.queue_presence.touch(&resolved.profile.id, now_ms());
     }

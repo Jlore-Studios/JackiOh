@@ -10,8 +10,7 @@ use crate::rules::fixtures::harness::{
     events_of_type, new_game, next_nonce, past_the_mulligans as playing, put, slot,
 };
 
-/// An attack action from p1 (TS `attackVia(state, attackerId, targetId, player = "p1")`; no caller
-/// names another player).
+/// An attack action from p1.
 fn attack_via(state: &GameState, attacker_id: &str, target_id: &str) -> ReduceResult {
     let action: Action = json_as(json!({
         "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p1", "nonce": next_nonce()

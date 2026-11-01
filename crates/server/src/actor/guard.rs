@@ -1,8 +1,7 @@
-//! The abuse guards a person's socket stands behind (SPEC §9.8): `SeatGuard`, one per human seat,
-//! which the 1v1 match actor and the co-op actor (§13.9) each keep (R137, R835000, R835002, and for a
-//! seat's hellos R2686000), and one per watcher's socket (R2609000), and `HelloGate`, which `/ws/duos` and `/ws/watch` hold a socket
-//! behind until it says its hello (R835002). Every number is in `crate::config`; none is stated
-//! here.
+//! The abuse guards a person's socket stands behind (SPEC §9.8): `SeatGuard`, one per human seat of
+//! the 1v1 and co-op actors (§13.9; R137, R835000, R835002, R2686000) and one per watcher's socket
+//! (R2609000), and `HelloGate`, which `/ws/duos` and `/ws/watch` hold a socket behind until it says
+//! its hello (R835002). Every number is in `crate::config`.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, Weak};
@@ -84,10 +83,9 @@ impl SeatGuard {
     }
 
     /// R2609000, R2686000: `true`, and `now` kept, unless a hello of this socket `generation` was
-    /// answered less than `WATCH_HELLO_INTERVAL_MS` before `now`, so a hello flood costs one view per
-    /// interval. A hello of a generation not answered last (a reattach's first, or a seat's first
-    /// ever) is always allowed and starts its own interval. A seat's hellos that find one queued
-    /// coalesce first (R835001) and never ask this.
+    /// answered less than `WATCH_HELLO_INTERVAL_MS` before `now`, so a flood costs one view per
+    /// interval; a generation not answered last (a reattach's first) starts its own. A seat's hellos
+    /// that find one queued coalesce first (R835001) and never ask this.
     pub fn hello_answer_allowed(&mut self, generation: u64, now: i64) -> bool {
         if self
             .hello_answered

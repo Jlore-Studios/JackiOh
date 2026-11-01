@@ -1,6 +1,5 @@
 //! Two marks on a backrow card's view (SPEC §10.8), each read by the client and decided by the
 //! engine alone (CLAUDE.md rule 7):
-//!
 //!   R371  `unrevealed: true` on the controller's own view of a Trap or Field Trap that is still
 //!         face-down, so the board can say "your opponent can't see this card" without working out
 //!         R33 itself. It is the same answer `backrow_is_public` gives the other seat: present exactly
@@ -8,9 +7,7 @@
 //!   R372  `counters.gradeLetter`, the letter #93 Combo-Index's grade counter stands for (E..S), and
 //!         a preview value's `display`, the word a value prints as, carried through `preview_of`
 //!         untouched.
-//!
-//! Test-only definitions, registered over the fixture catalog.
-//! Surface contract: docs/v0.3.0/SURFACE.md §8.
+//! Test-only definitions, registered over the fixture catalog (Surface contract: docs/v0.3.0/SURFACE.md §8).
 
 use jackioh_engine::effects::steal;
 use jackioh_engine::subsystems::combo_index::GRADES;

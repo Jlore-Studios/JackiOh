@@ -1,8 +1,8 @@
-//! Patch v0.3.7's combat keywords in the AI's own combat reads (#841): a Ranged attacker's kill of a
+//! The combat keywords of #841 in the AI's own combat reads: a Ranged attacker's kill of a
 //! unit that is not Ranged takes no strike back (R783000), in the move order and in the opponent's
 //! reply, a Flying Taunt in Attack Position binds only the Flying and Ranged attackers (R783002) and a
 //! landed one every attacker (R783003), in `face_threat` and the lethal solver's `ready_gap`, and
-//! `KeywordWeights` weighs each keyword the patch shipped.
+//! `KeywordWeights` weighs each keyword #841 shipped.
 //!
 //! No card prints Ranged or Flying yet (§6.1: the random keyword pool only), so each board grants the
 //! keyword to a unit on the field. The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy (core-011) 3/3,

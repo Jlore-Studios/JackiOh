@@ -95,8 +95,8 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
 
         // p1's start of turn: Moths makes p2's Panther attack it; the Panther destroys it and survives,
         // so p2 draws 2 — on p1's turn (R426: a forced attack is an attack). The first draw is Hinder,
-        // cast as it is drawn for 0: no play (R2179002), so p2's Gifted Program passes it by (through
-        // v0.5.2 it was a play, R70, and made it Radiant).
+        // cast as it is drawn for 0: a cast (R70) but no play (R2179002), so p2's Gifted Program passes
+        // it by.
         g.start_turn();
         let hinder = g
             .events()

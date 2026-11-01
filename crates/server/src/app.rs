@@ -92,10 +92,9 @@ pub struct App {
     /// §14.8, #1303: the permits of the practice claims being verified at once,
     /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
     pub practice_verifications: tokio::sync::Semaphore,
-    /// SPEC §11 R2422000: how many practice claims are settling now, each counted from before its
-    /// task is spawned until it ends (`api::practice`), so the shutdown drain waits for every one,
-    /// a claim whose caller has gone included, before it closes the store. One per app, for the
-    /// limiter's reason.
+    /// SPEC §11 R2422000: how many practice claims are settling now (`api::practice`), so the
+    /// shutdown drain waits for every one before it closes the store. One per app, for the limiter's
+    /// reason.
     pub practice_settles: tokio::sync::watch::Sender<usize>,
     /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
     /// (`economy::spend_slots`). One per app, for the limiter's reason.
@@ -104,12 +103,10 @@ pub struct App {
 
 // The clock
 
-/// Epoch milliseconds. Anchored once to the wall clock and advanced by tokio's clock, so a test that
-/// calls `tokio::time::pause()` and `advance()` moves every deadline the server reads, while a
-/// deployment reads the wall clock. The anchor is a `std` instant, the same in every runtime, and the
-/// reading is the calling runtime's tokio instant measured from it, either side of it: anchoring on
-/// the first caller's tokio instant would freeze every other runtime's reading at that caller's
-/// paused clock.
+/// Epoch milliseconds, anchored once to the wall clock and advanced by tokio's, so a test's
+/// `tokio::time::pause()` and `advance()` move every deadline the server reads. The anchor is a `std`
+/// instant, the same in every runtime: anchoring on the first caller's tokio instant would freeze
+/// every other runtime's reading at that caller's paused clock.
 pub fn now_ms() -> i64 {
     static ANCHOR: OnceLock<(std::time::Instant, i64)> = OnceLock::new();
     let (at, epoch_ms) = *ANCHOR.get_or_init(|| {
@@ -130,13 +127,10 @@ pub fn now_ms() -> i64 {
 
 // BUILD M8's `E2E=1` mode
 
-/// Not in SPEC, and no R-row: boot ergonomics for the test mode, not a rule. These are placeholders
-/// so `E2E=1 jackioh-server` (the command `e2e/README.md` documents) boots in a checkout with no
-/// `.env`: `env.rs` validates the whole contract whatever the mode, and end-to-end mode reaches
-/// neither Supabase nor Postgres. Each is filled in ONLY when the variable is unset. The one rule
-/// here is `CATALOG_VERSION`, the version this build compiled in (`jackioh_cards::catalog_version()`,
-/// SURFACE §11.3), which `env.rs` requires the variable to equal. `CODE_PEPPER` is a throwaway: the
-/// fixture invite codes are checked into `e2e/support/config.ts`, so their hashes protect nothing.
+/// Not in SPEC: placeholders so `E2E=1 jackioh-server` (`e2e/README.md`) boots with no `.env`, each
+/// filled in ONLY when the variable is unset; `env.rs` validates the whole contract whatever the mode.
+/// `CATALOG_VERSION` must equal the version this build compiled in (SURFACE §11.3). `CODE_PEPPER` is a
+/// throwaway: the fixture invite codes are checked into `e2e/support/config.ts`.
 fn e2e_env_defaults() -> Vec<(&'static str, String)> {
     vec![
         ("SUPABASE_URL", "https://e2e-fixture-auth.invalid".to_string()),
@@ -1134,11 +1128,10 @@ fn init_logging() {
 /// Starts the background loops through `loops::spawn_supervised` and keeps their handles, so
 /// `stop_loops` can abort them on shutdown (#861).
 fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
-    // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
-    // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
-    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
-    // instance may sleep before an hour is up. A loop logs its failures and tries again on its next
-    // tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized once now and then hourly.
+    // §9.5: the matchmaker's sweeper and the reaper; R260, R263: the series sweeper runs the pick
+    // clock and starts a game a restart left unstarted. The retention purge runs once now, since a
+    // free instance may sleep before an hour is up. R1454: with `LADDER_BOTS=on`, the bot pool is
+    // sized once now and then hourly.
     let mut running = vec![
         (
             "matchmaker",
@@ -1220,16 +1213,11 @@ pub fn shutdown_signal() -> std::io::Result<impl Future<Output = ()> + Send + 's
 
 /// Serves `app` on `listener` until `shutdown` resolves, then drains and answers `Ok`.
 ///
-/// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain runs at
-/// most `drain` long, in this order: it stops accepting connections, aborts the background loops, lets
-/// in-flight HTTP requests finish, stops every match and co-op actor (open sockets get close frame
-/// 1001 and queues drain so result writes land), waits for every socket and for every practice claim
-/// still settling, a gone caller's included, so its pay lands (R2422000), and closes the store.
-///
-/// axum's graceful shutdown waits only for HTTP requests, since an upgraded socket leaves its count,
-/// so `all_closed` is awaited. `pg::close` waits for checked-out connections, so it sits inside the
-/// `drain` timeout: do not move it out. Past `drain` it logs `server.drain_timed_out` and still
-/// answers `Ok`, so the process exits 0.
+/// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain, at
+/// most `drain` long, stops every actor so result writes land and waits for every socket (axum's
+/// graceful shutdown counts no upgraded one) and settling practice claim (R2422000) before it closes
+/// the store. `pg::close` waits for checked-out connections, so it sits inside the `drain` timeout:
+/// do not move it out. Past `drain` it logs `server.drain_timed_out` and still answers `Ok`.
 pub async fn serve_until<F>(
     app: Arc<App>,
     listener: tokio::net::TcpListener,
@@ -1282,12 +1270,10 @@ where
     Ok(())
 }
 
-/// The listener `serve` answers on: every interface, IPv6 and IPv4 alike (`[::]`, which takes
-/// IPv4 too while `net.ipv6.bindv6only` is 0, Linux's default), or every IPv4 interface where the
-/// host has no IPv6. `localhost` names `::1` before `127.0.0.1` on the CI runners and on macOS, so an
-/// IPv4-only listener would leave Chrome's connections to `http://localhost:8787` depending on a
-/// fallback from a refused `::1`. An IPv4 peer arrives as `::ffff:a.b.c.d`, which `rate_limit_address`
-/// keys as `a.b.c.d` (R190), so no limit's key changes.
+/// The listener `serve` answers on: `[::]`, which takes IPv4 too while `net.ipv6.bindv6only` is 0,
+/// or every IPv4 interface where the host has no IPv6. `localhost` names `::1` first on the CI runners
+/// and macOS, so an IPv4-only listener would leave Chrome hanging on a fallback. An IPv4 peer arrives
+/// as `::ffff:a.b.c.d`, which `rate_limit_address` keys as `a.b.c.d` (R190).
 async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
     match tokio::net::TcpListener::bind((Ipv6Addr::UNSPECIFIED, port)).await {
         Ok(listener) => Ok(listener),

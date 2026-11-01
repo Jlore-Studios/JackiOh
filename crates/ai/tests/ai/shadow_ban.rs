@@ -1240,7 +1240,7 @@ mod a_game_ending_play_r390 {
     fn r390_ninety_plays_at_plus_5_and_one_that_loses_the_game_raise_no_self_harm_at_full_or_half_strength() {
         let before = running();
         let lost = finished(&before, Winner::P2);
-        // The one play's evaluation change is what used to decide the mean.
+        // The one play's evaluation change would decide a mean on its own.
         assert!(ev(&lost) - ev(&before) < -AI_EVAL.win / 2.0);
 
         let mut s =

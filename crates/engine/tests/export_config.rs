@@ -1,17 +1,14 @@
 //! Writes `apps/web/src/wire/engineConfig.ts`, the engine constants the web client imports as
-//! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
-//! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
+//! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and types that a file under
+//! `apps/web/src` imports from it (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, Duos co-op's six, #936 S1, R1563006's
 //! sequence clock, #1843's vote tally, R2652001's coin faces, and others), generated from
 //! `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md rule 9).
-//!
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
 //! this test and fails on a diff, as it does for the ts-rs types under `wire/generated/` (V20).
-//!
 //! Each constant is one line, `export const NAME<: type> = <JSON value>;`, sorted by name. The type
-//! annotation keeps the client's code typechecking against the shapes it expects (`DIFFICULTIES` is
-//! `readonly Difficulty[]`, not `string[]`). The two types come from the generated ts-rs files, which
-//! are `config.rs`'s own `Handicap` and `Difficulty`.
+//! annotation, from the generated ts-rs files, keeps the client's code typechecking against the shapes
+//! it expects (`DIFFICULTIES` is `readonly Difficulty[]`, not `string[]`).
 #![allow(
     clippy::disallowed_methods,
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"

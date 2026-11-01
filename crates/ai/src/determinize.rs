@@ -176,7 +176,7 @@ fn set_slot_def(state: &mut GameState, side: PlayerId, slot: TrapSlot, def_id: &
     }
 }
 
-/// What `trapFor` closed over in TS: the trap pools, what the board shows, and the two id sets.
+/// What a trap's sampling reads: the trap pools, what the board shows, and the two id sets.
 struct TrapSampler<'a> {
     trap_pool: &'a [String],
     aura_traps: &'a [String],

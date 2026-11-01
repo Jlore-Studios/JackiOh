@@ -177,9 +177,8 @@ mod r209_twinspells_grant_follows_its_current_face {
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
 
-        // Make it Radiant." (Snom Bunny Mind Control steals only a
-        // Unit since patch v0.3.12.) Twinspell is p1's now, and Radiant on the field, where §5.2 has its
-        // text be the radiant one from then on: "Echo +2".
+        // Twinspell is p1's now, and Radiant on the field, where §5.2 has its text be the radiant one
+        // from then on: "Echo +2".
         g.activate(
             CHURCH,
             json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
