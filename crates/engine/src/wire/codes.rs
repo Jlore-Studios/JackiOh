@@ -20,7 +20,10 @@
 //!
 //! Port of `packages/shared/src/codes.ts` (part 5); the web keeps that file as
 //! `apps/web/src/wire/codes.ts`, and both are tested against one table,
-//! `crates/engine/tests/fixtures/code-input-cases.json`, so they cannot drift.
+//! `crates/engine/tests/fixtures/code-input-cases.json`, so they cannot drift. Only the reading is
+//! ported: finding a code in pasted text (R191 B4), naming the excluded characters and placing the
+//! code field's caret (B16) are the client's alone, so `codes.ts` keeps them and its tests prove
+//! them (#2160).
 //!
 //! The pure crates have no Unicode-normalization crate (SURFACE §2, §3), so step 2's NFKC is written
 //! out here (`nfkc`): the full compatibility decompositions, the canonical combining classes and the
@@ -132,17 +135,6 @@ fn is_ascii_letter_or_digit(character: char) -> bool {
     character.is_ascii_digit() || character.is_ascii_uppercase()
 }
 
-const ASCII_LETTERS_AND_DIGITS: &str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-/// True for exactly one separator code point, and for nothing else.
-pub fn is_code_separator(character: &str) -> bool {
-    let mut characters = character.chars();
-    match (characters.next(), characters.next()) {
-        (Some(only), None) => is_separator_char(only),
-        _ => false,
-    }
-}
-
 /// `character.toUpperCase()` when that is one code point, else `character` as it was.
 fn upper_or_self(character: char) -> char {
     let mut upper = character.to_uppercase();
@@ -233,323 +225,6 @@ pub fn canonical_code(raw: &str, format: &CodeFormat) -> Option<String> {
     } else {
         None
     }
-}
-
-/// Caret index in `formatted` after `character_count` characters:
-/// n + (n > 0 ? Math.floor((n - 1) / groupSize) : 0).
-pub fn formatted_caret(character_count: usize, format: &CodeFormat) -> usize {
-    let n = character_count;
-    n + if n > 0 {
-        (n - 1) / format.group_size.max(1)
-    } else {
-        0
-    }
-}
-
-/// Which letters a word of pasted text is written in; digits have no case. "sentence" is a first
-/// letter in upper case and every later letter in lower case ("Abcd"), which a phone keyboard makes
-/// of the first word of a message.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum LetterCase {
-    Upper,
-    Lower,
-    Sentence,
-    Mixed,
-    None,
-}
-
-/// One run of ASCII letters and digits (after upper-casing) in pasted text.
-#[derive(Clone, Debug)]
-struct Word {
-    characters: String,
-    letter_case: LetterCase,
-}
-
-/// Words that sit next to each other in pasted text, each pair joined by separators only (`joins[i]`
-/// joins `words[i]` and `words[i + 1]`), in the same case. Anything else between two words (a colon,
-/// a full stop, a bracket, a letter outside ASCII) ends a chain, and so does a change of case: an
-/// invite writes its code in one case, and "Here" or "Jack" beside it does not.
-#[derive(Clone, Debug)]
-struct Chain {
-    words: Vec<Word>,
-    joins: Vec<String>,
-}
-
-/// Whether a case mapping of `character` is `character` itself, as TS's `character === mapped`.
-fn maps_to_itself(mut mapped: impl Iterator<Item = char>, character: char) -> bool {
-    mapped.next() == Some(character) && mapped.next().is_none()
-}
-
-fn letter_case_of(original: &str) -> LetterCase {
-    let mut upper = false;
-    let mut lower = false;
-    // Only the first letter is upper case, so far.
-    let mut sentence = true;
-    let mut letters = 0;
-    for character in original.chars() {
-        let is_upper = !maps_to_itself(character.to_lowercase(), character);
-        let is_lower = !is_upper && !maps_to_itself(character.to_uppercase(), character);
-        if !is_upper && !is_lower {
-            continue;
-        }
-        if is_upper {
-            upper = true;
-        } else {
-            lower = true;
-        }
-        let breaks_sentence = if letters == 0 { !is_upper } else { is_upper };
-        if breaks_sentence {
-            sentence = false;
-        }
-        letters += 1;
-    }
-    if upper && lower {
-        return if sentence {
-            LetterCase::Sentence
-        } else {
-            LetterCase::Mixed
-        };
-    }
-    if upper {
-        return LetterCase::Upper;
-    }
-    if lower {
-        return LetterCase::Lower;
-    }
-    LetterCase::None
-}
-
-/// Whether two neighbouring words can belong to one code. Strict, the first reading: the same case.
-/// Loose, the second reading `find_code_in_text` falls back on when the strict one found nothing: a
-/// sentence-case word counts as lower case, so "Abcd-efgh-jkmn-pqrs is your code", typed by hand on
-/// a phone that capitalised the first letter, still holds its code.
-fn same_case(a: LetterCase, b: LetterCase, loose: bool) -> bool {
-    let fold = |letter_case: LetterCase| -> LetterCase {
-        if loose && letter_case == LetterCase::Sentence {
-            LetterCase::Lower
-        } else {
-            letter_case
-        }
-    };
-    let x = fold(a);
-    let y = fold(b);
-    x == LetterCase::None || y == LetterCase::None || x == y
-}
-
-/// `chains_in`'s running state (TS's closure over its locals).
-struct ChainReader {
-    loose: bool,
-    chains: Vec<Chain>,
-    words: Vec<Word>,
-    joins: Vec<String>,
-    original: String,
-    characters: String,
-    /// The separators since the last word, or `None` when something else came between.
-    join: Option<String>,
-}
-
-impl ChainReader {
-    fn end_word(&mut self) {
-        if self.characters.is_empty() {
-            return;
-        }
-        let word = Word {
-            characters: std::mem::take(&mut self.characters),
-            letter_case: letter_case_of(&self.original),
-        };
-        let joined = match (self.words.last(), self.join.as_ref()) {
-            (Some(last), Some(join)) if same_case(last.letter_case, word.letter_case, self.loose) => {
-                Some(join.clone())
-            }
-            _ => None,
-        };
-        if let Some(join) = joined {
-            self.joins.push(join);
-            self.words.push(word);
-        } else {
-            if !self.words.is_empty() {
-                self.chains.push(Chain {
-                    words: std::mem::take(&mut self.words),
-                    joins: std::mem::take(&mut self.joins),
-                });
-            }
-            self.words = vec![word];
-            self.joins = Vec::new();
-        }
-        self.original = String::new();
-        self.characters = String::new();
-        self.join = Some(String::new());
-    }
-}
-
-fn chains_in(text: &str, loose: bool) -> Vec<Chain> {
-    let mut reader = ChainReader {
-        loose,
-        chains: Vec::new(),
-        words: Vec::new(),
-        joins: Vec::new(),
-        original: String::new(),
-        characters: String::new(),
-        join: None,
-    };
-
-    for character in nfkc::nfkc(text).chars() {
-        let read = upper_or_self(character);
-        if is_ascii_letter_or_digit(read) {
-            reader.original.push(character);
-            reader.characters.push(read);
-            continue;
-        }
-        reader.end_word();
-        if is_separator_char(character) {
-            if let Some(join) = reader.join.as_mut() {
-                join.push(character);
-            }
-        } else {
-            reader.join = None;
-        }
-    }
-    reader.end_word();
-    if !reader.words.is_empty() {
-        reader.chains.push(Chain {
-            words: reader.words,
-            joins: reader.joins,
-        });
-    }
-    reader.chains
-}
-
-/// Whether a word could be part of a code, and so must not be cut away from one beside it: a stray
-/// single character (a 17th key, even an excluded one), or a run of alphabet characters as long as a
-/// group or shorter (a group, or part of one), or several whole groups run together. Anything else
-/// is prose: a word holding a character the alphabet leaves out ("is", "code", "your"), or one whose
-/// length no run of groups has ("thanks", "invite").
-fn could_belong_to_code(word: &Word, format: &CodeFormat) -> bool {
-    let length = utf16_len(&word.characters);
-    if length <= 1 {
-        return true;
-    }
-    for character in word.characters.chars() {
-        if !format.alphabet.contains(character) {
-            return false;
-        }
-    }
-    let size = format.group_size.max(1);
-    length <= size || length.is_multiple_of(size)
-}
-
-/// The codes one chain holds. A chain that reads as exactly one code as a whole is that code,
-/// however its groups are joined. Otherwise a code inside a longer chain counts only when its own
-/// groups are joined one way and neither word beside it could be read as more of it: a neighbour
-/// joined to it some other way ("HERE ABCD-EFGH-JKMN-PQRS") is not, and neither is one joined the
-/// same way that no code could hold ("my code is abcd efgh jkmn pqrs thanks": "is" holds an I, and
-/// "thanks" is six letters long). But in "ABCD-EFGH-JKMN-PQRS-T", "X-ABCD-EFGH-JKMN-PQRS" or
-/// "abcd efgh jkmn pqrs tuvw" the extra word is joined exactly as the groups are and could be part
-/// of a code, so the whole reads as one code too long (the server's reading, R145's identical error),
-/// and the field must not quietly cut it down to a code the player never had.
-fn codes_in_chain(chain: &Chain, format: &CodeFormat) -> Vec<String> {
-    let mut text = String::new();
-    for (index, word) in chain.words.iter().enumerate() {
-        if index > 0 {
-            text.push_str(chain.joins.get(index - 1).map(String::as_str).unwrap_or(""));
-        }
-        text.push_str(&word.characters);
-    }
-    if let Some(whole) = canonical_code(&text, format) {
-        return vec![whole];
-    }
-
-    let size = format.group_size.max(1);
-    let mut found: Vec<String> = Vec::new();
-    let count = chain.words.len();
-    for start in 0..count {
-        let internal = chain.joins.get(start);
-        let mut characters = String::new();
-        for end in start..count {
-            if end > start {
-                // One way of joining groups, and only ever between whole groups.
-                if chain.joins.get(end - 1) != internal || !utf16_len(&characters).is_multiple_of(size) {
-                    break;
-                }
-            }
-            characters.push_str(&chain.words[end].characters);
-            if utf16_len(&characters) < format.length {
-                continue;
-            }
-            if utf16_len(&characters) == format.length && end > start {
-                let left_word = if start > 0 {
-                    chain.words.get(start - 1)
-                } else {
-                    None
-                };
-                let right_word = chain.words.get(end + 1);
-                let left_blocks = left_word.is_some_and(|word| {
-                    start > 0 && chain.joins.get(start - 1) == internal && could_belong_to_code(word, format)
-                });
-                let right_blocks = right_word.is_some_and(|word| {
-                    chain.joins.get(end) == internal && could_belong_to_code(word, format)
-                });
-                let code = if !left_blocks && !right_blocks {
-                    canonical_code(&characters, format)
-                } else {
-                    None
-                };
-                if let Some(code) = code {
-                    found.push(code);
-                }
-            }
-            break;
-        }
-    }
-    found
-}
-
-/// The distinct codes the text's chains hold, stopping once there are two.
-fn codes_in_text(text: &str, format: &CodeFormat, loose: bool) -> indexmap::IndexSet<String> {
-    let mut found = indexmap::IndexSet::new();
-    for chain in chains_in(text, loose) {
-        for code in codes_in_chain(&chain, format) {
-            found.insert(code);
-            if found.len() > 1 {
-                return found;
-            }
-        }
-    }
-    found
-}
-
-/// If `canonical_code(text)` is `Some`, returns it. Otherwise it reads the text as chains of words
-/// (see `Chain`) and returns the code only if exactly one distinct code is found in them. Two
-/// different codes, a code with an extra group joined on, or no code at all is `None`, and the paste
-/// then goes through to the field's own reading.
-///
-/// Only when the strict reading finds nothing at all is the text read again with a sentence-case
-/// word joining lower-case ones (`same_case`), so the looser reading can add a code but never change
-/// what the strict one found.
-pub fn find_code_in_text(text: &str, format: &CodeFormat) -> Option<String> {
-    if let Some(direct) = canonical_code(text, format) {
-        return Some(direct);
-    }
-
-    let mut found = codes_in_text(text, format, false);
-    if found.is_empty() {
-        found = codes_in_text(text, format, true);
-    }
-    if found.len() != 1 {
-        return None;
-    }
-    found.into_iter().next()
-}
-
-/// ASCII [0-9A-Z] minus the alphabet, sorted: ["0", "1", "I", "O"] for R104.
-pub fn excluded_characters(format: &CodeFormat) -> Vec<String> {
-    let mut excluded: Vec<String> = ASCII_LETTERS_AND_DIGITS
-        .chars()
-        .filter(|&character| !format.alphabet.contains(character))
-        .map(|character| character.to_string())
-        .collect();
-    excluded.sort();
-    excluded
 }
 
 /// `String.prototype.normalize("NFKC")`: the full compatibility decomposition, the canonical
@@ -2641,7 +2316,8 @@ mod nfkc {
 
 #[cfg(test)]
 mod tests {
-    //! R191, docs/polish/5-sign-in.md B1-B4: the one shared reading of a typed or pasted code.
+    //! R191, docs/polish/5-sign-in.md B1-B3: the one shared reading of a typed or pasted code (B4,
+    //! finding one in pasted text, is the client's alone: `apps/web/src/wire/codes.test.ts`).
     //!
     //! The client's code field and the server's redemption both read a code through
     //! `crates/engine/src/wire/codes.rs` (the web through its own copy, `apps/web/src/wire/codes.ts`),
@@ -2691,7 +2367,6 @@ mod tests {
         formatted: String,
         problem: Option<String>,
         character: Option<String>,
-        found_in_text: bool,
     }
 
     /// The shared table. A row's columns are read at its top level, or under `expected` when the
@@ -2728,9 +2403,6 @@ mod tests {
                     formatted: text("formatted").expect("every row has a formatted column"),
                     problem,
                     character,
-                    found_in_text: field("foundInText")
-                        .and_then(Value::as_bool)
-                        .expect("every row has a foundInText column"),
                     input,
                 }
             })
@@ -2763,7 +2435,7 @@ mod tests {
     // The table
     // -----------------------------------------------------------------------------------------
 
-    mod r191_the_shared_code_input_table_b1_b4 {
+    mod r191_the_shared_code_input_table_b1_b3 {
         use super::*;
 
         #[test]
@@ -2811,34 +2483,13 @@ mod tests {
                 );
             }
         }
-
-        #[test]
-        fn r191_b4_find_code_in_text_reads_every_row() {
-            for row in code_input_cases() {
-                let found = find_code_in_text(&row.input, &FORMAT);
-
-                assert_eq!(found.is_some(), row.found_in_text, "{}", row.name);
-                if row.canonical.is_some() {
-                    assert_eq!(found, row.canonical, "{}", row.name);
-                }
-                // Whatever it finds is a whole code, never a fragment.
-                if let Some(found) = &found {
-                    assert_eq!(
-                        canonical_code(found, &FORMAT).as_ref(),
-                        Some(found),
-                        "{}",
-                        row.name
-                    );
-                }
-            }
-        }
     }
 
     // -----------------------------------------------------------------------------------------
     // B1: separators, normalization and the canonical reading
     // -----------------------------------------------------------------------------------------
 
-    /// Every separator `is_code_separator` names, one of each kind.
+    /// Every separator `is_separator_char` names, one of each kind.
     const SEPARATORS: &[(&str, &str)] = &[
         ("space", " "),
         ("tab", "\t"),
@@ -2885,6 +2536,11 @@ mod tests {
 
     mod r191_b1_is_code_separator {
         use super::*;
+
+        /// True for exactly one separator code point, and for nothing else.
+        fn is_code_separator(character: &str) -> bool {
+            character.chars().count() == 1 && character.chars().all(is_separator_char)
+        }
 
         #[test]
         fn r191_b1_treats_every_listed_space_dash_and_invisible_character_as_a_separator() {
@@ -3004,17 +2660,22 @@ mod tests {
             })
         }
 
+        /// What R104's alphabet leaves out of the ASCII letters and digits.
+        const EXCLUDED_CHARACTERS: [&str; 4] = ["0", "1", "I", "O"];
+
         #[test]
         fn r191_b2_excludes_exactly_0_1_i_and_o_from_r104s_alphabet() {
-            assert_eq!(excluded_characters(&INVITE_CODE_FORMAT), vec!["0", "1", "I", "O"]);
-            assert_eq!(excluded_characters(&ROOM_CODE_FORMAT), vec!["0", "1", "I", "O"]);
+            for character in "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
+                let excluded = EXCLUDED_CHARACTERS.contains(&character.to_string().as_str());
+                assert_eq!(CODE_ALPHABET.contains(character), !excluded, "{character}");
+            }
         }
 
         #[test]
         fn r191_b2_names_each_excluded_character_typed_in_either_case_after_the_characters_before_it() {
             let start = prefix(BASE_FORMATTED, FORMAT.group_size + utf16_len(FORMAT.separator));
-            for excluded_character in excluded_characters(&FORMAT) {
-                let mut typings: Vec<String> = vec![excluded_character.clone()];
+            for excluded_character in EXCLUDED_CHARACTERS {
+                let mut typings: Vec<String> = vec![excluded_character.to_string()];
                 let lower = excluded_character.to_lowercase();
                 if !typings.contains(&lower) {
                     typings.push(lower);
@@ -3022,7 +2683,7 @@ mod tests {
                 for typed in typings {
                     let input = format!("{start}{typed}");
                     let reading = read_code_input(&input, &FORMAT);
-                    assert_eq!(reading.problem, excluded(&excluded_character), "{typed}");
+                    assert_eq!(reading.problem, excluded(excluded_character), "{typed}");
                     assert_eq!(reading.characters, prefix(BASE, FORMAT.group_size), "{typed}");
                     assert_eq!(reading.formatted, prefix(BASE, FORMAT.group_size), "{typed}");
                     assert!(!reading.complete, "{typed}");
@@ -3053,7 +2714,7 @@ mod tests {
 
         #[test]
         fn r191_b2_refuses_each_excluded_character_in_every_position_of_a_code() {
-            for excluded_character in excluded_characters(&FORMAT) {
+            for excluded_character in EXCLUDED_CHARACTERS {
                 for position in 0..FORMAT.length {
                     let input = format!(
                         "{}{}{}",
@@ -3065,7 +2726,7 @@ mod tests {
                     let place = format!("{excluded_character} at {position}");
 
                     assert_eq!(canonical_code(&input, &FORMAT), None, "{place}");
-                    assert_eq!(reading.problem, excluded(&excluded_character), "{place}");
+                    assert_eq!(reading.problem, excluded(excluded_character), "{place}");
                     assert_eq!(reading.characters, &BASE[..position], "{place}");
                 }
             }
@@ -3192,176 +2853,6 @@ mod tests {
             assert_eq!(reading.problem, None);
             assert!(!reading.complete);
             assert_eq!(utf16_len(&reading.characters), FORMAT.length - 1);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------
-    // B4: a code inside pasted text
-    // -----------------------------------------------------------------------------------------
-
-    mod r191_b4_find_code_in_text {
-        use super::*;
-
-        fn find(text: &str) -> Option<String> {
-            find_code_in_text(text, &FORMAT)
-        }
-
-        #[test]
-        fn r191_b4_finds_the_one_grouped_code_in_an_invite_sentence() {
-            assert_eq!(find("Your invite: abcd-efgh-jkmn-pqrs.").as_deref(), Some(BASE));
-        }
-
-        #[test]
-        fn r191_b4_finds_a_code_whose_groups_are_joined_by_unicode_dashes_or_line_breaks() {
-            assert_eq!(
-                find("Invite \u{2192} ABCD\u{2013}EFGH\u{2013}JKMN\u{2013}PQRS").as_deref(),
-                Some(BASE)
-            );
-            assert_eq!(find("Your code:\nABCD-EFGH\nJKMN-PQRS\n").as_deref(), Some(BASE));
-        }
-
-        #[test]
-        fn r191_b4_finds_a_code_written_with_no_separators_at_all() {
-            assert_eq!(find("Here: ABCDEFGHJKMNPQRS!").as_deref(), Some(BASE));
-        }
-
-        #[test]
-        fn r191_b4_finds_one_code_written_twice_in_two_spellings() {
-            assert_eq!(
-                find("(ABCD-EFGH-JKMN-PQRS) (abcd efgh jkmn pqrs)").as_deref(),
-                Some(BASE)
-            );
-        }
-
-        #[test]
-        fn r191_b4_returns_null_for_a_text_holding_two_different_codes() {
-            assert_eq!(find("(ABCD-EFGH-JKMN-PQRS) (ABCD-EFGH-JKMN-PQRT)"), None);
-        }
-
-        #[test]
-        fn r191_b4_returns_null_for_a_text_holding_no_code() {
-            assert_eq!(find("No code here."), None);
-            assert_eq!(find(""), None);
-        }
-
-        #[test]
-        fn r191_b4_returns_null_for_a_code_with_an_excluded_character_in_it() {
-            assert_eq!(find("Your invite: ABCD-EFGH-JKMN-PQR0."), None);
-        }
-
-        #[test]
-        fn r191_b4_returns_null_for_groups_glued_to_other_letters_or_digits() {
-            assert_eq!(find("XABCD-EFGH-JKMN-PQRS"), None);
-            assert_eq!(find("ABCD-EFGH-JKMN-PQRS2"), None);
-        }
-
-        #[test]
-        fn r191_b4_never_completes_a_code_by_upper_casing_sharp_s_to_ss() {
-            assert_eq!(find("Code: ABCD-EFGH-JKMN-PQ\u{00DF}."), None);
-        }
-
-        #[test]
-        fn r191_b4_reads_a_four_letter_word_beside_a_code_as_a_word_not_as_a_group() {
-            for text in [
-                "Here ABCD-EFGH-JKMN-PQRS",
-                "Take ABCD-EFGH-JKMN-PQRS",
-                "HERE ABCD-EFGH-JKMN-PQRS",
-                "Your invite code:\nABCD-EFGH-JKMN-PQRS\nHave fun!",
-                "ABCD-EFGH-JKMN-PQRS\n\nBest,\nJack",
-                "ABCD-EFGH-JKMN-PQRS\n\u{2014} Mark",
-                "ABCD-EFGH-JKMN-PQRS - see you at the tavern, Jack",
-                "Here aBcD-eFgH-jKmN-pQrS",
-            ] {
-                assert_eq!(find(text).as_deref(), Some(BASE), "{text:?}");
-            }
-        }
-
-        #[test]
-        fn r191_b4_never_cuts_a_pasted_code_with_an_extra_group_down_to_a_code_never_had() {
-            for text in [
-                "ABCD-EFGH-JKMN-PQRS-T",
-                "abcd efgh jkmn pqrs t",
-                "X-ABCD-EFGH-JKMN-PQRS",
-                "ABCD-EFGH-JKMN-PQRS-0",
-            ] {
-                // The server reads each of these as malformed; the paste handler must not disagree.
-                assert_eq!(canonical_code(text, &FORMAT), None, "{text:?}");
-                assert_eq!(find(text), None, "{text:?}");
-            }
-        }
-
-        #[test]
-        fn r191_b4_returns_null_for_two_codes_on_one_line_and_the_code_for_one_code_written_twice() {
-            assert_eq!(find("ABCD-EFGH-JKMN-PQRS ABCD-EFGH-JKMN-PQRT"), None);
-            assert_eq!(
-                find("ABCD-EFGH-JKMN-PQRS ABCD-EFGH-JKMN-PQRS").as_deref(),
-                Some(BASE)
-            );
-        }
-
-        #[test]
-        fn r191_b4_finds_a_code_whose_first_letter_a_phone_keyboard_capitalised_inside_a_message() {
-            for text in [
-                "Abcd-efgh-jkmn-pqrs is your code",
-                "Here it is: Abcd-efgh-jkmn-pqrs",
-                "Abcd efgh jkmn pqrs",
-                "Your code is Abcd-efgh-jkmn-pqrs, have fun",
-            ] {
-                assert_eq!(find(text).as_deref(), Some(BASE), "{text:?}");
-            }
-        }
-
-        #[test]
-        fn r191_b4_the_sentence_case_reading_only_adds_a_code_where_the_strict_one_found_none() {
-            // The strict reading already finds exactly this code beside a capitalised word; the looser one
-            // must not glue "Here" onto it and lose it.
-            assert_eq!(find("Here abcd efgh jkmn pqrs").as_deref(), Some(BASE));
-            // Two codes stay ambiguous under either reading.
-            assert_eq!(find("Abcd-efgh-jkmn-pqrs or Abcd-efgh-jkmn-pqrt"), None);
-            // An extra group joined on is still one character too long.
-            assert_eq!(find("Abcd-efgh-jkmn-pqrs-t is it"), None);
-        }
-    }
-
-    // -----------------------------------------------------------------------------------------
-    // B16: where the caret goes after n characters. The code field puts it back here after every
-    // accepted change, so typing never lands the caret on the wrong side of a drawn separator.
-    // -----------------------------------------------------------------------------------------
-
-    mod r191_b16_formatted_caret {
-        use super::*;
-
-        #[test]
-        fn r191_b16_follows_the_surface_formula_for_every_n() {
-            for n in 0..=FORMAT.length {
-                let expected = n + if n > 0 { (n - 1) / FORMAT.group_size } else { 0 };
-                assert_eq!(formatted_caret(n, &FORMAT), expected, "n = {n}");
-            }
-        }
-
-        #[test]
-        fn r191_b16_is_the_end_of_the_formatted_value_so_it_never_sits_after_a_trailing_separator() {
-            for n in 0..=FORMAT.length {
-                let formatted = format_code_characters(&BASE[..n], &FORMAT);
-                assert_eq!(formatted_caret(n, &FORMAT), utf16_len(&formatted), "n = {n}");
-            }
-        }
-
-        #[test]
-        fn r191_b16_stays_inside_a_group_at_its_edge_after_a_whole_group_it_precedes_the_separator() {
-            let group = FORMAT.group_size;
-            let formatted = BASE_FORMATTED;
-            let at = formatted_caret(group, &FORMAT);
-            assert_eq!(&formatted[at..at + 1], FORMAT.separator);
-            let after = formatted_caret(group + 1, &FORMAT) - 1;
-            assert_eq!(&formatted[after..after + 1], &BASE[group..group + 1]);
-        }
-
-        #[test]
-        fn r191_b16_counts_no_separators_for_a_room_code_which_is_one_group() {
-            for n in 0..=ROOM_CODE_FORMAT.length {
-                assert_eq!(formatted_caret(n, &ROOM_CODE_FORMAT), n);
-            }
         }
     }
 
