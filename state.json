@@ -12174,9 +12174,12 @@
       }
     },
     "2677": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "05cda148f749752ba506211276f68826d85d6f2b": 1
       },
+      "ci_run_id": 41307320980,
+      "ci_sha": "05cda148f749752ba506211276f68826d85d6f2b",
       "cleared": {
         "at": "2026-11-01T12:36:54Z",
         "by": "`claude` (strong)",
@@ -12185,9 +12188,16 @@
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-01T08:48:25Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2649,
       "kind": "revise",
+      "pending_request": false,
+      "queued_at": "2026-11-01T12:48:10Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
