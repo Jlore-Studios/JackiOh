@@ -92,11 +92,13 @@ enemy card is never probed) and of the seat's hand's Field Spells and Units (set
 R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
 before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
-A unit's Activate counts by one use (R2564000): at the root `activation_prices` ends the seat's turn and
-then the enemy's, within `AI_ACTIVATION_PROBE_NODES`; at the start of each player's next turn it tries
-that player's units' uses as the reply does (`visible_activation`) and prices the best as the
-controller's evaluation after less before, each crystal at `next_turn_mana`; `unit_worth` adds
-`AI_EVAL.activation` of it, for both sides' units.
+A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
+(R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
+`AI_ACTIVATION_PROBE_NODES`; at the start of each player's next turn it tries that player's units' uses,
+then its face-up backrow cards' (`activate_sources`), as the reply does (`visible_activation`), and
+prices the best as the controller's evaluation after less before, each crystal at `next_turn_mana`;
+`unit_worth` adds `AI_EVAL.activation` of it for both sides' units, and `material` for each readable
+backrow card, inside its Brittle share.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

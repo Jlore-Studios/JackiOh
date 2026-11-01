@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import zhCN from "../i18n/zh-CN.json";
-import { getQuests, replaceQuest, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { ApiRequestError, getQuests, replaceQuest, type QuestView, type QuestsResponse } from "../net/api.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import QuestsPanel, { QuestsList, countdownWords, questsTestid } from "./QuestsPanel.tsx";
@@ -198,6 +198,24 @@ describe("QuestsList's Replace", () => {
     });
     await waitFor(() => {
       expect(screen.queryByTestId(questsTestid.replace)).toBeNull();
+    });
+    expect(screen.getByText("Win 3 games")).toBeInTheDocument();
+  });
+
+  it("R2378000 a replace refused past the account's waiting turns shows the server's words", async () => {
+    const busy = "your last purchase or opening is still going through; try again in a moment";
+    vi.mocked(getQuests).mockResolvedValue(book({ replacesLeft: 1 }));
+    vi.mocked(replaceQuest).mockRejectedValue(
+      new ApiRequestError(429, { code: "rate_limited", message: busy, details: { retryAfterMs: 1_000 } }),
+    );
+    render(<QuestsPanel token={TOKEN} />);
+    await screen.findByText("Win 3 games");
+
+    fireEvent.click(screen.getByTestId(questsTestid.replace));
+    fireEvent.click(screen.getByTestId(questsTestid.replaceConfirm));
+    expect(await screen.findByTestId(questsTestid.replaceError)).toHaveTextContent(busy);
+    await waitFor(() => {
+      expect(getQuests).toHaveBeenCalledTimes(2);
     });
     expect(screen.getByText("Win 3 games")).toBeInTheDocument();
   });

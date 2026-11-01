@@ -252,10 +252,12 @@ which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` min
 sends it again on that press's retries.
 
 **One spend at a time** (SPEC §14.11, R2378000). The six economy spends above (not the invite code's
-redemption) claim the account's turn before they read the store (`economy/spend_slots.rs`, `App::spends`)
-and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at once; the next ones wait their turn in
-the process, in the order sent, holding no database connection, so a burst never holds the pool's
-connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
+redemption), and the other routes that write under the account's economy lock for a press (`PUT /api/card-picks`,
+`POST /api/card-picks/upload`, `POST /api/practice/seeds`, `DELETE /api/practice/seeds/:seed`,
+`POST /api/quests/:questId/replace`; issue #2610), claim the account's turn before they read the store
+(`economy/spend_slots.rs`, `App::spends`) and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at
+once; the next ones wait their turn in the process, in the order sent, holding no database connection, so a
+burst never holds the pool's connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
 `rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
 
 **Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
@@ -396,8 +398,10 @@ shows a dealt card, by the match sockets' rule (R1834003). Before its hello the 
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
 closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refused (`forbidden`, 4403)
 (R835002). Once it is in, a later `hello` is answered with the view it was last sent, again (nothing
-before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket; every other
-frame a watcher sends is ignored, and leaving changes nothing in the match.
+before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket, at most once
+per `WATCH_HELLO_INTERVAL_MS`; every other frame a watcher sends is unanswered, and past
+`MALFORMED_FRAMES_PER_WINDOW` of them it is closed with 1008, as a seat's is (R2609000). Leaving changes
+nothing in the match.
 Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
 gets the same `error forbidden` and close the moment the two unfriend or either blocks the other
 (`MatchActor::revoke_watchers`); no setting lets a watcher go (R2615000).

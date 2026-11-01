@@ -57,6 +57,7 @@ mod tests {
     // Issue #2521: Stratos (S #68) is no Starship Piece any more (B9), so a keywords-only piece stands in.
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const FLAK_V3: &str = "stinkyscape-053"; // (2) 0/4 Starship Piece, Equip; Radiant 0/8, Lucky 1.
+    const OVERDRIVE: &str = "stinkyscape-101"; // (2) 5/5 Starship Piece, Equip, Brittle 2, Reborn.
     const CAPSULE: &str = "stinkyscape-040"; // (3) 2/2 Starship Piece, "Cry: Place 2 Plague Counters."
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const MONKEY: &str = "classic-077"; // (2) 5/5 Stack, "Aura: Spells cost (1) more."
@@ -194,18 +195,21 @@ mod tests {
             "active": "p1",
             "p1": {
                 "hand": [HIT_JOB, FILLER],
-                "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                "field": [VANILLA, VANILLA, VANILLA, VANILLA, OVERDRIVE],
                 "backrow": full_backrow(),
                 "library": crate::filler(4),
                 "mana": 10,
             },
-            "p2": { "hand": [FILLER], "field": [AP_ROUNDS], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
         }));
-        // p1's AP Rounds, stolen: its death fuses into its owner's Starship (R1852002), p1's rows full.
-        let piece = s.unit_at(P2, 1).id;
-        s.card_mut(piece.as_str()).owner = P1;
+        // p1's Overdrive Module dies, and Reborn returns it to its zone before its copy fuses (§4.5
+        // step 4), so p1's rows are full again when the Starship is summoned. A piece dies on its
+        // controller's side and builds its controller's ship (R2618000), so only a body that comes
+        // back leaves that side full.
+        let piece = s.unit_at(P1, 5).id;
         let beneath = s.unit_at(P1, STARSHIP_FULL_ROW_LANE).id;
         s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
+        assert_eq!(s.unit_at(P1, 5).id, piece, "Reborn brought it back first");
         let ship = dormant_starship_of(s.state(), P1)
             .expect("p1's Dormant Starship")
             .id
@@ -222,7 +226,7 @@ mod tests {
         let stats = s.stats(ship.as_str());
         assert_eq!(
             (stats.attack, stats.health),
-            (3, 1),
+            (5, 5),
             "the piece's copy fused in at once"
         );
     }

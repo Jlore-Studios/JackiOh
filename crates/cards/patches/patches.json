@@ -19562,5 +19562,95 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.9d",
+    "date": "2026-10-31",
+    "title": "Patch: holding a card on a touch screen acts as its hover, on every screen and either turn",
+    "source": "#2617",
+    "notes": "On a touch screen a finger held on a card opens its hover preview while it stays down, on either turn and on every screen (R2617000); #165 had kept the inspect sheet on your own turn and off the board. With Hover previews off a hold opens the sheet as before. How cards are read only: nothing plays differently.",
+    "player": {
+      "title": "Hold a card on a phone to see it up close",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On a touch screen, holding a card shows it enlarged until you let go, on either turn and on every screen. The hold never plays or picks the card."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "20dc56d356a7d7197b9ab750d9670cdf8dec0648"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9e",
+    "date": "2026-10-31",
+    "title": "Patch: a card that dies goes to the graveyard of the player who controlled it",
+    "source": "#2618",
+    "notes": "A card that leaves the field for a graveyard goes to its controller's, and a card that leaves the resolving zone for one to the graveyard of the player who played it, as that player's own card (R2618000, amending R12, R172, R360, R453, R747, R803, R1282, R1852002 and R1859012). A stolen Unit that dies is the thief's in the thief's graveyard, and a stolen Starship Piece builds the thief's ship. An Exile or a shuffle from the field still goes to the owner.",
+    "player": {
+      "title": "A card goes to the graveyard of the side it died on",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit you took from your opponent that dies now goes to your graveyard as your card, not back to theirs. A backrow card you took does the same when it is used up or destroyed.",
+        "A Starship Piece you took that dies now fuses into your Starship, not its old owner's.",
+        "Shadowstep returns a Unit you took that dies to your hand, since it is in your graveyard."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9f10a70abf7520b479d654b9607cc5cd2c7a0057"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-002",
+      "classic-064",
+      "classic-080",
+      "classicplus-004",
+      "classicplus-006",
+      "classicplus-025",
+      "classicplus-026",
+      "classicplus-038",
+      "core-012",
+      "core-043",
+      "core-053",
+      "core-055",
+      "core-056",
+      "core-092",
+      "core-t-bread",
+      "meditative-030",
+      "meditative-036",
+      "meditative-066",
+      "meditative-093",
+      "stinkyscape-037",
+      "stinkyscape-042",
+      "stinkyscape-050",
+      "stinkyscape-056",
+      "stinkyscape-059",
+      "stinkyscape-062",
+      "stinkyscape-068",
+      "stinkyscape-074",
+      "stinkyscape-080",
+      "stinkyscape-085",
+      "stinkyscape-113",
+      "stinkyscape-122",
+      "stinkyscape-142",
+      "stinkyscape-153",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-korrelite",
+      "traininggrounds-007",
+      "traininggrounds-041",
+      "traininggrounds-044",
+      "traininggrounds-054"
+    ],
+    "changes": []
   }
 ]

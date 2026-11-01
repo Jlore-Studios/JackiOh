@@ -50,12 +50,9 @@ function hover(element: HTMLElement): void {
   });
 }
 
-function longPress(element: HTMLElement): void {
-  fireEvent.pointerDown(element, { pointerType: "touch", clientX: 10, clientY: 10 });
-  act(() => {
-    vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
-  });
-  fireEvent.pointerUp(element, { pointerType: "touch", clientX: 10, clientY: 10 });
+/** The I key opens a card's or a back's sheet; a touch hold shows its preview (R2617000). */
+function openSheet(element: HTMLElement): void {
+  fireEvent.keyDown(element, { key: "i" });
 }
 
 /** A board with face-down cards on both seats (one of yours the opponent stole, R33), with and without a cost. */
@@ -122,10 +119,10 @@ describe("R370 a face-down trap shows its cost", () => {
     expect(screen.queryByTestId(INSPECT_FACE)).toBeNull();
   });
 
-  it("R370 a long-press opens the same as a dialog with Close, and a back with no cost states none", () => {
+  it("R370 the I key opens the same as a dialog with Close, and a back with no cost states none", () => {
     vi.useFakeTimers();
     renderBoard(backsView());
-    longPress(backIn("opponent", 3));
+    openSheet(backIn("opponent", 3));
     const sheet = screen.getByTestId(INSPECT_FACE_DOWN);
     expect(sheet.getAttribute("role")).toBe("dialog");
     expect(sheet.getAttribute("aria-label")).toBe("Face-down trap");
@@ -165,7 +162,7 @@ describe("R371 your own face-down trap says the opponent can't see it", () => {
     hover(own);
     expect(within(screen.getByTestId(INSPECT_HOVER)).getByTestId(INSPECT_NOTE).textContent).toBe(UNREVEALED_NOTE);
     fireEvent.pointerLeave(own, { pointerType: "mouse" });
-    longPress(own);
+    openSheet(own);
     expect(within(screen.getByTestId(INSPECT_SHEET)).getByTestId(INSPECT_NOTE).textContent).toBe(UNREVEALED_NOTE);
     fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
 
@@ -291,7 +288,7 @@ describe("R471 a face-down card's Plague Counters are public", () => {
   it("R471 its sheet states the count too", () => {
     vi.useFakeTimers();
     renderBoard(plagueView());
-    longPress(backIn("opponent", 1));
+    openSheet(backIn("opponent", 1));
     const sheet = screen.getByTestId(INSPECT_FACE_DOWN);
     expect(sheet.getAttribute("data-mode")).toBe("sheet");
     const line = sheet.querySelector(PLAGUE_LINE);

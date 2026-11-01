@@ -53,7 +53,7 @@ describe("R667 the Plague Chalice warning on a hand card", () => {
     expect(screen.queryByTestId(testid.countered("safe"))).toBeNull();
   });
 
-  it("R667 the hover preview and the long-press sheet carry the note, so a phone shows it with no hover", () => {
+  it("R667 R2617000 the hover preview, the touch hold's and the sheet carry the note, so a phone shows it with no hover", () => {
     vi.useFakeTimers();
     renderBoard(warnedView());
     const doomed = screen.getByTestId(testid.handCard("doomed"));
@@ -65,11 +65,16 @@ describe("R667 the Plague Chalice warning on a hand card", () => {
     expect(within(screen.getByTestId(INSPECT_HOVER)).getByTestId(INSPECT_NOTE).textContent).toBe(COUNTERED_NOTE);
     fireEvent.pointerLeave(doomed, { pointerType: "mouse" });
 
+    // A phone's hold is its hover: the same preview, open while the finger is down.
     fireEvent.pointerDown(doomed, { pointerType: "touch", clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
+    expect(within(screen.getByTestId(INSPECT_HOVER)).getByTestId(INSPECT_NOTE).textContent).toBe(COUNTERED_NOTE);
     fireEvent.pointerUp(doomed, { pointerType: "touch", clientX: 10, clientY: 10 });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+
+    fireEvent.keyDown(doomed, { key: "i" });
     expect(within(screen.getByTestId(INSPECT_SHEET)).getByTestId(INSPECT_NOTE).textContent).toBe(COUNTERED_NOTE);
     fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
   });

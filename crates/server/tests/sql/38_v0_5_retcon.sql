@@ -37,7 +37,11 @@ begin
          false
     from (values ('e2532000-0000-4000-8000-0000000000aa', 'live', 'v0.5.11'),
                  ('dev:v0.5.7:r2532:1', 'dev', 'v0.5.7'),
-                 ('dev:v0.5.11:r2532:1', 'dev', 'v0.5.11')) as g (id, source, patch);
+                 ('dev:v0.5.11:r2532:1', 'dev', 'v0.5.11'),
+                 ('dev:v0.5.11:learned-v0.5.10-20261030-1:2', 'dev', 'v0.5.11'),
+                 ('dev:v0.4.12d:r2532:1', 'dev', 'v0.4.12d')) as g (id, source, patch);
+  -- A record of a kept version is left as it is, its marker the first retcon's.
+  update public.game_records set record = record || '{"versions": 2}'::jsonb where id = 'dev:v0.4.12d:r2532:1';
 
   -- The totals key on the patch: the old v0.5.7's row and the old v0.5.11's must not meet.
   insert into public.record_totals (patch, source, mode, p1_pilot, p2_pilot, records)
@@ -45,6 +49,16 @@ begin
   insert into public.game_totals (patch, source, mode, p1_pilot, p2_pilot, total)
   values ('v0.5.7', 'dev', 'random', 'ai', 'ai', '{"games": 7}'),
          ('v0.5.11', 'dev', 'random', 'ai', 'ai', '{"games": 11}');
+  -- A card's co-played map keeps the record where two cards first met: renamed as the record is,
+  -- v0.5.1 never read inside v0.5.10.
+  insert into public.card_totals (patch, source, mode, pilot, card, stats, co)
+  values ('v0.5.11', 'dev', 'random', 'ai', 'core-001', '{"n": 11}',
+          '{"core-002": [1, 1, "dev:v0.5.11:learned-v0.5.10-20261030-1:2", 0, 0], "core-003": [1, 0, "e2532000-0000-4000-8000-0000000000aa", 1, 2]}'),
+         ('v0.5.7', 'dev', 'random', 'ai', 'core-001', '{"n": 7}', '{"core-002": [1, 1, "dev:v0.5.7:r2532:1", 0, 0]}'),
+         ('v0.4.12d', 'dev', 'random', 'ai', 'core-001', '{"n": 4}', '{"core-002": [1, 1, "dev:v0.4.12d:r2532:1", 0, 0]}');
+  insert into public.decklist_totals (patch, list, deck, games, wins, first_record, first_seat)
+  values ('v0.5.11', 'l2532', '[]', 11, 6, 'dev:v0.5.11:r2532:1', 0),
+         ('v0.5.7', 'l2532', '[]', 7, 3, 'dev:v0.5.7:r2532:1', 1);
 end $$;
 
 \i /tmp/0068_v0_5_retcon.sql
@@ -73,12 +87,19 @@ begin
   end if;
 
   select string_agg(id || '=' || patch, ',' order by id) into v from public.game_records
-   where id like 'dev:%r2532%' or id = 'e2532000-0000-4000-8000-0000000000aa';
+   where (id like 'dev:%r2532%' or id = 'e2532000-0000-4000-8000-0000000000aa') and patch <> 'v0.4.12d';
   if v <> 'dev:v0.5.5:r2532:1=v0.5.5,dev:v0.5.7:r2532:1=v0.5.7,e2532000-0000-4000-8000-0000000000aa=v0.5.7' then
     raise exception 'FAIL (R2532000): the game records are %', v;
   end if;
+  if not exists (select 1 from public.game_records where id = 'dev:v0.5.7:learned-v0.5.6c-20261030-1:2' and patch = 'v0.5.7') then
+    raise exception 'FAIL (R2532000): a learned series'' version was not renamed with the record''s';
+  end if;
+  if (select record -> 'versions' from public.game_records where id = 'dev:v0.4.12d:r2532:1') <> '2'::jsonb then
+    raise exception 'FAIL (R2532000): a record of a kept version was rewritten';
+  end if;
   select count(*) into n from public.game_records
-   where (id like 'dev:%r2532%' or id = 'e2532000-0000-4000-8000-0000000000aa')
+   where (id like 'dev:%r2532%' or id like 'dev:%learned%' or id = 'e2532000-0000-4000-8000-0000000000aa')
+     and patch <> 'v0.4.12d'
      and (record ->> 'id' <> id or record ->> 'patch' <> patch or record -> 'versions' <> '3'::jsonb
           or record #>> '{game,turns}' <> '9');
   if n <> 0 then
@@ -101,6 +122,19 @@ begin
   if exists (select 1 from public.game_totals where starts_with(patch, '~')) then
     raise exception 'FAIL (R2532000): a game total kept its passing name';
   end if;
-  raise notice 'OK (R2532000): every row renamed once, the copies kept and marked 3, game_totals among the totals';
+  select string_agg(patch || '=' || (stats ->> 'n') || ':' || (co #>> '{core-002,2}'), ',' order by patch) into v
+    from public.card_totals where card = 'core-001' and patch in ('v0.4.12d', 'v0.5.5', 'v0.5.7', 'v0.5.11');
+  if v <> 'v0.4.12d=4:dev:v0.4.12d:r2532:1,v0.5.5=7:dev:v0.5.5:r2532:1,v0.5.7=11:dev:v0.5.7:learned-v0.5.6c-20261030-1:2' then
+    raise exception 'FAIL (R2532000): the card totals are %', v;
+  end if;
+  if (select co #>> '{core-003,2}' from public.card_totals where card = 'core-001' and patch = 'v0.5.7') <> 'e2532000-0000-4000-8000-0000000000aa' then
+    raise exception 'FAIL (R2532000): a live record id in a co-played map changed';
+  end if;
+  select string_agg(patch || '=' || games || ':' || first_record, ',' order by patch) into v
+    from public.decklist_totals where list = 'l2532';
+  if v <> 'v0.5.5=7:dev:v0.5.5:r2532:1,v0.5.7=11:dev:v0.5.7:r2532:1' then
+    raise exception 'FAIL (R2532000): the decklist totals are %', v;
+  end if;
+  raise notice 'OK (R2532000): every row renamed once, the copies kept and marked 3, the co-played and decklist record ids renamed with their records, a kept version left alone';
 end $$;
 rollback;

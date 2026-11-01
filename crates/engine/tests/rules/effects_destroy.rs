@@ -1,4 +1,4 @@
-//! Destroy and Sacrifice (SPEC §6.3, §4.5, R11, R12, R46, R78, BUILD M3-T1).
+//! Destroy and Sacrifice (SPEC §6.3, §4.5, R11, R12, R46, R78, R2618000, BUILD M3-T1).
 //! The fixture defs and scripts these tests need are registered here, on top of the shared fixture
 //! catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
 
@@ -344,7 +344,7 @@ mod destroy_m3_t1 {
     }
 
     #[test]
-    fn r12_a_stolen_unit_destroyed_goes_to_its_owner_s_graveyard() {
+    fn r2618000_a_stolen_unit_destroyed_goes_to_its_controller_s_graveyard_as_theirs() {
         let mut state = default_game();
         let mut theirs = new_instance(
             &mut state,
@@ -370,11 +370,60 @@ mod destroy_m3_t1 {
         );
         check(&mut run, &mut state);
 
+        // It died on p1's side, so it lands in p1's graveyard as p1's own card, and both events say so.
         assert_eq!(
-            ids(&state.players[PlayerId::P2].graveyard),
+            ids(&state.players[PlayerId::P1].graveyard),
             vec![theirs.id.clone()]
         );
-        assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
+        assert_eq!(state.players[PlayerId::P2].graveyard.len(), 0);
+        let buried = &state.players[PlayerId::P1].graveyard[0];
+        assert_eq!((buried.owner, buried.controller), (PlayerId::P1, PlayerId::P1));
+        assert_eq!(
+            serde_json::to_value(events_of_type(&run.events, GameEventType::Destroyed)).expect("serializes")
+                [0]["owner"],
+            json!("p1")
+        );
+        assert_eq!(
+            serde_json::to_value(events_of_type(&run.events, GameEventType::EnteredGraveyard))
+                .expect("serializes")[0]["owner"],
+            json!("p1")
+        );
+    }
+
+    #[test]
+    fn r2618000_a_stolen_backrow_card_destroyed_goes_to_its_controller_s_graveyard() {
+        let mut state = default_game();
+        let mut theirs = new_instance(
+            &mut state,
+            &field_spell().id,
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
+        assert!(place_on_field(
+            &mut state,
+            &mut theirs,
+            slot(PlayerId::P1, Row::Backrow, 2),
+            Default::default()
+        ));
+        let theirs = live(&state, &theirs.id).clone();
+        let mut run = Bench::new(&state);
+
+        apply(
+            &mut run,
+            &mut state,
+            destroy(json_as(json!({ "target": chosen() }))),
+            Some(&theirs),
+            RunOptions::default(),
+        );
+        check(&mut run, &mut state);
+
+        assert_eq!(id_at(&state, slot(PlayerId::P1, Row::Backrow, 2)), None);
+        assert_eq!(
+            ids(&state.players[PlayerId::P1].graveyard),
+            vec![theirs.id.clone()]
+        );
+        assert_eq!(state.players[PlayerId::P1].graveyard[0].owner, PlayerId::P1);
+        assert_eq!(state.players[PlayerId::P2].graveyard.len(), 0);
     }
 
     #[test]
@@ -625,7 +674,7 @@ mod sacrifice_m3_t1 {
     }
 
     #[test]
-    fn r12_a_sacrificed_stolen_unit_goes_to_its_owner_s_graveyard() {
+    fn r2618000_a_sacrificed_stolen_unit_goes_to_its_controller_s_graveyard_as_theirs() {
         let mut state = default_game();
         let mut theirs = new_instance(
             &mut state,
@@ -654,10 +703,11 @@ mod sacrifice_m3_t1 {
         );
 
         assert_eq!(
-            ids(&state.players[PlayerId::P2].graveyard),
+            ids(&state.players[PlayerId::P1].graveyard),
             vec![theirs.id.clone()]
         );
-        assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
+        assert_eq!(state.players[PlayerId::P1].graveyard[0].owner, PlayerId::P1);
+        assert_eq!(state.players[PlayerId::P2].graveyard.len(), 0);
     }
 
     #[test]
@@ -683,5 +733,57 @@ mod sacrifice_m3_t1 {
         assert_eq!(ids(&state.players[PlayerId::P1].hand), vec![card.id.clone()]);
         assert_eq!(state.counters.destroyed, 0);
         assert_eq!(run.events, Vec::<GameEvent>::new());
+    }
+}
+
+// R2618000: where a card its owner does not hold lands, past a death.
+
+mod r2618000_landings {
+    use super::*;
+    use jackioh_engine::zones::{OffFieldZone, move_to_zone};
+
+    #[test]
+    fn r2618000_a_card_leaving_a_player_s_resolving_zone_lands_in_that_player_s_graveyard_as_theirs() {
+        let mut state = default_game();
+        let mut card = new_instance(
+            &mut state,
+            &dier().id,
+            PlayerId::P2,
+            Zone::Resolving { player: PlayerId::P1 },
+        );
+        // p1 casts it, as a cast of a card that exists makes its caster its controller (R453).
+        card.controller = PlayerId::P1;
+        state.players[PlayerId::P1].resolving.push(card.clone());
+
+        move_to_zone(&mut state, &mut card, OffFieldZone::Graveyard, Default::default());
+
+        assert!(state.players[PlayerId::P1].resolving.is_empty());
+        assert_eq!(ids(&state.players[PlayerId::P1].graveyard), vec![card.id.clone()]);
+        assert_eq!(state.players[PlayerId::P1].graveyard[0].owner, PlayerId::P1);
+        assert_eq!(state.players[PlayerId::P2].graveyard.len(), 0);
+    }
+
+    #[test]
+    fn r2618000_a_stolen_unit_exiled_from_the_field_still_goes_to_its_owner_s_exile() {
+        let mut state = default_game();
+        let mut theirs = new_instance(
+            &mut state,
+            "fx-4",
+            PlayerId::P2,
+            Zone::Hand { player: PlayerId::P2 },
+        );
+        assert!(place_on_field(
+            &mut state,
+            &mut theirs,
+            slot(PlayerId::P1, Row::Units, 1),
+            Default::default()
+        ));
+        let mut theirs = live(&state, &theirs.id).clone();
+
+        move_to_zone(&mut state, &mut theirs, OffFieldZone::Exile, Default::default());
+
+        assert_eq!(ids(&state.players[PlayerId::P2].exile), vec![theirs.id.clone()]);
+        assert_eq!(state.players[PlayerId::P2].exile[0].owner, PlayerId::P2);
+        assert_eq!(state.players[PlayerId::P1].exile.len(), 0);
     }
 }

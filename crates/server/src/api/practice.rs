@@ -103,7 +103,8 @@ fn refused(reason: ClaimRefusal) -> ApiResult {
 /// `POST /api/practice/seeds` with `{ difficulty, humanSeat, deck, catalog }` (`AuthLevel::Active`).
 /// 201 `{ seed, lastBoard, expiresAt }`; a 409 while the economy is off, for a catalog version
 /// this build cannot fold (R767000), or while the account holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed
-/// seeds (R1483000).
+/// seeds (R1483000). It runs in the account's economy turn; past the requests waiting theirs it
+/// is 429 `rate_limited` (R2378000).
 pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let request: SeedRequest = body_of(&req.body, "a practice game's setup")?;
@@ -119,6 +120,9 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
             "This game's cards are from a version the server cannot check; reload the page.",
         ));
     }
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock below.
+    let _turn = app.spends.claim(&profile.id).await?;
     let now = now_ms();
     let seed = crate::api::queue::new_seed();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -166,10 +170,14 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
 /// `DELETE /api/practice/seeds/:seed` (`AuthLevel::Active`, [[R2379000]]): the caller's unclaimed seed
 /// given back, deleted under the account's economy lock (R1483000's count takes it too), so its
 /// place is free for the next issue. 200 `{ released: true }`; a 404, changing nothing, for a seed
-/// that is not the caller's, was claimed, or was never issued.
+/// that is not the caller's, was claimed, or was never issued. It runs in the account's economy
+/// turn; past the requests waiting theirs it is 429 `rate_limited` (R2378000).
 pub async fn delete_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let seed = req.params.get("seed").cloned().unwrap_or_default();
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock below.
+    let _turn = app.spends.claim(&profile.id).await?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.economy_lock_account(&profile.id).await?;
     if !tx.economy_practice_seed_release(&profile.id, &seed).await? {

@@ -7,8 +7,8 @@
 //!          graveyard. Your Starship launch costs (0)."
 //! Engine: Tradable (R1838000) and Flashback (§6.1, set again from its owner's graveyard once) are
 //! catalog keywords. Set face-down, it reveals (R17) when "one of your Starship Pieces" dies: a piece
-//! its controller owns, whose copy fuses into their Dormant Starship (`starshipFused` for them,
-//! R1852000, R1852002), wherever it died, a stolen one included (R1859012). Then
+//! whose copy fuses into their Dormant Starship (`starshipFused` for them, R1852000, R1852002), one that
+//! died on their side, into their graveyard, a stolen one included (R1859012, R2618000). Then
 //! `starship_launch_costs { cost: 0 }` (R1852006): their next launch by the Activate is free. The
 //! Radiant face first summons that piece out of its owner's graveyard into the leftmost open unit zone
 //! (R64), a summon with no Cry (R1), its copy staying fused in the Starship. Declares no numbers: (0)
@@ -215,9 +215,10 @@ mod tests {
     }
 
     #[test]
-    fn r1859012_a_piece_it_owns_dying_under_the_enemy_fuses_into_its_starship_and_reveals_it() {
-        // p2 steals p1's AP Rounds and destroys it: it dies under p2's control into p1's graveyard, and
-        // its copy fuses into p1's Starship (R1852002), so it is one of p1's Starship Pieces.
+    fn r1859012_r2618000_a_piece_it_owns_dying_under_the_enemy_leaves_it_set() {
+        // p2 steals p1's AP Rounds and destroys it: it dies under p2's control into p2's graveyard as
+        // p2's own card (R2618000), and its copy fuses into p2's Starship (R1852002), so it is not one
+        // of p1's Starship Pieces.
         let mut s = board(
             "r1859012-stolen-own",
             false,
@@ -227,18 +228,19 @@ mod tests {
         );
         let piece = steal(&mut s, P2, 2);
         s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
-        assert_eq!(s.card(piece.as_str()).zone, Zone::Graveyard { player: P1 });
-        assert!(dormant_starship_of(s.state(), P1).is_some(), "the copy fused into p1's Starship");
-        assert!(trap_fired(&s));
-        s.expect_in_zone(ID, "graveyard");
-        assert_eq!(launch_cost(s.state(), P1), 0);
-        assert_eq!(launch_cost(s.state(), P2), STARSHIP_LAUNCH_COST);
+        assert_eq!(s.card(piece.as_str()).zone, Zone::Graveyard { player: P2 });
+        assert!(dormant_starship_of(s.state(), P2).is_some(), "the copy fused into p2's Starship");
+        assert!(dormant_starship_of(s.state(), P1).is_none());
+        assert!(!trap_fired(&s));
+        let trap = s.card(ID);
+        assert!(matches!(trap.zone, Zone::Field { row: Row::Backrow, .. }) && trap.face_up != Some(true));
+        assert_eq!(launch_cost(s.state(), P1), STARSHIP_LAUNCH_COST);
     }
 
     #[test]
-    fn r1859012_an_enemy_piece_dying_under_its_controller_leaves_it_set() {
-        // p1 steals p2's AP Rounds and destroys it: it dies under p1's control but fuses into p2's
-        // Starship, so it is not one of p1's Starship Pieces.
+    fn r1859012_r2618000_an_enemy_piece_dying_under_its_controller_fuses_into_its_starship_and_reveals_it() {
+        // p1 steals p2's AP Rounds and destroys it: it dies under p1's control into p1's graveyard as
+        // p1's own card (R2618000), and its copy fuses into p1's Starship, so it is one of p1's pieces.
         let mut s = board(
             "r1859012-stolen-enemy",
             false,
@@ -248,13 +250,12 @@ mod tests {
         );
         let piece = steal(&mut s, P1, 2);
         s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
-        assert_eq!(s.card(piece.as_str()).zone, Zone::Graveyard { player: P2 });
-        assert!(dormant_starship_of(s.state(), P2).is_some(), "the copy fused into p2's Starship");
-        assert!(dormant_starship_of(s.state(), P1).is_none());
-        assert!(!trap_fired(&s));
-        let trap = s.card(ID);
-        assert!(matches!(trap.zone, Zone::Field { row: Row::Backrow, .. }) && trap.face_up != Some(true));
-        assert_eq!(launch_cost(s.state(), P1), STARSHIP_LAUNCH_COST);
+        assert_eq!(s.card(piece.as_str()).zone, Zone::Graveyard { player: P1 });
+        assert!(dormant_starship_of(s.state(), P1).is_some(), "the copy fused into p1's Starship");
+        assert!(dormant_starship_of(s.state(), P2).is_none());
+        assert!(trap_fired(&s));
+        s.expect_in_zone(ID, "graveyard");
+        assert_eq!(launch_cost(s.state(), P1), 0);
     }
 
     #[test]

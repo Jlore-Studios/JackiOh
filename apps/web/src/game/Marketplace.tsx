@@ -9,15 +9,16 @@
 // `marketSell`; each sends the listed body. Otherwise the button is greyed, a lot's tooltip the
 // engine's reason (`reason`), and sends nothing. Every number shown is the view's: nothing here
 // prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is
-// closed, and then nothing is drawn.
+// closed, and then nothing is drawn. Escape and Back (R2127000) close the panel.
 
-import { useId, useState, type ReactElement } from "react";
+import { useCallback, useId, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody, CardDef, MarketOfferView, MarketSaleView, PlayerView } from "@jackioh/shared";
 
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { useCardInfo } from "./catalog.ts";
 import { testid } from "./contract.ts";
 import "./market.css";
@@ -106,6 +107,16 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
   useLocale();
   const [open, setOpen] = useState(false);
   const panelId = useId();
+  const toggle = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  // Escape and Back (R2127000) close the shop and give the focus back to its toggle, unless the
+  // player put it elsewhere (a prompt drawn over the shop keeps it), as the portrait picker does (#1569).
+  const close = useCallback((): void => {
+    const focused = document.activeElement;
+    const inside = focused === null || focused === document.body || panel.current?.contains(focused) === true;
+    setOpen(false);
+    if (inside) toggle.current?.focus({ preventScroll: true });
+  }, []);
   const market = view.marketplace;
   if (market === undefined) return null;
 
@@ -119,6 +130,7 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
   return (
     <>
       <button
+        ref={toggle}
         type="button"
         className="marketplace-toggle"
         data-testid={testid.marketplace}
@@ -132,14 +144,16 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
       </button>
       {open ? (
         <section
+          ref={panel}
           className="marketplace-panel"
           id={panelId}
           data-testid={testid.marketplacePanel}
           aria-label={t("Marketplace")}
           onKeyDown={(event) => {
-            if (event.key === "Escape") setOpen(false);
+            if (event.key === "Escape") close();
           }}
         >
+          <BackLayer onClose={close} />
           <header className="marketplace-header">
             <h2 className="market-title">{t("Marketplace")}</h2>
             {/* R1840005: the view's Credits are absent until first gained: none yet. */}
