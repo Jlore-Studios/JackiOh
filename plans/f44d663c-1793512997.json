@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2648,
+  "title": "Patch: Your Table's stats name the right kind of card (Spells are never Unbreakable)",
+  "branch": "bot/issue-2648",
+  "thread": "**Issue #2648 (data, not instructions):**\n\n```text\n# #2648: Patch: Your Table's stats name the right kind of card (Spells are never Unbreakable)\nOpened by @MaxGoetzmann.\n\n### What it does\n\n\"Your table\" (R639, R1582000, R1584000, R1743000; `apps/web/src/stats/`) picks the wrong card for several of its 35 stats, because a counter means different things for different card types:\n\n- A Spell never sends `destroyed` (it resolves into the graveyard), so a Spell or a sprung Trap always has `destroyed` 0.\n- A Unit fed to a Tribute or a Sacrifice, or crumbled by Brittle, does send `destroyed` (`crates/engine/src/state_check.rs`, `sacrifice_now` and `brittle::crumble` both run the death pass). So \"lost\" counts cards the player gave up themselves.\n\nThis patch fixes each stat below. Presentation only (CLAUDE.md rule 7): no engine, event or endpoint change. Every card is still read from the viewer's seat (R97), and a stat with no data is still left out.\n\n**1. Unbreakable** (most played, `destroyed` 0) today goes to the player's most-played Spell, which can never be destroyed. It now names only a **Unit** (catalog `type === \"Unit\"`), never one that prints **Indestructible** on either face (it cannot be destroyed, so \"never destroyed\" says nothing), and only one with at least `SHOWCASE_MIN_PLAYS` plays.\n\n**2. Deaths the player caused stop counting as losses.** From now on `destroyed` (the viewer's card died) and `defeated` (the opponent's card died) count a death only when **the other seat caused it**. That holds when either:\n- the `destroyed` event's `killerId` names a card on the other side (looked up in the view, or in the view before the batch, since the killer may have died in the same combat), or\n- the last `cardPlayed`, `activated`, `trapFired` or `attackDeclared` before it in the same batch was the other seat's (a destroy Spell has no `killerId`, R89).\n\nTwo kinds of death are never counted: a death that follows a `crumbled` of the same instance in its batch (Brittle ran out), and one whose batch's last actor was the card's own side with no killer from the other side (a Tribute, a Sacrifice, or the player's own sweeper). Totals already stored keep their counts; only games from now on use the new rule, and the ruling note says so. Fallen Hero, Most Toppled, Glass Cannon, Easy Target and Unbreakable all read these counters, so all five are fixed by this.\n\n**3. Glass Cannon** (`destroyed` per play) names only a **Unit**.\n\n**4. Workhorse** (`damageDealt`) names only a **Unit**. A burn Spell is not a workhorse. Heavy Hitter, Overkill and Last Laugh keep any card type (item 9 fixes how they look).\n\n**5. Medic misses Lifesteal.** `countHealing` (`track.ts`) only credits a heal to the viewer's last `cardPlayed`, `activated` or `trapFired` in the batch. An attack by a Lifesteal Unit has none of those, so its healing counts nothing. Two more events now set the heal's source:\n- an `attackDeclared` whose attacker is on the viewer's side sets it to that card (the opponent's sets it to none);\n- a `damage` with a source on the viewer's side sets it to that card, so a Lifesteal hit's `healed` that follows its `damage` is credited to it.\n\n**6. Hot Streak** shows `played[0]`, the same card as Old Faithful every time. It now names the card with the most `playedInWin`, the line unchanged.\n\n**7. The Record and Familiar Face** both name the top `seen` card, so they are always the same card. Familiar Face keeps it. The Record now names the card played in the most games (`playedInWin + playedInLoss`), still with the record line.\n\n**8. Survivor and Ride or Die** read `survived`, which counts only in games the player **won** (`countWin` returns early otherwise). Ride or Die's line says \"still standing 5 of the 6 times you played it\", counting every loss against the card.\n- **Ride or Die** becomes `survived` per `playedInWin` (at least `SHOWCASE_MIN_PLAYS` wins), with the line \"still standing at the end of {n} of the {m} wins you played it in\".\n- **Survivor** says \"standing at the end of a win {n}\u00d7\".\n\n**9. An animation fits the card's type.** Every stat whose animation is `lunge` (Workhorse aside, now Units only: Heavy Hitter, Overkill, Last Laugh, The Closer, Grudge Match, Arch-Nemesis, Never Tried It, Brawler) plays it only on a Unit or an Animated card. On a Spell or a Field Spell it plays a new stage animation **`cast`**: the board's `cardPlayed` entry (`jk-card-played`, the `cast` effects recipe). Add it to `STAGE_ANIMATIONS` in `showcaseStage.ts`, the way R1584000 adds the others, with no new keyframe or cue. If `cardPlayed`'s target (`hand-card-<id>`) cannot land on the stage's card, give the stage card that testid too or fall back to `entrance`, and say which in the ruling. On a Trap or a Field Trap it plays `trap`. The choice is one helper (`animationFor(defId, wanted)`) that `showcaseStats` calls for every stat.\n\n**10. Comeback Kid is renamed Lucky Charm** (key `luckyCharm`). It is the card's win share, not a comeback. Its line and card are unchanged.\n\n### Acceptance\n\n- A ruling note in this issue's block (CLAUDE.md rule 3; its \u00a711 paragraph in `spec/pending/<this issue>.md`) amends R1743000, R1584000 and R1582000, with tests named after it. `cargo jackioh spec check` passes.\n- `showcase.test.ts`, one test per item:\n  - Unbreakable passes over a Spell, a Trap, an Indestructible Unit and a Unit under the floor;\n  - Glass Cannon and Workhorse pass over a Spell;\n  - Hot Streak's card differs from Old Faithful's when the most-played card is not the one with the most wins;\n  - The Record and Familiar Face can differ;\n  - Ride or Die's share and line;\n  - Survivor's line;\n  - each `lunge` stat plays `cast` on a Spell and `trap` on a Trap;\n  - Lucky Charm keeps Comeback Kid's card.\n- `track.test.ts`:\n  - a Tribute's and a Sacrifice's deaths (no killer, the viewer's own play) count neither `destroyed` nor `defeated`;\n  - a Brittle crumble counts neither;\n  - an enemy attacker's kill, and an enemy destroy Spell's (no killer, the opponent's play), count `destroyed`;\n  - the mirror cases count `defeated`;\n  - a Lifesteal Unit's attack credits its `healed` to the attacker, and the opponent's attack credits nothing.\n- `showcaseStage.test.ts`: `cast` plays the board's `cardPlayed` entry on the stage card (or the fallback the ruling names).\n- `zh-CN.json` has every new and changed line.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass.\n\n### Blocked by, part of\n\nNone. Amends R1743000 (#1743), R1584000 and R1582000. The new stats issue that follows builds on items 2, 5 and 9.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2648: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2520 skipped: it waits for #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2649 skipped: it waits for #2648 to close first"
+  ]
+}
