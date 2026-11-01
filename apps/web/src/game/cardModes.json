@@ -277,8 +277,14 @@
   "stinkyscape-026": {
     "base": [
       [
-        "piece",
-        "universities"
+        "university",
+        "piece"
+      ]
+    ],
+    "radiant": [
+      [
+        "university",
+        "piece"
       ]
     ]
   },
