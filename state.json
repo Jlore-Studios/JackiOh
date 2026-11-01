@@ -12071,7 +12071,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-01T09:26:18Z",
       "round_tier": "strong",
-      "run_id": "pending:9712c145-1793530688",
+      "run_id": "41299798527",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
