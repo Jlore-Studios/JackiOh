@@ -353,4 +353,56 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
       expect(sent).not.toContain(word);
     }
   });
+
+  it("R2649000 the new counters are not sent: the payload and the request body leave them out", async () => {
+    const NEW = [
+      "tempExpired",
+      "tempPlayed",
+      "crumbled",
+      "crumbledAgainst",
+      "fengShuiGood",
+      "fengShuiBad",
+      "traded",
+      "tradeDrawn",
+      "created",
+      "kills",
+      "biggestKill",
+      "reborn",
+      "shieldsLost",
+      "armorAbsorbed",
+      "damageTaken",
+      "doubleAttacks",
+      "lifesteal",
+      "sacrificed",
+      "froze",
+      "frozen",
+      "thawed",
+      "shattered",
+      "flashback",
+      "manaSaved",
+      "countered",
+      "counterspells",
+      "burned",
+      "bounced",
+      "launched",
+    ] as const;
+    const every = Object.fromEntries(NEW.map((counter, i) => [counter, i + 1])) as Partial<CardCounters>;
+    const stats: PlayerStats = {
+      ...EMPTY_STATS,
+      games: 2,
+      wins: 1,
+      losses: 1,
+      draws: 0,
+      cards: { "card-a": { ...NO_COUNTS, ...every, played: 4 }, "card-b": { ...NO_COUNTS, ...every } },
+    };
+    const payload = syncPayload(stats);
+    expect(payload).toEqual({ games: 2, wins: 1, losses: 1, draws: 0, cards: { "card-a": { played: 4 } } });
+
+    writeSession({ accessToken: "token-new", refreshToken: "refresh-new", expiresAt: Date.now() + 60000 });
+    setStoredStats(stats);
+    await syncPlayerStats();
+    expect(putPlayerStats).toHaveBeenCalled();
+    const sent = JSON.stringify(vi.mocked(putPlayerStats).mock.calls);
+    for (const word of NEW) expect(sent).not.toContain(word);
+  });
 });

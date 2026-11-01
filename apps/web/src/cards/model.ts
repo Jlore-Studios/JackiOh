@@ -1,32 +1,11 @@
-// What a card face shows, computed once from a catalog def and the live view (docs/polish/6-cards.md,
-// Surface B). Pure: no React, no DOM, no settings, except the reader's language (R711000). Every
-// component that draws a card — the board's Card.tsx, the inspect overlays, the deck builder —
-// builds a FaceModel here and hands it down.
-//
-// Two kinds of face come out of it (SPEC §10.10). A face with no `inPlay` is the card as printed:
-// the collection's, both faces of it in the catalog's words. A face with `inPlay` is the card as the
-// view says it stands in a game (R243): the cost the view gives it, the stats of a Unit in its
-// owner's hand with what it gained there (#89 Corpse Eater), and inPlay.ts's words where play and
-// print part ways. A match-made definition (a Fuse's, R77) is just the `def` the caller found in the
-// view's `defs`, and prints its own name, text and stats.
-//
-// Nothing here is a rule (CLAUDE.md rule 7). The tones compare two numbers the view and the catalog
-// already carry, so a buffed unit reads green and a damaged one red, the way Hearthstone colors them.
-//
-// Per-card states ride on a face in play as the view gives them (cardState.ts draws them). The
-// collection shows none of them.
-//
-// An Animated Field Spell or Trap that prints attack and health prints those of the Unit it becomes
-// (B3.1 rule 1; R2280000: it may print none), so its face carries them as a Unit's does, wherever it is.
-//
-// A copier (Classic #57 Echo, B5 E14, R399, R511) prints the Spell text the view says it has
-// (`InPlay.copies`) in place of its own copying sentence; it keeps its own name, cost, type and art.
-//
-// ME-CN, R1301, R711000: a card the view says is Chinese (`FaceSource.chinese`), or any card when the
-// reader reads Chinese (`drawnInChinese`), prints its name and both faces' texts from the Chinese
-// table (chinese.ts). A Radiant face's gold diff compares the two Chinese faces (R1302). The English
-// face's name and text ride along (`englishName`, `englishText`), never printed: the art's motif and
-// the glossary's terms are read from them.
+// What a card face shows, computed once from a catalog def and the live view (docs/polish/6-cards.md, Surface B). Pure
+// but for the reader's language (R711000); nothing here is a rule (CLAUDE.md rule 7). A face with no `inPlay` is the card
+// as printed (SPEC §10.10); with `inPlay`, as the view says it stands (R243): its cost, a hand Unit's gained stats (#89
+// Corpse Eater), inPlay.ts's words, cardState.ts's states; a match-made def (a Fuse's, R77) prints its own. An Animated Field
+// Spell or Trap that prints attack and health prints the Unit's (B3.1 rule 1; R2280000: it may print none). A copier (Classic #57
+// Echo, B5 E14, R399, R511) prints the Spell text the view says it has (`InPlay.copies`). ME-CN, R1301, R711000: a Chinese card
+// (`FaceSource.chinese`), or any when the reader reads Chinese (`drawnInChinese`), prints name and texts from chinese.ts; a
+// Radiant gold diff compares the Chinese faces (R1302). The English name and text ride along, never printed: art motif and glossary read them.
 
 import {
   fillParams,
@@ -103,12 +82,8 @@ export type FaceModel = {
   rarity: Rarity | null;
   /** B2.5, R503: the rarity a token prints (`CardDef.printedRarity`), which its frame shows in place of Token's. Display only. */
   printedRarity?: PrintedRarity | null;
-  /**
-   * R1177001: the card is a token (`CardDef.token`), which its full face says on its type line
-   * ("Token Unit"); no face wears a mark of it (R2647000). On every catalog card the flag agrees
-   * with rarity Token, the Token tag and §7's row, and on a fused card with its tag (R1177000).
-   * Absent (false) on a face built by hand and on a card with no definition.
-   */
+  /** R1177001: the card is a token (`CardDef.token`), said on its type line ("Token Unit"), with no mark (R2647000);
+   * it agrees with rarity Token, the Token tag and §7's row, on a fused card with its tag (R1177000). */
   token?: boolean;
   index: string | null;
   set: SetName | null;
@@ -190,11 +165,7 @@ export type FaceModel = {
   tallies?: readonly NamedTally[];
   /** R979000: in play, why a card in the viewer's own hand (or, R1571000, graveyard) cannot be played now (`CardView.playReason`), which the inspect notes spell out. */
   playReason?: string;
-  /**
-   * R2521009: a Resource's sale prices on the face shown (`CardDef.resource`'s `base` or `radiant`
-   * `sellMin` and `sellMax`), which the face prints under its text; null (or absent, on a face built
-   * by hand) on every card that is no Resource.
-   */
+  /** R2521009: a Resource's sale prices on the face shown (`CardDef.resource`'s `sellMin`, `sellMax`), printed under its text; null otherwise. */
   credits?: FaceCredits | null;
 };
 /** R2521009: what a Resource sells for on one face, its least and its most. */
@@ -393,9 +364,8 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
 }
 
 /**
- * B5 E14, R511: a copier's text in play (Classic #57 Echo): the copied text where its own face prints its
- * copying sentence (its base text), so whatever else its face prints stays (a Radiant Echo still reads
- * "Echo 1"); a face that does not print that sentence prints the copied text alone.
+ * B5 E14, R511: a copier's text in play (Classic #57 Echo): the copied text replaces its own copying
+ * sentence, whatever else its face prints stays; a face without that sentence prints the copied text alone.
  */
 function copiedText(own: FaceText, def: CardDef | undefined, copied: FaceText): FaceText {
   const sentence = def === undefined ? "" : fillParams(def, "base");
@@ -425,11 +395,8 @@ function withViewParams(def: CardDef | undefined, values: Readonly<Record<string
   return params.length === 0 ? def : { ...def, params };
 }
 
-/**
- * R2521009: a Resource's sale prices on the face shown, as its definition prints them
- * (`CardDef.resource`, R1840000); null for a card that is no Resource. Nothing is worked out: the
- * numbers are the definition's (CLAUDE.md rule 7).
- */
+/** R2521009: a Resource's sale prices as its definition prints them (`CardDef.resource`, R1840000),
+ * worked out by nothing (CLAUDE.md rule 7); null for a card that is no Resource. */
 function creditsOf(def: CardDef | undefined, radiant: boolean): FaceCredits | null {
   const resource = def?.resource;
   if (resource === undefined) return null;
@@ -456,9 +423,8 @@ function handLive(stats: InPlay["handStats"], printed: PrintedFace | undefined):
 }
 
 /**
- * The keywords a card has now that its printed face does not print, each once, in order. Lucky X stacks
- * and the view keeps each entry (layers.rs), so Lucky is gained when its sum is not the printed sum, as
- * one entry at the sum where its first entry stands (R1438).
+ * The keywords a card has now that its printed face does not, each once, in order. Lucky X stacks
+ * (layers.rs): it is gained when its sum differs from the printed one, as one entry at the sum (R1438).
  */
 function gainedKeywords(live: readonly Keyword[], printed: readonly Keyword[]): Keyword[] {
   const printedKeys = new Set(printed.map(keywordKey));
@@ -645,9 +611,8 @@ function printsUnitStats(printed: PrintedFace | undefined): boolean {
 }
 
 /**
- * A face's text with its `{key}` numbers filled in (`fillParams`, B3.4 rule 5): its printed values, or
- * `values` in play. A Radiant face marks what the base face's text, as printed, does not have (R277); a
- * fused definition's lines are marked against the same ingredients' base lines (radiantDiff.ts).
+ * A face's text with its `{key}` numbers filled in (`fillParams`, B3.4 rule 5): printed values, or `values`
+ * in play. A Radiant face marks what the base text lacks (R277); a fused one's lines against its ingredients' (radiantDiff.ts).
  */
 function textOf(
   def: CardDef | undefined,

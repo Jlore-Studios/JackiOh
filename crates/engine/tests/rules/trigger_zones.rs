@@ -10,7 +10,7 @@
 //!
 //! A card in a hand or graveyard that answered every hook would change the board silently (#58 Rush
 //! Token Farm summoning from a hand, #64 Gifted Program making plays Radiant), so the tests assert the
-//! board. Each has a second half: the same card on the field or in the backrow must fire.
+//! board, each with a second half: the same card on the field or in the backrow must fire.
 //!
 //! Fixtures are this file's own: `tz-` defs indexed above 2500 (BUILD §0).
 

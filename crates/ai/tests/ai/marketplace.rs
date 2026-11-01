@@ -124,7 +124,7 @@ fn held_credits_are_worth_what_they_buy_on_the_own_side_only() {
 }
 
 /// A price no card's place in hand is worth at `AI_EVAL.market_credit` a Credit (30 points), all the
-/// Credits the AI holds. Before #2389 a Credit was worth nothing, so the AI bought at any price.
+/// Credits the AI holds.
 const OVERPRICED: i32 = 1000;
 
 #[test]

@@ -1063,7 +1063,6 @@ mod r257_queue_modes {
         let legacy = active_profile(&app, "legacy", 1000.0).await;
         let [one, two, _] = decks_from();
         let deck_id = save_deck_for(&app, "modern", &one, "modern's deck").await;
-        // Two saved decks for the second player: it queues the younger one by its id.
         save_deck_for(&app, "legacy", &one, "older").await;
         tokio::time::advance(Duration::from_millis(1_000)).await;
         let younger = save_deck_for(&app, "legacy", &two, "younger").await;
@@ -1235,7 +1234,6 @@ mod r257_queue_modes {
         // R143: the seed the older ticket brought is the series' seed base.
         assert_eq!(series["seedBase"], "series-seed");
         assert_eq!(e2e_seed_count(), 0);
-        // Nobody is in a match yet: the series opens on its pick phase.
         assert!(
             to_json(&q!(app, matches_live()))
                 .as_array()
@@ -1353,7 +1351,6 @@ mod r640002_the_queue_readout {
         assert_eq!(expected_wait_seconds(&[1_000; 4]), None, "too few to say");
         assert_eq!(expected_wait_seconds(&[0; 5]), Some(10));
         assert_eq!(expected_wait_seconds(&[29_999; 5]), Some(30));
-        // A wait on a step goes past it, so "under" holds.
         assert_eq!(expected_wait_seconds(&[30_000; 5]), Some(40));
         // The upper quartile, not the longest: three waits in four are under it.
         assert_eq!(
@@ -1534,7 +1531,6 @@ mod r258_all_random {
         };
         assert_eq!(seat_deck(&app, &match_id, "rng-one").await, one_deck);
         assert_eq!(seat_deck(&app, &match_id, "rng-two").await, two_deck);
-        // Two seats, two different deals.
         assert_ne!(p1_deck, p2_deck);
         // Frozen into the match row, so `(seed, decks, log)` replays it.
         assert_eq!(row["decks"], json!([p1_deck, p2_deck]));
@@ -1948,12 +1944,10 @@ mod a_failed_start_does_not_end_the_sweep {
         failed.sort();
         assert_eq!(failed, vec!["t-bo1-a".to_string(), "t-bo1-b".to_string()]);
 
-        // The younger All Random pair started in the same sweep.
         assert_eq!(paired_profiles(&app).await, vec![json!(["rnd-c", "rnd-d"])]);
         for id in ["t-rnd-c", "t-rnd-d"] {
             assert_eq!(ticket(&app, id).await["status"], "matched");
         }
-        // The failed pair's players were freed as they are today.
         for id in ["bo1-a", "bo1-b"] {
             assert_eq!(in_match_of(&app, id).await, Value::Null);
         }
@@ -1999,7 +1993,6 @@ mod a_failed_start_does_not_end_the_sweep {
         assert_eq!(body["status"], "open");
         assert!(body["ticketId"].is_string());
 
-        // The unrelated pair still failed as before, and both its players were freed.
         for id in ["pair-a", "pair-b"] {
             assert_eq!(in_match_of(&app, id).await, Value::Null);
         }
@@ -2063,7 +2056,6 @@ mod a_failed_start_does_not_end_the_sweep {
         assert_eq!(report.made, 1);
         assert_eq!(report.failed.len(), 1);
 
-        // The bot game started despite the person pair's failure.
         let rows = paired_profiles(&app).await;
         assert_eq!(rows.len(), 1);
         let players = rows[0].as_array().cloned().unwrap_or_default();
@@ -2118,7 +2110,6 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         // coin on the match seed.
         tokio::time::advance(Duration::from_millis(1)).await;
 
-        // The pairing: each seat carries what its ticket froze.
         let (_, paired) = enqueue_with(&app, &rival, json!({ "mode": "bo1", "deckId": rival_deck_id })).await;
         assert_eq!(paired["status"], "matched");
 
@@ -2322,7 +2313,7 @@ mod r1834002_the_loadout_the_ticket_freezes {
             &CardPicks {
                 card_id: theirs[1].clone(),
                 foil: Some("foil-from-a-newer-client".to_string()),
-                full_art: Some(true),
+                full_art: Some(true.into()),
                 ..CardPicks::default()
             },
             now_ms(),
@@ -2338,7 +2329,6 @@ mod r1834002_the_loadout_the_ticket_freezes {
             ticket(&app, &ticket_id).await["deckSlots"],
             json!({ "table": "table-felt", "cardBack": "card-back-lacquer" })
         );
-        // A re-save while the ticket is open does not reach it.
         save_with_slots(
             &app,
             &swapper,
@@ -3008,7 +2998,6 @@ mod r1989000_the_seed_coin_seats_the_pair {
             assert_eq!(row["players"], json!([first, second]), "seed {seed}");
             seen_p1_first |= older_is_p1;
             seen_p2_first |= !older_is_p1;
-            // The same seed run again seats the same way.
             let again = paired_on(
                 &app,
                 &format!("coin-c-{index}"),

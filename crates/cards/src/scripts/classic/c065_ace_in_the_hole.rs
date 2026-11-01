@@ -16,6 +16,11 @@
 //! The coin is a luck-based roll whose better side is heads on both faces (R1440): the trap's own
 //! Lucky (`lucky_on`: printed plus given, R1438) flips that many more coins, heads kept. It prints
 //! none, so with nothing given the flip is the one draw it always was.
+//!
+//! The coin is reported as it lands (`report_rolls`, R2652001), every coin a Lucky flipped with it.
+//! The base face flips face-down, so the opponent sees that flip only on heads, when the trap fires in
+//! the same action, as a Secret's is seen; the Radiant face is Revealed before it flips, so both see
+//! every flip (R2652000).
 
 use jackioh_engine::effects::{recruit, remember, reveal};
 use jackioh_engine::prelude::*;
@@ -38,16 +43,18 @@ fn flip(on_tails: bool) -> Hook {
     hook(move |ctx| {
         // R987: the controller's Luck flips extra times beside the card's own Lucky.
         let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me)) + luck_of(&*ctx.state, ctx.controller);
-        if ctx.rng.lucky_coin(lucky) {
-            return vec![remember(json_as(
+        let coin = flip_coin(ctx, lucky);
+        let heads = coin.heads();
+        // R2652000, R2652001: the coin is shown first; to the opponent only if the trap fires on it.
+        let mut effects = vec![report_rolls(RollKind::Coin, ROLL_COIN_SIDES, vec![coin])];
+        if heads {
+            effects.push(remember(json_as(
                 json!({ "key": HEADS, "value": ctx.state.turn }),
-            ))];
+            )));
+        } else if on_tails {
+            effects.push(recruit(json_as(json!({}))));
         }
-        if on_tails {
-            vec![recruit(json_as(json!({})))]
-        } else {
-            vec![]
-        }
+        effects
     })
 }
 
@@ -147,6 +154,24 @@ mod tests {
             }
         }
         panic!("no seed gave {}", coin.as_str());
+    }
+
+    /// The `rolled` batches among `events`.
+    fn rolled(events: &[GameEvent]) -> Vec<GameEvent> {
+        events
+            .iter()
+            .filter(|event| event.event_type() == GameEventType::Rolled)
+            .cloned()
+            .collect()
+    }
+
+    /// The types of `events` from the first `rolled` on, in the order the view lists them.
+    fn from_the_flip(events: &[GameEvent]) -> Vec<GameEventType> {
+        events
+            .iter()
+            .map(GameEvent::event_type)
+            .skip_while(|kind| *kind != GameEventType::Rolled)
+            .collect()
     }
 
     fn fired(s: &Scenario) -> usize {
@@ -289,6 +314,123 @@ mod tests {
                 plain.end_turn();
                 assert_eq!(s.state().next_seq, plain.state().next_seq);
                 assert_eq!(s.view(P2).events, plain.view(P2).events);
+            }
+
+            /// R2652000: a tails flipped face-down is one coin reported to its controller alone: the
+            /// raw event marks it face-down, p1's view shows the coin and p2's has no `rolled` at all.
+            #[test]
+            fn r2652000_base_tails_the_flip_reaches_its_controller_alone() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({}));
+                let ace = s.card(ACE).clone();
+                s.end_turn();
+                let raw = rolled(s.events());
+                assert_eq!(raw.len(), 1);
+                let GameEvent::Rolled {
+                    player,
+                    instance_id,
+                    kind,
+                    rolls,
+                    face_down,
+                    ..
+                } = &raw[0]
+                else {
+                    panic!("a rolled event");
+                };
+                assert_eq!((*player, instance_id.as_str(), *kind), (P1, ace.id.as_str(), RollKind::Coin));
+                assert_eq!(rolls, &vec![RollResult { faces: vec![ROLL_TAILS], kept: 0 }]);
+                assert_eq!(*face_down, Some(true));
+
+                let mine = rolled(&s.view(P1).events);
+                assert_eq!(mine.len(), 1);
+                // `faceDown` is the engine's: no view forwards it.
+                assert!(matches!(&mine[0], GameEvent::Rolled { face_down: None, def_id, .. } if def_id == ACE));
+                assert!(rolled(&s.view(P2).events).is_empty());
+                assert!(!js(&s.view(P2)).to_string().contains(ACE));
+            }
+
+            /// R2652000, R645: a host that slices a view by the step's event count (the server's bot
+            /// personas) is told the opponent's view holds one event fewer, so it reads exactly the
+            /// step's events the view carries, the flip's controller every one of them.
+            #[test]
+            fn r2652000_a_host_slicing_a_view_by_the_step_reads_the_step_alone() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({}));
+                s.end_turn();
+                let fresh = s.last_events().len();
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P1, fresh), fresh);
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P2, fresh), fresh - 1);
+                let theirs = s.view(P2).events;
+                let step: Vec<GameEvent> = s
+                    .last_events()
+                    .iter()
+                    .filter(|event| event.event_type() != GameEventType::Rolled)
+                    .cloned()
+                    .collect();
+                let seen = &theirs[theirs.len() - jackioh_engine::viewed_of_newest(s.state(), P2, fresh)..];
+                assert_eq!(
+                    seen.iter().map(GameEvent::event_type).collect::<Vec<_>>(),
+                    step.iter().map(GameEvent::event_type).collect::<Vec<_>>()
+                );
+                // Asked for more than the log holds, it counts what there is.
+                let total: usize = s.state().applied.iter().map(|entry| entry.events.len()).sum();
+                assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P1, total + 5), total);
+            }
+
+            /// R2652000, R168: deep in a game, with more events behind it than the window holds, the
+            /// opponent's window is still full after a tails flipped face-down, and the very one a
+            /// face-down Sheepish leaves them: the flip is out before the window is taken, since a
+            /// window one event short would tell them a hidden card rolled.
+            #[test]
+            fn r2652000_a_withheld_flip_leaves_the_opponent_a_full_window_as_a_face_down_sheepishs() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({}));
+                let mut plain = scenario(json!({
+                    "seed": s.state().seed.clone(),
+                    "p1": {
+                        "hand": [FILLER],
+                        "backrow": [{ "def": SHEEPISH, "faceUp": false }],
+                        "library": [LUNAR, VANILLA, GARY, VANILLA],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                let earlier: Vec<AppliedAction> = (0..VIEW_EVENT_LIMIT)
+                    .map(|i| AppliedAction {
+                        nonce: format!("earlier-{i}"),
+                        events: vec![json_as(json!({ "type": "manaChanged", "player": "p2", "current": i, "max": 4 }))],
+                    })
+                    .collect();
+                for game in [&mut s, &mut plain] {
+                    game.state_mut().applied.splice(0..0, earlier.clone());
+                    game.end_turn();
+                }
+                assert_eq!(rolled(s.last_events()).len(), 1);
+                let theirs = s.view(P2).events;
+                assert_eq!(theirs.len(), VIEW_EVENT_LIMIT);
+                assert_eq!(theirs, plain.view(P2).events);
+            }
+
+            /// R2652000: on heads the trap fires in the same action, so the opponent sees the flip too,
+            /// naming the card as its graveyard does, before the `trapFired` it caused.
+            #[test]
+            fn r2652000_base_heads_the_opponent_sees_the_flip_with_the_trap_it_fired() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Heads, json!({}));
+                s.end_turn();
+                for viewer in [P1, P2] {
+                    let view = s.view(viewer);
+                    let seen = rolled(&view.events);
+                    assert_eq!(seen.len(), 1, "{viewer} sees the flip");
+                    assert!(matches!(
+                        &seen[0],
+                        GameEvent::Rolled { def_id, rolls, face_down: None, .. }
+                            if def_id == ACE && rolls[0].heads()
+                    ));
+                    // The flip is the end-of-turn hook's, before `turnEnded`; the trap fires after it.
+                    let order = from_the_flip(&view.events);
+                    assert_eq!(order[0], GameEventType::Rolled);
+                    assert!(order.contains(&GameEventType::TrapFired));
+                }
             }
 
             #[test]
@@ -481,6 +623,49 @@ mod tests {
                         .map(js)
                         .any(|event| event["type"] == "trapFired")
                 );
+            }
+
+            /// R2652000: the Radiant face is Revealed before it flips, so its tails, which fires nothing,
+            /// reaches both players, the coin after the reveal and before the recruit.
+            #[test]
+            fn r2652000_radiant_the_revealed_trap_flips_in_both_views() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({ "radiant": true }));
+                s.end_turn();
+                assert_eq!(fired(&s), 0);
+                let raw = rolled(s.events());
+                assert_eq!(raw.len(), 1);
+                assert!(matches!(&raw[0], GameEvent::Rolled { face_down: None, .. }));
+                for viewer in [P1, P2] {
+                    let seen = rolled(&s.view(viewer).events);
+                    assert_eq!(seen.len(), 1, "{viewer} sees the flip");
+                    assert!(matches!(
+                        &seen[0],
+                        GameEvent::Rolled { def_id, rolls, .. } if def_id == ACE && !rolls[0].heads()
+                    ));
+                }
+            }
+
+            /// R1440, R2652001: given Lucky 1 its two coins are one batch, both faces in draw order
+            /// and the heads kept when either lands it.
+            #[test]
+            fn r2652001_given_lucky_1_its_two_coins_are_one_report() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({ "radiant": true }));
+                crate::give_lucky(&mut s, ACE, 1);
+                let mut coins = Rng::new(&s.state().seed, s.state().rng_cursor);
+                let face = |heads: bool| if heads { ROLL_HEADS } else { ROLL_TAILS };
+                let faces = vec![face(coins.coin()), face(coins.coin())];
+                s.end_turn();
+                let raw = rolled(s.events());
+                assert_eq!(raw.len(), 1);
+                let GameEvent::Rolled { rolls, .. } = &raw[0] else {
+                    panic!("a rolled event");
+                };
+                assert_eq!(rolls.len(), 1);
+                assert_eq!(rolls[0].faces, faces);
+                assert_eq!(rolls[0].heads(), faces.contains(&ROLL_HEADS));
+                assert_eq!(fired(&s), usize::from(rolls[0].heads()));
             }
 
             #[test]

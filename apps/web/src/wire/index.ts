@@ -236,6 +236,8 @@ export const GAME_EVENT_TYPES = [
   "held",
   // Issue #1855's Anomalies: a side's board replaced by a preset (R1855000).
   "boardReplaced",
+  // Issue #2652: a card's coin flips or die rolls, one batch per verb or hook (R2652001).
+  "rolled",
 ] as const satisfies readonly GameEventType[];
 
 /**

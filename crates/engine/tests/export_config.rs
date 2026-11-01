@@ -2,8 +2,8 @@
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, Duos co-op's six, #936 S1, R1563006's
-//! sequence clock, #1843's vote tally, and others), generated from `crates/engine/src/config.rs` so
-//! the client never restates a rules number (CLAUDE.md rule 9).
+//! sequence clock, #1843's vote tally, R2652001's coin faces, and others), generated from
+//! `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md rule 9).
 //!
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
 //! this test and fails on a diff, as it does for the ts-rs types under `wire/generated/` (V20).
@@ -27,9 +27,10 @@ use jackioh_engine::config::{
     DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE,
     EMOTE_HAND_VOICE, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
     KY_COMPETITION_SECONDS, LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA,
-    RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX,
-    SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES,
-    TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
+    RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS, ROLL_TAILS,
+    SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
+    TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN, VERSIONS_SCHEME,
+    VOTE_TALLY_SIZE,
 };
 use serde::Serialize;
 
@@ -168,6 +169,10 @@ fn engine_config_ts() -> String {
         constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
+        // R2652001: the faces a reported coin shows for heads and tails, which the roll panel and the
+        // log read.
+        constant("ROLL_HEADS", None, &ROLL_HEADS),
+        constant("ROLL_TAILS", None, &ROLL_TAILS),
         constant("VERSIONS_SCHEME", None, &VERSIONS_SCHEME),
         // R923002: the practice sandbox panel's bounds.
         constant("SANDBOX_ARMOR_MAX", None, &SANDBOX_ARMOR_MAX),
@@ -208,8 +213,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Sixty-three constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 63, "{text}");
+    // Sixty-five constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 65, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

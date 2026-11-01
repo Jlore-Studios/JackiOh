@@ -1,9 +1,26 @@
-// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's takings, lethal blows, Traps fired and survivors; R1743000 adds the damage, the biggest hit, the overkill, the attacks, the healing, the draws and the Radiant changes of the viewer's cards, and a game's turns. R2648000: a death counts only when the other seat caused it; a Lifesteal hit credits its heal.
+// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's takings,
+// lethal blows, Traps fired and survivors; R1743000 the damage, biggest hit, overkill, attacks, healing, draws,
+// Radiant changes and turns; R2648000: a death counts only when the other seat caused it, a Lifesteal hit credits
+// its heal. R2649000 adds the game's own mechanics, each read from the viewer's seat (R97) and, where it needs
+// what a card was, from the view before the batch.
 
-import { opponentOf, type CardView, type GameEvent, type PlayerId, type PlayerView, type SideView } from "@jackioh/shared";
+import { CATALOG } from "@jackioh/cards";
+import {
+  hasKeyword,
+  opponentOf,
+  type CardView,
+  type GameEvent,
+  type Keyword,
+  type PlayerId,
+  type PlayerView,
+  type SideView,
+  type UnitView,
+} from "@jackioh/shared";
 
 import { ALLURE_MARK, markEventOf } from "../cards/marks.ts";
 import { HIDDEN_ID } from "../game/animations.ts";
+import { printedCost } from "../game/decks.ts";
+import { FROZEN_MARK } from "./config.ts";
 import { logMax, logSeen, logWith, outcomeFor, type GameLog, type GameOutcome } from "./model.ts";
 
 function readable(defId: string): string | null {
@@ -30,12 +47,51 @@ export function seenIn(view: PlayerView): string[] {
   return [...ids];
 }
 
-/** Count plays, draws, Radiant changes, turns and the viewer's Traps fired by the viewer-relative counter. */
+/**
+ * R2649000: the mana a play of the viewer's cost under its printed cost (`printedCost`: an X card's is 0, an
+ * embiggen card's its base); 0 for a play with an X, at its embiggen price, cast on draw, or of an unknown card.
+ */
+function manaSavedBy(event: Extract<GameEvent, { type: "cardPlayed" }>, id: string): number {
+  const def = CATALOG[id];
+  if (def === undefined || event.x !== undefined || event.embiggened === true || event.onDraw === true) return 0;
+  return Math.max(0, printedCost(def.cost) - event.costPaid);
+}
+
+/**
+ * Count plays, draws, Radiant changes, turns and the viewer's Traps fired by the viewer-relative counter.
+ * R2649000 adds the viewer's Flashback plays (R783012) and the mana they saved, crumbles (Brittle, R638),
+ * plays countered, cards burned from a full hand (R4) and bounced, and Starship pieces launched (R1852003).
+ */
 export function countEvent(log: GameLog, event: GameEvent, viewer: PlayerView["viewer"]): GameLog {
   if (event.type === "cardPlayed") {
     const id = readable(event.defId);
     if (id === null) return log;
-    return logWith(log, event.player === viewer ? "played" : "playedAgainst", id);
+    if (event.player !== viewer) return logWith(log, "playedAgainst", id);
+    let next = logWith(log, "played", id);
+    if (event.from === "graveyard") next = logWith(next, "flashback", id);
+    const saved = manaSavedBy(event, id);
+    return saved > 0 ? logWith(next, "manaSaved", id, saved) : next;
+  }
+  if (event.type === "crumbled") {
+    const id = readable(event.defId);
+    return id === null ? log : logWith(log, event.owner === viewer ? "crumbled" : "crumbledAgainst", id);
+  }
+  if (event.type === "countered") {
+    const id = readable(event.defId);
+    return id === null || event.player !== viewer ? log : logWith(log, "countered", id);
+  }
+  if (event.type === "burned" || event.type === "bounced") {
+    const id = readable(event.defId);
+    return id === null || event.owner !== viewer ? log : logWith(log, event.type, id);
+  }
+  if (event.type === "starshipLaunched") {
+    if (event.player !== viewer) return log;
+    let next = log;
+    for (const piece of event.pieces) {
+      const id = readable(piece);
+      if (id !== null) next = logWith(next, "launched", id);
+    }
+    return next;
   }
   // R1582000: a Trap the viewer controlled fired; another's reads as the sentinel to them (R97). A
   // face-up Field Trap firing again reveals nothing (R2657001) but still fires, so it counts each time.
@@ -65,6 +121,49 @@ function defIdOn(sides: readonly SideView[], instanceId: string | null): string 
     if (found !== undefined) return readable(found.defId);
   }
   return null;
+}
+
+/** R2649000: the readable definition of the viewer's card `instanceId` names, where this view shows it, else where the view before did. */
+function ownDefId(view: PlayerView, before: PlayerView | null, instanceId: string | null): string | null {
+  return defIdOn(before === null ? [view.you] : [view.you, before.you], instanceId);
+}
+
+/** R2649000: the card `side` shows under `instanceId`; none for no id or the sentinel (R97). */
+function cardOn(side: SideView, instanceId: string | null): CardView | undefined {
+  if (instanceId === null || instanceId === HIDDEN_ID) return undefined;
+  return cardsOnSide(side).find((card) => card.instanceId === instanceId);
+}
+
+/** R2649000: the unit on `side`'s field (a carried one included) under `instanceId`; none for no id or the sentinel. */
+function unitOn(side: SideView, instanceId: string | null): UnitView | undefined {
+  if (instanceId === null || instanceId === HIDDEN_ID) return undefined;
+  return [...side.units, ...(side.carried ?? [])].find((unit): unit is UnitView => unit !== null && unit.instanceId === instanceId);
+}
+
+/** R2649000: a card's keywords as the view shows them; a hand card that sets none has its catalog face's printed ones (R243). */
+function keywordsOf(card: CardView): readonly Keyword[] {
+  return card.keywords ?? CATALOG[card.defId]?.[card.radiant ? "radiant" : "base"].keywords ?? [];
+}
+
+/**
+ * R1743000, R2648000: the viewer's card an event makes the source of what follows it in the batch (their play,
+ * activation, Trap, attacker or damage dealer). Null for the opponent's event or a card the view does not
+ * show; undefined for an event that sets none.
+ */
+function sourceAfter(event: GameEvent, view: PlayerView): string | null | undefined {
+  if (event.type === "cardPlayed" || event.type === "activated") return event.player === view.viewer ? readable(event.defId) : null;
+  if (event.type === "trapFired") return event.controller === view.viewer ? readable(event.defId) : null;
+  if (event.type === "attackDeclared") return defIdOn([view.you], event.attackerId);
+  if (event.type === "damage") return defIdOn([view.you], event.sourceId);
+  return undefined;
+}
+
+/** R2648000: the seat an event acts for (a play, an activation, a Trap, an attack); undefined for one that acts for none. */
+function actorOf(event: GameEvent, views: readonly (PlayerView | null)[]): PlayerId | null | undefined {
+  if (event.type === "cardPlayed" || event.type === "activated") return event.player;
+  if (event.type === "trapFired") return event.controller;
+  if (event.type === "attackDeclared") return seatOf(views, event.attackerId);
+  return undefined;
 }
 
 /**
@@ -111,12 +210,9 @@ export function countDeaths(log: GameLog, view: PlayerView, fresh: readonly Game
   let actor: PlayerId | null = null;
   let next = log;
   for (const event of fresh) {
-    if (event.type === "cardPlayed" || event.type === "activated") {
-      actor = event.player;
-    } else if (event.type === "trapFired") {
-      actor = event.controller;
-    } else if (event.type === "attackDeclared") {
-      actor = seatOf(views, event.attackerId);
+    const acted = actorOf(event, views);
+    if (acted !== undefined) {
+      actor = acted;
     } else if (event.type === "crumbled") {
       crumbled.add(event.instanceId);
     } else if (event.type === "destroyed") {
@@ -189,41 +285,320 @@ export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEv
 }
 
 /**
- * R1743000: `healed` names no source, so a heal counts toward the viewer's card that acted last before
- * it in the batch, and toward nothing after the opponent's or a hidden card. R2648000: the viewer's
- * attacker, or card that dealt the damage, becomes the source, so a Lifesteal hit's heal is its card's.
+ * R1743000: `healed` names no source, so a heal counts toward the viewer's card that acted last before it in
+ * the batch, and toward nothing after the opponent's or a hidden card. R2648000: the viewer's attacker, or
+ * damage dealer, becomes the source, so a Lifesteal hit's heal is its card's. R2649000 (Vampire): the first heal
+ * after a `damage` by a card that had Lifesteal in the view before also counts as drained; none without it.
  */
-export function countHealing(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
+export function countHealing(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null = null): GameLog {
   let next = log;
   let source: string | null = null;
+  let drain = false;
   for (const event of fresh) {
-    if (event.type === "cardPlayed" || event.type === "activated") {
-      source = event.player === view.viewer ? readable(event.defId) : null;
-    } else if (event.type === "trapFired") {
-      source = event.controller === view.viewer ? readable(event.defId) : null;
-    } else if (event.type === "attackDeclared") {
-      source = defIdOn([view.you], event.attackerId);
-    } else if (event.type === "damage") {
-      source = defIdOn([view.you], event.sourceId);
+    const after = sourceAfter(event, view);
+    if (after !== undefined) {
+      source = after;
+      const card = event.type === "damage" && after !== null && before !== null ? cardOn(before.you, event.sourceId) : undefined;
+      drain = card !== undefined && hasKeyword(keywordsOf(card), "Lifesteal");
     } else if (event.type === "healed" && event.amount > 0 && source !== null) {
       next = logWith(next, "healing", source, event.amount);
+      if (drain) next = logWith(next, "lifesteal", source, event.amount);
+      drain = false;
     }
   }
   return next;
 }
 
 /**
+ * R2649000: what the viewer's Units took: a `divineShieldLost` counts a shield popped (Bubble Wrap); a
+ * `damage` its amount (Punching Bag) and what Armor took off (`absorbed`, R1360); a `damageAbsorbed` the hit
+ * Armor took whole (R1361) (Iron Wall). The card is named where this view shows it, else the view before.
+ */
+export function countTaken(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "divineShieldLost") {
+      const id = ownDefId(view, before, event.instanceId);
+      if (id !== null) next = logWith(next, "shieldsLost", id);
+    } else if (event.type === "damage") {
+      const id = ownDefId(view, before, event.targetId);
+      if (id === null) continue;
+      if (event.amount > 0) next = logWith(next, "damageTaken", id, event.amount);
+      if (event.absorbed !== undefined && event.absorbed > 0) next = logWith(next, "armorAbsorbed", id, event.absorbed);
+    } else if (event.type === "damageAbsorbed" && event.absorbed > 0) {
+      const id = ownDefId(view, before, event.targetId);
+      if (id !== null) next = logWith(next, "armorAbsorbed", id, event.absorbed);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000 (Martyr): a death of the viewer's card that R2648000 counts for neither seat because the viewer
+ * gave it up: the opponent neither its killer nor the last to act before it, and the viewer's side its killer
+ * or the batch's actor, the last before it or else the first after it (a Tribute's death precedes its play,
+ * R119). Never after a `crumbled` of the same card (Brittle, R638), nor with no actor and no killer.
+ */
+export function countSacrificed(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  const views = [before, view];
+  const foe = opponentOf(view.viewer);
+  const crumbled = new Set<string>();
+  const waiting: string[] = [];
+  let actor: PlayerId | null | undefined;
+  let next = log;
+  for (const event of fresh) {
+    const acted = actorOf(event, views);
+    if (acted !== undefined) {
+      if (actor === undefined && acted === view.viewer) for (const id of waiting) next = logWith(next, "sacrificed", id);
+      actor = acted;
+    } else if (event.type === "crumbled") {
+      crumbled.add(event.instanceId);
+    } else if (event.type === "destroyed" && event.owner === view.viewer) {
+      const id = readable(event.defId);
+      const killer = seatOf(views, event.killerId);
+      if (id === null || crumbled.has(event.instanceId) || killer === foe || actor === foe) continue;
+      if (killer === view.viewer || actor === view.viewer) next = logWith(next, "sacrificed", id);
+      else if (actor === undefined) waiting.push(id);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000: the opponent's cards the viewer's cards killed. A `destroyed` of the opponent's card whose
+ * `killerId` names the viewer's card (in this view, else the view before: the killer may die in the same
+ * combat) counts a kill (Executioner) and may raise the killer's biggest kill to the victim's `maxHealth`
+ * (Giant Slayer). A crumble (R638) is no kill, nor is a victim the sentinel hides (R97). A victim Frozen in
+ * the view before (`UnitView.frozen`) was shattered (Shatter) by its killer, or with no `killerId` by the
+ * viewer's card that acted last before it in the batch; an opponent's killer or actor shatters nothing.
+ */
+export function countKills(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  const crumbled = new Set<string>();
+  let actorCard: string | null = null;
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "cardPlayed" || event.type === "activated") {
+      actorCard = event.player === view.viewer ? readable(event.defId) : null;
+    } else if (event.type === "trapFired") {
+      actorCard = event.controller === view.viewer ? readable(event.defId) : null;
+    } else if (event.type === "attackDeclared") {
+      actorCard = ownDefId(view, before, event.attackerId);
+    } else if (event.type === "crumbled") {
+      crumbled.add(event.instanceId);
+    } else if (event.type === "destroyed" && event.owner !== view.viewer && readable(event.defId) !== null && !crumbled.has(event.instanceId)) {
+      const killer = ownDefId(view, before, event.killerId);
+      if (killer !== null) next = logMax(logWith(next, "kills", killer), "biggestKill", killer, event.maxHealth);
+      const victim = before === null ? undefined : (unitOn(before.opponent, event.instanceId) ?? unitOn(before.you, event.instanceId));
+      const by = event.killerId === null ? actorCard : killer;
+      if (victim?.frozen === true && by !== null) next = logWith(next, "shattered", by);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000 (Double Tap): a Unit of the viewer's second `attackDeclared` in one turn (Windfury, R636).
+ * The log keeps this turn's attacks by instance id (`attackers`, never stored), emptied at each
+ * `turnStarted`.
+ */
+export function countDoubleAttacks(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "turnStarted") {
+      if (Object.keys(next.attackers).length > 0) next = { ...next, attackers: {} };
+    } else if (event.type === "attackDeclared") {
+      const id = ownDefId(view, before, event.attackerId);
+      if (id === null) continue;
+      const times = (next.attackers[event.attackerId] ?? 0) + 1;
+      next = { ...next, attackers: { ...next.attackers, [event.attackerId]: times } };
+      if (times === 2) next = logWith(next, "doubleAttacks", id);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000: the freezes and thaws (`marked` with the `frozen` mark, R1174000: `added` a freeze, else a thaw).
+ * A freeze on a Unit the opponent's side shows (in the view before, else this one) counts for the viewer's
+ * card R2648000's source rule names (Cold Snap); a freeze on the viewer's Unit counts for it (Brain Freeze);
+ * a thaw of the viewer's Unit this view still shows on the field counts for it (Spring Thaw), a death never.
+ */
+export function countFreezes(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  const foe = opponentOf(view.viewer);
+  let source: string | null = null;
+  let next = log;
+  for (const event of fresh) {
+    const after = sourceAfter(event, view);
+    if (after !== undefined) {
+      source = after;
+      continue;
+    }
+    const change = markEventOf(event);
+    if (change === null || change.mark !== FROZEN_MARK) continue;
+    if (change.added) {
+      if (source !== null && seatOf([before, view], change.instanceId) === foe) next = logWith(next, "froze", source);
+      const id = ownDefId(view, before, change.instanceId);
+      if (id !== null) next = logWith(next, "frozen", id);
+    } else {
+      const unit = unitOn(view.you, change.instanceId);
+      const id = unit === undefined ? null : readable(unit.defId);
+      if (id !== null) next = logWith(next, "thawed", id);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000: the viewer's cards that were Temporary in their hand in the view before (its keywords, R637,
+ * R2179001). One discarded after the viewer's `turnEnded` and before a later `turnStarted` (the cleanup's
+ * discard, R637) slipped away (Use It or Lose It); one played, by its hand id (R227's `formerId` when the play
+ * set it face-down), was played in time (Just in Time). Without that view, or a hand it shows, nothing counts.
+ */
+export function countTemporary(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  if (before === null || !Array.isArray(before.you.hand)) return log;
+  const hand: readonly CardView[] = before.you.hand;
+  const temporary = new Set(hand.filter((card) => hasKeyword(keywordsOf(card), "Temporary")).map((card) => card.instanceId));
+  if (temporary.size === 0) return log;
+  let ended = false;
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "turnEnded" && event.player === view.viewer) {
+      ended = true;
+    } else if (event.type === "turnStarted") {
+      ended = false;
+    } else if (event.type === "discarded" && ended && event.owner === view.viewer && temporary.has(event.instanceId)) {
+      const id = readable(event.defId);
+      if (id !== null) next = logWith(next, "tempExpired", id);
+    } else if (event.type === "cardPlayed" && event.player === view.viewer && temporary.has(event.formerId ?? event.instanceId)) {
+      const id = readable(event.defId);
+      if (id !== null) next = logWith(next, "tempPlayed", id);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000: the viewer's trades (R1838001: `traded` names no card, and the card it shuffles in is hidden
+ * from the trader too). The first `drawn` of theirs after each `traded` was pulled from a trade (Trade-In
+ * Value). For each `traded`, one Tradable card (`tradable`) of their hand in the view before that this view
+ * shows nowhere was traded away (Hot Potato), in hand order; with no view before, none.
+ */
+export function countTrades(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  let trades = 0;
+  let owed = 0;
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "traded" && event.player === view.viewer) {
+      trades += 1;
+      owed += 1;
+    } else if (event.type === "drawn" && event.player === view.viewer && owed > 0) {
+      owed -= 1;
+      const id = readable(event.defId);
+      if (id !== null) next = logWith(next, "tradeDrawn", id);
+    }
+  }
+  if (trades === 0 || before === null || !Array.isArray(before.you.hand)) return next;
+  const hand: readonly CardView[] = before.you.hand;
+  const gone = hand.filter(
+    (card) => card.tradable === true && cardOn(view.you, card.instanceId) === undefined && cardOn(view.opponent, card.instanceId) === undefined,
+  );
+  for (const card of gone.slice(0, trades)) {
+    const id = readable(card.defId);
+    if (id !== null) next = logWith(next, "traded", id);
+  }
+  return next;
+}
+
+/**
+ * R2649000 (Second Wind): a `destroyed` of the viewer's Unit that had Reborn in the view before, then
+ * a `summoned` of theirs of the same definition later in the batch, each summon taking one such death.
+ * With no view before, nothing counts.
+ */
+export function countReborn(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  if (before === null) return log;
+  const dying: string[] = [];
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "destroyed" && event.owner === view.viewer) {
+      const unit = unitOn(before.you, event.instanceId);
+      const id = unit === undefined ? null : readable(unit.defId);
+      if (unit !== undefined && id !== null && hasKeyword(unit.keywords, "Reborn")) dying.push(id);
+    } else if (event.type === "summoned" && event.player === view.viewer) {
+      const at = dying.indexOf(event.defId);
+      if (at < 0) continue;
+      dying.splice(at, 1);
+      next = logWith(next, "reborn", event.defId);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000: a Feng Shui's judgement of the viewer's play (R983), counted for the card it names where the
+ * view shows it, positive (Good Feng Shui) or negative (Bad Feng Shui); and a `countered` of the
+ * opponent's play whose `byInstanceId` names the viewer's card (Nope).
+ */
+export function countFengShuiAndCounters(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "fengShui" && event.player === view.viewer) {
+      const id = ownDefId(view, before, event.instanceId);
+      if (id !== null) next = logWith(next, event.outcome === "positive" ? "fengShuiGood" : "fengShuiBad", id);
+    } else if (event.type === "countered" && event.player !== view.viewer) {
+      const id = ownDefId(view, before, event.byInstanceId);
+      if (id !== null) next = logWith(next, "counterspells", id);
+    }
+  }
+  return next;
+}
+
+/**
+ * R2649000 (Mass Produced): each Created card (R943's `created`) this view shows on the viewer's side, counted
+ * once per instance in a game (`createdIds`, never stored), a fresh id it takes (R227's `formerId`) included.
+ * The seat holding it is credited, not R2089000's `creator`, which no view forwards; a dealt card, the
+ * opponent's side and a card the viewer cannot read count nothing.
+ */
+export function countCreated(log: GameLog, view: PlayerView, fresh: readonly GameEvent[] = []): GameLog {
+  const counted = new Set(log.createdIds);
+  const known = counted.size;
+  // R227: a card set face-down or changing control takes a fresh id but is the same card, so its new
+  // id joins the ones counted when its `formerId` is among them, in the batch's order.
+  for (const event of fresh) {
+    if (event.type !== "cardPlayed" && event.type !== "summoned" && event.type !== "controlChanged") continue;
+    if (event.formerId !== undefined && counted.has(event.formerId)) counted.add(event.instanceId);
+  }
+  let next = log;
+  for (const card of cardsOnSide(view.you)) {
+    const id = readable(card.defId);
+    if (card.created !== true || id === null || counted.has(card.instanceId)) continue;
+    counted.add(card.instanceId);
+    next = logWith(next, "created", id);
+  }
+  return next === log && counted.size === known ? log : { ...next, createdIds: [...counted] };
+}
+
+/**
  * Views carry a sliding event window (SPEC §10.8), so callers supply only fresh events. `before` is the
- * view the batch followed (R1743000's overkill reads the targets' health in it), null for the first.
+ * view the batch followed (R1743000's overkill reads the targets' health in it, R2649000's counters what
+ * a card was), null for the first.
  */
 export function observe(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null = null): GameLog {
-  let next = logSeen(log, seenIn(view));
+  let next = countCreated(logSeen(log, seenIn(view)), view, fresh);
   for (const event of fresh) next = countEvent(next, event, view.viewer);
-  return countWin(
-    countHealing(countHits(countDeaths(countAllured(next, view, fresh), view, fresh, before), view, fresh, before), view, fresh),
-    view,
-    fresh,
-  );
+  next = countAllured(next, view, fresh);
+  next = countDeaths(next, view, fresh, before);
+  next = countSacrificed(next, view, fresh, before);
+  next = countHits(next, view, fresh, before);
+  next = countHealing(next, view, fresh, before);
+  next = countTaken(next, view, fresh, before);
+  next = countKills(next, view, fresh, before);
+  next = countDoubleAttacks(next, view, fresh, before);
+  next = countFreezes(next, view, fresh, before);
+  next = countTemporary(next, view, fresh, before);
+  next = countTrades(next, view, fresh, before);
+  next = countReborn(next, view, fresh, before);
+  next = countFengShuiAndCounters(next, view, fresh, before);
+  return countWin(next, view, fresh);
 }
 
 export function outcomeOfView(view: PlayerView): GameOutcome | null {

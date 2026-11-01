@@ -1,6 +1,8 @@
 // Every number and key the player statistics state (CLAUDE.md rule 9; SPEC R639), the browser's own: the
 // engine owns the rules numbers, the server a game record's (SPEC §9.11, R376). The statistics stay on the device.
 
+import type { MarkColor } from "../cards/marks.ts";
+
 /** localStorage, in stats/store.ts's shape. */
 export const PLAYER_STATS_KEY = "jackioh.stats.v1";
 
@@ -42,6 +44,18 @@ export const SHOWCASE_BEAT_GAP_MS = 900;
 
 /** R1743000: a card's plays (games, times faced) before a per-play stat can name it, so one game does not win it. */
 export const SHOWCASE_MIN_PLAYS = 5;
+
+/** R2649000: the engine's `FROZEN_MARK` (`config.rs`, R1174000): `marked` with `added: true` as a freeze lands, `added: false` as it thaws. */
+export const FROZEN_MARK = "frozen";
+
+/** R2649000: the engine's `FROZEN_MARK` color key (`config.rs`): the frost, as the stage's `freeze` and `thaw` draw it. */
+export const FROZEN_MARK_COLOR: MarkColor = "cyan";
+
+/** R2649000: Classic #20 The Power to Punish's mark (R437), the unit marked for death, as the stage's `doom` draws it. */
+export const DESTROY_MARK = "destroy";
+
+/** R2649000: Classic #20's mark color: #50's aura, in red (R437). */
+export const DESTROY_MARK_COLOR: MarkColor = "red";
 
 /** R1583000: the games logged before the device names a Pocket Pick. */
 export const POCKET_PICK_MIN_GAMES = 10;

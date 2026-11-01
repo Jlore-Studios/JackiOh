@@ -22,7 +22,7 @@ use crate::config::{
 };
 use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, owns};
 use crate::db::store::{BotDeck, BotRow, FrozenTrio};
-use crate::economy::store::{CardCosmetic, CardPicks, CosmeticOwners, OwnedCosmetics};
+use crate::economy::store::{CardCosmetic, CardPicks, CosmeticOwners, FullArtPick, OwnedCosmetics};
 use crate::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots, setting_key};
 
 const MS_PER_DAY: i64 = 86_400_000;
@@ -511,7 +511,7 @@ fn wear_full_arts<'c>(
         }
         if !rng.chance(full_art_wear(fit, &full_art.id)) {
             let at = entry(cards, card);
-            cards[at].full_art = Some(false);
+            cards[at].full_art = Some(FullArtPick::On(false));
         }
     }
 }

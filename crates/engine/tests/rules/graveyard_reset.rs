@@ -1,12 +1,11 @@
-//! R766 (issue #473): a card that reaches a graveyard or an exile pile is its printed card again, its
-//! price included. R78 and R215 already reset it there; since R766 its `costMod` and `costOverride` go
-//! with the rest, so it costs its printed cost (R65) wherever it is read or played from there, while its
-//! Radiant face, its tuning, its Brittle and times-played counts and its enchantments stay, and a fused
-//! card stays fused at its fused definition's cost. A price a card is given on its way to a hand, or one
-//! it keeps going from the field to a hand (R78), is untouched.
+//! R766 (issue #473): a card that reaches a graveyard or an exile pile is its printed card again: R78
+//! and R215 reset it there, and its `costMod` and `costOverride` go with the rest, so it costs its printed
+//! cost (R65) wherever it is read or played from there. Its Radiant face, tuning, Brittle and times-played
+//! counts and enchantments stay, and a fused card stays fused at its fused definition's cost. A price given
+//! on its way to a hand, or kept going from the field to a hand (R78), is untouched.
 //!
-//! The engine half, on fixture cards. The loop issue #473 found — C+ #54 Book of Books' (0) Book of
-//! Stats replayed for free under C #90 In Too Deep's reward L — is proved on the real cards in
+//! The engine half, on fixture cards. The loop issue #473 found, C+ #54 Book of Books' (0) Book of Stats
+//! replayed for free under C #90 In Too Deep's reward L, is proved on the real cards in
 //! `crates/cards/src/scripts/classic/c090_in_too_deep.rs`.
 
 use jackioh_engine::effects::{

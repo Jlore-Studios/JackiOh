@@ -851,10 +851,15 @@ pub fn hidden_information_violations(
     } = hidden_from(state, viewer);
 
     // The view's events are the tail of the log's, in order: line them up to find a `stolen` among them.
+    // R2652000: less the face-down rolls the view drops for this viewer, so the two still line up.
+    let withheld = crate::view_for::withheld_rolls(state, viewer);
     let raw: Vec<&GameEvent> = state
         .applied
         .iter()
         .flat_map(|entry| entry.events.iter())
+        .enumerate()
+        .filter(|(at, _)| !withheld.contains(at))
+        .map(|(_, event)| event)
         .collect();
     let offset = raw.len() as isize - view.events.len() as isize;
     let mut events: Vec<Value> = Vec::new();

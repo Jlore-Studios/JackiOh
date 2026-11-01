@@ -1,20 +1,16 @@
 // The choice pickers (BUILD M5-T2, SPEC §10.6). One modal, a picker for every prompt kind, no rules.
-//
-// Two things open this modal, and telling them apart is R81:
-//  1. `view.pending` — a `PendingChoice` the engine opened during resolution, paused until it is
-//     answered by an `answer` action (or, for the mulligan, §10.2's own `mulligan` action).
-//  2. `props.interaction` — a play the player is still building, with NO `view.pending`: nothing is
-//     paused, and it submits a `play`, never an `answer`. §10.6 keeps the `x`, `embiggen`, `zone`,
-//     `tribute` and `direction` prompt kinds for later sets, so both routes render the same picker
-//     with the same `data-prompt-kind`. A targeting cost's discards (Classic #89) are random at pay
-//     time (R682) and need no picker.
-//
-// A card option is drawn as the card in play (faces.ts, SPEC §10.10). `data-prompt-source` ("engine"
-// or "play") is for layout only (prompt.css). #1204: a new prompt is a new `PromptModal` (its `key`),
-// so a folded picker opens unfolded.
-//
-// No rule is applied here either: `min`, `max` and the options came from the engine, from
-// `PendingView` on route 1 and from the `legalActions` candidates (`actions.ts`) on route 2.
+// Two things open it, and telling them apart is R81: (1) `view.pending`, a `PendingChoice` the engine opened
+// during resolution, answered by an `answer` action (or, for the mulligan, §10.2's own `mulligan` action);
+// (2) `props.interaction`, a play the player is still building, with NO `view.pending`: nothing is paused and
+// it submits a `play`, never an `answer`. Both render the same picker with the same `data-prompt-kind` (§10.6
+// keeps `x`, `embiggen`, `zone`, `tribute` and `direction` for later sets). A targeting cost's discards
+// (Classic #89) are random at pay time (R682) and need no picker. A card option is drawn as the card in play
+// (faces.ts, SPEC §10.10). `data-prompt-source` ("engine" or "play") is for layout only (prompt.css). #1204: a
+// new prompt is a new `PromptModal` (its `key`), so a folded picker opens unfolded. #2646: in a choice of
+// DISCOVER_OPTION_LIMIT options or fewer, every option naming no card is a choice card (ChoiceCard.tsx), art,
+// label and what it does, no cost, stats, id, inspect overlay or sheet: route 2's `mode`, `ability`, `equip`,
+// `faceDown` and `plague`, route 1's `mode`, `answer` and `reward`. No rule is applied here: `min`, `max` and the
+// options come from the engine, from `PendingView` (route 1) and the `legalActions` candidates (`actions.ts`, route 2).
 
 import {
   Fragment,
@@ -80,6 +76,7 @@ import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { abilityLabel, usesWords } from "./ActivateControl.tsx";
+import { ChoiceCard, choiceSeed } from "./ChoiceCard.tsx";
 import { modeText } from "./modeText.ts";
 import { useWearerSeat } from "./wearer.ts";
 import "./prompt.css";
@@ -101,9 +98,8 @@ export type PromptProps = {
 };
 
 /**
- * The seat that is only watching gets NO `data-prompt-kind`: §10.8 gives that view the fact that a
- * choice is open and nothing else. Its own flag keeps "a prompt is open for me" and "somebody is
- * choosing" from reading the same in the DOM.
+ * The seat only watching gets NO `data-prompt-kind`: §10.8 gives that view the fact that a choice is open and
+ * nothing else. Its own flag keeps "a prompt is open for me" and "somebody is choosing" apart in the DOM.
  */
 const WAITING_FLAG = "waiting";
 
@@ -148,6 +144,10 @@ type PickerItem = {
   /** Which arrow a direction option draws. Never read off the key, which is the engine's. */
   arrow?: "left" | "right";
   detail?: string;
+  /** R831004: the set an option names (#82 KY's Trial's first Discover), whose mark is its picture. */
+  set?: string;
+  /** R420: an answer's letter, its place in the order offered. */
+  letter?: string;
   /** #492: what picking a card option chooses, under its face ("Embiggened", "X = 2"). */
   caption?: string;
   /** #492: an embiggen option, whose face shows the price that form is played for (`pricedFace`). */
@@ -176,10 +176,11 @@ type Picker = {
   title: string;
   /** The card asking, when the picker knows it: its name heads the title ("Pocket Chaos: choose one"). */
   sourceDefId?: string;
+  /** #2646: the card whose options the choice cards are, which seeds their art when no title names it. */
+  artSource?: string;
   /**
-   * #617: the card being played, as the view lists it, when the options are words rather than faces
-   * (a "Choose one"): its name in the title opens its preview and long-press sheet, so the card can
-   * be read while its choice is open.
+   * #617: the card being played, as the view lists it, when the options are words ("Choose one"): its name in
+   * the title opens its preview and long-press sheet, so the card can be read while its choice is open.
    */
   sourceCard?: CardView;
   items: PickerItem[];
@@ -205,8 +206,8 @@ type Picker = {
 const CARD_CHROMES: ReadonlySet<PromptKind> = new Set(["discover", "hand", "mulligan", "pick"]);
 
 /**
- * #492: the card picker, front and center (`CardChoice`). It is `data-prompt-layout="cards"`, which
- * prompt.css reads to keep it out of the small pickers' dock beside the board.
+ * #492: the card picker, front and center (`CardChoice`). #2646: a short choice of options naming no card is
+ * one too, its options choice cards. `data-prompt-layout="cards"` keeps it out of the small pickers' dock (prompt.css).
  */
 function isCardLayout(picker: Picker): boolean {
   return picker.cards === true || CARD_CHROMES.has(picker.chrome);
@@ -353,12 +354,29 @@ function pickerForPending(
     // key's tail, never off the whole key: `data-testid="direction-left"` is the M5-T2 contract.
     const arrow = DIRECTIONS.find((d) => option.label === d || option.key === d || option.key.endsWith(`:${d}`));
     if (arrow !== undefined) base.arrow = arrow;
+    // #2646, R2646000: a card's Choose one reads each option's words off that card (modeText.ts) when
+    // the view names the card asking. The label stays the engine's, which can carry a rolled number.
+    if (pending.kind === "mode") {
+      const selection = selectionForOption(option);
+      const detail = selection.pick === "mode" ? modeText(pending.sourceDefId, selection.option, pending.sourceRadiant === true).detail : undefined;
+      if (detail !== undefined) base.detail = detail;
+      // R831004: an option that names a set (#82 KY's Trial's first Discover) wears the set's mark (R503).
+      if (option.defId === undefined && setMarkOf(option.label).kind !== "unknown") base.set = option.label;
+    }
     return base;
   });
 
-  const chrome = pending.kind === "mode" && pending.options.length <= DISCOVER_OPTION_LIMIT ? "discover" : pending.kind;
-  // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`).
-  const cards = pending.kind === "embiggen" || (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT);
+  const short = pending.options.length <= DISCOVER_OPTION_LIMIT;
+  // R1184000: a sequence's Stop is a button under the answers, never one of them.
+  const answers = pending.options.filter((option) => option.key !== ANSWER_STOP).length;
+  const chrome = pending.kind === "mode" && short ? "discover" : pending.kind;
+  // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`); #2646:
+  // so are a few answers (C+ #42) and a quest's rewards (Classic #90), each a choice card.
+  const cards =
+    pending.kind === "embiggen" ||
+    (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT) ||
+    (pending.kind === "answer" && answers <= DISCOVER_OPTION_LIMIT) ||
+    (pending.kind === "reward" && short);
   // Outside a lesson the mulligan's heading says who goes first, which bears on what to keep, rather
   // than how to answer it. §2.1: Player 1 takes the first turn, and is `active` until then.
   const turnOrder = pending.kind === "mulligan" && !lesson;
@@ -371,7 +389,8 @@ function pickerForPending(
         ? t("You are going first")
         : t("You are going second")
       : t(pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt),
-    items,
+    // #2646: a reward's choice card is named for its place, as an answer is, and says the reward.
+    items: pending.kind === "reward" && cards ? items.map((item, at) => ({ ...item, label: t("Reward {letter}", { letter: ANSWER_LETTERS[at] ?? String(at + 1) }), detail: item.label })) : items,
     min: pending.min,
     max: pending.max,
     // The mulligan is per-card toggles plus a confirm, whatever its max.
@@ -384,6 +403,12 @@ function pickerForPending(
       action: answerAction(pending, items.map((item) => item.key).filter((key) => keys.includes(key)), view, legal),
     }),
   };
+  // R2646000: the card asking, when the view names it, seeds its options' art, and a Choose one's title
+  // names it as a play's does. A reward's title stays the quest (R404).
+  if (pending.sourceDefId !== undefined) {
+    picker.artSource = pending.sourceDefId;
+    if (pending.kind === "mode") picker.sourceDefId = pending.sourceDefId;
+  }
   if (pending.kind === "answer" && pending.streak !== undefined) {
     picker.streak = pending.streak;
     picker.sequenceChoice = pending.choiceId;
@@ -409,9 +434,8 @@ function isDirection(options: readonly string[]): boolean {
 }
 
 /**
- * R81 puts a declared `hand` pick (#26 Glowy Jelly Bean) in the play action's `targets`, so it
- * arrives here as a `target` need — but §10.6 still names `hand` as its own prompt kind. Presentation
- * only — the action built is the same `play` either way.
+ * R81 puts a declared `hand` pick (#26 Glowy Jelly Bean) in the play action's `targets`, so it arrives as a
+ * `target` need, but §10.6 names `hand` as its own prompt kind. Presentation only: the action is the same `play`.
  */
 function isHandPick(need: PlayNeed, view: PlayerView): boolean {
   if (need.kind !== "target") return false;
@@ -461,7 +485,8 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       const actMap = new Map(activations.map((a) => [a.ability, a]));
       return {
         ...common,
-        chrome: "discover",
+        // #2646: a few abilities are choice cards; more keep the plain list.
+        chrome: need.abilities.length <= DISCOVER_OPTION_LIMIT ? "discover" : "mode",
         title: t("Choose an ability"),
         ...(source !== undefined ? { sourceDefId: source } : {}),
         ...(played !== null ? { sourceCard: played.card } : {}),
@@ -469,12 +494,9 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
           const act = actMap.get(abilityId);
           const rawLabel = act?.label ?? abilityId;
           const label = info && played?.card ? abilityLabel(info, played.card, rawLabel) : rawLabel;
-          const detail = act?.usesLeft !== undefined ? usesWords(act.usesLeft) : undefined;
-          return {
-            key: abilityId,
-            label: t(label),
-            ...(detail !== undefined ? { detail } : {}),
-          };
+          // A choice card says what it does (#2646): how often the ability may still be used.
+          const detail = act === undefined ? t("Use this ability.") : usesWords(act.usesLeft);
+          return { key: abilityId, label: t(label), detail };
         }),
         submit: (keys) => (keys[0] === undefined ? {} : play({ ability: keys[0] })),
       };
@@ -543,18 +565,25 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
-    case "equip":
-      // R1086: one zone with both a plain and an Equip play asks which.
+    case "equip": {
+      // R1086: one zone with both a plain and an Equip play asks which: two choice cards (#2646), each
+      // saying what it does in its keyword's words (glossary.ts).
+      const cards = need.values.length <= DISCOVER_OPTION_LIMIT;
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "mode",
+        ...(cards ? { cards } : {}),
+        ...(played === null ? {} : { artSource: played.defId }),
         title: t("Equip or Stack?"),
         items: need.values.map((value) => ({
           key: String(value),
           label: value ? t("Equip") : t("Stack"),
+          ...(cards ? { detail: value ? t("Fuse it into the unit in this zone.") : t("Play it on top of the unit in this zone.") } : {}),
         })),
         submit: (keys) => (keys[0] === undefined ? {} : play({ equip: keys[0] === "true" })),
       };
+    }
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
       // R81: a declared `target` pick whose selections are all hand cards is rendered with the hand
@@ -591,14 +620,21 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       // engine listed; the rest is mana. Several paying cards are told apart by where they stand.
       const sources = new Set(need.options.flatMap((option) => (option === "none" ? [] : [option.from])));
       const byKey = new Map(need.options.map((option) => [plagueKey(option), option]));
+      // #2646: a few ways to pay are choice cards; more keep the row of chips.
+      const cards = need.options.length <= DISCOVER_OPTION_LIMIT;
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "number",
-        variant: "plague",
+        ...(cards ? { cards } : { variant: "plague" as const }),
+        ...(played === null ? {} : { artSource: played.defId }),
         title: t("Pay with Plague Counters?"),
         items: need.options.map((option) => ({
           key: plagueKey(option),
           label: plagueLabel(view, option, sources.size > 1),
+          ...(cards
+            ? { detail: option === "none" ? t("The whole price is paid in mana.") : t("The counters pay that much of the price; mana pays the rest.") }
+            : {}),
         })),
         submit: (keys) => {
           const choice: PlagueChoice | undefined = keys[0] === undefined ? undefined : byKey.get(keys[0]);
@@ -616,11 +652,24 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         endOfNextTurn: t("Set face-down: reveal at the end of your next turn"),
         cloaked: t("Set face-down: reveal it with its Activate"),
       };
+      // #2646: a few ways are choice cards, each named for how the card lies and saying when it
+      // reveals; more keep the plain list of sentences.
+      const names: Record<FaceDownChoice, string> = {
+        up: t("Face-up"),
+        endOfThisTurn: t("Face-down"),
+        startOfNextTurn: t("Face-down"),
+        endOfNextTurn: t("Face-down"),
+        cloaked: t("Cloaked"),
+      };
+      const cards = need.options.length <= DISCOVER_OPTION_LIMIT;
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "mode",
+        ...(cards ? { cards } : {}),
+        ...(played === null ? {} : { artSource: played.defId }),
         title: t("Play it how?"),
-        items: need.options.map((option) => ({ key: option, label: labels[option] })),
+        items: need.options.map((option) => (cards ? { key: option, label: names[option], detail: labels[option] } : { key: option, label: labels[option] })),
         submit: (keys) => {
           const choice: FaceDownChoice | undefined =
             keys[0] === undefined ? undefined : (keys[0] as FaceDownChoice);
@@ -667,10 +716,9 @@ const NUMBER_OPTION = /^\d+$/;
 const UNKNOWN_PRICE = "?";
 
 /**
- * #492: the embiggened form is at the view's `embiggenCost`, which the engine reads with the function
- * it charges that play by. A card view without it (one not in its owner's hand) falls back to the
- * price the face shows beside its gem (`FaceCost.alt`, cards/model.ts), else "?": the client never
- * works out an embiggen price itself (CLAUDE.md rule 7).
+ * #492: the embiggened form is at the view's `embiggenCost`, which the engine reads with the function it
+ * charges that play by. Without it (a card not in its owner's hand) fall back to the price beside the face's
+ * gem (`FaceCost.alt`, cards/model.ts), else "?": the client never works out an embiggen price (CLAUDE.md rule 7).
  */
 function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | undefined, def: CardDef | undefined): FaceModel {
   if (price === "normal") return { ...face, cost: { ...face.cost, alt: null } };
@@ -710,6 +758,8 @@ function nameOf(defId: string, info: { name: string; def?: CardDef }, chinese: b
   return chinese ? chineseName(defId, info.name, info.def) : info.name;
 }
 
+// A number option is a card back (R247), a code option its code (R1183005), and any other option that
+// names no card a `ChoiceOption` (#2646).
 function CardOption(props: {
   item: PickerItem;
   pressed: boolean;
@@ -756,9 +806,6 @@ function CardOption(props: {
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
   const code = face === null && props.item.code === true ? props.item.label : null;
-  // R831004: an option that names a set (#82 KY's Trial's first Discover) shows the set's mark (R503).
-  const mark = face === null && number === null && code === null ? setMarkOf(props.item.label) : null;
-  const setMark = mark === null || mark.kind === "unknown" ? null : mark;
   const testId = `prompt-option-${props.item.key}`;
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(face === null ? null : { key: testId, face }, { prefer: "above", showLoc: false });
@@ -779,7 +826,6 @@ function CardOption(props: {
         data-verdict={verdict}
         data-number={number ?? undefined}
         data-code={code === null ? undefined : "true"}
-        data-set={setMark === null ? undefined : props.item.label}
         data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
         aria-pressed={props.pressed}
@@ -800,18 +846,7 @@ function CardOption(props: {
           <pre className="prompt-code">
             <code>{code}</code>
           </pre>
-        ) : face === null ? (
-          <>
-            {setMark === null ? null : <img className="prompt-set-mark" src={setMark.src} alt="" aria-hidden="true" title={setMark.label} />}
-            <span className="prompt-card-name">{name}</span>
-            {/* A Discover menu's text option (a card's modes): the effect rides `detail`. */}
-            {props.item.detail === undefined ? (
-              info.text === "" ? null : <span className="prompt-card-text">{info.text}</span>
-            ) : (
-              <span className="prompt-card-text">{props.item.detail}</span>
-            )}
-          </>
-        ) : (
+        ) : face === null ? null : (
           <span className="cf-option">
             <CardFace face={face} layout="full" worn={props.own === true} />
           </span>
@@ -830,6 +865,35 @@ function CardOption(props: {
       </button>
       <OwnCopy own={props.own === true}>{inspect.overlay}</OwnCopy>
     </>
+  );
+}
+
+/**
+ * #2646: an option that names no card, in a short choice: a choice card (ChoiceCard.tsx), which is not
+ * a card, so it opens no inspect overlay or long-press sheet. Read out as its label and what it does.
+ */
+function ChoiceOption(props: { item: PickerItem; seed: string; pressed: boolean; readOnly?: boolean; onPick: () => void }) {
+  const { item } = props;
+  const detail = item.detail === undefined || item.detail === "" ? undefined : item.detail;
+  return (
+    <button
+      type="button"
+      className="prompt-card prompt-card--choice"
+      data-testid={`prompt-option-${item.key}`}
+      data-letter={item.letter}
+      data-set={item.set}
+      aria-pressed={props.pressed}
+      aria-disabled={props.readOnly === true ? "true" : undefined}
+      aria-label={detail === undefined ? item.label : `${item.label}: ${detail}`}
+      onClick={props.onPick}
+    >
+      <ChoiceCard
+        seed={props.seed}
+        label={item.label}
+        {...(detail === undefined ? {} : { detail })}
+        {...(item.set === undefined ? {} : { set: item.set })}
+      />
+    </button>
   );
 }
 
@@ -876,16 +940,20 @@ function PlainOption(props: { item: PickerItem; pressed: boolean; readOnly?: boo
   );
 }
 
-/** Arrow keys walk a grid of option buttons `columns` wide; Enter or Space presses the focused one. */
+/**
+ * Arrow keys walk a grid of option buttons `columns` wide, the options within the element that
+ * listens; Enter or Space presses the focused one. A key pressed off the options is left alone.
+ */
 function arrowFocus(columns: number) {
   const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns };
   return (event: ReactKeyboardEvent<HTMLElement>): void => {
     const step = steps[event.key];
     if (step === undefined) return;
-    event.preventDefault();
-    const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>("button")];
+    const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button[data-testid^="prompt-option-"]')];
     const at = event.target instanceof HTMLElement ? buttons.indexOf(event.target) : -1;
-    if (at >= 0) buttons[at + step]?.focus();
+    if (at < 0) return;
+    event.preventDefault();
+    buttons[at + step]?.focus();
   };
 }
 
@@ -896,6 +964,8 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
   if (props.sourceDefId === undefined) return <p className="prompt-title">{props.title}</p>;
   // R711000: the asking card's name as a reader of Chinese reads it.
   const name = nameOf(props.sourceDefId, info, isZhCn());
+  // R2646000: an engine prompt that names its card already ("Pickle: choose one") says it once.
+  const ask = props.title.startsWith(`${name}: `) ? props.title.slice(name.length + 2) : props.title;
   return (
     <p className="prompt-title">
       {face === null ? (
@@ -905,16 +975,15 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
           {name}
         </span>
       )}
-      <span className="prompt-title-ask">{props.title}</span>
+      <span className="prompt-title-ask">{ask}</span>
       {inspect.overlay}
     </p>
   );
 }
 
 /**
- * A board pick's hint. On a phone held upright, with drag to play on, a play's zone, target and
- * Tribute picks fold to a bar with no options in it (prompt.css): the answers glow on the board and
- * are tapped there, and this line says so.
+ * A board pick's hint. On an upright phone with drag to play on, a play's zone, target and Tribute picks fold
+ * to a bar with no options (prompt.css): the answers glow on the board and are tapped there, and this says so.
  */
 const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
   zone: "Tap a highlighted zone on the board.",
@@ -928,10 +997,9 @@ function BoardHint(props: { chrome: PromptKind }) {
 }
 
 /**
- * R689, R821000: "Place N Plague Counters" names one of every permanent on the field, and a list of
- * them covered the board it is answered on. The pick is a click on the highlighted card or zone
- * (`answerPlaguePlacement`, Game.tsx), so the panel is only the question and where the answers are.
- * No Confirm, since a click answers; no Cancel, since an engine prompt must be answered.
+ * R689, R821000: "Place N Plague Counters" names one of every permanent on the field; a list of them covered
+ * the board. The pick is a click on the highlighted card or zone (`answerPlaguePlacement`, Game.tsx), so the
+ * panel is only the question: no Confirm (a click answers), no Cancel (an engine prompt must be answered).
  */
 function BoardOnlyPrompt(props: {
   pending: Extract<PendingView, { forYou: true }>;
@@ -962,6 +1030,8 @@ function BoardOnlyPrompt(props: {
 
 function CardChoice(props: {
   picker: Picker;
+  /** The row's name, when it is a group of its own (the answers). */
+  label?: string;
   spent: number;
   pressed: (key: string) => boolean;
   fits: (key: string) => boolean;
@@ -973,6 +1043,10 @@ function CardChoice(props: {
   // R1655000: a mulligan's options are the viewer's own hand.
   const wearer = useWearerSeat();
   const own = picker.chrome === "mulligan" && wearer !== null;
+  // R247: a Discover of numbers offers no card, and each is drawn on a card back. A Choose one whose
+  // options are numbers with words of their own (#51's cost brackets) is choice cards instead.
+  const numbers = picker.items.every((item) => item.defId === undefined && item.detail === undefined && NUMBER_OPTION.test(item.label));
+  const artSource = picker.artSource ?? picker.sourceDefId;
   return (
     <>
       {budget === undefined ? null : (
@@ -980,19 +1054,35 @@ function CardChoice(props: {
           {t("({spent}) of ({limit}) spent", { spent: props.spent, limit: budget.limit })}
         </p>
       )}
-      <div className="prompt-cards" data-testid="prompt-cards" data-choice={picker.chrome}>
-        {picker.items.map((item) => (
-          <CardOption
-            key={item.key}
-            item={item}
-            pressed={props.pressed(item.key)}
-            verdicts={picker.chrome === "mulligan"}
-            own={own}
-            over={!props.pressed(item.key) && !props.fits(item.key)}
-            readOnly={props.readOnly}
-            onPick={() => props.pick(item.key)}
-          />
-        ))}
+      <div
+        className="prompt-cards"
+        data-testid="prompt-cards"
+        data-choice={picker.chrome}
+        {...(props.label === undefined ? {} : { role: "group", "aria-label": props.label })}
+      >
+        {picker.items.map((item) =>
+          item.defId !== undefined || item.code === true || numbers ? (
+            <CardOption
+              key={item.key}
+              item={item}
+              pressed={props.pressed(item.key)}
+              verdicts={picker.chrome === "mulligan"}
+              own={own}
+              over={!props.pressed(item.key) && !props.fits(item.key)}
+              readOnly={props.readOnly}
+              onPick={() => props.pick(item.key)}
+            />
+          ) : (
+            <ChoiceOption
+              key={item.key}
+              item={item}
+              seed={choiceSeed(artSource, picker.chrome, item.key)}
+              pressed={props.pressed(item.key)}
+              readOnly={props.readOnly}
+              onPick={() => props.pick(item.key)}
+            />
+          ),
+        )}
       </div>
     </>
   );
@@ -1017,9 +1107,8 @@ function PromptModal(props: {
   const readOnly = props.readOnly === true;
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
   /**
-   * What is typed in the X field, which is not the same thing as what has been chosen: a field
-   * being cleared, or holding a number the engine did not offer, stages nothing. `null` means
-   * "nothing typed since the last stepper press", so the field follows the stepper.
+   * What is typed in the X field, apart from what is chosen: a cleared field, or a number the engine did not
+   * offer, stages nothing. `null`: nothing typed since the last stepper press, so the field follows the stepper.
    */
   const [typedX, setTypedX] = useState<string | null>(null);
   // R515: what the picks cost together, and whether they fit the budget (a hint; the engine rules).
@@ -1110,6 +1199,85 @@ function PromptModal(props: {
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
           ))}
         </div>
+      );
+    }
+
+    if (picker.chrome === "answer") {
+      // R1184000: a question of a sequence says how many it has right so far and offers Stop, under
+      // no letter, after the lettered answers; a lone problem (C+ #42) has neither.
+      const answers = items.filter((item) => item.key !== ANSWER_STOP);
+      const stop = items.find((item) => item.key === ANSWER_STOP);
+      const stopButton =
+        stop === undefined ? null : (
+          <button
+            key={stop.key}
+            type="button"
+            className="prompt-answer-stop"
+            data-testid={`prompt-option-${stop.key}`}
+            aria-pressed={pressed(stop.key)}
+            aria-disabled={readOnly ? "true" : undefined}
+            onClick={() => pick(stop.key)}
+          >
+            {stop.label}
+          </button>
+        );
+      return (
+        <>
+          {picker.streak === undefined ? null : (
+            <p className="prompt-streak" data-testid="prompt-streak" data-streak={picker.streak}>
+              {t("Right answers in a row: {count}", { count: picker.streak })}
+            </p>
+          )}
+          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
+            <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
+          )}
+          {isCardLayout(picker) ? (
+            // #2646: a few answers are choice cards, each named by its letter (R420) and saying its
+            // answer; Stop stays a button under them.
+            <>
+              <CardChoice
+                picker={{
+                  ...picker,
+                  items: answers.map((item, at) => {
+                    const letter = ANSWER_LETTERS[at] ?? String(at + 1);
+                    return { ...item, label: letter, detail: item.label, letter };
+                  }),
+                }}
+                label={t("Answers")}
+                spent={spent(selected)}
+                pressed={pressed}
+                fits={(key) => fits([...selected, key])}
+                pick={pick}
+                readOnly={readOnly}
+              />
+              {stopButton}
+            </>
+          ) : (
+            <div className="prompt-answers" role="group" aria-label={t("Answers")}>
+              {answers.map((item, at) => {
+                const letter = ANSWER_LETTERS[at] ?? String(at + 1);
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    data-testid={`prompt-option-${item.key}`}
+                    data-letter={letter}
+                    aria-pressed={pressed(item.key)}
+                    aria-label={`${letter}: ${item.label}`}
+                    aria-disabled={readOnly ? "true" : undefined}
+                    onClick={() => pick(item.key)}
+                  >
+                    <span className="prompt-answer-letter" aria-hidden="true">
+                      {letter}
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+              {stopButton}
+            </div>
+          )}
+        </>
       );
     }
 
@@ -1240,60 +1408,6 @@ function PromptModal(props: {
       );
     }
 
-    if (picker.chrome === "answer") {
-      // R1184000: a question of a sequence says how many it has right so far and offers Stop, under
-      // no letter, after the lettered answers; a lone problem (C+ #42) has neither.
-      const answers = items.filter((item) => item.key !== ANSWER_STOP);
-      const stop = items.find((item) => item.key === ANSWER_STOP);
-      return (
-        <>
-          {picker.streak === undefined ? null : (
-            <p className="prompt-streak" data-testid="prompt-streak" data-streak={picker.streak}>
-              {t("Right answers in a row: {count}", { count: picker.streak })}
-            </p>
-          )}
-          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
-            <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
-          )}
-          <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
-            {answers.map((item, at) => {
-              const letter = ANSWER_LETTERS[at] ?? String(at + 1);
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  data-testid={`prompt-option-${item.key}`}
-                  data-letter={letter}
-                  aria-pressed={pressed(item.key)}
-                  aria-label={`${letter}: ${item.label}`}
-                  aria-disabled={readOnly ? "true" : undefined}
-                  onClick={() => pick(item.key)}
-                >
-                  <span className="prompt-answer-letter" aria-hidden="true">
-                    {letter}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-            {stop === undefined ? null : (
-              <button
-                key={stop.key}
-                type="button"
-                className="prompt-answer-stop"
-                data-testid={`prompt-option-${stop.key}`}
-                aria-pressed={pressed(stop.key)}
-                aria-disabled={readOnly ? "true" : undefined}
-                onClick={() => pick(stop.key)}
-              >
-                {stop.label}
-              </button>
-            )}
-          </div>
-        </>
-      );
-    }
-
     if (picker.chrome === "reward") {
       return (
         <div className="prompt-rewards" role="group" aria-label={t("Rewards")}>
@@ -1349,6 +1463,8 @@ function PromptModal(props: {
         role="dialog"
         aria-modal={!folded && !readOnly}
         aria-label={picker.title}
+        // The answers, as cards or as a list, and Stop after them, walked by the arrows (R420).
+        onKeyDown={picker.chrome === "answer" ? arrowFocus(ANSWER_COLUMNS) : undefined}
       >
         {picker.chrome === "reward" ? (
           <p className="prompt-quest-banner" data-testid="prompt-quest-complete">
@@ -1403,10 +1519,9 @@ function PromptModal(props: {
 }
 
 /**
- * §10.6, §10.8: the other seat learns that a choice is open and nothing else about it. The chooser
- * is always the viewer's opponent (a prompt for the viewer is `forYou`), so the line names the
- * opponent rather than a seat id. R2211000: on a replay's board, the viewer's own craft, market or
- * board-only placement is this panel, under the prompt's words.
+ * §10.6, §10.8: the other seat learns that a choice is open and nothing else. The chooser is always the
+ * viewer's opponent (a prompt for the viewer is `forYou`), so the line names the opponent. R2211000: on a
+ * replay's board, the viewer's own craft, market or board-only placement is this panel, under the prompt's words.
  */
 function Waiting(props: { pendingFor: PlayerId; prompt?: string }) {
   useLocale();
@@ -1484,9 +1599,9 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
 }
 
 /**
- * R265, R266: the viewer has answered its mulligan and the opponent has not. The answer is sealed —
- * the hand changes only once both are in — so the panel shows the hand as it is, each card stamped
- * with what will happen to it (`kept` is the view's own record of the answer).
+ * R265, R266: the viewer has answered its mulligan and the opponent has not. The answer is sealed (the hand
+ * changes once both are in), so the panel shows the hand as it is, each card stamped with what will happen
+ * to it (`kept` is the view's record).
  */
 function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
   useLocale();

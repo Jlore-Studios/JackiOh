@@ -26,9 +26,10 @@ export type Side = "you" | "opponent";
 
 /**
  * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
- * while it offers this many options or fewer; more options keep the plain mode list.
+ * while it offers this many options or fewer; more options keep the plain mode list. #2646: so is
+ * every other choice of options that name no card, each option a choice card (ChoiceCard.tsx).
  */
-export const DISCOVER_OPTION_LIMIT = 5;
+export const DISCOVER_OPTION_LIMIT = 4;
 
 /**
  * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the
@@ -38,8 +39,7 @@ export const X_CARD_LIMIT = 4;
 
 /**
  * Lanes are 1-based, as the engine's are (`crates/engine/src/zones.rs`; `e2e/support/types.ts`
- * declares `Lane = 1 | 2 | 3 | 4 | 5`): a `ZoneChoice` in a `play` action carries 1..5, so the
- * client's zone testids must too or nothing the engine blesses would ever light up.
+ * declares `Lane = 1 | 2 | 3 | 4 | 5`): a `ZoneChoice` carries 1..5, so the zone testids must too.
  */
 export const LANES: readonly number[] = [1, 2, 3, 4, 5];
 
@@ -96,8 +96,7 @@ export const testid = {
   mulliganWaiting: "mulligan-waiting",
   /**
    * R384, R510: the Activate control on a card the viewer controls (ActivateControl.tsx). `ability`
-   * is named only when the card lists several (`CardView.activations`), so a card with one ability
-   * is always `activate-<instanceId>`.
+   * is named only when the card lists several (`CardView.activations`).
    */
   activate: (instanceId: string, ability?: string): string =>
     ability === undefined ? `activate-${instanceId}` : `activate-${instanceId}-${ability}`,
@@ -173,10 +172,9 @@ export type ClickTarget =
 export type BoardControl = "end-turn" | "offer-draw" | "power" | "concede";
 
 /**
- * What the board may offer. `legal` and `selected` hold `data-testid`s; anything clickable whose
- * testid is not in `legal` renders with `aria-disabled="true"` and `data-legal="false"` and does
- * not fire `onClick`. The client computes neither set from the rules — `actions.ts` derives them
- * from the `legalActions` array the engine returned.
+ * What the board may offer. `legal` and `selected` hold `data-testid`s; a clickable whose testid is
+ * not in `legal` renders `aria-disabled="true"` and `data-legal="false"` and fires no `onClick`.
+ * `actions.ts` derives both sets from the engine's `legalActions`, never from the rules.
  */
 export type Highlight = {
   legal: ReadonlySet<string>;
@@ -209,9 +207,8 @@ export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent
 
 /**
  * The emote surface one hero carries (R643–R644, issue §1–§5). Game owns the state; the board only
- * draws and reports. `onPortrait` is the click that is NOT a target pick (the legal branch still
- * goes to `onClick`), and `onPortraitHold` the hold that opens the hero's inspect view instead
- * (R1449, R1330; issue §2: targeting wins).
+ * draws and reports. `onPortrait` is the click that is NOT a target pick, `onPortraitHold` the hold
+ * that opens the hero's inspect view (R1449, R1330; issue §2: targeting wins).
  */
 export type HeroEmotes = {
   portrait: PortraitId;
@@ -236,8 +233,8 @@ export type BoardProps = {
   animating?: AnimatingMap;
   /**
    * The animation entries the runner has started since the board last caught up (M5-T4). The number pops
-   * read these, not `view`: the runner is still holding `view` back, so it lacks the event being animated;
-   * and one action's several numbers must stay on screen together, not vanish as the next entry starts.
+   * read these, not `view`, which the runner holds back without the event being animated; one action's
+   * several numbers stay on screen together.
    */
   animated?: readonly AnimationFrames[];
   /** A route's server-synchronised clock, mounted in the physical End Turn housing. */

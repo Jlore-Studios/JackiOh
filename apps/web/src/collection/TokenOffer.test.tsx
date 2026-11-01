@@ -140,6 +140,23 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     }
   });
 
+  it("R2655000 a locked Epic full art offers an Epic token, and its animated and signed full arts none", async () => {
+    const plenty = held({ cosmeticRare: 9, cosmeticEpic: 9 });
+    // Every card's Epic full art is one an Epic token buys; no token buys a Legendary or Mythic one.
+    const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
+    expect(fullArts).toHaveLength(21 * 3);
+    for (const fullArt of fullArts) expect(offerTier(fullArt, plenty), fullArt.id).toBe(fullArt.rarity === "Epic" ? "Epic" : null);
+    expect(offerTier(entry("full-art-league-of-losers"), held({ cosmeticRare: 9 }))).toBeNull();
+
+    tokenServer({ cosmeticEpic: 2 }, refusal(500, "internal", "unused"));
+    cardViewOf(() => Promise.resolve(new Map()));
+    expect(await screen.findByTestId(T.tokenOffer("full-art-big-d-fender"))).toHaveTextContent("Unlock with an Epic token (2 held)");
+    for (const id of ["full-art-big-d-fender-animated", "full-art-big-d-fender-signed"]) {
+      expect(screen.getByTestId(T.stripItem(id)), id).toHaveAttribute("data-owned", "false");
+      expect(screen.queryByTestId(T.tokenOffer(id)), id).toBeNull();
+    }
+  });
+
   it("R1953001 a refusal shows the server's words and changes nothing", async () => {
     const server = tokenServer({ cosmeticEpic: 1 }, refusal(409, "conflict", "that cosmetic is already owned there"));
     const read = vi.fn<(token: string) => Promise<OwnedByCard>>().mockResolvedValue(new Map());

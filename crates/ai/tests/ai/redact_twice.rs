@@ -5,9 +5,7 @@
 //! else, so the AI an arena plays decides exactly as the AI of the quality gates does on the true
 //! state.
 //!
-//! Rust only: no TypeScript test ports to this, since the agent protocol is v0.3.0's (part 29). Found
-//! by part 34's `promote --dry-run`, where every decision facing a face-down trap panicked with
-//! `unknown defId "ai:hidden"`.
+//! Without it every decision facing a face-down trap panicked with `unknown defId "ai:hidden"`.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

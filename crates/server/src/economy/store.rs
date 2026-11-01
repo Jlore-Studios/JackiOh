@@ -1,21 +1,16 @@
 //! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
-//! `FakeTables::economy`). Migration 0047's practice seeds (§14.8, #1303) live here too: a seed is
-//! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`). So
-//! do migration 0067's idempotency keys (R2124000): a spend's key and the answer it committed,
-//! written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`. Migration 0071
-//! keeps a claim with its seed until it settles (R2422000): the burn writes the claim, and the pay
-//! or the refusal marks the seed settled (`economy_practice_seed_settle`), once.
+//! `FakeTables::economy`). Also here: migration 0047's practice seeds (§14.8, #1303), no holding and no
+//! ledger, whose claim burns in place (`economy_practice_seed_claim`); migration 0067's idempotency keys
+//! (R2124000), written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`; and
+//! migration 0071's claim, kept with its seed until a pay or a refusal settles it, once (R2422000,
+//! `economy_practice_seed_settle`).
 //!
-//! Same shape as `duos::store`: every store method is one method on `Tx`, named
-//! `economy_<table>_<verb>`, whose body dispatches to this file's `pg::<name>` or `fake::<name>`.
-//! A grant writes its holding and its ledger row together, in the caller's transaction, and a grant
-//! the holding cannot take answers `None` or `false` and writes nothing (§14.1, §14.5). A grant the
-//! schema refuses by its checks is refused here first, before either store, as
-//! `StoreError::Other("economy: …")`, so both answer it alike.
-//!
-//! Lists come in their key's byte order (Postgres's `collate "C"`), a count that fell to zero
-//! included; ledgers come oldest first.
+//! Same shape as `duos::store`: each store method is a `Tx` method `economy_<table>_<verb>` dispatching
+//! to this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and ledger row together, in
+//! the caller's transaction; one the holding cannot take answers `None` or `false`, writing nothing
+//! (§14.1, §14.5); one the schema's checks refuse is refused here first, as `StoreError::Other("economy: …")`.
+//! Lists come in their key's byte order (Postgres's `collate "C"`), zero counts included; ledgers oldest first.
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -193,11 +188,52 @@ pub struct OwnedCosmetics {
     pub account: Vec<String>,
 }
 
-/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061), what one card of the
-/// account wears of its own: a foil, a finish, a border and whether its full art prints. A kind
-/// with no pick is absent and wears its kind's default (R1953001; the Full-art cards setting, for
-/// `full_art`). An id is kept as it was written, one the registry does not know among them (a
-/// newer client's), and judged only where it is worn (`loadout::freeze_loadout`, R1834002).
+/// R2655000: a card's own full-art pick: `false` (no full art), `true` (its Epic full art, as every
+/// pick before #2655 named it) or a full art's registry id, which travels as the id's text. An id
+/// is kept as written and judged where it is worn, as a foil's is (`cosmetics::full_art_picked`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(untagged)]
+pub enum FullArtPick {
+    On(bool),
+    Id(String),
+}
+
+impl From<bool> for FullArtPick {
+    fn from(on: bool) -> FullArtPick {
+        FullArtPick::On(on)
+    }
+}
+
+impl FullArtPick {
+    /// Whether the pick prints a full art at all: `true` or any id.
+    pub fn prints(&self) -> bool {
+        !matches!(self, FullArtPick::On(false))
+    }
+
+    /// The id the pick names, if it names one rather than a switch.
+    pub fn id(&self) -> Option<&str> {
+        match self {
+            FullArtPick::Id(id) => Some(id),
+            FullArtPick::On(_) => None,
+        }
+    }
+
+    /// The pick a row of `public.card_cosmetic_picks` holds: its `full_art` switch, and the id
+    /// migration 0072 keeps beside a switch that is on.
+    pub fn of_row(full_art: Option<bool>, id: Option<String>) -> Option<FullArtPick> {
+        match (full_art, id) {
+            (Some(true), Some(id)) => Some(FullArtPick::Id(id)),
+            (Some(on), _) => Some(FullArtPick::On(on)),
+            (None, _) => None,
+        }
+    }
+}
+
+/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
+/// wears of its own: a foil, a finish, a border and its full-art pick ([`FullArtPick`], R2655000). A
+/// kind with no pick is absent and wears its default (R1953001; the Full-art cards setting, for
+/// `full_art`). An id is kept as written, an unknown one (a newer client's) too, and judged only where
+/// it is worn (`loadout::freeze_loadout`, R1834002).
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPicks {
@@ -209,7 +245,7 @@ pub struct CardPicks {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub border: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub full_art: Option<bool>,
+    pub full_art: Option<FullArtPick>,
 }
 
 impl CardPicks {
@@ -901,10 +937,10 @@ mod pg {
 
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
-        EconomyReason, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant,
-        JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim, PracticeOutcome, PracticeSeed,
-        PracticeSettled, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal,
-        literal, track_after,
+        EconomyReason, FullArtPick, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry,
+        InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim, PracticeOutcome,
+        PracticeSeed, PracticeSettled, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
+        from_literal, literal, track_after,
     };
     use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
@@ -1495,14 +1531,14 @@ mod pg {
             foil: row.try_get("foil")?,
             finish: row.try_get("finish")?,
             border: row.try_get("border")?,
-            full_art: row.try_get("full_art")?,
+            full_art: FullArtPick::of_row(row.try_get("full_art")?, row.try_get("full_art_id")?),
         })
     }
 
     pub async fn card_picks_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<CardPicks>, StoreError> {
         run_as(t, Some(profile_id)).await?;
         sqlx::query(
-            r#"select card_id, foil, finish, border, full_art from public.card_cosmetic_picks
+            r#"select card_id, foil, finish, border, full_art, full_art_id from public.card_cosmetic_picks
                 where profile_id = $1::uuid
                 order by card_id collate "C""#,
         )
@@ -1532,20 +1568,22 @@ mod pg {
             return Ok(());
         }
         sqlx::query(
-            "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at)
+            "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at, full_art_id)
              values ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::boolean,
-                     to_timestamp($7::double precision / 1000.0))
+                     to_timestamp($7::double precision / 1000.0), $8::text)
              on conflict (profile_id, card_id) do update
                 set foil = excluded.foil, finish = excluded.finish, border = excluded.border,
-                    full_art = excluded.full_art, updated_at = excluded.updated_at",
+                    full_art = excluded.full_art, full_art_id = excluded.full_art_id,
+                    updated_at = excluded.updated_at",
         )
         .bind(profile_id)
         .bind(picks.card_id.as_str())
         .bind(picks.foil.as_deref())
         .bind(picks.finish.as_deref())
         .bind(picks.border.as_deref())
-        .bind(picks.full_art)
+        .bind(picks.full_art.as_ref().map(FullArtPick::prints))
         .bind(at)
+        .bind(picks.full_art.as_ref().and_then(FullArtPick::id))
         .execute(&mut **t)
         .await?;
         Ok(())
@@ -1561,9 +1599,9 @@ mod pg {
         let mut written = 0;
         for card in picks.iter().filter(|card| !card.is_empty()) {
             written += sqlx::query(
-                "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at)
+                "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at, full_art_id)
                  values ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::boolean,
-                         to_timestamp($7::double precision / 1000.0))
+                         to_timestamp($7::double precision / 1000.0), $8::text)
                  on conflict (profile_id, card_id) do nothing",
             )
             .bind(profile_id)
@@ -1571,8 +1609,9 @@ mod pg {
             .bind(card.foil.as_deref())
             .bind(card.finish.as_deref())
             .bind(card.border.as_deref())
-            .bind(card.full_art)
+            .bind(card.full_art.as_ref().map(FullArtPick::prints))
             .bind(at)
+            .bind(card.full_art.as_ref().and_then(FullArtPick::id))
             .execute(&mut **t)
             .await?
             .rows_affected();

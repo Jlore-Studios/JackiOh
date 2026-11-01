@@ -1,5 +1,6 @@
 // R1584000: which stats the floor's showcase shows, and the words for each. R1743000: the other
 // twenty-five, the tokens every stat passes over, and the bag the showcase draws its order from.
+// R2649000: the thirty on the game's own mechanics.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
@@ -9,7 +10,7 @@ import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { ROTATION_POOL, type RandomSource } from "../routes/landingFan.ts";
 import { seeded } from "../test/random.ts";
 import { SHOWCASE_MIN_PLAYS } from "./config.ts";
-import { EMPTY_STATS, NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
+import { EMPTY_STATS, NO_COUNTS, type CardCounter, type CardCounters, type PlayerStats } from "./model.ts";
 import type { PocketPick } from "./pocketPick.ts";
 import {
   EMPTY_BAG,
@@ -23,6 +24,7 @@ import {
   type ShowcaseKey,
   type ShowcaseStat,
 } from "./showcase.ts";
+import type { StageAnimation } from "./showcaseStage.ts";
 
 const CATALOG = catalogJson as unknown as CardDefs;
 
@@ -159,7 +161,7 @@ describe("R1584000 showcaseStats", () => {
 
 const TOKENS = ["core-t-sheep", "core-t-rush", "core-051-1"] as const;
 
-/** Data for every one of the 35 stats, none of it on a token. */
+/** Data for every one of the 65 stats, none of it on a token. */
 const RICH = tally(
   {
     "core-001": {
@@ -180,6 +182,36 @@ const RICH = tally(
       radiant: 6,
       playedInWin: 9,
       playedInLoss: 3,
+      // R2649000's counters.
+      tempExpired: 2,
+      tempPlayed: 4,
+      crumbled: 3,
+      crumbledAgainst: 2,
+      fengShuiGood: 2,
+      fengShuiBad: 1,
+      traded: 3,
+      tradeDrawn: 3,
+      created: 5,
+      kills: 11,
+      biggestKill: 9,
+      reborn: 2,
+      shieldsLost: 4,
+      armorAbsorbed: 13,
+      damageTaken: 40,
+      doubleAttacks: 3,
+      lifesteal: 18,
+      sacrificed: 2,
+      froze: 4,
+      frozen: 3,
+      thawed: 2,
+      shattered: 1,
+      flashback: 2,
+      manaSaved: 17,
+      countered: 2,
+      counterspells: 3,
+      burned: 1,
+      bounced: 2,
+      launched: 1,
     },
     "core-002": { seen: 20, played: 7, playedAgainst: 11, defeated: 2 },
     "core-003": { seen: 5, playedAgainst: 12 },
@@ -195,9 +227,56 @@ const WITH_TOKENS: PlayerStats = {
   ...RICH,
   cards: {
     ...RICH.cards,
-    [TOKENS[0]]: { ...NO_COUNTS, seen: 999, played: 999, playedAgainst: 999, defeated: 999, allured: 999, lethal: 999, sprung: 999, survived: 999, damageDealt: 999, biggestHit: 999, overkill: 999, attacks: 999, healing: 999, drawn: 999, radiant: 999, playedInWin: 999 },
+    [TOKENS[0]]: {
+      ...NO_COUNTS,
+      seen: 999,
+      played: 999,
+      playedAgainst: 999,
+      defeated: 999,
+      allured: 999,
+      lethal: 999,
+      sprung: 999,
+      survived: 999,
+      damageDealt: 999,
+      biggestHit: 999,
+      overkill: 999,
+      attacks: 999,
+      healing: 999,
+      drawn: 999,
+      radiant: 999,
+      playedInWin: 999,
+      // R2649000's counters, a drawn-but-unplayed brick among them.
+      tempPlayed: 999,
+      crumbled: 999,
+      crumbledAgainst: 999,
+      fengShuiGood: 999,
+      fengShuiBad: 999,
+      traded: 999,
+      tradeDrawn: 999,
+      created: 999,
+      kills: 999,
+      biggestKill: 999,
+      reborn: 999,
+      shieldsLost: 999,
+      armorAbsorbed: 999,
+      damageTaken: 999,
+      doubleAttacks: 999,
+      lifesteal: 999,
+      sacrificed: 999,
+      froze: 999,
+      frozen: 999,
+      thawed: 999,
+      shattered: 999,
+      flashback: 999,
+      manaSaved: 999,
+      countered: 999,
+      counterspells: 999,
+      burned: 999,
+      bounced: 999,
+      launched: 999,
+    },
     [TOKENS[1]]: { ...NO_COUNTS, seen: 999, played: 999, playedAgainst: 999, destroyed: 999, defeated: 999, sprung: 999, survived: 999, playedInLoss: 999 },
-    [TOKENS[2]]: { ...NO_COUNTS, seen: 999, playedAgainst: 999 },
+    [TOKENS[2]]: { ...NO_COUNTS, seen: 999, playedAgainst: 999, drawn: 999, tempExpired: 999 },
   },
   longestGamePlayed: { [TOKENS[0]]: 9, "core-002": 3 },
 };
@@ -242,12 +321,12 @@ describe("R1743000 a token is never a stat's card", () => {
 });
 
 describe("R1743000 the new stats", () => {
-  it("R1743000 all 35 keys show given data, in the order of SHOWCASE_KEYS, each with a title and an animation", () => {
-    expect(SHOWCASE_KEYS).toHaveLength(35);
-    expect(new Set(SHOWCASE_KEYS).size).toBe(35);
+  it("R1743000 R2649000 all 65 keys show given data, in the order of SHOWCASE_KEYS, each with a title and an animation", () => {
+    expect(SHOWCASE_KEYS).toHaveLength(65);
+    expect(new Set(SHOWCASE_KEYS).size).toBe(65);
     const stats = showcaseStats(RICH, PICK, seeded(2));
     expect(stats.map((stat) => stat.key)).toEqual([...SHOWCASE_KEYS]);
-    expect(stats.slice(10).map((stat) => stat.title())).toEqual([
+    expect(stats.slice(10, 35).map((stat) => stat.title())).toEqual([
       "Glass Cannon",
       "Unbreakable",
       "Grudge Match",
@@ -274,7 +353,7 @@ describe("R1743000 the new stats", () => {
       "Hot Streak",
       "Marathon",
     ]);
-    expect(stats.slice(10).map((stat) => [stat.animation, stat.side])).toEqual([
+    expect(stats.slice(10, 35).map((stat) => [stat.animation, stat.side])).toEqual([
       ["death", "you"], // Glass Cannon
       ["shield", "you"], // Unbreakable
       ["lunge", "you"], // Grudge Match
@@ -300,6 +379,70 @@ describe("R1743000 the new stats", () => {
       ["death", "you"], // Jinx
       ["radiant", "you"], // Hot Streak
       ["entrance", "you"], // Marathon
+    ]);
+    expect(stats.slice(35).map((stat) => stat.title())).toEqual([
+      "Use It or Lose It",
+      "Just in Time",
+      "Sand Castle",
+      "Outlasted",
+      "Good Feng Shui",
+      "Bad Feng Shui",
+      "Hot Potato",
+      "Trade-In Value",
+      "Mass Produced",
+      "Executioner",
+      "Giant Slayer",
+      "Second Wind",
+      "Bubble Wrap",
+      "Iron Wall",
+      "Punching Bag",
+      "Double Tap",
+      "Vampire",
+      "Martyr",
+      "Cold Snap",
+      "Brain Freeze",
+      "Spring Thaw",
+      "Shatter",
+      "Encore",
+      "Bargain Hunter",
+      "Denied",
+      "Nope",
+      "Burnt Toast",
+      "Frequent Flyer",
+      "Liftoff",
+      "Brick",
+    ]);
+    expect(stats.slice(35).map((stat) => [stat.animation, stat.side])).toEqual([
+      ["expire", "you"], // Use It or Lose It
+      ["inTime", "you"], // Just in Time
+      ["crumble", "you"], // Sand Castle
+      ["crumble", "opponent"], // Outlasted
+      ["radiant", "you"], // Good Feng Shui
+      ["hit", "you"], // Bad Feng Shui
+      ["bounce", "you"], // Hot Potato
+      ["entrance", "you"], // Trade-In Value
+      ["stamp", "you"], // Mass Produced
+      ["lunge", "you"], // Executioner
+      ["lunge", "you"], // Giant Slayer
+      ["reborn", "you"], // Second Wind
+      ["shield", "you"], // Bubble Wrap
+      ["armor", "you"], // Iron Wall
+      ["hit", "you"], // Punching Bag
+      ["windfury", "you"], // Double Tap
+      ["heal", "you"], // Vampire
+      ["doom", "you"], // Martyr
+      ["lunge", "you"], // Cold Snap
+      ["freeze", "you"], // Brain Freeze
+      ["thaw", "you"], // Spring Thaw
+      ["lunge", "you"], // Shatter
+      ["reborn", "you"], // Encore
+      ["radiant", "you"], // Bargain Hunter
+      ["exile", "you"], // Denied
+      ["trap", "you"], // Nope, on a Unit
+      ["death", "you"], // Burnt Toast
+      ["bounce", "you"], // Frequent Flyer
+      ["launch", "you"], // Liftoff
+      ["exile", "you"], // Brick
     ]);
   });
 
@@ -620,6 +763,127 @@ describe("R2648000 a stat names the right kind of card", () => {
     expect(animationFor("core-005", "lunge")).toBe("cast");
     expect(animationFor("core-041", "lunge")).toBe("trap");
     expect(animationFor("core-001", "lunge")).toBe("lunge");
+  });
+});
+
+describe("R2649000 the game's own mechanics", () => {
+  type Row = readonly [ShowcaseKey, CardCounter, string, number, (n: number) => string, StageAnimation, "you" | "opponent"];
+  /** Each stat that names the card with the most of one counter: its title, a count, its line for any count, its animation and its side. */
+  const ROWS: readonly Row[] = [
+    ["useItOrLoseIt", "tempExpired", "Use It or Lose It", 4, (n) => `slipped away unplayed ${String(n)}×`, "expire", "you"],
+    ["sandCastle", "crumbled", "Sand Castle", 3, (n) => `crumbled ${String(n)}×`, "crumble", "you"],
+    ["outlasted", "crumbledAgainst", "Outlasted", 5, (n) => `waited it out ${String(n)}×`, "crumble", "opponent"],
+    ["goodFengShui", "fengShuiGood", "Good Feng Shui", 2, (n) => `blessed by Feng Shui ${String(n)}×`, "radiant", "you"],
+    ["badFengShui", "fengShuiBad", "Bad Feng Shui", 2, (n) => `cursed by Feng Shui ${String(n)}×`, "hit", "you"],
+    ["hotPotato", "traded", "Hot Potato", 6, (n) => `traded away ${String(n)}×`, "bounce", "you"],
+    ["tradeInValue", "tradeDrawn", "Trade-In Value", 6, (n) => `pulled from a trade ${String(n)}×`, "entrance", "you"],
+    ["massProduced", "created", "Mass Produced", 8, (n) => `created ${String(n)}×`, "stamp", "you"],
+    ["executioner", "kills", "Executioner", 12, (n) => (n === 1 ? "took down 1 enemy" : `took down ${String(n)} enemies`), "lunge", "you"],
+    ["giantSlayer", "biggestKill", "Giant Slayer", 9, (n) => `felled a ${String(n)}-health giant`, "lunge", "you"],
+    ["secondWind", "reborn", "Second Wind", 3, (n) => `rose again ${String(n)}×`, "reborn", "you"],
+    ["bubbleWrap", "shieldsLost", "Bubble Wrap", 7, (n) => `shield popped ${String(n)}×`, "shield", "you"],
+    ["ironWall", "armorAbsorbed", "Iron Wall", 21, (n) => `shrugged off ${String(n)} damage`, "armor", "you"],
+    ["punchingBag", "damageTaken", "Punching Bag", 44, (n) => `took ${String(n)} damage`, "hit", "you"],
+    ["doubleTap", "doubleAttacks", "Double Tap", 5, (n) => `attacked twice in a turn ${String(n)}×`, "windfury", "you"],
+    ["vampire", "lifesteal", "Vampire", 17, (n) => `drained ${String(n)} health`, "heal", "you"],
+    ["martyr", "sacrificed", "Martyr", 4, (n) => `gave itself up ${String(n)}×`, "doom", "you"],
+    ["coldSnap", "froze", "Cold Snap", 6, (n) => (n === 1 ? "froze 1 enemy" : `froze ${String(n)} enemies`), "lunge", "you"],
+    ["brainFreeze", "frozen", "Brain Freeze", 5, (n) => `frozen ${String(n)}×`, "freeze", "you"],
+    ["springThaw", "thawed", "Spring Thaw", 4, (n) => `thawed out ${String(n)}×`, "thaw", "you"],
+    ["shatter", "shattered", "Shatter", 3, (n) => (n === 1 ? "shattered 1 frozen enemy" : `shattered ${String(n)} frozen enemies`), "lunge", "you"],
+    ["encore", "flashback", "Encore", 2, (n) => `played from the graveyard ${String(n)}×`, "reborn", "you"],
+    ["bargainHunter", "manaSaved", "Bargain Hunter", 15, (n) => `saved ${String(n)} mana`, "radiant", "you"],
+    ["denied", "countered", "Denied", 3, (n) => `countered ${String(n)}×`, "exile", "you"],
+    ["nope", "counterspells", "Nope", 4, (n) => (n === 1 ? "stopped 1 play cold" : `stopped ${String(n)} plays cold`), "trap", "you"],
+    ["burntToast", "burned", "Burnt Toast", 2, (n) => `burned from a full hand ${String(n)}×`, "death", "you"],
+    ["frequentFlyer", "bounced", "Frequent Flyer", 5, (n) => `bounced back to hand ${String(n)}×`, "bounce", "you"],
+    ["liftoff", "launched", "Liftoff", 3, (n) => (n === 1 ? "flew in 1 launched Starship" : `flew in ${String(n)} launched Starships`), "launch", "you"],
+  ];
+
+  it.each(ROWS)(
+    "R2649000 %s is the card with the most %s, a tie to the lower id, worded for any count, left out with none, a token passed over",
+    (key, counter, title, n, line, animation, side) => {
+      // core-009 and core-003 are Units, so a lunge stays a lunge and Nope plays the Trap's reveal.
+      const found = statOf(tally({ "core-009": { [counter]: n }, "core-003": { [counter]: n }, "core-004": { [counter]: n - 1 } }), key);
+      expect([found?.cardId, found?.title(), found?.line(), found?.animation, found?.side]).toEqual(["core-003", title, line(n), animation, side]);
+      // The singular, where the line has a word to bend.
+      expect(statOf(tally({ "core-003": { [counter]: 1 } }), key)?.line()).toBe(line(1));
+      // No data, and a token topping it, which gives way to the next card.
+      expect(statOf(tally({ "core-004": { seen: 2, played: 3 } }), key)).toBeUndefined();
+      expect(statOf(tally({ [TOKENS[0]]: { [counter]: n } }), key)).toBeUndefined();
+      expect(statOf(tally({ [TOKENS[0]]: { [counter]: n + 9 }, "core-003": { [counter]: n } }), key)?.cardId).toBe("core-003");
+    },
+  );
+
+  it("R2649000 Just in Time is the card played most per time it was Temporary, at least SHOWCASE_MIN_PLAYS, a tie to the lower id, a token passed over", () => {
+    const base = {
+      "core-009": { tempPlayed: 4, tempExpired: 1 },
+      "core-003": { tempPlayed: 4, tempExpired: 1 },
+      "core-004": { tempPlayed: SHOWCASE_MIN_PLAYS - 1 },
+    };
+    const found = statOf(tally(base), "justInTime");
+    expect([found?.cardId, found?.title(), found?.line(), found?.animation, found?.side]).toEqual([
+      "core-003",
+      "Just in Time",
+      "played 4 of the 5 times it was Temporary",
+      "inTime",
+      "you",
+    ]);
+    expect(statOf(tally({ "core-003": { tempPlayed: 1, tempExpired: 4 } }), "justInTime")?.line()).toBe("played 1 of the 5 times it was Temporary");
+    // Under the floor, never played in time, no data, or a token: left out or passed over.
+    expect(statOf(tally({ "core-004": base["core-004"] }), "justInTime")).toBeUndefined();
+    expect(statOf(tally({ "core-004": { tempExpired: 9 } }), "justInTime")).toBeUndefined();
+    expect(statOf(tally({ "core-004": { played: 9 } }), "justInTime")).toBeUndefined();
+    expect(statOf(tally({ ...base, [TOKENS[0]]: { tempPlayed: 9 } }), "justInTime")?.cardId).toBe("core-003");
+  });
+
+  it("R2649000 Mass Produced's most-created token gives way to the next card, the Coin among the tokens", () => {
+    expect(CATALOG["core-t-coin"]?.token).toBe(true);
+    const found = statOf(tally({ "core-t-sheep": { created: 30 }, "core-t-coin": { created: 20 }, "core-002": { created: 4 } }), "massProduced");
+    expect([found?.cardId, found?.line()]).toEqual(["core-002", "created 4×"]);
+    expect(statOf(tally({ "core-t-sheep": { created: 30 }, "core-t-coin": { created: 20 } }), "massProduced")).toBeUndefined();
+  });
+
+  it("R2649000 Nope casts on a Spell and is revealed on a Trap or any other card", () => {
+    expect(statOf(tally({ "core-005": { counterspells: 2 } }), "nope")?.animation).toBe("cast");
+    expect(statOf(tally({ "core-006": { counterspells: 2 } }), "nope")?.animation).toBe("cast");
+    expect(statOf(tally({ "core-041": { counterspells: 2 } }), "nope")?.animation).toBe("trap");
+    expect(statOf(tally({ "core-018": { counterspells: 2 } }), "nope")?.animation).toBe("trap");
+    expect(statOf(tally({ "core-001": { counterspells: 2 } }), "nope")?.animation).toBe("trap");
+  });
+
+  it("R2649000 a lunge stat on a Spell casts and on a Trap is revealed", () => {
+    for (const key of ["executioner", "giantSlayer", "coldSnap", "shatter"] as const) {
+      const counter = ({ executioner: "kills", giantSlayer: "biggestKill", coldSnap: "froze", shatter: "shattered" } as const)[key];
+      expect([key, statOf(tally({ "core-005": { [counter]: 2 } }), key)?.animation]).toEqual([key, "cast"]);
+      expect([key, statOf(tally({ "core-041": { [counter]: 2 } }), key)?.animation]).toEqual([key, "trap"]);
+    }
+  });
+
+  it("R2649000 Brick is the card drawn most more often than played, with at least SHOWCASE_MIN_PLAYS draws, a tie to the lower id, a token passed over", () => {
+    const base = {
+      "core-009": { drawn: 9, played: 2 },
+      "core-003": { drawn: 9, played: 2 },
+      "core-004": { drawn: SHOWCASE_MIN_PLAYS - 1 },
+      "core-005": { drawn: 20, played: 19 },
+    };
+    const found = statOf(tally(base), "brick");
+    expect([found?.cardId, found?.title(), found?.line(), found?.animation, found?.side]).toEqual(["core-003", "Brick", "drawn 9×, played 2×", "exile", "you"]);
+    // Under the floor, played as often as drawn, no data, or a token: left out or passed over.
+    expect(statOf(tally({ "core-004": base["core-004"] }), "brick")).toBeUndefined();
+    expect(statOf(tally({ "core-004": { drawn: 7, played: 7 } }), "brick")).toBeUndefined();
+    expect(statOf(tally({ "core-004": { played: 9 } }), "brick")).toBeUndefined();
+    expect(statOf(tally({ ...base, [TOKENS[0]]: { drawn: 50 } }), "brick")?.cardId).toBe("core-003");
+    expect(statOf(tally({ "core-004": { drawn: SHOWCASE_MIN_PLAYS, played: 4 } }), "brick")?.line()).toBe(`drawn ${String(SHOWCASE_MIN_PLAYS)}×, played 4×`);
+  });
+
+  it("R2649000 the new stats' words are looked up when called, in Chinese too", async () => {
+    const one = statOf(tally({ "core-003": { kills: 1 } }), "executioner");
+    const many = statOf(RICH, "executioner");
+    expect([one?.line(), many?.line()]).toEqual(["took down 1 enemy", "took down 11 enemies"]);
+    await setLocale("zh-CN");
+    expect([many?.title(), many?.line(), one?.line()]).toEqual(["刽子手", "击败 11 个敌人", "击败 1 个敌人"]);
+    expect(statOf(RICH, "brick")?.line()).toBe("被抽到 19 次，打出 12 次");
   });
 });
 

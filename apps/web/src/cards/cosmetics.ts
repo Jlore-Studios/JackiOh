@@ -1,23 +1,16 @@
-// R1295000: the card cosmetics a player's own cards wear: a foil over the art, a finish on the
-// print and a border round the frame. R1953001: nothing sets the account-wide picks of those three
-// (`COSMETICS_SETTINGS_KEY`, the account's `cosmetics` group, R633) and no face wears them; the
-// group keeps its shape (R1655000). R1297000: the same store holds the deck slots, the playmat
-// (`table`), the ambient backdrop (`field`) and the card back (`cardBack`). The ids are the
-// registry's (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`). An id
-// this client does not know (a newer client's) is kept, so this device never overwrites it, and
-// drawn as its kind's default.
-//
-// The picks never reach the engine, an action, `PlayerView` or the log, and a face wears them only
-// where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). An opponent's
-// side, and every side of a watched or replayed online game, wears its seat's loadout frozen when the
-// match began (R1834002, `cards/loadouts.ts`); every other face draws the defaults (CLAUDE.md rule 7).
-// Each slot is its own attribute on the face, apart from the rarity foil (`data-foil`, model.ts), so
-// a decorative foil never blurs the Mythic and Radiant signal.
-//
-// R1834000: a card's own picks live on the account, and this store is its cache on the device:
-// `cardPicksSync.ts` sends the device's own up once, then puts the account's in it and sends each
-// later write (`subscribeCardPickWrites`). The store keeps what it is given; the wear path and
-// `useCanEquip` apply ownership.
+// R1295000: the card cosmetics a player's own cards wear: a foil over the art, a finish on the print and a
+// border round the frame. R1953001: nothing sets the account-wide picks of those three
+// (`COSMETICS_SETTINGS_KEY`, the account's `cosmetics` group, R633) and no face wears them; the group keeps
+// its shape (R1655000). R1297000: the same store holds the deck slots, the playmat (`table`), the backdrop
+// (`field`) and the card back (`cardBack`). Ids are the registry's (`crates/server/cosmetics.json`, generated
+// into `wire/generated/cosmetics.ts`); an unknown id (a newer client's) is kept, never overwritten, and drawn
+// as its kind's default. The picks never reach the engine, an action, `PlayerView` or the log; a face wears
+// them only where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). An opponent's
+// side, and every side of a watched or replayed online game, wears its seat's loadout frozen at match start
+// (R1834002, `cards/loadouts.ts`); every other face draws the defaults (CLAUDE.md rule 7). Each slot is its own
+// face attribute, apart from the rarity foil (`data-foil`, model.ts), so a decorative foil never blurs Mythic
+// and Radiant. R1834000: a card's picks live on the account, this store is the device's cache
+// (`cardPicksSync.ts`, `subscribeCardPickWrites`); it keeps what it is given, the wear path and `useCanEquip` apply ownership.
 
 import {
   createContext,
@@ -153,23 +146,31 @@ export function useCosmetics(): CardCosmetics {
 export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 
 /**
- * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default
- * (R1953001; the Full-art cards setting, for `fullArt`); a pick of a kind's default id is a pick. An
- * id this client does not know reads as its kind's default.
+ * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default (R1953001;
+ * the Full-art cards setting, for `fullArt`); a pick of a default id is a pick; an unknown id reads as the
+ * default. R2655000: `fullArt` is `false`, `true` (the Epic full art) or a full art's id, kept as written.
  */
-export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean };
+export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean | string };
 
 /** One card's picks as stored: a short text is kept for each kind, known or not (as `normalizeCosmetics` keeps one). */
-export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean };
+export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean | string };
 
 /** R1834000: what one write changed of a card's picks, field by field: the new pick, or null where it was cleared. */
-export type CardPickChange = { foil?: string | null; finish?: string | null; border?: string | null; fullArt?: boolean | null };
+export type CardPickChange = { foil?: string | null; finish?: string | null; border?: string | null; fullArt?: boolean | string | null };
 
 const CARD_PICK_FIELDS = [...CARD_SLOT_KINDS, "fullArt"] as const;
 const NO_PICKS: CardPicks = Object.freeze({});
 
 function isPickText(value: unknown): value is string {
   return typeof value === "string" && value !== "" && value.length <= COSMETIC_ID_MAX_LENGTH;
+}
+
+/** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
+const FULL_ART_ID_PREFIX = "full-art-";
+
+/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id, known or not. */
+function isFullArtPick(value: unknown): value is boolean | string {
+  return typeof value === "boolean" || (isPickText(value) && value.startsWith(FULL_ART_ID_PREFIX));
 }
 
 function normalizeStoredPicks(raw: unknown): StoredCardPicks {
@@ -179,7 +180,8 @@ function normalizeStoredPicks(raw: unknown): StoredCardPicks {
     const value = record[kind];
     if (isPickText(value)) out[kind] = value;
   }
-  if (typeof record["fullArt"] === "boolean") out.fullArt = record["fullArt"];
+  const fullArt = record["fullArt"];
+  if (isFullArtPick(fullArt)) out.fullArt = fullArt;
   return out;
 }
 
@@ -251,9 +253,8 @@ function subscribeCardPicks(listener: () => void): () => void {
 }
 
 /**
- * R1956000: another tab wrote the account's picks or the cards' (a null key is a `localStorage.clear()`
- * there): re-read what it wrote and notify, so every face here wears it at once. What this page could
- * not save is dropped for what storage now holds, which is what every other tab draws.
+ * R1956000: another tab wrote the account's or the cards' picks (a null key is a `localStorage.clear()`):
+ * re-read and notify so every face wears it at once; what this page could not save gives way to storage.
  */
 function onCosmeticsStorage(event: StorageEvent): void {
   const key = event.key;
@@ -269,9 +270,8 @@ function onCosmeticsStorage(event: StorageEvent): void {
 }
 
 /**
- * The first read of either store installs the one window "storage" listener, for the page's life:
- * the stores keep what storage holds while no face is mounted too, so a face mounted later draws a
- * pick another tab made meanwhile.
+ * The first read of either store installs the one window "storage" listener for the page's life: the stores
+ * keep what storage holds even with no face mounted, so a later face draws a pick another tab made meanwhile.
  */
 function listenToStorage(): void {
   if (storageListening || typeof window === "undefined") return;
@@ -343,11 +343,14 @@ export function writeCardPick(defId: string, kind: CardSlotKind, id: CosmeticId 
   });
 }
 
-/** Sets whether `defId`'s full art prints, or clears the pick with null, which leaves it to the Full-art cards setting. */
-export function writeCardFullArt(defId: string, on: boolean | null): void {
+/**
+ * Sets `defId`'s full-art pick: `false` for none, `true` for its Epic, or a full art's id (R2655000,
+ * `fullArtPickOf`); null clears the pick, which leaves it to the Full-art cards setting.
+ */
+export function writeCardFullArt(defId: string, pick: boolean | string | null): void {
   updateCardPicks(defId, (picks) => {
-    if (on === null) delete picks.fullArt;
-    else picks.fullArt = on;
+    if (isFullArtPick(pick)) picks.fullArt = pick;
+    else delete picks.fullArt;
   });
 }
 
@@ -399,9 +402,8 @@ export type CardOwnership = "every" | OwnedByCard;
 export const OwnershipContext = createContext<CardOwnership>("every");
 
 /**
- * R1834004: the loadout of the seat that owns the copy drawn below it, which its faces wear where
- * they are not the viewer's own (`worn`): null with none above it, and wherever the board says the
- * copy draws the defaults (game/wearer.ts). Provided by `TheirCopy` (loadouts.ts).
+ * R1834004: the loadout of the seat owning the copy drawn below, which its not-`worn` faces wear; null with
+ * none above or where the board says the copy draws the defaults (game/wearer.ts). Provided by `TheirCopy` (loadouts.ts).
  */
 export const TheirCopyContext = createContext<SeatLoadout | null>(null);
 
@@ -423,11 +425,10 @@ export function useCanEquip(): (defId: string, cosmeticId: CosmeticId) => boolea
 }
 
 /**
- * What `face` wears, each kind resolved to a known id: the defaults where `picks` is null (a face
- * that is not the viewer's own), the default foil on a face with its rarity foil (Mythic, Radiant)
- * and the default finish and border on a Radiant face, whose gold is its own. R1655000: a kind
- * the card has a pick of (`card`) that `owns` takes the card's pick; `picks` otherwise, which a face
- * passes as the kind defaults (R1953001) and a sample of a cosmetic as that cosmetic.
+ * What `face` wears, each kind a known id: the defaults where `picks` is null (not the viewer's own), the
+ * default foil with a rarity foil (Mythic, Radiant), the default finish and border on a Radiant face (its
+ * gold is its own). R1655000: a kind `card` picks that `owns` takes is the card's pick, else `picks` (the
+ * kind defaults on a face, R1953001; a cosmetic sample as that cosmetic).
  */
 export function wornCosmetics(
   face: FaceModel,
@@ -498,9 +499,8 @@ export function deckCosmeticPatch(kind: DeckSlotKind, id: string | null): DeckCo
 }
 
 /**
- * `kind`'s id to draw: the deck's pick when it has one (even an unknown id, which then draws as
- * the default: the deck's word is final), else the account's, else the default. R1833000: a pick
- * `owns` refuses (one the account does not own) draws as the default too.
+ * `kind`'s id to draw: the deck's pick (even an unknown id, which draws as the default), else the account's,
+ * else the default. R1833000: a pick `owns` refuses draws as the default too.
  */
 export function resolveDeckCosmetic(
   kind: DeckSlotKind,
@@ -637,12 +637,10 @@ export type CosmeticAttributes = {
 };
 
 /**
- * The cosmetic attributes of a face: when `worn`, the card's own picks (R1655000) where the viewer
- * owns them, over its kinds' defaults (R1953001: never the account's picks); else the defaults.
- * R1956001: a worn Created card's are its generator's (`createdBy`), owned on the generator.
- * R1834004: a face not `worn` below a `TheirCopy` wears that seat's picks of its card, every one
- * owned (the server checked, R1834001). Rarity rules hold over both. `animatedFoil` stills a cosmetic
- * foil, and a moving finish or border with it (R1833000). Its hooks run on every face, worn or not.
+ * A face's cosmetic attributes: when `worn`, the card's own picks (R1655000) where owned, over its kinds'
+ * defaults (R1953001); a Created card's are its generator's (R1956001). Below a `TheirCopy` and not `worn`:
+ * that seat's picks, all owned (R1834001, R1834004). Rarity rules hold over both; `animatedFoil` stills a
+ * foil and a moving finish or border (R1833000). Its hooks run on every face, worn or not.
  */
 export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
   const source = face.createdBy ?? face.defId;

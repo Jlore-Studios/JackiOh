@@ -69,12 +69,10 @@ fn backrow_def(state: &GameState) -> String {
 
 #[test]
 fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_the_breaker() {
-    // The set card really is set.
     let state = set_state("alt-play-redact");
     let set = state.players[AI].backrow[0].as_ref().expect("a set card");
     assert!(set.set_as.is_some());
 
-    // Redacted for the opponent, it is a placeholder with no face-down form.
     let public = redact(&state, HUMAN);
     let hidden = public.players[AI].backrow[0].as_ref().expect("the placeholder");
     assert_eq!(hidden.set_as, None);
@@ -130,7 +128,6 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_the_breake
         );
     }
 
-    // The aura is live: the owner's Units are offered face-down, Cloaked.
     let offered: Vec<_> = legal_actions(&state, AI)
         .into_iter()
         .filter(|action| {
@@ -215,7 +212,6 @@ fn r783009_determinize_samples_a_printed_cloaked_card_stamped_cloaked() {
     );
     let set = state.players[AI].backrow[0].clone().expect("the set card");
     assert_eq!(set.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
-    // Its controller's legal actions hold its Reveal.
     assert!(legal_actions(&state, AI).iter().any(|action| matches!(
         action,
         ActionBody::Activate { instance_id, ability, .. } if *instance_id == set.id && ability.as_deref() == Some("reveal")

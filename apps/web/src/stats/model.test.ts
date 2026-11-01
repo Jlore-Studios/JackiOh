@@ -191,6 +191,73 @@ describe("R1743000 the new counters and totals", () => {
   });
 });
 
+describe("R2649000 the game's own mechanics", () => {
+  const NEW_SUMMED = [
+    "tempExpired",
+    "tempPlayed",
+    "crumbled",
+    "crumbledAgainst",
+    "fengShuiGood",
+    "fengShuiBad",
+    "traded",
+    "tradeDrawn",
+    "created",
+    "kills",
+    "reborn",
+    "shieldsLost",
+    "armorAbsorbed",
+    "damageTaken",
+    "doubleAttacks",
+    "lifesteal",
+    "sacrificed",
+    "froze",
+    "frozen",
+    "thawed",
+    "shattered",
+    "flashback",
+    "manaSaved",
+    "countered",
+    "counterspells",
+    "burned",
+    "bounced",
+    "launched",
+  ] as const;
+
+  it("R2649000 the new counters sum across games, biggestKill keeps the max, and each starts at 0", () => {
+    expect([...SUMMED_COUNTERS]).toEqual(expect.arrayContaining([...NEW_SUMMED]));
+    expect(MAX_COUNTERS).toContain("biggestKill");
+    let stats = EMPTY_STATS;
+    for (const [n, kill] of [
+      [2, 4],
+      [3, 7],
+      [1, 2],
+    ] as const) {
+      let log = logMax(EMPTY_LOG, "biggestKill", "core-001", kill);
+      for (const counter of NEW_SUMMED) log = logWith(log, counter, "core-001", n);
+      stats = addGame(stats, log, "loss");
+    }
+    const card = stats.cards["core-001"];
+    for (const counter of NEW_SUMMED) expect([counter, card?.[counter]]).toEqual([counter, 6]);
+    expect(card?.biggestKill).toBe(7);
+    for (const counter of [...NEW_SUMMED, "biggestKill"] as const) {
+      expect([counter, NO_COUNTS[counter]]).toEqual([counter, 0]);
+      expect([counter, EMPTY_LOG[counter]]).toEqual([counter, {}]);
+    }
+    expect(logIsEmpty(logMax(EMPTY_LOG, "biggestKill", "core-001", 1))).toBe(false);
+    expect(logMax(logMax(EMPTY_LOG, "biggestKill", "core-001", 5), "biggestKill", "core-001", 3).biggestKill).toEqual({ "core-001": 5 });
+  });
+
+  it("R2649000 createdIds and attackers never reach the totals", () => {
+    expect([EMPTY_LOG.createdIds, EMPTY_LOG.attackers]).toEqual([[], {}]);
+    const log = { ...logWith(EMPTY_LOG, "created", "core-002"), createdIds: ["m1", "m2"], attackers: { mine: 2 } };
+    const stats = addGame(EMPTY_STATS, log, "win");
+    expect(stats.cards).toEqual({ "core-002": { ...NO_COUNTS, created: 1 } });
+    expect(Object.keys(stats)).not.toContain("createdIds");
+    expect(Object.keys(stats)).not.toContain("attackers");
+    expect(JSON.stringify(stats)).not.toContain("m1");
+  });
+});
+
 describe("R377 formatPlayedDelta", () => {
   it("R377 formats signed percentage points and returns null for null", () => {
     expect(formatPlayedDelta(0.2)).toBe("+20%");

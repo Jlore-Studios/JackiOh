@@ -1,39 +1,15 @@
 // The keyword glossary the inspect views print beside a card (docs/polish/6-cards.md, Surface B).
 //
-// Every `rule` is reviewed data, written once in the words a player reads (#133). The link to the
-// spec is structural: each entry names its section (`section`: §6.1 unit keywords, §6.2 triggers and
-// timing words, §6.3 verbs, §5.2 Radiant) and, where its spec row is spelled differently from its id,
-// that row's name (`row`). rules.test.ts checks that every row of spec/06-keywords.md's three tables
-// is a term here or a rules-only row, and never compares a sentence, so a reworded spec row fails
-// nothing. If a spec rule changes what a player should read, change the line here by hand.
-//
-// The lines follow the spec's rules, with three kinds of difference a player is owed:
-// - Players' words (R373): the rules' "library" is the Deck and "sacrifice" is a Tribute; the retired
-//   turn-trigger prose reads label-style ("At the start of turn"), and "backrow zone" reads "backrow" (#45).
-// - No ruling's number: a spec row's citation ("(R384)") is no player's word (R512).
-// - A row's own **Ruling** where it overrides its Rule column, as Cry's §6.2 ruling does. RULED_TERMS
-//   lists these rows.
-//
-// And two rows are short reminders rather than the spec's full text (R500): Cry's ruling and Tribute's
-// Rule column are long enough to crowd a card's inspect view, so the glossary says each in one short
-// line that is still true to the rule (Tribute's leaves out R41's backrow clause, which R428 removed).
-// SHORT_REMINDERS holds the two lines.
-//
-// `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
-// are the other spellings cards use.
-//
-// What bolds (R910000, issue #910): every §6.2 trigger and §6.3 verb, and Radiant, bolds wherever a
-// card uses it as that term, in every case and inflection the cards print, each such spelling an alias
-// below. A word spelled like a term that names something else stays plain, listed in PLAIN_SPELLINGS.
-// A §6.1 keyword bolds as the keyword a card has, so "you stack onto this" stays plain. Card types,
-// zones, stats, positions, rarities and the §6.3 rows rules.test.ts keeps rules-only stay plain, as
-// Hearthstone prints them. rules.test.ts fails on a card that prints a trigger or verb that neither
-// bolds nor is a plain spelling.
-//
-// "Can't attack or be attacked" gets no entry: no card prints it (it is the rule of a Unit a carrier
-// holds, R446). A plain stat buff ("+2/+2") stays plain words, since matching is case-sensitive and
-// "buff" is lower-case there. Warp Disruptor's aura, "Units can't be in Defense Position", stays plain
-// words too.
+// Every `rule` is reviewed data in a player's words (#133); each entry names its spec `section` (§6.1
+// unit keywords, §6.2 triggers, §6.3 verbs, §5.2 Radiant) and, if the spec row is spelled differently,
+// its `row`. rules.test.ts checks every row of spec/06-keywords.md's tables is a term here or rules-only,
+// never a sentence: a changed spec rule needs a hand edit here. Owed differences: players' words (R373,
+// #45), no ruling's number (R512), and a row's own **Ruling** over its Rule column (Cry; RULED_TERMS).
+// SHORT_REMINDERS holds two short lines (R500; Tribute leaves out R41's backrow clause, R428 removed).
+// `label` is what rules.ts's tokenizer matches, case-sensitively; `aliases` are other spellings.
+// What bolds (R910000, #910): every §6.2 trigger, §6.3 verb and Radiant used as that term, each
+// inflection an alias; look-alikes stay plain (PLAIN_SPELLINGS), as do types, zones, stats and rules-only
+// rows; a §6.1 keyword bolds only as the keyword a card has. "Can't attack or be attacked" (R446) has no entry.
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -360,8 +336,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
 
 /**
  * R910000: spellings that hold a term's word but name something else, so the tokenizer prints them
- * plain: the exile pile, which reads like Exile ("your exile", "from exile", Lizard's Breath's
- * "Exile," among its piles). Transmogulate's "graveyard and exile" went with its old reach (#2179).
+ * plain: the exile pile, which reads like Exile ("your exile", "from exile", Lizard's Breath's "Exile,"; #2179).
  */
 export const PLAIN_SPELLINGS: readonly string[] = [
   "your exile",

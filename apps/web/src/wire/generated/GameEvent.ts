@@ -18,6 +18,8 @@ import type { Position } from "./Position";
 import type { PredictOutcome } from "./PredictOutcome";
 import type { PromptKind } from "./PromptKind";
 import type { RedirectWhat } from "./RedirectWhat";
+import type { RollKind } from "./RollKind";
+import type { RollResult } from "./RollResult";
 import type { RotationDirection } from "./RotationDirection";
 import type { Row } from "./Row";
 import type { SecretChoice } from "./SecretChoice";
@@ -178,4 +180,4 @@ radiant?: true, credits: number, } | { "type": "marketSold", player: PlayerId, i
 /**
  * Set when the card sold is Radiant. Only ever `Some(true)`.
  */
-radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, };
+radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, } | { "type": "held", player: PlayerId, instanceId: string, defId: string, holderId: string, } | { "type": "boardReplaced", player: PlayerId, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, };

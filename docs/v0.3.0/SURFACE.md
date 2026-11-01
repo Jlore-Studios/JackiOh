@@ -977,14 +977,15 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
   before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
-  border?, fullArt? }`, goes after the first view to a socket that shows a card that seat's deck
+  border?, fullArt? }` (`fullArt` `true` for the card's Epic full art, or a Legendary's or a
+  Mythic's id, R2655000), goes after the first view to a socket that shows a card that seat's deck
   dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
   `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:
   `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
-  fullArt? }` (absent keeps, `null` clears) and `POST /api/card-picks/upload` `{ cards }`
+  fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, R2655000) and `POST /api/card-picks/upload` `{ cards }`
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in
   `apps/web/src/game/net.ts` and `src/cards/loadouts.ts`; without them every seat but the viewer's
   draws the defaults.

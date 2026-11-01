@@ -2,39 +2,33 @@
 //! checked it, on a seed the server issued for it.
 //!
 //! - **An issue** (`POST /api/practice/seeds`) mints a seed and keeps it with the profile and the
-//!   game's setup: the AI tier, the human's seat, the deck and the catalog version, which the page
-//!   sends, and the human's last board, which the server keeps ([[R1303003]]) and answers with the
-//!   seed for the game to begin with. The same transaction prunes the profile's seeds issued more
-//!   than `PRACTICE_SEED_TTL_SECONDS` ago, so an abandoned game's seed goes ([[R1303001]]), and
-//!   refuses the request, issuing nothing, while the account already holds
-//!   `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]), counted under the account's economy
-//!   lock so requests made at once cannot pass it together.
-//! - **A release** (DELETE /api/practice/seeds/:seed) deletes the caller's unclaimed seed under the economy lock, so a game left without saving gives its place back ([[R2379000]]).
-//! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once
-//!   it is over. Its seed is burned first, in a transaction of its own, so it pays once whatever
-//!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log to the
-//!   claimed result off the runtime, re-running no AI move ([[R2560000]]), at most
-//!   `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait for a permit, and none is
-//!   dropped); then a claim that passed pays through the reward hook at practice rates (held to
-//!   the day's Jlore cap, [[R1483000]]), moving the account's quests as a
-//!   ladder game does ([[R1304001]]), and keeps the board it ended on, in a task of its own that
-//!   finishes even when the caller stops waiting.
-//!   The pay is one transaction, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store
-//!   fails it ([[R1688000]]); one that never lands answers an error and leaves the seed burned.
-//!   No transaction stays open across a check.
+//!   game's setup (AI tier, human's seat, deck, catalog version) and the human's last board, which
+//!   the server keeps ([[R1303003]]). The same transaction prunes seeds issued more than
+//!   `PRACTICE_SEED_TTL_SECONDS` ago ([[R1303001]]), and refuses, issuing nothing, while the account
+//!   holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]), counted under the account's
+//!   economy lock so requests made at once cannot pass it together.
+//! - **A release** (DELETE /api/practice/seeds/:seed) deletes the caller's unclaimed seed under the
+//!   economy lock, so a game left without saving gives its place back ([[R2379000]]).
+//! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once it
+//!   is over. Its seed is burned first, in a transaction of its own, so it pays once whatever the
+//!   check answers ([[R1303001]]); then `economy::practice::verify` folds the log to the claimed
+//!   result off the runtime, re-running no AI move ([[R2560000]]), at most
+//!   `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting. A claim that passed pays at practice rates (held
+//!   to the day's Jlore cap, [[R1483000]]), moves the quests as a ladder game does ([[R1304001]]) and
+//!   keeps the board it ended on, in a task that finishes even when the caller stops waiting. The
+//!   pay is one transaction, tried up to `PRACTICE_PAY_ATTEMPTS` times ([[R1688000]]); one that never
+//!   lands answers an error and leaves the seed burned. No transaction stays open across a check.
 //!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
-//! - **A settle, once** ([[R2422000]]): the burn keeps the claim (its result and log) with the seed,
-//!   and the claim settles once. The pay marks the seed `paid` first in its own transaction, only
-//!   where it has no mark, so the try that lands pays once whoever runs it; a refusal marks it
-//!   `refused`. The server counts the settles running (`App::practice_settles`), and its shutdown
-//!   drain waits for them before the store closes (`all_settled`). A claim still unsettled
-//!   `PRACTICE_SETTLE_GRACE_SECONDS` after its burn (every try at its pay failed, or the server
-//!   stopped or crashed under it) is settled by the retention loop (`sweep_unsettled`): checked
-//!   again under the same permits, then paid at the sweep's time, keeping no board, or marked
-//!   refused.
+//! - **A settle, once** ([[R2422000]]): the burn keeps the claim with the seed. The pay marks the seed
+//!   `paid` first, only where it has no mark, so the try that lands pays once; a refusal marks it
+//!   `refused`. The shutdown drain waits for running settles (`App::practice_settles`,
+//!   `all_settled`). A claim unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after its burn is settled by
+//!   the retention loop (`sweep_unsettled`): checked again under the same permits, then paid with no
+//!   board, or marked refused.
 //!
-//! The issue and the claim answer only while the economy is on ([[R1302006]]): an issue is a 409, a claim
-//! `economy_off`. A release answers whatever the switch says: it pays nothing. The page asks for a seed only for a game that can pay ([[R1303000]]).
+//! The issue and the claim answer only while the economy is on ([[R1302006]]): an issue is a 409, a
+//! claim `economy_off`. A release answers whatever the switch says: it pays nothing. The page asks
+//! for a seed only for a game that can pay ([[R1303000]]).
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -227,9 +221,8 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     }
     tx.commit().await?;
 
-    // The check and the pay run as a task of their own, so a caller that stops waiting (the page's
-    // request timeout behind a long queue, a closed tab) leaves its burned seed to be checked and
-    // paid all the same: nothing past the burn is dropped.
+    // The check and the pay run as a task of their own, so a caller that stops waiting (a request
+    // timeout, a closed tab) leaves its burned seed checked and paid all the same.
     let settled = spawn_settle(app, held, claimed, now, true)
         .await
         .map_err(|error| ApiError::internal(format!("the practice claim's check failed: {error}")))??;
@@ -423,12 +416,11 @@ pub struct Swept {
     pub refused: usize,
 }
 
-/// [[R2422000]]: settles every claim still unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after it
-/// burned its seed, the oldest first and one at a time, each as a counted task of its own: checked
-/// again under the verify permits, then paid at the sweep's time with no board, or marked refused.
-/// A claim another settle marks first pays nothing here. Nothing while the economy is off
-/// ([[R1302006]]): the claims wait for it. A settle that fails is logged and its claim left for
-/// the next sweep. The retention loop runs it (`api::retention::run_purge`).
+/// [[R2422000]]: settles every claim unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after its burn, the
+/// oldest first, one at a time, each as a counted task: checked again under the verify permits, then
+/// paid at the sweep's time with no board, or marked refused. Nothing while the economy is off
+/// ([[R1302006]]). A settle that fails is logged and its claim left for the next sweep. The
+/// retention loop runs it (`api::retention::run_purge`).
 pub async fn sweep_unsettled(app: &Arc<App>) -> StoreResult<Swept> {
     let mut swept = Swept::default();
     if !app.economy_live {

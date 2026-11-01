@@ -487,6 +487,37 @@ describe("QA v0.2.0, Card Cosmetic", () => {
       "Cast a random Call to Chaos",
     ]);
   });
+
+  it("R2652001 a roll is stated in words in the log and the live region", () => {
+    vi.useFakeTimers();
+    const GARY = "core-004";
+    const coin = (heads: boolean): { faces: number[]; kept: number } => ({ faces: [heads ? 1 : 2], kept: 0 });
+    const seven: GameEvent = {
+      type: "rolled",
+      player: "p2",
+      instanceId: "c4",
+      defId: GARY,
+      kind: "coin",
+      sides: 2,
+      rolls: [true, false, true, true, false, true, false].map(coin),
+    };
+    showcase([seven]);
+    expect(screen.getByTestId(showcaseTestid.rollLive)).toHaveTextContent(`${nameOf(GARY)} flipped 7 coins: 4 heads, 3 tails`);
+    cleanup();
+
+    const logged: GameEvent[] = [
+      seven,
+      { type: "rolled", player: "p2", instanceId: "c4", defId: GARY, kind: "coin", sides: 2, rolls: [{ faces: [2, 1], kept: 1 }] },
+      { type: "rolled", player: "p1", instanceId: "c9", defId: "stinkyscape-154", kind: "die", sides: 80, rolls: [{ faces: [12], kept: 0 }, { faces: [67], kept: 0 }] },
+      { type: "rolled", player: "p2", instanceId: "hidden", defId: "hidden", kind: "die", sides: 100, rolls: [{ faces: [41], kept: 0 }] },
+    ];
+    render(withCatalog(<Log view={withEvents(baseView(), logged)} revealed />));
+    const lines = Array.from(document.querySelectorAll(".log li")).map((line) => line.textContent ?? "");
+    expect(lines).toContain(`${nameOf(GARY)} flipped 7 coins: 4 heads, 3 tails`);
+    expect(lines).toContain(`${nameOf(GARY)} flipped a coin: heads (Lucky rolled 1 more)`);
+    expect(lines).toContain(`${nameOf("stinkyscape-154")} rolled 2 80-sided dice: 12; 67`);
+    expect(lines).toContain("A hidden card rolled a 100-sided die: 41");
+  });
 });
 
 describe("QA v0.2.0, the reader", () => {

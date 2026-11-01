@@ -142,7 +142,6 @@ mod r783000_ranged {
         assert_eq!(damage_on(&forced, &target.id), 2);
         took_nothing_back(&forced, &events, &archer.id);
 
-        // A unit that is not Ranged still takes its strike back.
         let mut plain = board("r783000-plain");
         let attacker = put(&mut plain, &grunt().id, slot(P1, Row::Units, 1), json!({}));
         let target = put(&mut plain, &ranged().id, slot(P2, Row::Units, 1), json!({}));
@@ -153,7 +152,6 @@ mod r783000_ranged {
 
     #[test]
     fn r783000_against_a_ranged_defender_first_strike_and_poisonous_strike_back() {
-        // Ranged on Ranged: the exchange is the plain one, both strike.
         let mut state = board("r783000-both");
         let archer = put(&mut state, &ranged().id, slot(P1, Row::Units, 1), json!({}));
         let other = put(&mut state, &ranged().id, slot(P2, Row::Units, 1), json!({}));
@@ -243,13 +241,11 @@ mod r783002_flying {
         let wing = put(&mut state, &flyer().id, slot(P1, Row::Units, 3), json!({}));
         let bird = put(&mut state, &flyer().id, slot(P2, Row::Units, 1), json!({}));
 
-        // `legal_actions` offers the Flying unit to the Ranged and the Flying attackers only.
         assert!(!attack_targets(&state, &walker.id).contains(&bird.id));
         assert!(attack_targets(&state, &archer.id).contains(&bird.id));
         assert!(attack_targets(&state, &wing.id).contains(&bird.id));
         assert!(!attack_targets(&state, &walker.id).is_empty());
 
-        // The reducer refuses exactly the one it does not offer.
         assert!(attack_refusal(&state, &walker.id, &bird.id).contains("Flying or Ranged"));
         assert_eq!(attack_refusal(&state, &archer.id, &bird.id), "");
         assert_eq!(attack_refusal(&state, &wing.id, &bird.id), "");
@@ -283,11 +279,9 @@ mod r783002_flying {
         };
         let bird = put(&mut state, &flyer().id, slot(P2, Row::Units, 2), json!({}));
 
-        // An "all" effect.
         cast_now(&mut state, &quake().id, P1, false);
         assert_eq!(damage_on(&state, &bird.id), 1);
 
-        // A Spell's target.
         let bolt = new_instance(&mut state, &cloaked_bolt().id, P1, Zone::Hand { player: P1 });
         state.players.p1.hand.push(bolt.clone());
         state = act(
@@ -301,7 +295,6 @@ mod r783002_flying {
         );
         assert!(in_graveyard(&state, P2, &bird.id), "the Spell's 2 finished it");
 
-        // A Cry's target.
         let mut cried = board("r783002-cry");
         cried.players.p1.mana.current = 4;
         let bird = put(&mut cried, &flyer().id, slot(P2, Row::Units, 2), json!({}));
@@ -432,12 +425,10 @@ mod r1081000_flying_backrow {
         let mut state = board("r1081000-zones");
         let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
         let zones = legal_zones_for(&state, P1, &bird, &[]);
-        // An empty board: every unit lane and every backrow lane.
         for lane in 1..=5 {
             assert!(zones.contains(&unit_zone(lane)), "unit lane {lane} offered");
             assert!(zones.contains(&backrow_zone(lane)), "backrow lane {lane} offered");
         }
-        // A Unit that cannot fly is offered its unit lanes only.
         let plain = in_hand_with_mana(&mut state, &grunt().id, P1);
         let plain_zones = legal_zones_for(&state, P1, &plain, &[]);
         assert!(!plain_zones.is_empty());
@@ -447,7 +438,6 @@ mod r1081000_flying_backrow {
     #[test]
     fn r1081000_flying_unit_plays_into_empty_backrow_and_acts() {
         let mut state = board("r1081000-stand");
-        // A Unit that cannot fly is still refused the backrow.
         let plain = in_hand_with_mana(&mut state, &grunt().id, P1);
         assert!(
             play_refusal(&state, &plain.id, json!({ "row": "backrow", "lane": 1 }))
@@ -455,12 +445,10 @@ mod r1081000_flying_backrow {
         );
         let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
         let target = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
-        // It attacks from the backrow.
         let (refused, _) = declare(&mut state, &wing.id, &target.id);
         assert_eq!(refused, None);
         assert_eq!(damage_on(&state, &target.id), 2);
 
-        // Played from hand with `zone: { row: backrow }`, it stands there.
         let mut played = board("r1081000-played");
         let bird = in_hand_with_mana(&mut played, &flyer().id, P1);
         let next = act(
@@ -485,7 +473,6 @@ mod r1081000_flying_backrow {
             "the flyer stands in backrow lane 2"
         );
         assert!(active_units_of(&next, P1).iter().any(|unit| unit.id == bird.id));
-        // Its backrow entry carries the Unit it is, with its live attack.
         let view = view_for(&next, P1);
         let BackrowView::Public(entry) = view.you.backrow[1].as_ref().expect("a public card") else {
             panic!("the backrow flyer is public");
@@ -500,7 +487,6 @@ mod r1081000_flying_backrow {
                 .any(|keyword| keyword.kind() == KeywordKind::Flying)
         );
 
-        // In Attack Position it is attacked only by Flying or Ranged.
         let mut fought = next;
         let walker = put(&mut fought, &grunt().id, slot(P2, Row::Units, 1), json!({}));
         let archer = put(&mut fought, &ranged().id, slot(P2, Row::Units, 2), json!({}));
@@ -521,7 +507,6 @@ mod r1081000_flying_backrow {
             slot(P1, Row::Backrow, 1),
             json!({}),
         );
-        // Flying with Stack is offered the occupied zones of either row.
         let stacker = in_hand_with_mana(&mut state, &flying_stacker().id, P1);
         let zones = legal_zones_for(&state, P1, &stacker, &[]);
         assert!(zones.contains(&unit_zone(1)), "the occupied unit zone is offered");
@@ -529,11 +514,9 @@ mod r1081000_flying_backrow {
             zones.contains(&backrow_zone(1)),
             "the occupied backrow zone is offered"
         );
-        // Plain Flying is refused both: neither zone is open.
         let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
         assert!(play_refusal(&state, &bird.id, json!({ "row": "units", "lane": 1 })).contains("not open"));
         assert!(play_refusal(&state, &bird.id, json!({ "row": "backrow", "lane": 1 })).contains("not open"));
-        // Played onto the occupied backrow zone, the Stack flyer tops it as a pile.
         let next = act(
             &state,
             json!({
@@ -572,7 +555,6 @@ mod r1081000_flying_backrow {
             json!({}),
         );
         let other = put(&mut state, &grunt().id, slot(P2, Row::Units, 2), json!({}));
-        // Landed: anything may attack it, and its Taunt binds every attacker.
         set_position(&mut state, &wall.id, Position::Def);
         assert_eq!(attack_targets(&state, &walker.id), vec![wall.id.clone()]);
         assert_eq!(attack_refusal(&state, &walker.id, &wall.id), "");
@@ -607,7 +589,6 @@ mod r1081000_flying_backrow {
     fn r1081000_no_double_count() {
         let mut state = board("r1081000-once");
         let bird = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
-        // One backrow flyer is one permanent.
         let quest: QuestDef = json_as(json!({
             "id": "q",
             "text": "q",
@@ -623,7 +604,6 @@ mod r1081000_flying_backrow {
                 .count(),
             1
         );
-        // One card in the Audit's scan.
         let targets = audit_targets(
             &state,
             AuditArgs {
@@ -635,7 +615,6 @@ mod r1081000_flying_backrow {
             },
         );
         assert_eq!(targets.iter().filter(|card| card.id == bird.id).count(), 1);
-        // One listing on the view: a public backrow entry carrying its unit, and no unit-row entry.
         let view = view_for(&state, P1);
         assert!(view.you.units.iter().all(|unit| unit.is_none()));
         let BackrowView::Public(entry) = view.you.backrow[1].as_ref().expect("a public card") else {
@@ -663,7 +642,6 @@ mod r1081000_flying_backrow {
             let result = reduce(&state, &Action::new(body.clone(), P1, "r1081000-offered"));
             assert_eq!(result.error, None, "offered {body:?}, refused");
         }
-        // Declared as an action, the attack lands on the hero, and the switch spends its exertion.
         let attacked = act(
             &state,
             json!({ "type": "attack", "attackerId": wing.id, "targetId": "hero-p2", "playerId": "p1" }),
@@ -703,7 +681,6 @@ mod r1081000_flying_backrow {
 
     #[test]
     fn r1081000_a_backrow_flyer_at_zero_health_dies_and_meets_every_unit_effect() {
-        // An "all Units" effect reaches it, as the 1 damage of a quake shows on either side.
         let mut state = board("r1081000-all");
         let mine = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 3), json!({}));
         let theirs = put(&mut state, &flyer().id, slot(P2, Row::Backrow, 2), json!({}));
@@ -760,7 +737,6 @@ mod r1081000_flying_backrow {
         assert!(stands(&state, P2, &wing.id), "it stands on the other side");
         assert!(active_units_of(&state, P2).iter().any(|unit| unit.id == wing.id));
 
-        // A rotation across the center line likewise.
         let mut ring = board("r1081000-rotate");
         let wing = put(&mut ring, &flyer().id, slot(P1, Row::Backrow, 5), json!({}));
         vanilla(&mut ring, &wing.id);
@@ -796,7 +772,6 @@ mod r1081000_flying_backrow {
         };
         assert!(stands(&ring, player, &wing.id), "and stands where it landed");
 
-        // A steal takes it into the thief's open backrow zone, standing.
         let mut taken = board("r1081000-steal");
         let wing = put(&mut taken, &flyer().id, slot(P2, Row::Backrow, 3), json!({}));
         vanilla(&mut taken, &wing.id);
@@ -1053,7 +1028,6 @@ mod r1081000_flying_backrow {
         assert_pile(&state, slot(P1, Row::Backrow, 2), &top.id, &under.id);
         assert_eq!(live(&state, &under.id).zone.z(), ZoneName::Field);
 
-        // A rotation moves it along the backrow ring whole, too.
         let mut ring = board("r1081000-pile-rotate");
         let (top, under) = flyer_beneath_a_stack_flyer(&mut ring);
         {
@@ -1133,7 +1107,6 @@ mod r1081000_flying_backrow {
             Some(wing.id.clone())
         );
         assert!(can_go_berserk(&state, &wing));
-        // It may attack again.
         if let Some(card) = find_instance_mut(&mut state, &wing.id) {
             card.exertion.attacked = true;
         }

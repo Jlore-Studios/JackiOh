@@ -19,6 +19,7 @@ import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
+import { rollCues } from "./rolls.ts";
 import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
@@ -1226,6 +1227,8 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   overflow,
   // R436 (chaos.ts) and R437 (brand.ts).
   chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
+  // R2652001: a batch of coin flips or die rolls, every one landing at once in one panel (rolls.ts).
+  roll: (event, p) => rollCues(event, p.D, p.env.intensity),
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,
   armor,

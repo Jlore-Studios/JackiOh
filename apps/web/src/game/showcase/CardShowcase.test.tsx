@@ -10,9 +10,11 @@ import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
 import { withCatalog } from "../../test/board.tsx";
 import { baseView, unit, withEvents } from "../../test/fixtures.ts";
+import { createAnimationQueue } from "../animations.ts";
 import Game from "../Game.tsx";
 import CardShowcase from "./CardShowcase.tsx";
 import {
+  SHOWCASE_GATE_MAX_MS,
   SHOWCASE_HOLD_MS,
   SHOWCASE_MULTICAST_HOLD_MS,
   TRAP_REVEAL_TEXT,
@@ -262,6 +264,45 @@ describe("per viewer, as a hotseat device is handed over", () => {
     expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase-def", "core-011");
     advance(SHOWCASE_HOLD_MS);
     expect(screen.queryByTestId(T.root)).toBeNull();
+  });
+
+  // R2652000: a face-down Ace in the Hole's tails is its controller's alone, so p1's view holds it and
+  // p2's never does; the words said to p1 must not stay on the device, or arrive, once p2 holds it.
+  const ACE = "classic-065";
+  const tails: GameEvent = {
+    type: "rolled",
+    player: "p1",
+    instanceId: "c65",
+    defId: ACE,
+    kind: "coin",
+    sides: 2,
+    rolls: [{ faces: [2], kept: 0 }],
+  };
+  const ended: GameEvent = { type: "turnEnded", player: "p1", turn: 4, unspentMana: 0 };
+  const said = (): string => screen.getByTestId(T.rollLive).textContent ?? "";
+
+  it("R2652000 a roll said to one seat is gone from the live region once the device is handed over", () => {
+    const { rerender } = render(withCatalog(<CardShowcase view={withEvents(baseView(), [TURN])} />));
+    rerender(withCatalog(<CardShowcase view={withEvents(baseView(), [TURN, tails, ended])} />));
+    expect(said()).toMatch(/flipped a coin: tails/);
+    rerender(withCatalog(<CardShowcase view={asP2([TURN, ended])} />));
+    expect(said()).toBe("");
+    // Nor does it come back to p1, whose window has nothing new.
+    rerender(withCatalog(<CardShowcase view={withEvents(baseView(), [TURN, tails, ended])} />));
+    expect(said()).toBe("");
+  });
+
+  it("R2652000 a roll still waiting on its runner entry is never said to the seat that took the device", () => {
+    const queue = createAnimationQueue({ schedule: () => undefined, reducedMotion: false });
+    const tree = (view: PlayerView) => withCatalog(<CardShowcase view={view} queue={queue} />);
+    const { rerender } = render(tree(withEvents(baseView(), [TURN])));
+    rerender(tree(withEvents(baseView(), [TURN, tails, ended])));
+    // Gated: nothing is said until the runner reaches it.
+    expect(said()).toBe("");
+    rerender(tree(asP2([TURN, ended])));
+    // The gate lets go with p2 holding the device: the words were p1's.
+    advance(SHOWCASE_GATE_MAX_MS);
+    expect(said()).toBe("");
   });
 });
 

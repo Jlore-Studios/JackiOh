@@ -181,7 +181,8 @@ export type StripGroup = { kind: StripKind; items: StripItem[] };
 
 /**
  * R1655000: what a card may wear, by kind: the registry's foils, finishes and borders (the default
- * first), and the card's own full art beside the face with none, the kind absent where it has none.
+ * first), and the face with no full art then the card's own (R2655000: its Epic, Legendary and
+ * Mythic), the kind absent where it has none.
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
   const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
@@ -194,14 +195,15 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
       owned: canEquip(defId, cosmetic.id),
     })),
   }));
-  for (const cosmetic of COSMETICS) {
-    if (cosmetic.kind !== "fullArt" || cosmetic.card !== defId) continue;
+  const fullArts: StripItem[] = COSMETICS.flatMap((cosmetic): StripItem[] =>
+    cosmetic.kind === "fullArt" && cosmetic.card === defId
+      ? [{ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }]
+      : [],
+  );
+  if (fullArts.length > 0) {
     groups.push({
       kind: "fullArt",
-      items: [
-        { kind: "fullArt", id: NO_FULL_ART_ID, name: t("No full art"), rarity: "Common", owned: true },
-        { kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) },
-      ],
+      items: [{ kind: "fullArt", id: NO_FULL_ART_ID, name: t("No full art"), rarity: "Common", owned: true }, ...fullArts],
     });
   }
   return groups;

@@ -1,19 +1,15 @@
-// The card pool as a grid of full cards (docs/polish/6-cards.md, Surface D). Every pool entry is a
-// `div.db-item` holding the card, `card-pool-<id>` (`data-held-by` when a compared deck holds it, R251:
-// a card is its catalog id, so one copy per trio), and `db-add-<id>`, the "+" that adds it in one tap.
-// A click, a right-click or a touch long-press opens the card's detail view, whose "Add to <deck>"
-// adds it. A resting mouse opens a preview only on a card whose face prints less than its whole text
-// (#1017). The face is decoration to a screen reader (it repeats the name); the detail view reads the
-// rules out in full. READ-ONLY, for the Card Almanac (R630): given none of the deck editor's props, the
-// grid has no "+", no drag and none of the deck's `data-*` or `aria-disabled`.
-// R1956000: a card the viewer owns is drawn as their own copy and wears their picks for it (the
-// foil, finish, border and full art of R1655000): below the deck builder's `OwnCopy` every card
-// the collection does not say is unowned, and in a read-only grid the cards `own` names.
-// #2266: the Almanac draws about 700 cards, so each card is memoized (`PoolCard`). #2334: its grid
-// is `virtual`, mounting only the rows near the view (poolWindow.ts, usePoolWindow.ts); its row tracks
-// keep the height of the rest, so the scrollbar and each card's place are the whole pool's. The cards
-// just past the view are mounted before the keyboard reaches them, so every card is reachable by Tab.
-// Find-in-page sees only mounted cards. A page with no layout (a test's jsdom) draws every card.
+// The card pool as a grid of full cards (docs/polish/6-cards.md, Surface D). Every entry is a `div.db-item`
+// holding the card, `card-pool-<id>` (`data-held-by` when a compared deck holds it, R251: a card is its
+// catalog id, so one copy per trio), and `db-add-<id>`, the "+" that adds it in one tap. A click, right-click
+// or long-press opens the detail view ("Add to <deck>"). A resting mouse opens a preview only on a card whose
+// face prints less than its whole text (#1017). The face is decoration to a screen reader. READ-ONLY, for the
+// Card Almanac (R630): given none of the deck editor's props, no "+", no drag, no `data-*` or `aria-disabled`.
+// R1956000: a card the viewer owns is drawn as their own copy with their picks (R1655000's foil, finish,
+// border, full art): below the deck builder's `OwnCopy` every card the collection does not say is unowned,
+// in a read-only grid the cards `own` names. #2266: the Almanac draws ~700 cards, so each is memoized
+// (`PoolCard`). #2334: a `virtual` grid mounts only rows near the view (poolWindow.ts, usePoolWindow.ts), its row
+// tracks keep the rest's height, and cards just past the view mount so every card is reachable by Tab.
+// Find-in-page sees only mounted cards; a page with no layout (a test's jsdom) draws every card.
 
 import {
   memo,
@@ -56,9 +52,8 @@ export type PoolPlace = "deck" | Holder | null;
 export type OwnCopies = { cards: ReadonlySet<string>; owned: CardOwnership };
 
 /**
- * R1956000: `children` drawn as the viewer's own copy of `cardId`, owning what `own.owned` holds,
- * when `own` names the card; as the providers above say otherwise. It always renders both
- * providers, so a face below it keeps its place in the tree when `own` arrives.
+ * R1956000: `children` drawn as the viewer's own copy of `cardId`, owning what `own.owned` holds, when `own`
+ * names the card. It always renders both providers, so a face below keeps its place when `own` arrives.
  */
 export function AsOwnCopy({
   own,
@@ -171,9 +166,8 @@ const SEES_NEAR =
   typeof HTMLElement !== "undefined" && "oncontentvisibilityautostatechange" in HTMLElement.prototype;
 
 /**
- * A pool card's face, drawn the first time the browser un-skips its holder and kept after. A face
- * still skipped holds nothing: reading the style of anything inside a skipped face forces a layout
- * of the whole page. A browser without the event draws every face at once.
+ * A pool card's face, drawn the first time the browser un-skips its holder and kept after; a skipped face
+ * holds nothing, since reading its style forces a layout of the whole page. No event: every face at once.
  */
 function PoolFace({ children }: { children: ReactNode }): ReactElement {
   const holder = useRef<HTMLSpanElement>(null);

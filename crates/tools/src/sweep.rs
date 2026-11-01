@@ -25,11 +25,10 @@
 //! cargo jackioh sweep --due [REV]                  the ids a sweep is due over since REV (R1678000)
 //! ```
 //!
-//! Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
-//! A slice writes each line as it lands, so one cut short keeps what it finished: rerun the rest.
-//! Tooling, so it may read the clock (`Instant`, for decision timing), files and the console;
-//! `crates/ai` stays pure and receives the clock as `now`, and R977000's re-timer, which times again a
-//! decision the clock found slow against the perf gate's yardstick, as `retime` (`still_slow`).
+//! Pass 2 needs every slice's pass 1 first (the at-risk list is the whole sweep's); a slice writes each
+//! line as it lands, so one cut short keeps what it finished: rerun the rest.
+//! Tooling, so it may read the clock (`Instant`) and files; `crates/ai` stays pure and receives the
+//! clock as `now`, and R977000's re-timer, which times a slow decision again, as `retime` (`still_slow`).
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -203,7 +202,7 @@ fn name_of(def_id: &str) -> String {
         .map_or_else(|| def_id.to_string(), |def| def.name.clone())
 }
 
-/// A sweep flag's name, as TS wrote it (`neverPlayed` …).
+/// A sweep flag's name (`neverPlayed` …).
 fn flag_names(flags: &[SweepFlag]) -> String {
     flags.iter().map(literal).collect::<Vec<_>>().join(", ")
 }
@@ -247,8 +246,7 @@ fn timed<T>(label: &str, run: impl FnOnce() -> T, describe: impl FnOnce(&T) -> S
     result
 }
 
-/// The clock `sweepCard` and `sweepAtRisk` time decisions with: milliseconds since `origin`
-/// (TS: `performance.now`).
+/// The clock `sweepCard` and `sweepAtRisk` time decisions with: milliseconds since `origin`.
 fn milliseconds_since(origin: Instant) -> impl Fn() -> f64 {
     move || origin.elapsed().as_secs_f64() * MS_PER_SECOND
 }
@@ -397,7 +395,7 @@ fn pass2(
     results
 }
 
-/// `[...new Set(xs)].sort()`.
+/// The ids sorted, each once.
 fn sorted_unique(ids: impl IntoIterator<Item = String>) -> Vec<String> {
     let mut unique: Vec<String> = ids.into_iter().collect::<IndexSet<_>>().into_iter().collect();
     unique.sort();

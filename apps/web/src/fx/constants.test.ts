@@ -94,6 +94,12 @@ const S2 = {
   FX_CHAOS_LAND_LAST: 0.85,
   FX_CHAOS_REEL_DECOYS: 6,
   FX_CHAOS_DECOY_STEP: 3,
+  // Issue #2652: a batch of coins or dice (R2652001).
+  FX_ROLL_LAND_AT: 0.5,
+  FX_ROLL_STAGGER: 0.05,
+  FX_ROLL_LAND_LAST: 0.7,
+  FX_ROLL_TUMBLE_FACES: 8,
+  FX_ROLL_TUMBLE_STRIDE: 3,
   // Issue #124: the sweep's fog, the whole-pile wave and the multicast flare.
   FX_FOG_HIT_FROM: 0.2,
   FX_FOG_HIT_TO: 0.75,
@@ -190,6 +196,8 @@ const S2 = {
     auspicious: "吉",
     inauspicious: "凶",
     chaosRolled: "Call to Chaos:",
+    coinsFlipped: "Coin flip",
+    diceRolled: "Dice roll",
     turnCutShort: "Turn cut short",
     autopilot: "The AI takes the turn",
     votedOut: "Voted out",
@@ -291,7 +299,7 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
     expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_WALLS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
-    for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST]) {
+    for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST, constants.FX_ROLL_LAND_AT, constants.FX_ROLL_LAND_LAST]) {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);
     }

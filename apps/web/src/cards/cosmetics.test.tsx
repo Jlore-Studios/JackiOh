@@ -1063,6 +1063,44 @@ describe("R1833000 the 36 earned cosmetics' looks", () => {
   });
 });
 
+describe("R2655003 the full-art tiers' motion", () => {
+  const GATE = ':root:not([data-reduce-motion="true"]) ';
+
+  it("R2655003 the full-art tiers move only inside the motion gate by transform or opacity, and stand still outside it", () => {
+    const gated = gatedRules(cosmeticsCss);
+    const moving = gated.filter((rule) => rule.selector.includes("cf-full-art--") && /animation\s*:/.test(rule.body));
+    // The art's drift and the band's sweep on both moving tiers; the signature's wipe on the Mythic.
+    expect(moving.map((rule) => rule.selector)).toEqual([
+      `${GATE}.cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-art-frame > .cf-art`,
+      `${GATE}.cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-full-art-sweep`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-wipe`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-ink`,
+    ]);
+    // Outside the gate nothing of a full art's tier animates: the still frame and the whole name.
+    const all = rules(cosmeticsCss);
+    const ungated = all.filter(
+      (rule) => /cf-full-art|cf-signature/.test(rule.selector) && !gated.some((inner) => inner.selector === rule.selector && inner.body === rule.body),
+    );
+    expect(ungated.length).toBeGreaterThan(0);
+    for (const rule of ungated) expect(rule.body, rule.selector).not.toMatch(/animation|transition|transform\s*:/);
+    // Each loop moves by transform or opacity alone, and the name's wipe runs once and holds.
+    for (const name of ["full-art-drift", "full-art-sweep", "full-art-sign-wipe", "full-art-sign-ink"]) {
+      const at = cosmeticsCss.indexOf(`@keyframes ${name} {`);
+      expect(at, name).toBeGreaterThanOrEqual(0);
+      const body = blockFrom(cosmeticsCss, cosmeticsCss.indexOf("{", at));
+      const properties = [...body.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1]);
+      expect(properties.length, name).toBeGreaterThan(0);
+      for (const property of properties) expect(["transform", "opacity"], `${name}: ${property ?? ""}`).toContain(property);
+    }
+    for (const rule of moving.filter((rule) => rule.selector.includes("cf-signature"))) expect(rule.body, rule.selector).toMatch(/\bboth\b/);
+    for (const rule of moving.filter((rule) => !rule.selector.includes("cf-signature"))) expect(rule.body, rule.selector).toMatch(/\binfinite\b/);
+    // The signature is set in the self-hosted script face, in the palette's colors.
+    const text = ruleBody(cosmeticsCss, /\.cf-signature-text\s*\{/);
+    expect(text).toMatch(/font-family:\s*var\(--font-signature\)/);
+    for (const rule of all.filter((rule) => /cf-full-art|cf-signature/.test(rule.selector))) expect(hexes(rule.body), rule.selector).toEqual([]);
+  });
+});
+
 describe("R1953001 the chases move everywhere, and a card wears its own picks or the defaults", () => {
   /** Every Legendary and Mythic entry of the registry, the starters among them, so a new one is walked too. */
   const CHASES = COSMETICS.filter((cosmetic) => cosmetic.rarity === "Legendary" || cosmetic.rarity === "Mythic");
@@ -1082,9 +1120,10 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
   }
 
   it("R1953001 every Legendary and Mythic foil, finish, border, table, card back and field moves in a game, in the Collection's samples and on its mini boards", () => {
-    // The chase mark is exactly Legendary and Mythic (R1333000), and every kind a player equips has some.
+    // The chase mark is exactly Legendary and Mythic (R1333000), and every kind a player equips has
+    // some, a card's full art among them since #2655 (R2655000).
     expect(CHASES.map((cosmetic) => cosmetic.id)).toEqual(COSMETICS.filter((cosmetic) => cosmetic.chase).map((cosmetic) => cosmetic.id));
-    expect(new Set(CHASES.map((cosmetic) => cosmetic.kind))).toEqual(new Set([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS]));
+    expect(new Set(CHASES.map((cosmetic) => cosmetic.kind))).toEqual(new Set([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS, "fullArt"]));
     for (const { id } of COSMETICS) expect(isChaseCosmetic(id), id).toBe(CHASES.some((chase) => chase.id === id));
     expect(isChaseCosmetic("no-such-cosmetic")).toBe(false);
 
@@ -1112,6 +1151,11 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
         case "field":
           // Scoped to no board, so the mini board's backdrop (game/Backdrop.tsx) moves as the game's does.
           expect(animates(tableCss, `.board-backdrop[data-backdrop="${id}"] `), id).toBe(true);
+          break;
+        case "fullArt":
+          // R2655000: every Legendary and Mythic full art moves its art wherever its card prints it, by
+          // its tier's class, which CardFace sets on every full face of that tier (fullArtTiers.test.tsx).
+          expect(animates(cosmeticsCss, '.cf.cf-full-art--animated[data-full-art-motion="animated"] '), id).toBe(true);
           break;
         default:
           throw new Error(`${id} is a chase of a kind no player equips`);

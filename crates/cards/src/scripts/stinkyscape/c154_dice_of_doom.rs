@@ -9,6 +9,10 @@
 //! (`lucky_on`, printed plus given) and its player's Luck roll it again, any `HIT` a hit (R1440). The
 //! Radiant face rolls `RADIANT_ROLLS` dice of 1 to `RADIANT_SIDES`, each lucky the same way, either a
 //! hit. Every roll is made, hit or not, so the draws a play takes never hang on the faces. Embiggened,
+//! the instance first gains Lucky +1 for good (`gain_keyword_for_good`, R386, kept in every zone,
+//! R1438), counting toward this play's roll. A hit adds each Terminus card (S #4's `TERMINUS_CARDS`,
+//! R1857002) at `costOverride` 0. The dice are reported to both players as one batch before the Lucky
+//! gain and the Terminus cards, every roll of each die with the one it kept (R2652001).
 
 use jackioh_engine::effects::{add_to_hand, gain_keyword_for_good};
 use jackioh_engine::prelude::*;
@@ -33,11 +37,12 @@ fn roll(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     } else {
         (1, SIDES)
     };
-    let mut hit = false;
-    for _ in 0..rolls {
-        hit |= ctx.rng.lucky(lucky, |rng| rng.int(sides) + 1 == HIT, |a, b| a || b);
-    }
-    let mut effects = Vec::new();
+    let dice: Vec<RollResult> = (0..rolls)
+        .map(|_| roll_die(ctx, sides, lucky, |face| face == HIT))
+        .collect();
+    let hit = dice.iter().any(|die| die.kept_face() == HIT);
+    // R2652001: the dice are shown, every Lucky roll of each, before anything they decided.
+    let mut effects = vec![report_rolls(RollKind::Die, sides, dice)];
     if gain > 0 {
         effects.push(gain_keyword_for_good(json_as(
             json!({ "keyword": { "kind": "Lucky", "n": gain } }),
@@ -249,6 +254,84 @@ mod tests {
             }
             crate::register_all();
             assert!(crate::card_def(ID).tags.contains(&Tag::Quickdraw));
+        }
+
+        /// The last step's one `rolled` batch, as `(sides, rolls)`, checking it is the dice's and comes
+        /// before every card the play added to the hand.
+        fn report(s: &Scenario) -> (i32, Vec<RollResult>) {
+            let at = |kind: GameEventType| s.last_events().iter().position(|event| event.event_type() == kind);
+            let batches: Vec<&GameEvent> =
+                s.last_events().iter().filter(|event| event.event_type() == GameEventType::Rolled).collect();
+            assert_eq!(batches.len(), 1, "one batch");
+            if let Some(added) = at(GameEventType::AddedToHand) {
+                assert!(at(GameEventType::Rolled) < Some(added), "the dice show before the cards they won");
+            }
+            let GameEvent::Rolled { def_id, kind, sides, rolls, face_down, .. } = batches[0] else {
+                unreachable!("filtered to rolled");
+            };
+            assert_eq!((def_id.as_str(), *kind, *face_down), (ID, RollKind::Die, None));
+            (*sides, rolls.clone())
+        }
+
+        /// R2652001: the base face's one d100 is reported with its one face; a hit keeps the 67 and adds
+        /// the Terminus cards, a miss keeps its face and adds nothing.
+        #[test]
+        fn r2652001_base_one_d100_reported_and_a_67_kept_on_a_hit() {
+            let seed = seed_where("dice-of-doom-reported-hit", |seed| hits(seed, false));
+            let s = rolled(&seed, false, json!({}));
+            let (sides, rolls) = report(&s);
+            assert_eq!(sides, 100);
+            assert_eq!(rolls, vec![RollResult { faces: vec![HIT], kept: 0 }]);
+            assert_eq!(added(&s).len(), TERMINUS_CARDS.len());
+
+            let seed = seed_where("dice-of-doom-reported-miss", |seed| !hits(seed, false));
+            let cursor = board(&seed, false).state().rng_cursor;
+            let face = Rng::new(&seed, cursor).int(100) + 1;
+            let s = rolled(&seed, false, json!({}));
+            assert_eq!(report(&s), (100, vec![RollResult { faces: vec![face], kept: 0 }]));
+            assert_ne!(face, HIT);
+            assert!(added(&s).is_empty());
+        }
+
+        /// R2652001: the Radiant face's two d80s are one batch of two dice, each its own face in draw
+        /// order.
+        #[test]
+        fn r2652001_radiant_two_d80s_are_one_batch() {
+            let seed = "dice-of-doom-reported-radiant";
+            let cursor = board(seed, true).state().rng_cursor;
+            let mut rng = Rng::new(seed, cursor);
+            let faces = [rng.int(RADIANT_SIDES) + 1, rng.int(RADIANT_SIDES) + 1];
+            let s = rolled(seed, true, json!({}));
+            assert_eq!(
+                report(&s),
+                (
+                    RADIANT_SIDES,
+                    faces.iter().map(|face| RollResult { faces: vec![*face], kept: 0 }).collect()
+                )
+            );
+            assert_eq!(added(&s).is_empty(), !faces.contains(&HIT));
+        }
+
+        /// R1438, R2652001: Embiggened, the Lucky it gains rolls its die once more, so the die reports
+        /// both faces in draw order, a 67 kept if either is one.
+        #[test]
+        fn r2652001_embiggened_each_die_reports_two_faces() {
+            for radiant in [false, true] {
+                let seed = format!("dice-of-doom-reported-embiggened-{radiant}");
+                let cursor = board(&seed, radiant).state().rng_cursor;
+                let sides = if radiant { RADIANT_SIDES } else { 100 };
+                let mut rng = Rng::new(&seed, cursor);
+                let s = rolled(&seed, radiant, json!({ "embiggen": true }));
+                let (reported_sides, rolls) = report(&s);
+                assert_eq!(reported_sides, sides);
+                assert_eq!(rolls.len(), if radiant { 2 } else { 1 });
+                for die in &rolls {
+                    let faces = vec![rng.int(sides) + 1, rng.int(sides) + 1];
+                    let kept = i32::from(faces[0] != HIT && faces[1] == HIT);
+                    assert_eq!(die, &RollResult { faces, kept });
+                }
+                assert_eq!(s.state().rng_cursor, cursor + 2 * rolls.len() as u32);
+            }
         }
 
         #[test]

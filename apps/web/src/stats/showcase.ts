@@ -2,11 +2,11 @@
 // holds no data for is left out. This module only chooses and words them; it takes the stage's types
 // and nothing else of it, so the effects layer stays off the first screen until the showcase is drawn.
 //
-// R1743000: a stat's card is never a token, nor one the catalog no longer holds. The order is a
-// shuffled bag (`nextInBag`) drawn from the page's random source.
+// R1743000: a stat's card is never a token, nor one the catalog no longer holds (R2649000: 65 stats).
+// The order is a shuffled bag (`nextInBag`) drawn from the page's random source.
 //
-// R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit; Hot
-// Streak, The Record and Ride or Die read the wins), and `animationFor` fits a lunge to the card's type.
+// R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit), and
+// `animationFor` fits a lunge to the card's type. R2649000's thirty are read off `track.ts`'s counters.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import { hasKeyword, type CardDefs, type KeywordKind } from "@jackioh/shared";
@@ -21,7 +21,7 @@ import type { StageAnimation } from "./showcaseStage.ts";
 
 const CATALOG = catalogJson as unknown as CardDefs;
 
-/** The stats, the ten of R1584000 first and R1743000's twenty-five after. */
+/** The stats, the ten of R1584000 first, R1743000's twenty-five after, then R2649000's thirty. */
 export const SHOWCASE_KEYS = [
   "toppled",
   "coveted",
@@ -58,6 +58,36 @@ export const SHOWCASE_KEYS = [
   "jinx",
   "hotStreak",
   "marathon",
+  "useItOrLoseIt",
+  "justInTime",
+  "sandCastle",
+  "outlasted",
+  "goodFengShui",
+  "badFengShui",
+  "hotPotato",
+  "tradeInValue",
+  "massProduced",
+  "executioner",
+  "giantSlayer",
+  "secondWind",
+  "bubbleWrap",
+  "ironWall",
+  "punchingBag",
+  "doubleTap",
+  "vampire",
+  "martyr",
+  "coldSnap",
+  "brainFreeze",
+  "springThaw",
+  "shatter",
+  "encore",
+  "bargainHunter",
+  "denied",
+  "nope",
+  "burntToast",
+  "frequentFlyer",
+  "liftoff",
+  "brick",
 ] as const;
 export type ShowcaseKey = (typeof SHOWCASE_KEYS)[number];
 
@@ -104,6 +134,12 @@ function isUnit(id: string): boolean {
   return CATALOG[id]?.type === "Unit";
 }
 
+/** R2649000: the card's catalog type is Spell or Field Spell. */
+function isSpell(id: string): boolean {
+  const type = CATALOG[id]?.type;
+  return type === "Spell" || type === "Field Spell";
+}
+
 /** R2648000: either face of the card prints one of `kinds`. */
 function prints(id: string, ...kinds: KeywordKind[]): boolean {
   const def = CATALOG[id];
@@ -143,8 +179,7 @@ type Share = { readonly id: string; readonly part: number; readonly whole: numbe
 
 /**
  * R1743000: the showable card with the highest `part` per `whole` (a `whole` of at least SHOWCASE_MIN_PLAYS,
- * a `part` above 0), the part capped at the whole (a card can be destroyed more often than it was played);
- * a tie goes to the lower id.
+ * a `part` above 0), the part capped at the whole; a tie goes to the lower id.
  */
 function topShare(
   stats: PlayerStats,
@@ -206,8 +241,8 @@ export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): Showc
 
 /**
  * One stat for each the device has data for, none before the first finished game. The Pocket Pick
- * (R1583000) may come after the draw through `pocketStat`, so its answer redraws nothing. R1743000: the
- * order is not the stats'; each stat that picks at random draws once from `random`, only with a candidate.
+ * (R1583000) may come after the draw through `pocketStat`, so its answer redraws nothing. R1743000: each
+ * stat that picks at random draws once from `random`, only with a candidate.
  */
 export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, random: RandomSource): ShowcaseStat[] {
   if (stats.games === 0) return [];
@@ -222,6 +257,9 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
   const faced = countsOf(stats, grudge?.id ?? "");
   const explored = ids((c) => c.played > 0);
   const longest = ranked(stats.longestGamePlayed)[0] ?? played[0];
+  const nope = topCard(stats, "counterspells");
+  const brick = ranked(column(stats, (c) => (c.drawn >= SHOWCASE_MIN_PLAYS ? c.drawn - c.played : 0)))[0];
+  const bricked = countsOf(stats, brick?.id ?? "");
   const out: ShowcaseStat[] = [
     ...counted(stats, "defeated", { key: "toppled", title: () => t("Most Toppled"), animation: "death", side: "opponent" }, (n) =>
       t("taken down {n}×", { n }),
@@ -368,6 +406,102 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
         stats.longestGame === 1
           ? t("longest game: {n} turn", { n: stats.longestGame })
           : t("longest game: {n} turns", { n: stats.longestGame }),
+    ),
+    // R2649000: the game's own mechanics.
+    ...counted(stats, "tempExpired", { key: "useItOrLoseIt", title: () => t("Use It or Lose It"), animation: "expire", side: "you" }, (n) =>
+      t("slipped away unplayed {n}×", { n }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.tempPlayed, (c) => c.tempPlayed + c.tempExpired),
+      { key: "justInTime", title: () => t("Just in Time"), animation: "inTime", side: "you" },
+      (n, m) => t("played {n} of the {m} times it was Temporary", { n, m }),
+    ),
+    ...counted(stats, "crumbled", { key: "sandCastle", title: () => t("Sand Castle"), animation: "crumble", side: "you" }, (n) =>
+      t("crumbled {n}×", { n }),
+    ),
+    ...counted(stats, "crumbledAgainst", { key: "outlasted", title: () => t("Outlasted"), animation: "crumble", side: "opponent" }, (n) =>
+      t("waited it out {n}×", { n }),
+    ),
+    ...counted(stats, "fengShuiGood", { key: "goodFengShui", title: () => t("Good Feng Shui"), animation: "radiant", side: "you" }, (n) =>
+      t("blessed by Feng Shui {n}×", { n }),
+    ),
+    ...counted(stats, "fengShuiBad", { key: "badFengShui", title: () => t("Bad Feng Shui"), animation: "hit", side: "you" }, (n) =>
+      t("cursed by Feng Shui {n}×", { n }),
+    ),
+    ...counted(stats, "traded", { key: "hotPotato", title: () => t("Hot Potato"), animation: "bounce", side: "you" }, (n) =>
+      t("traded away {n}×", { n }),
+    ),
+    ...counted(stats, "tradeDrawn", { key: "tradeInValue", title: () => t("Trade-In Value"), animation: "entrance", side: "you" }, (n) =>
+      t("pulled from a trade {n}×", { n }),
+    ),
+    ...counted(stats, "created", { key: "massProduced", title: () => t("Mass Produced"), animation: "stamp", side: "you" }, (n) =>
+      t("created {n}×", { n }),
+    ),
+    ...counted(stats, "kills", { key: "executioner", title: () => t("Executioner"), animation: "lunge", side: "you" }, (n) =>
+      n === 1 ? t("took down {n} enemy", { n }) : t("took down {n} enemies", { n }),
+    ),
+    ...counted(stats, "biggestKill", { key: "giantSlayer", title: () => t("Giant Slayer"), animation: "lunge", side: "you" }, (n) =>
+      t("felled a {n}-health giant", { n }),
+    ),
+    ...counted(stats, "reborn", { key: "secondWind", title: () => t("Second Wind"), animation: "reborn", side: "you" }, (n) =>
+      t("rose again {n}×", { n }),
+    ),
+    ...counted(stats, "shieldsLost", { key: "bubbleWrap", title: () => t("Bubble Wrap"), animation: "shield", side: "you" }, (n) =>
+      t("shield popped {n}×", { n }),
+    ),
+    ...counted(stats, "armorAbsorbed", { key: "ironWall", title: () => t("Iron Wall"), animation: "armor", side: "you" }, (n) =>
+      t("shrugged off {n} damage", { n }),
+    ),
+    ...counted(stats, "damageTaken", { key: "punchingBag", title: () => t("Punching Bag"), animation: "hit", side: "you" }, (n) =>
+      t("took {n} damage", { n }),
+    ),
+    ...counted(stats, "doubleAttacks", { key: "doubleTap", title: () => t("Double Tap"), animation: "windfury", side: "you" }, (n) =>
+      t("attacked twice in a turn {n}×", { n }),
+    ),
+    ...counted(stats, "lifesteal", { key: "vampire", title: () => t("Vampire"), animation: "heal", side: "you" }, (n) =>
+      t("drained {n} health", { n }),
+    ),
+    ...counted(stats, "sacrificed", { key: "martyr", title: () => t("Martyr"), animation: "doom", side: "you" }, (n) =>
+      t("gave itself up {n}×", { n }),
+    ),
+    ...counted(stats, "froze", { key: "coldSnap", title: () => t("Cold Snap"), animation: "lunge", side: "you" }, (n) =>
+      n === 1 ? t("froze {n} enemy", { n }) : t("froze {n} enemies", { n }),
+    ),
+    ...counted(stats, "frozen", { key: "brainFreeze", title: () => t("Brain Freeze"), animation: "freeze", side: "you" }, (n) =>
+      t("frozen {n}×", { n }),
+    ),
+    ...counted(stats, "thawed", { key: "springThaw", title: () => t("Spring Thaw"), animation: "thaw", side: "you" }, (n) =>
+      t("thawed out {n}×", { n }),
+    ),
+    ...counted(stats, "shattered", { key: "shatter", title: () => t("Shatter"), animation: "lunge", side: "you" }, (n) =>
+      n === 1 ? t("shattered {n} frozen enemy", { n }) : t("shattered {n} frozen enemies", { n }),
+    ),
+    ...counted(stats, "flashback", { key: "encore", title: () => t("Encore"), animation: "reborn", side: "you" }, (n) =>
+      t("played from the graveyard {n}×", { n }),
+    ),
+    ...counted(stats, "manaSaved", { key: "bargainHunter", title: () => t("Bargain Hunter"), animation: "radiant", side: "you" }, (n) =>
+      t("saved {n} mana", { n }),
+    ),
+    ...counted(stats, "countered", { key: "denied", title: () => t("Denied"), animation: "exile", side: "you" }, (n) =>
+      t("countered {n}×", { n }),
+    ),
+    // A counter is a Trap's reveal, or a Spell's cast.
+    ...tallied(
+      nope,
+      { key: "nope", title: () => t("Nope"), animation: nope !== undefined && isSpell(nope.id) ? "cast" : "trap", side: "you" },
+      (n) => (n === 1 ? t("stopped {n} play cold", { n }) : t("stopped {n} plays cold", { n })),
+    ),
+    ...counted(stats, "burned", { key: "burntToast", title: () => t("Burnt Toast"), animation: "death", side: "you" }, (n) =>
+      t("burned from a full hand {n}×", { n }),
+    ),
+    ...counted(stats, "bounced", { key: "frequentFlyer", title: () => t("Frequent Flyer"), animation: "bounce", side: "you" }, (n) =>
+      t("bounced back to hand {n}×", { n }),
+    ),
+    ...counted(stats, "launched", { key: "liftoff", title: () => t("Liftoff"), animation: "launch", side: "you" }, (n) =>
+      n === 1 ? t("flew in {n} launched Starship", { n }) : t("flew in {n} launched Starships", { n }),
+    ),
+    ...about(brick?.id, { key: "brick", title: () => t("Brick"), animation: "exile", side: "you" }, () =>
+      t("drawn {n}×, played {m}×", { n: bricked.drawn, m: bricked.played }),
     ),
   ];
   return out.map((stat) => ({ ...stat, animation: animationFor(stat.cardId, stat.animation) }));

@@ -12,7 +12,7 @@
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
-use jackioh_engine::config::FUSE_COST_CAP;
+use jackioh_engine::config::{FUSE_COST_CAP, ROLL_HEADS, ROLL_TAILS};
 use jackioh_engine::effects::{
     exile, flip_coin_keyword, flip_coins, fuse_cards, grant_keywords_random_unit, radiant_chance, rotate,
 };
@@ -393,6 +393,113 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         assert_eq!(flips("coins-a", 5), AttackHealth { attack: 3, health: 2 });
     }
 
+    /// R2652001: the five coins are one `rolled` batch, each coin's one face (1 heads, 2 tails) and the
+    /// one it kept, reported before the `buffed` they decided; a face-up unit's batch has no
+    /// `faceDown`.
+    #[test]
+    fn r2652001_flip_coins_reports_every_coin_once_before_its_buff() {
+        let mut state = game("coins-known");
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+
+        let ran = run(
+            &mut state,
+            &[coins(json!({
+                "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 }, "perTails": { "health": 1 }
+            }))],
+            with_self(&unit),
+        );
+
+        // "coins-known" at cursor 0 flips T H H H H.
+        assert_eq!(
+            events_json(&ran.events, "rolled"),
+            vec![json!({
+                "type": "rolled", "player": "p1", "instanceId": unit.id, "defId": gary().id,
+                "kind": "coin", "sides": 2,
+                "rolls": [
+                    { "faces": [2], "kept": 0 }, { "faces": [1], "kept": 0 }, { "faces": [1], "kept": 0 },
+                    { "faces": [1], "kept": 0 }, { "faces": [1], "kept": 0 },
+                ],
+            })]
+        );
+        let order: Vec<GameEventType> = ran.events.iter().map(GameEvent::event_type).collect();
+        assert_eq!(order, vec![GameEventType::Rolled, GameEventType::Buffed]);
+        // The report changes no draw: still the five the buff was always rolled with.
+        assert_eq!(draws(&ran), 5);
+    }
+
+    /// R1440, R2652001: with Lucky 1 every coin reports both its draws, in draw order, and keeps the
+    /// first heads, else its first face.
+    #[test]
+    fn r2652001_with_lucky_1_each_coin_reports_both_draws_and_keeps_the_first_heads() {
+        let mut state = game("coins-known");
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        find_instance_mut(&mut state, &unit.id)
+            .expect("gary is on the field")
+            .granted_keywords
+            .push(Keyword::Lucky { n: 1 });
+        let flipper = live(&state, &unit.id).clone();
+
+        let ran = run(
+            &mut state,
+            &[coins(json!({
+                "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 }, "perTails": { "health": 1 }
+            }))],
+            with_self(&flipper),
+        );
+
+        assert_eq!(draws(&ran), 10);
+        let mut predicted = Rng::new("coins-known", 0);
+        let face = |heads: bool| if heads { ROLL_HEADS } else { ROLL_TAILS };
+        let mut heads = 0;
+        let expected: Vec<Value> = (0..5)
+            .map(|_| {
+                let faces = [face(predicted.coin()), face(predicted.coin())];
+                let kept = usize::from(faces[0] != ROLL_HEADS && faces[1] == ROLL_HEADS);
+                heads += i32::from(faces[kept] == ROLL_HEADS);
+                json!({ "faces": faces, "kept": kept })
+            })
+            .collect();
+        let rolled = events_json(&ran.events, "rolled");
+        assert_eq!(rolled.len(), 1);
+        assert_eq!(rolled[0]["rolls"], Value::Array(expected));
+        // "coins-known" starts T H: the first coin drew tails, then heads, and kept the heads.
+        assert_eq!(rolled[0]["rolls"][0], json!({ "faces": [2, 1], "kept": 1 }));
+        // The kept faces are the ones the buff counted.
+        assert_eq!(live(&state, &unit.id).buffs.attack, heads);
+    }
+
+    /// R2652001, §10.7: a verb whose target is missing draws nothing, so it reports nothing.
+    #[test]
+    fn r2652001_a_missing_target_reports_nothing() {
+        let mut state = game("coins-known");
+        let rider = flip_coin_keyword(json_as(json!({
+            "target": { "of": "self" },
+            "headsKeyword": { "kind": "Divine Shield" },
+            "tailsKeyword": { "kind": "Rush" },
+        })));
+        let ran = run(
+            &mut state,
+            &[
+                coins(json!({ "target": { "of": "self" }, "coins": 5, "perHeads": { "attack": 1 } })),
+                rider,
+            ],
+            as_p1(),
+        );
+        assert_eq!(draws(&ran), 0);
+        assert!(events_json(&ran.events, "rolled").is_empty());
+        assert!(ran.events.is_empty());
+    }
+
     #[test]
     fn s6_3_a_card_that_pays_nothing_for_a_side_of_the_coin_still_flips_it() {
         let mut state = game("coins-a");
@@ -453,6 +560,28 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
             events_json(&ran.events, "keywordGranted"),
             vec![json!({ "type": "keywordGranted", "instanceId": unit.id, "keyword": { "kind": "Rush" } })]
         );
+    }
+
+    /// R2652001: the rider's one coin is a batch of its own, before the keyword it decided.
+    #[test]
+    fn r2652001_flip_coin_keyword_reports_its_one_coin_before_the_keyword() {
+        let mut state = game("coins-known");
+        let unit = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+
+        let ran = run(&mut state, &[rider()], with_self(&unit));
+
+        // Tails at cursor 0, so Rush.
+        let order: Vec<GameEventType> = ran.events.iter().map(GameEvent::event_type).collect();
+        assert_eq!(order, vec![GameEventType::Rolled, GameEventType::KeywordGranted]);
+        let rolled = events_json(&ran.events, "rolled");
+        assert_eq!(rolled[0]["kind"], "coin");
+        assert_eq!(rolled[0]["rolls"], json!([{ "faces": [ROLL_TAILS], "kept": 0 }]));
+        assert_eq!(live(&state, &unit.id).granted_keywords, vec![Keyword::Rush]);
     }
 
     #[test]

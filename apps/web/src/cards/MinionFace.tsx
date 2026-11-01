@@ -1,52 +1,24 @@
-// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): an oval portrait with its
-// cost, a name plate, attack and health, keyword chips, the Divine Shield bubble and a Taunt frame
-// — Hearthstone's minion on the board.
-//
-// Every element the board's tests and the e2e specs read lives here:
-// `.stats`, `.stat-attack[data-attack]`, `.stat-health[data-health][data-max-health]` whose text is
-// "health/max" (BUILD M5-T1's "current over max"), `.stat-armor[data-armor]`,
-// `.keywords .keyword[data-keyword][data-n][title]` and `.shield-icon`. The numbers are the
-// view's (UnitView) and nothing else; the tones only compare them with the printed face.
-//
-// Keywords. Every keyword keeps its `[data-keyword]` badge in the DOM, but only the ones the minion
-// does not already draw as a state get a visible chip. R2577000: nor do the keywords that do nothing
-// on the field (`onField: false` in keywordVisuals.ts), which leave the "+n" count too. At most
-// KEYWORD_CHIPS_MAX chips show, legible at a pixel floor (cards.css); the hover preview and the
-// inspect sheet list them all.
-//
-// Keyword visuals (R438). Beside its chip, every keyword that can act on the field has a treatment on
-// the minion drawn by shape (keywordVisuals.ts has the map, the layers' caps and the cap on loops;
-// KeywordFx.tsx draws them; keywords.css their look and motion), each carrying `data-keyword-fx="<kind>"`.
-//
-// Vanilla. A unit a Vanilla took the text of (§6.3, R115) is marked Vanilla in the view
-// (`UnitView.vanilla`, R243), since its definition still names what it lost: the minion wears a
-// plain "Vanilla" stamp at its portrait's corner (`.cf-vanilla`). Its keyword chips are the view's,
-// which already leave the lost ones out.
-//
-// SPEC §10.8's states. Brittle's count and the Animated cog are keyword treatments above (the view's
-// `brittle` count draws the cracks even when no Brittle keyword lists it). The rest ride a small rail
-// of badges just over the name plate (CardStates.tsx): the tuned mark (R386) and the enchantments (E39).
-//
-// The "zzz" (R849000). The face draws it (`.cf-sick[data-sick]`) where the view marks the unit `sick`:
-// summoning sick with neither Rush nor Charge (`combat::is_asleep`), on both seats. `canAct` draws
-// nothing here: it is false for every unit whose controller is not the active player, and a
-// summoning-sick unit may still switch (§4.1), so read bare it can say neither "asleep" nor "can
-// attack". A spent unit of the player acting now wears only the cue from game/spent.ts (#258).
-// Whether a unit can attack is `legalActions`', drawn by the board's highlight, never read off the
-// view here (CLAUDE.md rule 7).
-//
-// ME-CN, R1301: a Chinese unit's name plate is the model's Chinese name and its keyword titles are
-// the table's words (chinese.ts); its chips keep their marks, and its art the English name's motif.
-//
-// R1839000: a Dormant card wears `data-dormant` and the binding seal (DormantSeal.tsx). On `awakened`
-// (R1839002) the seal breaks (game/animations.css) and stays broken until the board catches up
-// (game/awakening.ts's `data-awakening`).
-//
-// R2647000: a token unit wears no mark of it, and no Created badge either (CardStates.tsx); its hover
-// preview's full face says "Token Unit" (R1177001).
-//
-// R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics as its full
-// face does (CardFace.tsx, cosmetics.ts).
+// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): oval portrait, cost, name plate,
+// attack, health, keyword chips, Divine Shield bubble, Taunt frame. The board's tests and e2e read
+// `.stats`, `.stat-attack[data-attack]`, `.stat-health[data-health][data-max-health]` (text "health/max",
+// BUILD M5-T1), `.stat-armor[data-armor]`, `.keywords .keyword[data-keyword][data-n][title]`, `.shield-icon`.
+// The numbers are the view's (UnitView); the tones only compare them with the printed face.
+// Keywords: each keeps a `[data-keyword]` badge, but only those not already drawn as a state get a chip,
+// nor (R2577000) those with `onField: false` (keywordVisuals.ts), which leave the "+n" too; at most
+// KEYWORD_CHIPS_MAX show (cards.css), the hover preview and inspect sheet list all. R438: a keyword that
+// acts on the field also gets a shape treatment `data-keyword-fx="<kind>"` (keywordVisuals.ts, KeywordFx.tsx).
+// Vanilla (§6.3, R115, R243): a unit a Vanilla took the text of is marked in the view and wears a
+// `.cf-vanilla` stamp; its chips are the view's. §10.8: Brittle's count and the Animated cog are keyword
+// treatments; the rest ride CardStates.tsx's rail over the name plate: tuned mark (R386), enchantments (E39).
+// "zzz" (R849000): `.cf-sick[data-sick]` where the view marks the unit `sick` (summoning sick with neither
+// Rush nor Charge, `combat::is_asleep`), both seats. Never read `canAct` for it: false for every unit of the
+// non-active player, and a summoning-sick unit may still switch (§4.1). A spent unit of the player acting
+// wears only game/spent.ts's cue (#258). Whether a unit can attack is `legalActions`' (CLAUDE.md rule 7).
+// ME-CN, R1301: a Chinese unit's name plate and keyword titles are chinese.ts's; chips keep their marks.
+// R1839000/R1839002: a Dormant card wears `data-dormant` and DormantSeal.tsx's seal, broken on `awakened`
+// until the board catches up (game/awakening.ts's `data-awakening`). R2647000: a token unit wears no
+// mark and no Created badge (CardStates.tsx); its hover preview says "Token Unit" (R1177001).
+// R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics (CardFace.tsx, cosmetics.ts).
 
 import { useRef, type ReactElement } from "react";
 

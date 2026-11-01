@@ -1,30 +1,11 @@
-// The board (BUILD M5-T1): five lanes as columns, two seats, two hands, the control bar and the
-// log — all of it drawn from one `PlayerView` (CLAUDE.md rule 7, SPEC §10.8).
-//
-// `viewFor` has already oriented the view, so the DOM speaks in "you" and "opponent" and the
-// board never has to know which seat is which. Nothing here decides anything: every clickable
-// element takes `data-legal` from `props.highlight.legal` (built by `actions.ts` from the
-// engine's `legalActions`) and fires `props.onClick` only when that says true (or, R979000, to
-// show the reason a hand card of yours cannot be played, which sends nothing). With the default
-// `NO_HIGHLIGHT` the whole board is greyed out, which is the honest default for "the client has
-// not been told what is legal".
-//
-// Polish task 7 (docs/polish/7-mobile-ux.md S6, S11): the green glow is `data-glow`, written from
-// `highlight.glow` (a subset of `legal`); `data-legal` stays the only click gate. `dragToPlay`
-// becomes `data-drag` on the root (drag.css keys touch-action off it). The layout itself is
-// board.css's grid, which keeps the children below in this order. A phone has no room for the log
-// beside the field, so board.css hides it there and shows `log-toggle` instead.
-//
-// #2645: on a phone (`usePhoneBar`) the control bar keeps to one row. Offer draw, Concede and Friends
-// are the rows of ⋯'s menu (`MatchMenu.tsx`), the same controls the desktop bar holds as buttons,
-// built once.
-//
-// While a hand card of yours is hovered or selected, the field rings the cards its preview names
-// (#991, SPEC §10.10).
-//
-// R1297000: the viewer's half wears the playmat and backdrop the wearer picked. R1834004: an online
-// board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts); a watched or
-// replayed game's lower half wears its own seat's too.
+// The board (BUILD M5-T1): five lanes, two seats, two hands, the control bar and the log, all drawn from one `PlayerView`
+// (CLAUDE.md rule 7, SPEC §10.8), oriented by `viewFor`. Nothing here decides anything: every clickable element takes
+// `data-legal` from `props.highlight.legal` (`actions.ts`, from `legalActions`) and fires `props.onClick` only when true (or,
+// R979000, to show why a hand card cannot be played, sending nothing). `data-glow` (docs/polish/7-mobile-ux.md S6, S11) is a subset
+// of `legal`; `dragToPlay` becomes `data-drag`; `confirmEndTurn` makes End turn ask twice while something is playable. board.css's
+// grid keeps the children in this order. #2645: on a phone (`usePhoneBar`) the bar keeps to one row; Offer draw, Concede and Friends
+// are ⋯'s menu rows (`MatchMenu.tsx`). A hovered or selected hand card rings the cards its preview names (#991, SPEC §10.10).
+// R1297000: the viewer's half wears the wearer's playmat and backdrop. R1834004: an online board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts).
 
 import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
@@ -140,9 +121,8 @@ function amountFor(
 }
 
 /**
- * The numbers to pop, from the burst's events. They cannot come from `view`: that is the view the
- * runner is still HOLDING BACK (BUILD M5-T4), which does not yet carry the event being animated. A
- * caller with no burst falls back to what is animating against the shown view (a fixture's board).
+ * The numbers to pop come from the burst's events, not `view`: the runner is still HOLDING BACK that
+ * view (BUILD M5-T4), so it lacks the event being animated. No burst: what animates against the shown view.
  */
 export function popsFrom(
   view: PlayerView,
@@ -235,13 +215,8 @@ function ManaTray({
 }
 
 /**
- * A library / graveyard / exile pile. `regionId` is the element the M5-T4 animation table moves,
- * `testId` the number the e2e specs read (`e2e/support/testids.ts`), apart so the count never pulses.
- * A graveyard or an exile pile is public on both seats (§10.8), so either can be looked through
- * (`browse`); so can the viewer's own library (R313), from the list without order the view carries
- * (`SideView.ownLibrary`, R310): each entry on the face it went in with (R311), a card back for those
- * the viewer was never shown (R312). The opponent's library is a count and nothing else, so it has no
- * `browse`. Nothing here reads a rule or a hidden card (CLAUDE.md rule 7).
+ * A pile: `regionId` is what the M5-T4 animation table moves, `testId` what e2e reads (`e2e/support/testids.ts`). Graveyards and
+ * exiles are public (§10.8), as is the viewer's own library (R313, `SideView.ownLibrary` R310; R311 faces, R312 backs): `browse`. Not the opponent's (CLAUDE.md rule 7).
  */
 type PileBrowse =
   | { kind: "pile"; title: string; cards: readonly CardView[]; view: PlayerView }

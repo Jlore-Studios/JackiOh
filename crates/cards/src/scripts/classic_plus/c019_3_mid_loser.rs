@@ -1,5 +1,6 @@
 //! C+ #19.3 Mid Loser (SPEC §8.7 row 19.3): Cry flips a coin (Lucky X: X more flips, heads kept): heads
-//! +{heads}/+{heads}; tails −{tails}/−{tails} and the opponent's next refresh is 1 higher.
+//! +{heads}/+{heads}; tails −{tails}/−{tails} and the opponent's next refresh is 1 higher. The coin is
+//! reported to both players before its buff, each Lucky flip with it (R2652001).
 
 use jackioh_engine::prelude::*;
 
@@ -7,8 +8,9 @@ pub const ID: &str = "classicplus-019-3";
 
 // "your opponent gains 1 mana next turn": the declared number `oppMana` (R386), less being better.
 
-/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`).
-fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
+/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`), with
+/// every face it drew (R2652001).
+fn coin(ctx: &mut EffectContext<'_>) -> RollResult {
     // R987: the controller's Luck flips extra times beside the card's own Lucky.
     let lucky = match ctx.live_self() {
         Some(me) if me.zone.z() == ZoneName::Field => {
@@ -16,18 +18,25 @@ fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
         }
         _ => 0,
     } + luck_of(&*ctx.state, ctx.controller);
-    ctx.rng.lucky_coin(lucky)
+    flip_coin(ctx, lucky)
 }
 
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    if lands_heads(ctx) {
+    let coin = coin(ctx);
+    // R2652001: the coin is shown before the buff it decided.
+    let shown = report_rolls(RollKind::Coin, ROLL_COIN_SIDES, vec![coin.clone()]);
+    if coin.heads() {
         let heads = param(&*ctx, "heads");
-        return vec![buff(json_as(
-            json!({ "target": { "of": "self" }, "attack": heads, "health": heads }),
-        ))];
+        return vec![
+            shown,
+            buff(json_as(
+                json!({ "target": { "of": "self" }, "attack": heads, "health": heads }),
+            )),
+        ];
     }
     let tails = param(&*ctx, "tails");
     vec![
+        shown,
         buff(json_as(
             json!({ "target": { "of": "self" }, "attack": -tails, "health": -tails }),
         )),
@@ -49,7 +58,12 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3 (R411).
+// C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3: "Cry, on a play from hand, a
+// cast or League of Losers' summon (R1, R411), flips a seeded coin: heads +4/+4 permanently; tails
+// −2/−2 permanently (a damaged Mid Loser can die at the state check) and the opponent's next mana
+// refresh is 1 higher (`nextTurnMod`); a copy or a Rollback's recreation flips nothing; heads and tails
+// amounts read through `param()`; radiant Lucky 1 (two flips, heads kept if either lands) and heads
+// +10/+10".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,6 +131,23 @@ mod tests {
     }
 
     use crate::unit_or_blank;
+
+    /// The last step's `rolled` batches, and whether each came before the step's first `buffed`.
+    fn reports(s: &Scenario) -> Vec<(Vec<RollResult>, bool)> {
+        let mut buffed = false;
+        let mut out = Vec::new();
+        for event in s.last_events() {
+            match event {
+                GameEvent::Buffed { .. } => buffed = true,
+                GameEvent::Rolled { rolls, kind, def_id, .. } => {
+                    assert_eq!((*kind, def_id.as_str()), (RollKind::Coin, MID));
+                    out.push((rolls.clone(), !buffed));
+                }
+                _ => {}
+            }
+        }
+        out
+    }
 
     mod c_n19_3_mid_loser {
         use super::*;
@@ -304,6 +335,24 @@ mod tests {
             }
 
             #[test]
+            fn r2652001_base_one_coin_is_reported_before_its_buff() {
+                for (flip, face, size) in [(Flip::Heads, ROLL_HEADS, 8), (Flip::Tails, ROLL_TAILS, 2)] {
+                    let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == flip);
+                    s.play(MID, json!({}));
+                    assert_eq!(
+                        reports(&s),
+                        vec![(vec![RollResult { faces: vec![face], kept: 0 }], true)]
+                    );
+                    let me = mid(&s);
+                    s.expect_stats(&me, json!({ "attack": size, "health": size }));
+                    for viewer in [P1, P2] {
+                        let seen = s.view(viewer).events.iter().filter(|event| event.event_type() == GameEventType::Rolled).count();
+                        assert_eq!(seen, 1, "{viewer} sees the coin");
+                    }
+                }
+            }
+
+            #[test]
             fn draws_one_coin_from_the_match_rng() {
                 let mut s = from_hand(false)("mid-one-coin");
                 let cursor = s.state().rng_cursor;
@@ -336,6 +385,28 @@ mod tests {
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
             }
 
+            /// R1440, R2652001: Lucky 1's two flips are one coin of one batch: tails then heads reports
+            /// both faces and keeps the heads, two tails keep the first.
+            #[test]
+            fn r2652001_radiant_lucky_1_reports_both_coins_and_the_kept_one() {
+                let mut s = seeded(from_hand(true), |each| {
+                    let mut rng = Rng::new(&each.state().seed, each.state().rng_cursor);
+                    !rng.coin() && rng.coin()
+                });
+                s.play(MID, json!({}));
+                assert_eq!(
+                    reports(&s),
+                    vec![(vec![RollResult { faces: vec![ROLL_TAILS, ROLL_HEADS], kept: 1 }], true)]
+                );
+
+                let mut s = seeded(from_hand(true), |each| next_flip(each, 1) == Flip::Tails);
+                s.play(MID, json!({}));
+                assert_eq!(
+                    reports(&s),
+                    vec![(vec![RollResult { faces: vec![ROLL_TAILS, ROLL_TAILS], kept: 0 }], true)]
+                );
+            }
+
             #[test]
             fn s6_1_lucky_1_flips_twice() {
                 let mut s = from_hand(true)("mid-two-coins");
@@ -355,8 +426,6 @@ mod tests {
             }
         }
 
-        /// R386 the opponent's mana on tails is declared, less being better: a Degrade gives them 2, and an
-        /// Upgrade finds it at its floor of 1
         #[test]
         fn r386_a_degrade_gives_the_opponent_2_mana_on_tails_and_an_upgrade_finds_it_at_its_floor_of_1() {
             let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);

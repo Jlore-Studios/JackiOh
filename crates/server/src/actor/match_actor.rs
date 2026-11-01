@@ -1706,7 +1706,10 @@ impl MatchActor {
             if core.personas[home].is_none() {
                 continue;
             }
-            let view = engine::view_for(self.shared.pinned, &core.state, playing(core, home));
+            let seat = playing(core, home);
+            let view = engine::view_for(self.shared.pinned, &core.state, seat);
+            // R2652000: less the face-down rolls this seat's view leaves out of the change.
+            let fresh = engine::viewed_of_newest(&core.state, seat, fresh);
             let from = view.events.len().saturating_sub(fresh);
             let prev = core.bot_views[home].take();
             let intents = match core.personas[home].as_mut() {

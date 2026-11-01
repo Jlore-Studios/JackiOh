@@ -1,10 +1,9 @@
 // Replay with scripted decks (SPEC §9.2, §9.3; REVIEW B1.2, B8). Script-less fixture decks leave the
-// state queues (`echoQueue`, `triggerQueue`, `delayed`, the dispatch frontier) empty in every fold.
-// These decks are scripted — an end-of-turn trigger, a Death hook, two traps, a delayed effect, an Echo
-// card and three cards that open prompts — so the folds exercise the queues, and the run asserts it.
-//
+// state queues (`echoQueue`, `triggerQueue`, `delayed`, the dispatch frontier) empty in every fold;
+// these decks are scripted (an end-of-turn trigger, a Death hook, two traps, a delayed effect, an Echo
+// card, three prompting cards) so the folds exercise the queues, and the run asserts it.
 // 30 seeds, each played once and replayed twice (`fold`, then step by step). The run is seeded end to
-// end, so what it reaches is fixed rather than sampled: more seeds would add breadth, not confidence.
+// end, so what it reaches is fixed: more seeds would add breadth, not confidence.
 
 use std::sync::OnceLock;
 
@@ -64,8 +63,7 @@ fn asker() -> CardDef {
     unit("asker", 1404, 1, 1, json!({}))
 }
 /// Echo 2 on a Spell whose Cry prompts, so a repeat is left *waiting* in `echoQueue` while a prompt
-/// is open. Echo 1 never reaches that state: the one repeat is in flight, not queued. With two, the
-/// first repeat pauses while the second is still owed in the queue — what §10.5 step 6 must survive.
+/// is open (Echo 1's one repeat is in flight, never queued): what §10.5 step 6 must survive.
 fn echo_asker() -> CardDef {
     def("echo-asker", "Spell", 1405, json!({}))
 }
@@ -571,9 +569,8 @@ struct Run {
     replayed: Peaks,
 }
 
-/// The whole run, computed once: the tests read it, in either order. (Each Rust test runs on its own
-/// thread with its own registry override; `run` registers the cards itself on whichever thread
-/// computes it, and the result is plain data.)
+/// The whole run, computed once: the tests read it, in either order. (Each test runs on its own
+/// thread with its own registry override, so `run` registers the cards itself.)
 static CACHED: OnceLock<Run> = OnceLock::new();
 
 fn run() -> &'static Run {
@@ -586,7 +583,6 @@ fn run() -> &'static Run {
             let (played, log) = play_scripted_game(&seed);
             merge(&mut live, &played.peaks);
 
-            // Fold the recorded log from the seed (the M1 gate's own check), then walk it again step by step.
             register_all();
             let folded = fold(&FoldArgs {
                 seed: seed.clone(),
@@ -652,7 +648,6 @@ mod replay_with_scripted_decks_9_2_9_3 {
         assert!(live.work > 0, "work never held an interrupted sequence");
         assert!(live.card_prompts > 0, "no card ever opened a prompt");
         assert!(live.traps_fired > 0, "no trap ever fired");
-        // And the games were real games, not two actions and a concede.
         assert!(live.actions > seeds().len() * 10);
 
         // The replay passed through the same depths, seed by seed: the queues are replayed, not

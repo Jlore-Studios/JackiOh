@@ -103,6 +103,14 @@ export const FX_CHAOS_STAGGER = 0.2;
 export const FX_CHAOS_LAND_LAST = 0.85;
 export const FX_CHAOS_REEL_DECOYS = 6;
 export const FX_CHAOS_DECOY_STEP = 3;          // how far apart in the names table a reel's decoys are
+// R2652001: a batch of coin flips or die rolls, one panel. Item i of n lands at (FX_ROLL_LAND_AT +
+// i × stagger) of the entry, the stagger shrinking so the last lands by FX_ROLL_LAND_LAST, every coin
+// spinning and every die tumbling through FX_ROLL_TUMBLE_FACES faces first. It lasts D + FX_BANNER_TAIL_MS.
+export const FX_ROLL_LAND_AT = 0.5;
+export const FX_ROLL_STAGGER = 0.05;
+export const FX_ROLL_LAND_LAST = 0.7;
+export const FX_ROLL_TUMBLE_FACES = 8;
+export const FX_ROLL_TUMBLE_STRIDE = 3;        // a die's walk through its faces, item i stepping this + i
 // Issue #124: a sweep's fog rolls over its row in one entry (SWEEP_MS), each unit's hit landing as the
 // fog reaches its lane; it spreads over the row grown by FX_FOG_PAD of its height on every side.
 export const FX_FOG_HIT_FROM = 0.2;
@@ -206,6 +214,9 @@ export const FX_TEXT = {
   inauspicious: "凶",
   /** R436: the title over the effects Call to Chaos rolled. */
   chaosRolled: "Call to Chaos:",
+  /** R2652001: the title over a batch of coins, and over a batch of dice. */
+  coinsFlipped: "Coin flip",
+  diceRolled: "Dice roll",
   /** B5 E10: an effect ended the turn. */
   turnCutShort: "Turn cut short",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */

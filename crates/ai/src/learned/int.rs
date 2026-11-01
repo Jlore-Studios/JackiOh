@@ -26,7 +26,6 @@ pub struct IntNetwork<'a> {
     pub features_version: u32,
     pub catalog: &'a str,
     pub width: usize,
-    /// How many dense features it reads.
     pub dense: usize,
     /// A clipped activation's one (127).
     pub activation: i64,
@@ -173,9 +172,8 @@ fn words<const N: usize, T>(bytes: &[u8], read: fn([u8; N]) -> T) -> Option<Vec<
     )
 }
 
-/// An integer network read at run time from weights.json's object (`"format": 2`), owned: the
-/// parity fixture's, natively and in the WASM build (R1011000). The compiled-in network never comes
-/// this way: `build.rs` makes it constant.
+/// An integer network read at run time from weights.json's object (`"format": 2`), owned: the parity
+/// fixture's (R1011000). The compiled-in network never comes this way: `build.rs` makes it constant.
 #[derive(Clone, Debug, PartialEq)]
 pub struct OwnedIntNetwork {
     features_version: u32,

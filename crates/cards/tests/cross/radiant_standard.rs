@@ -19,7 +19,7 @@ fn entries() -> Vec<&'static CardDef> {
 /// R275: the factor a Radiant Unit's attack and health are held to.
 const STAT_FACTOR: i32 = 2;
 
-/// R275's named exceptions to the stat half, by id, with the reason. None remain, so the record
+/// R275's named exceptions to the stat half, by id, with the reason; none remain.
 const STAT_EXCEPTIONS: &[(&str, &str)] = &[];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.

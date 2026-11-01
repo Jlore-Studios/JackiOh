@@ -3,9 +3,8 @@
 //! a fresh Supabase project (docs/architecture.md, step 4 of the bring-up checklist).
 //!
 //! Why not the Supabase CLI: `supabase db push` only reads `supabase/migrations/<timestamp>_<name>.sql`,
-//! and the canonical SQL lives at `crates/server/migrations/`. The SQL is plain Postgres, so either
-//! path works; this runner is the one the checklist uses because it needs nothing but a connection
-//! string. See docs/architecture.md for the CLI variant.
+//! and the canonical SQL lives at `crates/server/migrations/`. The SQL is plain Postgres, so either path
+//! works (docs/architecture.md has the CLI variant); this runner needs nothing but a connection string.
 //!
 //! The files are compiled into the binary with `include_str!` (SURFACE §11.3), so the Docker image
 //! needs no migrations directory at run time. `tests/store/migrations_pinned.rs` proves that every
@@ -299,18 +298,20 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0071_practice_settles.sql",
         include_str!("../../migrations/0071_practice_settles.sql"),
     ),
+    (
+        "0072_full_art_tiers.sql",
+        include_str!("../../migrations/0072_full_art_tiers.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
-/// taken with `pg_advisory_xact_lock` inside each transaction, never as a session lock: Render's
-/// release runs this runner on every deploy (render.yaml), over whatever `DATABASE_URL` the
-/// server uses, and behind a transaction-mode pooler a session lock stays held on whichever pooled
-/// backend took it, so the next deploy's lock could wait forever and the server never boot.
+/// taken with `pg_advisory_xact_lock` inside each transaction, never as a session lock: behind a
+/// transaction-mode pooler a session lock stays held on whichever pooled backend took it, so the next
+/// deploy's lock could wait forever and the server never boot (render.yaml's `release` runs this runner).
 pub const LOCK_ID: i64 = 0x6a61636b; // "jack"
 
-/// The ledger, created (if missing) under the lock before any file runs. Its table comment names
-/// the Rust paths; `comment on` re-runs every time, so an older database's comment is brought up to
-/// date and nothing else about the ledger changes.
+/// The ledger, created (if missing) under the lock before any file runs. `comment on` re-runs every
+/// time, so an older database's table comment is brought up to date.
 pub const LEDGER: &str = "
 create schema if not exists app;
 create table if not exists app.migrations (
@@ -331,11 +332,10 @@ comment on table app.migrations is
 /// jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
 /// on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
 ///
-/// 0068_v0_5_retcon.sql (R2532000): its first version renamed each record id a card's co-played
-/// map keeps with a PL/pgSQL call per id, over every row of `card_totals`, which ran for minutes on
-/// a season of totals: Render's `release` outran its boot window on every deploy, and the
-/// transaction rolled back each time, so production never applied it. Where a database did, its
-/// renames are the same.
+/// 0068_v0_5_retcon.sql (R2532000): its first version renamed each record id a card's co-played map
+/// keeps with a PL/pgSQL call per id over every row of `card_totals`, which ran for minutes: Render's
+/// `release` outran its boot window and the transaction rolled back each deploy. Where a database
+/// applied it, its renames are the same.
 pub const REWRITTEN: &[(&str, &[&str])] = &[
     ("0013_retention_purge.sql", &["16b93e4d"]),
     ("0068_v0_5_retcon.sql", &["5827754e"]),

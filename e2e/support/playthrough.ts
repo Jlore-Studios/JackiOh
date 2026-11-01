@@ -49,7 +49,7 @@ function dispatched(handle: Handle, body: ActionBody, seat: PlayerId): string | 
 export const GAME_OVER = "the game is over";
 
 /** Mirrors `apps/web/src/game/contract.ts`: a "Choose one" this short is drawn as a Discover pop-up. */
-const DISCOVER_OPTION_LIMIT = 5;
+const DISCOVER_OPTION_LIMIT = 4;
 
 /** The `data-prompt-kind` the board draws a prompt with (`apps/web/src/game/Prompt.tsx`, the M5-T4 contract). */
 export function boardKind(pending: { kind?: string; options?: unknown[] }): string {

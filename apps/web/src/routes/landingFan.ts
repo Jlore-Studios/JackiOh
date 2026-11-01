@@ -1,5 +1,6 @@
 // R374 deals real, non-token Core cards into four rarities in random order, with the middle Radiant.
 // Randomness is client-owned (CLAUDE.md rule 4) and injected so tests can deal deterministically.
+// R1017002 deals only the cards that print whole on a fan card, a full-art card (R2655001) favored.
 
 import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh/shared";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -28,8 +29,7 @@ export const FAN_CARD_MAX_PX = 158;
 
 /**
  * R1017002: the most text a fan card prints whole at FAN_CARD_MAX_PX and the reading floor before the art
- * gives way (issue #1017's long layout), measured in Chromium on every catalog face; a narrower card only
- * shrinks its text.
+ * gives way (issue #1017's long layout), measured in Chromium on every catalog face.
  */
 export const FAN_TEXT_LIMIT: TextLimit = { charsPerLine: 25, lines: 5 };
 
@@ -45,8 +45,8 @@ export const ROTATION_POOL: readonly CardDef[] = Object.values(CATALOG).filter(
 );
 
 /**
- * R1017002: whether both of `def`'s faces print whole on a fan card: a hero's full-art face prints
- * no words, any other its whole catalog text, with no short form, within FAN_TEXT_LIMIT.
+ * R1017002: whether both of `def`'s faces print whole on a fan card: a full-art face prints no words,
+ * any other its whole catalog text, with no short form, within FAN_TEXT_LIMIT.
  */
 export function fitsTheFan(def: CardDef, fullArtOn: boolean): boolean {
   return [false, true].every((radiant) => {
@@ -101,17 +101,17 @@ export const EVEN: CardWeight = () => 1;
 const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 3, xxl: 4 };
 
 /**
- * R639 favors faces whose name and rules text print at the largest size, but never excludes dense
- * cards. A hero's card counts as one (R1017002): in the fan it prints its art and no words, and with
- * full art off it is dealt only when its text fits the fan. A Training Grounds Legacy card of one is
- * named apart (R2511000) and prints its words, so it does not.
+ * R639 favors faces whose name and rules text print at the largest size, never excluding dense cards.
+ * A full-art card counts as one (R1017002, R2655001): it prints art and no words, and with full art off it
+ * is dealt only when its text fits. A Training Grounds Legacy card of one is named apart (R2511000) and
+ * prints its words, so it does not.
  */
 export function featureWeight(def: CardDef): number {
   const known = WEIGHTS.get(def.id);
   if (known !== undefined) return known;
   const face = faceModel({ defId: def.id, def, radiant: false });
   const fits =
-    isFullArtCard(def.id, def.name) ||
+    isFullArtCard(def.id) ||
     (TIER_RANK[nameTier(face.name)] <= TIER_RANK[FEATURE_PLAIN_MAX_TIER] &&
       TIER_RANK[textTier(face.text.full)] <= TIER_RANK[FEATURE_PLAIN_MAX_TIER]);
   const weight = fits ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE;
@@ -121,9 +121,9 @@ export function featureWeight(def: CardDef): number {
 
 const WEIGHTS = new Map<string, number>();
 
-/** R1017002: `weigh`, with a hero's full-art card FULL_ART_WEIGHT_FACTOR times as likely while full art is on. */
+/** R1017002: `weigh`, with a full-art card FULL_ART_WEIGHT_FACTOR times as likely while full art is on. */
 export function favoringFullArt(weigh: CardWeight, fullArtOn: boolean): CardWeight {
-  return (def) => weigh(def) * (fullArtOn && isFullArtCard(def.id, def.name) ? FULL_ART_WEIGHT_FACTOR : 1);
+  return (def) => weigh(def) * (fullArtOn && isFullArtCard(def.id) ? FULL_ART_WEIGHT_FACTOR : 1);
 }
 
 /** A nonpositive weight counts as one so no card becomes unreachable. */

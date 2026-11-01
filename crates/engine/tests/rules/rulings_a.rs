@@ -910,7 +910,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         let unit = put(&mut state, REBORN_PINGER, slot(P1, UNITS, 1), json!({}));
 
         kill_and_check(&mut state, &unit);
-        // First death: the Death trigger fired and Reborn brought it back at 1 health without Reborn.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         let back = must(card_at(&state, slot(P1, UNITS, 1)), "reborn unit").clone();
         assert_eq!(back.id, unit.id);
@@ -918,7 +917,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(!unit_has(&state, &back, KeywordKind::Reborn));
 
         kill_and_check(&mut state, &back);
-        // Second death: Death fires again and the unit stays in its owner's graveyard.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 2);
         assert_eq!(ids(&state.players.p1.graveyard), vec![unit.id.clone()]);
         assert!(card_at(&state, slot(P1, UNITS, 1)).is_none());
@@ -1943,7 +1941,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_ne!(replacement.id, unit.id);
         assert_eq!(replacement.position, Some(Position::Def));
         assert_eq!(replacement.owner, P1);
-        // Ceased to exist: no graveyard, no exile pile, no Death.
         assert!(state.players.p1.graveyard.is_empty());
         assert!(!state.players.p1.exile.iter().any(|card| card.id == unit.id));
 
@@ -2139,7 +2136,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(played["costPaid"], json!(0));
         assert_eq!(played["onDraw"], json!(true));
         assert_eq!(state.players.p1.mana.current, mana_before);
-        // The script ran and the spell reached the graveyard (R70).
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
         assert!(state.players.p1.graveyard.iter().any(|card| card.id == spell.id));
     }

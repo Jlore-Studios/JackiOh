@@ -1,37 +1,19 @@
-// Short rules text (issues #814, #1017): what a face prints when its whole text would not fit its
-// rules box. The art never gives way for such a face (fit.ts, `long: false`): it prints a short form,
-// or its text cut at the box's last line with "…", and its whole text stands on the left of its
-// hover preview (inspect/Extended.tsx), in the touch sheet and in the detail view.
-//
-// Issue #1017 measured the limit (constants.ts FACE_TEXT_LIMIT) and cut every catalog face under it,
-// but for these. Each card's text is a list no box holds, or a face still a line over after the cut:
-// - `n` (a number): its first n lines, which its text puts first, "…" in place of the last full
-//   stop: lists such as #98 Heroic Power's thirteen powers, and a few faces that fit, whose last
-//   line is a reminder or the designer's flavour that the click-in carries;
-// - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
-//   must stay whole in the catalog (each roll's label is a clause of it, R436);
-// - "clamp": its whole text, cut by the rules box at its last line with "…": seven faces still about
-//   a line over after the cut, which a 200 px tile prints whole, three #1563 left a line over, one
-//   #1704 did, and #1828's Can't attack put both faces of Jungle Loser a line over.
-// The Stinkyscape set (R1857000) printed its rows before its cards were built: its two Call to
-// Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
-// put over the limit clamps, unless the card's part (docs/stinkyscape-set.md ST13) wrote its own.
-// Where a face just at the limit took the long layout at 170 px (#4.5 1v1 Final Destination's and
-// #26 ZolarKeth's base faces), it prints its first lines or up to its first colon instead (#2067).
-// The set's two staged Quests, #7 The Greatest Heist and #112 Job Application, print one stage
-// (questFace.ts, R2450000), measured as they print it.
-// The held Training Grounds set (R2194000) does the same while it is built: its Call to Chaos edition (#39) takes
-// "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
-// card's part (docs/training-grounds-set.md TG5) writes its own.
-// Issue #2521's texts: Classic+ #34 Memory Leak's base face and Meditative+ #1 Bob's Plan's clamp,
-// and ZolarKeth's Radiant face prints its first line, as its base face does.
-// Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
-// rolled power and a Call to Chaos "???" (inPlay.ts) instead.
-//
-// In play the Summit prints its header and only the next Ascent line (#814): the level the engine's
-// preview carries under "Ascent level" (R280, c008_reach_the_summit.rs), which is the play count on
-// the instance. A face in play that runs past the hover preview's limit clamps rather than shrinking
-// its art, and its whole text stands on its left too.
+// Short rules text (issues #814, #1017): what a face prints when its whole text would not fit its rules box.
+// The art never gives way (fit.ts, `long: false`): the face prints a short form, or its text cut at the box's
+// last line with "…", and the whole text stands on the left of its hover preview (inspect/Extended.tsx), in the
+// touch sheet and in the detail view. #1017 cut every catalog face under the limit (constants.ts FACE_TEXT_LIMIT)
+// but these, whose text is a list no box holds or a line over after the cut. The forms: `n` (a number) its first
+// n lines, "…" in place of the last full stop (#98 Heroic Power's thirteen powers; faces whose last line is a
+// reminder or flavour); "colon" up to its first colon (the Call to Chaos editions, whose list must stay whole in
+// the catalog, R436); "clamp" the whole text, cut by the box at its last line (#1563, #1704, #1828).
+// Stinkyscape (R1857000, docs/stinkyscape-set.md ST13): Call to Chaos #150 and #151 take "colon", every face its
+// rows put over the limit clamps unless the card's part wrote its own; #4.5's and #26's base faces take lines or a
+// colon (#2067); Quests #7 and #112 print one stage (questFace.ts, R2450000). The held Training Grounds set
+// (R2194000, docs/training-grounds-set.md TG5): Call to Chaos #39 "colon", the Radiant faces of #16 and #38 clamp.
+// #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant face. Only a face printing its catalog text takes a
+// short form (in play #98 prints its rolled power and a Call to Chaos "???", inPlay.ts). In play the Summit prints
+// its header and the next Ascent line only (#814): the level the engine's preview carries as "Ascent level" (R280,
+// c008_reach_the_summit.rs); a face in play past the preview's limit clamps rather than shrinking its art.
 
 import type { PreviewValue } from "@jackioh/shared";
 
@@ -156,9 +138,8 @@ export function shortFormOf(defId: string, radiant: boolean): ShortForm | null {
 }
 
 /**
- * The words a `n` or "colon" short form prints, ending in "…" (`trailOff`). Null when there is
- * nothing to cut (a text no longer than its form, or one without a colon) and for "clamp", which
- * prints the whole text.
+ * The words a `n` or "colon" short form prints, ending in "…" (`trailOff`). Null when there is nothing to cut
+ * and for "clamp", which prints the whole text.
  */
 export function cutText(full: string, form: ShortForm): string | null {
   if (form === "clamp") return null;
@@ -180,9 +161,8 @@ export function ascentLevelOf(values: readonly PreviewValue[]): number | null {
 }
 
 /**
- * What a Summit face in play prints for `level`: the header (every line before the first
- * "Ascent N:" line) and only the level's own line. Null when there is nothing to shorten to (a
- * translated face parses no Ascent lines, so it takes its short form instead).
+ * What a Summit face in play prints for `level`: the header (every line before the first "Ascent N:" line)
+ * and only the level's own line. Null when there is nothing to shorten to (a translated face parses no Ascent lines).
  */
 export function summitShortText(defId: string, full: string, level: number | null | undefined): string | null {
   if (defId !== SUMMIT_DEF_ID || level === null || level === undefined) return null;

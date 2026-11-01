@@ -7,10 +7,9 @@
 //!          {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your opponent's deck."
 //! Engine: the keywords are catalog data (§6.1). A kill trigger, C+ #19.5 Bot Loser's: on each
 //! `destroyed` whose `killerId` is this (R42), Cleave and Poisonous kills included, even when it has
-//! left the field since, dying in that combat, as the snapshot it killed with and for the player who
-//! controlled it then ("Whenever", `even_if_gone`, R2396000, R212), `shuffle_into` the opponent's deck
-//! `viruses` CN-Viruses (Core #90.1), the opponent's cards, Radiant on the Radiant face; the shuffle-in
-//! is public and recorded in their list (R311), and a full deck refuses it (R80).
+//! left the field since, as the snapshot it killed with and for the player who controlled it then
+//! ("Whenever", `even_if_gone`, R2396000, R212), `shuffle_into` the opponent's deck `viruses`
+//! CN-Viruses (Core #90.1), Radiant on the Radiant face; public and listed (R311), a full deck refuses it (R80).
 
 use jackioh_engine::prelude::*;
 
@@ -70,9 +69,8 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // M #95.1 CN Golem — SPEC §8.8 row 95.1, R1245, R2396000: "Rush, Poisonous, Cleave, Pierce, 10/10;
-// whenever it is R42's killer of a Unit, Cleave kills included, even when it has left the field since,
-// `viruses` CN-Viruses go into the opponent's deck, theirs and listed (R311), a full deck refusing them
-// (R80); radiant 20/20 with Windfury (R636), and the viruses Radiant".
+// whenever it is R42's killer of a Unit, even when it has left the field since, `viruses` CN-Viruses go
+// into the opponent's deck (R311, R80); radiant 20/20 with Windfury (R636), and the viruses Radiant".
 #[cfg(test)]
 mod tests {
     use super::{CN_VIRUS, ID};

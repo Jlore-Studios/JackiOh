@@ -1,8 +1,7 @@
 //! The golden replay (SURFACE §13.3), its pure half: the canonical texts, one recorded game's replay
 //! to its first `Mismatch` and the hotseat fixture's fold. `cargo jackioh golden check --file` replays a
 //! `golden record` file with it, on this build or another (`luau diff`, `classify`), and the engine's
-//! `tests/golden.rs` folds the hotseat fixture with it. The 240 committed traces both once replayed
-//! (#1641) were retired in #2578.
+//! `tests/golden.rs` folds the hotseat fixture with it. No committed traces now (#1641, #2578).
 //!
 //! A mismatch carries the Rust side's canonical text (`text`) and never writes it: the engine's
 //! `clippy.toml` bans file I/O here, so each caller writes it to `target/golden-diff/` under
@@ -25,18 +24,17 @@ pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.
 /// The final state hash of the recorded hotseat game (SURFACE §5.2).
 ///
 /// Refresh it ONLY together with the recording, and only when the rules deliberately changed: run
-/// `pnpm test:e2e` (spec 01 re-records `e2e/artifacts/01-hotseat-full-game.json` and checks the
-/// browser against a fold of it), copy that file over `crates/engine/tests/golden/`'s fixture, and paste
-/// the hash the engine's `tests/golden.rs` reports. Editing the number on its own turns the check into a
-/// rubber stamp.
+/// `pnpm test:e2e` (spec 01 re-records `e2e/artifacts/01-hotseat-full-game.json`), copy that file over
+/// `crates/engine/tests/golden/`'s fixture, and paste the hash the engine's `tests/golden.rs` reports.
+/// Editing the number on its own turns the check into a rubber stamp.
 ///
 /// The exception is a change to what the state RECORDS about the same game, which leaves the log as it
 /// is and moves the hash alone: R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and
 /// R457 (§6.2; B5 E4), R943's Created mark and R982's last element (R1420), and #1837's tags (R1837000).
 /// A change to the game itself re-records the log (R244, R275, R276, R360–R366; #2179's Core #81
-/// Radiant Saintess, #2368's mulligan, R2368000). Where Cypress cannot be fetched, spec 01's policy (the
-/// first playable hand card into the first open zone, then each unit at the first target it may attack,
-/// then End turn) run against the engine records it, checked first on the base build for the old log.
+/// Radiant Saintess, #2368's mulligan, R2368000). Where Cypress cannot be fetched, run spec 01's policy
+/// (the first playable hand card into the first open zone, each unit at the first target, then End turn)
+/// against the engine, checked first on the base build for the old log.
 /// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
 pub const HOTSEAT_HASH: &str = "972f5b85";
 
@@ -113,12 +111,15 @@ pub fn hashed_state_text(state: &GameState) -> String {
 }
 
 /// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
-/// (R1956001): it dresses the card and plays no part in the game, as `hash_state` leaves its
-/// `generators` out, so a trace recorded before it was sent replays as it did.
+/// (R1956001) or a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000): each dresses
+/// the view and plays no part in the game, as `hash_state` leaves its `generators` out, so a trace
+/// recorded before it was sent replays as it did.
 pub fn view_texts(state: &GameState) -> [String; 2] {
     [PlayerId::P1, PlayerId::P2].map(|player| {
         let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serializes");
         strip_key(&mut value, "createdBy");
+        strip_key(&mut value, "sourceDefId");
+        strip_key(&mut value, "sourceRadiant");
         canonical(&value)
     })
 }

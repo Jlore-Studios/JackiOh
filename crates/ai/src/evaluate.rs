@@ -512,11 +512,10 @@ pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
     coming_refreshes(&state.players[seat], w) - coming_refreshes(&state.players[seat.opponent()], w)
 }
 
-/// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (an
-/// entry `redact` dropped, R185, counts nothing). A mark on a hand card (R1141), a backrow card or an own
-/// unit counts nothing, nor does an unmarked delayed effect: the shipped ones are as often a cost as a
-/// payoff, and a countdown is weighed past the reply instead (`reply_score`, #1995). Nor does a delayed
-/// destroy's mark on a unit that is Indestructible now, which the destroy spares (Classic #20, R46).
+/// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (an entry
+/// `redact` dropped, R185, counts nothing). A mark on a hand card (R1141), a backrow card or an own unit counts
+/// nothing, nor does an unmarked effect (as often a cost as a payoff; a countdown is weighed in `reply_score`,
+/// #1995) or a delayed destroy's mark on a unit Indestructible now, which it spares (Classic #20, R46).
 fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights, prices: &Prices) -> f64 {
     let Some(marks) = &state.marks else {
         return 0.0;
@@ -772,11 +771,10 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
     face_threat_with(state, attacker, &AI_EVAL)
 }
 
-/// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0 that
-/// may swing (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49),
-/// sorted ascending by attack. Taunts soak the smallest attackers they bind first (`damage_past_taunts`),
-/// and each remaining attack goes through `subsystems::projected_hero_damage` (armor, which a Pierce hit
-/// skips, R346, and the Anti-oneshot cap), summed.
+/// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0 that may swing
+/// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
+/// Taunts soak the smallest first (`damage_past_taunts`); each remaining attack goes through
+/// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     for unit in active_units_of(state, attacker) {
@@ -822,15 +820,12 @@ impl TauntStand {
     }
 }
 
-/// What `attacks` (attacker, its attack, whether it may hit the hero once no Taunt walls it) deal
-/// `defender`'s hero once its Taunts have soaked up the attackers they bind, those that may not hit the
-/// hero first and then the smallest. §4.2 step 3: a Taunt binds only the attackers the engine's
-/// `attack_restriction` lets attack it, so a Flying Taunt in Attack Position holds no ground attacker
-/// (R783002) and a landed one holds every attacker (R783003). Each bound attacker is one §4.4 hit on the
-/// Taunt (#898), its First Strike, Divine Shield, Armor (R346), Poisonous, Trample and Cleave (R63) read
-/// as combat runs them; a destroyed Reborn Taunt comes back and binds the attackers left. Lane strike
-/// (R94) and combat-only bonuses (R1120) stay out. A hit that may not hit the hero (a Rush unit on its
-/// summon turn, or one in the Gauntlet, R1849005) lands nothing past the Taunts (#1823).
+/// What `attacks` (attacker, its attack, whether it may hit the hero once no Taunt walls it) deal `defender`'s hero
+/// once its Taunts have soaked the attackers they bind (those that may not hit the hero first, then the smallest).
+/// §4.2 step 3: a Taunt binds only attackers `attack_restriction` lets attack it (R783002, R783003). Each bound
+/// attacker is one §4.4 hit on it (#898), read as combat runs it (R346, R63), a destroyed Reborn Taunt returning;
+/// lane strike (R94) and combat-only bonuses (R1120) stay out. A hit that may not hit the hero (Rush on its summon
+/// turn, the Gauntlet, R1849005) lands nothing past the Taunts (#1823).
 pub fn damage_past_taunts(
     state: &GameState,
     defender: PlayerId,
@@ -973,11 +968,10 @@ pub fn damage_past_taunts(
     total
 }
 
-/// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a Taunt
-/// with First Strike, against an attacker without it, strikes first, and an attacker that falls there
-/// never lands its hit. The strike back runs the §4.4 steps that can stop it (Divine Shield, Armor,
-/// which a Pierce Taunt skips, R346, Indestructible, the zero rule); a Poisonous Taunt destroys with any
-/// damage. A Ranged attacker takes no strike back from a Taunt that is not Ranged (R783000).
+/// §4.3 step 1 and R93, as `subsystems::lethal`'s private `falls_to_first_strike` reads it: a First Strike Taunt
+/// strikes an attacker without it first, and an attacker that falls there never lands its hit. The strike back runs
+/// the §4.4 steps that can stop it (Divine Shield, Armor, which a Pierce Taunt skips, R346, Indestructible, the zero
+/// rule); a Poisonous Taunt destroys with any damage. A Ranged attacker takes none from a non-Ranged Taunt (R783000).
 fn falls_to_first_strike(
     state: &GameState,
     attacker: &CardInstance,
@@ -1159,13 +1153,12 @@ fn spawned_death_probe(
     death_probe(&placed, seat, &unit, counter)
 }
 
-/// R2424000: the Death prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe
-/// world (a function of what the seat sees, R185), each card once: every unit on either field whose
-/// Death is live, the seat's first, then each Unit in the seat's hand with one (R923001). R2566000:
-/// after every Death, each Starship Piece with none, priced by the copy its death fuses into its owner's
-/// Starship, so a board of pieces never takes the nodes a Death drew before. Each runs on a sandbox copy
-/// (R923000) with automatic turn end off (R345), so no tool's step ends the turn (R82), and with no
-/// price passed (R923003). At most `AI_DEATH_PROBE_NODES` nodes from `counter`.
+/// R2424000: the Death prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe world (a
+/// function of what the seat sees, R185), each card once: every unit on either field whose Death is live, the seat's
+/// first, then each Unit in the seat's hand with one (R923001). R2566000: last, each Starship Piece with none, priced
+/// by the copy its death fuses into its owner's Starship, so pieces never take the nodes a Death drew. Each runs on a
+/// sandbox copy (R923000), automatic turn end off (R345, R82), no price passed (R923003); at most
+/// `AI_DEATH_PROBE_NODES` nodes from `counter`.
 pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<DeathPrice> {
     if AI_EVAL.death == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1343,13 +1336,11 @@ fn spawned_turn_hook_probe(
     }
 }
 
-/// R2477000, R2565000: the turn-hook prices a decision of `seat`'s passes (`Prices`), probed on `world`,
-/// its probe world (a function of what the seat sees, R185), each card once: the seat's own field and
-/// backrow cards with a start-of-turn or end-of-turn hook, then the enemy's units and the backrow cards
-/// the seat can read (`readable_by`, so no face-down card is ever probed), each priced as its own
-/// controller's, then each Field Spell or Unit in the seat's hand with one (R923001); the first copy, the
-/// seat's own, sets a card's price. Probed as `death_prices` is, at most `AI_TURN_HOOK_PROBE_NODES` nodes
-/// from `counter`.
+/// R2477000, R2565000: the turn-hook prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe
+/// world (R185), each card once: the seat's own field and backrow cards with a start- or end-of-turn hook, then the
+/// enemy's units and the backrow cards the seat can read (`readable_by`: no face-down card is probed), each priced as
+/// its controller's, then each Field Spell or Unit in the seat's hand with one (R923001); the seat's own copy sets a
+/// card's price. Probed as `death_prices` is, at most `AI_TURN_HOOK_PROBE_NODES` nodes from `counter`.
 pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Vec<TurnHookPrice> {
     if AI_EVAL.turn_hook == 0.0 || world.pending.is_some() || world.result.is_some() {
         return Vec::new();
@@ -1541,13 +1532,12 @@ fn probe_turns(
     priced
 }
 
-/// R2564000, R2603000: the activation prices a decision of `seat`'s passes (`Prices`), probed on `world`,
-/// its probe world (a function of what the seat sees, R185): one use of the Activate of each unit acting
-/// on either field and each card acting face-up in either backrow (never a Dormant, face-down or hand
-/// card), each card once. The enemy's are tried at the start of its next turn and the seat's at the start
-/// of its own (`probe_turns`), so a use the seat already spent this turn hides nothing. It runs with
-/// automatic turn end off (R345) and no price passed, at most `AI_ACTIVATION_PROBE_NODES` nodes from
-/// `counter`; no node is spent when no card has an Activate or outside the seat's own main phase.
+/// R2564000, R2603000: the activation prices a decision of `seat`'s passes (`Prices`), probed on `world`, its probe
+/// world (R185): one use of the Activate of each unit acting on either field and each card acting face-up in either
+/// backrow (never a Dormant, face-down or hand card), each once. The enemy's are tried at the start of its next turn,
+/// the seat's at the start of its own (`probe_turns`), so a use already spent this turn hides nothing. Automatic turn
+/// end off (R345), no price passed, at most `AI_ACTIVATION_PROBE_NODES` nodes from `counter`; none spent when no card
+/// has an Activate or outside the seat's own main phase.
 pub fn activation_prices(
     world: &GameState,
     seat: PlayerId,

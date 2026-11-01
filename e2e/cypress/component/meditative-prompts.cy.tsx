@@ -19,9 +19,8 @@
 // The Created status (ME-CREATED, R943) of a card in hand: no mark on its face (R2647000), and a hold
 // shows its preview, which says it was made during the game.
 //
-// The mount is mobile-ux.cy.tsx's (the narrowest box the board is ever given), with the real catalog,
-// since the market draws its lots from it. The block editor's meters and face are the engine's own
-// `craftPreview`, so the WebAssembly module is loaded first.
+// The mount is mobile-ux.cy.tsx's, with the real catalog (the market draws its lots from it). The block
+// editor's meters and face are the engine's own `craftPreview`, so the WebAssembly module loads first.
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PendingOption, PlayerView } from "@jackioh/shared";
@@ -102,7 +101,7 @@ function marketView(): PlayerView {
 
 type Kind = {
   kind: string;
-  /** The `data-prompt-kind` the sheet carries: a play-time "Choose one" of five or fewer is a Discover pop-up. */
+  /** The `data-prompt-kind` the sheet carries: a play-time "Choose one" of four or fewer is a Discover pop-up (#2646). */
   shows: string;
   view: () => PlayerView;
   /** The legal actions the board is given: a play-time choice's candidate plays. */
@@ -119,11 +118,14 @@ function cardName(defId: string): string {
   return CATALOG[defId]?.name ?? defId;
 }
 
-/** A play-time choice: the card in hand and one candidate play per mode, as `legalActions` lists them (R81). */
-function choice(kind: string, defId: string, modes: readonly string[]): Kind {
+/**
+ * A play-time choice: the card in hand and one candidate play per mode, as `legalActions` lists them (R81).
+ * It shows as a Discover pop-up, or as the plain mode list past DISCOVER_OPTION_LIMIT options.
+ */
+function choice(kind: string, defId: string, modes: readonly string[], shows = "discover"): Kind {
   return {
     kind,
-    shows: "discover",
+    shows,
     view: () => baseView({ you: emptySide("p1", { hand: [card({ instanceId: HAND, defId, cost: 2 })] }) }),
     legal: modes.map((mode): ActionBody => ({ type: "play", instanceId: HAND, modes: [mode] })),
     open: ts(testid.handCard(HAND)),
@@ -136,7 +138,7 @@ const KINDS: readonly Kind[] = [
   { kind: "market", shows: "market", view: marketView, legal: [], card: { selector: ts("prompt-option-mode:meditative-041"), name: cardName("meditative-041") } },
   choice("secret", "meditative-022", ["greed", "attack", "defend"]),
   choice("prediction", "meditative-022-1", ["greed", "attack", "defend"]),
-  choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"]),
+  choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"], "mode"),
 ];
 
 function openSheet(entry: Kind): void {
@@ -237,7 +239,7 @@ function nameOf(element: Element): string {
   return `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").split(/\s+/)[0] ?? ""} "${name}"`;
 }
 
-/* ------------------------------------------------------------------------------------- specs */
+/* specs */
 
 describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", () => {
   beforeEach(() => {

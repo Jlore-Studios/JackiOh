@@ -1,10 +1,9 @@
 // R1834002: the loadout each seat of an online match wears, frozen by the server when the match began:
 // its seat's six picks (its deck's slots over its account's; foil, finish and border are their kinds'
-// defaults, R1953001) and the picks of each of its cards the receiver has been shown. R1834003: the
-// seats' picks come in a `loadouts` frame on every join and reconnect, before the view, the cards' in a
+// defaults, R1953001) and the picks of each of its cards the receiver has been shown. R1834003: the seats'
+// picks come in a `loadouts` frame on every join and reconnect, before the view, the cards' in a
 // `cardLoadouts` frame after it, once per socket; a replay's page carries both (`net/api.ts`). Read as
 // untrusted input: an unknown id, or a kind a card's entry lacks, draws as its kind's default.
-//
 // R1834004: the server checked every pick against the seat's own account (R1834001), so nothing here
 // asks whether the viewer owns it; game/wearer.ts decides which copies wear one. Drawn state only
 // (CLAUDE.md rule 7): no loadout reaches the engine, an action or the view.
@@ -59,14 +58,18 @@ export function parseSeatPicks(raw: unknown): Record<PlayerId, CardCosmetics> | 
   return p1 === null || p2 === null ? null : { p1, p2 };
 }
 
-/** One card entry's picks: each kind it names resolved (its word is final), and full art only when it says `true`. */
+/**
+ * One card entry's picks: each kind it names resolved (its word is final), and full art only when it
+ * says `true` (its Epic) or names a full art by its id (R2655000), which fullArt.ts reads only when it
+ * is that card's.
+ */
 function cardPicksOf(raw: Record<string, unknown>): CardPicks {
   const out: CardPicks = {};
   for (const kind of CARD_SLOT_KINDS) {
     const id = raw[kind];
     if (typeof id === "string") out[kind] = resolveCosmetic(kind, id);
   }
-  if (raw.fullArt === true) out.fullArt = true;
+  if (raw.fullArt === true || (typeof raw.fullArt === "string" && raw.fullArt !== "")) out.fullArt = raw.fullArt;
   return out;
 }
 
@@ -82,9 +85,9 @@ export function parseCardLoadouts(raw: unknown): CardLoadouts | null {
 
 /**
  * R1834003: what one socket, or one replay's pages, have sent so far: the seats' picks, the newest
- * standing, and every card's picks merged in by seat and card id, a card sent again replacing its
- * entry. A `cardLoadouts` that comes before any `loadouts` is kept for it. Each verb answers what
- * `current()` then holds, null until the seats' picks have come.
+ * standing, and every card's picks merged by seat and card id, a card sent again replacing its entry. A
+ * `cardLoadouts` before any `loadouts` is kept for it. Each verb answers what `current()` then holds,
+ * null until the seats' picks have come.
  */
 export type LoadoutsHolder = {
   seats(picks: Record<PlayerId, CardCosmetics>): SeatLoadouts;

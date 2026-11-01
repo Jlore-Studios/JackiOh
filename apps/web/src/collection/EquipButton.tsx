@@ -1,6 +1,7 @@
 // R1955000: a pack opening's reveal equips the cosmetic a slot just granted, writing what the
 // Collection's pickers write with no request: the server settled the grant (CLAUDE.md rule 7). A
-// portrait is a deck's pick (R641, R1827000), so it has no button. The wear path decides what is worn.
+// portrait is a deck's pick (R641, R1827000), so it has no button. R2655000: a full art's Equip picks
+// that tier on its card (`fullArtPickOf`). The wear path decides what is worn.
 
 import type { ReactElement } from "react";
 
@@ -18,12 +19,13 @@ import {
   type CosmeticId,
   type DeckSlotKind,
 } from "../cards/cosmetics.ts";
+import { fullArtIdOf, fullArtPickOf } from "../cards/fullArt.ts";
 import { t } from "../i18n/i18n.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
 export type EquipTarget =
   | { store: "card"; cardId: string; kind: CardSlotKind; id: CosmeticId }
-  | { store: "fullArt"; cardId: string }
+  | { store: "fullArt"; cardId: string; id: CosmeticId }
   | { store: "account"; kind: DeckSlotKind; id: CosmeticId };
 
 /** What equipping `cosmeticId`, granted on `cardId` (null for an account one), writes: none for a portrait, an unknown id, or a per-card one with no card. */
@@ -32,7 +34,7 @@ export function equipTarget(cosmeticId: string, cardId: string | null): EquipTar
   if (found === undefined) return null;
   const slot = CARD_SLOT_KINDS.find((kind) => kind === found.kind);
   if (slot !== undefined) return cardId === null ? null : { store: "card", cardId, kind: slot, id: found.id };
-  if (found.kind === "fullArt") return cardId === null ? null : { store: "fullArt", cardId };
+  if (found.kind === "fullArt") return cardId === null ? null : { store: "fullArt", cardId, id: found.id };
   const account = DECK_SLOT_KINDS.find((kind) => kind === found.kind);
   return account === undefined ? null : { store: "account", kind: account, id: found.id };
 }
@@ -42,7 +44,7 @@ function holds(target: EquipTarget, account: CardCosmetics, card: CardPicks): bo
     case "card":
       return card[target.kind] === target.id;
     case "fullArt":
-      return card.fullArt === true;
+      return fullArtIdOf(target.cardId, card.fullArt) === target.id;
     case "account":
       return account[target.kind] === target.id;
   }
@@ -54,7 +56,7 @@ function equip(target: EquipTarget): void {
       writeCardPick(target.cardId, target.kind, target.id);
       return;
     case "fullArt":
-      writeCardFullArt(target.cardId, true);
+      writeCardFullArt(target.cardId, fullArtPickOf(target.cardId, target.id));
       return;
     case "account":
       writeCosmetics({ [target.kind]: target.id });

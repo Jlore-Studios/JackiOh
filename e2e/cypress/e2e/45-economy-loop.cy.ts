@@ -504,8 +504,10 @@ function earnAFullArt(loop: Loop): void {
   let earned: FullArt | null = null;
   let other: FullArt | null = null;
   read<OwnedCosmeticsBody>(econ(), "/api/cosmetics").then((owned) => {
+    // R2655000: an Epic token buys an Epic full art, one to a card; the Legendary and Mythic are chases no token pays for.
     const fullArts = COSMETICS.filter((cosmetic): cosmetic is FullArt => cosmetic.kind === "fullArt").filter(
       (cosmetic) =>
+        cosmetic.rarity === "Epic" &&
         loop.owned.has(cosmetic.card) &&
         !owned.cards.some((entry) => entry.cardId === cosmetic.card && entry.cosmeticId === cosmetic.id),
     );

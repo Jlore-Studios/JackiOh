@@ -24,6 +24,35 @@ export const CARD_COUNTERS = [
   "radiant",
   "playedInWin",
   "playedInLoss",
+  "tempExpired",
+  "tempPlayed",
+  "crumbled",
+  "crumbledAgainst",
+  "fengShuiGood",
+  "fengShuiBad",
+  "traded",
+  "tradeDrawn",
+  "created",
+  "kills",
+  "biggestKill",
+  "reborn",
+  "shieldsLost",
+  "armorAbsorbed",
+  "damageTaken",
+  "doubleAttacks",
+  "lifesteal",
+  "sacrificed",
+  "froze",
+  "frozen",
+  "thawed",
+  "shattered",
+  "flashback",
+  "manaSaved",
+  "countered",
+  "counterspells",
+  "burned",
+  "bounced",
+  "launched",
 ] as const;
 export type CardCounter = (typeof CARD_COUNTERS)[number];
 
@@ -41,14 +70,42 @@ export const SUMMED_COUNTERS = [
   "healing",
   "drawn",
   "radiant",
+  "tempExpired",
+  "tempPlayed",
+  "crumbled",
+  "crumbledAgainst",
+  "fengShuiGood",
+  "fengShuiBad",
+  "traded",
+  "tradeDrawn",
+  "created",
+  "kills",
+  "reborn",
+  "shieldsLost",
+  "armorAbsorbed",
+  "damageTaken",
+  "doubleAttacks",
+  "lifesteal",
+  "sacrificed",
+  "froze",
+  "frozen",
+  "thawed",
+  "shattered",
+  "flashback",
+  "manaSaved",
+  "countered",
+  "counterspells",
+  "burned",
+  "bounced",
+  "launched",
 ] as const;
 export type SummedCounter = (typeof SUMMED_COUNTERS)[number];
 
 /** R1743000: the counters that keep the largest value of any game, not a sum. */
-export const MAX_COUNTERS = ["biggestHit", "overkill"] as const;
+export const MAX_COUNTERS = ["biggestHit", "overkill", "biggestKill"] as const;
 export type MaxCounter = (typeof MAX_COUNTERS)[number];
 
-/** Per-card viewer counts, summed or kept at their maximum across games (R1582000, R1743000). */
+/** Per-card viewer counts, summed or kept at their maximum across games (R1582000, R1743000, R2649000). */
 export type CardCounters = Readonly<Record<CardCounter, number>>;
 
 export const NO_COUNTS: CardCounters = Object.freeze({
@@ -70,6 +127,35 @@ export const NO_COUNTS: CardCounters = Object.freeze({
   radiant: 0,
   playedInWin: 0,
   playedInLoss: 0,
+  tempExpired: 0,
+  tempPlayed: 0,
+  crumbled: 0,
+  crumbledAgainst: 0,
+  fengShuiGood: 0,
+  fengShuiBad: 0,
+  traded: 0,
+  tradeDrawn: 0,
+  created: 0,
+  kills: 0,
+  biggestKill: 0,
+  reborn: 0,
+  shieldsLost: 0,
+  armorAbsorbed: 0,
+  damageTaken: 0,
+  doubleAttacks: 0,
+  lifesteal: 0,
+  sacrificed: 0,
+  froze: 0,
+  frozen: 0,
+  thawed: 0,
+  shattered: 0,
+  flashback: 0,
+  manaSaved: 0,
+  countered: 0,
+  counterspells: 0,
+  burned: 0,
+  bounced: 0,
+  launched: 0,
 });
 
 export type PlayerStats = {
@@ -82,9 +168,9 @@ export type PlayerStats = {
   /** R1743000: the games won in a row now; a loss or a draw resets it. */
   readonly streak: number;
   readonly bestStreak: number;
-  /** R1743000: the most turns any finished game ran. */
+  /** the most turns any finished game ran. */
   readonly longestGame: number;
-  /** R1743000: the player's plays, by card, in that longest game. */
+  /** the player's plays, by card, in that longest game. */
   readonly longestGamePlayed: Readonly<Record<string, number>>;
 };
 
@@ -126,6 +212,68 @@ export type GameLog = {
   readonly radiant: Readonly<Record<string, number>>;
   /** The highest turn a `turnStarted` named in this game. */
   readonly turns: number;
+  /** R2649000: the player's Temporary cards discarded unplayed at the end of their turn. */
+  readonly tempExpired: Readonly<Record<string, number>>;
+  /** the player's plays of a card Temporary in their hand. */
+  readonly tempPlayed: Readonly<Record<string, number>>;
+  /** the player's cards that crumbled (Brittle, R638). */
+  readonly crumbled: Readonly<Record<string, number>>;
+  /** the opponent's cards that crumbled. */
+  readonly crumbledAgainst: Readonly<Record<string, number>>;
+  /** the player's plays a Feng Shui judged positive (R983). */
+  readonly fengShuiGood: Readonly<Record<string, number>>;
+  /** the player's plays a Feng Shui judged negative. */
+  readonly fengShuiBad: Readonly<Record<string, number>>;
+  /** the player's Tradable cards traded away (R1838001). */
+  readonly traded: Readonly<Record<string, number>>;
+  /** the player's cards drawn by a trade. */
+  readonly tradeDrawn: Readonly<Record<string, number>>;
+  /** the player's Created cards (R943), each instance once. */
+  readonly created: Readonly<Record<string, number>>;
+  /** the opponent's cards the player's cards killed. */
+  readonly kills: Readonly<Record<string, number>>;
+  /** the largest `maxHealth` of a card each of the player's cards killed. */
+  readonly biggestKill: Readonly<Record<string, number>>;
+  /** the player's Reborn Units that came back. */
+  readonly reborn: Readonly<Record<string, number>>;
+  /** the Divine Shields the player's Units lost. */
+  readonly shieldsLost: Readonly<Record<string, number>>;
+  /** the damage Armor took off the player's Units (R1360, R1361). */
+  readonly armorAbsorbed: Readonly<Record<string, number>>;
+  /** the damage the player's Units took. */
+  readonly damageTaken: Readonly<Record<string, number>>;
+  /** the player's Units' second attack in one turn. */
+  readonly doubleAttacks: Readonly<Record<string, number>>;
+  /** the healing the player's Lifesteal cards drained. */
+  readonly lifesteal: Readonly<Record<string, number>>;
+  /** the player's own deaths at their own hand. */
+  readonly sacrificed: Readonly<Record<string, number>>;
+  /** the opponent's Units the player's cards froze. */
+  readonly froze: Readonly<Record<string, number>>;
+  /** the player's Units frozen. */
+  readonly frozen: Readonly<Record<string, number>>;
+  /** the player's Units that thawed on the field. */
+  readonly thawed: Readonly<Record<string, number>>;
+  /** the frozen opponent Units the player's cards killed. */
+  readonly shattered: Readonly<Record<string, number>>;
+  /** the player's plays from the graveyard (R783012). */
+  readonly flashback: Readonly<Record<string, number>>;
+  /** the mana the player's plays cost under their printed cost. */
+  readonly manaSaved: Readonly<Record<string, number>>;
+  /** the player's plays countered. */
+  readonly countered: Readonly<Record<string, number>>;
+  /** the opponent's plays the player's cards countered. */
+  readonly counterspells: Readonly<Record<string, number>>;
+  /** the player's cards burned from a full hand (R4). */
+  readonly burned: Readonly<Record<string, number>>;
+  /** the player's cards bounced back to the hand. */
+  readonly bounced: Readonly<Record<string, number>>;
+  /** the player's Starship pieces launched in a Starship (R1852003). */
+  readonly launched: Readonly<Record<string, number>>;
+  /** the Created instances already counted this game; never stored. */
+  readonly createdIds: readonly string[];
+  /** this turn's attacks, by the attacker's instance id; never stored. */
+  readonly attackers: Readonly<Record<string, number>>;
 };
 
 export const EMPTY_LOG: GameLog = Object.freeze({
@@ -146,6 +294,37 @@ export const EMPTY_LOG: GameLog = Object.freeze({
   drawn: Object.freeze({}),
   radiant: Object.freeze({}),
   turns: 0,
+  tempExpired: Object.freeze({}),
+  tempPlayed: Object.freeze({}),
+  crumbled: Object.freeze({}),
+  crumbledAgainst: Object.freeze({}),
+  fengShuiGood: Object.freeze({}),
+  fengShuiBad: Object.freeze({}),
+  traded: Object.freeze({}),
+  tradeDrawn: Object.freeze({}),
+  created: Object.freeze({}),
+  kills: Object.freeze({}),
+  biggestKill: Object.freeze({}),
+  reborn: Object.freeze({}),
+  shieldsLost: Object.freeze({}),
+  armorAbsorbed: Object.freeze({}),
+  damageTaken: Object.freeze({}),
+  doubleAttacks: Object.freeze({}),
+  lifesteal: Object.freeze({}),
+  sacrificed: Object.freeze({}),
+  froze: Object.freeze({}),
+  frozen: Object.freeze({}),
+  thawed: Object.freeze({}),
+  shattered: Object.freeze({}),
+  flashback: Object.freeze({}),
+  manaSaved: Object.freeze({}),
+  countered: Object.freeze({}),
+  counterspells: Object.freeze({}),
+  burned: Object.freeze({}),
+  bounced: Object.freeze({}),
+  launched: Object.freeze({}),
+  createdIds: Object.freeze([]) as readonly string[],
+  attackers: Object.freeze({}),
 });
 
 export type GameOutcome = "win" | "loss" | "draw";

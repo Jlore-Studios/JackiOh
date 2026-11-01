@@ -1,7 +1,5 @@
 //! The refusals a play's choices go through, and the channel they travel in (SPEC §10.5 step 1,
-//! §10.6, R81, R90).
-//!
-//! The refusals: a card dormant under a Stack, the opponent's hand, and the counts a declaration
+//! §10.6, R81, R90): a card dormant under a Stack, the opponent's hand, and the counts a declaration
 //! asks for.
 //!
 //! It also holds R81's core, a statement about *where* a choice lives: Zone, X, embiggen, Tribute and
@@ -71,7 +69,6 @@ fn traveller() -> CardDef {
 fn discoverer() -> CardDef {
     def("discoverer", "Spell", 1456, json!({}))
 }
-/// A spare card to sit in a hand as a candidate.
 fn candidate() -> CardDef {
     def("candidate", "Spell", 1457, json!({}))
 }
@@ -271,7 +268,6 @@ fn first_decl(state: &GameState, card: &CardInstance) -> TargetDecl {
     only(play_choices::declared_targets(state, card))
 }
 
-/// `result.error` as text, empty when the action went through.
 fn error_of(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
@@ -319,7 +315,6 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<CardInstan
 mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
     use super::*;
 
-    /// "R90 offers only the top of a Stack pile and refuses a card dormant under it (R13)"
     #[test]
     fn r90_r13_offers_only_the_top_of_a_stack_pile_and_refuses_a_card_dormant_under_it() {
         let mut state = playing("stack-dormant");
@@ -397,8 +392,6 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert_eq!(find_instance(&state, &buried.id).map(|card| card.damage), Some(0));
     }
 
-    /// "R90 refuses a hand pick that names a card in the opponent's hand, which the chooser cannot see
-    /// (§9.1)"
     #[test]
     fn r90_refuses_a_hand_pick_that_names_a_card_in_the_opponents_hand_which_the_chooser_cannot_see() {
         let mut state = playing("opponent-hand");
@@ -436,14 +429,12 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
             ))
             .contains("not a legal target")
         );
-        // The hand pick the chooser does own goes through.
         assert_eq!(
             act_result(&state, targeting(&card.id, vec![on_instance(&mine.id)])).error,
             None
         );
     }
 
-    /// "R90 refuses fewer picks than a declaration's minimum and more than its maximum"
     #[test]
     fn r90_refuses_fewer_picks_than_a_declarations_minimum_and_more_than_its_maximum() {
         let mut state = playing("counts");
@@ -535,8 +526,6 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert!(error_of(&act_result(&state, targeting(&card.id, vec![]))).contains("needs 1 target"));
     }
 
-    /// "R90 gives a card that declared nothing nothing: a target or a mode it never asked for is
-    /// refused"
     #[test]
     fn r90_gives_a_card_that_declared_nothing_nothing_a_target_or_a_mode_it_never_asked_for_is_refused() {
         let mut state = playing("declared-nothing");
@@ -601,8 +590,6 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         );
     }
 
-    /// "R81 carries a declared hand pick in targets and a declared direction in modes, in the play
-    /// action itself"
     #[test]
     fn r81_carries_a_declared_hand_pick_in_targets_and_a_declared_direction_in_modes_in_the_play_action_itself()
      {
@@ -695,7 +682,6 @@ mod r81_r90_the_refusals_a_plays_choices_go_through_s10_5_step_1 {
         assert!(played.state.pending.is_none());
     }
 
-    /// "R81 opens a PendingChoice for a choice made during resolution, not a play choice"
     #[test]
     fn r81_opens_a_pending_choice_for_a_choice_made_during_resolution_not_a_play_choice() {
         let mut state = playing("resolution-choice");
@@ -753,8 +739,6 @@ mod r703_a_pick_the_play_needs {
             .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
     }
 
-    /// "R703 a needed pick the board cannot satisfy is neither offered nor accepted, where R90's plain
-    /// pick plays and fizzles"
     #[test]
     fn r703_r90_a_needed_pick_the_board_cannot_satisfy_is_neither_offered_nor_accepted_where_the_plain_pick_plays_and_fizzles()
      {
@@ -811,7 +795,7 @@ mod r703_a_pick_the_play_needs {
         );
     }
 
-    /// "R703 a cast is never refused (R70): cast with no unit on the board, the needed pick fizzles"
+    /// R70: a cast is never refused, so a needed pick the board cannot satisfy fizzles.
     #[test]
     fn r703_r70_a_cast_is_never_refused_cast_with_no_unit_on_the_board_the_needed_pick_fizzles() {
         let mut state = playing("r657-cast");

@@ -1,28 +1,16 @@
 // The whole client in one component: board (M5-T1), pickers (M5-T2), animation runner (M5-T4).
 //
-// It holds exactly three pieces of state, and none of them is a rule:
-//
-//  - `interaction` — the play or attack the player is halfway through building. `actions.ts` is
-//    the only thing that advances it, and it advances it by filtering the `legal` array the
-//    engine handed us. Nothing here asks whether a card is affordable or a target is reachable.
-//  - `queue` — the animation runner. BUILD M5-T4 says the view updates after the animation for an
-//    event completes, so the view this component renders is the one the events were planned
-//    against; it swaps to the newest view when the queue settles.
-//  - `shown` — that held-back view.
-//
-// Everything else is `props.view` and `props.legal`. `onAction` goes straight out to the caller,
-// which is the only thing that talks to the engine (CLAUDE.md rule 7). The chrome beside the board
-// holds no rule either: the Concede control asks before it sends anything (ConfirmConcede.tsx), and
-// the draw offer's notices come from the view (DrawOffer.tsx). So do R915004's notice that a custom
-// card's script failed (ScriptFailedNotice.tsx), R1838000's Trade control (TradeControl.tsx) and
-// R1853003's Marketplace shop (Marketplace.tsx, in the board's control bar, #2645), each live exactly
-// as `legal` lists its moves.
-//
-// `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
-// While the runner holds it back, the board draws the older position, and the newer position's moves
-// on it lit End turn and glowed the hand before the player could see the turn was theirs: a click
-// there ended a turn they had not seen. So until the board catches up, every consumer of `legal`
-// gets none.
+// Exactly three pieces of state, none a rule: `interaction` (the play or attack being built; `actions.ts`
+// advances it by filtering the engine's `legal` array, nothing here asks if a card is affordable),
+// `queue` (the animation runner: BUILD M5-T4 updates the view after an event's animation, so the board
+// renders the view the events were planned against and swaps to the newest when the queue settles) and
+// `shown` (that held-back view). Everything else is `props.view` and `props.legal`; `onAction` goes
+// straight to the caller, the only thing that talks to the engine (CLAUDE.md rule 7). The chrome holds no
+// rule either: Concede asks first (ConfirmConcede.tsx), the draw offer's notices come from the view
+// (DrawOffer.tsx), as do R915004's script-failed notice (ScriptFailedNotice.tsx), R1838000's Trade control
+// (TradeControl.tsx) and R1853003's Marketplace shop (Marketplace.tsx, #2645), each live as `legal` lists its moves.
+// `legal` belongs to `props.view`, so every consumer gets none until the board SHOWS that view: else the newer
+// position's moves lit End turn before the player saw the turn was theirs.
 
 import {
   useCallback,
@@ -153,9 +141,8 @@ export type GameProps = {
   /** R1838000: the board's own Trade bar; the Duos board turns it off and puts Trade in its card bar. */
   tradeBar?: boolean;
   /**
-   * R2095000: no audio, effects layer or showcase, for the Duos teammate's read-only board: the audio
-   * and the effects find their anchors on the whole page, so a second board would play the other
-   * duel's cues and shake, spark and mark the own board.
+   * R2095000: no audio, effects layer or showcase, for the Duos teammate's read-only board: they anchor
+   * on the whole page, so a second board would play the other duel's cues on the own board.
    */
   silent?: boolean;
 };

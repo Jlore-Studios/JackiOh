@@ -1,27 +1,15 @@
-// The face of a card, and the interaction vocabulary every other board component shares
-// (BUILD M5-T1). A card renders `CardView` / `UnitView` and nothing else (CLAUDE.md rule 7, SPEC
-// §10.8). When `card` is `null` it draws a back: `BackrowView { faceDown: true }` and the opponent's
-// hand carry no identity at all, so there is nothing to leak and nothing to key a testid off.
-//
-// No rule lives here. `legal` is "is my testid in `props.highlight.legal`", which came from the
-// engine's `legalActions`; `canAct` / `usedThisTurn` are drawn as state, never consulted as permission.
-//
-// What it draws is the card presentation module's (apps/web/src/cards, docs/polish/6-cards.md). The
-// face inside is `.cf`, which ignores the pointer, so the root and the badges beside it take every
-// click. The face is the card in play (faces.ts, SPEC §10.10), a hand Unit's grown stats (#89) included; a
-// match-made card reads its definition from the view (`MatchCardsContext`, R243) where the catalog has none.
-//
-// R667: the viewer's hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice would
-// counter it) wears a warning film. R437: a card wears the marks its view lists (#50 K-Pop Fanatic's
-// pending steal), a face-down back too (R33: the player who cannot read the card still sees it is
-// marked); the opponent's hand of backs carries none. #2270: a field card at Brittle
-// `BRITTLE_LAST_COUNT` crumbles at its next tick (R385, R638), so it wears Allure's aura (R963,
-// R1045000) in gray, alone; a mark of its own outranks it. #2437: a hand card at Temporary
-// `TEMPORARY_LAST_COUNT` (R637, R2179001) is discarded at its owner's next end of turn: fuchsia.
-// R1295000: a stolen unit keeps its owner's look; a card in the resolving strip, which names no owner,
-// wears the defaults. R1655000: the viewer's own card wears its own card's picks over the account's.
-// R384, R510: each of a card's `activations` is an Activate control beside the face, its click kept off
-// the card. R2321000: a unit wears a pill per count the view's `tallies` give it (cards/Tallies.tsx).
+// The face of a card, and the interaction vocabulary every other board component shares (BUILD M5-T1).
+// A card renders `CardView` / `UnitView` and nothing else (CLAUDE.md rule 7, SPEC §10.8); `card: null` draws
+// a back (`BackrowView { faceDown: true }`, the opponent's hand): no identity to leak or key a testid off.
+// No rule lives here: `legal` comes from the engine's `legalActions`; `canAct` / `usedThisTurn` are state.
+// The face (`.cf`, which ignores the pointer, so the root and badges take every click) is the card
+// presentation module's (apps/web/src/cards, docs/polish/6-cards.md, faces.ts, SPEC §10.10): the card in
+// play, a hand Unit's grown stats (#89) included; a match-made card reads its definition from the view (R243).
+// Marks: R667 (hand card `counteredOnPlay`, #87), R437 (the view's marks, #50; a back too, R33), #2270 Brittle
+// `BRITTLE_LAST_COUNT` (R385, R638) wears Allure's aura (R963, R1045000) in gray, a mark of its own outranks it;
+// #2437 Temporary `TEMPORARY_LAST_COUNT` (R637, R2179001) fuchsia. R1295000: a stolen unit keeps its owner's
+// look, the resolving strip wears defaults. R1655000: the viewer's own card wears its own picks. R384, R510:
+// `activations` are Activate controls beside the face. R2321000: `tallies` pills (cards/Tallies.tsx).
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement, ReactNode } from "react";
 
@@ -190,9 +178,8 @@ export type CardProps = {
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
   counters?: { plague?: number; grade?: number; gradeLetter?: string };
   /**
-   * R370: a back in the backrow, a face-down trap; absent for every other back. `at` names its zone
-   * ("opponent-3"), which keys its inspect overlay since a back has no instance id. R437: `marks` are
-   * the view's on the face-down card, which its back carries (R33). R471: its Plague Counters, public.
+   * R370: a face-down backrow trap's back; absent for every other back. `at` names its zone ("opponent-3"),
+   * which keys its inspect overlay (a back has no instance id). R437, R33: `marks`. R471: Plague Counters, public.
    */
   faceDown?: { cost?: number; at: string; marks?: readonly CardMark[]; plague?: number };
   /** R371: the viewer's own face-down trap (`BackrowView.unrevealed`), veiled: the other sees its back. */
@@ -558,10 +545,9 @@ export default function Card(props: CardProps): ReactElement {
     </div>
   );
 
-  // The overlay is a sibling of the root, never its child, so the root's click and drag handlers
-  // never see an event from inside a preview or a sheet. #258: so is the switch (⟳), so it gets a full
-  // 44 px target (board.css) and a DEF card's rotation never turns it. R1313000, R1655000: the viewer's
-  // own card's overlay prints the full art the card does and wears its cosmetics; R1834004: another
+  // The overlay is a sibling of the root, never its child, so the root's handlers never see an event from
+  // inside a preview or a sheet. #258: so is the switch (⟳): a full 44 px target (board.css), never rotated by DEF.
+  // R1313000, R1655000: the viewer's own card's overlay prints its full art and cosmetics; R1834004: another
   // seat's card wears that seat's loadout.
   return (
     <TheirCopy loadout={theirs}>

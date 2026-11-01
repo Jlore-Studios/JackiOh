@@ -332,7 +332,8 @@ describe("R404 In Too Deep through the real engine", () => {
     expect(screen.getByTestId("prompt-quest-complete").textContent).toBe("Quest complete!");
     expect(modal.querySelector(".prompt-title")?.textContent).toBe("Draw 2 cards");
     const tiles = Array.from(modal.querySelectorAll<HTMLElement>("[data-testid^='prompt-option-']"));
-    expect(tiles.map((tile) => tile.textContent)).toEqual(["Heal your hero 6", "Deal 3 damage to a target"]);
+    // #2646: each reward is a choice card, its words its text.
+    expect(tiles.map((tile) => tile.querySelector(".choice-card-text")?.textContent)).toEqual(["Heal your hero 6", "Deal 3 damage to a target"]);
     fireEvent.click(must(tiles[0], "reward A's tile"));
     expect(onAction).toHaveBeenCalledTimes(1);
     const answer = must(onAction.mock.calls[0]?.[0], "the answer");
@@ -588,7 +589,8 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
       // Off the field its tree has no quest open, and it prints its text as it is.
       const off = questFace(ITD, face.radiant);
       expect(questFaceText(off), face.label).toBeNull();
-      expect(faceText(off).shown, face.label).toBe(full);
+      // R2655001: this card prints full art now; the test reads its words.
+      expect(faceText(off, undefined, false).shown, face.label).toBe(full);
     }
   });
 

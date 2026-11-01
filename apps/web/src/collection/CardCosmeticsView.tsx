@@ -1,6 +1,7 @@
 // A card in context (#1662, R1655000, part of #1651): the Collection's card view, the card large in its
-// own picks under a strip of live previews of what it may wear. Clicking an owned item equips it on
-// this card alone; `Use default` clears the pick (R1953001); a locked one a held token covers offers
+// own picks under a strip of live previews of what it may wear (R2655000: a full-art card's full arts
+// are none, its Epic, its animated Legendary and its signed Mythic). Clicking an owned item equips it
+// on this card alone; `Use default` clears the pick (R1953001); a locked one a held token covers offers
 // it. It decides nothing (CLAUDE.md rule 7): a pick goes to the device's store, which
 // `cards/cardPicksSync.ts` sends to the account (R1834000) and an online match freezes for the
 // opponent's sight (R1834002). So a preview writes no pick, lest it stand as one opponents are shown:
@@ -26,7 +27,7 @@ import {
   writeCardPick,
   type CardPicks,
 } from "../cards/cosmetics.ts";
-import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
+import { FullArtShown, OwnCopy, fullArtIdOf, fullArtPickOf, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
 import { useBackLayer } from "../net/backLayers.ts";
@@ -66,7 +67,7 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
     <span className="collection-cardview__stage">
       <span className="collection-cardview__face" data-testid={T.cardViewFace}>
         {preview !== null && preview.kind === "fullArt" && preview.owned ? (
-          <FullArtShown defId={face.defId} on={preview.id !== NO_FULL_ART_ID}>
+          <FullArtShown defId={face.defId} pick={preview.id === NO_FULL_ART_ID ? false : fullArtPickOf(face.defId, preview.id)}>
             {largeFace}
           </FullArtShown>
         ) : (
@@ -78,8 +79,9 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   );
 }
 
-function isEquipped(item: StripItem, picks: CardPicks): boolean {
-  if (item.kind === "fullArt") return picks.fullArt !== undefined && picks.fullArt === (item.id !== NO_FULL_ART_ID);
+/** For a full art, the tier the card's pick names (R2655000). */
+function isEquipped(defId: string, item: StripItem, picks: CardPicks): boolean {
+  if (item.kind === "fullArt") return item.id === NO_FULL_ART_ID ? picks.fullArt === false : fullArtIdOf(defId, picks.fullArt) === item.id;
   return picks[item.kind] === item.id;
 }
 
@@ -144,7 +146,7 @@ function StripKindGroup({
       </div>
       <ul className="collection-strip__items">
         {group.items.map((item) => {
-          const equipped = isEquipped(item, picks);
+          const equipped = isEquipped(def.id, item, picks);
           return (
             <li key={item.id}>
               <button
@@ -260,7 +262,7 @@ export default function CardCosmeticsView({
 
   const equip = (item: StripItem): void => {
     if (!item.owned) return;
-    if (item.kind === "fullArt") writeCardFullArt(def.id, item.id !== NO_FULL_ART_ID);
+    if (item.kind === "fullArt") writeCardFullArt(def.id, item.id === NO_FULL_ART_ID ? false : fullArtPickOf(def.id, item.id));
     else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
   };
   const clear = (kind: StripKind): void => {

@@ -190,6 +190,45 @@ describe("R639 a tolerant reader", () => {
     expect(readPlayerStats()).toMatchObject({ streak: 0, bestStreak: 0, longestGame: 0, longestGamePlayed: {} });
   });
 
+  it("R2649000 an older value reads the new counters as 0, a bad one as 0, a game stores them and the clear empties them", () => {
+    window.localStorage.setItem(
+      PLAYER_STATS_KEY,
+      JSON.stringify({ v: PLAYER_STATS_VERSION, games: 3, wins: 2, losses: 1, draws: 0, cards: { "core-001": { seen: 3, played: 4, drawn: 2 } } }),
+    );
+    expect(readPlayerStats().cards["core-001"]).toEqual({ ...NO_COUNTS, seen: 3, played: 4, drawn: 2 });
+
+    const bad = parsePlayerStats({
+      v: PLAYER_STATS_VERSION,
+      games: 1,
+      cards: { "core-001": { tempExpired: "9", kills: -1, biggestKill: 1.5, manaSaved: null, created: 3, launched: 2, froze: {} } },
+    });
+    expect(bad.cards["core-001"]).toEqual({ ...NO_COUNTS, created: 3, launched: 2 });
+    // A card with only a new counter is kept.
+    expect(parsePlayerStats({ v: PLAYER_STATS_VERSION, games: 1, cards: { "core-002": { shattered: 1 } } }).cards["core-002"]).toEqual({
+      ...NO_COUNTS,
+      shattered: 1,
+    });
+
+    // A game stores each new counter under the same key and version, and reads it back; biggestKill keeps its max.
+    dropPlayerStatsCache();
+    window.localStorage.clear();
+    const game = logMax(logWith(logWith(EMPTY_LOG, "kills", "core-001", 2), "counterspells", "core-041"), "biggestKill", "core-001", 6);
+    recordGame({ ...game, createdIds: ["m1"], attackers: { mine: 2 } }, "win");
+    recordGame(logMax(logWith(EMPTY_LOG, "kills", "core-001"), "biggestKill", "core-001", 3), "loss");
+    dropPlayerStatsCache();
+    const stored = JSON.parse(window.localStorage.getItem(PLAYER_STATS_KEY) ?? "null") as { v: number; cards: Record<string, Record<string, number>> };
+    expect(stored.v).toBe(PLAYER_STATS_VERSION);
+    expect(stored.cards["core-001"]).toMatchObject({ kills: 3, biggestKill: 6 });
+    expect(window.localStorage.getItem(PLAYER_STATS_KEY)).not.toContain("createdIds");
+    expect(window.localStorage.getItem(PLAYER_STATS_KEY)).not.toContain("attackers");
+    expect(readPlayerStats().cards["core-001"]).toMatchObject({ kills: 3, biggestKill: 6 });
+    expect(readPlayerStats().cards["core-041"]).toMatchObject({ counterspells: 1 });
+
+    expect(resetPlayerStats()).toBe(EMPTY_STATS);
+    dropPlayerStatsCache();
+    expect(readPlayerStats()).toEqual(EMPTY_STATS);
+  });
+
   it("R639 storage that throws leaves the in-memory totals in force", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("blocked");

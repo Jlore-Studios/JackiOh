@@ -12,7 +12,8 @@
 //! Each bucket of at least `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be
 //! pasted into `BOT_COSMETIC_FITS` in `crates/server/src/config.rs` by hand (CLAUDE.md rule 9), and
 //! a bucket under it prints a comment, so its row keeps the prior. Ownership is read now, so a full
-//! art or an earned foil, finish or border granted after a match counts as not worn there.
+//! art or an earned foil, finish or border granted after a match counts as not worn there;
+//! `full_art_wear` is the share that printed that one of its card's tiers (R2655000).
 //!
 //! The output is aggregates only: no account id or username.
 
@@ -25,7 +26,7 @@ use crate::cli::{connect_one, database_url};
 use crate::config::{
     BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FIT_WINDOW_DAYS,
 };
-use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, registry};
+use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, full_art_picked, registry};
 use crate::db::store::{Db, LoadoutSample, StoreError};
 use crate::economy::store::OwnedCosmetics;
 use crate::env::quoted;
@@ -226,7 +227,14 @@ pub fn fit_cosmetics(
             }
             let printed = could
                 .iter()
-                .filter(|sample| sample.loadout.card(card).and_then(|picks| picks.full_art) == Some(true))
+                .filter(|sample| {
+                    sample
+                        .loadout
+                        .card(card)
+                        .and_then(|picks| picks.full_art.as_ref())
+                        .and_then(|pick| full_art_picked(registry, card, pick))
+                        .is_some_and(|worn| worn.id == full_art.id)
+                })
                 .count();
             full_art_wear.push((full_art.id.clone(), share(printed, could.len())));
         }

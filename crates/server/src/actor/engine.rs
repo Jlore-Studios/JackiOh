@@ -165,6 +165,12 @@ pub fn view_for(pinned: Pinned, state: &EngineState, player: PlayerId) -> Player
     pinned.run(|| jackioh_engine::view_for(state, player))
 }
 
+/// R2652000: how many of a change's `fresh` events `player`'s view carries (a face-down trap's flip it
+/// leaves out), so the bots' personas slice that view by the change alone (R645).
+pub fn viewed_of_newest(state: &EngineState, player: PlayerId, fresh: usize) -> usize {
+    jackioh_engine::viewed_of_newest(state, player, fresh)
+}
+
 /// §9.5: a crashed actor rebuilds its state by folding `(seed, log)`.
 pub fn fold(pinned: Pinned, args: &FoldArgs) -> FoldResult {
     registered();
