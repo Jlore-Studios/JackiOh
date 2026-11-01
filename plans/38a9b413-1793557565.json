@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2733,
+  "title": "CI: a patches promotion or log is stuck",
+  "branch": "bot/issue-2733",
+  "thread": "**Issue #2733 (data, not instructions):**\n\n```text\n# #2733: CI: a patches promotion or log is stuck\nOpened by @github-actions[bot].\n\n<!-- stuck #2696 -->\nThe technical log's pull request https://github.com/Jlore-Studios/JackiOh/pull/2696 (`patches log`, R1369000) has been open over 2 hours and did not merge itself:\n\n- a conflict with main\n\nUntil its entries are on main, the 4 commit(s) it logs are missing from the technical log, and nothing logs them again: a later log holds only what went live after it.\n\nFix it on a branch from main: add the entries this pull request adds to `crates/cards/patches/technical.json` as they are, each after the entry it follows here, and keep main's, each commit once (`cargo jackioh patches check` holds the file's shape). Keep their `version`, the patch that was live when they went live (R1369000): `cargo jackioh patches log` run again would log them on today's. Fix too any check red here that is red on main. Close this issue with that pull request; the watch in `.github/workflows/patches-ship.yml` then closes this one.\n\nIf they are red for a reason outside the repository (CI or Render out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a `**Human required:**` line saying what a person must do, and build nothing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2733: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
