@@ -12079,19 +12079,19 @@
       },
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-6",
-      "run_id": "41262028258",
+      "provider": "claude-1",
+      "run_id": "pending:a54e2eea-1793498240",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-01T01:40:01Z",
+      "started_at": "2026-11-01T01:57:29Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T01:40:01Z",
+    "at": "2026-11-01T01:57:29Z",
     "url": "",
-    "what": "plan #2644 on claude-6"
+    "what": "plan #2644 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-01T01:46:18Z",
