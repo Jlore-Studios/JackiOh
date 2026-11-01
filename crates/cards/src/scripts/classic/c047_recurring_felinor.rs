@@ -9,7 +9,8 @@
 //!            applies (R4). Radiant: it returns with `costOverride` 0, which persists in every zone (R78).
 //!
 //! A graveyard trigger's `when` is not consulted outside the trap window, so "one of your Traps" is
-//! checked in `run`, which answers anything else with no effects.
+//! checked in `run`, which answers anything else with no effects. R2657001: a Field Trap reveals once,
+//! the first time it fires, so a face-up one firing again (`trapFired.again`) returns nothing.
 
 use jackioh_engine::effects::{CastDef, CastHow, CastNewArgs, CastNewDef, add_to_hand, cast_new};
 use jackioh_engine::prelude::*;
@@ -21,12 +22,14 @@ const ANCIENT_ACQUISITION: &str = "classic-034";
 /// The cost the returned card takes, read as the trigger runs.
 type ReturnCost = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
 
-fn recur(cost_override: Option<ReturnCost>) -> TriggerDef {
+/// The return. `reveals_only` (R2657001) leaves out a Field Trap's later firings, which reveal nothing;
+/// the script v0.5.9f shipped answered every firing.
+fn recur(cost_override: Option<ReturnCost>, reveals_only: bool) -> TriggerDef {
     TriggerDef::new("recurring-felinor", &[GameEventType::TrapFired], move |ctx, event| {
-        let GameEvent::TrapFired { controller, .. } = event else {
+        let GameEvent::TrapFired { controller, again, .. } = event else {
             return vec![];
         };
-        if *controller != ctx.controller {
+        if *controller != ctx.controller || (reveals_only && *again == Some(true)) {
             return vec![];
         }
         let mut args = json!({ "instance": { "of": "self" } });
@@ -48,22 +51,35 @@ fn cry(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     })]
 }
 
-pub fn script() -> CardScripts {
+fn scripts(reveals_only: bool) -> CardScripts {
     let base = Script {
         cry: Some(hook(cry)),
-        graveyard_triggers: vec![recur(None)],
+        graveyard_triggers: vec![recur(None, reveals_only)],
         ..Script::default()
     };
 
     let radiant = Script {
         cry: Some(hook(cry)),
-        graveyard_triggers: vec![recur(Some(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
-            param(ctx, "returnCost")
-        })))],
+        graveyard_triggers: vec![recur(
+            Some(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
+                param(ctx, "returnCost")
+            })),
+            reveals_only,
+        )],
         ..Script::default()
     };
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(true)
+}
+
+/// R767000: through v0.5.9f every firing of one of your Traps returned it, a Field Trap's later ones
+/// included, before R2657001 made those plain triggers; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    scripts(false)
 }
 
 // BUILD M9 Classic row C 47 (SPEC §8.6 row 47): the Cry casts a free generated C #34 (R70, R684, R87);
@@ -194,6 +210,26 @@ mod tests {
                 s.end_turn();
                 s.expect_events(json!(["turnEnded", "trapFired"]));
                 s.expect_in_zone(FELINOR, "hand");
+            }
+
+            #[test]
+            fn r2657001_a_face_up_field_trap_firing_again_reveals_nothing_and_returns_nothing() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "backrow": [{ "def": BREAD, "faceUp": true }], "graveyard": [FELINOR] },
+                    "p2": { "hand": [FILLER], "library": [FILLER] },
+                }));
+                s.end_turn();
+                let again: Vec<Option<bool>> = s
+                    .events()
+                    .iter()
+                    .filter_map(|event| match event {
+                        GameEvent::TrapFired { again, .. } => Some(*again),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(again, vec![Some(true)], "Bread and Butter fires again, as a plain trigger");
+                s.expect_in_zone(FELINOR, "graveyard");
             }
 
             #[test]

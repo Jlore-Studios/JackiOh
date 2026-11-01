@@ -44,9 +44,8 @@
 // specific prompts ("Look at your opponent's hand").
 //
 // Patch v0.2.0 adds the §6 rows its card texts print (R512):
-// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
-//   catalog's spelling of the spec's "Cannot be in Defense Position", its `row`), "Can't be
-//   attacked", "Only Units in this lane can attack this" and Berserk. "Can't attack or be attacked"
+// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be attacked", "Only Units in
+//   this lane can attack this" and Berserk. "Can't attack or be attacked"
 //   gets no entry: no card prints it since patch v0.2.3 (it is the rule of a Unit a carrier holds,
 //   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
 // - §6.2's Activate, one entry for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
@@ -75,6 +74,11 @@
 //
 // Issue #1852 (R1852000–R1852007) adds §6.1's Starship Piece and Starship, keyword kinds, §6.2's "When
 // launched" and §6.3's Launch, which Stinkyscape's cards print.
+//
+// Issue #2657 (R2657000) makes §6.1's "Can't Defend" a keyword kind, the successor to the status
+// "Cannot be in Defense Position" (printed "Can't be in Defense Position"), whose entry it replaces:
+// the cards that printed the status print the keyword on their keyword line. Warp Disruptor's aura,
+// "Units can't be in Defense Position", stays plain words.
 //
 // R1857000, R910000: the Stinkyscape set's faces print these terms mid-sentence, so their spellings
 // bold too: "launch" and "launches" (Launch), "fuses" (Fuse), "Floated" (Float), "Allured" (Allure) and
@@ -132,7 +136,6 @@ export type VerbTermId =
   | "Mark in a hand";
 /** §6.1's unit statuses that are not keyword kinds (patch v0.2.0, B5 E35). */
 export type StatusTermId =
-  | "Can't be in Defense Position"
   | "Can't be attacked"
   | "Only Units in this lane can attack this"
   | "Berserk"
@@ -265,10 +268,9 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
   ),
   Starship: keyword("Starship", "A launched Starship, built from the Starship Pieces fused into it"),
+  // Issue #2657 (R2657000): the successor to the status "Cannot be in Defense Position".
+  "Can't Defend": keyword("Can't Defend", "Never in Defense Position"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
-  "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
-    row: "Cannot be in Defense Position",
-  }),
   "Can't be attacked": status("Can't be attacked", "No attack may target it"),
   "Only Units in this lane can attack this": status(
     "Only Units in this lane can attack this",
@@ -459,4 +461,5 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Tradable: "TD",
   "Starship Piece": "SP",
   Starship: "SS",
+  "Can't Defend": "CD",
 };

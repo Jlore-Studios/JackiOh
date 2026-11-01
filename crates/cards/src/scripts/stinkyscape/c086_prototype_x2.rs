@@ -7,8 +7,8 @@
 //!            Cry: Discover 3 Legendary Weapons and Equip them into this."
 //!
 //! Tribute 5 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
-//! Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand or deck, never below 0
-//! (`float_lowers_tribute`, R1841003). R1862002: the Cry is `equip_picks` (R1841002), 3 Discovers of three in
+//! Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand (in hand or deck
+//! through v0.5.9f, R2657002), never below 0 (`float_lowers_tribute`, R1841003). R1862002: the Cry is `equip_picks` (R1841002), 3 Discovers of three in
 //! turn from the Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them
 //! whether or not the set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused
 //! into this with its Activate (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the
@@ -24,23 +24,29 @@ pub const ID: &str = "stinkyscape-086";
 /// "Tribute 5" (R101).
 const TRIBUTE: i32 = 5;
 
-/// "Discover 3".
+/// "Discover 3": the declared `weapons` since #2657 (R2657006), printed before, as a replay of an
+/// older version reads it (`param_or`).
 const PICKS: i32 = 3;
 
 /// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
-fn arm(rarity: Rarity) -> Script {
+/// One face; `deck` adds the Float deck trigger it had through v0.5.9f (R2657002).
+fn arm(rarity: Rarity, deck: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             tribute: Some(TRIBUTE),
             ..StaticFlags::default()
         }),
-        // R1841003: "Float reduces Tribute requirement by 1", in hand and in deck.
+        // R1841003: "Float reduces Tribute requirement by 1", in hand alone since R2657002.
         hand_triggers: vec![float_lowers_tribute("stinkyscape-086-float-hand")],
-        deck_triggers: vec![float_lowers_tribute("stinkyscape-086-float-deck")],
-        cry: Some(hook(move |_ctx| {
+        deck_triggers: if deck {
+            vec![float_lowers_tribute("stinkyscape-086-float-deck")]
+        } else {
+            vec![]
+        },
+        cry: Some(hook(move |ctx| {
             vec![equip_picks(json_as(json!({
                 "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
-                "times": PICKS,
+                "times": param_or(&*ctx, "weapons", PICKS),
             })))]
         })),
         ..Script::default()
@@ -49,13 +55,22 @@ fn arm(rarity: Rarity) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: arm(Rarity::Epic),
-        radiant: arm(Rarity::Legendary),
+        base: arm(Rarity::Epic, false),
+        radiant: arm(Rarity::Legendary, false),
+    }
+}
+
+/// R767000: through v0.5.9f a Float lowered its Tribute in the deck too, before R2657002; `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    CardScripts {
+        base: arm(Rarity::Epic, true),
+        radiant: arm(Rarity::Legendary, true),
     }
 }
 
 // Stinkyscape #86 Prototype-X2 — SPEC §8.10 row 86, BUILD M12 row S 86: Tribute 5, lowered 1 by each of
-// its owner's Floats while it waits, never below 0 (R1841003); its Cry asks 3 Discovers in turn, each
+// its owner's Floats while it waits in hand, never in the deck (R2657002), never below 0 (R1841003); its Cry asks 3 Discovers in turn, each
 // three Epic Weapons it does not hold, and fuses each pick into it, its Activate usable that turn
 // (R1841002, R1751000); radiant 16/16 and Legendary Weapons. Since #2521 it is no Starship Piece
 // (R1852001).
@@ -186,7 +201,7 @@ mod tests {
         }
 
         #[test]
-        fn r1841003_each_float_lowers_its_tribute_in_hand_and_deck_never_below_0() {
+        fn r1841003_r2657002_each_float_lowers_its_tribute_in_hand_never_in_the_deck_never_below_0() {
             let mut library = filler(8);
             library.as_array_mut().expect("a pile").push(json!(ID));
             let mut s = weapon_board(
@@ -201,7 +216,7 @@ mod tests {
             s.end_turn();
             assert_eq!(
                 (tribute(&s, &in_hand), tribute(&s, &in_deck)),
-                (TRIBUTE - 1, TRIBUTE - 1)
+                (TRIBUTE - 1, TRIBUTE)
             );
             // p2's Float lowers nothing of p1's.
             s.end_turn();

@@ -343,9 +343,9 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         state.players.p2.hero.health = 9;
         let mut b = Bench::new(&state);
         let dealt = deal(&mut b, &mut state, None, hero_target(P2), 12);
-        // 12 − 1 Armor = 11, halved and rounded up = 6, capped at Anti-oneshot's 5.
-        assert_eq!(dealt, 5);
-        assert_eq!(hero(&state, P1), 25);
+        // 12 − 1 Armor = 11, halved and rounded up = 6, capped at Anti-oneshot's 4 (5 until #2657).
+        assert_eq!(dealt, 4);
+        assert_eq!(hero(&state, P1), 26);
         assert_eq!(hero(&state, P2), 9);
         // And a cap alone keeps a hit from being lethal in the first place.
         put(

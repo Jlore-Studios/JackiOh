@@ -217,7 +217,8 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// every Unit on either side in Defense Position switches to Attack Position, active player's first
 /// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
 /// exertion is spent; `positionSwitched` reports it. R2179000: so does an Indestructible Unit in
-/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it.
+/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it —
+/// and R2657000 a Unit with Can't Defend, the same way.
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
@@ -225,7 +226,10 @@ fn leave_defense(sink: &mut EngineSink<'_>) {
             if unit.position != Some(Position::Def) {
                 continue;
             }
-            if !barred && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible) {
+            if !barred
+                && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible)
+                && !crate::layers::unit_has(sink.state, &unit, KeywordKind::CantDefend)
+            {
                 continue;
             }
             if let Some(card) = find_instance_mut(sink.state, &unit.id) {

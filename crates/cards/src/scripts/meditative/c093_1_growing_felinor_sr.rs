@@ -7,7 +7,7 @@
 //!           Can't be in Defense Position.
 //!           Death: Summon a Radiant Growing Felinor Sr Sr."
 //! Engine:
-//! - **The flag:** `never_defense`, as #65.1 Spikey Pillow (`core-065-1`): `reduce.rs` refuses the switch
+//! - **Can't Defend** (R2657000, the static flag `never_defense` through v0.5.9f), as #65.1 Spikey Pillow: `reduce.rs` refuses the switch
 //!   and `legal_actions` leaves it out, and `combat.rs` checks a switch made as an effect (§6.1).
 //! - **The Death:** summons the next size up, `meditative-093-2`, into the leftmost open unit zone
 //!   (R64): a fresh card, on its Radiant face when this is the Radiant face (R1180). With no zone open it
@@ -24,10 +24,6 @@ const NEXT: &str = "meditative-093-2";
 
 fn growing(radiant: bool) -> Script {
     Script {
-        static_flags: Some(StaticFlags {
-            never_defense: Some(true),
-            ..StaticFlags::default()
-        }),
         death: Some(hook(move |_ctx| {
             vec![summon(json_as(
                 json!({ "defId": NEXT, "player": "self", "radiant": radiant }),
@@ -44,13 +40,19 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
+}
+
 // M #93.1 Growing Felinor Sr — SPEC §8.8 row 93.1, BUILD M10 row M 93.1: "It can't switch to
 // Defense; its Death summons a base Growing Felinor Sr Sr (M 93.2), not another Sr (MD-E19); a
 // unit token, it vanishes and still fires its Death (R11); radiant 4/4, Divine Shield, Rush, and
 // the Sr Sr is Radiant".
 #[cfg(test)]
 mod tests {
-    use super::{ID, NEXT, script};
+    use super::{ID, NEXT, script_v0_5_9f};
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::testkit::*;
 
@@ -91,9 +93,10 @@ mod tests {
             assert_eq!(def.printed_rarity, Some(PrintedRarity::Common));
             assert_eq!([def.base.attack, def.base.health], [Some(2), Some(2)]);
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(4), Some(4)]);
-            assert!(def.base.keywords.is_empty());
-            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush]);
-            let scripts = script();
+            assert_eq!(def.base.keywords, vec![Keyword::CantDefend]);
+            assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]);
+            // R767000: the script kept for v0.5.9f carries the flag the keyword took over from.
+            let scripts = script_v0_5_9f();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.never_defense),
                 Some(true)
@@ -130,7 +133,7 @@ mod tests {
                 assert_eq!(next.def_id, NEXT);
                 assert!(!next.radiant);
                 s.expect_stats(&next, json!({ "attack": 3, "maxHealth": 3 }));
-                assert!(keywords_of(s.state(), &next).is_empty());
+                assert_eq!(keywords_of(s.state(), &next), vec![Keyword::CantDefend]);
                 assert_eq!(row_defs(&s), vec![Some(NEXT.to_string()), None, None, None, None]);
             }
 
@@ -172,7 +175,7 @@ mod tests {
                 s.expect_stats(&next, json!({ "attack": 6, "maxHealth": 6 }));
                 assert_eq!(
                     keywords_of(s.state(), &next),
-                    vec![Keyword::DivineShield, Keyword::Rush]
+                    vec![Keyword::DivineShield, Keyword::Rush, Keyword::CantDefend]
                 );
                 assert_eq!(s.unit_at(P1, 1).id, next.id);
                 assert!(s.unit(P1, 3).is_none());

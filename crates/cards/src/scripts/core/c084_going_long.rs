@@ -1,9 +1,10 @@
 //! #84 Going Long (SPEC §8.4 row 84): Field Spell, cost 2 embiggen 4, Rare (no Quickdraw since #2521).
-//!   Base:    "Your hero has Armor 2 (Embiggened (4): 4)"
-//!   Radiant: "Armor 4 (Embiggened (4): 8)" — the cell changes only the two numbers (§8 Conventions).
+//!   Base:    "Your hero has Armor 2 (Embiggened (4): 5)"
+//!   Radiant: "Armor 4 (Embiggened (4): 10)" — the cell changes only the two numbers (§8 Conventions).
+//!   (Embiggened 4 and 8 until #2657.)
 //!   Engine:  "Hero armor in pipeline step 2".
 //!
-//! Four numbers: normal 2, Embiggened 4; radiant normal 4, Embiggened 8 (`config.HERO_ARMOR`). The embiggen choice
+//! Four numbers: normal 2, Embiggened 5; radiant normal 4, Embiggened 10 (`config.HERO_ARMOR`). The embiggen choice
 //! lands on the instance (R81) and Radiant is its flag, so the engine reads both off the card in the
 //! backrow and no card-side code is needed. #2521 took its Quickdraw tag away, and with it §6.2's
 //! `quickdraw` static flag, so setup deals it as any other card. The Armor is the `heroArmor` static
@@ -32,7 +33,7 @@ fn going_long() -> Script {
 
 pub fn script() -> CardScripts {
     let base = going_long();
-    // "Armor 4 (Embiggened (4): 8)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
+    // "Armor 4 (Embiggened (4): 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
     let radiant = going_long();
     CardScripts { base, radiant }
 }
@@ -59,9 +60,9 @@ pub fn script_v0_5_11() -> CardScripts {
 }
 
 // #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "Not dealt into the opening hand by setup (#2521 took its
-// Quickdraw away); embiggen 2 → Armor 2, 4 → Armor 4 on the hero; radiant 4 / 8" (patch v0.1.1: the paid-4
+// Quickdraw away); embiggen 2 → Armor 2, 4 → Armor 5 on the hero; radiant 4 / 10" (Armor 4 and 8 until #2657) (patch v0.1.1: the paid-4
 // numbers were 5 and 10). The four numbers:
-//   base 2 / 4, radiant 4 / 8 (paid 2 / paid 4). The Armor is asserted through a real damage instance
+//   base 2 / 5, radiant 4 / 10 (paid 2 / paid 4). The Armor is asserted through a real damage instance
 // on the protected hero (§4.4 step 2); attackers are placed by `field`, so no Cry fires (R1). A card placed by setup is
 // "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit that is 0 after Armor emits no `damage`.
 #[cfg(test)]
@@ -121,8 +122,8 @@ mod tests {
     }
 
     #[test]
-    fn r386_an_upgrade_gives_armor_3_or_paid_5_and_a_degrade_armor_1_or_paid_3() {
-        for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 5), (false, true, 3)] {
+    fn r386_an_upgrade_gives_armor_3_or_paid_6_and_a_degrade_armor_1_or_paid_4() {
+        for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 6), (false, true, 4)] {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
@@ -257,7 +258,7 @@ mod tests {
         }
 
         #[test]
-        fn embiggen_4_costs_4_mana_and_gives_armor_4_so_the_same_6_attack_hit_lands_for_2() {
+        fn embiggen_4_costs_4_mana_and_gives_armor_5_so_the_same_6_attack_hit_lands_for_1() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
@@ -270,12 +271,12 @@ mod tests {
             s.end_turn(); // p2's turn
             s.attack(BIGOT, "hero");
 
-            assert_eq!(damage_to(&s, "hero-p1"), vec![2]);
-            s.expect_health(P1, 28);
+            assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
+            s.expect_health(P1, 29);
         }
 
         #[test]
-        fn the_base_price_is_still_2_and_paying_it_gives_armor_2_rather_than_4() {
+        fn the_base_price_is_still_2_and_paying_it_gives_armor_2_rather_than_5() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
@@ -353,7 +354,7 @@ mod tests {
         }
 
         #[test]
-        fn paid_4_armor_8_the_radiant_embiggen_price_gives_armor_8_so_a_6_attack_hit_is_nothing_r63() {
+        fn paid_4_armor_10_the_radiant_embiggen_price_gives_armor_10_so_a_6_attack_hit_is_nothing_r63() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -366,7 +367,7 @@ mod tests {
 
             s.play(GOING_LONG, json!({ "zone": 1, "embiggen": true }));
             s.expect_mana(P1, 0);
-            assert_eq!(shown_armor(&s, P1), 8);
+            assert_eq!(shown_armor(&s, P1), 10);
 
             s.end_turn();
             s.attack(BIGOT, "hero");
@@ -377,7 +378,7 @@ mod tests {
         }
 
         #[test]
-        fn the_radiant_face_still_reduces_rather_than_blocks_a_14_attack_hit_lands_for_6_at_armor_8() {
+        fn the_radiant_face_still_reduces_rather_than_blocks_a_14_attack_hit_lands_for_4_at_armor_10() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -392,8 +393,8 @@ mod tests {
             s.end_turn();
             s.attack(POINTMASTER, "hero");
 
-            assert_eq!(damage_to(&s, "hero-p1"), vec![6]); // 14 − 8
-            s.expect_health(P1, 24);
+            assert_eq!(damage_to(&s, "hero-p1"), vec![4]); // 14 − 10
+            s.expect_health(P1, 26);
         }
 
         #[test]

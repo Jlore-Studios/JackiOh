@@ -178,16 +178,16 @@ mod tests {
         }
 
         #[test]
-        fn e6_the_lowest_cap_wins_beside_anti_oneshot_armor_s_5_or_its_radiant_3() {
+        fn e6_the_lowest_cap_wins_beside_anti_oneshot_armor_s_4_or_its_radiant_3() {
             crate::register_all();
             let mut s = under_fire(json!({ "backrow": [ANTI_ONESHOT] }), json!({ "field": [MENACE] }), false);
             s.attack(MENACE, "hero");
             assert_eq!(hero_hits(&s, P1), vec![1]);
 
             let mut loose = under_fire(json!({ "backrow": [ANTI_ONESHOT] }), json!({ "field": [MENACE] }), false);
-            step_param(loose.card_mut(ANIME), "cap", 6); // Degraded six times: cap 7, so Anti-oneshot's 5 is lower
+            step_param(loose.card_mut(ANIME), "cap", 6); // Degraded six times: cap 7, so Anti-oneshot's 4 is lower
             loose.attack(MENACE, "hero");
-            assert_eq!(hero_hits(&loose, P1), vec![5]);
+            assert_eq!(hero_hits(&loose, P1), vec![4]);
 
             let mut tight = under_fire(
                 json!({ "backrow": [{ "def": ANTI_ONESHOT, "radiant": true }] }),

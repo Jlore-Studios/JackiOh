@@ -367,4 +367,14 @@ describe("R2205000 the Field Guide", () => {
     );
     expect(found(view, [{ type: "cardPlayed", player: "p1", instanceId: "s1", defId: "bolt", costPaid: 0 }], defs)).not.toContain("quickdraw");
   });
+
+  it("R2657001 a Field Trap firing again reveals nothing, so it finds no trap entry; its first firing does", () => {
+    resetIds();
+    const view = baseView();
+    const defs = { field: defOf({ type: "Field Trap" }) };
+    const fired: GameEvent = { type: "trapFired", instanceId: "t1", defId: "field", controller: "p1", row: "backrow", lane: 0 };
+    expect(found(view, [fired], defs)).toEqual(["trap", "field-trap"]);
+    expect(found(view, [{ ...fired, again: true } as GameEvent], defs)).toEqual([]);
+    expect(found(view, [{ ...fired, controller: "p2", again: true } as GameEvent], defs)).toEqual([]);
+  });
 });

@@ -81,7 +81,8 @@
     "Flashback": "闪回",
     "Tradable": "可交易",
     "Starship Piece": "星舰部件",
-    "Starship": "星舰"
+    "Starship": "星舰",
+    "Can't Defend": "无法守备"
   },
   "labels": {
     "Cry:": "战吼：",
@@ -143,7 +144,7 @@
     "Tradable": { "label": "可交易", "rule": "在你的主要阶段，将其从你的手牌洗入你的牌库并抽一张牌，不消耗法力值。每回合一次交易" },
     "Starship Piece": { "label": "星舰部件", "rule": "死亡时，它的一个复制融合进你的休眠星舰；若你没有，先召唤一艘" },
     "Starship": { "label": "星舰", "rule": "一艘已发射的星舰，由融合进它的星舰部件建造而成" },
-    "Can't be in Defense Position": { "label": "无法成为守备表示", "rule": "永远不会切换为守备表示" },
+    "Can't Defend": { "label": "无法守备", "rule": "永远不会处于守备表示" },
     "Can't be attacked": { "label": "无法被攻击", "rule": "任何攻击都不能以其为目标" },
     "Only Units in this lane can attack this": { "label": "只有这一纵列的单位可以攻击这个单位", "rule": "只有从其所在纵列的敌方单位区发起的攻击才是合法的" },
     "Berserk": { "label": "狂暴", "rule": "处于狂暴状态时，在其控制者的回合开始和结束时攻击自己的英雄" },

@@ -908,8 +908,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 .iter()
                 .any(|why| why == inside)
         );
-        // The faces that quote a label are the two that grant a Death (R1107), and Meditative+ #9's
-        // Embiggened Cry (#2179), on both faces.
+        // The faces that quote a label are the two that grant a Death (R1107), Meditative+ #9's
+        // Embiggened Cry (#2179) and Stinkyscape #26 ZolarKeth's granted Activate (#2657), on both faces.
         let quoting: Vec<String> = swept()
             .iter()
             .filter(|face| {
@@ -931,6 +931,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 "meditative-059 radiant",
                 "meditativeplus-009 base",
                 "meditativeplus-009 radiant",
+                "stinkyscape-026 base",
+                "stinkyscape-026 radiant",
             ])
         );
     }

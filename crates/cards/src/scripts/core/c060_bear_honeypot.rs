@@ -22,6 +22,8 @@ pub const ID: &str = "core-060";
 
 /// §7's shared Rush Token, 3/3 with Rush.
 const RUSH_TOKEN: &str = "core-t-rush";
+/// "Summon 2 Rush Tokens": what it printed before it declared `tokens` (#2657).
+const PRINTED_TOKENS: i32 = 2;
 
 /// §10.5 step 7's event: the play this trap answers, with the cost R56 reads (the fields of
 /// `cardResolved` this card reads after `match_` has read the rest).
@@ -76,10 +78,10 @@ fn tokens_and_attack(ctx: &EffectContext, played: &ResolvedPlay, fill: bool) -> 
     let mut tokens: Vec<Effect> = if fill {
         vec![fill_board(json_as(json!({ "defId": RUSH_TOKEN })))]
     } else {
-        vec![
-            summon(json_as(json!({ "defId": RUSH_TOKEN }))),
-            summon(json_as(json!({ "defId": RUSH_TOKEN }))),
-        ]
+        // R2657006: the declared `tokens`, 2 as printed before #2657 (`param_or`).
+        (0..param_or(ctx, "tokens", PRINTED_TOKENS))
+            .map(|_| summon(json_as(json!({ "defId": RUSH_TOKEN }))))
+            .collect()
     };
 
     if def_of(Some(&*ctx.state), &played.def_id).type_ != CardType::Unit || !played.permanent {
