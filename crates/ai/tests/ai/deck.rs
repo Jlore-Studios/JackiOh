@@ -723,7 +723,7 @@ mod r1370_a_deck_that_leans_on_a_set {
         // And for the Training Grounds release (#2204): the literals gate it as well, so the decks are
         // still the ones dealt before it was in any pool. The human and themed pins were re-dealt for
         // #2521, whose Memory Leak and Going Long changes move the builder's picks: their seeds stop at
-        // the same cursors.
+        // the same cursors. The human pin was re-dealt again for #2657, whose costs move the curve.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -746,11 +746,11 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-078",
                     "core-012",
                     "core-010",
-                    "core-055",
+                    "core-056",
                     "classicplus-007",
-                    "classicplus-033",
+                    "classicplus-034",
                     "core-077",
-                    "classicplus-011",
+                    "classicplus-026",
                 ],
             ),
             (
