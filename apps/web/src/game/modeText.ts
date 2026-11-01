@@ -217,7 +217,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   // Starship Piece.'" `universities` is v0.5.9f's Activate's other option, kept for its replays.
   "stinkyscape-026": {
     university: { label: "University", detail: "Summon a University." },
-    piece: { label: "Starship Piece", detail: "This gains \"Activate: Summon a random Starship Piece.\"" },
+    piece: { label: "Starship Piece", detail: "This gains “Activate: Summon a random Starship Piece.”" },
     universities: { label: "Universities", detail: "Activate your Universities." },
   },
   // S #112 Job Application, Stage 3: "Activate to accept (a Paycheck each start of turn from the next) or
@@ -320,7 +320,7 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   // S #26 ZolarKeth, radiant (#2657): the University and the Starship Piece are Radiant.
   "stinkyscape-026": {
     university: { label: "Radiant University", detail: "Summon a Radiant University." },
-    piece: { label: "Radiant Starship Piece", detail: "This gains \"Activate: Summon a random Radiant Starship Piece.\"" },
+    piece: { label: "Radiant Starship Piece", detail: "This gains “Activate: Summon a random Radiant Starship Piece.”" },
   },
   // S #121 System Schematic, radiant: "The one chosen Radiant".
   "stinkyscape-121": {
