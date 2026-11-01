@@ -12813,7 +12813,8 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "gpt"
+          "gpt",
+          "claude"
         ],
         "builder": "gpt",
         "rejections": [],
@@ -12822,10 +12823,16 @@
             "family": "gpt",
             "run": "41326475359",
             "tier": "medium"
+          },
+          {
+            "family": "claude",
+            "run": "41328376440",
+            "tier": "strong"
           }
         ],
         "sha": "06da5bc8b1656139a36ca180f8ade9224ac7b317",
         "tiers": {
+          "claude": "strong",
           "gpt": "medium"
         }
       }
