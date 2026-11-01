@@ -33,10 +33,10 @@ use crate::api::http::{
 };
 use crate::api::queue::new_uuid;
 use crate::app::App;
-use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS};
+use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, MS_PER_DAY};
 use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError};
 use crate::social::friends::are_friends;
-use crate::social::{MS_PER_DAY, created, iso, no_content, not_found, param, refused};
+use crate::social::{created, iso, no_content, not_found, param, refused};
 use crate::username::is_blocked;
 
 /// S7's `ChatMessage`: `from` and `to` are profile ids; `read` is whether its recipient has read it.

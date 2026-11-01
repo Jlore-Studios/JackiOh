@@ -2862,3 +2862,50 @@ mod r2478000_co_op_and_watch_upgrades_count_against_the_accounts_budget {
         }
     }
 }
+
+mod an_account_that_is_not_active_is_refused_the_co_op_and_watch_sockets {
+    //! §9.4's gate on `/ws/duos` and `/ws/watch`, as on `/ws/match` (`ws_server.rs`): a pending or
+    //! banned account's upgrade is answered `forbidden` with the gate's own words and closed with
+    //! R148's 4403, before any hello is read.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_pending_or_banned_accounts_co_op_or_watch_upgrade_is_closed_with_4403() {
+        let app = empty_test_app().await;
+        let served = serve(&app);
+        for (n, status, message) in [
+            (1u32, "pending", "redeem an invite code to activate this account"),
+            (2, "banned", "this account is banned"),
+        ] {
+            let user_id = format!("user-{n}");
+            fake(&app).lock().await.seed_profile(json!({
+                "id": uuid(n),
+                "userId": user_id,
+                "status": status,
+            }));
+            let token = add_user(&app, &user_id, &format!("{user_id}@example.test"), true);
+            for path in [DUOS_PATH, WATCH_PATH] {
+                let client = served.connect(path, &token).await;
+                let (_, _, refusal) = client
+                    .wait_for(0, PROMPTLY, |frame| {
+                        frame["type"] == "error" && frame["code"] == "forbidden"
+                    })
+                    .await
+                    .unwrap_or_else(|| panic!("{status} {path}: no forbidden: {:?}", client.frames()));
+                assert_eq!(refusal["message"], message, "{status} {path}");
+                assert_eq!(
+                    client.wait_closed(PROMPTLY).await,
+                    Some(WS_CLOSE.forbidden),
+                    "{status} {path}"
+                );
+                assert!(
+                    client.of_type("view").is_empty(),
+                    "{status} {path}: {:?}",
+                    client.frames()
+                );
+            }
+        }
+    }
+}
