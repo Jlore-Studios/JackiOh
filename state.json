@@ -12353,14 +12353,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-11-01T15:17:51Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
+      "pr": 2713,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-01T15:06:05Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "41323685804",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T15:55:50Z",
@@ -12368,7 +12372,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6559713590"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "2683": {
       "action": "build",
