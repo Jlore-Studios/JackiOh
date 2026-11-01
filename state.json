@@ -10165,15 +10165,18 @@
       "asks": [],
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-7",
+      "round_tier": "",
       "run_id": "41263688888",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T02:04:50Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2520": {
       "onto": "bot/issue-2497",
