@@ -13185,6 +13185,14 @@
       "started_at": "2026-11-01T18:26:27Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2735": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-01T16:36:59Z",
+      "issue": 2681,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "732204536440d0b3",
