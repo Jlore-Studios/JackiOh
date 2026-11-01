@@ -428,8 +428,7 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
 }
 
 /// #1143: a Unit's worth off its own stats and keywords by the weights `unit_worth` reads a view with,
-/// none of the field's layers, position or damage: attack (none with "Can't attack"), health, Armor,
-/// each keyword and Spell Damage per point.
+/// none of the field's layers, position or damage.
 fn face_worth(attack: i32, health: i32, keywords: &[Keyword], w: &EvalWeights) -> f64 {
     let mut value = w.health * f64::from(health) + w.armor_point * f64::from(armor_of(keywords));
     if !has_keyword(keywords, KeywordKind::CantAttack) {

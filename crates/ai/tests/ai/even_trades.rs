@@ -4,11 +4,9 @@
 //! A losing trade, and every other even trade of the same attacker, stays behind the plays.
 //! #1821: a Cleave attack whose splash kills a neighbour is a kill, though its target lives.
 //!
-//! The cards: Wrong-House Attacker (classicplus-006) 1/1 Rush, Lifesteal, Poisonous, Midrange Menace
-//! (core-019) 9/9 Taunt, Hit Job (core-016, 3 mana: destroy a Unit), Mr. Vanilla (core-008) 4/4, Reno
-//! (core-053) 4/6, Tempo Timmy (core-011) 3/3 Rush, First Strike, Mommy Barker (classicplus-013),
-//! Radiant 4/4 Reborn, Nurse Cleaver (classic-073) 3/6 Rush, Cleave, Lifesteal, and Zoomerbin Oomen
-//! (core-067) 1/2.
+//! The cards: Wrong-House Attacker 1/1 Rush, Lifesteal, Poisonous; Midrange Menace 9/9 Taunt; Hit Job
+//! (3 mana: destroy a Unit); Mr. Vanilla 4/4; Reno 4/6; Tempo Timmy 3/3 Rush, First Strike; Mommy
+//! Barker, Radiant 4/4 Reborn; Nurse Cleaver 3/6 Rush, Cleave, Lifesteal; and Zoomerbin Oomen 1/2.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

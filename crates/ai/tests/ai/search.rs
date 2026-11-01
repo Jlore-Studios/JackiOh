@@ -582,9 +582,9 @@ mod candidate_actions_b14 {
         assert_eq!(expanded.len(), width + 1);
     }
 
-    /// R2021000: whether switching p1's Mr. Vanilla (core-008, a 4/4 in Attack Position) to Defense is a
-    /// stand-down facing p2's `archivist`, an Archivist (core-030, a 4/5 that kills the Vanilla and
-    /// survives), once `change` has changed the board (given the Vanilla's id and the Archivist's).
+    /// R2021000: whether switching p1's Mr. Vanilla (a 4/4 in Attack Position) to Defense is a stand-down
+    /// facing p2's `archivist`, an Archivist (a 4/5 that kills the Vanilla and survives), once `change`
+    /// has changed the board (given the Vanilla's id and the Archivist's).
     fn stands_down_facing(archivist: Value, change: impl FnOnce(&mut GameState, &str, &str)) -> bool {
         jackioh_cards::register_all();
         let mut state = scenario(json!({
@@ -1047,7 +1047,7 @@ mod lanes_that_play_differently {
     const VANILLA: &str = "core-008";
 
     /// One of the AI's Mr. Vanillas in lane 1, another in its hand, and the enemy's Radiant Nurse
-    /// Cleaver (classic-073, 6/12 Cleave) opposite lane 1. The vanilla's placements are lanes 2, 3 and 5
+    /// Cleaver (6/12 Cleave) opposite lane 1. The vanilla's placements are lanes 2, 3 and 5
     /// (3 and 4 are one); only lane 2 is beside the unit, where the Cleaver's reply would kill both.
     fn cleaver_board() -> GameState {
         jackioh_cards::register_all();
@@ -1125,7 +1125,7 @@ mod lanes_that_play_differently {
     }
 
     /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line.
-    /// At 3 mana with Midrange Menace (core-019, 3) and a vanilla (1) in hand and a beam one line wide,
+    /// At 3 mana with Midrange Menace (3) and a vanilla (1) in hand and a beam one line wide,
     /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 3 (the midlane,
     /// R2203001) is a line below lane 1's. The same one depth deep, where lane 1's line is closed after
     /// the loop ends.
@@ -1806,9 +1806,9 @@ mod rescored_own_prompts_1636 {
 mod ways_of_being_played {
     use super::*;
 
-    /// Acceptance criterion 1: On a hand wide enough to fill the root (10 cards),
-    /// root_expansion at AI_BUDGET.root_branching holds Buff Billy (classicplus-069)
-    /// at x == mana, an Embiggened play, and a Cloaked card's face-down set (#1778).
+    /// Acceptance criterion 1: On a hand wide enough to fill the root (10 cards), root_expansion at
+    /// AI_BUDGET.root_branching holds Buff Billy at x == mana, an Embiggened play, and a Cloaked card's
+    /// face-down set (#1778).
     #[test]
     fn buff_billy_embiggen_and_cloaked_set_survive_root_expansion() {
         jackioh_cards::register_all();
