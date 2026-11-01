@@ -12333,6 +12333,7 @@
     "2682": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-01T15:17:49Z",
         "difficulty": "medium",
