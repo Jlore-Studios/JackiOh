@@ -96,7 +96,7 @@ impl<T> std::ops::IndexMut<PlayerId> for PerPlayer<T> {
 
 /// `Partial<Record<PlayerId, T>>` (SURFACE §4.3): only a seat with a value has a key. (The serde
 /// `bound` stops `#[serde(default)]` from asking `T: Default`, which a missing `Option` never needs.)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[serde(bound(deserialize = "T: Deserialize<'de>"))]
 #[cfg_attr(
     feature = "ts",
@@ -145,6 +145,22 @@ impl<T> PerPlayerOpt<T> {
     pub fn is_empty(&self) -> bool {
         self.p1.is_none() && self.p2.is_none()
     }
+}
+
+/// R2702000: one card of a seat's deck list changed at setup, as a dungeon run's deck arrives with
+/// its upgraded cards: the card at `index` of the list `createGame` is given (before the shuffle),
+/// dealt on its Radiant face when `radiant`, and Buffed `upgrades` times.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct DeckMark {
+    pub index: usize,
+    pub radiant: bool,
+    pub upgrades: i32,
 }
 
 string_union! {

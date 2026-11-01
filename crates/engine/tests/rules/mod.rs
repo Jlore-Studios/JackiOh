@@ -67,6 +67,7 @@ pub mod damage_odds;
 pub mod damage_pipeline;
 pub mod death_pause;
 pub mod deck_bottom;
+pub mod deck_marks;
 pub mod delayed_kinds;
 pub mod destroyed_face;
 pub mod discard_guard;

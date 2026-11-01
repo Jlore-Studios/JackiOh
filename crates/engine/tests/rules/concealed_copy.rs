@@ -111,6 +111,7 @@ fn hide_records(state: &mut GameState, deck: &str, their_board: &str, choice: Se
     state.opening = Some(OpeningRecord {
         decks: (vec![deck.to_string()], vec![deck.to_string()]),
         dealt: None,
+        deck_marks: None,
     });
     state.glitch_boards = Some(PerPlayerOpt {
         p1: Some(vec![entry(their_board)]),
