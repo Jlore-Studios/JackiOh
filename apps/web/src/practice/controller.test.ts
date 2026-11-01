@@ -4,11 +4,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, DistributiveOmit, PlayerView } from "@jackioh/shared";
+import type { RunAction, RunFightSetup } from "@jackioh/run";
 
 import { baseView, pendingFor, waitingPending } from "../test/fixtures.ts";
 import type { PracticePacing } from "./config.ts";
 import { createPracticeController } from "./controller.ts";
 import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
+import { readPracticeResume, writePracticeResume } from "./resume.ts";
 import type { PracticeController, PracticeTimers } from "./controller.ts";
 import type { PracticeHost } from "./host.ts";
 import type {
@@ -692,6 +694,77 @@ describe("R508 the controller carries the human's last practice board", () => {
       await flush();
       expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config });
     }
+  });
+});
+
+// R2706000, B25: a dungeon run's fight through the controller (DR14 part E, #2706).
+
+describe("R2706000 a dungeon run's fight through the controller", () => {
+  const SETUP: RunFightSetup = {
+    seed: "RUNSED-1-0",
+    humanDeck: ["core-008"],
+    humanHandicap: { deckSize: 1, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0, heroHealth: 17 },
+    humanMarks: [],
+    enemyDeck: ["classic-090"],
+    enemyHandicap: { deckSize: 1, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0, heroHealth: 20 },
+    enemy: { id: "cave-troll", name: "Cave Troll", heroHealth: 20, deck: ["classic-090"], artifacts: [] },
+  };
+  const FIGHT: PracticeStartConfig = { ...CONFIG, seed: SETUP.seed, run: SETUP };
+  const LOST: RunAction = { type: "fightOver", won: false, hp: 0, damageDealt: 3, healingDone: 0, cardsDrawn: 4, turns: 2 };
+  const OVER = snap({ turn: 1, active: "p1", phase: "over", pending: null, result: { winner: "p2", reason: "concede" } }, false);
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("R2706000 a run fight's start goes as given and leaves practice's memory alone", async () => {
+    const board = [{ defId: "core-008", radiant: false }];
+    writeLastBoard(board);
+    writePracticeResume(CONFIG);
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    const started = controller.start(FIGHT);
+    await flush();
+    // No last board rides along (R508's is the free game's), and the config goes as given.
+    expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config: FIGHT });
+    fake.respond({ type: "started", snapshot: humanTurn(1), defs: {}, aiSeat: "p2" });
+    await started;
+    expect(readPracticeResume()).toEqual(CONFIG);
+
+    controller.act({ type: "concede" });
+    await flush();
+    fake.respond({ type: "snapshot", snapshot: OVER });
+    await flush();
+    expect(controller.getState().phase).toBe("over");
+    // The free game the page remembers is still there to resume, and its last board is the one it had.
+    expect(readPracticeResume()).toEqual(CONFIG);
+    expect(readLastBoard()).toEqual(board);
+  });
+
+  it("B25 runReport resolves the action and rejects an error or a failure", async () => {
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    const started = controller.start(FIGHT);
+    await flush();
+    fake.respond({ type: "started", snapshot: OVER, defs: {}, aiSeat: "p2" });
+    await started;
+
+    const reported = controller.runReport();
+    await flush();
+    expect(fake.open().map((held) => held.body)).toEqual([{ type: "runReport" }]);
+    fake.respond({ type: "runReport", action: LOST });
+    await expect(reported).resolves.toEqual(LOST);
+
+    const refused = controller.runReport();
+    await flush();
+    fake.respond({ type: "runReport", error: "the fight does not fold" });
+    await expect(refused).rejects.toThrow("the fight does not fold");
+
+    const failed = controller.runReport();
+    await flush();
+    fake.respond({ type: "failed", message: "a fight is reported only once it is over" });
+    await expect(failed).rejects.toThrow("a fight is reported only once it is over");
+    expect(fake.maxInFlight()).toBe(1);
   });
 });
 

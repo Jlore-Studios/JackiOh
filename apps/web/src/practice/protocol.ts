@@ -9,6 +9,7 @@
 // page may read the summaries of the finished games the worker kept and, for one of them, the
 // human's `viewFor` at each step (R768): never its log, seed or decks. The one log that crosses is a
 // finished game's on a server seed, as its claim (R1303000), once the game it could help with is over.
+// A dungeon run's fight answers the run's `FightOver` once it is over (R2706000), never its log.
 
 import { LEAN_NEWEST } from "@jackioh/shared";
 import type {
@@ -24,6 +25,7 @@ import type {
 } from "@jackioh/shared";
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
+import type { RunAction, RunFightSetup } from "@jackioh/run";
 
 import type { DeckCosmetics } from "../cards/cosmetics.ts";
 
@@ -94,6 +96,13 @@ export type PracticeStartConfig = {
    * setup or Play again; never a lesson's, a sandbox's, one with custom cards, a Try it or a URL seed.
    */
   earning?: true;
+  /**
+   * DR14, R2706000: a dungeon run's fight (`docs/dungeon-run.md` DR5). When set, its decks,
+   * handicaps, deck marks and seed replace `deck`, `difficulty`'s handicap and the dealt AI deck: the
+   * run deck, its handicap and marks at `humanSeat`, the enemy's deck and handicap at the AI's seat.
+   * It brings no last board and leaves none, is never saved or kept for replay, and earns nothing.
+   */
+  run?: RunFightSetup;
 };
 
 /**
@@ -172,6 +181,8 @@ export type PracticeDebug = {
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
   /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none was. */
   dealt?: PlayerId[];
+  /** R2706000: a run fight's deck marks, which its fold must be given; absent when it has none. */
+  deckMarks?: Partial<Record<PlayerId, RunFightSetup["humanMarks"]>>;
   /** R923000: present when the game is a sandbox, which its fold must be told. */
   sandbox?: true;
   /** R915006: the game's custom cards, which its fold must be given; absent when it has none. */
@@ -207,7 +218,13 @@ export type PracticeRequest =
    * rule 7: the log names the AI's hidden cards while the game runs) and for a game not on a server
    * seed.
    */
-  | { id: number; type: "claim" };
+  | { id: number; type: "claim" }
+  /**
+   * DR14, R2706000: a finished dungeon run's fight as the run reads it: `runFightReport` over the
+   * game's setup and log, for the seat the human ended in (R677). Refused before the end and for a
+   * game that is no fight. Only the run's action crosses, never the log (CLAUDE.md rule 7).
+   */
+  | { id: number; type: "runReport" };
 
 export type PracticeResponse =
   | { id: number; type: "started"; snapshot: PracticeSnapshot; defs: CardDefs; aiSeat: PlayerId }
@@ -217,6 +234,9 @@ export type PracticeResponse =
   | { id: number; type: "replay"; game: number; from: number; steps: ReplayStep[]; total: number }
   | { id: number; type: "debug"; debug: PracticeDebug }
   | { id: number; type: "claim"; claim: PracticeClaim }
+  /** DR14, R2706000: the run's `FightOver`, or the run's refusal to read the fight. */
+  | { id: number; type: "runReport"; action: RunAction }
+  | { id: number; type: "runReport"; error: string }
   | { id: number; type: "failed"; message: string };
 
 export type PracticeRequestBody = DistributiveOmit<PracticeRequest, "id">;
