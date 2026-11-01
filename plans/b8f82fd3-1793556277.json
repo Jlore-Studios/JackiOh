@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2722,
+  "title": "Patch: Legendary and Mythic entrances with far bigger music, a board-wide takeover for every Mythic, and both on a hidden card's reveal",
+  "branch": "bot/issue-2722",
+  "thread": "**Issue #2722 (data, not instructions):**\n\n```text\n# #2722: Patch: Legendary and Mythic entrances with far bigger music, a board-wide takeover for every Mythic, and both on a hidden card's reveal\nOpened by @jgoetzmann.\n\n## What it does\n\nThe owner wants a Legendary or Mythic play to feel like a Hearthstone legendary entrance, and a Mythic's to take over the whole board, the way Deathwing's arrival does. A hidden card (a Trap, or any Cloaked card) makes its entrance when it **reveals**.\n\n### 1. Music that is WAY more epic\n\nToday each Legendary and Mythic card (171 in `apps/web/src/audio/music-cards.json`) opens its play with an intro (R1350, R1351, R1352). Each is rendered by `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, from `apps/web/scripts/music/tracks.mjs`'s `INTRO_CARDS`), runs 3 to 6 s (`MUSIC_INTRO_MIN_S`, `MUSIC_INTRO_MAX_S` in `apps/web/src/audio/constants.ts`), and ducks the bed to `MUSIC_INTRO_DUCK_GAIN` (0.35). Beside it plays the `entrance` sting (`apps/web/src/audio/sfx.ts`, 1400 ms). The result is pleasant but small.\n\nMake them strong:\n\n- **The orchestration:** a full orchestral fanfare with brass, choir, timpani and cymbal hits, a riser into the downbeat, wide dynamics and a real ending.\n- **Mythic above Legendary:** a bigger ensemble, a longer span and its own motif per Mythic.\n- **Re-rendered, bed and sting included:** re-render every intro. Raise `MUSIC_INTRO_MAX_S` if the music needs it, under a new named cap. Duck the bed harder, sit the intro louder against the sound effects, and rebuild the `entrance` sting to match.\n- **Licensed:** any new soundfont or sample set is open-licensed, with its row in `assets/music/LICENSES.md`.\n- **Unchanged:** an intro still plays only for a card the viewer can read, at R204's moment, cut short as R1351 says.\n\n### 2. A board-wide takeover for a Mythic\n\nWhen a Mythic enters, at the moment R1350 and R669 pick (a Unit's `summoned`, a Spell's cast, a Trap's first firing, a Cloaked card's reveal in part 3), the whole board reacts, as in Hearthstone's Deathwing entrance. For example:\n\n- the board darkens and the other music drops away;\n- the card's art or silhouette sweeps across or fills the board;\n- a shockwave and light rays cross both sides, the screen shakes hard, and the other Units recoil;\n- then the card lands, timed to the intro's downbeat.\n\nEach Mythic may get its own takeover, as R670's marquee entrances do (`apps/web/src/fx/entrances.ts`, `CARD_FX`), with a strong shared one for the rest. Legendaries keep a lighter version: no full takeover, but bigger than today's rays and slam.\n\n### 3. On reveal: Traps and Cloaked cards\n\nAn entrance (the intro, the sting, the animation and a Mythic's takeover) plays when a hidden card **reveals**, never when it is set face-down.\n\n- **A Legendary or Mythic Trap or Field Trap.** It plays its full entrance at its first firing, which is where R1350 already starts its intro (`castOf` in `apps/web/src/audio/musicDirector.ts`). Its animation, and a Mythic's takeover, centre on the zone that flipped (`trapFired`'s `row` and `lane`, R154). A firing again (`again`, R2657001) plays nothing new, and its set plays nothing.\n- **Any Cloaked card, whatever its rarity** (\u00a76.1, R783004 to R783008).\n  - **Its face-down set** plays nothing that names or hints at the card, on either seat: no intro, no rarity sting, no animation keyed to its rarity. Check today's path: `castOf` skips a `cardPlayed` only when the card's audio entry is a trap, so a Cloaked Unit's or Spell's face-down set may open its intro on its controller's seat now.\n  - **Its Activate: Reveal** (R783006) plays the entrance its rarity's normal play gets, on both seats: a Common's, Rare's or Epic's play sound and animation, or a Legendary's or Mythic's intro, entrance and (for a Mythic) takeover. That holds for a revealed Unit as it animates into its unit zone, a revealed Spell as it resolves, and a revealed Field Spell as it turns face-up.\n  - **Destroyed or bounced unrevealed** (R783008), it plays no entrance.\n- **The other seat.** The opponent reads a firing Trap as the sentinel (R154, R763), so at that moment their client can't know which card fired, and CLAUDE.md rule 7 holds. Either play the opponent's entrance at the first event that names the card to them (such as its arrival in the graveyard, or a Field Trap standing face-up), or play a rarity-neutral reveal at the firing and the card's own entrance once it is named. Showing the opponent the Trap's identity at the firing itself would change R154 and R763's redaction, an engine rule; this issue doesn't do that unless the ruling argues for it.\n\n### Constraints\n\n- **Pacing.** R200 says the effects layer paces nothing, and R201 that an entrance decorates the entry the runner already timed. A takeover either fits inside that entry, or a new ruling amends R200 to let a Mythic's entrance hold the game for a named, capped beat, with `cy.settled()` waiting for it. Say which in the ruling.\n- **Hidden information.** It plays only for a card the viewer can read: a hidden summon has no `defId` (R202), and part 3 covers hidden cards. It plays for both seats, for watchers and in replays.\n- **Reduced motion.** No shake, flash or sweep; a still reveal of the card instead. The music still plays.\n- **Performance.** It moves by `transform` and `opacity`, and stays smooth on a phone.\n\nPresentation only (CLAUDE.md rule 7): nothing enters `PlayerView`, an action, the log or a replay hash. This takes a ruling note in this issue's block and amends R1350, R1352 and R670 (and R200 if needed). It changes no card data and is not how cards look, so it takes no version unless the classifier says otherwise.\n\n## Acceptance\n\n- Every intro listed in `music-cards.json` is re-rendered and its file committed. `music-assets.test.ts` passes, every file is within the new cap, and every Mythic's intro is longer than and distinct from the Legendary ones.\n- The bed ducks to the new, lower gain during an intro, and the new `entrance` sting plays at the same moments as today (`cues.test.ts`, `musicDirector.test.ts`).\n- Every face-up Mythic Unit or Spell play starts a board-wide takeover, and no Legendary, Epic or hidden play does (an FX cue test). The marquee Mythics play their own.\n- A Legendary and a Mythic Trap's first firing plays its intro, its entrance and (for the Mythic) its takeover on its controller's seat. Its set plays none of them, and a firing again plays nothing new.\n- A Cloaked Legendary and a Cloaked Mythic (one Unit, one Spell and one Field Spell between them) play nothing on their face-down set, on either seat, and their full entrance on their Activate: Reveal, on both seats. A Cloaked Common plays its rarity's normal play cues on its reveal. A Cloaked card destroyed unrevealed plays none.\n- No sound or animation cue names, or keys on the rarity of, a card the viewer's view hides at that moment. This is a test over a recorded game that sets and reveals Traps and Cloaked cards, from both seats.\n- The takeover holds the game no longer than its named cap, or not at all (R200, as ruled), and the hotseat e2e smoke still settles.\n- Under reduced motion, the takeover is a still reveal with no shake or flash.\n- A component or e2e spec captures a Mythic's takeover mid-flight and at rest.\n- The ruling note and the amended rulings pass `cargo jackioh spec check`.\n\n## Blocked by, part of\n\nNothing blocks it. It pairs with #2721, which removes the rarity foil so the crest and this music set Legendary and Mythic apart.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2722: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
