@@ -12518,7 +12518,9 @@
     },
     "2687": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6559734356"
+      ],
       "difficulty_by": {
         "at": "2026-11-01T16:35:50Z",
         "difficulty": "hard",
@@ -12554,9 +12556,7 @@
       "started_at": "2026-11-01T16:59:13Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6559734356"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "2688": {
