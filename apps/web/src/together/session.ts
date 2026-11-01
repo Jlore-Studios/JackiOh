@@ -1,16 +1,12 @@
-// What Play together's screens share besides `net/social.ts`: a refusal in its own words and a read
-// that keeps itself fresh. A route that takes a token (decks, replays, settings) is called with the
+// What Play together's screens share besides `net/social.ts`: a refused session told apart and a
+// read that keeps itself fresh (a refusal's words are `net/errors.ts`'s `messageOf`). A route that takes a token (decks, replays, settings) is called with the
 // tab's session through `net/gate.ts`'s `withSession`, as the social and Duos wrappers are.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiRequestError } from "../net/api.ts";
 import { readFailureOf } from "../net/gate.ts";
-
-/** A refusal's sentence: the server's own for `ApiRequestError`, the transport's plain one otherwise. */
-export function messageOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
+import { attempt } from "../net/errors.ts";
 
 /** The session refused a social route outright: signed out (401), or an account that is not active (403). */
 export function isRefusedSession(cause: unknown): boolean {
@@ -30,11 +26,6 @@ export function unreadCountsOf(answer: unknown): Readonly<Record<string, number>
     if (typeof count === "number" && Number.isFinite(count)) counts[friendId] = count;
   }
   return counts;
-}
-
-/** Turns a synchronous throw into a rejected promise. */
-export function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
 }
 
 export type Polled<T> =

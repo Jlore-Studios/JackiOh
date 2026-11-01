@@ -26,8 +26,6 @@ import type { GameEventType } from "./generated/GameEventType.ts";
 
 export type { Action } from "./generated/Action.ts";
 export type { ActionBody } from "./generated/ActionBody.ts";
-export type { ActionInput } from "./generated/ActionInput.ts";
-export type { ActionType } from "./generated/ActionType.ts";
 export type { ActivationView } from "./generated/ActivationView.ts";
 export type { CardCost } from "./generated/CardCost.ts";
 export type { CardDef } from "./generated/CardDef.ts";
@@ -35,21 +33,15 @@ export type { CardFace } from "./generated/CardFace.ts";
 export type { CardMark } from "./generated/CardMark.ts";
 export type { CardType } from "./generated/CardType.ts";
 export type { CardView } from "./generated/CardView.ts";
-export type { CatalogQuery } from "./generated/CatalogQuery.ts";
-export type { CopiedTextView } from "./generated/CopiedTextView.ts";
 export type { CraftEffect } from "./generated/CraftEffect.ts";
 export type { CraftFrame } from "./generated/CraftFrame.ts";
 export type { CraftHat } from "./generated/CraftHat.ts";
 export type { CraftHatKind } from "./generated/CraftHatKind.ts";
-export type { CraftHatPrice } from "./generated/CraftHatPrice.ts";
 export type { CraftKeyword } from "./generated/CraftKeyword.ts";
-export type { CraftKeywordPrice } from "./generated/CraftKeywordPrice.ts";
 export type { CraftMode } from "./generated/CraftMode.ts";
 export type { CraftOffer } from "./generated/CraftOffer.ts";
-export type { CraftPreview } from "./generated/CraftPreview.ts";
 export type { CraftRecipe } from "./generated/CraftRecipe.ts";
 export type { CraftVerb } from "./generated/CraftVerb.ts";
-export type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
 export type { CreditView } from "./generated/CreditView.ts";
 export type { CustomCard } from "./generated/CustomCard.ts";
 export type { CustomFrame } from "./generated/CustomFrame.ts";
@@ -57,21 +49,17 @@ export type { CustomIssue } from "./generated/CustomIssue.ts";
 export type { CustomParam } from "./generated/CustomParam.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
 export type { Flavor } from "./generated/Flavor.ts";
-export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";
 export type { GameEventType } from "./generated/GameEventType.ts";
 export type { GameOverReason } from "./generated/GameOverReason.ts";
 export type { HeroPowerView } from "./generated/HeroPowerView.ts";
-export type { HeroView } from "./generated/HeroView.ts";
 export type { Keyword } from "./generated/Keyword.ts";
 export type { KeywordKind } from "./generated/KeywordKind.ts";
-export type { LibraryEntryView } from "./generated/LibraryEntryView.ts";
 export type { LibraryOverflowOutcome } from "./generated/LibraryOverflowOutcome.ts";
 export type { LibraryView } from "./generated/LibraryView.ts";
 export type { MarketOfferView } from "./generated/MarketOfferView.ts";
 export type { MarketSaleView } from "./generated/MarketSaleView.ts";
 export type { MarketplaceView } from "./generated/MarketplaceView.ts";
-export type { ModeDecl } from "./generated/ModeDecl.ts";
 export type { ModifierView } from "./generated/ModifierView.ts";
 export type { MulliganView } from "./generated/MulliganView.ts";
 export type { Param } from "./generated/Param.ts";
@@ -90,21 +78,15 @@ export type { RevealAt } from "./generated/RevealAt.ts";
 export type { Row } from "./generated/Row.ts";
 export type { SandboxOp } from "./generated/SandboxOp.ts";
 export type { SecretChoice } from "./generated/SecretChoice.ts";
-export type { SecretView } from "./generated/SecretView.ts";
 export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
 export type { SpawnZone } from "./generated/SpawnZone.ts";
 export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
-export type { StarscapeReward } from "./generated/StarscapeReward.ts";
 export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TallyView } from "./generated/TallyView.ts";
-export type { TargetDecl } from "./generated/TargetDecl.ts";
-export type { TargetFilter } from "./generated/TargetFilter.ts";
-export type { TradesView } from "./generated/TradesView.ts";
 export type { Tuning } from "./generated/Tuning.ts";
-export type { TuningChange } from "./generated/TuningChange.ts";
 export type { UnitView } from "./generated/UnitView.ts";
 export type { Zone } from "./generated/Zone.ts";
 export type { ZoneChoice } from "./generated/ZoneChoice.ts";
@@ -259,7 +241,6 @@ export {
   KEYWORD_KINDS,
   LEAN_NEWEST,
   PARAM_PLACEHOLDER,
-  PLAYER_IDS,
   SHIPPED_SETS,
   fillParams,
   hasKeyword,

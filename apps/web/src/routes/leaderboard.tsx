@@ -16,6 +16,7 @@ import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { BackLink } from "./nav.tsx";
+import { messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
 import "./leaderboard.css";
@@ -55,7 +56,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
         if (canceled) return;
         // R2125000: a read that fails behind a kept ladder leaves it and says nothing; only a first visit says why.
         const kept = cachedRead<LeaderboardResponse>(token, keptPaths.leaderboard);
-        if (kept === undefined) setError(cause instanceof Error ? cause.message : String(cause));
+        if (kept === undefined) setError(messageOf(cause));
         else setBoard(kept);
       });
     return () => {

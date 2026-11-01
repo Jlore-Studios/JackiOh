@@ -25,7 +25,7 @@ import { createPortal } from "react-dom";
 import { TERM_HOVER_DELAY_MS } from "./constants.ts";
 import { GLOSSARY, type GlossaryTermId } from "./glossary.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
-import { placePreview, type Rect } from "./inspect/placement.ts";
+import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
 import { useRefsInteractive } from "./refContext.tsx";
 
 export type TermTipMode = "off" | "pointer" | "control";
@@ -56,11 +56,6 @@ function useTermTipMode(): TermTipMode {
 /** Whether a press starts on a term that shows its rule: then it is the term's long press. */
 export function startsOnTermTip(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(TERM_TIP_SELECTOR) !== null;
-}
-
-function rectOf(element: Element): Rect {
-  const box = element.getBoundingClientRect();
-  return { left: box.left, top: box.top, width: box.width, height: box.height };
 }
 
 function viewport(): { width: number; height: number } {

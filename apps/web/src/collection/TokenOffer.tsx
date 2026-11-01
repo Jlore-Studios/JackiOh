@@ -21,6 +21,7 @@ import { formatNumber, t } from "../i18n/i18n.ts";
 import { getTokens, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
 import { cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
 import { collectionTestid as T } from "./collection.ts";
+import { messageOf } from "../net/errors.ts";
 
 import "./tokenOffer.css";
 
@@ -146,7 +147,7 @@ export default function TokenOffer({
       },
       (cause: unknown) => {
         setState("ready");
-        setError(cause instanceof Error ? cause.message : String(cause));
+        setError(messageOf(cause));
       },
     );
   };

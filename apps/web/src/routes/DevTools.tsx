@@ -27,6 +27,7 @@ import {
   type DevClearPart,
   type QuestView,
 } from "../net/api.ts";
+import { attempt, messageOf } from "../net/errors.ts";
 
 export const devToolsTestid = {
   panel: "dev-tools",
@@ -114,16 +115,14 @@ export default function DevTools({ token }: { token: string }): ReactElement {
   const run = (request: () => Promise<unknown>): void => {
     if (working) return;
     setStatus({ kind: "working" });
-    Promise.resolve()
-      .then(request)
-      .then(
-        () => {
-          setStatus({ kind: "done" });
-        },
-        (cause: unknown) => {
-          setStatus({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause) });
-        },
-      );
+    attempt(request).then(
+      () => {
+        setStatus({ kind: "done" });
+      },
+      (cause: unknown) => {
+        setStatus({ kind: "failed", message: messageOf(cause) });
+      },
+    );
   };
 
   return (
