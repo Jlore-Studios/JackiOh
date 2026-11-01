@@ -1372,3 +1372,113 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
         assert!(!serialized(&view).contains(&trap.def_id));
     }
 }
+
+// R2646000: the card asking a prompt reaches its chooser only while the chooser may read it
+
+mod r2646000_prompt_source {
+    use super::*;
+
+    /// A Choose one for `player`, asked by `resume`'s card.
+    fn ask(state: &mut GameState, player: PlayerId, resume: Resume) {
+        with_sink(state, |sink| {
+            open_prompt(
+                sink,
+                OpenPromptArgs {
+                    player,
+                    kind: PromptKind::Mode,
+                    aim: None,
+                    prompt: "Choose one".to_string(),
+                    options: vec![mode_option("burn"), mode_option("freeze")],
+                    min: None,
+                    max: None,
+                    budget: None,
+                    owner: None,
+                    resume,
+                },
+            )
+        });
+    }
+
+    /// The resume of the card `card` asking, on its Radiant face.
+    fn asked_by(card: &CardInstance) -> Resume {
+        Resume {
+            def_id: card.def_id.clone(),
+            instance_id: Some(card.id.clone()),
+            radiant: true,
+            ..inert_resume()
+        }
+    }
+
+    #[test]
+    fn r2646000_the_chooser_reads_a_visible_asking_card() {
+        let d = defs();
+
+        // A public card: the other seat's graveyard.
+        let mut state = game("source-public");
+        let card = put_in_pile(&mut state, &d.public_field.id, PlayerId::P2, ZoneName::Graveyard);
+        ask(&mut state, PlayerId::P1, asked_by(&card));
+        let own = own_options(&view_for(&state, PlayerId::P1));
+        assert_eq!(own.source_def_id, Some(d.public_field.id.clone()));
+        assert_eq!(own.source_radiant, Some(true));
+        // The other seat learns only that a prompt is open (§10.6), never who asks.
+        let other = serialized(&view_for(&state, PlayerId::P2));
+        assert!(!other.contains("sourceDefId"));
+        assert!(!other.contains("sourceRadiant"));
+
+        // The chooser's own hand card is the chooser's to read.
+        let mut state = game("source-own-hand");
+        let card = in_hand(&mut state, &d.secret_hand[0].id, PlayerId::P1, 1).remove(0);
+        ask(&mut state, PlayerId::P1, asked_by(&card));
+        assert_eq!(
+            own_options(&view_for(&state, PlayerId::P1)).source_def_id,
+            Some(d.secret_hand[0].id.clone())
+        );
+        let other = serialized(&view_for(&state, PlayerId::P2));
+        assert!(!other.contains("sourceDefId"));
+        assert!(!other.contains(&d.secret_hand[0].id));
+    }
+
+    #[test]
+    fn r2646000_a_hidden_asking_card_is_not_named() {
+        let d = defs();
+        let mut state = game("source-hidden");
+        // The asking card is in the other seat's hand, which the chooser may not read (§9.1).
+        let card = in_hand(&mut state, &d.secret_hand[0].id, PlayerId::P2, 1).remove(0);
+        ask(&mut state, PlayerId::P1, asked_by(&card));
+        let own = own_options(&view_for(&state, PlayerId::P1));
+        assert_eq!(own.source_def_id, None);
+        assert_eq!(own.source_radiant, None);
+        let text = serialized(&view_for(&state, PlayerId::P1));
+        assert!(!text.contains("sourceDefId"));
+        assert!(!text.contains("sourceRadiant"));
+        assert!(!text.contains(&d.secret_hand[0].id));
+    }
+
+    #[test]
+    fn r2646000_no_card_no_source() {
+        let d = defs();
+
+        // A prompt no card opened.
+        let mut state = game("source-none");
+        ask(&mut state, PlayerId::P1, inert_resume());
+        let own = own_options(&view_for(&state, PlayerId::P1));
+        assert_eq!((own.source_def_id, own.source_radiant), (None, None));
+
+        // A card the state no longer holds.
+        let mut state = game("source-gone");
+        let card = put_in_pile(&mut state, &d.public_field.id, PlayerId::P2, ZoneName::Graveyard);
+        state.players[PlayerId::P2].graveyard.clear();
+        ask(&mut state, PlayerId::P1, asked_by(&card));
+        assert_eq!(own_options(&view_for(&state, PlayerId::P1)).source_def_id, None);
+
+        // A card that has since changed definition.
+        let mut state = game("source-changed");
+        let card = put_in_pile(&mut state, &d.public_field.id, PlayerId::P2, ZoneName::Graveyard);
+        let resume = Resume {
+            def_id: d.stack_top.id.clone(),
+            ..asked_by(&card)
+        };
+        ask(&mut state, PlayerId::P1, resume);
+        assert_eq!(own_options(&view_for(&state, PlayerId::P1)).source_def_id, None);
+    }
+}

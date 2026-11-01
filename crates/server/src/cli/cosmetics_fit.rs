@@ -24,8 +24,8 @@
 //!    whose person owns it there and whose deck holds the card, the share whose card wears it
 //!    (ownership read now, as for `full_art_wear`);
 //!  - `full_art_wear`: of the seats whose person owns a full art and whose deck holds its card, the
-//!    share that printed it (ownership read now, so a full art granted after a match counts it as
-//!    not printed);
+//!    share that printed that one, of its card's tiers (R2655000; ownership read now, so a full art
+//!    granted after a match counts it as not printed);
 //!  - `ownership`: each non-starter's share of the bucket's people that own it, on its card for a
 //!    per-card one.
 //!
@@ -40,7 +40,7 @@ use crate::cli::{connect_one, database_url};
 use crate::config::{
     BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FIT_WINDOW_DAYS,
 };
-use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, registry};
+use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, full_art_picked, registry};
 use crate::db::store::{Db, LoadoutSample, StoreError};
 use crate::economy::store::OwnedCosmetics;
 use crate::env::quoted;
@@ -243,7 +243,14 @@ pub fn fit_cosmetics(
             }
             let printed = could
                 .iter()
-                .filter(|sample| sample.loadout.card(card).and_then(|picks| picks.full_art) == Some(true))
+                .filter(|sample| {
+                    sample
+                        .loadout
+                        .card(card)
+                        .and_then(|picks| picks.full_art.as_ref())
+                        .and_then(|pick| full_art_picked(registry, card, pick))
+                        .is_some_and(|worn| worn.id == full_art.id)
+                })
                 .count();
             full_art_wear.push((full_art.id.clone(), share(printed, could.len())));
         }

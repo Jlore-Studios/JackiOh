@@ -1,11 +1,13 @@
 // R1584000: the floor's stat showcase: the cycle and its holds, reduced motion, and the board's
 // animation each stat's card plays. R1743000: the order is a shuffled bag drawn from the page's random
-// source, and the showcase itself, not an arrow or a dot, is the control.
+// source, and the showcase itself, not an arrow or a dot, is the control. R2649000: Brittle's and
+// Temporary's aura is on the card before the beat it warns of, and a beat played twice starts again.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
+import { marksTestid } from "../cards/CardMarks.tsx";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { animationRow } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
@@ -15,7 +17,7 @@ import { SHOWCASE_BEAT_GAP_MS, SHOWCASE_INTERVAL_MS, SHOWCASE_LEAD_MS } from "./
 import { EMPTY_STATS, NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
 import type { PocketPick } from "./pocketPick.ts";
 import { showcaseStats, type ShowcaseKey, type ShowcaseStat } from "./showcase.ts";
-import { STAGE_INSTANCE_ID } from "./showcaseStage.ts";
+import { STAGE_INSTANCE_ID, firstBeatAt, stageScript } from "./showcaseStage.ts";
 import { StatShowcase } from "./StatShowcase.tsx";
 
 beforeEach(() => {
@@ -332,5 +334,90 @@ describe("R1584000 the card's animation", () => {
     fireEvent.click(root());
     expect(shown()).not.toBe(before);
     expect(card().getAttribute("data-entry")).toBe("enter");
+  });
+});
+
+describe("R2649000 the aura before the beat", () => {
+  const ms = (type: string): number => animationRow(type)!.durationMs;
+  /** The one stat `key` of a tally with `counts` on core-004. */
+  const statFor = (key: ShowcaseKey, counts: Partial<CardCounters>): ShowcaseStat[] =>
+    showcaseStats(tally({ "core-004": counts }), null, seeded(1)).filter((stat) => stat.key === key);
+  /** The color of the aura the stage's card wears, or null for none. */
+  const aura = (): string | null => card().querySelector(`[data-testid="${marksTestid(STAGE_INSTANCE_ID)}"]`)?.getAttribute("data-mark-color") ?? null;
+
+  it("R2649000 the aura is on the card until the first beat and gone when it plays", () => {
+    const cases = [
+      ["sandCastle", { crumbled: 3 }, "gray", "crumbled"],
+      ["justInTime", { tempPlayed: 4, tempExpired: 1 }, "fuchsia", "cardPlayed"],
+      ["useItOrLoseIt", { tempExpired: 2 }, "fuchsia", "exiled"],
+    ] as const;
+    for (const [key, counts, color, type] of cases) {
+      const stats = statFor(key, counts);
+      expect(stats).toHaveLength(1);
+      const stat = stats[0]!;
+      const first = firstBeatAt(stageScript(stat.animation, stat.cardId, stat.side));
+      expect(first).toBe(SHOWCASE_LEAD_MS + SHOWCASE_BEAT_GAP_MS);
+      show(stats);
+      // The aura alone, the board's: no badge and nothing marked.
+      expect([key, aura()]).toEqual([key, color]);
+      expect(card().querySelector("[data-marks]")).toBeNull();
+      expect(card().hasAttribute("data-animating")).toBe(false);
+      advance(SHOWCASE_LEAD_MS);
+      expect([key, aura(), card().hasAttribute("data-animating")]).toEqual([key, color, false]);
+      advance(first - SHOWCASE_LEAD_MS - 1);
+      expect([key, aura()]).toEqual([key, color]);
+      // The beat plays, and the warning it followed is gone.
+      advance(1);
+      expect([key, card().getAttribute("data-animating"), aura()]).toEqual([key, type, null]);
+      advance(ms(type) + SHOWCASE_BEAT_GAP_MS);
+      expect([key, card().hasAttribute("data-animating"), aura()]).toEqual([key, false, null]);
+      cleanup();
+    }
+  });
+
+  it("R2649000 a stat with no aura plays its first beat after the lead, as before", () => {
+    show(statFor("martyr", { sacrificed: 2 }));
+    expect(aura()).toBeNull();
+    advance(SHOWCASE_LEAD_MS);
+    // Doom's first beat is the red destroy mark, the board's own badge.
+    expect(card().getAttribute("data-animating")).toBe("marked");
+    expect(card().querySelector('[data-marks="destroy"]')).not.toBeNull();
+    expect(aura()).toBe("red");
+    advance(ms("marked") + SHOWCASE_BEAT_GAP_MS);
+    expect(card().getAttribute("data-animating")).toBe("destroyed");
+  });
+
+  it("R2649000 under reduced motion the still card wears the aura", () => {
+    show(statFor("sandCastle", { crumbled: 3 }), true);
+    expect(aura()).toBe("gray");
+    advance(2 * SHOWCASE_INTERVAL_MS);
+    expect(aura()).toBe("gray");
+    expect(document.querySelector("[data-animating]")).toBeNull();
+    expect(card().hasAttribute("data-entry")).toBe(false);
+    cleanup();
+    setFxSettings({ motion: "reduce" });
+    show(statFor("justInTime", { tempPlayed: 4, tempExpired: 1 }));
+    expect(aura()).toBe("fuchsia");
+    advance(2 * SHOWCASE_INTERVAL_MS);
+    expect(aura()).toBe("fuchsia");
+    expect(document.querySelector("[data-animating]")).toBeNull();
+  });
+
+  it("R2649000 a repeated beat is a new element, so its keyframe starts again", () => {
+    const zone = (): HTMLElement => screen.getByTestId(testid.zone("you", "units", 0));
+    show(statFor("massProduced", { created: 4 }));
+    advance(SHOWCASE_LEAD_MS);
+    const first = zone();
+    expect(first.getAttribute("data-animating")).toBe("summoned");
+    advance(ms("summoned") + SHOWCASE_BEAT_GAP_MS);
+    const second = zone();
+    expect(second.getAttribute("data-animating")).toBe("summoned");
+    expect(second).not.toBe(first);
+    expect(first.isConnected).toBe(false);
+    advance(ms("summoned") + SHOWCASE_BEAT_GAP_MS);
+    expect(zone().getAttribute("data-animating")).toBe("summoned");
+    expect(zone()).not.toBe(second);
+    advance(ms("summoned") + SHOWCASE_BEAT_GAP_MS);
+    expect(document.querySelector("[data-animating]")).toBeNull();
   });
 });

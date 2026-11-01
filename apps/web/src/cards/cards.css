@@ -925,12 +925,13 @@
   pointer-events: none;
 }
 
-/* The banner sits between a Unit's attack and health (19cqw gems in the bottom corners, their
-   numbers centered about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh. */
+/* The banner sits between a Unit's attack and health (19cqw gems 1.5cqw in from the bottom corners,
+   their numbers centered about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh,
+   its ends at the gems' inner edges so it covers neither (R2655003 measures it on every type). */
 .cf[data-full-art="true"] .card-name {
   top: 88.2cqh;
-  left: 19cqw;
-  right: 19cqw;
+  left: 20.5cqw;
+  right: 20.5cqw;
   padding: 0 4cqw;
 }
 

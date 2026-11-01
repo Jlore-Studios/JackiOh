@@ -2393,7 +2393,7 @@ mod r1834002_the_loadout_the_ticket_freezes {
             &CardPicks {
                 card_id: theirs[1].clone(),
                 foil: Some("foil-from-a-newer-client".to_string()),
-                full_art: Some(true),
+                full_art: Some(true.into()),
                 ..CardPicks::default()
             },
             now_ms(),

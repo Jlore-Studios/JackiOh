@@ -159,3 +159,48 @@ async fn r1833000_an_existing_account_owns_none_of_the_36() {
     let (status, body) = get(&app, Some(OTHER_TOKEN)).await;
     assert_eq!((status, body), (200, json!({ "cards": [], "account": [] })));
 }
+
+#[tokio::test]
+async fn r2655000_an_existing_account_owns_none_of_the_57() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    // What an account made before #2655 could own: a portrait card's Epic full art on its card.
+    own(&app, &profile, Some("core-008"), "full-art-mr-vanilla").await;
+    // #2655's 57: every full art but the six portrait cards' Epics, none a default or a starter
+    // (R2655000).
+    let new: Vec<String> = shipped()
+        .expect("the shipped registry")
+        .into_iter()
+        .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter)
+        .map(|cosmetic| cosmetic.id)
+        .filter(|id| {
+            ![
+                "full-art-big-d-fender",
+                "full-art-gary-the-gambler",
+                "full-art-mr-vanilla",
+                "full-art-tempo-timmy",
+                "full-art-duplicating-felinors",
+                "full-art-jlockeed-shredder-10",
+            ]
+            .contains(&id.as_str())
+        })
+        .collect();
+    assert_eq!(new.len(), 57);
+
+    // Nothing grants them: the account reads what it was given, and none of the 57, not even its
+    // own card's Legendary or Mythic.
+    let (status, body) = get(&app, Some(TOKEN)).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [{ "cardId": "core-008", "cosmeticId": "full-art-mr-vanilla" }], "account": [] })
+    );
+    let listed = body.to_string();
+    for id in &new {
+        assert!(!listed.contains(&format!("\"{id}\"")), "{id} is owned");
+    }
+    // And another fixture account, which was given nothing, owns none either.
+    let (status, body) = get(&app, Some(OTHER_TOKEN)).await;
+    assert_eq!((status, body), (200, json!({ "cards": [], "account": [] })));
+}

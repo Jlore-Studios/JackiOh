@@ -524,7 +524,10 @@ describe("B5 E11 a card in your graveyard that legal lists is played from the pi
 
     const modal = el("prompt-modal");
     expect(modal).toHaveAttribute("data-prompt-kind", "number");
-    const options = within(modal).getAllByRole("button", { pressed: false }).map((button) => button.textContent);
+    // #2646: each way to pay is a choice card, named by its label.
+    const options = within(modal)
+      .getAllByRole("button", { pressed: false })
+      .map((button) => button.querySelector(".choice-card-name")?.textContent ?? button.textContent);
     expect(options).toContain("Pay in mana only");
     expect(options).toContain("Spend 2 Plague Counters");
 

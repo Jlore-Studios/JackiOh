@@ -39,6 +39,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
+import { rollBatchOf, rollWords } from "../fx/rolls.ts";
 import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { faceDownCost, sideOf, testid } from "./contract.ts";
@@ -540,6 +541,12 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       const roll = chaosRollOf(event);
       const who = event.defId === HIDDEN_CARD ? t(CHAOS_TEXT.title) : name.def(event.defId);
       return roll === null ? null : t("{who} rolled: {names}", { who, names: chaosNames(roll).map((effect) => t(effect)).join(listSeparator()) });
+    }
+    case "rolled": {
+      // R2652001: the batch in the words the panel lands on (fx/rolls.ts); a card the viewer may not
+      // read is a hidden card (R97). A face-down trap's flip never reaches the other seat (R2652000).
+      const batch = rollBatchOf(event);
+      return batch === null ? null : capitalised(rollWords(batch, name.card(event.instanceId, event.defId)));
     }
     case "flickered":
       return capitalised(t("{card} flickered", { card: name.card(event.instanceId, event.defId) }));

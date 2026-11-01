@@ -22,7 +22,9 @@ enforces rules and never sees hidden information.** In practice:
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
   targets and modes are built **inline into the `play` action**; everything decided during
   resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
-  both with the same pickers.
+  both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
+  card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
+  does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -34,7 +36,7 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 
 The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
-The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
+The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
 The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
 
@@ -194,7 +196,7 @@ cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the abi
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
 view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
-which asks which first (the `ability` need, a Discover-chrome picker in `Prompt.tsx` showing each
+which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
 the same turn; the rest wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
@@ -415,7 +417,9 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
-                        as live previews, which equip on that card alone, kept on the device
+                        as live previews (a full-art card's strip offers no full art and its Epic, its
+                        animated Legendary and its signed Mythic, R2655000), which equip on that card
+                        alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned

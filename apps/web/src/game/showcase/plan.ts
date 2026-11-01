@@ -7,6 +7,7 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { castOnDrawAt } from "../../fx/castOnDraw.ts";
 import { chaosRollOf, type ChaosRoll } from "../../fx/chaos.ts";
+import { rollBatchOf, type RollBatch } from "../../fx/rolls.ts";
 import { faceDownCost, sideOf } from "../contract.ts";
 import { firesAgain } from "../animations.ts";
 import { createPlayTracker, type PlayTracker } from "../runs.ts";
@@ -178,6 +179,14 @@ export function chaosRollsIn(fresh: readonly GameEvent[]): { roll: ChaosRoll; ev
   return fresh.flatMap((event) => {
     const roll = chaosRollOf(event);
     return roll === null || roll.effects.length === 0 ? [] : [{ roll, event }];
+  });
+}
+
+/** R2652001: the batches of coins or dice among `fresh`, in order, with the event each came from. */
+export function rollsIn(fresh: readonly GameEvent[]): { batch: RollBatch; event: GameEvent }[] {
+  return fresh.flatMap((event) => {
+    const batch = rollBatchOf(event);
+    return batch === null || batch.rolls.length === 0 ? [] : [{ batch, event }];
   });
 }
 

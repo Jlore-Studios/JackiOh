@@ -608,6 +608,8 @@ mod generator {
             GameEventType,
             GameEvent,
             Ballot,
+            RollKind,
+            RollResult,
             FleeOpponent,
             ReplacementMoment,
             ReplacementWhere,

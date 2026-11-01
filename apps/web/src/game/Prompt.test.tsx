@@ -964,8 +964,9 @@ describe("R1044 the face-down picker asks how to play it", () => {
     expect(kindOfModal()).toBe("mode");
     expect(screen.getByText("Play it how?")).not.toBeNull();
     expect(optionTestids()).toEqual(["prompt-option-up", "prompt-option-cloaked"]);
-    expect(screen.getByText("Play it face-up")).not.toBeNull();
-    expect(screen.getByText("Set face-down: reveal it with its Activate")).not.toBeNull();
+    // #2646: each way is a choice card, its sentence the card's text.
+    expect(screen.getByTestId("prompt-option-up").querySelector(".choice-card-text")?.textContent).toBe("Play it face-up");
+    expect(screen.getByTestId("prompt-option-cloaked").querySelector(".choice-card-text")?.textContent).toBe("Set face-down: reveal it with its Activate");
 
     fireEvent.click(screen.getByTestId("prompt-option-cloaked"));
 

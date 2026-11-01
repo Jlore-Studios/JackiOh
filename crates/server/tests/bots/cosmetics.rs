@@ -511,7 +511,7 @@ fn wear(fit: &CosmeticFit) -> Worn {
         let printed = draw_card_picks(&seed, registry, fit, &dfender, &picks, &[deck.as_slice()]);
         if printed
             .iter()
-            .any(|card| card.card_id == "core-001" && card.full_art == Some(false))
+            .any(|card| card.card_id == "core-001" && card.full_art == Some(false.into()))
         {
             off += 1;
         }
@@ -1038,10 +1038,10 @@ fn r1834005_redealt_decks_draw_again() {
     );
     let mut expected = third.cosmetics.cards.clone();
     match expected.iter_mut().find(|picks| picks.card_id == "core-001") {
-        Some(picks) => picks.full_art = Some(false),
+        Some(picks) => picks.full_art = Some(false.into()),
         None => expected.push(CardPicks {
             card_id: "core-001".to_string(),
-            full_art: Some(false),
+            full_art: Some(false.into()),
             ..CardPicks::default()
         }),
     }
