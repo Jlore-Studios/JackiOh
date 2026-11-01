@@ -1,5 +1,4 @@
 // Practice presets are token-free Core decks, checked under §2.6 and outside AI's shadow ban (R186).
-// A saved deck is offered only when complete and the validator finds no §2.6 fault in it (§9.9, `savedDeckRefusal`).
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 

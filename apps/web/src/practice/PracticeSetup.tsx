@@ -59,11 +59,9 @@ export type PracticeSetupChoice = {
 /** What the account offers the deck picker, and why when nothing: a signed-in player is never told to sign in. */
 export type SavedDecks =
   | { kind: "anonymous" }
-  /** The account, or its saved decks, are still being read. */
   | { kind: "checking" }
   /** Signed in, but the account is not active yet (an invite code is owed) or may not play. */
   | { kind: "inactive" }
-  /** An active account that has no saved deck. */
   | { kind: "none" }
   /** Could not be read. `retry` reads them again (#1691) after `retryAfterMs`, a rate limit's wait (R192). */
   | { kind: "unavailable"; retry?: () => void; retryAfterMs?: number }
@@ -78,7 +76,6 @@ type PracticeSetupProps = {
   defsFailed: boolean;
   /** §12.9: the account's custom cards, which a saved deck may name; absent, there are none. */
   custom?: CustomCardsState;
-  /** #1691: reads the custom cards again, offered beside a failed read. */
   onRetryCustom?: () => void;
   /** #1691: asks the worker for the catalog again, offered beside a failed preview. */
   onRetryDefs?: () => void;
@@ -252,7 +249,6 @@ export function PracticeSetup({
   // A remembered saved deck that is gone, not complete or not loaded yet falls back to random.
   const selected = options.some((option) => option.value === deck && !option.disabled) ? deck : "random";
   const picked: PracticeDeckChoice = deckChoiceFromValue(selected, savedDecks) ?? { kind: "random" };
-  // R1373, R924000: only the Random deck leans, and only on a pick.
   const choice: PracticeDeckChoice = picked.kind === "random" && lean !== null ? { kind: "random", leanSet: lean } : picked;
   const preview = previewFor(choice, savedDecks);
   const hint = savedHint(saved);

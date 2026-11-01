@@ -15,14 +15,10 @@ import { createNoise1D } from "./rng.ts";
 import type { FxShakeOffset } from "./types.ts";
 
 export type Shake = {
-  /** trauma = min(1, trauma + max(0, t)) */
   add(trauma: number): void;
-  /** linear decay at decayPerSecond, floored at 0 */
   step(dtMs: number): void;
-  /** x,y = maxOffsetPx·trauma²·noise, angle = maxAngleDeg·trauma²·noise */
   sample(nowMs: number): FxShakeOffset;
   trauma(): number;
-  /** trauma > 0 */
   active(): boolean;
   reset(): void;
 };

@@ -63,7 +63,6 @@ export type SpeechPort = {
   cancel(): void;
 };
 
-/** window.speechSynthesis + SpeechSynthesisUtterance (lang "en-US"), or null when either is missing (jsdom). */
 export function browserSpeechPort(): SpeechPort | null {
   const w = window as unknown as {
     speechSynthesis?: SpeechSynthesis;
@@ -103,10 +102,8 @@ export function browserSpeechPort(): SpeechPort | null {
   };
 }
 
-/** Where the page's visibility comes from: the document and the page's hide/show events, or a test's. */
 export type LifecyclePort = { visible(): boolean; subscribe(listener: () => void): () => void };
 
-/** The page's lifecycle, or null when `document`/`window` are missing (jsdom without a harness). */
 export function browserLifecycle(): LifecyclePort | null {
   if (typeof document === "undefined" || typeof window === "undefined") return null;
   return {
@@ -261,10 +258,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   let entries: PlayedCue[] = [];
   const lastSfxAt = new Map<SfxId, number>();
-  /** R655: a card effect's retrigger guard, by its bank name. */
   const lastEffectAt = new Map<string, number>();
   let sfxEnds: number[] = [];
-  /** R655: when the last pick-up was accepted, and the gain of its effect, which the next one fades. */
   let lastPickupAt: number | null = null;
   let pickupEffect: GainNode | null = null;
   /** Compressed bytes per key, for the page's lifetime (a failed fetch is kept as null). */
@@ -365,7 +360,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /** Builds a new context, mix and settings subscription, after there is none. */
   function createFresh(): void {
     const make = factory;
     if (make === null) return;
@@ -409,7 +403,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     playSilentFrame(ctx);
   }
 
-  /** The page went hidden or came back: cut the voice while hidden; rebuild and pump on return. */
   function onLifecycle(): void {
     try {
       if (disposed) return;
@@ -450,7 +443,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     gain.setTargetAtTime(1, sfxDuckUntil, SFX_DUCK_RELEASE_TC_S);
   }
 
-  /** R669: sfx enters the effects bus directly or through a stereo panner. */
   function sfxInput(c: AudioContext, b: Mix, pan: number | undefined): { input: AudioNode; extra: AudioNode | null } {
     if (pan === undefined || pan === 0 || !Number.isFinite(pan)) {
       return { input: b.sfx, extra: null };
@@ -642,7 +634,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return pending;
   }
 
-  /** The decoded line, from the cache (and moved to its most recent end) or fetched and decoded. */
   function load(key: VoiceKey): Promise<AudioBuffer | null> {
     const cached = decoded.get(key);
     if (cached !== undefined) {
@@ -670,7 +661,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return pending;
   }
 
-  /** Whether a voice line could be heard at all: no point loading one otherwise. */
   function voiceWanted(): boolean {
     const s = readAudioSettings();
     return !s.muted && s.voiceOn;
@@ -681,7 +671,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return !busy && !disposed && voiceWanted();
   }
 
-  /** Starts prefetch requests up to VOICE_PREFETCH_CONCURRENCY while background work may run. */
   function pumpPrefetch(): void {
     const rest = prefetchRest;
     if (rest === null) return;
@@ -710,7 +699,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /* voice channel */
 
-  /** Tells the `speaking` subscribers when the channel has gone from free to held or back. */
   function notifySpeaking(): void {
     const held = channel !== null;
     if (held === spoke) return;
@@ -739,7 +727,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return true;
   }
 
-  /** Frees the channel if `ch` still holds it, and hands it to the next waiting line. */
   function release(ch: VoiceChannel): void {
     if (channel !== ch) return;
     // Held across the hand-over: the next waiting line takes the channel before anyone is told.
@@ -753,7 +740,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     release(ch);
   }
 
-  /** Takes the channel from its line: a line that had not started yet is dropped, one speaking fades out. */
   function cut(ch: VoiceChannel): void {
     if (channel !== ch) return;
     // Not `setChannel`: a cut is followed by the line that cut in (`begin`) or by `silenceVoice`,
@@ -767,7 +753,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
-  /** Mute or voice lines off: nothing speaks and nothing waits. */
   function silenceVoice(): void {
     if (channel !== null) cut(channel);
     for (const line of waiting) setOutcome(line, "dropped");
@@ -775,7 +760,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     notifySpeaking();
   }
 
-  /** Whether a line of priority `rank` takes the channel from the one holding it. */
   function cutsIn(rank: VoicePriority, held: VoicePriority): boolean {
     // R655: a pick-up answers the viewer's own hand, so it also cuts off the last pick-up's line.
     return rank > held || rank === VOICE_PRIORITY.pickup;
@@ -903,7 +887,6 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   }
 
   function begin(line: VoiceLine): void {
-    // A timer that fires while the page is hidden must not take the channel.
     if (!accepting()) return;
     const ch: VoiceChannel = {
       line,

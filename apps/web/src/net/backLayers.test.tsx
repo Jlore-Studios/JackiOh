@@ -20,13 +20,11 @@ import { at, must } from "../test/stubServer.ts";
 import { useBackLayer } from "./backLayers.ts";
 import { guardLeaving, navigate, usePathname } from "./navigate.ts";
 
-/** One layer, closed through its own `onClose` while `closable`. */
 function Overlay({ name, onClose, closable = true }: { name: string; onClose: () => void; closable?: boolean }): ReactElement {
   useBackLayer(onClose, closable);
   return <div data-testid={`overlay-${name}`} />;
 }
 
-/** A screen that reads the path, opens one more layer on Open and closes the newest on Close. */
 function Screen(): ReactElement {
   const path = usePathname();
   const [open, setOpen] = useState<readonly string[]>([]);

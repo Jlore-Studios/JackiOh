@@ -14,7 +14,6 @@ import { createPracticeCore } from "./core.ts";
 import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 
-/** A 0-cost Spell: "Deal {dmg} damage to the enemy hero." */
 const BURNER: CustomCard = {
   id: "custom-burner",
   version: 1,
@@ -215,7 +214,6 @@ describe("R962000 a sandbox game spawns the custom cards it carries", () => {
     ).toBe(true);
     expect(events.some((event) => event.type === "scriptFailed")).toBe(false);
 
-    // The log, the spawns in it, folds back to the same game with the custom card and the flag.
     const debug = await send({ type: "debug" });
     if (debug.type !== "debug") throw new Error("a dev core answers debug");
     const { decks, handicaps, log, dealt, hash, customCards, sandbox } = debug.debug;

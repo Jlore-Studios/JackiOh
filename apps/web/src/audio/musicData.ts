@@ -68,7 +68,6 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
   for (const [defId, entry] of Object.entries(raw.cards)) {
     if (!isRecord(entry)) fail("music-cards.json", defId, "must be an object");
     const out: MusicCardEntry = {};
-    // R822000: no card plays a theme; a card's music is its intro.
     if (entry.theme !== undefined) fail("music-cards.json", `${defId}.theme`, "is retired: no card plays a theme (R822000)");
     if (entry.station !== undefined) {
       const station = MUSIC_STATIONS.find((s) => s === entry.station);
@@ -114,7 +113,6 @@ export function isStationTrack(id: string): boolean {
   return MUSIC_STATIONS.some((station) => id === dangerTrack(station) || stationTracks(station).includes(id));
 }
 
-/** The rotation counter, read inside try/catch: 0 when storage is unavailable. */
 export function readRotation(): number {
   try {
     const n = Number(window.localStorage.getItem(MUSIC_ROTATION_KEY));

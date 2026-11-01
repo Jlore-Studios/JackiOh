@@ -330,7 +330,6 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
       target.play([...lethal.cues, ...delayCues(planResult(view, env), lethal.leadMs)]);
     }
     if (previousViewer !== undefined && previousViewer !== view.viewer) target.play(planHandover(view, env));
-    // `planEnv` reads refs only, so the effect depends on the view alone.
   }, [view]);
 
   return (

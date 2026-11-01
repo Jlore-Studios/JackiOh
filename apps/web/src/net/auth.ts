@@ -75,7 +75,6 @@ export const SIGN_IN_FAILED_MESSAGE = "That email and password do not match an a
 export const USERNAME_SIGN_IN_FAILED_MESSAGE = "That username and password do not match an account.";
 export const SIGN_UP_FAILED_MESSAGE = "Could not create that account.";
 
-/** What a player reads when this build has no auth provider. */
 export const AUTH_UNCONFIGURED_MESSAGE = "Sign-in isn't available on this site right now.";
 
 /** For the console only, never shown on the page. */
@@ -112,7 +111,6 @@ export const AUTH_MESSAGES: Readonly<Record<AuthFailure, string>> = {
   network: "Couldn't reach the sign-in service. Check your connection and try again.",
   service: "The sign-in service had a problem. Try again in a minute.",
   unconfigured: AUTH_UNCONFIGURED_MESSAGE,
-  // R664, R160: all email-code refusals use one sentence.
   codeInvalid: "That code didn't work. Check the newest email we sent, or ask for a new code.",
   mfaCodeInvalid: "That code didn't match. Type the 6-digit code your authenticator app shows now.",
   mfaUnavailable: "Two-step sign-in isn't available on this site right now.",
@@ -199,7 +197,6 @@ export const AUTH_NOTICES: Readonly<{
   mfaRemoved: "Two-step sign-in is off. Signing in asks only for your email and password again.",
 };
 
-/** Further weak-password reasons follow the first. */
 const WEAK_PASSWORD_ALSO: Readonly<Partial<Record<AuthFailure, string>>> = {
   weakPasswordCharacters: "It also needs more kinds of characters: mix upper and lower case letters, digits and symbols.",
   weakPasswordPwned: "It has also appeared in a data breach, so choose one you haven't used anywhere else.",
@@ -261,7 +258,6 @@ function weakPasswordFailure(body: unknown): AuthFailure {
   return weakPasswordFailures(body)[0] ?? "weakPassword";
 }
 
-/** The endpoint's answer for "some other 4xx": its generic refusal. */
 function genericRefusal(endpoint: AuthEndpoint): AuthFailure {
   switch (endpoint) {
     case "signIn":
@@ -302,7 +298,6 @@ export function classifyProviderRefusal(endpoint: AuthEndpoint, status: number, 
   }
   if (status >= 500) return "service";
 
-  // R664, R160: every sign-in-code refusal is one sentence.
   if (endpoint === "verifyOtp") return "codeInvalid";
   if (endpoint === "mfaVerify" || endpoint === "mfa") {
     if (code !== null && MFA_DISABLED_CODES.has(code)) return "mfaUnavailable";
@@ -405,7 +400,6 @@ type ProviderRequest = {
   method: "GET" | "POST" | "PUT" | "DELETE";
   path: string;
   body?: Record<string, unknown>;
-  /** A session call's access token; an anonymous one sends the publishable key. */
   bearer?: string;
   keepalive?: boolean;
 };
@@ -636,7 +630,6 @@ export function isAuthCode(code: string): boolean {
 }
 
 export type CodeExchange =
-  /** A verifier here matched the code: the link's session, and which kind of link it was. */
   | { kind: "session"; session: Session; flow: PkceFlow; secondFactor: string | null }
   /** R324: a code without a local verifier came from elsewhere. */
   | { kind: "elsewhere" }
@@ -802,7 +795,7 @@ export async function requestEmailSignIn(email: string): Promise<void> {
 /** GoTrue's sign-in codes are digits; anything else is never sent. */
 const EMAIL_CODE_PATTERN = /^[0-9]{6,10}$/u;
 
-/** A typed code with its spaces and dashes taken out (a code is often pasted as `123 456`). */
+/** Spaces and dashes go: a code is often pasted as `123 456`. */
 export function normalizeOneTimeCode(raw: string): string {
   return raw.replace(/[\s-]/gu, "");
 }
@@ -830,7 +823,6 @@ export async function verifyEmailCode(
 
 // Two-step sign-in: an authenticator app (R665)
 
-/** One of the account's TOTP factors, as GoTrue lists them on `GET /auth/v1/user`. */
 export type TotpFactor = { id: string; verified: boolean };
 
 /** The assurance level an access token's own payload claims (`aal`), read and never verified. */
@@ -914,7 +906,6 @@ export async function verifySecondFactor(session: Session, factorId: string, cod
   return next;
 }
 
-/** What enrolling shows the player: the QR code, and the same key to type by hand. */
 export type TotpEnrolment = { factorId: string; qrCode: string | null; secret: string };
 
 const TOTP_ISSUER = "JackiOh";
@@ -956,7 +947,7 @@ export async function enrollTotp(session: Session): Promise<TotpEnrolment> {
   return { factorId: body.id, qrCode: qrImage(body.totp?.qr_code), secret };
 }
 
-/** R665: remove a factor. The provider asks an `aal2` session to remove a verified one. */
+/** R665: the provider asks an `aal2` session to remove a verified factor. */
 export async function removeFactor(session: Session, factorId: string): Promise<void> {
   const config = requireConfig();
   const { status, json } = await send(config, {

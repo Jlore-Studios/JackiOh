@@ -1,7 +1,7 @@
 // Play room links (SPEC §9.5, R767) and co-op room links (R2094000).
 // They only fill the lobby form; the server validates the mode (R264, CLAUDE.md rule 7).
-// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632); codes use `canonicalCode`
-// and `ROOM_CODE_FORMAT` (R191). Sign-in keeps only code and mode (B35); unavailable storage means no link.
+// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632).
+// Sign-in keeps only code and mode (B35); unavailable storage means no link.
 
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";

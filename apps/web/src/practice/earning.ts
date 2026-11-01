@@ -12,8 +12,7 @@ import { randomDeckLean, type PracticeStartConfig } from "./protocol.ts";
 
 /**
  * R1303000: the seed request for a free game on the setup's own deck, or null for a game that never
- * earns: a lesson, a sandbox game, one with custom cards, the creator's Try it, and a game whose AI
- * deck is dealt from the e2e fixture pool (`aiBanned`), which the server never deals.
+ * earns, such as one whose AI deck is dealt from the e2e fixture pool (`aiBanned`), which the server never deals.
  */
 export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest | null {
   if (config.lesson !== undefined || config.sandbox === true || config.aiBanned !== undefined) return null;

@@ -21,7 +21,7 @@ function costOf(def: CardDef): number | null {
   return null;
 }
 
-/** What a word of a search is matched against: name, both texts, id, set, type and rarity. */
+/** What a word of a search is matched against. */
 function haystack(def: CardDef): string {
   return [
     def.name,
@@ -41,7 +41,7 @@ function haystack(def: CardDef): string {
 
 /**
  * R923001: at most `limit`, in catalog order. Every word of the query must match: a number the cost, any
- * other word a part of the `haystack`. An empty query finds the first `limit` cards.
+ * other word a part of the `haystack`.
  */
 export function searchCards(defs: readonly CardDef[], query: string, limit: number = SANDBOX_RESULTS_MAX): CardDef[] {
   const words = query.toLowerCase().split(/\s+/u).filter((word) => word.length > 0);

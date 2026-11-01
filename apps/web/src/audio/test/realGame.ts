@@ -89,7 +89,6 @@ export function realGame(
   return game;
 }
 
-/** The hand card's defId for an instance in `player`'s own hand, or null. */
 export function handDefId(game: RealGame, player: PlayerId, instanceId: string): string | null {
   const hand = game.view(player).you.hand;
   if (!Array.isArray(hand)) return null;
@@ -101,7 +100,6 @@ export function playOf(game: RealGame, player: PlayerId, instanceId: string): Ac
   return game.legal(player).find((a) => a.type === "play" && a.instanceId === instanceId);
 }
 
-/** Answers any open prompt with its first legal answer, until none is open. */
 export function answerPrompts(game: RealGame): void {
   for (let i = 0; i < 10; i += 1) {
     const who = game.actor();
@@ -112,7 +110,6 @@ export function answerPrompts(game: RealGame): void {
   }
 }
 
-/** Both seats' views of one moment of a real game. */
 export type SeatViews = { p1: PlayerView; p2: PlayerView };
 
 /**

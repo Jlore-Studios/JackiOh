@@ -18,7 +18,6 @@ export const PRACTICE_PACING: PracticePacing = {
   firstActionMs: 800,
   actionGapMs: 550,
   promptAnswerMs: 450,
-  // Wait for lethal replay and result effects.
   resultDelayMs: FX_LETHAL_LEAD_MAX_MS + FX_RESULT_MS,
 };
 

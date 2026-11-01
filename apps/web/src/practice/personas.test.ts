@@ -1,5 +1,4 @@
 // R645 (SPEC §9.9, §6): cosmetic persona chatter cannot affect game state, replays, or decisions.
-// Table-driven tests cover configuration boundaries, session rules, and redacted human views.
 // R1344 starts pools with §6 emotes, adds MN03 emoji, and limits rolls to the dealt hand.
 // R643's `emoteGate` judges send time; blocked emotes are dropped, never queued.
 
@@ -155,8 +154,6 @@ function session(persona: PersonaName, rng: () => number): EmotePersona {
 
 const MIN_DELAY = { emote: "greetings", delayMs: AI_EMOTE.delayMinMs } as const;
 
-// The deal
-
 describe("R645 pickPersona", () => {
   it("R645 deals balanced below 0.4, polite below 0.65, bm below 0.85 and silent for the rest", () => {
     const deals: [number, PersonaName][] = [
@@ -180,8 +177,6 @@ describe("R645 pickPersona", () => {
     expect(PERSONAS.reduce((sum, persona) => sum + AI_PERSONAS[persona].weight, 0)).toBeCloseTo(1, 10);
   });
 });
-
-// Trigger table
 
 describe("R645 the trigger table", () => {
   for (const persona of PERSONAS) {
@@ -227,8 +222,6 @@ describe("R645 the trigger table", () => {
     }
   });
 });
-
-// Reply table
 
 describe("R645 the reply table", () => {
   it("R645 R1344 each emote of the pool lands on its reply row — a yawn, a shrug, a thinking face and a gasp on none", () => {
@@ -303,8 +296,6 @@ describe("R645 the reply table", () => {
   });
 });
 
-// Polite pools
-
 describe("R645 polite's pools", () => {
   it("R645 R1344 polite never picks a taunt emote — no threaten, laugh, wahWah, yawn, angry, fire, skull, cool or party anywhere it may draw", () => {
     const offLimits: readonly EmoteId[] = ["threaten", "laugh", "wahWah", "yawn", "angry", "fire", "skull", "cool", "party"];
@@ -319,8 +310,6 @@ describe("R645 polite's pools", () => {
     }
   });
 });
-
-// Session trigger detection
 
 describe("R645 the session's trigger detection", () => {
   it("R645 the mulligan's end sends the greeting — balanced takes it every time", () => {
@@ -515,8 +504,6 @@ describe("R645 the session's trigger detection", () => {
   });
 });
 
-// Session replies
-
 describe("R645 the session's replies", () => {
   it("R645 a player's emote can earn a reply, each reply rule at most once a match", () => {
     const s = session("balanced", low);
@@ -547,8 +534,6 @@ describe("R645 the session's replies", () => {
     expect(s.onPlayerEmote("greetings", 31_000)).toEqual([]);
   });
 });
-
-// Session caps and rate limit
 
 describe("R645 caps and the shared gate", () => {
   it("R645 the caps live in config: balanced 1/1/8, polite 1/1/6, bm 2/2/20, silent 0/0/0", () => {

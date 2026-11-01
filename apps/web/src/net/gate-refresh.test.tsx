@@ -48,9 +48,7 @@ const RENEWED = {
 };
 
 type Server = {
-  /** `/api/auth/me`, by the bearer token it carried. */
   me: (token: string | null) => Reply;
-  /** `POST /auth/v1/token?grant_type=refresh_token`. */
   refresh: () => Reply;
 };
 
@@ -85,7 +83,6 @@ function serve(server: Server): { meCalls: Call[]; refreshCalls: Call[] } {
   return { meCalls, refreshCalls };
 }
 
-/** `me` accepts only the renewed token; the old one is refused as unauthorised. */
 function acceptsOnlyNew(token: string | null): Reply {
   return token === NEW ? { status: 200, body: meBody() } : UNAUTHORIZED;
 }
@@ -188,7 +185,6 @@ describe("R194 B32 renewal", () => {
     const realNow = Date.now.bind(Date);
     let early = false;
     vi.spyOn(window, "setTimeout").mockImplementation(((handler: TimerHandler, ms?: number, ...args: unknown[]) => {
-      // Run the renewal timer with the clock 80 ms behind.
       if (!early && typeof handler === "function" && typeof ms === "number" && ms > 0 && ms <= lead) {
         early = true;
         return realSetTimeout(() => {

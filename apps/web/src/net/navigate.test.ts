@@ -81,7 +81,6 @@ describe("#1756 navigate opens a new screen at the top", () => {
     expect(result.current).toBe(paths.collection);
     await traverse(() => window.history.forward());
     expect(result.current).toBe(paths.replays);
-    // The link's own scroll, and none from either traversal.
     expect(scrolledAt).toEqual([paths.replays]);
   });
 });

@@ -320,7 +320,6 @@ describe("B41 flashes", () => {
     expect(tinted.some((c) => c.startsWith("rgba(255, 0, 170"))).toBe(true);
     expect(tinted.some((c) => c.startsWith("rgba(119, 136, 153"))).toBe(false);
 
-    // One color is both the core and the glow.
     const single = stopsOf(["#112233"]);
     expect(single.every((c) => c.startsWith("rgba(17, 34, 51"))).toBe(true);
 

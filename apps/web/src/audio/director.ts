@@ -2,16 +2,14 @@
 // animation runner. A view arrives with §10.8's sliding window of events; the director owes each event
 // it has not voiced (`owed`, with the view it was planned against) and sends its cues only when the
 // runner STARTS the entry that animates it, so sound and motion land together. What the runner never
-// starts (reduced motion, `gameOver`'s zero-length entry, a drained queue) is flushed once at idle,
-// condensed to FLUSH_MAX_SFX plain effects, one card effect and one line: the most important (R655).
+// starts (reduced motion, `gameOver`'s zero-length entry, a drained queue) is flushed once at idle.
 // R203: the first view, and a view for a different seat (a hand-over), voices nothing and drops all owed.
 // New events come from the runner's own `newEventsSince` (game/animations.ts), so what it owes is what
 // Game enqueues; R97 may turn an older `drawn` from the sentinel to its real id between windows, which
-// `sameOccurrence` matches. A seen event it did not owe stays silent (`known`). Events match by object
-// identity: the entry the runner starts carries the very objects in `view.events`.
+// `sameOccurrence` matches. Events match by object identity: the entry the runner starts carries the
+// very objects in `view.events`.
 // PLAYS IN PROGRESS (R506): a cue reads the innermost open play (`playing`), as #21 Hinder's rider and
-// #27's Radiant cards do; a `cardPlayed` right after a readable `drawn` of that card is a cast on draw. A
-// sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
+// #27's Radiant cards do. A sentinel play opens a frame no moment matches, and a sentinel draw marks nothing.
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -24,7 +22,6 @@ import { CARD_AUDIO } from "./voiceData.ts";
 export type SoundDirector = {
   /** Feed every newest view (Game's props.view). */
   onView(view: PlayerView): void;
-  /** The runner has just started this entry. */
   onEntryStart(entry: AnimationEntry): void;
   /** The runner is idle (inFlight() === null). */
   onIdle(): void;
@@ -203,7 +200,6 @@ export function createSoundDirector(
       send(cue, j * FLUSH_GAP_MS);
     });
 
-    // One card effect and one voice: the burst's most important of each, at its own delay.
     if (cardEffect !== null) send(cardEffect, cardEffect.delayMs);
     if (line !== null) send(line, line.delayMs);
   }
@@ -259,7 +255,6 @@ export function createSoundDirector(
         const item = index >= 0 ? owed[index] : undefined;
         if (index >= 0) owed.splice(index, 1);
         if (voiced.has(event)) return;
-        // A view's event the director did not owe is old news the runner is replaying: silent.
         if (item === undefined && known.has(event)) return;
         voiced.add(event);
         const view = item?.view ?? seen;

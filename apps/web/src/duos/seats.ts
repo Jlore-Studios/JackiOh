@@ -8,7 +8,6 @@ import type { Team } from "../wire/generated/Team.ts";
 /** S2's `DUOS_SEATS`, in its order. */
 export const DUOS_SEATS: readonly DuosSeat[] = ["a1", "a2", "b1", "b2"];
 
-/** A1, A2 → a; B1, B2 → b. */
 export function teamOf(seat: DuosSeat): Team {
   return seat === "a1" || seat === "a2" ? "a" : "b";
 }
@@ -18,7 +17,6 @@ export function duelOf(seat: DuosSeat): 0 | 1 {
   return seat === "a1" || seat === "b1" ? 0 : 1;
 }
 
-/** A1 ↔ A2, B1 ↔ B2. */
 export function teammateOf(seat: DuosSeat): DuosSeat {
   switch (seat) {
     case "a1":
@@ -32,7 +30,7 @@ export function teammateOf(seat: DuosSeat): DuosSeat {
   }
 }
 
-/** A1 ↔ B1, A2 ↔ B2: the seat across the same duel. */
+/** The seat across the same duel. */
 export function acrossOf(seat: DuosSeat): DuosSeat {
   switch (seat) {
     case "a1":

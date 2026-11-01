@@ -29,10 +29,7 @@ const STAGING_ONLY_HEADER: Header = { key: "X-Robots-Tag", value: "noindex" };
 const isStagingOnly = (header: Header): boolean =>
   header.key === STAGING_ONLY_HEADER.key && header.value === STAGING_ONLY_HEADER.value;
 
-/**
- * The `_headers` blocks for these vercel.json blocks: paths in Cloudflare's spelling (`(.*)` as `*`),
- * the every-path block without STAGING_ONLY_HEADER, the rest as is, so any other difference fails.
- */
+/** The `_headers` blocks these vercel.json blocks must become, so that any other difference fails. */
 function productionHeaders(staging: VercelConfig["headers"]): HeaderBlock[] {
   return staging.map((block) => ({
     path: block.source.replace("(.*)", "*"),
@@ -153,14 +150,10 @@ describe("public/_headers", () => {
       { path: "/fonts/*", headers: [cache] },
     ];
     const differing: VercelConfig["headers"][] = [
-      // Another extra header on every path.
       [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER, { key: "X-Other", value: "1" }] }, fonts],
-      // The header with another value, or spelled another way.
       [{ source: "/(.*)", headers: [shared, { key: "X-Robots-Tag", value: "none" }] }, fonts],
       [{ source: "/(.*)", headers: [shared, { key: "x-robots-tag", value: "noindex" }] }, fonts],
-      // The header on another path.
       [{ source: "/(.*)", headers: [shared] }, { source: "/fonts/(.*)", headers: [cache, STAGING_ONLY_HEADER] }],
-      // A shared header missing or changed, or a block missing.
       [{ source: "/(.*)", headers: [STAGING_ONLY_HEADER] }, fonts],
       [{ source: "/(.*)", headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, STAGING_ONLY_HEADER] }, fonts],
       [{ source: "/(.*)", headers: [shared, STAGING_ONLY_HEADER] }],

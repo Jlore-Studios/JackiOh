@@ -1,5 +1,5 @@
 // The Duos screens' testids (#936 S8), mirrored in `e2e/support/testids.ts`. The first block is S8's
-// frozen list; the rest are this slice's own chrome, each named for what it holds.
+// frozen list; the rest are this slice's own chrome.
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { PingKind } from "../net/duos.ts";
@@ -53,7 +53,7 @@ export const duosTestid = {
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
   resultJlore: "duos-result-jlore",
-  /** #1755: the rail's "Result", while "View the board" has folded the result panel; it opens it again. */
+  /** #1755: the rail's "Result", while "View the board" has folded the result panel. */
   resultReopen: "duos-result-reopen",
   /** R2092000: the result panel's Play again, and its status line. */
   resultAgain: "duos-result-again",

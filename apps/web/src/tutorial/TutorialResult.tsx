@@ -62,7 +62,6 @@ function Emblem({ won, number }: { won: boolean; number: number }): ReactElement
   );
 }
 
-/** "Easy, Medium or Hard", in the tiers' order. */
 function tierList(): string {
   const labels = DIFFICULTIES.map((tier) => t(DIFFICULTY_LABEL[tier]));
   const last = labels.pop() ?? "";

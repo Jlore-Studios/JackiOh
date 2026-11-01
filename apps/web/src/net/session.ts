@@ -1,4 +1,3 @@
-// Browser session and pending-auth storage.
 // CLAUDE.md rule 7: bearer tokens are not game state, so browser storage stays in this module.
 // Per-tab `sessionStorage` limits token persistence (R632); migrate shared tokens and prefer it to the
 // M8 fixture in `localStorage` (e2e/README.md A6). Pending addresses are non-secret; recovery stays per tab (R193).
@@ -24,7 +23,6 @@ function read(store: Storage | null, key: string): string | null {
   try {
     return store?.getItem(key) ?? null;
   } catch {
-    // Storage is unavailable.
     return null;
   }
 }

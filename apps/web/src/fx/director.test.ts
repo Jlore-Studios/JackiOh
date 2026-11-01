@@ -287,8 +287,6 @@ function measuredTestids(calls: readonly { anchor: FxAnchor }[]): string[] {
   return calls.flatMap((call) => (call.anchor.kind === "testid" ? [call.anchor.testid] : []));
 }
 
-// B32: cues fire at the measured box and expire by D + T.
-
 describe("B32 — the director fires each cue on time and leaves nothing behind", () => {
   it("freezes FX visual time during hit-stop and resumes from the remaining lifetime", () => {
     const h = harness();
@@ -469,8 +467,6 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
     expect(h.director.active()).toBe(0);
   });
 });
-
-// B33: clear() and a hidden page.
 
 describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock ages", () => {
   it("B32 a banner replaces one still fading, so two never read over each other", () => {
@@ -759,8 +755,6 @@ describe("B34 — particle capacity", () => {
   });
 });
 
-// B35: shake reaches the board only through the sink.
-
 describe("B35 — the shake goes through the sink", () => {
   it("B35 a shake cue drives the sink with offsets bounded by trauma², then clears it once when the trauma is spent", () => {
     const h = harness();
@@ -820,8 +814,6 @@ describe("B35 — the shake goes through the sink", () => {
     expect(h.sink.applies()).toHaveLength(0);
   });
 });
-
-// B41: flash presets bloom at their origin.
 
 describe("B41 — bursts of a flash preset bloom at their origin", () => {
   it("B41 a spark burst leaves a bloom running after its particles are counted, and it is gone within the preset's flash time", () => {

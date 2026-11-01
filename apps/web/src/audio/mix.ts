@@ -5,12 +5,8 @@
 //                                  reverb sends ◀───────┘─▶ reverb ─────┤
 //   music player ─▶ music bus ─▶ music duck ────────────────────────────┴─▶ master ─▶ limiter ─▶ destination
 //
-// The music bus ducks under voice or selected effects (R631). R669 ducks effects under voice and pans
-// unit cues before the bus; effects and voice share reverb, unlike music.
-//
-// The hard-knee limiter only catches pile-ups. Chrome measurements (audio-recipes.cy.tsx, B57) keep
-// a -6 dB threshold below full scale; a 3 ms attack avoids clipping short transients.
-//
+// The music bus ducks under voice or selected effects (R631). Chrome measurements (audio-recipes.cy.tsx,
+// B57) keep the limiter's threshold at -6 dB; its 3 ms attack avoids clipping short transients.
 // Imports only ./types.ts and ./constants.ts, like sfx.ts, so the Cypress component spec can render
 // the real mix in an OfflineAudioContext.
 
@@ -37,7 +33,6 @@ export type Mix = {
   music: GainNode;
   musicDuck: GainNode;
   limiter: DynamicsCompressorNode;
-  /** R669: the shared reverb. */
   reverb: ConvolverNode;
 };
 
@@ -60,7 +55,6 @@ export function reverbImpulse(ctx: BaseAudioContext): AudioBuffer {
   return buffer;
 }
 
-/** The shared reverb and its two sends, into `master`. */
 function buildReverb(ctx: BaseAudioContext, from: { sfx: AudioNode; voice: AudioNode }, master: AudioNode): ConvolverNode {
   const reverb = ctx.createConvolver();
   reverb.buffer = reverbImpulse(ctx);
@@ -81,7 +75,6 @@ export function mixLevels(s: AudioSettings): { master: number; sfx: number; crow
   return { master: s.muted ? 0 : s.master, sfx: s.sfx, crowd: s.crowd, voice: s.voiceOn ? s.voice : 0, music: s.music };
 }
 
-/** Builds the buses and the limiter into `ctx.destination`, at `settings`' levels. */
 export function buildMix(ctx: BaseAudioContext, settings: AudioSettings): Mix {
   const master = ctx.createGain();
   const sfx = ctx.createGain();

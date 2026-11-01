@@ -66,7 +66,6 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Run one wrapper against a server that answers `reply`; the one request it made, and its result. */
 async function sent(run: () => Promise<unknown>, reply: Reply): Promise<{ call: Call; result: unknown }> {
   const server = stubServer(() => reply);
   const result = await run();
@@ -74,7 +73,6 @@ async function sent(run: () => Promise<unknown>, reply: Reply): Promise<{ call: 
   return { call: must(server.calls[0], "the request"), result };
 }
 
-/** Run one wrapper against a server that refuses it; the error it rejected with. */
 async function refused(run: () => Promise<unknown>, reply: Reply): Promise<ApiRequestError> {
   stubServer(() => reply);
   const outcome = await run().then(

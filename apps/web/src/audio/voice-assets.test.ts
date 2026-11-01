@@ -1,6 +1,5 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B35, B36 and B37: the pre-rendered voice set
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
-//
 //   B35  exactly one `<defId>-<hook>` file under apps/web/public/audio/voice/ per hook in card-audio.json5
 //        that names a voice (R1448's attack line among them), each an MP4 within VOICE_FILE_MAX_MS, and a
 //        manifest of exactly those keys with each file's size and voiceHash.
@@ -8,11 +7,8 @@
 //   B37  `--check` exits 0 on the committed tree; on a temp copy with one thing broken it exits 1 with
 //        one line per problem, each starting with the key (the Surface's contract).
 //   R655 the manifest's keys are exactly the file's voice lines; an effect-only hook expects no file.
-//
-// voiceHash = sha1(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).hex.slice(0, 16), keys in
-// exactly that order, for a voice rendered by macOS `say`; sha1(JSON.stringify({ v: 1, backend: "sapi",
-// voice, rate, semitones, filter, text })) for one rendered by Windows SAPI (R501). Both are recomputed
-// here from the formula, never imported, so the script and this test cannot share a mistake.
+// voiceHash (macOS `say`) and sapiHash (Windows SAPI, R501) are recomputed here from the formula, never
+// imported, so the script and this test cannot share a mistake.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -132,7 +128,6 @@ const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
   isRecord(AUDIO.emotes) ? AUDIO.emotes : {},
 ).flatMap((portrait) => EMOTE_LINES.map((line) => `emote-${portrait}-${line}`));
 
-/** Every hook the committed file voices, plus every emote line. */
 const EXPECTED_KEYS: readonly string[] = [...voicedKeys(AUDIO).filter(voicedNow), ...EXPECTED_EMOTE_KEYS];
 const EXPECTED_FILES: readonly string[] = EXPECTED_KEYS.map((key) => `${key}.m4a`);
 /** Core's own count (44 units with three lines each, 67 spells and traps) plus whatever the other sets bring. */
@@ -268,7 +263,6 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
 const KEY_AT_START = /^((?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|traininggrounds|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
 
-/** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {
   const keys = new Set<string>();
   for (const line of run.lines) {
@@ -314,7 +308,6 @@ function editManifest(root: string, edit: (files: Json) => void): void {
   writeJson(path, manifest);
 }
 
-/** Expect `--check --root root` to exit 1 reporting exactly `keys`. */
 function expectReported(root: string, keys: readonly string[]): void {
   const run = runCheck(["--root", root]);
   expect(run.status, describeRun(run)).toBe(1);

@@ -17,22 +17,19 @@ export type FxSurface = {
   resize(): void;
   /** Clears the whole store and sets the transform to scale(dpr). */
   clear(): void;
-  /** Removes the resize listener / ResizeObserver. */
   dispose(): void;
 };
 
-/** True when running under jsdom (its user agent names itself). */
 export function isHeadlessDom(win?: Window): boolean {
   return (win ?? window).navigator.userAgent.includes("jsdom");
 }
 
-/** Clamp to [1, FX_MAX_DPR]; NaN/undefined → 1. */
 export function effectiveDpr(devicePixelRatio: number | undefined): number {
   if (typeof devicePixelRatio !== "number" || Number.isNaN(devicePixelRatio)) return 1;
   return Math.min(FX_MAX_DPR, Math.max(1, devicePixelRatio));
 }
 
-/** null under jsdom (never calls getContext there), or when getContext("2d") is null or throws. */
+/** null under jsdom, or when getContext("2d") is null or throws. */
 export function createSurface(canvas: HTMLCanvasElement, win?: Window): FxSurface | null {
   const host: Window = win ?? canvas.ownerDocument.defaultView ?? window;
   if (isHeadlessDom(host)) return null;

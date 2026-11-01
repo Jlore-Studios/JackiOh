@@ -5,7 +5,6 @@
 import { t } from "../i18n/i18n.ts";
 import { duosIdOf, matchIdOf, paths, seriesIdOf, siteOrigin, watchIdOf } from "./navigate.ts";
 
-/** The name every tab title ends with. */
 export const SITE_NAME = "JackiOh";
 
 /** The screen's name, for its tab title; null for a path the client serves nothing at. */
@@ -69,8 +68,8 @@ export function screenNameFor(path: string): string | null {
 }
 
 /**
- * The tab title for a path. The match and co-op screens replace it with "Your turn · JackiOh" while
- * the game waits on the player (`awaitsYou`, game/net.ts).
+ * The match and co-op screens replace this tab title with "Your turn · JackiOh" while the game waits
+ * on the player (`awaitsYou`, game/net.ts).
  */
 export function documentTitleFor(path: string): string {
   const name = screenNameFor(path);
@@ -78,7 +77,7 @@ export function documentTitleFor(path: string): string {
   return name === "" ? SITE_NAME : `${t(name)} · ${SITE_NAME}`;
 }
 
-/** The canonical address of a path the client serves on `origin` (this bundle's own by default), or null for one it does not (a 404). */
+/** The canonical address of a path the client serves on `origin`, or null for one it does not (a 404). */
 export function canonicalUrlFor(path: string, origin: string = siteOrigin()): string | null {
   return screenNameFor(path) === null ? null : `${origin}${path}`;
 }

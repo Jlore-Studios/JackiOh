@@ -52,7 +52,6 @@ export function planClockAlarm(
   if (!own || remainingMs === null || !Number.isFinite(remainingMs)) return { memory: CLOCK_ALARM_IDLE, beats: [] };
 
   let last = memory.lastSecond;
-  // A clock moving up starts a new countdown.
   if (last !== null && remainingMs > last * CLOCK_ALARM_BEAT_MS + CLOCK_ALARM_LOOKAHEAD_MS) last = null;
 
   const top = Math.min(FROM_SECONDS, Math.floor((remainingMs + CLOCK_ALARM_LATE_MS) / CLOCK_ALARM_BEAT_MS));

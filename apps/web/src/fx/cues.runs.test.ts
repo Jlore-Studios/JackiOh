@@ -49,7 +49,6 @@ describe("planFx whole-pile impacts", () => {
     const zones = cues.filter((cue) => cue.kind === "zone");
     expect(zones).toHaveLength(1);
     expect(zones[0]).toMatchObject({ at: { kind: "testid", testid: "graveyard-you" }, direction: "down", delayMs: 0 });
-    // The per-card recipes stay silent: nothing else is planned.
     expect(cues.filter((cue) => cue.kind !== "zone" && cue.kind !== "burst")).toHaveLength(0);
   });
 

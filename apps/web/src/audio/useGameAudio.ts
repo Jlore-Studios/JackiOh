@@ -86,7 +86,6 @@ export function useGameAudio(runner: AnimationQueue, view: PlayerView, silent = 
   }, [director, view, silent]);
 
   // Keep engine and music busy during entries (B58), so the idle flush preempts preload/prefetch.
-  // Clear both if Game unmounts mid-burst.
   useLayoutEffect(() => {
     if (silent) return undefined;
     const engine = getAudioEngine();

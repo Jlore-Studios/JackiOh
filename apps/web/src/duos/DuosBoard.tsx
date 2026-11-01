@@ -1,17 +1,14 @@
-// The Duos co-op board (#936 S8, B61–B64; R2095000): Game.tsx for the seat's own duel, with the life
-// strip, the teammate strip, the portal, the Both boards toggle, the pass control and the pings.
+// The Duos co-op board (#936 S8, B61–B64; R2095000): Game.tsx for the seat's own duel and the Duos rail.
 //
-// GAME.TSX STAYS THE ONE BOARD (CLAUDE.md). The own duel's moves go in and out of their
-// `{kind: "duel"}` envelopes. The portal (`duos-portal`) flips to the teammate's view, whose hand and
+// GAME.TSX STAYS THE ONE BOARD (CLAUDE.md). The portal flips to the teammate's view, whose hand and
 // face-down cards are the team's to see (B23), read-only (B63: `replay`, so it raises no prompt). Each
-// Game has its own key, so neither animates the other duel's events. R2095000's wide-screen toggle
-// shows both, the teammate's `silent` so one duel's cues play once.
+// Game has its own key, so neither animates the other duel's events; Both boards' teammate is `silent`,
+// so one duel's cues play once.
 //
 // CLAUDE.md rule 7: nothing here decides a rule. The pass control is live exactly when `legal` lists
 // that card's `pass` (B19), the concede offer when it lists `concede` (B11). Game's R345 preference is
 // pinned off, as every Duos duel holds it (B9). Draw offers are refused in Duos (B10), so duos.css
-// hides them with the board's own Concede, which the rail's offer stands in for. A replay (#965) draws
-// no card bar, concede, waiting line or result panel; Play again (R2092000) is the chrome's.
+// hides them with the board's own Concede, which the rail's offer stands in for.
 
 import {
   useCallback,
@@ -59,9 +56,9 @@ export type DuosBoardProps = {
   pings: readonly ReceivedPing[];
   onPing: (ping: PingKind, target: PingTarget) => void;
   error?: string | null;
-  /** R1483000: the server's per-seat flag for whether the daily cap held this seat's pay back; dev and replay pass false. */
+  /** R1483000: the server's per-seat flag for whether the daily cap held this seat's pay back. */
   jloreCapped: boolean;
-  /** #1664: what the result paid this seat's person, from the server's last view; dev, replay and a game it paid nothing pass none. */
+  /** #1664: what the result paid this seat's person, from the server's last view; none when it paid nothing. */
   economy?: GameEconomy | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
@@ -74,7 +71,7 @@ const NOTHING: readonly ActionBody[] = [];
 
 function ignore(): void {}
 
-/** R2095000: the Both boards choice, kept per device (`"1"` is on) as `CoopPanel.tsx` keeps its room. */
+/** R2095000: the Both boards choice, kept per device. */
 function readBoth(): boolean {
   try {
     return window.localStorage.getItem(DUOS_BOTH_KEY) === "1";
@@ -296,8 +293,7 @@ export function DuosBoard({
   replay = false,
 }: DuosBoardProps): ReactElement {
   useLocale();
-  // #1664: the result's write paid this seat's person, so the pill reads the wallet again, once
-  // however many views carry the answer.
+  // #1664: the result paid this seat's person, so the pill reads the wallet again, once however many views say so.
   const paid = economy !== null;
   useEffect(() => {
     if (paid) announceWallet();
@@ -321,7 +317,6 @@ export function DuosBoard({
   const boardBusy = useBoardBusy(host);
   const portal = useRef<HTMLButtonElement>(null);
   const [showing, setShowing] = useState<Showing>("own");
-  // R2095000: Both boards, off until the player presses it, never in a replay.
   const [both, setBoth] = useState<boolean>(readBoth);
   const showBoth = both && !replay;
   const [boardAfterResult, setBoardAfterResult] = useState(false);
@@ -415,7 +410,6 @@ export function DuosBoard({
     };
   }, [showing, both, replay]);
 
-  // B64: the pings still up, marked on the board that shows their duel.
   usePingSounds(pings, seat);
   const now = usePingNow(pings);
   const livePings = pings.filter((ping) => now - ping.at < PING_SHOW_MS);

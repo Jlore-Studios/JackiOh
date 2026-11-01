@@ -1,7 +1,5 @@
 // B2 (docs/polish/2-sound.md): the first user gesture builds and resumes the context inside the
-// gesture itself, as iOS requires, and later gestures resume it only while it is not running. The HTML
-// standard's activation-triggering input events are why a touch `pointerdown` alone is not enough and
-// `pointerup`/`touchend` are listened to as well.
+// gesture itself, as iOS requires, and later gestures resume it only while it is not running.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

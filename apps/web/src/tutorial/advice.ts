@@ -1,5 +1,5 @@
 // Coach advice for the coach's own line (SPEC §9.10, R292, R293): one legal action from the human
-// view—lethal, play, trade, hero, Taunt, then End turn—never a rule (CLAUDE.md rule 7).
+// view, never a rule (CLAUDE.md rule 7).
 
 import type { ActionBody, UnitView } from "@jackioh/shared";
 

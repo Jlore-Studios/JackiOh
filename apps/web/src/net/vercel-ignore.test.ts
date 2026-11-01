@@ -40,7 +40,6 @@ function git(...args: string[]): string {
   }).trim();
 }
 
-/** Commits what is staged, `after` seconds after the commit before it (a day unless a test says). */
 function commit(message: string, after = DAY): string {
   now += after;
   git("commit", "-q", "-m", message);
@@ -63,7 +62,6 @@ function commits(...pushes: string[][]): void {
 /** `remote` stands in for the repository on GitHub, where rule 2a reads the countdown issue's tags. */
 type Env = { ref?: string; message?: string; env?: string; previous?: string | null; remote?: string };
 
-/** Whether Vercel would build, running ignoreCommand in `cwd` with the variables Vercel sets. */
 function builds({ ref = "main", message = "A change", env = "preview", previous = base, remote }: Env = {}, cwd = repo): boolean {
   const vars: Record<string, string> = {
     PATH: process.env.PATH ?? "",
@@ -226,7 +224,6 @@ describe("scripts/vercel-ignore.sh", () => {
     // A changed the bundle and its build never ran (the daily cap); B only touched the bot.
     commits(["crates/engine/src/a.rs"], ["bot/harness/b.py"]);
     expect(builds()).toBe(true);
-    // Once A is the last build, B alone is skipped.
     const built = git("rev-parse", "HEAD~1");
     expect(builds({ previous: built })).toBe(false);
   });
@@ -299,7 +296,6 @@ describe("scripts/vercel-ignore.sh", () => {
   });
 
   describe("rule 2a, the countdown issue's Vercel commands, as tags on GitHub", () => {
-    /** A bare repository standing in for GitHub, with the tags it is given pointing at commits of `repo`. */
     function github(tags: Record<string, string>): string {
       const remote = mkdtempSync(join(SCRATCH, "vercel-remote-"));
       execFileSync("git", ["init", "-q", "--bare", remote]);
@@ -335,7 +331,6 @@ describe("scripts/vercel-ignore.sh", () => {
       writeFileSync(join(repo, "crates/engine/src/a.rs"), "changed\n");
       git("add", "-A");
       const asked = commit("soon after", MIN_GAP_SECONDS - 60);
-      // Without the tag, the wait skips it.
       expect(builds({ previous: built })).toBe(false);
       expect(builds({ previous: built, remote: remote({}) })).toBe(false);
       // The tag on it, or on a commit before a newer one, builds it now.

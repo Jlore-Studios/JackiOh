@@ -17,7 +17,6 @@ export function createFrameLoop(options: {
   now: () => number;
   /** Return true while there is still work; false stops requesting frames until the next wake(). */
   onFrame: (frame: FxFrame) => boolean;
-  /** Called when the page turns visible after being hidden. */
   onResume?: () => void;
 }): FrameLoop {
   const { frames, visibility, now, onFrame, onResume } = options;

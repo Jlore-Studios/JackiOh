@@ -1,9 +1,6 @@
-// Audio as the integration branch wires it into Game (docs/polish/reference.md, "audio x cards"):
-//
-//  - the board's `CatalogContext` reaches the sound director, so a readable card sounds its rarity and
-//    family; with no catalog, or for a card behind the sentinel (R203), every card keeps its plain sounds;
-//  - a voice line holding the channel marks the board `data-speaking`, the attribute practice's
-//    pacing holds the AI on (SPEC §9.9).
+// Audio as the integration branch wires it into Game (docs/polish/reference.md, "audio x cards"): the
+// board's `CatalogContext` reaches the sound director, and a voice line holding the channel marks the
+// board `data-speaking`, the attribute practice's pacing holds the AI on (SPEC §9.9).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";

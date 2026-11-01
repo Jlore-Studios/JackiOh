@@ -11,10 +11,7 @@ export type SpriteSurface = { canvas: CanvasImageSource; ctx: CanvasRenderingCon
 export type SpriteCanvasFactory = (sizePx: number) => SpriteSurface | null;
 
 export type SpriteCache = {
-  /**
-   * A radial-gradient disc for (preset, color index, dpr), drawn once and cached; null without a 2D context.
-   * `colors` (#1447) stands in for the preset's palette, and the color picked is part of the cache key.
-   */
+  /** Null without a 2D context. `colors` (#1447) stands in for the preset's palette, and the color picked is part of the cache key. */
   get(preset: FxPreset, colorIndex: number, dpr: number, colors?: readonly string[]): CanvasImageSource | null;
   size(): number;
   clear(): void;

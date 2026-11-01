@@ -872,7 +872,6 @@ describe("R194 B34 signOut loads the landing page", () => {
 
     signOut();
 
-    // The load starts before the provider answers.
     expect(loads).toEqual([{ to: paths.landing, session: null, e2eSession: null, revokeSent: true }]);
   });
 

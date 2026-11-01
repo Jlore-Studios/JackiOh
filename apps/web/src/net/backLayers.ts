@@ -18,7 +18,6 @@ type Layer = { close: () => void; closable: () => boolean };
 
 /** The open layers, oldest first. */
 const layers: Layer[] = [];
-/** The top layer's close watcher, where the browser has them. */
 let held: { layer: Layer; watcher: Watcher } | null = null;
 /**
  * The layers' entry while current, live or spent: its address and the one under it, the same until a
@@ -46,7 +45,6 @@ function watcherClass(): WatcherClass | null {
   return typeof found === "function" ? (found as WatcherClass) : null;
 }
 
-/** Gives the top layer what answers Back: a close watcher, or the one entry. */
 function sync(): void {
   const top = layers.at(-1);
   const Made = watcherClass();

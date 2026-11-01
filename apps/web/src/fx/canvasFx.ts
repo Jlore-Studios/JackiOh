@@ -14,9 +14,7 @@ export type CanvasFx = {
   projectile(preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
   /** #1442: a flavor's shot (`shots.ts`), bursting `preset` where it lands; `density` as for `projectile`. */
   shot(shot: FxShot, colors: readonly string[], preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
-  /** Jagged branching polyline from the box center, white-hot fading to dark over durationMs. */
   crack(box: FxBox, durationMs: number): void;
-  /** An expanding elliptical shock wave about the box, fading over durationMs. */
   ring(preset: FxPreset, box: FxBox, durationMs: number): void;
   /** The preset's bloom (if it has one) at `at`, sized by `box` and `count`; `colors` (#1447, hot first) sets its core and glow. */
   flash(preset: FxPreset, at: FxVec, box: FxBox, count: number, colors?: readonly string[]): void;
@@ -38,7 +36,7 @@ const PROJECTILE = {
   trailPower: 0.35,
   /** Each trail particle is born this far (CSS px, either way) off the path, so the trail has body. */
   trailJitter: 4,
-  /** Head glow radii, CSS px; the halo stop sits at `haloAt` of the radius. */
+  /** Head glow radii, CSS px. */
   haloRadius: 24,
   haloAt: 0.7,
   haloAlpha: 0.25,
@@ -232,7 +230,6 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
     power: PROJECTILE.arrivalPower,
   };
 
-  /** The quadratic Bézier point for `t`, written into `at` (no allocation per trail particle). */
   const at = { x: 0, y: 0 };
   const pointAt = (pr: Projectile, t: number): void => {
     const u = 1 - t;

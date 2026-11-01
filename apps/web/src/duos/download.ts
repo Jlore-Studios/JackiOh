@@ -1,9 +1,8 @@
 // Downloading a finished co-op replay as JSON (issue #1242, R1242000): the caller's seat's
-// already-authorized `DuosView`s, each step's index and round, the caller's seat and the build's
-// catalog version. Nothing else leaves: no seed, log, state, deck, match id, account id or name, and
-// no ping. The file does carry what the team shares (§13.6), the teammate's duel and hand as the seat
-// saw them, though nothing in it names the teammate. Its format is versioned apart from R1141000's 1v1
-// file, and it is made in the page and handed to the browser's downloads, never uploaded or kept.
+// already-authorized `DuosView`s and the build's catalog version. Nothing else leaves: no seed, log,
+// state, deck, match id, account id or name, and no ping. The file does carry what the team shares
+// (§13.6), the teammate's duel and hand as the seat saw them, though nothing in it names the teammate.
+// Its format is versioned apart from R1141000's 1v1 file; it is made in the page, never uploaded or kept.
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 
@@ -16,16 +15,13 @@ import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { DuosReplaySteps } from "./DuosReplay.tsx";
 import { DUOS_SEATS } from "./seats.ts";
 
-/** What a reader of the file checks first: what it is, and which shape of it. */
 export const DUOS_REPLAY_JSON_FORMAT = "jackioh-duos-replay";
 export const DUOS_REPLAY_JSON_VERSION = 2;
 /** R1371000: the version a file written before the version retcon carries; its catalog is an old name. */
 export const DUOS_REPLAY_JSON_UNMARKED_VERSION = 1;
 
-/** One step of the file: its index, its round and the seat's view after it. */
 export type DuosReplayJsonStep = { step: number; round: number; view: DuosView };
 
-/** The file's shape: the format and version, the catalog version, the caller's seat and its views. */
 export type DuosReplayJson = {
   format: typeof DUOS_REPLAY_JSON_FORMAT;
   version: typeof DUOS_REPLAY_JSON_VERSION;
@@ -40,7 +36,6 @@ function viewOf(view: DuosView): DuosView {
   return { seat, own, teammate, team, enemy, round, roundSeats, concedeOfferedBy, result };
 }
 
-/** The file for `steps`: the seat's views, each with its index and round, and nothing of the match. */
 export function duosReplayJson(steps: DuosReplaySteps): DuosReplayJson {
   return {
     format: DUOS_REPLAY_JSON_FORMAT,
@@ -51,15 +46,13 @@ export function duosReplayJson(steps: DuosReplaySteps): DuosReplayJson {
   };
 }
 
-/** The file for `steps`, made in the page and handed to the browser's downloads. */
 export function duosReplayJsonFile(steps: DuosReplaySteps): File {
   return new File([JSON.stringify(duosReplayJson(steps))], "jackioh-duos-replay.json", { type: "application/json" });
 }
 
 /**
- * The views of a file `duosReplayJsonFile` wrote, or a `ReplayFailure` saying why it is refused,
- * under the 1v1 file's caps and sentences. A view is checked only for its seat and round, never for
- * rules (CLAUDE.md rule 7).
+ * The views of a file `duosReplayJsonFile` wrote, under the 1v1 file's caps and sentences. A view is
+ * checked only for its seat and round, never for rules (CLAUDE.md rule 7).
  */
 export function parseDuosReplayJson(json: Record<string, unknown>): DuosReplaySteps {
   const unmarked = json.version === DUOS_REPLAY_JSON_UNMARKED_VERSION;

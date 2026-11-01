@@ -1,9 +1,8 @@
 // scripts/ci-scope.sh: the lines ci.yml's `changes` job uses to skip jobs. It may say `full=false`
 // only when no CI job reads any changed file, and any other line false only when nothing its job reads
-// changed, so each case is a diff in a throwaway repo: a path alone that leaves a line off, and the same
-// path beside an engine source, which turns it on. Every doubt must come out with every line true. The
-// scans at the end hold `web` and `e2e` to every repository path the web's and the client's sources
-// name; crates/tools/tests/acceptance.rs holds the Rust groups to `cargo metadata`.
+// changed; every doubt must come out with every line true. The scans at the end hold `web` and `e2e` to
+// every path the web's and the client's sources name; crates/tools/tests/acceptance.rs holds the Rust
+// groups to `cargo metadata`.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -69,7 +68,6 @@ function git(...args: string[]): string {
   return execFileSync("git", [...GIT_CONFIG, ...args], { cwd: repo, encoding: "utf8" }).trim();
 }
 
-/** A commit on top of the first one that writes each file with its content. */
 function changeFiles(contents: Record<string, string>): { base: string; head: string } {
   // Staged over the first commit's tree in an index of their own, so the commit takes one process and
   // no checkout: a case makes dozens of these, and processes are what cost a case its time.
@@ -96,11 +94,9 @@ function changeFiles(contents: Record<string, string>): { base: string; head: st
   return { base: baseSha, head };
 }
 
-/** A commit on top of the first one that adds `files`, each holding its own path. */
 const change = (...files: string[]): { base: string; head: string } =>
   changeFiles(Object.fromEntries(files.map((file) => [file, `${file}\n`])));
 
-/** The script's output lines, each `name=true|false`, the names in `NAMES`' order. */
 function lines(base: string | undefined, head: string | undefined): Answer {
   const args = [SCRIPT, ...(base === undefined ? [] : [base]), ...(head === undefined ? [] : [head])];
   const run = spawnSync("sh", args, { cwd: repo, encoding: "utf8" });
@@ -118,7 +114,6 @@ function answerFor(...files: string[]): Answer {
   return lines(base, head);
 }
 
-/** The lines a pull request that adds `files` turns on. */
 const onFor = (...files: string[]): Name[] => {
   const answer = answerFor(...files);
   return NAMES.filter((name) => answer[name]);
@@ -271,7 +266,6 @@ describe("scripts/ci-scope.sh", () => {
     ]) {
       expect(fullAndDb(answerFor(file)), file).toEqual({ full: true, db: false });
     }
-    // A pull request that skips everything skips the db job too.
     expect(fullAndDb(answerFor("bot/harness/state.py", ".harness/config.json"))).toEqual({ full: false, db: false });
   });
 
@@ -353,7 +347,6 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
-  // The other lines: an `on` path turns its line on alone; an `off` path leaves it off alone, not beside an engine source.
   const SCOPED: Record<"clippy" | "web" | "e2e", { on: string[]; off: string[] }> = {
     clippy: {
       on: [
@@ -464,8 +457,7 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
-  // promote-production.test.ts, which `web (promote-production)` runs on its own line: an `on` path
-  // turns it on (and `web` with it, so the job that runs it runs); an `off` path leaves it off.
+  // `web (promote-production)` runs promote-production.test.ts on its own line; an `on` path turns `web` on too, so that job runs.
   const PROMOTE = {
     on: [
       "scripts/promote-production.sh",
@@ -504,8 +496,7 @@ describe("scripts/ci-scope.sh", () => {
     }
   });
 
-  // infra/'s terraform steps in `rust (checks, fuzz 200)` (#1708): nothing but infra/ reads it, so it
-  // runs that line alone, and nothing outside it but the workflows and this script turns it on.
+  // infra/'s terraform steps in `rust (checks, fuzz 200)` (#1708): nothing but infra/ reads it.
   it("runs infra/'s terraform steps only when infra/ or the workflow that runs them changed", () => {
     for (const file of ["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"]) {
       expect(onFor(file), file).toEqual(["full", "infra"]);
@@ -604,7 +595,6 @@ const SOURCE = /\.(ts|tsx|mjs|js)$/;
 const SKIP_DIRS = new Set(["node_modules", "dist", "pkg", ".vite"]);
 const TOKENS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g;
 
-/** Every source file under `root` (a repository-relative file or directory), repository-relative. */
 function sourcesUnder(root: string): string[] {
   const stat = statSync(join(ROOT, root), { throwIfNoEntry: false });
   if (stat === undefined) return [];
@@ -628,7 +618,6 @@ function readings(file: string, literal: string): string[] {
   return out;
 }
 
-/** The path a reading names, if it is one: under a top-level entry outside apps/ and e2e/, `*` as `x`, a directory as a file in it. */
 function named(reading: string, literal: string): string | undefined {
   const path = posix.normalize(reading.replaceAll("*", "x")).replace(/\/+$/, "");
   const first = path.split("/")[0] ?? "";
@@ -638,7 +627,6 @@ function named(reading: string, literal: string): string | undefined {
   return stat?.isDirectory() ? `${path}/x` : path;
 }
 
-/** Each repository path the sources under `roots` name, with the files that name it. */
 function namedPaths(roots: string[], keep: (file: string) => boolean): Map<string, string[]> {
   const found = new Map<string, string[]>();
   for (const file of roots.flatMap(sourcesUnder).filter(keep)) {
@@ -665,7 +653,7 @@ const WEB = namedPaths(
   ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
   (file) => !DATA_ONLY.includes(file),
 );
-/** What e2e smoke's client build and specs read: e2e/, and the client without its unit tests. */
+/** What e2e smoke's client build and specs read. */
 const E2E = namedPaths(
   ["e2e", "apps/web/vite.config.ts", "apps/web/static-pages.ts", "apps/web/src"],
   (file) => !(file.startsWith("apps/web/src/") && (/\.test\.tsx?$/.test(file) || file.startsWith("apps/web/src/test/"))),

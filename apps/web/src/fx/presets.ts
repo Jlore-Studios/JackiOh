@@ -7,7 +7,7 @@
 import type { FxPreset } from "./types.ts";
 
 export type ParticlePresetSpec = {
-  /** ms, max ≤ FX_MAX_PARTICLE_LIFE_MS */
+  /** ms */
   life: readonly [number, number];
   /** CSS px per second */
   speed: readonly [number, number];
@@ -20,7 +20,6 @@ export type ParticlePresetSpec = {
   /** max radians per second */
   spin: number;
   blend: "lighter" | "source-over";
-  /** CSS colors the sprites are drawn in */
   colors: readonly string[];
   /** size eases to 0 over life */
   shrink: boolean;

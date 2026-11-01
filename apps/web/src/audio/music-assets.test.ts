@@ -34,10 +34,7 @@ afterAll(() => {
   for (const dir of scratch) rmSync(dir, { recursive: true, force: true });
 });
 
-/**
- * R1352: the cards of `sets` that open their play with an intro of their own: every Legendary and Mythic,
- * tokens printed so included. A set joins the list this is called with when its release ships.
- */
+/** R1352: the cards of `sets` that open their play with an intro of their own: every Legendary and Mythic. */
 function introCards(sets: readonly SetName[]): string[] {
   return Object.entries(CATALOG)
     .filter(([, c]) => sets.includes(c.set))
@@ -48,7 +45,6 @@ function introCards(sets: readonly SetName[]): string[] {
     .map(([id]) => id);
 }
 
-/** Every set the catalog holds, shipped or not. */
 const CATALOG_SETS = [...new Set(Object.values(CATALOG).map((c) => c.set))];
 
 function check(root?: string): { status: number | null; out: string } {
@@ -129,7 +125,6 @@ describe("R631 the cards that play music", () => {
 
   it("R1352 gives every Legendary and Mythic of the shipped sets, tokens printed so included, an intro of its own", () => {
     const cards = introCards(SHIPPED_SETS);
-    // Cards and tokens both: a token printed Legendary or Mythic opens its play like any card.
     expect(cards.filter((id) => CATALOG[id]?.token !== true).length).toBeGreaterThan(0);
     expect(cards.filter((id) => CATALOG[id]?.token === true).length).toBeGreaterThan(0);
     for (const id of cards) expect(MUSIC_CARDS[id]?.intro, id).toBeDefined();

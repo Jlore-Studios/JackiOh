@@ -1,4 +1,4 @@
-// What the chosen deck is, before Start: its name, what it does, its mana curve and its cards. The card
+// What the chosen deck is, before Start. The card
 // data is the catalog the worker sends (§5.1: the catalog is public), so this page imports none of its own;
 // until it arrives, or when it cannot be read, the preview says so and Start still works.
 

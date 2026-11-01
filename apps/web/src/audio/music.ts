@@ -48,25 +48,20 @@ export type MusicPlayer = {
   playIntro(id: string): void;
   /** R1351: cuts the intro playing (or about to) short with MUSIC_INTRO_CUT_FADE_S, and lets the bed back up. */
   stopIntro(): void;
-  /** R1350: fetches these intros' files in the background, between animation bursts. */
   preloadIntros(ids: readonly string[]): void;
-  /** The intro playing, else null. */
   intro(): string | null;
   /** Forgets where each station track left off (a new match). */
   resetResume(): void;
-  /** Fetches these tracks' files in the background, between animation bursts. */
   preload(ids: readonly string[]): void;
   setBusy(busy: boolean): void;
   /** The track playing or about to take over, else null. */
   current(): string | null;
-  /** The track last asked for. */
   wanted(): string | null;
   opponentTurn(): boolean;
   log(): readonly MusicLogEntry[];
   dispose(): void;
 };
 
-/** Where focus comes from: the page's visibility and the window's focus, or a test's. */
 export type FocusPort = { focused(): boolean; subscribe(listener: () => void): () => void };
 
 export type MusicPlayerOptions = {
@@ -266,7 +261,6 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     graph.focus.gain.setTargetAtTime(target, now, MUSIC_FOCUS_TC_S);
   }
 
-  /** Ramps the turn mix to where it should be, once the context runs (`sync` calls it again after a resume). */
   function applyTurn(): void {
     if (graph === null || !running() || appliedTurn === opponent) return;
     appliedTurn = opponent;
@@ -304,7 +298,6 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     return pending;
   }
 
-  /** Decodes a track to play it; resolves null if its file cannot be had. */
   function decode(id: string): Promise<AudioBuffer | null> {
     const ready = decoded.get(id);
     if (ready !== undefined) {
@@ -515,7 +508,6 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     return track !== undefined && !track.loop && track.handoff !== null;
   }
 
-  /** An intro's compressed bytes, from its own cache (a failure is not kept, so it is tried again). */
   function fetchIntro(id: string): Promise<ArrayBuffer | null> {
     const cached = introBytes.get(id);
     if (cached !== undefined) {
@@ -560,7 +552,6 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     }
   }
 
-  /** The bed dips for an intro from `from` and comes back as its music ends at `until`. */
   function duckBed(from: number, until: number): void {
     if (graph === null) return;
     const param = graph.bed.gain;
@@ -569,7 +560,6 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
     param.setTargetAtTime(1, until, MUSIC_INTRO_DUCK_RELEASE_TC_S);
   }
 
-  /** Fades an intro out from `at` over MUSIC_INTRO_CUT_FADE_S and stops it. */
   function cutClip(c: Clip, at: number): void {
     if (c.stopping) return;
     c.stopping = true;

@@ -9,7 +9,6 @@ import { THEME_PALETTES, themeFor, type ArtThemeId } from "../cards/art/themes.t
 import { EMBLEMS, type EmblemGlyph } from "../cards/art/emblems.ts";
 import type { FxCardFacts, FxIcon, FxPreset, FxTint } from "./types.ts";
 
-/** One family's look: the particles it throws, the ring it flares with, its tint and its emblem. */
 export type FxLook = { preset: FxPreset; ring: FxPreset; tint: FxTint; icon: FxIcon };
 
 /** Each family's particles and ring (the canvas half of its look); its colors come from its palette. */
@@ -48,7 +47,6 @@ function lookOfTheme(theme: ArtThemeId): FxLook {
   };
 }
 
-/** Every family's look, by art theme. */
 export const FX_LOOKS: Readonly<Record<ArtThemeId, FxLook>> = Object.fromEntries(
   (Object.keys(THEME_PARTICLES) as ArtThemeId[]).map((theme) => [theme, lookOfTheme(theme)]),
 ) as Record<ArtThemeId, FxLook>;
@@ -75,7 +73,6 @@ export const TONE_LOOKS: Readonly<Record<"damage" | "heal" | "cast", FxLook>> = 
   },
 };
 
-/** The look of a card the viewer can read, by its public facts; undefined when they do not say. */
 export function lookOf(facts: FxCardFacts | undefined): FxLook | undefined {
   if (facts?.type === undefined) return undefined;
   return FX_LOOKS[themeFor(facts.tags ?? [], facts.type)];
@@ -112,5 +109,4 @@ export const ZONE_LOOKS: Readonly<Partial<Record<string, ZoneLook>>> = {
   crumbled: { look: { ...ZONE_GONE, preset: "dust" }, direction: "down" },
 };
 
-/** A zone wave's look when its event names none: arcane, across. */
 export const ZONE_DEFAULT: ZoneLook = { look: TONE_LOOKS.cast, direction: "none" };

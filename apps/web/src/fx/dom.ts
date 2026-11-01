@@ -1,5 +1,5 @@
 // DOM effects for S10/B39: data-only, aria-hidden elements painted by fx.css; no text nodes become Cypress or screen-reader content.
-// Missing boxes mount nothing. No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
+// No timers: the director removes effects (S8 step 5); idempotent removal makes clear/expiry safe.
 // Ghosts are card BACK only (R202); supports R502 fracture, R437 brand, R436 chaos, and R1363 shields.
 
 import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS } from "./constants.ts";

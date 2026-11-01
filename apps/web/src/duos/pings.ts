@@ -1,5 +1,4 @@
-// The five pings (#936 B64, S6): what each looks like on the wheel and on its marker, what it says,
-// and the shape check a relayed `ping` frame passes before the board shows it. A ping is cosmetic:
+// The five pings (#936 B64, S6) and the shape check a relayed `ping` frame passes. A ping is cosmetic:
 // it never reaches the engine, a view or the log (B39), so nothing here is a rule.
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
@@ -7,7 +6,6 @@ import { LANES } from "../game/contract.ts";
 import { PING_KINDS, type PingKind, type PingTarget } from "../net/duos.ts";
 import { isRecord } from "../wire/json.ts";
 
-/** The glyph a ping wears on the wheel and on its marker. */
 export const PING_GLYPH: Readonly<Record<PingKind, string>> = {
   thumbsUp: "\u{1F44D}",
   thumbsDown: "\u{1F44E}",
@@ -50,7 +48,6 @@ export function parsePingTarget(value: unknown): PingTarget | null {
   if (side !== "p1" && side !== "p2") return null;
   // S6's `lane: 0..4`: 0-based on the wire, where the board's zone testids count 1..5.
   if (at === "hero") return { duel, at: "hero", side };
-  // Both rows have a slot per lane (`LANES`); a ping names one 0-based.
   if (at === "unit") return isWholeIn(lane, LANES.length) ? { duel, at: "unit", side, lane } : null;
   if (at === "backrow") return isWholeIn(lane, LANES.length) ? { duel, at: "backrow", side, lane } : null;
   if (at === "hand") return isWholeIn(index, Number.MAX_SAFE_INTEGER) ? { duel, at: "hand", side, index } : null;

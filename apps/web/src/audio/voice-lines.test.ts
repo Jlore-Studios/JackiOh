@@ -1,16 +1,6 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`
-// against the catalog it voices.
-//
-//   B33  exactly the catalog's ids, each card's kind from its catalog type (the file never states it),
-//        each kind's hooks and lines (CARD_HOOK_NAMES), and every voice a line names usable for its
-//        backend (`say`, or R501's SAPI).
-//   B34  every line non-empty, in /^[A-Za-z ,.'!?-]+$/, within VOICE_MAX_WORDS[hook] words, and with a
-//        BANNED_RULES_WORDS entry in fewer than BANNED_WORDS_MAX_SHARE of the lines (issue #115), each
-//        offender named even under the allowance.
-//   R655 the sections in order, each entry's name comment in catalog order, and the effects bank.
-//
-// Both files are read off disk rather than imported, so this checks the committed file itself and
-// not whatever `voiceData.ts` makes of it.
+// against the catalog it voices. Both files are read off disk rather than imported, so this checks the
+// committed file itself and not whatever `voiceData.ts` makes of it.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -30,7 +20,7 @@ const AUDIO_PATH = resolve(here, "card-audio.json5");
 type EntryKind = "unit" | "spell" | "trap";
 type Hook = "play" | "attack" | "death" | "cast" | "trigger";
 
-/** docs/polish/2-sound.md: Unit -> unit; Spell and Field Spell -> spell; Trap and Field Trap -> trap. */
+/** As docs/polish/2-sound.md maps them. */
 const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
   Unit: "unit",
   Spell: "spell",
@@ -102,12 +92,11 @@ function allAssignments(): Assignment[] {
   );
 }
 
-/** A hook's voice line: an assignment with a voice and a text. */
 function isLine(value: unknown): boolean {
   return isRecord(value) && typeof value.voice === "string" && typeof value.text === "string";
 }
 
-/** Every line the file carries (an assignment that gives a voice, a text or a lines list), so a malformed one is still checked. A trigger's lines count one by one. */
+/** Every line the file carries; a trigger's lines count one by one. */
 type Line = { key: string; hook: Hook; text: unknown };
 
 function allLines(): Line[] {
@@ -128,7 +117,6 @@ function isSapi(name: string): boolean {
   return isRecord(voice) && voice.backend === "sapi";
 }
 
-/** The voices the cards table actually names. */
 function referencedVoices(): string[] {
   const names = new Set<string>();
   for (const { value } of allAssignments()) {
@@ -391,7 +379,6 @@ describe("every voice line is short, plain flavour (B34)", () => {
 
   it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8)", () => {
     expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
-    // The counter itself: punctuation-only tokens are not words, hyphenated and elided ones are one.
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);
 
@@ -422,7 +409,6 @@ describe("every voice line is short, plain flavour (B34)", () => {
       "Animated", "Activate", "Brittle", "Nerf", "Buff", "Spell Damage", "Immune to Spells", "Counter",
       "Flicker", "Plague Counter",
     ]);
-    // The matcher itself: whole words in any case, across whitespace, and never inside a longer word.
     expect(bannedMatcher("Taunt").test("I TAUNT you!")).toBe(true);
     expect(bannedMatcher("Divine Shield").test("a divine  shield, dear")).toBe(true);
     expect(bannedMatcher("Echo").test("Echoes of the past")).toBe(false);

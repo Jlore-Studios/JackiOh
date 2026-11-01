@@ -20,7 +20,6 @@ export type ParticleSystem = {
   draw(ctx: CanvasRenderingContext2D, dpr: number): void;
   alive(): number;
   capacity(): number;
-  /** Lowers or raises the live cap; growing reallocates the pool, shrinking never does. */
   setCapacity(capacity: number): void;
   /** `allocations` counts pool (re)allocations: 1 after construction. */
   stats(): { allocations: number };
@@ -31,9 +30,7 @@ export type ParticleSystem = {
 
 /** CLAUDE.md rule 9: the look-and-feel numbers of drawing and stepping. */
 const TUNING = {
-  /** Fraction of a particle's life spent fading in. */
   fadeInFraction: 0.12,
-  /** Alpha a particle is born with before it fades fully in. */
   bornAlpha: 0.4,
   /** Non-shrinking presets (smoke, poison, dust, confetti) grow by this fraction of their size over life. */
   expandOverLife: 0.45,
@@ -135,7 +132,6 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
 
   const nextSlot = (s: number) => (s + 1 >= cap ? 0 : s + 1);
 
-  /** A free slot while there is room (searching from the cursor), else the oldest one at the cursor. */
   const claimSlot = (): number => {
     if (aliveCount < cap) {
       let s = cursor;

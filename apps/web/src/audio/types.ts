@@ -76,17 +76,12 @@ export type StingTier = "common" | "rare" | "epic";
 export type CardKind = "unit" | "spell" | "trap";
 /** R655: when a card's sounds play (constants.ts CARD_HOOKS, the one list of them). */
 export type CardHook = keyof typeof CARD_HOOKS;
-/** A voice line is a hook's line, so its kinds are the hooks. */
 export type VoiceLineKind = CardHook;
-/**
- * What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>`
- * files). The split-from-the-end VoiceKey convention holds either way.
- */
+/** What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>` files). */
 export type PlayableLineKind = VoiceLineKind | VoiceEmoteId | `trigger${number}`;
 /** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast", "emote-gary-thanks". Parse from the END: defIds contain "-". */
 export type VoiceKey = `${string}-${PlayableLineKind}`;
 
-/** What every voice (a `Persona` here) carries, whichever synthesizer rendered its files. */
 type PersonaCommon = {
   /** For the speechSynthesis fallback: SpeechSynthesisUtterance pitch (0–2) and rate (0.1–10). */
   web: { pitch: number; rate: number };
@@ -169,10 +164,7 @@ export type VoiceManifest = {
   files: Record<string, { hash: string; bytes: number }>;
 };
 
-/**
- * How much a line matters when another is already speaking (constants.ts VOICE_PRIORITY): a line
- * cuts in on one of lower priority and waits briefly behind one of equal or higher priority.
- */
+/** How much a line matters when another is already speaking (constants.ts VOICE_PRIORITY). */
 export type VoicePriority = number;
 
 export type SoundCue =
@@ -196,7 +188,6 @@ export type PlayedCue =
       params?: SfxParams;
       delayMs: number;
       atMs: number;
-      /** Accepted while the context was not running: nothing was scheduled. */
       suspended?: true;
     }
   | {
@@ -216,7 +207,6 @@ export type PlayedCue =
       effect: string;
       delayMs: number;
       atMs: number;
-      /** Accepted while the context was not running: nothing was scheduled. */
       suspended?: true;
     };
 
@@ -256,7 +246,6 @@ export type MusicTrack = {
   loop: boolean;
   /** Seconds of intro before the loop's music begins (a result's or a Mythic's sting); a sting's whole length. */
   intro: number;
-  /** The file's length in seconds. */
   duration: number;
   /** Where the loop starts and ends in the file, in seconds; null for a sting. */
   loopStart: number | null;

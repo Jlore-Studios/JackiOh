@@ -3,7 +3,7 @@
 // after its own `drawn` is a cast on draw, `castOnDraw.ts`) and the plays still resolving, innermost
 // last, for `cardFx.ts`'s recipes (#21 Hinder, #27 Blood Ridden): a `cardPlayed` opens one, its
 // `cardResolved` or `countered` closes it (R502). R202: only ids the viewer may read are kept, so every
-// hidden card looks the same to the planner. Each map keeps at most `limit` entries, the oldest evicted first.
+// hidden card looks the same to the planner.
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 

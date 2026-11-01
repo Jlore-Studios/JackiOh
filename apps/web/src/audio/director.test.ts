@@ -1,5 +1,4 @@
 // The sound director (docs/polish/2-sound.md, B22 and B24 to B27, and R203's hand-over clause).
-//
 // The director is fed views and runner notifications and sends cues to a recording sink. Entries
 // come from the real `planEntries`, and views from the web fixtures, so an event is the very object
 // the view carries: the director matches events by identity, as the runner hands them out.
@@ -80,7 +79,6 @@ function rig(): { sink: Recorder; director: SoundDirector } {
   return { sink, director: createSoundDirector(sink, LINES) };
 }
 
-/** Every cue sent, as "sfx:id@delay" / "voice:defId/line@delay" / "effect:defId/hook@delay", in the order sent. */
 function sent(sink: Recorder): string[] {
   return sink.sent.map((s) => {
     if (s.kind === "sfx") return `sfx:${s.id}@${String(s.delayMs)}`;
@@ -91,7 +89,6 @@ function sent(sink: Recorder): string[] {
 
 const sfxSent = (sink: Recorder) => sink.sent.filter((s): s is Extract<Sent, { kind: "sfx" }> => s.kind === "sfx");
 const voiceSent = (sink: Recorder) => sink.sent.filter((s): s is Extract<Sent, { kind: "voice" }> => s.kind === "voice");
-/** Voice cues as "defId/line!priority". */
 const linesSent = (sink: Recorder) => voiceSent(sink).map((v) => `${v.defId}/${v.line}!${String(v.priority)}`);
 
 const played = (defId: string, instanceId: string, player: PlayerId = "p1"): GameEvent => ({
@@ -146,7 +143,6 @@ function p2View(events: GameEvent[] = []): PlayerView {
   });
 }
 
-/** Feeds the first view, then one view carrying `events`; returns that view. */
 function begin(director: SoundDirector, events: GameEvent[], first: PlayerView = firstView()): PlayerView {
   director.onView(first);
   const next = withEvents(first, events);

@@ -97,7 +97,6 @@ describe("R677 a Glitch swap in practice", () => {
     const swapped = snapshotOf(d.send({ type: "act", action: keepAll(before) }));
     const state = debugOf(d).state as GameState;
     expect(state.seatSwaps).toBe(1);
-    // The human's view, legal actions and the AI's turn to act all read the seats as they are now.
     expect(swapped.view.viewer).toBe(AI);
     expect(swapped.legal).toEqual(legalActions(state, AI));
     expect(swapped.aiToAct).toBe(aiToAct(state, HUMAN));
@@ -112,7 +111,6 @@ describe("R677 a Glitch swap in practice", () => {
     expect(last?.playerId).toBe(AI);
     expect(last?.nonce).toBe("h1");
 
-    // And the AI's next action goes as the human's starting seat.
     let next = after;
     for (let n = 0; n < 5 && !next.aiToAct && next.view.result === null; n += 1) {
       const endTurn = next.legal.find((candidate) => candidate.type === "endTurn");

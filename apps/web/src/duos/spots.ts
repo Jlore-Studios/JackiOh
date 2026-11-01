@@ -1,10 +1,9 @@
-// Where on a board a ping points (#936 B64): the element Game.tsx draws for a hero, a zone or a hand
-// card, read back from its testid (`game/contract.ts`), and the S6 `PingTarget` it means in the duel
-// that board shows. Game.tsx stays the one board, so the Duos layer finds its anchors by the testids
-// every other layer uses, and adds nothing to the board itself.
+// Where on a board a ping points (#936 B64): a hero, zone or hand card Game.tsx draws, read back from
+// its testid (`game/contract.ts`), and the S6 `PingTarget` it means in the duel that board shows.
+// Game.tsx stays the one board, so the Duos layer finds its anchors by the testids every layer uses.
 //
-// A board's "you" side is the viewer's team's player in that duel (team A's `p1`, team B's `p2`). A
-// hand target only ever names "you" (S6), the one hand the view holds as cards.
+// A board's "you" side is the viewer's team's player in that duel. A hand target only ever names
+// "you" (S6), the one hand the view holds as cards.
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
@@ -32,7 +31,6 @@ function sideOfAttr(value: string | null): Side | null {
   return value === "you" || value === "opponent" ? value : null;
 }
 
-/** The spot the element is, or is inside; null for anything else on the page. */
 export function spotOfElement(element: Element | null): BoardSpot | null {
   const hit = element?.closest(SPOT_SELECTOR) ?? null;
   if (hit === null) return null;
@@ -66,7 +64,6 @@ export function sameSpot(a: BoardSpot | null, b: BoardSpot | null): boolean {
   return spotTestid(a) === spotTestid(b);
 }
 
-/** The viewer's own hand as cards, or none (a view only ever holds its own hand as cards). */
 function handOf(view: PlayerView): readonly { instanceId: string }[] {
   return Array.isArray(view.you.hand) ? view.you.hand : [];
 }

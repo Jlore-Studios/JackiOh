@@ -28,13 +28,11 @@ export type FlavorExitPlan = { D: number; tgt: string; intensity: number; fallAt
 
 export type FlavorExit = (p: FlavorExitPlan) => FxCue[];
 
-/** Physical: it slumps, and dust settles. */
 const physical: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => [
   tunedBurst(i, "dust", tid(tgt, FOOT), "ring", fallAt, T.physicalSlump),
   tunedBurst(i, "dust", tid(tgt, FOOT), "area", settleAt, T.physicalDust),
 ];
 
-/** Brute: it crumbles into rubble. */
 const brute: FlavorExit = ({ D, tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -44,7 +42,6 @@ const brute: FlavorExit = ({ D, tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Beast: it bolts off in a streak. */
 const beast: FlavorExit = ({ D, tgt, intensity: i, fallAt, pile }) => {
   const at = tid(tgt);
   return [
@@ -53,25 +50,21 @@ const beast: FlavorExit = ({ D, tgt, intensity: i, fallAt, pile }) => {
   ];
 };
 
-/** Fire: it burns down to ash. */
 const fire: FlavorExit = ({ tgt, intensity: i, settleAt }) => [
   tunedBurst(i, "fire", tid(tgt, FOOT), "area", 0, T.fireFlame),
   tunedBurst(i, "dust", tid(tgt, FOOT), "area", settleAt, T.fireAsh),
 ];
 
-/** Dark: it sinks into smoke. */
 const dark: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => [
   tunedBurst(i, "void", tid(tgt, FOOT), "ring", fallAt, T.darkSink),
   tunedBurst(i, "smoke", tid(tgt, FOOT), "area", settleAt, T.darkSmoke),
 ];
 
-/** Holy: it rises in light. */
 const holy: FlavorExit = ({ D, tgt, intensity: i, fallAt }) => {
   const at = tid(tgt);
   return [raysCue(D, "holy", at, fallAt), tunedBurst(i, "holy", tid(tgt, TOP), "area", fallAt, T.holyLight)];
 };
 
-/** Nerd: it closes like a book. */
 const nerd: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -80,7 +73,6 @@ const nerd: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Tech: it powers down with sparks. */
 const tech: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -89,7 +81,6 @@ const tech: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Nature: it wilts. */
 const nature: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -98,7 +89,6 @@ const nature: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Toxic: it melts into a puddle. */
 const toxic: FlavorExit = ({ D, tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   const foot = tid(tgt, FOOT);
@@ -109,7 +99,6 @@ const toxic: FlavorExit = ({ D, tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Snack: it is eaten, leaving crumbs. */
 const snack: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -118,7 +107,6 @@ const snack: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Hustle: it scatters as bills. */
 const hustle: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -127,7 +115,6 @@ const hustle: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Clout: the lights go out, a "disconnected" flash. */
 const clout: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [
@@ -136,7 +123,6 @@ const clout: FlavorExit = ({ tgt, intensity: i, fallAt, settleAt }) => {
   ];
 };
 
-/** Spirit: it floats up. */
 const spirit: FlavorExit = ({ D, tgt, intensity: i, fallAt, settleAt }) => {
   const at = tid(tgt);
   return [

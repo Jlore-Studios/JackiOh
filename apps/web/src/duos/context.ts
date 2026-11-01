@@ -1,7 +1,6 @@
-// What a route hangs on the Duos board beyond S8's frozen `DuosBoardProps`: its way back, its
-// connection line, its clock and the teammate's socket (B37). The networked route (`DuosRoute.tsx`)
-// and the dev hotseat (`DevDuosRoute.tsx`) provide different chrome around the same board, so it
-// travels by context and the props stay S8's. Presentation only (CLAUDE.md rule 7).
+// What a route hangs on the Duos board beyond S8's frozen `DuosBoardProps`. The networked route
+// (`DuosRoute.tsx`) and the dev hotseat (`DevDuosRoute.tsx`) provide different chrome around the same
+// board, so it travels by context and the props stay S8's. Presentation only (CLAUDE.md rule 7).
 
 import { createContext, type ReactNode } from "react";
 

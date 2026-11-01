@@ -13,9 +13,6 @@ function elementOf(target: EventTarget | null): Element | null {
   return target as Element;
 }
 
-/** "click" → closest(UI_CLICK_SELECTOR) → playSfx("uiClick"). "pointerover" with pointerType "mouse" →
- *  closest(UI_HOVER_SELECTOR) that differs from the last hovered one and is ≥ UI_HOVER_THROTTLE_MS after the
- *  last hover sound → playSfx("uiHover"). Returns the remover. */
 export function installUiSounds(
   sink: Pick<SoundSink, "playSfx">,
   host: Document | HTMLElement,

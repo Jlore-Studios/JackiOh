@@ -49,7 +49,6 @@ function guard(): (() => void)[] {
   return held;
 }
 
-/** Moves the history by `step` and waits for the `popstate` it fires. */
 async function traverse(step: () => void): Promise<void> {
   await act(async () => {
     const popped = new Promise((resolve) => {

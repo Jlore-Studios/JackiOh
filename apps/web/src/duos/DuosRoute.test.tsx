@@ -43,7 +43,6 @@ class FakeDuosSocket implements SocketLike {
   }
 }
 
-/** The newest socket the route opened. */
 function latest(): FakeDuosSocket {
   return must(sockets.at(-1), "a socket");
 }
@@ -141,7 +140,6 @@ describe("the co-op route's tab title (#1792)", () => {
       latest().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
     });
   }
-  /** A1's seat (duel 0) at `round`: its own duel's view as given, and its team's ended flags. */
   function a1(round: number, own: Partial<PlayerView>, ended: boolean[] = [false, false]): DuosView {
     return { ...duosView(round), own: baseView(own), team: { ...duosTeamView("a"), ended } };
   }

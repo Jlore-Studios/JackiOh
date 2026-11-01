@@ -1,8 +1,6 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: the merge of
 // main into production through a pull request, Vercel's hold and fast-forward, and the one countdown
-// issue that can hold or delay either and shows the queue. Each case runs the real script in a fresh
-// clone of a throwaway "origin", with stand-ins for `curl` and `gh`, which keeps GitHub's state in a
-// JSON file and merges with real git, so production ends up holding what GitHub would leave it.
+// issue that can hold or delay either and shows the queue; each case runs it against a throwaway origin.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -149,7 +147,6 @@ echo "$*" >> "$FAKE_GH_DIR/curl.log"
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
 interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean }
-/** What Vercel's GitHub app reported for a build of main: its commit and its latest status. */
 interface Deployment { id: number; sha: string; state: string; creator?: string }
 interface Gh {
   next: number;
@@ -296,7 +293,6 @@ const comment = (w: World, number: number, body: string, when: string, who: { lo
 const reactions = (w: World, id: number): string[] => gh(w).reactions.filter((r) => r.comment === id).map((r) => r.content);
 /** The commit a tag names on origin, or "" when there is no such tag. */
 const tagAt = (w: World, tag: string): string => git(w.origin, "for-each-ref", "--format=%(objectname)", `refs/tags/${tag}`);
-/** The deploy hook's calls, one line of curl's arguments each. */
 const hookCalls = (w: World): string[] => {
   try {
     return readFileSync(join(w.root, "gh", "curl.log"), "utf8").split("\n").filter((line) => line !== "");
@@ -664,7 +660,6 @@ describe("Vercel, from the same issue", () => {
     expect(issue(w, 1).body).toContain("**Vercel (staging): on hold.**");
     expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT) · Vercel on hold");
     expect(marker(issue(w, 1))).toContain("held=0");
-    // Production still merges at its time.
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     expect(gh(w).prs).toHaveLength(1);
     expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);

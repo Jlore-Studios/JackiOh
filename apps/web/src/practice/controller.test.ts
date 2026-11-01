@@ -161,8 +161,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// Lifecycle
-
 describe("B36 the controller's lifecycle", () => {
   it("B36 starts idle with nothing known", () => {
     const controller = controllerFor(fakeHost());
@@ -269,8 +267,6 @@ describe("B36 the controller's lifecycle", () => {
     expect(bodies(fake)).toEqual([{ type: "start", config: CONFIG }]);
   });
 });
-
-// The pacing loop
 
 describe("B36 the pacing loop", () => {
   it("B36 sends no aiStep while the snapshot says the AI owes nothing", async () => {
@@ -590,8 +586,6 @@ describe("any named hold keeps the AI's next step back (a voice line as well as 
     await expectAiStepAfter(fake, PACING.actionGapMs);
   });
 });
-
-// Debug
 
 describe("B36 debug() rides the same queue", () => {
   const DEBUG: PracticeDebug = {
