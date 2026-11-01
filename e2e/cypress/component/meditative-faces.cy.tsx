@@ -39,6 +39,7 @@ import type { BackrowView, CardDef, CardView, PlayerView, UnitView } from "@jack
 
 import { ALL_TRIBES, CardFace, FACE_ASPECT, LONG_FACES, faceModel } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
+import { FullArtAllowed } from "../../../apps/web/src/cards/fullArt.ts";
 import { PREVIEW_HEIGHT_PX } from "../../../apps/web/src/cards/inspect/constants.ts";
 import { SET_MARK_MIN_FACE_PX } from "../../../apps/web/src/cards/setMark.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
@@ -143,13 +144,16 @@ function nameProblems(root: Element, expected: string, at: string): string[] {
 function InspectGrid({ height, face }: { height: number; face: Face }) {
   const width = widthFor(height);
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
-      {MEDITATIVE.map((def) => (
-        <div key={def.id} data-fit-box={def.id} style={{ width, height, flex: "none" }}>
-          <CardFace face={modelOf(def, face)} layout="full" />
-        </div>
-      ))}
-    </div>
+    // R2655001: API Key Fishing and Tatches the Totem print full art now; the grid reads their words.
+    <FullArtAllowed allowed={false}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
+        {MEDITATIVE.map((def) => (
+          <div key={def.id} data-fit-box={def.id} style={{ width, height, flex: "none" }}>
+            <CardFace face={modelOf(def, face)} layout="full" />
+          </div>
+        ))}
+      </div>
+    </FullArtAllowed>
   );
 }
 

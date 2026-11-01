@@ -14,10 +14,17 @@
 //! R1333000: a cosmetic's rarity is [`CosmeticRarity`], its own scale, never its card's: nothing
 //! here converts it to or from the catalog's `PrintedRarity`, so no code can tie one to the other.
 //!
-//! R1313000: the full-art faces of the hero portraits' cards (R1017001) are cosmetics too, one per
-//! card, each naming its card. A player owns one on its card and never picks one, so the kind has
-//! no default, and the check refuses a full art with no card, a card with two, a default one and a
-//! card named by any other kind.
+//! R1313000: the full-art faces of the hero portraits' cards (R1017001) are cosmetics too, each
+//! naming its card. A player owns one on its card and never picks one in the settings, so the kind
+//! has no default, and the check refuses a full art with no card, a default one and a card named by
+//! any other kind.
+//!
+//! R2655000: a full-art card has three full arts, one of each rarity: the Epic (the still face),
+//! the Legendary (animated) and the Mythic (signed), the last two chases. The check refuses a card
+//! with two full arts of one rarity. A card's own pick names one ([`full_art_picked`]): `false`,
+//! `true` for its Epic, or a full art's id. R2655001: the registry's full arts are the list of the
+//! cards that print one; #2655 appends 57, the six portrait cards' Legendary and Mythic and fifteen
+//! more cards' three, none a default or a starter, so no account is granted one (§14.12).
 //!
 //! R1661000: every account cosmetic (a playmat, a backdrop, a card back, a hero portrait) but its
 //! kind's default is `GLOBAL_COSMETIC_FLOOR_RARITY` or better, the floor of a duplicate's global
@@ -50,15 +57,16 @@ use serde::{Deserialize, Serialize};
 use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId};
 
 use crate::config::{GLOBAL_COSMETIC_FLOOR_RARITY, PLAYER_SETTINGS_TEXT_MAX_LENGTH};
-use crate::economy::store::OwnedCosmetics;
+use crate::economy::store::{FullArtPick, OwnedCosmetics};
 
 /// The registry's text, compiled in.
 pub const COSMETICS_JSON: &str = include_str!("../cosmetics.json");
 
 /// The slot a cosmetic fills: on a card, a foil over the art, a finish on the print and a border
 /// round the frame (R1295000); on a deck, the playmat (`Table`), the ambient backdrop behind the
-/// board (`Field`) and the back of its face-down cards and deck (`CardBack`) (R1297000); a hero
-/// portrait's card's full-art face (`FullArt`), owned on its card and never picked (R1313000); and
+/// board (`Field`) and the back of its face-down cards and deck (`CardBack`) (R1297000); a card's
+/// full-art face (`FullArt`), owned on its card and picked only by the card's own pick (R1313000,
+/// R2655000); and
 /// the deck's hero portrait (`Portrait`), an account cosmetic (R641, R1827000).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -212,7 +220,8 @@ pub struct Cosmetic {
     /// pack slot lands on its tier (§14.6).
     #[serde(default)]
     pub chase: bool,
-    /// The card a full art belongs to, by catalog id; no other kind names one (R1313000).
+    /// The card a full art belongs to, by catalog id; no other kind names one (R1313000). A card
+    /// has at most one full art of each rarity (R2655000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<String>,
 }
@@ -240,12 +249,19 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
         if !seen.insert(id) {
             out.push(format!("the id {id:?} is listed twice"));
         }
-        // R1313000: a full art names its card, one per card, and is no default; nothing else names one.
+        // R1313000: a full art names its card and is no default; nothing else names one. R2655000: a
+        // card has at most one full art of each rarity (an Epic, a Legendary and a Mythic).
         match (cosmetic.kind, cosmetic.card.as_deref()) {
             (CosmeticKind::FullArt, None) => out.push(format!("the full art {id:?} names no card")),
             (CosmeticKind::FullArt, Some(card)) => {
-                if !full_art_cards.insert(card) {
-                    out.push(format!("the card {card:?} has two full arts"));
+                if !id.starts_with(FULL_ART_ID_PREFIX) {
+                    out.push(format!(
+                        "the full art {id:?} does not start with {FULL_ART_ID_PREFIX:?}"
+                    ));
+                }
+                let rarity = cosmetic.rarity;
+                if !full_art_cards.insert((card, rarity)) {
+                    out.push(format!("the card {card:?} has two {rarity} full arts"));
                 }
             }
             (kind, Some(card)) => out.push(format!(
@@ -409,11 +425,29 @@ pub fn check_pick(
     }
 }
 
-/// The full art of `card` in `registry`, if the card has one (R1313000).
+/// The Epic full art of `card` in `registry`, if the card has one (R1313000): what a pick of
+/// `true` names (R2655000).
 pub fn full_art_of<'r>(registry: &'r [Cosmetic], card: &str) -> Option<&'r Cosmetic> {
-    registry
-        .iter()
-        .find(|cosmetic| cosmetic.kind == CosmeticKind::FullArt && cosmetic.card.as_deref() == Some(card))
+    registry.iter().find(|cosmetic| {
+        cosmetic.kind == CosmeticKind::FullArt
+            && cosmetic.card.as_deref() == Some(card)
+            && cosmetic.rarity == CosmeticRarity::Epic
+    })
+}
+
+/// R2655000: the full art of `card` that `pick` names, whether the account owns it or not: none
+/// for `false`, the card's Epic for `true` ([`full_art_of`]), and for an id that full art when it
+/// is one of `card`'s, none otherwise.
+pub fn full_art_picked<'r>(registry: &'r [Cosmetic], card: &str, pick: &FullArtPick) -> Option<&'r Cosmetic> {
+    match pick {
+        FullArtPick::On(false) => None,
+        FullArtPick::On(true) => full_art_of(registry, card),
+        FullArtPick::Id(id) => registry.iter().find(|cosmetic| {
+            cosmetic.kind == CosmeticKind::FullArt
+                && cosmetic.id == *id
+                && cosmetic.card.as_deref() == Some(card)
+        }),
+    }
 }
 
 /// The cosmetics a duplicate may drop (R1301002): the per-card ones that are neither a default
@@ -461,6 +495,9 @@ pub fn is_id_of(kind: CosmeticKind, id: &str) -> bool {
             .any(|cosmetic| cosmetic.kind == kind && cosmetic.id == id)
     })
 }
+
+/// What a full art's registry id starts with (R2655000), so a card pick's `fullArt` text names one.
+pub const FULL_ART_ID_PREFIX: &str = "full-art-";
 
 /// What a portrait's registry id starts with: `portrait-` and its `PortraitId` (R1827000).
 pub const PORTRAIT_ID_PREFIX: &str = "portrait-";
@@ -612,10 +649,46 @@ mod tests {
         ("card-back-nebula", CosmeticKind::CardBack, CosmeticRarity::Mythic),
     ];
 
-    /// The shipped registry before #1833: every entry but its last 36 (R1833000).
+    /// R2655000: how many full arts #2655 appends after #1833's 36: the six portrait cards'
+    /// Legendary and Mythic, then fifteen more cards' Epic, Legendary and Mythic.
+    const R2655000_NEW: usize = 6 * 2 + 15 * 3;
+
+    /// The shipped registry before #1833: every entry but #2655's 57 and #1833's 36 before them
+    /// (R1833000).
     fn before_r1833000(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
-        &cosmetics[..cosmetics.len() - R1833000_NEW.len()]
+        &cosmetics[..cosmetics.len() - R2655000_NEW - R1833000_NEW.len()]
     }
+
+    /// The 57 #2655 appends, last in the registry (R2655000).
+    fn r2655000_new(cosmetics: &[Cosmetic]) -> &[Cosmetic] {
+        &cosmetics[cosmetics.len() - R2655000_NEW..]
+    }
+
+    /// R2655001: the 21 full-art cards, the six portrait cards (R1017001) and the fifteen #2655
+    /// adds, and the slug each one's ids carry.
+    const R2655001_CARDS: [(&str, &str); 21] = [
+        ("core-001", "big-d-fender"),
+        ("core-004", "gary-the-gambler"),
+        ("core-008", "mr-vanilla"),
+        ("core-011", "tempo-timmy"),
+        ("core-012", "duplicating-felinors"),
+        ("core-013", "jlockeed-shredder-10"),
+        ("classicplus-019", "league-of-losers"),
+        ("core-018", "bread-and-butter"),
+        ("classicplus-012", "the-mother-pancake"),
+        ("core-086", "miss-mrow"),
+        ("meditative-021", "api-key-fishing"),
+        ("classicplus-046", "felinor-flagbearer"),
+        ("stinkyscape-154", "dice-of-doom"),
+        ("classicplus-062", "kys-papaya"),
+        ("classic-090", "in-too-deep"),
+        ("classicplus-048", "jlockeeds-lobbyist"),
+        ("meditative-087", "tatches-the-totem"),
+        ("classicplus-069", "buff-billy"),
+        ("traininggrounds-040", "goetzmann-game-design"),
+        ("classicplus-026", "tommy-tempo"),
+        ("classicplus-075", "j-jungle-explorer"),
+    ];
 
     #[test]
     fn r1295000_the_shipped_registry_passes_with_one_default_and_nine_items_per_kind() {
@@ -671,29 +744,60 @@ mod tests {
     }
 
     #[test]
-    fn r1313000_the_six_full_arts_are_epic_one_per_hero_card_and_no_pick() {
+    fn r1313000_r2655001_every_full_art_card_has_an_epic_a_legendary_and_a_mythic_and_none_is_a_pick() {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let full_arts: Vec<&Cosmetic> = cosmetics
             .iter()
             .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
             .collect();
-        let mut cards: Vec<&str> = full_arts
+        let cards: BTreeSet<&str> = full_arts
             .iter()
             .filter_map(|cosmetic| cosmetic.card.as_deref())
             .collect();
-        cards.sort_unstable();
-        // R1017001's six: Big D-fender, Gary the Gambler, Mr. Vanilla, Tempo Timmy, Duplicating
-        // Felinors and Jlockeed Shredder-10.
+        // R2655001: the registry is the list: R1017001's six portrait cards and #2655's fifteen.
         assert_eq!(
             cards,
-            [
-                "core-001", "core-004", "core-008", "core-011", "core-012", "core-013"
-            ]
+            R2655001_CARDS
+                .iter()
+                .map(|(card, _)| *card)
+                .collect::<BTreeSet<_>>()
         );
+        assert_eq!(full_arts.len(), 21 * 3);
+        for (card, slug) in R2655001_CARDS {
+            let of_card: Vec<(&str, CosmeticRarity)> = full_arts
+                .iter()
+                .filter(|cosmetic| cosmetic.card.as_deref() == Some(card))
+                .map(|cosmetic| (cosmetic.id.as_str(), cosmetic.rarity))
+                .collect();
+            // One of each rarity on the cosmetics' own scale, whatever the card's rarity, by id.
+            assert_eq!(
+                of_card,
+                [
+                    (format!("full-art-{slug}").as_str(), CosmeticRarity::Epic),
+                    (
+                        format!("full-art-{slug}-animated").as_str(),
+                        CosmeticRarity::Legendary
+                    ),
+                    (format!("full-art-{slug}-signed").as_str(), CosmeticRarity::Mythic),
+                ],
+                "{card}"
+            );
+            assert_eq!(
+                full_art_of(&cosmetics, card).map(|cosmetic| cosmetic.rarity),
+                Some(CosmeticRarity::Epic),
+                "{card}"
+            );
+        }
         for cosmetic in &full_arts {
-            // Epic on the cosmetics' own scale, whatever its card's rarity.
-            assert_eq!(cosmetic.rarity, CosmeticRarity::Epic, "{}", cosmetic.id);
-            assert!(!cosmetic.default, "{}", cosmetic.id);
+            // R2655000: the chase mark exactly on the Legendary and the Mythic; none a default or a
+            // starter, so every one is earned.
+            assert_eq!(
+                cosmetic.chase,
+                cosmetic.rarity != CosmeticRarity::Epic,
+                "{}",
+                cosmetic.id
+            );
+            assert!(!cosmetic.default && !cosmetic.starter, "{}", cosmetic.id);
         }
         // No other kind names a card.
         assert!(
@@ -706,6 +810,68 @@ mod tests {
             "\"fullArt\""
         );
         assert!(!CosmeticKind::PICKED.contains(&CosmeticKind::FullArt));
+    }
+
+    #[test]
+    fn r2655000_the_check_takes_one_full_art_of_each_rarity_on_a_card_and_refuses_two_of_one() {
+        let full_art = |id: &str, card: &str, rarity: CosmeticRarity| Cosmetic {
+            card: Some(card.to_owned()),
+            rarity,
+            chase: rarity.is_chase(),
+            ..entry(id, CosmeticKind::FullArt, false)
+        };
+        // One each of Epic, Legendary and Mythic on a card passes, beside another card's.
+        let mut tiers = defaults();
+        tiers.extend([
+            full_art("full-art-a", "core-001", CosmeticRarity::Epic),
+            full_art("full-art-a-animated", "core-001", CosmeticRarity::Legendary),
+            full_art("full-art-a-signed", "core-001", CosmeticRarity::Mythic),
+            full_art("full-art-b", "core-004", CosmeticRarity::Epic),
+        ]);
+        assert!(problems(&tiers).is_empty(), "{:?}", problems(&tiers));
+        // Two of one rarity on one card are refused, whichever the rarity.
+        for rarity in [
+            CosmeticRarity::Epic,
+            CosmeticRarity::Legendary,
+            CosmeticRarity::Mythic,
+        ] {
+            let mut twice = tiers.clone();
+            twice.push(full_art("full-art-a-again", "core-001", rarity));
+            assert_eq!(
+                problems(&twice),
+                vec![format!("the card \"core-001\" has two {rarity} full arts")]
+            );
+        }
+        // A full art's id starts with "full-art-", so a pick's text names one.
+        let mut unprefixed = defaults();
+        unprefixed.push(full_art("art-a", "core-001", CosmeticRarity::Epic));
+        assert_eq!(
+            problems(&unprefixed),
+            vec!["the full art \"art-a\" does not start with \"full-art-\"".to_owned()]
+        );
+        // A Legendary or Mythic full art is a chase, an Epic one is not (R1333000).
+        let mut unmarked = defaults();
+        unmarked.push(Cosmetic {
+            chase: false,
+            ..full_art("full-art-a-signed", "core-001", CosmeticRarity::Mythic)
+        });
+        assert_eq!(problems(&unmarked).len(), 1, "{:?}", problems(&unmarked));
+        // `true` picks the Epic, an id picks that full art of its own card alone, `false` none.
+        let picked = |card: &str, pick: FullArtPick| {
+            full_art_picked(&tiers, card, &pick).map(|cosmetic| cosmetic.id.as_str())
+        };
+        assert_eq!(picked("core-001", FullArtPick::On(true)), Some("full-art-a"));
+        assert_eq!(picked("core-001", FullArtPick::On(false)), None);
+        assert_eq!(
+            picked("core-001", FullArtPick::Id("full-art-a-signed".to_owned())),
+            Some("full-art-a-signed")
+        );
+        assert_eq!(
+            picked("core-004", FullArtPick::Id("full-art-a-signed".to_owned())),
+            None
+        );
+        assert_eq!(picked("core-001", FullArtPick::Id("foil-none".to_owned())), None);
+        assert_eq!(picked("core-002", FullArtPick::On(true)), None);
     }
 
     #[test]
@@ -731,7 +897,7 @@ mod tests {
         twice.push(full_art("full-art-b", Some("core-001")));
         assert_eq!(
             problems(&twice),
-            vec!["the card \"core-001\" has two full arts".to_owned()]
+            vec!["the card \"core-001\" has two Common full arts".to_owned()]
         );
 
         let mut foil_with_card = defaults();
@@ -1003,11 +1169,31 @@ mod tests {
         assert!(problems(&fine).is_empty(), "{:?}", problems(&fine));
 
         // The shipped chases are its two Legendary starters, which every account owns already, then
-        // #1833's twelve, the first that can drop (R1833000).
+        // #1833's fifteen, the first that can drop (R1833000), then #2655's 42 full arts, a
+        // Legendary and a Mythic on each of its 21 cards (R2655000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let chases: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.chase).collect();
+        assert_eq!(chases.len(), 17 + 42);
+        let full_art_chases: Vec<&str> = r2655000_new(&cosmetics)
+            .iter()
+            .filter(|cosmetic| cosmetic.chase)
+            .map(|cosmetic| cosmetic.id.as_str())
+            .collect();
+        assert_eq!(full_art_chases.len(), 42);
         assert_eq!(
-            chases
+            chases[17..]
+                .iter()
+                .map(|cosmetic| cosmetic.id.as_str())
+                .collect::<Vec<_>>(),
+            full_art_chases
+        );
+        assert!(
+            chases[17..]
+                .iter()
+                .all(|cosmetic| cosmetic.kind == CosmeticKind::FullArt && cosmetic.rarity.is_chase())
+        );
+        assert_eq!(
+            chases[..17]
                 .iter()
                 .map(|cosmetic| cosmetic.id.as_str())
                 .collect::<Vec<_>>(),
@@ -1079,20 +1265,28 @@ mod tests {
                     || (cosmetic.kind == CosmeticKind::Portrait && !cosmetic.default))),
             "{earlier:?}"
         );
-        // A duplicate drops the six full arts, then #1833's 18 per-card ones.
-        let mut dropped: Vec<Cosmetic> = cosmetics
+        // A duplicate drops the six Epic full arts, then #1833's 18 per-card ones, then #2655's 57
+        // full arts (R2655000).
+        let mut dropped: Vec<Cosmetic> = earlier
             .iter()
             .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
             .cloned()
             .collect();
         assert_eq!(dropped.len(), 6);
+        assert!(
+            dropped
+                .iter()
+                .all(|cosmetic| cosmetic.rarity == CosmeticRarity::Epic)
+        );
         dropped.extend(
-            cosmetics[earlier.len()..]
+            cosmetics[earlier.len()..earlier.len() + R1833000_NEW.len()]
                 .iter()
                 .filter(|cosmetic| cosmetic.kind.is_per_card())
                 .cloned(),
         );
         assert_eq!(dropped.len(), 6 + 18);
+        dropped.extend(r2655000_new(&cosmetics).iter().cloned());
+        assert_eq!(dropped.len(), 6 + 18 + R2655000_NEW);
         assert_eq!(pack_cosmetics(&cosmetics), dropped);
         // An entry that leaves the mark out is no starter.
         let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
@@ -1253,14 +1447,15 @@ mod tests {
      {
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
-        assert_eq!(cosmetics.len(), 72);
+        // #1833's 72, and #2655's 57 after them (R2655000).
+        assert_eq!(cosmetics.len(), 72 + R2655000_NEW);
         // Appended after every earlier entry, the portraits last among those, so none moves.
         let earlier = before_r1833000(&cosmetics);
         assert_eq!(
             earlier.last().map(|cosmetic| cosmetic.id.as_str()),
             Some("portrait-shredder")
         );
-        let new = &cosmetics[earlier.len()..];
+        let new = &cosmetics[earlier.len()..earlier.len() + R1833000_NEW.len()];
         assert_eq!(
             new.iter()
                 .map(|cosmetic| (cosmetic.id.as_str(), cosmetic.kind, cosmetic.rarity))

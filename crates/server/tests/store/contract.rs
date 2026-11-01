@@ -10833,6 +10833,42 @@ mod cosmetic_loadouts {
         assert_eq!(picks_of(harness, &other.id).await, others);
     }
 
+    /// R2655000: a card's full-art pick keeps a full art's id as written (migration 0072's
+    /// `full_art_id`), beside `true` and `false`, through a put and an upload; a put of a switch
+    /// takes the id away, and an id the registry does not know is kept too.
+    async fn r2655000_card_picks_keep_a_full_art_id(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        let signed =
+            json!({ "cardId": "core-008", "foil": "foil-rainbow", "fullArt": "full-art-mr-vanilla-signed" });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(signed.clone()), now));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([signed]));
+        // A switch replaces the id whole: off, then on (the Epic), each with no id left behind.
+        let off = json!({ "cardId": "core-008", "fullArt": false });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(off.clone()), now + 1));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([off]));
+        let epic = json!({ "cardId": "core-008", "fullArt": true });
+        q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(epic.clone()), now + 2));
+        assert_eq!(picks_of(harness, &profile.id).await, json!([epic]));
+        // The upload writes an id too, one this build does not know among them.
+        let upload = vec![
+            picks(json!({ "cardId": "core-004", "fullArt": "full-art-gary-the-gambler-animated" })),
+            picks(json!({ "cardId": "core-011", "fullArt": "full-art-from-a-newer-client" })),
+        ];
+        assert_eq!(
+            q!(harness, t => t.economy_card_picks_upload(&profile.id, &upload, now + 3)),
+            2
+        );
+        assert_eq!(
+            picks_of(harness, &profile.id).await,
+            json!([
+                { "cardId": "core-004", "fullArt": "full-art-gary-the-gambler-animated" },
+                epic,
+                { "cardId": "core-011", "fullArt": "full-art-from-a-newer-client" },
+            ])
+        );
+    }
+
     /// R1834002: a Best-of-1 ticket and a room freeze their deck's slots beside the deck, a trio's
     /// decks theirs inside it, a match both seats' loadouts, and a bot's decks and trio theirs; each
     /// reads back as it was written, and one written without them reads back without them.
@@ -11106,6 +11142,7 @@ mod cosmetic_loadouts {
 
     both_stores!(
         r1834000_card_picks_put_upload_get_cascade,
+        r2655000_card_picks_keep_a_full_art_id,
         r1834002_frozen_slots_and_loadouts_round_trip,
         r1834005_bots_keep_their_cosmetics,
         r1834005_cosmetic_owners_count_people_and_their_first_grant,

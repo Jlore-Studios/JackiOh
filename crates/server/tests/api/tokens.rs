@@ -1034,3 +1034,58 @@ async fn r2378000_a_redemption_sent_past_the_waiting_ones_is_refused_at_once_and
     assert_eq!(status, 200, "its turn come, the token is redeemed: {body}");
     assert_eq!(held(&app, InventoryItem::CardToken, "").await, 0);
 }
+
+#[tokio::test]
+async fn r2655000_an_epic_token_buys_a_new_card_s_epic_full_art_and_no_token_its_legendary_or_mythic() {
+    let (app, token) = setup().await;
+    let card = "classicplus-019".to_string();
+    own(&app, std::slice::from_ref(&card)).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 2).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+
+    // League of Losers' animated and signed full arts are chases, which no token buys (R1305003),
+    // and a token of a chase's tier is no token at all: refused, and every token kept.
+    let before = everything(&app).await;
+    for cosmetic in [
+        "full-art-league-of-losers-animated",
+        "full-art-league-of-losers-signed",
+    ] {
+        for token in ["Rare", "Epic"] {
+            let (status, answer) =
+                redeem(json!({ "token": token, "cosmeticId": cosmetic, "cardId": card })).await;
+            assert_eq!(status, 409, "{cosmetic} for {token}: {answer}");
+        }
+        for token in ["Legendary", "Mythic"] {
+            let (status, answer) =
+                redeem(json!({ "token": token, "cosmeticId": cosmetic, "cardId": card })).await;
+            assert_eq!(status, 400, "{cosmetic} for {token}: {answer}");
+        }
+    }
+    // Its Epic full art is above a Rare token's tier.
+    let (status, answer) =
+        redeem(json!({ "token": "Rare", "cosmeticId": "full-art-league-of-losers", "cardId": card })).await;
+    assert_eq!(status, 409, "{answer}");
+    assert_eq!(everything(&app).await, before);
+
+    // An Epic token buys the Epic full art, on its own card.
+    let (status, answer) =
+        redeem(json!({ "token": "Epic", "cosmeticId": "full-art-league-of-losers", "cardId": card })).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(
+        ledger(&app)
+            .await
+            .cosmetics
+            .iter()
+            .any(|row| row.card_id.as_deref() == Some(card.as_str())
+                && row.cosmetic_id == "full-art-league-of-losers")
+    );
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
+}

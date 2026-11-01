@@ -21,6 +21,13 @@
  * R1297000: the card backs, after the foils. A back is one `data-card-back` look on the viewer's own
  * face-down cards and deck pile, the same for every card of the seat; the default adds no attribute.
  * No look has text, and the emblem and cost gem stay; the chase backs recolor the emblem and move it.
+ *
+ * R2655000: the full-art tiers, after the card backs. A Legendary full art (`cf-full-art--animated`)
+ * lays a light band over its art; a Mythic (`cf-full-art--signed`) signs the card's name across the
+ * art too, between the gems and the name banner (FullArtSignature.tsx). R2655003: still, the band
+ * rests across the art and the name stands whole; in the motion gate, while Animated foil is on
+ * (`data-full-art-motion`), the art drifts in its crop, the band sweeps over it and the name writes
+ * itself left to right once, then holds. A full art takes no foil's motion slot.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -663,6 +670,74 @@
   stroke: #c9a8ff;
 }
 
+/* ---------------------------------------------------------------------- full-art tiers --- */
+
+/* The frame clips what moves inside it: the art scaled for its drift, and the band. */
+.cf.cf-full-art--animated .cf-art-frame {
+  overflow: hidden;
+}
+
+.cf-full-art-sweep {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in srgb, var(--pal-white) 22%, transparent) 46%,
+    color-mix(in srgb, var(--pal-white) 22%, transparent) 54%,
+    transparent 70%
+  );
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* The signature sits over the art below its middle, clear of the cost gem, the rarity gem, the set
+   mark and the crest above it and of the name banner, a Unit's stats and a token's mark below it. */
+.cf .cf-signature {
+  position: absolute;
+  z-index: 2;
+  top: 56cqh;
+  left: 10cqw;
+  right: 10cqw;
+  height: 16cqh;
+  pointer-events: none;
+}
+
+/* A small face (149 mirrors FACE_TEXT_MIN_HEIGHT_PX) gives its name the band from 52cqh down, so
+   the signature moves up into the art, under the grown cost gem and the set mark. */
+@container cardface (max-height: 149px) {
+  .cf:not([data-layout="minion"]) .cf-signature {
+    top: 28cqh;
+    height: 20cqh;
+  }
+}
+
+.cf-signature-wipe,
+.cf-signature-ink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cf-signature-wipe {
+  overflow: hidden;
+}
+
+.cf-signature-ink > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.cf-signature-text {
+  font-family: var(--font-signature);
+  font-weight: 700;
+  fill: var(--pal-parchment);
+  filter: drop-shadow(0 0 1px var(--pal-black)) drop-shadow(0 1px 1px var(--pal-black));
+}
+
 /* ----------------------------------------------------------------------------- motion --- */
 
 /* The one gate every look moves in. The holo band crosses the window and leaves it; the rainbow and
@@ -671,7 +746,9 @@
    the galaxy and the void's shimmer turn, and the void's edge pulses. Gilded edge's gold hairline
    glints; Obsidian's gloss crosses the face and rests off it; Starlit's stars and Celestial's ring
    twinkle; Filigree's ring glints. The chase backs' emblems breathe, turn and orbit: a back has no
-   motion slot, only this gate, and the deck pile, which draws no emblem, holds still. */
+   motion slot, only this gate, and the deck pile, which draws no emblem, holds still. A Legendary or
+   Mythic full art's art drifts in its crop and its band sweeps across it and rests off it; a
+   Mythic's name is uncovered left to right once, then holds (R2655003). */
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-holo-sweep"][data-cosmetic-motion="animated"] .cf-art::after {
     will-change: transform;
@@ -766,6 +843,26 @@
   :root:not([data-reduce-motion="true"]) .cf-back[data-card-back="card-back-nebula"] .cf-back-emblem {
     will-change: transform, opacity;
     animation: cosmetic-back-orbit 14s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-art-frame > .cf-art {
+    will-change: transform;
+    animation: full-art-drift 16s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-full-art-sweep {
+    will-change: transform;
+    animation: full-art-sweep 6s ease-in-out infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-wipe {
+    will-change: transform;
+    animation: full-art-sign-wipe 2.4s ease-in-out 0.4s both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-ink {
+    will-change: transform;
+    animation: full-art-sign-ink 2.4s ease-in-out 0.4s both;
   }
 }
 
@@ -932,5 +1029,46 @@
   100% {
     transform: rotate(360deg) scale(0.95);
     opacity: 0.8;
+  }
+}
+
+/* R2655003: the art's drift, slightly enlarged so its crop never shows an edge. */
+@keyframes full-art-drift {
+  from {
+    transform: scale(1.08) translate(-1.5%, -1%);
+  }
+  to {
+    transform: scale(1.08) translate(1.5%, 1%);
+  }
+}
+
+/* The band crosses the art in the first 40% and rests off it for the rest. */
+@keyframes full-art-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  40%,
+  to {
+    transform: translateX(120%);
+  }
+}
+
+/* The wipe and the ink move in opposite directions, so the name stays put while a widening window
+   uncovers it from the left, as a pen writes it. */
+@keyframes full-art-sign-wipe {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes full-art-sign-ink {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }

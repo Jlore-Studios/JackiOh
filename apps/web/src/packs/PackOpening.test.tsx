@@ -20,6 +20,7 @@ import {
   readCardPicks,
   readCosmetics,
   resetCosmeticsForTests,
+  writeCardFullArt,
   writeCardPick,
   writeCosmetics,
 } from "../cards/cosmetics.ts";
@@ -1123,6 +1124,20 @@ describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
 
     fireEvent.click(screen.getByTestId(T.equip(2)));
     expect(readCardPicks("core-004").fullArt).toBe(true);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
+  it("R2655000 a chase full art's Equip picks that tier", () => {
+    // The card wears its Epic already: the Mythic it just drew is still one to equip.
+    writeCardFullArt("core-004", true);
+    torn({ opened: granting({ kind: "cosmetic", cosmeticId: "full-art-gary-the-gambler-signed", cosmeticRarity: "Mythic" }) });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equip");
+    expect(screen.getByTestId(T.equip(2))).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCardPicks("core-004").fullArt).toBe("full-art-gary-the-gambler-signed");
     expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
     expect(screen.getByTestId(T.equip(2))).toBeDisabled();
   });

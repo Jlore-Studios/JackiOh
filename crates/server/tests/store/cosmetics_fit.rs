@@ -79,7 +79,7 @@ fn samples() -> Vec<LoadoutSample> {
             vec![
                 CardPicks {
                     card_id: "core-001".to_string(),
-                    full_art: Some(true),
+                    full_art: Some(true.into()),
                     ..CardPicks::default()
                 },
                 CardPicks {

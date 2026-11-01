@@ -57,9 +57,16 @@
 // quests, their rewards and its auras. A staged face prints less than its whole text, which stands
 // on the left of its hover preview, every stage in it, as a short form's does.
 //
-// R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
-// words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
-// the hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's board (R1108000).
+// R1017001: a full-art card (fullArt.ts; R2655001: one the cosmetics registry has a full art of, and
+// R2655002 a token listed under one) prints its art across the whole full face and no words
+// (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in the
+// hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial
+// lesson's board (R1108000). R2655000: the face wears the tier its pick names (`data-full-art-tier`):
+// an Epic is the still face; a Legendary is animated (`cf-full-art--animated`): its art drifts in its
+// crop and a light sweeps over it (`.cf-full-art-sweep`); a Mythic moves so too and signs the card's
+// name across the art (`cf-full-art--signed`, FullArtSignature.tsx). R2655003: the motion runs only
+// while Animated foil is on (`data-full-art-motion`) and inside cosmetics.css's motion gate, by
+// transform and opacity, and takes no foil's slot.
 //
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, a foil over
 // its art, a finish and a border, each on its own attribute apart from the rarity foil
@@ -83,7 +90,8 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { showsFullArt, useFullArt } from "./fullArt.ts";
+import { showsFullArt, useFullArtTier } from "./fullArt.ts";
+import { FullArtSignature } from "./FullArtSignature.tsx";
 import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
@@ -331,8 +339,10 @@ export function hasCrest(face: FaceModel): boolean {
 export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
-  // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides.
-  const fullArtOn = useFullArt(face.defId, worn);
+  // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
+  // R2655000: at the tier its pick names.
+  const fullArtTier = useFullArtTier(face.defId, worn);
+  const fullArtOn = fullArtTier !== null;
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -365,12 +375,15 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
-  // R1017001: a hero portrait's card fills its full face with its art, and prints no words.
+  // R1017001: a full-art card fills its full face with its art, and prints no words.
   const fullArt = full && showsFullArt(face, fullArtOn);
+  // R2655000: a Legendary or Mythic full art moves, and a Mythic signs the card's name.
+  const tier = fullArt ? fullArtTier : null;
+  const moving = tier === "Legendary" || tier === "Mythic";
 
   return (
     <span
-      className={join("cf", `cf--${layout}`, className)}
+      className={join("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", tier === "Mythic" && "cf-full-art--signed")}
       data-layout={layout}
       data-card-type={face.type}
       data-rarity={rarity ?? undefined}
@@ -384,6 +397,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      data-full-art-tier={tier ?? undefined}
+      data-full-art-motion={moving ? (settings.animatedFoil ? "animated" : "static") : undefined}
       {...cosmetics}
       style={scales}
     >
@@ -420,11 +435,14 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               starship={face.inPlay ? face.starship : null}
             />
           )}
+          {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
         </span>
 
         <span className="card-name" ref={nameRef}>
           {face.name}
         </span>
+
+        {tier === "Mythic" && <FullArtSignature name={face.englishName ?? face.name} />}
 
         {hasRarityGem(rarity) && (
           <span className="cf-gem" data-rarity={rarity ?? undefined}>

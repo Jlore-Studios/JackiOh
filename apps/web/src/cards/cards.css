@@ -925,12 +925,13 @@
   pointer-events: none;
 }
 
-/* The banner sits between a Unit's attack and health (19cqw gems in the bottom corners, their
-   numbers centered about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh. */
+/* The banner sits between a Unit's attack and health (19cqw gems 1.5cqw in from the bottom corners,
+   their numbers centered about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh,
+   its ends at the gems' inner edges so it covers neither (R2655003 measures it on every type). */
 .cf[data-full-art="true"] .card-name {
   top: 88.2cqh;
-  left: 19cqw;
-  right: 19cqw;
+  left: 20.5cqw;
+  right: 20.5cqw;
   padding: 0 4cqw;
 }
 
@@ -1068,8 +1069,12 @@
   }
 }
 
+/* R2655002: a listed token prints its parent's full art, so a full-art face can be a token's: its
+   mark sits just above the name banner (whose top is at 88.2cqh, with 1cqh between them), between a
+   Unit's attack and health, so it covers neither. A small face puts it back at the foot (below). */
 .cf[data-full-art="true"] .cf-token {
   display: flex;
+  bottom: 12.8cqh;
 }
 
 /* The board minion: the slot is the room its stats row leaves between attack and Armor or health
@@ -1301,9 +1306,12 @@
   }
 
   /* R1177001: the type line is gone, so a token's mark takes its place at the foot, between a
-     Unit's numbers and under anything else's name. */
-  .cf:not([data-layout="minion"]) .cf-token {
+     Unit's numbers and under anything else's name; a full-art token's too (R2655002), whose name
+     takes the small face's band as any name does. */
+  .cf:not([data-layout="minion"]) .cf-token,
+  .cf[data-full-art="true"]:not([data-layout="minion"]) .cf-token {
     display: flex;
+    bottom: 1.5cqh;
   }
 }
 

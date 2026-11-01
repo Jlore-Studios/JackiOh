@@ -46,7 +46,7 @@ import {
   type FaceModel,
 } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
-import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
+import { FullArtAllowed, showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { FAN_CARD_MAX_PX, rotationPool } from "../../../apps/web/src/routes/landingFan.ts";
@@ -298,7 +298,10 @@ describe("R503: the set mark, printed rarity and the new families on real faces"
           const def = CATALOG[id] as CardDef;
           return (
             <div key={id} data-marked={id} style={{ width, height: heightFor(width), flex: "none" }}>
-              <CardFace face={faceModel({ defId: id, def, radiant })} layout="full" />
+              {/* R2655002: this token prints its parent's full art now; the row reads its printed-rarity frame. */}
+              <FullArtAllowed allowed={id !== "classicplus-019-1"}>
+                <CardFace face={faceModel({ defId: id, def, radiant })} layout="full" />
+              </FullArtAllowed>
             </div>
           );
         })}
