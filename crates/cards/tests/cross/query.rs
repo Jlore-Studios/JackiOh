@@ -388,8 +388,7 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
     fn build_row_51_1_the_ky_pool_excludes_the_ky_tagged_tokens_51_1_and_classic_plus_42_1_and_the_generator_57()
      {
         register();
-        let names: Vec<String> = catalog
-            .pool("core-057", &q(json!({ "tags": ["KY"] })))
+        let names: Vec<String> = pool("core-057", &q(json!({ "tags": ["KY"] })))
             .iter()
             .map(|def| def.name.clone())
             .collect();
