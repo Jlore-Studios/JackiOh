@@ -2,8 +2,8 @@
 // seed, and what the result dialog says about a claim.
 //
 // Page-safe: it never imports `core.ts`, and it decides no rule (CLAUDE.md rule 7). Whether a game
-// pays is the server's to say once it has folded the log and played the AI's side again
-// (R1303002); this only names the setups the server is asked about and words its answer.
+// pays is the server's to say once it has folded the log to its result (R2560000); this only names
+// the setups the server is asked about and words its answer.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 
@@ -45,12 +45,7 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
 export type PracticeEarning =
   | { kind: "pending" }
   | { kind: "paid"; jlore: number; xp: number; jloreCapped: boolean; tracks?: readonly TrackGain[]; quests?: readonly QuestPaid[] }
-  | {
-      kind: "refused";
-      reason: string;
-      /** R2208000: this device's clock cut one of the game's AI decisions short, which an `ai_mismatch` may then be. */
-      clockCut?: true;
-    }
+  | { kind: "refused"; reason: string }
   | { kind: "unreachable" }
   | { kind: "unearned"; /** R2379000: the server's reason for issuing no seed, or the page's unreachable sentence; null when neither. */ reason: string | null };
 
@@ -70,8 +65,6 @@ function refusalText(reason: string): string {
       return t("it came in too late to count");
     case "does_not_fold":
       return t("we couldn't check how it was played");
-    case "ai_mismatch":
-      return t("the AI's moves didn't check out");
     case "not_finished":
       return t("it did not finish");
     case "voided":
@@ -92,14 +85,8 @@ export function earningText(earning: PracticeEarning): string {
       // R1483000: what was paid stays in the line; the cap's holdback follows it.
       return earning.jloreCapped ? `${paid} · ${t("Daily Jlore reached")}` : paid;
     }
-    case "refused": {
-      // R2208000: an AI move this device's clock cut short is the cause, so the line names it.
-      const reason =
-        earning.reason === "ai_mismatch" && earning.clockCut === true
-          ? t("this device ran out of time on one of the AI's moves")
-          : refusalText(earning.reason);
-      return t("This game earned nothing ({reason}).", { reason });
-    }
+    case "refused":
+      return t("This game earned nothing ({reason}).", { reason: refusalText(earning.reason) });
     case "unreachable":
       return t("The server could not check this game.");
     case "unearned":

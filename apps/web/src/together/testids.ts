@@ -1,5 +1,5 @@
 // Play together's chrome (#936, SPEC S8): the friends page, the chat panel and the Friends button's
-// panel, the challenge toast, the watch screen, the replay share and the spectators setting. The SPEC fixes the
+// panel, the challenge toast, the watch screen and the replay share. The SPEC fixes the
 // first ids of each group; the rest are this slice's. `e2e/support/testids.ts` mirrors the strings.
 
 export const togetherTestid = {
@@ -16,6 +16,8 @@ export const togetherTestid = {
   noFriends: "together-no-friends",
   challenge: "together-challenge",
   watch: "together-watch",
+  /** R2615000: the Watching panel's note that friends may always watch, and how to stop one. */
+  watchingNote: "together-watching-note",
   chatOpen: "together-chat-open",
   unread: "together-unread",
   remove: "together-remove",
@@ -41,6 +43,8 @@ export const togetherTestid = {
   challengeError: "together-challenge-error",
   /** #1568: a failed deck read offers Try again beside the alert. */
   challengeDecksRetry: "together-challenge-decks-retry",
+  /** R915005: under a deck or trio picker that lists one naming a custom card: why it is off. */
+  challengePracticeOnly: "together-challenge-practice-only",
   /** One per open challenge this account sent: `data-challenge-id`, `data-room-code`. */
   outgoingChallenge: "together-outgoing-challenge",
   cancelChallenge: "together-cancel-challenge",
@@ -108,6 +112,8 @@ export const challengeToastTestid = {
   decline: "challenge-decline",
   /** The deck or trio the toast joins with. */
   deck: "challenge-toast-deck",
+  /** R915005: under a deck or trio picker that lists one naming a custom card: why it is off. */
+  practiceOnly: "challenge-toast-practice-only",
   /** R2031000: an All Random challenge's "More cards from" (R924000), a select. */
   lean: "challenge-toast-lean",
   /** R767's way in: `/play` with the room's code filled in, offered after a refused join. */
@@ -140,5 +146,3 @@ export const shareTestid = {
   retry: "share-friend-retry",
 } as const;
 
-/** "Let friends watch my games" (`allowSpectators`), in the settings panel and on Play together. */
-export const SPECTATORS_SETTING_TESTID = "setting-allowSpectators";

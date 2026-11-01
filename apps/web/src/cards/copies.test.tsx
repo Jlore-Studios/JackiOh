@@ -20,7 +20,7 @@ import { listedFace } from "../game/faces.ts";
 import { withCatalog } from "../test/board.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
-import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
+import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { copyingWords } from "./inspect/StateNotes.tsx";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_HOVER, INSPECT_PRINTED, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 const ECHO = "classic-057";
-/** (1) Spell: "Draw {draw}." — 3 on its base face, 6 on its Radiant face. */
+/** (1) Spell: "Draw {least}-{most}." — 2-3 on its base face, 4-6 on its Radiant face (#2657). */
 const KNOWLEDGE = "classic-024";
 /** (1) Spell, no declared numbers: "Draw 2. Heal your hero 2." */
 const STOCKPILE = "core-005";
@@ -66,12 +66,9 @@ function hover(element: HTMLElement): HTMLElement {
   return screen.getByTestId(INSPECT_HOVER);
 }
 
-function longPress(element: HTMLElement): HTMLElement {
-  fireEvent.pointerDown(element, { pointerType: "touch", clientX: 10, clientY: 10 });
-  act(() => {
-    vi.advanceTimersByTime(LONG_PRESS_MS * 2);
-  });
-  fireEvent.pointerUp(element, { pointerType: "touch", clientX: 10, clientY: 10 });
+/** The I key on `element` opens its inspect sheet (a touch hold shows the preview, R2617000), and the sheet. */
+function sheetOf(element: HTMLElement): HTMLElement {
+  fireEvent.keyDown(element, { key: "i" });
   return screen.getByTestId(INSPECT_SHEET);
 }
 
@@ -82,9 +79,9 @@ describe("R399 R511 Echo prints the text it copies", () => {
   });
 
   it("R511 in hand it prints the copied face's text with the numbers it reads, under its own name, cost and type", () => {
-    renderHand([echo({ copies: { defId: KNOWLEDGE, radiant: false, params: { draw: 3 } } })]);
+    renderHand([echo({ copies: { defId: KNOWLEDGE, radiant: false, params: { least: 2, most: 3 } } })]);
     const root = screen.getByTestId(testid.handCard("e1"));
-    expect(rulesText(root)).toBe("Draw 3.");
+    expect(rulesText(root)).toBe("Draw 2-3.");
     expect(root.querySelector(".card-name")?.textContent).toBe("Echo");
     expect(root.querySelector(".cost-gem")?.getAttribute("data-cost")).toBe("1");
     expect(face(root).getAttribute("data-card-type")).toBe("Spell");
@@ -92,9 +89,9 @@ describe("R399 R511 Echo prints the text it copies", () => {
   });
 
   it("R511 a number the copy reads off its printed value is drawn as it reads, marked as moved", () => {
-    renderHand([echo({ copies: { defId: KNOWLEDGE, radiant: false, params: { draw: 5 } } })]);
+    renderHand([echo({ copies: { defId: KNOWLEDGE, radiant: false, params: { least: 2, most: 5 } } })]);
     const root = screen.getByTestId(testid.handCard("e1"));
-    expect(rulesText(root)).toBe("Draw 5.");
+    expect(rulesText(root)).toBe("Draw 2-5.");
     const moved = must(root.querySelector<HTMLElement>(".cf-tuned"), "the moved number");
     expect(moved.textContent).toBe("5");
     expect(moved.getAttribute("data-way")).toBe("better");
@@ -106,13 +103,14 @@ describe("R399 R511 Echo prints the text it copies", () => {
   });
 
   it("R511 a Radiant Echo keeps its own Echo 1, marked as its Radiant face marks it, over the text it copies", () => {
-    renderHand([echo({ radiant: true, copies: { defId: KNOWLEDGE, radiant: true, params: { draw: 6 } } })]);
+    renderHand([echo({ radiant: true, copies: { defId: KNOWLEDGE, radiant: true, params: { least: 4, most: 6 } } })]);
     const root = screen.getByTestId(testid.handCard("e1"));
-    expect(rulesText(root)).toBe("Echo 1\nDraw 6.");
+    expect(rulesText(root)).toBe("Echo 1\nDraw 4-6.");
     const marks = Array.from(root.querySelectorAll(".cf-text-base .cf-mark")).map((mark) => mark.textContent ?? "");
     expect(marks.join(" ")).toContain("Echo 1");
-    // Book of Knowledge's Radiant face draws 6 where its base face draws 3: the copy marks it too.
-    expect(marks).toContain("6");
+    // Book of Knowledge's Radiant face draws 4-6 where its base face draws 2-3: the copy marks it too.
+    expect(marks.join(" ")).toContain("4");
+    expect(marks.join(" ")).toContain("6");
   });
 
   it("R399 an Echo that copies nothing prints its own text and has no note", () => {
@@ -127,7 +125,7 @@ describe("R399 R511 Echo prints the text it copies", () => {
 
   it("R511 the hover preview and the sheet say what it copies, and give Echo's own printed text beside the copy", () => {
     vi.useFakeTimers();
-    renderHand([echo({ copies: { defId: KNOWLEDGE, radiant: false, params: { draw: 3 } } })]);
+    renderHand([echo({ copies: { defId: KNOWLEDGE, radiant: false, params: { least: 2, most: 3 } } })]);
     const root = screen.getByTestId(testid.handCard("e1"));
     const preview = hover(root);
     const note = must(within(preview).getByTestId(INSPECT_STATES).querySelector<HTMLElement>('[data-state="copies"]'), "the note");
@@ -136,20 +134,20 @@ describe("R399 R511 Echo prints the text it copies", () => {
     expect(within(preview).getByTestId(INSPECT_PRINTED).textContent).toContain(ECHO_SENTENCE);
     fireEvent.pointerLeave(root, { pointerType: "mouse" });
 
-    const sheet = longPress(root);
+    const sheet = sheetOf(root);
     expect(within(sheet).getByTestId(INSPECT_STATES).textContent).toContain("Copying: Book of Knowledge");
   });
 
   it("R399 while it resolves both players' boards draw the copy in the resolving strip, and the play reveal's face does too", () => {
-    const resolving = echo({ instanceId: "r1", copies: { defId: KNOWLEDGE, radiant: false, params: { draw: 3 } } });
+    const resolving = echo({ instanceId: "r1", copies: { defId: KNOWLEDGE, radiant: false, params: { least: 2, most: 3 } } });
     const view = baseView({ opponent: emptySide("p2", { resolving: [resolving], hand: { count: 3 } }) });
     render(withCatalog(<Board view={view} />));
     const root = within(screen.getByTestId("resolving-opponent")).getByTestId(testid.card("r1"));
-    expect(rulesText(root)).toBe("Draw 3.");
+    expect(rulesText(root)).toBe("Draw 2-3.");
     expect(root.querySelector(".card-name")?.textContent).toBe("Echo");
     // The showcase and the log draw a card the view lists through listedFace.
     const listed = must(listedFace(lookup, view, resolving), "the listed face");
-    expect(listed.text.full).toBe("Draw 3.");
+    expect(listed.text.full).toBe("Draw 2-3.");
     expect(listed.copying).toEqual({ defId: KNOWLEDGE, name: "Book of Knowledge", radiant: false });
   });
 });
@@ -169,13 +167,13 @@ describe("R399 R511 Echo through the real engine", () => {
 
     game.act("p1", must(playOf(game, "p1", knowledge.instanceId), "a legal play of Book of Knowledge"));
     const copied = must(hand().find((entry) => entry.instanceId === echoCard.instanceId), "Echo still in hand");
-    expect(copied.copies).toEqual({ defId: KNOWLEDGE, radiant: false, params: { draw: 3 } });
+    expect(copied.copies).toEqual({ defId: KNOWLEDGE, radiant: false, params: { least: 2, most: 3 } });
     expect(Array.isArray(game.view("p2").opponent.hand)).toBe(false);
 
     vi.useFakeTimers();
     render(withCatalog(<Board view={game.view("p1")} />, catalog));
     const root = screen.getByTestId(testid.handCard(echoCard.instanceId));
-    expect(rulesText(root)).toBe("Draw 3.");
+    expect(rulesText(root)).toBe("Draw 2-3.");
     expect(root.querySelector(".card-name")?.textContent).toBe("Echo");
     const preview = hover(root);
     expect(within(preview).getByTestId(INSPECT_STATES).textContent).toContain("Copying: Book of Knowledge");

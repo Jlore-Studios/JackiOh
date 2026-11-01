@@ -619,9 +619,7 @@ pub fn counter_play(args: CounterPlayArgs) -> Effect {
         } else {
             match to {
                 CounterDestination::Thief => {
-                    if ctx.state.players[thief].hand.len() as i32
-                        >= crate::query::hand_cap_of(ctx.state, thief)
-                    {
+                    if crate::query::room_in(ctx.state, thief, OffFieldZone::Hand) == 0 {
                         CounteredTo::Graveyard
                     } else {
                         CounteredTo::Hand

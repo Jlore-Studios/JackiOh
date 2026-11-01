@@ -1,9 +1,11 @@
-//! SPEC §8.11 Training Grounds #55 Reminisce, the snapshot of Core #72 Reminisce (`core-072`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//! SPEC §8.11 Training Grounds #55 Legacy: Reminisce,
+//! the Legacy card of Core #72 Reminisce (`core-072`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
 //!
 //! #72 Reminisce (SPEC §8.3): "Discover a card from your GY; it costs 1 less; exile this", radiant
 //! "It costs 0" — the radiant cell restates only the cost clause, so the Discover and the self-exile

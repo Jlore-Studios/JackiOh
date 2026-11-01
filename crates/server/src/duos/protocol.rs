@@ -25,6 +25,7 @@ use jackioh_engine::config::{BACKROW_ZONES, UNIT_ZONES};
 use jackioh_engine::duos::DUOS_NONCE_PREFIX;
 use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
 
+pub use crate::actor::protocol::encode;
 use crate::actor::protocol::{
     ClientMessage, MAX_FRAME_BYTES, MAX_NONCE_LENGTH, MalformedMessage, SERVER_NONCE_PREFIX, SocketErrorCode,
     parse_client_message,
@@ -358,13 +359,6 @@ pub fn error_message(code: SocketErrorCode, message: &str, nonce: Option<&str>) 
         message: message.to_string(),
         nonce: nonce.map(str::to_string),
     }
-}
-
-/// The frame's JSON text.
-pub fn encode(message: &DuosServerMessage) -> String {
-    serde_json::to_string(message).unwrap_or_else(|error| {
-        format!(r#"{{"type":"error","code":"internal","message":"the frame could not be encoded: {error}"}}"#)
-    })
 }
 
 #[cfg(test)]

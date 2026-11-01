@@ -18,7 +18,6 @@ import { CardBack, CardFace, CardListSheet, useInspectTrigger, type CardListEntr
 import { DEFAULT_CARD_COSMETICS } from "../cards/cosmetics.ts";
 import { TheirCopy } from "../cards/loadouts.ts";
 import { CatalogContext, type CardLookup } from "./catalog.ts";
-import { touchHoldMode } from "./contract.ts";
 import { listedFace } from "./faces.ts";
 import { revealTestid } from "./reveal.ts";
 import { useSeatDeckCosmetics, useTheirLoadout } from "./wearer.ts";
@@ -57,16 +56,14 @@ function TheirCard({
   face,
   index,
   back,
-  touchHold,
 }: {
   card: CardView;
   face: FaceModel | null;
   index: number;
   back?: string;
-  touchHold?: "sheet" | "preview";
 }): ReactElement {
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above", touchHold, showLoc: false });
+  const inspect = useInspectTrigger(face === null ? null : { key: `their-hand-${card.instanceId}`, face }, { prefer: "above", showLoc: false });
   const style = { "--i": index } as CSSProperties;
   if (face === null) {
     return (
@@ -114,7 +111,7 @@ export function TheirHand({ view, cards }: TheirHandProps): ReactElement {
         ) : (
           <ul className="their-hand__cards">
             {cards.map((card, index) => (
-              <TheirCard key={card.instanceId} card={card} face={entries[index]?.face ?? null} index={index} back={back} touchHold={touchHoldMode(view)} />
+              <TheirCard key={card.instanceId} card={card} face={entries[index]?.face ?? null} index={index} back={back} />
             ))}
           </ul>
         )}

@@ -16,10 +16,11 @@
 //   after the state it shows, then draws the friend's board read-only from the friend's seat;
 // - B50, §10.8: every `view` frame carries `legal: []`, the friend's seat's hand in full and the
 //   other seat's hand as a count alone;
-// - B50 (revocation): the friend turning `allowSpectators` off mid-watch ends it with a `forbidden`
-//   frame and the refused screen;
-// - B50 (refusal): with watching off, and with the friends no longer friends, the watch link is
-//   refused the same way, and the way back leads to Play together.
+// - R2615000: the account's settings carry no watching switch, so a friend may always watch;
+// - B50 (revocation): the friend removing the watcher mid-watch ends it with a `forbidden` frame and
+//   the refused screen, the friendship being the way out;
+// - B50 (refusal): with the two no longer friends, the watch link is refused the same way, and the
+//   way back leads to Play together.
 //
 // "Full" (`SPECTATORS_PER_MATCH`) is not covered here: an account is one watcher, so filling a match
 // takes nine friend accounts and the E2E server seeds three. The server's own test covers it
@@ -94,16 +95,6 @@ function incomingRequestRow(profileId: string): string {
 /** The watch link a friend row's Watch follows (`watchLink` in apps/web/src/together/watchLink.ts). */
 function watchPath(matchId: string, friendId: string): string {
   return `/watch/${matchId}?${new URLSearchParams({ friend: friendId }).toString()}`;
-}
-
-/** `PUT /api/settings` with the account's `allowSpectators` alone. */
-function allowSpectators(account: E2EAccount, allow: boolean): Cypress.Chainable<Cypress.Response<{ settings: { allowSpectators: boolean } }>> {
-  return cy.request<{ settings: { allowSpectators: boolean } }>({
-    method: "PUT",
-    url: apiUrl("/api/settings"),
-    headers: bearerHeaders(account.token),
-    body: { allowSpectators: allow },
-  });
 }
 
 // The frames the watch screen's socket received
@@ -182,7 +173,7 @@ describe("44 watching a friend's live game", () => {
       .should("eq", "active");
   });
 
-  it("B50: waits out the delay, then draws the friend's seat read-only, and is ended when the friend turns watching off", () => {
+  it("B50 R2615000: waits out the delay, then draws the friend's seat read-only, and is ended when the friend removes the watcher", () => {
     const one = accounts.p1();
     const two = accounts.p2();
     const joiner = accounts.pending();
@@ -206,10 +197,10 @@ describe("44 watching a friend's live game", () => {
       expect(twoName, "R1435: the watcher has a username to be found by").to.not.eq("");
     });
 
-    // §9.5: a friend allows watching until they say otherwise.
-    cy.request<{ settings: { allowSpectators: boolean } }>({ method: "GET", url: apiUrl("/api/settings"), headers: bearerHeaders(one.token) })
-      .its("body.settings.allowSpectators")
-      .should("eq", true);
+    // R2615000: no setting turns watching off; the account's settings carry no switch.
+    cy.request<{ settings: Record<string, unknown> }>({ method: "GET", url: apiUrl("/api/settings"), headers: bearerHeaders(one.token) })
+      .its("body.settings")
+      .should("not.have.property", "allowSpectators");
 
     // B43: `one` asks `two` to be friends, and `two` opens Play together, where the request waits.
     cy.then(() => {
@@ -300,9 +291,10 @@ describe("44 watching a friend's live game", () => {
       }
     });
 
-    // B50, B46: the friend turns watching off, and the watcher is let go at once.
+    // B50, B45: the friend removes the watcher, and the watcher is let go at once (R2615000: the
+    // friendship is the way out).
     cy.then(() => {
-      allowSpectators(one, false).its("body.settings.allowSpectators").should("eq", false);
+      cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
     });
     cy.get(ts(WATCH_REFUSED), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(WATCH_SCREEN)).should("have.attr", "data-connection", "refused");
@@ -312,21 +304,8 @@ describe("44 watching a friend's live game", () => {
       expect(last?.code, "B50: a revoked watcher is told forbidden").to.eq("forbidden");
     });
 
-    // With watching off, the row no longer offers Watch, and a watch link is refused.
-    cy.visitAs(two, TOGETHER);
+    // No longer friends: a watch link is refused the same way, and the way back leads to Play together.
     cy.then(() => {
-      cy.get(friendRow(oneId), { timeout: timeouts.view })
-        .should("have.attr", "data-status", "inMatch")
-        .and("have.attr", "data-watchable", "false");
-      cy.get(friendRow(oneId)).find(ts(TOGETHER_WATCH)).should("not.exist");
-      cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
-    });
-    expectRefused();
-
-    // Watching back on, but no longer friends: the same refusal, and the way back leads to Play together.
-    cy.then(() => {
-      allowSpectators(one, true).its("status").should("eq", 200);
-      cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
       cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
     });
     expectRefused();

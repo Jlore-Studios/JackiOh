@@ -1,13 +1,13 @@
 //! S #74 Paragon-X (SPEC §8.10 row 74): (4) Unit, Mythic, 10/1 → 20/2, of the Stinkyscape set.
-//!   Base:    "Tribute 2, Starship Piece, Charge, Flying, Ranged, Divine Shield, Immutable / Immune to
-//!            Spell Damage."
-//!   Radiant: "Tribute 2, Starship Piece, Charge, Flying, Ranged, Divine Shield, Immutable, Pierce /
-//!            Immune to Spell Damage."
-//! Engine: its keywords are catalog data (§6.1): Starship Piece (R1852000: dying, a copy fuses into its
-//! owner's Dormant Starship), Charge, Flying, Ranged, Divine Shield and Immutable (R23). Tribute 2 is its
-//! play's cost (§6.3, `StaticFlags.tribute`, R101). Immune to Spell Damage (R1849000,
-//! `StaticFlags.immune_to_spell_damage`): a Spell's hit on it is no damage instance, its Divine Shield
-//! kept; a Unit's or a Trap's lands. Radiant: Pierce, the same flags.
+//!   Base:    "Tribute 2, Charge, Flying, Ranged, Divine Shield, Immutable, Immune to Spells"
+//!   Radiant: "Tribute 2, Charge, Flying, Ranged, Divine Shield, Immutable, Immune to Spells, Pierce"
+//! Engine: its keywords are catalog data (§6.1): Charge, Flying, Ranged, Divine Shield, Immutable (R23,
+//! R781001) and Immune to Spells (E35, `restrictions::spell_cannot_reach`): no Spell may target it,
+//! and a Spell's sweep passes it by, its damage and its destroys alike, its Divine Shield kept; a Unit's
+//! or a Trap's lands. Tribute 2 is its play's cost (§6.3, `StaticFlags.tribute`, R101). Since #2521 it
+//! prints Immune to Spells in place of its Immune to Spell Damage flag (R1849000) and is no Starship
+//! Piece, so its death fuses nothing. Radiant: Pierce, the same keywords. Through v0.5.11 it carried
+//! the flag, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -20,12 +20,29 @@ pub fn script() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    // The Radiant face adds Pierce, catalog data, and keeps the Tribute.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
+
+/// R767000: through v0.5.11 it printed no Immune to Spells and carried Immune to Spell Damage as a flag
+/// (R1849000: a Spell's hit on it was no damage instance; a Spell's destroy still reached it);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
             immune_to_spell_damage: Some(true),
             ..StaticFlags::default()
         }),
         ..Script::default()
     };
-    // The Radiant face adds Pierce, catalog data, and keeps both flags.
     CardScripts {
         radiant: base.clone(),
         base,
@@ -44,6 +61,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const POWDER_SPRAY: &str = "classicplus-012-4"; // (1) Spell: Deal 3 damage to each enemy.
     const SORCERER: &str = "core-068"; // (2) 5/5, Cry: Deal 4 damage.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ARMAGEDDON: &str = "core-088"; // (4) Spell: Destroy all permanents.
 
     /// p1 holds Paragon-X (`radiant` its face) with two Vanillas on its field to tribute; p2 holds
@@ -72,6 +90,13 @@ mod tests {
         has_keyword(&s.stats(card).keywords, kind)
     }
 
+    fn hit(s: &Scenario, card: &CardInstance) -> bool {
+        s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::Damage { target_id, .. } if *target_id == card.id
+        ))
+    }
+
     mod base {
         use super::*;
 
@@ -92,19 +117,36 @@ mod tests {
         }
 
         #[test]
-        fn a_spells_hit_deals_nothing_and_keeps_divine_shield() {
-            // Immutable: no Spell may target it (R781001), so the Spell is an "each enemy" one.
+        fn immune_to_spells_no_spell_may_target_it() {
+            let mut s = on_the_field(false, json!([HIT_JOB, FILLER]));
+            let paragon = s.unit_at(P1, 1);
+            assert!(has(&s, &paragon, KeywordKind::ImmuneToSpells));
+            assert!(immune_to_spells(s.state(), &paragon));
+            let spell = s.card(HIT_JOB).clone();
+            assert!(spell_cannot_reach(s.state(), Some(&spell), &paragon));
+            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::instance(&paragon) })));
+            s.expect_in_zone(&paragon, "field");
+        }
+
+        #[test]
+        fn a_damaging_spells_sweep_skips_it_and_keeps_divine_shield() {
             let mut s = on_the_field(false, json!([POWDER_SPRAY]));
             let paragon = s.unit_at(P1, 1);
             assert!(has(&s, &paragon, KeywordKind::DivineShield));
             s.play(POWDER_SPRAY, json!({}));
+            // The hero still takes the sweep's 3; the Paragon is passed by, no instance at all.
             s.expect_health(P1, HERO_HEALTH - 3);
             s.expect_stats(&paragon, json!({ "attack": 10, "health": 1 }));
             assert!(has(&s, &paragon, KeywordKind::DivineShield), "no instance, so no shield spent");
-            assert!(!s.last_events().iter().any(|event| matches!(
-                event,
-                GameEvent::Damage { target_id, .. } if *target_id == paragon.id
-            )));
+            assert!(!hit(&s, &paragon));
+        }
+
+        #[test]
+        fn a_spells_destroy_all_passes_it_by() {
+            let mut s = on_the_field(false, json!([ARMAGEDDON]));
+            let paragon = s.unit_at(P1, 1);
+            s.play(ARMAGEDDON, json!({}));
+            s.expect_in_zone(&paragon, "field");
         }
 
         #[test]
@@ -117,18 +159,35 @@ mod tests {
         }
 
         #[test]
-        fn dying_it_fuses_into_the_dormant_starship() {
-            let mut s = on_the_field(false, json!([ARMAGEDDON]));
+        fn its_death_fuses_nothing_it_is_no_starship_piece() {
+            // Two Units' Cries: the first takes the Divine Shield, the second kills it.
+            let mut s = on_the_field(false, json!([SORCERER, SORCERER]));
             let paragon = s.unit_at(P1, 1);
-            s.play(ARMAGEDDON, json!({}));
+            assert!(!has(&s, &paragon, KeywordKind::StarshipPiece));
+            s.play(SORCERER, json!({ "zone": 1, "targets": pick::instance(&paragon) }));
+            s.play(SORCERER, json!({ "zone": 2, "targets": pick::instance(&paragon) }));
             s.expect_in_zone(&paragon, "graveyard");
-            assert!(s.last_events().iter().any(|event| matches!(
-                event,
-                GameEvent::StarshipFused { player: P1, def_id, .. } if def_id == ID
-            )));
-            let starship = dormant_starship_of(s.state(), P1).expect("a Dormant Starship was summoned").clone();
-            assert_eq!(starship_pieces_of(&starship).len(), 1);
-            assert!(!has(&s, &starship, KeywordKind::StarshipPiece), "R1852001: the hull is no piece");
+            assert!(dormant_starship_of(s.state(), P1).is_none(), "no piece died, so no Dormant Starship");
+            assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
+        }
+
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_spares_it_a_spells_damage_by_its_flag() {
+            // As v0.5.11 printed it: no Immune to Spells, the flag alone (R1849000).
+            let old = |def: &mut CardDef| {
+                for face in [&mut def.base, &mut def.radiant] {
+                    face.keywords.retain(|keyword| keyword.kind() != KeywordKind::ImmuneToSpells);
+                }
+            };
+            crate::under_kept_as(ID, super::super::script_v0_5_11(), old, || {
+                let mut s = on_the_field(false, json!([POWDER_SPRAY]));
+                let paragon = s.unit_at(P1, 1);
+                assert!(!immune_to_spells(s.state(), &paragon));
+                s.play(POWDER_SPRAY, json!({}));
+                s.expect_stats(&paragon, json!({ "health": 1 }));
+                assert!(has(&s, &paragon, KeywordKind::DivineShield));
+                assert!(!hit(&s, &paragon));
+            });
         }
     }
 
@@ -136,15 +195,27 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_20_2_with_pierce() {
+        fn is_20_2_with_pierce_and_immune_to_spells() {
             let mut s = on_the_field(true, json!([POWDER_SPRAY]));
             let paragon = s.unit_at(P1, 1);
             s.expect_stats(&paragon, json!({ "attack": 20, "health": 2 }));
             assert!(has(&s, &paragon, KeywordKind::Pierce));
-            // The same flags: a Spell's hit deals it nothing.
+            assert!(has(&s, &paragon, KeywordKind::ImmuneToSpells));
+            // The same keyword: a Spell's sweep passes it by.
             s.play(POWDER_SPRAY, json!({}));
             s.expect_stats(&paragon, json!({ "health": 2 }));
             assert!(has(&s, &paragon, KeywordKind::DivineShield));
+            assert!(!hit(&s, &paragon));
+        }
+
+        #[test]
+        fn its_death_fuses_nothing() {
+            let mut s = on_the_field(true, json!([SORCERER, SORCERER]));
+            let paragon = s.unit_at(P1, 1);
+            s.play(SORCERER, json!({ "zone": 1, "targets": pick::instance(&paragon) }));
+            s.play(SORCERER, json!({ "zone": 2, "targets": pick::instance(&paragon) }));
+            s.expect_in_zone(&paragon, "graveyard");
+            assert!(dormant_starship_of(s.state(), P1).is_none());
         }
     }
 }

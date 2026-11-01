@@ -17,8 +17,9 @@ import { mixHex, RADIANT_PALETTE, turnHue } from "./themes.ts";
 export const TRAINING_GROUNDS_PREFIX = "traininggrounds-";
 
 /**
- * The snapshots (docs/training-grounds-set.md TG2): each draws the picture of the Core card it
- * freezes, so a snapshot and its Core card look the same (R503).
+ * The Legacy cards, the snapshots of docs/training-grounds-set.md TG2: each draws the picture of the
+ * Core card it freezes, so a Legacy card and its Core card look the same (R503); its `Legacy:` name and
+ * tag set it apart (R2511000).
  */
 export const SNAPSHOT_ART: Readonly<Record<string, string>> = {
   "traininggrounds-041": "core-002",
@@ -43,7 +44,10 @@ export const SNAPSHOT_ART: Readonly<Record<string, string>> = {
   "traininggrounds-060": "core-058",
 };
 
-/** The Core card whose picture a snapshot wears, or null for any other id. */
+/** R2511000: what a Legacy card's name holds before its Core card's. */
+export const LEGACY_PREFIX = /^Legacy: /;
+
+/** The Core card whose picture a Legacy card wears, or null for any other id. */
 export function snapshotArtOf(defId: string): string | null {
   return Object.hasOwn(SNAPSHOT_ART, defId) ? (SNAPSHOT_ART[defId] ?? null) : null;
 }

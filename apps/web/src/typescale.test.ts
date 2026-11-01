@@ -1,5 +1,5 @@
 // #2107: the board's text takes its sizes from one type scale, typescale.css, and its faces from
-// fonts.css's three families, and no stylesheet gains a size or a face of its own unless this file
+// fonts.css's four families, and no stylesheet gains a size or a face of its own unless this file
 // says so.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -14,8 +14,8 @@ const SRC = dirname(fileURLToPath(import.meta.url));
 const TYPE_MAX = 10;
 /** The step the board's body is set in; every other step's em form is a fraction of it. */
 const BODY_STEP = "md";
-/** The faces a stylesheet may name: fonts.css's three families, or its parent's. */
-const FAMILIES = ["inherit", "var(--font-display)", "var(--font-text)", "var(--font-mono)"];
+/** The faces a stylesheet may name: fonts.css's four families, or its parent's. */
+const FAMILIES = ["inherit", "var(--font-display)", "var(--font-text)", "var(--font-mono)", "var(--font-signature)"];
 
 const STEP = /var\(--type-[a-z0-9]+(?:-em)?\)/;
 /** A viewport or container term, which a clamp() or max() may hold beside a step. */
@@ -66,8 +66,8 @@ const UNSCALED: Record<string, number> = {
   "auth/consent.css": 3,
   "auth/tavern.css": 23,
   "auth/two-step.css": 1,
-  "cards/cards.css": 30,
-  "cards/cardstate.css": 9,
+  "cards/cards.css": 29,
+  "cards/cardstate.css": 8,
   "cards/inspect/inspect.css": 34,
   "cards/inspect/list-play.css": 1,
   "cards/keywords.css": 3,
@@ -149,12 +149,13 @@ describe("#2107 the type scale", () => {
       "--font-display",
       "--font-text",
       "--font-mono",
+      "--font-signature",
     ]);
   });
 });
 
 describe("#2107 no one-off sizes or faces", () => {
-  it("#2107 the board's stylesheets state no size but the scale's and no face but the three families", () => {
+  it("#2107 the board's stylesheets state no size but the scale's and no face but the four families", () => {
     expect(BOARD_SHEETS.length).toBeGreaterThan(20);
     const found = BOARD_SHEETS.flatMap((sheet) => offScale(read(sheet)).map((declaration) => `${sheet}: ${declaration}`));
     expect(found, "name a step (typescale.css) or a family (fonts.css) instead").toEqual([]);

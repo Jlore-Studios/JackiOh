@@ -224,7 +224,7 @@ fn only(cards: Vec<CardInstance>) -> CardInstance {
         .expect("expected exactly one fixture card")
 }
 
-/// A card owned by one player but standing on the other's field, for R12's "owner's graveyard".
+/// A card owned by one player but standing on the other's field, for R2618000's "controller's graveyard".
 fn stolen_onto(state: &mut GameState, def_id: &str, owner: PlayerId, at: ZoneSlot) -> CardInstance {
     let mut card = new_instance(state, def_id, owner, Zone::Hand { player: owner });
     if !place_on_field(state, &mut card, at, Default::default()) {
@@ -262,7 +262,7 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
     use super::*;
 
     #[test]
-    fn marks_every_matching_enemy_unit_leaves_allies_and_other_tags_standing_and_one_state_check_buries_them_in_their_owners_graveyards_r12_r59()
+    fn marks_every_matching_enemy_unit_leaves_allies_and_other_tags_standing_and_one_state_check_buries_them_in_their_controllers_graveyards_r2618000_r59()
      {
         // §6.3.
         let mut state = game("destroyAll-scope");
@@ -271,7 +271,7 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
         let enemy_one = put(&mut state, BEAST, slot(PlayerId::P2, Row::Units, 1), json!({}));
         let enemy_human = put(&mut state, HUMAN, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let enemy_two = put(&mut state, FELINOR, slot(PlayerId::P2, Row::Units, 3), json!({}));
-        // R12: owned by p1, standing on p2's side: the scope is by side, the graveyard by owner.
+        // R2618000: owned by p1, standing on p2's side: the scope is by side, and so is the graveyard.
         let stolen = stolen_onto(&mut state, BEAST, PlayerId::P1, slot(PlayerId::P2, Row::Units, 4));
         let mut run = Runner::new(state);
 
@@ -311,12 +311,23 @@ mod destroy_all_s6_3_s4_5_r46_r59_m3_t1 {
             run.id_at(PlayerId::P1, Row::Units, 2),
             Some(ally_human.id.clone())
         );
-        // R12: the two p2-owned bodies to p2's graveyard, the stolen p1-owned one to p1's.
+        // R2618000: all three died on p2's side, so all three are in p2's graveyard, the p1-owned one
+        // as p2's own card now; p1's graveyard is untouched.
         assert_eq!(
             sorted(run.graveyard(PlayerId::P2)),
-            sorted(vec![enemy_one.id.clone(), enemy_two.id.clone()])
+            sorted(vec![
+                enemy_one.id.clone(),
+                enemy_two.id.clone(),
+                stolen.id.clone()
+            ])
         );
-        assert_eq!(run.graveyard(PlayerId::P1), vec![stolen.id.clone()]);
+        assert_eq!(run.graveyard(PlayerId::P1), Vec::<String>::new());
+        let buried = run.state.players[PlayerId::P2]
+            .graveyard
+            .iter()
+            .find(|card| card.id == stolen.id)
+            .expect("the stolen body is in p2's graveyard");
+        assert_eq!((buried.owner, buried.controller), (PlayerId::P2, PlayerId::P2));
         // R59: one state check collected all three.
         assert_eq!(events_of_type(&run.events, GameEventType::Destroyed).len(), 3);
     }

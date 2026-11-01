@@ -1,6 +1,6 @@
 // The model job's loop, against real git repositories and a scripted model.
 //
-// bot/tests/test_work.py, ported (PORTING.md §7). Its module-level helpers (workDone,
+// bot/tests/test_work.py, ported (#467). Its module-level helpers (workDone,
 // workApprove, workChanges, workBuilder, workReviewer, workGates) are the Python's DONE, APPROVE,
 // changes, builder, reviewer and GATES, which a dozen other test files import.
 package tests

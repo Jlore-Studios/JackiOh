@@ -63,7 +63,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
 
     /// p1's Starship holding the Amplifier, a Mr. Vanilla of p1's in Defense Position and one in Attack
     /// Position, and a Mr. Vanilla of p2's in Defense Position.
@@ -121,7 +121,7 @@ mod tests {
     fn r1859002_on_the_field_it_does_nothing_when_a_starship_launches() {
         let (mut s, ship) = built_starship(
             "r1859002-field",
-            json!([{ "def": STRATOS, "lane": 1 }]),
+            json!([{ "def": AP_ROUNDS, "lane": 1 }]),
             json!({ "field": [{ "def": ID, "lane": 2, "position": "DEF" }] }),
             json!({}),
         );

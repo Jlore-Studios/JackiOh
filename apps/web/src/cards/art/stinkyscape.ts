@@ -39,11 +39,21 @@ export type StinkySubject = { family: StinkyFamily; kind: string; tier: number }
 export const STARSHIP_PIECES: ReadonlySet<string> = new Set(
   [
     "038", "040", "043", "048", "049", "050", "051", "052", "053", "054", "055", "056", "057", "058", "059",
-    "060", "061", "062", "063", "064", "065", "066", "067", "068", "069", "072", "073", "074", "075", "076",
-    "077", "078", "079", "080", "081", "082", "083", "085", "086", "090", "093", "098", "100", "101", "104",
+    "060", "061", "062", "063", "064", "065", "066", "067", "079", "090", "093", "098", "100", "101", "104",
     "105", "106", "107", "108", "122", "131", "132", "133", "134", "136", "140", "141", "142", "143", "150-1",
-    "175", "t-ai-10",
+    "175", "177", "t-ai-10",
   ].map((suffix) => `${STINKYSCAPE_PREFIX}${suffix}`),
+);
+
+/**
+ * The ships #2521 took the Starship Piece keyword from (Phalanx, the Prototypes, the Paragons, Halo,
+ * Galaxy, Radix, Ozark, Falcon, Yuma, the Badgers and Stratos): still ships, so still drawn as the fleet
+ * they shipped as (R503).
+ */
+const FORMER_STARSHIP_PIECES: ReadonlySet<string> = new Set(
+  ["068", "069", "072", "073", "074", "075", "076", "077", "078", "080", "081", "082", "083", "085", "086"].map(
+    (suffix) => `${STINKYSCAPE_PREFIX}${suffix}`,
+  ),
 );
 
 /** First match wins: each weapon the set names, word by word. */
@@ -198,7 +208,7 @@ export function stinkySubject(defId: string, name: string | undefined, tags: rea
   if (resource !== null) return { family: "resource", kind: resource, tier };
   const anomaly = wordIn(lower, ANOMALY_WORDS);
   if (anomaly !== null) return { family: "anomaly", kind: anomaly, tier };
-  if (STARSHIP_PIECES.has(defId) || FLEET_NAMES.some((ship) => lower.includes(ship))) {
+  if (STARSHIP_PIECES.has(defId) || FORMER_STARSHIP_PIECES.has(defId) || FLEET_NAMES.some((ship) => lower.includes(ship))) {
     return { family: "fleet", kind: fleetKind(lower), tier };
   }
   if (type === "Unit") return { family: "crew", kind: has("Felinor") ? "felinor" : "pilot", tier };

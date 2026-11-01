@@ -4,7 +4,9 @@
 //!   Radiant: "Cry: Exile every card in your opponent's graveyard.\nAura: Cards your opponent owns that
 //!            would go to a graveyard are exiled instead."
 //!   Engine:  the aura is a replacement at "would go to a graveyard" while Voidwalker is on the field,
-//!            whatever sends the card there; the Radiant face judges by owner. Its own card reaches the
+//!            whatever sends the card there; the Radiant face judges by owner, read once a card from the
+//!            field or a play is the card of the player whose graveyard it is headed for (R2618000), so a
+//!            Unit you stole that dies on your side is yours and is not exiled. Its own card reaches the
 //!            graveyard when it dies: its aura left the field with it (R398). Unit tokens still cease to
 //!            exist (R11).
 
@@ -343,7 +345,7 @@ mod tests {
             }
 
             #[test]
-            fn aura_judged_by_owner_a_stolen_unit_of_theirs_dying_on_your_side_is_exiled() {
+            fn r2618000_aura_judged_by_owner_a_stolen_unit_of_theirs_dying_on_your_side_is_yours_and_reaches_your_graveyard() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }], "mana": 7 },
@@ -353,9 +355,33 @@ mod tests {
                 s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
                 assert_eq!(s.card(&vanilla).controller, P1);
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
+                s.expect_in_zone(&vanilla, "graveyard");
+                assert!(s.pile(P2, "exile").is_empty());
+                // The Vanilla dies before Hit Job lands (§4.5's check comes before §10.5 step 7, R59).
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![MIND_CONTROL, VANILLA, HIT_JOB]);
+                assert_eq!(s.card(&vanilla).owner, P1);
+            }
+
+            #[test]
+            fn r2618000_aura_judged_by_owner_a_unit_of_yours_they_stole_dying_on_their_side_is_exiled() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [{ "def": VOID, "radiant": true }, VANILLA] },
+                    "p2": { "hand": [MIND_CONTROL, HIT_JOB, FILLER], "mana": 7 },
+                    "active": "p2",
+                }));
+                let vanilla = s.card(VANILLA).clone();
+                s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
+                assert_eq!(s.card(&vanilla).controller, P2);
+                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
+                // It was headed for p2's graveyard as p2's card, so the aura exiles it, into p2's exile.
                 s.expect_in_zone(&vanilla, "exile");
-                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![VANILLA]);
-                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![MIND_CONTROL, HIT_JOB]);
+                let mut exiled = def_ids(&s.pile(P2, "exile"));
+                exiled.sort();
+                let mut expected = vec![MIND_CONTROL, HIT_JOB, VANILLA];
+                expected.sort();
+                assert_eq!(exiled, expected);
+                assert!(s.pile(P1, "graveyard").is_empty());
             }
 
             #[test]

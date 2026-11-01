@@ -7,8 +7,8 @@ what you like. At an edge, this file is law. It does not change during Waves 1�
 contact part (part 31) records the hole in `.fullsend/notes/spec-gaps.md` and the orchestrator
 patches this file between waves, never a builder in the middle of one.
 
-The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832, in git history) and [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
-[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are #306's sub-issues.
+The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832) and D-ci-spec (removed later), all in git history; they give file:line facts the rules below lean on. Every TypeScript file's fate was in
+`PORT-MAP.md`, removed once that layout was gone (`git show 3c5c7a81:docs/v0.3.0/PORT-MAP.md`). The briefs of the parts are #306's sub-issues.
 
 Contents:
 
@@ -63,7 +63,7 @@ crates/
     tests/rules/<x>.rs     one per ported packages/engine/test/<x>.test.ts
     tests/rules/fixtures/  ← packages/engine/test/fixtures/*.ts (test-only scripts and catalogs)
     tests/golden.rs        golden trace replay (§13)
-    tests/golden/games.jsonl
+    tests/golden/          the 240 recorded games (§13.3), retired in #2578
     tests/golden/01-hotseat-full-game.json
     tests/fixtures/code-input-cases.json  shared with apps/web (§10.4)
   cards/                   package jackioh-cards (lib)    ← packages/cards/src, catalog.json, flavour.json, patches/
@@ -111,7 +111,7 @@ Rules that follow from the tree:
 
 - `match` is a Rust keyword, so the server's match actor lives in `crates/server/src/actor/`.
 - **Every `lib.rs`, `mod.rs`, `main.rs` and `Cargo.toml` is written once, by part 1**, and declares
-  every module listed in [PORT-MAP.md](PORT-MAP.md) for its crate. A Wave 1 part fills module files;
+  every module listed in `PORT-MAP.md` for its crate. A Wave 1 part fills module files;
   it never edits those files. A dependency or module it wishes existed goes under `GAPS` in its notes
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
@@ -246,7 +246,7 @@ both need `zones.activeUnitsOf` write the same call without ever seeing each oth
 
 Slugs: every `-` and `.` becomes `_`, and a name that would start with a digit gets a `c` prefix
 (`012-1-devour.ts` → `c012_1_devour.rs`). A module named after a Rust keyword takes a trailing
-underscore (`type.ts` → `type_.rs`, `match` → `actor`). [PORT-MAP.md](PORT-MAP.md) lists every
+underscore (`type.ts` → `type_.rs`, `match` → `actor`). `PORT-MAP.md` listed every
 resulting path, so nobody has to apply these by hand.
 
 ### 4.2 Names
@@ -684,7 +684,7 @@ it too), and `catalog::registered_catalog()`/`scripts::script_of()` consult it f
 A card reference resolves by catalog id, §5 index or name, as in TS. `s.unit_at(p, lane)` is `s.unit(p, lane)`
 that panics on an empty lane, and `testkit::pick` holds the one-instance selection builders (`id`, `instance`,
 `card`, `unit_at`); tests take these rather than a copy (#1826). `testkit::must(value, what)` is an
-`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::Monitor`
+`Option`'s value or a panic `expected {what}`, and tests take it too (#2023). `testkit::invariants::InvariantMonitor`
 is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::glow` is `_glow.ts`.
 
 ## 9. The AI crate
@@ -708,6 +708,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
 pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;   // R2102000: a sure win this turn by what `seat` sees
+pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;   // R2660000: a lethal on the opponent's board that nothing the seat does this turn stops
 pub fn random_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;   // §10.7's policy, via subsystems::choose_action
 pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody>;
 pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord;
@@ -947,8 +948,8 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   to warn when it disagrees: the compiled-in version is served either way, so a stale dashboard value
   never stops a deploy (#488; it first refused to boot, which made every card patch a hand edit).
   `GET /api/catalog` keeps `x-deployed-commit`, from `RENDER_GIT_COMMIT` then and `DEPLOYED_COMMIT` now.
-- **Routes dropped** (unused): `POST /api/auth/signup` (503 in production), `GET /api/catalog/:version`.
-  `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
+- **Routes dropped** (unused): `POST /api/auth/signup` (503 in production). `GET /api/catalog/:version`
+  stays, since R388 and §9.4 promise it (#2160). `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
 - **All Random's lean** (#549, R1372; #924, R924000): "More cards from" is a request field, not a
   socket frame (the queue, the rooms and the rematch are HTTP routes, and `actor/protocol.rs` carries
@@ -978,14 +979,15 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
   before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
-  border?, fullArt? }`, goes after the first view to a socket that shows a card that seat's deck
+  border?, fullArt? }` (`fullArt` `true` for the card's Epic full art, or a Legendary's or a
+  Mythic's id, R2655000), goes after the first view to a socket that shows a card that seat's deck
   dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
   `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
   `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:
   `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
-  fullArt? }` (absent keeps, `null` clears) and `POST /api/card-picks/upload` `{ cards }`
+  fullArt? }` (absent keeps, `null` clears; `fullArt` a boolean or a full art's id, R2655000) and `POST /api/card-picks/upload` `{ cards }`
   (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in
   `apps/web/src/game/net.ts` and `src/cards/loadouts.ts`; without them every seat but the viewer's
   draws the defaults.
@@ -1019,11 +1021,16 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `gate [--full] [--shard k/K] [--out dir]`, `gate merge <dir>` | `gate.rs` | 22 | `pnpm ai:gate`, `gate-*.test.ts`, `gate-merge.ts` | the three matchups against `gateNeeded`, plus the perf gate |
 | `sweep [ids…] [--pass2 …] [--report …]` | `sweep.rs` | 22 | `pnpm ai:sweep` | R186's two-pass sweep; prints `SHADOW_BAN` rows |
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |
-| `golden check`, `golden bless [--seeds N]` | `golden.rs` | 23 | — | §13 |
+| `golden check`, `golden bless [--seeds N]` (retired in #2578), `golden record` | `golden.rs` | 23 | — | §13 |
 | `spec check`, `spec index` | `spec.rs` | 28 | `pnpm rulings:coverage`, `rulings.test.ts` | §15 |
 | `arena …`, `agent`, `promote …` | `arena.rs`, `agent.rs`, `promote.rs` | 29 | `ladder/`, `duel.ts` | §14 |
 
 ## 13. Golden traces
+
+> **Historical (#2578).** The 240 games below, the oracle of the TypeScript → Rust port, are retired, and `golden bless` with them. The
+> format lives on: `golden record --seeds A..B [--force ids] --out <path>` writes §13.3's lines from the build it runs on, and
+> `golden check --file <path>` replays them with §13.2's hashes on any build; `golden check` alone folds the hotseat fixture to
+> `HOTSEAT_HASH` (now `972f5b85`).
 
 The oracle the rewrite is held to, recorded from the TypeScript engine **before** any Rust runs
 (part 23), and replayed by the Rust engine.
@@ -1053,7 +1060,8 @@ With §5.2's `canonical` and `fnv1a32_utf16` (TS: copy `replay.ts`'s `canonical`
 
 ### 13.3 File format
 
-`crates/engine/tests/golden/games.jsonl`, one game per line, written with keys in this order:
+The traces file (committed under `crates/engine/tests/golden/` until #2578, now what `golden record --out` writes), one game per line,
+written with keys in this order:
 
 ```json
 {"v":1,"seed":"jackioh-fuzz-1","args":{"seed":"jackioh-fuzz-1","decks":[[…],[…]],"handicaps":null},
@@ -1249,5 +1257,5 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§11.2, handlers:** `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult` (a handler that starts a match needs the `Arc` for `Registry::start`); `app::Handler`, `h!` and `api::http::dispatch` follow.
 - **§14.2, the arena's records:** `pilots` are both `"ai"` (R376's `Pilot` allows only `human`/`ai`); the two agents are named in the record's `id`, `dev:<patch>:arena:<a>-vs-<b>:<seed>`.
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
-- **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` rewrote those alone.
+- **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` (retired in #2578) rewrote those alone.
 - **§6.1 / §6.6, counts kept on a unit (#2321, R2321000):** `Script` gains `tallies: Option<TallyHook>`, a pure read of `ConditionContext` returning `Vec<UnitTally>` (`{ instance_id, value, goal }`), combined across a Fuse's ingredients in order as `preview` is; `UnitView` carries `tallies: Option<Vec<TallyView>>` (`{ defId, value, goal }`, `preview::tallies_on`), absent when no card counts the unit, so no golden hash moves for a game without one.

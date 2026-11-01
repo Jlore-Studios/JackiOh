@@ -34,10 +34,6 @@ export const FX_FATIGUE_FLIGHT_FRACTION = 0.6; // …and reaches the hero at 0.9
 export const FX_OVERFLOW_FIZZLE_AT = 0.45;     // a refused card fizzles at 0.45 D, after it bounces off the pile
 export const FX_MANA_STAGGER_MS = 40;
 export const FX_MANA_MAX_SPARKS = 10;
-export const FX_SHAKE_MIN_DAMAGE = 3;
-export const FX_TRAUMA_PER_DAMAGE = 0.15;
-export const FX_SHAKE_MAX_TRAUMA = 0.8;
-export const FX_HERO_TRAUMA_MULT = 1.25;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
@@ -112,6 +108,14 @@ export const FX_CHAOS_STAGGER = 0.2;
 export const FX_CHAOS_LAND_LAST = 0.85;
 export const FX_CHAOS_REEL_DECOYS = 6;
 export const FX_CHAOS_DECOY_STEP = 3;          // how far apart in the names table a reel's decoys are
+// R2652001: a batch of coin flips or die rolls, one panel. Item i of n lands at (FX_ROLL_LAND_AT +
+// i × stagger) of the entry, the stagger shrinking so the last lands by FX_ROLL_LAND_LAST, every coin
+// spinning and every die tumbling through FX_ROLL_TUMBLE_FACES faces first. It lasts D + FX_BANNER_TAIL_MS.
+export const FX_ROLL_LAND_AT = 0.5;
+export const FX_ROLL_STAGGER = 0.05;
+export const FX_ROLL_LAND_LAST = 0.7;
+export const FX_ROLL_TUMBLE_FACES = 8;
+export const FX_ROLL_TUMBLE_STRIDE = 3;        // a die's walk through its faces, item i stepping this + i
 // Issue #124: a sweep's fog rolls over its row (one entry, SWEEP_MS), each unit's hit landing as the
 // fog reaches its lane, from FX_FOG_HIT_FROM to FX_FOG_HIT_TO of the entry; a zone wave's count pops
 // at FX_ZONE_COUNT_AT. A fog is FX_FOG_PUFFS puffs of cloud and FX_FOG_ICONS icons, spread over the
@@ -221,6 +225,9 @@ export const FX_TEXT = {
   inauspicious: "凶",
   /** R436: the title over the effects Call to Chaos rolled. */
   chaosRolled: "Call to Chaos:",
+  /** R2652001: the title over a batch of coins, and over a batch of dice. */
+  coinsFlipped: "Coin flip",
+  diceRolled: "Dice roll",
   /** B5 E10: an effect ended the turn. */
   turnCutShort: "Turn cut short",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */

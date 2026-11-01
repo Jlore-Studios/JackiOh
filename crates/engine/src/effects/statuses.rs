@@ -59,12 +59,25 @@ pub fn go_berserk(args: GoBerserkArgs) -> Effect {
 #[serde(rename_all = "camelCase")]
 pub struct MayAttackAgainArgs {
     pub target: TargetSpec,
+    /// R2521002 (Stinkyscape #94 Tmack Trav): the fresh exertion alone — a unit still summoning sick
+    /// stays sick, so Rush keeps it off the hero on its summon turn. Every refresh does so since
+    /// R2657004, so this says what the verb does anyway. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub keep_sick: Option<bool>,
+    /// R767000: the sickness lifted for the rest of the turn, as every refresh did before R2657004 —
+    /// only the scripts kept for those versions' replays (Classic+ #73.1 Classic Golem's v0.5.9f) say
+    /// so. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lift_sick: Option<bool>,
 }
 
 /// B5 E35: the unit may attack again this turn (Classic+ #73.1 Classic Golem's "after it destroys a
-/// Unit"): a fresh exertion — both halves, §4.1 — and no summoning sickness for the rest of this turn,
-/// so a unit that has just entered the field may attack at once. It does not grant an attack a unit
-/// could not otherwise make: Attack Position, attack above 0 and the unit restrictions still apply.
+/// Unit"): a fresh exertion — both halves, §4.1. It does not grant an attack a unit could not otherwise
+/// make: Attack Position, attack above 0 and the unit restrictions still apply. R2657004: summoning
+/// sickness lasts the whole turn a unit entered the field, whatever attacks an effect gives it, so a
+/// unit that entered this turn attacks again as its keywords let it: a Rush unit a Unit only (§6.1),
+/// never the hero (R2521002 made it so for Tmack Trav first). `lift_sick` is the older rule, for kept
+/// scripts alone.
 pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
     Effect::new("mayAttackAgain", move |ctx| {
         let Some(unit) = instance_of(ctx, &args.target) else {
@@ -81,8 +94,12 @@ pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
                 switched: false,
                 attacks: None,
             };
-            // §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which this lifts for the turn.
-            if live.summoned_turn == Some(turn) {
+            // §4.1: sickness is "entered the field this turn" (`combat::is_sick`), which a refresh leaves
+            // (R2657004); a script kept from before lifts it for the turn (R767000).
+            if args.lift_sick == Some(true)
+                && args.keep_sick != Some(true)
+                && live.summoned_turn == Some(turn)
+            {
                 live.summoned_turn = None;
             }
         }

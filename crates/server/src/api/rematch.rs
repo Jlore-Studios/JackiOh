@@ -19,6 +19,12 @@
 //!
 //! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
+//! R2685000: an offer is taken only within `REMATCH_OFFER_TTL_MS` of the finished match's end (its
+//! row's `finished_at`), as a co-op Play again's is (R1398000). Past it an offer lapses silently:
+//! nothing is recorded and no game is made, but an entry that already made one still answers its id.
+//! One entry's `at` is only its latest offer's time, so a seat's mismatched offers can no longer
+//! keep an older seat's offer alive past the match's window.
+//!
 //! The offers live in memory, one map per `App` (`RematchOffers`): rendezvous state for two sockets,
 //! not rows, so a restart drops them and both clients re-offer. An entry without a created game is
 //! swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so a late poller
@@ -77,7 +83,8 @@ struct OfferEntry {
     offers: IndexMap<PlayerId, RematchStakes>,
     /// R1372, R924000: seat -> its latest offer's "More cards from" pick.
     leans: IndexMap<PlayerId, Option<LeanPick>>,
-    /// `now` of the latest offer; the sweep reads this.
+    /// `now` of the latest offer; the sweep reads this. It is not the offer window: R2685000 counts
+    /// that from the finished match's `finished_at`, and `offer_as` takes no offer past it.
     at: i64,
     /// The game equal stakes made, once made.
     match_id: Option<String>,
@@ -134,8 +141,9 @@ fn series_game() -> ApiError {
     )
 }
 
-/// R1638000: a card patch went live since the match began. `details` are the co-op join's.
-fn cards_changed(app: &App, played_on: &str) -> ApiError {
+/// R1638000: a card patch went live since the match began, for a 1v1 rematch and a co-op Play again.
+/// `details` are the co-op join's.
+pub(crate) fn cards_changed(app: &App, played_on: &str) -> ApiError {
     ApiError::with_details(
         ApiErrorCode::UpdateRequired,
         "The cards changed since this game. Start a new one.",
@@ -161,7 +169,8 @@ fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
 
 /// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
 /// game is never swept here: the id is how a late poller finds the game, until the reaper's
-/// `sweep_rematch_offers`.
+/// `sweep_rematch_offers`. This reads the latest offer's `at`; the window an offer is taken in is the
+/// finished match's, which `offer_as` checks first (R2685000).
 fn live_entry<'a>(
     offers: &'a mut IndexMap<String, OfferEntry>,
     match_id: &str,
@@ -547,6 +556,24 @@ async fn offer_as(
     }
 
     let now = now_ms();
+    // R2685000: the window is the finished match's, not an offer's. A finished row with no end is
+    // outside it, as it is for its socket (R1285000). The offer lapses silently, recording nothing,
+    // telling no actor and making no game; an entry that already made one keeps its id, so a seat
+    // that offers or polls late still learns where to go, and any other entry is dropped.
+    if match_row
+        .finished_at
+        .is_none_or(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
+    {
+        let mut map = offers(app);
+        let answered = match map.get(&match_row.id) {
+            Some(entry) if entry.match_id.is_some() => entry.match_id.clone(),
+            _ => {
+                map.shift_remove(&match_row.id);
+                None
+            }
+        };
+        return Ok(answered);
+    }
     // One new game per pair of equal offers: check and claim run under one lock, so two offers
     // landing together cannot mint two games; a failed create clears the claim.
     let (claimed, answered) = {

@@ -289,11 +289,13 @@ pub fn why_cannot_switch_in(
     if spend_exertion && !has_exertion_in(auras, unit, ExertionKind::Switch) {
         return Err(EngineError::new("that unit has already acted this turn"));
     }
-    // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect, nor can
-    // any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23 Warp Disruptor), nor an
-    // Indestructible one, whatever made it so (R2179000).
+    // §4.1: a Unit with Can't Defend cannot be switched to Defense Position, by an action or by an
+    // effect (R2657000; `never_defense` is the flag it took over from, as #65.1 Spikey Pillow printed it
+    // through v0.5.9f), nor can any Unit while an aura says Units cannot be (R1849006, Stinkyscape #23
+    // Warp Disruptor), nor an Indestructible one, whatever made it so (R2179000).
     if to == Position::Def
         && (crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true)
+            || auras.unit_has(unit, KeywordKind::CantDefend)
             || crate::restrictions::defense_barred(auras.state())
             || auras.unit_has(unit, KeywordKind::Indestructible))
     {
@@ -2135,8 +2137,9 @@ pub const AFTER_ATTACK_WORK: &str = "@afterAttack";
 /// (`after_attack_of` reads them back): the attack's target (a unit's id or `hero-<player>`), the units
 /// that combat destroyed — the ones whose lethal hit was the attacker's (R42's killer: the attacked
 /// unit, and Cleave's kills) — whether the attacker is still on the field on the stay it attacked from
-/// once the check has closed (always true, since the hook runs only then, R2285001; kept for the
-/// scripts that read it), and whether the attack was forced (R53).
+/// once the check has closed (true, since an "After this attacks" runs only then, R2285001; false only
+/// for a "Whenever this attacks" whose attacker died or left, R2396000), and whether the attack was
+/// forced (R53).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AfterAttackFacts {
@@ -2289,8 +2292,9 @@ pub fn run_owed_combat_copies(sink: &mut EngineSink<'_>, item: &WorkItem) {
 }
 
 /// The state check that closes a combat (§4.2 step 5, §4.3 step 3, R53), then the attacker's
-/// `afterAttack` hook (Classic #13, Classic+ #73.1, Core #32) — only when the attacker is still on the
-/// field on the stay it attacked from once that check has closed (R2285001). An attack that was called
+/// `afterAttack` hook (Classic+ #73.1, Stinkyscape #91) — only when the attacker is still on the
+/// field on the stay it attacked from once that check has closed (R2285001), or, for a "Whenever this
+/// attacks" (Core #32), whatever became of it (R2396000). An attack that was called
 /// off (R44, R220) never fought and never reaches here. The hook is a whole effect, so a check follows
 /// it (R59); a question inside it, or a Death's question in the check before it, owes the rest to
 /// `state.work` (R113).
@@ -2424,10 +2428,8 @@ fn owe_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack) {
 
 /// The attacker's hook, from `paused` when a question split it, then the check that follows it.
 fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: Option<PausedStep>) {
-    let Some(hook) = crate::scripts::script_of(sink.state, &owed.snapshot)
-        .after_attack
-        .clone()
-    else {
+    let script = crate::scripts::script_of(sink.state, &owed.snapshot);
+    let Some(hook) = script.after_attack.clone() else {
         return;
     };
     if sink.state.result.is_some() {
@@ -2441,20 +2443,28 @@ fn run_after_attack(sink: &mut EngineSink<'_>, owed: &OwedAfterAttack, paused: O
         })
     });
     // R2285001: "After this attacks" only for an attacker still on the field on the stay it attacked
-    // from. One that died in the combat, or left the field otherwise, does nothing, and no check is
-    // owed after a hook that never ran.
-    let (Some(self_card), true) = (live, survived) else {
-        return;
+    // from; one that died in the combat, or left the field otherwise, does nothing, and no check is
+    // owed after a hook that never ran. R2396000: "Whenever this attacks" also for one that died or
+    // left, as the snapshot it fought with, as `run_after_attacked` runs a dead defender; a Reborn
+    // body is not it, so it runs once.
+    let self_card = match (live, survived) {
+        (Some(live), true) => live,
+        _ if script.after_attack_even_if_gone => owed.snapshot.clone(),
+        _ => return,
     };
     let judged = OwedAfterAttack {
         survived: Some(survived),
         ..owed.clone()
     };
+    // `{ ...facts, ...(survived ? {} : { [SELF_KEY]: snapshot }) }`, in that key order.
     let mut data: IndexMap<String, Value> = IndexMap::new();
     data.insert("targetId".to_string(), json!(owed.target_id));
     data.insert("destroyedIds".to_string(), json!(owed.destroyed_ids));
     data.insert("survived".to_string(), json!(survived));
     data.insert("forced".to_string(), json!(owed.forced));
+    if !survived {
+        data.insert(crate::prompts::SELF_KEY.to_string(), to_json(&owed.snapshot));
+    }
     let mut plan_data = IndexMap::new();
     plan_data.insert(AFTER_ATTACK_KEY.to_string(), to_json(&judged));
     let plan = WorkPlan {

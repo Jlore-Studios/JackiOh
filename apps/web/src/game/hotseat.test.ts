@@ -551,6 +551,9 @@ describe("with the real engine", () => {
     const seed = "hotseat-r265-p1-first";
     const live = real(seed);
     expect(live.seat).toBe("p1");
+    // R345: p1 turns R82's automatic turn end off, so turn 1 stays open whatever the seed deals it.
+    expect(live.dispatch({ type: "setAutoEndTurn", enabled: false }).error).toBeUndefined();
+    expect(live.seat, "a preference hands the device to nobody").toBe("p1");
     expect(live.view().mulligan).toEqual({ youReady: false, opponentReady: false });
 
     live.dispatch(keepAll(live.view()));
@@ -561,25 +564,33 @@ describe("with the real engine", () => {
     const view = live.view();
     expect(view.mulligan).toBeUndefined();
     expect([view.turn, view.phase, view.active]).toEqual([1, "main", "p1"]);
-    expect(live.log().map((action) => action.playerId)).toEqual(["p1", "p2"]);
+    expect(live.log().map((action) => [action.playerId, action.type])).toEqual([
+      ["p1", "setAutoEndTurn"],
+      ["p1", "mulligan"],
+      ["p2", "mulligan"],
+    ]);
     expectFolds(live, seed);
   });
 
   it("R265 p2 answers first after a manual hand-over: the device goes to p1, and p1's answer starts the game", () => {
-    // Re-pinned for v0.3.5: with the Meditative set in the random decks, the old seed dealt p1 a turn
-    // with nothing to play, which R82 ends by itself; and again for v0.3.10, whose costs did the same.
-    const seed = "hotseat-r265-p2-first-b";
+    // R345: p1 turns R82's automatic turn end off before its own answer, so turn 1 stays open whatever the seed deals it.
+    const seed = "hotseat-r265-p2-first";
     const live = real(seed);
     live.setSeat("p2");
     live.dispatch(keepAll(live.view()));
     expect(live.seat, "p2's answer hands the device to p1, who still owes one").toBe("p1");
     expect(live.view().mulligan).toEqual({ youReady: false, opponentReady: true });
+    expect(live.dispatch({ type: "setAutoEndTurn", enabled: false }).error).toBeUndefined();
 
     live.dispatch(keepAll(live.view()));
     const view = live.view();
     expect(view.mulligan).toBeUndefined();
     expect([view.turn, view.phase, view.active, live.seat]).toEqual([1, "main", "p1", "p1"]);
-    expect(live.log().map((action) => action.playerId)).toEqual(["p2", "p1"]);
+    expect(live.log().map((action) => [action.playerId, action.type])).toEqual([
+      ["p2", "mulligan"],
+      ["p1", "setAutoEndTurn"],
+      ["p1", "mulligan"],
+    ]);
     expectFolds(live, seed);
   });
 

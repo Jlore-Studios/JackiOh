@@ -72,7 +72,9 @@ export type ActionBody =
   | { type: "concede" }
   | { type: "endTurn" }
   // R1838000: a Trade of a Tradable hand card.
-  | { type: "trade"; instanceId: string };
+  | { type: "trade"; instanceId: string }
+  // R345: a seat's own automatic turn end preference.
+  | { type: "setAutoEndTurn"; enabled: boolean };
 
 export type ActionInput = ActionBody & { playerId: PlayerId };
 export type Action = ActionBody & { playerId: PlayerId; nonce: string };

@@ -166,9 +166,15 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
             if grants <= 0 {
                 continue;
             }
-            // R386: the card's declared numbers `armor` and `paidArmor` where it declares them.
+            // R386: the card's declared numbers `armor` and `paidArmor` where it declares them, read as
+            // they stand (#73 Anti-oneshot Armor's Radiant `armor` 1 since #2657, which `HERO_ARMOR`,
+            // Going Long's table, does not hold), `HERO_ARMOR` where it does not.
             let key = if text.embiggened { "paidArmor" } else { "armor" };
-            sum += grants * crate::params::declared_or(state, card, key, side.on(text.embiggened));
+            let armor = match crate::params::param_decl_of(state, &card.def_id, key) {
+                Some(_) => crate::params::param_value(state, Some(card), key, Default::default()),
+                None => side.on(text.embiggened),
+            };
+            sum += grants * armor;
         }
     }
     sum

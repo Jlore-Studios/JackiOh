@@ -17,7 +17,9 @@
 // Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
 // chip shows only while a card of a shipped set carries its tag (`shippedTags`), so a set's chip and
 // its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's, the Stinkyscape
-// set's and its four, R1883000) arrive with the set and never before.
+// set's and its four, R1883000) arrive with the set and never before. Issue #2521's two tags reach
+// cards of a set that already ships, so their chips show from the patch that adds them: Faction in
+// both lists, Resource in the almanac's alone.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -93,15 +95,20 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Drone Core",
   "Weapon",
   "Swarm",
+  // R2511000: Training Grounds #41 to #60, the Legacy cards.
+  "Legacy",
+  // Issue #2521: the Stinkyscape set's five Faction cards, #95 and #159 to #162, which a deck may
+  // hold. "Resource" is left out with "War Doctrine": only the six Resource tokens carry it.
+  "Faction",
 ];
 
 /**
- * The almanac's tag chips (R630): the deck builder's, then the five only tokens carry, "Prime" (the
+ * The almanac's tag chips (R630): the deck builder's, then the six only tokens carry, "Prime" (the
  * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000),
- * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000) and "Token", since the almanac shows tokens.
- * Every tag a catalog card carries.
+ * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000), "Resource" (the Stinkyscape set's six
+ * Resources, issue #2521) and "Token", since the almanac shows tokens. Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {
@@ -182,6 +189,11 @@ export function costBucket(cost: CardCost): CostBucket {
 export function costOrder(cost: CardCost): number {
   const price = printedPrice(cost);
   return price === "X" ? Number.POSITIVE_INFINITY : price;
+}
+
+/** The deck tile's gem: the printed price, an embiggen card's base price, X as X, and nothing for no cost. */
+export function tileCost(cost: CardCost | undefined): string {
+  return cost === undefined ? "" : String(printedPrice(cost));
 }
 
 /** R711000: a card's words as a reader with a card table reads them (none for English): its name, its

@@ -1,7 +1,8 @@
 // A card in context (#1662, R1655000, part of #1651): the Collection's card view. A card opens large,
 // wearing its own picks (`OwnCopy own`: the viewer's own copy, as the deck builder's detail view is),
 // under a strip of what that card may wear, by kind: its foil, finish and border and, when it has
-// one, its full art. Each item is a small live preview of the card wearing it.
+// them, its full arts (R2655000: no full art, its Epic, its animated Legendary and its signed Mythic,
+// one of which the card wears). Each item is a small live preview of the card wearing it.
 //
 // Hovering or focusing an item shows it on the large card; clicking one the card owns equips it on
 // this card alone (`writeCardPick`, `writeCardFullArt`), and a locked one, which `useCanEquip` says no
@@ -45,9 +46,10 @@ import {
   writeCardPick,
   type CardPicks,
 } from "../cards/cosmetics.ts";
-import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
+import { FullArtShown, OwnCopy, fullArtIdOf, fullArtPickOf, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import {
@@ -87,7 +89,7 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
     <span className="collection-cardview__stage">
       <span className="collection-cardview__face" data-testid={T.cardViewFace}>
         {preview !== null && preview.kind === "fullArt" && preview.owned ? (
-          <FullArtShown defId={face.defId} on={preview.id !== NO_FULL_ART_ID}>
+          <FullArtShown defId={face.defId} pick={preview.id === NO_FULL_ART_ID ? false : fullArtPickOf(face.defId, preview.id)}>
             {largeFace}
           </FullArtShown>
         ) : (
@@ -99,9 +101,9 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   );
 }
 
-/** Whether `item` is the card's own pick of its kind. */
-function isEquipped(item: StripItem, picks: CardPicks): boolean {
-  if (item.kind === "fullArt") return picks.fullArt !== undefined && picks.fullArt === (item.id !== NO_FULL_ART_ID);
+/** Whether `item` is the card's own pick of its kind: for a full art, the tier the card's pick names (R2655000). */
+function isEquipped(defId: string, item: StripItem, picks: CardPicks): boolean {
+  if (item.kind === "fullArt") return item.id === NO_FULL_ART_ID ? picks.fullArt === false : fullArtIdOf(defId, picks.fullArt) === item.id;
   return picks[item.kind] === item.id;
 }
 
@@ -166,7 +168,7 @@ function StripKindGroup({
       </div>
       <ul className="collection-strip__items">
         {group.items.map((item) => {
-          const equipped = isEquipped(item, picks);
+          const equipped = isEquipped(def.id, item, picks);
           return (
             <li key={item.id}>
               <button
@@ -276,10 +278,13 @@ export default function CardCosmeticsView({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [textOpen, onClose]);
+  // R2127000: Back closes the view as Close does, and the focus goes back as above. The card's text,
+  // opened over it, is a layer of its own on top, so Back closes that first.
+  useBackLayer(onClose);
 
   const equip = (item: StripItem): void => {
     if (!item.owned) return;
-    if (item.kind === "fullArt") writeCardFullArt(def.id, item.id !== NO_FULL_ART_ID);
+    if (item.kind === "fullArt") writeCardFullArt(def.id, item.id === NO_FULL_ART_ID ? false : fullArtPickOf(def.id, item.id));
     else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
   };
   const clear = (kind: StripKind): void => {
@@ -296,6 +301,7 @@ export default function CardCosmeticsView({
         tier={tier}
         held={tokens}
         cosmeticId={item.id}
+        name={item.name}
         cardId={def.id}
         onRedeemed={setTokens}
         testid={T.tokenOffer(item.id)}

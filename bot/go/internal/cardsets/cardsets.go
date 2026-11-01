@@ -110,9 +110,8 @@ type Card struct {
 
 // Patch is cardsets.Patch. Build it with NewPatch.
 type Patch struct {
-	// `v0.4.0`, and the newest of its versions production has shipped, read for its figures.
-	Name    string
-	Version string
+	// `v0.4.0`. Its figures are read at the newest of its versions production has shipped.
+	Name string
 	// Whether it has the gate's live games, so its figures are live games alone.
 	Live  bool
 	Games int
@@ -120,9 +119,9 @@ type Patch struct {
 	Cards *pyjson.Object
 }
 
-// NewPatch is Patch(name, version, live, games).
-func NewPatch(name, version string, live bool, games int) *Patch {
-	return &Patch{Name: name, Version: version, Live: live, Games: games, Cards: pyjson.New()}
+// NewPatch is Patch(name, live, games).
+func NewPatch(name string, live bool, games int) *Patch {
+	return &Patch{Name: name, Live: live, Games: games, Cards: pyjson.New()}
 }
 
 func cardsOf(cards *pyjson.Object) []*Card {
@@ -235,7 +234,7 @@ func Read(fetch Fetch, base string /* = API */) ([]*Patch, int, string) {
 		if !seen[name] { // the newest version of its patch: its window holds the whole patch
 			seen[name] = true
 			cleared := pyjson.Truthy(get(py.Or(get(live, "gate"), pyjson.New()), "cleared"))
-			patch := NewPatch(name, version, cleared, py.MustInt(py.Or(get(live, "totalGames"), 0)))
+			patch := NewPatch(name, cleared, py.MustInt(py.Or(get(live, "totalGames"), 0)))
 			add(patch.Cards, get(live, "cards"))
 			if !cleared {
 				dev := fetch(URL(base, version, "dev"))

@@ -1,7 +1,8 @@
 //! The abuse guards a person's socket stands behind (SPEC §9.8): `SeatGuard`, one per human seat,
-//! which the 1v1 match actor and the co-op actor (§13.9) each keep (R137, R835000, R835002), and
-//! `HelloGate`, which `/ws/duos` and `/ws/watch` hold a socket behind until it says its hello
-//! (R835002). Every number is in `crate::config`; none is stated here.
+//! which the 1v1 match actor and the co-op actor (§13.9) each keep (R137, R835000, R835002, and for a
+//! seat's hellos R2686000), and one per watcher's socket (R2609000), and `HelloGate`, which `/ws/duos` and `/ws/watch` hold a socket
+//! behind until it says its hello (R835002). Every number is in `crate::config`; none is stated
+//! here.
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, Weak};
@@ -17,7 +18,7 @@ use crate::api::http::{lock, log_alert};
 use crate::app::now_ms;
 use crate::config::{
     MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, REJECTION_ALERT_THRESHOLD,
-    REJECTION_ALERT_WINDOW_MS, WS_IDLE_TIMEOUT_SECONDS,
+    REJECTION_ALERT_WINDOW_MS, WATCH_HELLO_INTERVAL_MS, WS_IDLE_TIMEOUT_SECONDS,
 };
 
 /// §9.8: the action flood limit, measured over this window.
@@ -35,13 +36,18 @@ fn prune(window: &mut VecDeque<i64>, now: i64, span: i64) {
     }
 }
 
-/// One seat's three windows: its actions, its refusals and its malformed frames.
+/// One seat's three windows (its actions, its refusals and its malformed frames) and when a socket's
+/// last hello was answered, with that socket's generation (R2609000, R2686000).
 #[derive(Default)]
 pub struct SeatGuard {
     actions: VecDeque<i64>,
     rejections: VecDeque<i64>,
     alerted: bool,
     malformed: VecDeque<i64>,
+    /// R2609000, R2686000: the socket generation a hello was last answered for and when. A watcher's
+    /// socket passes its id, which never changes; a seat passes its attach count, so a reattach is a
+    /// new generation.
+    hello_answered: Option<(u64, i64)>,
 }
 
 impl SeatGuard {
@@ -87,6 +93,22 @@ impl SeatGuard {
         prune(&mut self.malformed, now, REJECTION_ALERT_WINDOW_MS);
         self.malformed.push_back(now);
         self.malformed.len() > MALFORMED_FRAMES_PER_WINDOW
+    }
+
+    /// R2609000, R2686000: `true`, and `now` kept, unless a hello of this socket `generation` was
+    /// answered less than `WATCH_HELLO_INTERVAL_MS` before `now`, so a hello flood costs one view per
+    /// interval. A hello of a generation not answered last (a reattach's first, or a seat's first
+    /// ever) is always allowed and starts its own interval. A seat's hellos that find one queued
+    /// coalesce first (R835001) and never ask this.
+    pub fn hello_answer_allowed(&mut self, generation: u64, now: i64) -> bool {
+        if self
+            .hello_answered
+            .is_some_and(|(last, at)| last == generation && now - at < WATCH_HELLO_INTERVAL_MS)
+        {
+            return false;
+        }
+        self.hello_answered = Some((generation, now));
+        true
     }
 }
 

@@ -1,12 +1,15 @@
-/* The web fonts (issue #262): one display face and one text face, both under the SIL Open Font
-   License and self-hosted from public/fonts (their licenses beside them), so the page asks no
-   third party for anything and the CSP's `font-src 'self'` holds.
+/* The web fonts (issue #262): one display face and one text face, and since #2655 one signature
+   face, all under the SIL Open Font License and self-hosted from public/fonts (their licenses
+   beside them), so the page asks no third party for anything and the CSP's `font-src 'self'` holds.
 
    - Alegreya (Huerta Tipográfica), the display face: titles, card names, the tavern's headings.
    - Inter (Rasmus Andersson), the text face: everything else, card rules text included.
+   - Dancing Script (Impallari Type), the signature face: only the name a Mythic full art signs
+     across its art (R2655003, cards/FullArtSignature.tsx). It has no metric-matched fallback: it
+     is drawn inside an SVG that scales the name to its box, so a swap refits nothing.
 
-   Both are variable fonts over the weight axis, so the many weights the CSS asks for (400 to 900)
-   are one file each, plus an italic. Only the Latin subset is shipped; anything outside it falls to
+   All are variable fonts over the weight axis, so the many weights the CSS asks for (400 to 900)
+   are one file each, plus an italic for the first two. Only the Latin subset is shipped; anything outside it falls to
    the stacks' system faces glyph by glyph. The files are Fontsource's builds (v5.3.0); the version
    is in the file name, because public/_headers lets browsers keep /fonts/* for a year without
    asking: a new file needs a new name.
@@ -59,6 +62,16 @@
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+@font-face {
+  font-family: "Dancing Script";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dancing-script-5.3.0-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* The metric-matched fallbacks (scripts/font-fallbacks.py). */
 
 @font-face {
@@ -86,4 +99,6 @@
   --font-text: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   /* The code face: the system's own monospace, which no file is shipped for. */
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  /* R2655003: the signature face, then the systems' own script faces. */
+  --font-signature: "Dancing Script", "Segoe Script", "Brush Script MT", cursive;
 }

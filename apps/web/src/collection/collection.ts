@@ -69,6 +69,10 @@ export const collectionTestid = {
   // R1953001: a held cosmetic token offered on a locked cosmetic (TokenOffer), and its refusal.
   tokenOffer: (id: string) => `collection-token-offer-${id}`,
   tokenOfferError: (id: string) => `collection-token-offer-error-${id}`,
+  // R2480000: the question the offer asks before it spends, and its two answers.
+  tokenOfferDialog: (id: string) => `collection-token-offer-dialog-${id}`,
+  tokenOfferConfirm: (id: string) => `collection-token-offer-confirm-${id}`,
+  tokenOfferCancel: (id: string) => `collection-token-offer-cancel-${id}`,
   ownedCosmetic: (id: string, cardId: string | null) =>
     cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;
@@ -190,9 +194,10 @@ export type StripGroup = { kind: StripKind; items: StripItem[] };
 
 /**
  * R1655000: what a card may wear, by kind. The foil, finish and border are the registry's entries
- * of each kind (the default first); the full art is the card's own entry beside the face with none,
- * and the kind is absent from a card that has none. `canEquip` is the ownership answer
- * (`useCanEquip`), so a locked item is the one it says no to.
+ * of each kind (the default first); the full art is the face with none, then the card's own entries
+ * in the registry's order (R2655000: its Epic, Legendary and Mythic), and the kind is absent from a
+ * card that has none. `canEquip` is the ownership answer (`useCanEquip`), so a locked item is the one
+ * it says no to.
  */
 export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
   const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
@@ -205,14 +210,15 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
       owned: canEquip(defId, cosmetic.id),
     })),
   }));
-  for (const cosmetic of COSMETICS) {
-    if (cosmetic.kind !== "fullArt" || cosmetic.card !== defId) continue;
+  const fullArts: StripItem[] = COSMETICS.flatMap((cosmetic): StripItem[] =>
+    cosmetic.kind === "fullArt" && cosmetic.card === defId
+      ? [{ kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) }]
+      : [],
+  );
+  if (fullArts.length > 0) {
     groups.push({
       kind: "fullArt",
-      items: [
-        { kind: "fullArt", id: NO_FULL_ART_ID, name: t("No full art"), rarity: "Common", owned: true },
-        { kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) },
-      ],
+      items: [{ kind: "fullArt", id: NO_FULL_ART_ID, name: t("No full art"), rarity: "Common", owned: true }, ...fullArts],
     });
   }
   return groups;

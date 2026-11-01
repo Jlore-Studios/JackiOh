@@ -59,7 +59,7 @@
 //! `crates/engine/src/config.rs` as `CODE_BLOCK_MAX_LINES` is. Each is sorted by id, and computed
 //! anew on every build, so both lists grow with the catalog; `register_all` hands them to the engine.
 //! Beside them, `LIST_READERS`: the ids whose script reads the two lists (`reads_card_lists`, R2173000),
-//! which the golden replay's list test keeps out of its shard (R1846003).
+//! which the engine's golden binary holds its committed logs free of (R1846003).
 //!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.
@@ -472,12 +472,17 @@ fn history_json(
         }
         carried.push(entry);
     }
-    // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps.
+    // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps;
+    // R2532000: and, by the scheme an older marked file names, the names a later retcon renamed.
     let aliases_path = patches_dir.join("aliases.json");
-    let aliases = if aliases_path.exists() {
-        read_json(&aliases_path)["aliases"].clone()
+    let (aliases, marked) = if aliases_path.exists() {
+        let file = read_json(&aliases_path);
+        (
+            file["aliases"].clone(),
+            file.get("marked").cloned().unwrap_or(serde_json::json!({})),
+        )
     } else {
-        serde_json::json!({})
+        (serde_json::json!({}), serde_json::json!({}))
     };
     serde_json::json!({
         "order": versions,
@@ -486,6 +491,7 @@ fn history_json(
         "cardLists": card_lists,
         "versions": carried,
         "aliases": aliases,
+        "marked": marked,
     })
     .to_string()
 }

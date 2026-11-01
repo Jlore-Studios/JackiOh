@@ -35,7 +35,6 @@ use crate::db::store::{
 };
 use crate::economy::store::OwnedCosmetics;
 use crate::loadout::{CARD_SLOT_KINDS, COSMETICS_GROUP, DECK_SLOT_KINDS, setting_key};
-use crate::social::watch::revoke_all_of;
 
 /// R633: a group id is a lower-case slug (`gameplay`, `audio`, `fx`, `cards`).
 fn is_group_id_shape(id: &str) -> bool {
@@ -209,24 +208,16 @@ pub async fn get_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let row = tx.player_settings_get(&profile.id).await?;
-    // Social (#939): S7's `allowSpectators` rides beside the groups.
-    let allow_spectators = tx.profiles_allows_spectators(&profile.id).await?;
     tx.commit().await?;
-    ok_of(&settings_answer(settings_view(row.as_ref()), allow_spectators))
+    ok_of(&settings_answer(settings_view(row.as_ref())))
 }
 
-/// `PUT /api/settings`: the groups sent, merged into the account's (R634), and S7's
-/// `allowSpectators` when the body carries it (`put_allow_spectators` when it carries nothing else).
+/// `PUT /api/settings`: the groups sent, merged into the account's (R634). An `allowSpectators` beside
+/// them, which a client from before R2615000 may still send, is read as any other key the body holds
+/// past `groups`: not at all.
 pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let now = now_ms();
-    // Social (#939): S7's `allowSpectators`, alone or beside the groups.
-    let allow_spectators = allow_spectators_of(&req.body)?;
-    if req.body.get("groups").is_none()
-        && let Some(allow) = allow_spectators
-    {
-        return put_allow_spectators(app, &profile.id, allow).await;
-    }
     let groups = read_groups(&req.body, now)?;
     let sent = groups.len();
 
@@ -248,16 +239,7 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
             },
         )
         .await?;
-    // Social (#939): written with the groups it came with, and only when they were merged.
-    if let (PlayerSettingsMergeOutcome::Merged { .. }, Some(allow)) = (&outcome, allow_spectators) {
-        tx.profiles_set_allow_spectators(&profile.id, allow).await?;
-    }
-    let allowed = tx.profiles_allows_spectators(&profile.id).await?;
     tx.commit().await?;
-    // B50: watching off lets go of whoever watches now, not only of the next hello.
-    if !allowed {
-        revoke_all_of(app, &profile.id);
-    }
     let settings = match outcome {
         PlayerSettingsMergeOutcome::Limit => {
             return Err(ApiError::with_details(
@@ -274,43 +256,11 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
         "settings.merged",
         json!({ "profileId": profile.id, "sent": sent, "held": settings.groups.len() }),
     );
-    ok_of(&settings_answer(settings_view(Some(&settings)), allowed))
+    ok_of(&settings_answer(settings_view(Some(&settings))))
 }
 
-// ---- Social: watching and shared replays (#939, #940) ----
-
-/// S7: both routes answer `{ settings: { groups, allowSpectators }, allowSpectators }`: the account's
-/// groups as before, and whether its live games, ranked or unranked, may be watched by its friends (B50), on the
-/// settings and beside them, so a client reading either finds it.
-fn settings_answer(view: PlayerSettingsView, allow_spectators: bool) -> Value {
-    json!({
-        "settings": { "groups": view.groups, "allowSpectators": allow_spectators },
-        "allowSpectators": allow_spectators,
-    })
+/// Both routes answer `{ settings: { groups } }`. The account's `allowSpectators` they once carried
+/// beside the groups is gone with the setting (R2615000): friends may always watch.
+fn settings_answer(view: PlayerSettingsView) -> Value {
+    json!({ "settings": view })
 }
-
-/// S7: the body's `allowSpectators`, when it carries one, which must be a boolean.
-fn allow_spectators_of(body: &Value) -> Result<Option<bool>, ApiError> {
-    match body.get("allowSpectators") {
-        None => Ok(None),
-        Some(Value::Bool(allow)) => Ok(Some(*allow)),
-        Some(_) => Err(bad_request("\"allowSpectators\" must be a boolean")),
-    }
-}
-
-/// `PUT /api/settings` with `{ allowSpectators }` and no groups: that alone is written, and the
-/// account's settings answered as `GET` answers them.
-async fn put_allow_spectators(app: &Arc<App>, profile_id: &str, allow: bool) -> ApiResult {
-    let mut tx = app.db.begin(Some(profile_id)).await?;
-    tx.profiles_set_allow_spectators(profile_id, allow).await?;
-    let row = tx.player_settings_get(profile_id).await?;
-    tx.commit().await?;
-    // B50: watching off lets go of whoever watches now, not only of the next hello.
-    let revoked = if allow { 0 } else { revoke_all_of(app, profile_id) };
-    log_info(
-        "settings.spectators",
-        json!({ "profileId": profile_id, "allowSpectators": allow, "watchersRevoked": revoked }),
-    );
-    ok_of(&settings_answer(settings_view(row.as_ref()), allow))
-}
-// ---- end Social: watching and shared replays ----

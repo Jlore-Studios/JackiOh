@@ -39,9 +39,10 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { markWords } from "../cards/marks.ts";
 import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
+import { rollBatchOf, rollWords } from "../fx/rolls.ts";
 import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
-import { sideOf, testid, touchHoldMode } from "./contract.ts";
+import { faceDownCost, sideOf, testid } from "./contract.ts";
 import { curveEquation } from "./curveEquation.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
@@ -216,14 +217,6 @@ function defIdOfInstance(view: PlayerView, instanceId: string): string | undefin
   return undefined;
 }
 
-/** R370: the cost the view gives the face-down card in a backrow lane, while one stands there. */
-function faceDownCostAt(view: PlayerView, player: PlayerId, lane: number): number | undefined {
-  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
-  const entry = seat.backrow[lane - 1];
-  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
-  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
-}
-
 /** R404: an open quest's words, off the quest line its card's view carries, or null once it is not open. */
 function questText(view: PlayerView, instanceId: string, quest: string): string | null {
   return cardInView(view, instanceId)?.quest?.open.find((open) => open.id === quest)?.text ?? null;
@@ -273,7 +266,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       // cost its back shows while it still stands there.
       const where = { whose: name.whose(event.player), zone: zoneLabel(event.row, event.lane) };
       if (event.defId === HIDDEN_CARD && event.row === "backrow") {
-        const cost = faceDownCostAt(view, event.player, event.lane);
+        const cost = faceDownCost(view, event.player, event.lane);
         return capitalised(
           cost === undefined
             ? t("{whose} {zone}: a face-down trap was set", where)
@@ -422,8 +415,10 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       return t("{whose} {zone} was locked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "trapFired":
       // R154: the other seat reads the sentinel, and a sentinel is not a name.
-      return event.defId === HIDDEN_CARD
-        ? t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) })
+      if (event.defId === HIDDEN_CARD) return t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) });
+      // R2657001: a face-up Field Trap firing again reveals nothing, so its line says only that it triggered.
+      return event.again === true
+        ? t("{whose} {card} triggered", { whose: capitalised(name.whose(event.controller)), card: name.def(event.defId) })
         : t("{whose} trap {card} fired", { whose: capitalised(name.whose(event.controller)), card: name.def(event.defId) });
     case "attackDeclared": {
       const attack = { attacker: capitalised(name.instance(event.attackerId)), target: name.instance(event.targetId) };
@@ -546,6 +541,12 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
       const roll = chaosRollOf(event);
       const who = event.defId === HIDDEN_CARD ? t(CHAOS_TEXT.title) : name.def(event.defId);
       return roll === null ? null : t("{who} rolled: {names}", { who, names: chaosNames(roll).map((effect) => t(effect)).join(listSeparator()) });
+    }
+    case "rolled": {
+      // R2652001: the batch in the words the panel lands on (fx/rolls.ts); a card the viewer may not
+      // read is a hidden card (R97). A face-down trap's flip never reaches the other seat (R2652000).
+      const batch = rollBatchOf(event);
+      return batch === null ? null : capitalised(rollWords(batch, name.card(event.instanceId, event.defId)));
     }
     case "flickered":
       return capitalised(t("{card} flickered", { card: name.card(event.instanceId, event.defId) }));
@@ -791,10 +792,10 @@ export function keptLineFor(view: PlayerView, lookup: CardLookup | null): (event
 type Line = KeptLine;
 
 /** One line; a line about a card is a button that opens it (see the header). Kept lines are the same objects from render to render, so they do not redraw. */
-const LogLine = memo(function LogLine({ line, touchHold }: { line: Line; touchHold?: "sheet" | "preview" }): ReactElement {
+const LogLine = memo(function LogLine({ line }: { line: Line }): ReactElement {
   const face = line.face;
   // Lines of code is a hidden stat in matches.
-  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { touchHold, showLoc: false });
+  const inspect = useInspectTrigger(face === null ? null : { key: `log-${line.key}`, face }, { showLoc: false });
   if (face === null) {
     return (
       <li className="log-line" data-event={line.type}>
@@ -851,15 +852,13 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
     return [{ key: history.keys[index] ?? `${view.viewer}-window-${String(index)}`, type: event.type, text, face }];
   });
   const lines = [...history.kept, ...windowLines].slice(-LOG_HISTORY_LIMIT);
-  const touchHold = touchHoldMode(view);
-
   return (
     <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
       {lines.map((line, index) => (
         <Fragment key={line.key}>
           {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
           {index > 0 && line.type === "turnStarted" ? <li className="log-divider" aria-hidden="true" /> : null}
-          <LogLine line={line} touchHold={touchHold} />
+          <LogLine line={line} />
         </Fragment>
       ))}
     </ol>

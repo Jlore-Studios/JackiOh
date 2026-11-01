@@ -38,6 +38,7 @@ import {
   searchMatches,
   shippedTags,
   sortPool,
+  tileCost,
   visiblePool,
   type CostBucket,
   type PoolFilter,
@@ -216,13 +217,17 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Drone Core",
       "Weapon",
       "Swarm",
+      "Legacy",
+      "Faction",
     ]);
-    // Only the ten AI tokens carry "AI", the Prime tokens "Prime" and Otherworldly Removal's three
-    // tokens "Other-Origins" (R1837000), and the pool never offers a Token.
+    // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
+    // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
+    // never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");
     expect(FILTER_TAGS).not.toContain("Prime");
     expect(FILTER_TAGS).not.toContain("Other-Origins");
     expect(FILTER_TAGS).not.toContain("War Doctrine");
+    expect(FILTER_TAGS).not.toContain("Resource");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -293,6 +298,16 @@ describe("costBucket and costOrder (B31)", () => {
     expect(costOrder(100)).toBe(100);
     expect(costOrder({ base: 2, embiggen: 4 })).toBe(2);
     expect(costOrder("X")).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe("tileCost (#2644)", () => {
+  it("prints a number, X, an embiggen card's base price, and nothing for no cost", () => {
+    expect(tileCost(3)).toBe("3");
+    expect(tileCost(10)).toBe("10");
+    expect(tileCost("X")).toBe("X");
+    expect(tileCost({ base: 4, embiggen: 2 })).toBe("4");
+    expect(tileCost(undefined)).toBe("");
   });
 });
 
@@ -729,7 +744,7 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
     expect(pool(["Stinkyscape"])).toHaveLength(deckableIn(["Stinkyscape"]));
     expect(new Set(pool(["Stinkyscape"]).map(setOf))).toEqual(new Set(["Stinkyscape"]));
-    // Re-pinned for the Training Grounds release (#2204): its 60 cards, the twenty Core snapshots
+    // Re-pinned for the Training Grounds release (#2204): its 60 cards, the twenty Legacy cards
     // (#41 to #60) among them, join the pool; its token never does.
     expect(pool(["Training Grounds"])).toHaveLength(deckableIn(["Training Grounds"]));
     expect(new Set(pool(["Training Grounds"]).map(setOf))).toEqual(new Set(["Training Grounds"]));
@@ -757,8 +772,8 @@ describe("the Jlockeed tag (R278)", () => {
     const stinkyscape = setShips("Stinkyscape")
       ? ["124", "125", "126", "127", "128", "129", "130"].map((n) => `stinkyscape-${n}`)
       : [];
-    // Re-pinned for the Training Grounds release (#2204): its snapshots of Core #14 and #13, #45
-    // Jlockeed's Weapons and #48 Jlockeed Shredder-10, carry the tag as their Core cards do (R2195000).
+    // Re-pinned for the Training Grounds release (#2204): its Legacy cards of Core #14 and #13, #45
+    // and #48, carry the tag as their Core cards do (R2195003).
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
@@ -862,8 +877,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -910,6 +925,41 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     // (War Doctrine is on tokens alone, which the deck builder never offers) and the Almanac's four.
     for (const tag of ["Drone Core", "Weapon", "Swarm"] as const) expect(DECK_CHIP_TAGS.includes(tag), tag).toBe(true);
     for (const tag of four) expect(ALMANAC_CHIP_TAGS.includes(tag), tag).toBe(true);
+  });
+
+  it("R2511000 the Legacy chip keeps the twenty Training Grounds Legacy cards, each named after its Core card", () => {
+    expect(DECK_CHIP_TAGS.includes("Legacy")).toBe(true);
+    expect(ALMANAC_CHIP_TAGS.includes("Legacy")).toBe(true);
+    const real: CatalogSnapshot = { version: "core-test", cards: CORE_CATALOG };
+    const kept = visiblePool(real, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Legacy"]) }, DEFAULT_SORT);
+    const ids = Array.from({ length: 20 }, (_, n) => `traininggrounds-0${String(41 + n)}`);
+    expect([...kept].sort()).toEqual(ids);
+    for (const id of ids) expect(CORE_CATALOG[id]?.name.startsWith("Legacy: "), id).toBe(true);
+    expect(CORE_CATALOG["traininggrounds-041"]?.name).toBe(`Legacy: ${CORE_CATALOG["core-002"]?.name ?? ""}`);
+  });
+
+  it("issue #2521's Faction gets a chip in both lists and Resource, on tokens alone, in the almanac's only", () => {
+    // The five Faction cards are cards a deck may hold; the six Resources are tokens, which the deck
+    // builder never offers.
+    const shipped = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
+    const factions = shipped.filter((d) => d.tags.includes("Faction"));
+    const resources = shipped.filter((d) => d.tags.includes("Resource"));
+    expect(factions.map((d) => d.name).sort()).toEqual([
+      "Faction: ETHICS",
+      "Faction: Golden Accord",
+      "Faction: Pegasus",
+      "Faction: Star-Jumper Core",
+      "Faction: Vanguard Coalition",
+    ]);
+    expect(factions.every((d) => !d.token)).toBe(true);
+    expect(resources.map((d) => d.name).sort()).toEqual(["Axnit", "Gellium", "Korrelite", "Narcor", "Red Narcor", "Reknite"]);
+    expect(resources.every((d) => d.token && d.tags.includes("Token"))).toBe(true);
+    expect(DECK_CHIP_TAGS).toContain("Faction");
+    expect(DECK_CHIP_TAGS).not.toContain("Resource");
+    expect(ALMANAC_CHIP_TAGS).toContain("Faction");
+    expect(ALMANAC_CHIP_TAGS).toContain("Resource");
+    expect(filterTagId("Faction")).toBe("db-filter-tag-faction");
+    expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
   });
 
   it("R1381 a tag chip shows while a card that ships carries it", () => {

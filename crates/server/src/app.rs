@@ -52,6 +52,10 @@ pub struct App {
     /// §9.8's per-account rate limit at the API (R109, R157), one per app: a fresh app starts with an
     /// empty window, so one test's flood cannot leak into the next.
     pub limiter: api::http::RateLimiter,
+    /// SPEC §11 R2478000: the profile id each verified auth user was last resolved to, which refuses
+    /// an account whose R109 budget is spent before the store is read. One per app, for the limiter's
+    /// reason.
+    pub known_profiles: api::http::KnownProfiles,
     /// R1443: sign-ins by username, counted per address and, apart, per username. One per app, for
     /// the limiter's reason.
     pub sign_in_limiter: api::http::RateLimiter,
@@ -99,6 +103,11 @@ pub struct App {
     /// §14.8, #1303: the permits of the practice claims being verified at once,
     /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
     pub practice_verifications: tokio::sync::Semaphore,
+    /// SPEC §11 R2422000: how many practice claims are settling now, each counted from before its
+    /// task is spawned until it ends (`api::practice`), so the shutdown drain waits for every one,
+    /// a claim whose caller has gone included, before it closes the store. One per app, for the
+    /// limiter's reason.
+    pub practice_settles: tokio::sync::watch::Sender<usize>,
     /// SPEC §11 R2378000: each account's spends, one running and the rest waiting their turn
     /// (`economy::spend_slots`). One per app, for the limiter's reason.
     pub spends: crate::economy::spend_slots::SpendSlots,
@@ -1005,6 +1014,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
             crate::config::API_REQUESTS_PER_MINUTE as _,
             API_RATE_WINDOW_MS as _,
         ),
+        known_profiles: api::http::KnownProfiles::default(),
         sign_in_limiter: api::http::create_rate_limiter(
             crate::config::USERNAME_SIGN_IN_ATTEMPTS_PER_WINDOW,
             crate::config::USERNAME_SIGN_IN_WINDOW_MS,
@@ -1025,6 +1035,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         ci_runs,
         economy_live: crate::config::ECONOMY_LIVE,
         practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
+        practice_settles: tokio::sync::watch::Sender::new(0),
         spends: crate::economy::spend_slots::SpendSlots::default(),
     });
 
@@ -1254,10 +1265,11 @@ pub fn shutdown_signal() -> std::io::Result<impl Future<Output = ()> + Send + 's
 /// Serves `app` on `listener` until `shutdown` resolves, then drains and answers `Ok`.
 ///
 /// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain runs
-/// at most `drain` long and does five things, in this order: it stops accepting new connections,
+/// at most `drain` long and does these things, in this order: it stops accepting new connections,
 /// aborts the background loops, lets in-flight HTTP requests finish, stops every match and co-op actor (open
 /// sockets get close frame 1001 and queues drain so result writes land), waits for every socket to
-/// finish, and closes the store.
+/// finish, waits for every practice claim still settling, a caller's that has gone included, so its
+/// pay lands (R2422000), and closes the store.
 ///
 /// axum's graceful shutdown waits only for HTTP requests, because an upgraded socket leaves its
 /// count. That is why the actors are stopped and `all_closed` is awaited. `pg::close` waits for
@@ -1300,6 +1312,8 @@ where
         }
         actor::ws_server::close_all(&app);
         actor::ws_server::all_closed(&app).await;
+        // R2422000: a claim's check and pay outlive its request, so they are waited for apart.
+        crate::api::practice::all_settled(&app).await;
         app.db.close().await;
         (served, matches)
     })

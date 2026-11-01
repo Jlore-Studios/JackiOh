@@ -6,8 +6,8 @@ import { catalogVersion, registeredCatalog, validator } from "../wasm/index.ts";
 
 import type { CardDef, CardDefs, CustomCard, CustomIssue } from "./index.ts";
 
-/** §9.4: exactly 3 decks per loadout (Rust's `validator::LOADOUT_DECKS`). */
-export const LOADOUT_DECKS = 3;
+/** §9.4: the decks per loadout, the engine's `config::LOADOUT_DECKS` (generated, `./engineConfig.ts`). */
+export { LOADOUT_DECKS } from "./engineConfig.ts";
 
 export type CardId = string;
 

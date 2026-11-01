@@ -1,7 +1,9 @@
 //! Practice earning's check (SPEC §14.8, §9.9, #1303): a practice game runs in the browser, so the
 //! server takes no word of the client's for its result. It folds the claimed log from the setup its
-//! seed was issued for and re-runs every AI move, and only a game that passes pays
-//! ([[R1303000]]–[[R1303003]]).
+//! seed was issued for, and only a game that folds to the claimed result pays
+//! ([[R1303000]]–[[R1303003]]). It re-runs no AI move ([[R2560000]]): an action of the AI's seat is
+//! held to its nonce and seat and reduced like any other, since practice pay is held to the day's
+//! Jlore cap ([[R1483000]]).
 //!
 //! This mirrors the browser's worker (`apps/web/src/practice/core.ts`), function by function:
 //!
@@ -10,30 +12,23 @@
 //!   `"{seed}:ai-deck"` (`actor::engine::deal_practice_ai_deck`), the tier's handicap on the AI's
 //!   seat alone (R180), and the human's last board, the server's own ([[R1303003]]). No game the
 //!   server folds is a sandbox or holds a custom card (R923000, R915005: `create_game_args`).
-//! - [`ai_action`] is its `aiStep`: `decide` on the AI's own stream, `"{seed}:ai"`, kept for the
-//!   whole game, then the fallback (`fallbackActions`) when the decision is one R188 forbids or one
-//!   the engine refuses. The AI reads the true state only through `ai_to_act` and `redact` (R185),
-//!   as in play. There is no clock ([[R1303002]]): every decision runs to `AI_BUDGET`, and a move
-//!   the browser's wall-clock cap cut short to another one does not match.
 //! - [`verify`] is its `apply`, action by action, under the worker's nonces (`h<n>` the human's,
 //!   `a<n>` the AI's, each counting only accepted actions), each sent as the seat its player plays
 //!   then: a Glitch swap moves both (R677). A game that passes is read once more by the engine's
 //!   `summarize_game`, for what the quests count ([[R1304001]]).
 //!
-//! Every engine call goes through `actor::engine` under the game's `Pinned` catalog (R767000), and
-//! the AI runs inside `Pinned::run`, so it reads the catalog the game was played on. Nothing here
-//! reads a clock or the store: `api::practice` checks the seed, runs this off the runtime and pays.
+//! Every engine call goes through `actor::engine` under the game's `Pinned` catalog (R767000).
+//! Nothing here reads a clock or the store: `api::practice` checks the seed, runs this off the
+//! runtime and pays.
 
 use serde::{Deserialize, Serialize};
 
-use jackioh_ai::{AiOptions, ai_to_act, decide};
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, GameOverReason, GameState, LastBoardEntry, PerPlayerOpt, PlayerId,
-    Rng, SeatSummary,
+    SeatSummary,
 };
 
 use crate::actor::engine::{self, CreateGameArgs, FoldArgs, Pinned};
-use crate::bots::seat::r188_forbidden;
 use crate::economy::rewards::is_player_action;
 use crate::economy::store::{PracticeDeck, PracticeSetup};
 
@@ -52,8 +47,6 @@ pub enum ClaimRefusal {
     /// The log does not fold from the seed's setup: an action the engine refuses, one under the
     /// wrong nonce or seat, one after the end, or a setup that does not begin.
     DoesNotFold,
-    /// An AI action in the log is not the one the AI chooses there ([[R1303002]]).
-    AiMismatch,
     /// The log folds to a game that has not ended.
     NotFinished,
     /// The game ended voided by a Glitch (R679), which records nothing ([[R1303000]]).
@@ -63,7 +56,7 @@ pub enum ClaimRefusal {
 }
 
 /// The result a claim says the human had, read from the seat they ended in (R677).
-#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ClaimedResult {
     Win,
@@ -91,7 +84,7 @@ pub struct Verified {
     pub won: Option<bool>,
     /// The human's actions that earn XP ([[R1302004]]).
     pub actions: i64,
-    /// How many of the log's actions were the AI's, each re-run.
+    /// How many of the log's actions were the AI's.
     pub ai_moves: i64,
     /// R508: the board the human takes from the game, from the seat they ended in.
     pub last_board: Vec<LastBoardEntry>,
@@ -100,12 +93,6 @@ pub struct Verified {
     pub seat: Option<SeatSummary>,
     /// §14.9: the attacks the human took, for the quests.
     pub attacks: i64,
-}
-
-/// R188, R923000: what the practice AI never plays, not even as a fallback: `core.ts`'s
-/// `isForbiddenAiAction`, the bots' R188 list and a sandbox tool.
-fn forbidden(body: &ActionBody) -> bool {
-    r188_forbidden(body) || matches!(body, ActionBody::Sandbox { .. })
 }
 
 /// `body` and `rest` in seat order, as `home` and its opponent.
@@ -154,44 +141,9 @@ fn begin(pinned: Pinned, args: &CreateGameArgs) -> Result<GameState, ClaimRefusa
     }
 }
 
-/// The action the practice AI takes in `state` from `seat` under `nonce`, as the worker's `aiStep`
-/// takes it: `decide`'s choice, unless R188 forbids it or the engine refuses it, else the first
-/// legal action the engine accepts, `endTurn` first; `None` when the AI owes nothing. `rng` is the
-/// AI's stream, left where the decision left it.
-pub fn ai_action(
-    pinned: Pinned,
-    state: &GameState,
-    seat: PlayerId,
-    nonce: &str,
-    rng: &mut Rng,
-) -> Option<ActionBody> {
-    let accepted = |body: &ActionBody| {
-        !forbidden(body)
-            && engine::reduce(pinned, state, &Action::new(body.clone(), seat, nonce))
-                .error
-                .is_none()
-    };
-    let chosen = pinned.run(|| {
-        if !ai_to_act(state, seat) {
-            return None;
-        }
-        let mut options = AiOptions::new(rng.clone());
-        let decision = decide(state, seat, &mut options);
-        *rng = options.rng;
-        Some(decision.map(|decision| decision.action))
-    })?;
-    if let Some(body) = chosen.filter(|body| accepted(body)) {
-        return Some(body);
-    }
-    let legal = engine::legal_actions(pinned, state, seat);
-    let (end_turn, rest): (Vec<ActionBody>, Vec<ActionBody>) = legal
-        .into_iter()
-        .partition(|body| matches!(body, ActionBody::EndTurn));
-    end_turn.into_iter().chain(rest).find(|body| accepted(body))
-}
-
-/// A practice claim checked: `log` folded from `setup` on `seed`, every AI action re-run, to a
-/// finished game whose result for the human is `claimed`.
+/// A practice claim checked: `log` folded from `setup` on `seed`, each action under its player's
+/// next nonce and from the seat that player plays then (R677), to a finished game whose result for
+/// the human is `claimed`. No AI action is re-run ([[R2560000]]).
 pub fn verify(
     pinned: Pinned,
     seed: &str,
@@ -203,19 +155,14 @@ pub fn verify(
     let ai_home = human_home.opponent();
     let args = opening_args(pinned, seed, setup);
     let mut state = begin(pinned, &args)?;
-    let mut ai_rng = Rng::new(&format!("{seed}:ai"), 0);
     let (mut humans, mut ais, mut actions, mut attacks) = (0_i64, 0_i64, 0_i64, 0_i64);
     for action in log {
         if state.result.is_some() {
             return Err(ClaimRefusal::DoesNotFold);
         }
         if action.nonce == format!("a{ais}") {
-            let seat = engine::seat_played_by(&state, ai_home);
-            if action.player_id != seat {
+            if action.player_id != engine::seat_played_by(&state, ai_home) {
                 return Err(ClaimRefusal::DoesNotFold);
-            }
-            if ai_action(pinned, &state, seat, &action.nonce, &mut ai_rng).as_ref() != Some(&action.body) {
-                return Err(ClaimRefusal::AiMismatch);
             }
             ais += 1;
         } else if action.nonce == format!("h{humans}") {

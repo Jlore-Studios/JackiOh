@@ -165,11 +165,11 @@ mod tests {
     fn r2529000_a_system_patch_is_read_as_a_micro_over_its_plays() {
         let json = r#"[
           { "version": "v0.5.0", "tier": "major", "plays": [], "changes": [] },
-          { "version": "v0.5.1", "tier": "patch", "plays": ["core-001"], "system": true, "changes": [] },
-          { "version": "v0.5.2", "tier": "patch", "plays": [], "changes": [] }
+          { "version": "v0.5.0b", "tier": "patch", "plays": ["core-001"], "system": true, "changes": [] },
+          { "version": "v0.5.1", "tier": "patch", "plays": [], "changes": [] }
         ]"#;
         let history = patch_history_of(json).expect("reads");
-        assert_eq!(history[1], step("v0.5.1", PatchTier::Micro, &["core-001"]));
+        assert_eq!(history[1], step("v0.5.0b", PatchTier::Micro, &["core-001"]));
         assert_eq!(history[2].tier, PatchTier::Patch);
     }
 }

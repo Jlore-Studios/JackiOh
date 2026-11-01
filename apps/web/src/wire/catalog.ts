@@ -22,7 +22,9 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
  * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum). The held
  * Stinkyscape set adds Drone Core, Weapon, War Doctrine and Swarm: family tags that no rule reads
- * (R1857000).
+ * (R1857000). Legacy marks Training Grounds #41 to #60, the frozen copies of Core cards, a family tag
+ * no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources, Reknite to Red
+ * Narcor, every one a token) and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162).
  */
 export type Tag =
   | "Human"
@@ -51,6 +53,9 @@ export type Tag =
   | "Weapon"
   | "War Doctrine"
   | "Swarm"
+  | "Legacy"
+  | "Resource"
+  | "Faction"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
@@ -189,7 +194,9 @@ export type Keyword =
   /** #1852, R1852000: when it dies, a copy of it fuses into its owner's Dormant Starship. */
   | { kind: "Starship Piece" }
   /** #1852, R1852003: a launched Starship. */
-  | { kind: "Starship" };
+  | { kind: "Starship" }
+  /** #2657, R2657000: never in Defense Position; the successor to the status "Cannot be in Defense Position". */
+  | { kind: "Can't Defend" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -230,6 +237,7 @@ export const KEYWORD_KINDS = [
   "Tradable",
   "Starship Piece",
   "Starship",
+  "Can't Defend",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

@@ -90,6 +90,8 @@ const HAND_2 = handId(1);
 const FIELD_SPELL = backrowId(0);
 /** The viewer's face-up Trap in backrow lane 5. */
 const MY_TRAP = backrowId(4);
+/** The viewer's face-up Field Trap in backrow lane 2. */
+const MY_FIELD_TRAP = backrowId(1);
 
 /* ------------------------------------------------------------------------------------------- *
  * Anchors and expected cues, in S7's notation
@@ -1217,6 +1219,15 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
+  it("R2657001 a Field Trap firing again plans an activation's flare on its card: no reveal burst and no shake", () => {
+    const again: GameEvent = { type: "trapFired", instanceId: MY_FIELD_TRAP, defId: "core-018", controller: "p1", row: "backrow", lane: 1, again: true };
+    for (const D of [ANIMATIONS.activated.durationMs, ODD_D]) {
+      const cues = plan([again], D);
+      expectCues(cues, [ring("arcane", cardT(MY_FIELD_TRAP), 0, D), burst("arcane", cardT(MY_FIELD_TRAP), "point", 0)]);
+      expect(shakesOf(cues)).toEqual([]);
+    }
+  });
+
   it("#1447 a readable trap reveal uses every flavor look's colors and particle", () => {
     const rows: Array<[string, Flavor]> = [
       ["core-001", "Physical"],
@@ -1681,6 +1692,7 @@ const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   brand: ["kind", "at", "tint", "delayMs", "durationMs"],
   shield: ["kind", "size", "at", "delayMs", "durationMs"],
   chaos: ["kind", "title", "lines", "delayMs", "durationMs"],
+  roll: ["kind", "title", "die", "items", "delayMs", "durationMs"],
   fog: ["kind", "tone", "from", "to", "tint", "icon", "delayMs", "durationMs"],
   zone: ["kind", "at", "tint", "text", "direction", "delayMs", "durationMs"],
 };

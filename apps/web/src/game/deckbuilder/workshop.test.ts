@@ -24,7 +24,6 @@ import {
   holdersOf,
   nextName,
   ownershipUnknown,
-  pairHolders,
   removeCard,
   trioSharedCards,
   trioSlots,
@@ -158,27 +157,14 @@ describe("the editor's moves", () => {
   });
 });
 
-describe("a Core card and its Training Grounds snapshot (R2195000)", () => {
+describe("a Core card and its Legacy card (R2195000, R2511001)", () => {
   const core = catalog.cards[fixtureCardId(2)];
   if (core === undefined) throw new Error("the fixture catalog holds card 2");
-  const snapshot = { ...core, id: "traininggrounds-041", index: "41", set: "Training Grounds" as const, snapshotOf: core.id };
-  const paired = { ...catalog, cards: { ...catalog.cards, [snapshot.id]: snapshot } };
+  const legacy = { ...core, id: "traininggrounds-041", index: "41", set: "Training Grounds" as const, name: `Legacy: ${core.name}` };
 
-  it("R2195000 a deck holding one of the pair shows the other unavailable, says which is here, and refuses it", () => {
-    const holdingCore = pairHolders("a", [core.id], paired);
-    const holder = holdingCore.get(snapshot.id);
-    expect(holder).toEqual({ deckId: "a", name: "this deck, as its Core card" });
-    expect(addCard([core.id], snapshot.id, holdingCore)).toEqual({ ok: false, reason: "held", holder });
-
-    const holdingSnapshot = pairHolders("a", [snapshot.id], paired);
-    expect(holdingSnapshot.get(core.id)).toEqual({ deckId: "a", name: "this deck, as its Training Grounds snapshot" });
-    expect(addCard([snapshot.id], core.id, holdingSnapshot)).toMatchObject({ ok: false, reason: "held" });
-  });
-
-  it("R2195000 a card with no pair, or a deck holding neither, makes nothing unavailable", () => {
-    expect(pairHolders("a", [fixtureCardId(1)], paired).size).toBe(0);
-    expect(pairHolders("a", [], paired).size).toBe(0);
-    expect(addCard([], snapshot.id, pairHolders("a", [], paired))).toEqual({ ok: true, cards: [snapshot.id] });
+  it("R2511001 a deck holding one takes the other, each its own card", () => {
+    expect(addCard([core.id], legacy.id, holdersOf([], 20))).toEqual({ ok: true, cards: [core.id, legacy.id] });
+    expect(addCard([legacy.id], core.id, holdersOf([], 20))).toEqual({ ok: true, cards: [legacy.id, core.id] });
   });
 });
 

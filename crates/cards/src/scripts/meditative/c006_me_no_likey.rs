@@ -11,8 +11,9 @@
 //! may exceed 4.
 //!
 //! "If you do": the gift's mana follows only when the Unit actually changed sides — with no free zone
-//! on the opponent's side it stays and nothing is gained (R803). The owner doesn't change (§3.2), so
-//! a given Unit that dies goes to its owner's graveyard. The number is declared and read through
+//! on the opponent's side it stays and nothing is gained (R803). The owner doesn't change on the field
+//! (§3.2), but a given Unit that dies goes to the opponent's graveyard, the side it died on, as theirs
+//! (R2618000). The number is declared and read through
 //! `param` (R386); the base face prints none (R749).
 
 use jackioh_engine::effects::{ForEachCardArgs, for_each_card, gain_mana, give_control, instance_of};
@@ -69,7 +70,7 @@ pub fn script() -> CardScripts {
 
 // M #6 Me no Likey — SPEC §8.8 row 6, BUILD M10 row M 6: "Give one of your Units to their lane (R15,
 // R171, R1423) and gain its cost on the field (R65, R396, R803); with their row full it stays and gains
-// nothing; an X Unit gives its X; a dead gift goes to your graveyard (§3.2); an enemy Unit is no
+// nothing; an X Unit gives its X; a dead gift goes to their graveyard (R2618000); an enemy Unit is no
 // legal target; radiant gains twice the cost; its tuned number (multiple) reads through `param()`
 // (R386)".
 #[cfg(test)]
@@ -145,7 +146,7 @@ mod tests {
         }
 
         #[test]
-        fn r803_dying_it_goes_to_your_graveyard() {
+        fn r803_r2618000_dying_it_goes_to_their_graveyard_as_theirs() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [LIKELY, FILLER], "mana": 9, "field": [MENACE, FODDER] },
@@ -157,15 +158,17 @@ mod tests {
             s.play(LIKELY, json!({ "targets": targets }));
             assert_eq!(s.card(&gift).controller, P2);
 
-            // The 9-attack Menace trades into the gift: its owner takes the body home (§3.2).
+            // The 9-attack Menace trades into the gift: it dies on their side, into their graveyard as
+            // their card (R2618000).
             let menace = s.card(MENACE).id.clone();
             s.attack(&menace, &gift);
 
             let dead = s.card(&gift).clone();
             assert_eq!(dead.zone.z(), ZoneName::Graveyard);
-            assert_eq!(dead.owner, P1);
-            let home: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.id.clone()).collect();
-            assert!(home.contains(&gift));
+            assert_eq!(dead.owner, P2);
+            let theirs: Vec<String> = s.pile(P2, "graveyard").iter().map(|card| card.id.clone()).collect();
+            assert!(theirs.contains(&gift));
+            assert!(!s.pile(P1, "graveyard").iter().any(|card| card.id == gift));
         }
 
         #[test]

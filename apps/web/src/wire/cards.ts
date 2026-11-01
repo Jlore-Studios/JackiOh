@@ -23,7 +23,10 @@ function newestVersion(patches: unknown): string {
 /** Catalog version from the newest card-data patch (§9.4; R388). */
 export const CATALOG_VERSION: string = newestVersion(patchesJson);
 
-const VERSION_ALIASES: Readonly<Record<string, string>> = aliasesJson.aliases;
+/** `aliases.json`: scheme 1's names to today's, and for each older marked scheme its renamed names. */
+type AliasesFile = { aliases: Record<string, string>; marked?: Record<string, Record<string, string>> };
+const ALIASES: AliasesFile = aliasesJson as AliasesFile;
+const VERSION_ALIASES: Readonly<Record<string, string>> = ALIASES.aliases;
 
 /**
  * R1371000: the name a version read from an unmarked file goes by now: its new name when the version
@@ -33,4 +36,15 @@ const VERSION_ALIASES: Readonly<Record<string, string>> = aliasesJson.aliases;
  */
 export function currentVersionName(unmarked: string): string {
   return Object.hasOwn(VERSION_ALIASES, unmarked) ? (VERSION_ALIASES[unmarked] ?? unmarked) : unmarked;
+}
+
+/**
+ * R2532000: the name a version from a file of `scheme` goes by now. The v0.5 retcon (#2532) renamed the
+ * v0.5 line again, so scheme 1 (no marker) reads through `currentVersionName`, an older marked scheme
+ * through `aliases.json`'s `marked`, and today's (`VERSIONS_SCHEME`) as it is.
+ */
+export function versionNameFrom(scheme: number, name: string): string {
+  if (scheme <= 1) return currentVersionName(name);
+  const renamed = ALIASES.marked?.[String(scheme)];
+  return renamed !== undefined && Object.hasOwn(renamed, name) ? (renamed[name] ?? name) : name;
 }

@@ -22,7 +22,9 @@ enforces rules and never sees hidden information.** In practice:
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
   targets and modes are built **inline into the `play` action**; everything decided during
   resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
-  both with the same pickers.
+  both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
+  card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
+  does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -34,7 +36,7 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 
 The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
 
-The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s three families: `--font-display`, `--font-text` and `--font-mono`. A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
+The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
 
 The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline.
 
@@ -94,7 +96,9 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
+
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -154,6 +158,8 @@ present for exactly that window.
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks nothing.
+
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
 the end of the offerer's turn. `DrawOffer.tsx` draws one element, `draw-toast` (the element the
@@ -190,7 +196,7 @@ cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the abi
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
 view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
-which asks which first (the `ability` need, a Discover-chrome picker in `Prompt.tsx` showing each
+which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
 the same turn; the rest wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
@@ -209,7 +215,7 @@ zone is picked by clicking the unit or its zone.
 **The Trade** (SPEC §6.1, §10.10, R1838000). A hand card of the viewer's that `legal` lists a `trade`
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
-`trade-<instanceId>`, "Trade" with the price and the Trades left from the view's `trades`. It is live
+`trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
 exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
 reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
@@ -222,14 +228,24 @@ play is built as a hand card's.
 **Credits** (issue #1840, R1840005). `Hero.tsx` draws each seat's `marketCredits` from the view alone,
 as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
 and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
-#2250 (R2250000), so the hand draws it and there is no Resource tray.
+#2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
+`Credits: <min>–<max>` under its text, its face's `resource` prices (`cards/model.ts`, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
-a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
+a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
+its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+
+**The match menu** (#2645). On a phone (`game/phoneBar.ts`, board.css's two phone layouts) the control bar
+keeps to one row: End turn, the Marketplace toggle while the view carries a marketplace, the log toggle,
+⋯ (`match-menu`) and the gear. ⋯'s menu (`match-menu-panel`, `game/MatchMenu.tsx`) holds Offer draw,
+Concede and Friends, each a full-width 44px row with its whole label; it decides nothing, so Concede still
+only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot while a declined offer blocks
+it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
+Tablets and desktops keep the buttons in the bar.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
@@ -272,9 +288,15 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
 mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
-(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
+(`pressBack`, `pressForward`), which need real timers; `seedSearch.ts` `seedWhere`, which finds a
+test's seed at run time instead of pinning one a card change re-deals (#2569); and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
+
+`scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
+the Patch notes page as Markdown, a pre-release while only staging has the version), which
+`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
@@ -367,9 +389,9 @@ net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for
                         the lobby
 net/spending.ts         R2378000: whether one of the tab's spends is out, from its press until its answer or
                         its failure (`net/api.ts`'s spends run through `whileSpending`); the Shop's Buy and
-                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack wait on it,
-                        Buy, Open and Open all turning economy/spend.css's wheel, and a 429 keeps its
-                        press's key
+                        the pack panel's Open, Open all, sealed pack, Reveal all and Next pack and the
+                        cosmetic pack panel's Open and chase Buy (R2683000) wait on it, Buy, Open and Open
+                        all turning economy/spend.css's wheel, and a 429 keeps its press's key
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
                         then the game), and useLiveGame, the live match, series or co-op game the menus'
@@ -404,7 +426,9 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         of its own wears its kind's default (R1953001); a card of the Cards section opens large
                         wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
-                        as live previews, which equip on that card alone, kept on the device
+                        as live previews (a full-art card's strip offers no full art and its Epic, its
+                        animated Legendary and its signed Mythic, R2655000), which equip on that card
+                        alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
                         the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles
                         and the deck builder's slot picker offer what the account owns, and an unowned
@@ -471,7 +495,9 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         with a new cosmetic's Equip (R1955000), filling from the opening's `shardBefore` and, only when full, its reward moment: the
-                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
+                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`), whose Buy asks
+                        inline first, "Buy Galaxy? This spends your full Chase Shard bar.", Cancel
+                        focused, Escape answering Cancel, and sends once on Confirm (R2683000); every
                         refusal shows the server's reason through `t()` (R711000) and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
                         read the account again (`onChanged`, `revision`) (`shop.ts` holds the
@@ -557,15 +583,16 @@ The landing page offers three doors — Play (to the `/play` hub, R1578000), Col
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
-- the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
-  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
+- the pass control on an inspected hand card sends `Pass` only when `legal` holds it, with the pass
+  cost and the passes left beside it (SPEC §13.5); it is the only way to pass, and a hand card
+  dragged onto the portal or the teammate's board passes nothing (#2619);
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
 - the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
   (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
   `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
-  card dragged onto it passing when `legal` lists it. The choice is kept per device in
+  card dragged onto it doing nothing. The choice is kept per device in
   `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
   screen while both boards show, and below 600px the toggle hides and the board falls back to one
   with the portal flipping: the rail rides whichever board the portal names, so the one drawn
@@ -614,8 +641,8 @@ src/practice/
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, the clock mark (R2208000), in IndexedDB `jackioh.practice`
-                      (memory in jsdom), and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
+                      PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
@@ -639,7 +666,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
-- A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
+- A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the

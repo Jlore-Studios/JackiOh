@@ -10631,8 +10631,6 @@
     ],
     "loc": 5,
     "base": {
-      "attack": 0,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -10645,8 +10643,6 @@
       "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
-      "attack": 0,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -18377,8 +18373,6 @@
     ],
     "loc": 24,
     "base": {
-      "attack": 1,
-      "health": 1,
       "keywords": [
         {
           "kind": "Animated"
@@ -18390,8 +18384,6 @@
       "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
     },
     "radiant": {
-      "attack": 2,
-      "health": 2,
       "keywords": [
         {
           "kind": "Animated"
@@ -22204,7 +22196,7 @@
     "loc": 253,
     "base": {
       "keywords": [],
-      "text": "Get employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     },
     "radiant": {
       "keywords": [
@@ -22213,7 +22205,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nGet employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     }
   },
   "stinkyscape-112-1": {

@@ -68,8 +68,8 @@
 //! conversion below is arithmetic. One file holds the modules `patch`, `patches_io` and `versions`
 //! (naming a version by its tier, R1366000) and the command itself, each keeping its module (SURFACE
 //! §4.2), with their tests at the bottom; `js` comes first. Some functions have no caller in the
-//! binary, only in the tests (`versions_at_sites` and the paths `patches_io` names).
-#![allow(dead_code)]
+//! binary, only in the tests (`versions_at_sites` and the paths `patches_io` names): each is
+//! `#[cfg(test)]`, so anything else the binary stops calling shows as dead code (#2160).
 
 use std::fmt;
 use std::fs;
@@ -462,6 +462,7 @@ pub mod patch {
     use anyhow::{Context as _, bail};
 
     use super::js::is_line_terminator;
+    #[cfg(test)]
     use jackioh_engine::wire::is_js_space;
 
     /// How a site's pattern finds the version.
@@ -496,6 +497,8 @@ pub mod patch {
 
     /// One match of a site's pattern: its byte span, and where the version starts inside it (everything before is kept).
     struct SiteMatch {
+        /// Read only by `versions_at_sites`, which only the tests call.
+        #[cfg_attr(not(test), allow(dead_code))]
         start: usize,
         value_start: usize,
         end: usize,
@@ -534,6 +537,7 @@ pub mod patch {
             })
     }
 
+    #[cfg(test)]
     fn non_space_length(text: &str) -> usize {
         text.char_indices()
             .find(|(_, c)| is_js_space(*c))
@@ -541,6 +545,7 @@ pub mod patch {
     }
 
     /// The version a site's match carries: the first alternative (`"v"` or `=v`) matching at the leftmost position.
+    #[cfg(test)]
     fn version_in(matched: &str) -> Option<String> {
         for (at, _) in matched.char_indices() {
             let rest = &matched[at..];
@@ -559,6 +564,7 @@ pub mod patch {
         None
     }
 
+    #[cfg(test)]
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub struct SiteVersion {
         pub file: &'static str,
@@ -567,6 +573,7 @@ pub mod patch {
 
     /// The version each site carries now, or `None` where the pattern finds none. An optional site
     /// that is missing or carries no version is left out.
+    #[cfg(test)]
     pub fn versions_at_sites(repo_root: &Path) -> anyhow::Result<Vec<SiteVersion>> {
         let mut out = Vec::new();
         for site in VERSION_SITES {
@@ -657,10 +664,12 @@ pub mod patches_io {
         super::repo_root().join("crates/cards/patches")
     }
 
+    #[cfg(test)]
     pub fn patches_json() -> PathBuf {
         patches_dir().join("patches.json")
     }
 
+    #[cfg(test)]
     pub fn index_json() -> PathBuf {
         patches_dir().join("index.json")
     }
@@ -671,6 +680,7 @@ pub mod patches_io {
     }
 
     /// Every shipped patch's provenance: the commit that shipped it and its snapshot's blob (R646).
+    #[cfg(test)]
     pub fn shipped_json() -> PathBuf {
         patches_dir().join("shipped.json")
     }
@@ -728,6 +738,7 @@ pub mod patches_io {
         }
 
         /// The fields a `changed` line lists; none for the other kinds.
+        #[cfg(test)]
         pub fn fields(&self) -> &[String] {
             self.fields.as_deref().unwrap_or(&[])
         }
@@ -1339,6 +1350,7 @@ pub mod patches_io {
     }
 
     /// Two catalogs hold the same entries, key order aside.
+    #[cfg(test)]
     pub fn same_catalog(a: &Catalog, b: &Catalog) -> bool {
         if a.len() != b.len() {
             return false;
@@ -1352,6 +1364,7 @@ pub mod patches_io {
     /// The working catalog with every pending-claimed entry reverted to the newest shipped
     /// snapshot: entries the snapshots hold come back, created ones go away. With no fragments it
     /// is the catalog as it stands.
+    #[cfg(test)]
     pub fn revert_pending(catalog: &Catalog, newest: &Catalog, claimed: &IndexSet<String>) -> Catalog {
         let mut out = Catalog::new();
         for (id, def) in catalog {

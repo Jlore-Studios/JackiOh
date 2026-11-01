@@ -319,6 +319,10 @@ pub struct TriggerDef {
     pub when: Option<TriggerWhen>,
     /// Reads the event and the state; returns the effects to queue, or none.
     pub run: TriggerRun,
+    /// R2396000: "Whenever this destroys a Unit": answers a `destroyed` its card is R42's killer of
+    /// though the card has left the field since, as the snapshot it killed with
+    /// (`triggers::offer_to_gone_killer`).
+    pub even_if_gone: bool,
 }
 
 impl TriggerDef {
@@ -333,6 +337,7 @@ impl TriggerDef {
             on: on.to_vec(),
             when: None,
             run: Arc::new(run),
+            even_if_gone: false,
         }
     }
 
@@ -342,6 +347,12 @@ impl TriggerDef {
         when: impl Fn(&mut EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static,
     ) -> TriggerDef {
         self.when = Some(Arc::new(when));
+        self
+    }
+
+    /// R2396000: the same trigger, answering a kill even once its card is gone.
+    pub fn even_if_gone(mut self) -> TriggerDef {
+        self.even_if_gone = true;
         self
     }
 }
@@ -1175,21 +1186,26 @@ pub struct Script {
     /// Vanilla takes them. A PURE READ of instance data: like an aura's `applies`, it must never call
     /// back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
-    /// "When this attacks" / "Whenever this attacks" (Classic #45 Nature Titan, Classic+ #73.1 Classic
-    /// Golem, Stinkyscape #75 Badger): run for the attacker before any damage of each attack it makes,
+    /// "When this attacks" (Classic #13 Boots on the Ground, Classic #45 Nature Titan, Classic+ #73.1
+    /// Classic Golem, Stinkyscape #75 Badger): run for the attacker before any damage of each attack it makes,
     /// a declared one's once its trap window has closed (before the defender's `allyAttacked`) and a
     /// forced one's before its combat (R2285000). `ctx.data` holds `{ targetId, forced }`, read with
     /// `combat::when_attacks_of`. A whole effect list followed by its state check, parkable like any
     /// (R113); an attack whose attacker or target has left the field after it does not fight (R220).
     pub when_attacks: Option<Hook>,
-    /// "After this attacks" (Classic #13 Boots on the Ground, Classic+ #73.1 Classic Golem, Core #32
-    /// Prem Panther): run for the attacker once the state check that closes each of its combats has run,
-    /// a declared attack's or a forced one's, and only when the attacker is still on the field on the
-    /// stay it attacked from: one that died in the combat, or left the field otherwise, does nothing
-    /// (R2285001). Not for an attack called off before it fought (R44). `ctx.data` holds the combat's
-    /// facts, read with `combat::after_attack_of`: `{ targetId, destroyedIds, survived, forced }`,
-    /// `survived` always true. A whole effect list, parkable like any (R113).
+    /// "After this attacks" (Classic+ #73.1 Classic Golem, Stinkyscape #38, #91, #92 and #94): run for
+    /// the attacker once the state check that closes each of its combats has run, a declared attack's
+    /// or a forced one's, and only when the attacker is still on the field on the stay it attacked
+    /// from: one that died in the combat, or left the field otherwise, does nothing (R2285001), but
+    /// under `after_attack_even_if_gone`. Not for an attack called off before it fought (R44).
+    /// `ctx.data` holds the combat's facts, read with `combat::after_attack_of`: `{ targetId,
+    /// destroyedIds, survived, forced }`, `survived` true but under `after_attack_even_if_gone`. A
+    /// whole effect list, parkable like any (R113).
     pub after_attack: Option<Hook>,
+    /// R2396000: "Whenever this attacks" (Core #32 Prem Panther): `after_attack` runs also for an
+    /// attacker that died or left the field in that combat, as the snapshot it fought with
+    /// (`prompts::SELF_KEY`), `survived` false.
+    pub after_attack_even_if_gone: bool,
     /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the
     /// state check that closes each combat it was the target of has run, a declared attack's or a
     /// forced one's, also when it died there — then on the snapshot it fought with, as a Death hook

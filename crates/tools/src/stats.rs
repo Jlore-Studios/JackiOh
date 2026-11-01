@@ -38,10 +38,10 @@
 //! notebook computes over the same files (`analysis/`) are checked against these.
 //!
 //! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
-//! per patch, mode and source: how often the first seat won (with its 95% Wilson interval), how the
-//! games ended, how long they lasted, and what R1256000's counts say of fatigue, Traps, position
-//! switches and Radiant upgrades. A record written before those counts is unknown for them, not
-//! zero. The training lanes keep these figures
+//! per patch, mode and source: how often the first seat won of the decided games (with its 95% Wilson
+//! interval; unknown when every game was drawn, R2567000), how the games ended, how long they lasted,
+//! and what R1256000's counts say of fatigue, Traps, position switches and Radiant upgrades. A record
+//! written before those counts is unknown for them, not zero. The training lanes keep these figures
 //! beside the card figures (`training/README.md`).
 //!
 //! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
@@ -394,13 +394,17 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
             "{patch} {mode} {source}: {games} games, {} drawn",
             figures.draws
         ));
-        lines.push(format!(
-            "  first seat won {} of {games}: {}, 95% interval {} to {}",
-            figures.first_wins,
-            percent(figures.first_share),
-            percent(figures.first_low),
-            percent(figures.first_high)
-        ));
+        lines.push(match figures.first_share {
+            Some(share) => format!(
+                "  first seat won {} of {} decided: {}, 95% interval {} to {}",
+                figures.first_wins,
+                figures.games - figures.draws,
+                percent(share),
+                percent(figures.first_low),
+                percent(figures.first_high)
+            ),
+            None => "  first seat: unknown, no game was won".to_string(),
+        });
         let endings: Vec<String> = figures
             .reasons
             .iter()
@@ -1249,7 +1253,7 @@ mod tests {
                     {
                         "patch": "v0.2.3", "mode": "random", "source": "dev",
                         "games": 3, "draws": 1, "firstWins": 1,
-                        "firstShare": 0.333, "firstLow": 0.061, "firstHigh": 0.792,
+                        "firstShare": 0.5, "firstLow": 0.095, "firstHigh": 0.905,
                         "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
                         "turnQuartiles": [9, 12, 40],
                         "counted": 2, "fatigueGames": 1, "fatigueShare": 0.5, "fatigueDamageMean": 1.5,
@@ -1278,7 +1282,7 @@ mod tests {
             "Games: AI development runs, every mode, every patch, human and AI pilots (unified).",
             "",
             "v0.2.3 random dev: 3 games, 1 drawn",
-            "  first seat won 1 of 3: 33.3%, 95% interval 6.1% to 79.2%",
+            "  first seat won 1 of 2 decided: 50.0%, 95% interval 9.5% to 90.5%",
             "  endings: hero-death 2, turn-cap 1",
             "  turns, quartiles: 9, 12, 40",
             "  fatigue: a draw from an empty library in 1 of 2 games (50.0%), 1.50 damage a game",
@@ -1288,7 +1292,7 @@ mod tests {
             "  (fatigue, traps, switches and upgrades over the 2 of 3 games whose records carry R1256000's counts)",
             "",
             "v0.2.2b random dev: 1 games, 0 drawn",
-            "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
+            "  first seat won 1 of 1 decided: 100.0%, 95% interval 20.7% to 100.0%",
             "  endings: alt-win 1",
             "  turns, quartiles: 15, 15, 15",
             "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts",
@@ -1347,6 +1351,29 @@ mod tests {
         assert!(render_games(&report, false).contains(
             "  (fatigue, traps, switches and upgrades over the 2 of 4 games whose records carry R1256000's counts)"
         ));
+    }
+
+    #[test]
+    fn r2567000_games_report_reads_the_first_seat_over_decided_games_and_unknown_when_all_drawn() {
+        let lines = [
+            game_line("dev:v0.2.3:dev:1", "v0.2.3", "draw", "turn-cap", 40, None),
+            game_line("dev:v0.2.3:dev:2", "v0.2.3", "draw", "draw-accepted", 20, None),
+        ];
+        let report = game_report(
+            &parse_game_record_lines(&lines.join("\n")).unwrap(),
+            &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
+        );
+        let figures = &report.groups[0].figures;
+        assert_eq!((figures.games, figures.draws, figures.first_share), (2, 2, None));
+        assert_eq!(
+            serde_json::to_value(&report).unwrap()["groups"][0]["firstShare"],
+            Value::Null
+        );
+        let text = render_games(&report, false);
+        assert!(
+            text.contains("v0.2.3 random dev: 2 games, 2 drawn\n  first seat: unknown, no game was won\n"),
+            "{text}"
+        );
     }
 
     #[test]

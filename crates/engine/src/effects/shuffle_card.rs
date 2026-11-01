@@ -7,11 +7,11 @@
 //! shuffle-in the engine has (`draw::shuffle_into_library`): the `shuffledIn` event with its position
 //! blanked for both players (R97), the owner shown what went in (R311) and R43's arrival roll.
 //!
-//! R80, R316: a card that would go into a full library does not. It STAYS where it is when it is in
-//! its owner's graveyard already — no second move and no second `enteredGraveyard`, since it never
-//! left — and `libraryOverflow { outcome: "graveyard" }` reports the refusal as for any existing card.
-//! A card anywhere else is refused the way `shuffle_into_library` refuses an existing card: to its
-//! owner's graveyard, or ceasing to exist if it is a unit-token card (R11).
+//! R80, R316: a card that would go into a full library does not, and `shuffle_into_library` alone
+//! decides it. It STAYS where it is when it is in its owner's graveyard already — no second move and
+//! no second `enteredGraveyard`, since it never left — and `libraryOverflow { outcome: "graveyard" }`
+//! reports the refusal as for any existing card. A card anywhere else is refused as any existing card
+//! is: to its owner's graveyard, or ceasing to exist if it is a unit-token card (R11).
 //!
 //! R1867006: `player` moves the card into another player's library instead (Stinkyscape #12.3
 //! Psychic Scream's "into your opponent's deck"). The card becomes the new owner's before the move,
@@ -22,11 +22,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::LIBRARY_CAP;
 use crate::draw::shuffle_into_library;
 use crate::script::Effect;
 use crate::state::{find_instance, find_instance_mut};
-use crate::wire::{GameEvent, LibraryOverflowOutcome, Zone};
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -61,19 +59,6 @@ pub fn shuffle_card_into(args: ShuffleCardIntoArgs) -> Effect {
         let Some(mut card) = find_instance(ctx.state, &args.instance_id).cloned() else {
             return;
         };
-        let full = ctx.state.players[card.owner].library.len() as i32 >= LIBRARY_CAP;
-        let in_own_graveyard = matches!(card.zone, Zone::Graveyard { player } if player == card.owner);
-        if full && in_own_graveyard {
-            ctx.events.push(GameEvent::LibraryOverflow {
-                player: card.owner,
-                instance_id: card.id.clone(),
-                def_id: card.def_id.clone(),
-                outcome: LibraryOverflowOutcome::Graveyard,
-                radiant: if card.radiant { Some(true) } else { None },
-                copy_of: None,
-            });
-            return;
-        }
         shuffle_into_library(ctx, &mut card, true, None);
     })
 }

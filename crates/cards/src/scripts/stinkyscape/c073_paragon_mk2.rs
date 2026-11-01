@@ -1,9 +1,9 @@
 //! SPEC §8.10 Stinkyscape 73 Paragon Mk2, a card of the Stinkyscape set.
-//! (4) Unit, Legendary, 7/1 → 14/2: Starship Piece, Charge, Flying, Ranged, Divine Shield.
-//! Radiant: Starship Piece, Charge, Flying, Ranged, Divine Shield, Pierce.
+//! (4) Unit, Legendary, 7/1 → 14/2: Charge, Flying, Ranged, Divine Shield.
+//! Radiant: Charge, Flying, Ranged, Divine Shield, Pierce.
 //!
-//! Keywords only (§6.1): its script is empty. Starship Piece: its death fuses a copy into its
-//! owner's Dormant Starship, summoned first if they have none (R1852000).
+//! Keywords only (§6.1): its script is empty. Since #2521 it is no Starship Piece: its death fuses
+//! nothing (R1852000 reads the keyword).
 
 use jackioh_engine::prelude::*;
 
@@ -17,8 +17,8 @@ pub fn script() -> CardScripts {
 }
 
 // Stinkyscape #73 Paragon Mk2 — SPEC §8.10 row 73, BUILD M12 row S 73: "a 7/1 Charge Flying Ranged
-// Divine Shield Starship Piece; its Divine Shield takes the first hit; radiant 14/2 with Pierce
-// (R346)".
+// Divine Shield Unit; its Divine Shield takes the first hit; no Starship Piece, so its death fuses
+// nothing (#2521); radiant 14/2 with Pierce (R346)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -28,8 +28,9 @@ mod tests {
     use crate::filler;
 
     const PARAGON: &str = "stinkyscape-073";
-    const STRATOS: &str = "stinkyscape-068"; // 3/3 Flying Starship Piece.
+    const STRATOS: &str = "stinkyscape-068"; // (1) 3/1 Flying, Ranged.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
     fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
@@ -53,11 +54,11 @@ mod tests {
         let def = crate::card_def(PARAGON);
         assert_eq!(
             kinds_of(&def.base.keywords),
-            vec!["Starship Piece", "Charge", "Flying", "Ranged", "Divine Shield"]
+            vec!["Charge", "Flying", "Ranged", "Divine Shield"]
         );
         assert_eq!(
             kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Charge", "Flying", "Ranged", "Divine Shield", "Pierce"]
+            vec!["Charge", "Flying", "Ranged", "Divine Shield", "Pierce"]
         );
         assert_eq!((def.base.attack, def.base.health), (Some(7), Some(1)));
         assert_eq!((def.radiant.attack, def.radiant.health), (Some(14), Some(2)));
@@ -72,8 +73,9 @@ mod tests {
             "p2": { "hand": [ANCHOR], "field": [STRATOS, MENACE], "library": filler(4) },
         }));
         // A Unit without Flying or Ranged cannot attack it (R783002); a Flying one can, and its
-        // 3-attack hit takes the Divine Shield instead: the Paragon stands undamaged, while the
-        // Stratos dies to the 7-attack strike back.
+        // 3-attack hit takes the Divine Shield instead: the Paragon stands undamaged, while the 3/1
+        // Stratos dies to the 7-attack strike back (the Paragon has Ranged, so it strikes back a
+        // Ranged attacker, R783000).
         s.expect_refused(|s| s.attack(MENACE, PARAGON));
         s.attack(STRATOS, PARAGON);
         s.expect_in_zone(PARAGON, "field");
@@ -87,6 +89,23 @@ mod tests {
         s.expect_in_zone(PARAGON, "field");
         assert_eq!(s.card(PARAGON).damage, 0);
         assert_eq!(s.card(MENACE).damage, 7);
+    }
+
+    #[test]
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [PARAGON], "library": filler(4) },
+            "p2": { "hand": [ANCHOR], "library": filler(4) },
+        }));
+        let me = s.card(PARAGON).clone();
+        assert!(!live_kinds(&s, PARAGON).contains(&"Starship Piece".to_string()));
+        // A destroy is no damage: the Divine Shield does not stop it.
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+
+        s.expect_in_zone(&me, "graveyard");
+        assert!(dormant_starship_of(s.state(), PlayerId::P1).is_none(), "no Dormant Starship");
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
     }
 
     #[test]

@@ -24,8 +24,6 @@ use jackioh_engine::testkit::{
     registered_catalog, validate_deck,
 };
 
-use jackioh_engine::catalog::pair_key;
-
 use super::support::{ai_pool, register_cards};
 
 const SEEDS: usize = 200;
@@ -612,8 +610,8 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     /// The tags a theme may be (at least `minThemeSize` cards of the pool `banned` and the gate `gated`
-    /// leave), each with how many cards the pool holds of it, a Core card and its snapshot counted
-    /// once since a deck holds one of them (R2195000); never Quickdraw (R817000).
+    /// leave), each with how many cards the pool holds of it, a Core card and its Legacy card counted
+    /// apart since a deck holds both (R2511001); never Quickdraw (R817000) or Legacy (R2511001).
     fn themes(banned: &[String], gated: &[SetName]) -> Vec<(String, usize)> {
         register_cards();
         let pool: Vec<CardDef> = query(&CatalogQueryArgs::default())
@@ -624,16 +622,14 @@ mod r1370_a_deck_that_leans_on_a_set {
         let mut counts: IndexMap<String, IndexSet<String>> = IndexMap::new();
         for def in &pool {
             for tag in &def.tags {
-                if *tag != Tag::Token && *tag != Tag::Quickdraw {
+                if *tag != Tag::Token && *tag != Tag::Quickdraw && *tag != Tag::Legacy {
                     counts
                         .entry(tag.as_str().to_string())
                         .or_default()
-                        .insert(pair_key(def).to_string());
+                        .insert(def.id.clone());
                 }
             }
         }
-        // Re-pinned for the Training Grounds release (#2204): TG #59 is Core #47's Fruit snapshot, so
-        // the Fruit pool counted one card twice and asked a floor the deck can never meet.
         let mut themes: Vec<(String, usize)> = counts
             .into_iter()
             .map(|(tag, cards)| (tag, cards.len()))
@@ -725,7 +721,10 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
         // deal the decks unchanged. Every pin was re-dealt again for #2179, whose costs move the curve.
         // And for the Training Grounds release (#2204): the literals gate it as well, so the decks are
-        // still the ones dealt before it was in any pool.
+        // still the ones dealt before it was in any pool. The human and themed pins were re-dealt for
+        // #2521, whose Memory Leak and Going Long changes move the builder's picks: their seeds stop at
+        // the same cursors. Every pin was re-dealt again for #2657, whose costs move the curve:
+        // the same seeds stop at the same cursors.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -748,11 +747,11 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-078",
                     "core-012",
                     "core-010",
-                    "core-055",
+                    "core-056",
                     "classicplus-007",
-                    "classicplus-031",
-                    "core-076",
-                    "classicplus-008",
+                    "classicplus-034",
+                    "core-077",
+                    "classicplus-026",
                 ],
             ),
             (
@@ -771,16 +770,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-015",
                     "core-004",
                     "core-052",
-                    "core-091",
-                    "classicplus-001",
+                    "core-092",
+                    "classicplus-002",
                     "classicplus-044",
                     "core-032",
-                    "classic-049",
+                    "classic-050",
                     "classicplus-067",
-                    "classic-004",
-                    "classicplus-066",
-                    "core-045",
-                    "core-054",
+                    "classic-005",
+                    "classicplus-068",
+                    "core-026",
+                    "core-053",
                 ],
             ),
             (
@@ -808,17 +807,17 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-020",
                     "classic-066",
                     "classicplus-012",
-                    "classic-079",
+                    "classic-080",
                     "classic-020",
                     "classicplus-003",
-                    "classic-061",
-                    "classicplus-005",
-                    "classicplus-046",
-                    "core-032",
-                    "classic-006",
-                    "core-095",
-                    "core-094",
-                    "classicplus-017",
+                    "classic-060",
+                    "classicplus-008",
+                    "classicplus-038",
+                    "core-029",
+                    "classic-014",
+                    "classic-009",
+                    "classic-004",
+                    "classicplus-019",
                 ],
             ),
             (
@@ -840,13 +839,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-066",
                     "classicplus-037",
                     "core-001",
-                    "core-082",
+                    "core-078",
+                    "core-071",
                     "core-066",
-                    "core-070",
                     "classicplus-063",
-                    "core-093",
-                    "classic-075",
-                    "classicplus-013",
+                    "core-098",
+                    "classic-083",
+                    "classicplus-026",
                 ],
             ),
         ];
@@ -1008,7 +1007,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             .iter()
             .filter(|id| {
                 let def = def_of(None, id);
-                def.snapshot_of.is_none() && !def.tags.contains(&Tag::Quickdraw)
+                !def.tags.contains(&Tag::Legacy) && !def.tags.contains(&Tag::Quickdraw)
             })
             .cloned()
             .collect();
@@ -1018,8 +1017,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
         // gave the units' up (seed 7). Its last six hold two Units (M+ #21, #24), as Meditative's first
         // six did (M #2, #3), so every floor stays in reach and the units' is still held. Re-pinned for
-        // the Training Grounds release (#2204): the newest set's snapshots (#41–#60) are left out, as a
-        // Core card dealt first keeps its snapshot out (R2195000), and so is #40 Goetzmann Game Design, a
+        // the Training Grounds release (#2204): the newest set's Legacy cards (#41–#60) are left out, so
+        // the six kept stay the set's own printed cards (R2511000), and so is #40 Goetzmann Game Design, a
         // Quickdraw card the cap may keep out (R817000), so the six kept are TG #34–#39, two of them Units
         // (#36, #38).
         let kept: Vec<String> = printed[printed.len() - 6..].to_vec();
@@ -1659,6 +1658,38 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
         }
     }
 
+    /// R2511001: Legacy marks copies of Core cards, not a family, so it is never a theme either: a
+    /// pool whose one theme-sized tag it is rolls none (a Legacy-themed deck would be a bag of reprints).
+    #[test]
+    fn r2511001_legacy_is_never_a_theme_so_a_pool_whose_one_theme_sized_tag_it_is_rolls_none() {
+        register_cards();
+        let legacy: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.contains(&Tag::Legacy))
+            .map(|def| def.id.clone())
+            .collect();
+        assert_eq!(legacy.len(), 20);
+        let mut untagged: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.is_empty())
+            .map(|def| def.id.clone())
+            .collect();
+        untagged.sort();
+        let kept: IndexSet<String> = legacy
+            .into_iter()
+            .chain(untagged.into_iter().take(DECK_SIZE as usize))
+            .collect();
+        let banned: Vec<String> = ai_pool().into_iter().filter(|id| !kept.contains(id)).collect();
+        let opts = options(json!({ "banned": banned, "gatedSets": [] }));
+        for n in 1..=SEEDS {
+            let mut rng = create_rng(&format!("r2511001:theme:{n}"), 0);
+            let deck = build_ai_deck(&mut rng, DECK_SIZE, &opts);
+            assert_eq!(deck.len(), DECK_SIZE as usize, "seed {n}");
+            // The theme's chance and one draw per card, and no draw to pick a theme.
+            assert_eq!(rng.cursor(), DECK_SIZE as u32 + 1, "seed {n}");
+        }
+    }
+
     #[test]
     fn r817000_an_included_quickdraw_card_counts_toward_the_cap_and_is_always_dealt() {
         register_cards();
@@ -1773,45 +1804,50 @@ mod r976000_shaping_is_an_option {
     }
 }
 
-/// R2195000: a random deck holds a Core card or its Training Grounds snapshot, never both, and an
-/// included one keeps the other out. The deals lean on the set so the snapshots are dealt often.
-mod r2195000_a_random_deck_holds_a_core_card_or_its_snapshot {
+/// R2195000, R2511001: a Legacy card is its own card, so a random deck may hold it beside its Core
+/// card, and an included Core card keeps neither out. The deals lean on the set so the Legacy cards
+/// are dealt often.
+mod r2195000_r2511001_a_random_deck_may_hold_a_core_card_and_its_legacy_card {
     use super::*;
 
-    /// The Core cards `deck` holds beside their snapshots.
+    /// The Legacy cards `deck` holds beside their Core cards, the Core card named after "Legacy: ".
     fn both_in(deck: &[String]) -> Vec<String> {
         deck.iter()
-            .filter_map(|id| def_of(None, id).snapshot_of.clone())
-            .filter(|core| deck.contains(core))
+            .filter(|id| {
+                let name = &def_of(None, id).name;
+                name.strip_prefix("Legacy: ").is_some_and(|core| {
+                    deck.iter().any(|other| {
+                        let other = def_of(None, other);
+                        other.set == jackioh_engine::SetName::Core && other.name == core
+                    })
+                })
+            })
+            .cloned()
             .collect()
     }
 
     #[test]
-    fn r2195000_no_random_deck_holds_both_and_an_included_one_keeps_the_other_out() {
+    fn r2195000_r2511001_a_random_deck_may_hold_both_and_an_included_one_keeps_neither_out() {
         register_cards();
         let leaning = json!({ "banned": [], "gatedSets": [], "leanSet": "Training Grounds" });
-        let mut snapshots = 0;
+        let (mut both, mut included_both) = (0, 0);
         for n in 0..SEEDS {
             let seed = format!("r2195000:{n}");
             let deck = build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &options(leaning.clone()));
-            snapshots += deck
-                .iter()
-                .filter(|id| def_of(None, id).snapshot_of.is_some())
-                .count();
-            assert_eq!(both_in(&deck), Vec::<String>::new(), "{seed}: {deck:?}");
+            both += both_in(&deck).len();
 
             let mut including = leaning.clone();
             including["include"] = json!(["core-002"]);
             let deck = build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &options(including));
             assert!(deck.contains(&"core-002".to_string()), "{seed}");
-            assert!(
-                !deck.contains(&"traininggrounds-041".to_string()),
-                "{seed}: {deck:?}"
-            );
+            if deck.contains(&"traininggrounds-041".to_string()) {
+                included_both += 1;
+            }
         }
+        assert!(both > 0, "no deck held a Core card beside its Legacy card");
         assert!(
-            snapshots > 0,
-            "no deck held a snapshot, so the deals measured nothing"
+            included_both > 0,
+            "an included Core card kept its Legacy card out of every deck"
         );
     }
 }

@@ -15,6 +15,7 @@ import {
   animTestid,
   createAnimationQueue,
   durationFor,
+  firesAgain,
   HIDDEN_ID,
   locateInstance,
   newEventsSince,
@@ -147,6 +148,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   held: 350,
   // Issue #1855 (R1855000).
   boardReplaced: 500,
+  // Issue #2652 (R2652001).
+  rolled: 1200,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -282,6 +285,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
   boardReplaced: { type: "boardReplaced", player: "p1" },
+  rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -352,7 +356,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(92);
+    expect(rows).toHaveLength(93);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -814,6 +818,28 @@ describe("planEntries", () => {
       expect(entry.durationMs, entry.type).toBe(0);
     }
   });
+
+  it("R2657001 a Field Trap firing again plays no reveal: an activation's flare on its card, where a first firing flips", () => {
+    // The fixture's face-up Field Trap stands in the viewer's backrow lane 1; core-018 is Bread and Butter, a Field Trap.
+    const trap = must(faceUpBackrowIds(view)[1], "the viewer's face-up Field Trap");
+    const first: GameEvent = { type: "trapFired", instanceId: trap, defId: "core-018", controller: "p1", row: "backrow", lane: 1 };
+    const again: GameEvent = { ...first, again: true };
+    expect(firesAgain(first)).toBe(false);
+    expect(firesAgain(again)).toBe(true);
+
+    const [flip, flare] = planEntries([first, again], view, false);
+    // The first firing is the reveal: the flip and its hold on the card.
+    expect(flip?.type).toBe("trapFired");
+    expect(flip?.durationMs).toBe(BUILD_DURATIONS.trapFired);
+    expect([...(flip?.frames ?? [])]).toEqual([[testid.card(trap), "trapFired"]]);
+    // The second reveals nothing: the card flares as an activated one does, for an activation's time.
+    expect(flare?.events).toEqual([again]);
+    expect(flare?.type).toBe("activated");
+    expect(flare?.durationMs).toBe(BUILD_DURATIONS.activated);
+    expect([...(flare?.frames ?? [])]).toEqual([[testid.card(trap), "activated"]]);
+    // Reduced motion zeroes it like any other entry.
+    expect(planEntries([again], view, true)[0]?.durationMs).toBe(0);
+  });
 });
 
 /* ------------------------------------------------------------------------------------------- *
@@ -920,9 +946,14 @@ describe("createAnimationQueue", () => {
       expect(ms, "no entry is lengthened").toBeLessThanOrEqual(timed[index]?.durationMs ?? 0);
       expect(ms, "and none is squeezed below the floor").toBeGreaterThanOrEqual(MIN_ENTRY_MS);
     }
+    // R2652001: a batch of coins or dice is pinned, keeping its time out of the budget, as a cast is.
+    const pinned = timed.flatMap((entry, index) => (entry.type === "rolled" ? [index] : []));
+    expect(pinned.length, "the stream holds rolls").toBeGreaterThan(0);
+    for (const index of pinned) expect(scheduled[index]).toBe(timed[index]?.durationMs);
+    const squeezed = scheduled.filter((_, index) => !pinned.includes(index));
     // The floor is what a stream of this length costs; without it the budget would be exact.
-    expect(scheduled.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(
-      Math.max(BURST_BUDGET_MS, timed.length * MIN_ENTRY_MS),
+    expect(squeezed.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(
+      Math.max(BURST_BUDGET_MS, squeezed.length * MIN_ENTRY_MS),
     );
     expect(queue.idle()).toBe(true);
   });

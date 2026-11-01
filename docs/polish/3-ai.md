@@ -290,7 +290,7 @@ export type NodeCounter = {
 
 ```ts
 export const AI_BUDGET: SearchBudget = {
-  nodes: 600, lethalNodes: 150, determinizations: 3, beamWidth: 4,
+  nodes: 1200, lethalNodes: 300, determinizations: 3, beamWidth: 4,
   rootBranching: 20, branching: 6, maxDepth: 8, finalists: 3,
 };
 /** The quality gates' and the sweep's budget: the browser's own, so both measure the AI that ships. */
@@ -1062,7 +1062,7 @@ export const PRACTICE_PACING: PracticePacing = { firstActionMs: 800, actionGapMs
 export const PRACTICE_PACING_REDUCED: PracticePacing = { firstActionMs: 150, actionGapMs: 150, promptAnswerMs: 100 };
 /** `?pace=fast`, honored only when MODE !== "production" (e2e). */
 export const PRACTICE_PACING_FAST: PracticePacing = { firstActionMs: 0, actionGapMs: 30, promptAnswerMs: 0 };
-export const PRACTICE_AI_CLOCK_MS = 1500;
+export const PRACTICE_AI_CLOCK_MS = 3000;
 export const PRACTICE_SETUP_KEY = "jackioh.practice.setup"; // localStorage: { difficulty, deck } (try/catch)
 export const PRACTICE_DEFAULT_DIFFICULTY: Difficulty = "easy";
 ```

@@ -38,10 +38,14 @@ pub const AI_SKILL_MAX: f64 = 1.0;
 /// can play under half as often as the random policy (0.038 to 0.096).
 pub const AI_SKILL_MISS_TEMPERATURE: f64 = 4.0;
 
-/// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
+/// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180). R2575000: 1200 nodes
+/// and 300 lethal nodes since the owner doubled them (issue #2575), in the search shape of before; a
+/// fat state still scales its allowance from at most `AI_SEARCH.fat_budget_nodes`, and the server's
+/// ladder bots' middle strengths and its Duos seats keep the 600 and 150 of before
+/// (`BOT_MID_STRENGTH_BUDGET`, `DUOS_AI_BUDGET` in `crates/server/src/config.rs`).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
-    nodes: 600,
-    lethal_nodes: 150,
+    nodes: 1200,
+    lethal_nodes: 300,
     determinizations: 3,
     beam_width: 4,
     root_branching: 20,
@@ -65,6 +69,24 @@ pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
 /// AI's solver does.
 pub const LETHAL_HINT_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
 pub const LETHAL_HINT_NODES: usize = AI_BUDGET.lethal_nodes;
+
+/// R2660000: the stream the ladder bots' concession check (`unstoppable::unstoppable_lethal`) draws
+/// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
+pub const UNSTOPPABLE_LETHAL_SEED: &str = "ai:unstoppable-lethal";
+
+/// R2660000: the worlds the check proves the lethal on, the AI's own; it holds only on all of them.
+pub const UNSTOPPABLE_LETHAL_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
+const _: () = assert!(
+    UNSTOPPABLE_LETHAL_DETERMINIZATIONS > 0,
+    "R2660000: no world proves nothing"
+);
+
+/// R2660000: the nodes one whole check may spend, the seat's every line and the opponent's every
+/// reply on every world: twice a decision's, since it tries every line where the search tries a beam.
+pub const UNSTOPPABLE_LETHAL_NODES: usize = 2 * AI_BUDGET.nodes;
+
+/// R2660000: the nodes one proof of the opponent's lethal may spend, the AI's solver's own.
+pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize = AI_BUDGET.lethal_nodes;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
@@ -157,6 +179,9 @@ pub struct AiSearch {
     pub fat_min_nodes: i32,
     /// The least of the scaled budget the lethal solver's allowance shrinks to.
     pub fat_min_lethal: i32,
+    /// R2575000: the most nodes a fat state's allowance is scaled from: the practice budget before
+    /// issue #2575 doubled it, so a state whose every step costs the most spends what it did.
+    pub fat_budget_nodes: i32,
     /// The cards a simulated Play of which `simulate` charges `expensive_def_nodes` for (its
     /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
     /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
@@ -198,6 +223,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     fat_reference: 30,
     fat_min_nodes: 150,
     fat_min_lethal: 60,
+    fat_budget_nodes: 600,
     expensive_def_ids: &["core-097", "classicplus-027"],
     expensive_def_nodes: 100,
     ai_turn_trap_ids: &["core-096"],
@@ -419,11 +445,30 @@ pub struct EvalWeights {
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
     /// killing a unit whose Death pays its owner is worth less than its body.
     pub death: f64,
+    /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
+    /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
+    /// seat can read, either side's, and `unit_worth` adds for each unit on the field. A face-down card
+    /// is priced as before.
+    pub turn_hook: f64,
+    /// R2564000: the share of what one use of a unit's Activate gives its controller
+    /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units
+    /// and the enemy's alike. R2603000: `material` adds it, inside the card's Brittle share, for each
+    /// backrow card the seat can read, on either side.
+    pub activation: f64,
+    /// R2688000: the share of what a unit's next attack gives its controller through its attack hooks,
+    /// "when this attacks" and "after this attacks" (`evaluate::attack_hook_price`), that `unit_worth`
+    /// adds, inside the Brittle share, while the unit may attack, the seat's units and the enemy's
+    /// alike.
+    pub attack_hook: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
     pub backrow_base: f64,
     pub backrow_per_cost: f64,
+    /// R2490000: a Unit standing in the backrow is priced once, as the Unit the unit walk priced
+    /// — the backrow walk skips it. Off, it keeps the old backrow price on top, as the frozen
+    /// baseline did.
+    pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
     /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
@@ -561,9 +606,20 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     slumber_waiting_share: 0.5,
     // R2424000: an untuned start for the training lanes, as R2380000's shares are.
     death: 0.5,
+    // R2477000: an untuned start for the training lanes, as R2424000's is. At 0.5 the smoke gate read
+    // 20, 16 and 17 of 20; at 1.0, 19, 16 and 16, Hard against Easy on its floor of 16.
+    turn_hook: 0.5,
+    // R2564000: an untuned start for the training lanes, as R2477000's is. At 0.5 the smoke gate read
+    // 20, 16 and 20 of 20; at 0, 19, 16 and 20.
+    activation: 0.5,
+    // R2688000: an untuned start for the training lanes, as R2564000's is. At 0.5 the smoke gate read
+    // 20, 20 and 20 of 20; at 0, 20, 20 and 20.
+    attack_hook: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
+    // R2490000: a Unit standing in the backrow counts once, as the Unit it is.
+    standing_unit_priced_once: true,
     enemy_face_down: 2.0,
     // #1602: off. At 0.8 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
     // 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen); the
@@ -595,6 +651,22 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
 /// R2424000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two per field
 /// unit with a Death, three or four per own hand Unit with one.
 pub const AI_DEATH_PROBE_NODES: usize = 24;
+
+/// R2477000, R2565000: the most nodes a decision's turn-hook probes (`evaluate::turn_hook_prices`)
+/// spend: one per turn hook of each card on either board the seat can read with one, and a spawn
+/// (three nodes on a full unit row) more per own hand Unit or Field Spell with one. 24, as the Death
+/// probes', for a board with a few engines on both sides and the hand's.
+pub const AI_TURN_HOOK_PROBE_NODES: usize = 24;
+
+/// R2564000, R2603000: the most nodes a decision's activation probes (`evaluate::activation_prices`)
+/// spend: two turn ends and `AI_REPLY.visible_activations` uses for each of about four cards, units and
+/// face-up backrow cards together.
+pub const AI_ACTIVATION_PROBE_NODES: usize = 20;
+
+/// R2688000: the most nodes a decision's attack-hook probes (`evaluate::attack_hook_prices`) spend: two
+/// turn ends, and two attacks (the unit's and its hookless twin's) for each of about five units with a
+/// "when this attacks" or an "after this attacks" hook, on either field.
+pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -750,9 +822,17 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     slumber_waiting_share: 0.0,
     // R2424000 came after the gates were fixed: nothing, as it gave a Death.
     death: 0.0,
+    // R2477000 came after the gates were fixed: nothing, as it gave a turn hook.
+    turn_hook: 0.0,
+    // R2564000 came after the gates were fixed: nothing, as it gave an Activate.
+    activation: 0.0,
+    // R2688000 came after the gates were fixed: nothing, as it gave an attack hook.
+    attack_hook: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
+    // The baseline is frozen: it priced a standing Unit again as a backrow card, as it did.
+    standing_unit_priced_once: false,
     enemy_face_down: 2.0,
     // #1602's shown cost and fatigue came after the gates were fixed too: nothing, as it gave them.
     enemy_face_down_per_cost: 0.0,

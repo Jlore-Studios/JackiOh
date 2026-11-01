@@ -333,14 +333,6 @@ pub fn record_matches(record: &GameRecord, filter: &CardStatsFilter) -> bool {
         && filter.patch.as_ref().is_none_or(|patch| record.patch == *patch)
 }
 
-/// The seats of a record the pilot filter counts, in seat order.
-pub fn seats_counted(record: &GameRecord, pilot: PilotFilter) -> Vec<PlayerId> {
-    PLAYER_IDS
-        .into_iter()
-        .filter(|seat| pilot == PilotFilter::Unified || record.pilots[*seat].as_str() == pilot.as_str())
-        .collect()
-}
-
 // ---------------------------------------------------------------------------
 // The breakdowns (R377)
 // ---------------------------------------------------------------------------
@@ -1436,11 +1428,12 @@ pub struct GameFigures {
     pub draws: i64,
     /// How many the seat that took the first turn won.
     pub first_wins: i64,
-    /// `first_wins` over `games`, to three places.
-    pub first_share: f64,
-    /// The low end of the 95% Wilson interval of `first_share`.
+    /// R2567000: `first_wins` over the decided games (`games - draws`), to three places, or null
+    /// when every game was drawn.
+    pub first_share: Option<f64>,
+    /// The low end of the 95% Wilson interval of `first_share`, over the decided games: 0 when none.
     pub first_low: f64,
-    /// The high end of the 95% Wilson interval of `first_share`.
+    /// The high end of the 95% Wilson interval of `first_share`, over the decided games: 1 when none.
     pub first_high: f64,
     /// Games per ending, every `GameOverReason` in its declared order, the ones no game had at 0.
     pub reasons: IndexMap<GameOverReason, i64>,
@@ -1502,7 +1495,9 @@ fn game_figures(total: &GameTotal) -> Option<GameFigures> {
     if total.games <= 0 {
         return None;
     }
-    let (low, high) = wilson_interval(total.first_wins, total.games);
+    // R2567000: a draw is neither seat's win, so the first seat's share is over the decided games.
+    let decided = total.games - total.draws;
+    let (low, high) = wilson_interval(total.first_wins, decided);
 
     let mut reasons: IndexMap<GameOverReason, i64> =
         GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
@@ -1532,7 +1527,7 @@ fn game_figures(total: &GameTotal) -> Option<GameFigures> {
         games: total.games,
         draws: total.draws,
         first_wins: total.first_wins,
-        first_share: round_share(total.first_wins as f64 / total.games as f64),
+        first_share: (decided > 0).then(|| round_share(total.first_wins as f64 / decided as f64)),
         first_low: round_share(low),
         first_high: round_share(high),
         reasons,
@@ -2675,6 +2670,15 @@ mod tests {
     mod totals {
         use super::*;
 
+        /// The seats of a record the pilot filter counts, in seat order: the record-by-record
+        /// reference the totals are held to.
+        fn seats_counted(record: &GameRecord, pilot: PilotFilter) -> Vec<PlayerId> {
+            PLAYER_IDS
+                .into_iter()
+                .filter(|seat| pilot_counts(pilot, record.pilots[*seat]))
+                .collect()
+        }
+
         /// `card_stats` as it counted the records themselves.
         fn reference_card_stats(records: &[GameRecord], filter: &CardStatsFilter) -> CardStatsReport {
             let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
@@ -3311,6 +3315,7 @@ mod tests {
 
         /// One group's figures over its records, which are never none: `stats report --games` as
         /// it counted the records themselves (`crates/tools/src/stats.rs`, before R1994000).
+        /// The first seat's share is over the decided games (R2567000).
         fn reference_game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> GameGroup {
             let (patch, mode, source) = key;
             let n = records.len();
@@ -3322,7 +3327,8 @@ mod tests {
                 .iter()
                 .filter(|record| record.game.winner.player() == Some(record.game.first))
                 .count();
-            let (low, high) = wilson_interval(first_wins as i64, n as i64);
+            let decided = n - draws;
+            let (low, high) = wilson_interval(first_wins as i64, decided as i64);
 
             let mut reasons: IndexMap<GameOverReason, i64> =
                 GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
@@ -3354,7 +3360,7 @@ mod tests {
                     games: n as i64,
                     draws: draws as i64,
                     first_wins: first_wins as i64,
-                    first_share: round_share(first_wins as f64 / n as f64),
+                    first_share: (decided > 0).then(|| round_share(first_wins as f64 / decided as f64)),
                     first_low: round_share(low),
                     first_high: round_share(high),
                     reasons,
@@ -3450,6 +3456,44 @@ mod tests {
                 let json = serde_json::to_string(total).unwrap();
                 assert_eq!(&serde_json::from_str::<GameTotal>(&json).unwrap(), total);
             }
+        }
+
+        #[test]
+        fn r2567000_the_first_share_counts_only_the_decided_games() {
+            // 10 games: 4 first-seat wins, 4 second-seat wins, 2 draws.
+            let total = GameTotal {
+                games: 10,
+                draws: 2,
+                first_wins: 4,
+                turns: [(12, 10)].into_iter().collect(),
+                ..GameTotal::default()
+            };
+            let figures = game_figures(&total).unwrap();
+            assert_eq!((figures.games, figures.draws, figures.first_wins), (10, 2, 4));
+            assert_eq!(figures.first_share, Some(0.5));
+            let (low, high) = wilson_interval(4, 8);
+            assert_eq!(
+                (figures.first_low, figures.first_high),
+                (round_share(low), round_share(high))
+            );
+            assert_eq!((figures.first_low, figures.first_high), (0.215, 0.785));
+        }
+
+        #[test]
+        fn r2567000_every_game_drawn_leaves_the_first_share_unknown() {
+            let total = GameTotal {
+                games: 3,
+                draws: 3,
+                turns: [(40, 3)].into_iter().collect(),
+                ..GameTotal::default()
+            };
+            let figures = game_figures(&total).unwrap();
+            assert_eq!(figures.first_share, None);
+            assert_eq!((figures.first_low, figures.first_high), (0.0, 1.0));
+            assert_eq!(
+                serde_json::to_value(&figures).unwrap()["firstShare"],
+                serde_json::Value::Null
+            );
         }
     }
 

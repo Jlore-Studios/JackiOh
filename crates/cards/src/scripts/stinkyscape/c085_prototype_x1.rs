@@ -1,7 +1,7 @@
 //! Stinkyscape #85 Prototype-X1 (SPEC §8.10 row 85). Unit 6/6 → 12/12, cost 4, Legendary.
-//!   Base:    "Tribute 2, Starship Piece
+//!   Base:    "Tribute 2
 //!            Cry: Discover 2 Epic Weapons and Equip them into this."
-//!   Radiant: "Tribute 2, Starship Piece
+//!   Radiant: "Tribute 2
 //!            Cry: Discover 2 Legendary Weapons and Equip them into this."
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's printed
@@ -9,9 +9,9 @@
 //! Weapon-tagged cards of the rarity, the pool naming its set so that it reaches them whether or not the
 //! set ships (R1420, R1857000). Each pick is a fresh copy, not made Radiant, fused into this with its Activate
 //! (R1751000): no Cry, no hand, never a Weapon it holds. The fusion wears the face its kept host wears (R77),
-//! so a Radiant Prototype wields its Weapons' Radiant faces. Starship Piece is a catalog keyword the engine
-//! plays: this one's death fuses a copy into its owner's Dormant Starship (R1852000), and the Weapons it
-//! takes leave it a piece (R1852001).
+//! so a Radiant Prototype wields its Weapons' Radiant faces. Since #2521 it is no Starship Piece, and the
+//! Weapons it takes, each a piece, leave it none (R1852001), so its death fuses nothing (R1852000 reads
+//! the keyword).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -21,7 +21,8 @@ pub const ID: &str = "stinkyscape-085";
 /// "Tribute 2" (R101).
 const TRIBUTE: i32 = 2;
 
-/// "Discover 2".
+/// "Discover 2": the declared `weapons` since #2657 (R2657006), printed before, as a replay of an
+/// older version reads it (`param_or`).
 const PICKS: i32 = 2;
 
 /// R1862002: "Discover PICKS `rarity` Weapons and Equip them into this".
@@ -31,10 +32,10 @@ fn arm(rarity: Rarity) -> Script {
             tribute: Some(TRIBUTE),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             vec![equip_picks(json_as(json!({
                 "query": { "set": SetName::Stinkyscape, "tags": [Tag::Weapon], "rarity": rarity },
-                "times": PICKS,
+                "times": param_or(&*ctx, "weapons", PICKS),
             })))]
         })),
         ..Script::default()
@@ -50,7 +51,8 @@ pub fn script() -> CardScripts {
 
 // Stinkyscape #85 Prototype-X1 — SPEC §8.10 row 85, BUILD M12 row S 85: Tribute 2 (R101); its Cry asks
 // 2 Discovers in turn, each three Epic Weapons it does not hold, and fuses each pick into it, its
-// Activate usable that turn (R1841002, R1751000); radiant 12/12 and Legendary Weapons.
+// Activate usable that turn (R1841002, R1751000); radiant 12/12 and Legendary Weapons. Since #2521 it is
+// no Starship Piece (R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -63,6 +65,8 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    const FILLER: &str = "core-005"; // (1) Spell.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
 
     /// The Epic and the Legendary Weapons (§8.10 row 85).
     const EPIC: [&str; 6] = [
@@ -134,11 +138,12 @@ mod tests {
         (s, host)
     }
 
-    /// The host takes its Weapons' Activates that turn, and is still a Starship Piece (R1852001).
+    /// The host takes its Weapons' Activates that turn, and is no Starship Piece: each Weapon is one,
+    /// the kept host none (R1852001).
     fn armed(s: &Scenario, host: &str) {
         let card = s.card(host).clone();
         assert!(!activate_actions_for(s.state(), P1, &card).is_empty());
-        assert!(unit_has(s.state(), &card, KeywordKind::StarshipPiece));
+        assert!(!unit_has(s.state(), &card, KeywordKind::StarshipPiece));
     }
 
     mod base {
@@ -148,6 +153,20 @@ mod tests {
         fn r1862002_the_cry_discovers_n_weapons_of_its_rarity_in_turn_and_equips_each() {
             let (s, host) = arms(false, &EPIC);
             armed(&s, &host);
+        }
+
+        #[test]
+        fn its_death_fuses_nothing_it_is_no_starship_piece() {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [HIT_JOB, FILLER], "field": [ID], "library": crate::filler(4) },
+                "p2": { "hand": [FILLER], "library": crate::filler(4) },
+            }));
+            let me = s.card(ID).clone();
+            assert!(!unit_has(s.state(), &me, KeywordKind::StarshipPiece));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+            s.expect_in_zone(&me, "graveyard");
+            assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship");
+            assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
         }
 
         #[test]

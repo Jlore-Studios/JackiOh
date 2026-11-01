@@ -50,6 +50,10 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
     description: "JackiOh's accessibility statement, and how to tell us about a barrier.",
   },
   {
+    path: paths.ai,
+    description: "How JackiOh uses AI: its computer opponents, what was made with AI, and what AI does with your data.",
+  },
+  {
     path: paths.copyright,
     description: "How to report content on JackiOh that infringes your copyright, and how to answer a report.",
   },
@@ -150,8 +154,8 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Deleting your account or getting a copy",
       "<p>You can delete your account yourself: sign in, open your Account page, and choose " +
         "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
-        "custom cards, your tutorial progress, the records of how you played, and the record of your age " +
-        "check and of the terms you agreed to. Finished matches and their results stay in " +
+        "custom cards, your tutorial progress, your player statistics, the records of how you played, and " +
+        "the record of your age check and of the terms you agreed to. Finished matches and their results stay in " +
         "the other player&rsquo;s history, with your account removed from them, and so does a finished " +
         "co-op game in your teammate&rsquo;s, its moves and its result included. You can&rsquo;t delete " +
         "your account during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.</p>" +
@@ -209,7 +213,20 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "any message a friend sends you. We review reports, and abuse in chat can get an account suspended or " +
         "banned.</p>",
     ) +
-    section("Ranked play", "<p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>"),
+    section(
+      "AI opponents",
+      "<p>If no one near your rating is free to play after a short wait, ranked may pair you with an AI " +
+        "opponent that our server plays, so you still get a game. It can happen at any rank, in Best of 1, " +
+        "All Random and Conquest.</p>" +
+        "<ul><li>An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, " +
+        "as a player does, though never in Jlorious.</li>" +
+        "<li>It plays at a person&rsquo;s pace, and may emote, concede, answer a draw offer, let a turn run " +
+        "out or offer a rematch.</li>" +
+        "<li>Nothing in the game marks which opponents are AI.</li>" +
+        "<li>It sees only what a player in its seat could see.</li>" +
+        "<li>A game against one counts toward your rank and rating like any other ranked game.</li></ul>" +
+        "<p>A challenge you send to a friend, or accept from one, is always played against that friend.</p>",
+    ),
   [paths.copyright]:
     section(
       "Reporting content that infringes your copyright",
@@ -228,6 +245,35 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     section(
       "Repeat infringers",
       "<p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>",
+    ),
+  [paths.ai]:
+    section(
+      "The computer opponents",
+      "<p>JackiOh has three kinds of computer opponent. Each plays by the same rules you do and sees only what a " +
+        "player in its seat could see.</p>" +
+        "<ul><li>In Practice, at the difficulty you pick, and in the tutorial, an opponent that runs in your browser.</li>" +
+        "<li>In ranked, when no one near your rating is free after a short wait, an AI opponent that our server " +
+        "plays. Nothing in the game marks it; the Terms say when it comes, what it looks like and how it plays.</li>" +
+        "<li>In co-op, the team you and a friend play against.</li></ul>" +
+        "<p>They choose their moves by searching the moves the rules allow, with a game-playing program we wrote " +
+        "and tune on games it plays against itself. They are not chatbots, and they say nothing to you but the " +
+        "emotes a player can send.</p>",
+    ) +
+    section(
+      "Made with AI",
+      "<ul><li>The music, every track and the few bars each Legendary and Mythic card plays, was composed by an AI " +
+        "model, Anthropic&rsquo;s Claude, written as code and played with free instrument sounds. No melody or " +
+        "recording was taken from another work. Where each track came from.</li>" +
+        "<li>The cards&rsquo; spoken lines are read by computer text-to-speech voices, not recorded by actors.</li>" +
+        "<li>Card art is drawn by code from each card&rsquo;s name, type and tags, not by an image-generation model.</li>" +
+        "<li>JackiOh&rsquo;s code is written with the help of AI coding assistants.</li></ul>",
+    ) +
+    section(
+      "What AI does with your data",
+      "<p>We don&rsquo;t send anything you write, or your account&rsquo;s details, to an AI service. Records of " +
+        "online games are used as the Privacy Policy says: for the card statistics, to time the ranked AI " +
+        "opponents&rsquo; moves and habits like a person&rsquo;s, and to choose the decks they bring from decks " +
+        "players have taken into ranked.</p>",
     ),
   [paths.accessibility]:
     section(

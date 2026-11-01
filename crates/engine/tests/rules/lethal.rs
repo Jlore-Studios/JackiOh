@@ -124,7 +124,7 @@ mod r44_lethal_projection_m3_t7 {
     }
 
     #[test]
-    fn r44_clamps_the_projection_with_anti_oneshot_armor_base_5_and_radiant_3_s4_4_step_3() {
+    fn r44_clamps_the_projection_with_anti_oneshot_armor_base_4_and_radiant_3_s4_4_step_3() {
         let mut state = board("cap-base");
         let attacker = put(
             &mut state,
@@ -141,9 +141,9 @@ mod r44_lethal_projection_m3_t7 {
 
         assert_eq!(unit_view(&state, &live(&state, &attacker)).attack, 10);
         assert_eq!(projected(&state, &attacker, &on_hero()), ANTI_ONESHOT_CAP.base);
-        state.players.p2.hero.health = 6;
+        state.players.p2.hero.health = ANTI_ONESHOT_CAP.base + 1;
         assert!(!lethal(&state, &attacker, &on_hero()));
-        state.players.p2.hero.health = 5;
+        state.players.p2.hero.health = ANTI_ONESHOT_CAP.base;
         assert!(lethal(&state, &attacker, &on_hero()));
 
         // Radiant Anti-oneshot Armor clamps to 3, so the same 10 attack needs a hero on 3.

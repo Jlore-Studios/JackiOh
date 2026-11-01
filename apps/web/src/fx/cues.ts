@@ -34,6 +34,7 @@ import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
+import { rollCues } from "./rolls.ts";
 import { flavorEntranceCues } from "./entrances.ts";
 import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
@@ -860,6 +861,9 @@ const lock: Recipe = (event, p) => {
 const trap: Recipe = (event, p) => {
   if (event.type !== "trapFired") return [];
   const at = anchor(p.tgt);
+  // R2657001: a face-up Field Trap firing again reveals nothing: the short flare an activation gets
+  // (`cast`'s), with no reveal burst and no shake.
+  if (event.again === true) return [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "point", 0, "cast")];
   const delay = frac(FX_TRAP_BURST_AT, p.D);
   // #1447: the reveal names the card only when the view shows this very instance (§10.8, R33); its burst then takes the
   // card's flavor colors and particle. An opponent's face-down trap is not in the view, so its burst stays arcane.
@@ -1298,6 +1302,8 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   overflow,
   // R436: the slot-machine reveal of what Call to Chaos rolled (chaos.ts).
   chaos: (event, p) => chaosCues(event, p.D, p.env.intensity),
+  // R2652001: a batch of coin flips or die rolls, every one landing at once in one panel (rolls.ts).
+  roll: (event, p) => rollCues(event, p.D, p.env.intensity),
   // R437: a mark branded onto its card in the mark's colors (brand.ts).
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,

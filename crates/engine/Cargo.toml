@@ -23,7 +23,7 @@ indexmap = { workspace = true }
 ts-rs = { workspace = true, optional = true }
 
 [dev-dependencies]
-# Golden traces and the hotseat fixture run the real cards (SURFACE §2, §13).
+# The golden binary's committed logs and the rule benders run the real cards (SURFACE §2, §13).
 jackioh-cards = { workspace = true }
 
 # The integration-test binaries for the ported engine tests (SURFACE §1), the modules of

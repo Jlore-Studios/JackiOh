@@ -1,8 +1,10 @@
 //! "After this attacks" (`Script.afterAttack`): the attacker's hook, run once the state check that closes
 //! each of its combats has run — a declared attack's (§4.2 step 5) and a forced one's (R53) — and only
 //! for an attacker still on the field on the stay it attacked from: one that died there runs nothing
-//! (R2285001); never for an attack called off before it fought (R44). Classic #13 Boots on the Ground,
-//! Classic+ #73.1 Classic Golem and Core #32 Prem Panther (R426) are its users.
+//! (R2285001); never for an attack called off before it fought (R44). Classic+ #73.1 Classic Golem is
+//! its user. "Whenever this attacks" (`afterAttackEvenIfGone`) runs the same hook at the same point for
+//! an attacker that died or left too, as the snapshot it fought with, once (R2396000): Core #32 Prem
+//! Panther (R426).
 //!
 //! Port of `packages/engine/test/after-attack.test.ts`.
 
@@ -11,8 +13,9 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
-    answer, cleave_veteran, death_asker, grunt, notes, pawn, playing, reborn_veteran, recorder, replays_to,
-    round_trip, turncoat, veteran, veteran_asker, wall,
+    answer, cleave_veteran, death_asker, even_asker, even_veteran, grunt, notes, pawn, playing,
+    reborn_even_veteran, reborn_veteran, recorder, replays_to, round_trip, turncoat, veteran, veteran_asker,
+    wall,
 };
 use crate::rules::fixtures::harness::{put, sink_for, slot};
 
@@ -290,5 +293,162 @@ mod script_after_attack {
             ]
         );
         assert!(resumed.work.is_empty());
+    }
+}
+
+mod r2396000_whenever_this_attacks {
+    use super::*;
+
+    #[test]
+    fn r2396000_an_attacker_that_dies_runs_it_as_its_snapshot_survived_false() {
+        let mut state = playing("dc-even-died");
+        let striker = put(
+            &mut state,
+            &even_veteran.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
+        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
+        })));
+        assert_eq!(
+            notes(game.state()),
+            vec![format!("even:{}::false:false:field:p1", blocker.id)]
+        );
+        assert!(
+            game.state()
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == striker.id)
+        );
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    #[test]
+    fn r2396000_a_survivor_runs_it_survived_true() {
+        let mut state = playing("dc-even-survived");
+        let striker = put(
+            &mut state,
+            &even_veteran.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        by_id_mut(&mut state, &striker.id).buffs = AttackHealth { attack: 1, health: 3 };
+        let victim = put(&mut state, &grunt.id, slot(P2, Row::Units, 1), Default::default());
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": victim.id, "playerId": "p1"
+        })));
+        assert_eq!(
+            notes(game.state()),
+            vec![format!("even:{}:{}:true:false:field:p1", victim.id, victim.id)]
+        );
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    #[test]
+    fn r2396000_a_reborn_body_runs_it_once() {
+        let mut state = playing("dc-even-reborn");
+        let striker = put(
+            &mut state,
+            &reborn_even_veteran.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
+        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
+        })));
+        // The body Reborn brought back stands in its lane, and the attack was answered once, as it died.
+        assert_eq!(
+            top_id(&game.state().players.p1.units[0]),
+            Some(striker.id.as_str())
+        );
+        assert_eq!(
+            notes(game.state()),
+            vec![format!("even:{}::false:false:field:p1", blocker.id)]
+        );
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    #[test]
+    fn r2396000_r113_a_dead_attackers_question_pauses_and_round_trips() {
+        let mut state = playing("dc-even-pause");
+        let striker = put(
+            &mut state,
+            &even_asker.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
+        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 4, health: 0 };
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": striker.id, "targetId": blocker.id, "playerId": "p1"
+        })));
+        let paused = game.state().clone();
+        assert_eq!(notes(&paused), vec!["even:before"]);
+        assert_eq!(paused.pending.as_ref().map(|pending| pending.player_id), Some(P1));
+        assert_eq!(owed_work(&paused, Some(AFTER_ATTACK_WORK)).len(), 1);
+        let resumed = answer(&round_trip(&paused)).state;
+        assert_eq!(
+            notes(&resumed),
+            vec!["even:before", "even:answered:false", "even:tail"]
+        );
+        assert!(resumed.work.is_empty());
+        let pending = paused.pending.as_ref().expect("expected a prompt");
+        game.play(input(json!({
+            "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": "p1"
+        })));
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    #[test]
+    fn r2396000_r2285001_a_fused_after_part_still_asks_survival() {
+        let mut state = playing("dc-even-fused");
+        let vet = put(
+            &mut state,
+            &veteran.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let even = put(
+            &mut state,
+            &even_veteran.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        let fused = jackioh_engine::subsystems::fuse::fuse(
+            &mut sink_for(&mut state),
+            json_as(json!({ "ingredients": [vet, even], "target": vet })),
+        )
+        .expect("the two fuse");
+        let blocker = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
+        by_id_mut(&mut state, &blocker.id).buffs = AttackHealth { attack: 9, health: 0 };
+        let mut game = recorder(&state);
+        game.play(input(json!({
+            "type": "attack", "attackerId": fused.id, "targetId": blocker.id, "playerId": "p1"
+        })));
+        // The fused card died: its "Whenever" part ran, as the snapshot it fought with, and its
+        // "After" part did nothing.
+        assert!(
+            game.state()
+                .players
+                .p1
+                .graveyard
+                .iter()
+                .any(|card| card.id == fused.id)
+        );
+        assert_eq!(
+            notes(game.state()),
+            vec![format!("even:{}::false:false:field:p1", blocker.id)]
+        );
     }
 }

@@ -193,6 +193,10 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
 /// Both mulligans kept whole: turn 1, p1's main phase.
 fn started(seed: &str, handicaps: Option<Handicaps>, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     let mut state = begin_game(&game(seed, handicaps, decks)).state;
+    // AI_TUTORIAL's seat may play none of the fixtures' Core cards (R2533000), so with auto-end on it
+    // would end each of its turns unasked; these tests pass every turn themselves.
+    state.players.p1.auto_end_turn = Some(false);
+    state.players.p2.auto_end_turn = Some(false);
     let keep = ids(&state.players.p1.hand);
     state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
     let keep = ids(&state.players.p2.hand);
@@ -422,7 +426,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
-                core_only: None,
+                tutorial_cards_only: None,
                 deck_copies: None,
             }
         );
@@ -438,7 +442,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
-                core_only: None,
+                tutorial_cards_only: None,
                 deck_copies: None,
             }
         );
@@ -453,7 +457,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
                 hero_health: None,
                 hero_floor: None,
                 pool_hold: None,
-                core_only: None,
+                tutorial_cards_only: None,
                 deck_copies: None,
             }
         );
@@ -1588,8 +1592,8 @@ mod r290_the_tutorial_handicap_ai_tutorial {
                 hero_health: Some(20),
                 hero_floor: None,
                 pool_hold: None,
-                core_only: Some(true),
-                deck_copies: None,
+                tutorial_cards_only: Some(true),
+                deck_copies: Some(TUTORIAL_DECK_COPIES),
             }
         );
         assert_eq!(tutorial_health(), 20);
@@ -2289,15 +2293,13 @@ mod r2433001_a_lessons_human_deck_may_hold_copies {
     }
 
     #[test]
-    fn r2433001_tutorial_human_allows_tutorial_deck_copies_and_no_other_handicap_sets_it() {
+    fn r2433001_r2533001_the_tutorials_two_seats_allow_tutorial_deck_copies_and_no_tier_sets_it() {
         assert_eq!(TUTORIAL_DECK_COPIES, 4);
         assert_eq!(TUTORIAL_HUMAN.deck_copies, Some(TUTORIAL_DECK_COPIES));
-        for handicap in [
-            HUMAN_HANDICAP,
-            AI_DIFFICULTY.medium,
-            AI_DIFFICULTY.hard,
-            AI_TUTORIAL,
-        ] {
+        // R2533001: a lesson's opponent may copy a vanilla unit, as its human does.
+        assert_eq!(AI_TUTORIAL.deck_copies, Some(TUTORIAL_DECK_COPIES));
+        assert!(state::validate_handicap(&AI_TUTORIAL, "p2").is_ok());
+        for handicap in [HUMAN_HANDICAP, AI_DIFFICULTY.medium, AI_DIFFICULTY.hard] {
             assert_eq!(handicap.deck_copies, None);
         }
         assert!(state::validate_handicap(&TUTORIAL_HUMAN, "p1").is_ok());
@@ -2312,7 +2314,8 @@ mod r2433001_a_lessons_human_deck_may_hold_copies {
     }
 
     #[test]
-    fn r2433001_a_deck_at_the_cap_is_dealt_one_over_it_is_refused_and_a_seat_without_it_refuses_duplicates() {
+    fn r2433001_r2533001_a_deck_at_the_cap_is_dealt_one_over_it_is_refused_and_a_seat_without_it_refuses_duplicates()
+     {
         register_all();
         let other = vanilla_deck(DECK_SIZE, 1);
         // At the cap: four copies of fx-1.
@@ -2332,6 +2335,16 @@ mod r2433001_a_lessons_human_deck_may_hold_copies {
             TUTORIAL_DECK_COPIES as usize
         );
         assert_eq!(at_cap.players.p1.handicap, Some(TUTORIAL_HUMAN));
+
+        // R2533001: the tutorial opponent's twelve may hold the same copies.
+        let mut twelve = vec!["fx-1".to_string(); TUTORIAL_DECK_COPIES as usize];
+        twelve.extend(vanilla_deck(AI_TUTORIAL.deck_size - TUTORIAL_DECK_COPIES, 2));
+        let opponent = game(
+            "r2533001-ai-copies",
+            Some(on_p2(AI_TUTORIAL)),
+            Some((other.clone(), twelve)),
+        );
+        assert_eq!(opponent.players.p2.handicap, Some(AI_TUTORIAL));
 
         // One over: five copies.
         let over = create_refusal(options(

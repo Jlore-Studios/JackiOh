@@ -174,7 +174,11 @@ string_union! {
     /// Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000). The
     /// Stinkyscape set adds Drone Core (its #27 to #36), Weapon (#50 to #61 and #140 to #143),
     /// War Doctrine (the four #137 tokens) and Swarm (its Swarm Units, #91 and #92): family tags that
-    /// no rule reads, which the server admits since the set's release (R1857000).
+    /// no rule reads, which the server admits since the set's release (R1857000). Legacy marks the
+    /// Training Grounds set's twenty Legacy cards, #41 to #60, frozen copies of Core cards: a family
+    /// tag no rule reads (R2511000). Issue #2521 adds Resource (the six Stinkyscape Resources:
+    /// Reknite, Korrelite, Gellium, Axnit, Narcor and Red Narcor, tokens all) and Faction (the five
+    /// Faction cards, #95 and #159 to #162), which the server admits from migration 0070.
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -202,6 +206,9 @@ string_union! {
         Weapon = "Weapon",
         WarDoctrine = "War Doctrine",
         Swarm = "Swarm",
+        Legacy = "Legacy",
+        Resource = "Resource",
+        Faction = "Faction",
         Token = "Token",
     }
 }
@@ -560,6 +567,10 @@ pub enum Keyword {
     /// R1852003: what a launched Starship takes as it launches. No rule of its own; the cards that
     /// name "your Starship" read it.
     Starship,
+    /// R2657000: a Unit that can't be in Defense Position, by its own switch or an effect's, the
+    /// keyword that took over from "Can't be in Defense Position" (`StaticFlags::never_defense`).
+    #[serde(rename = "Can't Defend")]
+    CantDefend,
 }
 
 string_union! {
@@ -608,6 +619,7 @@ string_union! {
         /// Stinkyscape's Starship (R1852000, R1852003).
         StarshipPiece = "Starship Piece",
         Starship = "Starship",
+        CantDefend = "Can't Defend",
     }
 }
 
@@ -662,6 +674,7 @@ impl Keyword {
             Keyword::Tradable => KeywordKind::Tradable,
             Keyword::StarshipPiece => KeywordKind::StarshipPiece,
             Keyword::Starship => KeywordKind::Starship,
+            Keyword::CantDefend => KeywordKind::CantDefend,
         }
     }
 
@@ -721,6 +734,7 @@ impl Keyword {
             KeywordKind::Tradable => Keyword::Tradable,
             KeywordKind::StarshipPiece => Keyword::StarshipPiece,
             KeywordKind::Starship => Keyword::Starship,
+            KeywordKind::CantDefend => Keyword::CantDefend,
         }
     }
 }
@@ -1170,10 +1184,12 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub craft: Option<crate::wire::craft::CraftRecipe>,
-    /// R2195000: the Core card this Training Grounds snapshot copies (#41–#60, "core-002" for #41),
-    /// so a deck holds one of the two, never both (§2.6 L3), and their shared name names one card
-    /// (R2195001). Absent on every other card, a fused or crafted definition included, so a state
-    /// that never holds a snapshot serializes, hashes and replays as before (TG4 D11).
+    /// R2195000, R2511001: the Core card a Training Grounds snapshot copied, in the catalogs shipped
+    /// from v0.5.5 to v0.5.7 ("core-002" for #41), where one Discover offered at most one of the two
+    /// (R2204001). The build's catalog sets it on no card, since a Legacy card is its own card
+    /// (R2511001); a replay of a game from those versions folds under its carried catalog (R767000),
+    /// which still sets it, so the game's offers are the same. Absent on every other card, so a state
+    /// that never holds one serializes, hashes and replays as before (TG4 D11).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub snapshot_of: Option<String>,

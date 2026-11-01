@@ -29,6 +29,9 @@
 // The held Training Grounds set (R2194000) does the same while it is built: its Call to Chaos edition (#39) takes
 // "colon", and the Radiant faces of #16 Celestial Caller and #38 Tutorial Master clamp, until each
 // card's part (docs/training-grounds-set.md TG5) writes its own.
+// Issue #2521's texts: Classic+ #34 Memory Leak's base face, with Crater, and Meditative+ #1 Bob's Plan's,
+// with Star Chart's plan, clamp; ZolarKeth's Radiant face prints its first line, as its base face does;
+// and Swear Loyalities' faces, shorter, fit whole.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -62,6 +65,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "classicplus-007": { radiant: "clamp" },
   "classicplus-019-2": { base: "clamp", radiant: "clamp" },
   "classicplus-042-1": { radiant: "clamp" },
+  "classicplus-034": { base: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
   "meditative-022": { base: 1, radiant: 1 },
@@ -69,13 +73,13 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditative-039-5": { base: 3, radiant: 3 },
   "meditative-040": { radiant: "clamp" },
   "meditative-045": { base: "clamp", radiant: "clamp" },
-  "meditative-049-1": { base: 3, radiant: 3 },
+  "meditative-049-1": { base: "clamp", radiant: "clamp" },
   "meditative-049-2": { base: "clamp", radiant: "clamp" },
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
   "meditative-098": { radiant: "clamp" },
-  "meditativeplus-001": { radiant: "clamp" },
+  "meditativeplus-001": { base: "clamp", radiant: "clamp" },
   "meditativeplus-004": { base: "clamp", radiant: "clamp" },
   "meditativeplus-020": { radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
@@ -89,14 +93,13 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-023": { base: "clamp", radiant: "clamp" },
   "stinkyscape-024": { base: "clamp", radiant: "clamp" },
   "stinkyscape-025": { base: "clamp" },
-  "stinkyscape-026": { base: 1 },
   "stinkyscape-039": { base: "clamp", radiant: "clamp" },
   "stinkyscape-077": { base: "clamp", radiant: "clamp" },
   "stinkyscape-087": { radiant: "clamp" },
   "stinkyscape-112": { base: "clamp", radiant: "clamp" },
   "stinkyscape-116": { base: "clamp", radiant: "clamp" },
   "stinkyscape-139": { base: "clamp", radiant: "clamp" },
-  "stinkyscape-143": { radiant: "clamp" },
+  "stinkyscape-143": { base: "clamp", radiant: "clamp" },
   "stinkyscape-147": { radiant: "clamp" },
   "stinkyscape-148": { base: "clamp", radiant: "clamp" },
   "stinkyscape-150": { base: "colon", radiant: "colon" },
@@ -104,15 +107,9 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "stinkyscape-153": { base: "clamp", radiant: "clamp" },
   "stinkyscape-154": { base: "clamp", radiant: "clamp" },
   "stinkyscape-157": { base: "clamp", radiant: "clamp" },
-  "stinkyscape-163": { base: "clamp", radiant: "clamp" },
   "stinkyscape-164": { base: "clamp", radiant: "clamp" },
   "stinkyscape-166": { base: "clamp", radiant: "clamp" },
   "stinkyscape-167": { base: "clamp", radiant: "clamp" },
-  "stinkyscape-169": { base: "clamp" },
-  "stinkyscape-170": { base: "clamp" },
-  "stinkyscape-171": { base: "clamp" },
-  "stinkyscape-172": { base: "clamp" },
-  "stinkyscape-173": { base: "clamp", radiant: "clamp" },
   "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
   // R2194000: the held Training Grounds set's rows.
   "traininggrounds-016": { radiant: "clamp" },

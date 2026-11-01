@@ -40,7 +40,7 @@ use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, JLORE_COOP_LOSS,
     JLORE_GAMES_DAILY_CAP, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS,
     MATCH_SERVER_ACTION_RETRY_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
-    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
+    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS, WATCH_HELLO_INTERVAL_MS,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
@@ -2128,6 +2128,86 @@ mod hello_coalescing {
 }
 
 // ---------------------------------------------------------------------------------------------
+// R2686000 — a person's later hellos are answered once per interval, as a watcher's are
+// ---------------------------------------------------------------------------------------------
+
+mod r2686000_player_hello_limit {
+    use super::*;
+
+    /// A script's burst of hellos on one socket, each sent after the previous reply had arrived.
+    const HELLO_BURST: usize = 10;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2686000_duos_hellos_are_answered_once_per_interval_actions_continue_and_a_new_generation_answers_at_once()
+     {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        h.ai_mulligans_answered(&a1).await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let interval = ms(WATCH_HELLO_INTERVAL_MS);
+        let from = a1.received();
+
+        // Ten hellos on one socket, each sent after the last had been run and answered, so each would
+        // cost its own view were only R835001's coalescing of queued hellos holding them: one is
+        // answered, and the socket stays open.
+        let started = Instant::now();
+        for _ in 0..HELLO_BURST {
+            a1.send_json(hello(&h.match_id)).await;
+            settle().await;
+            actor.idle().await;
+            settle().await;
+        }
+        assert_eq!(a1.of_type_since(from, "view").len(), 1, "{:?}", a1.frames());
+        assert_eq!(a1.close_code(), None);
+        assert_eq!(Instant::now(), started, "the clock stood still for the burst");
+
+        // The hello that comes a moment short of the interval is dropped, the one at it answered.
+        tokio::time::advance(interval - Duration::from_millis(1)).await;
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(a1.of_type_since(from, "view").len(), 1);
+        tokio::time::advance(Duration::from_millis(1)).await;
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(a1.of_type_since(from, "view").len(), 2);
+        assert_eq!(a1.close_code(), None);
+
+        // The gate is closed again, and an action is neither delayed nor refused by it.
+        a1.send_json(hello(&h.match_id)).await;
+        settle().await;
+        let before = Instant::now();
+        h.keep(&a1, "keep-r2686000").await;
+        assert_eq!(Instant::now(), before, "the ack came without the clock moving");
+
+        // A reattach is a new socket generation: its first later hello is answered at once, however
+        // recent the old socket's last answer, and its second, so soon after, is not.
+        let revived = h.seat(&h.host).await;
+        settle().await;
+        let seen = revived.received();
+        revived.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(
+            revived.of_type_since(seen, "view").len(),
+            1,
+            "{:?}",
+            revived.frames()
+        );
+        revived.send_json(hello(&h.match_id)).await;
+        settle().await;
+        actor.idle().await;
+        settle().await;
+        assert_eq!(revived.of_type_since(seen, "view").len(), 1);
+        assert_eq!(revived.close_code(), None);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // B40, §9.1 — a rebuild, and none for a socket that holds no seat
 // ---------------------------------------------------------------------------------------------
 
@@ -2743,5 +2823,42 @@ mod r1379000_the_credential_on_the_handshake {
             .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
             .await;
         assert!(view.is_some(), "{:?}", client.frames());
+    }
+}
+
+mod r2478000_co_op_and_watch_upgrades_count_against_the_accounts_budget {
+    //! R2478000: a co-op or watch upgrade is one request against its account's R109 budget, and one
+    //! past it is answered `forbidden` and closed with 4429, as `/ws/match`'s is.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+    use jackioh_server::api::http::account_key;
+    use jackioh_server::config::API_REQUESTS_PER_MINUTE;
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2478000_a_co_op_or_watch_upgrade_past_the_accounts_budget_is_closed_with_4429() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "ana").await;
+        for _ in 0..API_REQUESTS_PER_MINUTE {
+            assert!(app.limiter.allow(&account_key(&ana.id), now_ms()));
+        }
+        let served = serve(&app);
+
+        for path in [DUOS_PATH, WATCH_PATH] {
+            let client = served.connect(path, &ana.token).await;
+            let (_, _, refusal) = client
+                .wait_for(0, PROMPTLY, |frame| {
+                    frame["type"] == "error" && frame["code"] == "forbidden"
+                })
+                .await
+                .unwrap_or_else(|| panic!("{path}: no forbidden: {:?}", client.frames()));
+            assert_eq!(refusal["message"], "too many requests; slow down", "{path}");
+            assert_eq!(
+                client.wait_closed(PROMPTLY).await,
+                Some(WS_CLOSE.rate_limited),
+                "{path}"
+            );
+            assert!(client.of_type("view").is_empty(), "{path}: {:?}", client.frames());
+        }
     }
 }

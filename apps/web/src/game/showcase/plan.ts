@@ -7,7 +7,9 @@ import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { castOnDrawAt } from "../../fx/castOnDraw.ts";
 import { chaosRollOf, type ChaosRoll } from "../../fx/chaos.ts";
-import { sideOf } from "../contract.ts";
+import { rollBatchOf, type RollBatch } from "../../fx/rolls.ts";
+import { faceDownCost, sideOf } from "../contract.ts";
+import { firesAgain } from "../animations.ts";
 import { createPlayTracker, type PlayTracker } from "../runs.ts";
 import { HIDDEN_CARD, cardInView } from "../faces.ts";
 
@@ -88,14 +90,6 @@ function setLane(play: Played, at: number, fresh: readonly GameEvent[]): number 
   return null;
 }
 
-/** R370: the cost the view gives the face-down card in that backrow lane, if one still stands there. */
-function faceDownCost(view: PlayerView, player: PlayerId, lane: number): number | undefined {
-  const seat = sideOf(view, player) === "you" ? view.you : view.opponent;
-  const entry = seat.backrow[lane - 1];
-  if (entry === null || entry === undefined || !entry.faceDown) return undefined;
-  return "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
-}
-
 function playOf(event: Played, at: number, fresh: readonly GameEvent[], view: PlayerView): ShowcasePlay {
   const hidden = event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD;
   const lane = hidden ? setLane(event, at, fresh) : null;
@@ -132,7 +126,8 @@ function tailOffset(fresh: readonly GameEvent[], window: readonly GameEvent[]): 
 
 /**
  * R502 includes both seats' casts on draw; per-viewer trackers also find chained casts (R97, R202).
- * Issue #1493 holds up every `trapFired` on both seats, in stream order with the plays.
+ * Issue #1493 holds up every `trapFired` on both seats, in stream order with the plays, but a face-up
+ * Field Trap firing again (`again`), which reveals nothing (R2657001).
  */
 export function showcasePlays(
   fresh: readonly GameEvent[],
@@ -142,12 +137,13 @@ export function showcasePlays(
   const offset = tailOffset(fresh, view.events);
   const window = offset === null ? fresh : view.events;
   const base = offset ?? 0;
-  const total = fresh.filter((event) => event.type === "trapFired").length;
+  const total = fresh.filter((event) => event.type === "trapFired" && !firesAgain(event)).length;
   let revealed = 0;
   const items: ShowcaseItem[] = [];
   fresh.forEach((event, at) => {
     const cast = plays.see(event);
     if (event.type === "trapFired") {
+      if (firesAgain(event)) return;
       revealed += 1;
       const trapReveal = { ordinal: revealed, total };
       // R154, R763: either sentinel hides the trap; only its controller's seat may read it.
@@ -183,6 +179,14 @@ export function chaosRollsIn(fresh: readonly GameEvent[]): { roll: ChaosRoll; ev
   return fresh.flatMap((event) => {
     const roll = chaosRollOf(event);
     return roll === null || roll.effects.length === 0 ? [] : [{ roll, event }];
+  });
+}
+
+/** R2652001: the batches of coins or dice among `fresh`, in order, with the event each came from. */
+export function rollsIn(fresh: readonly GameEvent[]): { batch: RollBatch; event: GameEvent }[] {
+  return fresh.flatMap((event) => {
+    const batch = rollBatchOf(event);
+    return batch === null || batch.rolls.length === 0 ? [] : [{ batch, event }];
   });
 }
 

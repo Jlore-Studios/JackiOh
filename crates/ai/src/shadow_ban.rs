@@ -311,16 +311,13 @@
 /// (R600) and meeting no flag in full. It is dealt at stock weight and not
 /// in `UNBANNED_PREFER`, on the generations 4–7 precedent, and the table is
 /// empty.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "stinkyscape-149",
-        "neverPlayed: hard: affordable in hand on 69 turns over 45 pass-2 games, never played",
-    ),
-    (
-        "traininggrounds-025",
-        "neverPlayed: easy: affordable in hand on 184 turns over 99 pass-2 games, never played",
-    ),
-];
+///
+/// The sweeps of record after the Stinkyscape and Training Grounds sets shipped banned S #149
+/// Wildar (#2358) and TG #25 Trigor (#2397), both `neverPlayed`. #2521 lifts both through the unban
+/// lane (`SHADOW_UNBANNED`, R2521010), so the table is empty again (#2452): a banned card the beam
+/// never casts is a dead slot costing a fraction of a draw, on the generations 4–8 precedent. Both
+/// are dealt at stock weight and not in `UNBANNED_PREFER`.
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -333,12 +330,14 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
     ids
 };
 
-/// R732000, R1186000: the ids the unban lane has removed from the reports of record's `SHADOW_BAN`
-/// entries, sorted by id (generation 10: 021, 033, 047, 051, 063, 073, 092; 11: 041, 067, 080; 12:
-/// 006, 016, 045, 068; the notes above `SHADOW_BAN`). `cargo jackioh sweep --write` leaves their rows
-/// out of `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding
-/// its id here and running `cargo jackioh sweep --write`; a new sweep of a set drops its own ids from
-/// this list.
+/// R732000, R1186000, R2521010: the ids the unban lane has removed from the reports of record's
+/// `SHADOW_BAN` entries, sorted by id (generation 10: 021, 033, 047, 051, 063, 073, 092; 11: 041, 067,
+/// 080; 12: 006, 016, 045, 068; the notes above `SHADOW_BAN`; #2521: `stinkyscape-149` Wildar and
+/// `traininggrounds-025` Trigor, the two `neverPlayed` rows #2358 and #2397 wrote, so the AI deals
+/// itself every card of every set, #2452). `cargo jackioh sweep --write` leaves their rows out of
+/// `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding its id
+/// here and running `cargo jackioh sweep --write`; a new sweep of a set drops its own ids from this
+/// list. An id may be any card of a set the ban takes (`BAN_SETS` in `crates/tools/src/sweep.rs`).
 pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-006",
     "meditative-016",
@@ -354,6 +353,8 @@ pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-073",
     "meditative-080",
     "meditative-092",
+    "stinkyscape-149",
+    "traininggrounds-025",
 ];
 
 /// Issue #1113: the frozen fixture pool. A copy of `SHADOW_BAN_IDS` as it stood when the seeded

@@ -25,6 +25,10 @@
 //!
 //! Before it purges, the loop files again any finished match's game record whose write failed (R1596000,
 //! `refile_unfiled`), so the purge never takes the log of a game the card statistics lack.
+//!
+//! Last, the loop settles any practice claim still unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after it
+//! burned its seed (R2422000, `api::practice::sweep_unsettled`): a claim whose pay never landed is
+//! checked again and paid once, or marked refused, as a record whose filing failed is filed again.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -33,6 +37,7 @@ use serde_json::json;
 
 use crate::api::game_records::{fold_pending, refile_live_game};
 use crate::api::http::{log_info, log_warn, now_ms};
+use crate::api::practice::Swept;
 use crate::app::App;
 use crate::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, GAME_RECORD_REFILE_GRACE_SECONDS,
@@ -154,6 +159,15 @@ pub async fn run_purge(app: Arc<App>) {
                 "idempotency.sweep_failed",
                 json!({ "message": error.to_string() }),
             ),
+        }
+        // R2422000, last: each claim it settles re-runs its check, the slowest step of the pass.
+        match crate::api::practice::sweep_unsettled(&app).await {
+            Ok(swept) if swept == Swept::default() => {}
+            Ok(swept) => log_info(
+                "practice.swept",
+                json!({ "paid": swept.paid, "refused": swept.refused }),
+            ),
+            Err(error) => log_warn("practice.sweep_failed", json!({ "message": error.to_string() })),
         }
         tokio::time::sleep(Duration::from_secs(RETENTION_PURGE_INTERVAL_SECONDS as u64)).await;
     }

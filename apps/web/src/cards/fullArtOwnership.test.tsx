@@ -1,4 +1,5 @@
-// R1313000: the six full-art faces (R1017001) are owned cosmetics, one per hero portrait's card. Once
+// R1313000: the full-art faces (R1017001) are owned cosmetics, each naming its card (R2655000: an Epic,
+// a Legendary and a Mythic on each of the registry's full-art cards, R2655001). Once
 // ownership decides (the economy live, in a production build), a copy prints its full art only where
 // it is the viewer's own and the viewer owns it; every other copy, the opponent's among them, prints
 // its normal face. With no ownership mounted (practice, hotseat, the Almanac, the landing page's
@@ -20,9 +21,11 @@ import { CardFace } from "./CardFace.tsx";
 import { resetCosmeticsForTests, useCanEquip, writeCardFullArt, type CosmeticId, type OwnedByCard } from "./cosmetics.ts";
 import {
   E2E_FULL_ART_GATED_KEY,
+  FULL_ART_CARDS,
   FULL_ART_GATED,
-  FULL_ART_NAMES,
   FULL_ART_OF_CARD,
+  FULL_ARTS_OF_CARD,
+  FULL_ART_TIERS,
   FullArtAllowed,
   FullArtOwned,
   type FullArtOwnership,
@@ -40,12 +43,8 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
 const ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
 
-/** Longer than any inspect delay (hover or long-press), as in game/Card.test.tsx. */
-const PAST_ANY_INSPECT_DELAY_MS = 2_000;
-
 const DEFS = Object.values(CATALOG);
-// R2195001: a Training Grounds snapshot shares its Core card's name, not its full art.
-const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name) && def.snapshotOf === undefined);
+const HEROES = DEFS.filter((def) => FULL_ART_CARDS.has(def.id));
 const HERO_IDS = HEROES.map((def) => def.id);
 /** The ownership of the full art of each card in `ids`, as `GET /api/cosmetics` reads once mapped. */
 function owningFullArt(ids: Iterable<string>): OwnedByCard {
@@ -83,14 +82,23 @@ afterEach(() => {
 });
 
 describe("R1313000 the full-art faces are owned cosmetics", () => {
-  it("R1313000 the registry holds one Epic full art for each hero portrait's card, and none is a pick", () => {
+  it("R1313000 R2655000 the registry holds an Epic, a Legendary and a Mythic full art for each of its twenty-one full-art cards, and none is a pick", () => {
     const fullArts = COSMETICS.filter((cosmetic) => cosmetic.kind === "fullArt");
     const cards = fullArts.flatMap((cosmetic) => ("card" in cosmetic ? [cosmetic.card] : []));
-    expect([...cards].sort()).toEqual([...HERO_IDS].sort());
-    expect(new Set(cards.map((id) => CATALOG[id]?.name))).toEqual(FULL_ART_NAMES);
+    expect(new Set(cards)).toEqual(new Set(HERO_IDS));
+    expect(HERO_IDS).toHaveLength(21);
+    expect(fullArts).toHaveLength(21 * FULL_ART_TIERS.length);
+    for (const id of HERO_IDS) {
+      // One of each tier, its Epic what `true` names, and only the Legendary and Mythic chases.
+      const tiers = fullArts.filter((cosmetic) => "card" in cosmetic && cosmetic.card === id);
+      expect(tiers.map((cosmetic) => cosmetic.rarity), id).toEqual(FULL_ART_TIERS);
+      expect([...(FULL_ARTS_OF_CARD.get(id)?.values() ?? [])], id).toEqual(tiers.map((cosmetic) => cosmetic.id));
+      expect(FULL_ART_OF_CARD.get(id), id).toBe(tiers[0]?.id);
+      for (const cosmetic of tiers) expect(cosmetic.chase, cosmetic.id).toBe(cosmetic.rarity !== "Epic");
+    }
     for (const cosmetic of fullArts) {
-      expect(cosmetic.rarity, cosmetic.id).toBe("Epic");
       expect(cosmetic.default, cosmetic.id).toBe(false);
+      expect(cosmetic.starter, cosmetic.id).toBe(false);
     }
     expect((COSMETIC_KINDS as readonly string[]).includes("fullArt")).toBe(false);
   });
@@ -232,10 +240,8 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
 
     const root = handFace(OWNED).closest<HTMLElement>(".card");
     if (root === null) throw new Error("no card root");
-    fireEvent.pointerDown(root, { pointerType: "touch", clientX: 10, clientY: 10 });
-    act(() => {
-      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
-    });
+    // The I key opens the sheet (a touch hold shows the preview, R2617000).
+    fireEvent.keyDown(root, { key: "i" });
     expect(screen.getByTestId(INSPECT_SHEET).querySelector(".cf")?.getAttribute("data-full-art")).toBe("true");
     cleanup();
     closeInspect();

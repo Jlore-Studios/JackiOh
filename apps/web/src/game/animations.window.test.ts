@@ -104,23 +104,19 @@ const CLONE_MACHINE = "core-033";
 const VIRAL_INJECTION = "core-090";
 
 /** `n` distinct deckable ids, cheapest first (as `cheap20` picks them), after the ones a game needs.
- * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). Re-pinned for the
- * Training Grounds release (#2204): a deck holds a Core card or its snapshot, never both (R2195000),
- * so a card whose pair (its `snapshotOf`, or its own id) the deck holds is skipped, as the Rust
- * tests' `deal()` does. */
+ * Deckable is `cheap20`'s rule: no token, and only a set that ships (R1420). The Training Grounds
+ * Legacy cards (R2511000) are left out: each sorts after its Core card at the same cost, and leaving
+ * them out keeps the decks the seeds below were picked for. */
 function cheapest(n: number, needs: readonly string[] = []): string[] {
   const catalog = realPort().catalog?.() ?? {};
   const pool = Object.values(catalog)
-    .filter((def: CardDef) => !def.token && !def.tags.includes("Token") && setShips(def.set))
+    .filter((def: CardDef) => !def.token && !def.tags.includes("Token") && !def.tags.includes("Legacy") && setShips(def.set))
     .sort(byIndex)
     .sort((a, b) => printedCost(a.cost) - printedCost(b.cost));
-  const pairOf = (id: string): string => catalog[id]?.snapshotOf ?? id;
   const deck = [...needs];
-  const pairs = new Set(deck.map(pairOf));
   for (const def of pool) {
-    if (deck.length >= n || pairs.has(pairOf(def.id))) continue;
+    if (deck.length >= n || deck.includes(def.id)) continue;
     deck.push(def.id);
-    pairs.add(pairOf(def.id));
   }
   return deck;
 }

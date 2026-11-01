@@ -126,9 +126,6 @@ func TestBasics_EdgesInWinterTime(t *testing.T) {
 func TestBasics_NextOpenAndClose(t *testing.T) {
 	opens := basicsWindow.NextOpen(testsupport.Day)
 	assertEqual(t, clock.ISO(opens), "2026-09-30T02:00:00Z")
-	closes := basicsWindow.ClosesAt(testsupport.Night)
-	assertEqual(t, clock.ISO(closes), "2026-09-30T12:00:00Z")
-	assertTrue(t, basicsWindow.ClosesAt(testsupport.Day).IsZero()) // None
 }
 
 func TestBasics_FallbackZoneAgreesWithTzdata(t *testing.T) {
@@ -580,7 +577,8 @@ func TestBasics_ForbiddenAndReviewPaths(t *testing.T) {
 		"Cargo.toml", "crates/engine/Cargo.toml", "Cargo.lock", "rust-toolchain.toml",
 		"rustfmt.toml", "crates/engine/clippy.toml", "crates/cards/build.rs",
 		".cargo/config.toml", "vitest.config.ts", "apps/web/tsconfig.json",
-		"eslint.config.js", "scripts/build-wasm.sh", "render.yaml",
+		"eslint.config.js", "scripts/build-wasm.sh", "wrangler.jsonc", "apps/edge/src/index.ts",
+		"apps/web/public/_headers",
 		"crates/server/Dockerfile", "crates/server/migrations/0005_x.sql",
 		"e2e/cypress.config.ts"} {
 		assertTrue(t, git.Matches(path, review), path)

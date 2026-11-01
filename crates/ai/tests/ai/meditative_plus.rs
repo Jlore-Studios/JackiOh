@@ -50,7 +50,7 @@ fn in_hand(state: &GameState, def_id: &str) -> String {
 
 /// The modes and `embiggen` choices the AI's candidates play `card` with, sorted.
 fn priced_plays(state: &GameState, card: &str) -> Vec<(Vec<String>, Option<bool>)> {
-    let mut plays: Vec<(Vec<String>, Option<bool>)> = candidate_actions(state, AI)
+    let mut plays: Vec<(Vec<String>, Option<bool>)> = candidate_actions(state, AI, Prices::NONE)
         .into_iter()
         .filter_map(|action| match action {
             ActionBody::Play {
@@ -145,7 +145,7 @@ fn bob_game(seed: &str, radiant: bool, enemy_field: Value) -> Scenario {
 /// The modes and targets the AI's candidates play Bob with.
 fn bob_plays(state: &GameState) -> Vec<(Vec<String>, Vec<Selection>)> {
     let bob = in_hand(state, BOB);
-    candidate_actions(state, AI)
+    candidate_actions(state, AI, Prices::NONE)
         .into_iter()
         .filter_map(|action| match action {
             ActionBody::Play {
@@ -318,7 +318,7 @@ fn r1181002_the_ai_is_offered_the_gardens_dearer_choice_only_when_it_can_pay_the
             if mana < dearer {
                 continue;
             }
-            let dearer_play = candidate_actions(&state, AI)
+            let dearer_play = candidate_actions(&state, AI, Prices::NONE)
                 .into_iter()
                 .find(|action| {
                     matches!(action, ActionBody::Play { instance_id, embiggen: Some(true), .. } if *instance_id == wand)
@@ -410,7 +410,15 @@ fn facing_a_countdown(seed: &str, left: Option<i32>, on_field: bool) -> GameStat
 fn scored_after_ending(state: &GameState) -> f64 {
     let ended = act(state, AI, &ActionBody::EndTurn);
     let counter = create_node_counter(AI_BUDGET.nodes, None);
-    reply_score(&ended, AI, state.turn, &counter, &hidden_card_ids(&ended, AI)).expect("a score")
+    reply_score(
+        &ended,
+        AI,
+        state.turn,
+        &counter,
+        &hidden_card_ids(&ended, AI),
+        Prices::NONE,
+    )
+    .expect("a score")
 }
 
 /// Due in 1, the blast lands as the AI ends its turn, which the search priced before #1995; due in 2,
@@ -456,6 +464,7 @@ fn the_ais_own_countdown_is_blended_in_at_its_share_per_turn_it_still_waits() {
             turn,
             &create_node_counter(AI_BUDGET.nodes, None),
             &hidden_card_ids(end, AI),
+            Prices::NONE,
         )
         .expect("a score")
     };

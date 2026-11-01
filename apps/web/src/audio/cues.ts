@@ -550,12 +550,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   locked: { sfx: "lock", cues: () => [sfx("lock")] },
   // R203 + R154: only the controller's seat reads the trap, so only it hears the cast line. R17's
   // play-reactive traps fire on the very play they answer, so the line cuts in on that play's line.
+  // R2657001: a face-up Field Trap firing again reveals nothing, so it gives an activation's shimmer,
+  // with no sting and no line (it spoke when it revealed).
   trapFired: {
     sfx: "trapSting",
-    cues: (event, ctx) => [
-      sfx("trapSting"),
-      ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react),
-    ],
+    cues: (event, ctx) =>
+      event.again === true
+        ? [sfx("spell")]
+        : [sfx("trapSting"), ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
   },
   attackDeclared: { sfx: "attack", cues: () => [sfx("attack")] },
   attackCancelled: { sfx: "cancel", cues: () => [sfx("cancel")] },
@@ -710,6 +712,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // ---- Issue #1855: Anomalies, the board swap (R1855000) ----
   // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
   boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+
+  // ---- Issue #2652: coin flips and die rolls (R2652001) ----
+  // The batch spins as the slot machine's reel does, before the outcome sounds its own result.
+  rolled: { sfx: "chaosRoll", cues: () => [sfx("chaosRoll")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

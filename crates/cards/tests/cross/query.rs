@@ -17,7 +17,7 @@
 //!
 //! Port of `packages/cards/test/query.test.ts`.
 
-use jackioh_cards::query::{CardQuery, TRAP_TYPES, catalog, pool, query, query_cost};
+use jackioh_cards::query::{CardQuery, TRAP_TYPES, pool, query, query_cost};
 use jackioh_cards::{CATALOG, card_def_by_index};
 use jackioh_engine::catalog::set_is_open;
 use jackioh_engine::testkit::{json_as, register_catalog};
@@ -109,19 +109,6 @@ fn parse_float(index: &str) -> f64 {
 
 mod the_cards_layer_surface_5_1_one_query_function {
     use super::*;
-
-    #[test]
-    fn exposes_query_pool_cost_and_trap_types_on_catalog_the_object_card_scripts_call() {
-        register();
-        // lib.rs re-exports `query` (and with it `catalog` and the `CardQuery` type); everything a
-        // card script needs therefore has to be reachable through `catalog`.
-        let args = q(json!({ "tags": ["KY"] }));
-        assert_eq!(ids(catalog.query(&args)), ids(query(&args)));
-        assert_eq!(ids(catalog.pool("core-057", &args)), ids(pool("core-057", &args)));
-        let def = &CATALOG["core-046"];
-        assert_eq!(catalog.cost(def), query_cost(def));
-        assert_eq!(catalog.trap_types.to_vec(), TRAP_TYPES.to_vec());
-    }
 
     #[test]
     fn r35_r61_field_trap_counts_as_trap_so_trap_types_names_both_types() {
@@ -388,11 +375,11 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
     fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_fourteen_defs() {
         register();
         assert_eq!(
-            ids(catalog.query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
+            ids(query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
             strings(KY_POOL)
         );
         assert_eq!(
-            ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] })))),
+            ids(pool("core-057", &q(json!({ "tags": ["KY"] })))),
             strings(KY_POOL)
         );
     }
@@ -401,8 +388,7 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
     fn build_row_51_1_the_ky_pool_excludes_the_ky_tagged_tokens_51_1_and_classic_plus_42_1_and_the_generator_57()
      {
         register();
-        let names: Vec<String> = catalog
-            .pool("core-057", &q(json!({ "tags": ["KY"] })))
+        let names: Vec<String> = pool("core-057", &q(json!({ "tags": ["KY"] })))
             .iter()
             .map(|def| def.name.clone())
             .collect();
@@ -437,7 +423,7 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
         assert!(prime.tags.contains(&Tag::Ky) && prime.token);
         let kenny = card_def_by_index(SetName::MeditativePlus, "20.1");
         assert!(kenny.tags.contains(&Tag::Ky) && kenny.token);
-        let pool_ids = ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] }))));
+        let pool_ids = ids(pool("core-057", &q(json!({ "tags": ["KY"] }))));
         assert!(!pool_ids.contains(&"core-051-1".to_string()));
         assert!(!pool_ids.contains(&"classicplus-042-1".to_string()));
         assert!(!pool_ids.contains(&"meditative-045-1".to_string()));
@@ -500,7 +486,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     ];
 
     fn trap_query() -> Vec<&'static CardDef> {
-        catalog.query(&q(json!({ "type": catalog.trap_types })))
+        query(&q(json!({ "type": TRAP_TYPES })))
     }
 
     #[test]
@@ -508,7 +494,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         register();
         assert_eq!(ids(trap_query()), strings(TRAP_POOL));
         assert_eq!(
-            ids(catalog.pool("core-067", &q(json!({ "type": TRAP_TYPES })))),
+            ids(pool("core-067", &q(json!({ "type": TRAP_TYPES })))),
             strings(TRAP_POOL)
         );
     }
@@ -521,7 +507,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         // (2) since #2179. The Stinkyscape set's (1) Cost ones join them from its release (#1884), and the
         // Training Grounds set's from its own (#2204).
         assert_eq!(
-            ids(catalog.query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
+            ids(query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
                 "core-018",
                 "core-041",
@@ -579,9 +565,9 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
             .filter(|id| CATALOG.get(**id).is_some_and(|def| def.type_ == CardType::Trap))
             .map(|id| (*id).to_string())
             .collect();
-        assert_eq!(ids(catalog.query(&q(json!({ "type": "Trap" })))), expected);
+        assert_eq!(ids(query(&q(json!({ "type": "Trap" })))), expected);
         assert_eq!(
-            core_indices(catalog.query(&q(json!({ "type": "Trap" })))),
+            core_indices(query(&q(json!({ "type": "Trap" })))),
             strings(&["41", "60", "85", "96"])
         );
     }
@@ -600,7 +586,8 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // Legendary, M+ #24 Bob, Wisconsin's Strongest Soldier (§8.9), joins it; and for the Stinkyscape
     // release (#1884): its 28 Legendary cards (§8.10), the Dormant Starship, which only a rule
     // makes, aside (R1857001); and for the Training Grounds release (#2204): its #37 Seance, #38
-    // Tutorial Master and #39 Call to Chaos (#39.1 is a token). For replacing a card on
+    // Tutorial Master and #39 Call to Chaos (#39.1 is a token); and for #2521's balance patch: S #137
+    // Starfleet Commander (Common until then) and the new S #176 Preemptive Strike. For replacing a card on
     // the board, the script narrows the same pool by type and asks for TRAP_TYPES when the board card
     // is a trap ("Field Trap counts as Trap").
     const R35_POOL: &[&str] = &[
@@ -672,12 +659,14 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "stinkyscape-112",
         "stinkyscape-115",
         "stinkyscape-116",
+        "stinkyscape-137",
         "stinkyscape-147",
         "stinkyscape-149",
         "stinkyscape-150",
         "stinkyscape-151",
         "stinkyscape-152",
         "stinkyscape-153",
+        "stinkyscape-176",
         "traininggrounds-037",
         "traininggrounds-038",
         "traininggrounds-039",
@@ -687,11 +676,13 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     fn r35_the_filter_a_card_script_writes_returns_exactly_that_list() {
         register();
         assert_eq!(
-            ids(catalog.query(&q(json!({ "rarity": "Legendary", "excludeDefId": "core-083" })))),
+            ids(query(&q(
+                json!({ "rarity": "Legendary", "excludeDefId": "core-083" })
+            ))),
             strings(R35_POOL)
         );
         assert_eq!(
-            ids(catalog.pool("core-083", &q(json!({ "rarity": "Legendary" })))),
+            ids(pool("core-083", &q(json!({ "rarity": "Legendary" })))),
             strings(R35_POOL)
         );
     }
@@ -700,10 +691,10 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     fn r35_the_pool_is_the_legendary_rarity_set_minus_83_and_nothing_else() {
         register();
         assert_eq!(
-            core_indices(catalog.query(&q(json!({ "rarity": "Legendary" })))),
+            core_indices(query(&q(json!({ "rarity": "Legendary" })))),
             strings(&["52", "83", "85", "87", "92", "93", "95"])
         );
-        let legendary = catalog.pool("core-083", &q(json!({ "rarity": "Legendary" })));
+        let legendary = pool("core-083", &q(json!({ "rarity": "Legendary" })));
         assert!(!ids(legendary.iter().copied()).contains(&"core-083".to_string()));
         assert!(legendary.iter().all(|def| def.rarity == Rarity::Legendary));
         assert!(legendary.iter().all(|def| !def.token));
@@ -715,14 +706,17 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         // Core #85 and Classic #9 (Legendary since patch v0.2.9, issue #44) are the Legendary traps,
         // so a board trap — Trap or Field Trap — is replaced by one of them.
         assert_eq!(
-            ids(catalog.pool(
+            ids(pool(
                 "core-083",
                 &q(json!({ "rarity": "Legendary", "type": TRAP_TYPES }))
             )),
             strings(&["core-085", "classic-009"])
         );
         assert_eq!(
-            core_indices(catalog.pool("core-083", &q(json!({ "rarity": "Legendary", "type": "Unit" })))),
+            core_indices(pool(
+                "core-083",
+                &q(json!({ "rarity": "Legendary", "type": "Unit" }))
+            )),
             strings(&["52", "92"])
         );
     }
@@ -1006,8 +1000,12 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         ]);
         pool.extend(landed(&[CATBOY_MAID]));
         // R1857000: and since its release, the Stinkyscape set's #77 Yuma, #112 Job Application, #145
-        // Fortify Flesh, #153 Stimmycheck and its two Scanning Probes, #166 and #167.
+        // Fortify Flesh, #153 Stimmycheck and its two Scanning Probes, #166 and #167; and since #2521
+        // its three Flaks, #53, #57 and #61, whose Radiant faces print Lucky 1 (R2521001).
         pool.extend(landed(&[
+            "stinkyscape-053",
+            "stinkyscape-057",
+            "stinkyscape-061",
             "stinkyscape-077",
             "stinkyscape-112",
             "stinkyscape-145",
@@ -1075,9 +1073,10 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "meditative-101",
     ];
 
-    /// The Stinkyscape set's printed 1/1 Units (§8.10: #38 Shield Amplifier and #98 Hull Booster; none
-    /// of its tokens prints 1/1), which the pool takes since its release (#1884, R1857000).
-    const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-098"];
+    /// The Stinkyscape set's printed 1/1 Units (§8.10: #38 Shield Amplifier, #81 Radix since #2657 made
+    /// it 1/1, and #98 Hull Booster; none of its tokens prints 1/1), which the pool takes since its
+    /// release (#1884, R1857000).
+    const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-081", "stinkyscape-098"];
 
     #[test]
     fn r1080_the_one_one_pool_is_every_printed_1_1_unit_tokens_included() {
@@ -1087,7 +1086,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         expected.extend(landed(&[CATBOY_MAID]));
         expected.extend(strings(STINKYSCAPE_ONE_ONES));
         assert_eq!(
-            ids(catalog.query(&q(json!({
+            ids(query(&q(json!({
                 "type": "Unit",
                 "stats": { "attack": 1, "health": 1 },
                 "withTokens": true,
@@ -1106,7 +1105,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         expected.extend(strings(MEDITATIVE_ONE_ONES));
         expected.extend(landed(&[CATBOY_MAID]));
         expected.extend(strings(STINKYSCAPE_ONE_ONES));
-        let ones = catalog.query(&q(json!({
+        let ones = query(&q(json!({
             "type": "Unit",
             "stats": { "attack": 1, "health": 1 },
             "withTokens": true,
@@ -1161,19 +1160,21 @@ mod r1878000_the_starship_piece_pool_stinkyscape_124_jlockeeds_shipbuilding_gran
     use jackioh_engine::{DORMANT_STARSHIP_DEF_ID, KeywordKind, has_keyword};
 
     #[test]
-    fn r1878000_the_starship_piece_pool_is_the_sixty_stinkyscape_cards_that_print_the_keyword() {
+    fn r1878000_the_starship_piece_pool_is_the_forty_six_stinkyscape_cards_that_print_the_keyword() {
         register();
         // The query a card script writes, which names its set so that it reaches the pieces while the
-        // set is held (R1420): S #38 to #175, the Field Trap #131 Spacerace Stimulus among them; never
+        // set is held (R1420): S #38 to #177, the Field Trap #131 Spacerace Stimulus among them; never
         // the Dormant Starship, which prints none, nor the Golem or the AI card, which are tokens.
+        // #2521 took the keyword off fifteen Units (#68, #69, #72 to #78, #80 to #83, #85 and #86) and
+        // gave it to the new #177 Cloaking Module: sixty pieces until then.
         assert_eq!(
             starship_pieces(),
             q(json!({ "set": "Stinkyscape", "keywords": ["Starship Piece"] }))
         );
         let expected: Vec<String> = [
-            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
-            69, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 85, 86, 90, 93, 98, 100, 101, 104, 105, 106,
-            107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143, 175,
+            38, 40, 43, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 79,
+            90, 93, 98, 100, 101, 104, 105, 106, 107, 108, 122, 131, 132, 133, 134, 136, 140, 141, 142, 143,
+            175, 177,
         ]
         .iter()
         .map(|n| format!("stinkyscape-{n:03}"))

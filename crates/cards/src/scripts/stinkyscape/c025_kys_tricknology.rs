@@ -145,6 +145,24 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     /// How many games the pool sweep plays, six pieces each.
     const POOL_SEEDS: u32 = 20;
+    /// The fifteen Units that #2521 took off the Starship Pieces: the pool offers none of them.
+    const NO_LONGER_PIECES: [&str; 15] = [
+        "stinkyscape-068",
+        "stinkyscape-069",
+        "stinkyscape-072",
+        "stinkyscape-073",
+        "stinkyscape-074",
+        "stinkyscape-075",
+        "stinkyscape-076",
+        "stinkyscape-077",
+        "stinkyscape-078",
+        "stinkyscape-080",
+        "stinkyscape-081",
+        "stinkyscape-082",
+        "stinkyscape-083",
+        "stinkyscape-085",
+        "stinkyscape-086",
+    ];
 
     /// Every zone's point from the caster's seat: 5 lanes by the rows 1, 2, −1 and −2.
     fn every_point() -> Vec<(i32, i32)> {
@@ -264,6 +282,10 @@ mod tests {
         }
         assert!(seen.iter().all(|def_id| is_piece(def_id)), "{seen:?}");
         assert!(!seen.iter().any(|def_id| def_id == SPACERACE_STIMULUS));
+        assert!(
+            !seen.iter().any(|def_id| NO_LONGER_PIECES.contains(&def_id.as_str())),
+            "{seen:?}"
+        );
         assert!(has_keyword(
             &crate::card_def(SPACERACE_STIMULUS).base.keywords,
             KeywordKind::StarshipPiece

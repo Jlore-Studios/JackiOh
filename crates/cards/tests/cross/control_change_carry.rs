@@ -53,7 +53,7 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
     use super::*;
 
     #[test]
-    fn r30_r12_r171_a_stolen_twinspell_grants_its_echo_to_the_thiefs_next_spell_and_goes_to_its_owners_graveyard_s8_c79()
+    fn r30_r12_r171_r2618000_a_stolen_twinspell_grants_its_echo_to_the_thiefs_next_spell_and_goes_to_the_thiefs_graveyard_s8_c79()
      {
         let mut g = setup(json!({
             "p1": { "hand": [TWINSPELL, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
@@ -84,11 +84,18 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
             .collect();
         assert_eq!(changes, [(PlayerId::P1, false), (PlayerId::P2, true)]);
 
-        // p2's Stockpile resolves twice (draw 2, twice), and Twinspell goes to its owner's graveyard.
+        // p2's Stockpile resolves twice (draw 2, twice), and Twinspell goes to p2's graveyard, the side it
+        // was on, as p2's card (R2618000).
         let before = g.hand("p2").len();
         g.play(STOCKPILE, json!({}));
         assert_eq!(g.hand("p2").len(), before - 1 + 4);
         g.expect_in_zone(&twinspell, "graveyard");
+        assert!(
+            g.pile("p2", "graveyard")
+                .iter()
+                .any(|card| card.id == twinspell.id)
+        );
+        assert_eq!(g.card(&twinspell).owner, PlayerId::P2);
         assert_eq!(echo_next_spell_mods(&g, PlayerId::P2), 0);
     }
 }

@@ -76,9 +76,9 @@ mod tests {
         assert_eq!(s.hand(P1).len(), 3, "the filler and two draws");
     }
 
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce.
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
-    const CAPABILITY: &str = "stinkyscape-137"; // Cry: launches your Dormant Starship free.
+    const COMMANDER: &str = "stinkyscape-137"; // Cry: launches your Dormant Starship free.
 
     #[test]
     fn r1881003_cast_before_any_starship_the_later_launch_costs_1_and_spends_it() {
@@ -86,7 +86,7 @@ mod tests {
             "seed": "launch-sequencer-later",
             "p1": {
                 "hand": [SEQUENCER, HIT_JOB, FILLER],
-                "field": [STRATOS],
+                "field": [AP_ROUNDS],
                 "library": filler(4),
                 "mana": 10,
             },
@@ -121,16 +121,16 @@ mod tests {
     fn r1881003_a_launch_by_an_effect_spends_none() {
         let (mut s, ship) = crate::built_starship(
             "launch-sequencer-effect",
-            json!([{ "def": STRATOS, "lane": 1 }]),
-            json!({ "hand": [SEQUENCER, CAPABILITY] }),
+            json!([{ "def": AP_ROUNDS, "lane": 1 }]),
+            json!({ "hand": [SEQUENCER, COMMANDER] }),
             json!({}),
         );
         s.play(SEQUENCER, json!({}));
         assert_eq!(launch_cost(s.state(), P1), 1);
-        s.play(CAPABILITY, json!({ "zone": 4 }));
+        s.play(COMMANDER, json!({ "zone": 4 }));
         assert!(
             is_launched_starship(s.card(ship.as_str())),
-            "Firststrike Capability's Cry launched it"
+            "Starfleet Commander's Cry launched it"
         );
         assert_eq!(
             launch_cost(s.state(), P1),

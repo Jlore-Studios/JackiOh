@@ -9,7 +9,6 @@ pub fn script() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             attacked_only_from_lane: Some(true),
-            never_defense: Some(true),
             ..StaticFlags::default()
         }),
         ..Script::default()
@@ -19,6 +18,12 @@ pub fn script() -> CardScripts {
     let radiant = base.clone();
 
     CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
 }
 
 // SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune.
@@ -127,27 +132,27 @@ mod tests {
             use super::*;
 
             #[test]
-            fn has_armor_3_a_4_damage_hit_leaves_it_at_3() {
+            fn has_armor_2_a_4_damage_hit_leaves_it_at_2() {
                 let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
+                assert_eq!(s.stats(top(&s)).armor, 2);
+                let attacker = unit_or_blank(&s, P1, 3);
+                let target = top(&s);
+                s.attack(attacker, &target);
+                let target = top(&s);
+                s.expect_stats(&target, json!({ "health": 2 }));
+            }
+
+            #[test]
+            fn r386_its_armor_is_tuned_as_a_numbered_keyword_an_upgrade_makes_it_armor_3() {
+                let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
+                let tuning = tuning_of(top_mut(&mut s));
+                tuning.x = Some(add_step(tuning.x.as_ref(), "Armor", 1));
                 assert_eq!(s.stats(top(&s)).armor, 3);
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
                 s.expect_stats(&target, json!({ "health": 3 }));
-            }
-
-            #[test]
-            fn r386_its_armor_is_tuned_as_a_numbered_keyword_an_upgrade_makes_it_armor_4() {
-                let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
-                let tuning = tuning_of(top_mut(&mut s));
-                tuning.x = Some(add_step(tuning.x.as_ref(), "Armor", 1));
-                assert_eq!(s.stats(top(&s)).armor, 4);
-                let attacker = unit_or_blank(&s, P1, 3);
-                let target = top(&s);
-                s.attack(attacker, &target);
-                let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 4 }));
             }
 
             #[test]
@@ -189,7 +194,7 @@ mod tests {
                 s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
                 s.attack(&across, &loser);
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 3 }));
+                s.expect_stats(&loser, json!({ "health": 2 }));
             }
 
             #[test]
@@ -314,7 +319,7 @@ mod tests {
 
             #[test]
             fn s6_1_a_unit_still_reaches_it_a_cry_targets_it_and_a_unit_s_sweep_destroys_it() {
-                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 6 leaves 2.
+                // Radiant Twisted Sorcerer's 8 through the Radiant Top Loser's Armor 4 leaves 4.
                 let mut s = top_loser(json!({ "hand": [{ "def": SORCERER, "radiant": true }, FILLER] }), true, json!({}));
                 let loser = top(&s);
                 s.play(
@@ -322,7 +327,7 @@ mod tests {
                     json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": loser.id }] }),
                 );
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 6 }));
+                s.expect_stats(&loser, json!({ "health": 4 }));
                 let mut felinor = top_loser(json!({ "hand": [BIG_FELINOR, FILLER] }), true, json!({}));
                 let loser = top(&felinor);
                 felinor.play(BIG_FELINOR, json!({ "zone": 1 }));
@@ -336,7 +341,7 @@ mod tests {
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 5 }));
+                s.expect_stats(&target, json!({ "health": 3 }));
             }
 
             #[test]

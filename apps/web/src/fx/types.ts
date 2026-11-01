@@ -117,6 +117,21 @@ export type FxShieldCue = { kind: "shield"; size: "small" | "full"; at: FxAnchor
 export type FxChaosLine = { text: string; reel: readonly string[]; landMs: number };
 /** R436: the slot-machine reveal of the effects a Call to Chaos rolled, one line each, over the board. */
 export type FxChaosCue = { kind: "chaos"; title: string; lines: readonly FxChaosLine[]; delayMs: number; durationMs: number };
+/**
+ * R2652001: one coin or die of a batch. `faces` is every face it drew, `kept` the index of the one it
+ * kept (Lucky's extra draws are the others), `tumble` the faces its reel shows before it lands on the
+ * kept one (that face last), each as the words it shows, and `landMs` when it lands inside the entry.
+ */
+export type FxRollItem = { faces: readonly string[]; kept: number; tumble: readonly string[]; landMs: number };
+/** R2652001: one panel over the board for a batch of coin flips or die rolls, every item at once. */
+export type FxRollCue = {
+  kind: "roll";
+  title: string;
+  die: "coin" | "die";
+  items: readonly FxRollItem[];
+  delayMs: number;
+  durationMs: number;
+};
 /** A small glyph a DOM cue draws (an emblem of `cards/art/emblems.ts`): SVG path data in a 24×24 box. */
 export type FxIcon = { d: string; rule: "nonzero" | "evenodd" };
 export type FxFogCue = {
@@ -175,6 +190,7 @@ export type FxDomCue =
   | FxBrandCue
   | FxShieldCue
   | FxChaosCue
+  | FxRollCue
   | FxFogCue
   | FxZoneCue;
 export type FxStageCue = FxHoldCue | FxConcealCue | FxLungeCue;
@@ -212,6 +228,7 @@ export type FxRecipe =
   | "fatigue"
   | "overflow"
   | "chaos"
+  | "roll"
   | "brand"
   | "rewind"
   | "armor"

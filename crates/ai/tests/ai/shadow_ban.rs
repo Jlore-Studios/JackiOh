@@ -540,8 +540,10 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // deck too) brought the card down to four crystals: dealt with every Meditative ban lifted (#1675),
     // game 1 ran 21 turns, the card affordable on two of them, and once the AI priced a Dormant card it
     // ran 36, the card drawn on turn 30 at 0. Pile On (5) has no discount of its own, so only another
-    // card's could bring it to Easy's four crystals: in game 1 it is in hand from turn 7, unaffordable,
-    // until the game ends on turn 9. Both checks deal from the frozen fixture pool (issue #1113), so a
+    // card's could bring it to Easy's four crystals: in game 1 it was in hand from turn 7, unaffordable,
+    // until the game ended on turn 9. Re-pinned for #2521, whose changed cards re-deal the filler, as
+    // Megabase's turn as a Unit does (#2278): game 1 no longer draws it and game 2 does, unaffordable,
+    // so the check plays two. Both checks deal from the frozen fixture pool (issue #1113), so a
     // shadow-ban change re-deals neither.
     //
     // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
@@ -551,13 +553,24 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     // card affordable on no turn between them; game 5 holds it affordable, so the check plays five.
     // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
     // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
+    //
+    // Re-pinned for issue #2511 (R2511001), when the AI's deck stopped passing over a Core card's
+    // Legacy card and the deals moved: Easy's game 1 no longer draws Pile On, and with #2542's pricing
+    // of Field Spells game 3 brings it to four crystals once through another card's discount, so no
+    // run of games from game 1 holds it drawn and never affordable. The Easy check is GIGA Glowy Jelly
+    // Bean's again (7, only Float brings it down): game 2 draws it, never at four crystals.
+    //
+    // Re-pinned for issue #2490 (R2490000), when the AI's single pricing of a backrow Unit moved the
+    // play: Easy's game 1 now draws GIGA Glowy Jelly Bean and Floats bring it to four crystals, so no
+    // run of games from game 1 holds it never affordable. The Easy check is Ceaseless Void's (100):
+    // game 1 draws it, never at four crystals.
 
-    /// R186 Pile On (5 mana) is unswept at Easy's four crystals
+    /// R186 Ceaseless Void (100 mana) is unswept at Easy's four crystals
     #[test]
-    fn r186_pile_on_5_mana_is_unswept_at_easys_four_crystals() {
+    fn r186_ceaseless_void_100_mana_is_unswept_at_easys_four_crystals() {
         jackioh_cards::register_all();
         let easy = js(sweep_card(
-            "classic-060",
+            "core-100",
             &SweepOptions {
                 seeds: Some(1),
                 now: None,
@@ -1759,17 +1772,25 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
         );
     }
 
+    /// R2521010: the sets whose cards the shadow ban may hold (`BAN_SETS` in the tools' sweep), so the
+    /// unban lane may lift a card of any of them.
+    const BAN_SETS: [SetName; 4] = [
+        SetName::Meditative,
+        SetName::MeditativePlus,
+        SetName::Stinkyscape,
+        SetName::TrainingGrounds,
+    ];
+
     #[test]
-    fn r732000_the_unbanned_ids_are_sorted_meditative_cards_out_of_the_ban() {
+    fn r732000_r2521010_the_unbanned_ids_are_sorted_cards_of_the_ban_sets_out_of_the_ban() {
         jackioh_cards::register_all();
         assert!(
             SHADOW_UNBANNED.windows(2).all(|pair| pair[0] < pair[1]),
             "{SHADOW_UNBANNED:?}: not sorted by id"
         );
         for &def_id in SHADOW_UNBANNED {
-            assert_eq!(
-                def_of(None, def_id).set,
-                SetName::Meditative,
+            assert!(
+                BAN_SETS.contains(&def_of(None, def_id).set),
                 "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
             );
             assert!(

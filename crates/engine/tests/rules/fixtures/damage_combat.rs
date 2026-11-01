@@ -385,6 +385,36 @@ pub static striker_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("strik
 pub static kamikaze: LazyLock<CardDef> = LazyLock::new(|| plain_unit("kamikaze", 4751, 2, 2));
 /// R2285002: "When this attacks a Unit, transform it into a wall" (Classic+ #73.1 Classic Golem's shape).
 pub static shifter: LazyLock<CardDef> = LazyLock::new(|| plain_unit("shifter", 4752, 3, 3));
+/// R2396000: "Whenever this attacks": the veteran's notes, `even:`, with the player it acts for, run
+/// though it died in the combat (Core #32 Prem Panther's shape).
+pub static even_veteran: LazyLock<CardDef> = LazyLock::new(|| plain_unit("even-veteran", 4753, 2, 2));
+/// R2396000: the same with Reborn, 2/2, so a combat can kill it and bring a new body back.
+pub static reborn_even_veteran: LazyLock<CardDef> = LazyLock::new(|| {
+    unit(
+        "reborn-even-veteran",
+        4754,
+        2,
+        2,
+        json!([{ "kind": "Reborn" }]),
+        json!([{ "kind": "Reborn" }]),
+    )
+});
+/// R2396000: the veteran asker's hook as a "Whenever this attacks".
+pub static even_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("even-asker", 4755, 2, 2));
+/// R2396000: "Whenever this destroys a Unit": notes the Unit it killed and the player it acts for,
+/// though it died in that combat (Meditative #95.1 CN Golem's shape).
+pub static gone_killer: LazyLock<CardDef> = LazyLock::new(|| plain_unit("gone-killer", 4756, 2, 2));
+/// R2396000: the same with Reborn.
+pub static reborn_gone_killer: LazyLock<CardDef> = LazyLock::new(|| {
+    unit(
+        "reborn-gone-killer",
+        4757,
+        2,
+        2,
+        json!([{ "kind": "Reborn" }]),
+        json!([{ "kind": "Reborn" }]),
+    )
+});
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -443,6 +473,11 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         striker_asker.clone(),
         kamikaze.clone(),
         shifter.clone(),
+        even_veteran.clone(),
+        reborn_even_veteran.clone(),
+        even_asker.clone(),
+        gone_killer.clone(),
+        reborn_gone_killer.clone(),
     ]
 });
 
@@ -536,6 +571,53 @@ fn hero_guard(guard: HeroGuard) -> Script {
 fn after_attack_noter() -> Script {
     Script {
         after_attack: Some(hook(|ctx| vec![note(attack_facts(&*ctx))])),
+        ..Script::default()
+    }
+}
+
+/// R2396000: a "Whenever this attacks" noting the veteran's facts, `even:`, and the player it acts for.
+fn even_noter() -> Script {
+    Script {
+        after_attack: Some(hook(|ctx| {
+            let facts = after_attack_of(&*ctx);
+            let target = facts
+                .as_ref()
+                .map_or("?".to_string(), |facts| facts.target_id.clone());
+            let destroyed = facts
+                .as_ref()
+                .map_or(String::new(), |facts| facts.destroyed_ids.join("+"));
+            let survived = js_bool(facts.as_ref().map(|facts| facts.survived));
+            let forced = js_bool(facts.as_ref().map(|facts| facts.forced));
+            let zone = ctx.self_.as_ref().map_or("none", |card| card.zone.z().as_str());
+            vec![note(format!(
+                "even:{target}:{destroyed}:{survived}:{forced}:{zone}:{}",
+                ctx.controller
+            ))]
+        })),
+        after_attack_even_if_gone: true,
+        ..Script::default()
+    }
+}
+
+/// R2396000: a "Whenever this destroys a Unit" noting the Unit it killed and the player it acts for.
+fn gone_kill_noter() -> Script {
+    Script {
+        triggers: vec![
+            TriggerDef::new("gone-kill", &[GameEventType::Destroyed], |ctx, event| {
+                match (event, ctx.self_.as_ref()) {
+                    (
+                        GameEvent::Destroyed {
+                            instance_id,
+                            killer_id: Some(killer),
+                            ..
+                        },
+                        Some(me),
+                    ) if *killer == me.id => vec![note(format!("kill:{instance_id}:{}", ctx.controller))],
+                    _ => vec![],
+                }
+            })
+            .even_if_gone(),
+        ],
         ..Script::default()
     }
 }
@@ -937,6 +1019,27 @@ pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         ),
         (cleave_veteran.id.clone(), both(after_attack_noter())),
         (reborn_veteran.id.clone(), both(after_attack_noter())),
+        (even_veteran.id.clone(), both(even_noter())),
+        (reborn_even_veteran.id.clone(), both(even_noter())),
+        (
+            even_asker.id.clone(),
+            both(Script {
+                after_attack: Some(hook(|_ctx| {
+                    vec![note("even:before"), ask_controller("answered"), note("even:tail")]
+                })),
+                resume: IndexMap::from([(
+                    "answered",
+                    hook(|ctx| {
+                        let survived = js_bool(after_attack_of(&*ctx).map(|facts| facts.survived));
+                        vec![note(format!("even:answered:{survived}"))]
+                    }),
+                )]),
+                after_attack_even_if_gone: true,
+                ..Script::default()
+            }),
+        ),
+        (gone_killer.id.clone(), both(gone_kill_noter())),
+        (reborn_gone_killer.id.clone(), both(gone_kill_noter())),
         (
             turncoat.id.clone(),
             both(Script {

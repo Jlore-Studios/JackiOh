@@ -3,6 +3,7 @@ import type { AnnounceRecord } from "./AnnounceRecord";
 import type { AppliedAction } from "./AppliedAction";
 import type { BoardSnapshot } from "./BoardSnapshot";
 import type { CardDef } from "./CardDef";
+import type { CardInstance } from "./CardInstance";
 import type { CastMode } from "./CastMode";
 import type { CustomCard } from "./CustomCard";
 import type { DeclaredAttack } from "./DeclaredAttack";
@@ -112,6 +113,13 @@ castChain?: number,
  * leaves the field.
  */
 fieldExits?: FieldExits, 
+/**
+ * R2396000: the killers that answer "Whenever this destroys a Unit" even once gone, each as it
+ * stood when it killed, by the id of the Unit it killed: written as the state check reports the
+ * death (`state_check::collect`), taken as that `destroyed` is dispatched
+ * (`triggers::dispatch_event_at`). Absent while none waits.
+ */
+killSnapshots?: { [key in string]: CardInstance }, 
 /**
  * B3.1 rule 6, R383: the backrow zone each animated "Animated on your turn" card goes back to at
  * its controller's cleanup, held for it meanwhile as R64 holds a dying Reborn unit's zone

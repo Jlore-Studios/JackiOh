@@ -43,6 +43,52 @@ export type CardDelta =
 export const NONE = "none";
 export const NOT_RECORDED = "not recorded";
 
+/** How the diff reads one `CardDef` key (#2607). A `printed` key and a `data` one (R507: no face prints
+ * it) each have a `FIELD_LABEL` entry and a line of their own in `fieldChanges`, under the key's own
+ * name, the name `patches ship` records (`changed_fields`, R388); a `face` is diffed field by field
+ * (`base.text`, `radiant.stats`); an `ignored` key is never a change. */
+type KeyRole = "printed" | "data" | "face" | "ignored";
+
+/** Every `CardDef` key and its role, so a key `CardDef` gains with no entry here, or an entry for a key
+ * it lost, fails the web's typecheck (#2607), as a printed or data key with no `FIELD_LABEL` does. R507:
+ * fields without printed faces are listed by name. R1748001 and R1748002's flags are the Buff's data,
+ * and so is the Core card a Training Grounds copy named (`snapshotOf`, in the catalogs shipped from
+ * v0.5.5 to v0.5.7; R2511001). A Resource's prices print: its face prints its Credits (R2521009). */
+const CARD_KEYS = {
+  // The card itself: a delta's `id`, never one of its changes.
+  id: "ignored",
+  index: "printed",
+  name: "printed",
+  set: "printed",
+  type: "printed",
+  tags: "printed",
+  rarity: "printed",
+  printedRarity: "printed",
+  // R1437000: display only and in no snapshot, so a change to it alone is no card change.
+  flavor: "ignored",
+  token: "printed",
+  cost: "printed",
+  refs: "data",
+  params: "data",
+  dealsDamage: "data",
+  usesPlague: "data",
+  resource: "printed",
+  loc: "data",
+  radiantFallback: "printed",
+  // A Fuse's and a crafter's own (R179, R882), on a transient definition no snapshot holds.
+  ingredients: "data",
+  craft: "data",
+  snapshotOf: "data",
+  base: "face",
+  radiant: "face",
+} as const satisfies Record<keyof CardDef, KeyRole>;
+
+type CardKey = keyof typeof CARD_KEYS;
+/** The keys with a line of their own: every printed and data one. */
+type LabeledKey = { [K in CardKey]: (typeof CARD_KEYS)[K] extends "printed" | "data" ? K : never }[CardKey];
+/** What `fieldChanges` diffs on each face, under `<face>.<field>`. */
+type FaceField = `${FaceKey}.${"type" | "stats" | "keywords" | "text" | "grants"}`;
+
 export const FIELD_LABEL = {
   name: "Name",
   cost: "Cost",
@@ -69,34 +115,15 @@ export const FIELD_LABEL = {
   radiantFallback: "Radiant form",
   dealsDamage: "Deals damage",
   usesPlague: "Uses its Plague Counters",
-} as const;
+  snapshotOf: "Copy of",
+  resource: "Resource prices",
+  ingredients: "Ingredients",
+  craft: "Recipe",
+} as const satisfies Record<LabeledKey | FaceField, string>;
 
-/** R507: fields without printed faces are listed by name. R1748001 and R1748002's flags are the
- * Buff's data, as `patches ship` records them by name. */
-const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(["loc", "refs", "params", "dealsDamage", "usesPlague"]);
+const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(Object.entries(CARD_KEYS).flatMap(([key, role]) => (role === "data" ? [key] : [])));
 
-const KNOWN_KEYS: ReadonlySet<string> = new Set([
-  "id",
-  "index",
-  "name",
-  "set",
-  "type",
-  "tags",
-  "rarity",
-  "printedRarity",
-  "token",
-  "cost",
-  "refs",
-  "params",
-  "loc",
-  "radiantFallback",
-  "dealsDamage",
-  "usesPlague",
-  // R1437000: display only and in no snapshot, so a change to it alone is no card change.
-  "flavor",
-  "base",
-  "radiant",
-]);
+const KNOWN_KEYS: ReadonlySet<string> = new Set(Object.keys(CARD_KEYS));
 
 /** A price in R432's words: "(2) Cost", "(X) Cost", and an embiggen card's "(2) Cost, Embiggened (4)" (R1175000). */
 export function costText(cost: CardCost): string {
@@ -146,6 +173,20 @@ function paramsText(params: readonly Param[] | undefined): string {
 
 function refsText(refs: readonly string[] | undefined, defs: CardDefs | undefined): string {
   return listText((refs ?? []).map((id) => defs?.[id]?.name ?? id));
+}
+
+/** The Core card a Training Grounds copy named (`snapshotOf`), by its name in the snapshot, as `refs` are. */
+function copiedText(def: CardDef, defs: CardDefs | undefined): string {
+  return refsText(def.snapshotOf === undefined ? [] : [def.snapshotOf], defs);
+}
+
+/** A Resource's rarity and each face's prices (R1840000, R1840001): what a sale fetches, the Credits
+ * its face prints (R2521009), and what the Marketplace asks for it. */
+function resourceText(resource: CardDef["resource"]): string {
+  if (resource === undefined) return NONE;
+  const prices = (price: typeof resource.base): string =>
+    `sells for ${String(price.sellMin)}–${String(price.sellMax)} Credits, bought for ${String(price.buy)} Credits`;
+  return `${resource.rarity}, ${prices(resource.base)}; Radiant ${prices(resource.radiant)}`;
 }
 
 function dataText(value: unknown): string {
@@ -221,6 +262,10 @@ function fieldChanges(before: CardDef, after: CardDef, names: DiffNames): FieldC
   );
   value("dealsDamage", before.dealsDamage === true ? "yes" : "no", after.dealsDamage === true ? "yes" : "no");
   value("usesPlague", before.usesPlague === true ? "yes" : "no", after.usesPlague === true ? "yes" : "no");
+  value("snapshotOf", copiedText(before, names.before), copiedText(after, names.after));
+  value("resource", resourceText(before.resource), resourceText(after.resource));
+  value("ingredients", dataText(before.ingredients), dataText(after.ingredients));
+  value("craft", dataText(before.craft), dataText(after.craft));
 
   // Anything else the catalog grows: reported under its key rather than dropped.
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);

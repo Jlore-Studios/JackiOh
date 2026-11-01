@@ -57,9 +57,9 @@
       "games": 2,
       "draws": 1,
       "firstWins": 1,
-      "firstShare": 0.5,
-      "firstLow": 0.095,
-      "firstHigh": 0.905,
+      "firstShare": 1.0,
+      "firstLow": 0.207,
+      "firstHigh": 1.0,
       "reasons": {
         "hero-death": 1,
         "both-heroes-dead": 0,

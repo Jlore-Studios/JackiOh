@@ -179,9 +179,9 @@
       cast: { voice: "crone", effect: "wellDrip" },
     },
     "core-007": { // Jewelosco Scarab
-      play: { voice: "goof" },
-      attack: { voice: "goof" },
-      death: { voice: "goof" },
+      play: { voice: "alien" },
+      attack: { voice: "alien", effect: "rattle" },
+      death: { voice: "alien" },
     },
     "core-008": { // Mr. Vanilla
       play: { voice: "plain" },
@@ -361,9 +361,9 @@
       death: { voice: "hustler" },
     },
     "core-054": { // Straaza
-      play: { voice: "diva" },
-      attack: { voice: "diva" },
-      death: { voice: "diva" },
+      play: { voice: "storyteller", effect: "rumble" },
+      attack: { voice: "storyteller", effect: "fireWhoosh" },
+      death: { voice: "storyteller" },
     },
     "core-055": { // Lava Golem
       play: { voice: "brute" },
@@ -440,7 +440,7 @@
       cast: { voice: "guard" },
     },
     "core-074": { // Adaptive UI
-      cast: { voice: "robot" },
+      cast: { voice: "announcer" },
     },
     "core-075": { // Infinite Reserves
       cast: { voice: "hustler" },
@@ -507,9 +507,9 @@
       death: { voice: "elder" },
     },
     "core-092": { // Felinor Fiender
-      play: { voice: "crone" },
-      attack: { voice: "crone" },
-      death: { voice: "crone" },
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
     },
     "core-093": { // Combo-Index
       cast: { voice: "announcer" },
@@ -529,7 +529,7 @@
       death: { voice: "brute-golem" },
     },
     "core-096": { // My Pawn
-      cast: { voice: "snob", effect: "gong" },
+      cast: { voice: "plain", effect: "gong" },
     },
     "core-097": { // Zephrys
       cast: { voice: "whisper" },
@@ -1558,7 +1558,9 @@
       death: { voice: "alien" },
     },
     "meditative-049-3": { // AI Girlfriend
-      cast: { voice: "diva" },
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
     },
     "meditative-050": { // CN Tech
       cast: { voice: "robot" },
@@ -1868,6 +1870,9 @@
       cast: { voice: "robot" },
     },
     "meditativeplus-001-4": { // Leg Day
+      cast: { voice: "robot" },
+    },
+    "meditativeplus-001-5": { // Star Chart
       cast: { voice: "robot" },
     },
     "meditativeplus-002": { // NA Tech
@@ -2431,7 +2436,7 @@
       attack: { voice: "hero" },
       death: { voice: "hero" },
     },
-    "stinkyscape-095": { // Vanguard Coalition
+    "stinkyscape-095": { // Faction: Vanguard Coalition
       cast: { voice: "hero" },
     },
     "stinkyscape-096": { // Ocean Tsunami
@@ -2530,7 +2535,9 @@
       death: { voice: "snob" },
     },
     "stinkyscape-116": { // Megabase
-      cast: { voice: "sapi-announcer" },
+      play: { voice: "sapi-announcer" },
+      attack: { voice: "sapi-announcer" },
+      death: { voice: "sapi-announcer" },
     },
     "stinkyscape-117": { // Core System
       cast: { voice: "robot" },
@@ -2615,7 +2622,7 @@
       attack: { voice: "sapi-wizard" },
       death: { voice: "sapi-wizard" },
     },
-    "stinkyscape-137": { // Firststrike Capability
+    "stinkyscape-137": { // Starfleet Commander
       play: { voice: "sapi-hero" },
       attack: { voice: "sapi-hero" },
       death: { voice: "sapi-hero" },
@@ -2721,16 +2728,16 @@
     "stinkyscape-158": { // Stratos Swarm
       cast: { voice: "robot" },
     },
-    "stinkyscape-159": { // ETHICS
+    "stinkyscape-159": { // Faction: ETHICS
       cast: { voice: "sapi-bureaucrat" },
     },
-    "stinkyscape-160": { // Golden Accord
+    "stinkyscape-160": { // Faction: Golden Accord
       cast: { voice: "posh" },
     },
-    "stinkyscape-161": { // Pegasus
+    "stinkyscape-161": { // Faction: Pegasus
       cast: { voice: "diva" },
     },
-    "stinkyscape-162": { // Star-jumper Core
+    "stinkyscape-162": { // Faction: Star-Jumper Core
       cast: { voice: "robot" },
     },
     "stinkyscape-163": { // Swear Loyalities
@@ -2783,6 +2790,14 @@
       play: { voice: "robot" },
       attack: { voice: "robot" },
       death: { voice: "robot" },
+    },
+    "stinkyscape-176": { // Preemptive Strike
+      cast: { voice: "sapi-hero" },
+    },
+    "stinkyscape-177": { // Cloaking Module
+      play: { voice: "sapi-synth" },
+      attack: { voice: "sapi-synth" },
+      death: { voice: "sapi-synth" },
     },
     "stinkyscape-t-dormant-starship": { // Dormant Starship
       play: { voice: "sapi-synth-deep" },
@@ -3042,82 +3057,82 @@
     "traininggrounds-040": { // Goetzmann Game Design
       cast: { voice: "prof" },
     },
-    "traininggrounds-041": { // Bigot
+    "traininggrounds-041": { // Legacy: Bigot
       play: { voice: "snob" },
       attack: { voice: "snob" },
       death: { voice: "snob" },
     },
-    "traininggrounds-042": { // Stockpile
+    "traininggrounds-042": { // Legacy: Stockpile
       cast: { voice: "narrator" },
     },
-    "traininggrounds-043": { // Mr. Vanilla
+    "traininggrounds-043": { // Legacy: Mr. Vanilla
       play: { voice: "plain" },
       attack: { voice: "plain" },
       death: { voice: "plain" },
     },
-    "traininggrounds-044": { // Duplicating Felinors
+    "traininggrounds-044": { // Legacy: Duplicating Felinors
       play: { voice: "cat" },
       attack: { voice: "cat", effect: "catChirp" },
       death: { voice: "cat" },
     },
-    "traininggrounds-045": { // Jlockeed's Weapons
+    "traininggrounds-045": { // Legacy: Jlockeed's Weapons
       cast: { voice: "robot", effect: "metalClank" },
     },
-    "traininggrounds-046": { // Hit Job
+    "traininggrounds-046": { // Legacy: Hit Job
       cast: { voice: "hustler-hitman", effect: "sharpCrack" },
     },
-    "traininggrounds-047": { // Midrange Menace
+    "traininggrounds-047": { // Legacy: Midrange Menace
       play: { voice: "brute" },
       attack: { voice: "brute" },
       death: { voice: "brute" },
     },
-    "traininggrounds-048": { // Jlockeed Shredder-10
+    "traininggrounds-048": { // Legacy: Jlockeed Shredder-10
       play: { voice: "robot", effect: "engineRev" },
       attack: { voice: "robot", effect: "servoWhirr" },
       death: { voice: "robot", effect: "powerDown" },
     },
-    "traininggrounds-049": { // Reoccurring Dream
+    "traininggrounds-049": { // Legacy: Reoccurring Dream
       cast: { voice: "whisper" },
     },
-    "traininggrounds-050": { // Glowy Jelly Bean
+    "traininggrounds-050": { // Legacy: Glowy Jelly Bean
       cast: { voice: "wobble" },
     },
-    "traininggrounds-051": { // Big Felinor
+    "traininggrounds-051": { // Legacy: Big Felinor
       play: { voice: "cat" },
       attack: { voice: "cat", effect: "bigCatPounce" },
       death: { voice: "cat" },
     },
-    "traininggrounds-052": { // Snom Bunny Mind Control
+    "traininggrounds-052": { // Legacy: Snom Bunny Mind Control
       cast: { voice: "posh" },
     },
-    "traininggrounds-053": { // Prejudiced Postdoc
+    "traininggrounds-053": { // Legacy: Prejudiced Postdoc
       play: { voice: "snob" },
       attack: { voice: "snob" },
       death: { voice: "snob" },
     },
-    "traininggrounds-054": { // The Rock
+    "traininggrounds-054": { // Legacy: The Rock
       play: { voice: "brute", effect: "stoneThud" },
       attack: { voice: "brute", effect: "rumble" },
       death: { voice: "brute", effect: "crumble" },
     },
-    "traininggrounds-055": { // Reminisce
+    "traininggrounds-055": { // Legacy: Reminisce
       cast: { voice: "storyteller" },
     },
-    "traininggrounds-056": { // Corpse Eater
+    "traininggrounds-056": { // Legacy: Corpse Eater
       play: { voice: "alien" },
       attack: { voice: "alien", effect: "squelch" },
       death: { voice: "alien" },
     },
-    "traininggrounds-057": { // Recycling Initiative
+    "traininggrounds-057": { // Legacy: Recycling Initiative
       cast: { voice: "zoomer" },
     },
-    "traininggrounds-058": { // True Strike
+    "traininggrounds-058": { // Legacy: True Strike
       cast: { voice: "hero", effect: "zip" },
     },
-    "traininggrounds-059": { // Fig of Life
+    "traininggrounds-059": { // Legacy: Fig of Life
       cast: { voice: "storyteller", effect: "squelch" },
     },
-    "traininggrounds-060": { // Rush Token Farm
+    "traininggrounds-060": { // Legacy: Rush Token Farm
       cast: { voice: "elder" },
     },
   },

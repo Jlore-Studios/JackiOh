@@ -199,5 +199,6 @@ pub fn twice_forward_trigger(args: TwiceForwardArgs) -> TriggerDef {
             watch(ctx, event)
         })),
         run: Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| fire(radiant_copy, ctx, event)),
+        even_if_gone: false,
     }
 }

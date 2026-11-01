@@ -16,7 +16,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::catalog::pair_key;
 use jackioh_engine::wire::{CardType, SHIPPED_SETS, SeatSummary};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, FoldArgs, PlayerId, Tag, begin_game, create_game,
@@ -843,10 +842,10 @@ fn fixture_games_move_every_goal_kind_in_the_pool() {
         .map(|(id, _)| id.clone())
         .collect();
     cards.sort();
-    // Re-pinned for the Training Grounds release (#2204): a deck holds a Core card or its snapshot,
-    // never both (R2195000), so the pool keeps the Core card of each pair, which sorts first.
-    let mut pairs: BTreeSet<String> = BTreeSet::new();
-    cards.retain(|id| pairs.insert(pair_key(&CATALOG[id]).to_string()));
+    // Re-pinned for the Training Grounds release (#2204), when a deck held a Core card or its copy,
+    // never both: the pool keeps the Core card and leaves out its Legacy card (R2511000), the deals
+    // they always were.
+    cards.retain(|id| !CATALOG[id].tags.contains(&Tag::Legacy));
     let size = usize::try_from(DECK_SIZE).expect("a deck size");
     let mut moved: BTreeSet<String> = BTreeSet::new();
     for n in 1..=GAMES {

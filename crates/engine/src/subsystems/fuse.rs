@@ -1045,6 +1045,22 @@ fn any_flag(values: impl IntoIterator<Item = Option<bool>>) -> Option<bool> {
     }
 }
 
+/// R2396000: an ingredient's `afterAttack` as the fused card runs it: a "Whenever this attacks" part
+/// whatever became of the attacker, an "After this attacks" part only for a survivor (R2285001).
+fn after_attack_part(record: &Script) -> Option<Hook> {
+    let run = record.after_attack.clone()?;
+    if record.after_attack_even_if_gone {
+        return Some(run);
+    }
+    Some(hook(move |ctx| {
+        if crate::combat::after_attack_of(ctx).is_some_and(|facts| !facts.survived) {
+            Vec::new()
+        } else {
+            run(ctx)
+        }
+    }))
+}
+
 /// A number of the combined static flags: the larger, which is the one stricter requirement rather
 /// than a doubled one (`staticFlags.tribute`).
 fn max_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
@@ -1303,7 +1319,10 @@ fn combine_objects(records: &[Script]) -> Script {
             records.iter().map(|s| s.conditional_keywords.clone()).collect(),
         )),
         when_attacks: hooks(|s| s.when_attacks.clone(), "whenAttacks"),
-        after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
+        after_attack: hooks(after_attack_part, "afterAttack"),
+        // R2396000: a fusion runs its `afterAttack` for a gone attacker when any ingredient's is a
+        // "Whenever this attacks"; `after_attack_part` keeps the others to a survivor.
+        after_attack_even_if_gone: records.iter().any(|s| s.after_attack_even_if_gone),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),
         ally_attacked: hooks(|s| s.ally_attacked.clone(), "allyAttacked"),

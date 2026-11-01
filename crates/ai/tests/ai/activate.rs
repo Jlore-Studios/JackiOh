@@ -11,7 +11,7 @@
 //! import; the registries' override is per thread here, so every test installs it first
 //! (`install_pricey`).
 
-use jackioh_ai::{AiOptions, DecisionReason, action_key, candidate_actions, decide};
+use jackioh_ai::{AiOptions, DecisionReason, Prices, action_key, candidate_actions, decide};
 use jackioh_engine::testkit::{
     ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardScripts, GameState,
     Script, create_rng, effects, find_instance_mut, hook, json, json_as, register_catalog_as,
@@ -148,7 +148,7 @@ mod b3_2_activations_are_first_class_candidates {
             "p2": { "field": ["core-019"], "hand": ["core-005"] },
         }));
         let state = s.state();
-        let candidates = candidate_actions(state, AI);
+        let candidates = candidate_actions(state, AI, Prices::NONE);
         for action in &candidates {
             assert!(
                 is_legal(state, AI, action),
@@ -199,7 +199,7 @@ mod b3_2_activations_are_first_class_candidates {
             .and_then(|cost| cost.mana);
         assert_eq!(price, Some(3));
 
-        let candidates = candidate_actions(s.state(), AI);
+        let candidates = candidate_actions(s.state(), AI, Prices::NONE);
         let sources: Vec<Option<String>> = (0..3).map(|at| source_of(candidates.get(at))).collect();
         assert_eq!(
             sources,
@@ -367,7 +367,7 @@ mod b3_2_rule_10_heroic_powers_power_is_an_activate_the_ai_decides_like_any_othe
             tributes: None,
         };
         // Round-robin as ever: Reno's first lane (3), the power (its X, 1), Reno's second lane.
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let sources: Vec<Option<String>> = (0..3).map(|at| source_of(candidates.get(at))).collect();
         assert_eq!(
             sources,

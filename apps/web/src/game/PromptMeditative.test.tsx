@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { INSPECT_SHEET, closeInspect } from "../cards/index.ts";
+import { INSPECT_HOVER, closeInspect } from "../cards/index.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/index.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Prompt from "./Prompt.tsx";
@@ -55,7 +55,7 @@ describe("#617 the Meditative play-time choices", () => {
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", modes: ["lane-2"] });
   });
 
-  it("#617 a long-press on the card's name in a Choose one opens its sheet and picks nothing", () => {
+  it("#617 R2617000 a touch held on the card's name in a Choose one shows its preview and picks nothing", () => {
     vi.useFakeTimers();
     const onAction = renderChoice("meditative-022", ["greed", "attack", "defend"]);
     const source = screen.getByTestId("prompt-title-source");
@@ -64,8 +64,9 @@ describe("#617 the Meditative play-time choices", () => {
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS);
     });
-    expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent(CATALOG["meditative-022"]?.name ?? "meditative-022");
+    expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(CATALOG["meditative-022"]?.name ?? "meditative-022");
     fireEvent.pointerUp(source, { pointerType: "touch", pointerId: 1 });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     fireEvent.click(source);
     expect(onAction).not.toHaveBeenCalled();
   });

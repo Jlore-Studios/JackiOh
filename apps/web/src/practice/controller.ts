@@ -96,10 +96,9 @@ export type PracticeController = {
   debug(): Promise<PracticeDebug>;
   /**
    * R1303000: the finished game's claim, for the server to check; rejected while the game runs and
-   * for a game not on a server seed, as the worker refuses them. R2208000: `clockCut`, whether this
-   * device's clock cut an AI decision short (never sent to the server).
+   * for a game not on a server seed, as the worker refuses them.
    */
-  claim(): Promise<{ claim: PracticeClaim; clockCut: boolean }>;
+  claim(): Promise<PracticeClaim>;
   /**
    * R768000: the replay of a game the worker kept (the finished game's snapshot names it, `replay`),
    * its pages asked behind any request already queued, as every request to the worker is.
@@ -409,14 +408,14 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
       });
     },
 
-    claim(): Promise<{ claim: PracticeClaim; clockCut: boolean }> {
-      return new Promise<{ claim: PracticeClaim; clockCut: boolean }>((resolve, reject) => {
+    claim(): Promise<PracticeClaim> {
+      return new Promise<PracticeClaim>((resolve, reject) => {
         if (disposed) {
           reject(new Error(CLOSED_MESSAGE));
           return;
         }
         send({ type: "claim" }, (response) => {
-          if (response.type === "claim") resolve({ claim: response.claim, clockCut: response.clockCut === true });
+          if (response.type === "claim") resolve(response.claim);
           else reject(new Error(unexpected(response)));
         });
       });

@@ -63,6 +63,10 @@ its body is a hidden state line; leave it alone. Under the countdown it lists ev
 `main` that is not on production yet, with its push-to-main CI (passed, failed, running) and where it
 stands for production (live, the next merge, waits for CI, held).
 
+Each catalog version is also a GitHub release (`.github/workflows/releases.yml`): a pre-release, "on
+staging", while only `main` holds it, and a release once a merge brings it to `production`, the newest
+one Latest.
+
 Anyone with write access comments on the issue:
 
 | Comment | Effect |
@@ -86,7 +90,9 @@ hour (`RELEASE_HOUR`, `RELEASE_TZ`) and the label (`RELEASE_LABEL`).
 - Promoting an older commit than `production` already has is a no-op, not a rollback.
 - It moves `production` with the night bot's `BOT_GITHUB_TOKEN` (which has the `workflow` scope:
   GitHub refuses the built-in token a push that changes `.github/workflows`). The issue and its
-  comments stay on `GITHUB_TOKEN`, whose writes start no workflow.
+  comments stay on `GITHUB_TOKEN`, whose writes start no workflow. Nothing loops: a pull request's
+  CI never starts the promotion, and on a push to `production` only `releases.yml` runs, which writes
+  nothing but GitHub releases.
 
 ## 3. What a person sets outside the repo
 

@@ -34,6 +34,7 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   issue #2278      — Megabase (Stinkyscape 116) is a Unit, without Animated.
 //!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename, and issue #1219's
 //!                    12 Attack for the Radiant Jlockeed Shredder-10.
 //!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
@@ -42,12 +43,19 @@
 //!                    (#57's tag ships under patch v0.3.10's claim of that card).
 //!   issue #2280    — C+ #74 Twice Forward One Step Backwards and S #16 Rod of Ages print no stats on
 //!                    either face (R2280000); the briefs keep the stats they first printed.
+//!   issue #2521    — the Stinkyscape balance patch, in §8's rows: Core #84 Going Long and
+//!                    Meditative #80 Aluneth lose Quickdraw; C+ #34 Memory Leak (2); S #11 (2), #39
+//!                    (3), #163 (0) and #164 (1); S #68 Stratos 3/1 → 6/2; the five Faction cards
+//!                    (S #95, #159 to #162) renamed "Faction: …", (2) and tagged Faction; S #137
+//!                    Starfleet Commander (was Firststrike Capability) a Legendary Human; the six
+//!                    Resources tagged Resource; and the new S #176 Preemptive Strike, S #177
+//!                    Cloaking Module and M+ #1.5 Star Chart (§8.9, §8.10, §7).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
-//!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
-//!                    Classic (35/26/18/10/1) and Classic+ (13/24/25/13/3), as patch v0.2.9
-//!                    (issue #44) left them; B2.1's totals, 268 cards and 50 tokens in 318
-//!                    entries (Glitch, issue #170, the fiftieth).
+//!   census         — each set's cards, tokens and rarities (SPEC §8's rarity paragraph for Core,
+//!                    B2.5's table for Classic and Classic+, each later set's brief), read from
+//!                    `jackioh_cards::census`, where they are written once (#2581); the totals are
+//!                    its sums.
 //!   tag vocabulary — SPEC §5/§6 tags as BUILD M4-T1 lists them, R278's Jlockeed, B2.4's Book,
 //!                    Pancake and AI, the mechanics patch's Plague (every card that uses
 //!                    Plague Counters), and patch v0.2.Y's Catalyst, Prime and Acclaimed.
@@ -63,6 +71,7 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
+use jackioh_cards::census::{CENSUS, SetCensus};
 use jackioh_cards::{CATALOG, chinese_json};
 use jackioh_engine::{
     CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SetName, Tag,
@@ -389,7 +398,7 @@ const CORE: &[SpecRow] = &[
     row(
         "28",
         "Knockoff Temu Glowy Jelly Bean",
-        c(2),
+        c(1),
         T::Spell,
         &[G::JellyBean],
         R::Rare,
@@ -399,7 +408,7 @@ const CORE: &[SpecRow] = &[
     row(
         "29",
         "GIGA Glowy Jelly Bean",
-        c(7),
+        c(6),
         T::Spell,
         &[G::JellyBean],
         R::Rare,
@@ -953,7 +962,7 @@ const CORE: &[SpecRow] = &[
         "Going Long",
         emb(2, 4),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -1011,7 +1020,7 @@ const CORE: &[SpecRow] = &[
     row(
         "90",
         "CN-Viral Injection",
-        c(2),
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Rare,
@@ -2510,7 +2519,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "34",
         "Memory Leak",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -2520,7 +2529,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "35",
         "Rollback",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Legendary,
@@ -3377,7 +3386,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "19.1",
         "Temporal Rift",
-        c(0),
+        c(1),
         T::Spell,
         &[G::Token],
         R::Token,
@@ -3777,7 +3786,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "49.1",
         "YileGPT Prime",
-        c(10),
+        c(8),
         T::Unit,
         &[G::Cn, G::Acclaimed, G::Prime, G::Token],
         R::Token,
@@ -3798,7 +3807,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "49.3",
         "AI Girlfriend",
         c(4),
-        T::FieldSpell,
+        T::Unit,
         &[G::Cn, G::Token],
         R::Token,
         st(2, 30),
@@ -4129,7 +4138,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Aluneth",
         c(2),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[],
         R::Legendary,
         NO_STATS,
         NO_STATS,
@@ -4497,7 +4506,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "1",
         "Bob's Plan",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Quickdraw],
         R::Mythic,
@@ -4538,6 +4547,16 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
         "1.4",
         "Leg Day",
         c(3),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "1.5",
+        "Star Chart",
+        c(0),
         T::Spell,
         &[G::Ai, G::Token],
         R::Token,
@@ -4998,7 +5017,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "11",
         "Otherworldly Magic",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5038,7 +5057,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "12",
         "Otherworldly Nightmare",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Otherworldly],
         R::Epic,
@@ -5128,7 +5147,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "18",
         "Imitated Instrumentality",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Legendary,
@@ -5359,7 +5378,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "39",
         "The Narcor Project",
-        c(4),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -5409,7 +5428,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "44",
         "Great Replacement Theory",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Quickdraw],
         R::Mythic,
@@ -5439,7 +5458,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "47",
         "Circadian Fullcycler",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -5628,7 +5647,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(0, 2),
         st(0, 4),
     ),
-    row("68", "Stratos", c(1), T::Unit, &[], R::Common, st(3, 3), st(6, 6)),
+    row("68", "Stratos", c(1), T::Unit, &[], R::Common, st(3, 1), st(6, 2)),
     row("69", "Falcon", c(2), T::Unit, &[], R::Rare, st(4, 1), st(8, 2)),
     row(
         "70",
@@ -5713,8 +5732,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(10, 10),
         st(20, 20),
     ),
-    row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(2, 2), st(4, 4)),
-    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
+    row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(1, 1), st(2, 2)),
+    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(3, 3), st(6, 6)),
     row("83", "Halo", c(4), T::Unit, &[], R::Epic, st(2, 2), st(4, 4)),
     row(
         "84",
@@ -5804,8 +5823,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Rare,
-        st(4, 4),
-        st(8, 8),
+        st(3, 4),
+        st(6, 8),
     ),
     row(
         "93",
@@ -5829,10 +5848,10 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row(
         "95",
-        "Vanguard Coalition",
-        c(3),
+        "Faction: Vanguard Coalition",
+        c(2),
         T::Spell,
-        &[],
+        &[G::Faction],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -6042,7 +6061,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "116",
         "Megabase",
         c(1),
-        T::FieldSpell,
+        T::Unit,
         &[G::Quickdraw],
         R::Legendary,
         st(0, 20),
@@ -6251,11 +6270,11 @@ const STINKYSCAPE: &[SpecRow] = &[
     ),
     row(
         "137",
-        "Firststrike Capability",
+        "Starfleet Commander",
         c(4),
         T::Unit,
-        &[],
-        R::Common,
+        &[G::Human],
+        R::Legendary,
         st(9, 9),
         st(18, 18),
     ),
@@ -6413,7 +6432,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "148",
         "Alteran Reach",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[G::Wincon, G::Quickdraw],
         R::Mythic,
@@ -6533,31 +6552,49 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "158",
         "Stratos Swarm",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
-    row("159", "ETHICS", c(3), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "159",
+        "Faction: ETHICS",
+        c(2),
+        T::Spell,
+        &[G::Faction],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
     row(
         "160",
-        "Golden Accord",
-        c(3),
+        "Faction: Golden Accord",
+        c(2),
         T::Spell,
-        &[],
+        &[G::Faction],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
-    row("161", "Pegasus", c(3), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "161",
+        "Faction: Pegasus",
+        c(2),
+        T::Spell,
+        &[G::Faction],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
     row(
         "162",
-        "Star-jumper Core",
-        c(3),
+        "Faction: Star-Jumper Core",
+        c(2),
         T::Spell,
-        &[],
+        &[G::Faction],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -6565,7 +6602,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "163",
         "Swear Loyalities",
-        c(1),
+        c(0),
         T::Spell,
         &[],
         R::Rare,
@@ -6575,7 +6612,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "164",
         "The Syndicate",
-        c(2),
+        c(0),
         T::FieldSpell,
         &[],
         R::Epic,
@@ -6585,7 +6622,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "165",
         "The Trade Union",
-        c(1),
+        c(0),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -6665,7 +6702,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "173",
         "Abandoned Spice Tower",
-        c(3),
+        c(2),
         T::Unit,
         &[],
         R::Rare,
@@ -6682,6 +6719,26 @@ const STINKYSCAPE: &[SpecRow] = &[
         R::Common,
         st(2, 1),
         st(4, 2),
+    ),
+    row(
+        "176",
+        "Preemptive Strike",
+        c(2),
+        T::Spell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "177",
+        "Cloaking Module",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(2, 2),
+        st(4, 4),
     ),
     row(
         "T-dormant-starship",
@@ -6748,7 +6805,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Reknite",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6758,7 +6815,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Korrelite",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6768,7 +6825,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Gellium",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6778,7 +6835,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Axnit",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6788,7 +6845,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Narcor",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -6798,7 +6855,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         "Red Narcor",
         c(0),
         T::Spell,
-        &[G::Token],
+        &[G::Resource, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -7323,200 +7380,200 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     ),
     row(
         "41",
-        "Bigot",
+        "Legacy: Bigot",
         c(2),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Common,
         st(4, 1),
         st(8, 2),
     ),
     row(
         "42",
-        "Stockpile",
+        "Legacy: Stockpile",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "43",
-        "Mr. Vanilla",
+        "Legacy: Mr. Vanilla",
         c(1),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Common,
         st(4, 4),
         st(12, 12),
     ),
     row(
         "44",
-        "Duplicating Felinors",
+        "Legacy: Duplicating Felinors",
         c(2),
         T::Unit,
-        &[G::Felinor],
+        &[G::Felinor, G::Legacy],
         R::Rare,
         st(3, 4),
         st(6, 8),
     ),
     row(
         "45",
-        "Jlockeed's Weapons",
+        "Legacy: Jlockeed's Weapons",
         c(4),
         T::FieldSpell,
-        &[G::Jlockeed],
+        &[G::Jlockeed, G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "46",
-        "Hit Job",
+        "Legacy: Hit Job",
         c(3),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "47",
-        "Midrange Menace",
+        "Legacy: Midrange Menace",
         c(3),
         T::Unit,
-        &[],
+        &[G::Legacy],
         R::Common,
         st(9, 9),
         st(18, 18),
     ),
     row(
         "48",
-        "Jlockeed Shredder-10",
+        "Legacy: Jlockeed Shredder-10",
         c(3),
         T::Unit,
-        &[G::Jlockeed],
+        &[G::Jlockeed, G::Legacy],
         R::Common,
         st(6, 10),
         st(12, 20),
     ),
     row(
         "49",
-        "Reoccurring Dream",
+        "Legacy: Reoccurring Dream",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "50",
-        "Glowy Jelly Bean",
+        "Legacy: Glowy Jelly Bean",
         c(3),
         T::Spell,
-        &[G::JellyBean],
+        &[G::JellyBean, G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "51",
-        "Big Felinor",
+        "Legacy: Big Felinor",
         c(4),
         T::Unit,
-        &[G::Felinor],
+        &[G::Felinor, G::Legacy],
         R::Rare,
         st(3, 10),
         st(6, 20),
     ),
     row(
         "52",
-        "Snom Bunny Mind Control",
+        "Legacy: Snom Bunny Mind Control",
         c(4),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "53",
-        "Prejudiced Postdoc",
+        "Legacy: Prejudiced Postdoc",
         c(2),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Rare,
         st(2, 4),
         st(4, 8),
     ),
     row(
         "54",
-        "The Rock",
+        "Legacy: The Rock",
         c(4),
         T::Unit,
-        &[G::Human],
+        &[G::Human, G::Legacy],
         R::Common,
         st(10, 10),
         st(20, 20),
     ),
     row(
         "55",
-        "Reminisce",
+        "Legacy: Reminisce",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Rare,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "56",
-        "Corpse Eater",
+        "Legacy: Corpse Eater",
         c(4),
         T::Unit,
-        &[],
+        &[G::Legacy],
         R::Epic,
         st(2, 2),
         st(4, 4),
     ),
     row(
         "57",
-        "Recycling Initiative",
+        "Legacy: Recycling Initiative",
         c(0),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Epic,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "58",
-        "True Strike",
+        "Legacy: True Strike",
         c(1),
         T::Spell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "59",
-        "Fig of Life",
+        "Legacy: Fig of Life",
         c(3),
         T::Spell,
-        &[G::Fruit],
+        &[G::Fruit, G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
     ),
     row(
         "60",
-        "Rush Token Farm",
+        "Legacy: Rush Token Farm",
         c(2),
         T::FieldSpell,
-        &[],
+        &[G::Legacy],
         R::Common,
         NO_STATS,
         NO_STATS,
@@ -7535,8 +7592,9 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague, patch v0.2.Y's Catalyst, Prime and
 /// Acclaimed, the Meditative set's Wincon, the Meditative+ set's Potion, #1837's Terminus, Quest,
-/// Otherworldly, Other-Origins and Jelly Bean (R1837000) and the Stinkyscape set's Drone Core,
-/// Weapon, War Doctrine and Swarm (R1857000): the only tags any entry may carry.
+/// Otherworldly, Other-Origins and Jelly Bean (R1837000), the Stinkyscape set's Drone Core,
+/// Weapon, War Doctrine and Swarm (R1857000), and #2521's Resource and Faction: the only tags any
+/// entry may carry.
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -7564,151 +7622,29 @@ const ALLOWED_TAGS: &[&str] = &[
     "Weapon",
     "War Doctrine",
     "Swarm",
+    "Legacy",
+    "Resource",
+    "Faction",
     "Token",
 ];
 
-/// SPEC §8's and B2.5's distributions. Tokens carry rarity "Token" and are counted apart.
-const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
-    (
-        "Core",
-        &[
-            ("Common", 32),
-            ("Rare", 40),
-            ("Epic", 16),
-            ("Legendary", 7),
-            ("Mythic", 5),
-        ],
-    ),
-    (
-        "Classic",
-        &[
-            ("Common", 35),
-            ("Rare", 26),
-            ("Epic", 18),
-            ("Legendary", 10),
-            ("Mythic", 1),
-        ],
-    ),
-    (
-        "Classic+",
-        &[
-            ("Common", 13),
-            ("Rare", 24),
-            ("Epic", 25),
-            ("Legendary", 13),
-            ("Mythic", 3),
-        ],
-    ),
-    // R1420: docs/meditative-set.md M2's distribution, a ceiling until the set ships.
-    (
-        "Meditative",
-        &[
-            ("Common", 29),
-            ("Rare", 29),
-            ("Epic", 22),
-            ("Legendary", 16),
-            ("Mythic", 6),
-        ],
-    ),
-    // R1420, R1178000: docs/meditative-plus-set.md MP2's distribution, a ceiling until the set ships.
-    (
-        "Meditative+",
-        &[
-            ("Common", 5),
-            ("Rare", 9),
-            ("Epic", 9),
-            ("Legendary", 1),
-            ("Mythic", 2),
-        ],
-    ),
-    // R1420, R1857001: docs/stinkyscape-set.md ST12's distribution over its 176 cards, the Dormant
-    // Starship one of the Legendaries, a ceiling until the set ships.
-    (
-        "Stinkyscape",
-        &[
-            ("Common", 42),
-            ("Rare", 50),
-            ("Epic", 43),
-            ("Legendary", 29),
-            ("Mythic", 12),
-        ],
-    ),
-    // R1420, R2194000: docs/training-grounds-set.md TG2's distribution over its 60 cards (#1 to #40
-    // by the designer's bands, the snapshots #41 to #60 at their Core rarities), a ceiling until the
-    // set ships.
-    (
-        "Training Grounds",
-        &[
-            ("Common", 26),
-            ("Rare", 19),
-            ("Epic", 11),
-            ("Legendary", 3),
-            ("Mythic", 1),
-        ],
-    ),
-];
-
-/// B2.1: cards and tokens per set.
-struct SetSize {
-    set: &'static str,
-    /// The cards indexed 1..cards.
-    cards: usize,
-    /// The cards outside the set's numbers, at a `T-` index (R1857001: Stinkyscape's Dormant
-    /// Starship), counted with `cards` but not among its 1..N indices.
-    named_cards: usize,
-    tokens: usize,
+/// A set's census (`jackioh_cards::census`, where each set's counts are written once, #2581).
+fn census_of(set: &str) -> &'static SetCensus {
+    CENSUS
+        .iter()
+        .find(|census| census.set == set)
+        .unwrap_or_else(|| panic!("the census has no {set}"))
 }
 
-const SET_SIZES: &[SetSize] = &[
-    SetSize {
-        set: "Core",
-        cards: 100,
-        named_cards: 0,
-        tokens: 11,
-    },
-    SetSize {
-        set: "Classic",
-        cards: 90,
-        named_cards: 0,
-        tokens: 1,
-    },
-    SetSize {
-        set: "Classic+",
-        cards: 78,
-        named_cards: 0,
-        tokens: 38,
-    },
-    // R1420: docs/meditative-set.md M2, a ceiling until the set ships.
-    SetSize {
-        set: "Meditative",
-        cards: 102,
-        named_cards: 0,
-        tokens: 30,
-    },
-    // R1420, R1178000: docs/meditative-plus-set.md MP2, a ceiling until the set ships.
-    SetSize {
-        set: "Meditative+",
-        cards: 26,
-        named_cards: 0,
-        tokens: 6,
-    },
-    // R1420, R1857001: docs/stinkyscape-set.md ST12, a ceiling until the set ships: 175 cards, the
-    // Dormant Starship, and 52 tokens (the 30 its cards define and 22 shared).
-    SetSize {
-        set: "Stinkyscape",
-        cards: 175,
-        named_cards: 1,
-        tokens: 52,
-    },
-    // R1420, R2194000: docs/training-grounds-set.md TG2, a ceiling until the set ships: 60 cards (the
-    // snapshots #41 to #60 among them, part 2's) and the token #39.1.
-    SetSize {
-        set: "Training Grounds",
-        cards: 60,
-        named_cards: 0,
-        tokens: 1,
-    },
-];
+/// A set's tokens in the census's order: those its cards define, then those they share.
+fn census_tokens(census: &SetCensus) -> Vec<&'static str> {
+    census
+        .card_defined_tokens
+        .iter()
+        .chain(census.shared_tokens)
+        .copied()
+        .collect()
+}
 
 /// R1420: whether a set ships. A set that does not may hold fewer entries than its fixture and its
 /// counts, never more, and none of them counts toward the catalog's totals.
@@ -7719,21 +7655,21 @@ fn ships(set: &str) -> bool {
         .is_some_and(|known| set_ships(*known))
 }
 
-/// B2.1's totals, as SET_SIZES sums them over the sets that ship: the only count of the whole
+/// B2.1's totals, as the census sums them over the sets that ship: the only count of the whole
 /// catalog this file keeps.
 fn total_cards() -> usize {
-    SET_SIZES
+    CENSUS
         .iter()
-        .filter(|size| ships(size.set))
-        .map(|size| size.cards + size.named_cards)
+        .filter(|census| ships(census.set))
+        .map(SetCensus::card_count)
         .sum()
 }
 
 fn total_tokens() -> usize {
-    SET_SIZES
+    CENSUS
         .iter()
-        .filter(|size| ships(size.set))
-        .map(|size| size.tokens)
+        .filter(|census| ships(census.set))
+        .map(SetCensus::token_count)
         .sum()
 }
 
@@ -7745,13 +7681,12 @@ fn shipped_entries() -> Vec<&'static CardDef> {
         .collect()
 }
 
-/// A set's SET_SIZES row as one number (cards, named cards and tokens), for the fixture-row counts
-/// below.
+/// A set's census as one number (cards, named cards and tokens), for the fixture-row counts below.
 fn set_size(set: &str) -> usize {
-    SET_SIZES
+    CENSUS
         .iter()
-        .find(|size| size.set == set)
-        .map_or(0, |size| size.cards + size.named_cards + size.tokens)
+        .find(|census| census.set == set)
+        .map_or(0, |census| census.card_count() + census.token_count())
 }
 
 fn entries() -> Vec<&'static CardDef> {
@@ -7949,32 +7884,32 @@ mod catalog_membership_build_m4_t1_b2_1 {
             total_cards() + total_tokens(),
             "shipped catalog entries"
         );
-        for size in SET_SIZES {
+        for census in CENSUS {
             let in_set: Vec<&CardDef> = entries()
                 .into_iter()
-                .filter(|entry| entry.set.as_str() == size.set)
+                .filter(|entry| entry.set.as_str() == census.set)
                 .collect();
             let (cards, tokens) = (
                 in_set.iter().filter(|entry| !entry.token).count(),
                 in_set.iter().filter(|entry| entry.token).count(),
             );
             // R1857001: a set's cards are its numbered ones and those outside its numbers.
-            let most_cards = size.cards + size.named_cards;
-            if ships(size.set) {
-                assert_eq!(cards, most_cards, "{} cards", size.set);
-                assert_eq!(tokens, size.tokens, "{} tokens", size.set);
+            let most_cards = census.card_count();
+            if ships(census.set) {
+                assert_eq!(cards, most_cards, "{} cards", census.set);
+                assert_eq!(tokens, census.token_count(), "{} tokens", census.set);
             } else {
                 // R1420: a set being built holds no more than its brief lists.
                 assert!(
                     cards <= most_cards,
                     "{} cards: {cards} of at most {most_cards}",
-                    size.set
+                    census.set
                 );
                 assert!(
-                    tokens <= size.tokens,
+                    tokens <= census.token_count(),
                     "{} tokens: {tokens} of at most {}",
-                    size.set,
-                    size.tokens
+                    census.set,
+                    census.token_count()
                 );
             }
         }
@@ -7984,14 +7919,17 @@ mod catalog_membership_build_m4_t1_b2_1 {
     fn has_each_set_s_indices_1_n_present_exactly_once_none_of_them_a_token() {
         let by_key = by_key();
         let mut missing: Vec<String> = Vec::new();
-        for size in SET_SIZES {
-            for n in 1..=size.cards {
-                match by_key.get(&key_of(size.set, &n.to_string())) {
+        for census in CENSUS {
+            for n in 1..=census.cards {
+                match by_key.get(&key_of(census.set, &n.to_string())) {
                     // R1420: a set that has not shipped need not hold every card yet.
-                    None if !ships(size.set) => {}
-                    None => missing.push(format!("{} #{n} missing", size.set)),
+                    None if !ships(census.set) => {}
+                    None => missing.push(format!("{} #{n} missing", census.set)),
                     Some(entry) if entry.token => {
-                        missing.push(format!("{} #{n} ({}) is flagged token: true", size.set, entry.id));
+                        missing.push(format!(
+                            "{} #{n} ({}) is flagged token: true",
+                            census.set, entry.id
+                        ));
                     }
                     Some(_) => {}
                 }
@@ -7999,12 +7937,12 @@ mod catalog_membership_build_m4_t1_b2_1 {
             // by_key() is built with a duplicate guard, so one entry per index is already proved.
             let plain = entries()
                 .into_iter()
-                .filter(|entry| entry.set.as_str() == size.set && is_plain_index(&entry.index))
+                .filter(|entry| entry.set.as_str() == census.set && is_plain_index(&entry.index))
                 .count();
-            if ships(size.set) {
-                assert_eq!(plain, size.cards, "{} plain numeric indices", size.set);
+            if ships(census.set) {
+                assert_eq!(plain, census.cards, "{} plain numeric indices", census.set);
             } else {
-                assert!(plain <= size.cards, "{} plain numeric indices", size.set);
+                assert!(plain <= census.cards, "{} plain numeric indices", census.set);
             }
         }
         assert_eq!(missing, Vec::<String>::new(), "indices");
@@ -8013,20 +7951,8 @@ mod catalog_membership_build_m4_t1_b2_1 {
     #[test]
     fn has_core_s_five_card_defined_tokens_the_four_shared_tokens_the_coin_and_the_ghoul_token() {
         let by_key = by_key();
-        let expected = [
-            "51.1",
-            "65.1",
-            "90.1",
-            "93.1",
-            "95.1",
-            "T-rush",
-            "T-sheep",
-            "T-felinor",
-            "T-bread",
-            "T-coin",
-            "T-ghoul",
-        ];
-        for index in expected {
+        let expected = census_tokens(census_of("Core"));
+        for index in expected.iter().copied() {
             let entry = by_key.get(&key_of("Core", index));
             assert_eq!(
                 entry.map(|entry| entry.index.as_str()),
@@ -8057,13 +7983,7 @@ mod catalog_membership_build_m4_t1_b2_1 {
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index.to_string())
             .collect();
-        assert_eq!(
-            Some(tokens.len()),
-            SET_SIZES
-                .iter()
-                .find(|size| size.set == "Classic+")
-                .map(|size| size.tokens)
-        );
+        assert_eq!(tokens.len(), census_of("Classic+").token_count());
         assert_eq!(
             tokens.iter().filter(|index| index.starts_with("T-AI-")).count(),
             10
@@ -8176,23 +8096,20 @@ mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is
     }
 
     #[test]
-    fn r1178000_the_set_s_census_is_26_cards_and_6_tokens_5_9_9_1_2() {
+    fn r1178000_the_set_s_census_is_26_cards_and_7_tokens_5_9_9_1_2() {
         let tokens: Vec<&str> = MEDITATIVE_PLUS
             .iter()
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index)
             .collect();
-        // #1563 added Bob's Plan's #1.3 Garage Sale and #1.4 Leg Day (R1563003).
-        assert_eq!(tokens, ["1.1", "1.2", "1.3", "1.4", "16.1", "20.1"]);
+        // #1563 added Bob's Plan's #1.3 Garage Sale and #1.4 Leg Day (R1563003), and #2521 its #1.5
+        // Star Chart, Alteran Reach's plan (R2521008).
+        assert_eq!(tokens, census_tokens(census_of("Meditative+")));
         let mut rarities: BTreeMap<&str, usize> = BTreeMap::new();
         for row in MEDITATIVE_PLUS.iter().filter(|row| row.rarity != Rarity::Token) {
             *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
         }
-        let expected: BTreeMap<&str, usize> = RARITY_COUNTS
-            .iter()
-            .find(|(set, _)| *set == "Meditative+")
-            .map(|(_, counts)| counts.iter().copied().collect())
-            .unwrap_or_default();
+        let expected: BTreeMap<&str, usize> = census_of("Meditative+").rarities.iter().copied().collect();
         assert_eq!(rarities, expected);
         assert_eq!(MEDITATIVE_PLUS.len(), set_size("Meditative+"));
         // The Potion tag is the set's, on #11, #12 and #13 (#16's crafted potions are transient).
@@ -8274,17 +8191,23 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
 
     #[test]
     fn r1857001_numbers_174_and_175_and_the_t_ids() {
-        // The designer's second #21 and second #122 take the numbers after the list's last.
+        // The designer's second #21 and second #122 take the numbers after the list's last, and
+        // #2521's two new cards the two after them.
         assert_eq!(row_at("174").name, "Aerelret");
         assert_eq!(row_at("175").name, "Frost Module");
-        // The plain indices are 1..=175, each once; a token is N.k after its card N, or T-name;
-        // the AI generated cards are T-AI-1 to T-AI-10.
+        assert_eq!(row_at("176").name, "Preemptive Strike");
+        assert_eq!(row_at("177").name, "Cloaking Module");
+        // The plain indices are 1 to the census's count, each once; a token is N.k after its card N,
+        // or T-name; the AI generated cards are T-AI-1 to T-AI-10.
         let plain: Vec<usize> = STINKYSCAPE
             .iter()
             .filter(|row| is_plain_index(row.index))
             .filter_map(|row| row.index.parse().ok())
             .collect();
-        assert_eq!(plain, (1..=175).collect::<Vec<usize>>());
+        assert_eq!(
+            plain,
+            (1..=census_of("Stinkyscape").cards).collect::<Vec<usize>>()
+        );
         for row in STINKYSCAPE.iter().filter(|row| !is_plain_index(row.index)) {
             let numbered = row
                 .index
@@ -8310,7 +8233,7 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
     }
 
     #[test]
-    fn r1857001_the_census_is_175_cards_the_dormant_starship_and_52_tokens() {
+    fn r1857001_the_census_is_177_cards_the_dormant_starship_and_52_tokens() {
         let cards: Vec<&SpecRow> = STINKYSCAPE
             .iter()
             .filter(|row| row.rarity != Rarity::Token)
@@ -8320,17 +8243,18 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
             .filter(|row| !is_plain_index(row.index))
             .map(|row| row.index)
             .collect();
-        assert_eq!(cards.len(), 176);
-        assert_eq!(named, ["T-dormant-starship"]);
+        let census = census_of("Stinkyscape");
+        assert_eq!(cards.len(), census.card_count());
+        assert_eq!(named, census.shared_cards);
         let tokens: Vec<&str> = STINKYSCAPE
             .iter()
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index)
             .collect();
-        assert_eq!(tokens.len(), 52);
+        assert_eq!(tokens.len(), census.token_count());
         assert_eq!(
             tokens.iter().filter(|index| index.starts_with("T-")).count(),
-            22,
+            census.shared_tokens.len(),
             "shared tokens"
         );
         assert_eq!(STINKYSCAPE.len(), set_size("Stinkyscape"));
@@ -8338,11 +8262,7 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         for row in &cards {
             *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
         }
-        let expected: BTreeMap<&str, usize> = RARITY_COUNTS
-            .iter()
-            .find(|(set, _)| *set == "Stinkyscape")
-            .map(|(_, counts)| counts.iter().copied().collect())
-            .unwrap_or_default();
+        let expected: BTreeMap<&str, usize> = census.rarities.iter().copied().collect();
         assert_eq!(rarities, expected);
         // Its four tags are its own (R1857000): #27 to #36 Drone Core, #50 to #61 and #140 to #143
         // Weapon, the four #137 tokens War Doctrine, and the Swarm Units #91 and #92.
@@ -8364,6 +8284,25 @@ mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_bui
         assert_eq!(carrying(Tag::Swarm), ["91", "92"]);
         for index in carrying(Tag::Swarm) {
             assert_eq!(row_at(index).type_, CardType::Unit, "a Swarm entry is a Unit");
+        }
+        // And #2521's two: the six Resources (Resource) and the five Faction cards (Faction).
+        assert_eq!(
+            carrying(Tag::Resource),
+            [
+                "T-reknite",
+                "T-korrelite",
+                "T-gellium",
+                "T-axnit",
+                "T-narcor",
+                "T-red-narcor"
+            ]
+        );
+        for index in carrying(Tag::Resource) {
+            assert_eq!(row_at(index).rarity, Rarity::Token, "a Resource is a token");
+        }
+        assert_eq!(carrying(Tag::Faction), ["95", "159", "160", "161", "162"]);
+        for index in carrying(Tag::Faction) {
+            assert!(row_at(index).name.starts_with("Faction: "), "{index}");
         }
     }
 
@@ -8438,13 +8377,16 @@ mod r2194000_every_training_grounds_entry_equals_its_fixture_row_while_the_set_i
             .filter(|row| is_plain_index(row.index))
             .filter_map(|row| row.index.parse().ok())
             .collect();
-        assert_eq!(plain, (1..=60).collect::<Vec<usize>>());
+        assert_eq!(
+            plain,
+            (1..=census_of("Training Grounds").cards).collect::<Vec<usize>>()
+        );
         let tokens: Vec<&str> = TRAINING_GROUNDS
             .iter()
             .filter(|row| !is_plain_index(row.index))
             .map(|row| row.index)
             .collect();
-        assert_eq!(tokens, vec!["39.1"]);
+        assert_eq!(tokens, census_tokens(census_of("Training Grounds")));
         // #1-#15 Common, #16-#27 Rare, #28-#36 Epic, #37-#39 Legendary, #40 Mythic; the snapshots
         // keep their Core rarities, none Legendary or Mythic.
         for row in TRAINING_GROUNDS.iter().filter(|row| is_plain_index(row.index)) {
@@ -8486,7 +8428,12 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn is_core_32_40_16_7_5_classic_35_26_18_10_1_and_classic_plus_13_24_25_13_3_common_rare_epic_legendary_mythic()
      {
-        for (set, expected) in RARITY_COUNTS {
+        for SetCensus {
+            set,
+            rarities: expected,
+            ..
+        } in CENSUS
+        {
             let mut counted: BTreeMap<String, usize> = BTreeMap::new();
             for entry in entries()
                 .into_iter()
@@ -8606,29 +8553,16 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert!(position("classic-060") >= position("core-069"));
     }
 
-    /// R739, R2195001: the names two non-token cards share, as "name (first, second)", but a Training
-    /// Grounds snapshot (#41–#60) and the Core card its `snapshotOf` names, which share the Core
-    /// card's name by the owner's decision (#2195).
+    /// R739: the names two non-token cards share, as "name (first, second)".
     fn shared_names(cards: &[&CardDef]) -> Vec<String> {
-        let snapshot_pair = |a: &CardDef, b: &CardDef| {
-            let is_snapshot = |card: &CardDef| {
-                card.set == SetName::TrainingGrounds
-                    && card.index.parse::<u32>().is_ok_and(|n| (41..=60).contains(&n))
-            };
-            [(a, b), (b, a)].into_iter().any(|(snapshot, core)| {
-                is_snapshot(snapshot)
-                    && core.set == SetName::Core
-                    && snapshot.snapshot_of.as_deref() == Some(core.id.as_str())
-            })
-        };
-        let mut seen: IndexMap<&str, Vec<&CardDef>> = IndexMap::new();
+        let mut seen: IndexMap<&str, &CardDef> = IndexMap::new();
         let mut dupes: Vec<String> = Vec::new();
         for card in cards.iter().copied().filter(|card| !card.token) {
-            let named = seen.entry(card.name.as_str()).or_default();
-            if let Some(first) = named.iter().find(|first| !snapshot_pair(first, card)) {
+            if let Some(first) = seen.get(card.name.as_str()) {
                 dupes.push(format!("{} ({}, {})", card.name, first.id, card.id));
+            } else {
+                seen.insert(card.name.as_str(), card);
             }
-            named.push(card);
         }
         dupes
     }
@@ -8642,54 +8576,46 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         );
     }
 
+    /// R2195001, R2511000: a Legacy card (Training Grounds #41–#60) is named `Legacy: <its Core card's
+    /// name>` and carries the Legacy tag beside its Core card's tags, so it shares no name with its
+    /// Core card or any other; it keeps everything else.
     #[test]
-    fn r2195001_a_snapshot_shares_its_core_card_s_name_and_no_other_two_cards_do() {
-        let core = &CATALOG["core-002"];
-        let snapshot = CardDef {
-            id: "traininggrounds-041".to_string(),
-            index: "41".to_string(),
-            set: SetName::TrainingGrounds,
-            snapshot_of: Some(core.id.clone()),
-            ..core.clone()
-        };
-        assert_eq!(shared_names(&[core, &snapshot]), Vec::<String>::new());
-
-        // A Training Grounds card that names no Core card, or another one, or sits outside #41–#60.
-        let unmarked = CardDef {
-            snapshot_of: None,
-            ..snapshot.clone()
-        };
-        let wrong_core = CardDef {
-            snapshot_of: Some("core-005".to_string()),
-            ..snapshot.clone()
-        };
-        let outside = CardDef {
-            index: "40".to_string(),
-            ..snapshot.clone()
-        };
-        for card in [&unmarked, &wrong_core, &outside] {
-            assert_eq!(
-                shared_names(&[core, card]),
-                [format!("Bigot (core-002, {})", card.id)]
-            );
+    fn r2195001_r2511000_a_legacy_card_is_its_core_card_s_name_after_legacy_and_tagged_legacy() {
+        let legacy: Vec<&CardDef> = entries()
+            .into_iter()
+            .filter(|card| card.tags.contains(&Tag::Legacy))
+            .collect();
+        assert_eq!(
+            legacy.iter().map(|card| card.id.as_str()).collect::<Vec<_>>(),
+            (41..=60)
+                .map(|n| format!("traininggrounds-{n:03}"))
+                .collect::<Vec<_>>()
+        );
+        for card in &legacy {
+            assert_eq!(card.set, SetName::TrainingGrounds, "{}", card.id);
+            assert_eq!(card.tags.last(), Some(&Tag::Legacy), "{}", card.id);
+            assert!(card.name.starts_with("Legacy: "), "{}", card.name);
         }
-        // Two snapshots of one Core card, and two cards of other sets.
+        let core = &CATALOG["core-002"];
+        let bigot = &CATALOG["traininggrounds-041"];
+        assert_eq!(bigot.name, format!("Legacy: {}", core.name));
+        assert_eq!(bigot.tags, [Tag::Human, Tag::Legacy]);
+        assert_eq!(
+            (bigot.cost, bigot.rarity, &bigot.base, &bigot.radiant),
+            (core.cost, core.rarity, &core.base, &core.radiant)
+        );
+        assert_eq!(CATALOG["traininggrounds-060"].name, "Legacy: Rush Token Farm");
+        // No name is shared, the Core card's and its Legacy card's included.
         let twin = CardDef {
-            id: "traininggrounds-042".to_string(),
-            index: "42".to_string(),
-            ..snapshot.clone()
+            id: "traininggrounds-041".to_string(),
+            set: SetName::TrainingGrounds,
+            ..core.clone()
         };
         assert_eq!(
-            shared_names(&[core, &snapshot, &twin]),
-            ["Bigot (traininggrounds-041, traininggrounds-042)"]
+            shared_names(&[core, &twin]),
+            ["Bigot (core-002, traininggrounds-041)"]
         );
-        let classic = CardDef {
-            id: "classic-002".to_string(),
-            set: SetName::Classic,
-            snapshot_of: None,
-            ..core.clone()
-        };
-        assert_eq!(shared_names(&[core, &classic]), ["Bigot (core-002, classic-002)"]);
+        assert_eq!(shared_names(&[core, bigot]), Vec::<String>::new());
     }
 
     #[test]
@@ -8751,13 +8677,14 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn r1178000_prints_the_designer_s_rarity_on_meditative_plus_16_1_and_20_1_and_none_on_its_ai_helpers() {
         // §7: Jazakus Prime the designer's Epic, Lil' Kenny his Rare; the plan's AI generated
-        // helpers, #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, none, as the T-AI
-        // cards (B2.5).
+        // helpers, #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and #1.5 Star Chart
+        // (#2521), none, as the T-AI cards (B2.5).
         const MEDITATIVE_PLUS_PRINTED: &[(&str, Option<&str>)] = &[
             ("1.1", None),
             ("1.2", None),
             ("1.3", None),
             ("1.4", None),
+            ("1.5", None),
             ("16.1", Some("Epic")),
             ("20.1", Some("Rare")),
         ];
@@ -9010,14 +8937,7 @@ mod names_r381_b2_8 {
                 .or_default()
                 .push(entry.id.clone());
         }
-        // R2195001: a Training Grounds snapshot and the Core card it copies share a name.
-        let snapshot_pair = |ids: &[String]| {
-            ids.len() == 2 && CATALOG[ids[1].as_str()].snapshot_of.as_deref() == Some(ids[0].as_str())
-        };
-        let shared: Vec<(String, Vec<String>)> = names
-            .into_iter()
-            .filter(|(_, ids)| ids.len() > 1 && !snapshot_pair(ids))
-            .collect();
+        let shared: Vec<(String, Vec<String>)> = names.into_iter().filter(|(_, ids)| ids.len() > 1).collect();
         assert_eq!(shared, Vec::<(String, Vec<String>)>::new());
         assert_eq!(name_of("classic-016").as_deref(), Some("Book of Flame"));
         assert_eq!(name_of("classic-055").as_deref(), Some("Book of Wildfire"));

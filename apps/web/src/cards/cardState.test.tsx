@@ -7,7 +7,7 @@
 // Every view here is a fixture shaped as `viewFor` builds it (src/test/fixtures.ts, the view types of
 // crates/engine/src/wire/view.rs), rendered on the board — a hand card (the tall face), a unit (the
 // minion), a face-up backrow card (the compact face), a face-down one (a back) — and in the inspect
-// overlays a hover and a long-press open. Each state is checked on each surface, and its absence
+// overlays a hover and the I key open. Each state is checked on each surface, and its absence
 // draws nothing.
 
 import { existsSync, readFileSync } from "node:fs";
@@ -50,7 +50,7 @@ import {
 } from "./cardState.ts";
 import { MARK_PALETTES, TEMPORARY_LAST_COLOR, markColorOf, markWords } from "./marks.ts";
 import { closeInspect } from "./inspect/store.ts";
-import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
+import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import {
   INSPECT_GLOSSARY,
   INSPECT_HOVER,
@@ -114,13 +114,9 @@ function hover(element: HTMLElement): HTMLElement {
   return screen.getByTestId(INSPECT_HOVER);
 }
 
-/** A touch held on `element` until its inspect sheet opens, and the sheet. */
-function longPress(element: HTMLElement): HTMLElement {
-  fireEvent.pointerDown(element, { pointerType: "touch", clientX: 10, clientY: 10 });
-  act(() => {
-    vi.advanceTimersByTime(LONG_PRESS_MS * 2);
-  });
-  fireEvent.pointerUp(element, { pointerType: "touch", clientX: 10, clientY: 10 });
+/** The I key on `element` opens its inspect sheet (a touch hold shows the preview, R2617000), and the sheet. */
+function sheetOf(element: HTMLElement): HTMLElement {
+  fireEvent.keyDown(element, { key: "i" });
   return screen.getByTestId(INSPECT_SHEET);
 }
 
@@ -187,7 +183,7 @@ describe("R385 Brittle: a cracked-glass badge with the count, on every face that
     expect(within(preview).getByTestId(INSPECT_GLOSSARY).querySelector('[data-glossary-term="Brittle"]')).not.toBeNull();
     fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
 
-    const sheet = longPress(handRoot());
+    const sheet = sheetOf(handRoot());
     expect(within(sheet).getByTestId(INSPECT_STATES).textContent).toContain("Brittle 2: crumbles at 0");
   });
 
@@ -362,7 +358,7 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
     expect(preview.querySelector('[data-glossary-term="Buff"]')).not.toBeNull();
     fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
 
-    const sheet = longPress(handRoot());
+    const sheet = sheetOf(handRoot());
     expect(within(sheet).getByTestId(INSPECT_TUNED).textContent).toContain("Damage 4 → 5");
     expect(within(sheet).getByTestId(INSPECT_PRINTED)).toBeInTheDocument();
   });
@@ -441,7 +437,7 @@ describe("E39 enchantments: a glyph and words on every face that shows the card"
   it("E39 the sheet lists each in words, and Cast on draw's glossary entry rides along", () => {
     vi.useFakeTimers();
     renderBoard(handView({ defId: "classic-012", cost: 2, enchantments: [{ kind: "castOnDraw" }, { kind: "targetEnemies" }] }));
-    const sheet = longPress(handRoot());
+    const sheet = sheetOf(handRoot());
     const lines = Array.from(within(sheet).getByTestId(INSPECT_STATES).querySelectorAll("li"));
     expect(lines.map((line) => line.getAttribute("data-state"))).toEqual(["castOnDraw", "targetEnemies"]);
     expect(lines.map((line) => line.textContent)).toEqual(["Cast on draw", "Targets enemies"]);
@@ -818,22 +814,27 @@ describe("R1852000 the Starship: a comet badge with its pieces on a Dormant Star
 
 /* ----------------------------------------------------------------------------- MD-B6 R943 Created */
 
-describe("MD-B6 R943: a Created mark on a created card", () => {
-  it("R943 shows a Created mark on a created card", () => {
+describe("MD-B6 R943 R2647000: a Created card says so in its hover preview, not on its face", () => {
+  it("R943 R2647000 a Created card wears no Created mark on the board, in hand or in the backrow; its preview's state notes say it", () => {
     vi.useFakeTimers();
     renderBoard(
       baseView({
         you: emptySide("p1", {
           units: [unit("p1", { instanceId: "u1", defId: "classicplus-019-5", created: true }), unit("p1", { instanceId: "u2", defId: "classicplus-019-5" }), null, null, null],
+          hand: [card({ instanceId: "h1", defId: "core-004", cost: 1, created: true })],
+          backrow: [faceUpBackrow("p1", { instanceId: "b1", created: true }), null, null, null, null],
         }),
       }),
     );
-    const root = screen.getByTestId(testid.card("u1"));
-    expect(root.querySelector('.cf-state[data-state="created"]')?.getAttribute("aria-label")).toBe(
-      "Created: made during the game",
-    );
-    expect(root.querySelector('.cf-state[data-state="created"]')?.getAttribute("data-created")).toBe("true");
-    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="created"]')).toBeNull();
+    for (const root of [screen.getByTestId(testid.card("u1")), screen.getByTestId(testid.card("u2")), handRoot(), screen.getByTestId(testid.card("b1"))]) {
+      faceOf(root);
+      expect(root.querySelector('.cf-state[data-state="created"]')).toBeNull();
+    }
+    expect(stateBadges(inPlay("classicplus-019-5", { created: true })).map((badge) => badge.kind)).toContain("created");
+    const preview = hover(handRoot());
+    expect(preview.querySelector('.cf-state[data-state="created"]')).toBeNull();
+    const line = must(within(preview).getByTestId(INSPECT_STATES).querySelector<HTMLElement>('.inspect-state[data-state="created"]'), "the Created line");
+    expect(line.textContent).toContain("Created: made during the game");
   });
 });
 
@@ -899,7 +900,7 @@ describe("E36 a card's lines of code in the inspect overlays", () => {
     renderBoard(handView({ defId: "core-004", cost: 1, attack: 1, health: 1 }));
     expect(within(hover(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
     fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
-    expect(within(longPress(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
+    expect(within(sheetOf(handRoot())).queryByTestId(INSPECT_LOC)).toBeNull();
   });
 
   it("E36 a fused card's count is the sum its definition carries (the engine's Fuse adds its ingredients' up), and the board hides it (R693)", () => {

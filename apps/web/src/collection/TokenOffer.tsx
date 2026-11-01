@@ -5,16 +5,22 @@
 // cosmetic.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). The held counts are `GET /api/tokens`' and the offer only
-// hides what the server would refuse: the click sends `POST /api/tokens/redeem-cosmetic` and renders
+// hides what the server would refuse: its Confirm sends `POST /api/tokens/redeem-cosmetic` and renders
 // the answer, its held counts and a re-read of what the account owns (`rereadOwnedCosmetics`), so the
 // cosmetic shows owned. A refusal shows the server's words and changes nothing.
+//
+// R2480000 (#2480): a redemption cannot be undone, so the first press asks in the offer's place, as
+// the shop's card token does (shop/TokenPicker.tsx): "Unlock {name}? This spends 1 Epic token.", with
+// Confirm and Cancel, Cancel focused. Cancel and Escape spend nothing and put the offer back, focused.
+// The question is drawn inside the offer, so in the card view, a modal, it lies inside the modal.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useId, useState, type KeyboardEvent, type ReactElement } from "react";
 
 import { rereadOwnedCosmetics } from "../cards/ownedFullArt.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import { getTokens, redeemCosmeticToken, type CosmeticTokenTier, type TokenBarsResponse } from "../net/api.ts";
 import { cosmeticTier, type RegistryCosmetic } from "../shop/shop.ts";
+import { collectionTestid as T } from "./collection.ts";
 
 import "./tokenOffer.css";
 
@@ -72,15 +78,24 @@ function offerWords(tier: CosmeticTokenTier, count: number): string {
     : t("Unlock with an Epic token ({count} held)", { count: formatNumber(count) });
 }
 
+/** What the offer asks before it spends (R2480000): the cosmetic, and the token it spends. */
+function questionWords(tier: CosmeticTokenTier, name: string): string {
+  return tier === "Rare"
+    ? t("Unlock {name}? This spends 1 Rare token.", { name })
+    : t("Unlock {name}? This spends 1 Epic token.", { name });
+}
+
 /**
- * The offer on one locked cosmetic: spends a `tier` token on `cosmeticId`, on `cardId` for a per-card
- * one and on the account for none, then hands the answer's held tokens to `onRedeemed`.
+ * The offer on one locked cosmetic: asks first (R2480000), then spends a `tier` token on
+ * `cosmeticId`, on `cardId` for a per-card one and on the account for none, then hands the answer's
+ * held tokens to `onRedeemed`.
  */
 export default function TokenOffer({
   token,
   tier,
   held,
   cosmeticId,
+  name,
   cardId,
   onRedeemed,
   testid,
@@ -90,17 +105,37 @@ export default function TokenOffer({
   tier: CosmeticTokenTier;
   held: HeldTokens;
   cosmeticId: string;
+  /** The cosmetic's name in the reader's language, which the question names. */
+  name: string;
   cardId?: string;
   onRedeemed: (held: HeldTokens) => void;
   testid: string;
   errorTestid: string;
 }): ReactElement | null {
-  // Once redeemed the offer is spent: the cosmetic shows owned as the re-read answers.
-  const [state, setState] = useState<"ready" | "busy" | "redeemed">("ready");
+  // Once redeemed the offer is spent: the cosmetic shows owned as the re-read answers. R2480000: the
+  // press asks first; `asked` puts the focus back on the offer when Cancel or Escape answers.
+  const [state, setState] = useState<"ready" | "asking" | "busy" | "redeemed">("ready");
+  const [asked, setAsked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const questionId = useId();
+
+  const ask = (): void => {
+    if (state !== "ready") return;
+    setAsked(true);
+    setState("asking");
+  };
+  const cancel = (): void => {
+    setState("ready");
+  };
+  // Escape answers Cancel and nothing else: the card view closes on an Escape that reaches the window.
+  const cancelOnEscape = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== "Escape") return;
+    event.stopPropagation();
+    cancel();
+  };
 
   const redeem = (): void => {
-    if (state !== "ready") return;
+    if (state !== "asking") return;
     setState("busy");
     setError(null);
     redeemCosmeticToken(token, tier, cosmeticId, cardId).then(
@@ -119,9 +154,36 @@ export default function TokenOffer({
   if (state === "redeemed") return null;
   return (
     <div className="token-offer">
-      <button type="button" className="button-primary token-offer__button" data-testid={testid} disabled={state === "busy"} onClick={redeem}>
-        {state === "busy" ? t("Redeeming…") : offerWords(tier, heldOf(held, tier))}
-      </button>
+      {state === "asking" ? (
+        <div
+          className="token-offer__question"
+          role="alertdialog"
+          aria-labelledby={questionId}
+          data-testid={T.tokenOfferDialog(cosmeticId)}
+          onKeyDown={cancelOnEscape}
+        >
+          <p id={questionId}>{questionWords(tier, name)}</p>
+          <div className="token-offer__answers">
+            <button type="button" data-testid={T.tokenOfferConfirm(cosmeticId)} onClick={redeem}>
+              {t("Confirm")}
+            </button>
+            <button type="button" data-testid={T.tokenOfferCancel(cosmeticId)} autoFocus onClick={cancel}>
+              {t("Cancel")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="button-primary token-offer__button"
+          data-testid={testid}
+          disabled={state === "busy"}
+          autoFocus={asked}
+          onClick={ask}
+        >
+          {state === "busy" ? t("Redeeming…") : offerWords(tier, heldOf(held, tier))}
+        </button>
+      )}
       {error === null ? null : (
         <p className="notice" role="alert" data-testid={errorTestid}>
           {t(error)}

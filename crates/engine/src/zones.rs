@@ -1170,7 +1170,8 @@ impl OffFieldZone {
     }
 }
 
-/// The pile a card lands in; off the field it always belongs to its owner (R12).
+/// The pile a card lands in; off the field it always belongs to its owner (R12), who is the player whose
+/// graveyard a card from the field or a play reaches (R2618000).
 fn pile_for(side: &mut PlayerState, zone: OffFieldZone) -> &mut Vec<CardInstance> {
     match zone {
         OffFieldZone::Hand => &mut side.hand,
@@ -1505,8 +1506,24 @@ pub struct MoveToZoneOptions {
     pub keep_state: Option<bool>,
 }
 
+/// R2618000: whose graveyard a card bound for one lands in, when that is not simply its owner's: its
+/// controller's, for a card leaving the field (the side it was on) or the resolving zone (the player who
+/// played or cast it, or the thief who took it off the stack, E2, whose full hand burns it). It lands
+/// there as theirs, its owner becoming that player, as a Bounce makes a card its controller's for the
+/// hand (R747). So a graveyard holds only its holder's cards, and a replacement of the landing (B5 E5,
+/// R460) is read for that player's card and sends it to that player's exile pile or library. `None` for
+/// every other move, which goes to the owner's pile as R12 has it: an exile or a shuffle from the field,
+/// and every move from a hand or a library.
+fn graveyard_keeper(instance: &CardInstance, zone: OffFieldZone) -> Option<PlayerId> {
+    match (zone, &instance.zone) {
+        (OffFieldZone::Graveyard, Zone::Field { .. } | Zone::Resolving { .. }) => Some(instance.controller),
+        _ => None,
+    }
+}
+
 /// Move a card to one of its owner's off-field zones. Unit tokens cease to exist instead (R11),
-/// and a unit-token card leaving hand or library other than by being drawn or played does too.
+/// and a unit-token card leaving hand or library other than by being drawn or played does too. A card
+/// bound for a graveyard from the field or the resolving zone is its keeper's first (R2618000).
 ///
 /// R151's arrival hook is deliberately NOT here, although this is the single point every zone change
 /// goes through: the roll a card makes as it arrives needs the match rng, and this function takes a
@@ -1525,6 +1542,7 @@ pub fn move_to_zone(
     let from = instance.zone.z();
     let was_on_field = from == ZoneName::Field;
     let token = is_unit_token(state, instance);
+    let keeper = graveyard_keeper(instance, zone);
     remove_from_any_zone(state, instance);
     // R174: leaving the field ends every delayed effect aimed at this card and every trigger it
     // queued there, whatever comes back, and ends the stay every effect aimed at it was aimed at.
@@ -1564,6 +1582,10 @@ pub fn move_to_zone(
     // R78's reset, with `radiant` and the rest of what R78 keeps in every zone left alone.
     // So is a card that lands from the resolving zone (§10.5 step 7): its play is over, and a #95 an
     // earlier Call to Chaos cast (R87) carries no link of that chain (R28) back into a play of its own.
+    // R2618000: and it lands as its keeper's own card, before R78's reset hands control back to its owner.
+    if let Some(keeper) = keeper {
+        instance.owner = keeper;
+    }
     let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;
     let pile_to_pile = (from == ZoneName::Hand || from == ZoneName::Library) && to_graveyard_or_exile;
     let landed = from == ZoneName::Resolving;

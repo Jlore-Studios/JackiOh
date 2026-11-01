@@ -29,18 +29,18 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, every practice claim still settling waited for, R2422000, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs`, `cosmetics.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, the strengths' measured seed ratings, and a bot's wardrobe and the loadout it draws from it (R1453, R641000, R1454, R1452, R748000, R1834005) |
-| Cosmetics | `cosmetics.rs`, `cosmetics.json`, `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the hero cards' full arts, one per card, and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card and no default (R1295000, R1297000, R1313000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` and `owns_account_cosmetic` whether an account owns a portrait or another account cosmetic (R1833000), and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla and #1833's 18 playmats, backdrops and card backs on the shipped registry; `check_pick` refuses a pick that is not of its slot's kind or not owned where it is worn (R1834001). `loadout.rs` freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003) |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json`, `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the full arts, an Epic, a Legendary and a Mythic on each full-art card, the registry being the list of those cards (R2655000, R2655001), and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card, its id `full-art-…`, no default and no second full art of its rarity on its card (R1295000, R1297000, R1313000, R2655000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` and `owns_account_cosmetic` whether an account owns a portrait or another account cosmetic (R1833000), and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla and #1833's 18 playmats, backdrops and card backs on the shipped registry; `check_pick` refuses a pick that is not of its slot's kind or not owned where it is worn (R1834001), and `full_art_picked` reads which full art a card's pick names (`true` its Epic, R2655000). `loadout.rs` freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
-| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json`, `idempotency.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), 0047's practice seeds, and 0067's idempotency keys, a spend's key and the answer it committed, read and written in the spend's transaction under that lock so a retry replays its answer and spends nothing again (R2124000); the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), a quest for the cards of every set that ships, and position switches and Radiant upgrades counted as the game's record counts them (R2253000), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001), and a held quest's daily replace by a fresh draw, counted from the day's `removed` rows (R2210000) |
+| Economy | `economy/store.rs`, `math.rs`, `tiers.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json`, `idempotency.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), 0047's practice seeds, and 0067's idempotency keys, a spend's key and the answer it committed, read and written in the spend's transaction under that lock so a retry replays its answer and spends nothing again (R2124000); the pure math, the level curve and pity, forced on top of a card pack's rolled slots (R1298000, R1339001); the tiered roll every drop goes through, one integer draw on a weight table whose lowest tier is the fallback, a floor a fallback too, and the odds it answers (R1339000); the reward hook a finished game pays through (§14.8), for ladder, unranked, Conquest, practice and co-op games at each one's rates (R1502000), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000), and answering what it paid (`GameEconomy`: each set track's XP before and after and each level it reached, `TrackGain`, and each quest it completed) for the result to animate (#1657); the pure pack roll, its slots' tiered rarities, the card draw and the dupe chain with a duplicate's global roll for an account cosmetic, in R1339002's draw order (R1301001, R1301002, R1339000–R1339002, R1661001), and what an opening did to each token bar (`BarsSettled`), every slot adding its rolled rarity's points to both whatever it grants, its `slot_points` (R1953000, R1999000); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots' cosmetic rarities tiered rolls from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup to the claimed result, no AI move re-run (§14.8, R1303000–R1303003, R2560000); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), a quest for the cards of every set that ships, and position switches and Radiant upgrades counted as the game's record counts them (R2253000), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001), and a held quest's daily replace by a fresh draw, counted from the day's `removed` rows (R2210000) |
 | Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill, the clears and a token bar filled so it pays (R1310003), each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (and, under `E2E=1`, to any but the `e2e-econ` fixture, R1310004) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -164,6 +164,9 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R192) and is logged as
 `api.rate_limited`, and a key refused more than `API_REJECTION_ALERT_THRESHOLD` times inside
 `API_REJECTION_ALERT_WINDOW_MS` raises `api.rejections.unusual`, once a window (R1717000).
+Once this server has resolved an account's profile (`KnownProfiles`, at most `KNOWN_PROFILES_MAX` users),
+a request from it while its budget is spent is refused before the store is read, and every match, co-op
+and watch socket upgrade counts as one request against the same budget (R2478000).
 
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
@@ -178,6 +181,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
+| `GET` | `/api/catalog/:version` | none | the snapshot shipped patch `version` left, in `/api/catalog`'s shape; 404 for a version never shipped (SPEC §9.4, R388) |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001). The activation grants the starter cards (R111) and pays the newest set's track its first level (R1310000) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
@@ -196,9 +200,9 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off, for a catalog it cannot fold, or while the caller holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds, which it counts under the account's economy lock and issues nothing for (R1483000) |
 | `DELETE` | `/api/practice/seeds/:seed` | active | the caller's unclaimed seed given back, deleted under the account's economy lock so its place among `PRACTICE_SEEDS_OPEN_MAX` is free at once and a later claim of it is `unknown_seed`; 200 `{ released: true }`; 404, changing nothing, for another account's seed, a claimed one or one never issued (R2379000) |
-| `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000; `tracks` each set track the game moved, its level and XP `before` and `after` and every level it reached with its rewards, and `quests` each quest it completed, `economy::rewards::GameEconomy`), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001); a pay the store fails is tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and one that never lands is a 500 that leaves the seed burned (R1688000) |
+| `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded to its result, no AI move re-run (R2560000), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000; `tracks` each set track the game moved, its level and XP `before` and `after` and every level it reached with its rewards, and `quests` each quest it completed, `economy::rewards::GameEconomy`), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001); a pay the store fails is tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and one that never lands is a 500 that leaves the seed burned (R1688000); the claim is kept with its seed until it settles, paid or refused, once, and the retention loop pays one still unsettled `PRACTICE_SETTLE_GRACE_SECONDS` after it was made, with no board (R2422000) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
-| `GET`, `PUT`, `POST` | `/api/card-picks`, `/api/card-picks/upload` | active | the caller's own per-card picks (`card_cosmetic_picks`, R1834000): `{ cards }`, each `{ cardId, foil?, finish?, border?, fullArt? }` as written; a `PUT` of one card's, `{ cardId, foil?, finish?, border?, fullArt? }`, a key left out kept and `null` cleared, 400 `bad_request` for a card not in the catalog or a pick not of its kind or not owned on that card (R1834001); the device's one-time upload, `{ cards }`, which never overwrites a card the account holds, keeps an id this build does not know and leaves out one it could never wear. Each answers `{ cards }` |
+| `GET`, `PUT`, `POST` | `/api/card-picks`, `/api/card-picks/upload` | active | the caller's own per-card picks (`card_cosmetic_picks`, R1834000): `{ cards }`, each `{ cardId, foil?, finish?, border?, fullArt? }` as written, `fullArt` `false`, `true` (the card's Epic full art) or a full art's id (R2655000); a `PUT` of one card's, `{ cardId, foil?, finish?, border?, fullArt? }`, a key left out kept and `null` cleared, 400 `bad_request` for a card not in the catalog or a pick not of its kind or not owned on that card (R1834001); the device's one-time upload, `{ cards }`, which never overwrites a card the account holds, keeps an id this build does not know and leaves out one it could never wear. Each answers `{ cards }` |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
@@ -212,9 +216,9 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId`, `username` and win `streak` (R604, R612, R1436, R2101000), and once a ranked match's rated record is written its `rankBefore` and `rankAfter` off it, a ranked series' on its last game (R2388000) |
-| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000) |
+| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000); an offer past `REMATCH_OFFER_TTL_MS` of the match's end lapses silently, recording nothing (R2685000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
-| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
+| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
@@ -251,10 +255,12 @@ which the browser's preflight refuses every spend; `apps/web/src/net/api.ts` min
 sends it again on that press's retries.
 
 **One spend at a time** (SPEC §14.11, R2378000). The six economy spends above (not the invite code's
-redemption) claim the account's turn before they read the store (`economy/spend_slots.rs`, `App::spends`)
-and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at once; the next ones wait their turn in
-the process, in the order sent, holding no database connection, so a burst never holds the pool's
-connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
+redemption), and the other routes that write under the account's economy lock for a press (`PUT /api/card-picks`,
+`POST /api/card-picks/upload`, `POST /api/practice/seeds`, `DELETE /api/practice/seeds/:seed`,
+`POST /api/quests/:questId/replace`; issue #2610), claim the account's turn before they read the store
+(`economy/spend_slots.rs`, `App::spends`) and hold it until they answer. `ECONOMY_SPENDS_RUNNING_MAX` run at
+once; the next ones wait their turn in the process, in the order sent, holding no database connection, so a
+burst never holds the pool's connections waiting on the economy lock. One sent while `ECONOMY_SPENDS_WAITING_MAX` already wait is 429
 `rate_limited` with `SPEND_BUSY_RETRY_AFTER_MS`, and writes and keeps nothing.
 
 **Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
@@ -291,6 +297,9 @@ the sender's hand as silently as a rate-limited one, and relays nothing between 
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
 finished match whose log the retention purge took is not found (4404, R1285000).
+An upgrade whose token verifies counts as one request against its account's `API_REQUESTS_PER_MINUTE`;
+one past it gets the `forbidden` frame and close 4429, which the match and co-op clients retry on their backoff
+(the watch page takes the frame as a refusal; R2478000), and `/ws/duos` and `/ws/watch` count the same way.
 The pump pings every `WS_PING_INTERVAL_SECONDS` and drops a socket that has sent no frame for
 `WS_IDLE_TIMEOUT_SECONDS`, which starts its seat's grace; a socket's outgoing queue holds
 `WS_OUTBOX_MAX_FRAMES` frames, and the one that overflows it is closed (R1441).
@@ -304,8 +313,11 @@ What the actor holds, each with a test named after it:
   swap (R677).
 - The only per-player payload is `view_for`; no frame carries a `GameState`.
 - Each home seat keeps an `actor::guard::SeatGuard`: its action window (`MATCH_ACTIONS_PER_SECOND`,
-  R137), the count of its refusals that raises `match.rejections.unusual` once (R835000) and its
-  malformed-frame budget, past which its socket is closed with 1008 (R835002).
+  R137), the count of its refusals that raises `match.rejections.unusual` once (R835000), its
+  malformed-frame budget, past which its socket is closed with 1008 (R835002), and the socket
+  generation and time of its last answered `hello`: a later hello of the same socket sooner than
+  `WATCH_HELLO_INTERVAL_MS` is dropped unanswered, and a reattach's first hello is always answered
+  (R2686000).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
   R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
@@ -351,8 +363,8 @@ come within `WS_IDLE_TIMEOUT_SECONDS` is refused (R835002). The co-op actor hold
 holds, with four seats:
 
 - the seat is stamped from the verified token, the host's A1 and the guest's A2; B1 and B2 are the
-  AI's, played here through `duos_decide`, one action every `DUOS_AI_STEP_DELAY_MS`, whenever they owe
-  one;
+  AI's, played here through `duos_decide` at `DUOS_AI_BUDGET` (R2575000), one action every
+  `DUOS_AI_STEP_DELAY_MS`, whenever they owe one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
   illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
   log with `duos_fold` on the blocking pool, only for a profile that holds a seat and, once the match
@@ -361,7 +373,9 @@ holds, with four seats:
   for both humans; every engine call runs under the catalog version the match was dealt from
   (`DuosMatchOptions::catalog_version`, R767000);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
-  while one from the same socket is still queued is absorbed (R835001's rule);
+  while one from the same socket is still queued is absorbed (R835001's rule); one that finds none
+  queued is dropped unanswered when it comes less than `WATCH_HELLO_INTERVAL_MS` after the socket's
+  last answered one, while a reattach's first hello is answered at once (R2686000);
 - each human seat keeps the same `actor::guard::SeatGuard` as a 1v1 seat: `MATCH_ACTIONS_PER_SECOND`
   (R137, the overflow answered `rate_limited`), the malformed-frame budget and its 1008 close (R835002),
   and the count of refusals, the flood's included, that raises `match.rejections.unusual` once per
@@ -384,19 +398,21 @@ holds, with four seats:
 ### The watch socket (§9.5)
 
 A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
-friend's live match, ranked or unranked, whose player allows watching (`profiles.allow_spectators`) and has fewer
-than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`, the friend's seat's
+friend's live match, ranked or unranked, that has fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the
+friend's refuses it, and unfriending or a block ends a watch already running (R2615000). The watcher gets `view {view, legal: []}`, the friend's seat's
 `view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
 close. It is sent `loadouts` as it attaches and a `cardLoadouts` after each delayed view that newly
 shows a dealt card, by the match sockets' rule (R1834003). Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
 closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refused (`forbidden`, 4403)
 (R835002). Once it is in, a later `hello` is answered with the view it was last sent, again (nothing
-before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket; every other
-frame a watcher sends is ignored, and leaving changes nothing in the match.
+before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket, at most once
+per `WATCH_HELLO_INTERVAL_MS`; every other frame a watcher sends is unanswered, and past
+`MALFORMED_FRAMES_PER_WINDOW` of them it is closed with 1008, as a seat's is (R2609000). Leaving changes
+nothing in the match.
 Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
-gets the same `error forbidden` and close the moment the friend turns watching off (`PUT
-/api/settings`), or the two unfriend or either blocks the other (`MatchActor::revoke_watchers`).
+gets the same `error forbidden` and close the moment the two unfriend or either blocks the other
+(`MatchActor::revoke_watchers`); no setting lets a watcher go (R2615000).
 Once the match is over, a watcher that has been sent the view with the result is closed with 1000, `the
 match is over`, and both players get the new count (R1107000); a void still closes every watcher at once
 with `MATCH_VOIDED_CLOSE_CODE`.
@@ -616,7 +632,7 @@ series still makes its picks.
   `{seed_base}:bot-pick:{seat}:{game}`, from the series seed no client holds. A series game draws
   its bot no rematch plan (`MatchActorInput::series_game`), as a series game offers no rematch.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
-  budget, a softmax temperature, a chance to miss a lethal and, R747000, a skill) on the spec's
+  budget (the middle two strengths' `BOT_MID_STRENGTH_BUDGET`, R2575000), a softmax temperature, a chance to miss a lethal and, R747000, a skill) on the spec's
   resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
   acting clock, the search's deadline too; a move whose write failed is decided again
@@ -626,25 +642,28 @@ series still makes its picks.
   rebuilt actor resumes the bot's seat with its streams started again (R1452). R639000: the think
   time also grows with the move's legal actions (`THINK_COMPLEXITY_SLOPE`) and on a lethal decision
   (`THINK_LETHAL_SHIFT`), and a mulligan, a draw answer and a concession have priors of their own
-  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, and it answers a draw
-  offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
-  (`never_played`). A rebuild reads the turn each bot last moved in off the log
+  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, only facing a lethal on
+  the opponent's board it cannot stop (`jackioh_ai::unstoppable_lethal`, inside the decision's
+  deadline, R2660000), and otherwise may offer a draw while well behind (`BOT_DRAW_OFFER`,
+  R2660001), and it answers a draw offer by `bots::signals` rather than the AI's refusal (R188 holds
+  for practice); the actor plays every move but an emote (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
   turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
   no draw at full or zero skill); a decision the roll does not give to the AI is the skill miss's
   (`skill_miss_action`, R2214000: a softmax over the greedy baseline's one-ply scores) with no search, whose
   draw-offer answer is still the bot's own roll's, and `r188_forbidden` filters either.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
-  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
-  `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
-  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit, only while it trails), a draw answer
-  (`BOT_DRAW_ANSWER_FIT`, only while it trails), an idle turn its clock times out
+  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-offer-draw`,
+  `bot-idle`, `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the
+  same: its concession temper (`BOT_CONCEDE_FIT.share`, whether it concedes at all, then only when
+  the caller's `unstoppable_lethal` holds, R2660000), a draw answer (`BOT_DRAW_ANSWER_FIT`, only
+  while it trails), a draw offer (`BOT_DRAW_OFFER`, hand-set, only while it trails by
+  `min_behind`, R2660001), an idle turn its clock times out
   (`BOT_TIMEOUT_FIT`), its plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
   it meets an offer, and when) and its aim's lead. Where it stands (`standing`) is read through
   `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
-  cannot look up a face-down placeholder: the deficit on R1442's scale, which the concession's
-  threshold is fitted on, and how far it trails its opponent, centered on an even board, which both
-  guards read.
+  cannot look up a face-down placeholder: the deficit on R1442's scale, and how far it trails its
+  opponent, centered on an even board, which the draw answer and the draw offer read.
 - `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
   person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
   through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and
@@ -799,7 +818,8 @@ server-only.
 Migration 0038 adds Play together's tables (§9.4, §9.5): `friend_requests`, `friendships` (one row
 per pair, `a < b`), `blocks`, `presence` (server-only), `challenges`, `chat_messages` (1 to 500
 characters), `chat_reports` (one per message and reporter) and `replay_shares`, each with RLS on and a
-select policy for its own players only, and `profiles.allow_spectators` (on by default). The retention
+select policy for its own players only, and a watching setting on `profiles` (on by default), which no
+server has read since R2615000 and migration 0073 drops. The retention
 loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0039 adds the co-op tables
 (§13.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
 starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,
@@ -849,12 +869,10 @@ account, with the game's setup (the AI tier, the human's seat, the deck, the las
 and the catalog version), when it was issued and when it was claimed. It is server-only like
 `match_checkpoints` (RLS on, no policy, no grant), since a seed is what lets a claim pay, and it goes
 with its account (on delete cascade). A claim burns its seed in one transaction, then
-`economy::practice::verify` folds the log and re-runs every AI move off the runtime, at most
+`economy::practice::verify` folds the log off the runtime, at most
 `PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
-transaction pays and keeps the board, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store fails it (R1688000). An issue counts the account's unclaimed seeds issued within `PRACTICE_SEED_TTL_SECONDS` under its economy lock and refuses past `PRACTICE_SEEDS_OPEN_MAX` (R1483000); `practice_seeds_profile_issued` leads that count and the prune, so it needs no migration. Measured in release (`cargo test --release -p jackioh-server
---test server r1303002_the_ai_rerun -- --nocapture`, 2026-10-20, the night bot's 4-core runner):
-the recorded game, 46 actions of which 29 the AI's, verifies in 680–700 ms; twelve AI-against-AI
-games, four per tier, in 392–1,980 ms (32–76 actions, 18–46 AI moves), about 20–45 ms per AI move.
+transaction pays and keeps the board, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store fails it (R1688000). An issue counts the account's unclaimed seeds issued within `PRACTICE_SEED_TTL_SECONDS` under its economy lock and refuses past `PRACTICE_SEEDS_OPEN_MAX` (R1483000); `practice_seeds_profile_issued` leads that count and the prune, so it needs no migration. Measured in release before #2560 took the AI re-run out (2026-10-20): the recorded game, 46 actions
+of which 29 the AI's, verified in 680–700 ms, about 20–45 ms per AI move; the fold alone remains.
 
 Migration 0048 holds the shape of a game record's `build` (R1367000): absent, or the commit that
 played the game with, when the AI played a seat, its AI generation (`game_records_build_check`). The
@@ -982,6 +1000,9 @@ and its 52 tokens the day `SHIPPED_SETS` lists it (R1420). No row is rewritten; 
 card's tags as the catalog holds them, and 0016's grant hands every active account the cards the new
 catalog version adds (R481).
 
+Migration 0069 widens the `cards` tag check once more, as 0065 did, with #2521's Resource and Faction tags,
+so `seed-catalog` can write the six Resources and the five Faction cards as the catalog now tags them.
+
 Migration 0066 adds `deck_versions` (R2100000) and only adds objects and rows: one row per version of
 a saved deck, its name and cards as one save wrote them and `saved_at`, read newest first through
 `deck_versions_deck_saved_idx`. Its composite foreign key on `(profile_id, deck_id)` names only a deck
@@ -997,6 +1018,29 @@ on with no policy and no grant, as `practice_seeds`: the server alone reads and 
 with their profile (`on delete cascade`), and `economy::idempotency::sweep_expired` deletes those older
 than `IDEMPOTENCY_KEY_TTL_HOURS` from the retention loop. `tests/sql/37_idempotency_keys.sql` checks its
 shape, its checks, the client's refusal, the cascade and the re-apply.
+
+Migration 0071 adds three columns to `practice_seeds` (R2422000) and rewrites no row: `claim`, the claim
+as sent (`{ result, log }`), written by the burn and cleared once it settles, and `settled` (`paid` or
+`refused`) with `settled_at`, set by the pay in its own transaction, or by the refusal, only where they are
+null. `practice_seeds_settled_check` holds a mark to its time and to the two outcomes, and a claim or a mark
+to a claimed seed; the partial index `practice_seeds_unsettled` serves the retention loop's sweep
+(`api::practice::sweep_unsettled`), which settles every claim still unsettled
+`PRACTICE_SETTLE_GRACE_SECONDS` after `claimed_at`. The prune keeps an unsettled claim until it settles. A
+seed claimed before 0071 holds no claim, so nothing settles it and the prune deletes it as before.
+`tests/sql/39_practice_settles.sql` checks its columns, its index, its check and the re-apply.
+
+Migration 0072 adds `full_art_id` to `card_cosmetic_picks` (R2655000) and rewrites no row: the id of
+the full art a card's pick wears (its Epic, Legendary or Mythic), kept as written beside `full_art =
+true`; a row with the switch on and no id is the card's Epic, as every row before 0072 means it.
+`card_cosmetic_picks_full_art_id_check` holds the id to the switch being on and to a `full-art-…` slug
+of at most 40 characters. The store reads the two columns as one `FullArtPick` (`true`, `false` or the
+id). `tests/sql/40_full_art_tiers.sql` checks the id kept and the shapes refused.
+
+Migration 0073 drops the watching setting 0038 added to `profiles` (#2620), and its column grant to
+`authenticated` with it: friends may always watch (R2615000), so no server has read it since. It waited
+until no server on the code before R2615000 could be serving, since that code reads it while a deploy
+overlaps. `tests/sql/22_social.sql` checks that the column and its grant are gone and that the file
+re-applies.
 
 ## Tests
 

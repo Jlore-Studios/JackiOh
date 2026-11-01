@@ -1,6 +1,6 @@
 //! The picks an account makes for one card of its own (SPEC §14.2, SPEC §11 R1834000, R1834001): a
-//! foil, a finish, a border and whether its full art prints (R1655000), held on the account so
-//! the server, which shows them to an opponent (R1834002), has them. Only the caller's own, keyed on
+//! foil, a finish, a border and which of its full arts prints, if any (R1655000, R2655000), held on
+//! the account so the server, which shows them to an opponent (R1834002), has them. Only the caller's own, keyed on
 //! the verified token's profile and never on a field of the request.
 //!
 //! `GET /api/card-picks` answers `{ cards }`, every card the account picked something for, by card
@@ -9,14 +9,16 @@
 //! `PUT /api/card-picks` changes one card's picks: `{ cardId, foil?, finish?, border?, fullArt? }`,
 //! where a key left out keeps the card's pick and `null` clears it (the card then wears the
 //! account's). R1834001: an id must be one of the registry under its kind that the account owns on
-//! that card (a default, a starter or a ledger row), and `fullArt: true` needs the card's full art,
-//! owned; anything else is 400 `bad_request`, and nothing is written.
+//! that card (a default, a starter or a ledger row). `fullArt` is a boolean or a full art's id
+//! (R2655000): `true` needs the card's Epic full art, owned, and an id one of the card's own full
+//! arts, owned; anything else is 400 `bad_request`, and nothing is written.
 //!
 //! `POST /api/card-picks/upload` is a device's one-time upload of the picks it held before they
 //! moved to the account (`{ cards }`, as `GET` answers them). A card the account already holds a row
 //! for is never touched, so a pick a newer device wrote stands, and an id this build does not know
 //! is kept, as the device's store kept it (R1655000); one it knows of another kind, or that the
-//! account does not own on the card, is left out, since it could never be worn. A card not in the
+//! account does not own on the card, is left out, since it could never be worn, and so is a full
+//! art it knows that is another card's or not owned. A card not in the
 //! catalog is passed over. It answers `{ cards }` as `GET` does.
 
 use std::sync::Arc;
@@ -27,8 +29,8 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, bad_request, now_ms, ok_of, str};
 use crate::app::App;
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
-use crate::cosmetics::{self, PickRefusal, full_art_of, is_slug, owns};
-use crate::economy::store::{CardPicks, OwnedCosmetics};
+use crate::cosmetics::{self, CosmeticKind, FULL_ART_ID_PREFIX, PickRefusal, full_art_of, is_slug, owns};
+use crate::economy::store::{CardPicks, FullArtPick, OwnedCosmetics};
 use crate::loadout::{CARD_SLOT_KINDS, FULL_ART_SETTING, setting_key};
 
 /// A card a deck may hold: in the catalog, and no token.
@@ -36,13 +38,33 @@ fn is_playable(app: &App, card_id: &str) -> bool {
     app.catalog.card_ids.iter().any(|id| id == card_id) && !app.catalog.is_token(card_id)
 }
 
-/// What a write of `card_id`'s full art comes to against the account's ledger: `Ok` when the card
-/// has a full art the account owns.
-fn check_full_art(card_id: &str, owned: &OwnedCosmetics) -> Result<(), PickRefusal> {
-    match full_art_of(cosmetics::registry(), card_id) {
-        None => Err(PickRefusal::WrongKind),
-        Some(full_art) if owns(full_art, Some(card_id), owned) => Ok(()),
-        Some(_) => Err(PickRefusal::NotOwned),
+/// What a write of `card_id`'s full-art pick comes to against the account's ledger (R2655000):
+/// `false` always passes, `true` when the card has an Epic full art the account owns, and an id
+/// when it is one of the card's full arts and the account owns it there.
+fn check_full_art(card_id: &str, pick: &FullArtPick, owned: &OwnedCosmetics) -> Result<(), PickRefusal> {
+    let registry = cosmetics::registry();
+    match pick {
+        FullArtPick::On(false) => Ok(()),
+        FullArtPick::On(true) => match full_art_of(registry, card_id) {
+            None => Err(PickRefusal::WrongKind),
+            Some(full_art) if owns(full_art, Some(card_id), owned) => Ok(()),
+            Some(_) => Err(PickRefusal::NotOwned),
+        },
+        FullArtPick::Id(id) => {
+            cosmetics::check_pick(registry, owned, CosmeticKind::FullArt, id, Some(card_id))
+        }
+    }
+}
+
+/// A `fullArt` value as a `PUT` or an upload sends it: a boolean, or a well-shaped full art's id,
+/// `full-art-…` (R2655000).
+fn full_art_pick_of(value: &Value) -> Option<FullArtPick> {
+    match value {
+        Value::Bool(on) => Some(FullArtPick::On(*on)),
+        Value::String(id) if is_id_shape(id) && id.starts_with(FULL_ART_ID_PREFIX) => {
+            Some(FullArtPick::Id(id.clone()))
+        }
+        _ => None,
     }
 }
 
@@ -76,7 +98,7 @@ fn change_of<T>(
     }
 }
 
-/// `PUT /api/card-picks` (`AuthLevel::Active`).
+/// `PUT /api/card-picks` (`AuthLevel::Active`), in the account's economy turn (R2378000).
 pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let card_id = str(&req.body, "cardId")?;
@@ -93,8 +115,16 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
         )?;
         changes.push((kind, change));
     }
-    let full_art = change_of(&req.body, FULL_ART_SETTING, Value::as_bool, "a boolean")?;
+    let full_art = change_of(
+        &req.body,
+        FULL_ART_SETTING,
+        full_art_pick_of,
+        "a boolean or a full-art id",
+    )?;
 
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock below.
+    let _turn = app.spends.claim(&profile.id).await?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     // The row is read, changed and written back: two devices' writes take turns, so neither's
     // change is lost.
@@ -106,8 +136,9 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
                 .map_err(|refusal| bad_request(refusal.message(setting_key(*kind))))?;
         }
     }
-    if full_art == Some(Some(true)) {
-        check_full_art(&card_id, &owned).map_err(|refusal| bad_request(refusal.message(FULL_ART_SETTING)))?;
+    if let Some(Some(pick)) = &full_art {
+        check_full_art(&card_id, pick, &owned)
+            .map_err(|refusal| bad_request(refusal.message(FULL_ART_SETTING)))?;
     }
     let held = tx.economy_card_picks_get(&profile.id).await?;
     let mut picks = held
@@ -136,8 +167,8 @@ fn is_id_shape(id: &str) -> bool {
     is_slug(id) && id.len() <= PLAYER_SETTINGS_TEXT_MAX_LENGTH
 }
 
-/// One entry of an upload, read whole or refused: a card id, and each pick a well-shaped id or a
-/// boolean for the full art.
+/// One entry of an upload, read whole or refused: a card id, and each pick a well-shaped id, the
+/// full art's a boolean or a well-shaped id (R2655000).
 fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
     let refused =
         || bad_request("every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt? }");
@@ -160,15 +191,15 @@ fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
     }
     match fields.get(FULL_ART_SETTING) {
         None | Some(Value::Null) => {}
-        Some(Value::Bool(on)) => picks.full_art = Some(*on),
-        Some(_) => return Err(refused()),
+        Some(value) => picks.full_art = Some(full_art_pick_of(value).ok_or_else(refused)?),
     }
     Ok(picks)
 }
 
 /// R1834000: what of an uploaded entry can be kept: an id this build does not know stays, as the
 /// device kept it; one it knows is kept only where the account owns it on the card, under its kind.
-/// A full art switched on stays unless the card's full art is known and not owned.
+/// A full art switched on stays unless the card's Epic full art is known and not owned; a full art's
+/// id stays unless it is known and is another card's or not owned (R2655000).
 fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
     let registry = cosmetics::registry();
     for kind in CARD_SLOT_KINDS {
@@ -180,13 +211,23 @@ fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
             picks.set(kind, None);
         }
     }
-    if picks.full_art == Some(true) && check_full_art(&picks.card_id, owned) == Err(PickRefusal::NotOwned) {
+    let dropped = match &picks.full_art {
+        Some(pick @ FullArtPick::On(true)) => {
+            check_full_art(&picks.card_id, pick, owned) == Err(PickRefusal::NotOwned)
+        }
+        Some(pick @ FullArtPick::Id(id)) => {
+            registry.iter().any(|cosmetic| cosmetic.id == *id)
+                && check_full_art(&picks.card_id, pick, owned).is_err()
+        }
+        Some(FullArtPick::On(false)) | None => false,
+    };
+    if dropped {
         picks.full_art = None;
     }
     picks
 }
 
-/// `POST /api/card-picks/upload` (`AuthLevel::Active`).
+/// `POST /api/card-picks/upload` (`AuthLevel::Active`), in the account's economy turn (R2378000).
 pub async fn upload_card_picks(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let Some(entries) = req.body.get("cards").and_then(Value::as_array) else {
@@ -203,6 +244,9 @@ pub async fn upload_card_picks(app: &Arc<App>, req: Req) -> ApiResult {
         .map(upload_entry)
         .collect::<Result<Vec<CardPicks>, ApiError>>()?;
 
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock below.
+    let _turn = app.spends.claim(&profile.id).await?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     // What the account owns is read and the rows it lacks are written: under the lock
     // `put_card_pick` takes, a `PUT` from another device takes its turn instead of writing over
@@ -235,22 +279,23 @@ mod tests {
             // A known id of another kind.
             finish: Some("border-standard".to_string()),
             border: Some("border-standard".to_string()),
-            full_art: Some(false),
+            full_art: Some(FullArtPick::On(false)),
         };
         let kept = keepable(picks.clone(), &none);
         assert_eq!(kept.foil.as_deref(), Some("foil-from-a-newer-client"));
         assert_eq!(kept.finish, None);
         assert_eq!(kept.border.as_deref(), Some("border-standard"));
-        assert_eq!(kept.full_art, Some(false));
+        assert_eq!(kept.full_art, Some(FullArtPick::On(false)));
         // A full art switched on stays only where the card's full art is owned, or unknown here.
         let full_art = cosmetics::registry()
             .iter()
             .find(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
             .expect("the registry ships a full art");
+        assert_eq!(full_art.rarity, crate::cosmetics::CosmeticRarity::Epic);
         let card = full_art.card.clone().expect("a full art names its card");
         let on = CardPicks {
             card_id: card.clone(),
-            full_art: Some(true),
+            full_art: Some(FullArtPick::On(true)),
             ..CardPicks::default()
         };
         assert_eq!(keepable(on.clone(), &none).full_art, None);
@@ -261,12 +306,55 @@ mod tests {
             }],
             account: Vec::new(),
         };
-        assert_eq!(keepable(on, &owned).full_art, Some(true));
+        assert_eq!(keepable(on, &owned).full_art, Some(FullArtPick::On(true)));
         let unknown_here = CardPicks {
             card_id: "core-999".to_string(),
-            full_art: Some(true),
+            full_art: Some(FullArtPick::On(true)),
             ..CardPicks::default()
         };
-        assert_eq!(keepable(unknown_here, &none).full_art, Some(true));
+        assert_eq!(
+            keepable(unknown_here, &none).full_art,
+            Some(FullArtPick::On(true))
+        );
+    }
+
+    #[test]
+    fn r2655000_an_upload_keeps_an_owned_or_unknown_full_art_id_and_drops_another_card_s_or_an_unowned_one() {
+        let vanilla = |id: &str| CardPicks {
+            card_id: "core-008".to_string(),
+            full_art: Some(FullArtPick::Id(id.to_string())),
+            ..CardPicks::default()
+        };
+        let owned = OwnedCosmetics {
+            cards: vec![CardCosmetic {
+                card_id: "core-008".to_string(),
+                cosmetic_id: "full-art-mr-vanilla-signed".to_string(),
+            }],
+            account: Vec::new(),
+        };
+        let kept = |id: &str, owned: &OwnedCosmetics| keepable(vanilla(id), owned).full_art;
+        let signed = Some(FullArtPick::Id("full-art-mr-vanilla-signed".to_string()));
+        assert_eq!(kept("full-art-mr-vanilla-signed", &owned), signed);
+        // Not owned, another card's or no full art at all: dropped.
+        assert_eq!(
+            kept("full-art-mr-vanilla-signed", &OwnedCosmetics::default()),
+            None
+        );
+        assert_eq!(kept("full-art-mr-vanilla-animated", &owned), None);
+        assert_eq!(kept("full-art-gary-the-gambler-signed", &owned), None);
+        // An id this build does not know is kept, as the device kept it.
+        assert_eq!(
+            kept("full-art-from-a-newer-client", &OwnedCosmetics::default()),
+            Some(FullArtPick::Id("full-art-from-a-newer-client".to_string()))
+        );
+        // The wire reads a boolean or a well-shaped id, and nothing else.
+        assert_eq!(full_art_pick_of(&json!(true)), Some(FullArtPick::On(true)));
+        assert_eq!(
+            full_art_pick_of(&json!("full-art-mr-vanilla-signed")),
+            Some(FullArtPick::Id("full-art-mr-vanilla-signed".to_string()))
+        );
+        assert_eq!(full_art_pick_of(&json!("Full Art")), None);
+        assert_eq!(full_art_pick_of(&json!("foil-rainbow")), None);
+        assert_eq!(full_art_pick_of(&json!(1)), None);
     }
 }

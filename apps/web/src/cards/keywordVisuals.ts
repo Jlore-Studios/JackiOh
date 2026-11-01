@@ -1,6 +1,13 @@
 // Keyword visuals on the board (issue #40, R438): what every keyword a unit has looks like on its
 // board minion, beside the two-letter chip that names it.
 //
+// R2577000 amends that: only a keyword that can still act while the card is on the field, or as it
+// leaves, is drawn there (`onField`). Equip, Tradable, Cloaked, Crater, Flashback, Stack and
+// Temporary are rules of the hand, the graveyard or the moment of play, so a unit on the field draws
+// neither a treatment nor a chip for them: they take no layer's slot, no loop and no room in the
+// chips' "+n" fold, and the hover preview and the inspect sheet still list them. Their drawings stay
+// in KeywordFx.tsx and keywords.css.
+//
 // `KEYWORD_VISUALS` is a total map over `KeywordKind`, so a new keyword kind does not compile until
 // it has a treatment here and its drawing in KeywordFx.tsx and keywords.css. A treatment sits on one
 // of four layers of the minion, each a plane of its own, so several compose without covering each
@@ -50,6 +57,12 @@ export type KeywordVisual = {
   motion: KeywordMotion | null;
   /** Whether the treatment prints the keyword's number. */
   numbered: boolean;
+  /**
+   * R2577000: whether the keyword can still change what happens while the card is on the field, or
+   * as it leaves it. A unit on the field draws neither a treatment nor a chip for one that cannot;
+   * its hover preview and inspect sheet still list it.
+   */
+  onField: boolean;
 };
 
 /** How many treatments each layer draws on one unit. `stat` is Armor's plate, which is always drawn. */
@@ -78,6 +91,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a steel heater shield standing behind the portrait, and a steel ring",
     motion: null,
     numbered: false,
+    onField: true,
   },
   "Divine Shield": {
     layer: "frame",
@@ -85,6 +99,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a golden bubble over the portrait",
     motion: null,
     numbered: false,
+    onField: true,
   },
   Armor: {
     layer: "stat",
@@ -92,6 +107,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a steel plate tucked against the health gem, with the Armor total",
     motion: null,
     numbered: true,
+    onField: true,
   },
   "Can't attack": {
     layer: "veil",
@@ -99,6 +115,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "two chains crossed over a greyed portrait",
     motion: { keyframes: "kw-chain-sway", when: "always" },
     numbered: false,
+    onField: true,
   },
   "Immune to Spells": {
     layer: "frame",
@@ -106,6 +123,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a hexagonal ward around the portrait, sparks on its corners",
     motion: { keyframes: "kw-ward-shimmer", when: "always" },
     numbered: false,
+    onField: true,
   },
   Poisonous: {
     layer: "veil",
@@ -113,6 +131,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "green venom running from the portrait's top rim in drops",
     motion: { keyframes: "kw-venom-drip", when: "always" },
     numbered: false,
+    onField: true,
   },
   Charge: {
     layer: "veil",
@@ -120,6 +139,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "long speed streaks across the portrait behind a double chevron",
     motion: { keyframes: "kw-streak-rush", when: "canAct" },
     numbered: false,
+    onField: true,
   },
   Rush: {
     layer: "veil",
@@ -127,6 +147,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "three short motion dashes trailing off the portrait's right side",
     motion: { keyframes: "kw-dash-trail", when: "canAct" },
     numbered: false,
+    onField: true,
   },
   Brittle: {
     layer: "veil",
@@ -134,6 +155,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "hairline cracks, more of them as the count falls, and the count on a shard",
     motion: { keyframes: "kw-crack-flicker", when: "always" },
     numbered: true,
+    onField: true,
   },
   Lifesteal: {
     layer: "veil",
@@ -141,6 +163,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "crimson veins reaching in from the rim",
     motion: { keyframes: "kw-vein-pulse", when: "always" },
     numbered: false,
+    onField: true,
   },
   Reborn: {
     layer: "frame",
@@ -148,6 +171,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a ghostly echo of the portrait's ring rising above it",
     motion: { keyframes: "kw-echo-rise", when: "always" },
     numbered: false,
+    onField: true,
   },
   Indestructible: {
     layer: "frame",
@@ -155,6 +179,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a ring of stone blocks bolted round the portrait, runes between them",
     motion: { keyframes: "kw-rune-glow", when: "always" },
     numbered: false,
+    onField: true,
   },
   "First Strike": {
     layer: "glyph",
@@ -162,6 +187,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "an upright blade with a glint at its tip",
     motion: { keyframes: "kw-glint-twinkle", when: "always" },
     numbered: false,
+    onField: true,
   },
   Trample: {
     layer: "glyph",
@@ -169,6 +195,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a hoofprint in a shockwave ring",
     motion: { keyframes: "kw-shockwave", when: "always" },
     numbered: false,
+    onField: true,
   },
   Cleave: {
     layer: "glyph",
@@ -176,6 +203,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a crescent arc, an axe's sweep",
     motion: { keyframes: "kw-crescent-swing", when: "always" },
     numbered: false,
+    onField: true,
   },
   Pierce: {
     layer: "glyph",
@@ -183,6 +211,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a spear point on its shaft",
     motion: { keyframes: "kw-spear-thrust", when: "always" },
     numbered: false,
+    onField: true,
   },
   "Spell Damage": {
     layer: "veil",
@@ -190,6 +219,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "an arcane rune circle with the bonus at its center",
     motion: { keyframes: "kw-rune-turn", when: "always" },
     numbered: true,
+    onField: true,
   },
   "Animated on your turn": {
     layer: "veil",
@@ -197,6 +227,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a clock dial with a sweeping hand",
     motion: { keyframes: "kw-clock-sweep", when: "always" },
     numbered: false,
+    onField: true,
   },
   Animated: {
     layer: "veil",
@@ -204,6 +235,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "two brass cogs meshing at the portrait's foot",
     motion: { keyframes: "kw-cog-turn", when: "always" },
     numbered: false,
+    onField: true,
   },
   Lucky: {
     layer: "glyph",
@@ -211,6 +243,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a four-leaf clover with its number",
     motion: { keyframes: "kw-clover-sparkle", when: "always" },
     numbered: true,
+    onField: true,
   },
   Immutable: {
     layer: "glyph",
@@ -218,6 +251,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a padlock, shut",
     motion: { keyframes: "kw-seal-glint", when: "always" },
     numbered: false,
+    onField: true,
   },
   Stack: {
     layer: "frame",
@@ -225,6 +259,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "two card edges stepped out behind the portrait",
     motion: { keyframes: "kw-edge-shift", when: "always" },
     numbered: false,
+    onField: false,
   },
   Windfury: {
     layer: "glyph",
@@ -232,6 +267,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "two curved gusts, one above the other",
     motion: { keyframes: "kw-gust-sway", when: "always" },
     numbered: false,
+    onField: true,
   },
   Temporary: {
     layer: "glyph",
@@ -239,6 +275,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "an hourglass, its sand running out",
     motion: { keyframes: "kw-sand-fall", when: "always" },
     numbered: false,
+    onField: false,
   },
   Deft: {
     layer: "glyph",
@@ -246,6 +283,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a swift diagonal slash",
     motion: { keyframes: "kw-deft-dart", when: "always" },
     numbered: false,
+    onField: true,
   },
   Untributable: {
     layer: "glyph",
@@ -253,6 +291,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "an anchor holding its ground",
     motion: { keyframes: "kw-untributable-anchor", when: "always" },
     numbered: false,
+    onField: true,
   },
   Equip: {
     layer: "glyph",
@@ -260,6 +299,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a horseshoe magnet, its poles pulling in",
     motion: { keyframes: "kw-magnet-pull", when: "always" },
     numbered: false,
+    onField: false,
   },
   // #783's keywords (R783000, R783002, R783004, R783010, R783012).
   Ranged: {
@@ -268,6 +308,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a drawn bow with an arrow nocked",
     motion: { keyframes: "kw-ranged-aim", when: "always" },
     numbered: false,
+    onField: true,
   },
   Flying: {
     layer: "glyph",
@@ -275,6 +316,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a pair of spread wings",
     motion: { keyframes: "kw-flying-hover", when: "always" },
     numbered: false,
+    onField: true,
   },
   Cloaked: {
     layer: "glyph",
@@ -282,6 +324,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a hooded cloak drawn over a face",
     motion: { keyframes: "kw-cloaked-fade", when: "always" },
     numbered: false,
+    onField: false,
   },
   Crater: {
     layer: "glyph",
@@ -289,6 +332,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a cratered bowl with rubble thrown up from its rim",
     motion: { keyframes: "kw-crater-quake", when: "always" },
     numbered: false,
+    onField: false,
   },
   Flashback: {
     layer: "glyph",
@@ -296,6 +340,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a circling arrow turning back on itself",
     motion: { keyframes: "kw-flashback-rewind", when: "always" },
     numbered: false,
+    onField: false,
   },
   // R1838000: a hand keyword; a Unit that prints it carries it onto the field, where it does nothing.
   Tradable: {
@@ -304,6 +349,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "two arrows passing each other, one in and one out",
     motion: { keyframes: "kw-trade-swap", when: "always" },
     numbered: false,
+    onField: false,
   },
   // R1852000: Stinkyscape's Starship Piece, a riveted hull plate that glints.
   "Starship Piece": {
@@ -312,6 +358,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a riveted hull plate",
     motion: { keyframes: "kw-starship-piece-glint", when: "always" },
     numbered: false,
+    onField: true,
   },
   // R1852003: a launched Starship, a rocket nose up over its flame, riding its thrust.
   Starship: {
@@ -320,6 +367,16 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     shape: "a rocket nose up over its flame",
     motion: { keyframes: "kw-starship-thrust", when: "always" },
     numbered: false,
+    onField: true,
+  },
+  // R2657000: Can't Defend, never in Defense Position, a shield split in two whose halves drift apart.
+  "Can't Defend": {
+    layer: "glyph",
+    priority: 36,
+    shape: "a shield split down the middle, its halves drifting apart",
+    motion: { keyframes: "kw-cant-defend-split", when: "always" },
+    numbered: false,
+    onField: true,
   },
 };
 
@@ -369,14 +426,17 @@ export function temporaryLeft(keywords: readonly Keyword[]): number | null {
 }
 
 /**
- * The kinds a unit's treatments come from: its keywords as the view lists them, once each; Brittle
+ * The kinds a unit's treatments come from: its keywords as the view lists them, once each, but those that do nothing on the field (`onField: false`, R2577000); Brittle
  * for a unit the view gives a Brittle count (R385); and the Animated treatment for a backrow card the
  * view says is standing as a Unit (`animated`, R383) whose keywords do not already name it, except on
  * a Vanilla unit (R243), whose text is gone.
  */
 export function treatedKinds(source: KeywordFxSource): KeywordKind[] {
   const kinds: KeywordKind[] = [];
-  for (const keyword of source.keywords) if (!kinds.includes(keyword.kind)) kinds.push(keyword.kind);
+  for (const keyword of source.keywords) {
+    // R2577000: a keyword that does nothing on the field draws no treatment there.
+    if (KEYWORD_VISUALS[keyword.kind].onField && !kinds.includes(keyword.kind)) kinds.push(keyword.kind);
+  }
   // R385: a Brittle count the view gives (one an effect gave, "Give Brittle N") is Brittle whether or
   // not the keyword list names it, a Vanilla unit's included (a Vanilla keeps a given count, §6.1).
   if (source.brittle !== undefined && !kinds.includes("Brittle")) kinds.push("Brittle");

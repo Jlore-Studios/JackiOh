@@ -32,10 +32,13 @@
 //!  - Every engine call runs under the catalog the match was dealt from (R767000, `Pinned`), so a
 //!    rebuilt actor plays on as the match began.
 //!  - A `hello` repeated while one for the same socket is still queued is absorbed by it (§9.1, as
-//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame.
+//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame. One that finds
+//!    none queued is dropped, unanswered, when the socket's last answered hello was less than
+//!    `WATCH_HELLO_INTERVAL_MS` ago (R2686000); a reattach's first hello is always answered.
 //!  - Each person's seat keeps the 1v1 seat's guards (`actor::guard::SeatGuard`; R137, R835000,
-//!    R835002): the action flood window, the malformed-frame budget and the count of refusals that
-//!    raises `match.rejections.unusual`. Only a person's own refusals count; the AI's never do.
+//!    R835002): the action flood window, the malformed-frame budget, the count of refusals that
+//!    raises `match.rejections.unusual` and the hello interval. Only a person's own refusals count;
+//!    the AI's never do.
 //!  - A live `reduce` that panics changes nothing and is answered `internal` and filed; a server
 //!    action that panics ends the match as the ceiling's draw (R1253000).
 //!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
@@ -54,7 +57,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 
-use jackioh_ai::{AI_BUDGET, AiOptions, duos_decide};
+use jackioh_ai::{AiOptions, duos_decide};
 use jackioh_engine::duos::DuosState;
 use jackioh_engine::wire::{
     ActionBody, DUOS_SEATS, DuosAction, DuosActionBody, DuosResult, DuosSeat, DuosView,
@@ -71,7 +74,7 @@ use crate::app::{App, now_ms};
 use crate::bots::seat::r188_forbidden;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS,
+    BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_BUDGET, DUOS_AI_STEP_DELAY_MS,
     DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MATCH_RECORD_RESULT_ATTEMPTS,
     MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
@@ -296,10 +299,10 @@ impl AiJob {
         let wait = Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
         let deadline = std::time::Instant::now() + wait;
         let should_stop = move || std::time::Instant::now() >= deadline;
-        // The practice AI's budget (the browser's), cut short by the deadline.
+        // R2575000: the practice AI's budget before #2575 doubled it, cut short by the deadline.
         let mut options = AiOptions {
             rng: Rng::new(&format!("{}:duos-ai:{}", self.seed, self.seat), self.cursor),
-            budget: AI_BUDGET,
+            budget: DUOS_AI_BUDGET,
             should_stop: Some(&should_stop),
         };
         let body = self
@@ -452,7 +455,7 @@ struct Core {
     /// By `DUOS_SEATS`: where each seat's AI stream stands. A rebuilt actor starts them again.
     ai_cursor: [u32; 4],
     /// By `HUMAN_SEATS`: the 1v1 seat's guards (`actor::guard`): §9.8's per-seat action window
-    /// (R137), R835000's refusals and R835002's malformed frames.
+    /// (R137), R835000's refusals, R835002's malformed frames and R2686000's hello interval.
     guards: [SeatGuard; 2],
     /// By `HUMAN_SEATS`: B39's ping window.
     pings: [VecDeque<i64>; 2],
@@ -1046,8 +1049,13 @@ impl DuosActor {
             }
             Ok(DuosClientMessage::Hello { .. }) => {
                 // R835001: a hello while this socket's last one is still queued is absorbed by it.
+                // R2686000: one that finds none queued is dropped, unanswered and with the socket
+                // left open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered
+                // on this socket; a newer generation (a reattach) always enqueues.
                 let generation = core.socket_generation[index];
-                if core.hello_pending[index] != Some(generation) {
+                if core.hello_pending[index] != Some(generation)
+                    && core.guards[index].hello_answer_allowed(generation, now_ms())
+                {
                     core.hello_pending[index] = Some(generation);
                     self.enqueue(Task::Hello { seat, generation });
                 }

@@ -439,7 +439,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-2` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_2` | any time | 90% of 5 hours, 90% of the week |
 | `claude-3` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_3` | any time | none: until it refuses |
 | `claude-4` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_4` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week; from Sunday 17:00 until its week resets on Monday at 09:00 UTC, 80% of 5 hours, all of the week and its sessions' last hours (`late_week`) |
+| `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week; from Sunday 17:00 until its week resets on Monday at 09:00 UTC, 80% of 5 hours, 90% of the week and its sessions' last hours up to 90% (`late_week`); never past 90% of either (`hard_cap`) |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1, on three lanes (since 2026-10-27) | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
@@ -528,6 +528,8 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
     many (Muse has four, on one login, and claude-8 three): each run takes its own reading before
     it starts and watches it during every call, so two of them pass a cap by at most one
     reading's worth.
+  - **A hard cap** (`hard_cap`, below) is the one cap nothing lifts or raises, and a run going on
+    stops a point under it, so even the call it stops ends at it at most.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
     last reading had nearly full (85% or more), else an hour. A failed agy or Muse call whose
@@ -543,12 +545,18 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
   (`work.Worker.LastHour`), then under the new session's cap. The weekly cap still holds.
   The status issue says "cap 100% now (its last hour)", and a capped account's "starts again"
   time is its last hour's start when that comes before its reset.
-- `late_week` (`{"from": "Sun 17:00", "seven_day": 1.0, "five_hour": 0.8, "last_hour": true}`,
+- `late_week` (`{"from": "Sun 17:00", "seven_day": 0.9, "five_hour": 0.8, "last_hour": true}`,
   claude-5's): from that weekday and time in the bot's time zone until the week resets, the weekly
   cap is `seven_day`, the 5-hour one `five_hour`, and with `last_hour` a session's last hour lifts
-  that (as `last_hour: true` does, there alone). It holds only while the reset is at most a day
-  after its start (`LateWeekSpan`; claude-5's is ten hours), so a week whose reset moved never
-  has its caps raised for days.
+  that (as `last_hour: true` does, there alone; claude-5's to its 90% `hard_cap`). It holds only
+  while the reset is at most a day after its start (`LateWeekSpan`; claude-5's is ten hours), so a
+  week whose reset moved never has its caps raised for days.
+- `hard_cap` (`0.9`, claude-5's): a share no cap on either window goes past, whatever `late_week`
+  or a last hour would make it (a lifted 5-hour cap goes up to it, not to 100%), and a window with
+  no cap of its own is held to it too. A run going on stops a point under it
+  (`providers.HardCapMargin`), since a call the cap stops can end a point past where it stopped,
+  so no call takes the reading past the hard cap. It needs a `five_hour` or `seven_day` cap in
+  `limits`, since only those are watched during a call.
 - `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
   nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
 - `roles`: what it may do (`plan`, `build`, `fix`, `revise`, `review`, `suggest`).

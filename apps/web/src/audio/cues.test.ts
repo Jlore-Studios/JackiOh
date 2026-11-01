@@ -254,6 +254,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
   // Issue #1855 (R1855000).
   boardReplaced: { type: "boardReplaced", player: "p1" },
+  rolled: { type: "rolled", player: "p1", instanceId: "c4", defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }, { faces: [2, 1], kept: 1 }] },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -356,6 +357,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   starscapeTravelled: "whoosh",
   held: "poof",
   boardReplaced: "whoosh",
+  rolled: "chaosRoll",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -399,6 +401,8 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "held",
   // R1855000: a board replacement's whoosh, whatever the seat.
   "boardReplaced",
+  // R2652001: a batch of coins or dice spins, whatever it rolled.
+  "rolled",
   "countered",
   "stolen",
   "unlocked",
@@ -718,6 +722,13 @@ describe("R203: audio reveals no more than the screen", () => {
 
   it("R203 (B20) a trapFired carrying the sentinel gives the sting alone", () => {
     expect(shape(trapFired(HIDDEN_DEF_ID, "p2"))).toEqual([sfx("trapSting")]);
+  });
+
+  it("R2657001 a Field Trap firing again gives an activation's shimmer, with no sting and no line, on either seat", () => {
+    const again = (controller: PlayerId): GameEvent => ({ ...trapFired(FIELD_TRAP, controller), again: true } as GameEvent);
+    expect(shape(again("p1"))).toEqual([sfx("spell")]);
+    expect(shape(again("p2"))).toEqual([sfx("spell")]);
+    expect(voices(again("p1"))).toEqual([]);
   });
 
   it("R203 (B20) the sentinel never speaks, even from a table that has an entry under that name", () => {

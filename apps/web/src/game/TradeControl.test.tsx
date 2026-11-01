@@ -3,11 +3,15 @@
 // whose view carries a `tradeReason`, puts the bar on it with the price and the Trades left the view
 // gives; it sends the listed `trade` and nothing else (CLAUDE.md rule 7).
 
+import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
+import { CardActions } from "../duos/CardActions.tsx";
+import { duosTestid } from "../duos/testids.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
 import { handHintsTestid } from "./HandHints.tsx";
@@ -25,7 +29,7 @@ function holding(over: { left?: number; reason?: string; trades?: boolean } = {}
   return baseView({
     you: emptySide("p1", {
       hand: [
-        card({ instanceId: "h1", defId: "meditative-053", cost: 1, ...(reason === undefined ? {} : { tradeReason: reason }) }),
+        card({ instanceId: "h1", defId: "meditative-053", cost: 1, tradable: true, ...(reason === undefined ? {} : { tradeReason: reason }) }),
         card({ instanceId: "h2", defId: "core-005", cost: 1 }),
       ],
     }),
@@ -53,6 +57,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetLocaleForTests();
   vi.useRealTimers();
 });
 
@@ -60,7 +65,6 @@ describe("R1838000 the Trade offer is the view's and legal's", () => {
   it("R1838000 lists the hand cards legal lets trade, and the reasons the view gives the others", () => {
     const offer = tradeOfferFor(holding(), [TRADE_H1, END_TURN]);
     expect(offer).not.toBeNull();
-    expect(offer?.cost).toBe(0);
     expect(offer?.left).toBe(1);
     expect(offer === null ? false : offersTrade(offer, "h1")).toBe(true);
     expect(offer === null ? true : offersTrade(offer, "h2")).toBe(false);
@@ -80,9 +84,46 @@ describe("R1838000 the Trade bar on a 1v1 board", () => {
     const control = screen.getByTestId(testid.trade("h1")) as HTMLButtonElement;
     expect(control.disabled).toBe(false);
     expect(control.textContent).toContain("Trade");
-    expect(control.textContent).toContain("0 mana · 1 left");
+    expect(control.textContent).toContain("1 Trades left");
+    expect(control.textContent).not.toContain("mana");
     fireEvent.click(control);
     expect(onAction).toHaveBeenCalledWith(TRADE_H1);
+  });
+
+  it("shows Trades left in zh-CN and neither mana nor 法力", async () => {
+    await setLocale("zh-CN");
+    renderGame(holding(), [TRADE_H1, END_TURN]);
+    pointAt("h1");
+    const control = screen.getByTestId(testid.trade("h1")) as HTMLButtonElement;
+    expect(control.textContent).toContain("交易");
+    expect(control.textContent).toContain("剩余 1 次");
+    expect(control.textContent).not.toContain("mana");
+    expect(control.textContent).not.toContain("法力");
+  });
+
+  it("the Duos pass control still shows its mana cost", () => {
+    function DuosHost() {
+      const [container, setContainer] = useState<HTMLDivElement | null>(null);
+      return (
+        <div ref={setContainer}>
+          <div data-testid={testid.handCard("h1")} />
+          <CardActions
+            container={container}
+            view={holding()}
+            duel={0}
+            enabled={true}
+            pass={{ legal: new Set(["h1"]), cost: 1, left: 1 }}
+            onPass={vi.fn()}
+            onPing={vi.fn()}
+            markers={[]}
+          />
+        </div>
+      );
+    }
+    render(<DuosHost />);
+    pointAt("h1");
+    const passButton = screen.getByTestId(duosTestid.pass);
+    expect(passButton.textContent).toContain("1 mana · 1 left");
   });
 
   it("R1838000 a card the engine refuses is greyed with its reason and sends nothing", () => {

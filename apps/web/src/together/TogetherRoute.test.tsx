@@ -196,6 +196,14 @@ function rowOf(friend: PlayerRef): HTMLElement {
   );
 }
 
+/** The incoming request's row (`INCOMING`, from Eve). */
+function incomingRequestRow(): HTMLElement {
+  return must(
+    screen.queryAllByTestId(togetherTestid.requestRow).find((row) => row.getAttribute("data-direction") === "incoming"),
+    "the incoming request's row",
+  );
+}
+
 /** A control the row offers: present, and neither disabled nor aria-disabled. */
 function offers(row: HTMLElement, testid: string): boolean {
   const control = within(row).queryByTestId(testid);
@@ -542,6 +550,45 @@ describe("B55 requests both ways and the blocked list", () => {
     for (const testid of [TESTID.challenge, TESTID.watch, TESTID.chatOpen]) {
       const offered = screen.queryAllByTestId(testid).filter((control) => !rowOf(ANN).contains(control));
       expect(offered, testid).toHaveLength(0);
+    }
+  });
+
+  it("#2684 a first press on an incoming request's Block sends nothing and asks, naming the sender", async () => {
+    const server = await renderPage();
+    fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.requestBlock));
+    await settle();
+    expect(server.to("POST", "/api/blocks")).toHaveLength(0);
+    const row = incomingRequestRow();
+    expect(within(row).getByRole("alertdialog")).toHaveTextContent(`Block ${EVE.username}? Their request goes, and neither of you can reach the other.`);
+    for (const testid of [togetherTestid.requestAccept, togetherTestid.requestDecline, togetherTestid.requestBlock]) {
+      expect(within(row).queryByTestId(testid), testid).toBeNull();
+    }
+  });
+
+  it("#2684 Block in the request's question sends one block of the sender", async () => {
+    const server = await renderPage();
+    fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.requestBlock));
+    fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.confirm));
+    await waitFor(() => {
+      expect(server.to("POST", "/api/blocks")).toHaveLength(1);
+    }, SLOW);
+    expect(server.to("POST", "/api/blocks")[0]?.body).toEqual({ profileId: EVE.profileId });
+    await settle();
+    expect(server.to("POST", "/api/blocks")).toHaveLength(1);
+  });
+
+  it("#2684 Keep in the request's question sends nothing and puts back Accept, Decline and Block", async () => {
+    const server = await renderPage();
+    fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.requestBlock));
+    fireEvent.click(within(incomingRequestRow()).getByTestId(togetherTestid.keep));
+    await settle();
+    expect(server.to("POST", "/api/blocks")).toHaveLength(0);
+    expect(server.to("POST", "/api/friends/requests/rq-in/accept")).toHaveLength(0);
+    expect(server.to("POST", "/api/friends/requests/rq-in/decline")).toHaveLength(0);
+    const row = incomingRequestRow();
+    expect(within(row).queryByRole("alertdialog")).toBeNull();
+    for (const testid of [togetherTestid.requestAccept, togetherTestid.requestDecline, togetherTestid.requestBlock]) {
+      expect(offers(row, testid), testid).toBe(true);
     }
   });
 });
@@ -979,5 +1026,19 @@ describe("R2094000 a co-op link opens Play together filled", () => {
     await waitFor(() => {
       expect(screen.getByTestId("coop-join-submit")).toHaveFocus();
     }, SLOW);
+  });
+});
+
+describe("R2615000 watching has no switch", () => {
+  it("R2615000 the Watching panel says friends may always watch and how to stop one, and offers no switch", async () => {
+    const server = await renderPage();
+    const panel = must(screen.getByRole("heading", { name: "Watching" }).closest("section"), "the Watching panel");
+    expect(within(panel).getByTestId(togetherTestid.watchingNote)).toHaveTextContent(
+      "Your friends can always watch your online games, a few seconds behind. To stop someone watching, remove them as a friend or block them.",
+    );
+    expect(within(panel).queryByRole("checkbox")).toBeNull();
+    expect(within(panel).queryByRole("switch")).toBeNull();
+    // Nothing on the page reads or writes a watching setting.
+    expect(server.calls.some((call) => call.path === "/api/settings")).toBe(false);
   });
 });

@@ -38,12 +38,11 @@
 // R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line in
 // place of the five, its other tags after it; its tags themselves are unchanged.
 //
-// R1177001: a token says so on every face. Its type line reads "Token Unit", "Token Spell" (衍生物单位
+// R1177001: a token says so on its full face. Its type line reads "Token Unit", "Token Spell" (衍生物单位
 // on a Chinese face), so no crowded tag row can cut the word, and the tag row prints no Token chip.
-// Where the type line hides (a face under FACE_TEXT_MIN_HEIGHT_PX, a full-art face) the face wears
-// a token mark instead (`.cf-token`, TokenMark), which the board minion wears too (MinionFace.tsx).
-// A token that prints a rarity (R503) keeps that rarity's frame and gem beside the label. Glitch
-// stays blank (R674): its every word is corrupted, so it wears neither.
+// R2647000: where the type line hides (a face under FACE_TEXT_MIN_HEIGHT_PX, a full-art face) and on
+// the board minion nothing marks it, since it rarely matters in combat: the hover preview's full face
+// says it. A token that prints a rarity (R503) keeps that rarity's frame and gem. Glitch stays blank (R674).
 //
 // Issue #814: a Summit face given its Ascent level prints its header and only the next Ascent
 // line (shortText.ts). Issue #1017: a face whose text runs past the measured limit prints a short
@@ -57,13 +56,24 @@
 // quests, their rewards and its auras. A staged face prints less than its whole text, which stands
 // on the left of its hover preview, every stage in it, as a short form's does.
 //
-// R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
-// words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
-// the hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's board (R1108000).
+// R1017001: a full-art card (fullArt.ts; R2655001: one the cosmetics registry has a full art of, and
+// R2655002 a token listed under one) prints its art across the whole full face and no words
+// (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in the
+// hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial
+// lesson's board (R1108000). R2655000: the face wears the tier its pick names (`data-full-art-tier`):
+// an Epic is the still face; a Legendary is animated (`cf-full-art--animated`): its art drifts in its
+// crop and a light sweeps over it (`.cf-full-art-sweep`); a Mythic moves so too and signs the card's
+// name across the art (`cf-full-art--signed`, FullArtSignature.tsx). R2655003: the motion runs only
+// while Animated foil is on (`data-full-art-motion`) and inside cosmetics.css's motion gate, by
+// transform and opacity, and takes no foil's slot.
 //
 // R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, a foil over
 // its art, a finish and a border, each on its own attribute apart from the rarity foil
 // (cosmetics.ts, cosmetics.css). Every other face, and a face wearing the defaults, carries none.
+//
+// R2521009: a Resource's full face prints what it sells for on the face shown, "Credits: 2–5"
+// (`.cf-text-credits`, the model's `credits`), as a line under its text, in hand, in the inspect
+// views, the Almanac and the deck builder alike, since each draws this face.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -79,8 +89,9 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { showsFullArt, useFullArt } from "./fullArt.ts";
-import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
+import { showsFullArt, useFullArtTier } from "./fullArt.ts";
+import { FullArtSignature } from "./FullArtSignature.tsx";
+import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -151,14 +162,8 @@ export function tuningLine(face: FaceModel): string {
   ].join(" ");
 }
 
-/** R1177001: the word a token's type line and mark print. */
+/** R1177001: the word a token's type line prints. */
 export const TOKEN_WORD = "Token";
-
-/** R1177001: the token mark's one letter, where the foot has no room for the word (cards.css). */
-export const TOKEN_GLYPH = "T";
-
-/** R1177001: the token mark's one character on a Chinese face, the word's first. */
-const CHINESE_TOKEN_GLYPH = [...CHINESE_TERMS.tags.Token][0] ?? CHINESE_TERMS.tags.Token;
 
 /**
  * R1177001: the type line in the face's words: the card type, after "Token" on a token ("Token
@@ -170,24 +175,6 @@ export function typeLine(face: FaceModel): string {
     return face.token === true ? `${CHINESE_TERMS.tags.Token}${type}` : type;
   }
   return face.token === true ? `${TOKEN_WORD} ${face.type}` : face.type;
-}
-
-/**
- * R1177001: the token mark, where a face shows no type line (a small face, a full-art face, the
- * board minion): a slot at the foot holding a pill, the word or, where the slot is too narrow for
- * it, its one letter (cards.css), with "Token" as its name.
- */
-export function TokenMark({ face }: { face: FaceModel }): ReactElement | null {
-  if (face.token !== true || isGlitch(face.defId)) return null;
-  const chinese = face.chinese === true;
-  return (
-    <span className="cf-token" data-token="true" role="img" aria-label={t("Token")} title={t("Token")}>
-      <span className="cf-token-pill" aria-hidden="true">
-        <span className="cf-token-word">{chinese ? CHINESE_TERMS.tags.Token : TOKEN_WORD}</span>
-        <span className="cf-token-glyph">{chinese ? CHINESE_TOKEN_GLYPH : TOKEN_GLYPH}</span>
-      </span>
-    </span>
-  );
 }
 
 /** A frame tag in the face's words (R1301). */
@@ -202,7 +189,7 @@ function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
  */
 function printedText(face: FaceModel, text: string): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${text}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${text}${values}`, creditsLine(face), gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
 /** What a face's rules box prints (issues #814, #1017). */
@@ -327,8 +314,10 @@ export function hasCrest(face: FaceModel): boolean {
 export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
-  // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides.
-  const fullArtOn = useFullArt(face.defId, worn);
+  // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides;
+  // R2655000: at the tier its pick names.
+  const fullArtTier = useFullArtTier(face.defId, worn);
+  const fullArtOn = fullArtTier !== null;
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -361,12 +350,15 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
-  // R1017001: a hero portrait's card fills its full face with its art, and prints no words.
+  // R1017001: a full-art card fills its full face with its art, and prints no words.
   const fullArt = full && showsFullArt(face, fullArtOn);
+  // R2655000: a Legendary or Mythic full art moves, and a Mythic signs the card's name.
+  const tier = fullArt ? fullArtTier : null;
+  const moving = tier === "Legendary" || tier === "Mythic";
 
   return (
     <span
-      className={join("cf", `cf--${layout}`, className)}
+      className={join("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", tier === "Mythic" && "cf-full-art--signed")}
       data-layout={layout}
       data-card-type={face.type}
       data-rarity={rarity ?? undefined}
@@ -380,6 +372,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      data-full-art-tier={tier ?? undefined}
+      data-full-art-motion={moving ? (settings.animatedFoil ? "animated" : "static") : undefined}
       {...cosmetics}
       style={scales}
     >
@@ -416,11 +410,14 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               starship={face.inPlay ? face.starship : null}
             />
           )}
+          {moving && <span className="cf-full-art-sweep" aria-hidden="true" />}
         </span>
 
         <span className="card-name" ref={nameRef}>
           {face.name}
         </span>
+
+        {tier === "Mythic" && <FullArtSignature name={face.englishName ?? face.name} />}
 
         {hasRarityGem(rarity) && (
           <span className="cf-gem" data-rarity={rarity ?? undefined}>
@@ -433,8 +430,6 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
         <CardStates face={face} />
 
         {!fullArt && <span className="card-type">{glitch ? GLITCH_WORDS.type : typeLine(face)}</span>}
-
-        <TokenMark face={face} />
 
         {full && !fullArt && (
           <span
@@ -457,6 +452,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
                   {...(words.tuned === undefined ? {} : { tuned: words.tuned })}
                   chinese={face.chinese === true}
                 />
+              </span>
+            )}
+            {face.credits != null && (
+              <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>
+                {creditsLine(face)}
               </span>
             )}
             {face.gained.length > 0 && (

@@ -97,7 +97,7 @@ pub fn yuan_price(def: &CardDef, radiant: bool) -> i32 {
 
 /// Whether `player`'s hand has room for one more card (§2.4, R1143's hand size).
 fn hand_has_room(state: &GameState, player: PlayerId) -> bool {
-    (state.players[player].hand.len() as i32) < crate::query::hand_cap_of(state, player)
+    crate::query::room_in(state, player, crate::zones::OffFieldZone::Hand) > 0
 }
 
 /// R1000, R1001, R831002: the market's options for `player`, in this order: for each lot (distinct

@@ -9,6 +9,7 @@
 //! goes in the file its name falls in.
 
 pub mod activate;
+pub mod activation_spend_use;
 pub mod adjacency_aura;
 pub mod after_attack;
 pub mod after_attacked;
@@ -27,6 +28,7 @@ pub mod auto_end_turn;
 pub mod autopilot;
 pub mod backrow_death;
 pub mod backrow_piles;
+pub mod balance_2657;
 pub mod blueprint;
 pub mod board_history;
 pub mod brittle;
@@ -52,7 +54,6 @@ pub mod config;
 pub mod control_change;
 pub mod control_change_property;
 pub mod copied_text;
-pub mod core_only;
 pub mod core_patches;
 pub mod cost_rules;
 pub mod counter_warning;
@@ -62,6 +63,7 @@ pub mod crater;
 pub mod credit_line;
 pub mod custom;
 pub mod damage;
+pub mod damage_odds;
 pub mod damage_pipeline;
 pub mod death_pause;
 pub mod deck_bottom;
@@ -138,6 +140,7 @@ pub mod extra_turns;
 pub mod face_down_text;
 pub mod faces;
 pub mod feng_shui;
+pub mod tutorial_cards;
 // A fixture only the other binary's modules use is dead code in this one.
 #[allow(dead_code)]
 pub mod fixtures;
@@ -176,6 +179,7 @@ pub mod library_copies;
 pub mod mana;
 pub mod mana_before_play;
 pub mod marketplace;
+pub mod may_attack_again_sick;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod modifiers;

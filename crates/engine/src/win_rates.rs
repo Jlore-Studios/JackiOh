@@ -10,7 +10,8 @@
 //! not here). The table changes only with a card patch, so a game's seed and log replay on the
 //! build that played it (MD-D1, MD-D2). A replay folding under an earlier shipped catalog reads the
 //! table that version shipped with (R1266000). Meditative+ #2 NA Tech also reads the other end, the
-//! trailer (R1183000), with the same eligibility and tie-breaks.
+//! trailer (R1183000), with the same eligibility and tie-breaks. A game that holds its pools
+//! (R2201001) ranks without Legendary and Mythic cards (R2386001).
 
 use serde::{Deserialize, Serialize};
 
@@ -87,6 +88,10 @@ fn ranked_end(exclude_def_ids: &[&str], end: RateEnd) -> Option<String> {
             continue;
         };
         if !crate::catalog::deckable(def) {
+            continue;
+        }
+        // R2386001: a game that holds its pools ranks without the cards a held pool leaves out.
+        if crate::catalog::held_out(def) {
             continue;
         }
         let takes = match best {

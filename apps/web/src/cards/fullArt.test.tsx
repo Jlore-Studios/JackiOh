@@ -1,6 +1,7 @@
-// R1017001: the hero portraits' cards print full art and no words, as Hearthstone's Signature cards
-// do; no other card does, a full face is the only layout that does, and the Full-art cards setting
-// turns it off. The pixels are cards.css's ("full art"), seen in the Almanac.
+// R1017001: the full-art cards print full art and no words, as Hearthstone's Signature cards do; no
+// other card does, a full face is the only layout that does, and the Full-art cards setting turns it
+// off. R2655001: they are the cards the cosmetics registry has a full art of, the hero portraits'
+// six among them. The pixels are cards.css's ("full art"), seen in the Almanac.
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -9,7 +10,7 @@ import { CATALOG } from "@jackioh/cards";
 import { PORTRAITS } from "@jackioh/shared";
 
 import { CardFace, faceText } from "./CardFace.tsx";
-import { FULL_ART_NAMES, FullArtAllowed, isFullArt, showsFullArt } from "./fullArt.ts";
+import { FULL_ART_CARDS, FULL_ARTS_OF_CARD, FULL_ART_TIERS, FullArtAllowed, isFullArtCard, showsFullArt } from "./fullArt.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { INSPECT_EXTENDED, INSPECT_FACE } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
@@ -28,8 +29,34 @@ function faceOf(id: string, radiant: boolean, layout: "full" | "compact" = "full
   return cf;
 }
 
-// R2195001: a Training Grounds snapshot shares its Core card's name, not its full art.
-const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name) && def.snapshotOf === undefined);
+/** R2655001: every card the registry has a full art of. */
+const HEROES = DEFS.filter((def) => FULL_ART_CARDS.has(def.id));
+const HERO_NAMES: ReadonlySet<string> = new Set(HEROES.map((def) => def.name));
+
+/** R2655001: the six hero portraits' cards (R1017001), then the fifteen #2655 adds. */
+const FULL_ART_IDS = [
+  "core-001",
+  "core-004",
+  "core-008",
+  "core-011",
+  "core-012",
+  "core-013",
+  "classicplus-019",
+  "core-018",
+  "classicplus-012",
+  "core-086",
+  "meditative-021",
+  "classicplus-046",
+  "stinkyscape-154",
+  "classicplus-062",
+  "classic-090",
+  "classicplus-048",
+  "meditative-087",
+  "classicplus-069",
+  "traininggrounds-040",
+  "classicplus-026",
+  "classicplus-075",
+];
 
 afterEach(() => {
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
@@ -37,12 +64,16 @@ afterEach(() => {
 });
 
 describe("R1017001 full-art faces", () => {
-  it("R1017001 the full-art cards are the hero portraits' cards, each one in the catalog", () => {
+  it("R1017001 R2655001 the full-art cards are the registry's twenty-one, the hero portraits' cards among them, each in the catalog with three tiers", () => {
+    // The six portrait cards keep theirs (R1017001), and the list is the registry's, by card id.
     const names = Object.values(PORTRAITS).map((portrait) => portrait.cardName);
-    expect([...FULL_ART_NAMES].sort()).toEqual([...new Set(names)].sort());
-    for (const name of names) expect(DEFS.some((def) => def.name === name), name).toBe(true);
-    expect(HEROES).toHaveLength(FULL_ART_NAMES.size);
-    expect(isFullArt("Reach the Summit")).toBe(false);
+    for (const name of names) expect(HERO_NAMES.has(name), name).toBe(true);
+    expect([...FULL_ART_CARDS].sort()).toEqual([...FULL_ART_IDS].sort());
+    expect(HEROES).toHaveLength(FULL_ART_CARDS.size);
+    for (const id of FULL_ART_IDS) expect([...(FULL_ARTS_OF_CARD.get(id)?.keys() ?? [])], id).toEqual(FULL_ART_TIERS);
+    const summit = DEFS.find((def) => def.name === "Reach the Summit");
+    expect(summit).toBeDefined();
+    expect(isFullArtCard(summit?.id ?? "")).toBe(false);
   });
 
   it("R1017001 a hero's full face, base or Radiant, is its art, cost, name, rarity and a Unit's stats, and no words", () => {
@@ -66,7 +97,7 @@ describe("R1017001 full-art faces", () => {
 
   it("R1017001 other cards keep their windows and their words", () => {
     const others = (["Unit", "Spell", "Field Spell", "Trap", "Field Trap"] as const).flatMap((type) =>
-      DEFS.filter((def) => def.type === type && !FULL_ART_NAMES.has(def.name)).slice(0, 2),
+      DEFS.filter((def) => def.type === type && !isFullArtCard(def.id)).slice(0, 2),
     );
     for (const def of others) {
       const cf = faceOf(def.id, false);
@@ -77,10 +108,10 @@ describe("R1017001 full-art faces", () => {
     }
   });
 
-  it("R2195001 a Training Grounds snapshot of a hero's card prints its normal face", () => {
-    const snapshots = DEFS.filter((def) => def.snapshotOf !== undefined && FULL_ART_NAMES.has(def.name));
-    expect(snapshots.length).toBeGreaterThan(0);
-    for (const def of snapshots) {
+  it("R2195001 R2511000 a Training Grounds Legacy card of a hero's card prints its normal face", () => {
+    const legacy = DEFS.filter((def) => def.tags.includes("Legacy") && HERO_NAMES.has(def.name.replace(/^Legacy: /, "")));
+    expect(legacy.length).toBeGreaterThan(0);
+    for (const def of legacy) {
       const cf = faceOf(def.id, false);
       expect(cf.hasAttribute("data-full-art"), def.id).toBe(false);
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();

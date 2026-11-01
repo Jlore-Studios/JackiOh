@@ -154,8 +154,6 @@ pub enum SocketErrorCode {
     Forbidden,
     /// §9.8: the per-match action rate limit.
     RateLimited,
-    /// A protocol message this endpoint does not serve.
-    Unsupported,
     /// The match already has a result; no further action will be applied.
     MatchOver,
     Internal,
@@ -366,8 +364,8 @@ pub fn prompt_for_opponent(pending_for: PlayerId, deadline: Option<i64>) -> Serv
 /// `voided`, and the close tells the client the match is gone rather than to reconnect.
 pub const MATCH_VOIDED_CLOSE_REASON: &str = "voided";
 
-/// TS `JSON.stringify(message)`.
-pub fn encode(message: &ServerMessage) -> String {
+/// TS `JSON.stringify(message)`: a frame's JSON text, the match socket's and the co-op one's.
+pub fn encode<M: Serialize>(message: &M) -> String {
     serde_json::to_string(message).unwrap_or_else(|error| {
         // Every field of every frame is plain data; this cannot fail. Answer a frame the client
         // can read rather than an empty one.

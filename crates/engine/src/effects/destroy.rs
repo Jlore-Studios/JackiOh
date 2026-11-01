@@ -50,7 +50,7 @@ pub struct DestroyArgs {
 }
 
 /// §6.3 Destroy: mark the card and stop. §4.5 step 1 collects it at the next state check, moves it
-/// to its owner's graveyard (R12), fires its Death trigger and lets Indestructible ignore the mark
+/// to its controller's graveyard as theirs (R2618000), fires its Death trigger and lets Indestructible ignore the mark
 /// (R46). Nothing here moves a card, so several destroys in one effect die together (R59).
 pub fn destroy(args: DestroyArgs) -> Effect {
     Effect::new("destroy", move |ctx| {

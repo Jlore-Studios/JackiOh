@@ -330,7 +330,9 @@ mod r68_10_3_a_trap_answers_a_delayed_effect_before_the_next_delayed_effect_runs
         // due at the start of p1's next turn, in that order (R68). p2's fixture trap answers the
         // opponent taking one of p2's permanents by returning all of p2's units to p2's hand.
         let mut s = scenario(json!({
-            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "library": [RENO, RENO, RENO] },
+            // A (0) Spell keeps p1's turn open after the plays (R82), as the Fanatics' own switch to
+            // Defense Position did until Can't Defend (R2657000).
+            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO, "core-010"], "library": [RENO, RENO, RENO] },
             "p2": { "field": [VANILLA, TEMPO_TIMMY], "hand": [RENO], "library": [RENO, RENO, RENO] },
         }));
         fixture(
@@ -457,7 +459,8 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
         // p2's radiant Suppressive Aura shrinks p2's enemies by -2/-2. p1's two K-Pop Fanatics take p2's
         // Tempo Timmy and then p2's Mr. Vanilla at the start of p1's next turn, in that order (R68).
         // Timmy (3/3 with 1 damage) stolen onto p1's side is at 0 health there and dies in the check
-        // after the first steal. p2's fixture trap answers one of p2's own units dying by returning p2's units to hand.
+        // after the first steal. p2's fixture trap answers a Tempo Timmy dying by returning p2's units to hand: it
+        // names it by definition, since Timmy dies on p1's side as p1's card (R2618000).
         let mut s = scenario(json!({
             // Two K-Pop Fanatics at (2) each (patch v0.3.10) and Reno's (3).
             "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 7, "library": [RENO, RENO, RENO] },
@@ -478,7 +481,8 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
                         vec![effects::bounce_all(json_as(json!({ "side": "self" })))]
                     })
                     .with_when(|ctx, event| {
-                        matches!(event, GameEvent::Destroyed { owner, .. } if *owner == ctx.controller)
+                        matches!(event, GameEvent::Destroyed { def_id, .. } if def_id == TEMPO_TIMMY)
+                            && ctx.controller == PlayerId::P2
                     }),
                 ],
                 ..Script::default()

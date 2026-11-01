@@ -803,44 +803,75 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         );
     }
 
-    /// R2204001: a pool keeps a Core card and its Training Grounds snapshot both, but one offer shows
-    /// at most one of the pair: the shuffle draws as before and the other of a pair is passed over.
-    #[test]
-    fn r2204001_one_discover_never_offers_both_cards_of_a_snapshot_pair() {
-        let snapshot = def(
-            "fruit-a-snapshot",
+    /// `fruit_a`'s Legacy card, naming it (`snapshotOf`) as the catalogs shipped from v0.5.5 to
+    /// v0.5.7 named their snapshots (`marked`), or not, as the build's catalog names none.
+    fn legacy_of_fruit_a(marked: bool) -> CardDef {
+        let mut legacy = def(
+            "fruit-a-legacy",
             "Unit",
             1307,
             json!({
                 "id": "traininggrounds-fruit-a",
                 "set": "Training Grounds",
-                "name": fruit_a().name,
-                "tags": ["Fruit"],
-                "snapshotOf": fruit_a().id,
+                "name": format!("Legacy: {}", fruit_a().name),
+                "tags": ["Fruit", "Legacy"],
                 "base": { "attack": 1, "health": 1, "keywords": [], "text": "fruit-a" },
                 "radiant": { "attack": 2, "health": 2, "keywords": [], "text": "fruit-a" },
             }),
         );
+        legacy.snapshot_of = marked.then(|| fruit_a().id);
+        legacy
+    }
+
+    /// One Discover from the catalog over the Fruit pool with `legacy` in it, under seed `n`.
+    fn fruit_offer(legacy: &CardDef, n: usize) -> Vec<String> {
+        let mut state = game(&format!("r2204001-{n}"));
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(legacy.id.clone(), legacy.clone());
+        register_catalog(catalog);
+        let self_card = put(
+            &mut state,
+            &fruit_generator().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        run(
+            &mut state,
+            Some(&self_card),
+            vec![discover_from_catalog(json_as(
+                json!({ "step": "chosen", "query": { "tags": ["Fruit"] } }),
+            ))],
+        );
+        mode_options(&state)
+    }
+
+    /// R2511001: a Legacy card is its own card, so the pool keeps it beside its Core card and one
+    /// offer may show both: four in the pool, three offered, both together on some seeds.
+    #[test]
+    fn r2511001_one_discover_may_offer_a_core_card_and_its_legacy_card_both() {
+        let legacy = legacy_of_fruit_a(false);
+        let mut both_seen = false;
+        for n in 0..40 {
+            let offered = fruit_offer(&legacy, n);
+            assert_eq!(offered.len(), 3, "seed {n}: {offered:?}");
+            both_seen |= offered.contains(&fruit_a().id) && offered.contains(&legacy.id);
+        }
+        assert!(
+            both_seen,
+            "an offer shows a Core card and its Legacy card together"
+        );
+    }
+
+    /// R2204001, kept for replays by R2511001: under a catalog that names the Core card a snapshot
+    /// copied (`snapshotOf`, those shipped from v0.5.5 to v0.5.7, which a replay of their games
+    /// folds under, R767000), the pool keeps both but one offer shows at most one of the pair: the
+    /// shuffle draws as before and the other of a pair is passed over.
+    #[test]
+    fn r2204001_r2511001_under_a_catalog_that_pairs_them_one_discover_never_offers_both() {
+        let snapshot = legacy_of_fruit_a(true);
         let (mut core_seen, mut snapshot_seen) = (false, false);
         for n in 0..40 {
-            let mut state = game(&format!("r2204001-{n}"));
-            let mut catalog = registered_catalog().clone();
-            catalog.insert(snapshot.id.clone(), snapshot.clone());
-            register_catalog(catalog);
-            let self_card = put(
-                &mut state,
-                &fruit_generator().id,
-                slot(PlayerId::P1, Row::Units, 1),
-                json!({}),
-            );
-            run(
-                &mut state,
-                Some(&self_card),
-                vec![discover_from_catalog(json_as(
-                    json!({ "step": "chosen", "query": { "tags": ["Fruit"] } }),
-                ))],
-            );
-            let offered = mode_options(&state);
+            let offered = fruit_offer(&snapshot, n);
             // Four in the pool, three pairs: always three options, never both of the pair.
             assert_eq!(offered.len(), 3, "seed {n}: {offered:?}");
             let core = offered.contains(&fruit_a().id);

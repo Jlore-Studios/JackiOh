@@ -3084,8 +3084,8 @@ impl Tx<'_> {
     /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match
     /// (their in-match flag) `viewer` may watch as the store judges it: the two are friends with
     /// neither blocking the other, the match is live, ranked or unranked, seats the friend and not
-    /// `viewer`, and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`)
-    /// is the actor's to judge.
+    /// `viewer` (no setting of the friend's refuses it, R2615000). In the order named. Room
+    /// (`SPECTATORS_PER_MATCH`) is the actor's to judge.
     pub async fn presence_watchable(
         &mut self,
         viewer: &str,
@@ -3094,25 +3094,13 @@ impl Tx<'_> {
         dispatch!(self, presence_watchable(viewer, profile_ids))
     }
 
-    // profiles (B46, B50)
+    // profiles (B46)
 
     /// The profile a client named by id, or `None`: `profiles_get_by_id` for an id that came off
     /// the wire, which may be no id at all (Postgres answers `None` for a text that is not a UUID
     /// rather than failing the cast).
     pub async fn profiles_find(&mut self, profile_id: &str) -> StoreResult<Option<Profile>> {
         dispatch!(self, profiles_find(profile_id))
-    }
-
-    /// B50: whether friends may watch `profile_id`'s live games, ranked or unranked: true unless
-    /// they turned it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile
-    /// holds.
-    pub async fn profiles_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
-        dispatch!(self, profiles_allows_spectators(profile_id))
-    }
-
-    /// B50: `PUT /api/settings`' `allowSpectators`. An unknown profile is an error.
-    pub async fn profiles_set_allow_spectators(&mut self, profile_id: &str, allow: bool) -> StoreResult<()> {
-        dispatch!(self, profiles_set_allow_spectators(profile_id, allow))
     }
 
     // challenges (B48, B49)
@@ -3244,8 +3232,9 @@ impl Tx<'_> {
 // ---- end Social ----
 // ---- Social: watching and shared replays (#939, #940) ----
 //
-// Migration 0038's `friendships`, `blocks`, `replay_shares` and `profiles.allow_spectators`, as
-// watching a friend's game (B50) and sharing a replay with one (B52) read and write them.
+// Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and
+// sharing a replay with one (B52) read and write them. Friends may always watch (R2615000): migration
+// 0073 drops 0038's watching setting from `profiles`.
 
 /// B52: one replay share (`public.replay_shares`): `sharer`, who held a seat in the finished match
 /// `match_id`, shares its replay with `friend`.

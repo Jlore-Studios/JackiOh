@@ -1,0 +1,381 @@
+{
+  "//": "Generated from the card scripts by crates/tools/tests/export_card_modes.rs (#2646). Do not edit: run cargo test -p jackioh-tools --test export_card_modes.",
+  "classic-020": {
+    "base": [
+      [
+        "deal damage",
+        "opponent discards",
+        "destroy a Unit at the start of your next turn"
+      ]
+    ],
+    "radiant": [
+      [
+        "deal damage",
+        "opponent discards",
+        "destroy all enemy Units at the start of your next turn"
+      ]
+    ]
+  },
+  "classic-081": {
+    "base": [
+      [
+        "heal",
+        "draw",
+        "reduce"
+      ]
+    ],
+    "radiant": [
+      [
+        "heal",
+        "draw",
+        "reduce"
+      ]
+    ]
+  },
+  "classicplus-007": {
+    "base": [
+      [
+        "defender",
+        "attacker"
+      ]
+    ],
+    "radiant": [
+      [
+        "defender",
+        "attacker"
+      ]
+    ]
+  },
+  "classicplus-034": {
+    "base": [
+      [
+        "endOfTurn",
+        "afterPlay"
+      ]
+    ]
+  },
+  "classicplus-035": {
+    "radiant": [
+      [
+        "your side",
+        "your opponent's side",
+        "both sides"
+      ]
+    ]
+  },
+  "classicplus-040": {
+    "base": [
+      [
+        "Military",
+        "Education",
+        "Culture",
+        "Healthcare"
+      ]
+    ],
+    "radiant": [
+      [
+        "Military",
+        "Education",
+        "Culture",
+        "Healthcare"
+      ]
+    ]
+  },
+  "classicplus-044": {
+    "radiant": [
+      [
+        "All permanents",
+        "Only your opponent's"
+      ]
+    ]
+  },
+  "classicplus-045": {
+    "radiant": [
+      [
+        "All permanents",
+        "Only your opponent's"
+      ]
+    ]
+  },
+  "classicplus-077": {
+    "radiant": [
+      [
+        "All cards",
+        "Only yours"
+      ]
+    ]
+  },
+  "core-017": {
+    "radiant": [
+      [
+        "bounce all units",
+        "bounce all enemy units",
+        "destroy all enemy units"
+      ]
+    ]
+  },
+  "core-024": {
+    "base": [
+      [
+        "damage",
+        "heal",
+        "mana"
+      ]
+    ],
+    "radiant": [
+      [
+        "damage",
+        "heal",
+        "mana"
+      ]
+    ]
+  },
+  "core-030": {
+    "base": [
+      [
+        "highest",
+        "lowest"
+      ]
+    ]
+  },
+  "core-048": {
+    "radiant": [
+      [
+        "enemy",
+        "all"
+      ]
+    ]
+  },
+  "core-087": {
+    "base": [
+      [
+        "health",
+        "board",
+        "library"
+      ]
+    ],
+    "radiant": [
+      [
+        "health",
+        "board",
+        "library"
+      ],
+      [
+        "gift",
+        "skip"
+      ]
+    ]
+  },
+  "core-088": {
+    "radiant": [
+      [
+        "enemy",
+        "all"
+      ]
+    ]
+  },
+  "meditative-020": {
+    "base": [
+      [
+        "health",
+        "graveyard",
+        "board"
+      ]
+    ],
+    "radiant": [
+      [
+        "health",
+        "graveyard",
+        "board"
+      ]
+    ]
+  },
+  "meditative-022": {
+    "base": [
+      [
+        "greed",
+        "attack",
+        "defend"
+      ]
+    ],
+    "radiant": [
+      [
+        "greed",
+        "attack",
+        "defend"
+      ]
+    ]
+  },
+  "meditative-022-1": {
+    "base": [
+      [
+        "greed",
+        "attack",
+        "defend"
+      ]
+    ],
+    "radiant": [
+      [
+        "greed",
+        "attack",
+        "defend"
+      ]
+    ]
+  },
+  "meditative-098": {
+    "base": [
+      [
+        "lane-1",
+        "lane-2",
+        "lane-3",
+        "lane-4",
+        "lane-5"
+      ]
+    ],
+    "radiant": [
+      [
+        "lane-1",
+        "lane-2",
+        "lane-3",
+        "lane-4",
+        "lane-5"
+      ]
+    ]
+  },
+  "meditativeplus-004": {
+    "base": [
+      [
+        "combat",
+        "supplies"
+      ]
+    ],
+    "radiant": [
+      [
+        "combat",
+        "supplies"
+      ]
+    ]
+  },
+  "meditativeplus-024": {
+    "base": [
+      [
+        "freeze",
+        "take",
+        "discover",
+        "copies"
+      ]
+    ]
+  },
+  "stinkyscape-002": {
+    "radiant": [
+      [
+        "give Indestructible",
+        "freeze only"
+      ]
+    ]
+  },
+  "stinkyscape-026": {
+    "base": [
+      [
+        "university",
+        "piece"
+      ]
+    ],
+    "radiant": [
+      [
+        "university",
+        "piece"
+      ]
+    ]
+  },
+  "stinkyscape-112": {
+    "base": [
+      [
+        "Accept the offer",
+        "Send in another application"
+      ]
+    ],
+    "radiant": [
+      [
+        "Accept the offer",
+        "Send in another application"
+      ]
+    ]
+  },
+  "stinkyscape-112-1": {
+    "base": [
+      [
+        "Payday",
+        "All in on red"
+      ]
+    ],
+    "radiant": [
+      [
+        "Payday",
+        "All in on red"
+      ]
+    ]
+  },
+  "stinkyscape-116": {
+    "base": [
+      [
+        "5 Credits",
+        "10 Credits",
+        "15 Credits"
+      ]
+    ],
+    "radiant": [
+      [
+        "5 Credits",
+        "10 Credits",
+        "15 Credits"
+      ]
+    ]
+  },
+  "stinkyscape-121": {
+    "base": [
+      [
+        "Core System",
+        "Secure System",
+        "Unsecure System",
+        "Wild System"
+      ]
+    ],
+    "radiant": [
+      [
+        "Core System",
+        "Secure System",
+        "Unsecure System",
+        "Wild System"
+      ]
+    ]
+  },
+  "stinkyscape-157": {
+    "radiant": [
+      [
+        "gain Brittle",
+        "Tribute this"
+      ]
+    ]
+  },
+  "stinkyscape-163": {
+    "base": [
+      [
+        "Vanguard Coalition",
+        "ETHICS",
+        "Golden Accord",
+        "Pegasus",
+        "Star-jumper Core"
+      ]
+    ],
+    "radiant": [
+      [
+        "Vanguard Coalition",
+        "ETHICS",
+        "Golden Accord",
+        "Pegasus",
+        "Star-jumper Core"
+      ]
+    ]
+  }
+}

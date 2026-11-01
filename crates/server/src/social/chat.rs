@@ -8,9 +8,9 @@
 //! - `POST /api/chat/:friendId` `{body}`: `201 {message}`. Only between friends neither side
 //!   blocked (else 404, the one answer for both). The body is trimmed; empty is 422 `empty`, more
 //!   than `CHAT_MAX_CHARS` characters 422 `too_long`; then each word the username filter would
-//!   refuse (R1433's two lists, folded as a name is folded) is masked with `*`, a star per
-//!   character, and the message is stored as masked. Past `CHAT_MESSAGES_PER_MINUTE` a minute, 429;
-//!   only a message that would be stored counts.
+//!   refuse (R1433's `is_blocked` itself, so look-alikes and digits read as in a name) is masked
+//!   with `*`, a star per character, and the message is stored as masked. Past
+//!   `CHAT_MESSAGES_PER_MINUTE` a minute, 429; only a message that would be stored counts.
 //! - `GET /api/chat/unread`: `{unread: {[friendId]: n}}`, each friend with unread messages to the
 //!   caller.
 //! - `POST /api/chat/messages/:id/report` `{reason}`: its recipient reports a message, once (a
@@ -22,7 +22,6 @@
 
 use std::sync::Arc;
 
-use caseless::default_case_fold_str;
 use serde::Serialize;
 use serde_json::{Value, json};
 use unicode_normalization::UnicodeNormalization;
@@ -38,6 +37,7 @@ use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS};
 use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError};
 use crate::social::friends::are_friends;
 use crate::social::{MS_PER_DAY, created, iso, no_content, not_found, param, refused};
+use crate::username::is_blocked;
 
 /// S7's `ChatMessage`: `from` and `to` are profile ids; `read` is whether its recipient has read it.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -250,86 +250,18 @@ pub async fn purge(app: &App) -> Result<i64, StoreError> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// The word filter (B53): R1433's lists, the ones a username is held to, read over a message's words
+// The word filter (B53): the usernames' filter (R1433), read over a message's words
 // ---------------------------------------------------------------------------------------------
-
-/// Words refused wherever they appear (`username/blocklist_anywhere.txt`).
-const BLOCKLIST_ANYWHERE: &str = include_str!("../username/blocklist_anywhere.txt");
-/// Words refused only as a whole word or a part of one (`username/blocklist_token.txt`).
-const BLOCKLIST_TOKEN: &str = include_str!("../username/blocklist_token.txt");
-
-/// One list's words: a lowercase word per line, `#` comments and blank lines skipped.
-fn words(list: &'static str) -> impl Iterator<Item = &'static str> {
-    list.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-}
 
 fn is_mark(ch: char) -> bool {
     ch.general_category_group() == GeneralCategoryGroup::Mark
 }
 
-/// R1433's common digit substitutions: the letter a digit stands for, if it stands for one.
-fn substitute(ch: char) -> Option<char> {
-    match ch {
-        '0' => Some('o'),
-        '1' => Some('i'),
-        '3' => Some('e'),
-        '4' => Some('a'),
-        '5' => Some('s'),
-        '7' => Some('t'),
-        _ => None,
-    }
-}
-
-/// R1433's folding before a match, as a username is folded: the full case fold, NFD with every
-/// combining mark dropped, underscores dropped, the substitution digits read as their letters.
-fn fold(text: &str) -> String {
-    default_case_fold_str(text)
-        .nfd()
-        .filter(|ch| !is_mark(*ch) && *ch != '_')
-        .map(|ch| substitute(ch).unwrap_or(ch))
-        .collect()
-}
-
-/// A word's parts as a username's tokens split: on `_` and where a lowercase letter meets an
-/// uppercase one (`BigAss` is `Big`, `Ass`), its substitution digits read as letters first.
-fn parts(word: &str) -> Vec<String> {
-    let read: String = word.chars().map(|ch| substitute(ch).unwrap_or(ch)).collect();
-    let mut out: Vec<String> = Vec::new();
-    let mut current = String::new();
-    let mut last_lower = false;
-    for ch in read.chars() {
-        if ch == '_' {
-            out.push(std::mem::take(&mut current));
-            last_lower = false;
-            continue;
-        }
-        if last_lower && ch.is_uppercase() {
-            out.push(std::mem::take(&mut current));
-        }
-        current.push(ch);
-        last_lower = ch.is_lowercase();
-    }
-    out.push(current);
-    out.retain(|part| !part.is_empty());
-    out
-}
-
-/// Whether the filter refuses this word: an anywhere-word inside it, or a token-word that is the
-/// whole of it or of one of its parts. A word with no letter is never matched, so a number's digits
-/// are never read as a word (`455` is not `ass`).
+/// Whether the filter refuses this word: the usernames' filter (R1433) over its NFKC form, look-alike
+/// letters and digits read back both ways as in a name. A word with no letter is never matched, so a
+/// number's digits are never read as a word (`455` is not `ass`).
 fn is_blocked_word(word: &str) -> bool {
-    if !word.chars().any(char::is_alphabetic) {
-        return false;
-    }
-    let folded = fold(word);
-    if words(BLOCKLIST_ANYWHERE).any(|blocked| folded.contains(blocked)) {
-        return true;
-    }
-    std::iter::once(folded)
-        .chain(parts(word).iter().map(|part| fold(part)))
-        .any(|token| words(BLOCKLIST_TOKEN).any(|blocked| token == blocked))
+    word.chars().any(char::is_alphabetic) && is_blocked(&word.nfkc().collect::<String>())
 }
 
 /// B53: the message with every word the filter refuses masked, a `*` per character, so its length
@@ -361,18 +293,35 @@ pub fn mask_blocked_words(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::username::normalize_username;
 
-    /// A word the token list holds, read off the list itself so the test names no word.
-    fn a_token_word() -> &'static str {
-        words(BLOCKLIST_TOKEN)
-            .next()
-            .expect("the token list holds a word")
+    /// The first word of one of the usernames' lists, read off the list itself so the test names
+    /// no word.
+    fn first_word(list: &'static str) -> &'static str {
+        list.lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && !line.starts_with('#'))
+            .expect("the list holds a word")
     }
 
+    /// A word the token list holds.
+    fn a_token_word() -> &'static str {
+        first_word(include_str!("../username/blocklist_token.txt"))
+    }
+
+    /// A word the anywhere list holds.
     fn an_anywhere_word() -> &'static str {
-        words(BLOCKLIST_ANYWHERE)
-            .next()
-            .expect("the anywhere list holds a word")
+        first_word(include_str!("../username/blocklist_anywhere.txt"))
+    }
+
+    /// `word` in the Latin small capitals a fancy-text tool writes (`ɴɪɢɢᴇʀ`), which NFKC and the
+    /// case fold leave alone.
+    fn small_capitals(word: &str) -> String {
+        const PLAIN: &str = "abcdefghijklmnopqrstuvwxyz";
+        const SMALL: &str = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘꞯʀꜱᴛᴜᴠᴡxʏᴢ";
+        word.chars()
+            .map(|ch| PLAIN.find(ch).and_then(|at| SMALL.chars().nth(at)).unwrap_or(ch))
+            .collect()
     }
 
     fn stars(word: &str) -> String {
@@ -436,9 +385,45 @@ mod tests {
     }
 
     #[test]
-    fn b53_splits_a_word_into_its_parts_as_a_username_is_split() {
-        assert_eq!(parts("BigWord"), vec!["Big", "Word"]);
-        assert_eq!(parts("my_word"), vec!["my", "word"]);
-        assert_eq!(parts("a55"), vec!["ass"]);
+    fn b53_masks_a_listed_word_in_small_capitals_as_a_username_refuses_it() {
+        for word in [a_token_word(), an_anywhere_word()] {
+            let fancy = small_capitals(word);
+            assert_ne!(fancy, word, "premise: the word is written in look-alikes");
+            assert!(
+                normalize_username(&fancy).is_err(),
+                "premise: the name is refused"
+            );
+            assert_eq!(
+                mask_blocked_words(&format!("gg {fancy}")),
+                format!("gg {}", stars(&fancy))
+            );
+        }
+    }
+
+    #[test]
+    fn b53_masks_a_listed_word_with_a_number_beside_it_as_a_username_refuses_it() {
+        let word = a_token_word();
+        for joined in [format!("{word}1"), format!("1{word}")] {
+            assert!(
+                normalize_username(&joined).is_err(),
+                "premise: {joined} is refused as a name"
+            );
+            assert_eq!(mask_blocked_words(&joined), stars(&joined));
+        }
+    }
+
+    #[test]
+    fn b53_masks_a_word_exactly_when_the_username_filter_refuses_it() {
+        for word in [
+            "Scunthorpe",
+            "Cassandra",
+            "Assassin",
+            "Tit4n",
+            "Bob455",
+            "Bob_455",
+        ] {
+            let masked = mask_blocked_words(word) != word;
+            assert_eq!(masked, normalize_username(word).is_err(), "{word}");
+        }
     }
 }

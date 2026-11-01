@@ -64,74 +64,6 @@ func TestPullOfAndClosedByAsPython(t *testing.T) {
 	}
 }
 
-func TestLeftAloneAsPython(t *testing.T) {
-	for _, c := range python(t, "left_alone") {
-		row := pyjson.List(c)
-		thread := pyjson.New("number", 9, "title", row[0], "labels", []any{})
-		if got := LeftAlone_(thread); got != row[1] {
-			t.Errorf("LeftAlone_(%q) = %v; Python %v", row[0], got, row[1])
-		}
-	}
-	if !LeftAlone_(pyjson.New("number", 148, "title", "Anything")) {
-		t.Error("the status issue is left alone")
-	}
-	merging := pyjson.New("number", 9, "title", "Anything", "labels", []any{pyjson.New("name", "production merge")})
-	if !LeftAlone_(merging) {
-		t.Error("a production merge thread is left alone")
-	}
-}
-
-func newThread(number int, title, state string, pull bool, labels ...string) *pyjson.Object {
-	names := []any{}
-	for _, l := range labels {
-		names = append(names, pyjson.New("name", l))
-	}
-	o := pyjson.New("number", number, "title", title, "state", state, "labels", names)
-	if pull {
-		o.Set("pull_request", pyjson.New("url", "x"))
-	}
-	return o
-}
-
-// test_titles.py's test_plans_the_new_titles_and_the_open_issues_kind_labels.
-func TestPlanRetcon(t *testing.T) {
-	threads := []*pyjson.Object{
-		newThread(7, "Night bot: a cap", "open", false, "kind:internal"),
-		newThread(1, "Patch v0.3.X: Bigot costs (3)", "closed", false),
-		newThread(2, "Architecture: patch numbers (part 2 of 8): fragments", "open", false),
-		newThread(3, "v0.6.0: daily quests", "open", false),
-		newThread(4, "Patch v0.3.Y: a client fix", "open", true),
-		newThread(5, "CI: daily super run failed", "open", false),
-		newThread(6, "Patch: already new", "open", false),
-	}
-	rows := PlanRetcon(threads, map[int]string{1: "v0.3.4"})
-	var got [][3]any
-	for _, r := range rows {
-		got = append(got, [3]any{r.Number, r.New, r.Label})
-	}
-	want := [][3]any{
-		{1, "Patch v0.3.4: Bigot costs (3)", ""},
-		{2, "Patch: patch numbers (part 2 of 8): fragments", "kind:internal"},
-		{3, "Patch: daily quests", "kind:app"},
-		{4, "Patch: a client fix", ""},
-		{7, "Patch: a cap", ""},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("PlanRetcon = %v", got)
-	}
-	var done []*pyjson.Object
-	for _, r := range rows {
-		if r.Label != "" {
-			done = append(done, newThread(r.Number, r.New, "open", false, r.Label))
-		} else {
-			done = append(done, newThread(r.Number, r.New, "open", false))
-		}
-	}
-	if again := PlanRetcon(done, map[int]string{1: "v0.3.4"}); len(again) != 0 {
-		t.Fatalf("a second retcon changes %v", again)
-	}
-}
-
 func TestShipped(t *testing.T) {
 	v := func(names ...string) []*pyjson.Object {
 		var out []*pyjson.Object
@@ -151,25 +83,6 @@ func TestShipped(t *testing.T) {
 	}
 }
 
-func TestWriteCsvAsPythonsWriter(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "x.csv")
-	WriteCsv([]*Retitle{{1, "issue", "open", `a, "b"`, "line\nbreak", ""}, {2, "pull", "closed", " lead", "x", "kind:app"}}, path)
-	got, _ := os.ReadFile(path)
-	want := "number,kind,state,old title,new title,label\r\n" +
-		"1,issue,open,\"a, \"\"b\"\"\",\"line\nbreak\",\r\n" +
-		"2,pull,closed, lead,x,kind:app\r\n"
-	if string(got) != want {
-		t.Fatalf("csv = %q", got)
-	}
-}
-
-func TestApplyRetconSleepsBetweenWrites(t *testing.T) {
-	var slept []float64
-	if n := ApplyRetcon(nil, nil, 2.0, func(s float64) { slept = append(slept, s) }); n != 0 || slept != nil {
-		t.Fatal("no rows, no writes")
-	}
-}
-
 // The argparse parser, against what Python 3.13's printed for the same command lines.
 func TestParseArgsAsArgparse(t *testing.T) {
 	cases := []struct {
@@ -182,26 +95,19 @@ func TestParseArgsAsArgparse(t *testing.T) {
 		{nil, 2, false, "harness titles: error: the following arguments are required: command\n", nil},
 		{[]string{"shipped"}, 2, false, "harness titles shipped: error: the following arguments are required: --before, --after\n", nil},
 		{[]string{"shipped", "--before"}, 2, false, "harness titles shipped: error: argument --before: expected one argument\n", nil},
-		{[]string{"foo"}, 2, false, "harness titles: error: argument command: invalid choice: 'foo' (choose from 'shipped', 'retcon')\n", nil},
-		{[]string{"retcon", "--limit", "x"}, 2, false, "harness titles retcon: error: argument --limit: invalid int value: 'x'\n", nil},
-		{[]string{"retcon", "--pause", "0x10"}, 2, false, "harness titles retcon: error: argument --pause: invalid float value: '0x10'\n", nil},
-		{[]string{"retcon", "extra"}, 2, false, "harness titles: error: unrecognized arguments: extra\n", nil},
+		{[]string{"foo"}, 2, false, "harness titles: error: argument command: invalid choice: 'foo' (choose from 'shipped')\n", nil},
+		{[]string{"shipped", "--before", "a", "--after", "b", "extra"}, 2, false, "harness titles: error: unrecognized arguments: extra\n", nil},
 		{[]string{"--x", "shipped", "--before", "a", "--after", "b", "--zz"}, 2, false, "harness titles: error: unrecognized arguments: --x --zz\n", nil},
 		{[]string{"shipped", "--before", "a", "--after", "b", "--", "x"}, 2, false, "harness titles: error: unrecognized arguments: -- x\n", nil},
 		{[]string{"shipped", "--", "--before", "a"}, 2, false, "harness titles shipped: error: the following arguments are required: --before, --after\n", nil},
-		{[]string{"retcon", "--write=1"}, 2, false, "harness titles retcon: error: argument --write: ignored explicit argument '1'\n", nil},
-		{[]string{"retcon", "--numbers", "-x"}, 2, false, "harness titles retcon: error: argument --numbers: expected one argument\n", nil},
 		{[]string{"shipped", "--zz", "--before"}, 2, false, "harness titles shipped: error: argument --before: expected one argument\n", nil},
 		{[]string{"-x"}, 2, false, "harness titles: error: the following arguments are required: command\n", nil},
 		{[]string{"shipped", "--before=", "x"}, 2, false, "harness titles shipped: error: the following arguments are required: --after\n", nil},
-		{[]string{"retcon", "--wr", "--num", "1,2", "--lim", "-3", "--pa", "1e3"}, 0, true, "",
-			&arguments{command: "retcon", write: true, numbers: "1,2", limit: -3, pause: 1000, csv: "title-retcon.csv"}},
-		{[]string{"retcon", "--limit", " 7 ", "--pause", "1_0.5", "--numbers", "-x y", "--csv="}, 0, true, "",
-			&arguments{command: "retcon", limit: 7, pause: 10.5, numbers: "-x y", csv: ""}},
-		{[]string{"retcon", "--limit", "٣", "--numbers=-x"}, 0, true, "",
-			&arguments{command: "retcon", limit: 3, pause: 2, numbers: "-x", csv: "title-retcon.csv"}},
+		{[]string{"shipped", "--before=1", "--after", "-x"}, 2, false, "harness titles shipped: error: argument --after: expected one argument\n", nil},
+		{[]string{"shipped", "--bef", "-1", "--aft=b"}, 0, true, "", &arguments{command: "shipped", before: "-1", after: "b"}},
+		{[]string{"shipped", "--before", "-x y", "--after", "٣"}, 0, true, "", &arguments{command: "shipped", before: "-x y", after: "٣"}},
 		{[]string{"--", "shipped", "--before", "-1", "--after", "b", "--before", "c"}, 0, true, "",
-			&arguments{command: "shipped", before: "c", after: "b", pause: 2, csv: "title-retcon.csv"}},
+			&arguments{command: "shipped", before: "c", after: "b"}},
 	}
 	for _, c := range cases {
 		var out, errOut bytes.Buffer
@@ -225,17 +131,12 @@ func TestHelpAsArgparse(t *testing.T) {
 	var out bytes.Buffer
 	stdout = &out
 	defer func() { stdout = os.Stdout }()
-	if _, code, ok := parseArgs([]string{"retcon", "-hx"}); code != 0 || ok {
+	if _, code, ok := parseArgs([]string{"shipped", "-hx"}); code != 0 || ok {
 		t.Fatal("help exits 0")
 	}
 	// Python 3.13's argparse, with prog "harness titles".
-	want := "usage: harness titles retcon [-h] [--write] [--numbers NUMBERS]\n" +
-		"                             [--limit LIMIT] [--csv CSV] [--pause PAUSE]\n\noptions:\n" +
-		"  -h, --help         show this help message and exit\n" +
-		"  --write            write the titles; without it, only the CSV\n" +
-		"  --numbers NUMBERS  only these threads, comma-separated\n" +
-		"  --limit LIMIT      at most this many threads\n  --csv CSV\n" +
-		"  --pause PAUSE      seconds between writes\n"
+	want := "usage: harness titles shipped [-h] --before BEFORE --after AFTER\n\noptions:\n" +
+		"  -h, --help       show this help message and exit\n  --before BEFORE\n  --after AFTER\n"
 	if out.String() != want {
 		t.Fatalf("help = %q", out.String())
 	}

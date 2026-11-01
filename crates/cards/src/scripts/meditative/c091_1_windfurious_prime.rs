@@ -1,12 +1,13 @@
 //! M #91.1 Windfurious Prime (SPEC §8.8 row 91.1, §7 row 1b): (3) Unit Token (printed Epic),
 //! Prime, 5/10 → 10/20, Rush and Windfury on both faces, First Strike added on the Radiant face.
 //!
-//! Base:    "Rush, Windfury\nWhenever this attacks: Summon {joiners|random Unit|random Units} from
+//! Base:    "Rush, Windfury\nWhen this attacks: Summon {joiners|random Unit|random Units} from
 //!            your hand or deck. They attack its target first."
-//! Radiant: "Rush, Windfury, First Strike\nWhenever this attacks: Summon {joiners|random Unit|random
+//! Radiant: "Rush, Windfury, First Strike\nWhen this attacks: Summon {joiners|random Unit|random
 //!            Units} from your hand or deck. They attack its target first."
-//! Engine: `attack_joiners` (ME-ATTACKSUMMON, R1203); the count is the catalog `joiners` param (2
-//! and 2). Keywords are catalog data; there is nothing to run.
+//! Engine: `attack_joiners` (ME-ATTACKSUMMON, R1203), before the damage, since the joiners attack its
+//! target first: "When", not "Whenever" (R2396000); the count is the catalog `joiners` param (2 and
+//! 2). Keywords are catalog data; there is nothing to run.
 
 use jackioh_engine::prelude::*;
 
@@ -276,7 +277,7 @@ mod tests {
                 let def = crate::card_def(ID);
                 assert_eq!(
                     def.radiant.text,
-                    "Rush, Windfury, First Strike\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
+                    "Rush, Windfury, First Strike\nWhen this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
                 );
                 assert!(def.radiant.keywords.contains(&Keyword::FirstStrike));
                 assert!(

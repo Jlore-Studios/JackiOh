@@ -13,6 +13,7 @@ import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { formatDateTime, t, useLocale } from "../../i18n/i18n.ts";
 import type { DeckVersion } from "../../net/api.ts";
+import { BackLayer } from "../../net/backLayers.ts";
 import { versionChange, type VersionChange } from "./deckHistory.ts";
 import type { DeckStore } from "./sync.ts";
 import { DECK_HISTORY_BUTTON, DECK_HISTORY_PANEL, DECK_HISTORY_ROW, deckHistoryRestoreId } from "./testids.ts";
@@ -110,7 +111,7 @@ export default function DeckHistory({
     buttonRef.current?.focus();
   }, []);
 
-  // Outside press and Escape close the panel, like the cosmetics picker's.
+  // Outside press and Escape close the panel, like the cosmetics picker's; Back does too (R2127000, the panel's BackLayer).
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent): void => {
@@ -184,6 +185,7 @@ export default function DeckHistory({
       </button>
       {open ? (
         <div className="ws-cosmetics-panel ws-versions-panel" role="dialog" aria-label={t("Deck history")} data-testid={DECK_HISTORY_PANEL}>
+          <BackLayer onClose={close} />
           {listing.kind === "loading" ? (
             <p className="ws-hint" role="status">
               {t("Loading…")}

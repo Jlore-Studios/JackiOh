@@ -130,17 +130,15 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
 ///
 /// TS wrote the riders through the live card object. Here `card` is the card as found (or the fresh
 /// instance), so the radiant rider goes on it before it moves, and on the card in its pile too when
-/// it already is in one; the cost riders go on the card where the move put it. Whether it reaches the
-/// hand is `crate::draw::add_to_hand`'s own test, read as it reads it: the owner's hand below their
-/// hand cap (§2.4, R4, R1143, `hand_cap_of`) — else it is burned and takes no price.
+/// it already is in one; the cost riders go on the card where the move put it. Whether it reached the
+/// hand is `crate::draw::add_to_hand`'s outcome: a card a full hand burns (§2.4, R4, R1143,
+/// `query::room_in`) takes no price.
 fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders: &HandRiders) {
     apply_radiant_rider(&mut card, riders);
     if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_radiant_rider(live, riders);
     }
-    let reaches_hand =
-        (ctx.state.players[card.owner].hand.len() as i32) < crate::query::hand_cap_of(ctx.state, card.owner);
-    let _ = crate::draw::add_to_hand(ctx, &mut card);
+    let reaches_hand = crate::draw::add_to_hand(ctx, &mut card) == crate::draw::AddToHandOutcome::Hand;
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
     }

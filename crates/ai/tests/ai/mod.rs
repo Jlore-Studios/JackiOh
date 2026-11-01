@@ -4,8 +4,11 @@
 //! B32), which `ai_slow.rs` runs too; `duos` is Duos co-op's AI seats (B26–B31).
 
 pub mod activate;
+pub mod activations;
 pub mod alt_play;
 pub mod answer_key;
+pub mod attack_hooks;
+pub mod budget;
 pub mod cleave;
 pub mod combat_mods;
 pub mod deaths;
@@ -65,5 +68,7 @@ pub mod support;
 pub mod surface;
 pub mod tradable;
 pub mod training_grounds;
-pub mod tutorial_core_only;
+pub mod turn_hooks;
+pub mod tutorial_cards;
 pub mod tutorial_floor;
+pub mod unstoppable_lethal;

@@ -12,6 +12,7 @@
 //!   and Chinese sidecars are generated from `card-text.yaml` (#2498), which no pure crate parses.
 //! - `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION`, `card_def`, `card_def_by_index`: `catalog-data.ts`'s
 //!   readers of the shipped catalog, under their TS names (SURFACE §4.2).
+//! - `census`: each set's cards, tokens, rarities and tag counts, written once (#2581).
 //!
 //! The engine gets the WHOLE catalog and only the scripts that exist. A catalog id with no script is
 //! a playable card with no text: `scripts::script_of` falls back to an empty script, so a missing card
@@ -23,7 +24,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::IndexMap;
-use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName, WinRateTable};
+use jackioh_engine::{CardDef, CardDefs, CardScripts, SHIPPED_SETS, SetName, WinRateTable};
 
 include!(concat!(env!("OUT_DIR"), "/registry.rs"));
 
@@ -47,7 +48,7 @@ pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, LIST_READERS};
 /// the BUSTED or complicated lists.
 pub mod code_lines;
 
-/// SPEC §5.1's single pool source over the shipped catalog (`catalog.query`, `catalog.pool`, …).
+/// SPEC §5.1's single pool source over the shipped catalog (its `catalog.query`: `query`, `pool`, …).
 pub mod query;
 
 /// Classic+ #42 KY's Test's problem bank (R420).
@@ -55,6 +56,10 @@ pub mod ky_test_bank;
 
 /// Stinkyscape #4.2 KY's Last Exam's bank of impossible problems (R1870002).
 pub mod ky_last_exam_bank;
+
+/// #2581: each set's counts, written once, which tests/cross/catalog.rs and catalog check hold the
+/// catalog to.
+pub mod census;
 
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
@@ -164,6 +169,24 @@ pub static WIN_RATES: LazyLock<WinRateTable> = LazyLock::new(|| {
         .unwrap_or_else(|error| panic!("crates/cards/data/win_rates.json: {error}"))
 });
 
+/// R2386000: the shipped sets (`SHIPPED_SETS`, in order) of which `table` holds no row M #50 CN Tech
+/// or M+ #2 NA Tech can pick: a deckable card of the set (never a token) with at least
+/// `CN_TECH_MIN_GAMES` games. The compiled table leaves none (CN Tech's R2386000 test).
+pub fn sets_without_win_rates(table: &WinRateTable) -> Vec<SetName> {
+    use jackioh_engine::config::CN_TECH_MIN_GAMES;
+    SHIPPED_SETS
+        .into_iter()
+        .filter(|set| {
+            !table.cards.iter().any(|row| {
+                row.games >= CN_TECH_MIN_GAMES
+                    && CATALOG
+                        .get(&row.id)
+                        .is_some_and(|def| def.set == *set && jackioh_engine::catalog::deckable(def))
+            })
+        })
+        .collect()
+}
+
 /// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4), and where
 /// the older shipped catalogs a replay folds under are found (R767000): the engine's `OnceLock`s are
 /// set here, once per process, and read-only after. Idempotent: a second
@@ -186,6 +209,21 @@ pub fn register_all() {
         jackioh_engine::scripts::register_scripts(scripts_of());
         jackioh_engine::catalog::register_shipped(history::shipped_catalog);
     });
+}
+
+/// R767000, R2657000: `scripts` with "Can't be in Defense Position" as the static flag `never_defense`
+/// it was through v0.5.9f, on the faces that printed it (`base`, `radiant`): the kept script of each card
+/// that prints Can't Defend since #2657. It builds on the card's script as it stands, which differs from
+/// v0.5.9f's in that flag alone; a later change to one of those scripts keeps v0.5.9f's whole first.
+pub(crate) fn never_defense_kept(mut scripts: CardScripts, base: bool, radiant: bool) -> CardScripts {
+    for (face, printed) in [(&mut scripts.base, base), (&mut scripts.radiant, radiant)] {
+        if printed {
+            let mut flags = face.static_flags.clone().unwrap_or_default();
+            flags.never_defense = Some(true);
+            face.static_flags = Some(flags);
+        }
+    }
+    scripts
 }
 
 /// The card files' tests' `scenario()`: the shipped cards registered first (TS's vitest globalSetup,
@@ -506,8 +544,9 @@ pub(crate) fn events_json(s: &jackioh_engine::testkit::Scenario) -> Vec<serde_js
 
 /// R2195003: a Training Grounds snapshot plays exactly as its Core card. The same game, built by
 /// `setup` and played by `play` once with each card's id, logs the same events and ends in the same
-/// state, the snapshot's id read as the Core card's. The one thing left out is the element its play
-/// records (`gameLog.lastElement`, R980), which is its own number's, as R2195003 rules.
+/// state, the snapshot's id read as the Core card's. Left out are the element its play records
+/// (`gameLog.lastElement`, R980), which is its own number's, as R2195003 rules, and the Legacy tag its
+/// play counts (`gameLog.playedByTag`), which only a Legacy card carries (R2511000).
 #[cfg(test)]
 pub(crate) fn expect_plays_as(
     core: &str,
@@ -531,6 +570,9 @@ pub(crate) fn expect_plays_as(
         {
             if let Some(log) = side["gameLog"].as_object_mut() {
                 log.remove("lastElement");
+                if let Some(by_tag) = log.get_mut("playedByTag").and_then(|tags| tags.as_object_mut()) {
+                    by_tag.remove("Legacy");
+                }
             }
         }
         (events, state)

@@ -2,8 +2,11 @@
 // §10.10, §10.11, R641–R645, R1340–R1345). These cosmetic values never reach `ActionBody`,
 // `reduce`, replays, records or `PlayerView` (R643, R1342).
 // The deck-checked roster (D5, R641), dealt hand (R1341) and rate limit (R643) must match at both
-// separate deployables (§9.2), so their constants live here, not `crates/server/src/config.rs`
-// (CLAUDE.md rule 9). Practice personas stay in `apps/web/src/practice/personas.ts` (R645).
+// separate deployables (§9.2): the hand's and the limit's numbers are the engine's config's,
+// generated into `./engineConfig.ts` and re-exported here (CLAUDE.md rule 9). Practice personas
+// stay in `apps/web/src/practice/personas.ts` (R645).
+
+import { EMOTE_COOLDOWN_MS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS } from "./engineConfig.ts";
 
 /** MN03's twenty-four emotes: five portrait-specific voice lines, then nineteen shared emoji (R1340, R643). */
 export const VOICE_EMOTE_IDS = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
@@ -44,8 +47,7 @@ export function isVoiceEmote(emote: EmoteId): emote is VoiceEmoteId {
 
 // The engine's `deal_emote_hand`, via `@jackioh/engine`'s `dealEmoteHand`, deals each seat's hand (R1341).
 
-export const EMOTE_HAND_SIZE = 8;
-export const EMOTE_HAND_VOICE = 3;
+export { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE } from "./engineConfig.ts";
 
 export function handHolds(hand: readonly EmoteId[], emote: EmoteId): boolean {
   return hand.includes(emote);
@@ -84,9 +86,7 @@ export function pickPortrait(rng: () => number): PortraitId {
 
 // Shared client/server rate limit (R643).
 
-export const EMOTE_COOLDOWN_MS = 1500;
-export const EMOTE_WINDOW_MS = 20_000;
-export const EMOTE_WINDOW_MAX = 5;
+export { EMOTE_COOLDOWN_MS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS };
 
 export type EmoteGate =
   | { ok: true; sentAt: readonly number[] }

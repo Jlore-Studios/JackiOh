@@ -2426,6 +2426,12 @@ mod spec_11_rulings_r43_r84_m3_gate {
             .map(|_| new_instance(&mut state, PLAIN, P1, Zone::Library { player: P1 }))
             .collect();
         state.players.p1.library = library;
+        // The one test of a full pile: no room at the cap, the cap less the cards below it.
+        assert_eq!(room_in(&state, P1, OffFieldZone::Library), 0);
+        assert_eq!(
+            room_in(&state, P2, OffFieldZone::Library),
+            LIBRARY_CAP - state.players.p2.library.len() as i32
+        );
         let mut sink = sink_for(&mut state);
 
         let mut fresh = new_instance(&mut *sink.state, PLAIN, P1, Zone::Resolving { player: P1 });

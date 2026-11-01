@@ -1,9 +1,11 @@
-//! SPEC §8.11 Training Grounds #60 Rush Token Farm, the snapshot of Core #58 Rush Token Farm (`core-058`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//! SPEC §8.11 Training Grounds #60 Legacy: Rush Token Farm,
+//! the Legacy card of Core #58 Rush Token Farm (`core-058`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
 //!
 //! #58 Rush Token Farm (SPEC §8.3): Field Spell, cost 2. "Start of turn: summon a Rush Token" /
 //! radiant "Aura: your Rush Tokens +3/+3; same". Engine cell: "Aura keyed on def T-rush".

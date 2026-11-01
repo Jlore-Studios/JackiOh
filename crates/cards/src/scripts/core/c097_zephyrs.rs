@@ -378,10 +378,9 @@ mod tests {
     }
 
     /// Plays #97 in `setup` and checks what it offers: the top three of the state it resolves in, each
-    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446). Re-pinned for the
-    /// Training Grounds release (#2204): the top three pass over a card whose Core-or-snapshot pair a
-    /// better card holds (`subsystems::top_three`, R2204001), as facing three 7/7s Core #43 Big Felinor and its
-    /// snapshot TG #51 both rank at "clear".
+    /// ranked at one of `priorities` (§10.7), whichever set it is from (R1446). A Core card and its
+    /// Legacy card are two cards (R2511001), so the top three may hold both, as facing three 7/7s Core
+    /// #43 Big Felinor and TG #51 Legacy: Big Felinor both rank at "clear".
     fn offers_rank_at(setup: &Value, priorities: &[&str]) {
         let top = subsystems::top_three(&resolving(setup), P1, &options(None));
         for scored in &top {
@@ -396,12 +395,9 @@ mod tests {
         let mut s = scenario(setup.clone());
         s.play(ZEPHYRS, json!({}));
         assert_eq!(sorted(&offered_ids(&s)), sorted(&top));
-        // R29: three cards, no two of one pair.
-        let pairs: IndexSet<String> = top
-            .iter()
-            .map(|id| jackioh_engine::catalog::pair_key(&crate::card_def(id)).to_string())
-            .collect();
-        assert_eq!(pairs.len(), OFFERED as usize);
+        // R29: three different cards.
+        let distinct: IndexSet<&String> = top.iter().collect();
+        assert_eq!(distinct.len(), OFFERED as usize);
     }
 
     mod n97_zephyrs_s10_7_s_dry_run_reads_what_a_card_s_text_does {
@@ -441,6 +437,39 @@ mod tests {
             assert_eq!(outside(&core, CLEARERS), Vec::<String>::new(), "Core cards that do not clear the board");
             // …and every offer, of whatever set, ranks at the clear criterion or above.
             offers_rank_at(&setup, &["lethal", "clear"]);
+        }
+
+        /// R2511001: a Legacy card is its own card, so #97's offer is the ranking's top three as it
+        /// stands, a Core card and its Legacy card both when both rank there: facing three 7/7s, Core
+        /// #43 Big Felinor and TG #51 Legacy: Big Felinor score alike and neither passes the other over.
+        #[test]
+        fn r2511001_the_offer_is_the_ranking_s_top_three_a_core_card_and_its_legacy_card_both() {
+            crate::register_all();
+            let setup = json!({
+                "seed": "r5-zephyrs-clear",
+                "p1": { "hand": [ZEPHYRS, MENACE_FILLER], "mana": 5 },
+                "p2": { "field": ["core-025", "core-025", "core-025"] },
+            });
+            let state = resolving(&setup);
+            let ranked = subsystems::rank(&state, P1, &options(None));
+            let first: Vec<String> = ranked
+                .iter()
+                .take(OFFERED as usize)
+                .map(|scored| scored.def.id.clone())
+                .collect();
+            let top: Vec<String> = subsystems::top_three(&state, P1, &options(None))
+                .iter()
+                .map(|scored| scored.def.id.clone())
+                .collect();
+            assert_eq!(top, first);
+            let score = |id: &str| {
+                ranked
+                    .iter()
+                    .find(|scored| scored.def.id == id)
+                    .map(priority_of)
+            };
+            assert_eq!(score("traininggrounds-051"), score("core-043"));
+            assert_eq!(score("core-043"), Some(json!("clear")));
         }
 
         #[test]

@@ -13,8 +13,9 @@
 //! stand-ins for three turn stages. `preview.rs` is R1420's preview of a set that does not ship yet.
 //! `duos_scenario.rs` is #936's: a begun Duos game, every mulligan kept, round 1 open.
 //!
-//! `golden.rs` is the golden replay's pure half (§13.3, #1641), which the engine's `tests/golden.rs` and
-//! `cargo jackioh golden check` share. It is not globbed in: a caller names `golden::<item>`.
+//! `golden.rs` is the golden replay's pure half (§13.3, #1641): `cargo jackioh golden check --file` replays
+//! recorded games with it, and the engine's `tests/golden.rs` folds the hotseat fixture with it. It is not
+//! globbed in: a caller names `golden::<item>`.
 //!
 //! `pick.rs` holds the one-instance pick builders and `scenario.rs` the panicking `Scenario::unit_at`
 //! (#1826); like `golden`, callers name the module (`pick::<builder>`). `scenario.rs`'s `must` (an

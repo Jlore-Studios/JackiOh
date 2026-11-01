@@ -1,4 +1,4 @@
-// State badges: Brittle (R385), Temporary's count in a hand (#2437), tuned (R386), enchantments (B5 E39), and Animated (R383).
+// State badges: Brittle (R385), Temporary's count in a hand (#2437), tuned (R386), enchantments (B5 E39), and Animated (R383). A Created card's badge is never drawn on a face (R2647000).
 // The board minion draws Brittle and Animated itself (keywordVisuals.ts, R438); `PileDepth` shows E21.
 // Shape plus accessible words, not color, lets faces fit inside buttons (B12).
 
@@ -18,6 +18,9 @@ import "./cardstate.css";
 export type CardStatesProps = { face: FaceModel; omit?: readonly StateBadgeKind[] };
 
 const NONE: readonly StateBadgeKind[] = [];
+
+/** R2647000: the states no face draws, rarely relevant in combat; the inspect state notes still list them (StateNotes.tsx). */
+const NOT_ON_FACES: readonly StateBadgeKind[] = ["created"];
 
 /** #2437: the Temporary badge's disc, the fuchsia of a last count's aura (marks.ts), for cardstate.css. */
 const TEMPORARY_DISC = {
@@ -48,7 +51,7 @@ function Badge({ badge }: { badge: StateBadge }): ReactElement {
 
 export function CardStates({ face, omit = NONE }: CardStatesProps): ReactElement | null {
   useLocale();
-  const badges = stateBadges(face).filter((badge) => !omit.includes(badge.kind));
+  const badges = stateBadges(face).filter((badge) => !omit.includes(badge.kind) && !NOT_ON_FACES.includes(badge.kind));
   if (badges.length === 0) return null;
   const folded = badges.slice(STATE_BADGES_SMALL_MAX);
   return (

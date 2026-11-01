@@ -1,4 +1,4 @@
-//! S #162 Star-jumper Core (SPEC §8.10 row S 162; §2.4, §5.2, §6.3): (3) Spell, Rare.
+//! S #162 Faction: Star-Jumper Core (SPEC §8.10 row S 162; §2.4, §5.2, §6.3): (2) Spell, Faction, Rare.
 //!   Base:    "Add a Badger, Honey Badger, Ozark, Orca and Galaxy to your hand."
 //!   Radiant: "Add a Radiant Badger, Honey Badger, Ozark, Orca and Galaxy to your hand."
 //!
@@ -8,6 +8,9 @@
 //! (§5.2, R1880000). ST8: the Radiant face adds the five Radiant, where the designer's line repeated the
 //! base. The cards are named, so they reach the hand whether or not the set ships (R1420). Declares no
 //! numbers.
+//!
+//! #2521: renamed from Star-jumper Core, tagged Faction and (2) where it was (3). It and the five cards it
+//! adds are the Star-Jumper Core faction that S #163 Swear Loyalities keeps or exiles (R2521004).
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -41,8 +44,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #162 Star-jumper Core — SPEC §8.10 row S 162, BUILD M12 row S 162: "adds the 5 named cards in order,
-// each on its base face at its printed cost; a hand with room for fewer keeps the first and burns the
+// S #162 Faction: Star-Jumper Core — SPEC §8.10 row S 162, BUILD M12 row S 162: "adds the 5 named cards in
+// order, each on its base face at its printed cost; a hand with room for fewer keeps the first and burns the
 // rest; radiant all of them Radiant".
 #[cfg(test)]
 mod tests {

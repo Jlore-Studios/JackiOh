@@ -167,8 +167,6 @@ type HostOptions = {
   lethal?: boolean;
   /** R2102000: the started game's snapshot says the human has lethal, as any game's against the AI would (R2291000). */
   lethalHint?: boolean;
-  /** R2208000: the worker's claim answer marks a decision this device's clock cut. */
-  clockCut?: boolean;
 };
 
 /** Fake definitions cost each card by its id's final digit. */
@@ -302,12 +300,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
       if (body.type === "debug") return Promise.resolve({ id: mine, type: "debug", debug });
       if (body.type === "claim") {
         // R1303000: the conceded game's claim, as the worker answers it once the game is over.
-        return Promise.resolve({
-          id: mine,
-          type: "claim",
-          claim: { seed, result: "loss", log: [] },
-          ...(options.clockCut === true ? { clockCut: true as const } : {}),
-        });
+        return Promise.resolve({ id: mine, type: "claim", claim: { seed, result: "loss", log: [] } });
       }
       if (body.type === "catalog") {
         return Promise.resolve(
@@ -614,6 +607,14 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(option("saved:1")).not.toBeDisabled();
     expect(option("saved:2")).toBeDisabled();
     expect(screen.getByTestId(T.deckHint)).toHaveTextContent("Fix it in Decks to play it here.");
+    // #2562: the Decks link moves in place on a plain click and leaves a ctrl or meta click to the browser.
+    const decks = within(screen.getByTestId(T.deckHint)).getByRole("link", { name: "Decks" });
+    const here = window.location.pathname;
+    expect(fireEvent.click(decks, { button: 0, ctrlKey: true })).toBe(true);
+    expect(fireEvent.click(decks, { button: 0, metaKey: true })).toBe(true);
+    expect(window.location.pathname).toBe(here);
+    expect(fireEvent.click(decks, { button: 0 })).toBe(false);
+    expect(window.location.pathname).toBe("/decks");
   });
 
   it("B32 a pending account gets no saved decks", async () => {
@@ -720,6 +721,9 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     expect(hint()).toMatch(/Save a deck in Decks/);
     expect(hint()).not.toMatch(/sign in/i);
     expect(screen.getByRole("link", { name: "Decks" })).toHaveAttribute("href", "/decks");
+    // #2562: in place, without a page load.
+    expect(fireEvent.click(screen.getByRole("link", { name: "Decks" }), { button: 0 })).toBe(false);
+    expect(window.location.pathname).toBe("/decks");
   });
 
   it("a pending or banned account hears that its decks come once it is active", async () => {
@@ -2181,7 +2185,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       window.removeEventListener("jackioh:wallet-changed", onChanged);
     });
     const host = routeHost();
-    renderEarning(host, fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) }));
+    renderEarning(host, fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "result_mismatch" }) }));
     await startFromSetup();
     concedeOnBoard();
     await screen.findByTestId(T.result);
@@ -2212,7 +2216,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
 
   it("R1303000 a refused claim says why, and Play again still starts and asks for a fresh seed", async () => {
     const host = routeHost();
-    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) });
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "result_mismatch" }) });
     renderEarning(host, earning);
     await startFromSetup();
     concedeOnBoard();
@@ -2221,8 +2225,8 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     await waitFor(() => {
       expect(line).toHaveAttribute("data-earning", "refused");
     });
-    expect(line).toHaveAttribute("data-reason", "ai_mismatch");
-    expect(line).toHaveTextContent("This game earned nothing (the AI's moves didn't check out).");
+    expect(line).toHaveAttribute("data-reason", "result_mismatch");
+    expect(line).toHaveTextContent("This game earned nothing (its result didn't check out).");
 
     fireEvent.click(screen.getByTestId(T.playAgain));
     await waitFor(() => {
@@ -2233,37 +2237,6 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     await waitFor(() => {
       expect(screen.queryByTestId(T.result)).toBeNull();
     });
-  });
-
-  it("R2208000 an ai_mismatch refusal of a game this device's clock cut says the device ran out of time, and the server gets the claim alone", async () => {
-    const host = routeHost({ clockCut: true });
-    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) });
-    renderEarning(host, earning);
-    await startFromSetup();
-    concedeOnBoard();
-    await screen.findByTestId(T.result);
-    const line = await screen.findByTestId(practiceTestid.resultEarning);
-    await waitFor(() => {
-      expect(line).toHaveAttribute("data-earning", "refused");
-    });
-    expect(line).toHaveAttribute("data-reason", "ai_mismatch");
-    expect(line).toHaveTextContent("This game earned nothing (this device ran out of time on one of the AI's moves).");
-    expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-1", result: "loss", log: [] });
-  });
-
-  it("R2208000 a refusal for another reason of a game this device's clock cut reads as before", async () => {
-    const host = routeHost({ clockCut: true });
-    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "expired" }) });
-    renderEarning(host, earning);
-    await startFromSetup();
-    concedeOnBoard();
-    await screen.findByTestId(T.result);
-    const line = await screen.findByTestId(practiceTestid.resultEarning);
-    await waitFor(() => {
-      expect(line).toHaveAttribute("data-earning", "refused");
-    });
-    expect(line).toHaveAttribute("data-reason", "expired");
-    expect(line).toHaveTextContent("This game earned nothing (it came in too late to count).");
   });
 
   it("R1303000 a claim that fails shows that the server could not check it, and the dialog stays whole", async () => {
@@ -2384,6 +2357,23 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     concedeOnBoard();
     await screen.findByTestId(T.result);
     expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "unearned");
+  });
+
+  it("R2378000 a seed refused past the account's waiting turns starts the game unearned, in the server's words", async () => {
+    const busy = "your last purchase or opening is still going through; try again in a moment";
+    const host = routeHost();
+    renderEarning(
+      host,
+      fakeEarning({
+        seed: () =>
+          Promise.reject(
+            new ApiRequestError(429, { code: "rate_limited", message: busy, details: { retryAfterMs: 1_000 } }),
+          ),
+      }),
+    );
+    await startFromSetup();
+    expect(screen.getByTestId(practiceTestid.unearned)).toHaveTextContent(`This game won't earn anything: ${busy}`);
+    expect(host.starts()[0]?.earning).toBeUndefined();
   });
 
   it("R1303000 an anonymous player, a URL seed and a lesson ask for nothing", async () => {

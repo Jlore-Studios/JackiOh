@@ -106,8 +106,8 @@ describe("#2267 the hand hints and their row", () => {
     expect(screen.getByRole("img", { name: "目标" })).toBeInTheDocument();
   });
 
-  it("#2269 a hand card whose keywords include Tradable gets the pip; one without does not", () => {
-    const tradable = card({ keywords: [{ kind: "Tradable" }] });
+  it("#2269 #2574 a hand card whose view has tradable: true gets the pip; one without does not", () => {
+    const tradable = card({ tradable: true });
     const { container } = render(<HandHints card={tradable} view={VIEW} />);
     const pips = container.querySelectorAll(".hand-hint");
     expect(pips).toHaveLength(1);
@@ -123,7 +123,7 @@ describe("#2267 the hand hints and their row", () => {
   });
 
   it("#2269 a Tradable card by its printed keywords gets the pip, dimmed once the turn's Trade is spent", async () => {
-    const tradable = card({ defId: "meditative-053", cost: 1 });
+    const tradable = card({ defId: "meditative-053", cost: 1, tradable: true });
     const live = render(withCatalog(<HandHints card={tradable} view={baseView({ trades: { cost: 0, left: 1 } })} />));
     const pip = live.container.querySelector('[data-hint="tradable"]');
     expect(pip).not.toBeNull();
@@ -147,6 +147,37 @@ describe("#2267 the hand hints and their row", () => {
     await setLocale("zh-CN");
     render(withCatalog(<HandHints card={tradable} view={baseView({ trades: { cost: 0, left: 1 } })} />));
     expect(screen.getByRole("img", { name: "可交易" })).toHaveAttribute("data-hint", "tradable");
+  });
+
+  it("R2574000 the Tradable pip reads card.tradable instead of printed keywords", async () => {
+    // Card with tradable: true and no Tradable keyword (core-005 is a plain card) shows the pip.
+    const auraLent = card({ defId: "core-005", cost: 1, tradable: true });
+    const live = render(withCatalog(<HandHints card={auraLent} view={baseView({ trades: { cost: 0, left: 1 } })} />));
+    const pip = live.container.querySelector('[data-hint="tradable"]');
+    expect(pip).not.toBeNull();
+    expect(pip).not.toHaveAttribute("data-dimmed");
+    expect(screen.getByRole("img", { name: "Tradable" })).toBe(pip);
+
+    // Card with printed Tradable keyword but no card.tradable flag shows no pip.
+    cleanup();
+    const withoutFlag = card({ defId: "meditative-053", cost: 1 });
+    const { container: bare } = render(withCatalog(<HandHints card={withoutFlag} view={baseView({ trades: { cost: 0, left: 1 } })} />));
+    expect(bare.querySelector('[data-hint="tradable"]')).toBeNull();
+
+    // Dims when trades.left === 0.
+    cleanup();
+    render(withCatalog(<HandHints card={auraLent} view={baseView({ trades: { cost: 0, left: 0 } })} />));
+    const spent = screen.getByRole("img", { name: "No Trades left this turn" });
+    expect(spent).toHaveAttribute("data-hint", "tradable");
+    expect(spent).toHaveAttribute("data-dimmed", "true");
+
+    // Localizes when dimmed in zh-CN.
+    cleanup();
+    await setLocale("zh-CN");
+    render(withCatalog(<HandHints card={auraLent} view={baseView({ trades: { cost: 0, left: 0 } })} />));
+    const zh = screen.getByRole("img", { name: "本回合没有剩余交易次数" });
+    expect(zh).toHaveAttribute("data-hint", "tradable");
+    expect(zh).toHaveAttribute("data-dimmed", "true");
   });
 
   it("#2267 handHints.css: the row takes no pointer event, sits top-left, and has no glow or motion", () => {

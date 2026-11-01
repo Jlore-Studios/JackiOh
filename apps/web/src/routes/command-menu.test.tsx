@@ -3,10 +3,11 @@
 // move, with the focus moving in, staying inside and going back on close. R2126000: the selected
 // entry shows Enter, and the menu's foot names its keys.
 
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import type { CardDef, CardDefs, SetName } from "@jackioh/shared";
 import { setShips } from "@jackioh/shared";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
@@ -20,7 +21,7 @@ import { baseView } from "../test/fixtures.ts";
 import { pressBack } from "../test/history.ts";
 import { at } from "../test/stubServer.ts";
 import CommandMenu, { commandEntryTestid, commandMenuTestid } from "./CommandMenu.tsx";
-import { commandCards, commandMenuOn } from "./commandEntries.ts";
+import { commandCards, commandEntries, commandMenuOn } from "./commandEntries.ts";
 
 const { App } = await import("../main.tsx");
 // A card's result opens the Almanac, a lazily-imported route: load its chunk here, as almanac.test.tsx
@@ -230,15 +231,22 @@ describe("R2118000 the command menu", () => {
 
   it("R2118000 the card search lists only the shelf, never an unshipped card", () => {
     expect(commandCards(CATALOG).map((entry) => entry.id)).toEqual(almanacShelf(CATALOG).map((id) => `card-${id}`));
-    const held = Object.values(CATALOG).find(
-      (def) => !setShips(def.set) && Object.values(CATALOG).filter((other) => other.name === def.name).length === 1,
-    );
-    if (held !== undefined) {
-      render(<CommandMenu path="/" />);
-      const input = openMenu();
-      typeQuery(input, held.name);
-      expect(screen.queryByTestId(commandEntryTestid(`card-${held.id}`))).toBeNull();
-    }
+    const base = CATALOG["core-001"];
+    if (base === undefined) throw new Error("the catalog has no core-001");
+    // A set that has not shipped: Meditative+ until its patch, and from then on Boss, which is
+    // reserved (§5) and ships no card.
+    const unshipped: SetName = setShips("Meditative+") ? "Boss" : "Meditative+";
+    expect(setShips(unshipped)).toBe(false);
+    const building: CardDef = { ...base, id: "command-menu-unshipped", set: unshipped, name: "Card whose set never ships" };
+    expect(CATALOG[building.id]).toBeUndefined();
+    expect(Object.values(CATALOG).filter((other) => other.name === building.name)).toHaveLength(0);
+    const withUnshipped: CardDefs = { ...CATALOG, [building.id]: building };
+    expect(commandCards(withUnshipped).map((entry) => entry.id)).toEqual(commandCards(CATALOG).map((entry) => entry.id));
+    // The menu's search over that catalog lists no entry for it, and the same card in a set that
+    // ships is listed, so the query reaches it and only its set keeps it out.
+    const searched = (cards: CardDefs) => commandEntries(building.name, cards).map((entry) => entry.id);
+    expect(searched(withUnshipped)).not.toContain(`card-${building.id}`);
+    expect(searched({ ...CATALOG, [building.id]: { ...building, set: "Core" } })).toContain(`card-${building.id}`);
   });
 
   it("R2118000 a card's result opens its inspect detail", SLOW_GRID, async () => {
@@ -257,7 +265,10 @@ describe("R2118000 the command menu", () => {
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
     expect(screen.queryByTestId(commandMenuTestid.input)).toBeNull();
     fireEvent.click(screen.getByTestId(INSPECT_CLOSE));
-    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    }, SLOW);
+    expect(window.location.pathname + window.location.search).toBe(paths.almanac);
 
     const rush = CATALOG["core-t-rush"];
     if (rush === undefined) throw new Error("the catalog has no core-t-rush");

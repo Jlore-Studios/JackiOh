@@ -1,9 +1,11 @@
-//! SPEC §8.11 Training Grounds #50 Glowy Jelly Bean, the snapshot of Core #26 Glowy Jelly Bean (`core-026`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//! SPEC §8.11 Training Grounds #50 Legacy: Glowy Jelly Bean,
+//! the Legacy card of Core #26 Glowy Jelly Bean (`core-026`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
 //!
 //! #26 Glowy Jelly Bean (SPEC §8.2): "Choose a card in your hand; it becomes Radiant", radiant
 //! "Choose 2" — a Radiant cell that changes only a number changes only that number (§8 Conventions),

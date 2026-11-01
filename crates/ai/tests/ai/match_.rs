@@ -14,7 +14,7 @@ use std::panic::catch_unwind;
 use indexmap::IndexMap;
 use jackioh_ai::{
     AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, MatchConfig, MatchHooks, MatchRecord,
-    MatchSetup, Matchup, NextSwing, SeatController, action_key, candidate_actions, decide, evaluate,
+    MatchSetup, Matchup, NextSwing, Prices, SeatController, action_key, candidate_actions, decide, evaluate,
     game_config, greedy_action, play_match, random_action,
 };
 use jackioh_engine::testkit::{
@@ -250,7 +250,7 @@ fn eval(state: &GameState) -> f64 {
 /// One-ply values of every non-endTurn candidate on the true state, by actionKey.
 fn one_ply(state: &GameState) -> IndexMap<String, f64> {
     let mut values = IndexMap::new();
-    for (at, action) in candidate_actions(state, AI).into_iter().enumerate() {
+    for (at, action) in candidate_actions(state, AI, Prices::NONE).into_iter().enumerate() {
         if action.action_type() == ActionType::EndTurn {
             continue;
         }

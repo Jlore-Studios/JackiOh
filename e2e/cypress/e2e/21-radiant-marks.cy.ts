@@ -69,9 +69,9 @@ describe("21 — a card's marks in play: a computed value, a reference and a Rad
       .should("have.text", "Spikey Pillow");
     leave(inHand(MASOCHISM_MASK));
 
-    cy.get(inHand(MASOCHISM_MASK)).trigger("pointerdown", { pointerType: "touch", pointerId: 7, button: 0 });
+    // A touch hold shows the preview (R2617000), so the I key opens the sheet, where the reference is a control.
+    cy.get(inHand(MASOCHISM_MASK)).trigger("keydown", { key: "i" });
     cy.get(ts(INSPECT_SHEET), { timeout: timeouts.view }).should("be.visible");
-    cy.get(inHand(MASOCHISM_MASK)).trigger("pointerup", { pointerType: "touch", pointerId: 7, button: 0, force: true });
     cy.get(`${ts(INSPECT_SHEET)} ${CARD_REF}[data-ref="${SPIKEY_PILLOW}"]`)
       .first()
       .should("have.attr", "tabindex", "0")

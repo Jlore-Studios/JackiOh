@@ -15172,7 +15172,30 @@
       "stinkyscape-173",
       "stinkyscape-174",
       "stinkyscape-175",
-      "stinkyscape-t"
+      "stinkyscape-t",
+      "stinkyscape-t-ai-01",
+      "stinkyscape-t-ai-02",
+      "stinkyscape-t-ai-03",
+      "stinkyscape-t-ai-04",
+      "stinkyscape-t-ai-05",
+      "stinkyscape-t-ai-06",
+      "stinkyscape-t-ai-07",
+      "stinkyscape-t-ai-08",
+      "stinkyscape-t-ai-09",
+      "stinkyscape-t-ai-10",
+      "stinkyscape-t-anomaly-found",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-drone-corvette",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-meltdown-layer",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-propagation-layer",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite",
+      "stinkyscape-t-shield-layer"
     ],
     "changes": [
       {
@@ -16342,7 +16365,7 @@
     ]
   },
   {
-    "version": "v0.5.1",
+    "version": "v0.5.0b",
     "date": "2026-10-28",
     "title": "Buffs on the field skip a paid Tribute",
     "source": "#2261",
@@ -16364,7 +16387,7 @@
       "bf2908714fdb1f697f684f1ac784d4942d2caf55"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "classic-009",
       "classic-045",
@@ -16403,7 +16426,7 @@
     ]
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "date": "2026-10-28",
     "title": "Stinkyscape's first pass: Frozen, Dormant, Equip, Flying summons, the Marketplace and Anomaly Found!",
     "source": "#2246, #2247, #2248, #2258, #2259, #2260",
@@ -16563,7 +16586,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.2b",
+    "version": "v0.5.1b",
     "date": "2026-10-29",
     "title": "A card's printed trigger condition holds when the card is no trap (Prison answers only the opponent's Units)",
     "source": "#2271",
@@ -16595,7 +16618,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "date": "2026-10-29",
     "title": "Stinkyscape's first pass: the Starship's face and where it arrives",
     "source": "#2249",
@@ -16756,7 +16779,7 @@
     ]
   },
   {
-    "version": "v0.5.4",
+    "version": "v0.5.3",
     "date": "2026-10-29",
     "title": "Meditative balance changes IV",
     "source": "#2179",
@@ -17091,7 +17114,7 @@
     ]
   },
   {
-    "version": "v0.5.5",
+    "version": "v0.5.4",
     "date": "2026-10-29",
     "title": "Stinkyscape's first pass: Resources join the hand, and the Marketplace offers each player its own cards",
     "source": "#2250",
@@ -17276,7 +17299,7 @@
     ]
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "date": "2026-10-29",
     "title": "Attack timings, and Classic Golem transforms its target",
     "source": "#2285",
@@ -17298,7 +17321,7 @@
       "688d840212064815f73f4b98696126c51073816b"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "classic-013",
       "classic-045",
@@ -17334,7 +17357,7 @@
     ]
   },
   {
-    "version": "v0.5.6b",
+    "version": "v0.5.4c",
     "date": "2026-10-29",
     "title": "Stratos is spelled as Stratos Swarm spells it",
     "source": "#2327",
@@ -17376,7 +17399,7 @@
     ]
   },
   {
-    "version": "v0.5.7",
+    "version": "v0.5.5",
     "date": "2026-10-29",
     "title": "Training Grounds, the release: the set ships to the normal game as the newest set",
     "source": "Issue #2204, part 11 of the tracker #2193",
@@ -17833,7 +17856,7 @@
     ]
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "date": "2026-10-29",
     "title": "A backrow card becomes a Unit only with Animated and stats",
     "source": "#2280",
@@ -17859,7 +17882,7 @@
       "12e7d9f7949a5e0ab46c83c524507abed84083cb"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "classic-071",
       "classicplus-009",
@@ -17897,7 +17920,7 @@
     ]
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "date": "2026-10-29",
     "title": "The first player's opening hand draws 3",
     "source": "#2368",
@@ -18098,7 +18121,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.9b",
+    "version": "v0.5.6b",
     "date": "2026-10-30",
     "title": "Trigor's chain is marked by its summon, so a played Trigor set by Dino-size still summons",
     "source": "Issue #2206, part 13 of the tracker #2193 (REVIEW B-1)",
@@ -18126,7 +18149,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "date": "2026-10-30",
     "title": "A Trap fused into a Unit never fires from its unit zone, whatever fused it",
     "source": "#2226",
@@ -18145,7 +18168,7 @@
       "9fd1a4185f53428513b46769f46d31bf928a3d0a"
     ],
     "reconstructed": false,
-    "tier": "patch",
+    "tier": "micro",
     "plays": [
       "meditative-027",
       "meditative-039",
@@ -18157,7 +18180,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10b",
+    "version": "v0.5.6d",
     "date": "2026-10-30",
     "title": "Every summon of a Flying Unit may land in the backrow",
     "source": "#2453",
@@ -18187,7 +18210,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10c",
+    "version": "v0.5.6e",
     "date": "2026-10-30",
     "title": "A Buff may give a Field Spell Immutable",
     "source": "#2436",
@@ -18255,7 +18278,7 @@
     "changes": []
   },
   {
-    "version": "v0.5.10d",
+    "version": "v0.5.6f",
     "date": "2026-10-30",
     "title": "Job Application prints its quest one stage a line, as The Greatest Heist does",
     "source": "#2450",
@@ -18289,7 +18312,7 @@
     ]
   },
   {
-    "version": "v0.5.11",
+    "version": "v0.5.7",
     "date": "2026-10-30",
     "title": "Cards show what they remember",
     "source": "#2476",
@@ -18382,6 +18405,2003 @@
       "traininggrounds-043",
       "traininggrounds-057"
     ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.7b",
+    "date": "2026-10-30",
+    "title": "Three attack timings: When before, Whenever after even if gone, After only if still there",
+    "source": "Issue #2396, follows #2285",
+    "notes": "The owner's ruling (#2396), replacing part of #2285's reading: a card's own attack and kill triggers have three timings. \"When this attacks\" resolves before any damage of the attack (R2285000); \"Whenever this attacks\" and \"Whenever this destroys a Unit\" after the attack or the kill, once its combat's state check has run, whether or not the card is still on the field, once (R2396000); \"After\" only for a card still on the field (R2285001, R1245). Prem Panther draws when it trades, Boots on the Ground moves to \"When\", and CN Golem shuffles its CN-Virus though it dies in the combat that killed; Badger, Honey Badger, Windfurious Prime and Nature Titan now print \"When\", and Bot Loser and Training Grounds' Ravager \"After\", playing as before. The plays are the families classify's second stage finds against main's build; its divergences that touch no card are too few to be a rule (R2455000).",
+    "player": {
+      "title": "When, Whenever and After this attacks",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Prem Panther now draws for each Unit its attack destroyed even when it dies in that attack.",
+        "Boots on the Ground now draws, or Recruits, when it attacks, before the damage, so it does even when it dies in that attack.",
+        "CN Golem now shuffles its CN-Virus even when it dies in the combat that destroyed the Unit."
+      ],
+      "text": [
+        "Badger, Honey Badger, Windfurious Prime and Nature Titan now say \"When this attacks\", and Bot Loser and Ravager \"After this destroys a Unit\"; they play as before."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "ad70aaeca6d3db9c8e4efc65c9f4941c969c9f96"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-021",
+      "classic-049",
+      "classic-076",
+      "classicplus-031",
+      "classicplus-047",
+      "classicplus-049",
+      "classicplus-076",
+      "core-068",
+      "core-t-rush",
+      "meditative-064",
+      "meditative-071",
+      "meditative-095",
+      "stinkyscape-061",
+      "stinkyscape-068",
+      "stinkyscape-074",
+      "stinkyscape-075",
+      "stinkyscape-076",
+      "stinkyscape-085",
+      "stinkyscape-099",
+      "traininggrounds-028",
+      "traininggrounds-054"
+    ],
+    "changes": [
+      {
+        "id": "core-032",
+        "name": "Prem Panther",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-013",
+        "name": "Boots on the Ground",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-045",
+        "name": "Nature Titan",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-091-1",
+        "name": "Windfurious Prime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-075",
+        "name": "Badger",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-076",
+        "name": "Honey Badger",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-009",
+        "name": "Ravager",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.7c",
+    "date": "2026-10-30",
+    "title": "Megabase becomes a Unit",
+    "source": "#2278",
+    "notes": "Megabase is a Unit, without Animated",
+    "player": {
+      "title": "Megabase becomes a Unit",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Megabase is now a Unit played straight into a unit zone."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3337fcc12f23705035af5394a6d1eefccb96cb9d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-116"
+    ],
+    "changes": [
+      {
+        "id": "stinkyscape-116",
+        "name": "Megabase",
+        "kind": "changed",
+        "fields": [
+          "type",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.7d",
+    "date": "2026-10-30",
+    "title": "AI Girlfriend becomes a Unit",
+    "source": "Issue #2279",
+    "notes": "Meditative #49.3 AI Girlfriend becomes a plain Unit and drops Animated from both faces; YileGPT Prime's Cry summons it straight into a unit zone (R64), fizzling with every unit zone full. Stats, cost, Can't attack, the start-of-turn forced attacks (R53) and the after-attacked Nerf (R1026, MD-C26) are unchanged.",
+    "player": {
+      "title": "AI Girlfriend becomes a Unit",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "AI Girlfriend is a Unit instead of an Animated Field Spell"
+      ],
+      "text": [
+        "Its printed text drops Animated on both faces"
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "f61b0336e4128f45f049a5077a84e8a4b4dcf573"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-049"
+    ],
+    "changes": [
+      {
+        "id": "meditative-049-3",
+        "name": "AI Girlfriend",
+        "kind": "changed",
+        "fields": [
+          "type",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.8",
+    "date": "2026-10-30",
+    "title": "Training Grounds #41–#60 become Legacy cards, named, tagged and decked apart from their Core cards",
+    "source": "#2511",
+    "notes": "Training Grounds #41–#60 are renamed Legacy: <Core name> and tagged Legacy (R2511000); each is its own card, so a deck may hold it beside its Core card and a Discover may offer both (R2511001). Cost, stats, text, rarity, set and picture are unchanged.",
+    "player": {
+      "title": "Training Grounds' Core copies become Legacy cards",
+      "new": [
+        "A new tag, Legacy, on the twenty Training Grounds copies of Core cards. The deck builder and the Almanac can filter on it."
+      ],
+      "balance": [],
+      "changes": [
+        "The twenty Training Grounds copies of Core cards are now the Legacy cards, each its own card: a deck may hold a Legacy card beside the Core card it copies.",
+        "A Discover may offer a Core card and its Legacy card together."
+      ],
+      "text": [
+        "Each Legacy card is named Legacy: and its Core card's name, for example Legacy: Bigot. Its cost, stats, text, rarity and picture are unchanged."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "b804337036fc9214dd163516a906f3748882cdbd"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "traininggrounds-041",
+      "traininggrounds-042",
+      "traininggrounds-043",
+      "traininggrounds-044",
+      "traininggrounds-045",
+      "traininggrounds-046",
+      "traininggrounds-047",
+      "traininggrounds-048",
+      "traininggrounds-049",
+      "traininggrounds-050",
+      "traininggrounds-051",
+      "traininggrounds-052",
+      "traininggrounds-053",
+      "traininggrounds-054",
+      "traininggrounds-055",
+      "traininggrounds-056",
+      "traininggrounds-057",
+      "traininggrounds-058",
+      "traininggrounds-059",
+      "traininggrounds-060"
+    ],
+    "changes": [
+      {
+        "id": "traininggrounds-041",
+        "name": "Legacy: Bigot",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-042",
+        "name": "Legacy: Stockpile",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-043",
+        "name": "Legacy: Mr. Vanilla",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-044",
+        "name": "Legacy: Duplicating Felinors",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-045",
+        "name": "Legacy: Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-046",
+        "name": "Legacy: Hit Job",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-047",
+        "name": "Legacy: Midrange Menace",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-048",
+        "name": "Legacy: Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-049",
+        "name": "Legacy: Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-050",
+        "name": "Legacy: Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-051",
+        "name": "Legacy: Big Felinor",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-052",
+        "name": "Legacy: Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-053",
+        "name": "Legacy: Prejudiced Postdoc",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-054",
+        "name": "Legacy: The Rock",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-055",
+        "name": "Legacy: Reminisce",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-056",
+        "name": "Legacy: Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-057",
+        "name": "Legacy: Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-058",
+        "name": "Legacy: True Strike",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-059",
+        "name": "Legacy: Fig of Life",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      },
+      {
+        "id": "traininggrounds-060",
+        "name": "Legacy: Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "snapshotOf"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.8b",
+    "date": "2026-10-31",
+    "title": "Patch: CN Tech and NA Tech read a win-rate table that covers every set that ships",
+    "source": "cargo jackioh winrates --refresh (#2386)",
+    "notes": "R2386000: the win-rate table CN Tech and NA Tech read held no row either could pick for Stinkyscape, Training Grounds, so it is refilled from each card's in-deck wins and games over its window at v0.5.10b, development games padding a window short of PUBLIC_STATS_MIN_LIVE_GAMES live games (provisional). R1368000's refresh from live games follows in a later patch. Every shipped version keeps the table it shipped with. It also claims meditative-019 (plays): classify finds it playing differently in a game where a CN Tech cast resolves with its Temporal Rift's play (R1370000). A game that holds its pools ranks the table without Legendary and Mythic cards (R2386001).",
+    "player": {
+      "title": "CN Tech and NA Tech read new win rates",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "CN Tech and NA Tech can now pick cards of every set: Stinkyscape and Training Grounds had no win rates before.",
+        "Their win rates come from AI test games until enough live games are played."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "1a98a9a46659663a1304e7a7eecaa2d642cf3ec3"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-019",
+      "meditative-050",
+      "meditativeplus-002"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9",
+    "date": "2026-10-31",
+    "title": "Stinkyscape balance changes I",
+    "source": "#2521",
+    "notes": "The owner's first Stinkyscape balance pass (#2521, with #2452): Resources gain the Resource tag and show their Credits; the five Faction cards are renamed and cost (2), and Swear Loyalities exiles only another faction's cards from hand and deck (R2521004); fifteen cards lose Starship Piece and a dead piece fuses its base version (R2521000); Beams, Cannons and Repeaters no longer target heroes, with new damage and uses; the Flaks roll each enemy's damage (R2521001); Meteor, Stratos, ZolarKeth (R2521003), Tmack Trav (R2521002), Pestilent Slime (R2521005), Memory Leak, Starfleet Commander, Yamato Cannon, Paragon-X, Narcor, Red Narcor, Korrelite and four costs change; Going Long and Aluneth lose Quickdraw; Preemptive Strike, Cloaking Module and Star Chart are new (R2521008); CN Tech and NA Tech fall back to hard-coded ends (R2521007); xxFreshJack and Shockwave447 play differently, since the rewritten scripts move cards across the BUSTED and complicated lists they read (R2173001).",
+    "player": {
+      "title": "Stinkyscape balance changes I",
+      "new": [
+        "Preemptive Strike, a (2) Legendary Spell: if you have a Dormant Starship, launch it, then Discover a War Doctrine and cast it.",
+        "Cloaking Module, a (2) Rare Unit: Starship Piece, Equip, Cloaked and Immutable; its Radiant face is also Immune to Spells.",
+        "Star Chart, a token Bob's Plan adds with Alteran Reach: it travels your starscape map 2 nodes (Radiant 4).",
+        "Two new tags: Resource, on the six Stinkyscape Resources, and Faction, on the five Faction cards."
+      ],
+      "balance": [
+        "ETHICS, Pegasus, Vanguard Coalition, Golden Accord and Star-jumper Core cost (2), down from (3).",
+        "Swear Loyalities costs (0), down from (1). Otherworldly Magic costs (2), up from (1).",
+        "The Narcor Project costs (3), down from (4). The Syndicate costs (1), down from (2). Memory Leak costs (2), down from (3).",
+        "Stratos is 3/1, Radiant 6/2, down from 3/3 and 6/6, and gains Ranged.",
+        "Beam v5 deals 12, Radiant 24, down from 15 and 30. Beam v4 deals 7, Radiant 14, down from 9 and 18.",
+        "Beam v3 deals 5, Radiant 10, down from 6 and 12. Cannon v5 deals 9, Radiant 18, down from 10 and 20.",
+        "Repeater v5 is Activate 4 and deals 3, Radiant 6, from Activate 6 and 2. Repeater v4 is Activate 3 and deals 2, Radiant 4.",
+        "Repeater v3 is Activate 3, down from Activate 4.",
+        "Meteor's Radiant face deals 15, down from 20.",
+        "Starfleet Commander, once Firststrike Capability, is Legendary, up from Common."
+      ],
+      "changes": [
+        "Beams, Cannons and Repeaters can no longer target heroes.",
+        "Flak v3, v4 and v5 deal a random 1 to 3 damage to each enemy (Radiant 2 to 4, with Lucky 1).",
+        "Phalanx, the Prototypes, the Paragons, Halo, Galaxy, Radix, Ozark, Falcon, Yuma, the Badgers and Stratos are no longer Starship Pieces.",
+        "A Starship Piece that dies fuses into your Starship as the card it was printed as: no card fused into it and no Buff goes with it.",
+        "Swear Loyalities adds the Faction card you swear to and exiles only the other factions' cards in your hand and deck.",
+        "Korrelite has Pierce. Narcor adds a random Legendary card. Red Narcor gains 2 mana and draws 1 (Radiant 4 and 2).",
+        "ZolarKeth summons a University, not a Radiant one, and each University can be activated at most once each turn.",
+        "Tmack Trav's extra attack after a kill on the turn it is played may hit only a Unit, as Rush says.",
+        "Pestilent Slime spreads its Plague Counters among your permanents when it dies.",
+        "Memory Leak has Crater. Paragon-X is Immune to Spells. Jlockeed's Yamato Cannon's Radiant face has Rush.",
+        "Going Long and Aluneth are no longer Quickdraw cards.",
+        "CN Tech and NA Tech fall back to Lunar Eclipse and Infinite Reserves instead of random cards."
+      ],
+      "text": [
+        "The five faction cards are named Faction: ETHICS, Faction: Pegasus, Faction: Vanguard Coalition, Faction: Golden Accord and Faction: Star-Jumper Core.",
+        "Firststrike Capability is renamed Starfleet Commander and is a Human. Resources show the Credits they pay."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6d09dcab908a3d0127f9f1e716ce330f6be8de44"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classicplus-034",
+      "core-084",
+      "meditative-080",
+      "meditativeplus-001",
+      "stinkyscape-003",
+      "stinkyscape-011",
+      "stinkyscape-039",
+      "stinkyscape-050",
+      "stinkyscape-053",
+      "stinkyscape-054",
+      "stinkyscape-055",
+      "stinkyscape-057",
+      "stinkyscape-058",
+      "stinkyscape-059",
+      "stinkyscape-060",
+      "stinkyscape-061",
+      "stinkyscape-068",
+      "stinkyscape-069",
+      "stinkyscape-072",
+      "stinkyscape-073",
+      "stinkyscape-074",
+      "stinkyscape-077",
+      "stinkyscape-078",
+      "stinkyscape-080",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-083",
+      "stinkyscape-085",
+      "stinkyscape-086",
+      "stinkyscape-095",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-128",
+      "stinkyscape-137",
+      "stinkyscape-159",
+      "stinkyscape-160",
+      "stinkyscape-161",
+      "stinkyscape-162",
+      "stinkyscape-163",
+      "stinkyscape-164",
+      "stinkyscape-176",
+      "stinkyscape-177",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-gellium",
+      "stinkyscape-t-korrelite",
+      "stinkyscape-t-narcor",
+      "stinkyscape-t-red-narcor",
+      "stinkyscape-t-reknite"
+    ],
+    "changes": [
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classic-027",
+        "name": "Pestilent Slime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-034",
+        "name": "Memory Leak",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-080",
+        "name": "Aluneth",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "meditativeplus-001",
+        "name": "Bob's Plan",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-001-5",
+        "name": "Star Chart",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-003",
+        "name": "Meteor",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-011",
+        "name": "Otherworldly Magic",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-026",
+        "name": "ZolarKeth",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-039",
+        "name": "The Narcor Project",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-050",
+        "name": "Beam v3",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-051",
+        "name": "Repeater v3",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-052",
+        "name": "Cannon v3",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-053",
+        "name": "Flak v3",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-054",
+        "name": "Beam v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-055",
+        "name": "Repeater v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-056",
+        "name": "Cannon v4",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-057",
+        "name": "Flak v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-059",
+        "name": "Repeater v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-060",
+        "name": "Cannon v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-061",
+        "name": "Flak v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-068",
+        "name": "Stratos",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-069",
+        "name": "Falcon",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-072",
+        "name": "Paragon Mk1",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-073",
+        "name": "Paragon Mk2",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-074",
+        "name": "Paragon-X",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-077",
+        "name": "Yuma",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-078",
+        "name": "Ozark",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-080",
+        "name": "Galaxy",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-081",
+        "name": "Radix",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-082",
+        "name": "Phalanx",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-083",
+        "name": "Halo",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-085",
+        "name": "Prototype-X1",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-086",
+        "name": "Prototype-X2",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-095",
+        "name": "Faction: Vanguard Coalition",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-128",
+        "name": "Jlockeed's Yamato Cannon",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-137",
+        "name": "Starfleet Commander",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "rarity"
+        ]
+      },
+      {
+        "id": "stinkyscape-150",
+        "name": "Call to Chaos (Stinky Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-159",
+        "name": "Faction: ETHICS",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-160",
+        "name": "Faction: Golden Accord",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-161",
+        "name": "Faction: Pegasus",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-162",
+        "name": "Faction: Star-Jumper Core",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "tags",
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-163",
+        "name": "Swear Loyalities",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-164",
+        "name": "The Syndicate",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-176",
+        "name": "Preemptive Strike",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-177",
+        "name": "Cloaking Module",
+        "kind": "added"
+      },
+      {
+        "id": "stinkyscape-t-reknite",
+        "name": "Reknite",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-korrelite",
+        "name": "Korrelite",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-gellium",
+        "name": "Gellium",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-axnit",
+        "name": "Axnit",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-narcor",
+        "name": "Narcor",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-red-narcor",
+        "name": "Red Narcor",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.9b",
+    "date": "2026-10-31",
+    "title": "Siphon Squad Tribute loop with self-resummoning Death",
+    "source": "Issue #2500",
+    "notes": "Classic #88 Siphon Squad's Tribute condition holds nothing on a body that is not Siphon Squad itself and arrived this turn (R2500000), ending the loop when fused or granted with Job Application's self-resummoning Death.",
+    "player": {
+      "title": "Siphon Squad Tribute loop fix",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Siphon Squad no longer enters an infinite Tribute loop when fused or granted with Job Application."
+      ]
+    },
+    "commits": [
+      "5aaf4f39c6dd71062baf275e404478d3c2328075"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-088"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9c",
+    "date": "2026-10-31",
+    "title": "Patch: hide keywords that do nothing on the field from units on the board",
+    "source": "#2577",
+    "notes": "A unit on the board no longer draws a chip or a treatment for Equip, Tradable, Cloaked, Crater, Flashback, Stack or Temporary, keywords that do nothing once it is on the field (R2577000, amending R438); its hover preview and inspect sheet still list every keyword. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Units on the board show only the keywords that work there",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit on the board no longer shows Equip, Tradable, Cloaked, Crater, Flashback, Stack or Temporary, which do nothing once it is in play. Its preview still lists every keyword."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3a620e806108dd0adb8da49fb271ecc1d024256a"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9d",
+    "date": "2026-10-31",
+    "title": "Patch: holding a card on a touch screen acts as its hover, on every screen and either turn",
+    "source": "#2617",
+    "notes": "On a touch screen a finger held on a card opens its hover preview while it stays down, on either turn and on every screen (R2617000); #165 had kept the inspect sheet on your own turn and off the board. With Hover previews off a hold opens the sheet as before. How cards are read only: nothing plays differently.",
+    "player": {
+      "title": "Hold a card on a phone to see it up close",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "On a touch screen, holding a card shows it enlarged until you let go, on either turn and on every screen. The hold never plays or picks the card."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "20dc56d356a7d7197b9ab750d9670cdf8dec0648"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9e",
+    "date": "2026-10-31",
+    "title": "Patch: a card that dies goes to the graveyard of the player who controlled it",
+    "source": "#2618",
+    "notes": "A card that leaves the field for a graveyard goes to its controller's, and a card that leaves the resolving zone for one to the graveyard of the player who played it, as that player's own card (R2618000, amending R12, R172, R360, R453, R747, R803, R1282, R1852002 and R1859012). A stolen Unit that dies is the thief's in the thief's graveyard, and a stolen Starship Piece builds the thief's ship. An Exile or a shuffle from the field still goes to the owner.",
+    "player": {
+      "title": "A card goes to the graveyard of the side it died on",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit you took from your opponent that dies now goes to your graveyard as your card, not back to theirs. A backrow card you took does the same when it is used up or destroyed.",
+        "A Starship Piece you took that dies now fuses into your Starship, not its old owner's.",
+        "Shadowstep returns a Unit you took that dies to your hand, since it is in your graveyard."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "9f10a70abf7520b479d654b9607cc5cd2c7a0057"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-002",
+      "classic-064",
+      "classic-080",
+      "classicplus-004",
+      "classicplus-006",
+      "classicplus-025",
+      "classicplus-026",
+      "classicplus-038",
+      "core-012",
+      "core-043",
+      "core-053",
+      "core-055",
+      "core-056",
+      "core-092",
+      "core-t-bread",
+      "meditative-030",
+      "meditative-036",
+      "meditative-066",
+      "meditative-093",
+      "stinkyscape-037",
+      "stinkyscape-042",
+      "stinkyscape-050",
+      "stinkyscape-056",
+      "stinkyscape-059",
+      "stinkyscape-062",
+      "stinkyscape-068",
+      "stinkyscape-074",
+      "stinkyscape-080",
+      "stinkyscape-085",
+      "stinkyscape-113",
+      "stinkyscape-122",
+      "stinkyscape-142",
+      "stinkyscape-153",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-korrelite",
+      "traininggrounds-007",
+      "traininggrounds-041",
+      "traininggrounds-044",
+      "traininggrounds-054"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.9f",
+    "date": "2026-11-01",
+    "title": "Patch: drop the at-a-glance Token and Created marks, keep them in the hover preview",
+    "source": "#2647",
+    "notes": "A card's Token and Created status rarely matters in combat, so no face wears the token mark (R1177001) or the Created pill (R943) any more; the hover preview still says both, a token's full face on its type line and a Created card in its state notes (R2647000). The wire and the views are unchanged. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Cleaner card faces",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards no longer wear a Token or Created mark on the board, in hand or in the backrow. Hover over a card, or hold it on a touch screen, to see either."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cb89afaf1fe6cd0430f02f80ff73f23f2f1e996c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10",
+    "date": "2026-11-01",
+    "title": "Patch: Stinkyscape balance changes II",
+    "source": "#2657",
+    "notes": "The owner's second Stinkyscape balance pass (R2657000-R2657006). Can't Defend is a keyword in place of the static flag \"Can't be in Defense Position\". A Field Trap reveals only on its first firing (trapFired.again). Float triggers only from the hand. A Trade never draws its own card back unless the deck holds no other. Summoning sickness persists through a refreshed attack. A Buff may add Flashback or remove Can't attack and Can't Defend; a Nerf may add Crater in a hand and never adds either. KY's Constant reads a Temporary count, Plague Counters and newly declared Unit and Trap amounts. Cost, stat and text changes to about forty cards; every changed script keeps its v0.5.9f version for replays (R767000).",
+    "player": {
+      "title": "Stinkyscape Balance Changes II",
+      "new": [
+        "Can't Defend is a keyword: a Unit with it is never in Defense Position. It replaces \"Can't be in Defense Position\" on every card that printed it."
+      ],
+      "balance": [
+        "Jlockeed's J15 Fighter: Ranged, Flying, Rush, Can't be attacked (was First Strike, Rush, can't be in Defense Position, Can't be attacked). Its Radiant face adds Divine Shield.",
+        "Rollback costs (4). Circadian Fullcycler costs (3) and has Brittle 3. Otherworldly Nightmare costs (2). Imitated Instrumentality costs (4).",
+        "Bob's Plan costs (2). The Trade Union and The Syndicate cost (0). GIGA Glowy Jelly Bean costs (6). Knockoff Temu Glowy Jelly Bean costs (1).",
+        "Abandoned Spice Tower costs (2). CN-Viral Injection costs (1). Temporal Rift costs (1). Alteran Reach costs (0). Stratos Swarm costs (4).",
+        "Great Replacement Theory costs (2).",
+        "Flak v3, v4 and v5 hit each enemy Unit, no longer the enemy hero.",
+        "Beam v5 deals 11 damage (Radiant 22).",
+        "Spiritually 中国's CN cards cost (1).",
+        "Radix is 1/1 (Radiant 2/2). Phalanx is 3/3 with Armor 2 (Radiant 6/6 with Armor 4).",
+        "Spell Basket's Spells have Temporary 2.",
+        "Top Loser has Armor 2 (Radiant 4). Bot Loser gains +3 (Radiant +6).",
+        "Book of Knowledge draws 2-3 (Radiant 4-6).",
+        "Going Long's Embiggened Armor is 5 (Radiant 10).",
+        "Anti-oneshot Armor caps damage at 4, and its Radiant face also gives your hero Armor 1.",
+        "Second Amendment Snake places 3 Plague Counters (Radiant 6).",
+        "Introspection heals 1 and deals 1 (Radiant: heals 2, deals 2 and draws 2).",
+        "Wildar's Radiant face gives your opponent a (0) Call to Chaos, then you a Radiant one at (0).",
+        "The Propagation's Hornet is 3/4 (Radiant 6/8).",
+        "YileGPT Prime costs (8) and loses Can't attack and its start-of-turn effect.",
+        "Prep's Embiggened version draws a random Spell (Radiant: the highest cost one).",
+        "Asteroid Field gains 1 Resource.",
+        "Book of Tokens summons 1 token 60% of the time and 2 tokens 40%.",
+        "K-Pop Fanatic has Can't Defend.",
+        "Book Launcher has one Activate: choose a target; an enemy gets a harmful Book, an ally a helpful one.",
+        "ZolarKeth: Cry: choose one: summon a University, or this gains \"Activate: Summon a random Starship Piece\" (Radiant: a Radiant University or a Radiant piece)."
+      ],
+      "changes": [
+        "Float reduces a card's cost (or Tribute) only while it is in your hand, no longer in your deck.",
+        "A Field Trap reveals only the first time it fires. Later firings are quick triggers with no reveal, and \"when one of your Traps reveals\" no longer answers them.",
+        "Trading a card never draws that same card back unless it is the only card in your deck.",
+        "A Unit summoned this turn stays summoning sick even when an effect lets it attack again, so a refreshed Rush attack still can't hit the hero.",
+        "A Buff can give any card Flashback, or take Can't attack or Can't Defend off it. A Nerf can give Crater to a Unit, Field Spell or Trap in a hand, and never adds Can't attack or Can't Defend.",
+        "KY's Constant can change more numbers: a Temporary card's count, a card's Plague Counters, and printed amounts on Units and Traps such as Radix's Discover count or Bear Honeypot's tokens."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "d824c5530e0150c50a1d10dfcb71811e2fbd0cc1"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-024",
+      "classic-047",
+      "classicplus-003",
+      "classicplus-019",
+      "classicplus-035",
+      "classicplus-048",
+      "classicplus-051",
+      "classicplus-053",
+      "core-028",
+      "core-029",
+      "core-050",
+      "core-054",
+      "core-060",
+      "core-065",
+      "core-073",
+      "core-084",
+      "core-090",
+      "meditative-007",
+      "meditative-019",
+      "meditative-049",
+      "meditative-069",
+      "meditative-090",
+      "meditative-093",
+      "meditativeplus-001",
+      "stinkyscape-012",
+      "stinkyscape-018",
+      "stinkyscape-044",
+      "stinkyscape-047",
+      "stinkyscape-058",
+      "stinkyscape-081",
+      "stinkyscape-082",
+      "stinkyscape-083",
+      "stinkyscape-085",
+      "stinkyscape-086",
+      "stinkyscape-092",
+      "stinkyscape-097",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-116",
+      "stinkyscape-148",
+      "stinkyscape-158",
+      "stinkyscape-164",
+      "stinkyscape-165",
+      "stinkyscape-169",
+      "stinkyscape-170",
+      "stinkyscape-171",
+      "stinkyscape-172",
+      "stinkyscape-173",
+      "traininggrounds-036"
+    ],
+    "changes": [
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "core-050",
+        "name": "K-Pop Fanatic",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-060",
+        "name": "Bear Honeypot",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-090",
+        "name": "CN-Viral Injection",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-024",
+        "name": "Book of Knowledge",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-035",
+        "name": "Prep",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-003",
+        "name": "Second Amendment Snake",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-1",
+        "name": "Top Loser",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-035",
+        "name": "Rollback",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-048",
+        "name": "Jlockeed's Lobbyist",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-051",
+        "name": "Jlockeed's J15 Fighter",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-007",
+        "name": "Introspection",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-019-1",
+        "name": "Temporal Rift",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-032",
+        "name": "Spiritually 中国",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Prime",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-069",
+        "name": "The Maestro",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-090",
+        "name": "Spell Basket",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093",
+        "name": "Growing Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093-1",
+        "name": "Growing Felinor Sr",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093-2",
+        "name": "Growing Felinor Sr Sr",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093-3",
+        "name": "Growing Felinor Super Senior",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-001",
+        "name": "Bob's Plan",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-012",
+        "name": "Otherworldly Nightmare",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-018",
+        "name": "Imitated Instrumentality",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-026",
+        "name": "ZolarKeth",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-044",
+        "name": "Great Replacement Theory",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-047",
+        "name": "Circadian Fullcycler",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-053",
+        "name": "Flak v3",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-057",
+        "name": "Flak v4",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-058",
+        "name": "Beam v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-061",
+        "name": "Flak v5",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-081",
+        "name": "Radix",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-082",
+        "name": "Phalanx",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-083",
+        "name": "Halo",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-085",
+        "name": "Prototype-X1",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-086",
+        "name": "Prototype-X2",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscape-092",
+        "name": "The Propagation's Hornet",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscape-097",
+        "name": "Asteroid Field",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-116",
+        "name": "Megabase",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-143",
+        "name": "Book Launcher",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-148",
+        "name": "Alteran Reach",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-149",
+        "name": "Wildar",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-158",
+        "name": "Stratos Swarm",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-164",
+        "name": "The Syndicate",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-165",
+        "name": "The Trade Union",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-169",
+        "name": "Tiny Asteroid",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-170",
+        "name": "Medium Asteroid",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-171",
+        "name": "Large Asteroid",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-172",
+        "name": "Huge Asteroid",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-173",
+        "name": "Abandoned Spice Tower",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-036",
+        "name": "Training Dummy",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.5.10b",
+    "date": "2026-11-01",
+    "title": "Patch: show coin flip and dice roll results, with a suspense animation",
+    "source": "#2652",
+    "notes": "Every coin flip and die roll of Gary the Gambler, Ace in the Hole, Mid Loser and Dice of Doom is reported as a `rolled` batch, one per verb call or hook, holding each coin or die in draw order with every face Lucky and Luck drew and the one kept (R2652001). The draws, the rng cursor and every state hash are unchanged: the report is answered by nothing and takes no number in R68's order. A batch a face-down trap made reaches its controller alone unless the trap fires in the same action (R2652000). The other families classify names are cards whose games hold such a roll in the same action: cards that make or copy one (InfiniScepter's copies, Gachaholic's luck-based cards and the like) and the cards a fused or crafted card holding one of these four texts is made of (House Party, Warp Disruptor II, Otherworldly Removal and Level Up! with Dice of Doom's; Withering Storm with Gary's). Their own play is unchanged.",
+    "player": {
+      "title": "See how every coin and die lands",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "When Gary the Gambler, Mid Loser, Ace in the Hole or Dice of Doom flips coins or rolls dice, both players now watch every coin spin and every die tumble at once.",
+        "Each lands on its result before the buff, keyword or cards it decides, with Lucky's extra rolls shown beside it.",
+        "The game log says each result in words, such as \"Gary the Gambler flipped 5 coins: 3 heads, 2 tails\".",
+        "A face-down Ace in the Hole's flip stays hidden from your opponent unless it lands heads and the trap fires."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "70cc5d9cbc35867157ff3c9c1a99ea73522a9859"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-007",
+      "classic-015",
+      "classic-065",
+      "classic-074",
+      "classic-083",
+      "classicplus-008",
+      "classicplus-019",
+      "classicplus-032",
+      "classicplus-062",
+      "core-004",
+      "meditative-056",
+      "meditative-101",
+      "meditativeplus-007",
+      "stinkyscape-024",
+      "stinkyscape-154",
+      "traininggrounds-031"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.5.10c",
+    "date": "2026-11-01",
+    "title": "Patch: Legendary (animated) and Mythic (signed) full-art tiers, and fifteen more iconic cards join the full-art club",
+    "source": "#2655",
+    "notes": "Every full-art card now has three full arts: the Epic still face, a Legendary that moves (the art drifts and a light sweeps over it) and a Mythic that also signs the card's English name across the art (R2655000, R2655003). The Legendary and Mythic are chases, granted to no account, earned from a duplicate's roll, a cosmetic pack or the Chase Shard bar; no token buys them. The cosmetics registry is now the list of full-art cards (R2655001): fifteen more cards of every type join the six portrait cards, and the tokens of five of them wear their parent's full art (R2655002). A card's full-art pick chooses off, Epic, Legendary or Mythic among the tiers owned, checked by the server and frozen into a match's loadout; migration 0072 keeps the pick's id. Reduced motion and Animated foil off hold every tier still. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Animated and signed full arts, and fifteen more full-art cards",
+      "new": [
+        "Every full-art card has two new chase versions: an animated Legendary full art, and a Mythic one that also signs the card's name. Earn them from duplicates, cosmetic packs and the Chase Shard bar.",
+        "Fifteen more cards print full art, among them League of Losers, Bread and Butter, The Mother Pancake and In Too Deep, each in a still, an animated and a signed version.",
+        "Some of those cards' tokens print full art with them."
+      ],
+      "balance": [],
+      "changes": [
+        "A card's cosmetics in the Collection now let you pick which full art it wears: none, or any version you own."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "68eba27ca9f002f81e36cee2e3f0967830b2c53b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
     "changes": []
   }
 ]

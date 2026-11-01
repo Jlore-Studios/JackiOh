@@ -382,3 +382,61 @@ async fn a_put_and_an_upload_each_take_the_accounts_economy_lock_before_they_rea
         "{asked:?}"
     );
 }
+
+#[tokio::test]
+async fn r2655000_a_pick_of_a_full_art_tier_needs_that_tier_owned_on_its_card() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    let signed = "full-art-mr-vanilla-signed";
+    // Not owned, another card's tier, and a text that is no full art's id.
+    for (body, message) in [
+        (
+            json!({ "cardId": CARD, "fullArt": signed }),
+            "\"fullArt\" is a cosmetic this account does not own",
+        ),
+        (
+            json!({ "cardId": CARD, "fullArt": "full-art-gary-the-gambler-signed" }),
+            "\"fullArt\" is not a cosmetic id of its kind",
+        ),
+        (
+            json!({ "cardId": CARD, "fullArt": "foil-rainbow" }),
+            "\"fullArt\" must be a boolean or a full-art id or null",
+        ),
+    ] {
+        assert_eq!(refusal(put(&app, TOKEN, body.clone()).await), message, "{body}");
+    }
+    // Owning the Epic owns no other tier, and owning the Mythic owns neither the Epic nor `true`.
+    own(&app, &profile, CARD, FULL_ART).await;
+    assert_eq!(
+        refusal(put(&app, TOKEN, json!({ "cardId": CARD, "fullArt": signed })).await),
+        "\"fullArt\" is a cosmetic this account does not own"
+    );
+    own(&app, &profile, CARD, signed).await;
+    let (status, body) = put(&app, TOKEN, json!({ "cardId": CARD, "fullArt": signed })).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body, json!({ "cards": [{ "cardId": CARD, "fullArt": signed }] }));
+    assert_eq!(get(&app, Some(TOKEN)).await, (200, body));
+    // `true` is the Epic still, and an upload keeps an owned tier's id.
+    let (status, body) = put(&app, TOKEN, json!({ "cardId": CARD, "fullArt": true })).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body, json!({ "cards": [{ "cardId": CARD, "fullArt": true }] }));
+    own(&app, &profile, "core-004", "full-art-gary-the-gambler-animated").await;
+    let (status, body) = upload(
+        &app,
+        TOKEN,
+        json!([
+            { "cardId": "core-004", "fullArt": "full-art-gary-the-gambler-animated" },
+            // Not owned: left out, and with it the whole entry.
+            { "cardId": "core-011", "fullArt": "full-art-tempo-timmy-signed" },
+        ]),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [
+            { "cardId": "core-004", "fullArt": "full-art-gary-the-gambler-animated" },
+            { "cardId": CARD, "fullArt": true },
+        ] })
+    );
+}

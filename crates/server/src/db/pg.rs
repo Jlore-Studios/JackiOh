@@ -713,14 +713,6 @@ fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
 }
 
 fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
-    let Some(p2) = row.p2_profile_id else {
-        // Only an `open` room reaches this, and `matches_get`/`matches_live` filter those out
-        // before here.
-        return Err(StoreError::from(format!(
-            "match {} has no second player; it is still an open room",
-            row.id
-        )));
-    };
     let status = from_literal(if row.status == "over" { "finished" } else { "live" })?;
     let boards = (
         last_board_of(&row.p1_last_board)?,
@@ -744,8 +736,12 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     Ok(MatchRow {
         id: row.id,
         seed: row.seed,
-        // See KNOWN DIVERGENCES (deleted accounts): a deleted seat reads back as an empty id.
-        players: (row.p1_profile_id.unwrap_or_default(), p2),
+        // See KNOWN DIVERGENCES (deleted accounts): a deleted seat, either one, reads back as an
+        // empty id.
+        players: (
+            row.p1_profile_id.unwrap_or_default(),
+            row.p2_profile_id.unwrap_or_default(),
+        ),
         decks: (card_list_of(&row.p1_deck)?, card_list_of(&p2_deck)?),
         catalog_version: row.catalog_version,
         status,
@@ -1956,7 +1952,11 @@ pub async fn profiles_get_by_user_id(t: &mut PgTx<'_>, user_id: &str) -> Result<
 }
 
 pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Result<Vec<Profile>, StoreError> {
-    if profile_ids.is_empty() {
+    // A deleted seat reads back as the empty id (KNOWN DIVERGENCES, deleted accounts). An id that is
+    // not a uuid names no profile, and Postgres would refuse it, so it is left out, as
+    // `ranked_standings_subset` leaves it out.
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
         return Ok(Vec::new());
     }
     run_as(t, None).await?;
@@ -1967,7 +1967,7 @@ pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Resu
         profile_from!(),
         " where p.id = any($1::uuid[])"
     ))
-    .bind(profile_ids.to_vec())
+    .bind(ids)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
@@ -3751,9 +3751,9 @@ pub async fn matches_seats(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Ma
 // Replays (R768)
 // ---------------------------------------------------------------------------
 
-/// One finished match with a result, read for its replay. Unlike `to_match`'s other callers it
-/// reads a deleted second seat as the empty id too (KNOWN DIVERGENCES, deleted accounts), so a
-/// player keeps the replay of a match whose opponent has deleted their account.
+/// One finished match with a result, read for its replay. A deleted seat reads as the empty id
+/// (`to_match`, KNOWN DIVERGENCES, deleted accounts), so a player keeps the replay of a match whose
+/// opponent has deleted their account.
 async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Option<ReplayRow>, StoreError> {
     let row = sqlx::query(concat!(
         "select ",
@@ -3768,8 +3768,7 @@ async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Op
     let Some(row) = row else {
         return Ok(None);
     };
-    let mut row = MatchDbRow::read(&row)?;
-    row.p2_profile_id.get_or_insert_with(String::new);
+    let row = MatchDbRow::read(&row)?;
     let row = to_match(row)?;
     let Some(result) = results_get_by_match(t, match_id).await? else {
         return Ok(None);
@@ -3862,9 +3861,7 @@ pub async fn replays_list_with_modes(
     .map_err(db_error)?;
     let mut replays = Vec::with_capacity(rows.len());
     for row in &rows {
-        let mut shape = MatchDbRow::read(row)?;
-        // As `replay_row` reads it: a deleted second seat is the empty id, so the replay is kept.
-        shape.p2_profile_id.get_or_insert_with(String::new);
+        let shape = MatchDbRow::read(row)?;
         let replay = ReplayRow {
             row: to_match(shape)?,
             result: to_result(ResultDbRow {
@@ -7644,7 +7641,6 @@ pub async fn presence_watchable(
         "select p.id from public.profiles p
            join public.matches m on m.id = p.current_match_id
           where p.id = any($2::uuid[]) and p.id <> $1::uuid
-            and p.allow_spectators
             and m.status = 'live'
             and p.id in (m.p1_profile_id, m.p2_profile_id)
             and $1::uuid is distinct from m.p1_profile_id
@@ -7667,50 +7663,13 @@ pub async fn presence_watchable(
     Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
 }
 
-// profiles (B46, B50)
+// profiles (B46)
 
 pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(None);
     }
     profiles_get_by_id(t, profile_id).await
-}
-
-pub async fn profiles_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(false);
-    }
-    run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
-        .bind(profile_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    match row {
-        Some(row) => get(&row, "allow_spectators"),
-        None => Ok(false),
-    }
-}
-
-pub async fn profiles_set_allow_spectators(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    allow: bool,
-) -> Result<(), StoreError> {
-    if !is_uuid(profile_id) {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set allow_spectators = $2::boolean where id = $1::uuid")
-        .bind(profile_id)
-        .bind(allow)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    if done.rows_affected() == 0 {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    Ok(())
 }
 
 // challenges (B48, B49)
@@ -8443,11 +8402,16 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 //    cascading its `season_ranks` away, so `matches_get`, `results_get_by_match`, `series_get` and
 //    `ranked_game` can read back a null where the port types a profile id. TS handed that null on in
 //    a string-typed slot; a Rust `String` cannot hold it, so a deleted seat reads back as the empty
-//    string (a match's second seat excepted: `to_match` refuses a row with no `p2_profile_id`, as
-//    TS's did, except for a replay's read, `replay_row`, R768). The in-memory store keeps the id (it
-//    has no foreign keys). Only a replay reads a finished match's seats back, and a live match or
-//    series cannot lose a seat: the delete is refused, by constraint here and by
-//    `DELETE /api/account` first.
+//    string, either seat of a match included (`to_match`). An open room, whose second seat nobody
+//    has taken, never reaches `to_match`: `matches_get` and the replays read only `live` and
+//    `over` rows, and `matches_live` skips a row with no second seat. The in-memory store keeps
+//    the id (it has no foreign keys). Many reads hand a finished match's seats on (a replay, R768,
+//    the rematch routes, the ranks read, the match socket's reopen, a game record's refile), so a
+//    read that binds a profile id takes an id that is not a uuid, the empty one among them, as
+//    naming nothing (`profiles_get_many`, `ranked_standings_subset`, `blocks_between`, the
+//    economy's `game_jlore_totals`) instead of handing it to Postgres. A live match or series
+//    cannot lose a seat: the delete is refused, by constraint here and by `DELETE /api/account`
+//    first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
 //    `grace_deadline_at` plus two `*_disconnected_at`. The per-player deadlines are stored in the
 //    two `*_disconnected_at` columns and `grace_deadline_at` keeps the nearer of them. A migration

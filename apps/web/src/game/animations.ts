@@ -154,6 +154,13 @@ function zoneOfCard(view: PlayerView, zone: Zone, instanceId: string): string {
  * ------------------------------------------------------------------------------------------- */
 
 /**
+ * Issue #2652 (R2652001): how long a batch of coin flips or die rolls holds the board, BUILD M5-T4's
+ * `rolled` row: long enough for every coin to spin and every die to tumble before the result lands,
+ * where a banner is 600 ms. The effects speed divides it (R201) and reduced motion makes it 0.
+ */
+export const ROLLED_ENTRY_MS = 1_200;
+
+/**
  * `eventType → { animation, durationMs, testid }` with exactly one row per `GameEvent["type"]`
  * (BUILD M5-T4). Every duration is the BUILD table's; `animations.test.ts` pins all
  * forty-three literally so a drift in either direction fails.
@@ -446,7 +453,8 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
   // may not identify the card: an opponent's face-down trap has no `instanceId` in the view (§10.8,
   // R33) and so no `card-<instanceId>` to animate, but its zone is always on screen. The card
   // itself is preferred when the viewer can see it, which is the "trap name visible during the
-  // hold" the BUILD M5-T4 acceptance asks for.
+  // hold" the BUILD M5-T4 acceptance asks for. A Field Trap firing again reveals nothing and plays the
+  // `activated` row instead (`firesAgain`, R2657001).
   trapFired: {
     animation: "jk-trap-flip",
     durationMs: 700,
@@ -946,6 +954,16 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "board",
     target: () => testid.board,
   },
+  // Issue #2652 (R2652001): one panel over the board holds a card's whole batch of coins or dice,
+  // every coin spinning and every die tumbling at once and landing on its kept face (fx/rolls.ts),
+  // before the entry of what it decided; the log and the showcase's live region say it in words.
+  rolled: {
+    animation: "jk-banner",
+    durationMs: ROLLED_ENTRY_MS,
+    testid: "turn-banner",
+    fx: { recipe: "roll" },
+    target: () => testid.banner,
+  },
 };
 
 /**
@@ -1101,9 +1119,12 @@ export function pileTestid(pile: Pile): string {
   return pile.pile === "graveyard" ? animTestid.graveyard(pile.side) : animTestid.exile(pile.side);
 }
 
-/** Entries the burst budget never squeezes: each stands for many events, or holds a cast up to be read. */
+/**
+ * Entries the burst budget never squeezes: each stands for many events, holds a cast up to be read, or
+ * is a batch of coins or dice whose suspense is the point (R2652001).
+ */
 function pinned(entry: AnimationEntry): boolean {
-  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined;
+  return entry.cast !== undefined || entry.zone !== undefined || entry.sweep !== undefined || entry.type === "rolled";
 }
 
 function frameMap(entries: readonly (readonly [string | null, GameEventType])[]): Map<string, GameEventType> {
@@ -1278,18 +1299,30 @@ export function planEntries(
       i += 2;
       continue;
     }
-    const frames = frameMap([[frameFor(event, view, plays), event.type]]);
+    // R2657001: a face-up Field Trap firing again reveals nothing, so it plays as an activation does
+    // (the `activated` row's time and its flare, fx/cues.ts), never the reveal's flip and hold.
+    const shown = firesAgain(event) ? "activated" : event.type;
+    const frames = frameMap([[frameFor(event, view, plays), shown]]);
     take(i, 1);
     out.push({
       events: [event],
-      type: event.type,
-      durationMs: durationFor(event.type, reducedMotion),
+      type: shown,
+      durationMs: durationFor(shown, reducedMotion),
       frames,
       view,
     });
     i += 1;
   }
   return out;
+}
+
+/**
+ * R2657001: a `trapFired` for a face-up Field Trap firing again (`again`), which reveals nothing: a
+ * Field Trap reveals once, the first time it fires. Its entry, its effect and its sound are a plain
+ * trigger's, and no showcase holds it up.
+ */
+export function firesAgain(event: GameEvent): boolean {
+  return event.type === "trapFired" && event.again === true;
 }
 
 /* ------------------------------------------------------------------------------------------- *

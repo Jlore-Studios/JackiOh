@@ -9,7 +9,7 @@
 //! Meditative, Meditative+, Stinkyscape, R1857000, and the held Training Grounds set, R2194000): that it holds every card and every token exactly once, that every enum value is in
 //! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
 //! B3.1, which print a whole line or none, R2280000) and nowhere else, that the rarity distribution
-//! each set prints is the one the file carries, and that the v0.2.0 fields (`printedRarity`, `params`,
+//! each set prints is the one the census carries (`jackioh_cards::census`), and that the v0.2.0 fields (`printedRarity`, `params`,
 //! `loc`, a face's `type` and `xStats`) are well formed. It does NOT re-read the §8 cells — `crates/cards/tests/cross/catalog.rs` does that with
 //! an independent transcription. The pending-fragment proof is its own command, `patches check`
 //! (TS's `pnpm validate:catalog` ran both).
@@ -30,6 +30,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail};
 use indexmap::{IndexMap, IndexSet};
+use jackioh_cards::census::{CENSUS, tag_count};
 use jackioh_engine::wire::{
     CardType, Flavor, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders, set_ships,
 };
@@ -103,192 +104,24 @@ impl SetExpectation {
     }
 }
 
-fn range(prefix: &str, from: usize, to: usize) -> Vec<String> {
-    (from..=to).map(|n| format!("{prefix}{n}")).collect()
-}
-
 fn texts(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| (*item).to_string()).collect()
 }
 
-/// `SETS`.
+/// `SETS`: the census's sets (`jackioh_cards::census`, where each set's counts are written once, #2581).
 fn sets() -> Vec<SetExpectation> {
-    vec![
-        // §8 + §7: the 100 Core indices, the 5 card-defined tokens, and the 6 named ones — the 4
-        // tokens several cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token,
-        // a card of its own in patch v0.1.1 (R353). §8: "Distribution: 32 Common, 40 Rare, 16 Epic,
-        // 7 Legendary, 5 Mythic" (patch v0.2.9, issue #44, made #27, #28 and #40 Rare).
-        SetExpectation {
-            set: "Core",
-            segment: "core",
-            cards: 100,
-            shared_cards: Vec::new(),
-            card_defined_tokens: texts(&["51.1", "65.1", "90.1", "93.1", "95.1"]),
-            shared_tokens: texts(&["T-rush", "T-sheep", "T-felinor", "T-bread", "T-coin", "T-ghoul"]),
-            rarities: &[
-                ("Common", 32),
-                ("Rare", 40),
-                ("Epic", 16),
-                ("Legendary", 7),
-                ("Mythic", 5),
-            ],
-        },
-        // B2.1, B2.5: 90 cards and one shared token; the designer's rarities, as patch v0.2.9
-        // (issue #44) left them: 35/26/18/10/1. Issue #170 adds the shared token, Glitch, which only
-        // R673's roll ever makes (R674).
-        SetExpectation {
-            set: "Classic",
-            segment: "classic",
-            cards: 90,
-            shared_cards: Vec::new(),
-            card_defined_tokens: Vec::new(),
-            shared_tokens: texts(&["T-glitch"]),
-            rarities: &[
-                ("Common", 35),
-                ("Rare", 26),
-                ("Epic", 18),
-                ("Legendary", 10),
-                ("Mythic", 1),
-            ],
-        },
-        // B2.1, B2.3, B2.5, B8: 78 cards, 28 tokens a card defines and the ten AI generated cards,
-        // as patch v0.2.9 (issue #44) left them: 13/24/25/13/3.
-        SetExpectation {
-            set: "Classic+",
-            segment: "classicplus",
-            cards: 78,
-            shared_cards: Vec::new(),
-            card_defined_tokens: [
-                range("12.", 1, 8),
-                range("19.", 1, 5),
-                range("32.", 1, 3),
-                texts(&["36.1", "38.1", "42.1", "46.1"]),
-                range("65.", 1, 5),
-                texts(&["73.1", "75.1", "76.1"]),
-            ]
-            .concat(),
-            shared_tokens: range("T-AI-", 1, 10),
-            rarities: &[
-                ("Common", 13),
-                ("Rare", 24),
-                ("Epic", 25),
-                ("Legendary", 13),
-                ("Mythic", 3),
-            ],
-        },
-        // R1420: the Meditative set (issue #496, docs/meditative-set.md M2): 102 cards and the 30 tokens they
-        // define, the designer's rarities with five filled in by §8's rubric. It does not ship yet, so its
-        // entries are checked for their shape alone until the patch that lists it in SHIPPED_SETS.
-        SetExpectation {
-            set: "Meditative",
-            segment: "meditative",
-            cards: 102,
-            shared_cards: Vec::new(),
-            card_defined_tokens: texts(&[
-                "19.1", "22.1", "28.1", "30.1", "39.1", "39.2", "39.3", "39.4", "39.5", "45.1", "49.1",
-                "49.2", "49.3", "70.1", "71.1", "91.1", "93.1", "93.2", "93.3", "95.1", "96.1", "97.1",
-                "97.2", "97.3", "97.4", "97.5", "97.6", "97.7", "97.8", "97.9",
-            ]),
-            shared_tokens: Vec::new(),
-            rarities: &[
-                ("Common", 29),
-                ("Rare", 29),
-                ("Epic", 22),
-                ("Legendary", 16),
-                ("Mythic", 6),
-            ],
-        },
-        // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): 26 cards
-        // and the 6 tokens they define (#1.1 Base Camp, #1.2 Spa Day, and since #1563 #1.3 Garage Sale
-        // and #1.4 Leg Day, the AI generated helpers of #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil'
-        // Kenny), the rarities the designer printed and #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
-        // alone until the patch that lists it in SHIPPED_SETS (#1187).
-        SetExpectation {
-            set: "Meditative+",
-            segment: "meditativeplus",
-            cards: 26,
-            shared_cards: Vec::new(),
-            card_defined_tokens: texts(&["1.1", "1.2", "1.3", "1.4", "16.1", "20.1"]),
-            shared_tokens: Vec::new(),
-            rarities: &[
-                ("Common", 5),
-                ("Rare", 9),
-                ("Epic", 9),
-                ("Legendary", 1),
-                ("Mythic", 2),
-            ],
-        },
-        // R1420, R1857000, R1857001: the Stinkyscape set (issue #1836, docs/stinkyscape-set.md ST12):
-        // 175 cards (the designer's second #21 and #122 numbered #174 and #175), the 30 tokens they
-        // define, the Dormant Starship (a card outside the numbers, the set's one shared card), and 22
-        // shared tokens: the two drones, the Drone Battleship's three layers, the six Resources,
-        // Anomaly Found! and the ten AI generated cards. Its rarities over its 176 cards: 42 Common, 50
-        // Rare, 43 Epic, 29 Legendary (the Dormant Starship one of them) and 12 Mythic. It does not
-        // ship yet, so its entries are checked for their shape alone until its release (#1884).
-        SetExpectation {
-            set: "Stinkyscape",
-            segment: "stinkyscape",
-            cards: 175,
-            shared_cards: texts(&["T-dormant-starship"]),
-            card_defined_tokens: [
-                range("4.", 1, 6),
-                texts(&["8.1"]),
-                range("10.", 1, 3),
-                range("11.", 1, 3),
-                range("12.", 1, 3),
-                range("18.", 1, 3),
-                texts(&["84.1", "112.1", "135.1"]),
-                range("137.", 1, 4),
-                texts(&["147.1", "147.2", "148.1", "150.1"]),
-            ]
-            .concat(),
-            shared_tokens: [
-                texts(&[
-                    "T-drone-interceptor",
-                    "T-drone-corvette",
-                    "T-shield-layer",
-                    "T-propagation-layer",
-                    "T-meltdown-layer",
-                    "T-reknite",
-                    "T-korrelite",
-                    "T-gellium",
-                    "T-axnit",
-                    "T-narcor",
-                    "T-red-narcor",
-                    "T-anomaly-found",
-                ]),
-                range("T-AI-", 1, 10),
-            ]
-            .concat(),
-            rarities: &[
-                ("Common", 42),
-                ("Rare", 50),
-                ("Epic", 43),
-                ("Legendary", 29),
-                ("Mythic", 12),
-            ],
-        },
-        // R1420, R2194000: the Training Grounds set (issue #2193, docs/training-grounds-set.md TG2): 60
-        // cards (#1 to #40 and the Core snapshots #41 to #60, part 2's) and the one token #39 defines,
-        // #39.1. Its rarities over its 60 cards: 26 Common, 19 Rare, 11 Epic, 3 Legendary and 1 Mythic.
-        // It does not ship yet, so its entries are checked for their shape alone until its release
-        // (#2204).
-        SetExpectation {
-            set: "Training Grounds",
-            segment: "traininggrounds",
-            cards: 60,
-            shared_cards: Vec::new(),
-            card_defined_tokens: texts(&["39.1"]),
-            shared_tokens: Vec::new(),
-            rarities: &[
-                ("Common", 26),
-                ("Rare", 19),
-                ("Epic", 11),
-                ("Legendary", 3),
-                ("Mythic", 1),
-            ],
-        },
-    ]
+    CENSUS
+        .iter()
+        .map(|census| SetExpectation {
+            set: census.set,
+            segment: census.segment,
+            cards: census.cards,
+            shared_cards: texts(census.shared_cards),
+            card_defined_tokens: texts(census.card_defined_tokens),
+            shared_tokens: texts(census.shared_tokens),
+            rarities: census.rarities,
+        })
+        .collect()
 }
 
 fn expected_indices(set: &SetExpectation) -> Vec<String> {
@@ -299,133 +132,11 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
     out
 }
 
-/// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included — a census, so a tag
-/// that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
-/// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
-/// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
-/// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
-/// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563), each of which counts once it ships (R1420),
-/// the Stinkyscape set's (docs/stinkyscape-set.md ST12's census of its 228, R1857000), which counts
-/// from its release (#1884), and the held Training Grounds set's (docs/training-grounds-set.md TG2's census
-/// of its 61, R2194000), which counts from its release (#2204).
-fn expected_tag_count(tag: Tag) -> usize {
-    match tag {
-        // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
-        // Stinkyscape #6, #14, #15, #17, #26, #37, #42, #45, #88, #94, #96, #103, #109, #110, #111, #113,
-        // #114, #115, #147 and #147.1.
-        // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the snapshots #41, #43,
-        // #53 and #54.
-        Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(20) + training_grounds(15),
-        // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
-        // Stinkyscape #87.
-        // Training Grounds #17, #22, #23 and #33, and the snapshots #44 and #51.
-        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6),
-        // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
-        // Stinkyscape #4.2 and #25.
-        Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2),
-        // Meditative+ #21 Harmony Spirit.
-        // Stinkyscape #142.
-        // Training Grounds #29 Oriental.
-        Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
-        // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
-        // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
-        // Stinkyscape #21.
-        // Training Grounds' snapshot #59 Fig of Life.
-        Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
-        // Meditative #95 Call to Chaos (Meditative Edition).
-        // Stinkyscape #150 and #151.
-        // Training Grounds #39.
-        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
-        // Meditative+ #1 Bob's Plan.
-        // Stinkyscape #16, #44, #116, #148 and #154.
-        // Training Grounds #40 Goetzmann Game Design.
-        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1) + stinkyscape(5) + training_grounds(1),
-        // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
-        // Jlockeed's Supply Drop (the designer's "Jlockheed").
-        // Stinkyscape #124 to #130.
-        // Training Grounds' snapshots #45 and #48.
-        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1) + stinkyscape(7) + training_grounds(2),
-        // Meditative+ #15 Book of Potions.
-        // Stinkyscape #102.
-        Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
-        Tag::Pancake => 10,
-        // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, #1 Bob's Plan's
-        // AI generated helpers.
-        // Stinkyscape's ten AI generated cards, T-AI-1 to T-AI-10.
-        Tag::Ai => 10 + meditative_plus(4) + stinkyscape(10),
-        // Classic+ #7 The House since #1704, and #39 Book Worm since #1828.
-        // Stinkyscape #40 Poison Capsule.
-        Tag::Plague => 19 + meditative(2) + stinkyscape(1),
-        // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
-        // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
-        // Stinkyscape #147 (Catalyst) and its #147.1 (Prime).
-        Tag::Catalyst => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
-        Tag::Prime => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
-        // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.10 (#831).
-        // Stinkyscape #6, #26, #37, #87, #88, #109, #110, #111 and #115.
-        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9),
-        // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
-        // Stinkyscape #148 and #148.1.
-        Tag::Wincon => meditative(2) + stinkyscape(2),
-        // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
-        Tag::Potion => meditative_plus(3),
-        // #1837, ahead of the Stinkyscape set (R1837000): Core #100 Ceaseless Void; Classic #90 In Too
-        // Deep; Classic+ #32 Otherworldly Removal; its three tokens, #32.1 Execute, #32.2 Brawl and
-        // #32.3 Blade Storm; and Core #26 to #29, the four Glowy Jelly Beans.
-        // Stinkyscape: #4.1 to #4.6 (Terminus); #7 and #112 (Quest); #10 to #12 (Otherworldly) and
-        // their nine tokens, #10.1 to #12.3 (Other-Origins).
-        Tag::Terminus => 1 + stinkyscape(6),
-        Tag::Quest => 1 + stinkyscape(2),
-        Tag::Otherworldly => 1 + stinkyscape(3),
-        Tag::OtherOrigins => 3 + stinkyscape(9),
-        // Training Grounds #27 Hopeful Jelly Bean and the snapshot #50 Glowy Jelly Bean.
-        Tag::JellyBean => 4 + training_grounds(2),
-        // R1857000, the Stinkyscape set's four: #27 to #36 (Drone Core); #50 to #61 and #140 to #143
-        // (Weapon); the four #137 tokens (War Doctrine); #91 and #92, its Swarm Units (Swarm).
-        Tag::DroneCore => stinkyscape(10),
-        Tag::Weapon => stinkyscape(16),
-        Tag::WarDoctrine => stinkyscape(4),
-        Tag::Swarm => stinkyscape(2),
-        // Training Grounds #39.1.
-        Tag::Token => 50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1),
-    }
-}
-
-/// R1420: a Meditative entry counts toward the totals and the tag census only once its set ships,
-/// so the census holds on either side of the patch that lists it in `SHIPPED_SETS`.
-fn meditative(count: usize) -> usize {
-    if set_ships(SetName::Meditative) { count } else { 0 }
-}
-
-/// R1420, R1178000: the same for a Meditative+ entry, held until its release (#1187).
-fn meditative_plus(count: usize) -> usize {
-    if set_ships(SetName::MeditativePlus) {
-        count
-    } else {
-        0
-    }
-}
-
-/// R1420, R1857000: the same for a Stinkyscape entry, held until its release (#1884).
-fn stinkyscape(count: usize) -> usize {
-    if set_ships(SetName::Stinkyscape) { count } else { 0 }
-}
-
-/// R2194000: `count` once the Training Grounds set ships, else 0.
-fn training_grounds(count: usize) -> usize {
-    if set_ships(SetName::TrainingGrounds) {
-        count
-    } else {
-        0
-    }
-}
-
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
 fn expected_tag_counts() -> Vec<(&'static str, usize)> {
     Tag::ALL
         .iter()
-        .map(|tag| (tag.as_str(), expected_tag_count(*tag)))
+        .map(|tag| (tag.as_str(), tag_count(*tag)))
         .collect()
 }
 
@@ -1168,8 +879,8 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
     let mut failures: Vec<String> = Vec::new();
     let entries = catalog.len();
 
-    // 1. 111 entries, R1420's unshipped sets aside. (TS checks the total here and again after the
-    // loop, so a wrong total fails twice; kept.)
+    // 1. The census's entry total, R1420's unshipped sets aside. (TS checks the total here and again
+    // after the loop, so a wrong total fails twice; kept.)
     let unshipped_entries = catalog
         .values()
         .filter(|value| {
@@ -1528,35 +1239,6 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             refs_by_card.insert(key.as_str(), refs);
         }
 
-        // R2195000: a snapshot (Training Grounds #41–#60) names the Core card it copies, and keeps its
-        // name (R2195001).
-        if let Some(of) = value.get("snapshotOf") {
-            let original = of
-                .as_str()
-                .and_then(|id| catalog.get(id))
-                .and_then(Json::as_object);
-            let is_core_card = original.is_some_and(|o| {
-                o.get("set").and_then(Json::as_str) == Some("Core")
-                    && o.get("token") == Some(&Json::Bool(false))
-            });
-            if value.get("set").and_then(Json::as_str) != Some("Training Grounds") || !is_core_card {
-                fail(
-                    &mut failures,
-                    &at,
-                    &format!(
-                        "`snapshotOf` marks a Training Grounds card and names a Core card (got {})",
-                        describe(Some(of))
-                    ),
-                );
-            } else if original.and_then(|o| o.get("name")) != value.get("name") {
-                fail(
-                    &mut failures,
-                    &at,
-                    "a snapshot keeps its Core card's name (R2195001)",
-                );
-            }
-        }
-
         // R349: a card that prints no Radiant form carries `radiantFallback: true`, and its `radiant`
         // face is exactly the fallback the rule gives it: the base face with its attack and health
         // doubled, the same keywords and the same text.
@@ -1587,8 +1269,6 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "resource",
             "loc",
             "radiantFallback",
-            // R2195000: the Core card a Training Grounds snapshot copies (`CardDef.snapshot_of`).
-            "snapshotOf",
             "base",
             "radiant",
         ];
@@ -1606,8 +1286,7 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
         }
     }
 
-    // 1, 2. The totals: B2.1's 268 cards and, with Glitch (issue #170), 50 tokens, 318 entries, and
-    // from the patch that ships it the Meditative set's 102 and 30 (R1420): 370, 80 and 450.
+    // 1, 2. The totals: the census's sums over the sets that ship (R1420).
     if entries != expected_total {
         fail(
             &mut failures,
@@ -2221,6 +1900,8 @@ pub fn run_version(args: VersionArgs) -> anyhow::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use jackioh_cards::census::SetCensus;
+
     use super::*;
 
     fn shipped_catalog() -> Object {
@@ -2241,18 +1922,13 @@ mod tests {
     fn the_shipped_catalog_passes_every_check() {
         let report = check_catalog(&shipped_catalog());
         assert_eq!(report.failures, Vec::<String>::new());
-        // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
-        // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
-        // 26 and 4 (R1178000), 6 since #1563's #1.3 and #1.4; and from its release (#1884) the
-        // Stinkyscape set's 176 and 52 (R1857000); and from its release (#2204) the Training Grounds
-        // set's 60 and 1 (R2194000).
+        // The totals are the census's sums over the sets that ship (R1420, #2581).
+        let shipped = || CENSUS.iter().filter(|census| census.ships());
+        let cards: usize = shipped().map(SetCensus::card_count).sum();
+        let tokens: usize = shipped().map(SetCensus::token_count).sum();
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
-            (
-                318 + meditative(132) + meditative_plus(32) + stinkyscape(228) + training_grounds(61),
-                268 + meditative(102) + meditative_plus(26) + stinkyscape(176) + training_grounds(60),
-                50 + meditative(30) + meditative_plus(6) + stinkyscape(52) + training_grounds(1)
-            )
+            (cards + tokens, cards, tokens)
         );
     }
 
@@ -2280,8 +1956,8 @@ mod tests {
 
     #[test]
     fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
-        // Since its release (#1187) its entries (30, 32 since #1563) count toward the totals, and none is held apart:
-        // the entries held apart are a held set's alone (R1857000's Stinkyscape, while it is held).
+        // Since its release (#1187) its entries count toward the totals, and none is held apart: the
+        // entries held apart are a held set's alone (R1857000's Stinkyscape, while it is held).
         let shipped = check_catalog(&shipped_catalog());
         assert_eq!(shipped.failures, Vec::<String>::new());
         let held = shipped_catalog()
@@ -2301,6 +1977,18 @@ mod tests {
         // is (R2194000).
         assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
+        // Its census's counts, which the failures below name.
+        let rarity = |name: &str| {
+            CENSUS
+                .iter()
+                .find(|census| census.set == "Meditative+")
+                .and_then(|census| census.rarities.iter().find(|(rarity, _)| *rarity == name))
+                .map(|(_, count)| *count)
+                .expect("the census counts Meditative+'s rarities")
+        };
+        let (common, epic) = (rarity("Common"), rarity("Epic"));
+        let potions = tag_count(Tag::Potion);
+
         // So a card it lacks fails, as any shipped set's would: the totals and the index.
         let mut missing = shipped_catalog();
         missing.shift_remove("meditativeplus-002");
@@ -2312,7 +2000,10 @@ mod tests {
                 shipped.entries - 1
             ),
             "Meditative+: index \"2\" is missing".to_string(),
-            "Meditative+: expected 9 Epic non-token cards, found 8".to_string(),
+            format!(
+                "Meditative+: expected {epic} Epic non-token cards, found {}",
+                epic - 1
+            ),
         ] {
             assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }
@@ -2321,30 +2012,39 @@ mod tests {
         assert_eq!(
             check_catalog(&with_field("meditativeplus-002", "rarity", Json::from("Common"))).failures,
             [
-                "Meditative+: expected 5 Common non-token cards, found 6",
-                "Meditative+: expected 9 Epic non-token cards, found 8"
+                format!(
+                    "Meditative+: expected {common} Common non-token cards, found {}",
+                    common + 1
+                ),
+                format!(
+                    "Meditative+: expected {epic} Epic non-token cards, found {}",
+                    epic - 1
+                )
             ]
         );
 
         // Its tags are in the census: M+ #11 Living Mana Potion without its Potion tag.
         assert_eq!(
             check_catalog(&with_field("meditativeplus-011", "tags", Json::Array(Vec::new()))).failures,
-            ["catalog: expected 3 entries tagged \"Potion\", found 2"]
+            [format!(
+                "catalog: expected {potions} entries tagged \"Potion\", found {}",
+                potions - 1
+            )]
         );
 
-        // An index the brief does not list (#27, a fifth helper #1.5), or an id that does not follow
-        // its index, still fails.
+        // An index the brief does not list (#27, a sixth helper #1.6, #2521's #1.5 Star Chart being
+        // the fifth), or an id that does not follow its index, still fails.
         let mut wrong = shipped_catalog();
         for (index, id) in [
             ("27", "meditativeplus-027"),
-            ("1.5", "meditativeplus-001-5"),
+            ("1.6", "meditativeplus-001-6"),
             ("3", "meditativeplus-x"),
         ] {
             wrong.insert(id.to_string(), fixture_entry("Meditative+", index, id));
         }
         let failures = check_catalog(&wrong).failures.join("\n");
         assert!(failures.contains("unexpected index \"27\""), "{failures}");
-        assert!(failures.contains("unexpected index \"1.5\""), "{failures}");
+        assert!(failures.contains("unexpected index \"1.6\""), "{failures}");
         assert!(
             failures.contains("implies id \"meditativeplus-003\""),
             "{failures}"
@@ -2387,7 +2087,8 @@ mod tests {
             .into_iter()
             .find(|set| set.set == "Stinkyscape")
             .expect("the catalog holds the Stinkyscape set");
-        // R1857001's shape: 175 cards, the Dormant Starship, 30 tokens the cards define and 22 shared.
+        // R1857001's shape: 177 cards (175 until #2521), the Dormant Starship, 30 tokens the cards
+        // define and 22 shared.
         assert_eq!(
             (
                 expectation.cards,
@@ -2395,9 +2096,9 @@ mod tests {
                 expectation.card_defined_tokens.len(),
                 expectation.shared_tokens.len()
             ),
-            (175, 1, 30, 22)
+            (177, 1, 30, 22)
         );
-        assert_eq!(expected_indices(&expectation).len(), 228);
+        assert_eq!(expected_indices(&expectation).len(), 230);
         assert_eq!(
             id_for_index("stinkyscape", "T-dormant-starship"),
             jackioh_engine::DORMANT_STARSHIP_DEF_ID
@@ -2438,21 +2139,21 @@ mod tests {
         assert_eq!(totals(&report), totals(&bare));
         assert_eq!(report.unshipped_count, bare.unshipped_count + 4);
 
-        // No rarity passes its ceiling: a 43rd Common is refused while the set is built.
+        // No rarity passes its ceiling: a 42nd Common is refused while the set is built.
         let mut commons = without_stinkyscape();
-        for n in 1..=43 {
+        for n in 1..=42 {
             let id = format!("stinkyscape-{n:03}");
             commons.insert(id.clone(), fixture_entry("Stinkyscape", &n.to_string(), &id));
         }
         assert_eq!(
             check_catalog(&commons).failures,
-            ["Stinkyscape: expected 42 Common non-token cards, found 43"]
+            ["Stinkyscape: expected 41 Common non-token cards, found 42"]
         );
 
         // An index its brief does not list, or an id that does not follow its index, fails.
         let mut wrong = without_stinkyscape();
         for (index, id) in [
-            ("176", "stinkyscape-176"),
+            ("178", "stinkyscape-178"),
             ("4.7", "stinkyscape-004-7"),
             ("T-starship", "stinkyscape-t-starship"),
             ("3", "stinkyscape-x"),
@@ -2465,7 +2166,7 @@ mod tests {
         );
         let failures = check_catalog(&wrong).failures.join("\n");
         for expected in [
-            "Stinkyscape: unexpected index \"176\"",
+            "Stinkyscape: unexpected index \"178\"",
             "Stinkyscape: unexpected index \"4.7\"",
             "Stinkyscape: unexpected index \"T-starship\"",
             "implies id \"stinkyscape-003\"",

@@ -43,6 +43,10 @@
 // Radiant face's gold diff compares the two Chinese faces (R1302). The English face's name and text
 // ride along (`englishName`, `englishText`), never printed: the art's motif and the glossary's terms
 // are read from them.
+//
+// R2521009: a Resource (its definition carries `resource`, R1840000) prints what it sells for on the
+// face shown, `credits` (the face's `sellMin` and `sellMax`), as one line under its text,
+// "Credits: 2–5" (`creditsLine`). Read off the definition alone, in play or out; no other card has it.
 
 import {
   fillParams,
@@ -138,8 +142,8 @@ export type FaceModel = {
    */
   printedRarity?: PrintedRarity | null;
   /**
-   * R1177001: the card is a token (`CardDef.token`), which every token's face says: its type line
-   * ("Token Unit") and, where that line hides, its token mark. On every catalog card the flag agrees
+   * R1177001: the card is a token (`CardDef.token`), which its full face says on its type line
+   * ("Token Unit"); no face wears a mark of it (R2647000). On every catalog card the flag agrees
    * with rarity Token, the Token tag and §7's row, and on a fused card with its tag (R1177000).
    * Absent (false) on a face built by hand and on a card with no definition.
    */
@@ -252,7 +256,15 @@ export type FaceModel = {
   tallies?: readonly NamedTally[];
   /** R979000: in play, why a card in the viewer's own hand (or, R1571000, graveyard) cannot be played now (`CardView.playReason`), which the inspect notes spell out. */
   playReason?: string;
+  /**
+   * R2521009: a Resource's sale prices on the face shown (`CardDef.resource`'s `base` or `radiant`
+   * `sellMin` and `sellMax`), which the face prints under its text; null (or absent, on a face built
+   * by hand) on every card that is no Resource.
+   */
+  credits?: FaceCredits | null;
 };
+/** R2521009: what a Resource sells for on one face, its least and its most. */
+export type FaceCredits = { min: number; max: number };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
  * `live` (a unit on the field) and `liveCost` stay where they were, beside it.
@@ -453,6 +465,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
         : { pieces: inPlay.starship.pieces, launched: inPlay.starship.name !== null, list: inPlay.starship.list ?? [] },
     created: inPlay?.created === true,
     loc: def?.loc ?? null,
+    credits: creditsOf(source.def, source.radiant),
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
@@ -498,6 +511,25 @@ function withViewParams(def: CardDef | undefined, values: Readonly<Record<string
   if (def === undefined || def.params !== undefined || values === undefined) return def;
   const params: Param[] = Object.entries(values).map(([key, value]) => ({ key, base: value, radiant: value, better: "up" }));
   return params.length === 0 ? def : { ...def, params };
+}
+
+/**
+ * R2521009: a Resource's sale prices on the face shown, as its definition prints them
+ * (`CardDef.resource`, R1840000); null for a card that is no Resource. Nothing is worked out: the
+ * numbers are the definition's (CLAUDE.md rule 7).
+ */
+function creditsOf(def: CardDef | undefined, radiant: boolean): FaceCredits | null {
+  const resource = def?.resource;
+  if (resource === undefined) return null;
+  const price = radiant ? resource.radiant : resource.base;
+  return { min: price.sellMin, max: price.sellMax };
+}
+
+/** R2521009: the line a Resource's face prints under its text, "Credits: 2–5"; "" on any other face. */
+export function creditsLine(face: Pick<FaceModel, "credits">): string {
+  const credits = face.credits;
+  if (credits === undefined || credits === null) return "";
+  return t("Credits: {min}–{max}", { min: credits.min, max: credits.max });
 }
 
 /** E36: "27 lines of code", "1 line of code". */

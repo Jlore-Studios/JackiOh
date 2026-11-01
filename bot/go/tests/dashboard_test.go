@@ -1,7 +1,7 @@
 // The pinned status issue (`dashboard.py`): opened and pinned once, rewritten every sweep, adopted
 // again when the state file loses it, and drawn from the same facts as `/harness status`.
 //
-// bot/tests/test_dashboard.py, ported (PORTING.md §7).
+// bot/tests/test_dashboard.py, ported (#467).
 package tests
 
 import (
@@ -34,6 +34,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/stats"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/status"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/testsupport"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/waiting"
 )
 
 // dashboardRoom is runners_section's default `room`: MAX_BODY as it was when the Python defined
@@ -761,6 +762,15 @@ func TestDashboard_TheLoopCarriesTheStatisticsAndHarnessStatsCountsThemNow(t *te
 	assertIn(t, "dashboard: rewrote #148", out.String())
 }
 
+// dashboardHeldBy is why `provider` may not start a run (`waiting.HeldBy`), the kind and text a
+// box without a run shows, or two empty strings when it may start one.
+func dashboardHeldBy(ctx *hctx.Context, st *pyjson.Object, provider *providers.Provider) [2]string {
+	if held := waiting.HeldBy(ctx, st, provider, false, true); held != nil {
+		return [2]string{held.Kind, held.Text}
+	}
+	return [2]string{}
+}
+
 // A Claude account with no run: open, at a cap, outside its hours, resting after a run that
 // could not work, or off, each with the time it changes.
 func TestDashboard_EachIdleAccountSaysWhyInItsBox(t *testing.T) {
@@ -777,21 +787,17 @@ func TestDashboard_EachIdleAccountSaysWhyInItsBox(t *testing.T) {
 	}, "seed")
 	st := ctx.Store.Load()
 	pool := ctx.Cfg.Pool
-	account := func(ctx *hctx.Context, st *pyjson.Object, provider *providers.Provider) [2]string {
-		kind, text := dashboard.Account(ctx, st, provider)
-		return [2]string{kind, text}
-	}
-	assertEqual(t, account(ctx, st, pool.Get("claude-1")), [2]string{"idle", "⚪ idle"})
-	assertEqual(t, account(ctx, st, pool.Get("claude-2")),
-		[2]string{"paused", "⏸️ 5-hour 95% of its 90% cap<br/>starts again 23:10"})
-	assertEqual(t, account(ctx, st, pool.Get("claude-3")),
+	assertEqual(t, dashboardHeldBy(ctx, st, pool.Get("claude-1")), [2]string{})
+	assertEqual(t, dashboardHeldBy(ctx, st, pool.Get("claude-2")),
+		[2]string{"capped", "⏸️ 5-hour 95% of its 90% cap<br/>starts again 23:10"})
+	assertEqual(t, dashboardHeldBy(ctx, st, pool.Get("claude-3")),
 		[2]string{"broken", "⛔ its last run could not work<br/>tries again 23:50"})
 	day := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night.Add(12 * time.Hour), Cfg: ctx.Cfg})
-	assertEqual(t, account(day, day.Store.Load(), pool.Get("claude-1")),
+	assertEqual(t, dashboardHeldBy(day, day.Store.Load(), pool.Get("claude-1")),
 		[2]string{"closed", "🌙 outside its hours<br/>opens 21:00"})
 	unset := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Night, Cfg: testsupport.MakeConfig(
 		testsupport.Config{Env: map[string]string{"HARNESS_SECRETS_SET": ""}})})
-	assertEqual(t, account(unset, st, unset.Cfg.Pool.Get("claude-4")),
+	assertEqual(t, dashboardHeldBy(unset, st, unset.Cfg.Pool.Get("claude-4")),
 		[2]string{"off", "⚫ off: no secret set"})
 }
 
@@ -808,15 +814,11 @@ func TestDashboard_AnAccountTooCloseToItsCapToStartIsPausedNotOpen(t *testing.T)
 	}, "seed")
 	st := ctx.Store.Load()
 	pool := cfg.Pool
-	account := func(provider *providers.Provider) [2]string {
-		kind, text := dashboard.Account(ctx, st, provider)
-		return [2]string{kind, text}
-	}
-	assertEqual(t, account(pool.Get("claude-4")),
-		[2]string{"paused", "⏸️ 5-hour 49% of its 50% cap<br/>long runs start under 45%; " +
+	assertEqual(t, dashboardHeldBy(ctx, st, pool.Get("claude-4")),
+		[2]string{"reviews", "⏸️ 5-hour 49% of its 50% cap<br/>long runs start under 45%; " +
 			"reviews only<br/>starts again 03:00"})
-	assertEqual(t, account(pool.Get("claude-6")),
-		[2]string{"paused", "⏸️ 5-hour 45% of its 50% cap<br/>long runs start under 45%; " +
+	assertEqual(t, dashboardHeldBy(ctx, st, pool.Get("claude-6")),
+		[2]string{"reviews", "⏸️ 5-hour 45% of its 50% cap<br/>long runs start under 45%; " +
 			"reviews only<br/>starts again 01:50"})
 	body := dashboardRender(ctx, nil, "")
 	beforeQueue := dashboardBefore(body, "## 📋 Queue")

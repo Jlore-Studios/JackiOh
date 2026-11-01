@@ -1,6 +1,6 @@
 //! S #137.4 Space Doctrine (SPEC §8.10 row 137.4; §2.4, R65, R824000, R1852005, R1859007, R1859011):
 //! (4) Spell, War Doctrine, Token (printed Legendary), a token of the Stinkyscape set,
-//! which #137 Firststrike Capability Discovers and casts.
+//! which #137 Starfleet Commander Discovers and casts.
 //!
 //! Base:    "For the rest of the game, your Units have Flying. Fill your hand with copies of the
 //!          Starship Pieces fused into your Starship."
@@ -63,13 +63,13 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const CHASSIS: &str = "stinkyscape-048"; // (1) 4/1 Starship Piece, Equip, Rush: keywords only.
     const BURNER: &str = "stinkyscape-090"; // (2) 4/8 Starship Piece.
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
 
-    /// p1's launched Starship holding a Stratos, a Radiant After Burner and an Ultralight Chassis, in
+    /// p1's launched Starship holding an AP Rounds, a Radiant After Burner and an Ultralight Chassis, in
     /// that order; p1's hand the Doctrine (Radiant if `radiant`) and `fillers` fillers, not yet cast.
     fn board(seed: &str, radiant: bool, fillers: usize, launch: bool) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
@@ -77,7 +77,7 @@ mod tests {
         let (mut s, ship) = built_starship(
             seed,
             json!([
-                { "def": STRATOS, "lane": 1 },
+                { "def": AP_ROUNDS, "lane": 1 },
                 { "def": BURNER, "lane": 2, "radiant": true },
                 { "def": CHASSIS, "lane": 3 },
             ]),
@@ -102,7 +102,7 @@ mod tests {
     #[test]
     fn r1859011_one_copy_of_each_piece_oldest_first_on_the_face_it_fused_on() {
         let (s, hand) = cast("r1859011-space", false, 1, true);
-        assert_eq!(def_ids(&hand), vec![FILLER, STRATOS, BURNER, CHASSIS]);
+        assert_eq!(def_ids(&hand), vec![FILLER, AP_ROUNDS, BURNER, CHASSIS]);
         assert_eq!(hand.iter().map(|card| card.radiant).collect::<Vec<_>>(), vec![false, false, true, false]);
         assert_eq!(play_cost(s.state(), &hand[1]), 1, "the printed cost on the base face");
         let flies = s
@@ -118,7 +118,7 @@ mod tests {
         let fillers = usize::try_from(HAND_CAP).expect("a small cap") - 2;
         let (s, hand) = cast("r1859011-space-full", false, fillers, true);
         assert_eq!(hand.len(), fillers + 2);
-        assert_eq!(def_ids(&hand[fillers..]), vec![STRATOS, BURNER]);
+        assert_eq!(def_ids(&hand[fillers..]), vec![AP_ROUNDS, BURNER]);
         assert!(
             !s.last_events()
                 .iter()
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn r1859011_radiant_each_copy_costs_1() {
         let (s, hand) = cast("r1859011-space-radiant", true, 0, true);
-        assert_eq!(def_ids(&hand), vec![STRATOS, BURNER, CHASSIS]);
+        assert_eq!(def_ids(&hand), vec![AP_ROUNDS, BURNER, CHASSIS]);
         assert!(hand.iter().all(|card| play_cost(s.state(), card) == 1));
         assert_eq!(hand[1].cost_override, Some(1), "Burner's (2) set to (1)");
     }
@@ -140,7 +140,7 @@ mod tests {
         let set_cost = crate::upgrade_number(&mut s, ID, "setCost");
         s.play(ID, json!({}));
         let hand = s.state().players.p1.hand.clone();
-        assert_eq!(def_ids(&hand), vec![STRATOS, BURNER, CHASSIS]);
+        assert_eq!(def_ids(&hand), vec![AP_ROUNDS, BURNER, CHASSIS]);
         assert!(hand.iter().all(|card| card.cost_override == Some(set_cost)));
         assert!(hand.iter().all(|card| play_cost(s.state(), card) == set_cost));
     }

@@ -1,9 +1,10 @@
-//! Stinkyscape #77 Yuma (SPEC §8.10 row 77). (2) Unit, Epic, 1/8 → 2/16, Starship Piece, Flying.
-//!   Base:    "Starship Piece, Flying\nCry: At the start of your opponent's next turn, make them a trade
-//!            offer: you give them a card from your hand, then they Discover one of theirs to give you."
-//!   Radiant: "Starship Piece, Flying, Lucky 1\nCry: …" (the same Cry)
+//! Stinkyscape #77 Yuma (SPEC §8.10 row 77). (2) Unit, Epic, 1/8 → 2/16, Flying.
+//!   Base:    "Flying\nCry: At the start of your opponent's next turn, make them a trade offer: you give
+//!            them a card from your hand, then they Discover one of theirs to give you."
+//!   Radiant: "Flying, Lucky 1\nCry: …" (the same Cry)
 //!
-//! Starship Piece (R1852000) and Flying are printed keywords the engine plays. Cry (R1): `trade_offer`
+//! Flying is a printed keyword the engine plays; since #2521 it is no Starship Piece, so its death fuses
+//! nothing (R1852000 reads the keyword). Cry (R1): `trade_offer`
 //! (R1845002): a delayed effect due at the start of the opponent's next turn, a countdown badge on its
 //! side, that comes whatever becomes of Yuma (R76); with a card in each hand its controller picks one of
 //! theirs, it goes to the opponent's hand as theirs (R12), then the opponent Discovers one of their other
@@ -29,7 +30,8 @@ pub fn script() -> CardScripts {
 // opponent's next turn start you pick a hand card, it goes to them, then they Discover one of their others
 // for you (R1845002); either hand empty, nothing asked; radiant 2/16 and Lucky 1 over the Discover's
 // options". The prompts' answerers (legal actions, the policy, the timeout, the AI) are the engine's
-// (R1845002); the Lucky draw's comparator is proven on the engine's fixture (R1877001).
+// (R1845002); the Lucky draw's comparator is proven on the engine's fixture (R1877001). No Starship
+// Piece since #2521: its death fuses nothing.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,6 +116,21 @@ mod tests {
         pick(&mut s, &hit_job);
         assert_eq!(s.card(hit_job.as_str()).zone, Zone::Hand { player: P1 });
         assert!(s.state().pending.is_none());
+    }
+
+    #[test]
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [HIT_JOB, FILLER], "field": [ID], "library": filler(4) },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        let me = s.card(ID).clone();
+        assert!(!has_keyword(&s.stats(&me).keywords, KeywordKind::StarshipPiece));
+        // The testkit's `pick` named in full: this module's own `pick` answers prompts.
+        s.play(HIT_JOB, json!({ "targets": jackioh_engine::testkit::pick::instance(&me) }));
+        s.expect_in_zone(&me, "graveyard");
+        assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship");
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
     }
 
     #[test]

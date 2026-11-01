@@ -1,14 +1,13 @@
 # `jackioh-cards`
 
-771 catalog entries in the seven shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
-Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8), Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187),
-Stinkyscape (175 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000) and
-Training Grounds (60 cards and 1 token, spec §8.11, shipped by #2204, R2194000), 632 cards and 139 tokens
-in all. A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
+The catalog entries of the seven shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
+hidden token), Classic+ (§8.7), Meditative (§8.8), Meditative+ (§8.9, shipped in v0.3.15 by #1187),
+Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000) and Training
+Grounds (§8.11, shipped by #2204, R2194000), each set's counts written once in `src/census.rs` (#2581).
+A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
 while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
 #2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
-(R1420), counts toward none of the totals above, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
+(R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
@@ -31,6 +30,7 @@ crates/cards
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
+├── src/census.rs       each set's cards, tokens, rarities and tag counts (#2581)
 ├── src/ky_test_bank.rs C+ #42 KY's Test's problems (R420)
 ├── src/scripts/
 │   ├── core/           one Core card or token per file
@@ -158,12 +158,11 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `when_attacks_of(ctx)` | in a `when_attacks` hook, its attack's facts, before any damage (R2285000) |
-| `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts; it runs only for a surviving attacker (R426, R2285001) |
+| `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts; it runs only for a surviving attacker (R2285001), or for any with `after_attack_even_if_gone`, `survived` false for a gone one (R426, R2396000) |
 | `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
 | `traded_card_of(ctx)` | in a trigger on `traded`, the card that Trade put into a deck (R1864003) |
 | `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
-| `player_spell_damage(state, player)` | the player's Spell Damage, the one sum §4.4 step 0 reads: Units, auras for one player or both, "this turn" modifiers (R1180000, R1180001) |
 | `heal_multiplier_of(state, player)` | how many times as large a heal of the player's hero or Units is now (R1180003, Meditative+ #7) |
 | `inflation_chance_of(card, printed)`, `next_inflation_chance(chance)` | the Inflation chance a card rolls at (the one it carries, else its printed one) and the one the copy it makes carries (R1848006, Stinkyscape #153) |
 | `freeze::frozen_forever(card)` | whether a Unit is Frozen forever, which never thaws (R1848000) |
@@ -172,7 +171,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `subsystems::completed_stage_of(ctx, event)`, `subsystems::quest_stages_of(state, card)`, `subsystems::quest_memory_of(card)` | the stage (1 for the first) a staged quest's own `questCompleted` names, its stages, and its line: the stage it stands at and its wait to hear back (R1854000, R1854004, Stinkyscape #7, #112) |
 
 Board facts live in `crates/engine/src/query.rs`; if the one you need is missing, add it there and
-test it there. Randomness goes through `ctx`'s rng and every pool through `catalog.query` (§3).
+test it there. Randomness goes through `ctx`'s rng and every pool through `query` or `pool` (§3).
 
 **Play-time choices (R81).** Zone, X, embiggen, Tribute and the targets and modes a card needs for
 its own play travel in the `play` action. Declare them (`targets: vec![TargetDecl::target(…)]`,
@@ -203,9 +202,12 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
   which a Buff places one and from which a Nerf removes one on the field (R1748002).
-- `snapshotOf`: on a Training Grounds snapshot (#41–#60) only, the Core card it copies. The two
-  share a name (R2195001) and a deck holds one of them (R2195000); the snapshot's script is a copy of
-  the Core card's code, not a re-export (R2195003).
+- `snapshotOf`: set on no card since issue #2511 (R2511001). The catalogs shipped from v0.5.5 to
+  v0.5.7 set it on Training Grounds #41–#60, the Core card each copies, and a replay folded under
+  one still reads it (one Discover offers one of the pair, R2204001); `catalog check` refuses it now.
+  Those twenty are the Legacy cards, named `Legacy: <Core name>` and tagged Legacy (R2511000), each
+  its own card beside its Core card; its script is a copy of the Core card's code, not a re-export
+  (R2195003).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.
@@ -220,15 +222,15 @@ Tags are the designer's as written (`Jlockeed` is a pool as well as a filter, R2
 share a name (R381). Texts follow the house style (R432, R373): "Nerf" and "Buff", never "Degrade" or
 "Upgrade" (R1320).
 
-## 3. `catalog.query`, the only random pool (spec §5.1)
+## 3. `query`, the only random pool (spec §5.1's `catalog.query`)
 
 ```rust
 use crate::query::*;   // in a card file that draws from a pool
 
-catalog.query(&json_as(json!({ "type": "Unit", "cost": 2 })))     // every matching non-token card
-catalog.pool("core-057", &json_as(json!({ "tags": ["KY"] })))       // the same, your own id excluded (R387)
-catalog.cost(def)                                                   // R65's out-of-play cost
-TRAP_TYPES                                                          // [Trap, Field Trap]
+query(&json_as(json!({ "type": "Unit", "cost": 2 })))     // every matching non-token card
+pool("core-057", &json_as(json!({ "tags": ["KY"] })))       // the same, your own id excluded (R387)
+query_cost(def)                                             // R65's out-of-play cost
+TRAP_TYPES                                                  // [Trap, Field Trap]
 ```
 
 `src/query.rs` is a thin wrapper over the engine's one filter (`crates/engine/src/catalog.rs`). Its

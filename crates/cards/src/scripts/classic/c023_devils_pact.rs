@@ -108,7 +108,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // (1) Unit 3/3.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal 2.
     const BEAR: &str = "core-060"; // (1) Trap.
-    const PANTHER: &str = "core-032"; // Unit 5/4 Rush: after it attacks and survives, draw 2 per Unit it destroyed.
+    const PANTHER: &str = "core-032"; // Unit 5/4 Rush: whenever this attacks, draw 2 per Unit it destroyed.
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
     const FILLER: &str = "core-010"; // (0) Spell Rapid Replenish.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.

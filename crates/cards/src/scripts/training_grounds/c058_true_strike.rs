@@ -1,9 +1,11 @@
-//! SPEC §8.11 Training Grounds #58 True Strike, the snapshot of Core #44 True Strike (`core-044`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
+//! SPEC §8.11 Training Grounds #58 Legacy: True Strike,
+//! the Legacy card of Core #44 True Strike (`core-044`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
 //!
 //! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
-//! patch does not move it (R2195003); it shares the Core card's name (R2195001) and a deck holds one
-//! of the two, never both (R2195000). The Core file's notes, as they stood:
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
 //!
 //! #44 True Strike (SPEC §8.2, R346). Spell, cost 1, Common.
 //!   Base:    "Pierce / Deal 4 damage. Exile this."

@@ -47,7 +47,7 @@ use crate::state::{
 };
 use crate::wire::{
     AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row,
-    Winner, ZoneName, ZoneRef, has_keyword,
+    Winner, Zone, ZoneName, ZoneRef, has_keyword,
 };
 use crate::work::{PAUSE_KEY, PausedStep, WorkPlan, paused_of};
 use crate::zones::{MoveResult, OffFieldZone, PlaceOnFieldOptions, ZoneSlot, live_or};
@@ -217,7 +217,8 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
 /// every Unit on either side in Defense Position switches to Attack Position, active player's first
 /// (R68) — the one that arrived in it, or stood in it as the aura came. An effect's switch (R20), so no
 /// exertion is spent; `positionSwitched` reports it. R2179000: so does an Indestructible Unit in
-/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it.
+/// Defense Position, aura or not — one that arrived in it, or became Indestructible standing in it —
+/// and R2657000 a Unit with Can't Defend, the same way.
 fn leave_defense(sink: &mut EngineSink<'_>) {
     let barred = crate::restrictions::defense_barred(sink.state);
     for player in active_first(sink.state) {
@@ -225,7 +226,10 @@ fn leave_defense(sink: &mut EngineSink<'_>) {
             if unit.position != Some(Position::Def) {
                 continue;
             }
-            if !barred && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible) {
+            if !barred
+                && !crate::layers::unit_has(sink.state, &unit, KeywordKind::Indestructible)
+                && !crate::layers::unit_has(sink.state, &unit, KeywordKind::CantDefend)
+            {
                 continue;
             }
             if let Some(card) = find_instance_mut(sink.state, &unit.id) {
@@ -562,9 +566,11 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
 /// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the
 /// field, so R78's reset is applied here, where `moveToZone` would have applied it had the token
 /// reached a pile: damage, buffs, granted keywords, counters, memory, exertion and controller go,
-/// and the zone is set by `placeOnField`.
+/// and the zone is set by `placeOnField`. It comes back as the card of the player it died under, as a
+/// card the move took to that player's graveyard does (R2618000).
 fn reborn_token(snapshot: &CardInstance) -> CardInstance {
     let mut body = snapshot.clone();
+    body.owner = body.controller;
     crate::zones::reset_instance(&mut body);
     body
 }
@@ -785,6 +791,28 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
         })
         .collect();
 
+    // R2396000: the killers that answer "Whenever this destroys a Unit" even once gone, each as it stands
+    // now (one dying in this pass as its snapshot), kept for the dispatch of the kill it made.
+    let gone_killers: IndexMap<String, CardInstance> = if cause == DeathCause::Sacrificed {
+        IndexMap::new()
+    } else {
+        read.iter()
+            .filter_map(|card| card.snapshot.last_damaged_by.as_deref())
+            .filter_map(|killer_id| {
+                read.iter()
+                    .find(|other| other.unit.id == killer_id)
+                    .map(|other| other.snapshot.clone())
+                    .or_else(|| {
+                        find_instance(sink.state, killer_id)
+                            .filter(|killer| matches!(killer.zone, Zone::Field { .. }))
+                            .cloned()
+                    })
+            })
+            .filter(|killer| crate::triggers::answers_kills_when_gone(sink.state, killer))
+            .map(|killer| (killer.id.clone(), killer))
+            .collect()
+    };
+
     // R463: the cards collected together leave the field together — every one of them is off the field
     // before any lands — so a "would go to a graveyard" replacement (B5 E5) is read with all of them
     // gone: a Voidwalker dying in this pass has taken its aura with it for the cards beside it too.
@@ -859,6 +887,22 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             });
         }
         sink.state.counters.destroyed += 1;
+        // R42, R89: the unit whose damage instance was lethal. `damage.ts` credits a hit only as it
+        // takes the unit from above 0 health to 0 or less (or Poisonous marks it), and a destroy
+        // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
+        // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
+        let killer_id = if cause == DeathCause::Sacrificed {
+            None
+        } else {
+            card.snapshot.last_damaged_by.clone()
+        };
+        // R2396000: a killer that answers this kill even once gone waits for its dispatch.
+        if let Some(killer) = killer_id.as_ref().and_then(|id| gone_killers.get(id)) {
+            sink.state
+                .kill_snapshots
+                .get_or_insert_with(IndexMap::new)
+                .insert(card.unit.id.clone(), killer.clone());
+        }
         // R89: the event carries what the card was, since R78 resets the instance as it leaves.
         sink.events.push(GameEvent::Destroyed {
             instance_id: card.unit.id.clone(),
@@ -868,15 +912,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             controller: card.snapshot.controller,
             attack: card.attack,
             max_health: card.max_health,
-            // R42, R89: the unit whose damage instance was lethal. `damage.ts` credits a hit only as it
-            // takes the unit from above 0 health to 0 or less (or Poisonous marks it), and a destroy
-            // effect clears the credit as it marks (`effects/destroy.ts`), so a unit a spell destroyed or
-            // an aura starved after some unit damaged it has no killer. A sacrifice has none either.
-            killer_id: if cause == DeathCause::Sacrificed {
-                None
-            } else {
-                card.snapshot.last_damaged_by.clone()
-            },
+            killer_id,
             // R89: its face as it died, which a unit token that has ceased to exist can no longer tell
             // (C+ #12.8 Frostspatula remembers what it killed by definition and face, R409).
             radiant: if card.snapshot.radiant { Some(true) } else { None },
@@ -886,7 +922,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
     pass
 }
 
-/// §6.3 Sacrifice: the card goes from the field to its owner's graveyard at once, bypassing
+/// §6.3 Sacrifice: the card goes from the field to its controller's graveyard at once (R2618000), bypassing
 /// Indestructible, and "counts as a death" — so it is §4.5's death in full rather than a move with a
 /// Death hook bolted on: the destroyed counter (R55) and the `destroyed` event (R89), its Death hook
 /// off the snapshot (R78), and §6.1's Reborn, which returns a sacrificed Reborn unit to the zone it

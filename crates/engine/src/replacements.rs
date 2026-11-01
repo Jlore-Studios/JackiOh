@@ -48,7 +48,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{DAMAGE_REDIRECT_CAP, LIBRARY_CAP};
+use crate::config::DAMAGE_REDIRECT_CAP;
 use crate::damage::{DamageArgs, DamageTarget};
 use crate::script::{EffectContext, EngineSink, InsteadLasting, InsteadTo};
 use crate::state::{
@@ -301,6 +301,8 @@ fn fire(sink: &mut EngineSink<'_>, cand: &mut Candidate) -> bool {
         controller: cand.controller,
         row: at.map_or(Row::Backrow, |slot| slot.row),
         lane: at.map_or(0, |slot| slot.lane),
+        // R2657001: a face-up Field Trap replacing again reveals nothing.
+        again: crate::traps::fires_again(sink.state, &cand.card),
     });
     // R783011: a Crater Trap Locks the backrow zone it is revealed in, as `traps::fire_trap` does.
     crate::crater::lock_on_firing(sink, &cand.card, at);
@@ -810,7 +812,7 @@ pub fn graveyard_redirect_for(state: &GameState, card: &CardInstance) -> Option<
         // R80: a full library turns the card away, so that replacement cannot apply and the card goes on
         // toward its graveyard, where a later one may still meet it.
         if def.instead.to == Some(InsteadTo::BottomOfLibrary)
-            && state.players[card.owner].library.len() as i32 >= LIBRARY_CAP
+            && crate::query::room_in(state, card.owner, crate::zones::OffFieldZone::Library) == 0
         {
             continue;
         }

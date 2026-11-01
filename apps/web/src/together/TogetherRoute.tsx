@@ -54,7 +54,6 @@ import { FRIENDS_POLL_MS } from "./config.ts";
 import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
 import { attempt, messageOf, usePolled } from "./session.ts";
 import { noteFriends, reloadSocial, useSocialPoll } from "./socialPoll.ts";
-import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 import { togetherTestid } from "./testids.ts";
 import { MODE_WORDS, Named } from "./words.tsx";
 
@@ -438,7 +437,12 @@ export function TogetherRoute({ undoTimer }: { undoTimer?: UndoTimer } = {}): Re
             <h2 id="together-privacy-heading" className="together-panel__heading">
               {t("Watching")}
             </h2>
-            <SpectatorSwitch />
+            {/* R2615000: no switch; the friendship is the way out. */}
+            <p className="lobby-note" data-testid={togetherTestid.watchingNote}>
+              {t(
+                "Your friends can always watch your online games, a few seconds behind. To stop someone watching, remove them as a friend or block them.",
+              )}
+            </p>
           </section>
         </div>
       </div>

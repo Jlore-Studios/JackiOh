@@ -224,7 +224,7 @@ mod r783001_ranged_and_cleave {
         let right = put(&mut state, &grunt().id, slot(P2, Row::Units, 3), json!({}));
         let (refused, events) = declare(&mut state, &cleaving.id, &target.id);
         assert_eq!(refused, None);
-        // The target and both neighbours take the hit; the splashed units never strike back, and the
+        // The target and both neighbors take the hit; the splashed units never strike back, and the
         // target does not either.
         assert_eq!(damage_on(&state, &target.id), 2);
         assert_eq!(damage_on(&state, &left.id), 2);
@@ -816,7 +816,7 @@ mod r1081000_flying_backrow {
     fn r1081000_cleave_beside_a_backrow_flyer_reaches_only_units_standing_there() {
         let mut state = board("r1081000-cleave");
         let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
-        let neighbour = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 3), json!({}));
+        let neighbor = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 3), json!({}));
         let trap = put(
             &mut state,
             &crater_trap().id,
@@ -833,7 +833,7 @@ mod r1081000_flying_backrow {
         assert_eq!(refused, None);
         assert_eq!(damage_on(&state, &wing.id), 2);
         assert_eq!(
-            damage_on(&state, &neighbour.id),
+            damage_on(&state, &neighbor.id),
             2,
             "the Unit beside it takes the splash"
         );
@@ -1145,6 +1145,8 @@ mod r1081000_flying_backrow {
             &mut state,
             may_attack_again(MayAttackAgainArgs {
                 target: json_as(json!({ "of": "instance", "instanceId": wing.id })),
+                keep_sick: None,
+                lift_sick: None,
             }),
             P1,
         );

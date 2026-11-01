@@ -1431,16 +1431,16 @@
       "bytes": 8224
     },
     "core-007-attack": {
-      "hash": "ac718f7bfee24f1d",
-      "bytes": 7849
+      "hash": "028b338f92b1ee02",
+      "bytes": 7613
     },
     "core-007-death": {
-      "hash": "8a526e588b311987",
-      "bytes": 10548
+      "hash": "3235e9caadb5c185",
+      "bytes": 9254
     },
     "core-007-play": {
-      "hash": "b1ab40211af20028",
-      "bytes": 9034
+      "hash": "afc6adaca5dc5197",
+      "bytes": 11119
     },
     "core-008-attack": {
       "hash": "b9918389b493a9d4",
@@ -1627,16 +1627,16 @@
       "bytes": 9080
     },
     "core-032-attack": {
-      "hash": "838f5fc0e1ee1f59",
-      "bytes": 7203
+      "hash": "37c8b07a18c6ad66",
+      "bytes": 7474
     },
     "core-032-death": {
-      "hash": "7d6a9100af9bfc24",
-      "bytes": 9030
+      "hash": "3e2930337536c44f",
+      "bytes": 7987
     },
     "core-032-play": {
-      "hash": "cac4ceb68532100c",
-      "bytes": 10092
+      "hash": "4c7f8e00686b011d",
+      "bytes": 11021
     },
     "core-033-cast": {
       "hash": "423f3133494fb7db",
@@ -1775,16 +1775,16 @@
       "bytes": 8662
     },
     "core-054-attack": {
-      "hash": "52f52b21748f6f82",
-      "bytes": 9210
+      "hash": "64296114892f4f63",
+      "bytes": 9753
     },
     "core-054-death": {
-      "hash": "872c86828d987556",
-      "bytes": 7735
+      "hash": "08f9fa907e437ae1",
+      "bytes": 9769
     },
     "core-054-play": {
-      "hash": "5a6860df69da9388",
-      "bytes": 12481
+      "hash": "082f7afc9ffe7414",
+      "bytes": 12760
     },
     "core-055-attack": {
       "hash": "e004155647af2a58",
@@ -1839,8 +1839,8 @@
       "bytes": 12199
     },
     "core-062-cast": {
-      "hash": "c71a09ff408a2292",
-      "bytes": 10265
+      "hash": "5afd6ec7b5902f6d",
+      "bytes": 14221
     },
     "core-063-cast": {
       "hash": "936b50d19efbafaf",
@@ -1923,8 +1923,8 @@
       "bytes": 14009
     },
     "core-074-cast": {
-      "hash": "452c4983635f7b04",
-      "bytes": 12947
+      "hash": "be499f60ddb0c187",
+      "bytes": 11879
     },
     "core-075-cast": {
       "hash": "6cb3c8cc8d54192e",
@@ -2039,16 +2039,16 @@
       "bytes": 10930
     },
     "core-092-attack": {
-      "hash": "a0d02c228b611486",
-      "bytes": 8374
+      "hash": "7ab9d7dc91743145",
+      "bytes": 10281
     },
     "core-092-death": {
-      "hash": "d06597aebf97ab61",
-      "bytes": 8833
+      "hash": "872e0fc4a842b67b",
+      "bytes": 11715
     },
     "core-092-play": {
-      "hash": "86247a1a6a522d16",
-      "bytes": 11532
+      "hash": "d27740a8f8e1bcea",
+      "bytes": 13100
     },
     "core-093-1-cast": {
       "hash": "50e3aea90cd507d6",
@@ -2079,8 +2079,8 @@
       "bytes": 11597
     },
     "core-096-cast": {
-      "hash": "fc2ae08e31082dc9",
-      "bytes": 10024
+      "hash": "a3f09cc2ca38d9fa",
+      "bytes": 10490
     },
     "core-097-cast": {
       "hash": "b5bff5f78194fb5d",
@@ -2690,7 +2690,15 @@
       "hash": "e7877bb94f2f10a6",
       "bytes": 15991
     },
-    "meditative-049-3-cast": {
+    "meditative-049-3-attack": {
+      "hash": "eff74bd8377698c1",
+      "bytes": 9837
+    },
+    "meditative-049-3-death": {
+      "hash": "7bf76a3779fb9b1c",
+      "bytes": 8479
+    },
+    "meditative-049-3-play": {
       "hash": "0fe47ba7fae7a8d0",
       "bytes": 13263
     },
@@ -3349,6 +3357,10 @@
     "meditativeplus-001-4-cast": {
       "hash": "56b08eec21016a78",
       "bytes": 14160
+    },
+    "meditativeplus-001-5-cast": {
+      "hash": "80db134b964515f1",
+      "bytes": 14303
     },
     "meditativeplus-001-cast": {
       "hash": "d880410060c8a823",
@@ -4686,7 +4698,15 @@
       "hash": "c315d8d4a60f0c56",
       "bytes": 11738
     },
-    "stinkyscape-116-cast": {
+    "stinkyscape-116-attack": {
+      "hash": "8910857bb0827136",
+      "bytes": 3878
+    },
+    "stinkyscape-116-death": {
+      "hash": "02429b0874bd62a6",
+      "bytes": 4516
+    },
+    "stinkyscape-116-play": {
       "hash": "0947241543ab3028",
       "bytes": 11294
     },
@@ -5153,6 +5173,22 @@
     "stinkyscape-175-play": {
       "hash": "41c6bd8e8580ad60",
       "bytes": 10675
+    },
+    "stinkyscape-176-cast": {
+      "hash": "33bbcfeab4ab8cf3",
+      "bytes": 11285
+    },
+    "stinkyscape-177-attack": {
+      "hash": "c53df6063a8fc763",
+      "bytes": 4347
+    },
+    "stinkyscape-177-death": {
+      "hash": "88dbde556e791435",
+      "bytes": 8337
+    },
+    "stinkyscape-177-play": {
+      "hash": "bd7d6d72d44f88ab",
+      "bytes": 10492
     },
     "stinkyscape-t-ai-01-attack": {
       "hash": "92be48d0adec8895",

@@ -804,7 +804,7 @@ mod b47_status {
     }
 
     #[tokio::test]
-    async fn b47_b50_a_friend_who_turned_spectators_off_is_not_watchable() {
+    async fn b47_r2615000_a_friend_is_watchable_whatever_their_settings_say() {
         let app = empty_test_app().await;
         let ada = account(&app, 1, "Ada").await;
         let bea = account(&app, 2, "Bea").await;
@@ -825,7 +825,7 @@ mod b47_status {
 
         let friend = friend_entry(&lists(&app, &ada).await, &bea.id);
         assert_eq!(friend["status"], "inMatch", "{friend}");
-        assert_eq!(friend["watchable"], json!(false), "{friend}");
+        assert_eq!(friend["watchable"], json!(true), "{friend}");
     }
 
     #[tokio::test]

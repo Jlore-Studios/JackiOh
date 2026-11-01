@@ -28,9 +28,9 @@
       "cast": "Drink up, dearie."
     },
     "core-007": {
-      "play": "Clean up on aisle you!",
-      "attack": "Cleanup time!",
-      "death": "Price check... on death."
+      "play": "Chitter chitter, click!",
+      "attack": "Buzz buzz!",
+      "death": "Click... click..."
     },
     "core-008": {
       "play": "Hello. I am very normal.",
@@ -127,9 +127,9 @@
       "cast": "Show your work!"
     },
     "core-032": {
-      "play": "Premium predator. No ads.",
-      "attack": "Premium pounce.",
-      "death": "Subscription cancelled."
+      "play": "Silent paws. Sharp claws.",
+      "attack": "From the shadows!",
+      "death": "Back to the shadows..."
     },
     "core-033": {
       "cast": "Copy that. Copy that. Copy that."
@@ -210,9 +210,9 @@
       "death": "Luck... ran out."
     },
     "core-054": {
-      "play": "Shopping spree! On the house!",
-      "attack": "Everything must go!",
-      "death": "Out of stock."
+      "play": "Come here, my little ones.",
+      "attack": "Away from my brood!",
+      "death": "Look after them for me..."
     },
     "core-055": {
       "play": "Hot stuff. Coming through.",
@@ -242,7 +242,7 @@
       "death": "My grant... expired."
     },
     "core-062": {
-      "cast": "Here kitty kitty kitty!"
+      "cast": "Everyone's invited! Bring your friends!"
     },
     "core-063": {
       "cast": "New face, who dis?"
@@ -289,7 +289,7 @@
       "cast": "Nice try. Not today."
     },
     "core-074": {
-      "cast": "Now responsive on all devices!"
+      "cast": "Unleash the ultimate infestation!"
     },
     "core-075": {
       "cast": "There's always more in the back."
@@ -356,9 +356,9 @@
       "death": "Wash your hands."
     },
     "core-092": {
-      "play": "Cats. I need more cats.",
-      "attack": "Sic 'em, kitties!",
-      "death": "Who feeds them now?"
+      "play": "More! I need more cats!",
+      "attack": "For my lovelies!",
+      "death": "They were going to love me..."
     },
     "core-093": {
       "cast": "Style points! Grade me!"
@@ -378,7 +378,7 @@
       "death": "Order... restored."
     },
     "core-096": {
-      "cast": "Checkmate, puppet."
+      "cast": "Go on. Play your part."
     },
     "core-097": {
       "cast": "I know exactly what you need."
@@ -1405,7 +1405,9 @@
       "death": "Quarantined. Rude, honestly."
     },
     "meditative-049-3": {
-      "cast": "Fight for my amusement, darlings."
+      "play": "Fight for my amusement, darlings.",
+      "attack": "For me? You shouldn't.",
+      "death": "We are so over."
     },
     "meditative-050": {
       "cast": "Winning formula found. You're welcome."
@@ -1720,6 +1722,9 @@
     },
     "meditativeplus-001-4": {
       "cast": "Never skip it. Your Units thank you."
+    },
+    "meditativeplus-001-5": {
+      "cast": "Course plotted. Two jumps to the edge."
     },
     "meditativeplus-002": {
       "cast": "Best and worst, together. Balance achieved."
@@ -2381,7 +2386,9 @@
       "death": "Typical."
     },
     "stinkyscape-116": {
-      "cast": "Megabase online. Credits for everyone!"
+      "play": "Megabase online. Credits for everyone!",
+      "attack": "Launch the fleet!",
+      "death": "The base has fallen."
     },
     "stinkyscape-117": {
       "cast": "Rebooting all systems."
@@ -2634,6 +2641,14 @@
       "play": "Cryo module online.",
       "attack": "Chill out.",
       "death": "Thawed for good."
+    },
+    "stinkyscape-176": {
+      "cast": "Launch the ship. We strike first."
+    },
+    "stinkyscape-177": {
+      "play": "Cloak engaged. You never saw me.",
+      "attack": "Decloaking!",
+      "death": "Cloak failing. Visible."
     },
     "stinkyscape-t-dormant-starship": {
       "play": "Hull assembled. Awaiting parts.",

@@ -16,18 +16,10 @@
 //     gets a comment naming the version. A version is read from `patches.json` at the two commits,
 //     never parsed (R105).
 //
-//   - `harness titles retcon [--write] [--numbers 1,2] [--limit N] [--csv path]` (#1372)
-//     retitles every issue and pull request, closed ones included, from a reviewed dry run: a shipped
-//     card change's threads become `Patch v<version>: …` (the version from `patches.json`, linked by its
-//     `source` and by the issues its fragment's pull request closes), every other thread `Patch: …`.
-//     Titles a workflow or a bot finds by their text, the `production merge` threads, the status issue
-//     and the tools' own titles are left alone (`left_alone`). Open issues whose old prefix names their
-//     kind (`Architecture`, `CI`, `Night bot`: internal; `vX.Y.0`: app) get its `kind:*` label; a
-//     pull request gets its own from the classifier. Without `--write` it writes nothing, only the CSV.
-//
 // Nothing fires on a title edit (triage runs on `opened` and `labeled`; `bot-commands` and
 // `squishy-commands` on `labeled` and `assigned`), and an edit made with the workflow's token starts
-// no workflow at all.
+// no workflow at all. (The one-time `retcon` of every thread, #1372, ran and was removed; git
+// history has it.)
 //
 // The patterns are Python's `re` patterns with Python's classes spelled out, since Go's are ASCII:
 // `\d` is any script's decimal digit (\p{Nd}), `\s` Python's whitespace (`py.ReS`), and `\b`, which
@@ -38,9 +30,7 @@ package titles
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
-	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/gh"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
@@ -64,52 +54,8 @@ var (
 	merge  = regexp.MustCompile(`^Merge pull request #(\p{Nd}+)(?:$|` + py.ReNotW + `)`)
 )
 
-// sourceNumber is `#(\d+)`: an issue a patch's `source` names.
-var sourceNumber = regexp.MustCompile(`#(\p{Nd}+)`)
-
 // PatchesJSON is where the shipped patches are listed.
 var PatchesJSON = "crates/cards/patches/patches.json"
-
-// LeftAlone matches the threads whose titles a workflow or a bot finds by their text, or that a
-// tool names, which the retcon leaves as they are (#1372): ci-duration.yml's alert, super.yml's,
-// deploy-watch.yml's, patches-ship.yml's refusal and its watch's stuck issue, the disk alert
-// (`disk.TITLE`), the weekly hygiene issues (.github/hygiene/branches.py), the status issues
-// (`dashboard.TITLE`, Squishy's), and the tools' own pull requests.
-var LeftAlone = regexp.MustCompile(
-	`^(?:CI: a job ran over \p{Nd}+ minutes$` +
-		`|CI: daily super run failed$` +
-		`|Render: the live server is not serving main's catalog$` +
-		`|patches ship refused to promote the pending patches$` +
-		`|CI: a patches promotion or log is stuck$` +
-		`|Night bot: the machine's disk is filling up$` +
-		`|Architecture: weekly hygiene(?:$|` + py.ReNotW + `)` +
-		`|(?:Night bot|Squishy) status$` +
-		`|patches ship: ` +
-		`|Promote main to production: ` +
-		`|Merging to production(?:$|` + py.ReNotW + `)` +
-		`|AI gen \p{Nd}+ ` +
-		`|Revert ")`)
-
-// StatusIssue is the status issue (#148), whatever its title says.
-var StatusIssue = 148
-
-// ProductionLabel is the label of the production merge's issues and pull requests, which their
-// workflow titles.
-var ProductionLabel = "production merge"
-
-// PrefixKind is one of PrefixKinds: a prefix and the kind label it names.
-type PrefixKind struct {
-	Pattern *regexp.Regexp
-	Kind    string
-}
-
-// PrefixKinds is the kind an open issue's old prefix names (#1372): its label goes on open
-// threads only, since every `labeled` event starts a `bot-commands` run. A `Patch v…` title names
-// none.
-var PrefixKinds = []PrefixKind{
-	{regexp.MustCompile(`^(?:Architecture|CI|Night bot)(?: \(part \p{Nd}+ of \p{Nd}+\))?: `), "kind:internal"},
-	{regexp.MustCompile(`^v\p{Nd}+\.\p{Nd}+\.0(?: \(part \p{Nd}+ of \p{Nd}+\))?: `), "kind:app"},
-}
 
 // WhatItDoes is `(part, rest)`: the ` (part n of m)` right after the prefix ("" for none) and the
 // title without its prefix. A title with no prefix is all rest.
@@ -191,8 +137,8 @@ func containsInt(xs []int, n int) bool {
 }
 
 // Shipped is the patches `after` appends to `before`, in ship order. A push that renames or drops
-// a version `before` lists (the version retcon, #1371) shipped nothing: its threads are the title
-// retcon's (#1372), paced and reviewed, never a comment on each.
+// a version `before` lists (the version retcon, #1371) shipped nothing: it retitles no thread and
+// comments on none.
 func Shipped(before []*pyjson.Object, after []*pyjson.Object) []*pyjson.Object {
 	head := after
 	if len(head) > len(before) {
@@ -305,157 +251,6 @@ func comment(gh gh.Client, number int, locked bool, body string) {
 	gh.Unlock(number)
 	defer gh.Lock(number)
 	gh.CreateComment(number, body)
-}
-
-// LeftAlone_ is `left_alone`: whether the retcon leaves a thread's title as it is (#1372). (The
-// name LeftAlone is the pattern's, as in Python, where the two differ by case.)
-func LeftAlone_(thread *pyjson.Object) bool {
-	labels := labelNames(thread)
-	title := strings.Join(py.Split(py.OrStr(thread.Get("title"), "")), " ")
-	return py.MustInt(py.Or(thread.Get("number"), 0)) == StatusIssue || labels[ProductionLabel] ||
-		LeftAlone.MatchString(title)
-}
-
-// labelNames is `{str(label.get("name") if isinstance(label, dict) else label) for label in
-// thread.get("labels") or []}`.
-func labelNames(thread *pyjson.Object) map[string]bool {
-	names := map[string]bool{}
-	for _, label := range py.Each(thread.Get("labels")) {
-		if o, ok := label.(*pyjson.Object); ok {
-			names[py.Str(o.Get("name"))] = true
-		} else {
-			names[py.Str(label)] = true
-		}
-	}
-	return names
-}
-
-// VersionsByThread is each thread of a shipped card change, to the version that shipped it: the
-// issues its `source` names, the pull request whose commit added its fragment and the issues that
-// pull request closes. A thread several patches name takes the newest.
-func VersionsByThread(patches []*pyjson.Object, gh gh.Client, subjectOf func(sha string) string) map[int]string {
-	found := map[int]string{}
-	for _, entry := range patches {
-		version := py.OrStr(entry.Get("version"), "")
-		var numbers []int
-		for _, m := range sourceNumber.FindAllStringSubmatch(py.OrStr(entry.Get("source"), ""), -1) {
-			numbers = append(numbers, py.MustInt(m[1]))
-		}
-		for _, commit := range py.Each(entry.Get("commits")) {
-			number := 0
-			if _, failed := herr.Catch[*calledProcessError](func() { number = PullOf(subjectOf(py.Str(commit))) }); failed {
-				number = 0
-			}
-			if number == 0 {
-				continue
-			}
-			numbers = append(numbers, number)
-			herr.Catch[*herr.GitHubError](func() {
-				numbers = append(numbers, ClosedBy(py.OrStr(gh.GetPull(number).Get("body"), ""))...)
-			})
-		}
-		for _, number := range numbers {
-			found[number] = version
-		}
-	}
-	return found
-}
-
-// Retitle is one row of the retcon's CSV.
-type Retitle struct {
-	Number int
-	Kind   string
-	State  string
-	Old    string
-	New    string
-	Label  string // default: ""
-}
-
-// PlanRetcon is every thread the retcon changes, in number order: its new title, and the kind
-// label an open issue gets from its old prefix.
-func PlanRetcon(threads []*pyjson.Object, versions map[int]string) []*Retitle {
-	ordered := append([]*pyjson.Object{}, threads...)
-	sort.SliceStable(ordered, func(i, j int) bool {
-		return py.MustInt(ordered[i].Get("number")) < py.MustInt(ordered[j].Get("number"))
-	})
-	rows := []*Retitle{}
-	for _, thread := range ordered {
-		if LeftAlone_(thread) {
-			continue
-		}
-		number := py.MustInt(thread.Get("number"))
-		old := strings.Join(py.Split(py.OrStr(thread.Get("title"), "")), " ")
-		newTitle := NewTitle(old, versions[number])
-		pull := thread.Has("pull_request")
-		state := py.OrStr(thread.Get("state"), "")
-		label := ""
-		if !pull && state == "open" {
-			for _, pk := range PrefixKinds {
-				if pk.Pattern.MatchString(old) {
-					label = pk.Kind
-					break
-				}
-			}
-		}
-		if labelNames(thread)[label] {
-			label = ""
-		}
-		if newTitle != old || label != "" {
-			kind := "issue"
-			if pull {
-				kind = "pull"
-			}
-			rows = append(rows, &Retitle{number, kind, state, old, newTitle, label})
-		}
-	}
-	return rows
-}
-
-// WriteCsv writes the rows as Python's csv.writer does (the excel dialect: `,`, a field quoted
-// only when it holds `,`, `"`, \r or \n, a quote doubled, each row ended by \r\n).
-func WriteCsv(rows []*Retitle, path string) {
-	var b strings.Builder
-	writeRow(&b, []string{"number", "kind", "state", "old title", "new title", "label"})
-	for _, row := range rows {
-		writeRow(&b, []string{fmt.Sprint(row.Number), row.Kind, row.State, row.Old, row.New, row.Label})
-	}
-	herr.Must(writeFile(path, b.String()))
-}
-
-func writeRow(b *strings.Builder, fields []string) {
-	for i, field := range fields {
-		if i > 0 {
-			b.WriteByte(',')
-		}
-		if strings.ContainsAny(field, ",\"\r\n") {
-			b.WriteString(`"` + strings.ReplaceAll(field, `"`, `""`) + `"`)
-		} else {
-			b.WriteString(field)
-		}
-	}
-	b.WriteString("\r\n")
-}
-
-// ApplyRetcon writes the rows: each title, then its label. Returns how many threads it changed.
-// `sleep` nil is time.sleep.
-func ApplyRetcon(gh gh.Client, rows []*Retitle, pause float64 /* = 0.0 */, sleep func(float64) /* = None */) int {
-	if sleep == nil {
-		sleep = func(seconds float64) { time.Sleep(time.Duration(seconds * float64(time.Second))) }
-	}
-	changed := 0
-	for _, row := range rows {
-		if row.New != row.Old {
-			gh.UpdateIssue(row.Number, pyjson.New("title", row.New))
-		}
-		if row.Label != "" {
-			gh.AddLabels(row.Number, []string{row.Label})
-		}
-		changed++
-		if pause != 0 {
-			sleep(pause)
-		}
-	}
-	return changed
 }
 
 // ------------------------------------------------------------------ Python's str and int

@@ -9,17 +9,19 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardType, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardType, type Keyword, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
 
-import { CardFace, TOKEN_GLYPH, TOKEN_WORD, faceText, typeLine } from "./CardFace.tsx";
+import { CardFace, TOKEN_WORD, faceText, typeLine } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
 import { GLITCH_WORDS } from "./glitch.ts";
+import { HoverPreview } from "./inspect/HoverPreview.tsx";
+import { INSPECT_FACE, INSPECT_GLOSSARY, INSPECT_STATES } from "./inspect/testids.ts";
 import { MinionFace } from "./MinionFace.tsx";
 import { RulesText } from "./RulesText.tsx";
 import {
@@ -64,7 +66,7 @@ const CATALOG_SWEEP_TIMEOUT_MS = 60_000;
 
 /** vitest stubs CSS imports, so the set mark's stylesheet is read as text. */
 const setMarkCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "setmark.css"), "utf8");
-/** And the faces' own, for where the token mark shows (R1177001). */
+/** And the faces' own, which draw no token mark (R2647000). */
 const cardsCss = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "cards.css"), "utf8");
 
 function def(id: string): CardDef {
@@ -1008,14 +1010,6 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
 /** Every token a face can show: the catalog's, Glitch aside (it stays blank, R674). */
 const TOKENS: readonly CardDef[] = DEFS.filter((card) => card.token && card.id !== GLITCH_DEF_ID);
 
-/** The rules of `css` inside its first `@container <query>` block, up to the next one. */
-function containerBlock(css: string, query: string): string {
-  const at = css.indexOf(`@container ${query}`);
-  if (at < 0) throw new Error(`cards.css has no @container ${query}`);
-  const next = css.indexOf("@container", at + 1);
-  return css.slice(at, next < 0 ? undefined : next);
-}
-
 /** A board minion of `id`, as Card.tsx draws a unit on the field. */
 function minionFace(id: string, extra: Partial<FaceSource> = {}): HTMLElement {
   const u = unit("p1", { defId: id });
@@ -1031,57 +1025,37 @@ function minionFace(id: string, extra: Partial<FaceSource> = {}): HTMLElement {
   return one(container, ".cf");
 }
 
-describe("R1177001: every token says Token, on every layout", () => {
+describe("R1177001: every token's type line says Token", () => {
   it(
-    "R1177001 every token's full face prints Token before its type, wears the mark and no Token chip; no card's does",
+    "R1177001 R2647000 every token's full face prints Token before its type, wears no token mark and no Token chip; no card's does",
     () => {
       expect(TOKENS.length).toBeGreaterThanOrEqual(79);
       for (const card of TOKENS) {
         const cf = catalogFace(card.id);
         expect(one(cf, ".card-type").textContent, card.id).toBe(`${TOKEN_WORD} ${card.type}`);
-        const mark = one(cf, ".cf-token");
-        expect(mark.getAttribute("aria-label"), card.id).toBe("Token");
-        expect(one(mark, ".cf-token-word").textContent, card.id).toBe(TOKEN_WORD);
-        expect(one(mark, ".cf-token-glyph").textContent, card.id).toBe(TOKEN_GLYPH);
+        expect(cf.querySelector(".cf-token, [data-token]"), card.id).toBeNull();
         expect(cf.querySelector('.cf-tag[data-tag="Token"]'), card.id).toBeNull();
         cleanup();
       }
       for (const card of DEFS.filter((entry) => !entry.token).slice(0, 40)) {
         const cf = catalogFace(card.id);
         expect(one(cf, ".card-type").textContent, card.id).toBe(card.type);
-        expect(cf.querySelector(".cf-token"), card.id).toBeNull();
         cleanup();
       }
     },
     CATALOG_SWEEP_TIMEOUT_MS,
   );
 
-  it("R1177001 the compact face of a face-up backrow token keeps its type line and the mark", () => {
+  it("R1177001 the compact face of a face-up backrow token keeps its type line", () => {
     for (const id of ["classicplus-012-5", "classicplus-042-1", "classicplus-t-ai-10", "meditative-071-1"]) {
       const cf = catalogFace(id, false, "compact");
       expect(cf.getAttribute("data-layout"), id).toBe("compact");
       expect(one(cf, ".card-type").textContent, id).toBe(`${TOKEN_WORD} ${def(id).type}`);
-      one(cf, ".cf-token");
       cleanup();
     }
   });
 
-  it("R1177001 a board minion token wears the mark beside its Created badge; a real unit wears none", () => {
-    const token = minionFace("core-t-rush");
-    expect(token.getAttribute("data-layout")).toBe("minion");
-    expect(one(token, ".cf-token").getAttribute("aria-label")).toBe("Token");
-    // In the stats row, after attack, so it takes the room between the numbers; the numbers keep
-    // their own text.
-    const row = [...one(token, ".stats").children].map((child) => child.className);
-    expect(row.slice(0, 2)).toEqual(["stat stat-attack", "cf-token"]);
-    expect(one(token, ".stat-health").textContent).toBe("4/4");
-    // R943's Created mark is unchanged.
-    one(token, '.cf-state[data-state="created"]');
-    cleanup();
-    expect(minionFace("core-011").querySelector(".cf-token")).toBeNull();
-  });
-
-  it("R1177001 R503 a token that prints a rarity keeps its frame, gem and crest, and still says Token", () => {
+  it("R1177001 R503 a token that prints a rarity keeps its frame, gem and crest, and still says Token on its type line", () => {
     for (const id of ["classicplus-019-1", "classicplus-065-5", "meditative-071-1"]) {
       const printed = def(id).printedRarity;
       expect(printed, id).toBeDefined();
@@ -1090,7 +1064,6 @@ describe("R1177001: every token says Token, on every layout", () => {
         expect(cf.getAttribute("data-rarity"), id).toBe(printed);
         expect(one(cf, ".cf-gem").getAttribute("data-rarity"), id).toBe(printed);
         expect(one(cf, ".card-type").textContent, id).toBe(`${TOKEN_WORD} ${def(id).type}`);
-        one(cf, ".cf-token");
         cleanup();
       }
     }
@@ -1110,41 +1083,19 @@ describe("R1177001: every token says Token, on every layout", () => {
     }
   });
 
-  it("R1177001 R1301 a Chinese token face prints 衍生物 before the table's type, on its type line and its mark", () => {
+  it("R1177001 R1301 a Chinese token face prints 衍生物 before the table's type on its type line", () => {
     const token = CHINESE_TERMS.tags.Token;
     expect(token).toBe("衍生物");
     const cf = catalogFace("classicplus-012-5", false, "full", { chinese: true });
     expect(one(cf, ".card-type").textContent).toBe(`${token}${CHINESE_TERMS.types["Field Spell"]}`);
-    expect(one(cf, ".cf-token-word").textContent).toBe(token);
-    expect(one(cf, ".cf-token-glyph").textContent).toBe([...token][0]);
     expect(cf.textContent).not.toContain(TOKEN_WORD);
-    cleanup();
-    const unitFace = minionFace("core-t-rush", { chinese: true });
-    expect(one(unitFace, ".cf-token-word").textContent).toBe(token);
     // A Chinese card that is no token prints the table's type alone.
     expect(typeLine(faceModel({ defId: "core-011", def: def("core-011"), radiant: false, chinese: true }))).toBe(CHINESE_TERMS.types.Unit);
   });
 
-  it("R1177001 cards.css shows the mark only where the type line hides: a small face, a full-art face, the minion", () => {
-    const mark = /\.cf \.cf-token \{[^}]*\}/u.exec(cardsCss)?.[0] ?? "";
-    expect(mark).toContain("display: none");
-    // The mark is a size container of its own, so the pill can tell whether the word fits.
-    expect(mark).toContain("container: tokenmark / inline-size");
-    expect(cardsCss).toMatch(/\.cf\[data-layout="minion"\] \.stats > \.cf-token \{[^}]*display: flex/u);
-    expect(cardsCss).toMatch(/\.cf\[data-full-art="true"\] \.cf-token \{[^}]*display: flex/u);
-    const small = containerBlock(cardsCss, `cardface (max-height: ${String(FACE_TEXT_MIN_HEIGHT_PX - 1)}px)`);
-    expect(small).toMatch(/\.cf-token \{[^}]*display: flex/u);
-    expect(small).toMatch(/\.card-type \{[^}]*display: none/u);
-    // Where the slot has no room for the word, the pill prints its letter.
-    const narrow = containerBlock(cardsCss, "tokenmark (max-width: 4.8em)");
-    expect(narrow).toMatch(/\.cf-token-word \{[^}]*display: none/u);
-    expect(narrow).toMatch(/\.cf-token-glyph \{[^}]*display: inline/u);
-  });
-
-  it("R1177001 R674 Glitch wears no token label: its type line stays corrupted and it has no mark", () => {
+  it("R1177001 R674 Glitch wears no token label: its type line stays corrupted", () => {
     const cf = catalogFace(GLITCH_DEF_ID);
     expect(one(cf, ".card-type").textContent).toBe(GLITCH_WORDS.type);
-    expect(cf.querySelector(".cf-token")).toBeNull();
   });
 
   it("R1177001 R1177000 a token fused with a real card is labeled as the real card it is; tokens fused together as a token", () => {
@@ -1153,7 +1104,6 @@ describe("R1177001: every token says Token, on every layout", () => {
     expect(real.tags).not.toContain("Token");
     const realFace = renderFace({ defId: real.id, def: real, radiant: false });
     expect(one(realFace, ".card-type").textContent).toBe("Unit");
-    expect(realFace.querySelector(".cf-token")).toBeNull();
     cleanup();
 
     const pair = fusedDef([def("core-t-rush"), def("core-t-sheep")], 2);
@@ -1161,7 +1111,6 @@ describe("R1177001: every token says Token, on every layout", () => {
     expect(pair.tags).toContain("Token");
     const pairFace = renderFace({ defId: pair.id, def: pair, radiant: false });
     expect(one(pairFace, ".card-type").textContent).toBe("Token Unit");
-    one(pairFace, ".cf-token");
   });
 });
 
@@ -1289,3 +1238,71 @@ function FitProbe({ content }: { content: string }): ReactElement {
     </span>
   );
 }
+
+/* ----------------------------------------------------------------------------------- R2577000 */
+
+const PREVIEW_ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
+
+describe("R2577000: the preview lists the keywords the board minion hides", () => {
+  it("R2577000 a unit with Equip and Taunt hides Equip on the board, and its hover preview and full face still list it", () => {
+    const id = "meditative-065";
+    const keywords: Keyword[] = [{ kind: "Taunt" }, { kind: "Equip" }];
+    const u = unit("p1", { defId: id, keywords });
+    const face = faceModel({ defId: id, def: def(id), radiant: false, live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords } });
+    const board = render(<MinionFace face={face} unit={u} />);
+    expect(board.container.querySelector('.keywords > [data-keyword="Equip"]')?.getAttribute("data-chip")).toBe("hidden");
+    expect(board.container.querySelector('[data-keyword-fx="Equip"]')).toBeNull();
+    cleanup();
+    render(<HoverPreview face={face} anchor={PREVIEW_ANCHOR} />);
+    const glossary = screen.getByTestId(INSPECT_GLOSSARY);
+    expect(glossary.querySelector('[data-glossary-term="Equip"]')).not.toBeNull();
+    expect(glossary.querySelector('[data-glossary-term="Taunt"]')).not.toBeNull();
+    expect(screen.getByTestId(INSPECT_FACE).querySelector('.card-text strong.cf-term[data-term="Equip"]')).not.toBeNull();
+  });
+});
+
+/* ----------------------------------------------------------------------------------- R2647000 */
+
+describe("R2647000: Token and Created live in the hover preview, not on the faces", () => {
+  it(
+    "R2647000 no token face wears a token mark: compact, on the board, or by a rule where the type line hides",
+    () => {
+      for (const card of TOKENS) {
+        expect(catalogFace(card.id, false, "compact").querySelector(".cf-token, [data-token]"), card.id).toBeNull();
+        cleanup();
+      }
+      const token = minionFace("core-t-rush");
+      expect(token.querySelector(".cf-token, [data-token]")).toBeNull();
+      const stats = one(token, ".stats");
+      expect([...stats.children].map((child) => child.className)).toEqual(["stat stat-attack", "stat stat-health"]);
+      expect(stats.textContent).toBe("34/4");
+      // minionFace's face is Created: no badge on the board either.
+      expect(token.querySelector('.cf-state[data-state="created"]')).toBeNull();
+      // jsdom has no layout, so a small or full-art face is this same DOM: no stylesheet may bring a mark back.
+      expect(cardsCss).not.toContain("cf-token");
+    },
+    CATALOG_SWEEP_TIMEOUT_MS,
+  );
+
+  it("R2647000 R1177001 R943 the hover preview still says both: Token Unit on its type line, Created in its state notes", () => {
+    const id = "core-t-rush";
+    const u = unit("p1", { defId: id });
+    const source: FaceSource = {
+      defId: id,
+      def: def(id),
+      radiant: false,
+      live: { attack: u.attack, health: u.health, maxHealth: u.maxHealth, keywords: u.keywords },
+      inPlay: { created: true },
+    };
+    render(<HoverPreview face={faceModel(source)} anchor={PREVIEW_ANCHOR} />);
+    const shown = screen.getByTestId(INSPECT_FACE);
+    expect(one(shown, ".card-type").textContent).toBe(`${TOKEN_WORD} Unit`);
+    expect(shown.querySelector('.cf-token, [data-token], .cf-state[data-state="created"]')).toBeNull();
+    expect(one(screen.getByTestId(INSPECT_STATES), '.inspect-state[data-state="created"]').textContent).toContain(
+      "Created: made during the game",
+    );
+    cleanup();
+    render(<HoverPreview face={faceModel({ ...source, chinese: true })} anchor={PREVIEW_ANCHOR} />);
+    expect(one(screen.getByTestId(INSPECT_FACE), ".card-type").textContent).toBe(`${CHINESE_TERMS.tags.Token}${CHINESE_TERMS.types.Unit}`);
+  });
+});

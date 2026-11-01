@@ -7,6 +7,7 @@
 // SPEC S8 names no test id for the toast, so its buttons are found by their role and name, or by
 // the ids #1831 gave its Accept, deck picker and lobby link. R2031000: an All Random challenge's
 // toast offers "More cards from" on the device's online pick, and Accept joins with it.
+// R915005: a deck with a custom card, or a trio holding one, is listed off and never picked.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -68,8 +69,14 @@ const AGGRO = { ...DECK, id: "d-aggro", name: "Aggro", cards: [] };
 const CONTROL = { ...DECK, id: "d-control", name: "Control", cards: [] };
 const TRIO = { id: "t-one", name: "Trio One", deckIds: ["d-aggro", "d-control", null], createdAt: 0, updatedAt: 0 };
 
-function decksBody(decks: readonly object[] = [AGGRO, CONTROL]): object {
-  return { catalogVersion: "v1", decks, trios: [TRIO], limits: { decks: 20, trios: 10, nameLength: 40 } };
+// R915005: Imps holds a card from the creator; Core holds none.
+const IMPS = { ...DECK, id: "d-imps", name: "Imps", cards: ["custom-ember-imp"] };
+const CORE = { ...DECK, id: "d-core", name: "Core", cards: [] };
+const IMP_TRIO = { id: "t-imps", name: "Imp trio", deckIds: ["d-core", "d-imps", "d-core"], createdAt: 0, updatedAt: 0 };
+const CORE_TRIO = { id: "t-core", name: "Core trio", deckIds: ["d-core", "d-core", "d-core"], createdAt: 0, updatedAt: 0 };
+
+function decksBody(decks: readonly object[] = [AGGRO, CONTROL], trios: readonly object[] = [TRIO]): object {
+  return { catalogVersion: "v1", decks, trios, limits: { decks: 20, trios: 10, nameLength: 40 } };
 }
 
 /** What the stub's room join answers: the match the player lands in. */
@@ -536,6 +543,87 @@ describe("R2031000 an All Random challenge's more cards from", () => {
         expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
       }, SOON);
       expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "bo1", deckId: "d-aggro" });
+    },
+    TEST_MS,
+  );
+});
+
+describe("R915005 the challenge toast never offers a deck or trio with a custom card", () => {
+  it(
+    "R915005 Best of 1: the remembered Imps is listed off, the pick starts on Core, the note says why, and Accept joins with Core",
+    async () => {
+      signIn("tok-toast");
+      window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "bo1", deckId: "d-imps", trioId: null }));
+      const server = serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
+        call.method === "GET" && call.path === "/api/decks" ? { status: 200, body: decksBody([IMPS, CORE]) } : undefined,
+      );
+      render(<ChallengeToast />);
+      const picker = (await screen.findByTestId(challengeToastTestid.deck, undefined, SOON)) as HTMLSelectElement;
+      expect(picker.value).toBe("d-core");
+      expect(within(picker).getByRole("option", { name: "Imps (practice only)" })).toBeDisabled();
+      expect(within(picker).getByRole("option", { name: "Core" })).toBeEnabled();
+      expect(screen.getByTestId(challengeToastTestid.practiceOnly)).toHaveTextContent(
+        "A deck with a custom card plays only in practice, against the AI.",
+      );
+
+      fireEvent.click(screen.getByTestId(challengeToastTestid.accept));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "bo1", deckId: "d-core" });
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R915005 Conquest: a trio holding Imps is listed off and never picked, and Accept joins with Core trio",
+    async () => {
+      signIn("tok-toast");
+      window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "bo3", deckId: null, trioId: "t-imps" }));
+      const server = serve({ incoming: [{ ...INCOMING, mode: "bo3" }], outgoing: [] }, (call) =>
+        call.method === "GET" && call.path === "/api/decks"
+          ? { status: 200, body: decksBody([IMPS, CORE], [IMP_TRIO, CORE_TRIO]) }
+          : undefined,
+      );
+      render(<ChallengeToast />);
+      const picker = (await screen.findByTestId(challengeToastTestid.deck, undefined, SOON)) as HTMLSelectElement;
+      expect(picker.value).toBe("t-core");
+      expect(within(picker).getByRole("option", { name: "Imp trio (practice only)" })).toBeDisabled();
+      expect(screen.getByTestId(challengeToastTestid.practiceOnly)).toHaveTextContent("cannot play Conquest");
+
+      fireEvent.click(screen.getByTestId(challengeToastTestid.accept));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "bo3", trioId: "t-core" });
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R915005 with only practice decks the toast offers Open in lobby and says why",
+    async () => {
+      signIn("tok-toast");
+      serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
+        call.method === "GET" && call.path === "/api/decks" ? { status: 200, body: decksBody([IMPS]) } : undefined,
+      );
+      render(<ChallengeToast />);
+      expect(await screen.findByTestId(challengeToastTestid.lobby, undefined, SOON)).toBeInTheDocument();
+      expect(screen.queryByTestId(challengeToastTestid.accept)).toBeNull();
+      expect(screen.queryByTestId(challengeToastTestid.deck)).toBeNull();
+      expect(screen.getByTestId(challengeToastTestid.practiceOnly)).toBeInTheDocument();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R915005 a toast with nothing practice-only has no note",
+    async () => {
+      signIn("tok-toast");
+      serve({ incoming: [INCOMING], outgoing: [] });
+      render(<ChallengeToast />);
+      await screen.findByTestId(challengeToastTestid.deck, undefined, SOON);
+      expect(screen.queryByTestId(challengeToastTestid.practiceOnly)).toBeNull();
     },
     TEST_MS,
   );

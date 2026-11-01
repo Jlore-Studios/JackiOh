@@ -104,7 +104,7 @@ pub fn script() -> CardScripts {
 // §4.2 step 2 (never a Can't be attacked Unit, a Top Loser only from its lane); an empty enemy board draws no
 // roll (R129); if it destroys (R42) the enemy Unit in your Bot Loser's lane, your Bot Loser goes Berserk, and
 // with no Bot Loser nothing more happens; the chance reads through `param()` (step 10%); radiant also Can't
-// attack and 100%, and that kill is credited to your Bot Loser instead: its "Whenever this destroys a Unit"
+// attack and 100%, and that kill is credited to your Bot Loser instead: its "After this destroys a Unit"
 // trigger fires and the `destroyed` event names it as the killer".
 #[cfg(test)]
 mod tests {
@@ -464,7 +464,7 @@ mod tests {
                     matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id)
                 });
                 assert_eq!(killer_of(death), Some(bot.id.clone()));
-                s.expect_stats(&bot, json!({ "attack": 8 }));
+                s.expect_stats(&bot, json!({ "attack": 7 }));
                 assert_eq!(s.card(&bot).berserk, None);
             }
 

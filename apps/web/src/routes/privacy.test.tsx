@@ -17,6 +17,7 @@ import {
   MATCH_ACTION_RETENTION_DAYS,
   MIN_ACCOUNT_AGE_YEARS,
   PLAY_TELEMETRY_RETENTION_DAYS,
+  SPECTATE_DELAY_MS,
   TERMS_VERSION,
 } from "@jackioh/server-config";
 
@@ -48,7 +49,8 @@ const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
   "2026-10-15b/2026-10-17": "37fbbebe49f56312ba164323c624142fa3e88a5294677e1c654c6cfc86de2774",
   "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
-  "2026-10-15b/2026-10-30": "911999940283bc219199d97dc44940ecf5211fc98b987ed85e87d9b42b14f716",
+  "2026-10-31/2026-10-31": "5ac8a025c4405ca53208415c1aa5af89e7c6dceae143d442c3e36d5d5b3fc0a3",
+  "2026-10-31/2026-11-01": "b21cb121e8ed21750bf3a141392ed8f0238f8cb657b05833d802e55094387dd2",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -88,7 +90,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-30");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-11-01");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
@@ -215,6 +217,38 @@ describe("the privacy policy", () => {
     expect(deleting).toMatch(/challenges, co-op rooms and replay shares/);
   });
 
+  it("R2615000 R2615001 says friends may always watch, that online play's data has no opt-out, and that the player statistics are public", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    const section = (name: RegExp): string =>
+      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
+    const seconds = (ms: number): number => ms / 1_000;
+
+    // R2615000: watching has no switch; the friendship is the way out, for your friends and your opponent's.
+    const handled = section(/who handles it/i);
+    expect(handled).toContain(
+      `Any friend can watch your ranked and unranked online games from your seat, ${String(seconds(SPECTATE_DELAY_MS))} seconds behind.`,
+    );
+    expect(handled).toMatch(/There.s no setting to turn this off: to stop someone watching, remove them as a friend or block them\./);
+    expect(handled).toMatch(/Your opponent.s friends can see your moves too: they can watch a ranked or unranked game/);
+    expect(handled).not.toMatch(/Let friends watch my games|If your opponent lets friends watch/);
+    expect(section(/what we collect/i)).not.toMatch(/whether you let friends watch/);
+
+    // R2615001: online play is recorded with no opt-out, and the policy says why.
+    expect(section(/why we collect it/i)).toMatch(
+      /Playing online means your games are recorded as described above\. There.s no setting to turn that off/,
+    );
+
+    // R2000000, R639: the player statistics, practice games' counts among them, are public with no switch.
+    const collected = section(/what we collect/i);
+    expect(collected).toMatch(/Your player statistics: how many games you have finished, won, lost and drawn/);
+    expect(collected).toMatch(/from the online and practice games you finish/);
+    expect(collected).toMatch(/Its moves are not sent to us; only what it adds to your player statistics is, while you are signed in\./);
+    expect(handled).toMatch(/Your player statistics are public: anyone can see them, with your username, on the Players tab/);
+    expect(handled).toMatch(/There.s no setting to hide them/);
+    expect(section(/deleting your account/i)).toMatch(/your tutorial progress, your player statistics, the records of how you played/);
+  });
+
   it("#970 names custom cards and the presence heartbeat, and deletes the custom cards with the account", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
@@ -271,10 +305,30 @@ describe("the legal pages", () => {
     );
   });
 
-  it("R640001 the terms say ranked may pair a player with an AI opponent", () => {
+  it("R640001 R2614000 the terms say when ranked seats an AI opponent, what it looks like and does, and that nothing marks it", () => {
     render(<TermsRoute />);
-    const ranked = screen.getByRole("region", { name: "Ranked play" });
-    expect(ranked).toHaveTextContent("When no suitable opponent is available, ranked may pair you with an AI opponent.");
+    const ai = screen.getByRole("region", { name: "AI opponents" });
+    // When, and why: the empty-queue fallback, in every queue mode and at any rank (R1453, R1555000).
+    expect(ai).toHaveTextContent(
+      "If no one near your rating is free to play after a short wait, ranked may pair you with an AI opponent that our server plays, so you still get a game.",
+    );
+    expect(ai).toHaveTextContent("It can happen at any rank, in Best of 1, All Random and Conquest.");
+    // What it looks like: drawn as a person's (R1454, R1834005), on the ladder but never Jlorious (R640000).
+    expect(ai).toHaveTextContent(
+      "An AI opponent has a username, a portrait, cosmetics, a rank and a place on the leaderboard, as a player does, though never in Jlorious.",
+    );
+    // What it does: a person's pace and habits (R1452, R639000).
+    expect(ai).toHaveTextContent(
+      "It plays at a person’s pace, and may emote, concede, answer a draw offer, let a turn run out or offer a rematch.",
+    );
+    // Nothing labels its seat (R1452), and that is said in so many words.
+    expect(ai).toHaveTextContent("Nothing in the game marks which opponents are AI.");
+    // It reads what the AI may read (R185), and is rated as a person is (R610).
+    expect(ai).toHaveTextContent("It sees only what a player in its seat could see.");
+    expect(ai).toHaveTextContent("A game against one counts toward your rank and rating like any other ranked game.");
+    // Only the queue seats one: a challenge never does.
+    expect(ai).toHaveTextContent("A challenge you send to a friend, or accept from one, is always played against that friend.");
+    expect(screen.queryByRole("region", { name: "Ranked play" })).toBeNull();
   });
 
   it("open as drafts for the owner: their first source lines say so", () => {

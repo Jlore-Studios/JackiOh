@@ -855,8 +855,6 @@ export const SHARE_FRIEND_NONE = "share-friend-none";
 export const SHARE_FRIEND_ERROR = "share-friend-error";
 export const REPLAYS_SHARED_WITH_ME = "replays-shared-with-me";
 
-export const SETTING_ALLOW_SPECTATORS = "setting-allowSpectators";
-
 // R738, R643: the opponent's aim and the emote layer, mirroring the literals in
 // apps/web/src/game/aim/OpponentAim.tsx and apps/web/src/emotes/ui.tsx.
 export const OPPONENT_AIM = "opponent-aim";

@@ -95,6 +95,12 @@
   display: none;
 }
 
+/* On a phone those two were the match menu's rows (#2645) beside Friends: Duos offers neither, so without
+   a Friends button (a signed-out player's) the menu would open empty, and its ⋯ steps aside. */
+.duos-board .match-menu-toggle:not(:has(~ .match-menu .friends-button)) {
+  display: none;
+}
+
 /* The rail: the round, both teams' life, the teammate, the portal and the concede offer. */
 
 .duos-rail {
@@ -516,7 +522,8 @@
   font-weight: 650;
 }
 
-.coop-panel__status {
+.coop-panel__status,
+.coop-panel__note {
   margin: 0;
   color: var(--text-dim);
 }

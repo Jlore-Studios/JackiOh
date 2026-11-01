@@ -8,10 +8,15 @@
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
 //! (R1852001); played alone, its death fuses a copy into its owner's Dormant Starship (R1852000).
 //! The Activate's target is a declared permanent, either side (R81), once a turn (R384). R1862004:
-//! `cast_random_at` casts one random card of the Fruit pool (R382: the non-token Fruits of every set
-//! that ships, the Grapes among them; Organic Produce and Fruit Tree left it, R1837000), free and
-//! counted as played by its controller (R70, R452), aimed at that permanent for its first target where
-//! it may take it (R946), every other choice random. Radiant: the Fruit is cast Radiant.
+//! `cast_random_at` casts one random card of the Fruit pool, free and counted as played by its
+//! controller (R70, R452), aimed at that permanent for its first target where it may take it (R946),
+//! every other choice random. Radiant: the Fruit is cast Radiant.
+//!
+//! The pool (#2521, R2521006): every Fruit-tagged card of the sets that ship, tokens included, which
+//! its query states (`withTokens`, as R382 lets a pool name its tokens): the Fruits, and the five
+//! Grapes, C+ #65.1 to #65.5, the Fruit tag keeping every other token out; Organic Produce and Fruit
+//! Tree left it (R1837000). A Grape picked is rolled again on `GRAPE_ODDS`, as R382 rolls every Grape
+//! a pool generates, and the Grape that roll names is the one cast.
 
 use jackioh_engine::effects::cast_random_at;
 use jackioh_engine::prelude::*;
@@ -37,7 +42,7 @@ fn launch(radiant: bool) -> ActivationDecl {
                 return Vec::new();
             };
             vec![cast_random_at(
-                json_as(json!({ "query": { "tags": [Tag::Fruit] }, "radiant": radiant })),
+                json_as(json!({ "query": { "tags": [Tag::Fruit], "withTokens": true }, "radiant": radiant })),
                 aim,
             )]
         }),
@@ -59,8 +64,8 @@ pub fn script() -> CardScripts {
 
 // Stinkyscape #141 Fruit Launcher — SPEC §8.10 row 141, BUILD M12 row S 141: its Activate takes a
 // permanent and casts one random Fruit at it for its controller, free (R70), by an rng pick that
-// replays; a Fruit whose target cannot be that permanent makes its own choices at random; radiant 0/8
-// and a Radiant Fruit.
+// replays, a Grape among them (tokens included, R2521006); a Fruit whose target cannot be that
+// permanent makes its own choices at random; radiant 0/8 and a Radiant Fruit.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,6 +77,14 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FIG: &str = "core-047"; // Fig of Life, a Fruit: "Heal a target {heal}."
+    /// C+ #65.1 to #65.5, the Fruit tokens (R382).
+    const GRAPES: [&str; 5] = [
+        "classicplus-065-1",
+        "classicplus-065-2",
+        "classicplus-065-3",
+        "classicplus-065-4",
+        "classicplus-065-5",
+    ];
 
     /// p2's Vanilla, 2 damage on it, and p1's hero hurt too, so a heal has somewhere else to go.
     fn board(seed: &str, radiant: bool) -> Scenario {
@@ -114,6 +127,16 @@ mod tests {
         })
     }
 
+    /// R2521006: the first seed, under `prefix`, whose cast is a Grape.
+    fn grape_seed(prefix: &str, radiant: bool) -> String {
+        seed_where(prefix, |seed| {
+            fire(seed, radiant)
+                .2
+                .first()
+                .is_some_and(|(_, def_id, _)| GRAPES.contains(&def_id.as_str()))
+        })
+    }
+
     fn healed(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
@@ -140,6 +163,25 @@ mod tests {
             assert!(s.state().pending.is_none(), "a random cast asks nobody");
             // The pick is the rng's: the same seed casts the same Fruit.
             assert_eq!(fire("s141", false).2.first(), Some(&first));
+        }
+
+        #[test]
+        fn r2521006_its_pool_takes_the_fruit_tokens_a_grape_is_cast_free_for_its_controller() {
+            let (s, _, cast) = fire(&grape_seed("s141-grape", false), false);
+            let (player, def_id, paid) = cast.first().cloned().expect("a cast");
+            assert!(GRAPES.contains(&def_id.as_str()), "{def_id}");
+            assert_eq!((player, paid), (P1, 0));
+            let def = crate::card_def(&def_id);
+            assert!(def.token && def.tags.contains(&Tag::Fruit), "a Fruit token");
+            assert!(s.state().pending.is_none(), "a random cast asks nobody");
+            // No other token: every cast over the seeds is a Fruit, and a token only if a Grape.
+            for n in 0..16 {
+                let (_, _, cast) = fire(&format!("s141-pool-{n}"), false);
+                let id = cast.first().map(|(_, id, _)| id.clone()).expect("a cast");
+                let def = crate::card_def(&id);
+                assert!(def.tags.contains(&Tag::Fruit), "{id}");
+                assert!(!def.token || GRAPES.contains(&id.as_str()), "{id}");
+            }
         }
 
         #[test]
@@ -208,6 +250,19 @@ mod tests {
                 .find(|card| card.def_id == FIG)
                 .expect("the Fig landed");
             assert!(fig.radiant);
+        }
+
+        #[test]
+        fn r2521006_a_grape_is_cast_radiant() {
+            let (s, _, cast) = fire(&grape_seed("s141-grape-radiant", true), true);
+            let (_, def_id, _) = cast.first().cloned().expect("a cast");
+            assert!(GRAPES.contains(&def_id.as_str()), "{def_id}");
+            let grape = s
+                .pile(P1, "graveyard")
+                .into_iter()
+                .find(|card| card.def_id == def_id)
+                .expect("the Grape landed in its caster's graveyard (R87)");
+            assert!(grape.radiant);
         }
 
         #[test]

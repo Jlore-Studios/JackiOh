@@ -1,6 +1,7 @@
 // R374 deals real, non-token Core cards into four rarities in random order, with the middle Radiant.
 // Randomness is client-owned (CLAUDE.md rule 4) and injected so tests can deal deterministically.
-// R1017002 deals only the cards that print whole on a fan card, a hero's full-art card favored.
+// R1017002 deals only the cards that print whole on a fan card, a full-art card favored (R2655001: any
+// card the cosmetics registry has a full art of).
 
 import { SHIPPED_SETS, type CardDef, type CardDefs, type Rarity } from "@jackioh/shared";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -48,8 +49,8 @@ export const ROTATION_POOL: readonly CardDef[] = Object.values(CATALOG).filter(
 
 /**
  * R1017002: whether both of `def`'s faces print whole on a fan card without the long layout: a
- * hero's full-art face prints no words, and any other face its whole catalog text, with no short
- * form (issue #1017), within FAN_TEXT_LIMIT. With the Full-art cards setting off, a hero's card is
+ * full-art face prints no words, and any other face its whole catalog text, with no short
+ * form (issue #1017), within FAN_TEXT_LIMIT. With the Full-art cards setting off, a full-art card is
  * held to its text like any card.
  */
 export function fitsTheFan(def: CardDef, fullArtOn: boolean): boolean {
@@ -106,16 +107,16 @@ const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 
 
 /**
  * R639 favors faces whose name and rules text print at the largest size, but never excludes dense
- * cards. A hero's card counts as one (R1017002): in the fan it prints its art and no words, and with
- * full art off it is dealt only when its text fits the fan. A Training Grounds snapshot of one prints
- * its words, so it does not (R2195001).
+ * cards. A full-art card counts as one (R1017002, R2655001): in the fan it prints its art and no words, and with
+ * full art off it is dealt only when its text fits the fan. A Training Grounds Legacy card of one is
+ * named apart (R2511000) and prints its words, so it does not.
  */
 export function featureWeight(def: CardDef): number {
   const known = WEIGHTS.get(def.id);
   if (known !== undefined) return known;
   const face = faceModel({ defId: def.id, def, radiant: false });
   const fits =
-    isFullArtCard(def.id, def.name) ||
+    isFullArtCard(def.id) ||
     (TIER_RANK[nameTier(face.name)] <= TIER_RANK[FEATURE_PLAIN_MAX_TIER] &&
       TIER_RANK[textTier(face.text.full)] <= TIER_RANK[FEATURE_PLAIN_MAX_TIER]);
   const weight = fits ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE;
@@ -125,9 +126,9 @@ export function featureWeight(def: CardDef): number {
 
 const WEIGHTS = new Map<string, number>();
 
-/** R1017002: `weigh`, with a hero's full-art card FULL_ART_WEIGHT_FACTOR times as likely while full art is on. */
+/** R1017002: `weigh`, with a full-art card FULL_ART_WEIGHT_FACTOR times as likely while full art is on. */
 export function favoringFullArt(weigh: CardWeight, fullArtOn: boolean): CardWeight {
-  return (def) => weigh(def) * (fullArtOn && isFullArtCard(def.id, def.name) ? FULL_ART_WEIGHT_FACTOR : 1);
+  return (def) => weigh(def) * (fullArtOn && isFullArtCard(def.id) ? FULL_ART_WEIGHT_FACTOR : 1);
 }
 
 /** A nonpositive weight counts as one so no card becomes unreachable. */

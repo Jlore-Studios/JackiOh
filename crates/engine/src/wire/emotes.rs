@@ -8,9 +8,10 @@
 //! of the wire must agree on — the id lists, the portrait roster the deck save checks (D5, R641), the
 //! hand each seat is dealt (R1341) and the rate limit the client and the server enforce identically
 //! (R643) — because `apps/web` and the server may not import each other
-//! (§9.2: a client and a server are separate deployables). Constants therefore live here and not
-//! in the server's `config.rs` (CLAUDE.md rule 9): the rule books numbers to one named place,
-//! and this module is the one place both ends read.
+//! (§9.2: a client and a server are separate deployables). The hand's and the limit's numbers are
+//! the engine's `config.rs`'s (CLAUDE.md rule 9), which the server reads and the web reads generated
+//! (`apps/web/src/wire/engineConfig.ts`); this module re-exports them, so `wire::EMOTE_HAND_SIZE`
+//! and the rest still name them.
 //!
 //! The AI's persona config is NOT here: it is presentation logic of the practice opponent and
 //! lives in the web client (R645), which the engine and the AI's move search never import.
@@ -110,11 +111,8 @@ pub fn is_voice_emote(emote: EmoteId) -> bool {
 // The emote hand (R1341): eight of the pool, dealt to each seat each game from the match seed.
 // ---------------------------------------------------------------------------------------------
 
-/// How many emotes a seat is dealt each game (R1341): the menu shows these and nothing else.
-pub const EMOTE_HAND_SIZE: usize = 8;
-/// How many of a hand are voice lines (R1341); the other `EMOTE_HAND_SIZE - EMOTE_HAND_VOICE` are
-/// emoji. A fixed split, so every hand speaks in its portrait's voice and the menu keeps one shape.
-pub const EMOTE_HAND_VOICE: usize = 3;
+// The hand's size and its voice lines (R1341) are the engine config's (CLAUDE.md rule 9).
+pub use crate::config::{EMOTE_HAND_SIZE, EMOTE_HAND_VOICE};
 
 /// The seed of a seat's own emote stream (R1341): the match seed and the seat, so the deal never
 /// draws from the match rng (`state.rng`) and no state, log, replay hash or golden trace moves.
@@ -249,14 +247,6 @@ pub const PORTRAITS: &[(PortraitId, PortraitEntry)] = &[
     ),
 ];
 
-/// TS `PORTRAITS[id]`: the roster entry of `id` (every id has one).
-pub fn portrait_entry(id: PortraitId) -> &'static PortraitEntry {
-    match PORTRAITS.iter().find(|(key, _)| *key == id) {
-        Some((_, entry)) => entry,
-        None => panic!("portrait {id} has no roster entry"),
-    }
-}
-
 /// A uniform pick over the roster (R642: All Random deals one per seat, independently).
 pub fn pick_portrait(mut rng: impl FnMut() -> f64) -> PortraitId {
     let len = PORTRAIT_IDS.len();
@@ -300,12 +290,8 @@ pub fn pick_portrait_from_seed(seed: &str) -> PortraitId {
 // The rate limit (R643): one rule, one config, enforced at both ends.
 // ---------------------------------------------------------------------------------------------
 
-/// The pause between two emotes from one player.
-pub const EMOTE_COOLDOWN_MS: i64 = 1500;
-/// The rolling window the cap is counted over.
-pub const EMOTE_WINDOW_MS: i64 = 20_000;
-/// At most this many emotes in a window.
-pub const EMOTE_WINDOW_MAX: usize = 5;
+// The limit's cooldown, window and cap (R643) are the engine config's (CLAUDE.md rule 9).
+pub use crate::config::{EMOTE_COOLDOWN_MS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS};
 
 /// TS `EmoteGate = { ok: true; sentAt } | { ok: false; retryAfterMs; sentAt }`: `retry_after_ms`
 /// is `Some` exactly when `ok` is false, so the JSON is TS's either way.
@@ -491,8 +477,7 @@ mod tests {
             );
             let keys: Vec<PortraitId> = PORTRAITS.iter().map(|(id, _)| *id).collect();
             assert_eq!(keys, PORTRAIT_IDS.to_vec());
-            for id in PORTRAIT_IDS {
-                let entry = portrait_entry(*id);
+            for (id, entry) in PORTRAITS {
                 assert!(!entry.card_name.is_empty(), "{id}");
                 assert!(!entry.flavour.is_empty(), "{id}");
             }

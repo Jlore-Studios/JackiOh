@@ -39,10 +39,6 @@ const S2 = {
   FX_OVERFLOW_FIZZLE_AT: 0.45,
   FX_MANA_STAGGER_MS: 40,
   FX_MANA_MAX_SPARKS: 10,
-  FX_SHAKE_MIN_DAMAGE: 3,
-  FX_TRAUMA_PER_DAMAGE: 0.15,
-  FX_SHAKE_MAX_TRAUMA: 0.8,
-  FX_HERO_TRAUMA_MULT: 1.25,
   FX_SLAM_STATS_MIN: 10,
   FX_SLAM_TRAUMA_PER_STAT: 0.06,
   FX_SLAM_MAX_TRAUMA: 0.5,
@@ -96,6 +92,12 @@ const S2 = {
   FX_CHAOS_LAND_LAST: 0.85,
   FX_CHAOS_REEL_DECOYS: 6,
   FX_CHAOS_DECOY_STEP: 3,
+  // Issue #2652: a batch of coins or dice (R2652001).
+  FX_ROLL_LAND_AT: 0.5,
+  FX_ROLL_STAGGER: 0.05,
+  FX_ROLL_LAND_LAST: 0.7,
+  FX_ROLL_TUMBLE_FACES: 8,
+  FX_ROLL_TUMBLE_STRIDE: 3,
   // Issue #124: the sweep's fog, the whole-pile wave and the multicast flare.
   FX_FOG_HIT_FROM: 0.2,
   FX_FOG_HIT_TO: 0.75,
@@ -192,6 +194,8 @@ const S2 = {
     auspicious: "吉",
     inauspicious: "凶",
     chaosRolled: "Call to Chaos:",
+    coinsFlipped: "Coin flip",
+    diceRolled: "Dice roll",
     turnCutShort: "Turn cut short",
     autopilot: "The AI takes the turn",
     votedOut: "Voted out",
@@ -258,7 +262,6 @@ describe("S2 the effects constants", () => {
 
   it("S2 the shake caps stay inside [0, 1] trauma", () => {
     for (const trauma of [
-      constants.FX_SHAKE_MAX_TRAUMA,
       constants.FX_SLAM_MAX_TRAUMA,
       constants.FX_LEGENDARY_TRAUMA,
       constants.FX_TRAP_TRAUMA,
@@ -273,17 +276,10 @@ describe("S2 the effects constants", () => {
     expect((1 / constants.FX_TRAUMA_DECAY) * 1000).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
   });
 
-  it("S2 a typical hit reads: 4 or 5 damage moves the board several pixels and keeps it moving for a third of a second (B52)", () => {
-    // Peak offset is FX_SHAKE_MAX_PX · trauma² (shake.ts). Review: at 8 px and 0.1 per damage point a
-    // 5-damage hit peaked under 1 px on screen, which no player notices.
-    const trauma = (damage: number): number => Math.min(constants.FX_SHAKE_MAX_TRAUMA, damage * constants.FX_TRAUMA_PER_DAMAGE);
+  it("S2 the result thumps hardest of all, and a trap reveal is still felt (B52)", () => {
+    // Peak offset is FX_SHAKE_MAX_PX · trauma² (shake.ts). A damage hit's shake is its tier's
+    // `shakePx` (game/damageFeel.ts, #57), which cues.test.ts holds.
     const peak = (t: number): number => constants.FX_SHAKE_MAX_PX * t * t;
-    expect(peak(trauma(4))).toBeGreaterThanOrEqual(6);
-    expect(peak(trauma(5))).toBeGreaterThanOrEqual(9);
-    // How long it stays above one pixel of amplitude.
-    const visibleMs = (t: number): number => ((t - Math.sqrt(1 / constants.FX_SHAKE_MAX_PX)) / constants.FX_TRAUMA_DECAY) * 1000;
-    expect(visibleMs(trauma(5))).toBeGreaterThanOrEqual(300);
-    // The result thumps hardest of all, and a trap reveal is still felt.
     expect(peak(constants.FX_RESULT_TRAUMA)).toBeGreaterThanOrEqual(12);
     expect(peak(constants.FX_TRAP_TRAUMA)).toBeGreaterThanOrEqual(2);
   });
@@ -294,7 +290,7 @@ describe("R200 the v0.2.0 tails fit inside T", () => {
     expect(constants.FX_FRACTURE_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_BRAND_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
     expect(constants.FX_WALLS_TAIL_MS).toBeLessThanOrEqual(constants.FX_MAX_TAIL_MS);
-    for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST]) {
+    for (const at of [constants.FX_CRACK_HIT_AT, constants.FX_BLOOD_FLIGHT_FRACTION, constants.FX_BRAND_SLAM_AT, constants.FX_CHAOS_LAND_AT, constants.FX_CHAOS_LAND_LAST, constants.FX_ROLL_LAND_AT, constants.FX_ROLL_LAND_LAST]) {
       expect(at).toBeGreaterThanOrEqual(0);
       expect(at).toBeLessThanOrEqual(1);
     }

@@ -219,6 +219,38 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 | v0.3.17 | v0.4.0c | micro | 3 |
 | v0.3.17b | v0.4.0d | micro | 0 |
 
+## The v0.5 retcon
+
+#2532 (R2532000) renamed the v0.5 line a second time, by the tiers the classifier names now: a patch
+at 15 or more reprinted families, 50 or more that play differently, or a rule every game meets
+(R2455000, R2499000). `cargo jackioh patches retcon --from v0.5.0` computed it, every version before
+v0.5.0 kept its name, and the three patches made by a rule alone were measured against their base
+builds (1, 1 and 2 of 200 games diverged without a card) and are micros. Ten patches became six.
+Docs, commit messages, comments and the older titles keep the names they were written with; translate
+a v0.5 name in a text from before 2026-10-30 with this table. A file marked `versions: 2` names the
+v0.5 line the old way too, and its readers map it through `aliases.json`'s `marked`.
+
+| Old | New | Tier | Families |
+|---|---|---|---:|
+| v0.5.0 | v0.5.0 | major | 199 |
+| v0.5.1 | v0.5.0b | micro | 24 |
+| v0.5.2 | v0.5.1 | patch | 130 |
+| v0.5.2b | v0.5.1b | micro | 4 |
+| v0.5.3 | v0.5.2 | patch | 122 |
+| v0.5.4 | v0.5.3 | patch | 21 |
+| v0.5.5 | v0.5.4 | patch | 126 |
+| v0.5.6 | v0.5.4b | micro | 20 |
+| v0.5.6b | v0.5.4c | micro | 0 |
+| v0.5.7 | v0.5.5 | patch | 62 |
+| v0.5.8 | v0.5.5b | micro | 9 |
+| v0.5.9 | v0.5.6 | patch | 176 |
+| v0.5.9b | v0.5.6b | micro | 3 |
+| v0.5.10 | v0.5.6c | micro | 6 |
+| v0.5.10b | v0.5.6d | micro | 4 |
+| v0.5.10c | v0.5.6e | micro | 43 |
+| v0.5.10d | v0.5.6f | micro | 0 |
+| v0.5.11 | v0.5.7 | patch | 69 |
+
 ## A patch that takes several pull requests
 
 - **Tracker.** One issue, `Patch: <…>`, holds the scope and a checklist of the parts, one line per
@@ -323,6 +355,13 @@ part that narrows the task shows the gap instead of hiding it.
   `cargo jackioh patches log <base>..<head>` logs each App, AI and Internal commit of the range on the
   newest shipped X in `crates/cards/patches/technical.json`, with that line (R1369000); the page shows
   the App and AI lines under their X, and Internal ones stay in the record.
+- **GitHub releases.** Every shipped version is a GitHub release that reads as the page reads it
+  (`apps/web/src/patches/github.ts`): its note under the same headings, its technical log's player
+  lines, its cards with what changed on each, and on a major its line's summary and technical changes.
+  `.github/workflows/releases.yml` writes them after a ship, a technical log or a production merge: a
+  pre-release while only main (staging) holds the version, a release once production does, each
+  tagged at the commit `shipped.json` records. Nothing there is written by hand: the next run puts
+  back a release edited on GitHub, so a release reads better only when the note it is written from does.
 
 ## Win rates in a balance patch
 

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from "rea
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, resolveCosmetic, useOwnsAccountCosmetic, type DeckSlotKind } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { BackLayer } from "../../net/backLayers.ts";
 import { DECK_COSMETICS_BUTTON } from "./testids.ts";
 import type { DeckItem } from "./sync.ts";
 
@@ -44,7 +45,7 @@ export default function DeckCosmeticsPicker({
     buttonRef.current?.focus();
   }, []);
 
-  // Outside press and Escape close the picker, like the portrait picker's.
+  // Outside press and Escape close the picker, like the portrait picker's; Back does too (R2127000, the panel's BackLayer).
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent): void => {
@@ -85,6 +86,7 @@ export default function DeckCosmeticsPicker({
       </button>
       {open ? (
         <div className="ws-cosmetics-panel" role="dialog" aria-label={t("Deck cosmetics")}>
+          <BackLayer onClose={close} />
           {/* R1297000: the deck's own playmat, backdrop and card back; "As equipped in Collection" leaves
               the pick to the account's, equipped in the collection's Cosmetics section (R1579000), then
               the default. */}

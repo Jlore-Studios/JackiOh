@@ -1058,7 +1058,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r12_keeps_ownership_off_the_field_a_stolen_unit_dies_to_its_owner_s_graveyard() {
+    fn r12_r2618000_keeps_ownership_on_the_field_a_stolen_unit_dies_to_its_controller_s_graveyard() {
         let mut state = game("r12");
         let victim = put(&mut state, BODY, slot(P2, UNITS, 2), json!({}));
 
@@ -1072,12 +1072,12 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(stolen.owner, P2);
 
         kill_and_check(&mut state, &victim);
-        assert_eq!(ids(&state.players.p2.graveyard), vec![victim.id.clone()]);
-        assert!(state.players.p1.graveyard.is_empty());
-        // Control means nothing off the field, so it goes back to the owner on the way out (R78).
+        assert_eq!(ids(&state.players.p1.graveyard), vec![victim.id.clone()]);
+        assert!(state.players.p2.graveyard.is_empty());
+        // R2618000: it died on p1's side, so it is p1's card in p1's graveyard from then on.
         let dead = instance_in(&state, &victim.id);
-        assert_eq!(dead.controller, P2);
-        assert_eq!(dead.zone, Zone::Graveyard { player: P2 });
+        assert_eq!((dead.owner, dead.controller), (P1, P1));
+        assert_eq!(dead.zone, Zone::Graveyard { player: P1 });
     }
 
     #[test]

@@ -25,6 +25,8 @@ export const duosTestid = {
   coopDeck: "coop-deck",
   /** R2031000: beside the Random deck only, "More cards from" (R924000), a select. */
   coopLeanNewest: "coop-lean-newest",
+  /** R915005: under the deck picker when it lists one naming a custom card: why it is off. */
+  coopPracticeOnly: "coop-practice-only",
   coopCancel: "coop-cancel",
   coopInviteFriend: "coop-invite-friend",
   coopInvite: "coop-invite",

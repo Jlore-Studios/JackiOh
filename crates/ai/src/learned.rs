@@ -31,7 +31,7 @@
 use jackioh_engine::{AI_TUTORIAL, GameState, Handicap, PlayerId};
 
 use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
-use crate::evaluate::{NextSwing, evaluate};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced};
 use crate::features::{Features, features_of};
 
 /// One dense layer of the head: `out = clip(w · input + b)`, `w` row-major `outputs × inputs`.
@@ -196,21 +196,21 @@ impl Network<'_> {
 /// The score a finalist gets where `reply_score` scores it: the hand eval, or with
 /// `EvalKind::Learned` the network's correction of it at `LEARNED_CORRECTION_SHARE` (1v1 only, D9;
 /// R1012001).
-pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
-    finalist_score_with(state, seat, next, AI_EVAL_KIND, &LEARNED)
+pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64 {
+    finalist_score_with(state, seat, next, AI_EVAL_KIND, &LEARNED, prices)
 }
 
 /// R1012002: the score a complete line gets where the beam closes it (`static_score`): a finalist's
 /// with `LEARNED_REACH` at `Lines` or past it, so the network also picks the finalists; the hand eval
 /// otherwise.
-pub fn line_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
-    line_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED)
+pub fn line_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64 {
+    line_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED, prices)
 }
 
 /// R1012002: the score an open line gets where the beam ranks it at each depth: a finalist's with
 /// `LEARNED_REACH` at `Beam`, the hand eval otherwise.
-pub fn open_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
-    open_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED)
+pub fn open_score(state: &GameState, seat: PlayerId, next: NextSwing, prices: &Prices) -> f64 {
+    open_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED, prices)
 }
 
 /// `line_score` under a given reach, switch and network, for tests and screens.
@@ -221,11 +221,12 @@ pub fn line_score_with(
     reach: LearnedReach,
     kind: EvalKind,
     network: &Learned<'_>,
+    prices: &Prices,
 ) -> f64 {
     if reach >= LearnedReach::Lines {
-        finalist_score_with(state, seat, next, kind, network)
+        finalist_score_with(state, seat, next, kind, network, prices)
     } else {
-        evaluate(state, seat, next, &AI_EVAL)
+        evaluate_priced(state, seat, next, &AI_EVAL, prices)
     }
 }
 
@@ -237,22 +238,25 @@ pub fn open_score_with(
     reach: LearnedReach,
     kind: EvalKind,
     network: &Learned<'_>,
+    prices: &Prices,
 ) -> f64 {
     if reach >= LearnedReach::Beam {
-        finalist_score_with(state, seat, next, kind, network)
+        finalist_score_with(state, seat, next, kind, network, prices)
     } else {
-        evaluate(state, seat, next, &AI_EVAL)
+        evaluate_priced(state, seat, next, &AI_EVAL, prices)
     }
 }
 
 /// R1012003: whether a seat plays the tutorial opponent's tier: its handicap is `AI_TUTORIAL`'s
 /// resources, whatever the lesson adds that is no resource (R2201000's floor, R2201001's pool hold,
-/// R2433000's Core-only bar, which a lesson played before it lacks).
+/// R2533000's bar and R2533001's copies, which a lesson played before them lacks; R2433000's Core-only
+/// bar, which a lesson played under it held, folds to no field now).
 pub fn is_tutorial_opponent(handicap: Option<Handicap>) -> bool {
     let resources = |handicap: Handicap| Handicap {
         hero_floor: None,
         pool_hold: None,
-        core_only: None,
+        tutorial_cards_only: None,
+        deck_copies: None,
         ..handicap
     };
     handicap.is_some_and(|handicap| resources(handicap) == resources(AI_TUTORIAL))
@@ -265,8 +269,9 @@ pub fn finalist_score_with(
     next: NextSwing,
     kind: EvalKind,
     network: &Learned<'_>,
+    prices: &Prices,
 ) -> f64 {
-    let hand = evaluate(state, seat, next, &AI_EVAL);
+    let hand = evaluate_priced(state, seat, next, &AI_EVAL, prices);
     match kind {
         EvalKind::Hand => hand,
         EvalKind::Learned => {

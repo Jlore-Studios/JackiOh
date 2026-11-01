@@ -142,6 +142,11 @@ var LastHourSlack float64 = 0.01
 // for days.
 var LateWeekSpan = 24 * time.Hour
 
+// HardCapMargin is HARD_CAP_MARGIN: how far under its hard cap (`hard_cap`) a run already going
+// stops. A call the cap stops can end a point past it (`LastHourSlack`), so stopping a point
+// under the hard cap keeps every call at it or under it.
+var HardCapMargin = LastHourSlack
+
 // Weekdays is WEEKDAYS: weekday names as `late_week` writes them, Monday first
 // (`datetime.weekday`).
 var Weekdays = []string{"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
@@ -292,6 +297,18 @@ type Provider struct {
 	// higher caps, and its last hour there alone (claude-5's whole week, 80% of a session and
 	// its last hour from Sunday 17:00).
 	LateWeek *LateWeek // default: None
+	// HardCap is its hard cap (`hard_cap`, claude-5's 90%): no cap on any window goes past it,
+	// whatever its late week or its last hour would make it, and a run going on stops
+	// `HardCapMargin` under it, so no call passes it.
+	HardCap *float64 // default: None
+}
+
+// ceiling is the highest a cap of its may go: its hard cap, else all of the window.
+func (x *Provider) ceiling() float64 {
+	if x.HardCap != nil {
+		return *x.HardCap
+	}
+	return 1.0
 }
 
 // Describe is describe.
@@ -318,7 +335,7 @@ func (x *Provider) Hours(zoneName string) string {
 // (`late_week_holds`) and its last hour lifts the 5-hour one (`last_hour_of`).
 // `last_hour` is the reset of a session whose last hour a run already took
 // (`work.Worker`): the 5-hour cap stays lifted until then, however far past it the run
-// has gone.
+// has gone. Lifted means up to its hard cap (`hard_cap`), which holds every window.
 //
 // `usage` is nil for None, else the reading (a *pyjson.Object, {} included); `lastHour` is the
 // zero time for None.
@@ -326,13 +343,13 @@ func (x *Provider) CapsAt(at time.Time, zoneName string, usage any /* = None */,
 	caps := x.HeldCaps(at, zoneName, usage)
 	if !isNone(usage) && caps.Has("five_hour") &&
 		((!lastHour.IsZero() && at.Before(lastHour)) || !LastHourOf(x, usage, at, zoneName).IsZero()) {
-		caps.Set("five_hour", 1.0)
+		caps.Set("five_hour", x.ceiling())
 	}
 	return caps
 }
 
 // HeldCaps is `caps_at` without its last hour: the caps a reading is held to before that lifts
-// the 5-hour one.
+// the 5-hour one, each held to its hard cap.
 func (x *Provider) HeldCaps(at time.Time, zoneName string, usage any /* = None */) *pyjson.Object {
 	caps := x.Limits.Stops()
 	if x.OffHours.Len() > 0 && zoneName != "" && !x.Schedule.IsOpen(zoneName, at) {
@@ -348,6 +365,11 @@ func (x *Provider) HeldCaps(at time.Time, zoneName string, usage any /* = None *
 			}
 			return true
 		})
+	}
+	if x.HardCap != nil {
+		for _, window := range windowOrder {
+			caps.Set(window, pyMin(py.MustFloat(caps.GetOr(window, 1.0)), *x.HardCap))
+		}
 	}
 	return caps
 }

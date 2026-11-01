@@ -43,7 +43,7 @@
 //!     leaves on the field with its attack spent, its killing attack its last, readied nothing, and its
 //!     credit is taken back.
 //!
-//! The nine checks:
+//! The ten checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
@@ -143,11 +143,20 @@
 //!      mana, so an action that reset the game (`state.resets` moved) has its `turnStarted` and
 //!      `manaChanged` left unread: they named the game it took. Its `fatigue` events are still read,
 //!      against the game they fell in, and the fatigue shadow starts again from the new game's counts.
+//!   I10 no opponent-held prompt on its holder's off turn (§10.6, R1279000; #2568). A prompt the opponent
+//!      holds (`by: "enemy"`) never opens while its holder is not the active player: each card defers it
+//!      to the start of its holder's next turn by hand, and Pickle, Income Tax and In Too Deep opened
+//!      theirs on the wrong turn through v0.3.16 with nothing to see it. After every action of a live
+//!      game, a `pending` whose `player_id` is not `state.active`, and whose `prompt_owner_of` (the asking
+//!      card's controller, which `open_prompt` records when the player asked is someone else) is another
+//!      player, is a violation. A prompt held by the card's own controller opens on either turn (In Too
+//!      Deep's reward choice), an engine prompt records no owner, and the mulligans are no `pending`.
+//!      The message names the asking card and the turn.
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
 //!
-//! Port of `packages/cards/test/_invariants.ts` (SURFACE §8: `testkit::invariants::Monitor`). The
+//! Port of `packages/cards/test/_invariants.ts` (SURFACE §8: `testkit::invariants::InvariantMonitor`). The
 //! JSON a check walks is serde's, whose objects iterate in key order where TS's iterated in insertion
 //! order, so where one needle sits at two paths the path a message names may be the other one; which
 //! needles are found is the same.
@@ -161,6 +170,7 @@ use crate::config::{FATIGUE_DAMAGE, MIN_PLAGUE_PAYMENT, WINDFURY_ATTACKS};
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
 use crate::play_choices::PlayAction;
+use crate::prompts::prompt_owner_of;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
@@ -945,10 +955,15 @@ pub fn hidden_information_violations(
     } = hidden_from(state, viewer);
 
     // The view's events are the tail of the log's, in order: line them up to find a `stolen` among them.
+    // R2652000: less the face-down rolls the view drops for this viewer, so the two still line up.
+    let withheld = crate::view_for::withheld_rolls(state, viewer);
     let raw: Vec<&GameEvent> = state
         .applied
         .iter()
         .flat_map(|entry| entry.events.iter())
+        .enumerate()
+        .filter(|(at, _)| !withheld.contains(at))
+        .map(|(_, event)| event)
         .collect();
     let offset = raw.len() as isize - view.events.len() as isize;
     let mut events: Vec<Value> = Vec::new();
@@ -1516,7 +1531,7 @@ fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyw
 
 /// TS `InvariantMonitor`, made by `create_invariant_monitor`: the shadow of this file's header and
 /// the checks run against it. `before` is I1 and I3, `after` feeds one action's events into the
-/// shadow and runs I2, I4, I5, I7 and I9, `hidden` is I6 for both seats and `unlisted` is I8.
+/// shadow and runs I2, I4, I5, I7, I9 and I10, `hidden` is I6 for both seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -1564,9 +1579,6 @@ pub struct InvariantMonitor {
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
 }
-
-/// SURFACE §8's name for the monitor (`testkit::invariants::Monitor`).
-pub type Monitor = InvariantMonitor;
 
 pub fn create_invariant_monitor(start: &GameState) -> InvariantMonitor {
     InvariantMonitor::new(start)
@@ -2068,7 +2080,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5, I7 and I9 against the resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7, I9 and I10 against the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
@@ -2460,6 +2472,32 @@ impl InvariantMonitor {
             ));
         }
 
+        // I10: no prompt held by the opponent while its holder is not the active player (§10.6, R1279000).
+        if state.result.is_none()
+            && let Some(pending) = &state.pending
+            && pending.player_id != state.active
+            && prompt_owner_of(pending) != pending.player_id
+        {
+            let asked_by = pending.resume.instance_id.as_deref();
+            let asker = match asked_by.and_then(|id| find_instance(state, id)) {
+                Some(card) => name_of(card),
+                None => format!(
+                    "{} ({})",
+                    asked_by.unwrap_or("no instance"),
+                    pending.resume.def_id
+                ),
+            };
+            found.push(format!(
+                "I10 opponent prompt off turn: {asker} opened prompt {} for {}, held for {}, on turn {} while {} \
+                 is the active player (§10.6, R1279000)",
+                pending.id,
+                pending.player_id,
+                prompt_owner_of(pending),
+                state.turn,
+                state.active
+            ));
+        }
+
         found
     }
 
@@ -2598,7 +2636,7 @@ impl DuosInvariantMonitor {
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7 and I9 against both duels,
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7, I9 and I10 against both duels,
     /// and checks pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();

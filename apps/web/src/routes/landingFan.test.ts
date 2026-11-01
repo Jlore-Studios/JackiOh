@@ -6,11 +6,11 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { CardDef } from "@jackioh/shared";
+import { PORTRAITS, type CardDef } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
 import { nameTier, textTier } from "../cards/fit.ts";
-import { FULL_ART_NAMES, isFullArt, isFullArtCard } from "../cards/fullArt.ts";
+import { FULL_ART_CARDS, isFullArtCard } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
 import { faceLines, overLimit, shortFormOf } from "../cards/shortText.ts";
 import { FEATURE_WEIGHT_DENSE, FEATURE_WEIGHT_PLAIN, FULL_ART_WEIGHT_FACTOR } from "../stats/config.ts";
@@ -106,9 +106,9 @@ describe("R639 favoring the cards that print at full size", () => {
     for (const def of ROTATION_POOL) {
       const face = faceModel({ defId: def.id, def, radiant: false });
       const fits = ["s", "m"].includes(nameTier(face.name)) && ["s", "m"].includes(textTier(face.text.full));
-      // R1017002: a hero's card prints its art and no words in the fan, so it counts as plain; a
-      // Training Grounds snapshot of one prints its words (R2195001), so it is held to them.
-      const plain = fits || isFullArtCard(def.id, def.name);
+      // R1017002: a full-art card prints its art and no words in the fan, so it counts as plain; a
+      // Training Grounds Legacy card of one prints its words (R2511000), so it is held to them.
+      const plain = fits || isFullArtCard(def.id);
       expect(featureWeight(def), def.id).toBe(plain ? FEATURE_WEIGHT_PLAIN : FEATURE_WEIGHT_DENSE);
     }
   });
@@ -241,13 +241,17 @@ describe("R704 swaps below the threshold", () => {
 });
 
 /**
- * The heroes' full-art cards. Re-pinned for the Training Grounds release (#2204): the set's snapshots
- * of Mr. Vanilla (#43), Duplicating Felinors (#44) and Jlockeed Shredder-10 (#48) share their Core
- * cards' names but not their full art (R2195001), so they are no hero's card.
+ * The full-art cards the fan may deal (R2655001: the registry's, the heroes' among them). The Training
+ * Grounds Legacy cards of Mr. Vanilla (#43), Duplicating Felinors (#44) and Jlockeed Shredder-10 (#48)
+ * have ids of their own (R2511000) and print no full art, so they are no full-art card.
  */
-const HEROES = ROTATION_POOL.filter((def) => isFullArtCard(def.id, def.name));
-/** The shipped cards that share a hero's name and print no full art: the Training Grounds snapshots. */
-const HERO_SNAPSHOTS = ROTATION_POOL.filter((def) => FULL_ART_NAMES.has(def.name) && !isFullArtCard(def.id, def.name));
+const HEROES = ROTATION_POOL.filter((def) => isFullArtCard(def.id));
+/** The names of the registry's full-art cards. */
+const FULL_ART_CARD_NAMES: ReadonlySet<string> = new Set([...FULL_ART_CARDS].map((id) => CATALOG[id]?.name ?? id));
+/** The shipped Legacy cards of a full-art card, which print no full art. */
+const HERO_LEGACY = ROTATION_POOL.filter(
+  (def) => def.tags.includes("Legacy") && FULL_ART_CARD_NAMES.has(def.name.replace(/^Legacy: /, "")) && !isFullArtCard(def.id),
+);
 const RARITIES = ["Common", "Rare", "Epic", "Legendary", "Mythic"] as const;
 
 describe("R1017002 the fan deals only cards that print whole on it", () => {
@@ -256,7 +260,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     for (const fullArt of [true, false]) {
       for (const def of ROTATION_POOL) {
         const expected = [false, true].every((radiant) => {
-          if (fullArt && isFullArtCard(def.id, def.name)) return true;
+          if (fullArt && isFullArtCard(def.id)) return true;
           const text = faceModel({ defId: def.id, def, radiant }).text.full;
           return shortFormOf(def.id, radiant) === null && faceLines(text, FAN_TEXT_LIMIT.charsPerLine) <= FAN_TEXT_LIMIT.lines;
         });
@@ -267,7 +271,7 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     }
   });
 
-  it("R1017002 a short form, a text over the limit and a Radiant face over it each keep a card out; a hero's full-art card is in", () => {
+  it("R1017002 R2655001 a short form, a text over the limit and a Radiant face over it each keep a card out; a full-art card is in", () => {
     const byId = new Map(ROTATION_POOL.map((def) => [def.id, def]));
     const card = (id: string): CardDef => {
       const def = byId.get(id);
@@ -275,25 +279,32 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       return def;
     };
     const text = (id: string, radiant: boolean): string => faceModel({ defId: id, def: card(id), radiant }).text.full;
-    // Reach the Summit and Combo-Index print short forms; League of Losers' text runs past 5 lines of 25;
-    // Recycling Initiative's base face fits and its Radiant face does not.
-    for (const id of ["meditative-008", "core-093", "classicplus-019", "core-039"]) expect(fitsTheFan(card(id), true), id).toBe(false);
+    // Reach the Summit and Combo-Index print short forms; Recycling Initiative's base face fits and its
+    // Radiant face does not.
+    for (const id of ["meditative-008", "core-093", "core-039"]) expect(fitsTheFan(card(id), true), id).toBe(false);
+    // League of Losers' text runs past 5 lines of 25, so it fits only as the full-art card it is
+    // since #2655 (R2655001), and not with full art off.
     expect(overLimit(text("classicplus-019", false), FAN_TEXT_LIMIT)).toBe(true);
+    expect(fitsTheFan(card("classicplus-019"), true)).toBe(true);
+    expect(fitsTheFan(card("classicplus-019"), false)).toBe(false);
     expect(overLimit(text("core-039", false), FAN_TEXT_LIMIT)).toBe(false);
     expect(overLimit(text("core-039", true), FAN_TEXT_LIMIT)).toBe(true);
-    // Every hero's card is in while full art is on; off, each is held to its text, and Gary the
-    // Gambler's coin flips run past the limit.
-    expect(HEROES).toHaveLength(FULL_ART_NAMES.size);
+    // Every full-art card is in while full art is on; off, each is held to its text, and Gary the
+    // Gambler's coin flips run past the limit. A card is one exactly when the registry has its full
+    // art, the hero portraits' six among them.
+    for (const def of ROTATION_POOL) expect(HEROES.includes(def), def.id).toBe(FULL_ART_CARDS.has(def.id));
+    for (const portrait of Object.values(PORTRAITS)) expect(HEROES.some((def) => def.name === portrait.cardName), portrait.cardName).toBe(true);
     for (const def of HEROES) {
       expect(fitsTheFan(def, true), def.name).toBe(true);
-      expect(fanPool(true), def.name).toContain(def);
+      expect(rotationPool(true), def.name).toContain(def);
+      if (def.set === "Core") expect(fanPool(true), def.name).toContain(def);
       const words = [false, true].every((radiant) => !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
       expect(fitsTheFan(def, false), def.name).toBe(words);
     }
     expect(fitsTheFan(card("core-004"), false)).toBe(false);
-    // R2195001: a snapshot of a hero's card is held to its text, full art on or off.
-    expect(HERO_SNAPSHOTS.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
-    for (const def of HERO_SNAPSHOTS) {
+    // R2511000: a Legacy card of a hero's card is held to its text, full art on or off.
+    expect(HERO_LEGACY.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
+    for (const def of HERO_LEGACY) {
       const words = [false, true].every((radiant) => shortFormOf(def.id, radiant) === null && !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
       for (const fullArt of [true, false]) expect(fitsTheFan(def, fullArt), `${def.id}, full art ${fullArt ? "on" : "off"}`).toBe(words);
     }
@@ -321,9 +332,9 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
     }
   });
 
-  it("R1017002 a hero's full-art card weighs FULL_ART_WEIGHT_FACTOR times as much while full art is on, and as any card while it is off", () => {
+  it("R1017002 a full-art card weighs FULL_ART_WEIGHT_FACTOR times as much while full art is on, and as any card while it is off", () => {
     expect(FULL_ART_WEIGHT_FACTOR).toBeGreaterThan(1);
-    const other = FAN_POOL.find((def) => !isFullArt(def.name));
+    const other = FAN_POOL.find((def) => !isFullArtCard(def.id));
     if (other === undefined) throw new Error("no other card");
     for (const def of HEROES) {
       expect(favoringFullArt(EVEN, true)(def), def.name).toBe(FULL_ART_WEIGHT_FACTOR);
@@ -331,18 +342,18 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       expect(favoringFullArt(featureWeight, true)(def), def.name).toBe(FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR);
     }
     expect(favoringFullArt(EVEN, true)(other)).toBe(1);
-    // R2195001: a snapshot of a hero's card prints no full art, so it weighs as any card.
-    for (const def of HERO_SNAPSHOTS) expect(favoringFullArt(EVEN, true)(def), def.id).toBe(1);
+    // R2511000: a Legacy card of a hero's card prints no full art, so it weighs as any card.
+    for (const def of HERO_LEGACY) expect(favoringFullArt(EVEN, true)(def), def.id).toBe(1);
     expect(favoringFullArt(featureWeight, true)(other)).toBe(featureWeight(other));
     // Drawn among the Core Commons that fit, the heroes' share grows by about the factor.
     const commons = fanPool(true).filter((def) => def.rarity === "Common");
-    const heroes = commons.filter((def) => isFullArtCard(def.id, def.name)).length;
+    const heroes = commons.filter((def) => isFullArtCard(def.id)).length;
     const random = seeded(9);
     let drawn = 0;
     const DRAWS = 20_000;
     for (let i = 0; i < DRAWS; i += 1) {
       const def = pickWeighted(commons, random, favoringFullArt(EVEN, true));
-      if (def !== undefined && isFullArtCard(def.id, def.name)) drawn += 1;
+      if (def !== undefined && isFullArtCard(def.id)) drawn += 1;
     }
     const share = (heroes * FULL_ART_WEIGHT_FACTOR) / (commons.length - heroes + heroes * FULL_ART_WEIGHT_FACTOR);
     expect(drawn / DRAWS).toBeCloseTo(share, 1);

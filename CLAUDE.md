@@ -38,23 +38,22 @@ trap backrow. This file binds every agent, not only Claude.
    `spec-fold.yml` folds both files on `main` daily, since every ruling's branch conflicted on them. Section and
    ruling notes are edited in the PR as ever. `cargo jackioh spec check` fails on any mismatch between the
    notes, their tests and the R-ids cited in `crates/`, `apps/web/src/` or `e2e/`, comments included.
-4. `crates/engine`, `crates/cards`, `crates/ai` and `crates/luau` are pure: no clock, I/O, environment,
-   threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
+4. `crates/engine`, `crates/cards`, `crates/ai`, `crates/luau` and `crates/run` (the dungeon run) are pure:
+   no clock, I/O, environment, threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
    the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
-   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the four (no game
+   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five (no game
    crate takes `jackioh-luau`: it is the custom-card host, #902 V4), `mlua` (`jackioh-luau`'s) and, behind a
    `ts` feature (the engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
    `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
    among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled
-   chunks and scripts and no game state (#442 L8), and four thread-locals, each set for one call and put
-   back after it: three of the engine's (the shipped catalog a replay is folding under, R767000; the
-   custom-script host `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight
-   holds its game's random pools, `catalog::with_pool_hold`, R2201001) and the AI's Death prices for the
-   decision in flight (`evaluate::with_death_prices`, R2424000). A Luau script is kept pure by its host: the sandbox
-   (L5), the integer boundary every value crosses (L6) and the lint (L6, L7), all in
-   `crates/luau/README.md`. Data reaches a pure crate only at compile time (`include_str!`,
-   `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
+   chunks and scripts and no game state (#442 L8), and three thread-locals of the engine's, each set for one
+   call and put back after it (the shipped catalog a replay is folding under, R767000; the custom-script host
+   `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight holds its game's random
+   pools, `catalog::with_pool_hold`, R2201001). A Luau script is kept pure by its host: the sandbox (L5), the
+   integer boundary every value crosses (L6) and the lint (L6, L7), all in `crates/luau/README.md`. Data
+   reaches a pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs the
+   disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
    reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
    `EffectContext` and the engine's read helpers and returns effects. (A custom card's Luau script does the
@@ -69,7 +68,7 @@ trap backrow. This file binds every agent, not only Claude.
    and attach the report.
 9. Every number is a named constant: rules numbers in `crates/engine/src/config.rs` (BUILD §2, the "decide"
    rulings included), server numbers in `crates/server/src/config.rs`, the AI's in `crates/ai/src/`
-   (`config.rs` and its modules' constants). Those the client reads are generated into
+   (`config.rs` and its modules' constants), the dungeon run's in `crates/run/src/config.rs`. Those the client reads are generated into
    `apps/web/src/wire/engineConfig.ts` and `serverConfig.ts` by each crate's `tests/export_config.rs`, and CI
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
@@ -99,13 +98,13 @@ compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/
 ```
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
-cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
+cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the hotseat fixture's fold included; rewrites apps/web/src/wire/ (commit any diff)
 cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored   # the daily tests: the many-game sweeps marked #[ignore = "daily: …"]
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
-cargo jackioh golden check         # the golden traces from the TypeScript engine, replayed (cargo test replays them too)
+cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
 cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
@@ -179,6 +178,8 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 - `crates/cards`: a script reads state only through the prelude's read helpers, never `state.players[…]`; a
   missing verb or board fact goes into the engine (board facts in `src/query.rs`) with its test.
 - `crates/ai`: hidden cards never change a decision.
+- `crates/run`: the dungeon run (`docs/dungeon-run.md`), a seeded map of fights and tiles around plain
+  games. It changes no game: the caller plays each fight and reports its result.
 - `crates/server`: `cargo test` runs the store's in-memory fake, so RLS and triggers are checked only by the
   Docker suites, and a store change goes in `tests/store/contract.rs`.
 - `apps/web`: components take a `PlayerView` and nothing else. `Game.tsx` is the one board; each of its

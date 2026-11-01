@@ -10,12 +10,15 @@
 //
 // Keywords. Every keyword keeps its `[data-keyword]` badge in the DOM, but only the ones the minion
 // does not already draw as a state get a visible chip: Taunt is the shield frame, Divine Shield the
-// bubble, Armor the steel plate by the health gem. At most KEYWORD_CHIPS_MAX chips show, legible
+// bubble, Armor the steel plate by the health gem. R2577000: nor do the keywords that do nothing on the
+// field (`onField: false` in keywordVisuals.ts: Equip, Tradable, Cloaked, Crater, Flashback, Stack,
+// Temporary), which leave the "+n" count too. At most KEYWORD_CHIPS_MAX chips show, legible
 // at a pixel floor (cards.css); past that the last one becomes a "+n" count, and the hover preview
 // and the inspect sheet list them all.
 //
-// Keyword visuals (R438). Beside its chip, every keyword has a treatment on the minion drawn by
-// shape: a frame round the portrait, a veil over its art, a glyph in the top row, or Armor's plate
+// Keyword visuals (R438). Beside its chip, every keyword that can act on the field (R2577000) has a
+// treatment on the minion drawn by shape: a frame round the portrait, a veil over its art, a glyph
+// in the top row, or Armor's plate
 // (keywordVisuals.ts has the map, the layers' caps and the cap on loops; KeywordFx.tsx draws them;
 // keywords.css their look and motion). Each carries `data-keyword-fx="<kind>"`: Taunt's shield,
 // which used to be the portrait's ::before, is now its own treatment, and the Divine Shield bubble
@@ -48,9 +51,8 @@
 // the seal breaks (game/animations.css) and stays broken until the board catches up
 // (game/awakening.ts's `data-awakening`).
 //
-// R1177001: a token unit wears the token mark (CardFace.tsx's TokenMark, `.cf-token`) in its stats
-// row, in the room between attack and health, as its full face says "Token Unit": the board is where
-// a token is met most. The row's tests read its stats by their own classes, never its whole text.
+// R2647000: a token unit wears no mark of it, its stats row holding only its numbers; its hover preview's
+// full face says "Token Unit" (R1177001). No Created badge either (CardStates.tsx).
 //
 // R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics as its full
 // face does (CardFace.tsx, cosmetics.ts): the border as a rim inside its panel, the finish and the
@@ -63,7 +65,7 @@ import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/sh
 import { CardArt } from "./art/index.ts";
 import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
-import { TokenMark, costDigits, hasCrest } from "./CardFace.tsx";
+import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
@@ -72,7 +74,7 @@ import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
-import { keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
+import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { useCardSettings } from "./settings.ts";
 
@@ -103,9 +105,9 @@ export function drawnAsState(keyword: Keyword, armor: number): boolean {
   return keyword.kind === "Armor" && armor > 0;
 }
 
-/** The keywords that get a visible chip, and the ones folded into the "+n" count. */
+/** The keywords that get a visible chip, and the ones folded into the "+n" count; a keyword that does nothing on the field (R2577000) is neither. */
 export function keywordChips(keywords: readonly Keyword[], armor: number): { shown: Keyword[]; folded: Keyword[] } {
-  const chips = keywords.filter((keyword) => !drawnAsState(keyword, armor));
+  const chips = keywords.filter((keyword) => KEYWORD_VISUALS[keyword.kind].onField && !drawnAsState(keyword, armor));
   const room = chips.length <= KEYWORD_CHIPS_MAX ? chips.length : KEYWORD_CHIPS_MAX - 1;
   return { shown: chips.slice(0, room), folded: chips.slice(room) };
 }
@@ -227,8 +229,6 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
           <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone} data-tuned={face.tuning?.attack}>
             {unit.attack}
           </span>
-          {/* R1177001: a token unit says so between its numbers, as its full face's type line does. */}
-          <TokenMark face={face} />
           <span
             className="stat stat-health"
             data-health={unit.health}

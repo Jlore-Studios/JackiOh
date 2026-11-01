@@ -1,0 +1,130 @@
+# GitHub releases, one per shipped card patch, written from the patch history as the Patch notes page
+# reads it: apps/web/src/patches/github.ts writes them (its header says what a release holds) and
+# apps/web/scripts/github-releases.ts prints them. Each tag is the commit that brought its patch to main
+# (shipped.json, R646; the five patches rebuilt from git history at the commits their sources name), so
+# the releases sit in the order and on the days the patches shipped, back to v0.1.0 at the initial
+# commit. A release line's major also opens with the line's summary and technical changes.
+#
+# Staging is main and production is the `production` branch (docs/deploy-cloudflare.md). A version
+# main's patches.json holds and production's does not is a pre-release, "on staging". The run after a
+# production merge brings it makes it a release, and the newest version production holds is Latest.
+# promote-production.yml merges a catalog bump as soon as its CI passes, so a patch is a pre-release
+# for about that long; one whose bump is held longer stays one until it goes.
+#
+# Every run writes every release and changes only what differs: it creates a missing one, oldest first,
+# and edits one whose title, notes or pre-release flag moved. So its first run published the whole
+# history, a run with nothing new changes nothing, and a release edited by hand on GitHub is put back
+# (each body's first line says so). It deletes nothing: a version a retcon renames (R1371000) keeps its
+# old release beside the new one until a person deletes it.
+#
+# Three ways in:
+#   push to main        patches.json (a ship or a retcon), technical.json (the technical log, whose
+#                       player lines a release carries), or what writes the releases
+#   push to production  patches.json, when a production merge brings new versions: their
+#                       pre-releases become releases
+#   workflow_dispatch   by hand (Actions -> releases -> Run workflow)
+#
+# The tags and releases go out with the bot's token (BOT_GITHUB_TOKEN), because GitHub refuses the
+# Actions token a tag on any commit whose tree holds a workflow file, which is every commit but the
+# first: the first run created v0.1.0, at the initial commit, and was refused v0.1.0b with "HTTP 403:
+# Resource not accessible by integration" (promote-production.yml meets the same refusal). A tag or
+# release made with that token can start a workflow, and none listens for one: every `push` trigger
+# names branches, and nothing runs on `create` or `release`.
+name: releases
+
+on:
+  push:
+    branches: [main, production]
+    paths:
+      - crates/cards/patches/patches.json
+      - crates/cards/patches/technical.json
+      - apps/web/src/patches/github.ts
+      - apps/web/src/patches/history.ts
+      - apps/web/src/patches/releases.ts
+      - apps/web/scripts/github-releases.ts
+      - .github/workflows/releases.yml
+  workflow_dispatch:
+
+# One at a time, never cancelled: each run writes every release, so the one queued last catches up.
+concurrency:
+  group: releases
+  cancel-in-progress: false
+
+# The checkout's; the releases are written with the bot's token.
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: publish the releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # The install covers the whole workspace, e2e/ included; no browser is needed here.
+      CYPRESS_INSTALL_BINARY: "0"
+    steps:
+      # main's history and notes whichever branch was pushed; production's patches.json says what is live.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+
+      - name: write every release
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin production
+          git show FETCH_HEAD:crates/cards/patches/patches.json > "$RUNNER_TEMP/production.json"
+          pnpm --dir apps/web exec tsx scripts/github-releases.ts --production "$RUNNER_TEMP/production.json" > "$RUNNER_TEMP/releases.json"
+          jq -r '"\(.releases | length) releases, \([.releases[] | select(.prerelease)] | length) on staging only; Latest \(.latest)"' "$RUNNER_TEMP/releases.json"
+
+      - name: create what is missing and edit what moved
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          # GitHub limits how fast one token creates content, and the first run created 90 releases.
+          PAUSE_SECONDS: "2"
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[] | {tag_name, name, body, prerelease}' | jq -s . > "$RUNNER_TEMP/existing.json"
+
+          # One line per release to write, in patches.json's order: a missing one to create, or one whose
+          # title, notes or flag differ to edit. GitHub may end the notes it stores differently.
+          jq -c --slurpfile have "$RUNNER_TEMP/existing.json" '
+            def notes: (. // "") | gsub("\r"; "") | sub("\\s+$"; "");
+            ($have[0] | map({key: .tag_name, value: .}) | from_entries) as $by
+            | .releases[]
+            | . as $want | $by[$want.tag] as $has
+            | if $has == null then {op: "create"} + $want
+              elif $has.name != $want.name or ($has.body | notes) != ($want.body | notes) or $has.prerelease != $want.prerelease then {op: "edit"} + $want
+              else empty end' "$RUNNER_TEMP/releases.json" > "$RUNNER_TEMP/plan.jsonl"
+
+          created=0
+          edited=0
+          while IFS= read -r line; do
+            tag=$(jq -r .tag <<<"$line")
+            name=$(jq -r .name <<<"$line")
+            prerelease=$(jq -r .prerelease <<<"$line")
+            jq -r .body <<<"$line" > "$RUNNER_TEMP/notes.md"
+            if [ "$(jq -r .op <<<"$line")" = create ]; then
+              gh release create "$tag" --repo "$REPO" --target "$(jq -r .target <<<"$line")" --title "$name" \
+                --notes-file "$RUNNER_TEMP/notes.md" --prerelease="$prerelease" --latest=false
+              created=$((created + 1))
+              echo "created $tag"
+            else
+              gh release edit "$tag" --repo "$REPO" --title "$name" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="$prerelease"
+              edited=$((edited + 1))
+              echo "edited $tag"
+            fi
+            sleep "$PAUSE_SECONDS"
+          done < "$RUNNER_TEMP/plan.jsonl"
+
+          # Created with --latest=false, and an edit may move it: Latest is set last, once.
+          latest=$(jq -r '.latest // empty' "$RUNNER_TEMP/releases.json")
+          current=$(gh api "repos/$REPO/releases/latest" --jq .tag_name 2>/dev/null || true)
+          if [ -n "$latest" ] && [ "$current" != "$latest" ]; then
+            gh release edit "$latest" --repo "$REPO" --latest
+            echo "Latest is $latest"
+          fi
+          echo "### releases: $created created, $edited edited, Latest ${latest:-none}" >> "$GITHUB_STEP_SUMMARY"

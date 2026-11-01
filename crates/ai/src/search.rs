@@ -15,7 +15,7 @@ use crate::candidates::{
     candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down,
 };
 use crate::config::{AI_MOVE_ORDER, AI_SEARCH, MoveOrder};
-use crate::evaluate::NextSwing;
+use crate::evaluate::{NextSwing, Prices};
 use crate::learned::{finalist_score, line_score, open_score};
 use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
 use crate::reply::{hidden_card_ids, reply_score};
@@ -68,8 +68,16 @@ pub fn expansion(
     width: usize,
     order: MoveOrder,
     prior: &PolicyPrior<'_>,
+    prices: &Prices,
 ) -> Vec<ActionBody> {
-    expand(candidate_actions(state, seat), state, seat, width, order, prior)
+    expand(
+        candidate_actions(state, seat, prices),
+        state,
+        seat,
+        width,
+        order,
+        prior,
+    )
 }
 
 /// `expansion` at the search's root (#1635): of `root_candidate_actions`, which keeps every distinct
@@ -80,9 +88,10 @@ pub fn root_expansion(
     width: usize,
     order: MoveOrder,
     prior: &PolicyPrior<'_>,
+    prices: &Prices,
 ) -> Vec<ActionBody> {
     expand(
-        root_candidate_actions(state, seat),
+        root_candidate_actions(state, seat, prices),
         state,
         seat,
         width,
@@ -146,8 +155,9 @@ pub fn beam_search(
     seat: PlayerId,
     counter: &dyn NodeCounter,
     budget: SearchBudget,
+    prices: &Prices,
 ) -> Vec<Line> {
-    beam_search_with(det, seat, counter, budget, AI_MOVE_ORDER, &POLICY_PRIOR)
+    beam_search_with(det, seat, counter, budget, AI_MOVE_ORDER, &POLICY_PRIOR, prices)
 }
 
 /// `beam_search` with a given move order and policy prior, for tests and screens (R1171001).
@@ -158,13 +168,14 @@ pub fn beam_search_with(
     budget: SearchBudget,
     order: MoveOrder,
     prior: &PolicyPrior<'_>,
+    prices: &Prices,
 ) -> Vec<Line> {
     let root_turn = det.turn;
     let mut complete: Vec<Line> = Vec::new();
     let mut frontier: Vec<OpenLine> = vec![OpenLine {
         state: det.clone(),
         actions: Vec::new(),
-        score: open_score(det, seat, NextSwing::Enemy),
+        score: open_score(det, seat, NextSwing::Enemy, prices),
     }];
     let mut left_open: Vec<OpenLine> = Vec::new();
     // #1797: the lane variants of the children the beam kept, closed after it (each a state and its line).
@@ -190,12 +201,12 @@ pub fn beam_search_with(
                 break;
             }
             let moves = if depth == 0 {
-                root_expansion(&line.state, seat, width, order, prior)
+                root_expansion(&line.state, seat, width, order, prior, prices)
             } else {
-                expansion(&line.state, seat, width, order, prior)
+                expansion(&line.state, seat, width, order, prior, prices)
             };
             for action in moves {
-                let next = match simulate(&line.state, seat, &action, counter) {
+                let next = match simulate(&line.state, seat, &action, counter, prices) {
                     None => {
                         stopped = true;
                         break;
@@ -208,7 +219,7 @@ pub fn beam_search_with(
                 actions.push(action);
                 let status = line_status(&next, seat, root_turn);
                 if status != LineStatus::Open {
-                    let score = static_score(&next, seat, root_turn);
+                    let score = static_score(&next, seat, root_turn, prices);
                     complete.push(Line {
                         actions,
                         score,
@@ -236,8 +247,8 @@ pub fn beam_search_with(
                     continue;
                 }
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
-                let score = own_prompt_score(&next, seat, counter)
-                    .unwrap_or_else(|| open_score(&next, seat, NextSwing::Enemy));
+                let score = own_prompt_score(&next, seat, counter, prices)
+                    .unwrap_or_else(|| open_score(&next, seat, NextSwing::Enemy, prices));
                 children.push(OpenLine {
                     state: next,
                     actions,
@@ -283,13 +294,13 @@ pub fn beam_search_with(
         if actions.is_empty() {
             continue;
         }
-        let end = close_line(&state, seat, root_turn, counter);
+        let end = close_line(&state, seat, root_turn, counter, prices);
         // TS asked whether `closeLine` handed back the very state it was given (no step was taken):
         // a step always moves the state on, so equality answers the same question.
         let score = if end == state {
-            line_score(&end, seat, NextSwing::Enemy)
+            line_score(&end, seat, NextSwing::Enemy, prices)
         } else {
-            static_score(&end, seat, root_turn)
+            static_score(&end, seat, root_turn, prices)
         };
         let status = line_status(&end, seat, root_turn);
         complete.push(Line {
@@ -319,6 +330,7 @@ pub fn score_line(
     counter: &dyn NodeCounter,
     reply: bool,
     hidden: Option<&IndexSet<String>>,
+    prices: &Prices,
 ) -> Option<f64> {
     let root_turn = det.turn;
     let mut state = det.clone();
@@ -346,7 +358,7 @@ pub fn score_line(
             if !own_prompt || answered >= AI_SEARCH.max_auto_answers as usize {
                 break;
             }
-            match best_auto_answer(&state, seat, AnswersTried::Drawn, counter, "line")? {
+            match best_auto_answer(&state, seat, AnswersTried::Drawn, counter, "line", prices)? {
                 Err(_) => break,
                 Ok(next) => state = next,
             }
@@ -356,7 +368,7 @@ pub fn score_line(
             }
             continue;
         }
-        match simulate(&state, seat, action, counter) {
+        match simulate(&state, seat, action, counter, prices) {
             None => return None,
             Some(Err(_)) => break,
             Some(Ok(next)) => state = next,
@@ -371,12 +383,12 @@ pub fn score_line(
         && state.active == seat
         && state.phase == Phase::Main
     {
-        match simulate(&state, seat, &ActionBody::EndTurn, counter) {
+        match simulate(&state, seat, &ActionBody::EndTurn, counter, prices) {
             None => return None,
             // A finalist whose endTurn is refused keeps its static score, from the evaluation that
             // scores the finalists when they are replied to (#1010).
-            Some(Err(_)) if reply => return Some(finalist_score(&state, seat, NextSwing::Enemy)),
-            Some(Err(_)) => return Some(line_score(&state, seat, NextSwing::Enemy)),
+            Some(Err(_)) if reply => return Some(finalist_score(&state, seat, NextSwing::Enemy, prices)),
+            Some(Err(_)) => return Some(line_score(&state, seat, NextSwing::Enemy, prices)),
             Some(Ok(next)) => state = next,
         }
     }
@@ -390,8 +402,8 @@ pub fn score_line(
                 &default_hidden
             }
         };
-        reply_score(&state, seat, root_turn, counter, hidden)
+        reply_score(&state, seat, root_turn, counter, hidden, prices)
     } else {
-        Some(static_score(&state, seat, root_turn))
+        Some(static_score(&state, seat, root_turn, prices))
     }
 }

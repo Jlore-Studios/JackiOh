@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 const SRC = dirname(fileURLToPath(import.meta.url));
 
 /** The palette's size limit: a new color raises it in the same change, in plain sight. */
-const PALETTE_MAX = 48;
+const PALETTE_MAX = 49;
 /** WCAG 2.2 AA's contrast for text (1.4.3). */
 const AA_TEXT_CONTRAST = 4.5;
 
@@ -55,8 +55,8 @@ const UNMIGRATED: Record<string, number> = {
   "auth/tavern.css": 125,
   "auth/two-step.css": 2,
   "cards/art/art.css": 12,
-  "cards/cards.css": 270,
-  "cards/cardstate.css": 40,
+  "cards/cards.css": 266,
+  "cards/cardstate.css": 38,
   "cards/cosmetics.css": 328,
   "cards/glitch.css": 13,
   "cards/inspect/inspect.css": 100,

@@ -1,8 +1,8 @@
 //! SPEC §8.10 Stinkyscape 97 Asteroid Field, a card of the Stinkyscape set.
 //!   Base:    "Cast on draw: Deal {damage} damage to both heroes and all Units. Gain {resources|random
-//!            Stinkyscape Resource|random Stinkyscape Resources}." (2, 2)
+//!            Stinkyscape Resource|random Stinkyscape Resources}." (2, 1; 2, 2 until #2657)
 //!   Radiant: "Cast on draw: Deal {damage} damage to all enemies. Gain {resources|random Radiant
-//!            Stinkyscape Resource|random Radiant Stinkyscape Resources}." (2, 2)
+//!            Stinkyscape Resource|random Radiant Stinkyscape Resources}." (2, 1; 2, 2 until #2657)
 //!
 //! Cast on draw (§6.2, `StaticFlags.cast_on_draw`): drawn, it is cast free and counted as played (R70),
 //! its owner then drawing again (R58); setup never deals it (R635). Its cast is one `damage_all` hit on
@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn drawn_it_hits_both_heroes_and_all_units_gains_2_and_draws() {
+    fn drawn_it_hits_both_heroes_and_all_units_gains_1_and_draws() {
         let mut s = field_on_top(false);
         let (own, enemy) = (s.unit_at(P1, 1), s.unit_at(P2, 1));
         s.start_turn();
@@ -82,13 +82,13 @@ mod tests {
         s.expect_stats(&own, json!({ "health": 7 }));
         s.expect_stats(&enemy, json!({ "health": 7 }));
         let in_hand = crate::resources_in_hand(&s, P1);
-        assert_eq!(in_hand.len(), 2);
+        assert_eq!(in_hand.len(), 1);
         assert!(in_hand.iter().all(|card| !card.radiant));
         s.expect_in_zone(ID, "graveyard");
         assert_eq!(
             s.hand(P1).len(),
-            4,
-            "the draw repeated (R58), beside the two Resources (R2250000)"
+            3,
+            "the draw repeated (R58), beside the one Resource (R2250000)"
         );
     }
 
@@ -152,7 +152,7 @@ mod tests {
         s.expect_stats(&own, json!({ "health": 9 }));
         s.expect_stats(&enemy, json!({ "health": 7 }));
         let in_hand = crate::resources_in_hand(&s, P1);
-        assert_eq!(in_hand.len(), 2);
+        assert_eq!(in_hand.len(), 1);
         assert!(in_hand.iter().all(|card| card.radiant));
     }
 }

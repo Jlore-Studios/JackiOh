@@ -244,14 +244,74 @@
   display: block;
 }
 
-.prompt-card-name {
+/* #2646: a choice card (ChoiceCard.tsx), a short choice's option drawn as Hearthstone draws a Choose
+   One: an art window, a name bar and a text box, in the box a card face fills (cards.css .cf-option,
+   5:7). It is prompt chrome, not a card, so it has no gem, stats, rarity or foil, and its frame wears
+   a neutral stone of its own so it never reads as a card to play. */
+.prompt-card--choice {
+  border-color: var(--pal-stone-500);
+}
+
+.cf-option.choice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4%;
+  box-sizing: border-box;
+  padding: 6%;
+  overflow: hidden;
+  border: 1px solid var(--pal-stone-500);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--pal-stone-500) 18%, var(--bg-raised));
+  container-type: inline-size;
+}
+
+.choice-card-art {
+  flex: 0 0 46%;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pal-stone-500) 70%, var(--pal-black));
+  border-radius: var(--radius-sm);
+}
+
+/* R420: an answer's card is named by its letter, and its text is the answer itself, which is what
+   the player reads: it stands as large as the name. */
+.prompt-card--choice[data-letter] .choice-card-text {
+  color: var(--text);
+  font-size: max(var(--type-sm), 12cqw);
   font-weight: 650;
+}
+
+/* R831004: a set's mark is the picture of the option that names it. */
+.choice-card-art > .prompt-set-mark {
+  width: 60%;
+  height: auto;
+  max-height: 90%;
+  margin: 0;
+}
+
+.choice-card-name {
+  flex: none;
+  color: var(--text);
+  font-size: max(var(--type-2xs), 10cqw);
+  font-weight: 750;
+  line-height: 1.15;
+  text-align: center;
   overflow-wrap: break-word;
 }
 
-.prompt-card-text {
+/* The option's detail; keywords in it keep their tips (RulesText), so the text box takes the pointer
+   back from the face box (cards.css), and a click on it still picks the option. */
+.choice-card-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   color: var(--text-dim);
-  font-size: var(--type-2xs);
+  font-size: max(var(--type-3xs), 8cqw);
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: auto;
 }
 
 .prompt-list {
@@ -641,11 +701,6 @@
     font-size: var(--type-md);
   }
 
-  .prompt > .prompt-cards .prompt-card-text {
-    font-size: var(--type-sm);
-    line-height: 1.3;
-  }
-
   .prompt:has(> .prompt-cards) > .prompt-title,
   .prompt:has(> .prompt-cards) > .prompt-count {
     text-align: center;
@@ -664,6 +719,12 @@
   .prompt {
     width: 100%;
     padding: 10px;
+  }
+
+  /* #2646: four choice cards stand two by two on a phone, with no sideways scroll, each short enough
+     that both rows fit the sheet. */
+  .prompt-cards .prompt-card--choice {
+    width: min(calc(50% - 5px), 21vh);
   }
 
   .prompt-zones {
@@ -732,9 +793,9 @@
     > [data-prompt-kind="target"],
     > [data-prompt-kind="tribute"],
     > [data-prompt-kind="direction"],
-    > [data-prompt-kind="mode"],
+    > [data-prompt-kind="mode"]:not([data-prompt-layout="cards"]),
     > [data-prompt-kind="x"]:not([data-prompt-layout="cards"]),
-    > [data-prompt-kind="number"],
+    > [data-prompt-kind="number"]:not([data-prompt-layout="cards"]),
     > [data-prompt-kind="cell"]
   ) {
   background: transparent;
@@ -757,9 +818,9 @@
       > [data-prompt-kind="target"],
       > [data-prompt-kind="tribute"],
       > [data-prompt-kind="direction"],
-      > [data-prompt-kind="mode"],
+      > [data-prompt-kind="mode"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="x"]:not([data-prompt-layout="cards"]),
-      > [data-prompt-kind="number"],
+      > [data-prompt-kind="number"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="cell"]
     ) {
     place-items: center end;
@@ -768,7 +829,7 @@
 
   /* E18's board-facing pickers are wider than a zone list: the pad's six keys and the cell grid's
      row names and five lanes keep their touch size beside the board. */
-  .prompt[data-prompt-kind="number"] {
+  .prompt[data-prompt-kind="number"]:not([data-prompt-layout="cards"]) {
     width: min(340px, 100%);
   }
 
@@ -780,7 +841,7 @@
   .prompt[data-prompt-kind="target"],
   .prompt[data-prompt-kind="tribute"],
   .prompt[data-prompt-kind="direction"],
-  .prompt[data-prompt-kind="mode"],
+  .prompt[data-prompt-kind="mode"]:not([data-prompt-layout="cards"]),
   .prompt[data-prompt-kind="x"]:not([data-prompt-layout="cards"]) {
     width: min(262px, 100%);
   }
@@ -797,9 +858,9 @@
       > [data-prompt-kind="target"],
       > [data-prompt-kind="tribute"],
       > [data-prompt-kind="direction"],
-      > [data-prompt-kind="mode"],
+      > [data-prompt-kind="mode"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="x"]:not([data-prompt-layout="cards"]),
-      > [data-prompt-kind="number"],
+      > [data-prompt-kind="number"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="cell"]
     ) {
     place-items: end center;
@@ -927,7 +988,7 @@
       > [data-prompt-kind="target"],
       > [data-prompt-kind="tribute"],
       > [data-prompt-kind="direction"],
-      > [data-prompt-kind="mode"],
+      > [data-prompt-kind="mode"]:not([data-prompt-layout="cards"]),
       > [data-prompt-kind="x"]:not([data-prompt-layout="cards"])
     ) {
     place-items: stretch end;
@@ -937,7 +998,7 @@
   .prompt[data-prompt-kind="target"],
   .prompt[data-prompt-kind="tribute"],
   .prompt[data-prompt-kind="direction"],
-  .prompt[data-prompt-kind="mode"],
+  .prompt[data-prompt-kind="mode"]:not([data-prompt-layout="cards"]),
   .prompt[data-prompt-kind="x"]:not([data-prompt-layout="cards"]) {
     /* No wider than the board's right-hand column, so lane 5 stays uncovered. */
     width: min(186px, 40vw);

@@ -6,7 +6,11 @@
 //!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
 //!    included;
 //!  - the token travels as an offered `jackioh.bearer.` subprotocol (R1379000), and only
-//!    `WS_SUBPROTOCOL` is echoed.
+//!    `WS_SUBPROTOCOL` is echoed;
+//!  - each upgrade counts against its account's R109 budget; one past it closes with 4429 before any
+//!    store call (R2478000);
+//!  - a seat's later hellos on one socket are answered once per `WATCH_HELLO_INTERVAL_MS`, a new
+//!    socket's first at once, and actions never wait on it (R2686000).
 //!
 //! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
 //! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
@@ -24,13 +28,15 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use jackioh_server::actor::protocol::MAX_FRAME_BYTES;
-use jackioh_server::actor::ws_server::{WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
+use jackioh_server::actor::ws_server::{WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, router};
-use jackioh_server::config::WS_MAX_CONNECTIONS_PER_ADDRESS;
+use jackioh_server::config::{
+    API_REQUESTS_PER_MINUTE, WATCH_HELLO_INTERVAL_MS, WS_MAX_CONNECTIONS_PER_ADDRESS,
+};
 
-use crate::support::deps::{add_user, test_app};
+use crate::support::deps::{add_user, call, test_app};
 use crate::support::engine::playable;
-use crate::support::store::{fake, from};
+use crate::support::store::{fake, from, record_calls};
 
 /// How long a read waits before the test calls the socket silent. Real time: the listener does
 /// real I/O, so tokio's clock is not paused in this file.
@@ -111,16 +117,21 @@ pub(super) async fn seed_matches(matches: usize) -> (Arc<App>, Vec<String>) {
     (app, tokens)
 }
 
-/// `seed_matches` served on a real listener. Returns the listener and each profile's token.
-async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
-    let (app, tokens) = seed_matches(matches).await;
+/// `app` served on a real listener.
+async fn listen_on(app: &Arc<App>) -> Listening {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
     let port = listener.local_addr().expect("a bound address").port();
-    let service = router(Arc::clone(&app)).into_make_service_with_connect_info::<std::net::SocketAddr>();
+    let service = router(Arc::clone(app)).into_make_service_with_connect_info::<std::net::SocketAddr>();
     let server = tokio::spawn(async move {
         axum::serve(listener, service).await.expect("the listener serves");
     });
-    (Listening { port, server }, tokens)
+    Listening { port, server }
+}
+
+/// `seed_matches` served on a real listener. Returns the listener and each profile's token.
+async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
+    let (app, tokens) = seed_matches(matches).await;
+    (listen_on(&app).await, tokens)
 }
 
 async fn listen() -> (Listening, String) {
@@ -312,6 +323,35 @@ impl Client {
                 .expect("a view frame after the attach");
             if message["type"] == "view" {
                 return message["view"].clone();
+            }
+        }
+    }
+
+    /// The next message of `kind`, the others skipped: a hello's reply is several frames (the
+    /// loadouts, the view, the clock, the portraits, the cards' picks), and only one is its view.
+    async fn next_of_type(&mut self, kind: &str) -> Value {
+        loop {
+            let message = self
+                .next_message(READ_TIMEOUT)
+                .await
+                .unwrap_or_else(|| panic!("no `{kind}` frame arrived"));
+            if message["type"] == kind {
+                return message;
+            }
+        }
+    }
+
+    /// Every message that arrives until the socket has been silent for `quiet`, so the whole of a
+    /// reply is read and none of it is mistaken for the next one's. The socket closing meanwhile is
+    /// the test's failure.
+    async fn messages_until_silent(&mut self, quiet: Duration) -> Vec<Value> {
+        let mut seen = Vec::new();
+        loop {
+            match self.read_frame(quiet).await {
+                Read::Frame(0x1, payload) => seen.extend(serde_json::from_slice(&payload).ok()),
+                Read::Frame(0x8, _) | Read::Ended => panic!("the socket closed after {seen:?}"),
+                Read::Frame(..) => continue,
+                Read::Silent => return seen,
             }
         }
     }
@@ -771,6 +811,43 @@ mod banned_profiles_are_refused_the_match_socket {
     }
 }
 
+mod r2478000_upgrades_count_against_the_accounts_budget {
+    //! R2478000: an upgrade is one request against its account's R109 budget, and one past it is
+    //! refused before the store is read.
+    use super::*;
+
+    #[tokio::test]
+    async fn r2478000_a_burst_of_upgrades_past_the_accounts_budget_is_refused_before_any_store_call() {
+        let _serial = SERIAL.lock().await;
+        let (app, tokens) = seed_matches(1).await;
+        let listening = listen_on(&app).await;
+
+        // The API spends profile-1's whole budget, which also teaches the server whose it is.
+        for _ in 0..API_REQUESTS_PER_MINUTE {
+            let (status, ..) = call(&app, "GET", "/api/auth/me", Some(&tokens[0]), Value::Null).await;
+            assert_eq!(status, 200);
+        }
+        let calls = record_calls(&app).await;
+
+        for _ in 0..5 {
+            let mut client = open_as(listening.port, "match-1", &tokens[0]).await.open();
+            let refusal = client
+                .next_message(READ_TIMEOUT)
+                .await
+                .expect("an error frame before the close");
+            assert_eq!(refusal["type"], "error");
+            assert_eq!(refusal["code"], "forbidden");
+            assert_eq!(refusal["message"], "too many requests; slow down");
+            assert_eq!(client.close_code().await, WS_CLOSE.rate_limited);
+        }
+        assert_eq!(*calls.lock().expect("call log"), Vec::<String>::new());
+
+        // R157: the other seat's account has its own budget.
+        let mut other = open_as(listening.port, "match-1", &tokens[1]).await.open();
+        assert_eq!(other.first_view().await["viewer"], "p2");
+    }
+}
+
 mod the_graceful_shutdown {
     //! SIGTERM (and Ctrl-C) drains instead of cutting (#861): an in-flight request finishes, every
     //! match socket gets close frame 1001, the background loops stop, and the process exits 0
@@ -908,5 +985,104 @@ mod the_graceful_shutdown {
         assert_eq!(client.close_code().await, 1001);
         assert_eq!(logs.named("server.drain_timed_out").len(), 1);
         assert!(logs.named("server.stopped").is_empty());
+    }
+}
+
+mod r2686000_player_hello_limit {
+    //! R2686000: a player's later hellos on one socket are answered at most once per
+    //! `WATCH_HELLO_INTERVAL_MS`, the first hello of a new socket is answered at once, and actions
+    //! are never held back by it (a watcher's are R2609000's).
+    use super::*;
+
+    /// A script's burst of hellos on one socket, each sent after the previous reply had arrived.
+    const HELLO_BURST: usize = 10;
+    /// How long the socket is silent before a reply is taken as whole. It outlasts the actor
+    /// running a hello's task, so each of the burst would have been answered, one view each, were
+    /// only R835001's coalescing of queued hellos holding it; and it keeps the burst inside the
+    /// interval.
+    const HELLO_SETTLE: Duration = Duration::from_millis(25);
+
+    fn hello() -> String {
+        json!({ "type": "hello", "matchId": "match-1" }).to_string()
+    }
+
+    fn views(messages: &[Value]) -> usize {
+        messages
+            .iter()
+            .filter(|message| message["type"] == "view")
+            .count()
+    }
+
+    #[tokio::test]
+    async fn r2686000_match_hellos_are_answered_once_per_interval_actions_continue_and_a_new_generation_answers_at_once()
+     {
+        let _serial = SERIAL.lock().await;
+        let (listening, token) = listen().await;
+        let mut client = open_as(listening.port, "match-1", &token).await.open();
+        let attach = client.first_view().await;
+        let hand: Vec<Value> = attach["you"]["hand"]
+            .as_array()
+            .expect("a hand")
+            .iter()
+            .map(|card| card["instanceId"].clone())
+            .collect();
+        client.messages_until_silent(HELLO_SETTLE).await;
+
+        // The first hello of the socket is answered, and starts the interval.
+        let interval = Duration::from_millis(u64::try_from(WATCH_HELLO_INTERVAL_MS).expect("a duration"));
+        let started = tokio::time::Instant::now();
+        client.send_text(&hello()).await;
+        client.next_of_type("view").await;
+        let mut answered = 1;
+        // Each of the rest follows a reply that had settled, so none finds one still queued.
+        client.messages_until_silent(HELLO_SETTLE).await;
+        for _ in 1..HELLO_BURST {
+            client.send_text(&hello()).await;
+            answered += views(&client.messages_until_silent(HELLO_SETTLE).await);
+        }
+        assert!(started.elapsed() < interval, "the burst outlasted one interval");
+        assert_eq!(answered, 1, "ten hellos inside one interval cost one view");
+
+        // An action is neither delayed nor refused by the hello limit: it is acknowledged, not
+        // `rateLimited`, while the gate is closed.
+        client
+            .send_text(
+                &json!({
+                    "type": "action",
+                    "action": { "type": "mulligan", "keep": hand, "nonce": "keep-r2686000" },
+                })
+                .to_string(),
+            )
+            .await;
+        assert_eq!(client.next_of_type("ack").await["nonce"], "keep-r2686000");
+        client.messages_until_silent(HELLO_SETTLE).await;
+
+        // An interval after the answered hello (the burst and the action came after it, so this
+        // sleep alone is past it), another is answered.
+        tokio::time::sleep(interval).await;
+        client.send_text(&hello()).await;
+        client.next_of_type("view").await;
+        assert_eq!(
+            views(&client.messages_until_silent(HELLO_SETTLE).await),
+            0,
+            "one view answers one hello"
+        );
+
+        // A reattach is a new socket generation: its first hello is answered at once, however
+        // recent the old socket's last answer, and the old socket is not closed by the limit.
+        let mut revived = open_when_free(
+            listening.port,
+            &query("match-1"),
+            &[WS_SUBPROTOCOL, &bearer_protocol(&token)],
+        )
+        .await;
+        revived.first_view().await;
+        revived.messages_until_silent(HELLO_SETTLE).await;
+        revived.send_text(&hello()).await;
+        revived.next_of_type("view").await;
+        // The generation's second hello, so soon after, is dropped like the first socket's.
+        revived.messages_until_silent(HELLO_SETTLE).await;
+        revived.send_text(&hello()).await;
+        assert_eq!(views(&revived.messages_until_silent(HELLO_SETTLE).await), 0);
     }
 }

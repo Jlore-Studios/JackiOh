@@ -2514,42 +2514,42 @@
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "d7e93b03a7801eafda7ed2ecfa45a68c1909a037",
     "pr": 2238,
     "title": "a finished match's log is folded once, before its result's transaction takes the season and economy locks",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "4261e872a056b2826cc8a2ef4252378395f2d6c8",
     "pr": 2236,
     "title": "patches log: 0b87f86..651ac2e",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "f01e13024b36ad8e898cda0c1a1cadefc028f984",
     "pr": 2237,
     "title": "the web's tests share one settle, withCatalog, renderBoard and PointerEvent polyfill, and a guard stops new copies",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "a578facebe6a14ab723df3ba53893d419d2eeac3",
     "pr": 2229,
     "title": "the check that every long card face has a short form runs in the web's unit tests on every pull request",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "43cf9775bcae427baeb383325378a913a1c1ee8c",
     "pr": 2241,
     "title": "Training Grounds, the foundation",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "1d7f5cb38b09ca297f9a0f4b639cbce3cd48a96e",
     "pr": 2228,
     "title": "44x44 tap areas for small controls on phones",
@@ -2557,41 +2557,41 @@
     "player": "On a phone, small buttons, links and fields take a tap across a whole fingertip."
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "94fec4b155b5e2fb3e44bda3adf3e2581d184117",
     "pr": 2244,
     "title": "fold the pending §11 paragraphs and the rulings index into the spec",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "795c3f2dfaf33902e4fcd4ba1597a56b9e54a2d9",
     "pr": 2239,
     "title": "replace one held daily quest a day",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "3fbb5fb8c1d8d2563843d568fdc2279aeedde644",
     "pr": 2263,
     "title": "Training Grounds, the set's look and sound",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "a0acb322a1503723e8780571acd29fdfb238aa29",
     "title": "Merge pull request #2272 from Jlore-Studios/claude/amazing-cray-hdnd2a",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "dc3dbe0a03269cbbdf87d0dd03f08b4ef8227884",
     "pr": 2275,
     "title": "Training Grounds, the units on existing keywords and Cries",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "9c8dafb0fcc9076f5ccd913c91c861c049ffca35",
     "pr": 2245,
     "title": "a tutorial lesson can't be lost, and its random cards hold Legendary and Mythic back until the last lesson",
@@ -2599,21 +2599,21 @@
     "player": "Tutorial lessons can no longer be lost: your hero never falls below 1 Health."
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "7c0acdb6a47c10b327208b29f49ee52eec3518a2",
     "pr": 2281,
     "title": "the learn lane plays the newest patch, and a new set stops an export early on the set before",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "aaa4164e7455cee6e200254f7a04dd89b162679f",
     "pr": 2264,
     "title": "Training Grounds, the backrow, with Goliath Situation and Level Up!'s attack count",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "b63232fb0447470341443b9c5585b6eb9e4603b4",
     "pr": 2189,
     "title": "view transitions between menu screens",
@@ -2621,171 +2621,171 @@
     "player": "Menus fade into one another instead of cutting; games, replays and Reduce motion stay as they were."
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "934e98c9d3b56b49e7624623697337e9260aeb17",
     "pr": 2295,
     "title": "the shadow-ban sweep commits as github-actions[bot], not a stranger's account",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "ea22cbbce3f7c0a83a4e10b56c03c172b3b90a1e",
     "title": "Merge pull request #2282 from Jlore-Studios/claude/tg-chaos-2200",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "f230b3a764c35a4ce415596a40e5afe3943bb450",
     "pr": 2290,
     "title": "a bot match nobody opens is lost after the grace again",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "2b6fe6beafa09d2cc7619ff364c104063bf66212",
     "title": "Merge pull request #2277 from Jlore-Studios/claude/tg-triggers-2197",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "ffee883abf765aab5b7a51dff80255951652a954",
     "pr": 2292,
     "title": "the account screen shows this ranked season's record beside the rank",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "047d8661ae97f7cd69d303b07567accc80b102e1",
     "pr": 2294,
     "title": "the weaker ladder bots make plausible mistakes instead of uniformly random moves",
     "kind": "ai"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "d870ed3787866c2f7714d56399d67347ec65be6e",
     "pr": 2286,
     "title": "Training Grounds #41–#60, the Core snapshots, one per deck",
     "kind": "ai"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "21efa2fedafe9e7f7852bab3561cafeaf7d8eddd",
     "pr": 2283,
     "title": "Training Grounds, the spells, with set-stats on one unit, a copy that keeps its cost and tokens that die at end of turn",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "1fb8cb6d40cfea91e134930112fdf8c06e6fbdce",
     "pr": 2289,
     "title": "the game log says what each play aimed at and what dealt each hit",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "b62feb424f4266b7a941a2a54743a0426a7bb087",
     "pr": 2303,
     "title": "the deck builder's pool draws a face when it nears the screen, and every stats table scrolls by keyboard",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "9ea917acd2826549d1d5ec9d958081626712cdc2",
     "pr": 2155,
     "title": "a deck holding a card the newest patch changed says so, and what changed",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "8258a6e51feb0a5c3c47a4a105b3e90a51739b41",
     "pr": 2265,
     "title": "the shadow ban swept again after the Stinkyscape set shipping",
     "kind": "ai"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "e0ad4af7cb1a1e953a6b530ba7e4a815fc5d9b46",
     "pr": 2297,
     "title": "the M12 audit's remaining minor findings after the Stinkyscape release",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "9c183c145c6556319cb3c497072863c5348cdf71",
     "pr": 2217,
     "title": "the tests' must helper comes from the testkit, and the check keeps it so",
     "kind": "internal"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "05e864db3bf72242496cafde9ed264975d0efa88",
     "pr": 2312,
-    "title": "patches ship: v0.5.1, v0.5.2",
+    "title": "patches ship: v0.5.0b, v0.5.1",
     "kind": "app"
   },
   {
-    "version": "v0.5.2",
+    "version": "v0.5.1",
     "commit": "da5a454ec10200fdfe856ce52bc5a2d6b338d448",
     "pr": 2302,
     "title": "a card's printed trigger condition holds when the card is no trap (Prison answers only the opponent's Units)",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "2403b16670fe097bc6939f13537458481e3222c8",
     "pr": 2262,
     "title": "named layers, corner radii and shadow depths, and gradients only where they mean something",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "68edaae1adf824bddceb29a99d4699bb775629b6",
     "pr": 2288,
     "title": "the slow web and server CI jobs split under five minutes",
     "kind": "internal"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "163edc7f4ff4f15e642ad714e9e5197b5ef34d1f",
     "title": "Merge pull request #2186 from Jlore-Studios/bot/issue-2124",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "b74d2888f19aa1ede487b7a218fbe836a57f64ea",
     "pr": 2296,
     "title": "the technical log gains the five entries of the stuck log #2242",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "8c65cabcd3b8ead0c8abc32656cf0c47151aa28a",
     "pr": 2314,
     "title": "the lethal hint in every offline game against the AI",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "c2bb39cdedb38d977b05791668ca0d35e0003a56",
     "title": "Merge pull request #2284 from Jlore-Studios/claude/peaceful-maxwell-r7812c",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "cf13e1bae5af65c20eb14d5222ca7b84f4e5657d",
     "pr": 2316,
     "title": "a gate's redirect joins the view transition that drew its screen, and a skipped transition is no error",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "91d05cce20a695a4987c24577e9628679162d280",
     "pr": 2306,
     "title": "hand hints, a tiny icon row on the viewer's own hand cards",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "f9249bab97e910603c06f8975ba5c953030c0f30",
     "pr": 2319,
     "title": "the AI deals itself the Stinkyscape set, the gate lifted",
@@ -2793,55 +2793,55 @@
     "player": "The practice AI now builds its decks with Stinkyscape cards too."
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "51b2645873d3829c9f00f0c5bcaaf52254175a0a",
     "pr": 2163,
     "title": "a deck keeps its earlier versions, and one can be restored",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "6a83160e37172e0f3f86c58349ded65e54e3e7e1",
     "pr": 2322,
-    "title": "patches ship: v0.5.2b",
+    "title": "patches ship: v0.5.1b",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "bf53671d42e02406fbaca4dd24b17d16a1a2830a",
     "pr": 2326,
     "title": "Trigor's chain ends against forced attacks and Poisonous (R2197002's terminator)",
     "kind": "internal"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "3f3d2261537d25b4db31ce6db3c2cfa5682b6367",
     "pr": 2308,
     "title": "Training Grounds, the AI plays every card, and the sweep of record before it ships",
     "kind": "ai"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "23a91c99c29c10f9c2331433ba1f84c22cb5a19b",
     "pr": 2329,
     "title": "Training Grounds' screens show Level Up!'s attack count, mark In a hurry's tokens as end-of-turn, and fit a long hero badge on a phone",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "c5eeb1494d6e1f251a86f4918bc0c95d8aec7c8d",
     "title": "Merge pull request #2301 from Jlore-Studios/bot/issue-2266",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "4bbd0d855aa9c4bcfec1619ef346caaff410f1c4",
     "pr": 2343,
     "title": "a job ran over 7 minutes",
     "kind": "internal"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "177023fbe7ceec1f22035dc81099ac1f64f2ed6f",
     "pr": 2337,
     "title": "show the keyboard shortcuts the client already has",
@@ -2849,147 +2849,147 @@
     "player": "Keyboard shortcuts now show in tooltips, the command menu and the home page footer, with ⌘ on Apple devices and Ctrl elsewhere."
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "a2c193a32d5429c2d3b70c92c02074a274493ff4",
     "pr": 2342,
     "title": "the playmat taps everywhere but on a card, occupied zones included",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "0edb316a300dec24a15fbc9ec9254628071c2573",
     "pr": 2298,
     "title": "the card-token pick shows the cards it can unlock, with the deck builder's search, and asks before it spends the token",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "59597ef68093378e70031c5be0cfc249c24e0195",
     "pr": 2347,
     "title": "equal-height board rows and full-size Defense cards",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "052f5a7f13d4085391d177c80aa5861295b8d97c",
     "pr": 2344,
-    "title": "patches ship: v0.5.3",
+    "title": "patches ship: v0.5.2",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "b7a4418ed0aae166ed6bc985c81e759a49774dca",
     "pr": 2352,
     "title": "the AI prices an extra-turn card in hand and its banked Anomaly misses",
     "kind": "ai"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "d737897afa59daf19c3bb5a07bc1eff24877c9c2",
     "pr": 2349,
     "title": "the Stinkyscape release audit's last MINORs: Prison's R2271000 tests pin the fix, no \"held\" wording, the script count",
     "kind": "internal"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "0c15ac98c08de1941105665cd7fe4574686293ca",
     "pr": 2355,
     "title": "the hero badge's popover closes without a window key handler (R2126000)",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "5f7bb0be1e8d3697333e0aa92cf3ecafa7cba262",
     "pr": 2354,
     "title": "the Almanac passes axe again and the board fits a 1024x768 tablet",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "fea35ce3a56b0f839648926b76449b7490117e27",
     "pr": 2335,
     "title": "a few named durations and easing curves for every motion on the board",
     "kind": "app"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "4e5adcf3c8d43fcf1e01d9f2416354ee0fa75dcf",
     "pr": 2359,
     "title": "the frozen key-handler census drops ModifierBadge, which no longer has one (R2126000)",
     "kind": "internal"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "381c255cc23e60b97db7b8a6e310a390209c30d7",
     "pr": 2356,
     "title": "Floodgates' Death ends against a fused self-resummon",
     "kind": "internal"
   },
   {
-    "version": "v0.5.3",
+    "version": "v0.5.2",
     "commit": "0283f6dbee21ded69476a19d4e8733959600274c",
     "pr": 2358,
     "title": "the shadow ban swept again after a dispatch, over 10 card(s), with #2333's cards",
     "kind": "ai"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "55e115dfce9641ac48c72490bdbd589ad93f9e21",
     "pr": 2360,
     "title": "the Shop fits one screen again on a phone (R1580000)",
     "kind": "app"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "156aefc4c0390e8e6e36d50820d7d268b7758e52",
     "pr": 2361,
     "title": "spec 03's play after the trap is one Radiant Saintess's new cost allows",
     "kind": "internal"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "a27d3da93d9ce77ccb49eef978f605c9bb029db1",
     "pr": 2362,
-    "title": "patches ship: v0.5.4, v0.5.5, v0.5.6",
+    "title": "patches ship: v0.5.3, v0.5.4, v0.5.4b",
     "kind": "app"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "18f73763243e9eefa84d424273f2fb260fdc9b31",
     "pr": 2336,
     "title": "drop the \"Provisional statistics\" banner and the \"How to read these statistics\" notes from /stats",
     "kind": "app"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "2383d89363c56291ce540fa8beb483b68ecffa07",
     "pr": 2364,
     "title": "patches log: da5a454..0283f6d",
     "kind": "app"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "622a10b5bffdba2c1e5a35de7c2f68e8407bf8fd",
     "pr": 2365,
     "title": "I4 reads \"Animated on your turn\" as the animation had it, fuzz seed 2443",
     "kind": "internal"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "81e2bbb88be7a07829d8f660afbbd661424afdf2",
     "pr": 2350,
     "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-10-29",
     "kind": "app"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "52bd29e11fb2cadaadebae69295d718b558d6cf8",
     "pr": 2366,
     "title": "main lands pull requests through a merge queue, so two green alone no longer land red together",
     "kind": "internal"
   },
   {
-    "version": "v0.5.6",
+    "version": "v0.5.4b",
     "commit": "82ab41de7ee91d4a15619ef70de703e2d009eb6d",
     "pr": 2371,
     "title": "a Tokens toggle on /stats with each token's win rate",
@@ -2997,28 +2997,28 @@
     "player": "The statistics page can show each token's win rate: turn on Show tokens on the Cards tab."
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "5f8bff82c0b301e62d7db658a9ab9f54d1f562f6",
     "pr": 2377,
     "title": "patches log: 0283f6d..18f7376",
     "kind": "app"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "8e04d4897c388bf98ccda7f6196d8967ccf5af69",
     "pr": 2372,
     "title": "the shadow ban swept again over the Training Grounds set, with Stinkyscape ungated",
     "kind": "ai"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "ab43a743828a4823be40553126559157a8e8c884",
     "pr": 2393,
     "title": "fold the pending §11 paragraphs and the rulings index into the spec",
     "kind": "internal"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "fe7a340778530f3ec3a73d32bcf027a34a028dcf",
     "pr": 2293,
     "title": "the tutorial remade from Training Grounds, five lessons that can't be lost and a coach that lets you discover the rules",
@@ -3026,28 +3026,28 @@
     "player": "The tutorial is remade from the Training Grounds set: five lessons you can't lose, a coach that asks rather than tells, and a Field Guide of everything you discover."
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "a7ab98d16fa27f5fcb57443af3f4eb95752c0700",
     "pr": 2397,
     "title": "the shadow ban swept again after the Training Grounds set shipping",
     "kind": "ai"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "681d21729645aabf288cc4d7fe2698e71cbc3298",
     "pr": 2398,
     "title": "the Almanac's whole grid and its scroll match the 481-card baseline",
     "kind": "app"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "000f35fe655093a63516bab9f09ecce672d7d938",
     "pr": 2399,
     "title": "the store's seed test expects Training Grounds' Jlockeed and Jelly Bean cards",
     "kind": "internal"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "abf139aff6248ca8f0c037fa7cd95efd7a859382",
     "pr": 2400,
     "title": "WIP: the AI prices the Credits it holds at what they buy (#2389)",
@@ -3055,14 +3055,14 @@
     "player": "The AI now saves its Marketplace Credits rather than spending them on any offer at any price."
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "d718820a387ed60f48bd66a6693f2318bf27c044",
     "pr": 2348,
     "title": "a Tradable hand hint, dimmed once the turn's Trade is spent",
     "kind": "app"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "6df2db20bd4e6e017e76ea88bcca9f24a6aa51d2",
     "pr": 2339,
     "title": "Back closes the top sheet or dialog before it leaves the screen",
@@ -3070,235 +3070,235 @@
     "player": "Back closes the open sheet or dialog first instead of leaving the screen."
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "55c3e31746161a65b9a02f188d1a0da8d01f9922",
     "pr": 2405,
     "title": "a player watching the finished match's replay is still taken to the rematch both sides agreed to",
     "kind": "app"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "edaa93ada13aa1862fdd51da93e2f42db9c238d7",
     "pr": 2406,
-    "title": "patches ship: v0.5.7, v0.5.8",
+    "title": "patches ship: v0.5.5, v0.5.5b",
     "kind": "app"
   },
   {
-    "version": "v0.5.8",
+    "version": "v0.5.5b",
     "commit": "59cec786eb678d49cfcd57c5897fe93ebb372369",
     "pr": 2408,
     "title": "a patches promotion or log is stuck",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "7807472b68d36f3b0cb0f180274dbf69ad62b990",
     "title": "Merge pull request #2401 from Jlore-Studios/bot/issue-2378",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "b35166c8f7c092edcb88f6eb0fc89f52d627d575",
     "pr": 2404,
     "title": "the first player's opening hand draws 3",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "549a9c157bdedc51aba484b7bbfbbea77d6cd33a",
     "pr": 2411,
     "title": "patches log: 25aa954..59cec78",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "ec376fd63aafc7865e42d4b70db2f70e36aa2f74",
     "pr": 2414,
     "title": "a daily sweep fuses each triggered card's text onto Units and plays it until the board settles",
     "kind": "internal"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "55b2aaca64a498964229d326a4bc8420e9354121",
     "pr": 2413,
-    "title": "patches ship: v0.5.9",
+    "title": "patches ship: v0.5.6",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "078997f550d27658cfb88f8a02daa529e5b087ab",
     "pr": 2418,
     "title": "patches log: 59cec78..55b2aac",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "c29cffd6b34b45841f308c1f4ae41d41302137a2",
     "pr": 2409,
     "title": "leaving a practice game without saving gives its earning slot back, and a game that can't earn says so",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "b955a2ab758a5d54e81a5380e2a579bd7ba76f2a",
     "pr": 2341,
     "title": "a Tribute hand hint showing how many Tributes a card needs",
     "kind": "app"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "0edbe120418dca29bb69352c5e5fef5c1b85637b",
     "title": "Merge pull request #2416 from Jlore-Studios/bot/issue-2384",
     "kind": "internal"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "ae9765cc270c7cf399a48999bcf3fa36c928694a",
     "title": "Merge pull request #2421 from Jlore-Studios/bot/issue-2385",
     "kind": "internal"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "df0f4c86cab104a3a9d7845ee9b81a4a4255120f",
     "pr": 2412,
     "title": "the AI prices a Dormant unit by the unit it wakes as",
     "kind": "ai"
   },
   {
-    "version": "v0.5.9",
+    "version": "v0.5.6",
     "commit": "2d62a51037bde7b7db664758b658e9249e1dac30",
     "pr": 2428,
-    "title": "patches ship: v0.5.9b",
+    "title": "patches ship: v0.5.6b",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "f280ef8e0d074cd990db70a5f6c9b42a63f01d71",
     "pr": 2431,
     "title": "patches log: 55b2aac..2d62a51",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "cc1969069eb3c089eef6996833f1386e4582debb",
     "pr": 2307,
     "title": "daily quests for Stinkyscape, Radiant upgrades and position switches, and every set that ships keeps a set quest",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "d1b9471f05961c165c44ab01cf49b06537fbf660",
     "pr": 2432,
     "title": "a ranked match's result shows the rank and pips it moved you to",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "9fd1a4185f53428513b46769f46d31bf928a3d0a",
     "pr": 2403,
     "title": "a Trap fused into a Unit stays quiet, a gray outline on a card with 1 Brittle left, no previews of shipped sets, and the cards lib job under five minutes",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "90789d8706784a32c18b345d09ec3b293f8b4ee2",
     "pr": 2438,
-    "title": "patches ship: v0.5.10",
+    "title": "patches ship: v0.5.6c",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "07fef3cf1f372ac863ff241f23c9b9815f101ca8",
     "pr": 2440,
     "title": "the fuzz names the pool cards its games never played",
     "kind": "internal"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "0c6ed4c84fd6ad73fc87e0114f12bad24cc1d4a6",
     "pr": 2441,
     "title": "the shadow-ban sweep counts only the turns a card could really be played",
     "kind": "internal"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "703cd36038d13b3b5b1d51f6cc42c6e0c91bbdc9",
     "pr": 2443,
     "title": "a card opened from the patch notes shows its loading and retry states instead of nothing",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "fc232fc01121a5a913a615694846b2bd1040fc4d",
     "pr": 2407,
     "title": "in Chinese, the deck builder's, Almanac's and Shop's search and name sort read the Chinese card names",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "04f53195f7aa6760d0e62ef45228bdc74a83a02c",
     "pr": 2442,
     "title": "the cards lib job and the classifier's AI check under five minutes",
     "kind": "internal"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "2f46afc9e0020decffcb58283622f2dfda6471f4",
     "pr": 2449,
     "title": "patches log: 2d62a51..90789d8",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "bac632df40c6c0615a9aaa71a060071ec3ba522a",
     "pr": 2451,
     "title": "the AI prices a unit's Death by what it leaves behind, so it plays Trigor",
     "kind": "ai"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "5756e8e578e4e102b9c11e1c04ebb0f8d823ad5c",
     "pr": 2454,
     "title": "every summon of a Flying Unit may land in the backrow",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "6667f6a764e71a980c5341e2e387d56b1fe80347",
     "pr": 2456,
     "title": "the Credits count is a badge by the hero, as the Jade Counter is",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "7649399084475272cd9b5061dfe98c9a8d9b220d",
     "pr": 2448,
     "title": "a tutorial opponent plays only Core cards, whatever reaches its hand",
     "kind": "ai"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "20eb41ddf17d99426dccbfd958abb00d7c24b9c1",
     "pr": 2466,
-    "title": "patches ship: v0.5.10b",
+    "title": "patches ship: v0.5.6d",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "5915f0940b27dc63e4e1f53cf33a23c4ae3e4dbd",
     "pr": 2467,
     "title": "make a Dormant card on the field unmistakable (greyed out and bound)",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "1cbfe316dcb45fd0c97e937923bc16ed6cf173c6",
     "pr": 2468,
     "title": "a patch only when the change moves the stats of the cards broadly; everything smaller is a micro (#2455)",
     "kind": "internal"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "c663add22942fab1c935126129b474702a96a540",
     "pr": 2444,
     "title": "the tutorial made simpler, one thing a lesson, against a Core-only opponent, with a concede counted as a loss and the coach out of the middle",
@@ -3306,101 +3306,575 @@
     "player": "The tutorial is simpler: each lesson teaches one thing, the opponent plays only Core cards, a concede counts as a loss, and the coach stays at the side of the screen."
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "096e45cd461d9a8302d576f8338b9e6513551312",
     "pr": 2470,
     "title": "drop the Cost, Rarity, Keywords and Your stats columns and the set-traps line from /stats",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "bc08e1c7bea3d576d571eea33e241555175fe3fa",
     "pr": 2472,
     "title": "patches log: 90789d8..1cbfe31",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "30465612a77323e1a86ea68d16ef7adb257c06e6",
     "pr": 2469,
     "title": "Immutable is a valid buff target for field spells",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "2e0bf7880d1f270f4ca53f14829161f94063995e",
     "pr": 2420,
     "title": "`cargo jackioh fuzz --cards <ids|set>` deals the named cards into every seed's decks",
     "kind": "internal"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "0a37003944297ef4d74347990a25c028f5c4a287",
     "pr": 2485,
-    "title": "patches ship: v0.5.10c",
+    "title": "patches ship: v0.5.6e",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "246366b2e62922829aa29f539819c87e1c80fc68",
     "pr": 2488,
     "title": "patches log: 1cbfe31..0a37003",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "0c0e1a9b214ffe50e0ca071504dc2cafa009edfb",
     "pr": 2492,
     "title": "card statistics compare each card's games drawn against its games never drawn",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "360a768343ec48e294c4b66260be2c1160304f5f",
     "pr": 2484,
     "title": "a fuchsia outline on a Temporary 1 card in your hand, and a turns-left counter on every Temporary card there",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "c99a94281c37c6f12f315bdce23c9e4a4e0ceaca",
     "pr": 2494,
-    "title": "patches ship: v0.5.10d",
+    "title": "patches ship: v0.5.6f",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "0e5ae82ebc429ac0c8866cd4a2c3508ae521c1ca",
     "pr": 2496,
     "title": "patches log: 0a37003..c99a942",
     "kind": "app"
   },
   {
-    "version": "v0.5.10",
+    "version": "v0.5.6c",
     "commit": "9c9bcbd99ad3e395f5e98cd62309f5993e6f438a",
     "pr": 2474,
     "title": "standardize spelling to American English",
     "kind": "app"
   },
   {
-    "version": "v0.5.11",
+    "version": "v0.5.7",
     "commit": "b9687a41011ea3e7cbdb984f58cd15570613e5a2",
     "pr": 2522,
     "title": "a balance pass of 15 reprinted cards is a patch; an engine fix needs 50 cards or most games (#2499)",
     "kind": "internal"
   },
   {
-    "version": "v0.5.11",
+    "version": "v0.5.7",
     "commit": "8e08854a683af9a8ad8b187a68e35279e491510f",
     "pr": 2523,
-    "title": "patches ship: v0.5.11",
+    "title": "patches ship: v0.5.7",
     "kind": "app"
   },
   {
-    "version": "v0.5.11",
+    "version": "v0.5.7",
     "commit": "5ffe4ecc9c21929387148aea91ce0ca356e49b58",
     "pr": 2473,
     "title": "the night bot's harness in Go",
     "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ec882eeb6ecbc86189664aacbd884dd98e7f50ce",
+    "pr": 2525,
+    "title": "patches log: c99a942..4f48333",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "8a0b772f7aa590ca392837eee79626a149d86c53",
+    "pr": 2527,
+    "title": "patches log: 4f48333..5ffe4ec",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "2a87cd654dd23b5087f59021ba8f354aeebc6024",
+    "pr": 2531,
+    "title": "a change to how cards look ships as a micro, and a system the owner names ships as a patch (#2529)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "47b5883d16c90484ce3e7c0f577f45b14d6f94e6",
+    "pr": 2537,
+    "title": "spending a cosmetic token asks first, as spending a card token does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "22d7a15da7b8d9fd2c85a0ab2e23a3cf9a1531f6",
+    "pr": 2538,
+    "title": "Back in a live online match asks first, and says how long you have to come back",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "317b500e055ad60b9a90e83466126a35b071557a",
+    "pr": 2536,
+    "title": "the challenge and co-op deck pickers grey out a deck with a custom card, as the lobby's does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "bd2bc854cc460e131527ea83b5124f9d124e6daf",
+    "pr": 2539,
+    "title": "the emote and loadout numbers move into the engine's config, the command menu's card test stops racing, and a card page reads its patch history in one load",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "38fdaeb6a29a49a065d9488069d70e73c24ed323",
+    "pr": 2541,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "f95d2e2dfada9cbb039e27c85487fa24101a9356",
+    "pr": 2542,
+    "title": "the AI prices a Field Spell's Start of turn and End of turn effects, not only its cost",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a6ccf8204d006337b1bb4c5c165ab6d700d89181",
+    "pr": 2543,
+    "title": "a request flood from one signed-in account is refused before it reaches the database",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "496b440300364f8674082f558cbe263cf92edf98",
+    "pr": 2546,
+    "title": "retcon the v0.5 line's versions by the new patch and micro rules",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "88326c93fed7dea419ad7c3a00e29f62839a21bc",
+    "pr": 2545,
+    "title": "the tutorial opponent holds and plays only Training Grounds cards that are not Legendary or Mythic",
+    "kind": "ai",
+    "player": "The tutorial's opponent now plays Training Grounds cards, like you, but never a Legendary or Mythic one."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "c6f4b0fe261be5ca908f2890ea2bb9663ccbcbc1",
+    "pr": 2553,
+    "title": "chinese.json regenerated from card-text.yaml after #2545",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "1a98a9a46659663a1304e7a7eecaa2d642cf3ec3",
+    "pr": 2493,
+    "title": "CN Tech and NA Tech read a win-rate table that covers every set that ships",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7bae09d6fa427635e8a6f2b5f54f1d452c0a642b",
+    "pr": 2561,
+    "title": "Defense cards on a phone shrink only as far as their zone needs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "3c5c7a81ee081c735f41d811027c97eebb6f6e20",
+    "pr": 2551,
+    "title": "the AI counts a Unit standing in the backrow once, as a Unit, and not again as a backrow card",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b43732e47db6d93323af9aee09a3575865f068b5",
+    "pr": 2572,
+    "title": "practice claims stop re-running the AI's moves",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "92dd40db4310650d7cd89c738f866749c83b28c5",
+    "title": "Merge pull request #2583 from Jlore-Studios/claude/great-pasteur-yzpjgm",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7836f89a8f118439dacac6fbaa4e71bc71ad112a",
+    "pr": 2585,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "fecb7c3d8cdd00948f4797c5cf349568378c79fc",
+    "pr": 2586,
+    "title": "patches ship: v0.5.7b, v0.5.7c, v0.5.7d, v0.5.8, v0.5.8b, v0.5.9, v0.5.9b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e1885c18dfc6b4283e101a6a074262be54878ae9",
+    "pr": 2587,
+    "title": "Back closes a card opened in the Collection or in the statistics, as it already closes one in the Almanac",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "ded725f10e5eaedf40d57a776a052acaf77174a0",
+    "pr": 2589,
+    "title": "a new card states the catalog's counts once, not in three tests and nine docs",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a0fb2ba4472ed0101c414f4d0ad937444f66d63b",
+    "pr": 2588,
+    "title": "View full stats and the practice screen's Decks links move inside the app instead of reloading it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "bc5860045b4584ccf8293435818c116fa767b471",
+    "pr": 2592,
+    "title": "a finished match stays readable on the real database after its second player deletes their account",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "40a6e72e08491c380678ddccaab95fac96edbbb1",
+    "pr": 2594,
+    "title": "patches ship: v0.5.9c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "d5da71e8ec3ea690185e96b062a33fbf7bbe8c3a",
+    "pr": 2595,
+    "title": "the AI prices a card's repeatable Activate, so it removes a Cannon before a plain body",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "11f83582b169b679af46c1519683a7d285652b1d",
+    "pr": 2596,
+    "title": "web and e2e tests turn the automatic turn end off instead of pinning seeds that deal a turn-one play",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7ba82b660484d0837bfcd9b61c12079349cdc9c4",
+    "pr": 2599,
+    "title": "the fuzz monitor refuses an opponent-held prompt that opens on its holder's off turn",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "98f9653e8567792d9459342e3edc3bd20942de25",
+    "pr": 2601,
+    "title": "the first player's win share counts only decided games, and the game figures say how many were drawn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "f51e05a0fe134393854489fee10fa0a02271495f",
+    "pr": 2597,
+    "title": "the AI prices a Starship Piece's death by the copy it fuses into its owner's Starship",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "c306eb9a05adeb82bb21655205a54c9017f372f8",
+    "pr": 2600,
+    "title": "the AI prices the Start of turn and End of turn effects of Units on the board, on both sides",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a1b672c57c6cfdaa04ec48aa574b68cd5a4145bb",
+    "pr": 2591,
+    "title": "the Tradable pip on hand cards an aura makes Tradable, and no mana on the Trade button",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "eeb32c3e3a35263a85a415cfcd99eaf6d7ef6169",
+    "title": "Merge pull request #2584 from Jlore-Studios/bot/issue-2422",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e2c26a9ea169f5ad9b15d96b86e67d78cbfb721c",
+    "pr": 2598,
+    "title": "the AI's Death and turn-hook prices travel as a parameter, not two thread-locals",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b0246e7e224567cdf97489d3d942426aa8fa255a",
+    "pr": 2612,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "9766ab504a1e2856c0617af08ff29f46dedfd1b8",
+    "pr": 2621,
+    "title": "disclose the ladder bots in the Terms, let friends always watch, and say game data has no opt-out",
+    "kind": "app",
+    "player": "The Terms now explain AI opponents in ranked, your friends can always watch your online games, and the Privacy Policy lists your public player statistics."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "7835244936811cc0fe29683ba0f409839957e8a6",
+    "pr": 2590,
+    "title": "bot: build pass 1 for #2578",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "42306e482315696696fa1d64fdc8ccca3b0a667b",
+    "pr": 2623,
+    "title": "a Duos hand card no longer passes by dragging it onto the portal or the teammate's board",
+    "kind": "app",
+    "player": "In Duos, dragging a hand card onto the portal or your teammate's board no longer passes it: use the Pass button on the card."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "57fcd5ae29a8b4021be8d129e730f1cc6894d1db",
+    "pr": 2626,
+    "title": "migration 0068 renames in seconds, so Render's release finishes and the server deploys again (#2625)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "5e7e0d38f0d2c75cab13088e0b8360f310d94d3e",
+    "pr": 2627,
+    "title": "patches ship: v0.5.9d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "cc221192469a01b3a3a8fcc316ce3e55a3e95452",
+    "pr": 2632,
+    "title": "the patch notes' card diff covers every catalog field, so a new field fails typecheck and not a release",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b79251edbb9a614f8d779ac3b193c5da6d057aa1",
+    "pr": 2633,
+    "title": "Back closes the Marketplace and the deck builder's history, cosmetics and portrait pickers",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "4453e7a1177cfbde2cbdaf219f952026fb29d727",
+    "pr": 2634,
+    "title": "a watcher's socket is held to the players' limits on repeated hellos and junk frames",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "388026de1769ad8516cc885697b51db48360fcb2",
+    "pr": 2635,
+    "title": "every route that waits on an account's economy lock takes the account's turn first",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "0b6206d7026a66a4e691082c46ac98d29653699a",
+    "pr": 2639,
+    "title": "the combat and mana sections say what their newer rulings say",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "b624a0a041b05c2ede5a771a6038d2f16abdd3cc",
+    "pr": 2638,
+    "title": "the AI prices a Field Spell's Activate, as it already prices a Unit's",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "9f10a70abf7520b479d654b9607cc5cd2c7a0057",
+    "pr": 2640,
+    "title": "a card that dies goes to the graveyard of the player who controlled it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "19fea97e0fbf745202b5688dcc121496a81d32ea",
+    "pr": 2641,
+    "title": "patches ship: v0.5.9e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "1a7ccc3a2cbe75a185f860205d3e3167eeb304cb",
+    "pr": 2643,
+    "title": "patches log: 5ffe4ec..19fea97",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "672e81c227e9cb37345a3912376f4b3aa1f330b8",
+    "pr": 2628,
+    "title": "the practice AI thinks twice as long, CI's release build splits in two, and AI Girlfriend's and Megabase's Unit voice lines",
+    "kind": "ai",
+    "player": "The practice AI thinks twice as long before each move."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "618524b9cbf75a34476d5dba9b010a76aec93f46",
+    "pr": 2636,
+    "title": "open a gated screen without waiting on what the page already knows",
+    "kind": "app",
+    "player": "Screens open faster: moving between screens no longer waits to check your account again, and the game starts loading while it does."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "203a1cd9cfc85b4c05557dd3f5cc4edd6c99dac5",
+    "pr": 2637,
+    "title": "/ai says how JackiOh uses AI, and the voice lines' provenance",
+    "kind": "app",
+    "player": "A new page, How JackiOh uses AI, linked from the footer, says where the game uses AI and what it never does with your data."
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "9d721f425da570d239755929e81126afdbc86a12",
+    "pr": 2654,
+    "title": "every shipped patch is a GitHub release, and a pre-release while only staging has it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "a35bc60ae05ee2be9c04ccaa7d5dd2b2a204c244",
+    "pr": 2656,
+    "title": "the releases go out with the bot's token, since GitHub refuses the Actions token a tag on a commit that holds a workflow",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "0518f07a3892a7655db3eae807b32c5b422cec40",
+    "pr": 2659,
+    "title": "the bot's Go harness stops deferring to the deleted Python (PORTING.md, PARITY.md)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e030907ab81123c84df6535edaa3ce5d4801be5d",
+    "pr": 2661,
+    "title": "the phone's match controls stay on one row, with the Marketplace inside a match menu",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "400b1df32e276def1bf7d2ca8f77e314b5fd8126",
+    "pr": 2663,
+    "title": "a job ran over 7 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "98b5f9ffc2bac6f78072c8bb5f33d9778a5cb4f0",
+    "pr": 2664,
+    "title": "Your Table's stats name the right kind of card (Spells are never Unbreakable)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "813e0f049a0ad8114cfd21d2d8887811afefb219",
+    "pr": 2666,
+    "title": "true flavour and voice lines for six Core cards and the Felinors",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.9",
+    "commit": "e121aa8de007e51b503d24233377d5923e89eea6",
+    "pr": 2669,
+    "title": "patches ship: v0.5.9f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "e24474d95032ada4dd6816075ec1d63ff0fb2b3b",
+    "pr": 2672,
+    "title": "patches log: 19fea97..e121aa8",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "734e41346d9cf103b38c3f1d3b32df9b1b0bdb95",
+    "pr": 2673,
+    "title": "patches ship: v0.5.10",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "c9f76e178f5db3d1d89e8b3c76b408c8da95aa0b",
+    "pr": 2693,
+    "title": "the #2160 audit's decided dead code goes, and the docs it flagged say what the code does",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "b13cef3496186b772629a692be0fc217ca8a0613",
+    "pr": 2695,
+    "title": "a patches promotion or log is stuck",
+    "kind": "app"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "ea2a5dcb51a0d7b74a73ba469a38bf6e880ad835",
+    "pr": 2697,
+    "title": "fold the pending §11 paragraphs and the rulings index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "5a1d98d803dbde9f91b44811062d5961dff273b8",
+    "pr": 2699,
+    "title": "Block on an incoming friend request asks first, as Block on a friend does",
+    "kind": "app",
+    "player": "Blocking an incoming friend request now asks for confirmation first."
+  },
+  {
+    "version": "v0.5.10",
+    "commit": "ff76fd6f4895aed536e4dc210970796ada5b0328",
+    "pr": 2698,
+    "title": "patches ship: v0.5.10b, v0.5.10c",
+    "kind": "app"
   }
 ]

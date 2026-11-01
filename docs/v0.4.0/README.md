@@ -14,7 +14,9 @@ notes each part left beside this file while the tree was built; they stay in git
   below that cite it are the record; `git show 32d123284:docs/v0.4.0/PORTING.md` prints it.
 - **[api-gaps.md](api-gaps.md)** is what the Luau API binds, what it does not, and the fifteen gaps
   part 28 fixed with their Luau forms.
-- **[perf.json](perf.json)** is the performance baseline at the branch point (section 5.5).
+- **`perf.json`**, the performance baseline at the branch point (section 5.5), was removed: the
+  gate measures parent and current live, and section 5.5 quotes the baseline;
+  `git show 3c5c7a81:docs/v0.4.0/perf.json` prints it.
 - **`crates/luau/README.md`** is the host's contract: the sandbox, the integer boundary, the lint,
   the VM, the `J` bindings. **`crates/cards/README.md`** is the cards crate's.
 
@@ -254,7 +256,7 @@ cards then, marked 14 to stay Rust and left none unreadable or unclassified.
   `luau_diff_with_the_pilot_cards_forced_reports_0_mismatches` (`crates/tools/tests/luau.rs`), wrote
   PORTING.md against part 6's landed API (the pilots' pre-port Rust quoted from `8d29cd5e7^`) and
   took the baseline.
-- **The gate compares two binaries live; `perf.json` is a witness.** The plan said to compare
+- **The gate compares two binaries live; `perf.json` was a witness.** The plan said to compare
   against `perf.json`; `luau bench` measures parent and current on one machine in one run, which a
   committed file cannot. Rejected: a `--baseline perf.json` mode.
 - The baseline, 2026-10-13, on linux x86_64, 2 threads, Xeon Platinum 8488C, `main` at `f01a13d5d`

@@ -17,7 +17,8 @@
 >
 > The brief was written against the TypeScript code base. Since v0.3.0 the code is Rust: the paths
 > below name the Rust files, and the TypeScript file names and identifiers it still uses (`deck.ts`,
-> `catalog.test.ts`, `buildAiDeck`, …) map to their Rust ones in `docs/v0.3.0/PORT-MAP.md`.
+> `catalog.test.ts`, `buildAiDeck`, …) map to their Rust ones in the port map, now in git history
+> (`git show 3c5c7a81:docs/v0.3.0/PORT-MAP.md`).
 
 ## Contents
 

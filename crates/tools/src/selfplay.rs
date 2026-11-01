@@ -70,7 +70,8 @@ pub struct SelfplayGame {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ai_generation: Option<i32>,
     /// R1371000: the scheme `catalog` is named by (`VERSIONS_SCHEME`); a game written before the
-    /// version retcon has none, and its catalog is read through `patches/aliases.json`.
+    /// version retcon has none, and one of an older scheme (R2532000) is read through
+    /// `patches/aliases.json` too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub versions: Option<u32>,
     /// R1489000: the game's faults (`ArenaOutcome::faults`), which `positions` leaves it out for;
@@ -82,10 +83,7 @@ pub struct SelfplayGame {
 impl SelfplayGame {
     /// R1371000: the catalog the game was played on, as it is named now.
     pub fn catalog_now(&self) -> &str {
-        match self.versions {
-            Some(_) => &self.catalog,
-            None => jackioh_cards::versions::current_version_name(&self.catalog),
-        }
+        jackioh_cards::versions::version_name_from(self.versions.unwrap_or(1), &self.catalog)
     }
 }
 

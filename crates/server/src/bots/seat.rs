@@ -16,23 +16,26 @@
 //!
 //! R188 holds for the AI's own answer: `decide` never concedes, offers no draw and declines every
 //! offer, and `r188_forbidden` names what it may not answer. R639000 is the ladder bot's exception:
-//! at the start of its own turn it may concede, as a person behind does (`signals::concedes`), and
-//! it may accept a draw offered while it stands behind (`signals::accepts_draw`); it never offers a
-//! draw, and `never_played` is the actor's guard for that and for an emote.
+//! at the start of its own turn it may concede (`signals::concedes`), since R2660000 only facing a
+//! lethal on the opponent's board that nothing it does this turn stops (`unstoppable_lethal`), and
+//! it may accept a draw offered while it stands behind (`signals::accepts_draw`). R2660001: at the
+//! start of a turn it does not concede, it may offer a draw while well behind
+//! (`signals::offers_draw`). `never_played` is the actor's guard for an emote.
 
 use std::time::Duration;
 
 use jackioh_ai::{
     AiOptions, AiStyle, DecisionReason, decide_styled, plays_best, skill_miss_action, unanswered_draw_offer,
+    unstoppable_lethal,
 };
 use jackioh_engine::{ActionBody, ActionType, Aim, GameState, PlayerId, Rng};
 
 use crate::actor::engine::{self, Pinned};
 use crate::bots::aim::bot_aim;
-use crate::bots::signals::{accepts_draw, concedes, standard_normal, standing};
+use crate::bots::signals::{accepts_draw, concedes, offers_draw, standard_normal, standing};
 use crate::config::{
     AIM_RELAY_INTERVAL_MS, BOT_CLOCK_MARGIN_MS, BOT_CONCEDE_FIT, BOT_DECISION_DEADLINE_MS,
-    BOT_DRAW_ANSWER_FIT, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_FIRST_MU,
+    BOT_DRAW_ANSWER_FIT, BOT_DRAW_OFFER, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_THINK_PRIOR_FIRST_MU,
     BOT_THINK_PRIOR_FIRST_SIGMA, BOT_THINK_PRIOR_LATER_MU, BOT_THINK_PRIOR_LATER_SIGMA,
     BOT_THINK_PRIOR_LN_LEGAL_MEAN, BOT_THINK_PRIORS, BotStrength, THINK_COMPLEXITY_SLOPE, THINK_LETHAL_SHIFT,
     THINK_TIME_FITS, ThinkTimeFit, ThinkTimePrior,
@@ -56,7 +59,8 @@ pub struct BotJob {
     pub timing_rng: Rng,
     /// Whether this is the bot's first move of the turn.
     pub first_in_turn: bool,
-    /// R639000: whether this is the first move of the bot's own turn, the one a concession comes at.
+    /// R639000: whether this is the first move of the bot's own turn, the one a concession comes at,
+    /// and a draw offer (R2660001).
     pub own_turn_start: bool,
     /// R639000: how long an aim shows before the move (`signals::aim_lead_ms`).
     pub aim_lead_ms: i64,
@@ -119,8 +123,10 @@ struct Decided {
 
 /// R1452: decides, draws the think time, and waits whatever of it the decision did not take, less
 /// the aim's lead, which the actor waits out once it has relayed the aim (R639000). At the start of
-/// its own turn the bot first asks whether it concedes; a draw offer it is answering it accepts or
-/// declines as `signals::accepts_draw` says (R639000).
+/// its own turn the bot first asks whether it concedes: by its temper, and then only facing a lethal
+/// it cannot stop, proved inside the decision's deadline (R639000, R2660000). If it does not, it asks
+/// whether it offers a draw, when R36 lets it offer one (R2660001). A draw offer it is answering it
+/// accepts or declines as `signals::accepts_draw` says (R639000).
 pub async fn play(job: BotJob) -> BotMove {
     let started = tokio::time::Instant::now();
     let BotJob {
@@ -146,18 +152,38 @@ pub async fn play(job: BotJob) -> BotMove {
         // pinned catalog (R388, R767000).
         jackioh_cards::register_all();
         pinned.run(|| {
-            let legal_count = engine::legal_actions(pinned, &state, seat).len();
-            if own_turn_start
+            let legal = engine::legal_actions(pinned, &state, seat);
+            let legal_count = legal.len();
+            let deadline =
+                std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
+            let should_stop = move || std::time::Instant::now() >= deadline;
+            // R639000, R2660000: a conceder concedes facing a lethal it cannot stop; R2660001: else it
+            // may offer a draw. Neither draws on the AI's stream.
+            let opening = if own_turn_start
                 && concedes(
+                    &seed,
+                    home,
+                    || unstoppable_lethal(&state, seat, Some(&should_stop)),
+                    &BOT_CONCEDE_FIT,
+                ) {
+                Some(ActionBody::Concede)
+            } else if own_turn_start
+                && legal.contains(&ActionBody::OfferDraw)
+                && offers_draw(
                     &seed,
                     home,
                     state.turn,
                     &standing(&state, seat, &seed, home),
-                    &BOT_CONCEDE_FIT,
+                    &BOT_DRAW_OFFER,
                 )
             {
+                Some(ActionBody::OfferDraw)
+            } else {
+                None
+            };
+            if let Some(body) = opening {
                 return Decided {
-                    body: Some(ActionBody::Concede),
+                    body: Some(body),
                     ai_cursor: ai_rng.cursor(),
                     legal_count,
                     lethal: false,
@@ -168,9 +194,6 @@ pub async fn play(job: BotJob) -> BotMove {
             // so a bot at it plays as it did before the knob.
             let mut ai_rng = ai_rng;
             let (chosen, lethal, ai_cursor) = if plays_best(strength.skill, &mut ai_rng) {
-                let deadline = std::time::Instant::now()
-                    + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
-                let should_stop = move || std::time::Instant::now() >= deadline;
                 let mut options = AiOptions {
                     rng: ai_rng,
                     budget: strength.budget,
@@ -336,7 +359,8 @@ pub fn think_ms(
 /// R188: the answers the AI may not give, which `play` drops: a concession, a draw offer and an
 /// accepted draw. MD-D29, R1127: nor an `Emote`, as practice's AI never takes one: a bot's emotes
 /// come from its persona through the relay, which mints the action while a card hears it. A ladder
-/// bot's own concession and draw answer come from `signals` instead (R639000).
+/// bot's own concession, draw offer and draw answer come from `signals` instead (R639000, R2660000,
+/// R2660001).
 pub fn r188_forbidden(body: &ActionBody) -> bool {
     matches!(
         body,
@@ -347,10 +371,11 @@ pub fn r188_forbidden(body: &ActionBody) -> bool {
     )
 }
 
-/// R639000: the moves the actor never plays for a bot, whatever `play` came back with: a draw offer
-/// (a ladder bot never offers one) and an emote (its persona's, through the relay).
+/// R639000, R2660001: the move the actor never plays for a bot, whatever `play` came back with: an
+/// emote (its persona's, through the relay). A draw offer it plays, since a ladder bot offers one by
+/// `signals::offers_draw`'s roll (R2660001).
 pub fn never_played(body: &ActionBody) -> bool {
-    matches!(body, ActionBody::OfferDraw | ActionBody::Emote { .. })
+    matches!(body, ActionBody::Emote { .. })
 }
 
 /// What a bot plays when the AI gave nothing it may play, or the engine refused it: ending the turn
