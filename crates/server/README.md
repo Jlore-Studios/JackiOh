@@ -807,8 +807,8 @@ server-only.
 Migration 0038 adds Play together's tables (§9.4, §9.5): `friend_requests`, `friendships` (one row
 per pair, `a < b`), `blocks`, `presence` (server-only), `challenges`, `chat_messages` (1 to 500
 characters), `chat_reports` (one per message and reporter) and `replay_shares`, each with RLS on and a
-select policy for its own players only, and `profiles.allow_spectators` (on by default), which the server
-has read no longer since R2615000 and a later migration may drop. The retention
+select policy for its own players only, and a watching setting on `profiles` (on by default), which no
+server has read since R2615000 and migration 0073 drops. The retention
 loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0039 adds the co-op tables
 (§13.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
 starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,
@@ -1024,6 +1024,12 @@ true`; a row with the switch on and no id is the card's Epic, as every row befor
 `card_cosmetic_picks_full_art_id_check` holds the id to the switch being on and to a `full-art-…` slug
 of at most 40 characters. The store reads the two columns as one `FullArtPick` (`true`, `false` or the
 id). `tests/sql/40_full_art_tiers.sql` checks the id kept and the shapes refused.
+
+Migration 0073 drops the watching setting 0038 added to `profiles` (#2620), and its column grant to
+`authenticated` with it: friends may always watch (R2615000), so no server has read it since. It waited
+until no server on the code before R2615000 could be serving, since that code reads it while a deploy
+overlaps. `tests/sql/22_social.sql` checks that the column and its grant are gone and that the file
+re-applies.
 
 ## Tests
 
