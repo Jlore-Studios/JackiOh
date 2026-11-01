@@ -12980,6 +12980,8 @@
       "stop_requested": false
     },
     "2706": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -12987,9 +12989,14 @@
       "onto": "bot/issue-2701",
       "part_of": 2701,
       "pending_request": false,
+      "provider": "claude-2",
       "queued_at": "2026-11-01T18:44:40Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:a383d35a-1793560994",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-01T19:23:35Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "2707": {
       "failures": 0,
@@ -13489,9 +13496,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T19:08:21Z",
+    "at": "2026-11-01T19:23:35Z",
     "url": "",
-    "what": "plan #2703 on claude-6"
+    "what": "plan #2706 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-01T19:06:36Z",
