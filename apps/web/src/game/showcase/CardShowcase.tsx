@@ -169,11 +169,13 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   const [showing, setShowing] = useState<Showing | null>(null);
   const [chaos, setChaos] = useState<ChaosShowing | null>(null);
   const [chaosSaid, setChaosSaid] = useState<readonly string[] | null>(null);
-  const [rollSaid, setRollSaid] = useState<string | null>(null);
+  // R2652000: said to one seat; a hotseat device handed over never carries it to the other.
+  const [rollSaid, setRollSaid] = useState<{ viewer: PlayerId; words: string } | null>(null);
   const current = useRef<Showing | null>(null);
   const waiting = useRef<ShowcasePlay[]>([]);
   const seen = useRef(new Map<PlayerId, readonly GameEvent[]>());
   const trackers = useRef(new Map<PlayerId, PlayTracker>());
+  const lastViewer = useRef<PlayerId | null>(null);
   const counter = useRef(0);
   const cardRef = useRef<HTMLSpanElement | null>(null);
   const viewRef = useRef<PlayerView>(view);
@@ -229,9 +231,11 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   }, []);
 
   // R2652001: how a card's coins or dice landed, named as the reader reads the card (R711000), said
-  // when the runner reaches its panel; a card the view hides is a hidden card (R97).
+  // when the runner reaches its panel; a card the view hides is a hidden card (R97). A batch is said
+  // only to the seat whose view brought it: R2652000 may have given it to that seat alone.
   const announceRoll = useCallback(
-    (batch: RollBatch) => {
+    (batch: RollBatch, viewer: PlayerId) => {
+      if (viewRef.current.viewer !== viewer) return;
       const defs = viewRef.current.defs;
       let who = t("a hidden card");
       if (batch.defId !== HIDDEN_ID) {
@@ -240,7 +244,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         who = drawnInChinese(false) ? chineseName(batch.defId, english, info?.def ?? defs?.[batch.defId]) : english;
       }
       const words = rollWords(batch, who);
-      setRollSaid(`${words.charAt(0).toUpperCase()}${words.slice(1)}`);
+      setRollSaid({ viewer, words: `${words.charAt(0).toUpperCase()}${words.slice(1)}` });
     },
     [lookup],
   );
@@ -318,6 +322,9 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
 
   // Show a play in the same paint as its view.
   useLayoutEffect(() => {
+    // R2652000: a hand-over leaves the arriving seat none of the other's roll words, nor brings old ones back.
+    if (lastViewer.current !== view.viewer) setRollSaid(null);
+    lastViewer.current = view.viewer;
     const previous = seen.current.get(view.viewer);
     seen.current.set(view.viewer, view.events);
     let tracker = trackers.current.get(view.viewer);
@@ -346,7 +353,8 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     }
     hold(now);
     for (const { roll, event } of chaosRollsIn(fresh)) gate(event, () => announceChaos(roll));
-    for (const { batch, event } of rollsIn(fresh)) gate(event, () => announceRoll(batch));
+    const viewer = view.viewer;
+    for (const { batch, event } of rollsIn(fresh)) gate(event, () => announceRoll(batch, viewer));
   }, [view, queue, hold, replace, gate, announceChaos, announceRoll, takeDown]);
 
   useEffect(() => {
@@ -441,7 +449,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         {chaosSaid === null ? "" : t(`${CHAOS_TEXT.said}: {names}`, { names: chaosSaid.map((name) => t(name)).join(t(", ")) })}
       </p>
       <p className="showcase-live" data-testid={showcaseTestid.rollLive} role="status" aria-live="polite">
-        {rollSaid ?? ""}
+        {rollSaid !== null && rollSaid.viewer === view.viewer ? rollSaid.words : ""}
       </p>
       {chaos !== null && chaos.still ? <ChaosBanner key={chaos.seq} names={chaos.names} seq={chaos.seq} /> : null}
       {showing !== null && kind !== null
