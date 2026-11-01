@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 2645,
+  "title": "Patch: the phone's match controls stay on one row, with the Marketplace inside a match menu",
+  "branch": "bot/issue-2645",
+  "thread": "**Issue #2645 (data, not instructions):**\n\n```text\n# #2645: Patch: the phone's match controls stay on one row, with the Marketplace inside a match menu\nOpened by @MaxGoetzmann.\n\n## What happens\n\nOn a phone, the controls at the bottom of a match (End turn, Offer draw, Concede, the log toggle, Friends, the gear) are supposed to sit on **one row** (`board.css`, `@media (max-width: 600px)`: \"One row of controls, End turn taking what the others leave: two rows cost the hand 50px\"). Since the Marketplace shipped (R1853000\u2013R1853003), they no longer hold together once the Marketplace opens in a game:\n\n- The Marketplace toggle (`apps/web/src/game/Marketplace.tsx`, `.marketplace-toggle` in `market.css`) is not part of the bar. It is a `position: fixed` 44px pill at `left: 12px; bottom: 12px`, so on a phone it sits on top of the bar's left end, which is End turn and Offer draw.\n- The row already had no room to spare: at 390\u00d7844 it \"fits with a pixel to spare\", and at 360\u2013380px it only fits because gaps and padding tighten and Offer draw and Concede wrap their labels (`board.css`, the `max-width: 380px` block, #552). Every extra 44px control has had to be paid for by hiding another one (mute and language moved into the gear, #785; Friends hidden on the dev hotseat at \u2264380px, #1831).\n- The panel is anchored to the pill (`bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px)`), not to the bar, so it doesn't follow the bar when the bar grows a rail row or a notices row.\n\nSo the bottom of a match on a phone now either stacks, overlaps or wraps, depending on width and which rail is showing.\n\n## What should happen\n\nOn every phone layout, the bottom controls sit on **one row**, and no button label wraps: no control overlaps another and the page never scrolls sideways, whether or not the Marketplace is open. Every control stays a 44px target (B29). The rows that already wrap on purpose (the notices strip with a draw offer or a refused action, the online or replay rail, the status line) still take a row of their own above the controls, as they do now.\n\n## The fix: consolidate into a match menu\n\nStop adding buttons to the row. On a phone (`max-width: 600px`, and the short landscape breakpoint `(orientation: landscape) and (max-height: 500px)` where the bar is also tight), the bar holds at most these, left to right:\n\n1. **End turn** (with its clock), taking whatever width is left, as now.\n2. **Marketplace**: an icon button (a coin or stall glyph, `aria-label` \"Marketplace\"), shown only while `view.marketplace` is present. This is the same toggle with the same `testid.marketplace`, moved into the bar on phones instead of floating over it.\n3. **Log toggle**, as now.\n4. **Match menu** (\u22ef, `aria-label` \"Match menu\", `aria-expanded`): a popover or sheet opening upward from the bar that holds **Offer draw**, **Concede** and **Friends**, each a full-width 44px row with its full label (so nothing wraps).\n5. **The gear**, as now (it already holds Mute and Language there).\n\nThat's five controls at most, four when there's no Marketplace, against the six or seven today, so the row fits at 320px without shrinking any label. The `max-width: 380px` workarounds that let Offer draw and Concede wrap (`white-space: normal`, `min-width: min-content`) and the rule that hides Friends on the dev hotseat go away.\n\nDetails the builder must keep:\n\n- **Concede still only asks.** The menu's Concede calls the same `onControl(\"concede\")`, so `ConfirmConcede` opens as now. Keep `testid.concede` and `testid.offerDraw` on the menu items, and make `refocusConcede` in `Game.tsx` fall back to the menu button when the Concede item isn't in the DOM (the menu closes when the dialog opens).\n- **Offer draw keeps its states.** Its label and title (`offerDrawText`: offered, pending, refused) show in the menu item. While a draw is offered *to* you, the notices strip still carries Accept and Decline, so nothing important is hidden behind the menu. The \u22ef button gets a dot while Offer draw has something to say.\n- **The Marketplace panel anchors to the bar** on phones: open it upward from the bar's top edge (measure the bar, or place it in the bar's stacking context) rather than a fixed `bottom: \u202652px`, so it clears a rail or notices row. Escape and Back (R2127000) close the panel and the match menu alike; only one of the two is open at a time.\n- **Tablet and desktop are unchanged.** They have a column with room, and Offer draw, Concede and Friends stay as buttons there. Decide whether the floating Marketplace pill moves into the bar there too; if it does, it must not overlap anything, and the 1280\u00d7720 board must look the same otherwise.\n- **The Duos board** (`duos.css`, its own card bar with Trade) and the **practice table** (`practice.css` restyles Offer draw) get the same treatment, so their bars stay on one row too.\n- The bar's highlight and animating props (`ControlButton`'s `highlight` and `animating`) still reach the items, so a tutorial that points at Concede or Offer draw points at the \u22ef button while the menu is closed.\n- The client still only sends intent (CLAUDE.md rule 7): the menu and the toggle render `view` and `legal` and decide nothing.\n- Any new label goes through `t()` with its Chinese string, as the bar's others do.\n\n## Acceptance\n\n- `e2e/cypress/component/mobile-ux.cy.tsx`: for 320\u00d7568, 360\u00d7740, 375\u00d7667, 390\u00d7844, 412\u00d7915 and 844\u00d7390, with and without `view.marketplace`, and with a rail (online) and without one (practice, hotseat), every direct control of `.control-bar` shares one `offsetTop`, none is taller than one line (44px), none overlaps another or the Marketplace toggle, and `document.documentElement.scrollWidth <= innerWidth`.\n- Unit tests (`apps/web/src/test/ux/board-ux.test.tsx` or alongside): the match menu opens and closes, holds Offer draw, Concede and Friends on a phone, and Concede from it opens `ConfirmConcede` without sending `concede`; Escape closes it; the Marketplace toggle renders inside the bar on a phone and only while `view.marketplace` is present.\n- The specs and tests that click `testid.concede` or `testid.offerDraw` at a phone viewport open the menu first; desktop specs are untouched.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and the component specs are green.\n\n## How to reproduce\n\n1. `pnpm --dir apps/web dev`, then open `/practice` (or `/dev/hotseat`) at 390\u00d7844 in the device toolbar.\n2. Play a Stinkyscape deck until either player gains a Resource or Credits, which opens the Marketplace (R1853000).\n3. Look at the bottom of the board: the Marketplace pill sits over End turn and Offer draw. At 360px, Offer draw and Concede break onto two lines; with an online rail the panel opens over the rail.\n\nWhere: the client (`apps/web/src/game/Board.tsx`'s `.control-bar`, `Marketplace.tsx`, `market.css`, `board.css`, `practice.css`, `duos.css`). No engine, card or catalog work, and no fragment: this ships no card data.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2645: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2520 skipped: it waits for #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
