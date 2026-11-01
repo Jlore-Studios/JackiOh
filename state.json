@@ -12067,7 +12067,7 @@
         "reason": "`claude-2` stops mid-call: 5-hour usage is 91%, at or over its 90% cap; it resets at 2026-11-01T11:30:00Z",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -80; git log --oneline -3; cat spec/rulings/R2655002.md; cat spec/rulings/R2647000.md; cat spec/rulings/R1177001.md\"}\n- Bash: {\"command\": \"sed -n 340,520p apps/web/src/cards/CardFace.tsx; wc -l apps/web/src/game/HoverPreview.tsx 2>/dev/null; grep -rn \\\"HoverPreview\\\" apps/web/src --include=*.tsx -l | head\"}\n- Bash: {\"command\": \"cat apps/web/src/cards/inspect/HoverPreview.tsx; ls apps/web/src/cards/inspect/; grep -n \\\"Created\\\" apps/web/src/cards/inspect/*.tsx apps/web/src/cards/cardState.ts | head -30\"}"
       },
-      "interruptions": 1,
+      "interruptions": 2,
       "issue": 2655,
       "kind": "revise",
       "last_findings": [],
