@@ -13,6 +13,11 @@
 // R1743000: the stats come in a shuffled bag drawn from the page's random source (`nextInBag`): each
 // once before any repeats, never the one just shown first in a new round. There is no arrow and no dot
 // (a dot for each would give away how many there are), and the showcase is itself the one control.
+//
+// R2649000: a script's `aura` (Brittle's or Temporary's last count, the board's own) is drawn on the card
+// from its way in until the first beat, which waits a beat's gap more so the warning reads first; under
+// reduced motion the still card wears it. Each step draws the card afresh, so a beat played twice in a
+// row (`stamp`, `windfury`, `thaw`) starts its keyframe again.
 
 import {
   useEffect,
@@ -43,7 +48,7 @@ import { useLocale } from "../i18n/i18n.ts";
 import type { RandomSource } from "../routes/landingFan.ts";
 import { SHOWCASE_BEAT_GAP_MS, SHOWCASE_INTERVAL_MS, SHOWCASE_LEAD_MS } from "./config.ts";
 import { EMPTY_BAG, nextInBag, type ShowcaseStat } from "./showcase.ts";
-import { OPPONENT_LUNGE_DIR, STAGE_INSTANCE_ID, STAGE_LANE, stageCues, stageScript } from "./showcaseStage.ts";
+import { OPPONENT_LUNGE_DIR, STAGE_INSTANCE_ID, STAGE_LANE, firstBeatAt, stageCues, stageScript } from "./showcaseStage.ts";
 import "../game/animations.css";
 import "../fx/fx.css";
 
@@ -155,7 +160,7 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
   useEffect(() => {
     if (still) return undefined;
     const timers: number[] = [];
-    let wait = SHOWCASE_LEAD_MS;
+    let wait = firstBeatAt(script);
     script.beats.forEach((beat, index) => {
       timers.push(
         window.setTimeout(() => {
@@ -212,12 +217,13 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
   const first = beat?.entry.events[0];
   const change = first === undefined ? null : markEventOf(first);
   const mark = change !== null && change.added ? change : null;
+  const aura = still || step === "enter" ? script.aura : undefined;
   const def = CATALOG[stat.cardId];
   if (def === undefined) return null;
 
   return (
     <div className="landing-showcase-stage" data-testid={landingTestid.showcaseStage}>
-      <div className="landing-showcase-zone" data-testid={zoneTestid} data-animating={beat?.entry.frames.get(zoneTestid)}>
+      <div key={String(step)} className="landing-showcase-zone" data-testid={zoneTestid} data-animating={beat?.entry.frames.get(zoneTestid)}>
         <div
           className="landing-showcase-card"
           data-testid={cardTestid}
@@ -228,7 +234,7 @@ function StatStage({ stat, still, fxOn, intensity }: StatStageProps): ReactEleme
           style={side === "opponent" ? ({ "--lunge-dir": OPPONENT_LUNGE_DIR } as CSSProperties) : undefined}
         >
           <CardFace face={faceModel({ defId: stat.cardId, def, radiant: false })} />
-          {mark === null ? null : <CardMarks marks={[{ mark: mark.mark, color: mark.color }]} instanceId={STAGE_INSTANCE_ID} />}
+          <CardMarks marks={mark === null ? [] : [{ mark: mark.mark, color: mark.color }]} instanceId={STAGE_INSTANCE_ID} bareAura={aura} />
         </div>
       </div>
       {fxOn ? (
