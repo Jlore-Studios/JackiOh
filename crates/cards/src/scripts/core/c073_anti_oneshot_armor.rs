@@ -1,8 +1,8 @@
 //! #73 Anti-oneshot Armor (SPEC §8.3): "Your hero can't take more than 4 damage in one instance.
-//! Cry: draw 1", radiant "Your hero can't take more than 3 damage in one instance. Your hero has Armor
-//! 1. Cry: draw 2" (§8's cell "Cap 3; your hero has Armor 1; Cry: draw 2", R275: the cap is tightened,
-//! the hero armoured AND the Cry draws twice as many). The cap was 5 and the Radiant face gave no Armor
-//! through v0.5.9e (`script_v0_5_9e`, kept, R767000).
+//! Cry: draw 1", radiant "Your hero can't take more than 3 damage in one instance. Your hero has
+//! Armor 1. Cry: draw 2" (§8's cell "Cap 3; your hero has Armor 1; Cry: draw 2", R275: the cap is
+//! tightened, the hero armoured AND the Cry draws twice as many). The cap was 5 and the Radiant face
+//! gave no Armor through v0.5.9e (`script_v0_5_9e`, kept, R767000).
 //!
 //! The cap is not an effect or an aura: it is step 3 of the §4.4 damage pipeline, so the card only
 //! contributes a static flag. `damage.rs hero_damage_cap` reads `static_flags.anti_oneshot` on the
