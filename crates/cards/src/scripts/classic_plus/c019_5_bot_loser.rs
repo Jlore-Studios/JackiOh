@@ -1,11 +1,13 @@
-//! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): +{attackGain} Attack whenever it is R42's killer; while
-//! Berserk it attacks its own hero at your start and end of turn; the Radiant face can't go Berserk (R412).
+//! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): "After this destroys a Unit", +{attackGain} Attack each time
+//! it is R42's killer and still stands on the field as the kill is dispatched, so dying in that combat
+//! it gains nothing (R1245, R2396000); while Berserk it attacks its own hero at your start and end of
+//! turn; the Radiant face can't go Berserk (R412).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-019-5";
 
-/// "Whenever this destroys a Unit, it gains +{attackGain} Attack." (`when` is read for traps only, so the test is in `run`.)
+/// "After this destroys a Unit, it gains +{attackGain} Attack." (`when` is read for traps only, so the test is in `run`.)
 fn on_kill() -> TriggerDef {
     TriggerDef::new("bot-loser-kill", &[GameEventType::Destroyed], |ctx, event| {
         let killed_by_me = match (event, ctx.self_.as_ref()) {
@@ -56,7 +58,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// SPEC §8.7 row 19.5: Berserk is lost on leave (R78); its attacks on its hero are forced (R53).
+// SPEC §8.7 row 19.5: kills grant permanent Attack (R42), not one it dies making (R1245, R2396000);
+// while Berserk (lost on leave, R78)
+// it forced-attacks its hero at start/end of turn (R53); conditionMet reflects Berserk (R195);
+// radiant can't go Berserk (R412).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -73,6 +78,7 @@ mod tests {
     const ANTI_ONESHOT: &str = "core-073"; // hits on the hero capped at 5
     const HIT_JOB: &str = "core-016"; // destroy a target Unit
     const FILLER: &str = "core-005";
+    const TIMMY: &str = "core-011"; // 3/3 Rush, First Strike
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
     fn bot(s: &Scenario, player: PlayerId) -> CardInstance {
@@ -151,16 +157,16 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r42_whenever_it_destroys_a_unit_it_gets_4_attack_permanently() {
+            fn r42_whenever_it_destroys_a_unit_it_gets_3_attack_permanently() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 8, "health": 4 }));
+                s.expect_stats(&me, json!({ "attack": 7, "health": 4 }));
                 s.end_turn().end_turn();
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 8 }));
+                s.expect_stats(&me, json!({ "attack": 7 }));
             }
 
             #[test]
@@ -174,7 +180,24 @@ mod tests {
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 8 }));
+                s.expect_stats(&me, json!({ "attack": 7 }));
+            }
+
+            #[test]
+            fn r2396000_after_a_kill_it_dies_in_it_gains_nothing() {
+                // Tempo Timmy's First Strike meets its own: 4 kills the 3/3 as its 3 kills the Bot Loser,
+                // 1 damage down already, and "After this destroys a Unit" asks that it still stands.
+                let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": TIMMY, "lane": 3 }] }));
+                let me = bot(&s, P1);
+                s.card_mut(&me.id).damage = 1;
+                let target = unit_or_blank(&s, P2, 3);
+                s.attack(&me, &target);
+                s.expect_in_zone(target.as_str(), "graveyard");
+                s.expect_in_zone(me.id.as_str(), "gone");
+                assert!(
+                    !s.last_events().iter().any(|event| matches!(event, GameEvent::Buffed { .. })),
+                    "no buff: it was off the field as the destroyed event was dispatched"
+                );
             }
 
             #[test]
@@ -230,7 +253,8 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                s.expect_health(P1, 25);
+                // 10 attack, 2 Armor, then the cap of 4 (5 until #2657).
+                s.expect_health(P1, 26);
             }
 
             #[test]
@@ -276,14 +300,14 @@ mod tests {
             }
 
             #[test]
-            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_5() {
+            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_4() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let id = bot(&s, P1).id;
                 step_param(s.card_mut(&id), "attackGain", 1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&id, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 9 }));
+                s.expect_stats(&me, json!({ "attack": 8 }));
             }
         }
 
@@ -291,13 +315,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn t_8_8_charge_first_strike_it_gets_8_attack_per_kill() {
+            fn t_8_8_charge_first_strike_it_gets_6_attack_per_kill() {
                 let mut s = with_bot(json!({}), true, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 16, "health": 8 }));
+                s.expect_stats(&me, json!({ "attack": 14, "health": 8 }));
             }
 
             #[test]

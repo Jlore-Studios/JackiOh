@@ -427,6 +427,7 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     expect(readQueued(), "ended reads on either side of a live one never meet").toBe("random");
     cleanup();
 
+    // A server that never names the queue (older than R897000) never ends it either.
     // A server that never names the queue never ends it either.
     rememberQueued("random");
     const silent = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));

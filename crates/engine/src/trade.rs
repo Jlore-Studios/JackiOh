@@ -154,7 +154,7 @@ pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str)
             "a Trade costs {TRADE_COST} mana and you have {mana}"
         )));
     }
-    if side.library.len() as i32 >= LIBRARY_CAP {
+    if crate::query::room_in(state, player, crate::zones::OffFieldZone::Library) == 0 {
         return Err(EngineError::new(format!(
             "your deck is full ({LIBRARY_CAP} cards)"
         )));
@@ -162,7 +162,9 @@ pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str)
     Ok(())
 }
 
-/// R1838000, R1838001: the Trade, refused as `why_trade_refused` refuses it. Its draw is like any other
+/// R1838000, R1838001: the Trade. Refused as `why_trade_refused` refuses it; otherwise it pays
+/// `TRADE_COST`, counts the Trade, reports `traded`, shuffles the card into its owner's deck at a
+/// random position under the top card (R2657003) and draws one card for `player`, a draw like any other
 /// (§2.4, R1838002).
 pub fn apply_trade(
     sink: &mut EngineSink<'_>,
@@ -190,7 +192,8 @@ pub fn apply_trade(
         count,
     });
     sink.events.push(GameEvent::Traded { player });
-    crate::draw::shuffle_into_library(sink, &mut card, true, None);
+    // R2657003: never back on top, so the draw brings another card while the deck holds one.
+    crate::draw::shuffle_into_library_below_top(sink, &mut card);
     crate::draw::draw(sink, player, 1);
     Ok(())
 }

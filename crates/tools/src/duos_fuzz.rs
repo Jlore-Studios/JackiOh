@@ -176,7 +176,6 @@ fn duos_decks_for_handicaps(seed: u32, handicaps: &DuosHandicaps) -> DuosDecks {
         let size = handicaps
             .get(seat)
             .map_or(DECK_SIZE, |handicap| handicap.deck_size);
-        // R2195000: one of each Core card and snapshot pair per deck.
         crate::fuzz::deal_deck(&mut rest, usize::try_from(size).unwrap_or(0))
     };
     DuosDecks {

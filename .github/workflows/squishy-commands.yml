@@ -32,8 +32,6 @@ on:
 permissions: {}
 
 env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
   HARNESS_HOME: .squishy
 
 jobs:
@@ -78,9 +76,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: Handle the event, or sweep for anything left unanswered
         working-directory: bot
@@ -102,7 +98,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "schedule" ] || [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            python -m harness sweep
+            harness sweep
           else
-            python -m harness event
+            harness event
           fi

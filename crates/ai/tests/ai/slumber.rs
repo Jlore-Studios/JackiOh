@@ -54,19 +54,19 @@ fn r1839000_a_dormant_card_is_never_in_a_candidate_as_actor_or_target() {
     let own = active_units_of(&state, AI)[0].id.clone();
     let theirs = active_units_of(&state, HUMAN)[0].id.clone();
     assert!(
-        candidate_actions(&state, AI)
+        candidate_actions(&state, AI, Prices::NONE)
             .iter()
             .any(|action| names(action, &own))
     );
     assert!(
-        candidate_actions(&state, AI)
+        candidate_actions(&state, AI, Prices::NONE)
             .iter()
             .any(|action| names(action, &theirs))
     );
     sleep(&mut state, AI);
     sleep(&mut state, HUMAN);
     assert!(
-        !candidate_actions(&state, AI)
+        !candidate_actions(&state, AI, Prices::NONE)
             .iter()
             .any(|action| names(action, &own) || names(action, &theirs)),
         "neither the AI's Dormant card nor the human's is in any candidate"
@@ -128,7 +128,7 @@ fn eval(state: &GameState, w: &EvalWeights) -> f64 {
 /// waiting for an effect), and what that unit is worth awake.
 fn asleep(state: &GameState, player: PlayerId, turns: Option<i32>) -> (GameState, f64) {
     let mut out = state.clone();
-    let worth = unit_worth(state, active_units_of(state, player)[0], &AI_EVAL);
+    let worth = unit_worth(state, active_units_of(state, player)[0], &AI_EVAL, Prices::NONE);
     let id = sleep(&mut out, player);
     find_instance_mut(&mut out, &id).expect("the unit").slumber = Some(Slumber { turns });
     (out, worth)

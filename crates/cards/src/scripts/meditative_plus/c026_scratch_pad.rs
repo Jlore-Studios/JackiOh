@@ -3,9 +3,19 @@
 //!   Base:    "Code a card from scratch and add it to your hand. Exile this."
 //!   Radiant: "Code a Radiant card from scratch and add it to your hand. Exile this."
 //!
-//! Craft chain (M #17, §10.6, R880): number prompt for cost, then craft prompt with CraftMode::Scratch (R1182002, R881);
-//! mints to hand or burns on full hand (§2.4).
-//! Exile this (R178). Voice audio rendered on release (R1420, R1448).
+//! THE CHAIN is Meditative #17 True Craft a Card's (§10.6, R880): a `number` prompt for the crafted
+//! card's cost, 0 to `CRAFT_MAX_COST` (4), whose answer opens the `craft` prompt at that budget
+//! (`2 + 5 ×` the cost points, 24 lines), whose answer mints the card into the caster's hand —
+//! Radiant on the Radiant face — or burns it on a full one (§2.4). The craft prompt carries the
+//! from-scratch flag (`CraftMode::Scratch`, R1182002): the client opens an empty canvas with no
+//! presets, tooltips or hints, while the engine still rolls M #17's four presets so the AI, the
+//! random policy and a timeout answer with one (R881). The recipes, the budget and the card a
+//! recipe makes are M #17's: "from scratch" is the canvas, not a smaller budget.
+//!
+//! EXILE THIS (R178): after the mint, Scratch Pad goes to its owner's exile, not the graveyard.
+//!
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::effects::{choose_craft, choose_number, chosen_number, chosen_recipe, craft_card, exile};
 use jackioh_engine::prelude::*;

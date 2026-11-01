@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_TUNING_SERIES, AiDeckOptions, AiOptions, GREEDY_EVAL,
-    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SearchBudget, SeatController,
+    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, Prices, SHADOW_BAN, SearchBudget, SeatController,
     binomial_tail, build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games,
     greedy_action, play_match, run_gate_games, subject_seat_of,
 };
@@ -1127,7 +1127,7 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
 
     for (name, setup) in wide_boards() {
         let state = wide_state(name, &setup);
-        let candidates = candidate_actions(&state, PlayerId::P1).len();
+        let candidates = candidate_actions(&state, PlayerId::P1, Prices::NONE).len();
         if candidates <= WIDE_MIN_CANDIDATES {
             problems.push(format!(
                 "perf: {name}: {candidates} candidates, not more than {WIDE_MIN_CANDIDATES}"

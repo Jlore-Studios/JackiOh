@@ -13,7 +13,7 @@ import { canWatchArt, whenNear } from "./near.ts";
 import { motifFor } from "./motifs.ts";
 import { isStinkyscapeArt, stinkySubject } from "./stinkyscape.ts";
 import { proceduralArtUri, starshipArtUri, stinkyscapeArtUri, trainingGroundsArtUri } from "./svg.ts";
-import { isTrainingGroundsArt, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
+import { isTrainingGroundsArt, LEGACY_PREFIX, snapshotArtOf, yardSubject } from "./traininggrounds.ts";
 import { compositionFor, themeFor, THEME_PALETTES } from "./themes.ts";
 
 import "./art.css";
@@ -65,10 +65,13 @@ export function CardArt({
   }, [near]);
   const resolve = useDefResolver();
   const theme = themeFor(tags, type);
-  const cardName = name ?? resolve?.(defId)?.name;
   // R2170000 and R2202000: the Stinkyscape and Training Grounds sets draw their own families, and a
-  // Training Grounds snapshot its Core card's picture; every other card keeps R503's art.
-  const artId = snapshotArtOf(defId) ?? defId;
+  // Training Grounds Legacy card its Core card's picture, read by the Core card's name (its own after
+  // "Legacy: ", R2511000); every other card keeps R503's art.
+  const coreId = snapshotArtOf(defId);
+  const ownName = name ?? resolve?.(defId)?.name;
+  const cardName = coreId === null ? ownName : ownName?.replace(LEGACY_PREFIX, "");
+  const artId = coreId ?? defId;
   const stinky = isStinkyscapeArt(defId);
   const yard = isTrainingGroundsArt(defId);
   const motif = stinky || yard ? null : motifFor(cardName, theme);

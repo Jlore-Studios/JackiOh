@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::candidates::action_key;
 use crate::config::{AI_EVAL, AI_SEARCH};
-use crate::evaluate::{NextSwing, evaluate};
+use crate::evaluate::{NextSwing, Prices, evaluate_priced};
 use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -401,6 +401,7 @@ pub(crate) fn best_auto_answer(
     tried: AnswersTried,
     counter: &dyn NodeCounter,
     prefix: &str,
+    prices: &Prices,
 ) -> Option<SimStep> {
     let answers = auto_answers(state, answerer, tried);
     if answers.is_empty() {
@@ -434,7 +435,7 @@ pub(crate) fn best_auto_answer(
             } else {
                 NextSwing::Enemy
             };
-            evaluate(&next.state, answerer, swing, &AI_EVAL)
+            evaluate_priced(&next.state, answerer, swing, &AI_EVAL, prices)
         } else {
             0.0
         };
@@ -445,9 +446,21 @@ pub(crate) fn best_auto_answer(
     Some(best.map(|(state, _)| state).ok_or(failure))
 }
 
-/// #1112: scores state waiting on `seat`'s own prompt by auto-answering open prompts ahead.
-/// Returns `None` on error or node counter exhaustion.
-pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Option<f64> {
+/// #1112: what a state waiting on `seat`'s own prompt is worth once its prompts are answered, which is
+/// how the beam ranks a child that waits there (search.rs): every prompt open on the way, the seat's
+/// and any the other seat holds, gets its holder's best of AI_SEARCH.max_auto_answer_options answers
+/// drawn from all of them (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one
+/// node of `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
+/// `open_score` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
+/// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
+/// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
+/// (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
+pub fn own_prompt_score(
+    state: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Option<f64> {
     let holder = |state: &GameState| match (&state.result, &state.pending) {
         (None, Some(pending)) => Some(pending.player_id),
         _ => None,
@@ -462,10 +475,11 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
             if answered >= AI_SEARCH.max_auto_answers as usize {
                 return None;
             }
-            current = best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "ahead")?.ok()?;
+            current =
+                best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "ahead", prices)?.ok()?;
             answered += 1;
         }
-        Some(open_score(&current, seat, NextSwing::Enemy))
+        Some(open_score(&current, seat, NextSwing::Enemy, prices))
     }));
     run.unwrap_or_else(|payload| {
         note_sim_panic(counter, payload.as_ref());
@@ -480,8 +494,9 @@ pub fn simulate(
     seat: PlayerId,
     action: &ActionBody,
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Option<SimStep> {
-    simulate_answering(state, seat, action, counter, AnswersTried::Drawn)
+    simulate_answering(state, seat, action, counter, AnswersTried::Drawn, prices)
 }
 
 /// `simulate` variant using first legal action for opponent prompts (baseline before #891).
@@ -491,7 +506,7 @@ pub fn simulate_first_answers(
     action: &ActionBody,
     counter: &dyn NodeCounter,
 ) -> Option<SimStep> {
-    simulate_answering(state, seat, action, counter, AnswersTried::First)
+    simulate_answering(state, seat, action, counter, AnswersTried::First, Prices::NONE)
 }
 
 fn simulate_answering(
@@ -500,6 +515,7 @@ fn simulate_answering(
     action: &ActionBody,
     counter: &dyn NodeCounter,
     tried: AnswersTried,
+    prices: &Prices,
 ) -> Option<SimStep> {
     if !counter.take() {
         return None;
@@ -541,7 +557,7 @@ fn simulate_answering(
                 note_sim_error(counter);
                 return Some(Err("too many opponent prompts in one step".to_string()));
             }
-            current = match best_auto_answer(&current, other, tried, counter, "sim")? {
+            current = match best_auto_answer(&current, other, tried, counter, "sim", prices)? {
                 Ok(next) => next,
                 Err(error) => return Some(Err(error)),
             };
@@ -556,9 +572,9 @@ fn simulate_answering(
 }
 
 /// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent.
-fn passed_score(state: &GameState, seat: PlayerId) -> f64 {
+fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
-    line_score(state, seat, NextSwing::Enemy) - AI_EVAL.unspent_mana * f64::from(unspent)
+    line_score(state, seat, NextSwing::Enemy, prices) - AI_EVAL.unspent_mana * f64::from(unspent)
 }
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where TS handed `state` back itself
@@ -568,12 +584,13 @@ fn close_line_step(
     seat: PlayerId,
     root_turn: i32,
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Option<GameState> {
     if line_status(state, seat, root_turn) == LineStatus::Open
         && state.pending.is_none()
         && state.active == seat
         && state.phase == Phase::Main
-        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter)
+        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
     {
         return Some(next);
     }
@@ -582,31 +599,43 @@ fn close_line_step(
 
 /// Where a line stops: a line still open in the seat's main phase ends its turn here (one node, when
 /// one is left). Anything else stops where it stands.
-pub fn close_line(state: &GameState, seat: PlayerId, root_turn: i32, counter: &dyn NodeCounter) -> GameState {
-    close_line_step(state, seat, root_turn, counter).unwrap_or_else(|| state.clone())
+pub fn close_line(
+    state: &GameState,
+    seat: PlayerId,
+    root_turn: i32,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> GameState {
+    close_line_step(state, seat, root_turn, counter, prices).unwrap_or_else(|| state.clone())
 }
 
 /// The static value of a line that stopped at `state`: a passed turn pays for its unspent mana.
-pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32) -> f64 {
+pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &Prices) -> f64 {
     if line_status(state, seat, root_turn) == LineStatus::Passed {
-        passed_score(state, seat)
+        passed_score(state, seat, prices)
     } else {
-        line_score(state, seat, NextSwing::Enemy)
+        line_score(state, seat, NextSwing::Enemy, prices)
     }
 }
 
 /// A line's value: "over"/"yielded" → `line_score`; "passed" → `line_score` − AI_EVAL.unspentMana ×
 /// (players[seat].turnLog.unspentAtEnd ?? 0); "open" → simulate endTurn if the seat is in its main
 /// phase and a node is left, then score that, else `line_score` (R1012002).
-pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter: &dyn NodeCounter) -> f64 {
+pub fn terminal_score(
+    state: &GameState,
+    seat: PlayerId,
+    root_turn: i32,
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> f64 {
     let status = line_status(state, seat, root_turn);
     if status == LineStatus::Open {
-        return match close_line_step(state, seat, root_turn, counter) {
-            None => line_score(state, seat, NextSwing::Enemy),
-            Some(closed) => static_score(&closed, seat, root_turn),
+        return match close_line_step(state, seat, root_turn, counter, prices) {
+            None => line_score(state, seat, NextSwing::Enemy, prices),
+            Some(closed) => static_score(&closed, seat, root_turn, prices),
         };
     }
-    static_score(state, seat, root_turn)
+    static_score(state, seat, root_turn, prices)
 }
 
 /// `items` sorted and joined by commas: a part of `search_signature` that two orders of the same moves

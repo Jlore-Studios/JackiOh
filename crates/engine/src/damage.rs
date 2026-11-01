@@ -122,9 +122,15 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
             if grants <= 0 {
                 continue;
             }
-            // R386: the card's declared numbers `armor` and `paidArmor` where it declares them.
+            // R386: the card's declared numbers `armor` and `paidArmor` where it declares them, read as
+            // they stand (#73 Anti-oneshot Armor's Radiant `armor` 1 since #2657, which `HERO_ARMOR`,
+            // Going Long's table, does not hold), `HERO_ARMOR` where it does not.
             let key = if text.embiggened { "paidArmor" } else { "armor" };
-            sum += grants * crate::params::declared_or(state, card, key, side.on(text.embiggened));
+            let armor = match crate::params::param_decl_of(state, &card.def_id, key) {
+                Some(_) => crate::params::param_value(state, Some(card), key, Default::default()),
+                None => side.on(text.embiggened),
+            };
+            sum += grants * armor;
         }
     }
     sum
@@ -789,6 +795,19 @@ fn adjacent_units_of(
 /// `{ turn, moved }`, as an Activate ability notes its uses (`subsystems::activate`).
 const OWN_TURN_REDIRECT_KEY: &str = "ownTurnRedirect";
 
+/// R1849004: how much `card`'s own-turn redirect has taken off its controller's hero this turn, read
+/// off its note (`OWN_TURN_REDIRECT_KEY`); a note from another turn is 0. What the cap's rest is
+/// counted from, here and in its preview (`query::own_turn_redirect_left`, R2476000).
+pub(crate) fn own_turn_redirect_moved(state: &GameState, card: &CardInstance) -> i32 {
+    card.memory
+        .get(OWN_TURN_REDIRECT_KEY)
+        .filter(|record| {
+            record.get("turn").and_then(serde_json::Value::as_i64) == Some(i64::from(state.turn))
+        })
+        .and_then(|record| record.get("moved").and_then(serde_json::Value::as_i64))
+        .map_or(0, |moved| moved as i32)
+}
+
 /// What an own-turn redirect did to one hit: how much it took off the hero, and what that dealt to
 /// the opponent's hero.
 struct Moved {
@@ -825,12 +844,7 @@ fn own_turn_redirect(
             crate::params::declared_or(sink.state, &card, "multiplier", redirect.multiplier.unwrap_or(1))
                 .max(1);
         let turn = sink.state.turn;
-        let used = card
-            .memory
-            .get(OWN_TURN_REDIRECT_KEY)
-            .filter(|record| record.get("turn").and_then(serde_json::Value::as_i64) == Some(i64::from(turn)))
-            .and_then(|record| record.get("moved").and_then(serde_json::Value::as_i64))
-            .map_or(0, |moved| moved as i32);
+        let used = own_turn_redirect_moved(sink.state, &card);
         let take = rest.min(cap - used);
         if take <= 0 {
             continue;

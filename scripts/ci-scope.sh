@@ -91,8 +91,9 @@
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
 #    counts.report.json (the tools' test that holds `stats report --games` to them, R1994000) tools,
-#    wasm; and scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
-#    types it writes to the C bindings) tools, wasm.
+#    wasm; scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
+#    types it writes to the C bindings) tools, wasm; and apps/web/src/audio/voice-text.json (the
+#    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23), every Rust source for a file it includes from outside its crate, every Rust source for
 #    an `#[ignore]` that does not say it runs daily, and every Rust source for a preview of sets that
@@ -113,8 +114,8 @@
 #    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
 #    job that runs it runs.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
-#    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's golden
-#    traces, which tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
+#    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's tests/golden/,
+#    whose hotseat fixture tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
 #    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (render.yaml, the
 #    Dockerfile, vercel.json, wrangler.jsonc), the lint and unit-test configs, and the scripts no
 #    build runs.
@@ -251,6 +252,7 @@ for file in $files; do
     e2e/support/config.ts) on rust_server ;;
     render.yaml) on rust_server rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
+    apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
   esac

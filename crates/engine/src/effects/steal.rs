@@ -1,7 +1,13 @@
-//! Steal (SPEC §6.3): take control of a card on the field. Control is field-only, so the card keeps
-//! its owner for where it later goes (R12, §3.2), and its damage, buffs and counters, as it never
-//! leaves the field (R78). It lands per R15 and enters its new side this turn (R171: summoning sick,
-//! §4.1, and a fresh exertion); a steal that does nothing (R15, R76) changes neither.
+//! Steal (SPEC §6.3): take control of a card on the field. Control is a field-only notion, so the
+//! card keeps its owner and still goes to that owner's library or exile when it later leaves the field
+//! (R12, §3.2); to its controller's hand when bounced (R747) and to its controller's graveyard when it
+//! dies, as theirs (R2618000). Where it lands is R15, and it keeps its damage, buffs,
+//! counters and position because it never leaves the field, which is what R78's reset is about.
+//! What a steal does change besides `controller` is R171's: the card has entered its new
+//! controller's side on this turn, so it takes the turn as its `summonedTurn` (summoning sick, §4.1)
+//! and a fresh exertion. A steal that does nothing (R15, R76) changes neither.
+//!
+//! Port of `packages/engine/src/effects/steal.ts`.
 
 use serde::{Deserialize, Serialize};
 

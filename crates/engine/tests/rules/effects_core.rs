@@ -311,9 +311,10 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
         assert_eq!(after.divine_shield_spent, None);
         assert_eq!(after.marked_destroyed, None);
         assert_eq!(after.last_damaged_by, None);
-        // R12 and R78: control returns to the owner, which is where the card goes.
-        assert_eq!(after.controller, P1);
-        assert_eq!(after.zone, Zone::Graveyard { player: P1 });
+        // R2618000 and R78: the card was p2's to control, so it lands in p2's graveyard as p2's own, and
+        // control stays with that owner.
+        assert_eq!((after.owner, after.controller), (P2, P2));
+        assert_eq!(after.zone, Zone::Graveyard { player: P2 });
 
         // Radiant persists in every zone; R766 takes the two cost layers off in a graveyard.
         assert_eq!(after.cost_mod, 0);

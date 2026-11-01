@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { PendingOption, PlayerView } from "@jackioh/shared";
 
-import { INSPECT_SHEET, closeInspect } from "../cards/index.ts";
+import { INSPECT_HOVER, INSPECT_SHEET, closeInspect } from "../cards/index.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/index.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Prompt from "./Prompt.tsx";
@@ -121,13 +121,14 @@ describe("R1000 the night market's stall", () => {
   });
 });
 
-// #552 (MN09, mobile): a lot is read before it is bought, as a Discover's card is (Prompt.tsx).
-describe("#552 a lot opens its card on a long-press, and only a tap buys it", () => {
+// #552 (MN09, mobile): a lot is read before it is bought, as a Discover's card is (Prompt.tsx): a
+// long-press opens its card's sheet and buys nothing, and a plain tap still buys it.
+describe("#552 a lot shows its card on a touch hold, and only a tap buys it", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("#552 a touch long-press on a lot opens the lot's card in the inspect sheet and sends no deal", () => {
+  it("#552 R2617000 a touch held on a lot shows the lot's card in its preview while the finger is down, and sends no deal", () => {
     vi.useFakeTimers();
     const onAction = renderMarket(marketView([LOT, LEAVE]));
     const lot = screen.getByTestId("prompt-option-mode:core-080");
@@ -135,9 +136,9 @@ describe("#552 a lot opens its card on a long-press, and only a tap buys it", ()
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS);
     });
-    const sheet = screen.getByTestId(INSPECT_SHEET);
-    expect(sheet).toHaveTextContent(CATALOG["core-080"]?.name ?? "core-080");
+    expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(CATALOG["core-080"]?.name ?? "core-080");
     fireEvent.pointerUp(lot, { pointerType: "touch", pointerId: 1 });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     fireEvent.click(lot);
     expect(onAction).not.toHaveBeenCalled();
   });

@@ -39,8 +39,7 @@ pub fn gain_resources(args: GainResourcesArgs) -> Effect {
     Effect::new("gainResources", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         let count = if args.fill == Some(true) {
-            let held = ctx.sink.state.players[player].hand.len() as i32;
-            crate::query::hand_cap_of(ctx.sink.state, player) - held
+            crate::query::room_in(ctx.sink.state, player, crate::zones::OffFieldZone::Hand)
         } else {
             args.count
         };

@@ -113,7 +113,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // 4/4
     const POINTMASTER: &str = "core-020"; // 7/1 First Strike
     const MENACE: &str = "core-019"; // 9/9 Taunt
-    const PANTHER: &str = "core-032"; // 5/4 Rush: after this attacks and survives, draw 2 for each Unit that attack destroyed.
+    const PANTHER: &str = "core-032"; // 5/4 Rush: whenever this attacks, draw 2 for each Unit that attack destroyed.
     const GARY: &str = "core-004"; // 1/1
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
@@ -257,13 +257,13 @@ mod tests {
             }
 
             #[test]
-            fn s4_4_it_is_judged_after_the_hit_caps_anti_oneshot_armor_caps_a_9_at_5_lethal_at_5_not_at_6() {
+            fn s4_4_it_is_judged_after_the_hit_caps_anti_oneshot_armor_caps_a_9_at_4_lethal_at_4_not_at_5() {
                 crate::register_all();
-                let at5 = lethal_attack(json!({ "attacker": MENACE, "health": 5, "p1Backrow": [ANTI_ONESHOT] }));
-                assert_eq!(fired(&at5).len(), 1);
-                let mut at6 = lethal_attack(json!({ "attacker": MENACE, "health": 6, "p1Backrow": [ANTI_ONESHOT] }));
-                assert!(fired(&at6).is_empty());
-                at6.expect_health(PlayerId::P1, 1);
+                let at4 = lethal_attack(json!({ "attacker": MENACE, "health": 4, "p1Backrow": [ANTI_ONESHOT] }));
+                assert_eq!(fired(&at4).len(), 1);
+                let mut at5 = lethal_attack(json!({ "attacker": MENACE, "health": 5, "p1Backrow": [ANTI_ONESHOT] }));
+                assert!(fired(&at5).is_empty());
+                at5.expect_health(PlayerId::P1, 1);
             }
 
             #[test]
@@ -497,7 +497,7 @@ mod tests {
                 crate::register_all();
                 let mut s = lethal_attack(json!({
                     "attacker": MENACE,
-                    "health": 6,
+                    "health": 5,
                     "gambit": { "def": GAMBIT, "radiant": true },
                     "p1Backrow": [ANTI_ONESHOT],
                 }));
@@ -597,12 +597,12 @@ mod tests {
             }
 
             #[test]
-            fn s6_3_redirect_and_the_enemy_heros_caps_anti_oneshot_armor_caps_the_re_aimed_9_at_5() {
+            fn s6_3_redirect_and_the_enemy_heros_caps_anti_oneshot_armor_caps_the_re_aimed_9_at_4() {
                 kept(|| {
                     crate::register_all();
                     let mut s = lethal_attack(json!({ "attacker": MENACE, "health": 4, "p2": { "backrow": [ANTI_ONESHOT] } }));
-                    assert_eq!(hero_hits(&s, PlayerId::P2), vec![5]);
-                    s.expect_health(PlayerId::P2, 25);
+                    assert_eq!(hero_hits(&s, PlayerId::P2), vec![4]);
+                    s.expect_health(PlayerId::P2, 26);
                 });
             }
 

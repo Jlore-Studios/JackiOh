@@ -10,7 +10,7 @@
 use std::rc::Rc;
 
 use jackioh_engine::custom::{custom_def, validate_custom_card, with_custom_scripts};
-use jackioh_engine::testkit::{CardDef, PlayerId, Scenario, pick, scenario};
+use jackioh_engine::testkit::{CardDef, PlayerId, Scenario, pick, scenario, set_param};
 use jackioh_engine::{
     CardCost, CustomCard, CustomFrame, CustomParam, GameEvent, PrintedRarity, Rarity, find_def, fold,
     hash_state,
@@ -260,13 +260,20 @@ mod r915002_parity {
         });
     }
 
+    /// Book of Knowledge's printed `least`.
+    const LEAST: i32 = 2;
+
+    /// Since #2657 Book of Knowledge draws `least` to `most`, a roll the kit has no verb for, so both
+    /// cards are set to one count first (both ends 2), as its own pipeline tests do.
     #[test]
     fn r915002_classic_024_draws() {
         parity(
             "classic-024",
-            "return Card {\n  cry = function(c, n)\n    c:draw(n.draw)\n  end,\n}\n",
+            "return Card {\n  cry = function(c, n)\n    c:draw(n.least)\n  end,\n}\n",
             board,
             |s, id, _| {
+                set_param(s.card_mut(id), "least", LEAST);
+                set_param(s.card_mut(id), "most", LEAST);
                 s.play(id, json!({}));
             },
         );

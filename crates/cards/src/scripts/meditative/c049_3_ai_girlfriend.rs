@@ -1,36 +1,23 @@
-//! M #49.3 AI Girlfriend (SPEC §8.8 row 49.3): (4) Field Spell, CN, Token (printed
-//! Mythic), 2/30 → 4/60, Animated, Can't attack.
+//! M #49.3 AI Girlfriend (SPEC §8.8 row 49.3): (4) Unit, CN, Token (printed
+//! Mythic), 2/30 → 4/60, Can't attack.
 //!
-//! "Animated, Can't attack. Start of turn: Every enemy Unit attacks this. After this is attacked:
+//! "Can't attack. Start of turn: Every enemy Unit attacks this. After this is attacked:
 //! Nerf the attacker [Radiant: {times|time|times}]."
-//! Engine: Animated (§6.1, R383) — summoned into the backrow, it animates as it enters the field
-//! into its lane's unit zone (else R64's), a Unit for every rule from then on; with no open unit
-//! zone it stays a backrow card. Start of turn is Moths to the Flame's `forced_attacks_on` self
+//! Engine: Start of turn is Moths to the Flame's `forced_attacks_on` self
 //! (R53): every enemy Unit attacks in lane order, each its own combat with its own state check,
-//! the run stopping once this leaves the field.
-//! ME-AFTER-ATTACKED (MD-C26): after each combat it was the target of, declared or forced, the
-//! attacker still on the field is Nerfed (a Cleave splash is no attack on it).
+//! Can't attack and 0-attack Units included, the run stopping once this leaves the field.
+//! ME-AFTER-ATTACKED (MD-C26, R1026): after each combat it was the target of, declared or forced,
+//! the attacker still on the field is Nerfed (a Cleave splash is no attack on it).
 
 use jackioh_engine::effects::{degrade, forced_attacks_on};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-049-3";
 
-/// Whether this stands animated in a unit zone: a backrow card's forced attacks find no target.
-fn animated(ctx: &EffectContext) -> bool {
-    matches!(
-        ctx.live_self().map(|me| &me.zone),
-        Some(Zone::Field { row: Row::Units, .. })
-    )
-}
-
 fn girlfriend() -> Script {
     // Both faces share the one script: the Radiant face's two Nerfs are its declared `times`.
     Script {
-        start_of_turn: Some(hook(|ctx| {
-            if !animated(ctx) {
-                return vec![];
-            }
+        start_of_turn: Some(hook(|_ctx| {
             vec![forced_attacks_on(json_as(json!({
                 "target": { "of": "self" },
                 "attackers": "enemy",
@@ -54,6 +41,30 @@ fn girlfriend() -> Script {
 
 pub fn script() -> CardScripts {
     let base = girlfriend();
+    CardScripts {
+        base: base.clone(),
+        radiant: base,
+    }
+}
+
+/// R767000: through v0.5.7 the start-of-turn hook ran with the Animated backrow guard;
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_7() -> CardScripts {
+    let guarded: Hook = hook(|ctx| {
+        let animated = matches!(
+            ctx.live_self().map(|me| &me.zone),
+            Some(Zone::Field { row: Row::Units, .. })
+        );
+        if !animated {
+            return vec![];
+        }
+        vec![forced_attacks_on(json_as(json!({
+            "target": { "of": "self" },
+            "attackers": "enemy",
+        })))]
+    });
+    let mut base = girlfriend();
+    base.start_of_turn = Some(guarded);
     CardScripts {
         base: base.clone(),
         radiant: base,
@@ -94,7 +105,7 @@ mod tests {
             .collect()
     }
 
-    /// p1 plays the Girlfriend into backrow `lane` with `mana` to pay for it.
+    /// p1 plays the Girlfriend into unit zone `lane` with `mana` to pay for it.
     fn played(seed: &str, radiant_face: bool, lane: i32) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
@@ -126,72 +137,21 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1025_it_animates_into_a_unit_zone_or_stays_in_the_backrow() {
-                let s = played("girlfriend-animates", false, 2);
-                let unit = s.unit(P1, 2).expect("animated");
-                assert_eq!(unit.def_id, GIRLFRIEND);
-                assert!(
-                    s.events()
-                        .iter()
-                        .any(|event| matches!(event, GameEvent::Animated { .. }))
-                );
-            }
-
-            #[test]
-            fn r1025_with_no_open_unit_zone_it_stays_in_the_backrow() {
-                let mut s = scenario(json!({
-                    "seed": "girlfriend-no-room",
-                    "p1": {
-                        "field": [
-                            { "def": TOUGH, "lane": 1 },
-                            { "def": TOUGH, "lane": 2 },
-                            { "def": TOUGH, "lane": 3 },
-                            { "def": TOUGH, "lane": 4 },
-                            { "def": TOUGH, "lane": 5 },
-                        ],
-                        "hand": [GIRLFRIEND, FILLER],
-                        "library": [FILLER, FILLER],
-                        "mana": 4,
-                    },
-                    "p2": {
-                        "field": [{ "def": TOUGH, "lane": 1 }],
-                        "hand": [FILLER],
-                        "library": [FILLER, FILLER],
-                    },
-                }));
-                s.play(GIRLFRIEND, json!({ "zone": 1 }));
-
-                // No room: a backrow card, and its forced attacks find no target.
-                let back = s.backrow(P1, 1).expect("in the backrow");
-                assert_eq!(back.def_id, GIRLFRIEND);
-                s.start_turn();
-                assert!(nerfed(&s).is_empty());
-            }
-
-            #[test]
-            fn r1025_with_its_lanes_zone_taken_it_animates_into_the_leftmost_open_one() {
-                let mut s = scenario(json!({
-                    "seed": "girlfriend-leftmost",
-                    "p1": {
-                        "field": [{ "def": TOUGH, "lane": 2 }],
-                        "hand": [GIRLFRIEND, FILLER],
-                        "library": [FILLER, FILLER],
-                        "mana": 4,
-                    },
-                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
-                }));
-                s.play(GIRLFRIEND, json!({ "zone": 2 }));
-                assert_eq!(
-                    s.unit(P1, 1).map(|unit| unit.def_id),
-                    Some(GIRLFRIEND.to_string())
-                );
+            fn r1025_it_enters_as_a_unit_with_no_animated_keyword() {
+                let s = played("girlfriend-unit", false, 2);
+                // Straight into the unit zone: a Unit with no Animated keyword.
+                let girlfriend = s.unit(P1, 2).expect("girlfriend");
+                assert_eq!(girlfriend.def_id, GIRLFRIEND);
+                let keywords =
+                    serde_json::to_string(&s.stats(&girlfriend).keywords).expect("JSON");
+                assert!(!keywords.contains("Animated"), "{keywords}");
                 assert!(s.backrow(P1, 2).is_none());
             }
 
             #[test]
             fn it_cannot_attack() {
                 let mut s = played("girlfriend-cannot-attack", false, 1);
-                let girlfriend = s.unit(P1, 1).expect("animated");
+                let girlfriend = s.unit(P1, 1).expect("girlfriend");
                 let keywords = serde_json::to_string(&s.stats(&girlfriend).keywords).expect("JSON");
                 assert!(keywords.contains("Can't attack"), "{keywords}");
                 // A turn later, no longer newly summoned, it still can't.
@@ -220,7 +180,7 @@ mod tests {
                     },
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
-                let girlfriend = s.unit(P1, 1).expect("animated").id;
+                let girlfriend = s.unit(P1, 1).expect("girlfriend").id;
                 let order: Vec<String> = [1, 2, 4]
                     .iter()
                     .map(|lane| s.unit(P2, *lane).expect("attacker").id)
@@ -249,7 +209,7 @@ mod tests {
                     },
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
-                let girlfriend = s.unit(P1, 1).expect("animated").id;
+                let girlfriend = s.unit(P1, 1).expect("girlfriend").id;
                 s.card_mut(girlfriend.as_str()).damage = 28;
 
                 s.start_turn();
@@ -275,7 +235,7 @@ mod tests {
                     },
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
-                let girlfriend = s.unit(P1, 1).expect("animated");
+                let girlfriend = s.unit(P1, 1).expect("girlfriend");
                 s.end_turn();
                 let tough = s.unit(P2, 1).expect("tough");
 
@@ -301,7 +261,7 @@ mod tests {
                     },
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
-                let girlfriend = s.unit(P1, 1).expect("animated");
+                let girlfriend = s.unit(P1, 1).expect("girlfriend");
                 s.end_turn();
                 let cleaver = s.unit(P2, 2).expect("cleaver");
                 let big = s.unit(P1, 2).expect("big");
@@ -362,7 +322,7 @@ mod tests {
                     },
                 }));
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
-                let girlfriend = s.unit(P1, 1).expect("animated");
+                let girlfriend = s.unit(P1, 1).expect("girlfriend");
                 // One step down: the Radiant face's 2 becomes 1.
                 step_param(s.card_mut(&girlfriend), "times", -1);
 
@@ -392,6 +352,48 @@ mod tests {
                 s.start_turn();
 
                 assert_eq!(nerfed(&s), vec![big.id.clone(), big.id]);
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.5.7 and before, when it was an Animated
+        /// Field Spell whose forced attacks found no target from the backrow.
+        mod v0_5_7 {
+            use super::*;
+
+            #[test]
+            fn r767000_a_game_on_v0_5_7_folds_under_the_kept_script_a_girlfriend_left_in_the_backrow_draws_no_attack()
+            {
+                crate::register_all();
+                jackioh_engine::with_shipped(crate::catalog_at("v0.5.7"), || {
+                    let mut s = scenario(json!({
+                        "seed": "girlfriend-kept",
+                        "p1": {
+                            "field": [
+                                { "def": TOUGH, "lane": 1 },
+                                { "def": TOUGH, "lane": 2 },
+                                { "def": TOUGH, "lane": 3 },
+                                { "def": TOUGH, "lane": 4 },
+                                { "def": TOUGH, "lane": 5 },
+                            ],
+                            "hand": [GIRLFRIEND, FILLER],
+                            "library": [FILLER, FILLER],
+                            "mana": 4,
+                        },
+                        "p2": {
+                            "field": [{ "def": TOUGH, "lane": 1 }],
+                            "hand": [FILLER],
+                            "library": [FILLER, FILLER],
+                        },
+                    }));
+                    s.play(GIRLFRIEND, json!({ "zone": 1 }));
+                    // No open unit zone: it stays a backrow card, and the kept guard finds its
+                    // forced attacks no target.
+                    let back = s.backrow(P1, 1).expect("in the backrow");
+                    assert_eq!(back.def_id, GIRLFRIEND);
+                    s.start_turn();
+                    assert!(forced(&s).is_empty());
+                    assert!(nerfed(&s).is_empty());
+                });
             }
         }
     }

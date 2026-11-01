@@ -44,14 +44,16 @@ heroFloor?: number,
  */
 poolHold?: boolean, 
 /**
- * R2433000: this seat plays only Core cards. It never plays, sets or casts a card whose set is
- * not Core, from its hand or its graveyard, however the card got there. Absent means no bar, so
- * every other game hashes as before the field existed. Only the tutorial opponent sets it.
+ * R2533000 (replacing R2433000's `coreOnly`): this seat plays only the tutorial's cards, those of
+ * TUTORIAL_CARD_SET whose rarity is none of TUTORIAL_BARRED_RARITIES. It never plays, sets or
+ * casts another card, from its hand or its graveyard, however the card got there. Absent means
+ * no bar, so every other game hashes as before the field existed. Only the tutorial opponent
+ * sets it.
  */
-coreOnly?: boolean, 
+tutorialCardsOnly?: boolean, 
 /**
  * R2433001: the most copies of one card id this seat's deck may hold, in place of MAX_COPIES.
  * Absent means MAX_COPIES, so every other game hashes as before the field existed. Only a
- * lesson's human sets it (`TUTORIAL_HUMAN`).
+ * lesson's two seats set it (`TUTORIAL_HUMAN`, and `AI_TUTORIAL` since R2533001).
  */
 deckCopies?: number, };

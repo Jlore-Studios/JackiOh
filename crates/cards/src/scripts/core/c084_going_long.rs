@@ -1,20 +1,45 @@
-//! #84 Going Long (SPEC §8.4 row 84): Field Spell, Quickdraw, cost 2 embiggen 4, Rare.
-//!   Base:    "Your hero has Armor 2 (Embiggened (4): 4)"
-//!   Radiant: "Armor 4 (Embiggened (4): 8)" — the cell changes only the two numbers (§8 Conventions).
+//! #84 Going Long (SPEC §8.4 row 84): Field Spell, cost 2 embiggen 4, Rare (no Quickdraw since #2521).
+//!   Base:    "Your hero has Armor 2 (Embiggened (4): 5)"
+//!   Radiant: "Armor 4 (Embiggened (4): 10)" — the cell changes only the two numbers (§8 Conventions).
+//!   (Embiggened 4 and 8 until #2657.)
 //!   Engine:  "Hero armor in pipeline step 2".
 //!
-//! The embiggen choice lands on the instance (R81) and Radiant is its flag, so the engine reads both
-//! (`config.HERO_ARMOR`) off the card in the backrow. Quickdraw is §6.2's static flag. The Armor is the
-//! `heroArmor` static flag, #73's shape: the pipeline sums every backrow grant (R124: sources add) for
-//! §4.4 step 2 and §10.8's hero block. Nothing is stored, so the Armor stops when the Field Spell leaves.
+//! Four numbers: normal 2, Embiggened 5; radiant normal 4, Embiggened 10 (`config.HERO_ARMOR`). The embiggen choice
+//! lands on the instance (R81) and Radiant is its flag, so the engine reads both off the card in the
+//! backrow and no card-side code is needed. #2521 took its Quickdraw tag away, and with it §6.2's
+//! `quickdraw` static flag, so setup deals it as any other card. The Armor is the `heroArmor` static
+//! flag, #73's shape: the pipeline sums every backrow grant (R124: sources add, unlike step 3's cap),
+//! and §4.4 step 2, lethal, the scorer and §10.8's hero block all read that one function. Nothing is
+//! stored, so the Armor stops when the Field Spell leaves, and "Ignores armor" skips step 2 whole.
+//! Through v0.5.11 it was Quickdraw, which `script_v0_5_11` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-084";
 
-/// Both faces are the same script. The card declares its Armor as `armor` and `paidArmor` (R386), which
-/// `damage::hero_armor_of` reads through `params::declared_or`, so a Degrade or an Upgrade moves it.
+/// Both faces are the same script: the `heroArmor` flag, and no Quickdraw (#2521). The four values
+/// live in `config.HERO_ARMOR`, selected by the instance's `radiant` and `embiggened`. The card
+/// declares them as `armor` and `paidArmor` (R386), which `damage::hero_armor_of` reads through
+/// `params::declared_or`, so a Degrade or an Upgrade moves the Armor the price selects.
 fn going_long() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            hero_armor: Some(FlagOrCount::Flag(true)),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = going_long();
+    // "Armor 4 (Embiggened (4): 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
+    let radiant = going_long();
+    CardScripts { base, radiant }
+}
+
+/// R767000: Going Long through v0.5.11, with §6.2's Quickdraw flag beside the `heroArmor` one.
+fn going_long_v0_5_11() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -25,15 +50,21 @@ fn going_long() -> Script {
     }
 }
 
-pub fn script() -> CardScripts {
-    let base = going_long();
-    let radiant = going_long();
-    CardScripts { base, radiant }
+/// R767000: through v0.5.11 it was Quickdraw, setup dealing it into the opening hand (R640);
+/// `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_11() -> CardScripts {
+    CardScripts {
+        base: going_long_v0_5_11(),
+        radiant: going_long_v0_5_11(),
+    }
 }
 
-// #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "In opening hand; embiggen 2 → Armor 2, 4 → Armor 4
-// on the hero; radiant 4 / 8". Attackers are placed by `field`, so no Cry fires (R1). A card placed by
-// setup is "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit of 0 after Armor emits no `damage`.
+// #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "Not dealt into the opening hand by setup (#2521 took its
+// Quickdraw away); embiggen 2 → Armor 2, 4 → Armor 5 on the hero; radiant 4 / 10" (Armor 4 and 8 until #2657) (patch v0.1.1: the paid-4
+// numbers were 5 and 10). The four numbers:
+//   base 2 / 5, radiant 4 / 10 (paid 2 / paid 4). The Armor is asserted through a real damage instance
+// on the protected hero (§4.4 step 2); attackers are placed by `field`, so no Cry fires (R1). A card placed by setup is
+// "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit that is 0 after Armor emits no `damage`.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -42,7 +73,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const GOING_LONG: &str = "core-084"; // Field Spell, Quickdraw, cost 2 embiggen 4
+    const GOING_LONG: &str = "core-084"; // Field Spell, cost 2 embiggen 4, no Quickdraw (#2521)
     const BIGOT: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
     const POINTMASTER: &str = "core-020"; // 7/2
     const POSTDOC: &str = "core-061"; // 2/4
@@ -91,8 +122,8 @@ mod tests {
     }
 
     #[test]
-    fn r386_an_upgrade_gives_armor_3_or_paid_5_and_a_degrade_armor_1_or_paid_3() {
-        for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 5), (false, true, 3)] {
+    fn r386_an_upgrade_gives_armor_3_or_paid_6_and_a_degrade_armor_1_or_paid_4() {
+        for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 6), (false, true, 4)] {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
@@ -113,19 +144,56 @@ mod tests {
     mod n84_going_long_the_opening_hand {
         use super::*;
 
+        /// Plain Core cards, none of them Quickdraw, to fill a 25-card deck around Going Long (§2.6 L3).
+        const OTHERS: [&str; 24] = [
+            "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
+            "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
+            "core-044", "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
+        ];
+
+        /// Whether setup on `seed` deals Going Long into p1's opening hand.
+        fn in_opening_hand(seed: &str) -> bool {
+            let mut deck: Vec<String> = OTHERS.iter().map(|id| id.to_string()).collect();
+            deck.push(GOING_LONG.to_string());
+            let created = create_game(&CreateGameOptions {
+                seed: seed.to_string(),
+                decks: (deck.clone(), deck),
+                ..CreateGameOptions::default()
+            });
+            let state = begin_game(&created).state;
+            state.players.p1.hand.iter().any(|card| card.def_id == GOING_LONG)
+        }
+
         #[test]
-        fn s6_2_quickdraw_the_engine_reads_the_flag_off_a_real_instance_of_either_face() {
+        fn no_quickdraw_on_either_face_so_setup_deals_it_as_any_other_card() {
             crate::register_all();
-            // Setup's move is the engine's own test; `flags_of` resolves the flag through the face.
+            // #2521: no Quickdraw tag, and no `quickdraw` flag on either face, the one setup reads (R640).
+            assert!(!crate::card_def(GOING_LONG).tags.contains(&Tag::Quickdraw));
+            let scripts = script();
+            assert_ne!(scripts.base.flags().quickdraw, Some(true));
+            assert_ne!(scripts.radiant.flags().quickdraw, Some(true));
             let s = scenario(json!({
                 "p1": { "library": [GOING_LONG, { "def": GOING_LONG, "radiant": true }] },
             }));
             let library = s.pile(P1, "library");
             let plain = library.first().expect("the plain copy");
             let shiny = library.get(1).expect("the radiant copy");
+            assert_ne!(flags_of(s.state(), plain).quickdraw, Some(true));
+            assert_ne!(flags_of(s.state(), shiny).quickdraw, Some(true));
 
-            assert_eq!(flags_of(s.state(), plain).quickdraw, Some(true));
-            assert_eq!(flags_of(s.state(), shiny).quickdraw, Some(true));
+            // A Quickdraw card is dealt on every seed; this one stays in the library on some.
+            let seed = seed_where("going-long-no-quickdraw", |seed| !in_opening_hand(seed));
+            assert!(!in_opening_hand(&seed));
+        }
+
+        /// R767000: the script kept for the replays of v0.5.11 and before is Quickdraw on both faces.
+        #[test]
+        fn r767000_the_script_kept_for_v0_5_11_is_quickdraw() {
+            let kept = script_v0_5_11();
+            for face in [&kept.base, &kept.radiant] {
+                assert_eq!(face.flags().quickdraw, Some(true));
+                assert!(face.flags().hero_armor.is_some());
+            }
         }
     }
 
@@ -190,7 +258,7 @@ mod tests {
         }
 
         #[test]
-        fn embiggen_4_costs_4_mana_and_gives_armor_4_so_the_same_6_attack_hit_lands_for_2() {
+        fn embiggen_4_costs_4_mana_and_gives_armor_5_so_the_same_6_attack_hit_lands_for_1() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
@@ -203,12 +271,12 @@ mod tests {
             s.end_turn(); // p2's turn
             s.attack(BIGOT, "hero");
 
-            assert_eq!(damage_to(&s, "hero-p1"), vec![2]);
-            s.expect_health(P1, 28);
+            assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
+            s.expect_health(P1, 29);
         }
 
         #[test]
-        fn the_base_price_is_still_2_and_paying_it_gives_armor_2_rather_than_4() {
+        fn the_base_price_is_still_2_and_paying_it_gives_armor_2_rather_than_5() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
@@ -286,7 +354,7 @@ mod tests {
         }
 
         #[test]
-        fn paid_4_armor_8_the_radiant_embiggen_price_gives_armor_8_so_a_6_attack_hit_is_nothing_r63() {
+        fn paid_4_armor_10_the_radiant_embiggen_price_gives_armor_10_so_a_6_attack_hit_is_nothing_r63() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -299,7 +367,7 @@ mod tests {
 
             s.play(GOING_LONG, json!({ "zone": 1, "embiggen": true }));
             s.expect_mana(P1, 0);
-            assert_eq!(shown_armor(&s, P1), 8);
+            assert_eq!(shown_armor(&s, P1), 10);
 
             s.end_turn();
             s.attack(BIGOT, "hero");
@@ -310,7 +378,7 @@ mod tests {
         }
 
         #[test]
-        fn the_radiant_face_still_reduces_rather_than_blocks_a_14_attack_hit_lands_for_6_at_armor_8() {
+        fn the_radiant_face_still_reduces_rather_than_blocks_a_14_attack_hit_lands_for_4_at_armor_10() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -325,12 +393,12 @@ mod tests {
             s.end_turn();
             s.attack(POINTMASTER, "hero");
 
-            assert_eq!(damage_to(&s, "hero-p1"), vec![6]); // 14 − 8
-            s.expect_health(P1, 24);
+            assert_eq!(damage_to(&s, "hero-p1"), vec![4]); // 14 − 10
+            s.expect_health(P1, 26);
         }
 
         #[test]
-        fn s6_2_the_radiant_face_is_still_quickdraw_and_still_a_field_spell_in_the_backrow() {
+        fn the_radiant_face_is_still_a_field_spell_in_the_backrow_and_has_no_quickdraw() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -347,7 +415,7 @@ mod tests {
             assert!(placed.is_some());
             let placed = placed.unwrap();
             assert!(placed.radiant);
-            assert_eq!(flags_of(s.state(), &placed).quickdraw, Some(true));
+            assert_ne!(flags_of(s.state(), &placed).quickdraw, Some(true));
             s.expect_mana(P1, 2);
         }
     }

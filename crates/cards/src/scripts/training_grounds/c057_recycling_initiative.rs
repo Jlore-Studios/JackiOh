@@ -1,7 +1,62 @@
-//! SPEC §8.11 Training Grounds #57 Recycling Initiative, the snapshot of Core #39 Recycling Initiative (`core-039`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #39 (SPEC §8, §8.2): delayed effect re-entry (R126, R76, #50; §2.4, R4; §5.2, R215, R275).
+//! SPEC §8.11 Training Grounds #57 Legacy: Recycling Initiative,
+//! the Legacy card of Core #39 Recycling Initiative (`core-039`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #39 Recycling Initiative (SPEC §8.2; R4, R57, R65, R71, R78, R86, R126, R127, R133, R215, R275).
+//! Spell, cost 0.
+//!   Base:    "Exile this on play. End of turn: add a copy of every other card you played this
+//!            turn to your hand"
+//!   Radiant: "Exile this on play. End of turn: add a Radiant copy of every other card you played
+//!            this turn to your hand; the copies cost 1 less" — §8's cell "Copies are Radiant and
+//!            cost 1 less" (R275's raise: the copies' face and their price). The cell restates only
+//!            what a copy is and costs, so the exile and the end-of-turn clause are kept unchanged
+//!            (§8 Conventions).
+//!
+//! §8.2's Engine cell spells the mechanism out: "End-of-turn delayed effect: a fresh copy (radiant
+//! flag kept) of every card in `turnLog.playedIds` except this one, including cards played after it
+//! (R71); instances that no longer exist are skipped rather than fizzling (R86)."
+//!
+//!   - R71 is why the log is read when the delayed effect RUNS rather than when the Cry resolves: by
+//!     end of turn it has grown, so cards played AFTER this one are copied too. That is also why the
+//!     clause is a delayed effect and not an `endOfTurn` hook: the card is in exile by then, and
+//!     `turn.triggerOrder` only walks units and the backrow, so an `endOfTurn` hook would never be
+//!     reached. A delayed continuation names its script by stored def id, so it comes back to this
+//!     script even though the card is gone from play (R127, the same shape R76 gives #50 K-Pop
+//!     Fanatic) — with `ctx.self` whatever `findInstance` makes of it, exile pile included.
+//!   - R86 is the `findInstance` skip below: an id whose instance has ceased to exist (a unit token
+//!     that left the field, R11) drops out of the pool instead of fizzling on it. An id whose card
+//!     merely changed zone is still in the pool, which is why nothing here filters on `zone`.
+//!   - R57 is `addToHand`'s contract — a fresh instance carrying only the radiant flag — which is
+//!     exactly "a fresh copy (radiant flag kept)" on the base face. The radiant face's copies are
+//!     Radiant whatever the played card was: a flag that is only ever set (§5.2), never taken away.
+//!   - "every OTHER card" excludes this card's own id, and it is the set of cards played, not the
+//!     list of plays (R133). `turnLog.playedIds` holds one entry per play, so a card played, bounced
+//!     and replayed in one turn (#24) is two entries and one card, and it is copied ONCE: the loop
+//!     below skips an id it has already seen, ahead of R86's skip.
+//!
+//! WHERE THE CONTINUATION LIVES (R126, R127). `delay` stores a `Resume` — "script id + step +
+//! captured data", never a closure — and `turn.runDelayed` re-enters it through the one reader,
+//! `prompts.runResume`, which resolves `resume.hook` against either shape: a `Hook` on the script or
+//! a step table (`resume`, where `resume.step` picks the entry). So this card registers its
+//! continuation ONCE, in the `resume` table that every other pause in the repo uses, and says so by
+//! passing `hook: RESUME_HOOK` to `delay` (whose default is the `delayed` hook). R126: "A card must
+//! never have to register one continuation under two keys". R127 covers the rest: the entry is named
+//! by stored def id, so it re-enters with `ctx.self === null` once this card is in exile, which is
+//! why the id it needs travels in `data`.
+//!
+//! THE DISCOUNT. Radiant's "the copies cost 1 less" is R65's `costMod`, not a `costOverride`: an
+//! override REPLACES the printed cost, so it would make an X-cost copy free outright (R65: "a
+//! `costOverride` makes one free while X is still chosen") and erase an embiggen card's price choice.
+//! `setCostMod` cannot stand in for it either — the fresh copy does not exist until `addToHand`
+//! creates it, and `setCostMod`'s only way to name a card is a `TargetSpec`. So the −1 is passed as
+//! `addToHand`'s `costMod`, which R78 keeps in every zone. It is a price in the hand, so it lands
+//! only on a copy that reaches one: a copy a full hand burns reaches the graveyard with its radiant
+//! flag and without the discount (§2.4, R4, R215).
 
 use indexmap::IndexSet;
 use jackioh_engine::effects::{add_to_hand, delay, exile};
@@ -45,29 +100,49 @@ fn excluded_id(ctx: &EffectContext<'_>) -> Option<String> {
     ctx.self_.as_ref().map(|card| card.id.clone())
 }
 
-/// R71: the log is read here, when the delayed effect runs, so later plays are in it, in play order.
-/// R86: an id whose instance no longer exists is skipped rather than fizzled on; one that merely changed
-/// zone is still copied, so nothing filters on `zone`. R133: a card played, bounced and replayed (#24)
-/// is two entries and one card, and each id yields one copy; deduping by id leaves R86's skip untouched.
+/// R71, R86, R133: the other cards `player` played this turn that still exist, each once, in play order:
+/// the cards the end of turn copies, and the count its preview shows (R2476000).
+fn other_plays(state: &GameState, player: PlayerId, self_id: Option<&str>) -> Vec<CardInstance> {
+    let mut seen: IndexSet<String> = IndexSet::new();
+    let mut out = Vec::new();
+    for id in played_ids_this_turn(state, player) {
+        let id: String = id.to_string();
+        if self_id == Some(id.as_str()) || !seen.insert(id.clone()) {
+            continue;
+        }
+        if let Some(card) = find_instance(state, &id) {
+            out.push(card.clone());
+        }
+    }
+    out
+}
+
+/// R2476000: the words the count follows on both faces.
+const OTHER_PLAYS: &str = "each other card you played this turn";
+
+/// R2476000: in its owner's hand, the copies its end of turn would add were it played now: the other
+/// cards played this turn so far. A floor, as cards played after it are copied too (R71). Plays are
+/// public. Once played it is in exile, where no preview is asked.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let count = other_plays(ctx.state, ctx.controller, Some(ctx.self_.id.as_str())).len();
+        vec![count_preview(OTHER_PLAYS, count as i32)]
+    })
+}
+
+/// R71: the log is read here, when the delayed effect runs, so later plays are in it — through the
+/// engine's read-only `playedIdsThisTurn` (engine/src/query.ts), which gives the ids in play order.
+/// R86: an id whose instance no longer exists is skipped rather than fizzled on.
+/// R133: the log holds one entry per play, so a card played, bounced and replayed is two entries and
+/// one card. "Every other card you played this turn" is the set of cards, not the list of plays, so
+/// each id yields one copy; deduping by id leaves R86's skip untouched.
 fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
-    let self_id = excluded_id(ctx);
     let discount = discount_of(ctx, terms);
     let mut out: Vec<Effect> = Vec::new();
-    let mut seen: IndexSet<String> = IndexSet::new();
-
-    for id in played_ids_this_turn(&*ctx.state, ctx.controller) {
-        let id: String = id.to_string();
-        if self_id.as_deref() == Some(id.as_str()) {
-            continue;
-        }
-        if seen.contains(&id) {
-            continue;
-        }
-        seen.insert(id.clone());
-        let Some(card) = find_instance(&*ctx.state, &id) else {
-            continue;
-        };
-
+    for card in other_plays(&*ctx.state, ctx.controller, excluded_id(ctx).as_deref()) {
         let mut args = json!({
             "defId": card.def_id,
             "player": "self",
@@ -111,6 +186,7 @@ fn recycling_initiative(terms: CopyTerms) -> Script {
             ]
         })),
         resume: IndexMap::from([(COPY_STEP, copy_step)]),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -198,6 +274,32 @@ mod tests {
             .into_iter()
             .find(|card| card.def_id == def_id)
             .unwrap_or_else(|| panic!("no copy of {def_id} in p1's hand"))
+    }
+
+    /// R2476000: on either face, in hand, the copies its end of turn would add, after "each other card you
+    /// played this turn": 0, then 1 once Timmy is played, and the end of turn adds exactly that one copy.
+    #[test]
+    fn r2476000_in_hand_it_previews_the_other_cards_played_this_turn_and_copies_that_many() {
+        for radiant in [false, true] {
+            let mut s = scn(json!({
+                "p1": {
+                    "hand": [TIMMY, { "def": RECYCLING, "radiant": radiant }, STOCKPILE],
+                    "library": [MENACE, POSTDOC],
+                    "mana": 10,
+                },
+                "p2": spare(),
+            }));
+            let spell = s.card(RECYCLING).id.clone();
+            let seen = |s: &Scenario| crate::preview_seen(s, PlayerId::P1, &spell);
+            let label = "each other card you played this turn".to_string();
+            assert_eq!(seen(&s), vec![(label.clone(), 0, None)], "radiant {radiant}");
+            s.play(TIMMY, json!({ "zone": 1 }));
+            assert_eq!(seen(&s), vec![(label.clone(), 1, None)], "radiant {radiant}");
+            s.play(spell.as_str(), json!({}));
+            assert!(seen(&s).is_empty(), "radiant {radiant}: no preview in exile");
+            s.end_turn();
+            assert_eq!(count_in(&s, "p1", "hand", TIMMY), 1, "radiant {radiant}");
+        }
     }
 
     mod base {

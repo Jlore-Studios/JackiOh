@@ -1,4 +1,6 @@
-//! Retention purge cutoffs and expired record deletion (SURFACE §11.2).
+//! The retention purge (`crates/server/src/api/retention.rs`): which cutoffs it hands the store
+//! (docs/v0.3.0/SURFACE.md §11.2). What the store then deletes is asserted in `tests/store/contract.rs`
+//! and `tests/sql/07_retention_purge.sql`.
 
 use serde_json::json;
 
@@ -100,8 +102,8 @@ mod the_retention_purge {
         let app = test_app().await;
         let now = now_ms();
         let code_attempts_before = now - CODE_ATTEMPT_RETENTION_DAYS * DAY_MS;
-        let match_actions_before = now - MATCH_ACTION_RETENTION_DAYS * DAY_MS;
-        let play_telemetry_before = now - PLAY_TELEMETRY_RETENTION_DAYS * DAY_MS;
+        let match_actions_ended_before = now - MATCH_ACTION_RETENTION_DAYS * DAY_MS;
+        let play_telemetry_ended_before = now - PLAY_TELEMETRY_RETENTION_DAYS * DAY_MS;
 
         log_attempt(&app, "at-cutoff", code_attempts_before).await;
         log_attempt(&app, "past-cutoff", code_attempts_before - 1).await;
@@ -109,29 +111,31 @@ mod the_retention_purge {
             let mut data = fake_lock(&app).await;
             data.tables
                 .matches
-                .push(finished_match("m-at-cutoff", Some(match_actions_before)));
-            data.tables
-                .matches
-                .push(finished_match("m-past-cutoff", Some(match_actions_before - 1)));
+                .push(finished_match("m-at-cutoff", Some(match_actions_ended_before)));
+            data.tables.matches.push(finished_match(
+                "m-past-cutoff",
+                Some(match_actions_ended_before - 1),
+            ));
             for match_id in ["m-at-cutoff", "m-past-cutoff"] {
                 data.tables.match_actions.push(action_row(match_id));
             }
             // R1442: the play telemetry's own cutoff, on matches with no log left.
             data.tables
                 .matches
-                .push(finished_match("t-at-cutoff", Some(play_telemetry_before)));
-            data.tables
-                .matches
-                .push(finished_match("t-past-cutoff", Some(play_telemetry_before - 1)));
+                .push(finished_match("t-at-cutoff", Some(play_telemetry_ended_before)));
+            data.tables.matches.push(finished_match(
+                "t-past-cutoff",
+                Some(play_telemetry_ended_before - 1),
+            ));
             for match_id in ["t-at-cutoff", "t-past-cutoff"] {
                 data.tables.match_signals.push(signals_row(match_id));
             }
         }
         // R1044001: a game record's detail, on its own cutoff, written then dated by hand.
-        let game_records_before = now - GAME_RECORD_RAW_RETENTION_DAYS * DAY_MS;
+        let game_records_recorded_before = now - GAME_RECORD_RAW_RETENTION_DAYS * DAY_MS;
         for (id, recorded_at) in [
-            ("g-at-cutoff", game_records_before),
-            ("g-past-cutoff", game_records_before - 1),
+            ("g-at-cutoff", game_records_recorded_before),
+            ("g-past-cutoff", game_records_recorded_before - 1),
         ] {
             let mut t = app.db.begin(None).await.expect("begin");
             assert!(

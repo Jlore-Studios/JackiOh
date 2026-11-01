@@ -64,6 +64,10 @@ export const collectionTestid = {
   // R1953001: a held cosmetic token offered on a locked cosmetic (TokenOffer), and its refusal.
   tokenOffer: (id: string) => `collection-token-offer-${id}`,
   tokenOfferError: (id: string) => `collection-token-offer-error-${id}`,
+  // R2480000: the question the offer asks before it spends, and its two answers.
+  tokenOfferDialog: (id: string) => `collection-token-offer-dialog-${id}`,
+  tokenOfferConfirm: (id: string) => `collection-token-offer-confirm-${id}`,
+  tokenOfferCancel: (id: string) => `collection-token-offer-cancel-${id}`,
   ownedCosmetic: (id: string, cardId: string | null) =>
     cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;

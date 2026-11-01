@@ -188,3 +188,13 @@ export function useBackLayer(close: () => void, closable = true): void {
     [],
   );
 }
+
+/**
+ * R2127000: `useBackLayer` as an element, for an overlay drawn inline while its own state says it is
+ * open: mounted with the overlay, it is a layer exactly while the overlay shows, and with it shut Back
+ * leaves the screen as before.
+ */
+export function BackLayer({ onClose }: { onClose: () => void }): null {
+  useBackLayer(onClose);
+  return null;
+}

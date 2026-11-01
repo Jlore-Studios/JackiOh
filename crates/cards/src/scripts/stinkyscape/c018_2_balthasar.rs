@@ -47,6 +47,23 @@ fn copy_last_play(ctx: &EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     vec![add_to_hand(json_as(args))]
 }
 
+/// R2476000: after "the last card you played", the card its Activate would copy, by name as it was
+/// played, or the dash before a play. On the field, to both seats: the record keeps face-up plays
+/// alone (Traps and Field Traps, set face-down, never count, R451), so it names nothing hidden.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let last = last_face_up_played(ctx.state, ctx.controller);
+        vec![card_preview(
+            ctx.state,
+            "the last card you played",
+            last.as_ref().map(|last| (last.def_id.as_str(), last.radiant)),
+        )]
+    })
+}
+
 fn balthasar(radiant: bool) -> Script {
     let copy = ActivationDecl {
         id: "copy".to_string(),
@@ -66,6 +83,7 @@ fn balthasar(radiant: bool) -> Script {
     Script {
         start_of_turn: Some(hook(vote_if_below_half)),
         activations: vec![copy],
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -111,6 +129,24 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, GameEvent::VoteCast { def_id, .. } if def_id == BALTHASAR))
             .count()
+    }
+
+    /// R2476000: after "the last card you played", the card its Activate would copy, to both seats: the
+    /// dash, then Mr. Vanilla once played; a face-down Trap set after it changes nothing.
+    #[test]
+    fn r2476000_it_names_the_last_card_you_played() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = table(radiant, json!([VANILLA, BEAR, FILLER]));
+            let balthasar = s.card(BALTHASAR).id.clone();
+            let label = "the last card you played".to_string();
+            assert_eq!(crate::preview_seen(&s, P1, &balthasar), vec![(label.clone(), 0, Some("—".to_string()))]);
+            s.play(VANILLA, json!({}));
+            s.play(BEAR, json!({}));
+            let named = vec![(label, 1, Some("Mr. Vanilla".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &balthasar), named, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, PlayerId::P2, &balthasar), named, "radiant {radiant}");
+        }
     }
 
     fn copy(s: &mut Scenario) {

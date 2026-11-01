@@ -297,13 +297,13 @@ pub fn draw_priced(args: DrawPricedArgs) -> Effect {
     })
 }
 
-/// R1185004: copies of `source` (`addToHand`'s `copyOf`, R1242's riders, never a price) into `player`'s
-/// hand one at a time while it has room (§2.4's cap), so none is burned; at most the room the hand had
-/// as the fill began.
+/// R1185004: copies of `source` (`addToHand`'s `copyOf`, R1242's riders: the Radiant face, the Chinese
+/// flag, granted tags, `statsOverride`, `tuning`; never a price) into `player`'s hand, one at a time
+/// while it has room (§2.4's cap, `room_in`), so none is burned; at most the room the hand had
+/// as the fill began. A source no longer anywhere adds nothing.
 fn fill_hand_with_copies(ctx: &mut EffectContext<'_>, player: PlayerId, source: &str) {
-    let room = |ctx: &EffectContext<'_>| {
-        crate::query::hand_cap_of(ctx.state, player) - ctx.state.players[player].hand.len() as i32
-    };
+    let room =
+        |ctx: &EffectContext<'_>| crate::query::room_in(ctx.state, player, crate::zones::OffFieldZone::Hand);
     let mut left = room(ctx);
     while left > 0 && room(ctx) > 0 {
         let player_spec = if player == ctx.controller {

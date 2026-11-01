@@ -81,7 +81,7 @@ Each run keeps its reports as the artifact `learn-<run>` (the fit's report, the 
 gate's report, `deliver.json`, the weights) for 90 days, and its summary says how far it got. The
 night bot's status issue ("Night bot status", pinned) has a section for the lane: the generation on
 `main`, the lane's pull request, the next scheduled run and how each of the last runs ended
-(`bot/harness/dashboard.py`, `learn_lane`).
+(`bot/go/internal/dashboard`, `LearnLane`).
 
 ## Running unattended
 
@@ -135,7 +135,7 @@ them by hand (`training/README.md`, The gather lane).
 Only `crates/ai/src/learned/weights.json`, the switch in `crates/ai/src/config.rs`,
 `crates/ai/generation.json` and `training/history/learn.jsonl`, as every lane is held to `crates/ai/**`
 and `training/history/**` (CI's training gate), and the practice-claim fixture
-(`crates/server/tests/fixtures/practice-claim.json`, R1303002), which the run records again with the
+(`crates/server/tests/fixtures/practice-claim.json`, R2560000), which the run records again with the
 new AI after its gate passes, since every AI change plays that game differently. It never changes the
 exporter, the features, the trainer or the gate. A change to those is a person's pull request, measured with the same script:
 a feature change bumps `FEATURES_VERSION` and refits from stored logs with no new games (D3).

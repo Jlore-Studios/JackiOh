@@ -26,7 +26,8 @@ can drop in later without a 404 storm.
 To inspect a card:
 
 - **Desktop:** hover for 300 ms to see an enlarged card.
-- **Touch:** long-press to open an inspect sheet.
+- **Touch:** hold to see the same enlarged card while the finger stays down (R2617000; with hover
+  previews off, the hold opens an inspect sheet).
 
 The deck builder becomes a grid of full cards with:
 
@@ -97,7 +98,8 @@ board still fits 1280×720 and 390×844.
   `apps/web/public/art/*.webp` files land.
 - There are no class tabs (JackiOh has no classes), no crafting and no golden or diamond tiers.
   Flavour text and artist credits came later (R660): a sidecar beside the catalog
-  (`packages/cards/flavour.json`), shown in the inspect views and the detail view, never on a face.
+  (`crates/cards/flavour.json`, written since #2498 from `crates/cards/card-text.yaml`), shown in the
+  inspect views and the detail view, never on a face.
 - **Hearthstone's click-to-add in the pool.** The brief says "in the deck builder, a click opens a
   detail view", so a click on a pool card opens it and its "Add to Deck N" adds the card. Adding
   still takes one gesture: the "+" on every pool card, or a drag onto a deck. (The fix stage changed
@@ -434,9 +436,6 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
     span.card-name                           the name as ONE text node; inline style --cf-fit only
     span.cf-gem[data-rarity]                 absent for Token and unknown rarity
     span.card-type                           the CardType string, after "Token" on a token ("Token Unit", R1177001)
-    span.cf-token[data-token][role=img]      tokens only (R1177001): a slot at the foot (a `tokenmark` size container)
-      span.cf-token-pill                     span.cf-token-word "Token" + span.cf-token-glyph "T", the letter where
-                                             the slot has no room for the word; hidden while the type line shows
     span.card-text[data-clamped?]            inline style --cf-fit only
       span.cf-text-base                      RulesText(text.base)
       span.cf-text-radiant                   RulesText(text.radiant), only when non-null
@@ -450,11 +449,10 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
   them while it is off, and `none` for everything else. The CSS never animates under
   `prefers-reduced-motion: reduce`.
 - **`layout="compact"`** (a face-up backrow card) renders cost, art, name, rarity gem and
-  `.card-type` (and a token's `.cf-token`), but no `.card-text`, tags or stats.
+  `.card-type`, but no `.card-text`, tags or stats.
 - **Container query.** `@container cardface (max-height: 149px)` hides `.card-text`, `.cf-tags`
-  and `.card-type`, and shows a token's `.cf-token` at the foot in the type line's place
-  (R1177001), between a Unit's stats; where that room is narrower than the word, the mark is its
-  letter. The 149 mirrors `FACE_TEXT_MIN_HEIGHT_PX`. The text stays in the DOM.
+  and `.card-type`; no mark takes the type line's place (R2647000). The 149 mirrors
+  `FACE_TEXT_MIN_HEIGHT_PX`. The text stays in the DOM.
 - **Sizing.** `.cf` sits in normal flow: `position: relative; height: 100%; aspect-ratio: 5 / 7;
   max-width: 100%; margin-inline: auto`. It sets `pointer-events: none`. Everything inside is
   positioned against `.cf-scale` in `cqh`/`cqw`, so the card scales as one piece. Font sizes are
@@ -473,7 +471,6 @@ span.cf[data-layout="minion"][data-card-type][data-rarity?][data-foil][data-radi
     span.card-name                           name plate under the portrait, one text node
     span.stats
       span.stat.stat-attack[data-attack][data-tone]                      {attack}
-      span.cf-token[data-token]                                          tokens only (R1177001): the room between the numbers
       span.stat.stat-health[data-health][data-max-health][data-tone]     {health}<span class="cf-max">/{maxHealth}</span>
       span.stat.stat-armor[data-armor]                                   only when armor > 0
     span.keywords > span.keyword.keyword-icon[data-keyword][data-n?][data-chip?][title]   text `${KEYWORD_MARK}` + (` ${n}` when numbered)
@@ -484,7 +481,10 @@ span.cf[data-layout="minion"][data-card-type][data-rarity?][data-foil][data-radi
 Keyword chips run down the left edge under the cost gem at an 8px floor. Every keyword keeps its
 `[data-keyword]` badge in the DOM, but Taunt (the frame), Divine Shield (the bubble) and Armor while
 the armor plate shows are drawn as states and their badge is `data-chip="hidden"`; past three chips
-the rest fold into a `.cf-kw-more` "+n" whose title lists them. There is no exhausted mark.
+the rest fold into a `.cf-kw-more` "+n" whose title lists them. The keywords that do nothing on the
+field (R2577000: Equip, Tradable, Cloaked, Crater, Flashback, Stack, Temporary) are `data-chip="hidden"`
+too and leave the "+n" count; the hover preview and the inspect sheet list every keyword. There is no
+exhausted mark.
 
 `.stat-health`'s `textContent` stays `"{health}/{maxHealth}"`, which BUILD M5-T1's "current over
 max" requires. `.cf` fills its zone (`width: 100%; height: 100%; aspect-ratio: auto`).
@@ -993,7 +993,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
   the view marks `sick` wears `.cf-sick[data-sick]` (R849000). Taunt,
   Divine Shield and plated Armor are drawn as states (`data-chip="hidden"` on their badge); the
   other keywords show as at most `KEYWORD_CHIPS_MAX` (3) chips, the last becoming a `.cf-kw-more`
-  "+n" whose title lists the rest. Every keyword keeps its `[data-keyword]` badge.
+  "+n" whose title lists the rest. A keyword that does nothing on the field gets no chip and leaves
+  the count (R2577000). Every keyword keeps its `[data-keyword]` badge.
 - **B20.** No element inside a card carries the `card` class token, and no new testid starts with
   `card-` or `hand-card-`. So a stacked-pile zone holds one `.card`, the fixture board holds 20,
   and `cy.fieldCardByName` and `cy.handCardByName` resolve to the named card (jsdom query over

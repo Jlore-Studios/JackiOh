@@ -88,7 +88,8 @@ pub fn script() -> CardScripts {
 
 // C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1: one hit of N (R63), then the draw; its preview
 // is N (R280); radiant: the same, then Recruit their newest permanent, back to its owner's piles when
-// it leaves the field (§3.2), a Unit attacking at once (R53), a Trap set face-down (R33); tuned
+// it leaves the field (§3.2) but for a death, to your graveyard as yours (R2618000), a Unit attacking at
+// once (R53), a Trap set face-down (R33); tuned
 // numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
@@ -346,7 +347,7 @@ mod tests {
             }
 
             #[test]
-            fn s3_2_when_it_leaves_the_field_it_goes_to_its_owner_s_piles() {
+            fn r2618000_when_it_dies_on_your_side_it_goes_to_your_graveyard_as_yours() {
                 crate::register_all();
                 let mut s = curse(true, CurseOpts { their_exile: Some(vec![VANILLA]), ..CurseOpts::default() });
                 let vanilla = their_exiled(&s, VANILLA);
@@ -354,10 +355,11 @@ mod tests {
                 s.end_turn();
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
                 s.expect_in_zone(&vanilla, "graveyard");
-                let theirs: Vec<String> = s.pile(P2, "graveyard").into_iter().map(|card| card.id).collect();
-                assert!(theirs.contains(&vanilla.id));
                 let mine: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
-                assert!(!mine.contains(&vanilla.id));
+                assert!(mine.contains(&vanilla.id));
+                let theirs: Vec<String> = s.pile(P2, "graveyard").into_iter().map(|card| card.id).collect();
+                assert!(!theirs.contains(&vanilla.id));
+                assert_eq!(s.card(&vanilla).owner, P1);
             }
 
             #[test]

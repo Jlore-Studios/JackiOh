@@ -1,5 +1,17 @@
-//! B50, B51 (#936): watching a friend's live 1v1 game over `GET /ws/watch`.
-//! Spectators receive delayed views; closed on game over (R1107000). Mid-match blocks mute emotes (R1351000).
+//! B50, B51 (#936, `.fullsend/SPEC.md` S7): watching a friend's live 1v1 game over `GET /ws/watch`.
+//! A friend's hello for a live match, ranked or unranked, that has room gets the friend's seat's
+//! views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`, whatever the friend's
+//! settings say (R2615000); full, non-friend and blocked are `forbidden` then closed; a watcher's
+//! frames never reach the reducer; a watcher leaving changes nothing in the match; the players' own
+//! match sockets hear `watchers {count}` when the count changes. A watcher already in is let go the
+//! same way (`forbidden`, then closed) once the two unfriend or either blocks the other. Once the match is over, a watcher that has had the view with the result is
+//! closed with 1000 (R1107000). A block made mid-match also mutes the two players' emotes toward
+//! each other (R1351000).
+//!
+//! The match is a real one on the registry, played with the server tests' cards
+//! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
+//! actor tests attach them. The watcher is a real WebSocket over the app served on in-memory pipes
+//! (`actor/duos.rs`'s harness), on tokio's paused clock.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,11 +20,12 @@ use serde_json::{Value, json};
 use tokio::time::Instant;
 
 use jackioh_engine::EMOTE_WINDOW_MS;
+use jackioh_server::actor::guard::CLOSE_POLICY_VIOLATED;
 use jackioh_server::actor::ws_server::{WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH,
-    WS_IDLE_TIMEOUT_SECONDS,
+    MALFORMED_FRAMES_PER_WINDOW, PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, SPECTATE_DELAY_MS,
+    SPECTATORS_PER_MATCH, WATCH_HELLO_INTERVAL_MS, WS_IDLE_TIMEOUT_SECONDS,
 };
 use jackioh_server::db::store::{PlayerSettingsLimits, PlayerSettingsMergeInput, StartMatchInput};
 use jackioh_server::economy::store::CardPicks;
@@ -352,8 +365,10 @@ mod b50_watching_a_friend {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn b50_a_friend_who_turned_spectators_off_is_forbidden() {
+    async fn r2615000_no_setting_of_the_friends_refuses_a_friend() {
         let w = world(false).await;
+        // What a client from before R2615000 sends to turn watching off: the groups merge, the key
+        // beside them is read as nothing.
         let (status, body) = api(
             &w.app,
             "PUT",
@@ -363,10 +378,13 @@ mod b50_watching_a_friend {
         )
         .await;
         assert_eq!(status, 200, "{body}");
+        assert!(body["settings"].get("allowSpectators").is_none(), "{body}");
 
         let watcher = w.watch(&w.watcher).await;
 
-        assert_forbidden(&watcher).await;
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        assert!(watcher.close_code().is_none(), "admitted");
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
     }
 
     #[tokio::test(start_paused = true)]
@@ -566,10 +584,12 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn b50_turning_watching_off_lets_every_watcher_go_and_the_players_hear_the_count() {
+    async fn r2615000_no_setting_lets_a_watcher_go_only_the_friendship_does() {
         let (w, _other, first, second) = two_watching().await;
 
-        let (status, body) = api(
+        // The body a client from before R2615000 sent alone is no body of settings now, and the one it
+        // sent beside the groups merges them and lets nobody go.
+        let (alone, body) = api(
             &w.app,
             "PUT",
             "/api/settings",
@@ -577,29 +597,8 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
             json!({ "allowSpectators": false }),
         )
         .await;
-        assert_eq!(status, 200, "{body}");
-        settle().await;
-
-        assert_let_go(&first).await;
-        assert_let_go(&second).await;
-        for socket in [&w.p1, &w.p2] {
-            assert_eq!(
-                watcher_counts(socket).last(),
-                Some(&json!(0)),
-                "{:?}",
-                socket.messages()
-            );
-        }
-        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn b50_turning_watching_off_with_the_settings_groups_lets_the_watcher_go_too() {
-        let w = world(false).await;
-        let watcher = w.watch(&w.watcher).await;
-        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
-
-        let (status, body) = api(
+        assert_eq!(alone, 400, "{body}");
+        let (beside, body) = api(
             &w.app,
             "PUT",
             "/api/settings",
@@ -607,11 +606,14 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
             json!({ "groups": {}, "allowSpectators": false }),
         )
         .await;
-        assert_eq!(status, 200, "{body}");
+        assert_eq!(beside, 200, "{body}");
         settle().await;
 
-        assert_let_go(&watcher).await;
-        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(0)));
+        for client in [&first, &second] {
+            assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+            assert!(client.close_code().is_none(), "still watching");
+        }
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 2);
     }
 
     #[tokio::test(start_paused = true)]
@@ -896,7 +898,119 @@ mod r1103000_a_watchers_later_hello {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// R2609000 — a watcher's socket keeps a seat's limits
+// ---------------------------------------------------------------------------------------------
+
+mod r2609000_a_watcher_keeps_a_seats_limits {
+    use super::*;
+
+    /// The acceptance's burst of hellos.
+    const HELLO_BURST: usize = 50;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2609000_a_burst_of_hellos_is_answered_once_per_interval_and_the_players_play_on() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        let hello = json!({ "type": "hello", "matchId": w.match_id, "friendId": w.friend.id });
+
+        w.keep_both().await;
+        assert!(
+            watcher
+                .wait_for(0, ms(SPECTATE_DELAY_MS) + DELAY_SLACK, |frame| {
+                    frame["type"] == "view" && frame["view"]["phase"] == "main"
+                })
+                .await
+                .is_some(),
+            "the watcher never saw the turn begin: {:?}",
+            watcher.frames()
+        );
+        settle().await;
+        let last = watcher
+            .of_type("view")
+            .last()
+            .cloned()
+            .expect("the watcher was sent its views");
+        assert_eq!(last["view"]["active"], "p1", "{last}");
+        let received = watcher.received();
+        let started = Instant::now();
+
+        for _ in 0..HELLO_BURST / 2 {
+            watcher.send_json(hello.clone()).await;
+        }
+        // Mid-burst the friend plays: the action lands as it would with no watcher.
+        w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
+        settle().await;
+        for _ in 0..HELLO_BURST / 2 {
+            watcher.send_json(hello.clone()).await;
+        }
+        settle().await;
+
+        assert!(
+            started.elapsed() < ms(WATCH_HELLO_INTERVAL_MS),
+            "the burst outlasted one interval"
+        );
+        assert_eq!(
+            watcher.frames().split_off(received),
+            vec![last.clone()],
+            "one view for the whole burst"
+        );
+        assert_eq!(last_view_of(&w.p2)["active"], "p2", "the friend's action landed");
+
+        // An interval later a hello is answered again, with the same view: the end of the turn is
+        // not due yet.
+        tokio::time::sleep(ms(WATCH_HELLO_INTERVAL_MS)).await;
+        let received = watcher.received();
+        watcher.send_json(hello).await;
+        settle().await;
+        assert_eq!(watcher.frames().split_off(received), vec![last]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2609000_junk_past_the_malformed_budget_closes_the_watchers_socket_with_1008_and_the_players_hear_the_count()
+     {
+        let w = world(false).await;
+        w.keep_both().await;
+        let watcher = w.watch(&w.watcher).await;
+        settle().await;
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
+        w.p1.clear();
+        w.p2.clear();
+        let received = watcher.received();
+
+        for _ in 0..MALFORMED_FRAMES_PER_WINDOW {
+            watcher.send_text("not json").await;
+        }
+        settle().await;
+        assert_eq!(watcher.close_code(), None, "the budget itself is allowed");
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
+
+        watcher.send_text("not json").await;
+        assert_eq!(watcher.wait_closed(PROMPTLY).await, Some(CLOSE_POLICY_VIOLATED));
+        settle().await;
+        assert!(
+            watcher.of_type_since(received, "error").is_empty(),
+            "junk gets no reply: {:?}",
+            watcher.frames()
+        );
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(watcher_counts(socket), vec![json!(0)]);
+            assert!(socket.of_type("view").is_empty(), "{:?}", socket.messages());
+            assert_eq!(socket.close_code(), None);
+        }
+        let presence = w.app.matches.presence_of(&w.match_id).expect("the match is live");
+        assert!(presence.p1 && presence.p2, "both players are still there");
+        w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
+        settle().await;
+        assert_eq!(last_view_of(&w.p2)["active"], "p2", "the friend's action landed");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // R1351000 — a block mutes the players' emotes
+// ---------------------------------------------------------------------------------------------
 
 mod r1351000_a_block_mutes_the_players_emotes {
     use super::*;

@@ -1,7 +1,29 @@
-//! SPEC §8.11 Training Grounds #58 True Strike, the snapshot of Core #44 True Strike (`core-044`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #44 (SPEC §8, §8.2): deals damage; R55, R59, R85, R98, §10.1, §10.5, #40, #100.
+//! SPEC §8.11 Training Grounds #58 Legacy: True Strike,
+//! the Legacy card of Core #44 True Strike (`core-044`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #44 True Strike (SPEC §8.2, R346). Spell, cost 1, Common.
+//!   Base:    "Pierce / Deal 4 damage. Exile this."
+//!   Radiant: "Pierce / Deal 8 damage. Exile this." (the faces differ only in the number.)
+//!   Engine:  "Pierce: skips pipeline step 2; Divine Shield still applies."
+//!
+//! PIERCE ON A SPELL (R346): its damage ignores Armor. §4.4 step 2 reads Pierce off the source
+//! (`damage.pierces`), and the effect states it too (`ignoreArmor`, the effect's own Pierce as R85's
+//! `lifesteal` is Lifesteal), so the hit pierces on every run, an Echo repeat included, whose source R98
+//! may have left empty once "exile this" took the card from the resolving zone. It skips step 2 and
+//! NOTHING else: step 1 still negates a hit on a Divine Shield, step 3 still clamps Anti-oneshot Armor,
+//! step 4 still makes an Indestructible target take nothing.
+//! "Deal 4 damage" takes a DECLARED play-time target (R81, §8 Conventions: any unit or hero), read as
+//! `ctx.targets[0]`, never a prompt; R90 validates it against the declaration.
+//! "Exile this" (§5.1, §6.3): the spell is in the `resolving` zone while its script runs (§10.1, §10.5
+//! step 4), so `exile` moves it from there and step 7 must not send it to the graveyard. `exile` bumps
+//! the exile counter (R55), which #40 Echoes of the Forgotten and #100 Ceaseless Void read.
+//! Damage then exile in one list: the state check runs after both (R59).
 
 use jackioh_engine::effects::{damage, exile};
 use jackioh_engine::prelude::*;

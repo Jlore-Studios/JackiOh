@@ -19,6 +19,34 @@ pub const ID: &str = "meditative-096-1";
 /// What M #96 Meditative Journey writes (R1246).
 const JOURNEY_KEY: &str = "journey";
 
+/// R1248: the cards `me`'s `memory.journey` names that are still in an exile pile, in that order: the
+/// cards it returns, and the ones its preview counts (R2476000).
+fn journey_cards(state: &GameState, me: &CardInstance) -> Vec<String> {
+    me.memory
+        .get(JOURNEY_KEY)
+        .and_then(Value::as_array)
+        .map(|ids| ids.iter().filter_map(Value::as_str).map(str::to_string).collect::<Vec<_>>())
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|id| find_instance(state, id).is_some_and(|card| card.zone.z() == ZoneName::Exile))
+        .collect()
+}
+
+/// R2476000: in its owner's hand (a cast-on-draw card reaches one past R58's cap or by a move that is
+/// no draw), the journey's cards it would return now, after "the cards that went on this journey",
+/// with their ids so the client can mark them. Exile is public. One that remembers nothing shows 0.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        let went = journey_cards(ctx.state, ctx.self_);
+        vec![PreviewValue {
+            label: "the cards that went on this journey".to_string(),
+            value: went.len() as i32,
+            display: None,
+            ids: Some(went),
+        }]
+    })
+}
+
 fn journey_complete(radiant: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -26,17 +54,9 @@ fn journey_complete(radiant: bool) -> Script {
             ..StaticFlags::default()
         }),
         cry: Some(hook(move |ctx| {
-            let went: Vec<String> = ctx
-                .live_self()
-                .and_then(|me| me.memory.get(JOURNEY_KEY))
-                .and_then(Value::as_array)
-                .map(|ids| ids.iter().filter_map(Value::as_str).map(str::to_string).collect())
-                .unwrap_or_default();
+            let went = ctx.live_self().map(|me| journey_cards(ctx.state, me)).unwrap_or_default();
             let discount = param(&*ctx, "discount");
             went.into_iter()
-                .filter(|id| {
-                    find_instance(ctx.state, id).is_some_and(|card| card.zone.z() == ZoneName::Exile)
-                })
                 .map(|id| {
                     let mut args = json!({
                         "instance": { "of": "instance", "instanceId": id },
@@ -49,6 +69,7 @@ fn journey_complete(radiant: bool) -> Script {
                 })
                 .collect()
         })),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -303,6 +324,27 @@ mod tests {
 
             assert_eq!(held_of(&s, &went), went);
             assert_eq!(cost(&s, &went[0]), 1);
+        }
+    }
+
+    /// R2476000: held in hand, it previews the journey's cards still in exile after "the cards that went
+    /// on this journey": one of two once the other has left exile.
+    #[test]
+    fn r2476000_in_hand_it_previews_the_journeys_cards_still_in_exile() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "exile": [SEVEN, HIT_JOB], "library": [FILLER] },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+            }));
+            let went = ids(&s.pile(P1, "exile"));
+            remember(&mut s, &went);
+            let card = s.card(ID).id.clone();
+            let label = "the cards that went on this journey".to_string();
+            assert_eq!(crate::preview_seen(&s, P1, &card), vec![(label.clone(), 2, None)], "radiant {radiant}");
+            let mut left = s.card(went[1].as_str()).clone();
+            move_to_zone(s.state_mut(), &mut left, OffFieldZone::Graveyard, Default::default());
+            assert_eq!(crate::preview_seen(&s, P1, &card), vec![(label, 1, None)], "radiant {radiant}");
         }
     }
 }

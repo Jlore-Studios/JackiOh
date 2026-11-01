@@ -17,9 +17,9 @@ use jackioh_engine::wire::{
     DuosSeat, PerTeam, Team,
 };
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CardInstance, CostOptions, GameState, PlayerId, PlayerState, Rng, Zone,
-    effective_cost, hand_cap_of, legal_actions, max_mana_for, natural_mana_on, needs_zone, open_zones,
-    reduce_unpiloted, refreshed_mana, row_for_card, spendable_mana,
+    Action, ActionBody, ActionType, CardInstance, CostOptions, GameState, OffFieldZone, PlayerId,
+    PlayerState, Rng, Zone, effective_cost, legal_actions, max_mana_for, natural_mana_on, needs_zone,
+    open_zones, reduce_unpiloted, refreshed_mana, room_in, row_for_card, spendable_mana,
 };
 use serde::{Deserialize, Serialize};
 
@@ -192,7 +192,7 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // B19, B28: the passes left this round, the teammate's free hand slots and what the seat's mana
     // pays for, whichever is fewest.
     let made = state.passes.get(seat.duel()).copied().unwrap_or(0);
-    let free_slots = hand_cap_of(mate_duel, mate.player()) - mate_side.hand.len() as i32;
+    let free_slots = room_in(mate_duel, mate.player(), OffFieldZone::Hand);
     let paid_for = if rules.pass_cost > 0 {
         duel.players[player].mana.current / rules.pass_cost
     } else {

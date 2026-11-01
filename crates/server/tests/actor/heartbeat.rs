@@ -1,5 +1,19 @@
-//! R1441 (SPEC §9.5, §9.8): match sockets that stop answering are dropped, and blocked readers are closed.
-//! Real router served over in-memory pipes with paused clock.
+//! R1441 (SPEC §9.5, §9.8): a match socket that stops answering is found and dropped, and one that
+//! stops reading is let go.
+//!
+//!  - the pump pings every `WS_PING_INTERVAL_SECONDS`; a socket that has sent no frame of any kind
+//!    for `WS_IDLE_TIMEOUT_SECONDS` is dropped, which is a disconnect: its seat's grace starts and the
+//!    opponent is shown it;
+//!  - a socket that answers its pings stays;
+//!  - a socket's outgoing queue holds `WS_OUTBOX_MAX_FRAMES` frames, and one more closes it;
+//!  - the page's wake probe reopens a socket at most once per ping interval, a pace the account's
+//!    request budget, which every upgrade counts against (R2478000), never refuses.
+//!
+//! The first two run the real `/ws/match` upgrade and the real registry on tokio's paused clock. Real
+//! TCP races a paused clock (the header of `actor/ws_server.rs`), so the connection is an in-memory
+//! pipe (`MemoryListener`): `axum::serve` accepts the server end of a `tokio::io::duplex`, and the
+//! test is the client on the other. Every duration is read from `config.rs`, so these tests state
+//! R1441's numbers nowhere.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -22,6 +36,9 @@ use crate::support::socket::{FakeSocket, create_fake_socket, settle};
 /// The pipe's buffer each way: far more than a match's first frames, so a write never waits on the
 /// pump and the paused clock has nothing to race.
 const PIPE_BYTES: usize = 64 * 1024;
+
+/// Unit conversion, not configuration: the minute R109's request allowance is stated over.
+const MINUTE: Duration = Duration::from_secs(60);
 
 const IDLE_TIMEOUT: Duration = Duration::from_secs(WS_IDLE_TIMEOUT_SECONDS as u64);
 const PING_INTERVAL: Duration = Duration::from_secs(WS_PING_INTERVAL_SECONDS as u64);
@@ -255,6 +272,24 @@ async fn r1441_keeps_a_socket_that_answers_its_pings_open_past_the_idle_timeout(
         .presence_of("match-1")
         .expect("the match is live");
     assert!(presence.p1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2478000_a_reconnect_loop_at_the_wake_probes_pace_is_never_refused() {
+    let served = served().await;
+    let _opponent = served.attach_opponent().await;
+    let started = tokio::time::Instant::now();
+
+    // R1441's wake check reopens at most once per ping interval; each upgrade counts as a request.
+    let mut reconnects = 0;
+    while started.elapsed() < MINUTE * 3 {
+        let mut p1 = served.connect_p1().await;
+        assert_eq!(p1.first_view().await["viewer"], "p1");
+        drop(p1);
+        reconnects += 1;
+        tokio::time::sleep(PING_INTERVAL).await;
+    }
+    assert!(reconnects >= (MINUTE * 3).as_secs() / PING_INTERVAL.as_secs());
 }
 
 #[test]

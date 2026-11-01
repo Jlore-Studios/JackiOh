@@ -72,7 +72,7 @@ mod r346_move_order {
     /// Where `candidate_actions` puts the attack on the enemy's only unit and the first play.
     fn places(state: &GameState) -> (usize, usize) {
         let target = active_units_of(state, HUMAN)[0].id.clone();
-        let actions = candidate_actions(state, AI);
+        let actions = candidate_actions(state, AI, Prices::NONE);
         let attack = actions
             .iter()
             .position(|action| matches!(action, ActionBody::Attack { target_id, .. } if *target_id == target))
@@ -159,6 +159,7 @@ mod r346_reply {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(state, AI),
+            Prices::NONE,
         )
         .expect("a reply")
     }

@@ -1,6 +1,6 @@
 # GitHub: `main`'s branch protection with its five required checks, `main`'s merge queue, and the
 # `production` ruleset.
-# Not the labels: bot/harness/config.py `LABELS` owns them, and the sweep restores them. Not the
+# Not the labels: bot/go/internal/config `Labels` owns them, and the sweep restores them. Not the
 # Actions secrets: state would hold them.
 #
 # The token is GITHUB_TOKEN, with admin on the repository (README.md, Tokens).
@@ -14,7 +14,7 @@ data "github_repository" "jackioh" {
 
 # The five names ci.yml's summary jobs report and the bots wait on (`required_checks` in
 # .harness/config.json and .squishy/config.json); a rename changes all three. The rest is what the
-# night bot's `setup --repo-settings` writes (bot/harness/gh.py `set_protection`), so neither undoes
+# night bot's `setup --repo-settings` writes (bot/go/internal/gh `SetProtection`), so neither undoes
 # the other.
 resource "github_branch_protection" "main" {
   repository_id = data.github_repository.jackioh.node_id

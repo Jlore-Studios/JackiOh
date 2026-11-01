@@ -73,7 +73,8 @@ function castOf(event: GameEvent, lines: CardAudioTable, fired: Set<string>): { 
     return entryFor(lines, event.defId)?.kind === "trap" ? null : { defId: event.defId, player: event.player };
   }
   if (event.type === "trapFired") {
-    if (event.defId === HIDDEN_DEF_ID || fired.has(event.instanceId)) return null;
+    // R2657001: a Field Trap firing again (`again`) reveals nothing, even to a director that missed its first firing.
+    if (event.defId === HIDDEN_DEF_ID || event.again === true || fired.has(event.instanceId)) return null;
     fired.add(event.instanceId);
     return { defId: event.defId, player: event.controller };
   }

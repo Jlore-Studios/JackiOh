@@ -220,6 +220,7 @@ describe("B36 dragging a hand card onto a glowing zone plays it", () => {
   });
 });
 
+// B37: dragging an attacker onto the enemy hero
 describe("B37 dragging an attacker shows the arrow and attacks where it is released", () => {
   it("B37 an attacker lifted past the threshold shows the arrow from its card and no ghost", () => {
     const { onAction } = renderGame();
@@ -290,6 +291,7 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
   });
 });
 
+// B38: every way a drag is canceled
 describe("B38 a canceled drag goes back to idle, sends nothing, and swallows the click after the release", () => {
   const CANCELS: [string, () => void][] = [
     ["Escape", () => fireEvent.keyDown(window, { key: "Escape" })],

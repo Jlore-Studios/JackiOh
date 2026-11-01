@@ -4,7 +4,7 @@
 #
 #   - after every job, from the runners' job-completed hook, with --job: that job's files too;
 #   - every ten minutes, from the machine's disk timer, once for each agent user;
-#   - at the start of a model job that finds the disk short of room (bot/harness/disk.py).
+#   - at the start of a model job that finds the disk short of room (bot/go/internal/disk).
 #
 # Everything it deletes comes back by itself: packages from the network, logs and sessions as
 # they are written again. Nothing here may fail a job, so every error is ignored.

@@ -19,30 +19,44 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
-    c032_felinor_feelings, c035_prep, c039_outbreak, c052_final_gambit, c064_malzahars_recycler,
-    c088_siphon_squad, c090_in_too_deep,
+    c008_pickle, c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish,
+    c023_devils_pact, c024_book_of_knowledge, c027_pestilent_slime, c032_felinor_feelings, c035_prep,
+    c039_outbreak, c047_recurring_felinor, c052_final_gambit, c064_malzahars_recycler, c088_siphon_squad,
+    c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
-    c007_the_house, c011_anime_armor, c023_dropshipping, c030_felinor_fuser, c033_ivory_tower,
-    c040_appropriations, c042_kys_test, c043_ai_slop, c062_kys_papaya, c071_book_of_buff,
-    c078_claudes_datacenter,
+    c007_the_house, c011_anime_armor, c019_1_top_loser, c023_dropshipping, c030_felinor_fuser,
+    c033_ivory_tower, c040_appropriations, c042_kys_test, c043_ai_slop, c048_jlockeeds_lobbyist,
+    c051_jlockeeds_j15_fighter, c053_book_of_tokens, c062_kys_papaya, c071_book_of_buff,
+    c073_1_classic_golem, c078_claudes_datacenter,
 };
 use crate::scripts::core::{
-    c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
+    c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther, c042_eugenics,
     c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
-    c069_call_to_arms, c075_infinite_reserves, c080_zao_gao, c081_radiant_saintess, c083_transmogulate,
+    c065_1_spikey_pillow, c069_call_to_arms, c073_anti_oneshot_armor, c075_infinite_reserves, c080_zao_gao,
+    c081_radiant_saintess, c083_transmogulate, c084_going_long,
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
     c030_fickle_e_kitten, c032_spiritually_zhongguo, c037_cn_in_a_bottle, c038_h1b_printer,
-    c045_knowledge_breaker, c048_tranquility, c049_yilegpt_tamed, c053_prestige, c054_money_machine,
-    c074_montana_giant, c080_aluneth, c085_playtester, c094_shrinking_felinor, c097_2_wishing_well,
-    c097_8_prison, c102_catboy_maid_ssr,
+    c045_knowledge_breaker, c048_tranquility, c049_1_yilegpt_unleashed, c049_3_ai_girlfriend,
+    c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant, c080_aluneth, c085_playtester,
+    c090_spell_basket, c093_1_growing_felinor_sr, c093_2_growing_felinor_sr_sr,
+    c093_3_growing_felinor_super_senior, c093_growing_felinor, c094_shrinking_felinor, c095_1_cn_golem,
+    c097_2_wishing_well, c097_8_prison, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
     c001_bobs_plan, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
 };
+use crate::scripts::stinkyscape::{
+    c026_zolarketh, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c050_beam_v3,
+    c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4,
+    c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c074_paragon_x,
+    c086_prototype_x2, c094_tmack_trav, c116_megabase, c143_book_launcher, c149_wildar,
+    c163_swear_loyalities, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_narcor, t_red_narcor,
+};
+use crate::scripts::training_grounds::c036_training_dummy;
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -52,8 +66,9 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// previous kept script, folds under the kept one; every other card runs the build's own. Each card's
 /// file says what its kept script ran. Kept by #1034 (R987), #1039 (R1143), K-Pop Fanatic (R1045000),
 /// #1149 (R1149000, R1149001), #1194, #1279 (R1279000), #1563 (R844), #1704 (R831003, R406), #1748
-/// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020
-/// and #2179 (R1161, R920, R580, R2179003).
+/// (R1748003), #1828 (R1828000, R1828001, R1828002, R1828003), #1851 (R1103, R1851003), #1803, #2020,
+/// #2179 (R1161, R920, R580, R2179003), #2396 (R2396000), #2521 and #2657 (R2657000 with
+/// `never_defense_kept`, R2657001, R2657002, R2657004).
 /// A card patch before them that changed a script's behavior kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -217,59 +232,244 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.12c",
         c075_infinite_reserves::script_v0_4_12c,
     ),
-    (c048_tranquility::ID, "v0.5.2", c048_tranquility::script_v0_5_2),
+    (c048_tranquility::ID, "v0.5.1", c048_tranquility::script_v0_5_2),
     (
         c045_knowledge_breaker::ID,
-        "v0.5.2",
+        "v0.5.1",
         c045_knowledge_breaker::script_v0_5_2,
     ),
     (
         c030_felinor_fuser::ID,
-        "v0.5.2",
+        "v0.5.1",
         c030_felinor_fuser::script_v0_5_2,
     ),
     (
         c083_transmogulate::ID,
-        "v0.5.2",
+        "v0.5.1",
         c083_transmogulate::script_v0_5_2,
     ),
-    (c023_devils_pact::ID, "v0.5.2", c023_devils_pact::script_v0_5_2),
-    (c085_playtester::ID, "v0.5.2", c085_playtester::script_v0_5_2),
+    (c023_devils_pact::ID, "v0.5.1", c023_devils_pact::script_v0_5_2),
+    (c085_playtester::ID, "v0.5.1", c085_playtester::script_v0_5_2),
     (
         c102_catboy_maid_ssr::ID,
-        "v0.5.2",
+        "v0.5.1",
         c102_catboy_maid_ssr::script_v0_5_2,
     ),
     (
         c009_magic_amplifier::ID,
-        "v0.5.2",
+        "v0.5.1",
         c009_magic_amplifier::script_v0_5_2,
     ),
-    (c035_prep::ID, "v0.5.2", c035_prep::script_v0_5_2),
-    (c011_anime_armor::ID, "v0.5.2", c011_anime_armor::script_v0_5_2),
-    (c023_dropshipping::ID, "v0.5.2", c023_dropshipping::script_v0_5_2),
+    (c035_prep::ID, "v0.5.1", c035_prep::script_v0_5_2),
+    (c011_anime_armor::ID, "v0.5.1", c011_anime_armor::script_v0_5_2),
+    (c023_dropshipping::ID, "v0.5.1", c023_dropshipping::script_v0_5_2),
     (
         c020_the_power_to_punish::ID,
-        "v0.5.2",
+        "v0.5.1",
         c020_the_power_to_punish::script_v0_5_2,
     ),
     (
         c032_spiritually_zhongguo::ID,
-        "v0.5.2",
+        "v0.5.1",
         c032_spiritually_zhongguo::script_v0_5_2,
     ),
     (
         c081_radiant_saintess::ID,
-        "v0.5.2",
+        "v0.5.1",
         c081_radiant_saintess::script_v0_5_2,
     ),
-    (c071_book_of_buff::ID, "v0.5.2", c071_book_of_buff::script_v0_5_2),
+    (c071_book_of_buff::ID, "v0.5.1", c071_book_of_buff::script_v0_5_2),
     (
         c078_claudes_datacenter::ID,
-        "v0.5.2",
+        "v0.5.1",
         c078_claudes_datacenter::script_v0_5_2,
     ),
-    (c042_kys_test::ID, "v0.5.2", c042_kys_test::script_v0_5_2),
+    (c042_kys_test::ID, "v0.5.1", c042_kys_test::script_v0_5_2),
+    (
+        c049_3_ai_girlfriend::ID,
+        "v0.5.7",
+        c049_3_ai_girlfriend::script_v0_5_7,
+    ),
+    (c032_prem_panther::ID, "v0.5.7", c032_prem_panther::script_v0_5_11),
+    (
+        c013_boots_on_the_ground::ID,
+        "v0.5.7",
+        c013_boots_on_the_ground::script_v0_5_11,
+    ),
+    (c095_1_cn_golem::ID, "v0.5.7", c095_1_cn_golem::script_v0_5_11),
+    (
+        c027_pestilent_slime::ID,
+        "v0.5.7",
+        c027_pestilent_slime::script_v0_5_11,
+    ),
+    (c084_going_long::ID, "v0.5.7", c084_going_long::script_v0_5_11),
+    (c080_aluneth::ID, "v0.5.7", c080_aluneth::script_v0_5_11),
+    (c001_bobs_plan::ID, "v0.5.7", c001_bobs_plan::script_v0_5_11),
+    (c026_zolarketh::ID, "v0.5.7", c026_zolarketh::script_v0_5_11),
+    (c050_beam_v3::ID, "v0.5.7", c050_beam_v3::script_v0_5_11),
+    (c051_repeater_v3::ID, "v0.5.7", c051_repeater_v3::script_v0_5_11),
+    (c052_cannon_v3::ID, "v0.5.7", c052_cannon_v3::script_v0_5_11),
+    (c053_flak_v3::ID, "v0.5.7", c053_flak_v3::script_v0_5_11),
+    (c054_beam_v4::ID, "v0.5.7", c054_beam_v4::script_v0_5_11),
+    (c055_repeater_v4::ID, "v0.5.7", c055_repeater_v4::script_v0_5_11),
+    (c056_cannon_v4::ID, "v0.5.7", c056_cannon_v4::script_v0_5_11),
+    (c057_flak_v4::ID, "v0.5.7", c057_flak_v4::script_v0_5_11),
+    (c058_beam_v5::ID, "v0.5.7", c058_beam_v5::script_v0_5_11),
+    (c059_repeater_v5::ID, "v0.5.7", c059_repeater_v5::script_v0_5_11),
+    (c060_cannon_v5::ID, "v0.5.7", c060_cannon_v5::script_v0_5_11),
+    (c061_flak_v5::ID, "v0.5.7", c061_flak_v5::script_v0_5_11),
+    (c074_paragon_x::ID, "v0.5.7", c074_paragon_x::script_v0_5_11),
+    (c094_tmack_trav::ID, "v0.5.7", c094_tmack_trav::script_v0_5_11),
+    (
+        c163_swear_loyalities::ID,
+        "v0.5.7",
+        c163_swear_loyalities::script_v0_5_11,
+    ),
+    (t_narcor::ID, "v0.5.7", t_narcor::script_v0_5_11),
+    (t_red_narcor::ID, "v0.5.7", t_red_narcor::script_v0_5_11),
+    (
+        c024_book_of_knowledge::ID,
+        "v0.5.9f",
+        c024_book_of_knowledge::script_v0_5_9f,
+    ),
+    (c035_prep::ID, "v0.5.9f", c035_prep::script_v0_5_9f),
+    (
+        c047_recurring_felinor::ID,
+        "v0.5.9f",
+        c047_recurring_felinor::script_v0_5_9f,
+    ),
+    (c019_1_top_loser::ID, "v0.5.9f", c019_1_top_loser::script_v0_5_9f),
+    (
+        c048_jlockeeds_lobbyist::ID,
+        "v0.5.9f",
+        c048_jlockeeds_lobbyist::script_v0_5_9f,
+    ),
+    (
+        c051_jlockeeds_j15_fighter::ID,
+        "v0.5.9f",
+        c051_jlockeeds_j15_fighter::script_v0_5_9f,
+    ),
+    (
+        c053_book_of_tokens::ID,
+        "v0.5.9f",
+        c053_book_of_tokens::script_v0_5_9f,
+    ),
+    (
+        c073_1_classic_golem::ID,
+        "v0.5.9f",
+        c073_1_classic_golem::script_v0_5_9f,
+    ),
+    (
+        c029_giga_glowy_jelly_bean::ID,
+        "v0.5.9f",
+        c029_giga_glowy_jelly_bean::script_v0_5_9f,
+    ),
+    (
+        c065_1_spikey_pillow::ID,
+        "v0.5.9f",
+        c065_1_spikey_pillow::script_v0_5_9f,
+    ),
+    (
+        c073_anti_oneshot_armor::ID,
+        "v0.5.9f",
+        c073_anti_oneshot_armor::script_v0_5_9f,
+    ),
+    (
+        c032_spiritually_zhongguo::ID,
+        "v0.5.9f",
+        c032_spiritually_zhongguo::script_v0_5_9f,
+    ),
+    (
+        c049_1_yilegpt_unleashed::ID,
+        "v0.5.9f",
+        c049_1_yilegpt_unleashed::script_v0_5_9f,
+    ),
+    (
+        c090_spell_basket::ID,
+        "v0.5.9f",
+        c090_spell_basket::script_v0_5_9f,
+    ),
+    (
+        c093_1_growing_felinor_sr::ID,
+        "v0.5.9f",
+        c093_1_growing_felinor_sr::script_v0_5_9f,
+    ),
+    (
+        c093_2_growing_felinor_sr_sr::ID,
+        "v0.5.9f",
+        c093_2_growing_felinor_sr_sr::script_v0_5_9f,
+    ),
+    (
+        c093_3_growing_felinor_super_senior::ID,
+        "v0.5.9f",
+        c093_3_growing_felinor_super_senior::script_v0_5_9f,
+    ),
+    (
+        c093_growing_felinor::ID,
+        "v0.5.9f",
+        c093_growing_felinor::script_v0_5_9f,
+    ),
+    (c026_zolarketh::ID, "v0.5.9f", c026_zolarketh::script_v0_5_9f),
+    (
+        c034_drone_core_viii::ID,
+        "v0.5.9f",
+        c034_drone_core_viii::script_v0_5_9f,
+    ),
+    (
+        c035_drone_core_ix::ID,
+        "v0.5.9f",
+        c035_drone_core_ix::script_v0_5_9f,
+    ),
+    (
+        c036_drone_core_x::ID,
+        "v0.5.9f",
+        c036_drone_core_x::script_v0_5_9f,
+    ),
+    (c053_flak_v3::ID, "v0.5.9f", c053_flak_v3::script_v0_5_9f),
+    (c057_flak_v4::ID, "v0.5.9f", c057_flak_v4::script_v0_5_9f),
+    (c061_flak_v5::ID, "v0.5.9f", c061_flak_v5::script_v0_5_9f),
+    (
+        c086_prototype_x2::ID,
+        "v0.5.9f",
+        c086_prototype_x2::script_v0_5_9f,
+    ),
+    (c116_megabase::ID, "v0.5.9f", c116_megabase::script_v0_5_9f),
+    (
+        c143_book_launcher::ID,
+        "v0.5.9f",
+        c143_book_launcher::script_v0_5_9f,
+    ),
+    (c149_wildar::ID, "v0.5.9f", c149_wildar::script_v0_5_9f),
+    (
+        c169_tiny_asteroid::ID,
+        "v0.5.9f",
+        c169_tiny_asteroid::script_v0_5_9f,
+    ),
+    (
+        c170_medium_asteroid::ID,
+        "v0.5.9f",
+        c170_medium_asteroid::script_v0_5_9f,
+    ),
+    (
+        c171_large_asteroid::ID,
+        "v0.5.9f",
+        c171_large_asteroid::script_v0_5_9f,
+    ),
+    (
+        c172_huge_asteroid::ID,
+        "v0.5.9f",
+        c172_huge_asteroid::script_v0_5_9f,
+    ),
+    (
+        c173_abandoned_spice_tower::ID,
+        "v0.5.9f",
+        c173_abandoned_spice_tower::script_v0_5_9f,
+    ),
+    (
+        c036_training_dummy::ID,
+        "v0.5.9f",
+        c036_training_dummy::script_v0_5_9f,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -295,6 +495,10 @@ struct History {
     /// R1371000: `patches/aliases.json`'s map, each old name to its new one; empty before the retcon.
     #[serde(default)]
     aliases: IndexMap<String, String>,
+    /// R2532000: `patches/aliases.json`'s `marked`: for each older scheme a marked file can name, each
+    /// of its names a later retcon renamed, to its name now.
+    #[serde(default)]
+    marked: IndexMap<String, IndexMap<String, String>>,
 }
 
 /// R2173000: a `card_metrics/<version>.json`: the BUSTED and complicated lists a version shipped with.
@@ -374,6 +578,25 @@ pub fn current_version_name(unmarked: &str) -> &str {
 /// R1371000: the new name of a version the retcon renamed, `None` for any other name.
 pub fn version_alias(old: &str) -> Option<&'static str> {
     HISTORY.aliases.get(old).map(String::as_str)
+}
+
+/// R2532000: the name a version from a file named by `scheme` goes by now (`VERSIONS_SCHEME` is
+/// today's): an unmarked file's (scheme 1) through `version_alias`, an older marked file's through
+/// `patches/aliases.json`'s `marked`, and today's as it is.
+pub fn version_name_from(scheme: u32, name: &str) -> &str {
+    version_alias_from(scheme, name).unwrap_or(name)
+}
+
+/// R2532000: the name now of a version a retcon renamed since `scheme`, `None` for any other name.
+pub fn version_alias_from(scheme: u32, name: &str) -> Option<&'static str> {
+    if scheme <= 1 {
+        return version_alias(name);
+    }
+    HISTORY
+        .marked
+        .get(&scheme.to_string())?
+        .get(name)
+        .map(String::as_str)
 }
 
 /// R388: every shipped catalog version from `patches.json`, in release order.

@@ -426,6 +426,15 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  // R2657000: Can't Defend, a shield split down the middle, the two halves apart.
+  "Can't Defend": () => (
+    <Part className="kw-glyph-art kw-split-shield" anim fit="contain">
+      <path d="M46 8 L14 18 V46 C14 68 28 84 46 92 L40 64 L48 46 L40 30 Z" fill="#9aa3b5" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M54 8 L86 18 V46 C86 68 72 84 54 92 L60 64 L52 46 L60 30 Z" fill="#9aa3b5" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M24 26 L36 22 M64 22 L76 26" stroke="#e6ecf7" strokeWidth="3" strokeLinecap="round" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

@@ -511,3 +511,65 @@ describe("/match/<id>", () => {
     expect(StubSocket.opened).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------------------------
+// R2630000: a new screen's gate opens on the page's last answer
+// ---------------------------------------------------------------------------------------------
+
+describe("R2630000 a screen opens on the page's last read of the account", () => {
+  /** How many times the page has asked `/api/auth/me`. */
+  function meReads(): number {
+    return vi.mocked(globalThis.fetch).mock.calls.filter(([input]) => String(input).endsWith("/api/auth/me")).length;
+  }
+
+  it("R2630000 the next screen opens at once on the account the last one read, and reads it again behind it", async () => {
+    signIn();
+    serveAs("active");
+    render(<Gated>{() => <p>the first screen</p>}</Gated>);
+    expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    const before = meReads();
+    render(<Gated>{() => <p>the next screen</p>}</Gated>);
+    // No "Checking your account…" in between: the screen is there in the first render.
+    expect(screen.getByText("the next screen")).toBeInTheDocument();
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    await waitFor(() => {
+      expect(meReads()).toBe(before + 1);
+    }, SLOW);
+    expect(screen.getByText("the next screen")).toBeInTheDocument();
+  });
+
+  it("R2630000 a pending account, or one owing the username prompt, waits for the read on every screen", async () => {
+    signIn();
+    serveAs("pending");
+    render(<Gated allowPending>{() => <p>the code screen</p>}</Gated>);
+    expect(await screen.findByText("the code screen", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+    render(<Gated allowPending>{() => <p>the code screen again</p>}</Gated>);
+    expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
+    expect(await screen.findByText("the code screen again", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    serveAs("active", { name: "Player#7", nextChangeAt: null, promptOwed: true });
+    render(<Gated>{() => <p>a screen behind the prompt</p>}</Gated>);
+    expect(await screen.findByTestId("username-prompt", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+    render(<Gated>{() => <p>another screen behind the prompt</p>}</Gated>);
+    expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
+  });
+
+  it("R2630000 an account change announced on the page makes the next screen wait for the read", async () => {
+    signIn();
+    serveAs("active");
+    render(<Gated>{() => <p>the first screen</p>}</Gated>);
+    expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
+
+    // An invite redeemed, the terms agreed, a username picked: the kept answer goes with it.
+    announceAccountChange();
+    cleanup();
+    render(<Gated>{() => <p>the next screen</p>}</Gated>);
+    expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
+    expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
+  });
+});

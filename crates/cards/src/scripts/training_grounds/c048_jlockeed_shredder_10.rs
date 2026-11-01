@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #48 Jlockeed Shredder-10, the snapshot of Core #13 Jlockeed Shredder-10 (`core-013`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #13 (SPEC §8.1, §8): damage_all on controller's end of turn. One damage instance each (§4.4, R51; §2.4, §2.5, R386); state check runs after all hits (R59).
+//! SPEC §8.11 Training Grounds #48 Legacy: Jlockeed Shredder-10,
+//! the Legacy card of Core #13 Jlockeed Shredder-10 (`core-013`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 12/20 Unit, cost 3. Base "End of turn: deal 2 damage
+//! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
+//! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
+//! target, controller's end of turn".
+//!
+//! R51: every enemy unit plus the enemy hero, ONE damage instance each, so each hit goes through
+//! §4.4's pipeline alone and meets that target's Armor, Divine Shield and Anti-oneshot cap.
+//!
+//! R59: the state check never runs between the hits of one effect, so a unit the first hit kills is
+//! still on the field while the rest land. `damage_all` (engine/src/effects/damage.rs) is one effect
+//! and `end_turn` runs `state_check` after each end-of-turn hook. The scan for `endOfTurn` hooks is
+//! narrowed to the player whose turn is ending, so this card needs no check of its own.
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;

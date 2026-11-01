@@ -265,6 +265,7 @@ describe("with no session", () => {
   });
 });
 
+// #1691: the account read behind the screen
 describe("#1691 an account that could not be read", () => {
   it("#1691 an account read that failed offers Try again, which reads it again", async () => {
     vi.mocked(getMe).mockRejectedValueOnce(new Error("the server could not be reached"));

@@ -5,11 +5,11 @@
 # Nothing is compiled here. The calling workflow builds once per run, in the order the client
 # needs: `scripts/build-wasm.sh` before `pnpm build:e2e` (super.yml in its `wasm` job; ci.yml builds
 # the two modules in its `wasm` and `wasm-luau` jobs and the client on them in its `web-build` job),
-# into the artifact `web-build` (apps/web/dist and the WASM modules), and `cargo build --release -p
-# jackioh-server -p jackioh-tools` in its `rust-build` job (artifact `rust-release`:
-# target/release/jackioh-server, and target/release/jackioh, whose `replay` spec 01's and 13's hash
-# checks run). The caller checks out the repository and runs ./.github/actions/setup (Node is
-# enough) first.
+# into the artifact `web-build` (apps/web/dist and the WASM modules), and the release binaries in
+# its `rust-build` job (ci.yml's artifacts `rust-release-jackioh-server` and `rust-release-jackioh`,
+# one leg each; super.yml's one `rust-release`): target/release/jackioh-server, and
+# target/release/jackioh, whose `replay` spec 01's and 13's hash checks run. The caller checks out
+# the repository and runs ./.github/actions/setup (Node is enough) first.
 #
 # Fresh is the point. SPEC §11 R144 makes the server reseed its fixture accounts and invite codes at
 # boot, so a suite that activates the pending account or spends an invite code (spec 10) is
@@ -34,16 +34,19 @@ runs:
       with:
         name: web-build
         path: ${{ runner.temp }}
+    # The release binaries: ci.yml's two artifacts (`rust-release-jackioh`,
+    # `rust-release-jackioh-server`) or super.yml's one (`rust-release`), each holding one tarball.
     - uses: actions/download-artifact@v4
       with:
-        name: rust-release
+        pattern: rust-release*
+        merge-multiple: true
         path: ${{ runner.temp }}
     # Tarballs, so the binaries keep their executable bits and every file lands where it was built.
     - name: unpack the client and the binaries
       shell: bash
       run: |
         tar -xzf "$RUNNER_TEMP/web-build.tgz"
-        tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+        for archive in "$RUNNER_TEMP"/rust-release*.tgz; do tar -xzf "$archive"; done
 
     # A built client rather than `vite dev`: HMR reloads the page mid-run when anything under
     # apps/web/src changes, which remounts the route and restarts the game at turn 0. `build:e2e`,

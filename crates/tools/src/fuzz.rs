@@ -1,14 +1,159 @@
-//! `cargo jackioh fuzz` (SURFACE §12): M4 gate (BUILD "M4 gate", §10.9, B8) and handicapped wave (§9.9, R181, R182, R183, R184).
-//! Four assertions per seed: no panic, termination (R2, R84), replay equality (§9.3), and failure detail.
-//! Invariant checks: I1–I5, I8 (R171, R216, §4.1, §4.2), and I6 (§10.8) on both seats.
-//! Growth limits (#1254, §10.3) fail runaway action growth deterministically before timeout.
-//! Probes (#1386, §10.5, §10.6, R90, R265, #1574, #1694): forged unlogged actions to verify error paths.
-//! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4, SURFACE §3): games run in parallel with separate game and policy RNGs.
-//! Regression corpus (#1197) pins decks in `crates/tools/fuzz-corpus/` to ensure past bugs stay fixed.
-//! Handicapped wave tests practice AI resources: custom decks, extra crystals, and bonus draws.
-//! Starting states (#1503, R179, R417, R433, R564, R678) and endings channel (#1572, R36, R79, R345, R1127, §10.7).
-//! Forced cards (#2387, R279) test specific cards/sets in every seed without changing stream order.
-//! Pool coverage (#2426) tracks cards dealt and played across all passing seeds.
+//! `cargo jackioh fuzz` (SURFACE §12): the M4 gate (BUILD "M4 gate", SPEC §10.9, REVIEW B8), and with
+//! `--handicap` its handicapped wave (SPEC §9.9, R180–R184, R187). Port of
+//! `packages/cards/test/fuzz.test.ts` and `packages/cards/test/fuzz-handicap.test.ts`, in that order.
+//!
+//! # The gate (fuzz.test.ts)
+//!
+//!   "cards/test/fuzz.test.ts: 1,000 games per wave (seeds 1–1000) with decks drawn randomly from
+//!    all implemented cards, played by aiPolicy, never throw, always terminate (hero death or cap),
+//!    and replay to the same hash. Any card that appears in a failing seed is listed in the failure
+//!    message."
+//!
+//! Four assertions per seed, in this order:
+//!   1. NO THROW: playing the game out raises nothing (a panic, here).
+//!   2. TERMINATION: the game reaches a real `state.result` (hero death, both heroes dead, or the R2
+//!      turn cap at TURN_CAP_PLAYER_TURNS player-turns), inside a bounded number of actions. The
+//!      bound is not a pass condition: hitting it is a reported failure, so a non-terminating game
+//!      fails loudly instead of hanging CI (the policy never concedes or offers a draw, R84, so those
+//!      endings come only from the endings channel, below).
+//!   3. REPLAY EQUALITY: folding `(seed, decks, log)` in a fresh `create_game` reproduces the same
+//!      state hash, with no rejected actions. This is what makes SPEC §9.3's "(seed, log)
+//!      reconstructs any match" true.
+//!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
+//!      a bare seed number is useless against a 100-card pool.
+//!
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I5 and I8 (summoning sickness and exertion,
+//! R171, and nothing after game over, R216) hold on the state each action is chosen in and on the
+//! state it produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal
+//! actions, §10.8) holds for both seats on every state, setup's included: every state under
+//! `cargo test`, every I6_GATE_STRIDE-th under the gate.
+//! I8 (no unlisted attack, switch or activation `reduce` accepts, §4.1, §4.2, §10.2) runs on every state under `cargo test`,
+//! every I8_GATE_STRIDE-th under the gate and `--handicap`.
+//!
+//! And after every action, GROWTH (#1254): the gate weighs each action it applies by the events `reduce`
+//! returned, the largest number on any card instance and the number of instances in play, prints each
+//! measure's heaviest actions (one per game) in the summary and in `--json`, and fails a seed in the
+//! "growth" stage when one action passes GROWTH_EVENTS_BOUND, GROWTH_NUMBER_BOUND or
+//! GROWTH_INSTANCES_BOUND. That catches runaway growth inside one action (R874000's fusion, R884000's
+//! University) at the step that grew, well before the engine's settle cap (§10.3) panics or a process
+//! runs out of memory. The weighing reads the returned events and state only, never the clock, so it
+//! is as deterministic as the game; the handicapped wave is weighed the same way through the same
+//! loop, and `--duos` is weighed by `duos_fuzz.rs` through the shared helpers below.
+//!
+//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, forged
+//! actions that are never logged. A wrong-seat probe sends the action the policy chose from the seat
+//! that may not take it, and must be refused with no events (§9.3); a reused-nonce probe sends a
+//! concede under the nonce of the last logged action, and must neither apply nor replace anything but
+//! answer that action's own events (§10.1, §10.2); while a prompt is open, a malformed-answer probe
+//! sends the policy's answer with a stale choice id, from the other seat, with a pick dropped below
+//! `min`, with a pick doubled and with a pick no option offers, each owed a refusal with no events
+//! (§10.6, #1574). A malformed-action probe sends the policy's play, activation or mulligan with one
+//! choice made impossible: a target, mode, zone, Tribute or Plague source nothing offers, a negative X, a
+//! face-down timing no card is set by, an ability the card lacks, the `activatePower` alias aimed at
+//! nothing, a keep the seat was not dealt, and a second mulligan answer from the seat that gave one. Each
+//! is owed a refusal with no events (§10.5 step 1, R90, R265, #1694). Every way the state must be kept
+//! exactly, the nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
+//! and the probe. The handicapped wave probes the same way and `--duos` as `duos_fuzz.rs` says. The
+//! probes draw from no random stream, so every game plays as it did before them.
+//!
+//! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
+//! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
+//! `Rng::new` over a seed string derived from the seed number, so a reported seed reproduces its game
+//! exactly, in this process or any other, on any thread.
+//!
+//! The policy rng is deliberately SEPARATE from the game rng: `reduce` takes no rng, so it builds its
+//! own from `(state.seed, state.rng_cursor)` exactly as `fold` does. The policy's coin flips are
+//! therefore outside the state, and the recorded action log is the only thing replay needs — which is
+//! the property assertion 3 exists to prove.
+//!
+//! The seeds run in parallel (rayon): each game is its own state, its own rngs and its own monitor,
+//! and the registries are the process's read-only `OnceLock`s (SURFACE §3), so a game on one thread
+//! cannot see another's. The report reads the results back in seed order.
+//!
+//! HOW TO RUN
+//!   cargo jackioh fuzz                              the gate: seeds 1–1000
+//!   cargo jackioh fuzz --handicap                   the handicapped wave: seeds 1–1000
+//!   cargo jackioh fuzz --duos                       Duos co-op games: seeds 1–200 (`duos_fuzz.rs`)
+//!   cargo test -p jackioh-tools fuzz                seeds 1–20 of each (see SWEEP_SEEDS)
+//!   cargo jackioh fuzz --seeds 200 --json           the wave as one JSON object
+//!   cargo jackioh fuzz --seeds 200 --handicap --json   the handicapped wave as one JSON object
+//!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named (`--handicap` too, for a handicapped one)
+//!   cargo jackioh fuzz --regress                    the regression corpus
+//!   cargo jackioh fuzz --seeds 200 --cards <ids|set>   the named cards in both decks of every seed (#2387)
+//!
+//! # The regression corpus (#1197)
+//!
+//! A seed's deal moves whenever a card joins `FUZZ_POOL`, so a seed a past report named stops
+//! reproducing the day the next card lands. Each kept failure therefore pins its own decks in
+//! `crates/tools/fuzz-corpus/`; `--regress` replays them, each with its pinned decks and never a deal
+//! from the live pool, through the gate's checks, and the tools' `cargo test` runs it.
+//!
+//! # The handicapped wave (fuzz-handicap.test.ts)
+//!
+//! The gate plays every seed with this spec's resources on both seats, which is what every online
+//! match uses. Practice gives the AI's seat a handicap, and the handicap changes the rules a game runs
+//! through: a 25- or 30-card deck (R184), one more crystal up to a higher cap (R181), an extra opening
+//! card (R182), and at Hard a second start-of-turn draw with its own cast-on-draw chain, hand-cap
+//! check and fatigue step (R183). So this wave plays the same random-policy games with one seat
+//! handicapped, rotating by seed over Medium and Hard and over both seats, through the gate's own
+//! loop (`GameSetup` names the streams and the handicaps, `run_seed` plays and checks), and holds
+//! them to the same checks: no throw, a real ending inside the cap in `Phase::Over`, a log that folds
+//! back, handicaps included, to the live hash, the invariant monitor (I1–I8), growth weighing, the
+//! same probes and the serialization checkpoint. A failure goes through `Failure` and `report` with
+//! its tier and seat in the example line and both decks printed, and `--json` prints the wave as one
+//! JSON object.
+//!
+//! # Starting states (#1503)
+//!
+//! A plain deal never sets the three setup inputs `create_game` and `fold` take beyond the decks, so
+//! the paths that read them would have no random coverage. On `START_STATE_SHARE` of seeds, in both
+//! waves, the game starts from a dealt deck (R433), last boards (R417, R564) or Glitch boards (R678).
+//! The start is drawn from the seed's `start-` stream and its inputs from `start-inputs-`; the
+//! boards are manufactured in the shape the server keeps, and each one holds one fused Unit (R179).
+//! Create, fold and checkpoint all take the same inputs (`GameSetup::create_options` and
+//! `fold_args`), so a game that starts from them still folds back to its live hash. The summary and
+//! `--json` count seeds by start, and a failure names its start. `--from <seed>` plays a seed from
+//! its start, since the seed alone draws it. The corpus replays from the plain start.
+//!
+//! # The endings channel (#1572)
+//!
+//! The policy never concedes, offers or answers a draw, or emotes (R84), and `timeout`,
+//! `disconnectExpired`, `ceilingReached` and `setAutoEndTurn` are the server's, not its, so a plain
+//! wave never plays those endings and cleanups across random boards. On `ENDINGS_SHARE` of seeds, in both
+//! waves, the game also takes an endings channel: at each step, from a stream of its own, it may send
+//! one of those actions in the policy's place (`endings_action`). A concede, an expired disconnect or
+//! the ceiling comes at `ENDINGS_END_CHANCE`, an answer to a standing offer (R36) at
+//! `ENDINGS_ANSWER_CHANCE`, and an offer, an emote (R1127), a timeout (R268) or the R345 setting at
+//! `ENDINGS_ACT_CHANCE`, from either seat (R79). An offer, its answer and an emote go only while
+//! `legal_actions` lists them. A channel action is logged like any other, so replay, the hash and
+//! the checkpoint fold it, and the probes skip its step. The share, not every seed, keeps most games
+//! at their depth; `GameSetup` draws it from the seed's `endings-` stream, so `--from <seed> --seeds
+//! 1` replays it, and a game that took it may end by `ENDINGS_TERMINAL_REASONS`. The summary and
+//! `--json` count the seeds that took it. The corpus replays without it, and the shipped §10.7
+//! policy (`AI_SKIPPED_ACTIONS`) is unchanged.
+//!
+//! # Forced cards (#2387)
+//!
+//! A seed deals 50 of about 630 cards, so a plain wave deals any one card in fewer than one seed in
+//! ten. `--cards` deals the named cards into both decks of every seed of the gate's wave and of the
+//! handicapped wave, so a card's own run exercises it. The forcing goes through `golden.rs`: each
+//! forced card takes a first slot in place of a card from the end, the deck keeps its size and holds
+//! no card twice (a Core card and its Legacy card are two, R2511001; a token goes in through the card whose `refs` name it, R279), and
+//! an unknown id is refused with a message naming it. One set's name forces a slice of
+//! `FORCED_SET_CARDS_PER_SEED` of its cards a seed, in turn, until every one has been dealt. The
+//! streams are untouched, so a wave without `--cards` is the same wave it always played. The summary,
+//! `--json` and each failure name the forced cards, and a failure's `reproduce:` line replays its seed.
+//!
+//! # Pool coverage (#2426)
+//!
+//! A card dealt into many decks may never have its rules run, when the policy never plays it. Each
+//! wave therefore reports, over the games that passed (a failed seed adds nothing, as with growth),
+//! the ids dealt into either deck and the ids a `CardPlayed`, `TrapFired` or `CardAnnounced` event
+//! named, setup's included (`Coverage`). The summary's `coverage:` line counts the dealt cards no
+//! game played and names the first `COVERAGE_SHOWN` by id; `--json`'s `coverage` lists them all. It
+//! never fails a seed. Played is not every hook run: a card whose Death or trigger never fired still
+//! counts as played. The ids merge in seed order and the list is sorted, so any thread count gives
+//! the same report.
 
 use std::cell::RefCell;
 use std::fs;
@@ -263,21 +408,14 @@ pub fn decks_for_seed_from(seed: u32, pool: &[String]) -> (Vec<String>, Vec<Stri
     (p1, deal_deck(&mut shuffled, size))
 }
 
-/// The next `size` cards of a shuffled pool, as one deck. R2195000: a deck holds a Core card or its
-/// Training Grounds snapshot, so a card whose pair the deck already holds is passed over; over a pool
-/// with no snapshot that is the plain slice of the shuffle every deal took before.
+/// The next `size` cards of a shuffled pool, as one deck, an id the deck already holds passed over
+/// (a forced card, #2387). R2511001: a Core card and its Legacy card are two cards, so a deck may hold
+/// both; over a pool of distinct ids this is the plain slice of the shuffle.
 pub(crate) fn deal_deck(shuffled: &mut impl Iterator<Item = String>, size: usize) -> Vec<String> {
     let mut deck: Vec<String> = Vec::with_capacity(size);
-    let mut pairs: Vec<String> = Vec::with_capacity(size);
     while deck.len() < size {
         let Some(id) = shuffled.next() else { break };
-        // The shipped catalog itself, so a deal needs no registered catalog (a test may deal first).
-        let key = CATALOG
-            .get(&id)
-            .map_or(id.as_str(), jackioh_engine::catalog::pair_key)
-            .to_string();
-        if !pairs.contains(&key) {
-            pairs.push(key);
+        if !deck.contains(&id) {
             deck.push(id);
         }
     }
@@ -2905,7 +3043,6 @@ pub(crate) fn handicap_decks_for_seed_from(
         .into_iter();
     let big_size = usize::try_from(handicap.deck_size).unwrap_or(0);
     let small_size = usize::try_from(DECK_SIZE).unwrap_or(0);
-    // R2195000: one of each Core card and snapshot pair per deck (`deal_deck`).
     let big = deal_deck(&mut shuffled, big_size);
     let small = deal_deck(&mut shuffled, small_size);
     match seat {
@@ -4714,7 +4851,7 @@ pub(crate) mod tests {
         }
 
         /// The deck holds every forced id at `size` cards, and passes the checks a dealt deck does:
-        /// the size, no id twice and never both of an R2195000 pair (`validate_deck`).
+        /// the size and no id twice (`validate_deck`).
         fn assert_forced(deck: &[String], forced: &[String], size: usize) {
             assert_eq!(deck.len(), size, "{deck:?}");
             for id in forced {
@@ -4731,7 +4868,6 @@ pub(crate) mod tests {
             let _preview = preview_every_set();
             let forcing = forcing_of(&["core-090", "traininggrounds-041"]).unwrap();
             let size = usize::try_from(DECK_SIZE).unwrap_or(0);
-            let mut pair_ran = false;
             for seed in 1..=CI_SEEDS {
                 let forced = forcing.for_seed(seed);
                 assert_eq!(
@@ -4750,15 +4886,25 @@ pub(crate) mod tests {
                 let (f1, f2) = forcing.deal(seed, (h1, h2));
                 assert_forced(&f1, &forced, n1);
                 assert_forced(&f2, &forced, n2);
-                let (plain1, plain2) = decks_for_seed(seed);
-                pair_ran = pair_ran
-                    || plain1.contains(&"core-002".to_string())
-                    || plain2.contains(&"core-002".to_string());
             }
-            assert!(
-                pair_ran,
-                "no seed's plain deal held core-002, so the pair path never ran"
-            );
+        }
+
+        /// R2511001: a Core card and its Legacy card are two cards, so both are forced into one deck.
+        #[test]
+        fn r2511001_a_core_card_and_its_legacy_card_are_forced_together() {
+            register_all();
+            let forced: Vec<String> = ["core-002", "traininggrounds-041"]
+                .into_iter()
+                .map(str::to_string)
+                .collect();
+            let forcing = forcing_of(&["core-002", "traininggrounds-041"]).unwrap();
+            assert_eq!(forcing.for_seed(1), forced);
+            let size = usize::try_from(DECK_SIZE).unwrap_or(0);
+            for seed in 1..=CI_SEEDS {
+                let (p1, p2) = forcing.deal(seed, decks_for_seed(seed));
+                assert_forced(&p1, &forced, size);
+                assert_forced(&p2, &forced, size);
+            }
         }
 
         #[test]
@@ -4811,11 +4957,6 @@ pub(crate) mod tests {
             assert!(err.starts_with("--cards"), "{err}");
             assert!(err.contains("no-such-card: not in the catalog"), "{err}");
             // `{:#}` prints the whole context chain; `Display` shows only `--cards`.
-            let pair = format!(
-                "{:#}",
-                forcing_of(&["core-002", "traininggrounds-041"]).unwrap_err()
-            );
-            assert!(pair.contains("R2195000"), "{pair}");
             let set = format!("{:#}", forcing_of(&["Stinkyscape", "core-090"]).unwrap_err());
             assert!(set.contains("one set's name"), "{set}");
         }

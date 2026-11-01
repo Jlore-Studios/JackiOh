@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #56 Corpse Eater, the snapshot of Core #89 Corpse Eater (`core-089`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #89 (SPEC §8.5, §6.2): hand trigger on unit death (R68, R77).
+//! SPEC §8.11 Training Grounds #56 Legacy: Corpse Eater,
+//! the Legacy card of Core #89 Corpse Eater (`core-089`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89).
+//!
+//! Base: "Rush. While in your hand: whenever a unit on either side dies, this gains its attack and
+//! max health". Radiant: "Rush, Divine Shield; gains double". §8's Conventions: both keyword lists
+//! are printed in `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
+//!
+//! A hand-zone trigger: "while in your hand" and "stops once on the field" are the registry's
+//! doing (§10.3, R68). It reads the event, not the instance: R78 resets an instance leaving the
+//! field, and R89's `destroyed` event carries the attack and max health the layers computed at death
+//! (R38's "current" numbers). A death is a unit going from the field to a graveyard (§4.5 step 1, §6.2);
+//! a discard, burn or bounce emits another event. Units only, tokens excluded (R11); `def_of` is the layers' own catalog
+//! read, a transient Fuse def included (R77). The gain is a layer-4 `buff`, kept on entering the field.
 
 use jackioh_engine::prelude::*;
 

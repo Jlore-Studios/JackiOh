@@ -4,20 +4,19 @@
 //! shuffle-in (`draw::shuffle_into_library`): its position blanked for both players (R97), the owner
 //! shown what went in (R311) and R43's arrival roll.
 //!
-//! R80, R316: a card in its owner's graveyard that a full library refuses STAYS there (it never left:
-//! no second `enteredGraveyard`), reported by `libraryOverflow`; any other refused card goes to its
-//! owner's graveyard, or ceases to exist if a unit-token card (R11).
+//! R80, R316: `shuffle_into_library` alone decides a full library's refusal. A card in its owner's
+//! graveyard that it refuses STAYS there (it never left: no second `enteredGraveyard`), reported by
+//! `libraryOverflow`; any other refused card goes to its owner's graveyard, or ceases to exist if a
+//! unit-token card (R11).
 //!
 //! R1867006 (Stinkyscape #12.3 Psychic Scream's "into your opponent's deck"): `player` names another
 //! library; the card becomes that player's first, so R78's reset and the arrival land on their card (R12).
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::LIBRARY_CAP;
 use crate::draw::shuffle_into_library;
 use crate::script::Effect;
 use crate::state::{find_instance, find_instance_mut};
-use crate::wire::{GameEvent, LibraryOverflowOutcome, Zone};
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -48,19 +47,6 @@ pub fn shuffle_card_into(args: ShuffleCardIntoArgs) -> Effect {
         let Some(mut card) = find_instance(ctx.state, &args.instance_id).cloned() else {
             return;
         };
-        let full = ctx.state.players[card.owner].library.len() as i32 >= LIBRARY_CAP;
-        let in_own_graveyard = matches!(card.zone, Zone::Graveyard { player } if player == card.owner);
-        if full && in_own_graveyard {
-            ctx.events.push(GameEvent::LibraryOverflow {
-                player: card.owner,
-                instance_id: card.id.clone(),
-                def_id: card.def_id.clone(),
-                outcome: LibraryOverflowOutcome::Graveyard,
-                radiant: if card.radiant { Some(true) } else { None },
-                copy_of: None,
-            });
-            return;
-        }
         shuffle_into_library(ctx, &mut card, true, None);
     })
 }

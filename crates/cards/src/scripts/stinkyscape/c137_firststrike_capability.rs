@@ -1,11 +1,21 @@
-//! S #137 Firststrike Capability (SPEC §8.10 row 137; R1, R70, R113, R1839002, R1852003, R1852005,
-//! R1852006, R1857002, R1859006): (4) Unit, Common, 9/9 → 18/18, First Strike, a card of the
-//! Stinkyscape set.
+//! S #137 Starfleet Commander (SPEC §8.10 row 137; R1, R70, R113, R1839002, R1852003, R1852005,
+//! R1852006, R1857002, R1859006): (4) Unit, Human, Legendary, 9/9 → 18/18, First Strike, a card of the
+//! Stinkyscape set. It was Firststrike Capability, a Common with no tag, until #2521 renamed it; its
+//! Cry is unchanged, and its file keeps the old name.
 //!
 //! Base:    "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and
 //!          cast it."
 //! Radiant: "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a Radiant War
+//!          Doctrine and cast it."
+//! Engine: Cry (R1): with a Dormant Starship (`building_a_ship`, R1852005), `awaken` it, which launches
 //! it for nothing, spending no launch price (R1839002, R1852003, R1852006); then a Discover (§6.3) of
+//! three of the four War Doctrines, S #137.1 to S #137.4, named by id (the pool R1857002 names, which a
+//! held set's gate lets in), and a `cast_new` of the pick, free and counted as played (R70), Radiant on
+//! the Radiant face. The Doctrine resolves inside the Cry, before the Starship's fused When launched
+//! answers the launch (R113), so its Starship line reads the Starship before those (R1859006). With no
+//! Dormant Starship, nothing: no launch and no Discover. Declares no numbers. The Discover's prompt names
+//! the card as the game's catalog version spells it (`def_of`, R767000), so a replay of a game before
+//! the rename asks as it asked then. S #176 Preemptive Strike casts the same effect as a Spell.
 
 use jackioh_engine::prelude::*;
 
@@ -23,16 +33,14 @@ const WAR_DOCTRINES: [&str; 4] = [
 const PICKED: &str = "picked";
 
 fn firststrike(radiant: bool) -> Script {
-    let prompt = if radiant {
-        "Firststrike Capability: Discover a Radiant War Doctrine to cast"
-    } else {
-        "Firststrike Capability: Discover a War Doctrine to cast"
-    };
+    let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
     Script {
         cry: Some(hook(move |ctx| {
             let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
                 return vec![];
             };
+            let name = &def_of(Some(&*ctx.state), ID).name;
+            let prompt = format!("{name}: Discover {doctrine} to cast");
             vec![
                 awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
                 discover_from_catalog(json_as(json!({
@@ -62,8 +70,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #137 Firststrike Capability — SPEC §8.10 row 137, BUILD M12 row S 137 (R1852006, R1859006,
-// R70).
+// S #137 Starfleet Commander — SPEC §8.10 row 137, BUILD M12 row S 137: "with a Dormant Starship, its
+// Cry launches it free (its fused Cries, then the Doctrine before the When launched, R1859006; no launch
+// price spent, R1852006), then Discovers one of the four War Doctrines (three offered) and casts it for
+// its controller (R70); with none, nothing, no Discover; radiant 18/18 and the Doctrine Radiant".
 #[cfg(test)]
 mod tests {
     use super::{ID, WAR_DOCTRINES};
@@ -72,7 +82,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const CHASSIS: &str = "stinkyscape-048"; // (1) 4/1 Starship Piece, Equip, Rush: keywords only.
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
@@ -90,10 +100,12 @@ mod tests {
             .collect()
     }
 
+    /// p1's Starship (an Ultralight Chassis and an Ultra Capacitor) and Starfleet Commander (Radiant
+    /// if `radiant`) in hand, played into lane 4.
     fn played(seed: &str, radiant: bool) -> (Scenario, String) {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STRATOS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
+            json!([{ "def": CHASSIS, "lane": 1 }, { "def": CAPACITOR, "lane": 2 }]),
             json!({ "hand": [{ "def": ID, "radiant": radiant }] }),
             json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
         );
@@ -112,6 +124,8 @@ mod tests {
         let (s, ship) = played("r1859006-launch", false);
         assert!(is_launched_starship(s.card(ship.as_str())));
         assert!(!building_a_ship(s.state(), P1));
+        let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
+        assert!(prompt.starts_with("Starfleet Commander:"), "{prompt}");
         let options = offered(&s);
         assert_eq!(options.len(), 3, "{options:?}");
         assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())));
@@ -178,7 +192,7 @@ mod tests {
     fn r1859006_the_launch_spends_no_launch_price() {
         let (mut s, _ship) = built_starship(
             "r1859006-price",
-            json!([{ "def": STRATOS, "lane": 1 }]),
+            json!([{ "def": CHASSIS, "lane": 1 }]),
             json!({ "hand": [ID] }),
             json!({}),
         );

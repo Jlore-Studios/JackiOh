@@ -1,12 +1,21 @@
 //! The `/ws/duos` socket's first moments (fullsend SPEC S6, B35): authentication as `/ws/match` has
 //! it, then the `hello` that names the match, then the hand-off to the co-op actor.
 //!
-//! A `HelloGate` (`actor::guard`, R835002) holds the hello while the token is checked. Then
-//! `handle_duos_socket` verifies the token (subprotocol R1379000), applies §9.4's gate
-//! (`assert_active`), waits for the hello, and attaches the socket to the seat.
-//! Every refusal answers one `error` frame with code `forbidden` and closes with R148's codes.
+//! The upgrade itself (origin check, per-address count, frame cap, subprotocol) is
+//! `actor::ws_server::handle_duos`, the same doors `/ws/match` goes through. It installs a
+//! `HelloGate` on the socket before the socket's pump starts, so a `hello` the client sends the
+//! moment the socket opens is held while the token is checked rather than dropped. The gate is the
+//! one `/ws/watch` waits behind too (`actor::guard`, R835002): it answers a frame that is not the
+//! hello `malformed` and closes the socket past `MALFORMED_FRAMES_PER_WINDOW` of them. Then
+//! `handle_duos_socket` verifies the token (offered as a subprotocol, R1379000), applies §9.4's gate
+//! (`assert_active`), waits for the hello (at most `WS_IDLE_TIMEOUT_SECONDS`), and attaches the
+//! socket to the seat the profile holds in that match, folding the actor back first when it is not
+//! in memory. Every refusal answers one `error` frame with code `forbidden` and closes with R148's
+//! codes (4401, 4403, 4404, 4429 past the account's budget (R2478000), and 1011 for a fault), so a
+//! socket learns that it may not have the match, never which check said so.
 //!
-//! The match is the hello's `matchId`, else `?matchId=`, else the live co-op match (B42).
+//! The match is the hello's `matchId`, else the upgrade's `?matchId=`, else the profile's live co-op
+//! match (B42).
 
 use std::sync::Arc;
 
@@ -14,8 +23,8 @@ use jackioh_engine::wire::DuosSeat;
 
 use crate::actor::guard;
 use crate::actor::protocol::SocketErrorCode;
-use crate::actor::ws_server::{Socket, WS_CLOSE};
-use crate::api::http::{ApiErrorCode, assert_active};
+use crate::actor::ws_server::{Socket, WS_CLOSE, WS_DUOS_PATH};
+use crate::api::http::{ApiErrorCode, assert_active, upgrade_profile};
 use crate::app::App;
 use crate::db::store::{Profile, StoreError};
 use crate::duos::live_match_of;
@@ -71,11 +80,14 @@ async fn authenticate(app: &Arc<App>, token: Option<String>) -> Result<Profile, 
     let Ok(user) = app.auth.verify(&token).await else {
         return Err(Refusal::refused(WS_CLOSE.unauthorized, "sign in first"));
     };
-    let mut tx = app.db.begin(None).await?;
-    let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
-    tx.commit().await?;
-    let Some(profile) = profile else {
-        return Err(Refusal::refused(WS_CLOSE.unauthorized, "sign in first"));
+    // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
+    let profile = match upgrade_profile(app, &user, WS_DUOS_PATH).await {
+        Ok(Some(profile)) => profile,
+        Ok(None) => return Err(Refusal::refused(WS_CLOSE.unauthorized, "sign in first")),
+        Err(error) if error.code == ApiErrorCode::RateLimited => {
+            return Err(Refusal::refused(WS_CLOSE.rate_limited, &error.message));
+        }
+        Err(error) => return Err(Refusal::Threw(error.message)),
     };
     assert_active(&profile).map_err(|error| {
         let code = if error.code == ApiErrorCode::NotFound {

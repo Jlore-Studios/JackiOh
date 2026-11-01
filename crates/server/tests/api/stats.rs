@@ -1257,6 +1257,119 @@ mod r978000_kept_card_stats {
     }
 }
 
+mod r2491000_kept_card_history {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use jackioh_server::api::catalog::load_patch_versions;
+    use jackioh_server::db::store::{Db, StoreError};
+
+    /// Counts the fake store's `statsTotals.load` calls from here on, through its `on_call` hook.
+    async fn count_loads(app: &App) -> Arc<AtomicUsize> {
+        let loads = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&loads);
+        match &app.db {
+            Db::Fake(data) => {
+                data.lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                    if method == "statsTotals.load" {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                    Ok(())
+                }));
+            }
+            Db::Pg(_) => panic!("the API tests run on the fake store"),
+        }
+        loads
+    }
+
+    /// The loads one request to `path` made, which answers 200; the count starts again after it.
+    async fn loads_of(app: &Arc<App>, loads: &AtomicUsize, path: &str) -> usize {
+        let (status, _, _) = get_public(app, path).await;
+        assert_eq!(status, 200, "{path}");
+        loads.swap(0, Ordering::SeqCst)
+    }
+
+    /// A live game of `mode` on `patch` whose first seat, on `core-001` and `core-002`, `winner` wins.
+    fn game(id: String, patch: &str, mode: &'static str, winner: &'static str) -> Value {
+        make_game_record(
+            &id,
+            RecordOptions {
+                source: Some("live"),
+                mode: Some(mode),
+                patch: Some(patch.to_string()),
+                p1_deck: Some(vec!["core-001", "core-002"]),
+                winner: Some(winner),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2491000_a_drill_down_reads_its_patch_history_in_one_load_kept_per_match_type() {
+        let app = test_app().await;
+        let loads = count_loads(&app).await;
+        assert!(load_patch_versions().await.len() > 2);
+
+        // Each view misses once: the history's one load and the current patch's drills, however
+        // many patches ship.
+        for path in [
+            "/api/stats/cards/core-001",
+            "/api/stats/cards/core-001?mode=bo1",
+            "/api/stats/cards/core-001?mode=bo3",
+            "/api/stats/cards/core-001?mode=random",
+        ] {
+            assert_eq!(loads_of(&app, &loads, path).await, 2, "{path}");
+        }
+
+        // Every view is kept now, for every card's page.
+        for path in ["/api/stats/cards/core-001", "/api/stats/cards/core-002?mode=bo3"] {
+            assert_eq!(loads_of(&app, &loads, path).await, 0, "{path}");
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2491000_the_kept_history_lists_each_cleared_patch_as_its_own_load_did() {
+        let app = test_app().await;
+        let gate = count(PUBLIC_STATS_MIN_LIVE_GAMES);
+        let current = current_patch();
+        let versions = load_patch_versions().await;
+        let mut past = versions.iter().filter(|version| **version != current);
+        let old = past.next().expect("a past patch").clone();
+        let short = past.next().expect("a second past patch").clone();
+
+        let mut records: Vec<Value> = (0..gate)
+            .map(|i| game(format!("hist-old-{i}"), &old, "bo1", "p1"))
+            .collect();
+        records.push(game("hist-short-0".to_string(), &short, "bo1", "p1"));
+        records.extend((0..gate).map(|i| game(format!("hist-now-{i}"), &current, "bo3", "p2")));
+        insert_records(&app, records).await;
+
+        let row = |patch: &str, games: usize, rate: Value| json!({ "patch": patch, "games": games, "winRate": rate });
+
+        // `short` is below the gate: it is not listed.
+        let (_, _, all) = get_public(&app, "/api/stats/cards/core-001").await;
+        assert_eq!(
+            all["patches"],
+            json!([row(&old, gate, json!(1.0)), row(&current, gate, json!(0.0))])
+        );
+
+        // The gate counts every mode, so a patch whose games are all of another mode is listed
+        // with no games.
+        let (_, _, bo1) = get_public(&app, "/api/stats/cards/core-001?mode=bo1").await;
+        assert_eq!(
+            bo1["patches"],
+            json!([row(&old, gate, json!(1.0)), row(&current, 0, Value::Null)])
+        );
+
+        // A card no counted deck held is listed on each cleared patch with no games.
+        let (_, _, unheld) = get_public(&app, "/api/stats/cards/core-005").await;
+        assert_eq!(
+            unheld["patches"],
+            json!([row(&old, 0, Value::Null), row(&current, 0, Value::Null)])
+        );
+    }
+}
+
 mod r1044000_condensed_card_stats {
     use super::*;
     use std::time::Duration;

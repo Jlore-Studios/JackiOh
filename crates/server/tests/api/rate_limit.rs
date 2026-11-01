@@ -16,15 +16,16 @@ use sha2::Sha256;
 use tower::ServiceExt;
 use tracing_subscriber::layer::SubscriberExt;
 
-use jackioh_server::api::http::{account_key, address_key, create_rate_limiter};
+use jackioh_server::api::http::{KnownProfiles, account_key, address_key, create_rate_limiter};
 use jackioh_server::app::{self, App};
 use jackioh_server::auth::{Auth, SupabaseAuth, SupabaseAuthInput};
 use jackioh_server::config::{
     API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS, API_REQUESTS_PER_MINUTE,
 };
 
+use super::auth::{Harness, sign};
 use crate::support::deps::{add_user, record_logs, test_app};
-use crate::support::store::fake_lock;
+use crate::support::store::{fake_lock, record_calls};
 
 /// R109's allowance, as the server itself carries it.
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
@@ -168,6 +169,15 @@ fn count(statuses: &[u16], status: u16) -> usize {
     statuses.iter().filter(|&&candidate| candidate == status).count()
 }
 
+/// How many times the store was asked for a profile by its auth user, in a `record_calls` log.
+fn profile_reads(calls: &std::sync::Mutex<Vec<String>>) -> usize {
+    let calls = calls.lock().expect("call log");
+    calls
+        .iter()
+        .filter(|called| called.as_str() == "profiles.getByUserId")
+        .count()
+}
+
 // §9.8: the per-account API rate limit (R109)
 
 mod the_per_account_api_rate_limit_r109 {
@@ -272,6 +282,108 @@ mod the_per_account_api_rate_limit_r109 {
         let fresh = test_app().await;
         let again = sign_in(&fresh, "twice").await;
         assert_eq!(send(&fresh, "GET", MINE, Some(&again), None).await.status, 200);
+    }
+}
+
+// R2478000: an account whose budget is spent is refused before the store is read
+
+mod a_spent_account_is_refused_before_the_store_r2478000 {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2478000_a_flood_on_one_token_reads_the_profile_only_for_the_requests_the_budget_admits() {
+        let app = test_app().await;
+        let token = sign_in(&app, "looping").await;
+        let calls = record_calls(&app).await;
+
+        let inside = burst(&app, LIMIT, MINE, Some(&token), None).await;
+        assert_eq!(count(&inside, 200), LIMIT);
+        let reads = profile_reads(&calls);
+        assert!(
+            reads <= LIMIT + 1,
+            "{reads} profile reads for {LIMIT} admitted requests"
+        );
+
+        let refused = burst(&app, 50, MINE, Some(&token), None).await;
+        assert_eq!(count(&refused, 429), 50);
+        assert_eq!(profile_reads(&calls), reads, "a refusal reads no profile");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2478000_a_user_the_map_does_not_know_reads_the_store_so_a_new_account_is_still_created() {
+        let app = test_app().await;
+        let token = add_user(&app, "user-brand-new", "brand-new@example.test", true);
+        let calls = record_calls(&app).await;
+
+        assert_eq!(send(&app, "GET", MINE, Some(&token), None).await.status, 200);
+        assert_eq!(profile_reads(&calls), 1);
+        let seen = calls.lock().expect("call log").clone();
+        assert!(seen.iter().any(|called| called == "profiles.create"), "{seen:?}");
+        assert_eq!(send(&app, "GET", MINE, Some(&token), None).await.status, 200);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r2478000_an_account_the_map_does_not_know_reads_its_profile_once_before_its_429() {
+        let app = test_app().await;
+        let token = sign_in(&app, "restarted").await;
+        // The budget is spent by other means (another server's, or before this one's map was
+        // filled), so this server has never resolved the account.
+        for _ in 0..LIMIT {
+            assert!(app.limiter.allow(&account_key("restarted"), app::now_ms()));
+        }
+        let calls = record_calls(&app).await;
+
+        assert_eq!(send(&app, "GET", MINE, Some(&token), None).await.status, 429);
+        assert_eq!(profile_reads(&calls), 1, "the first refusal learns the account");
+        assert_eq!(send(&app, "GET", MINE, Some(&token), None).await.status, 429);
+        assert_eq!(
+            profile_reads(&calls),
+            1,
+            "the next one is refused before the store"
+        );
+    }
+
+    #[tokio::test]
+    async fn r2478000_r157_two_tokens_of_one_account_share_its_budget_and_the_second_is_refused_before_the_store()
+     {
+        let h = Harness::new().await;
+        let app = h.app().await;
+        fake_lock(&app)
+            .await
+            .seed_profile(json!({ "id": "two-tabs", "userId": "user-two-tabs", "status": "active" }));
+        let first = h.token_for("user-two-tabs");
+        let second = sign(
+            &h.gotrue,
+            "user-two-tabs",
+            json!({
+                "email": "user-two-tabs@example.test",
+                "app_metadata": { "provider": "email" },
+                "jti": "second-tab",
+            }),
+        );
+        assert_ne!(first, second);
+
+        let inside = burst(&app, LIMIT, MINE, Some(&first), None).await;
+        assert_eq!(count(&inside, 200), LIMIT);
+        let calls = record_calls(&app).await;
+
+        assert_eq!(send(&app, "GET", MINE, Some(&second), None).await.status, 429);
+        assert_eq!(profile_reads(&calls), 0);
+    }
+
+    #[test]
+    fn r2478000_known_profiles_holds_at_most_its_bound_and_drops_the_user_remembered_longest_ago() {
+        let known = KnownProfiles::new(2);
+        known.remember("user-a", "a");
+        known.remember("user-b", "b");
+        known.remember("user-a", "a");
+        assert_eq!(known.size(), 2);
+
+        known.remember("user-c", "c");
+        assert_eq!(known.size(), 2);
+        assert_eq!(known.get("user-a"), None);
+        assert_eq!(known.get("user-b").as_deref(), Some("b"));
+        assert_eq!(known.get("user-c").as_deref(), Some("c"));
     }
 }
 

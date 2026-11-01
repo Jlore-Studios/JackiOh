@@ -200,8 +200,6 @@ export type CardProps = {
    * "Face down" tag; the opponent's view never carries it, so their card shows no badge.
    */
   revealAt?: RevealAt;
-  /** #165: what a touch hold opens: the inspect sheet (default), or the hover preview while held. */
-  touchHold?: "sheet" | "preview";
   /** What a click reports. Absent means the element is not clickable and clicks bubble. */
   target?: ClickTarget | null;
   /** Units carry the switch-position button (BUILD M5-T2). */
@@ -298,7 +296,6 @@ export default function Card(props: CardProps): ReactElement {
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(subject, {
     prefer: form === "full" ? "above" : "beside",
-    touchHold: props.touchHold,
     showLoc: false,
     keyHint: SHORTCUTS.inspect,
   });

@@ -1,11 +1,15 @@
 //! S #137.2 Sea Doctrine (SPEC §8.10 row 137.2; R49, R1852005, R1859007, R1859009): (4) Spell, War
 //! Doctrine, Token (printed Legendary), a token of the Stinkyscape set, which #137
-//! Firststrike Capability Discovers and casts.
+//! Starfleet Commander Discovers and casts.
 //!
 //! Base and Radiant: "For the rest of the game, your Units have Deft. Heal your hero {multiplier}× your
 //! Starship's Health." Multiplier 2, Radiant 5.
 //! Engine: `give_units_keyword { Deft }`, a `unitsHaveKeyword` player modifier for the rest of the game:
+//! every Unit its caster controls has Deft (an attack and a switch in one turn, R49), those that arrive
+//! later too, but a Vanilla one (R1859007). Then, once, as it is cast: `heal` on its caster's hero by
+//! multiplier × the Health of their launched Starship (`launched_starship_of`, R1852005) as it stands,
 //! damage counted, with no cap on a hero (§6.3 Heal, R1859009); no launched Starship, no heal.
+//! Tunes: multiplier 2 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -46,7 +50,8 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    // Issue #2521: Stratos (S #68) is no Starship Piece any more, so a piece of 6 Health stands in.
+    const CRYSTAL: &str = "stinkyscape-132"; // (2) 3/6 Starship Piece, "Death: Your hero gains 1 Armor."
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
     fn has_deft(s: &Scenario, id: &str) -> bool {
@@ -56,10 +61,12 @@ mod tests {
             .any(|keyword| keyword.kind() == KeywordKind::Deft)
     }
 
+    /// p1's Starship (one Defensive Crystal, 3/6), launched if `launch`, with 2 damage on it; p1's hero at
+    /// 20, a Mr. Vanilla of p1's in lane 3 and the Doctrine (Radiant if `radiant`) in hand, not yet cast.
     fn board(seed: &str, radiant: bool, launch: bool) -> Scenario {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STRATOS, "lane": 1 }, { "def": STRATOS, "lane": 2 }]),
+            json!([{ "def": CRYSTAL, "lane": 1 }]),
             json!({
                 "hand": [{ "def": ID, "radiant": radiant }],
                 "field": [{ "def": VANILLA, "lane": 3 }],

@@ -43,6 +43,11 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const INJECTION: &str = "core-090";
+    /// A CN-Viral Injection at (2), the price these cases are written at: it costs (1) since #2657, and
+    /// a `costMod` of 1 puts it back.
+    fn injection() -> Value {
+        json!({ "def": INJECTION, "costMod": 1 })
+    }
     const CN_VIRUS: &str = "core-090-1";
     const FULLSEND: &str = "core-078";
     const TWINSPELL: &str = "core-079";
@@ -98,7 +103,7 @@ mod tests {
 
     #[test]
     fn r1180004_the_next_spell_costs_no_mana_and_three_times_its_cost_in_health() {
-        let mut s = game("m+006-price", json!({ "hand": [ID, INJECTION] }));
+        let mut s = game("m+006-price", json!({ "hand": [ID, injection()] }));
         s.play(ID, json!({}));
         let before = mana(&s);
         s.play(INJECTION, json!({}));
@@ -110,7 +115,7 @@ mod tests {
 
     #[test]
     fn r1180004_legal_actions_offer_a_spell_only_the_health_affords() {
-        let mut s = game("m+006-legal", json!({ "hand": [ID, INJECTION], "mana": 0 }));
+        let mut s = game("m+006-legal", json!({ "hand": [ID, injection()], "mana": 0 }));
         assert!(!listed(&s, INJECTION));
         s.play(ID, json!({}));
         assert!(listed(&s, INJECTION));
@@ -120,7 +125,7 @@ mod tests {
 
     #[test]
     fn r1180004_a_discount_lowers_the_health() {
-        let mut s = game("m+006-discount", json!({ "hand": [FULLSEND, ID, INJECTION] }));
+        let mut s = game("m+006-discount", json!({ "hand": [FULLSEND, ID, injection()] }));
         // /fullsend's "your cards cost (1) less this turn", read after every modifier (R65).
         s.play(FULLSEND, json!({}));
         s.play(ID, json!({}));
@@ -144,7 +149,7 @@ mod tests {
     fn r1180004_a_cast_does_not_use_it() {
         let mut s = game(
             "m+006-cast",
-            json!({ "hand": [ID, INJECTION], "library": [JELLY_BEAN, FILLER, FILLER] }),
+            json!({ "hand": [ID, injection()], "library": [JELLY_BEAN, FILLER, FILLER] }),
         );
         s.play(ID, json!({}));
         s.end_turn();
@@ -165,7 +170,7 @@ mod tests {
 
     #[test]
     fn r1180004_it_lasts_across_turns_until_a_spell_uses_it() {
-        let mut s = game("m+006-turns", json!({ "hand": [ID, INJECTION, FILLER] }));
+        let mut s = game("m+006-turns", json!({ "hand": [ID, injection(), FILLER] }));
         s.play(ID, json!({}));
         s.end_turn();
         s.end_turn();
@@ -177,7 +182,7 @@ mod tests {
 
     #[test]
     fn r1180004_paying_to_0_health_loses_at_the_state_check() {
-        let mut s = game("m+006-lose", json!({ "hand": [ID, INJECTION], "health": 6 }));
+        let mut s = game("m+006-lose", json!({ "hand": [ID, injection()], "health": 6 }));
         s.play(ID, json!({}));
         s.play(INJECTION, json!({}));
         assert_eq!(s.state().result.expect("the game is over").winner, Winner::P2);
@@ -185,7 +190,7 @@ mod tests {
 
     #[test]
     fn r1180004_a_second_bloodbloom_replaces_the_first() {
-        let mut s = game("m+006-twice", json!({ "hand": [ID, { "def": ID, "radiant": true }, INJECTION] }));
+        let mut s = game("m+006-twice", json!({ "hand": [ID, { "def": ID, "radiant": true }, injection()] }));
         s.play(s.hand(P1)[0].clone(), json!({}));
         s.play(s.hand(P1)[0].clone(), json!({}));
         assert_eq!(health(&s, P1), 30);
@@ -200,7 +205,7 @@ mod tests {
 
     #[test]
     fn multiple_reads_through_param() {
-        let mut s = game("m+006-param", json!({ "hand": [ID, INJECTION] }));
+        let mut s = game("m+006-param", json!({ "hand": [ID, injection()] }));
         let bloom = s.card(ID).id.clone();
         set_param(s.card_mut(&bloom), "multiple", 2);
         s.play(bloom.as_str(), json!({}));
@@ -210,7 +215,7 @@ mod tests {
 
     #[test]
     fn radiant_the_spell_it_prices_resolves_twice() {
-        let mut s = game("m+006-radiant", json!({ "hand": [{ "def": ID, "radiant": true }, INJECTION] }));
+        let mut s = game("m+006-radiant", json!({ "hand": [{ "def": ID, "radiant": true }, injection()] }));
         s.play(ID, json!({}));
         s.play(INJECTION, json!({}));
         assert_eq!(health(&s, P1), 24);
@@ -219,7 +224,7 @@ mod tests {
 
     #[test]
     fn base_the_spell_it_prices_resolves_once() {
-        let mut s = game("m+006-base-once", json!({ "hand": [ID, INJECTION] }));
+        let mut s = game("m+006-base-once", json!({ "hand": [ID, injection()] }));
         s.play(ID, json!({}));
         s.play(INJECTION, json!({}));
         assert_eq!(viruses(&s), 1);

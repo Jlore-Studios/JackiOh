@@ -160,7 +160,7 @@ fn inspect_game(
     seat: Option<PlayerId>,
     full_budget: bool,
 ) -> Result<Inspection> {
-    let shipped = crate::replay::pinned_catalog(&game, jackioh_cards::versions::is_marked(&game))?;
+    let shipped = crate::replay::pinned_catalog(&game, jackioh_cards::versions::scheme_of(&game))?;
     let input: ReplayInput =
         serde_json::from_value(game).context("the input is not {seed, decks, log, …}")?;
     with_shipped(shipped, || inspect(&input, at, seat, full_budget))

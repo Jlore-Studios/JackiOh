@@ -1,4 +1,5 @@
 {
+  "//": "Generated from crates/cards/card-text.yaml by crates/tools/tests/export_card_text.rs. Do not edit: change the YAML, then run cargo test -p jackioh-tools --test export_card_text.",
   "core-001": {
     "flavour": "He never learned to swing. He learned to stand very, very still."
   },
@@ -18,7 +19,7 @@
     "flavour": "Drop a coin in. Something better comes back up."
   },
   "core-007": {
-    "flavour": "Found in the dairy aisle, guarding a discount nobody asked for."
+    "flavour": "Just a scarab. It clicks, it chitters, and it rolls whatever it finds into a very neat ball."
   },
   "core-008": {
     "flavour": "No tricks, no text, no regrets."
@@ -93,7 +94,7 @@
     "flavour": "Show your work. Then show it again, but bigger."
   },
   "core-032": {
-    "flavour": "Premium plan. Premium claws. Premium refund policy: none."
+    "flavour": "Black as midnight, quiet as velvet, and gone before the grass stops moving."
   },
   "core-033": {
     "flavour": "Warranty void if copied. Copies also void."
@@ -126,7 +127,7 @@
     "flavour": "Bad science, worse ethics, and a deck that pays for both."
   },
   "core-043": {
-    "flavour": "He loves every cat. He has opinions about everything else."
+    "flavour": "He loves every Felinor. He has opinions about everyone else."
   },
   "core-044": {
     "flavour": "Aim once. Hit once. Leave."
@@ -162,7 +163,7 @@
     "flavour": "Bring it back. Bring it all back."
   },
   "core-054": {
-    "flavour": "She's been to every shop and haggled with every clerk."
+    "flavour": "Mother of a hundred hatchlings. She'll lend you two, and burn down anyone who's mean to them."
   },
   "core-055": {
     "flavour": "Built from three volunteers and one complaint form."
@@ -186,7 +187,7 @@
     "flavour": "Six years of research and one strongly held belief about who counts."
   },
   "core-062": {
-    "flavour": "Every cat in the neighbourhood comes when called. They all bring friends."
+    "flavour": "Throw one party for the Felinors and the whole clan turns up. They all bring friends."
   },
   "core-063": {
     "flavour": "A little nip, a little tuck, and a surprise nobody asked for."
@@ -225,7 +226,7 @@
     "flavour": "One big hit is fine. Two small ones are better. Every rule is a lesson."
   },
   "core-074": {
-    "flavour": "It resized itself to fit your wallet."
+    "flavour": "The U stands for Ultimate. The I stands for Infestation. The X stands for however much you've got."
   },
   "core-075": {
     "flavour": "There's always more in the back room. Always."
@@ -282,7 +283,7 @@
     "flavour": "He takes every hit, and every bruise becomes a briefing."
   },
   "core-092": {
-    "flavour": "He counts every cat on the field, and then he becomes them."
+    "flavour": "He knows every Felinor's name, favourite song and which window is theirs. Not one of them told him."
   },
   "core-093": {
     "flavour": "Grade E means effort. Grade S means show-off."
@@ -300,7 +301,7 @@
     "flavour": "Made of leftovers from a very loud afternoon."
   },
   "core-096": {
-    "flavour": "Not today. Not like this. Maybe never, actually."
+    "flavour": "He never raised his voice. You made every move yourself, exactly the way he planned it."
   },
   "core-097": {
     "flavour": "Ask for the perfect card and he thinks about it. Hard."
@@ -1364,6 +1365,9 @@
   "meditativeplus-001-4": {
     "flavour": "The plan said nothing about arms. The plan was very clear about legs."
   },
+  "meditativeplus-001-5": {
+    "flavour": "Bob drew the map himself. The edge of the universe is circled twice, in red pen."
+  },
   "meditativeplus-002": {
     "flavour": "The best and the worst of the meta, stapled together and sold as a bundle."
   },
@@ -2059,6 +2063,12 @@
   },
   "stinkyscape-175": {
     "flavour": "Keeps the drinks cold and the enemy colder."
+  },
+  "stinkyscape-176": {
+    "flavour": "The fleet's oldest rule: if they are going to shoot first, make sure they are too late."
+  },
+  "stinkyscape-177": {
+    "flavour": "Standard issue on every hull. Nobody has ever seen one installed, which is rather the point."
   },
   "stinkyscape-t-dormant-starship": {
     "flavour": "A hull of borrowed parts, dreaming of a sky it has never seen."

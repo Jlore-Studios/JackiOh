@@ -86,7 +86,7 @@ fn supplies_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         return vec![];
     };
     let count = if ctx.data.get("fill").and_then(Value::as_bool) == Some(true) {
-        hand_cap_of(ctx.state, ctx.controller) - zone_count(ctx.state, ctx.controller, OffFieldZone::Hand)
+        room_in(ctx.state, ctx.controller, OffFieldZone::Hand)
     } else {
         stored(ctx, "count").unwrap_or(0)
     };

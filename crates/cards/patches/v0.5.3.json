@@ -833,8 +833,8 @@
       },
       {
         "key": "heal",
-        "base": 4,
-        "radiant": 8,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -2827,7 +2827,7 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "loc": 16,
     "base": {
       "attack": 2,
@@ -2838,8 +2838,12 @@
     "radiant": {
       "attack": 4,
       "health": 4,
-      "keywords": [],
-      "text": "Death: Make your other Units and every card in your hand Radiant."
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nDeath: Make your other Units Radiant."
     }
   },
   "core-082": {
@@ -2884,15 +2888,18 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 2,
+    "cost": {
+      "base": 2,
+      "embiggen": 4
+    },
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Replace every card in your hand, deck, board, graveyard and exile with a random Legendary."
+      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (4): Your board too."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace every card in your hand, deck, board, graveyard and exile with a random Radiant Legendary."
+      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (4): Your board too."
     }
   },
   "core-084": {
@@ -4578,7 +4585,7 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "params": [
       {
         "key": "damage",
@@ -4601,11 +4608,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or choose a Unit, which is destroyed at the start of your next turn."
+      "text": "Activate: Choose one: Deal {damage} Pierce damage; your opponent discards {discards|random card|random cards}; or choose a Unit, which is destroyed at the start of your next turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or all enemy Units are destroyed at the start of your next turn."
+      "text": "Activate: Choose one: Deal {damage} Pierce damage; your opponent discards {discards|random card|random cards}; or all enemy Units are destroyed at the start of your next turn."
     }
   },
   "classic-021": {
@@ -4735,7 +4742,7 @@
           "n": 2
         }
       ],
-      "text": "Indestructible, Spell Damage +2\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
+      "text": "Indestructible, Spell Damage +2\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
     }
   },
   "classic-024": {
@@ -5101,7 +5108,10 @@
     "tags": [],
     "rarity": "Common",
     "token": false,
-    "cost": 0,
+    "cost": {
+      "base": 0,
+      "embiggen": 2
+    },
     "params": [
       {
         "key": "discount",
@@ -5115,11 +5125,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw the highest cost Spell from your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw the highest cost Spell from your deck."
     }
   },
   "classic-036": {
@@ -5343,9 +5353,12 @@
       "keywords": [
         {
           "kind": "Indestructible"
+        },
+        {
+          "kind": "Immutable"
         }
       ],
-      "text": "Indestructible"
+      "text": "Indestructible, Immutable"
     },
     "radiant": {
       "attack": 6,
@@ -5355,10 +5368,13 @@
           "kind": "Indestructible"
         },
         {
+          "kind": "Immutable"
+        },
+        {
           "kind": "Lifesteal"
         }
       ],
-      "text": "Indestructible, Lifesteal"
+      "text": "Indestructible, Immutable, Lifesteal"
     }
   },
   "classic-042": {
@@ -7456,20 +7472,20 @@
     ],
     "loc": 3,
     "base": {
-      "attack": 4,
-      "health": 4,
+      "attack": 3,
+      "health": 3,
       "keywords": [],
-      "text": "Aura: Your hero can't take more than {cap} damage at a time."
+      "text": "Aura: Your hero and this can't take more than {cap} damage at a time."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
+      "attack": 6,
+      "health": 6,
       "keywords": [
         {
           "kind": "Reborn"
         }
       ],
-      "text": "Reborn\nAura: Your hero can't take more than {cap} damage at a time."
+      "text": "Reborn\nAura: Your hero and this can't take more than {cap} damage at a time."
     }
   },
   "classicplus-012": {
@@ -8360,7 +8376,7 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "loc": 8,
     "base": {
       "keywords": [],
@@ -8394,7 +8410,7 @@
         "min": 1
       },
       {
-        "key": "brittle",
+        "key": "temporary",
         "base": 2,
         "radiant": 2,
         "better": "up",
@@ -8414,11 +8430,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}."
+      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Temporary {temporary}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}. Each costs ({setCost})."
+      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Temporary {temporary}. Each costs ({setCost})."
     }
   },
   "classicplus-024": {
@@ -8644,16 +8660,16 @@
     "cost": 4,
     "loc": 33,
     "base": {
-      "attack": 1,
-      "health": 1,
+      "attack": 3,
+      "health": 3,
       "keywords": [],
-      "text": "Cry: Discover a Felinor Unit, then another. Fuse both into this."
+      "text": "Cry: Discover a (2) Cost or less Felinor Unit, then another. Fuse both into this."
     },
     "radiant": {
-      "attack": 2,
-      "health": 2,
+      "attack": 6,
+      "health": 6,
       "keywords": [],
-      "text": "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
+      "text": "Cry: Discover a Radiant (3) Cost or less Felinor Unit, then another. Fuse both into this."
     }
   },
   "classicplus-031": {
@@ -8687,7 +8703,7 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "classicplus-032-1",
       "classicplus-032-2",
@@ -8886,8 +8902,8 @@
       },
       {
         "key": "paidCount",
-        "base": 17,
-        "radiant": 17,
+        "base": 14,
+        "radiant": 14,
         "better": "up",
         "step": 4,
         "min": 1
@@ -10467,7 +10483,7 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Buff a card {times|time|times}. It may be a card in your hand."
+      "text": "Buff a permanent {times|time|times}."
     },
     "radiant": {
       "keywords": [],
@@ -10489,8 +10505,8 @@
     "params": [
       {
         "key": "times",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -10852,11 +10868,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random AI generated card to your hand. It costs ({setCost})."
+      "text": "Activate: Add a random AI generated card to your hand. It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs ({setCost})."
+      "text": "Activate: Add a random Radiant AI generated card to your hand. It costs ({setCost})."
     }
   },
   "classicplus-t-ai-01": {
@@ -11757,13 +11773,13 @@
     "loc": 17,
     "base": {
       "attack": 1,
-      "health": 5,
+      "health": 4,
       "keywords": [],
       "text": "End of turn: Summon {traps|random Trap|random Traps}."
     },
     "radiant": {
       "attack": 2,
-      "health": 10,
+      "health": 8,
       "keywords": [],
       "text": "End of turn: Summon {traps|random Trap|random Traps}."
     }
@@ -12548,7 +12564,7 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "params": [
       {
         "key": "units",
@@ -12562,11 +12578,11 @@
     "loc": 43,
     "base": {
       "keywords": [],
-      "text": "One random effect: Get ready to learn Chinese; transform every card in your hand into the same random CN card, which cost (0); summon {units} random CN Units."
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random CN card, which costs (0). Summon {units} random CN Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "随机一项效果：准备好学中文；将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)；召唤{units}个随机的光辉中国单位。"
+      "text": "Get ready to learn Chinese! Transform every card in your hand into the same random Radiant CN card, which costs (0). Summon {units} random Radiant CN Units."
     }
   },
   "meditative-033": {
@@ -13205,7 +13221,7 @@
       "attack": 1,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field, in hands and decks.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      "text": "Cry: Nerf all other CN and KY cards on the field and in hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
     },
     "radiant": {
       "attack": 2,
@@ -13215,7 +13231,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nCry: Nerf all other CN and KY cards on the field, in hands and decks {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      "text": "Divine Shield\nCry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
     }
   },
   "meditative-045-1": {
@@ -13343,11 +13359,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "End the turn. Your hero is immune to damage until your next turn begins."
+      "text": "End the turn. Your hero is immune to damage until your next turn begins. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero is immune to damage until your next turn begins."
+      "text": "Your hero is immune to damage until your next turn begins. Exile this."
     }
   },
   "meditative-049": {
@@ -13947,8 +13963,8 @@
     "params": [
       {
         "key": "times",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -14886,13 +14902,13 @@
       "attack": 4,
       "health": 5,
       "keywords": [],
-      "text": "Start of turn: Choose one: add {books|Book of Buff|Books of Buff} or {books|Book of Nerf|Books of Nerf} to your hand."
+      "text": "Start of turn: At random, add {books|Book of Buff|Books of Buff} or {books|Book of Nerf|Books of Nerf} to your hand."
     },
     "radiant": {
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "Start of turn: Choose one: add {books|Radiant Book of Buff|Radiant Books of Buff} or {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
+      "text": "Start of turn: At random, add {books|Radiant Book of Buff|Radiant Books of Buff} or {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
     }
   },
   "meditative-086": {
@@ -16196,7 +16212,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCry: Draw 1-2. Add 1-3 to your Jade Counter."
+      "text": "Lucky 1\nCry: Draw 1-2. Add 1-2 to your Jade Counter."
     },
     "radiant": {
       "attack": 2,
@@ -16207,7 +16223,7 @@
           "n": 2
         }
       ],
-      "text": "Lucky 2\nCry: Draw 1-2. Add 1-6 to your Jade Counter."
+      "text": "Lucky 2\nCry: Draw 1-2. Add 1-4 to your Jade Counter."
     }
   },
   "meditativeplus-001": {
@@ -16454,14 +16470,14 @@
       {
         "key": "embiggenedDraw",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
       },
       {
         "key": "setCost",
-        "base": 0,
+        "base": 1,
         "radiant": 0,
         "better": "down",
         "step": 1,
@@ -16706,7 +16722,10 @@
     "tags": [],
     "rarity": "Common",
     "token": false,
-    "cost": 1,
+    "cost": {
+      "base": 1,
+      "embiggen": 2
+    },
     "params": [
       {
         "key": "spellDamage",
@@ -16720,11 +16739,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}."
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}."
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
     }
   },
   "meditativeplus-010": {
@@ -16752,13 +16771,13 @@
     ],
     "loc": 24,
     "base": {
-      "attack": 4,
+      "attack": 3,
       "health": 1,
       "keywords": [],
       "text": "Cry: Steal {cards|random card|random cards} from your opponent's hand."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 6,
       "health": 2,
       "keywords": [],
       "text": "Cry: Steal {cards|random card|random cards} from your opponent's hand. It costs (0)."

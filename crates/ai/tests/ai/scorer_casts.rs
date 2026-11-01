@@ -46,7 +46,7 @@ fn casting(s: &Scenario, def_id: &str) -> ActionBody {
 /// The nodes `simulate` takes for `action` on `state`.
 fn nodes_for(state: &GameState, action: &ActionBody) -> usize {
     let counter = create_node_counter(AI_BUDGET.nodes, None);
-    simulate(state, AI, action, &counter)
+    simulate(state, AI, action, &counter, Prices::NONE)
         .expect("the counter gives the step a node")
         .expect("the step is accepted");
     counter.used()

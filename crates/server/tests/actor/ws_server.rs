@@ -1,6 +1,22 @@
-//! `/ws/match` over a real listener (§9.8, R1379000, #861).
-//! Enforces `MAX_FRAME_BYTES`, `WS_MAX_CONNECTIONS_PER_ADDRESS`, and bearer subprotocol.
+//! `/ws/match` over a real listener and a real WebSocket client: what one client can cost the
+//! process before its token is even checked (§9.8), and how a client hands over its token.
+//!
+//!  - a frame over `MAX_FRAME_BYTES` is refused with 1009, so it is never buffered whole (the
+//!    library's default ceiling is far larger);
+//!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
+//!    included;
+//!  - the token travels as an offered `jackioh.bearer.` subprotocol (R1379000), and only
+//!    `WS_SUBPROTOCOL` is echoed;
+//!  - each upgrade counts against its account's R109 budget; one past it closes with 4429 before any
+//!    store call (R2478000).
+//!
+//! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
+//! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
+//! hand-rolled RFC 6455 client over a `TcpStream`.
 //! Surface contract: docs/v0.3.0/SURFACE.md §2, §11.2, §11.3.
+//!
+//! `the_graceful_shutdown` serves through `app::serve_until` instead: SIGTERM (and Ctrl-C) drains
+//! instead of cutting (#861).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,13 +26,13 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use jackioh_server::actor::protocol::MAX_FRAME_BYTES;
-use jackioh_server::actor::ws_server::{WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
+use jackioh_server::actor::ws_server::{WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, router};
-use jackioh_server::config::WS_MAX_CONNECTIONS_PER_ADDRESS;
+use jackioh_server::config::{API_REQUESTS_PER_MINUTE, WS_MAX_CONNECTIONS_PER_ADDRESS};
 
-use crate::support::deps::{add_user, test_app};
+use crate::support::deps::{add_user, call, test_app};
 use crate::support::engine::playable;
-use crate::support::store::{fake, from};
+use crate::support::store::{fake, from, record_calls};
 
 /// How long a read waits before the test calls the socket silent. Real time: the listener does
 /// real I/O, so tokio's clock is not paused in this file.
@@ -95,16 +111,21 @@ pub(super) async fn seed_matches(matches: usize) -> (Arc<App>, Vec<String>) {
     (app, tokens)
 }
 
-/// `seed_matches` served on a real listener. Returns the listener and each profile's token.
-async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
-    let (app, tokens) = seed_matches(matches).await;
+/// `app` served on a real listener.
+async fn listen_on(app: &Arc<App>) -> Listening {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
     let port = listener.local_addr().expect("a bound address").port();
-    let service = router(Arc::clone(&app)).into_make_service_with_connect_info::<std::net::SocketAddr>();
+    let service = router(Arc::clone(app)).into_make_service_with_connect_info::<std::net::SocketAddr>();
     let server = tokio::spawn(async move {
         axum::serve(listener, service).await.expect("the listener serves");
     });
-    (Listening { port, server }, tokens)
+    Listening { port, server }
+}
+
+/// `seed_matches` served on a real listener. Returns the listener and each profile's token.
+async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
+    let (app, tokens) = seed_matches(matches).await;
+    (listen_on(&app).await, tokens)
 }
 
 async fn listen() -> (Listening, String) {
@@ -742,6 +763,43 @@ mod banned_profiles_are_refused_the_match_socket {
         set_status(&app, "profile-1", ProfileStatus::Active).await;
         let mut client = open_as(listening.port, "match-1", &token).await.open();
         assert_eq!(client.first_view().await["viewer"], "p1");
+    }
+}
+
+mod r2478000_upgrades_count_against_the_accounts_budget {
+    //! R2478000: an upgrade is one request against its account's R109 budget, and one past it is
+    //! refused before the store is read.
+    use super::*;
+
+    #[tokio::test]
+    async fn r2478000_a_burst_of_upgrades_past_the_accounts_budget_is_refused_before_any_store_call() {
+        let _serial = SERIAL.lock().await;
+        let (app, tokens) = seed_matches(1).await;
+        let listening = listen_on(&app).await;
+
+        // The API spends profile-1's whole budget, which also teaches the server whose it is.
+        for _ in 0..API_REQUESTS_PER_MINUTE {
+            let (status, ..) = call(&app, "GET", "/api/auth/me", Some(&tokens[0]), Value::Null).await;
+            assert_eq!(status, 200);
+        }
+        let calls = record_calls(&app).await;
+
+        for _ in 0..5 {
+            let mut client = open_as(listening.port, "match-1", &tokens[0]).await.open();
+            let refusal = client
+                .next_message(READ_TIMEOUT)
+                .await
+                .expect("an error frame before the close");
+            assert_eq!(refusal["type"], "error");
+            assert_eq!(refusal["code"], "forbidden");
+            assert_eq!(refusal["message"], "too many requests; slow down");
+            assert_eq!(client.close_code().await, WS_CLOSE.rate_limited);
+        }
+        assert_eq!(*calls.lock().expect("call log"), Vec::<String>::new());
+
+        // R157: the other seat's account has its own budget.
+        let mut other = open_as(listening.port, "match-1", &tokens[1]).await.open();
+        assert_eq!(other.first_view().await["viewer"], "p2");
     }
 }
 

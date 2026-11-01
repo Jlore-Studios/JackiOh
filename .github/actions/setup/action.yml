@@ -92,7 +92,7 @@ runs:
     # changes only with the pin, so every other run hits an entry exactly and writes nothing, and a
     # pull request writes its own only when it moves the pin. Saved after the build, the entry also
     # holds the system libraries emcc builds into its own cache on the first link. The toolchain
-    # above still installs wasm32-unknown-unknown (bot/tests/test_workflows.py holds that line equal
+    # above still installs wasm32-unknown-unknown (bot/go/tests/workflows_test.go holds that line equal
     # to the bot's workflows); build-wasm.sh adds wasm32-unknown-emscripten itself when it is missing.
     - name: the emsdk scripts/build-wasm.sh pins
       id: emsdk

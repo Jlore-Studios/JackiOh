@@ -368,6 +368,14 @@ describe("R1350 a Legendary's or a Mythic's intro", () => {
     expect(r.intros).toEqual(["intro-core-096", "intro-classicplus-074"]);
   });
 
+  it("R2657001 a Field Trap firing again opens nothing, even for a director that never heard its first firing", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.director.onEvent({ type: "trapFired", instanceId: "t5", defId: "classicplus-074", controller: "p1", row: "backrow", lane: 3, again: true }, view);
+    expect(r.intros).toEqual([]);
+  });
+
   it("R1350 a card that is neither Legendary nor Mythic opens nothing", () => {
     const r = rig();
     const view = midGame();

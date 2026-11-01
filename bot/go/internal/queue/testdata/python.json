@@ -1,0 +1,1350 @@
+{
+"part_of": [
+[
+"Patch v0.9.X (part 1 of 2): the base",
+[
+"patch v0.9.x",
+2,
+1
+]
+],
+[
+"Patch (part 2 of 4): x",
+[
+"patch",
+4,
+2
+]
+],
+[
+"patch   V0.2.x  (PART 3 OF 5)",
+[
+"patch v0.2.x",
+5,
+3
+]
+],
+[
+"no part",
+null
+],
+[
+"(part 1 of 2)",
+[
+"",
+2,
+1
+]
+],
+[
+"Patch (part ١ of ٢)",
+[
+"patch",
+2,
+1
+]
+],
+[
+"a\n(part 1 of 2)",
+[
+"a",
+2,
+1
+]
+],
+[
+"a (part 1 of 2",
+null
+],
+[
+"a (part  1 of 2)",
+null
+],
+[
+"ΣΑΣ (part 1 of 2)",
+[
+"σας",
+2,
+1
+]
+],
+[
+"Patch (Part 2 of 3)(part 1 of 2)",
+[
+"patch",
+3,
+2
+]
+],
+[
+" Patch (part 2 of 3) ",
+[
+"patch",
+3,
+2
+]
+],
+[
+"x\t(part 10 of 12)",
+[
+"x",
+12,
+10
+]
+],
+[
+"x (part 1of 2)",
+null
+],
+[
+"A (part 01 of 02)",
+[
+"a",
+2,
+1
+]
+],
+[
+"Big  Patch  (part 2 of 2)",
+[
+"big patch",
+2,
+2
+]
+],
+[
+"",
+null
+],
+[
+"x (part 1 of 2) (part 2 of 2)",
+[
+"x",
+2,
+1
+]
+],
+[
+"İ (part 1 of 2)",
+[
+"i̇",
+2,
+1
+]
+],
+[
+"a b (part 1 of 2)",
+[
+"a b",
+2,
+1
+]
+]
+],
+"blocked": [
+[
+"Blocked by #125",
+[
+125
+]
+],
+[
+"Depends on #12 and #14",
+[
+12,
+14
+]
+],
+[
+"Do not start until #125 has merged",
+[
+125
+]
+],
+[
+"waits for: #1, #2 & #3",
+[
+1,
+2,
+3
+]
+],
+[
+"WAITS ON #4and #5",
+[
+4
+]
+],
+[
+"blocked by#7",
+[
+7
+]
+],
+[
+"xblocked by #8",
+[]
+],
+[
+"_blocked by #9",
+[]
+],
+[
+"Blocked  by #10",
+[]
+],
+[
+"blocked by\n#11",
+[]
+],
+[
+"blocked by #12 and\n#13",
+[
+12
+]
+],
+[
+"Depends on #1 andy #2",
+[
+1
+]
+],
+[
+"waıts on #6",
+[
+6
+]
+],
+[
+"Blocked by #12,#13,  &  #14",
+[
+12,
+13
+]
+],
+[
+"Blocked by #١٢",
+[
+12
+]
+],
+[
+"blocked by #1 blocked by #2",
+[
+1,
+2
+]
+],
+[
+"depends on #3, and #4",
+[
+3
+]
+],
+[
+"é blocked by #5",
+[
+5
+]
+],
+[
+"1blocked by #5",
+[]
+],
+[
+"blocked by : #6",
+[
+6
+]
+],
+[
+"blocked by:: #7",
+[]
+],
+[
+"Blocked by #8 AND #9 And #10",
+[
+8,
+9,
+10
+]
+],
+[
+"blocked by #11and",
+[
+11
+]
+],
+[
+"do NOT start UNTIL #12 & #13,#14",
+[
+12,
+13,
+14
+]
+],
+[
+"blocked by #1 and #2",
+[
+1,
+2
+]
+],
+[
+"Blocked by #x #3",
+[]
+],
+[
+"Depends on #1 & & #2",
+[
+1
+]
+],
+[
+"line one\nBlocked by #20\nDepends on #21",
+[
+20,
+21
+]
+],
+[
+"blocked by #2_ #3",
+[
+2
+]
+],
+[
+"blocked by\t:\t#4\tand\t#5",
+[
+4,
+5
+]
+],
+[
+"waits  for #1",
+[]
+],
+[
+"dependſ on #3",
+[
+3
+]
+],
+[
+"blocked by #9and #10",
+[
+9
+]
+]
+],
+"parent_of": [
+[
+"https://api.github.com/repos/o/r/issues/12",
+12
+],
+[
+"https://x/issues/12\n",
+12
+],
+[
+"https://x/issues/12/x",
+0
+],
+[
+"https://x/issues/",
+0
+],
+[
+"",
+0
+],
+[
+"https://x/issues/١٢",
+12
+],
+[
+"/issues/5/issues/6",
+6
+],
+[
+"/issues/7\n\n",
+0
+],
+[
+"/Issues/8",
+0
+],
+[
+"/issues/9 ",
+0
+]
+],
+"patch_of": [
+[
+"Patch v0.9.X (part 1 of 2): the base",
+"https://api.github.com/repos/o/r/issues/12",
+[
+12,
+"",
+2,
+1
+]
+],
+[
+"Patch v0.9.X (part 1 of 2): the base",
+"https://x/issues/12\n",
+[
+12,
+"",
+2,
+1
+]
+],
+[
+"Patch v0.9.X (part 1 of 2): the base",
+"https://x/issues/12/x",
+[
+0,
+"patch v0.9.x",
+2,
+1
+]
+],
+[
+"Patch (part 2 of 4): x",
+"https://api.github.com/repos/o/r/issues/12",
+[
+12,
+"",
+4,
+2
+]
+],
+[
+"Patch (part 2 of 4): x",
+"https://x/issues/12\n",
+[
+12,
+"",
+4,
+2
+]
+],
+[
+"Patch (part 2 of 4): x",
+"https://x/issues/12/x",
+[
+0,
+"patch",
+4,
+2
+]
+],
+[
+"patch   V0.2.x  (PART 3 OF 5)",
+"https://api.github.com/repos/o/r/issues/12",
+[
+12,
+"",
+5,
+3
+]
+],
+[
+"patch   V0.2.x  (PART 3 OF 5)",
+"https://x/issues/12\n",
+[
+12,
+"",
+5,
+3
+]
+],
+[
+"patch   V0.2.x  (PART 3 OF 5)",
+"https://x/issues/12/x",
+[
+0,
+"patch v0.2.x",
+5,
+3
+]
+],
+[
+"no part",
+"https://api.github.com/repos/o/r/issues/12",
+null
+],
+[
+"no part",
+"https://x/issues/12\n",
+null
+],
+[
+"no part",
+"https://x/issues/12/x",
+null
+],
+[
+"(part 1 of 2)",
+"https://api.github.com/repos/o/r/issues/12",
+[
+12,
+"",
+2,
+1
+]
+],
+[
+"(part 1 of 2)",
+"https://x/issues/12\n",
+[
+12,
+"",
+2,
+1
+]
+],
+[
+"(part 1 of 2)",
+"https://x/issues/12/x",
+[
+0,
+"",
+2,
+1
+]
+],
+[
+"Patch (part ١ of ٢)",
+"https://api.github.com/repos/o/r/issues/12",
+[
+12,
+"",
+2,
+1
+]
+],
+[
+"Patch (part ١ of ٢)",
+"https://x/issues/12\n",
+[
+12,
+"",
+2,
+1
+]
+],
+[
+"Patch (part ١ of ٢)",
+"https://x/issues/12/x",
+[
+0,
+"patch",
+2,
+1
+]
+]
+],
+"labels": [
+[
+[],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"difficulty:easy"
+],
+{
+"difficulty_of": "easy",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "easy",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"Difficulty:HARD",
+"difficulty:easy"
+],
+{
+"difficulty_of": "hard",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "hard",
+"labelled": "hard",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": " It is labelled `difficulty:hard`, so only Opus plans, builds and reviews it."
+}
+],
+[
+[
+"difficulty:medium",
+"bug"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "medium",
+"labelled": "medium",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"DİFFICULTY:EASY"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"difficulty:extreme"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"priority:high"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 0,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"priority:medium",
+"bot:build"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 1,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"priority:low"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 3,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"priority:high",
+"priority:low"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 0,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"Priority:HIGH"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 0,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"priority:urgent",
+"priority: high",
+"priority:highest"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"priority:urgent",
+"priority:low"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 3,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"human"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": true,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"Human"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": true,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"human required"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": true,
+"human_reply": "#4 is labelled `human required`: it needs something only a person can do (my comment on it says what), so it is people's and I leave it alone. Take that label off to hand it back to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"HUMAN REQUIRED",
+"human"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": true,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"humans"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"bot:fullsend"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "fullsend",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"BOT:FULLSEND",
+"bot:build"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "fullsend",
+"owner": "",
+"label_note": ""
+}
+],
+[
+[
+"squishy:build"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "Squishy",
+"label_note": ""
+}
+],
+[
+[
+"Squishy:Tree"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "Squishy",
+"label_note": ""
+}
+],
+[
+[
+"squishy:planned"
+],
+{
+"difficulty_of": "medium",
+"difficulty_of_hard": "hard",
+"difficulty_of_easy": "easy",
+"labelled": "",
+"priority": 2,
+"human": false,
+"human_reply": "#4 is labelled `human`: people do it, so I leave it alone. Take that label off to hand it to me.",
+"mode": "",
+"owner": "",
+"label_note": ""
+}
+]
+],
+"records": [
+[
+{},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"difficulty": "hard"
+},
+{
+"carried": "hard",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": true,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"difficulty": "easy",
+"difficulty_floor": "medium"
+},
+{
+"carried": "medium",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": true,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"difficulty_floor": "bogus"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"difficulty_by": {
+"difficulty": "easy"
+}
+},
+{
+"carried": "",
+"rating_source": "bot",
+"rating_source_none": "",
+"rated": true,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"difficulty_by": {
+"difficulty": "hard"
+}
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": true,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"difficulty_by": {}
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"tree": {
+"mode": "fullsend"
+}
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": true,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"tree": "fullsend"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"part_of": 7,
+"onto": "bot/issue-7"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": true,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"part_of": 7,
+"onto": "bot/issue-8"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"part_of": 0,
+"onto": "bot/issue-0"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"cleared": {
+"sha": "abc"
+},
+"source": "conflict"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {
+"sha": "abc"
+},
+"carries": true
+}
+],
+[
+{
+"cleared": {
+"sha": ""
+},
+"source": "conflict"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+],
+[
+{
+"cleared": {
+"sha": "abc"
+},
+"source": "request"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {
+"sha": "abc"
+},
+"carries": false
+}
+],
+[
+{
+"cleared": "abc"
+},
+{
+"carried": "",
+"rating_source": "person",
+"rating_source_none": "",
+"rated": false,
+"fullsend": false,
+"part": false,
+"cleared": {},
+"carries": false
+}
+]
+],
+"owner": [
+[
+{
+"labels": [
+{
+"name": "squishy:build"
+}
+]
+},
+"Squishy",
+[
+"squishy:build"
+]
+],
+[
+{
+"labels": [
+{
+"name": "Squishy:PR-Open"
+}
+]
+},
+"Squishy",
+[
+"Squishy:PR-Open"
+]
+],
+[
+{
+"labels": [
+{
+"name": "squishy:planned"
+}
+]
+},
+"",
+[
+"squishy:planned"
+]
+],
+[
+{
+"assignees": [
+{
+"login": "Squishy-Squooby"
+}
+]
+},
+"Squishy",
+[]
+],
+[
+{
+"assignees": [
+{
+"login": null
+},
+"x"
+],
+"labels": [
+"bot:build",
+{
+"name": null
+}
+]
+},
+"",
+[
+"None"
+]
+],
+[
+{
+"labels": [
+{
+"name": "bot:build"
+}
+],
+"assignees": [
+{
+"login": "someone"
+}
+]
+},
+"",
+[
+"bot:build"
+]
+]
+],
+"merge_title": [
+[
+{
+"title": "Fix it",
+"number": 5
+},
+"Fix it (#5)",
+""
+],
+[
+{
+"title": "  ",
+"number": 6
+},
+"",
+""
+],
+[
+{
+"title": null,
+"number": 7
+},
+"",
+""
+],
+[
+{
+"title": "Fix",
+"number": null
+},
+"Fix (#None)",
+""
+],
+[
+{
+"title": " Trim me ",
+"number": 8
+},
+"Trim me (#8)",
+""
+]
+],
+"owner_reply": "#9 is Squishy's (@squishy-squooby): it carries Squishy's labels or is assigned to it, so I leave it alone. Take its `squishy:…` labels off (and unassign @squishy-squooby) to hand it to me.",
+"parts_reply": "#3's parts are still open (#4, #5), and they land on its branch, `bot/issue-3`; I queue its reconcile myself when they have all closed.",
+"branches": [
+"bot/issue-12",
+"bot/wip/13"
+]
+}

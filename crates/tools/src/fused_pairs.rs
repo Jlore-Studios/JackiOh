@@ -1,9 +1,45 @@
-//! `cargo jackioh fused-pairs` (#2381): fuses text-bearing cards onto fusable Units until boards settle.
+//! `cargo jackioh fused-pairs [--pair <body>+<text>] [--day N] [--pairs N]` (#2381): each card whose text
+//! has a Death, a trigger, a start- or end-of-turn hook, an aura or a fused hook (Field Spells and Traps
+//! too: Wormhole and Job Application are no Units) fused onto each fusable Unit, and played until the
+//! board settles.
 //!
-//! Regressions tested: #1562 (R1121000), #998, #2243 (R1884003, R1884004, R1850000), #2356 (R2197005).
-//! Bodies are `FUSABLE_UNITS` (R23); text fuses per R77 and R179.
-//! Runs fixed scripts followed by `PAIR_TURNS` random actions under invariant monitoring.
-//! Samples daily batches (`DAILY_PAIRS`) or PR samples (`PR_PAIRS`), recording failures.
+//! Why: some of the worst bugs of a month were one card fused into another, and a random game meets a
+//! given pair by luck. #1562 (R1121000): a fused Book of Stats and Autocomplete replayed without end in
+//! one turn. #998: a fusion grew to 288 cards and a fuzz seed ran out of memory. #2243: Wormhole's text
+//! on a Unit kept games from ending (R1884003), a fused Job Application at 0 health never settled
+//! (R1884004) and a fused copier's targeting cost panicked (R1850000). #2356 (R2197005): Floodgates and
+//! Job Application fused, and "the board did not settle". The fuzz's only deliberate fusion is one pair
+//! of Units on a manufactured last board (`fuzz.rs`'s `manufactured_board`), which games read only
+//! through the few cards that bring one back; this walks the pairs on purpose.
+//!
+//! A pair plays like this. The body, a `FUSABLE_UNITS` card (no token, no Immutable card: R23), stands
+//! on seat 1's board with a Vanilla beside it on seat 2's; the text is fused onto it as R77 has it, the
+//! body keeping its instance, and `fused_into` runs (R179 rebuilds the same card from its id). Then a
+//! fixed script: seat 1 casts a Spell, ends the turn, seat 2 destroys the fused Unit if its Spell may
+//! reach it, ends the turn, seat 1 ends the next. Then a random-policy run, seeded from the pair, of
+//! `PAIR_TURNS` more turns. Every action runs under the invariant monitor (I1 to I10, as the fuzz checks
+//! them) and the fuzz's growth bounds, and the pair fails on a panic, an engine cap, an invariant breach,
+//! runaway growth, a prompt nobody can answer or `PAIR_STEP_BOUND` actions: a turn that never ends.
+//! Both ids, the seed and the command that plays the pair alone are in the report.
+//!
+//! Two samples. A day's sample, `DAILY_PAIRS` of the pairs drawn from the day's number, is the daily
+//! run's (`the_days_sample_of_fused_pairs_settles`, `#[ignore = "daily: …"]`): the whole walk is too
+//! much compute to play each day, and a new sample each day reaches them all over time. A pull request
+//! plays a fixed stride sample of `PR_PAIRS`, the pinned pairs of #2356 and R1884004, and a planted text
+//! that loops on its own death, which must fail.
+//!
+//! The clock only picks which pairs a day plays (`today`): a pair's game comes from its ids alone, so
+//! `--pair` plays a failure again on any day. A failing pair is fixed, or filed and put on `KNOWN_OPEN`
+//! with its open issue; the list only shrinks, as the fuzz's `POOL_EXCLUSIONS` does.
+//!
+//! ```text
+//! cargo jackioh fused-pairs                                    # today's sample
+//! cargo jackioh fused-pairs --day 20755 --pairs 500            # another day's, another size
+//! cargo jackioh fused-pairs --pairs 100000                     # every pair
+//! cargo jackioh fused-pairs --pair traininggrounds-030+stinkyscape-112
+//! cargo test -p jackioh-tools --bin jackioh fused_pairs                        # a pull request's
+//! cargo test -p jackioh-tools --bin jackioh fused_pairs -- --ignored --nocapture   # the daily one
+//! ```
 
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::LazyLock;

@@ -175,9 +175,12 @@ function saysOldTuningWord(text: string): boolean {
   return OLD_TUNING_WORDS.test(trimmed) && /[\sA-Z]/.test(trimmed);
 }
 
+/** Every card's voice lines, as `voice-text.json` holds them from crates/cards/card-text.yaml (#2498), a trigger's one by one. */
 function voiceLineTexts(): string[] {
-  const file = readFileSync(join(SRC, "audio/card-audio.json5"), "utf8");
-  return [...file.matchAll(/\btext:\s*"((?:[^"\\]|\\.)*)"/g)].map((match) => match[1] ?? "");
+  const file = JSON.parse(readFileSync(join(SRC, "audio/voice-text.json"), "utf8")) as {
+    cards: Record<string, Record<string, string | string[]>>;
+  };
+  return Object.values(file.cards).flatMap((lines) => Object.values(lines).flat());
 }
 
 describe("R1320 players read Nerf and Buff", () => {

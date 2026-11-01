@@ -39,4 +39,4 @@ Closes #
 - [ ] `cargo jackioh catalog check` and `cargo jackioh patches check` (card data changed)
 - [ ] `cargo jackioh classify --base origin/main --claims` (a card script, the engine or the AI changed: `--parent-bin` with a build of `origin/main` when it asks)
 - [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` (the client or the e2e specs changed)
-- [ ] `cd bot && python3 -m unittest discover -s tests -t .` (`bot/`, `.harness/`, `.squishy/` or the bots' workflows changed)
+- [ ] `cd bot/go && gofmt -l . && go vet ./... && go test ./...`, and `cd bot && python3 -m unittest discover -s tests -t .` for the machine's and hygiene's Python (`bot/`, `.harness/`, `.squishy/` or the bots' workflows changed)

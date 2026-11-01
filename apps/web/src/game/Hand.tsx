@@ -51,8 +51,6 @@ export type HandProps = {
   cap?: number | undefined;
   /** R1141: on the opponent's seat, how many of their hand cards carry a mark. Never which. */
   marked?: number | undefined;
-  /** #165: what a touch hold on a card opens (contract.ts's `touchHoldMode`). */
-  touchHold?: "sheet" | "preview";
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
@@ -92,12 +90,10 @@ function RevealedSlot({
   card,
   index,
   seat,
-  touchHold,
 }: {
   card: CardView;
   index: number;
   seat?: PlayerId;
-  touchHold?: "sheet" | "preview";
 }): ReactElement {
   return (
     <div className="hand-slot hand-slot--revealed" style={{ "--i": index } as CSSProperties}>
@@ -106,7 +102,7 @@ function RevealedSlot({
           <Card card={null} className="card-hand" backOf={seat} />
         </div>
         <div className="hand-flip-face">
-          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" touchHold={touchHold} inHandOf={seat} />
+          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" inHandOf={seat} />
         </div>
       </div>
     </div>
@@ -158,7 +154,7 @@ export default function Hand(props: HandProps): ReactElement {
       </div>
     ));
   } else if (revealed) {
-    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} seat={props.seat} touchHold={props.touchHold} />);
+    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} seat={props.seat} />);
   } else {
     cards = hand.map((card, index) => {
       const handTestid = testid.handCard(card.instanceId);
@@ -181,7 +177,6 @@ export default function Hand(props: HandProps): ReactElement {
             inOwnHand={yours}
             inHandOf={props.seat}
             target={{ on: "hand", instanceId: card.instanceId }}
-            touchHold={props.touchHold}
             highlight={props.highlight}
             animating={props.animating}
             onClick={props.onClick}

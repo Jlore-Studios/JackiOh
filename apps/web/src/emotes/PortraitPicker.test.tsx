@@ -26,6 +26,8 @@ import {
   memoryStorage,
   savedDeck,
 } from "../game/deckbuilder/testkit.ts";
+import { pressBack } from "../test/history.ts";
+import { at } from "../test/stubServer.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { EMOJI_LABEL } from "./EmojiArt.tsx";
 import { ownedPortraits, portraitCosmeticId, portraitOfCosmetic, PortraitsOwned } from "./ownedPortraits.ts";
@@ -366,5 +368,31 @@ describe("the picker in the deck editor (R641)", () => {
     const entry = mirror.decks?.find(({ item }) => item.id === "d1");
     expect(entry?.item.portrait).toBe("shredder");
     expect(entry?.dirty).toBe(true);
+  });
+});
+
+describe("R2127000 Back closes the portrait picker", () => {
+  afterEach(() => {
+    at("/");
+  });
+
+  it("R2127000 one Back closes the open picker, gives the focus back to the portrait button and the page stays on /decks; after Escape, one Back leaves", async () => {
+    at("/play");
+    window.history.pushState(null, "", "/decks");
+    render(picker("gary"));
+    openPicker();
+    screen.getByTestId("portrait-pick-timmy").focus();
+
+    await pressBack();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("portrait-current")).toHaveFocus();
+    expect(window.location.pathname).toBe("/decks");
+
+    // Escape closes it once and leaves no layer: the next Back is the page's.
+    openPicker();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
   });
 });

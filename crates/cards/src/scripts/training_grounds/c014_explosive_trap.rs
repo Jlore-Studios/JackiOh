@@ -66,7 +66,7 @@ mod tests {
     const MANA_WELL: &str = "core-006"; // a Field Spell.
     const HIT_JOB: &str = "core-016"; // rides along so the turn does not auto-end (R82).
     const PEA: &str = "meditative-013"; // (2) 2/6, Armor 2.
-    const BOOTS: &str = "classic-013"; // Radiant (1) 4/2 Charge: after this attacks, Recruit a card.
+    const BOOTS: &str = "classic-013"; // Radiant (1) 4/2 Charge: when this attacks, Recruit a card.
     const RUSH_TOKEN: &str = "core-t-rush";
 
     fn trap_set(hand: Value, radiant_trap: bool) -> Scenario {

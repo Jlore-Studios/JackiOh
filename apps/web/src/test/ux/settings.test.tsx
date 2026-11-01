@@ -809,6 +809,7 @@ describe("R2000000 Settings has no public player statistics opt-out", () => {
   });
 });
 
+// R345: "End turn automatically" is sent to the engine, which holds it
 describe("R345 the End turn automatically switch reaches the engine as setAutoEndTurn", () => {
   function sentPreferences(onAction: ReturnType<typeof vi.fn>): unknown[] {
     return onAction.mock.calls.map(([body]) => body).filter((body) => (body as { type: string }).type === "setAutoEndTurn");

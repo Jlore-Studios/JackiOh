@@ -187,7 +187,8 @@ mod tests {
 
             s.expect_in_zone(INJECTION, "graveyard");
             assert_eq!(s.state().players[P1].turn_log.cards_played, 1);
-            s.expect_mana(P1, 2);
+            // (1) since #2657: three of the four are left.
+            s.expect_mana(P1, 3);
         }
 
         #[test]

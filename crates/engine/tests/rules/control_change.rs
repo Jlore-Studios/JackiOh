@@ -659,7 +659,7 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
     use super::*;
 
     #[test]
-    fn r172_a_stolen_reborn_unit_returns_to_the_zone_it_reserved_on_the_thief_s_side_owned_by_its_owner_and_sick()
+    fn r172_r2618000_a_stolen_reborn_unit_returns_to_the_zone_it_reserved_on_the_thief_s_side_owned_by_the_thief_and_sick()
      {
         let mut state = playing("cc-reborn");
         let turn = state.turn;
@@ -680,7 +680,8 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         state_check(&mut EngineSink::new(&mut state, &mut events, &mut rng));
 
-        // It died as p1's, went to its owner's pile on the way (R12), and came back where it died.
+        // It died as p1's, went to p1's graveyard as p1's own card on the way (R2618000), and came back
+        // where it died.
         let destroyed: Vec<(String, PlayerId)> = events_of_type(&events, GameEventType::Destroyed)
             .iter()
             .map(|event| match event {
@@ -690,11 +691,11 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
                 other => panic!("not a destroyed event: {other:?}"),
             })
             .collect();
-        assert_eq!(destroyed, vec![(body.id.clone(), P2)]);
+        assert_eq!(destroyed, vec![(body.id.clone(), P1)]);
         let back = live(&state, &body);
         assert_eq!(card_id_at(&state, slot(P1, Row::Units, 3)), Some(body.id.clone()));
         assert_eq!(back.controller, P1);
-        assert_eq!(back.owner, P2);
+        assert_eq!(back.owner, P1);
         assert!(!state.players[P1].graveyard.iter().any(|c| c.id == body.id));
         assert!(!state.players[P2].graveyard.iter().any(|c| c.id == body.id));
         // R83: the return is an entry, so it is sick for the rest of the turn.

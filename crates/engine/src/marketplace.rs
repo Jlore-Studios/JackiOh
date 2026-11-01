@@ -331,7 +331,7 @@ pub fn why_market_buy_refused(state: &GameState, player: PlayerId, offer: i32) -
             lot.price
         )));
     }
-    if state.players[player].hand.len() as i32 >= crate::query::hand_cap_of(state, player) {
+    if crate::query::room_in(state, player, crate::zones::OffFieldZone::Hand) == 0 {
         return Err(EngineError::new("your hand is full"));
     }
     Ok(())

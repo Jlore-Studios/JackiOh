@@ -1,294 +1,31 @@
-//! Golden traces (§13) and the recorded hotseat game: the oracle the engine is held to (README V4).
+//! The two committed logs, folded with the real cards: the oracle the engine is held to (README V4).
 //!
-//! `golden/games.jsonl` holds 240 games, one per line: seeds 1–200 plain, 201–240 with one seat on
-//! Medium or Hard (R180–R184). Each is replayed as §13.3 says: `create_game(args)`, `begin_game`, check
-//! `begin`; then per step check `l` (the actor's legal actions, as a set), apply `a` with `reduce`, and
-//! check `s` (`hash_state`, §5.2), `v` (both seats' `view_for`) and `e` (the events), each an FNV-1a 32
-//! of the canonical JSON over its UTF-16 code units; last, the ending and length must be `end`.
+//! The recorded hotseat game must fold to `golden::HOTSEAT_HASH`, which `cargo jackioh golden check`
+//! checks too (#1641); a log recorded before the Equip rename still folds (R781000); and neither game
+//! moves whatever the card metrics' lists hold (R1846003).
 //!
-//! A mismatch writes the Rust side's canonical text to `target/golden-diff/`; every game is replayed,
-//! so fix the earliest divergent seed and step first. The games are split over GOLDEN_SHARDS tests to
-//! run on many threads (the engine's `clippy.toml` bans spawning one). Never edit a trace by hand;
-//! `cargo jackioh golden bless` rewrites the file from the Rust engine. The replay is
-//! `testkit::golden::replay_game`, which `cargo jackioh golden check` runs too (#1641).
+//! The 240 golden traces this file once replayed, recorded from the TypeScript engine, were retired in
+//! #2578. A change is held to its base build by `golden record` on the head and `golden check --file`
+//! on the base build (`luau diff`, `classify --parent-bin`), with nothing committed.
 
 use std::collections::BTreeSet;
-use std::path::PathBuf;
 
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::replay::fnv1a32_utf16;
-use jackioh_engine::testkit::golden::{HOTSEAT, HOTSEAT_HASH, Mismatch, check_hotseat, replay_game};
+use jackioh_engine::testkit::golden::{HOTSEAT, HOTSEAT_HASH, check_hotseat};
 use jackioh_engine::{
     Action, EARLIER_DECK_SIZE, FoldArgs, FoldResult, GameOverReason, GameResult, Phase, Winner, fold,
     hash_state,
 };
 
-// The golden traces (§13)
-
-/// §13.3: the recorded traces.
-const GAMES: &str = include_str!("golden/games.jsonl");
-
-/// §13.1: 200 games on this spec's resources and 40 with one seat handicapped.
-const GOLDEN_GAMES: usize = 240;
-
-/// §13.3: where a divergence leaves the Rust side's canonical text (the workspace's `target/`).
-const DIFF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/golden-diff");
-
-/// §13.3: write the Rust side's canonical text next to the recorded side's, and say where it went.
-#[allow(clippy::disallowed_methods)] // SURFACE §13.3: the diff file is this harness's output; clippy.toml's I/O ban guards the rules, which never reach this.
-fn write_diff(mismatch: &mut Mismatch) {
-    let Some(text) = &mismatch.text else {
-        return;
-    };
-    let dir = PathBuf::from(DIFF_DIR);
-    let path = dir.join(mismatch.diff_file());
-    let written =
-        match std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, format!("{text}\n"))) {
-            Ok(()) => path.display().to_string(),
-            Err(error) => format!("(could not write {}: {error})", path.display()),
-        };
-    mismatch.diff = Some(written);
-}
-
-/// Replays one line of `games.jsonl` (§13.3) and writes the Rust side of its first mismatch. `Ok`
-/// carries the number of steps replayed.
-fn replay_line(index: usize, line: &str) -> Result<usize, Box<Mismatch>> {
-    let game: Value = serde_json::from_str(line)
-        .unwrap_or_else(|error| panic!("games.jsonl line {}: not JSON: {error}", index + 1));
-    let seed = game["seed"]
-        .as_str()
-        .unwrap_or_else(|| panic!("games.jsonl line {}: no `seed`", index + 1));
-    replay_game(seed, &game).map_err(|mut mismatch| {
-        write_diff(&mut mismatch);
-        mismatch
-    })
-}
-
-/// The lines of `games.jsonl`, blank ones (a trailing newline) left out.
-fn golden_lines() -> Vec<&'static str> {
-    GAMES.lines().filter(|line| !line.trim().is_empty()).collect()
-}
-
-/// Replays every game of one shard and fails with every divergent game's first mismatch.
-fn replay_shard(shard: usize) {
-    register_all();
-    let mut failures: Vec<Box<Mismatch>> = Vec::new();
-    let mut games = 0usize;
-    let mut steps = 0usize;
-    for (index, line) in golden_lines().into_iter().enumerate() {
-        if index % GOLDEN_SHARDS != shard {
-            continue;
-        }
-        games += 1;
-        match replay_line(index, line) {
-            Ok(n) => steps += n,
-            Err(mismatch) => failures.push(mismatch),
-        }
-    }
-    assert!(
-        failures.is_empty(),
-        "golden shard {shard}: {} of {games} games diverged from their TypeScript trace \
-         ({steps} steps of the others replayed identically):\n{}",
-        failures.len(),
-        failures
-            .iter()
-            .map(|mismatch| mismatch.report())
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
-
-mod golden_traces {
-    use super::*;
-
-    #[test]
-    fn the_file_holds_every_recorded_game_once() {
-        let lines = golden_lines();
-        assert_eq!(
-            lines.len(),
-            GOLDEN_GAMES,
-            "SURFACE §13.1: 200 games and 40 handicapped"
-        );
-        let mut seen = BTreeSet::new();
-        for (index, line) in lines.iter().enumerate() {
-            let game: Value = serde_json::from_str(line)
-                .unwrap_or_else(|error| panic!("games.jsonl line {}: not JSON: {error}", index + 1));
-            let seed = game["seed"].as_str().unwrap_or_default().to_string();
-            assert_eq!(
-                game["args"]["seed"].as_str(),
-                Some(seed.as_str()),
-                "line {}: args.seed",
-                index + 1
-            );
-            assert!(seen.insert(seed.clone()), "{seed} is recorded twice");
-        }
-    }
-}
-
-mod a_doctored_trace {
-    use super::*;
-
-    #[test]
-    fn names_the_seed_the_step_the_hash_and_the_action_as_golden_check_does() {
-        // crates/tools/tests/golden.rs doctors the same hash and holds `golden check` to the same words.
-        register_all();
-        let mut game: Value = serde_json::from_str(golden_lines()[0]).expect("line 1 is JSON");
-        let recorded = game["steps"][0]["s"]
-            .as_str()
-            .expect("step 0 has an `s`")
-            .to_string();
-        let doctored = if recorded == "00000000" {
-            "ffffffff"
-        } else {
-            "00000000"
-        };
-        game["steps"][0]["s"] = Value::from(doctored);
-        let action = game["steps"][0]["a"].to_string();
-
-        let mismatch = replay_game("jackioh-fuzz-1", &game).expect_err("a doctored hash diverges");
-
-        assert_eq!(
-            (mismatch.seed.as_str(), mismatch.step.as_str(), mismatch.which),
-            ("jackioh-fuzz-1", "0", "s")
-        );
-        assert_eq!(
-            (mismatch.expected.as_str(), mismatch.actual.as_str()),
-            (doctored, recorded.as_str())
-        );
-        assert_eq!(mismatch.action.as_deref(), Some(action.as_str()));
-        let text = mismatch.text.as_deref().expect("the Rust side's state text");
-        assert_eq!(fnv1a32_utf16(text), recorded, "the text is the state `s` hashes");
-        assert_eq!(mismatch.diff_file(), "jackioh-fuzz-1-0-s.json");
-        let report = mismatch.report();
-        assert!(
-            report.starts_with(&format!(
-                "seed jackioh-fuzz-1 step 0: `s` expected {doctored}, Rust has {recorded}\n    action: {action}\n"
-            )),
-            "{report}"
-        );
-    }
-}
-
-/// R1846003, R2173000: a game that plays neither reader (Stinkyscape #109 xxFreshJack and #111
-/// Shockwave447, the only cards that ask for a BUSTED or complicated pool, R1846001), from its deck or
-/// made by a random effect, replays to its recorded hashes whatever the lists hold: every card in both,
-/// or none. One shard's games under each; the games that play a reader replay in the shards above.
-mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
-    use super::*;
-    use jackioh_engine::testkit::golden::events_text;
-    use jackioh_engine::testkit::{clear_overrides, register_code_lines};
-    use jackioh_engine::{CreateGameArgs, begin_game, create_recorded_game, reduce};
-
-    /// The cards that read the lists (R1846001), the cards build's `LIST_READERS`, each quoted as a
-    /// game's line names it.
-    fn readers() -> Vec<String> {
-        jackioh_cards::LIST_READERS
-            .iter()
-            .map(|id| format!("{id:?}"))
-            .collect()
-    }
-
-    /// Whether any event of the game names a reader, one a random effect makes mid-game included,
-    /// which the line's text never names.
-    fn names_a_reader(line: &str, readers: &[String]) -> bool {
-        let game: Value = serde_json::from_str(line).expect("a golden line");
-        let args: CreateGameArgs =
-            serde_json::from_value(game["args"].clone()).expect("createGame's options");
-        let begun = begin_game(&create_recorded_game(&args));
-        let names = |events: &[jackioh_engine::GameEvent]| {
-            let text = events_text(events);
-            readers.iter().any(|reader| text.contains(reader.as_str()))
-        };
-        if names(&begun.events) {
-            return true;
-        }
-        let mut state = begun.state;
-        for step in game["steps"].as_array().expect("a `steps` array") {
-            let action: Action = serde_json::from_value(step["a"].clone()).expect("an Action");
-            let result = reduce(&state, &action);
-            if names(&result.events) {
-                return true;
-            }
-            state = result.state;
-        }
-        false
-    }
-
-    #[test]
-    fn r1846003_the_readers_are_derived_from_the_scripts() {
-        assert_eq!(
-            jackioh_cards::LIST_READERS,
-            ["stinkyscape-109", "stinkyscape-111"],
-            "S #109 xxFreshJack and #111 Shockwave447 read the lists (R2173001)"
-        );
-    }
-
-    #[test]
-    fn r1846003_a_shard_without_a_reader_replays_alike_with_every_card_or_none_busted_and_complicated() {
-        register_all();
-        let every: Vec<(&str, usize)> = CATALOG.keys().map(|id| (id.as_str(), usize::MAX)).collect();
-        let readers = readers();
-        let games: Vec<(usize, &str)> = golden_lines()
-            .into_iter()
-            .enumerate()
-            .step_by(GOLDEN_SHARDS)
-            .filter(|(_, line)| !readers.iter().any(|reader| line.contains(reader.as_str())))
-            .filter(|(_, line)| !names_a_reader(line, &readers))
-            .collect();
-        assert!(!games.is_empty(), "the shard holds games with no reader");
-        for lines in [every, Vec::new()] {
-            register_code_lines(lines);
-            for &(index, line) in &games {
-                if let Err(mismatch) = replay_line(index, line) {
-                    clear_overrides();
-                    panic!("{}", mismatch.report());
-                }
-            }
-            clear_overrides();
-        }
-    }
-}
-
-/// One test per shard of the games, numbered 0.. in order.
-macro_rules! golden_shards {
-    ($($name:ident = $shard:expr),* $(,)?) => {
-        /// How many tests the games are split over: game `i` is replayed by shard `i % GOLDEN_SHARDS`.
-        const GOLDEN_SHARDS: usize = [$($shard),*].len();
-
-        mod replays_the_golden_traces {
-            use super::*;
-            $(
-                #[test]
-                fn $name() {
-                    replay_shard($shard);
-                }
-            )*
-        }
-    };
-}
-
-golden_shards!(
-    shard_00 = 0,
-    shard_01 = 1,
-    shard_02 = 2,
-    shard_03 = 3,
-    shard_04 = 4,
-    shard_05 = 5,
-    shard_06 = 6,
-    shard_07 = 7,
-    shard_08 = 8,
-    shard_09 = 9,
-    shard_10 = 10,
-    shard_11 = 11,
-);
-
-// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, which
-// this file folds with the real catalog and card scripts (a dev-dependency, §2): without them every Cry
-// fizzles. The log is committed (`e2e/artifacts/` is gitignored), so the fold always runs. `HOTSEAT_HASH`
-// is a literal: a fold compared with a fold would move together and prove nothing.
+// The recorded hotseat game: spec 01 asserts the browser's own hash equals a fold of this log, and
+// this file folds it with the real `reduce`, catalog and card scripts. It lives in the engine's tests,
+// which take `jackioh-cards` as a dev-dependency (§2), because a fold without the scripts registered
+// fizzles every Cry. The log is committed (`e2e/artifacts/` is gitignored, CI never runs Cypress), so
+// the fold always runs; the last test compares it with a local Cypress recording when there is one.
+// `HOTSEAT_HASH` is a literal: a fold compared with a fold would move together and prove nothing.
 
 /// The recording, as `e2e/support/tasks/replay.ts` writes it: `{ seed, decks, log }`.
 #[derive(Deserialize)]
@@ -445,9 +182,13 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 }
 
 // R781000: Magnetic is now Equip. A log recorded before the rename spells the play's flag `magnetic`
-// (golden seed 43's log as re-blessed for R1156000, its Sentient Cat Ears played onto a Unit at step 7)
-// and it reads as `equip`. It holds its first nine actions, p1 opening on three cards (R2368000) and its
-// mulligan keeping c20 alone, so every action folds.
+// (golden seed 43's log as the retired golden traces held it for R1156000, its Equip flag spelled
+// `magnetic` as logs before the rename spell it, its Sentient Cat Ears played onto a Unit at step 7), and
+// it reads as `equip`: the old log and the same log renamed fold to one state, the old-name play
+// accepted. Since Player 1 opens on three cards again (R2368000) the log holds its first nine actions,
+// p1's mulligan keeping c20 alone, its fourth card c10 now a replacement, so every action folds. Under
+// #2521's catalog p2's opening hand is another, so p2 sends all of it back: its Last Hurrah still draws
+// its deck, the Cat Ears with it.
 const PRE_EQUIP_LOG: &str = include_str!("golden/pre-equip-log.json");
 
 mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
@@ -488,5 +229,48 @@ mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
             "it is written back under the new name"
         );
         assert!(played.get("magnetic").is_none(), "and never under the old one");
+    }
+}
+
+/// R1846003, R2173000: the card metrics stay the build's under a fold, and a game that plays neither
+/// reader (Stinkyscape #109 xxFreshJack and #111 Shockwave447, the only cards that ask for a BUSTED or
+/// complicated pool, R1846001) folds to one hash whatever the lists hold: every card in both, or none,
+/// on this thread's override of the compiled metrics. The two committed logs deal no reader and make
+/// none (#2578 retired the golden games this once replayed a shard of).
+mod r1846003_the_card_metrics_reach_only_the_games_that_play_a_reader {
+    use super::*;
+    use jackioh_engine::testkit::golden::hashed_state_text;
+    use jackioh_engine::testkit::{clear_overrides, register_code_lines};
+
+    #[test]
+    fn r1846003_the_readers_are_derived_from_the_scripts() {
+        assert_eq!(
+            jackioh_cards::LIST_READERS,
+            ["stinkyscape-109", "stinkyscape-111"],
+            "S #109 xxFreshJack and #111 Shockwave447 read the lists (R2173001)"
+        );
+    }
+
+    #[test]
+    fn r1846003_a_log_without_a_reader_folds_alike_with_every_card_or_none_busted_and_complicated() {
+        register_all();
+        let every: Vec<(&str, usize)> = CATALOG.keys().map(|id| (id.as_str(), usize::MAX)).collect();
+        for (name, text) in [(COMMITTED_PATH, COMMITTED), ("pre-equip-log.json", PRE_EQUIP_LOG)] {
+            let input: FoldArgs = serde_json::from_str(text).expect("the log is a fold's input");
+            let folded = fold(&input).state;
+            let end = hashed_state_text(&folded);
+            for reader in jackioh_cards::LIST_READERS.iter() {
+                let quoted = format!("{reader:?}");
+                assert!(!text.contains(&quoted), "{name} deals {reader}");
+                assert!(!end.contains(&quoted), "{name} makes {reader}");
+            }
+            let build = hash_state(&folded);
+            for lines in [every.clone(), Vec::new()] {
+                register_code_lines(lines);
+                let hash = hash_state(&fold(&input).state);
+                clear_overrides();
+                assert_eq!(hash, build, "{name}: the lists moved a game that plays no reader");
+            }
+        }
     }
 }

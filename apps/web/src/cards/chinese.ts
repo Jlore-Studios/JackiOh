@@ -1,11 +1,25 @@
-// A card's words in Simplified Chinese (ME-CN, R1300–R1303), from the two sidecars beside the catalog
-// (`@jackioh/cards/chinese.json` and `chinese-terms.json`, aliased to crates/cards/) in the bundle: no
+// A card's words in Simplified Chinese (ME-CN, R1300–R1303), read from the two sidecars beside the
+// catalog (`@jackioh/cards/chinese.json` and `@jackioh/cards/chinese-terms.json`, which the aliases
+// resolve to crates/cards/), the way flavour.ts reads its own: the bundle carries the words, and no
 // server is asked. Presentation only (CLAUDE.md rule 7): no rule reads them.
-// The first table is keyed by catalog id, each text with exactly the `{key}`s its English face has
-// (an English `{key|singular|plural}` is a plain `{key}` there); the second holds the frame's words and
-// the glossary by GLOSSARY's ids. crates/cards' cross tests hold both to their contract.
-// A card is drawn in Chinese where the view says so (`CardView.chinese`, R1301), and every card is
-// for a reader of Chinese (R711000).
+//
+// The first table is keyed by catalog id: each card's and token's name and both faces' texts, each
+// text with exactly the `{key}`s its English face has (an English `{key|singular|plural}` is a plain
+// `{key}` there, a measure word beside it), and for a card that previews a formula (R280) its labels,
+// English template to Chinese template (`previews`). It is written in each card's `zh` in
+// crates/cards/card-text.yaml (#2498), which crates/tools/tests/export_card_text.rs turns into
+// `chinese.json`; its `"//"` entry says so and is dropped here. The second holds the frame's words:
+// the types, tags, rarities and keywords, the labels, "Radiant" and "Created", and the glossary's
+// entries by GLOSSARY's ids (R1303). crates/cards' cross tests hold both to their contract;
+// chinese.test.tsx proves the glossary names exactly GLOSSARY's entries.
+//
+// A card is drawn in Chinese where the view says it is (`CardView.chinese`, R1301), so every face of
+// it in a match, whatever the reader's language, and for a reader who reads Chinese (R711000) every
+// card is drawn from these tables, in a match and in the collection alike. A fused card
+// (R468) has no entry of its own, and its Chinese is its ingredients', joined as the engine joins
+// their English (crates/engine/src/subsystems/fuse.rs). A definition with no entry and no
+// ingredients (the hidden sentinel, Craft a Card's) keeps its English, and so does Glitch, whose
+// words stay corrupted in every language (glitch.ts).
 
 import chineseJson from "@jackioh/cards/chinese.json";
 import termsJson from "@jackioh/cards/chinese-terms.json";
@@ -51,7 +65,9 @@ export type ChineseTerms = {
   readonly glossary: Readonly<Record<GlossaryTermId, ChineseGlossaryEntry>>;
 };
 
-export const CHINESE: Readonly<Record<string, ChineseEntry>> = chineseJson;
+const { "//": _generated, ...entries } = chineseJson;
+
+export const CHINESE: Readonly<Record<string, ChineseEntry>> = entries;
 
 export const CHINESE_TERMS: ChineseTerms = termsJson;
 

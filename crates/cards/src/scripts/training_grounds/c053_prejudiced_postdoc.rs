@@ -1,7 +1,25 @@
-//! SPEC §8.11 Training Grounds #53 Prejudiced Postdoc, the snapshot of Core #61 Prejudiced Postdoc (`core-061`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #61 (SPEC §8.3): pick in play action (R81, CLAUDE.md rule 5, §10.5).
+//! SPEC §8.11 Training Grounds #53 Legacy: Prejudiced Postdoc,
+//! the Legacy card of Core #61 Prejudiced Postdoc (`core-061`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #61 Prejudiced Postdoc (SPEC §8.3, R23, R57, R64, R81, R90).
+//! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
+//! unit", which per §8's Conventions restates only which units the pick may name.
+//!
+//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) with three
+//! deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla flag is
+//! on, so it is at its printed stats with no buffs (R781003), and it has no granted keywords (BUILD
+//! M4-T4 #8). R23: Immutable blocks Vanilla on the
+//! Immutable card ITSELF, so an Immutable target is a legal pick. Auras (§10.4) are computed on read.
+//!
+//! R81/R90: the pick travels in the `play` action, so resolution never pauses. The Postdoc is still in
+//! hand when the play's choices are validated (§10.5 step 1), so it needs no `excludeSelf`. A pick the
+//! board cannot satisfy fizzles the Cry and the unit still enters (§8 Conventions, R90).
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;

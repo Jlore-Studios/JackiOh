@@ -75,6 +75,21 @@ fn next_play_summons(c: ConditionContext<'_>) -> bool {
         && first_free_zone(c.state, c.controller, Row::Units).is_some()
 }
 
+/// R2476000: in hand, the non-Units its controller has played this turn, after "non-Units in a turn"
+/// (the count `reaches_threshold` reads); on the field, the pool its end of turn casts from, after
+/// "non-Unit you played this turn", which both faces print. Counts alone: setting a backrow card is a
+/// public non-Unit play, so they name nothing hidden.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone == ConditionZone::Hand {
+            let played = played_this_turn_of_type(ctx.state, ctx.controller, NON_UNIT);
+            return vec![count_preview("non-Units in a turn", played)];
+        }
+        let pool = non_unit_plays(ctx.state, ctx.controller).len() as i32;
+        vec![count_preview("non-Unit you played this turn", pool)]
+    })
+}
+
 fn cast_new_read(read: impl Fn(&mut EffectContext<'_>) -> Option<CastDef> + Send + Sync + 'static) -> Effect {
     cast_new(CastNewArgs {
         def: CastNewDef::Read(Arc::new(read)),
@@ -112,6 +127,7 @@ fn wardrum(end_of_turn: Hook) -> Script {
         deck_triggers: vec![summon_at_threshold()],
         condition_met: Some(condition_hook(next_play_summons)),
         end_of_turn: Some(end_of_turn),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -616,6 +632,36 @@ mod tests {
             assert_eq!(frozen.state, live.state);
             // Lunar Eclipse 3 twice, Bone Storm 1 twice: 8 in all on p2's hero.
             assert_eq!(live.state.players.p2.hero.health, 30 - 8);
+        }
+    }
+
+    /// R2476000: in hand, the non-Units played this turn after "non-Units in a turn", 0, 1, 2; the
+    /// third summons it, and on the field it shows the pool its end of turn casts from, 3.
+    #[test]
+    fn r2476000_it_previews_the_non_units_played_this_turn_in_hand_and_its_cast_pool_on_the_field() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [{ "def": WARDRUM, "radiant": radiant }, REPLENISH, REPLENISH, REPLENISH],
+                    "field": [{ "def": MENACE, "lane": 1 }],
+                    "library": LIBRARY,
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let drum = s.card(WARDRUM).id.clone();
+            for played in 0..3 {
+                assert_eq!(
+                    crate::preview_seen(&s, P1, &drum),
+                    vec![("non-Units in a turn".to_string(), played, None)],
+                    "radiant {radiant}"
+                );
+                play_from_hand(&mut s, REPLENISH, json!({}));
+            }
+            assert_eq!(wardrum_in(&s), ZoneName::Field, "radiant {radiant}");
+            let pool = vec![("non-Unit you played this turn".to_string(), 3, None)];
+            assert_eq!(crate::preview_seen(&s, P1, &drum), pool, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, P2, &drum), pool, "radiant {radiant}");
         }
     }
 }

@@ -1,17 +1,36 @@
-//! ME-STATS (SPEC §8.8, M #50): `cargo jackioh winrates` writes `crates/cards/data/win_rates.json`.
+//! ME-STATS (docs/meditative-set.md M5, SPEC §8.8 row 50): `cargo jackioh winrates` writes
+//! `crates/cards/data/win_rates.json`, the table M #50 CN Tech reads, from a `stats report --json`
+//! export or from JSONL game record files. The table is `{ patch, source, cards }` with R377's
+//! in-deck wins and games per card id, as `/api/stats/cards` ranks by; the build compiles it in and
+//! never reads it at run time (CLAUDE.md rule 4). Record files are counted as that endpoint counts
+//! them: every counted seat of a live game, human and bot alike (R807000's merged display), and both
+//! seats of a development game (R378).
 //!
-//! Compiles table statically (CLAUDE.md rule 4) with R377 wins/games per card; counts live
-//! seats (R807000) and development games (R378).
-//! Reads records via `windowed_card_stats` (R1367000) under R654's gate.
-//! R1368000: `--refresh` updates table once per patch (#1360) when live game threshold is met.
+//! Record files are read through the engine's `windowed_card_stats`, the function the server's
+//! `/api/stats/cards` calls (R1367000): each card over its own window at `--patch`, under R654's gate
+//! as amended. A report export is taken as the server counted it. The table is live when no counted
+//! record is a development game, provisional otherwise.
+//!
+//! R1368000: `cargo jackioh winrates --refresh <input>…` refreshes the table once per patch (once
+//! per X, #1360). Its input is record files or a `stats report --window <v> --json` export.
+//! - It is due when the newest patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` live games and the
+//!   table is filed under a version outside that window.
+//! - When due, it writes the table and a pending fragment that claims it, CN Tech and NA Tech
+//!   (`TABLE_READERS`) through `plays`, so `patches ship` ships it as a micro.
+//! - Otherwise it says why and writes nothing. It exits 0 either way, for a workflow to run.
+//!
+//! R2386000: it is also due while that window is short, when the table is filed outside it, holds
+//! no row CN Tech can pick for a shipped set (jackioh_cards::sets_without_win_rates) and the
+//! input's table holds one for every shipped set. Development games pad that table (R1367000), so
+//! it is provisional; it ships with the same claims and counts as the patch's refresh.
 
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 use jackioh_engine::{
-    GameSource, PilotFilter, SourceFilter, StatsTotals, WinRateRow, WinRateSource, WinRateTable, WindowQuery,
-    WindowRequest, WindowedReport, windowed_card_stats,
+    GameSource, PilotFilter, SetName, SourceFilter, StatsTotals, WinRateRow, WinRateSource, WinRateTable,
+    WindowQuery, WindowRequest, WindowedReport, windowed_card_stats,
 };
 
 use crate::patches::patches_io::{
@@ -33,6 +52,8 @@ pub struct Args {
     /// R1368000: write the table only when a refresh is due, with the pending fragment that ships it:
     /// the current patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` live games and the table is from
     /// an earlier patch. Reads JSONL record files or one `stats report --window <v> --json` export.
+    /// R2386000: also while the window is short, when the table misses a shipped set and the input
+    /// fills every one.
     #[arg(long)]
     pub refresh: bool,
 }
@@ -46,13 +67,25 @@ pub const TABLE_READERS: &[&str] = &["meditative-050", "meditativeplus-002"];
 pub enum Refresh {
     /// The current patch's window has its live games and the table is from an earlier patch.
     Due(WinRateTable),
+    /// R2386000: the window is short, but the table holds no row CN Tech can pick for each of
+    /// `missing`, and the input's table, provisional, holds one for every shipped set.
+    Fills {
+        table: WinRateTable,
+        missing: Vec<SetName>,
+    },
     /// The current patch's window is short of `PUBLIC_STATS_MIN_LIVE_GAMES` live games.
     Short { live_games: i64 },
     /// The table is already this patch's: it was refreshed once in it (it is a version of the window).
     Current { table: String },
 }
 
-/// R1368000: whether `current` should be refreshed from `report` under R654's gate.
+/// R1368000: whether the table `current` should be refreshed from `report`, the windowed report at
+/// the newest shipped version. Due the first time the window every card shares (the patch's, its
+/// X's) clears R654's gate while `current` was filed under a version outside that window; a table
+/// filed under one of the window's versions was refreshed in this patch already, so it is never due
+/// twice in one. `dev_on` says whether a version holds a development record, as `table_of` reads it.
+/// R2386000: while the window is short it is Fills when current misses a shipped set and the
+/// report's table misses none.
 pub fn refresh_due(
     report: &WindowedReport,
     current: &WinRateTable,
@@ -64,6 +97,14 @@ pub fn refresh_due(
         };
     }
     if !report.patch.cleared() {
+        // R2386000: a shipped set CN Tech cannot pick from is filled from development games.
+        let missing = jackioh_cards::sets_without_win_rates(current);
+        if !missing.is_empty() {
+            let table = table_of(report, &dev_on);
+            if jackioh_cards::sets_without_win_rates(&table).is_empty() {
+                return Refresh::Fills { table, missing };
+            }
+        }
         return Refresh::Short {
             live_games: report.patch.live_games,
         };
@@ -97,6 +138,37 @@ pub fn refresh_fragment(table: &WinRateTable, live_games: i64) -> PendingFragmen
     }
 }
 
+/// R2386000: the fragment a fill ships with, as a refresh's (`refresh_fragment`) but filed from
+/// development games while the live window is short: it names the shipped sets the table missed.
+pub fn fill_fragment(table: &WinRateTable, missing: &[SetName]) -> PendingFragment {
+    let sets: Vec<&str> = missing.iter().map(|set| set.as_str()).collect();
+    PendingFragment {
+        title: "Patch: CN Tech and NA Tech read a win-rate table that covers every set that ships"
+            .to_string(),
+        sources: "cargo jackioh winrates --refresh (#2386)".to_string(),
+        notes: format!(
+            "R2386000: the win-rate table CN Tech and NA Tech read held no row either could pick for {}, so it is refilled from each card's in-deck wins and games over its window at {}, development games padding a window short of PUBLIC_STATS_MIN_LIVE_GAMES live games (provisional). R1368000's refresh from live games follows in a later patch. Every shipped version keeps the table it shipped with.",
+            sets.join(", "),
+            table.patch
+        ),
+        player: PlayerNote {
+            title: "CN Tech and NA Tech read new win rates".to_string(),
+            changes: vec![
+                format!(
+                    "CN Tech and NA Tech can now pick cards of every set: {} had no win rates before.",
+                    sets.join(" and ")
+                ),
+                "Their win rates come from AI test games until enough live games are played.".to_string(),
+            ],
+            ..PlayerNote::default()
+        },
+        cards: Vec::new(),
+        plays: TABLE_READERS.iter().map(|id| id.to_string()).collect(),
+        win_rates: true,
+        ..PendingFragment::default()
+    }
+}
+
 /// The table file's text, as `run` writes it.
 fn table_text(table: &WinRateTable) -> String {
     let mut out = serde_json::to_string_pretty(table).unwrap_or_default();
@@ -117,7 +189,7 @@ pub fn refresh(
     let current: WinRateTable =
         serde_json::from_str(&text).with_context(|| format!("parsing {}", table_path.display()))?;
     let decision = refresh_due(report, &current, dev_on);
-    let Refresh::Due(table) = &decision else {
+    let (Refresh::Due(table) | Refresh::Fills { table, .. }) = &decision else {
         return Ok(decision);
     };
     if let Some(claim) = read_fragments(pending_dir)?
@@ -132,7 +204,10 @@ pub fn refresh(
     if dry_run {
         return Ok(decision);
     }
-    let fragment = refresh_fragment(table, report.patch.live_games);
+    let fragment = match &decision {
+        Refresh::Fills { missing, .. } => fill_fragment(table, missing),
+        _ => refresh_fragment(table, report.patch.live_games),
+    };
     std::fs::create_dir_all(pending_dir).with_context(|| format!("creating {}", pending_dir.display()))?;
     write_json(&pending_dir.join(fragment_name(&fragment.title)), &fragment)?;
     std::fs::write(table_path, table_text(table))
@@ -311,6 +386,19 @@ pub fn run(args: Args) -> Result<()> {
                     "; wrote the table and its pending fragment"
                 }
             ),
+            Refresh::Fills { table, missing } => {
+                let sets: Vec<&str> = missing.iter().map(|set| set.as_str()).collect();
+                println!(
+                    "winrates: refresh due: {} (R2386000: the table held no row CN Tech can pick for {}){}",
+                    table.patch,
+                    sets.join(", "),
+                    if args.dry_run {
+                        "; --dry-run wrote nothing"
+                    } else {
+                        "; wrote the table and its pending fragment"
+                    }
+                )
+            }
             Refresh::Short { live_games } => println!(
                 "winrates: no refresh: the patch's window has {live_games} live games of {PUBLIC_STATS_MIN_LIVE_GAMES}"
             ),
@@ -341,6 +429,8 @@ pub fn run(args: Args) -> Result<()> {
 mod tests {
     use super::*;
     use jackioh_engine::CardStatsFilter;
+    use jackioh_engine::SHIPPED_SETS;
+    use jackioh_engine::config::CN_TECH_MIN_GAMES;
 
     fn stats(card: &str, wins: i32, games: i32) -> jackioh_engine::CardStats {
         jackioh_engine::CardStats {
@@ -646,6 +736,57 @@ mod tests {
         }
     }
 
+    /// R2386000: `records` development games on `version`, both seats holding the first deckable
+    /// card of each of `sets` (copying `totals`' record): each card gets 2 games per record.
+    fn dev_totals(version: &str, sets: &[SetName], records: i32) -> StatsTotals {
+        use jackioh_engine::{
+            GameMode, GameOverReason, GameRecord, GameSummary, PerPlayer, Pilot, PlayerId, SeatSummary,
+            Winner,
+        };
+        jackioh_cards::register_all();
+        let deck: Vec<String> = sets
+            .iter()
+            .map(|set| {
+                jackioh_cards::CATALOG
+                    .values()
+                    .find(|def| def.set == *set && jackioh_engine::catalog::deckable(def))
+                    .map(|def| def.id.clone())
+                    .unwrap_or_else(|| panic!("a deckable {set} card"))
+            })
+            .collect();
+        let mut totals = StatsTotals::default();
+        for n in 0..records {
+            totals.fold(
+                &GameRecord {
+                    id: format!("dev:{version}:s:{n}"),
+                    source: GameSource::Dev,
+                    mode: GameMode::Bo1,
+                    patch: version.to_string(),
+                    pilots: PerPlayer::new(Pilot::Ai, Pilot::Ai),
+                    game: GameSummary {
+                        first: PlayerId::P1,
+                        winner: Winner::P1,
+                        reason: GameOverReason::Concede,
+                        turns: 4,
+                        seats: PerPlayer::new(
+                            SeatSummary {
+                                deck: deck.clone(),
+                                ..SeatSummary::default()
+                            },
+                            SeatSummary {
+                                deck: deck.clone(),
+                                ..SeatSummary::default()
+                            },
+                        ),
+                    },
+                    build: None,
+                },
+                false,
+            );
+        }
+        totals
+    }
+
     /// A scratch directory of its own with `data/win_rates.json` holding `table` and no fragment.
     fn scratch(table: &WinRateTable) -> (PathBuf, PathBuf, PathBuf) {
         static SCRATCH: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
@@ -783,6 +924,72 @@ mod tests {
         let classified = classify::classify(&classify::read_diff(&side, &side, &[]), Some(&checked));
         assert_eq!(classified.tier, Some(Tier::Micro));
         assert_eq!(classified.cards, TABLE_READERS);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn r2386000_a_table_missing_a_shipped_set_is_due_from_development_games_while_the_window_is_short() {
+        use crate::patches::patches_io::player_note_problems;
+        let history = history();
+        let dev = dev_totals("v3", &SHIPPED_SETS, CN_TECH_MIN_GAMES);
+        let report = report_at(&history, "v3", &dev);
+        assert!(!report.patch.cleared());
+        let on = |version: &str| dev_on(&dev, version);
+        let Refresh::Fills {
+            table: filled,
+            missing,
+        } = refresh_due(&report, &table("v1"), on)
+        else {
+            panic!("a fill is due");
+        };
+        assert_eq!(missing, SHIPPED_SETS);
+        assert_eq!(filled.patch, "v3");
+        assert_eq!(filled.source, WinRateSource::Provisional);
+        assert!(jackioh_cards::sets_without_win_rates(&filled).is_empty());
+        // The filled table, filed under an earlier patch: nothing is missing, so nothing is due.
+        let mut covered = filled.clone();
+        covered.patch = "v1".to_string();
+        assert_eq!(
+            refresh_due(&report, &covered, on),
+            Refresh::Short { live_games: 0 }
+        );
+        // An input missing a set, or too thin for a row to qualify, leaves the table short.
+        for thin in [
+            dev_totals("v3", &SHIPPED_SETS[1..], CN_TECH_MIN_GAMES),
+            dev_totals("v3", &SHIPPED_SETS, CN_TECH_MIN_GAMES / 2 - 1),
+        ] {
+            let thin_report = report_at(&history, "v3", &thin);
+            assert_eq!(
+                refresh_due(&thin_report, &table("v1"), |version| dev_on(&thin, version)),
+                Refresh::Short { live_games: 0 }
+            );
+        }
+        // A fill writes the table and its fragment, once: the table is then this patch's.
+        let (dir, path, pending) = scratch(&table("v1"));
+        let decision = refresh(&report, on, &path, &pending, false).unwrap();
+        let Refresh::Fills { table: written, .. } = decision else {
+            panic!("a fill is written");
+        };
+        assert_eq!(written.patch, "v3");
+        let disk: WinRateTable = serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(disk, written);
+        let fragments = read_fragments(&pending).unwrap();
+        assert_eq!(fragments.len(), 1);
+        let fragment = &fragments[0].fragment;
+        assert_eq!(fragments[0].name, fragment_name(&fragment.title));
+        assert_eq!(fragment.plays, TABLE_READERS);
+        assert!(fragment.win_rates && fragment.cards.is_empty() && !fragment.rule);
+        assert!(
+            player_note_problems(&fragment.player).is_empty(),
+            "{:?}",
+            fragment.player
+        );
+        assert_eq!(
+            refresh(&report, on, &path, &pending, false).unwrap(),
+            Refresh::Current {
+                table: "v3".to_string()
+            }
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
 

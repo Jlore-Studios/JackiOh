@@ -1,9 +1,21 @@
-//! WebSocket adapter: axum WebSocket to `Socket` transport (SURFACE §4.1, §4.2, §11.2, §11.3).
-//! Upgrades authenticate via `app.auth`, enforce active account (§9.4), and check
-//! match membership or open rematch window (§9.1, §9.5, R1285000).
-//! Enforces frame limits (1009 on >MAX_FRAME_BYTES), rate limits per address, ping/idle
-//! timeouts, and bounded outbox (SPEC §9.5, §9.8, R1441).
-//! Bearer token decoded from `jackioh.bearer.` subprotocol or query string (R1379000).
+//! The WebSocket adapter: the only file in `src/actor` that knows a WebSocket library exists.
+//!
+//! The protocol is proven against the in-memory socket (`tests/support/socket.rs`), the same `Socket`
+//! the actor talks to. This file adds `socket_from_ws` (an axum WebSocket as a `Socket`; text frames
+//! only, a binary frame is answered with `error` and dropped) and `handle_match_socket` (the upgrade:
+//! authenticate through `app.auth`, count it against its account's R109 budget (R2478000), apply
+//! §9.4's gate (`assert_active`), refuse unless the profile is in the match it asked for or held a
+//! seat in it finished while its rematch window is open (§9.5, R1285000), §9.1). `handle` also
+//! bounds what an unauthenticated client costs: a frame over `MAX_FRAME_BYTES` closes the socket with
+//! 1009, and one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. A socket that
+//! stops answering is found and dropped: the pump pings every `WS_PING_INTERVAL_SECONDS` and drops a
+//! connection that has sent nothing for `WS_IDLE_TIMEOUT_SECONDS`, and a socket's outgoing queue holds
+//! at most `WS_OUTBOX_MAX_FRAMES` frames (SPEC §9.5, §9.8, R1441), so a dead or unread peer starts its
+//! seat's grace and cannot grow the server's memory without limit.
+//!
+//! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from the
+//! offered `jackioh.bearer.` subprotocol (R1379000), or, when none is offered, from the previous
+//! day's client's `?token=`; only `jackioh.v1` is echoed.
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -24,7 +36,9 @@ use tokio::sync::mpsc;
 use crate::actor::contracts::SocketHandlers;
 use crate::actor::protocol::{MAX_FRAME_BYTES, SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
-use crate::api::http::{ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address};
+use crate::api::http::{
+    ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address, upgrade_profile,
+};
 use crate::app::{App, browser_origins, now_ms};
 use crate::config::{
     DEFAULT_TRUSTED_PROXY_HOPS, REMATCH_OFFER_TTL_MS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
@@ -53,14 +67,19 @@ pub struct WsClose {
     pub unauthorized: u16,
     pub forbidden: u16,
     pub not_found: u16,
+    pub rate_limited: u16,
     pub internal: u16,
 }
 
-/// SPEC §11 R148, §9.1: close codes mirroring HTTP statuses (4401, 4403, 4404, 1011).
+/// SPEC §11 R148: 4401, 4403 and 4404 mirror the HTTP statuses of the same three refusals, with
+/// 1011 for an internal fault. Every refusal answers with the same error code and only the close code
+/// varies, so a socket never learns which check said so (§9.1). R2478000's 4429 mirrors 429 for an
+/// upgrade past its account's R109 budget.
 pub const WS_CLOSE: WsClose = WsClose {
     unauthorized: 4401,
     forbidden: 4403,
     not_found: 4404,
+    rate_limited: 4429,
     internal: 1011,
 };
 
@@ -443,11 +462,14 @@ async fn upgrade_socket(
         return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first"));
     };
 
-    let mut tx = app.db.begin(None).await?;
-    let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
-    tx.commit().await?;
-    let Some(profile) = profile else {
-        return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first"));
+    // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
+    let profile = match upgrade_profile(app, &user, WS_PATH).await {
+        Ok(Some(profile)) => profile,
+        Ok(None) => return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first")),
+        Err(error) if error.code == ApiErrorCode::RateLimited => {
+            return Err(UpgradeFailure::refused(WS_CLOSE.rate_limited, &error.message));
+        }
+        Err(error) => return Err(UpgradeFailure::Threw(error.message)),
     };
 
     // §9.4's gate, from the same function the HTTP router uses.

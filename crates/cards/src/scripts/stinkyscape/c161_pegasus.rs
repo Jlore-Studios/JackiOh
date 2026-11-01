@@ -1,11 +1,15 @@
-//! S #161 Pegasus (SPEC §8.10 row S 161; §2.4, §5.2, §6.3): (3) Spell, Rare.
+//! S #161 Faction: Pegasus (SPEC §8.10 row S 161; §2.4, §5.2, §6.3): (2) Spell, Faction, Rare.
 //!   Base:    "Add A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand."
 //!   Radiant: "Add a Radiant A Very Dandy Lad, Tmack Trav, Gokugains and Arctic Citadel to your hand."
 //!
 //! Engine: one `add_to_hand` per card named, S #113 A Very Dandy Lad, S #94 Tmack Trav, S #123 Gokugains, S
 //! #114 Arctic Citadel, in the order printed (S #10 Otherworldly Endurance's pattern), each a new card on its
+//! own face at its own price, a full hand burning what does not fit, in that order (§2.4). Radiant: each
 //! `radiant: true` (§5.2, R1880000). The cards are named, so they reach the hand whether or not the set ships
 //! (R1420). Declares no numbers.
+//!
+//! #2521: renamed from Pegasus, tagged Faction and (2) where it was (3). It and the four cards it adds are
+//! the Pegasus faction that S #163 Swear Loyalities keeps or exiles (R2521004).
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -38,7 +42,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #161 Pegasus — SPEC §8.10 row S 161, BUILD M12 row S 161.
+// S #161 Faction: Pegasus — SPEC §8.10 row S 161, BUILD M12 row S 161: "adds the 4 named cards in order, each
+// on its base face at its printed cost; a hand with room for fewer keeps the first and burns the rest;
+// radiant all of them Radiant".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

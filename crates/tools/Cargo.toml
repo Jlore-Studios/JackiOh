@@ -23,3 +23,7 @@ indexmap = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 rayon = { workspace = true }
+
+[dev-dependencies]
+# export_card_text.rs: crates/cards/card-text.yaml, parsed (#2498).
+yaml_serde = { workspace = true }

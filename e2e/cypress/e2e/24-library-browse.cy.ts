@@ -41,6 +41,7 @@ const ORDER_HIDDEN = /order hidden/i;
 type Seat = PlayerId;
 type LibraryCard = { defId: string };
 
+// Catalog ids map to SPEC §8 names.
 function nameOf(defId: string): string {
   const match = /^core-(\d{3})$/.exec(defId);
   const name = match === null ? undefined : CARD_NAMES[Number(match[1])];

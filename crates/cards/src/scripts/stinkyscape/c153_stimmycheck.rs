@@ -17,6 +17,19 @@ pub const ID: &str = "stinkyscape-153";
 /// R62: the step the end-of-turn delayed add re-enters (§10.6: `script.resume[step]`).
 const COPY_STEP: &str = "copy";
 
+/// R2476000: in its owner's hand, after "15% chance" (its `chance` as it stands, R386), the chance its
+/// Inflation rolls at: the one it carries from the Stimmycheck that added it (`inflation_chance_of`,
+/// the cry's own read), else the printed one. Hand only, so its owner alone reads it.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let printed = param(&ctx, "chance");
+        vec![count_preview(&format!("{printed}% chance"), inflation_chance_of(Some(ctx.self_), printed))]
+    })
+}
+
 fn stimmycheck(radiant: bool) -> Script {
     Script {
         cry: Some(hook(|ctx| {
@@ -44,6 +57,7 @@ fn stimmycheck(radiant: bool) -> Script {
                 })))]
             }),
         )]),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -109,6 +123,23 @@ mod tests {
                 cost_mods(&s).into_iter().filter(|cost_mod| *cost_mod == INFLATION_COST).count()
             })
             .sum()
+    }
+
+    /// R2476000: in hand, after "15% chance", the chance it rolls at: 15 printed, 25 once it carries 25,
+    /// and the copy its play adds carries 35.
+    #[test]
+    fn r2476000_in_hand_it_previews_the_inflation_chance_it_carries() {
+        for radiant in [false, true] {
+            let mut s = stimmy_board("stimmy-preview", radiant);
+            let stimmy = s.card(STIMMY).id.clone();
+            assert_eq!(crate::preview_seen(&s, P1, &stimmy), vec![("15% chance".to_string(), 15, None)]);
+            s.card_mut(STIMMY).memory.insert(INFLATION_CHANCE_KEY.to_string(), json!(25));
+            assert_eq!(crate::preview_seen(&s, P1, &stimmy), vec![("15% chance".to_string(), 25, None)]);
+            assert!(crate::preview_seen(&s, PlayerId::P2, &stimmy).is_empty(), "radiant {radiant}");
+            s.play(STIMMY, json!({}));
+            s.end_turn();
+            assert_eq!(copy_chance(&s), Some(35), "radiant {radiant}");
+        }
     }
 
     mod base {

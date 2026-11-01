@@ -22,6 +22,7 @@ import {
   writeCardSettings,
 } from "../cards/index.ts";
 import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
+import { KEYWORD_VISUALS } from "../cards/keywordVisuals.ts";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
 import Card, * as CardModule from "./Card.tsx";
@@ -194,11 +195,14 @@ describe("B16: a face-down card is a back and nothing else", () => {
     fireEvent.pointerLeave(bigot, { pointerType: "mouse" });
     expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
 
+    // R2617000: the hold is the hover, open while the finger is down.
     fireEvent.pointerDown(bigot, { pointerType: "touch", clientX: 10, clientY: 10 });
     act(() => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
-    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+    expect(screen.getByTestId(INSPECT_HOVER)).toBeInTheDocument();
+    fireEvent.pointerUp(bigot, { pointerType: "touch", clientX: 10, clientY: 10 });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
   });
 
   it("B16 CardBack alone is span.cf-back plus span.card-back-mark, with no text, no <text> or <title>", () => {
@@ -763,7 +767,8 @@ describe("B19: what a face-up root adds", () => {
       const visible = [...root.querySelectorAll<HTMLElement>(".keywords > [data-keyword]:not([data-chip='hidden'])")];
       const more = root.querySelector<HTMLElement>(".keywords > .cf-kw-more");
       const chips = u.keywords.filter(
-        (k) => k.kind !== "Taunt" && k.kind !== "Divine Shield" && !(k.kind === "Armor" && u.armor > 0),
+        // R2577000: a keyword that does nothing on the field gets no chip either.
+        (k) => k.kind !== "Taunt" && k.kind !== "Divine Shield" && !(k.kind === "Armor" && u.armor > 0) && KEYWORD_VISUALS[k.kind].onField,
       );
       // Every keyword keeps its badge in the DOM (e2e reads [data-keyword]).
       expect(root.querySelectorAll("[data-keyword]"), u.defId).toHaveLength(u.keywords.length);

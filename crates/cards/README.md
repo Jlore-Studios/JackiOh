@@ -1,14 +1,13 @@
 # `jackioh-cards`
 
-771 catalog entries in the seven shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
-Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8), Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187),
-Stinkyscape (175 cards, the Dormant Starship and 52 tokens, spec §8.10, shipped by #1884, R1857000) and
-Training Grounds (60 cards and 1 token, spec §8.11, shipped by #2204, R2194000), 632 cards and 139 tokens
-in all. A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
+The catalog entries of the seven shipped sets, Core (spec §8.1–§8.5), Classic (§8.6, and Glitch, a
+hidden token), Classic+ (§8.7), Meditative (§8.8), Meditative+ (§8.9, shipped in v0.3.15 by #1187),
+Stinkyscape (§8.10, the Dormant Starship among its cards, shipped by #1884, R1857000) and Training
+Grounds (§8.11, shipped by #2204, R2194000), each set's counts written once in `src/census.rs` (#2581).
+A set the catalog holds before it ships, as Meditative was while issue #496 built it, Meditative+
 while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, and Training Grounds while tracker
 #2193 did, is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
-(R1420), counts toward none of the totals above, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
+(R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
@@ -17,8 +16,10 @@ for adding, changing or removing a card (CLAUDE.md rule 10).
 ```
 crates/cards
 ├── catalog.json        the card data, proved against spec §8 by tests/cross/catalog.rs
-├── flavour.json        flavour lines and artist credits, not card data (R660)
-├── chinese.json        Simplified Chinese names and faces, not card data (R1303)
+├── card-text.yaml      every card's words but its rules, edited by hand: flavour, artist, voice lines,
+│                       Chinese, and the portraits' emote lines (#2498); not card data
+├── flavour.json        flavour lines and artist credits (R660), generated from card-text.yaml
+├── chinese.json        Simplified Chinese names and faces (R1303), generated from card-text.yaml
 ├── chinese-terms.json  the frame's Chinese words: types, tags, rarities, keywords, labels (R1303)
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
 │                       win_rates/ (each patch's win-rate table, R1329000), shipped.json, index.json,
@@ -29,6 +30,7 @@ crates/cards
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
+├── src/census.rs       each set's cards, tokens, rarities and tag counts (#2581)
 ├── src/ky_test_bank.rs C+ #42 KY's Test's problems (R420)
 ├── src/scripts/
 │   ├── core/           one Core card or token per file
@@ -113,7 +115,10 @@ mod tests {
 - **`preview`** is R280's number a formula comes to now: `{ label, value }` pairs, each label an
   exact substring of the running face's text, each value what the card's own resolution would deal
   or gain. It reads only public facts and the card's own face and counters, never a library's
-  contents or a hand's cards. A declared number (`params`) is not a preview.
+  contents or a hand's cards. A declared number (`params`) is not a preview. R2476000: a card that
+  remembers something shows it the same way, a count through `count_preview`, a remembered card by
+  name through `card_preview` (the dash, `NOTHING_REMEMBERED`, before there is one), read with the
+  same function its resolution reads it with; what only its owner may know stays in their hand.
 
 **Purity (CLAUDE.md rules 4 and 5).** A hook reads its `EffectContext` and returns `Vec<Effect>`;
 it never assigns to the state, never calls an engine mutator and never reaches for a clock or the
@@ -153,7 +158,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `when_attacks_of(ctx)` | in a `when_attacks` hook, its attack's facts, before any damage (R2285000) |
-| `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts; it runs only for a surviving attacker (R426, R2285001) |
+| `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts; it runs only for a surviving attacker (R2285001), or for any with `after_attack_even_if_gone`, `survived` false for a gone one (R426, R2396000) |
 | `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
 | `traded_card_of(ctx)` | in a trigger on `traded`, the card that Trade put into a deck (R1864003) |
@@ -198,9 +203,12 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
   Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
   which a Buff places one and from which a Nerf removes one on the field (R1748002).
-- `snapshotOf`: on a Training Grounds snapshot (#41–#60) only, the Core card it copies. The two
-  share a name (R2195001) and a deck holds one of them (R2195000); the snapshot's script is a copy of
-  the Core card's code, not a re-export (R2195003).
+- `snapshotOf`: set on no card since issue #2511 (R2511001). The catalogs shipped from v0.5.5 to
+  v0.5.7 set it on Training Grounds #41–#60, the Core card each copies, and a replay folded under
+  one still reads it (one Discover offers one of the pair, R2204001); `catalog check` refuses it now.
+  Those twenty are the Legacy cards, named `Legacy: <Core name>` and tagged Legacy (R2511000), each
+  its own card beside its Core card; its script is a copy of the Core card's code, not a re-export
+  (R2195003).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.
@@ -363,6 +371,16 @@ Every change to card data is a patch, and every patch is kept.
 
 ## 7. Flavour (R660)
 
+A card's words other than its rules are written in one file, `card-text.yaml` (#2498): one entry per
+catalog card and token, in catalog order with the card's name in a comment beside its id, holding its
+`flavour` and `artist`, its `voice` lines (R655, spoken in the voices of
+`apps/web/src/audio/card-audio.json5`) and its `zh` (§8), and an `emotes` section with the six
+portraits' lines (R644). This crate parses no YAML (CLAUDE.md rule 4):
+`cargo test -p jackioh-tools --test export_card_text` writes `flavour.json`, `chinese.json` and
+`apps/web/src/audio/voice-text.json` from it, each headed by a `"//"` entry that says so, and fails
+while one is stale; commit what it writes. It also holds the YAML's ids to the catalog's, in its order,
+and each name comment to the card's name.
+
 `flavour.json` is keyed by catalog id, `{ "flavour"?, "artist"? }`. It is not card data: an edit to it
 is no patch and claims no fragment. `tests/cross/flavour.rs` holds every key to a catalog entry, every
 entry to a flavour line, and each line to one trimmed line under its cap (120 characters, 60 for an
@@ -371,8 +389,9 @@ artist); the client's test also refuses rules words. Real art is credited when i
 
 ## 8. Chinese text (R1303)
 
-`chinese.json` is keyed by catalog id, `{ name, base, radiant, previews? }`: the name and both faces
-in Simplified Chinese, one Chinese line per English line. It is not card data: an edit to it is no
+`chinese.json`, written from each entry's `zh` in `card-text.yaml` (§7), is keyed by catalog id,
+`{ name, base, radiant, previews? }`: the name and both faces in Simplified Chinese, one Chinese line
+per English line. It is not card data: an edit to it is no
 patch and claims no fragment. Each face keeps exactly its English face's `{key}`s (an English
 `{key|one|many}` becomes `{key}` plus a measure word), names every `refs` card by its Chinese name,
 and carries `previews` exactly where the script declares `preview`. `chinese-terms.json` holds the

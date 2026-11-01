@@ -1,7 +1,26 @@
-//! SPEC §8.11 Training Grounds #55 Reminisce, the snapshot of Core #72 Reminisce (`core-072`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #70 (SPEC §8, §8.3): returns spells from graveyard.
+//! SPEC §8.11 Training Grounds #55 Legacy: Reminisce,
+//! the Legacy card of Core #72 Reminisce (`core-072`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #72 Reminisce (SPEC §8.3): "Discover a card from your GY; it costs 1 less; exile this", radiant
+//! "It costs 0" — the radiant cell restates only the cost clause, so the Discover and the self-exile
+//! are kept and only the discount changes (§8 Conventions).
+//!
+//! R50: the Discover's options come from the ACTUAL graveyard (`discover_from_graveyard`), so spell
+//! tokens there are eligible; a pool-based `discover_from_catalog` would exclude them.
+//!
+//! Two steps (§10.6): the cry opens the Discover and parks "exile this"; the answer runs `resume.chosen`
+//! first, then the parked exile. An empty graveyard opens nothing (§6.3: the card still resolves), so
+//! `exile` runs straight through. The resume step never reads `ctx.self`: its instance may be gone.
+//!
+//! Cost (R65): "1 less" is `costMod -1` (travels with the card, R78); "costs 0" is a `costOverride` of 0
+//! (R77), and `costMod` is still added after it. R4: `add_to_hand` moves the pick (§6.3 "Creates OR
+//! MOVES"), so a card picked into a full hand is burned.
 
 use jackioh_engine::effects::{add_to_hand, discover_from_graveyard, exile, set_cost_mod, set_cost_override};
 use jackioh_engine::prelude::*;

@@ -1,16 +1,19 @@
-// R2208000: the AI's clock in a practice game that earns. A game on a server seed decides under
-// PRACTICE_EARNING_AI_CLOCK_MS, since the server re-runs its AI moves with no clock (R1303002); every
-// other game keeps PRACTICE_AI_CLOCK_MS. A decision the long cap still cuts marks the game, in its save too.
+// R2208000, R2560000: the AI's clock in a practice game that earns. The server no longer re-runs a
+// claim's AI moves, so a game on a server seed (`earning: true`) decides under PRACTICE_AI_CLOCK_MS
+// like a free game, a lesson and a sandbox game, and a cut decision marks nothing: not the game's
+// save, not the claim's answer.
 //
-// The mocked `decide` runs the real search without its deadline (the fake clock is not the `Date.now()`
-// the engine's deadline reads), and records the deadlines it was asked with.
+// `@jackioh/ai` is mocked with a `decide` that is the real search until a test says its next decisions
+// were cut short by the clock (`stoppedBy: "clock"`), and that records the deadlines it was asked with.
+// The real search runs without its deadline: the fake clock is not `Date.now()`, which the engine's
+// deadline reads.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { PlayerId } from "@jackioh/shared";
 
-import { PRACTICE_AI_CLOCK_MS, PRACTICE_EARNING_AI_CLOCK_MS } from "./config.ts";
+import { PRACTICE_AI_CLOCK_MS } from "./config.ts";
 import { createPracticeCore } from "./core.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
@@ -69,27 +72,26 @@ beforeEach(() => {
   plan.deadlines = [];
 });
 
-describe("R2208000 an earning practice game's AI clock", () => {
-  it("R2208000 an earning game's decision carries PRACTICE_EARNING_AI_CLOCK_MS; a free game, a lesson and a sandbox game carry PRACTICE_AI_CLOCK_MS", () => {
-    expect(PRACTICE_EARNING_AI_CLOCK_MS).toBeGreaterThan(PRACTICE_AI_CLOCK_MS);
+describe("R2208000 R2560000 an earning practice game's AI clock", () => {
+  it("R2208000 R2560000 every practice game's decision carries PRACTICE_AI_CLOCK_MS, an earning game's too", () => {
     const lesson = TUTORIAL_LESSONS[0];
     if (lesson === undefined) throw new Error("no tutorial lesson");
-    const cases: [string, PracticeStartConfig, number][] = [
-      ["an earning game", config({ earning: true }), PRACTICE_EARNING_AI_CLOCK_MS],
-      ["a free game", config(), PRACTICE_AI_CLOCK_MS],
-      ["a lesson", lessonStartConfig(lesson), PRACTICE_AI_CLOCK_MS],
-      ["a sandbox game", config({ sandbox: true }), PRACTICE_AI_CLOCK_MS],
+    const cases: [string, PracticeStartConfig][] = [
+      ["an earning game", config({ earning: true })],
+      ["a free game", config()],
+      ["a lesson", lessonStartConfig(lesson)],
+      ["a sandbox game", config({ sandbox: true })],
     ];
-    for (const [name, start, cap] of cases) {
+    for (const [name, start] of cases) {
       plan.deadlines = [];
       const d = driver();
       expect(d.send({ type: "start", config: start }).type, name).toBe("started");
       expect(d.send({ type: "aiStep" }).type, name).toBe("snapshot");
-      expect(plan.deadlines[0], name).toBe(NOW + cap);
+      expect(plan.deadlines[0], name).toBe(NOW + PRACTICE_AI_CLOCK_MS);
     }
   });
 
-  it("R2208000 a cut decision marks an earning game, the mark survives a resume, and the claim's answer carries it beside the claim", () => {
+  it("R2208000 R2560000 a cut decision marks no earning game: its save and its claim's answer hold nothing more", () => {
     const start = config({ earning: true });
     const saves = memorySaveStore();
     const before = driver(saves);
@@ -97,34 +99,14 @@ describe("R2208000 an earning practice game's AI clock", () => {
     plan.cut = 1;
     expect(before.send({ type: "aiStep" }).type).toBe("snapshot");
     expect(plan.cut, "the cut decision was taken").toBe(0);
-    expect(saves.read()?.clockCut).toBe(true);
+    expect(Object.keys(saves.read() ?? {}).sort()).toEqual(["aiCursor", "catalog", "config", "hash", "log", "versions"]);
 
     // The reload: a new worker over the same device's save, asked for the game the page remembers.
     const after = driver(saves);
     expect(after.send({ type: "resume", config: start }).type).toBe("started");
     expect(after.send({ type: "act", action: { type: "concede" } }).type).toBe("snapshot");
     const answer = claimAnswer(after);
-    expect(answer.clockCut).toBe(true);
-    expect(Object.keys(answer.claim).sort(), "the mark is not in the claim the server folds").toEqual(["log", "result", "seed"]);
-  });
-
-  it("R2208000 an earning game with no cut decision, and a free game even with one, carry no mark", () => {
-    const uncut = memorySaveStore();
-    const earned = driver(uncut);
-    expect(earned.send({ type: "start", config: config({ earning: true }) }).type).toBe("started");
-    expect(earned.send({ type: "aiStep" }).type).toBe("snapshot");
-    expect(uncut.read(), "the game is saved").not.toBeNull();
-    expect(uncut.read()).not.toHaveProperty("clockCut");
-    expect(earned.send({ type: "act", action: { type: "concede" } }).type).toBe("snapshot");
-    expect(claimAnswer(earned)).not.toHaveProperty("clockCut");
-
-    const free = memorySaveStore();
-    const played = driver(free);
-    expect(played.send({ type: "start", config: config() }).type).toBe("started");
-    plan.cut = 1;
-    expect(played.send({ type: "aiStep" }).type).toBe("snapshot");
-    expect(plan.cut, "the cut decision was taken").toBe(0);
-    expect(free.read(), "the game is saved").not.toBeNull();
-    expect(free.read()).not.toHaveProperty("clockCut");
+    expect(Object.keys(answer).sort()).toEqual(["claim", "id", "type"]);
+    expect(Object.keys(answer.claim).sort(), "the claim the server folds is the seed, the result and the log").toEqual(["log", "result", "seed"]);
   });
 });

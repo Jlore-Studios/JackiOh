@@ -46,11 +46,13 @@ mod tests {
     use crate::{built_starship, launch_starship};
     use jackioh_engine::testkit::*;
 
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
 
+    /// p1's Starship holding the Capacitor (lane 1) and `others` AP Rounds, launched; its stats before
+    /// and after the launch.
     fn launched(seed: &str, radiant: bool, others: i32) -> ((i32, i32), (i32, i32)) {
         let mut pieces = vec![json!({ "def": ID, "lane": 1, "radiant": radiant })];
-        pieces.extend((2..2 + others).map(|lane| json!({ "def": STRATOS, "lane": lane })));
+        pieces.extend((2..2 + others).map(|lane| json!({ "def": AP_ROUNDS, "lane": lane })));
         let (mut s, ship) = built_starship(seed, json!(pieces), json!({}), json!({}));
         let before = s.stats(ship.as_str());
         launch_starship(&mut s, &ship);
@@ -61,7 +63,7 @@ mod tests {
     #[test]
     fn r1859004_three_other_pieces_give_the_starship_3_3() {
         let (before, after) = launched("r1859004-three", false, 3);
-        assert_eq!(before, (2 + 9, 2 + 9));
+        assert_eq!(before, (2 + 9, 2 + 3));
         assert_eq!(after, (before.0 + 3, before.1 + 3));
     }
 
@@ -75,7 +77,7 @@ mod tests {
     #[test]
     fn r1859004_radiant_it_counts_itself_at_2_2_a_piece() {
         let (before, after) = launched("r1859004-radiant", true, 3);
-        assert_eq!(before, (4 + 9, 4 + 9));
+        assert_eq!(before, (4 + 9, 4 + 3));
         assert_eq!(after, (before.0 + 8, before.1 + 8));
         let (alone_before, alone_after) = launched("r1859004-radiant-alone", true, 0);
         assert_eq!(alone_after, (alone_before.0 + 2, alone_before.1 + 2));

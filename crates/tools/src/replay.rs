@@ -20,12 +20,16 @@ use jackioh_luau::custom::KitHost;
 #[derive(clap::Args, Debug)]
 pub struct Args {}
 
-/// R767000: shipped catalog for `game`; resolves aliases if unversioned (R1371000).
-pub(crate) fn pinned_catalog(game: &Value, marked: bool) -> Result<Option<&'static ShippedCatalog>> {
+/// R767000: the shipped catalog `game` folds under, read off its `catalogVersion`: `None` (this
+/// build's) when it names none or this build's own version, the carried one when this build carries
+/// it, and an `earlier_patch` error, before anything is folded, for any other version. An input of an
+/// older `scheme` (`versions::scheme_of`: 1 without the `versions` marker, R1371000, or an older
+/// marker, R2532000) names it as it was before a version retcon, and it is read through
+/// `patches/aliases.json`.
+pub(crate) fn pinned_catalog(game: &Value, scheme: u32) -> Result<Option<&'static ShippedCatalog>> {
     let version = match game.get("catalogVersion") {
         None | Some(Value::Null) => return Ok(None),
-        Some(Value::String(version)) if marked => version.as_str(),
-        Some(Value::String(version)) => jackioh_cards::versions::current_version_name(version),
+        Some(Value::String(version)) => jackioh_cards::versions::version_name_from(scheme, version),
         Some(other) => bail!("catalogVersion {other} is not a string"),
     };
     let build = jackioh_cards::catalog_version();
@@ -41,7 +45,7 @@ pub(crate) fn pinned_catalog(game: &Value, marked: bool) -> Result<Option<&'stat
 /// game is by `catalogVersion`, folded by `duos_fold`: `{"hash": duos_hash, "refusedAt": the index in
 /// `log` of the action the fold refused and stopped at, or null}`.
 fn duos_json(input: Value) -> Result<Value> {
-    let shipped = pinned_catalog(&input["options"], jackioh_cards::versions::is_marked(&input))?;
+    let shipped = pinned_catalog(&input["options"], jackioh_cards::versions::scheme_of(&input))?;
     let game: DuosReplayInput =
         serde_json::from_value(input).context("the input is not a co-op game {options, log}")?;
     let folded = with_shipped(shipped, || duos_fold(&game));
@@ -54,7 +58,7 @@ fn replay_json(input: Value) -> Result<Value> {
     if input.get("options").is_some() {
         return duos_json(input);
     }
-    let shipped = pinned_catalog(&input, jackioh_cards::versions::is_marked(&input))?;
+    let shipped = pinned_catalog(&input, jackioh_cards::versions::scheme_of(&input))?;
     let args: FoldArgs = serde_json::from_value(input).context("the input is not {seed, decks, log, …}")?;
     let folded = with_shipped(shipped, || with_custom_scripts(Rc::new(KitHost), || fold(&args)));
     Ok(json!({
@@ -139,7 +143,7 @@ mod tests {
         duos_legal_actions, duos_reduce, duos_seats_to_act,
     };
 
-    /// The hotseat game e2e spec 01 recorded (SURFACE §13), committed beside the golden traces.
+    /// The hotseat game e2e spec 01 recorded (SURFACE §13), committed under `crates/engine/tests/golden/`.
     const HOTSEAT: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../engine/tests/golden/01-hotseat-full-game.json"

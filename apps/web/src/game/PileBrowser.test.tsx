@@ -154,7 +154,22 @@ describe("a pile that holds cards can be looked through", () => {
     expect(screen.getByTestId(INSPECT_LIST_SHEET)).toHaveAttribute("aria-label", "Your exile");
   });
 
-  it("a touch long-press opens the dialog once, and the tap it ends with opens no second one", () => {
+  it("R2617000 a touch held on a pile shows its list preview while the finger is down, and the tap it ends with opens no dialog", () => {
+    renderBoard(fullBoardView());
+    const pile = screen.getByTestId("graveyard-opponent");
+    fireEvent.pointerDown(pile, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_MS);
+    });
+    expect(names(screen.getByTestId(INSPECT_LIST_HOVER))).toEqual([nameOf("core-009")]);
+    fireEvent.pointerUp(pile, { pointerType: "touch", pointerId: 1 });
+    expect(screen.queryByTestId(INSPECT_LIST_HOVER)).toBeNull();
+    fireEvent.click(pile);
+    expect(screen.queryByTestId(INSPECT_LIST_SHEET)).toBeNull();
+  });
+
+  it("R2617000 with hover previews off a touch hold opens the dialog once, and the tap it ends with opens no second one", () => {
+    writeSettings({ hoverPreviews: false });
     renderBoard(fullBoardView());
     const pile = screen.getByTestId("graveyard-opponent");
     fireEvent.pointerDown(pile, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
@@ -259,7 +274,7 @@ describe("R313 your own library, without its order", () => {
     expect(pile).toHaveFocus();
   });
 
-  it("R313 Enter on the focused library pile opens the dialog, and a touch long-press does too", () => {
+  it("R313 R2617000 Enter on the focused library pile opens the dialog, and a touch hold shows its preview", () => {
     renderBoard(withLibrary());
     const pile = screen.getByTestId("library-you");
     fireEvent.keyDown(pile, { key: "Enter" });
@@ -269,8 +284,10 @@ describe("R313 your own library, without its order", () => {
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS);
     });
-    expect(screen.getAllByTestId(INSPECT_LIST_SHEET)).toHaveLength(1);
+    expect(screen.getByTestId(INSPECT_LIST_HOVER)).toBeInTheDocument();
+    expect(screen.queryByTestId(INSPECT_LIST_SHEET)).toBeNull();
     fireEvent.pointerUp(pile, { pointerType: "touch", pointerId: 1 });
+    expect(screen.queryByTestId(INSPECT_LIST_HOVER)).toBeNull();
   });
 
   it("R313 an empty library opens nothing, and nor does a library the view does not list", () => {

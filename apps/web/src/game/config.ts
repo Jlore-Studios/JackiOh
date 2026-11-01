@@ -28,3 +28,6 @@ export const BACKDROP_PARTICLE_DELAY_STEP_MS = 430;
  */
 export const MATCH_RANKS_READ_ATTEMPTS = 5;
 export const MATCH_RANKS_RETRY_MS = 1000;
+
+/** #2645: board.css's two phone layouts, where the control bar keeps to one row. */
+export const PHONE_BAR_QUERY = "(max-width: 600px), (orientation: landscape) and (max-height: 500px)";

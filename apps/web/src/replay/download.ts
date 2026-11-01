@@ -3,7 +3,7 @@
 // and no account (as a GIF names none, R513000), and nothing is uploaded or kept. A file the page wrote
 // opens again (#1160); a co-op replay's file is another shape, `duos/download.ts`'s (R1242000).
 
-import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
+import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
 
 import type { OnlineReplayListing } from "../net/api.ts";
@@ -16,7 +16,8 @@ import { isRecord } from "../wire/json.ts";
 
 /** What a reader of the file checks first: what it is, and which shape of it. */
 export const REPLAY_JSON_FORMAT = "jackioh-replay";
-export const REPLAY_JSON_VERSION = 2;
+/** R2532000: 3 since the v0.5 retcon (#2532), its versions named by `VERSIONS_SCHEME`. */
+export const REPLAY_JSON_VERSION = 3;
 /** R1371000: the version a file written before the version retcon carries; its catalog is an old name. */
 export const REPLAY_JSON_UNMARKED_VERSION = 1;
 
@@ -101,9 +102,12 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
  * gate makes the steps' checks enough, and the page never enforces rules (rule 7).
  */
 export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
-  const unmarked = json.version === REPLAY_JSON_UNMARKED_VERSION;
-  if (json.format !== REPLAY_JSON_FORMAT || (json.version !== REPLAY_JSON_VERSION && !unmarked)) throw new ReplayFailure("error", UNSUPPORTED);
-  const played = unmarked && typeof json.catalogVersion === "string" ? currentVersionName(json.catalogVersion) : json.catalogVersion;
+  // R2532000: the file's version is the scheme its catalog is named by, read through `aliases.json`.
+  const scheme = json.version;
+  if (json.format !== REPLAY_JSON_FORMAT || typeof scheme !== "number" || !Number.isInteger(scheme) || scheme < REPLAY_JSON_UNMARKED_VERSION || scheme > REPLAY_JSON_VERSION) {
+    throw new ReplayFailure("error", UNSUPPORTED);
+  }
+  const played = typeof json.catalogVersion === "string" ? versionNameFrom(scheme, json.catalogVersion) : json.catalogVersion;
   if (played !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
   const { steps } = json;
   if (!Array.isArray(steps) || steps.length === 0) throw new ReplayFailure("error", NOT_A_REPLAY);

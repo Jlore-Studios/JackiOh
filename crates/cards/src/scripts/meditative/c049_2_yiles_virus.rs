@@ -164,7 +164,7 @@ mod tests {
                 }));
                 let virus = s.unit(P1, 1).expect("the virus");
                 s.play(GIRLFRIEND, json!({ "zone": 1 }));
-                let girlfriend = s.unit(P2, 1).expect("the animated girlfriend");
+                let girlfriend = s.unit(P2, 1).expect("the girlfriend");
 
                 s.start_turn();
 

@@ -1,14 +1,20 @@
-// Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R655). `card-audio.json5` and
-// `voice-manifest.json` (written by `apps/web/scripts/gen-voice.mjs`) are imported here and nowhere
-// else. The JSON5 is parsed once at import against the catalog, so a malformed table fails loudly at
-// load, naming the path of the problem. Each card's kind comes from its catalog type. Everything here
-// reads a `PlayerView` or a defId and nothing else (CLAUDE.md rule 7, R203): a redacted card carries
-// `HIDDEN_DEF_ID`, which is never in the table, so it never yields a sound.
+// Card sound data access (docs/polish/2-sound.md, "voiceData.ts"; R655).
+//
+// `card-audio.json5` (the voices bank, the effects bank, every card's hooks, and the portraits'
+// emote voices), `voice-text.json` (the words those hooks and portraits speak, which
+// crates/tools/tests/export_card_text.rs writes from crates/cards/card-text.yaml, #2498) and
+// `voice-manifest.json` (which rendered files exist, written by `apps/web/scripts/gen-voice.mjs`)
+// are imported here and nowhere else. The table is JSON5, read as text, joined to its words and
+// parsed once at import against the catalog, so a malformed table fails loudly at load, naming the
+// path of the problem, instead of speaking garbage. Each card's kind comes from
+// its catalog type: the file never states it. Everything here reads a `PlayerView` or a defId
+// and nothing else (CLAUDE.md rule 7, R203): a redacted card carries `HIDDEN_DEF_ID`, which is
+// never in the table, so it never yields a sound.
 
 import JSON5 from "json5";
 
 import catalogJson from "@jackioh/cards/catalog.json";
-import type { PlayerView, PortraitId, VoiceEmoteId } from "@jackioh/shared";
+import { VOICE_EMOTE_IDS, type PlayerView, type PortraitId, type VoiceEmoteId } from "@jackioh/shared";
 
 import { CARD_HOOKS, CARD_HOOK_NAMES, HIDDEN_DEF_ID } from "./constants.ts";
 import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
@@ -31,15 +37,22 @@ import type {
 } from "./types.ts";
 import rawCardAudio from "./card-audio.json5?raw";
 import rawManifest from "./voice-manifest.json";
+import voiceTextJson from "./voice-text.json";
 import { isRecord } from "../wire/json.ts";
 
 /* Parsing */
 
 /** The file's name in every error, so a designer knows which file to open. */
 const FILE = "card-audio.json5";
+/** The file a line's words are written in, named in an error about them. */
+const TEXT_FILE = "card-text.yaml";
 
 function fail(path: string, problem: string): never {
   throw new Error(`${FILE}: ${path}: ${problem}`);
+}
+
+function failText(path: string, problem: string): never {
+  throw new Error(`${TEXT_FILE}: ${path}: ${problem}`);
 }
 
 function record(value: unknown, path: string): Record<string, unknown> {
@@ -347,8 +360,89 @@ function duplicateKeyPath(source: string): string | null {
   return null;
 }
 
-/** `parseCardAudio` of JSON5 text; a syntax error (with its line and column) or a key written twice fails the same way. */
-export function parseCardAudioText(source: string, catalog: CatalogTypes): CardAudioTable {
+/**
+ * R655, #2498: the raw table with its words filled in from `voiceText` (`voice-text.json`'s shape,
+ * `{ cards: { <id>: { <hook>: <line>, trigger: [<line>, …] } }, emotes: { <portrait>: { <line id>:
+ * <line> } } }`): each hook that names a voice gets its card's line for that hook as its `text` (a
+ * trigger its list as its `lines`), and each portrait its five lines. Nothing else moves, and the
+ * table keeps its order. Throws when the table writes a line itself (a hook's `text` or `lines`, a
+ * portrait's line), which is the YAML's to write, when the YAML has a line no voice speaks, and when
+ * a voice has nothing to speak: a voiced hook or a portrait with no lines in the YAML.
+ */
+export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  const words = isRecord(voiceText) ? voiceText : {};
+  const lines = isRecord(words.cards) ? words.cards : {};
+  const spoken = isRecord(words.emotes) ? words.emotes : {};
+  const table = { ...raw };
+  const cards = isRecord(raw.cards) ? raw.cards : {};
+  if (isRecord(raw.cards)) {
+    const filled: Record<string, unknown> = {};
+    for (const [defId, entry] of Object.entries(raw.cards)) {
+      const own = isRecord(lines[defId]) ? lines[defId] : {};
+      if (!isRecord(entry)) {
+        filled[defId] = entry;
+        continue;
+      }
+      const hooks: Record<string, unknown> = {};
+      for (const [hook, assignment] of Object.entries(entry)) {
+        if (!isRecord(assignment)) {
+          hooks[hook] = assignment;
+          continue;
+        }
+        for (const field of ["text", "lines"]) {
+          if (field in assignment) fail(`cards.${defId}.${hook}.${field}`, `a line belongs in ${TEXT_FILE}`);
+        }
+        if (assignment.voice === undefined) {
+          hooks[hook] = assignment;
+          continue;
+        }
+        if (!Object.hasOwn(own, hook)) failText(`${defId}.voice.${hook}`, `missing (${FILE} gives the hook a voice)`);
+        const { voice, ...rest } = assignment;
+        hooks[hook] = { voice, [hook === "trigger" ? "lines" : "text"]: own[hook], ...rest };
+      }
+      filled[defId] = hooks;
+    }
+    table.cards = filled;
+  }
+  for (const [defId, own] of Object.entries(lines)) {
+    const entry = cards[defId];
+    for (const hook of Object.keys(isRecord(own) ? own : {})) {
+      const assignment = isRecord(entry) ? entry[hook] : undefined;
+      if (!isRecord(assignment) || assignment.voice === undefined) {
+        failText(`${defId}.voice.${hook}`, `no voice in ${FILE} speaks it`);
+      }
+    }
+  }
+  const emotes = isRecord(raw.emotes) ? raw.emotes : {};
+  for (const portrait of Object.keys(spoken)) {
+    if (!isRecord(emotes[portrait])) failText(`emotes.${portrait}`, `${FILE} has no such portrait`);
+  }
+  if (isRecord(raw.emotes)) {
+    const filled: Record<string, unknown> = {};
+    for (const [portrait, entry] of Object.entries(raw.emotes)) {
+      if (!isRecord(entry)) {
+        filled[portrait] = entry;
+        continue;
+      }
+      for (const line of VOICE_EMOTE_IDS) {
+        if (line in entry) fail(`emotes.${portrait}.${line}`, `a line belongs in ${TEXT_FILE}`);
+      }
+      const own = spoken[portrait];
+      if (!isRecord(own)) failText(`emotes.${portrait}`, `missing (${FILE} gives the portrait a voice)`);
+      filled[portrait] = { ...entry, ...own };
+    }
+    table.emotes = filled;
+  }
+  return table;
+}
+
+/**
+ * `parseCardAudio` of JSON5 text, its words filled in from `voiceText` when it is given
+ * (`withVoiceText`). A syntax error is reported the same way, with its line and column, and so is a
+ * key written twice in one object.
+ */
+export function parseCardAudioText(source: string, catalog: CatalogTypes, voiceText?: unknown): CardAudioTable {
   let raw: unknown;
   try {
     raw = JSON5.parse(source);
@@ -357,10 +451,14 @@ export function parseCardAudioText(source: string, catalog: CatalogTypes): CardA
   }
   const twice = duplicateKeyPath(source);
   if (twice !== null) fail(twice, "written twice in one object (only the last would count)");
-  return parseCardAudio(raw, catalog);
+  return parseCardAudio(voiceText === undefined ? raw : withVoiceText(raw, voiceText), catalog);
 }
 
-export const CARD_AUDIO: CardAudioTable = parseCardAudioText(rawCardAudio, catalogJson as unknown as CatalogTypes);
+export const CARD_AUDIO: CardAudioTable = parseCardAudioText(
+  rawCardAudio,
+  catalogJson as unknown as CatalogTypes,
+  voiceTextJson,
+);
 /** Generated by gen-voice.mjs and checked against the files by its `--check` (B35, B37). */
 export const VOICE_MANIFEST = rawManifest as VoiceManifest;
 

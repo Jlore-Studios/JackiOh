@@ -3,8 +3,8 @@
 //! and node budgets while blind to hidden cards (R185).
 
 use jackioh_ai::{
-    AI_BUDGET, AI_SEARCH, AiOptions, Decision, create_node_counter, decide, hidden_instance_ids, redact,
-    simulate, surcharge_nodes,
+    AI_BUDGET, AI_SEARCH, AiOptions, Decision, Prices, SearchBudget, create_node_counter, decide,
+    hidden_instance_ids, redact, simulate, surcharge_nodes,
 };
 use jackioh_engine::testkit::{
     ActionBody, GameState, PlayerId, Value, create_rng, find_instance, hash_state, legal_actions, subsystems,
@@ -152,6 +152,7 @@ fn an_end_turn_into_the_hidden_cognitive_offloading_leaves_its_autopilot_turn_ow
         seat,
         &ActionBody::EndTurn,
         &create_node_counter(AI_BUDGET.nodes, None),
+        Prices::NONE,
     )
     .expect("the counter gives the step a node")
     .expect("End turn is accepted");
@@ -205,4 +206,34 @@ fn equivalent_visible_states_of_every_pinned_position_choose_alike() {
         );
         assert_eq!(decide_on(&twin, &at), decide_on(&at.state, &at));
     }
+}
+
+/// R2575000: improve-dev:200's position is a fat one (a long hand, a full board): its allowance is
+/// scaled from at most `AI_SEARCH.fat_budget_nodes`, so the doubled budget decides there exactly as
+/// the 600 nodes of before did, at the same cost.
+#[test]
+fn r2575000_a_fat_state_decides_at_ai_budget_as_it_did_at_600_nodes() {
+    let at = pinned(IMPROVE_DEV_200);
+    let before = SearchBudget {
+        nodes: 600,
+        lethal_nodes: 150,
+        ..AI_BUDGET
+    };
+    let mut options = AiOptions::with_budget(create_rng(&at.rng_seed, at.rng_cursor), before);
+    let old = decide(&at.state, at.seat, &mut options).expect("the seat has a decision to make");
+    let new = decide_on(&at.state, &at);
+    assert_eq!(new.action, old.action);
+    assert_eq!(
+        new.stats.nodes, old.stats.nodes,
+        "{:?} against {:?}",
+        new.stats, old.stats
+    );
+}
+
+/// R2575000: a position of ordinary width spends past the 600 nodes of before.
+#[test]
+fn r2575000_a_state_of_ordinary_width_spends_past_600_nodes() {
+    let at = pinned(IMPROVE_DEV_154);
+    let decision = decide_on(&at.state, &at);
+    assert!(decision.stats.nodes > 600, "{:?}", decision.stats);
 }

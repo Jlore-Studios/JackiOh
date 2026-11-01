@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::candidates::root_candidate_actions;
 use crate::config::{AI_SEARCH, POLICY_RANK_CAP};
 use crate::determinize::{DeterminizeOptions, determinize};
+use crate::evaluate::Prices;
 use crate::observe::redact;
 
 /// The layout `policy_keys` writes. Bump it with any change to what a key means or which keys a move
@@ -251,7 +252,7 @@ pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> P
         &mut Rng::new(AI_SEARCH.probe_seed, 0),
         DeterminizeOptions::default(),
     );
-    let moves = root_candidate_actions(&probe, seat);
+    let moves = root_candidate_actions(&probe, seat, Prices::NONE);
     let mut rank = 0;
     let candidates = moves
         .iter()

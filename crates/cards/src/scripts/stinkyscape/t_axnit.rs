@@ -1,12 +1,13 @@
-//! SPEC §7 Stinkyscape T-axnit Axnit, a Resource token of the Stinkyscape set.
+//! SPEC §7 Stinkyscape T-axnit Axnit, a Resource token of the Stinkyscape set (§7's token table).
 //!   Base:    "Deal {damage} damage to an enemy, with Lifesteal." (3)
 //!   Radiant: "Echo 1\nDeal {damage} damage to an enemy, with Lifesteal." (3)
 //!
-//! A Resource (R1840000), played from its owner's hand at (0) for its Credits (R2250001). "An enemy"
-//! is a declared target, the enemy hero or an enemy Unit, picked with the play (R81). Lifesteal is the
-//! effect's (R85, Core #93.1 Combo-Fodder's shape): its caster's hero heals by the damage dealt. The
-//! Radiant face prints Echo 1 (`StaticFlags.echo`, §6.3): it resolves a second time, its target asked
-//! afresh. The number is the declared `damage` (R386).
+//! A Resource (R1840000), tagged Resource and Token (§5's tags, issue #2521), played from its owner's
+//! hand at (0) for its Credits (R2250000, R2250001). "An enemy" is a declared target, the enemy hero
+//! or an enemy Unit, picked with the play (R81). Lifesteal is the effect's (R85, Core #93.1
+//! Combo-Fodder's shape): its caster's hero heals by the damage dealt. The Radiant face prints Echo 1
+//! (`StaticFlags.echo`, §6.3): it resolves a second time, its target asked afresh. The number is the
+//! declared `damage` (R386).
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -45,13 +46,15 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-axnit — SPEC §7, BUILD M12 row S T-axnit.
+// S T-axnit — SPEC §7, BUILD M12 row S T-axnit: "played from the hand at a chosen enemy, 3 damage and
+// its caster's hero healed 3; damage reads through `param()`; radiant it resolves twice, a target asked
+// each time". Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{play_resource, scenario};
+    use crate::{card_def, play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -63,6 +66,11 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "health": 20 },
             "p2": { "field": [BODY] },
         }))
+    }
+
+    #[test]
+    fn tagged_resource_and_token() {
+        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
     }
 
     #[test]

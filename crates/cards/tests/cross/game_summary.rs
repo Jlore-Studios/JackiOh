@@ -3,7 +3,7 @@
 //! #23, #96, #18), and draws/burns (R4, #21, #90).
 
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::catalog::{deckable, pair_key};
+use jackioh_engine::catalog::deckable;
 use jackioh_engine::testkit::*;
 
 /// Re-pinned for the Stinkyscape release (#1884): the decks are dealt from every set that ships, so
@@ -23,29 +23,10 @@ fn pool() -> Vec<String> {
     ids
 }
 
-/// holds (§2.6 L3, R2195000), so a shuffle with no pair in it deals its first and second `size` as it
-/// always did. Re-pinned for the Training Grounds release (#2204): its snapshots #41–#60 ship beside
+/// The two decks a game deals, `size` each, off a shuffle of `pool()`: its first and second `size`.
+/// A Core card and its Legacy card are two cards a deck may hold together (R2511001).
 fn deal(shuffled: &[String], size: usize) -> (Vec<String>, Vec<String>) {
-    fn take(rest: &mut Vec<String>, size: usize) -> Vec<String> {
-        let mut deck: Vec<String> = Vec::new();
-        let mut keys: Vec<String> = Vec::new();
-        rest.retain(|id| {
-            if deck.len() == size {
-                return true;
-            }
-            let key = CATALOG.get(id).map_or(id.as_str(), pair_key).to_string();
-            if keys.contains(&key) {
-                return true;
-            }
-            keys.push(key);
-            deck.push(id.clone());
-            false
-        });
-        deck
-    }
-    let mut rest = shuffled.to_vec();
-    let first = take(&mut rest, size);
-    (first, take(&mut rest, size))
+    (shuffled[..size].to_vec(), shuffled[size..size * 2].to_vec())
 }
 
 /// The dealt cards of a hand: R2089000 leaves a Created card (R943) out of every opening hand.
@@ -310,8 +291,14 @@ mod summarize_game_over_real_cards_s9_11 {
                             {
                                 plays[seat][at].placed = true;
                             // R2179002: a card cast on its draw is no play, though it stood in the hand as the
+                            // step began: a Trade shuffles it in and draws it straight back (summary-cards-28's
                             // p1 CN in a Bottle, since issue #2280's rules change took that game down a new path).
+                            // R831001: nor is a card a Counter sent to a hand in this step, its countering
+                            // player's cast, even when a second Counter sends it back to the hand it was played
+                            // from (summary-cards-87's p2 Book of Pain between two Palantirs, since #2657's
+                            // patch took that game down a new path).
                             } else if *on_draw != Some(true)
+                                && !stolen_here.contains(&instance_id.as_str())
                                 && let Some(card) = state.players[*caster]
                                     .hand
                                     .iter()

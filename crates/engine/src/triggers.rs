@@ -825,6 +825,9 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     let wakes = event.event_type();
     let mut later: Option<LaterMoves> = None;
     let mut uncovered: Option<Vec<String>> = None;
+    // R2396000: the killer that answers this kill even once gone, if it does not answer it below.
+    let gone_killer = take_kill_snapshot(sink.state, event);
+    let mut killer_answered = false;
     for holder in holders_answering(sink.state, wakes) {
         // §10.3: the traps have already had this event; queueing them too would fire them twice.
         if holder.is_trap {
@@ -865,9 +868,21 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
             .copied()
             .unwrap_or(holder.controller);
         let holder = TriggerHolder { controller, ..holder };
+        // R2396000: the killer still on the field answers its kill itself, once.
+        if gone_killer
+            .as_ref()
+            .is_some_and(|killer| killer.id == holder.card.id)
+            && defs.iter().any(|def| def.even_if_gone)
+        {
+            killer_answered = true;
+        }
         for def in &defs {
             queued.push(queue_trigger(sink, &holder, def, event));
         }
+    }
+    // R2396000: a killer gone from the field answers its kill after the board's holders, once.
+    if let Some(killer) = gone_killer.filter(|_| !killer_answered) {
+        queued.extend(offer_to_gone_killer(sink, &killer, event));
     }
     // MD-B22, R946: Showdown's watchers answer the event before anything notes its removals.
     queued.extend(offer_to_lane_watches(sink, event));
@@ -1055,7 +1070,66 @@ fn offer_to_death_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Q
     queued
 }
 
+/// R2396000: whether this card answers "Whenever this destroys a Unit" even once it is gone: one of its
+/// field triggers on a `destroyed` is `even_if_gone` (Meditative #95.1 CN Golem).
+pub fn answers_kills_when_gone(state: &GameState, card: &CardInstance) -> bool {
+    crate::scripts::script_of(state, card)
+        .triggers
+        .iter()
+        .any(|def| def.even_if_gone && def.on.contains(&GameEventType::Destroyed))
+}
+
+/// R2396000: the killer `state_check::collect` kept for this `destroyed`, taken off the state as it is
+/// dispatched; `None` for any other event, or a kill no such killer made.
+fn take_kill_snapshot(state: &mut GameState, event: &GameEvent) -> Option<CardInstance> {
+    let GameEvent::Destroyed {
+        instance_id,
+        killer_id,
+        ..
+    } = event
+    else {
+        return None;
+    };
+    let snapshots = state.kill_snapshots.as_mut()?;
+    let killer = snapshots.shift_remove(instance_id);
+    if snapshots.is_empty() {
+        state.kill_snapshots = None;
+    }
+    killer.filter(|killer| killer_id.as_deref() == Some(killer.id.as_str()))
+}
+
+/// R2396000: "Whenever this destroys a Unit" from a killer no longer on the field (or a Reborn body that
+/// is not it, R174): its `even_if_gone` triggers on this `destroyed` queue as the snapshot it killed
+/// with, which the entry carries (`prompts::SELF_KEY`) as a dead card's Death hook reads its own (R89),
+/// for the player who controlled it as it killed (R212).
+fn offer_to_gone_killer(
+    sink: &mut EngineSink<'_>,
+    killer: &CardInstance,
+    event: &GameEvent,
+) -> Vec<QueuedTrigger> {
+    let holder = holder_of(sink.state, killer, TriggerZone::Field, killer.controller);
+    let snapshot = serde_json::to_value(killer).expect("an instance is plain JSON (§10.1)");
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for def in triggers_on_event(&holder, event.event_type()) {
+        if !def.even_if_gone {
+            continue;
+        }
+        let mut entry = queue_trigger(sink, &holder, &def, event);
+        entry
+            .resume
+            .data
+            .insert(crate::prompts::SELF_KEY.to_string(), snapshot.clone());
+        if let Some(pushed) = sink.state.trigger_queue.last_mut() {
+            pushed.resume.data = entry.resume.data.clone();
+        }
+        queued.push(entry);
+    }
+    queued
+}
+
+// ---------------------------------------------------------------------------
 // 3. The loop.
+// ---------------------------------------------------------------------------
 
 /// Apply one queued entry whole (§10.3 step A). The card is found again now rather than trusted
 /// from queue time: it may have died, been played or moved while it waited, and a trigger its
@@ -1091,11 +1165,19 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         return;
     }
 
-    let Some(card) = find_instance(sink.state, &entry.instance_id).cloned() else {
-        return;
-    };
-    let Some(holder) = trigger_holder_for(sink.state, &card) else {
-        return;
+    // R2396000: a gone killer's entry runs as the snapshot it killed with, which the entry carries
+    // (`offer_to_gone_killer`); every other entry finds its card again.
+    let (card, holder) = if let Some(snapshot) = crate::prompts::self_snapshot_of(&entry.resume.data) {
+        let holder = holder_of(sink.state, &snapshot, TriggerZone::Field, snapshot.controller);
+        (snapshot, holder)
+    } else {
+        let Some(card) = find_instance(sink.state, &entry.instance_id).cloned() else {
+            return;
+        };
+        let Some(holder) = trigger_holder_for(sink.state, &card) else {
+            return;
+        };
+        (card, holder)
     };
 
     let Some(event) = event else {

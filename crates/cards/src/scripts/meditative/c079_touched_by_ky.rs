@@ -11,7 +11,7 @@
 //! - **The draws:** `draw` separate §2.4 draws, each with its own cast-on-draw chain. The Radiant
 //!   face's are `draw_priced` draws whose card, if the draw put it in the hand, becomes Radiant
 //!   (§5.2); a card cast on draw, burned, or a fatigue or limited draw gets nothing (R596).
-//! - **Voice line** (R204, `card-audio.json5`): "We must expand our minds."
+//! - **Voice line** (R204, `card-text.yaml`): "We must expand our minds."
 
 use jackioh_engine::prelude::*;
 

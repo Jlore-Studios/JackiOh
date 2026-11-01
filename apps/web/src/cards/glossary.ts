@@ -1,34 +1,88 @@
 // The keyword glossary the inspect views print beside a card (docs/polish/6-cards.md, Surface B).
 //
-// Every `rule` is reviewed data, written once in the words a player reads (#133). The link to the spec
-// is structural: each entry names its section (`section`: §6.1 unit keywords, §6.2 triggers and timing
-// words, §6.3 verbs, §5.2 Radiant) and, where its spec row is spelled differently from its id ("Armor X"
-// for Armor), that row's name (`row`). rules.test.ts checks that every row of spec/06-keywords.md's
-// three tables is a term here or a rules-only row, and never compares a sentence, so a reworded spec
-// row fails nothing. If a spec rule changes what a player should read, change the line here by hand.
+// Every `rule` is reviewed data, written once in the words a player reads (v0.3.0, #133). Until
+// then the table was built from SPEC's "Rule" column at load time, rewritten by regexes; each line
+// below is exactly what that produced, copied once, so no player-visible text changed. The link to
+// the spec is structural: each entry names its section (`section`: §6.1 unit keywords, §6.2
+// triggers and timing words, §6.3 verbs, §5.2 Radiant) and, where its spec row is spelled
+// differently from its id ("Armor X" for Armor), that row's name (`row`). rules.test.ts checks
+// that every row of spec/06-keywords.md's three tables is a term here or a rules-only row, and
+// never compares a sentence, so a reworded spec row fails nothing. If a spec rule changes what a
+// player should read, change the line here by hand.
 //
 // The lines follow the spec's rules, with three kinds of difference a player is owed:
-// - Players' words (R373): the rules' "library" is the Deck and "sacrifice" is a Tribute; the turn
-//   triggers read label-style ("At the start of turn"), and "backrow zone" reads "backrow" (#45).
+// - Players' words (v0.1.1, R373): the rules' "library" is the Deck and "sacrifice" is a Tribute;
+//   the retired turn-trigger prose reads label-style ("At the start of turn"), and "backrow zone"
+//   reads "backrow" (patch v0.2.1, issue #45).
 // - No ruling's number: a spec row's citation ("(R384)") is no player's word (R512).
-// - A row's own **Ruling** where it overrides its Rule column: Cry fires only when the card is played
-//   from hand or cast, never another way onto the field (§6.2; §6.3's Summon and Recruit rows agree).
-//   RULED_TERMS lists these rows.
-// And two rows are short reminders in SHORT_REMINDERS (R500): Cry's ruling and Tribute's Rule column
-// would crowd a card's inspect view (Tribute's leaves out R41's backrow clause, which R428 removed).
+// - A row's own **Ruling** where it overrides its Rule column: Cry's Rule column says "enters the
+//   field for the first time", but its ruling in the same §6.2 row says it fires only when the card
+//   is played from hand or cast, and never for a copy, a Recruit, a Reborn, a token or a Transform
+//   result (§6.3's Summon and Recruit rows agree). RULED_TERMS lists these rows.
+//
+// And two rows are short reminders rather than the spec's full text (R500, patch v0.2.0): Cry's
+// ruling and Tribute's Rule column are long enough to crowd a card's inspect view, so the glossary
+// says each in one short line that is still true to the rule (Tribute's no longer mentions R41's
+// backrow clause, which R428 removed). SHORT_REMINDERS holds the two lines.
 //
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
 // are the other spellings cards use.
 //
-// What bolds (R910000, #910): every §6.2 trigger and §6.3 verb, and Radiant, in every case and
-// inflection the cards print, each such spelling an alias below; a word spelled like a term that names
-// something else stays plain (PLAIN_SPELLINGS). A §6.1 keyword bolds as the keyword a card has, so "you
-// stack onto this" stays plain. Card types, zones, stats, positions, rarities and the §6.3 rows
-// rules.test.ts keeps rules-only stay plain, as Hearthstone prints them. rules.test.ts fails on a card
-// that prints a trigger or verb that neither bolds nor is a plain spelling.
+// What bolds (R910000, issue #910): every §6.2 trigger and §6.3 verb, and Radiant, bolds wherever a
+// card uses it as that term, in every case and inflection the cards print ("exile it", "exiled",
+// "steal it", "Locked", "Tributes", "Buffs and Nerfs"), each such spelling an alias below. A word
+// spelled like a term that names something else stays plain, listed in PLAIN_SPELLINGS: the exile
+// pile ("your exile", Lizard's Breath's "Exile," pile). A
+// §6.1 keyword bolds as the keyword a card has, so "you stack onto this" stays plain. Card types,
+// zones, stats, positions, rarities and the §6.3 rows rules.test.ts keeps rules-only (Summon, Draw,
+// Discard, Destroy, Damage, Heal, Add to hand, Shuffle into) stay plain, as Hearthstone prints them. rules.test.ts fails on
+// a card that prints a trigger or verb that neither bolds nor is a plain spelling.
 //
-// "Can't attack or be attacked" gets no entry: no card prints it (it is the rule of a Unit a carrier
-// holds, R446).
+// Patch v0.2.1 (issue #45) retired spelled variants ("Start of your turn", "End of your turn",
+// "Start of Game", "Once per Turn", "Cannot be in Defense Position", "Trigger the Cry", "Set a
+// hero's health", "End your turn"), keeping only grammatical plurals ("Plague Counters") and
+// specific prompts ("Look at your opponent's hand").
+//
+// Patch v0.2.0 adds the §6 rows its card texts print (R512):
+// - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be attacked", "Only Units in
+//   this lane can attack this" and Berserk. "Can't attack or be attacked"
+//   gets no entry: no card prints it since patch v0.2.3 (it is the rule of a Unit a carrier holds,
+//   R446), and matching stays case-sensitive, as "may tribute enemy units" stays plain words.
+// - §6.2's Activate, one entry for "Activate", "Activate X" and "Activate ♾️" (the tokenizer takes
+//   the count or the ♾️ with the label, as it takes "Armor 2").
+// - Balance patch 1 adds §6.3's Bounce (R692), with "Bounced" as its alias.
+// - §6.3's Counter, Steal, Unlock, Flicker, Plague Counter (and "Plague Counters"), Redirect, Set health,
+//   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
+//   the spec's row name and each alias the words cards print. Only capitalised spellings matched, so
+//   "steal it" mid-sentence stayed plain, until R910000 gave the lower-case spellings aliases.
+// - §6.3's Nerf and Buff, one row and one entry each, since a card prints one word or the other. Patch
+//   v0.3.4 (R1320) renamed them from Degrade and Upgrade, the names the engine keeps; a plain stat buff
+//   ("+2/+2") stays plain words, since matching is case-sensitive and "buff" is lower-case there.
+// - The Meditative set's words (R1384): §6.3's Exile, Hand size (matched in lower case, as #79 prints
+//   it) and Mark in a hand (printed "Mark"). Grant tag stays rules vocabulary: #35 says it in plain
+//   words, so no card prints the row's name.
+//
+// Issue #1563 (R1563000) adds §6.2's Float, with "Floats" as its alias: Bread and Butter's "Reveals when
+// any player Floats", "X = the Float", and "Float reduces cost" on GIGA Glowy Jelly Bean and YileGPT Prime.
+//
+// Issue #1174 (R1174000) adds §6.1's Frozen, a status that is no keyword kind, and §6.3's Freeze,
+// with "freeze" and "freezes" as its aliases. No card prints either yet (M+ #24 Bob, #1185, will).
+//
+// Issue #1839 (R1839000–R1839002) adds §6.1's Dormant, a status that is no keyword kind, §6.2's "When
+// this awakens" and §6.3's Awaken. Stinkyscape's cards print them; a card under a
+// Stack pile's top is "buried" to a player, never Dormant (§3.2).
+//
+// Issue #1852 (R1852000–R1852007) adds §6.1's Starship Piece and Starship, keyword kinds, §6.2's "When
+// launched" and §6.3's Launch, which Stinkyscape's cards print.
+//
+// Issue #2657 (R2657000) makes §6.1's "Can't Defend" a keyword kind, the successor to the status
+// "Cannot be in Defense Position" (printed "Can't be in Defense Position"), whose entry it replaces:
+// the cards that printed the status print the keyword on their keyword line. Warp Disruptor's aura,
+// "Units can't be in Defense Position", stays plain words.
+//
+// R1857000, R910000: the Stinkyscape set's faces print these terms mid-sentence, so their spellings
+// bold too: "launch" and "launches" (Launch), "fuses" (Fuse), "Floated" (Float), "Allured" (Allure) and
+// "end the turn" (End the turn).
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -82,7 +136,6 @@ export type VerbTermId =
   | "Mark in a hand";
 /** §6.1's unit statuses that are not keyword kinds (B5 E35). */
 export type StatusTermId =
-  | "Can't be in Defense Position"
   | "Can't be attacked"
   | "Only Units in this lane can attack this"
   | "Berserk"
@@ -215,10 +268,9 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
   ),
   Starship: keyword("Starship", "A launched Starship, built from the Starship Pieces fused into it"),
-  // §6.1's statuses that are not keyword kinds (B5 E35; R512).
-  "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
-    row: "Cannot be in Defense Position",
-  }),
+  // Issue #2657 (R2657000): the successor to the status "Cannot be in Defense Position".
+  "Can't Defend": keyword("Can't Defend", "Never in Defense Position"),
+  // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be attacked": status("Can't be attacked", "No attack may target it"),
   "Only Units in this lane can attack this": status(
     "Only Units in this lane can attack this",
@@ -274,7 +326,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Activate: trigger(
     "Activate",
     'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',
-    { row: "Activate / Activate X / Activate ♾️" },
+    // #2521: "Activated", ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
+    { row: "Activate / Activate X / Activate ♾️", aliases: ["Activated"] },
   ),
   // R1839002: a Dormant card's own trigger.
   "When this awakens": trigger("When this awakens", "When this Dormant card awakens"),
@@ -407,4 +460,5 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Tradable: "TD",
   "Starship Piece": "SP",
   Starship: "SS",
+  "Can't Defend": "CD",
 };

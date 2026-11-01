@@ -1,5 +1,17 @@
-//! R1367000: card patch history (`patches/patches.json`) for stats window (`jackioh_engine::wire::stats::window`).
-//! Recorded (`tier`, `plays`) from #1366 on. Prior versions read from changes (`PRE_TIER_MAJORS`, `PATCH_MIN_CARDS`). #1371 retcon.
+//! R1367000: the card patch history (`patches/patches.json`, compiled in) as a card's stats window
+//! reads it: each shipped version in the file's order, with its tier and the card families that play
+//! differently in it (`jackioh_engine::wire::stats::window`).
+//!
+//! `patches ship` records both (`tier`, `plays`) from #1366 on. A version shipped before that recorded
+//! neither, and is read from its `changes`: a family plays differently when a line adds or removes
+//! one of its cards, or changes a field of one that is not wording (`WORDING_FIELDS`). With no tier,
+//! the first version of each release line (`PRE_TIER_MAJORS`) is a major, a version in which
+//! `PATCH_MIN_CARDS` families or more play is a patch, and any other a micro. #1371's retcon writes
+//! every old entry's real tier, so this reading only has to be sensible.
+//!
+//! R2529000: a patch that a system the owner names alone made one (`system: true`) moves no card but
+//! the families it plays, so a window reads it as a micro over them. Its version keeps its tier
+//! everywhere else.
 
 use jackioh_engine::config::PATCH_MIN_CARDS;
 use jackioh_engine::wire::stats::{PatchStep, PatchTier, card_family};
@@ -27,6 +39,8 @@ struct Entry {
     tier: Option<PatchTier>,
     #[serde(default)]
     plays: Option<Vec<String>>,
+    #[serde(default)]
+    system: bool,
     #[serde(default)]
     changes: Vec<Change>,
 }
@@ -59,15 +73,19 @@ fn plays_of(changes: &[Change]) -> Vec<String> {
 
 fn step_of(entry: Entry) -> PatchStep {
     let plays = entry.plays.unwrap_or_else(|| plays_of(&entry.changes));
-    let tier = entry
-        .tier
-        .unwrap_or(if PRE_TIER_MAJORS.contains(&entry.version.as_str()) {
-            PatchTier::Major
-        } else if plays.len() >= PATCH_MIN_CARDS {
-            PatchTier::Patch
-        } else {
-            PatchTier::Micro
-        });
+    let tier = if entry.system {
+        PatchTier::Micro
+    } else {
+        entry
+            .tier
+            .unwrap_or(if PRE_TIER_MAJORS.contains(&entry.version.as_str()) {
+                PatchTier::Major
+            } else if plays.len() >= PATCH_MIN_CARDS {
+                PatchTier::Patch
+            } else {
+                PatchTier::Micro
+            })
+    };
     PatchStep {
         version: entry.version,
         tier,
@@ -138,5 +156,18 @@ mod tests {
         for major in PRE_TIER_MAJORS {
             assert!(versions.contains(major), "{major} is a shipped version");
         }
+    }
+
+    // R2529000: a patch a named system alone made one restarts no card's window but its own families'.
+    #[test]
+    fn r2529000_a_system_patch_is_read_as_a_micro_over_its_plays() {
+        let json = r#"[
+          { "version": "v0.5.0", "tier": "major", "plays": [], "changes": [] },
+          { "version": "v0.5.0b", "tier": "patch", "plays": ["core-001"], "system": true, "changes": [] },
+          { "version": "v0.5.1", "tier": "patch", "plays": [], "changes": [] }
+        ]"#;
+        let history = patch_history_of(json).expect("reads");
+        assert_eq!(history[1], step("v0.5.0b", PatchTier::Micro, &["core-001"]));
+        assert_eq!(history[2].tier, PatchTier::Patch);
     }
 }

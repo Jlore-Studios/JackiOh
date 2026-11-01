@@ -72,7 +72,7 @@ export function deckMirrorKey(profileId: string): string {
 export const TUTORIAL_PROGRESS_KEY = "jackioh.tutorial.v1";
 export const TUTORIAL_PROGRESS_VERSION = 1;
 
-/** R290: spec 23 compares the tutorial opponent handicap to the engine constant. */
+/** R290, R2533000, R2533001: spec 23 compares the tutorial opponent handicap to the engine constant. */
 export const TUTORIAL_HANDICAP = {
   deckSize: 12,
   manaBonus: 0,
@@ -80,6 +80,8 @@ export const TUTORIAL_HANDICAP = {
   extraOpeningCards: 0,
   extraDrawsPerTurn: 0,
   heroHealth: 20,
+  tutorialCardsOnly: true,
+  deckCopies: 4,
 } as const;
 
 export type E2EAccount = { email: string; password: string; token: string };

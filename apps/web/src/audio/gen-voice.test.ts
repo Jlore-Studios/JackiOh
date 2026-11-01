@@ -1,6 +1,8 @@
-// docs/polish/2-sound.md B45: `gen-voice.mjs` generates by default (B37 covers `--check`), exits 2 without
-// a synthesizer (CI's Linux case), and on macOS is hash-idempotent, removes orphans and rerenders edited
-// lines. R501: SAPI lines in the committed M4A format when available. Every run uses a temporary `--root`.
+// Polish task 2 (docs/polish/2-sound.md): `gen-voice.mjs` generates by default (B45; B37 covers
+// `--check`). B45 exits 2 without a synthesizer; macOS is hash-idempotent, removes orphans and
+// rerenders edited lines. R501 renders SAPI lines in the committed M4A format when available.
+// Every run uses a temporary `--root`; CI (Linux) covers the no-synthesizer case. A line's words are
+// edited in the copy's voice-text.json, which crates/cards/card-text.yaml writes (#2498).
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -16,6 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const WEB = resolve(here, "../..");
 const GEN_VOICE = join(WEB, "scripts/gen-voice.mjs");
 const REL_AUDIO = join("src", "audio", "card-audio.json5");
+const REL_VOICE_TEXT = join("src", "audio", "voice-text.json");
 const REL_MANIFEST = join("src", "audio", "voice-manifest.json");
 const REL_VOICE_DIR = join("public", "audio", "voice");
 const RUN_TIMEOUT_MS = 120_000;
@@ -24,6 +27,7 @@ type Manifest = { version: 1; format: string; files: Record<string, { hash: stri
 type Voice = { say: string; rate: number; pbas: number; pmod: number };
 type Assignment = { voice?: string; text?: string; effect?: string };
 type Audio = { voices: Record<string, unknown>; effects: Record<string, unknown>; cards: Record<string, Record<string, Assignment>> };
+type VoiceText = { cards: Record<string, Record<string, unknown>> };
 
 function hasTool(name: string): boolean {
   return spawnSync("which", [name], { stdio: "ignore" }).status === 0;
@@ -77,6 +81,7 @@ function copyTree(): string {
   const root = join(scratch, `tree-${String(copies)}`);
   mkdirSync(join(root, "src", "audio"), { recursive: true });
   cpSync(join(WEB, REL_AUDIO), join(root, REL_AUDIO));
+  cpSync(join(WEB, REL_VOICE_TEXT), join(root, REL_VOICE_TEXT));
   cpSync(join(WEB, REL_MANIFEST), join(root, REL_MANIFEST));
   cpSync(join(WEB, REL_VOICE_DIR), join(root, REL_VOICE_DIR), { recursive: true });
   return root;
@@ -88,6 +93,16 @@ function readAudio(root: string): Audio {
 
 function writeAudio(root: string, audio: Audio): void {
   writeFileSync(join(root, REL_AUDIO), `${JSON.stringify(audio, null, 2)}\n`);
+}
+
+/** Gives a copy's core-004 a new play line, in its voice-text.json. */
+function editPlayLine(root: string, line: string): void {
+  const path = join(root, REL_VOICE_TEXT);
+  const voiceText = JSON.parse(readFileSync(path, "utf8")) as VoiceText;
+  const lines = voiceText.cards["core-004"];
+  if (typeof lines?.play !== "string") throw new Error("core-004's play line should be in voice-text.json");
+  lines.play = line;
+  writeFileSync(path, `${JSON.stringify(voiceText, null, 2)}\n`);
 }
 
 function readManifest(root: string): Manifest {
@@ -172,9 +187,8 @@ describe("B45 gen-voice.mjs generate mode", () => {
       const audio = readAudio(root);
       const play = audio.cards["core-004"]?.play;
       const voice = play?.voice === undefined ? undefined : (audio.voices[play.voice] as Voice | undefined);
-      if (play === undefined || voice === undefined) throw new Error("core-004's play line and its voice should be in the file");
-      play.text = "Let it ride, baby!";
-      writeAudio(root, audio);
+      if (play === undefined || voice === undefined) throw new Error("core-004's play hook and its voice should be in the file");
+      editPlayLine(root, "Let it ride, baby!");
       const manifest = readManifest(root);
       const before = mtimes(root, manifest);
 
@@ -249,11 +263,7 @@ describe("B45 gen-voice.mjs generate mode", () => {
     "R501 reports a stale macOS line as needing say, and leaves its file and entry alone",
     () => {
       const root = copyTree();
-      const audio = readAudio(root);
-      const play = audio.cards["core-004"]?.play;
-      if (play === undefined) throw new Error("core-004's play line should be in the file");
-      play.text = "Let it ride, baby!";
-      writeAudio(root, audio);
+      editPlayLine(root, "Let it ride, baby!");
       const manifest = readManifest(root);
       const before = mtimes(root, manifest);
 

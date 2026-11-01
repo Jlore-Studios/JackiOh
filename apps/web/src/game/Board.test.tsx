@@ -495,6 +495,7 @@ describe("Board", () => {
   });
 });
 
+// The sorted testids of every element the board marks `data-counted` (#991).
 function countedIn(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll('[data-counted="true"]'))
     .map((element) => element.getAttribute("data-testid") ?? "")

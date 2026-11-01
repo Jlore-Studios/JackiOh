@@ -16,6 +16,40 @@ const TRIBUTE_COST: i32 = 3;
 /// R2206000: the memory key the Death's summon sets on the Trigor it makes, holding the turn.
 const CHAIN_MARK: &str = "trigorChain";
 
+/// R2197002: the base stats the Death summons a Trigor with: this one's base stats plus `grow`.
+fn next_stats(state: &GameState, this: &CardInstance, grow: i32) -> AttackHealth {
+    let base = base_stats_of(state, this);
+    AttackHealth { attack: base.attack + grow, health: base.health + grow }
+}
+
+/// R2206000: whether this Trigor's Death summons nothing: a Trigor's Death made it this turn.
+fn chained(state: &GameState, this: &CardInstance) -> bool {
+    this.memory.get(CHAIN_MARK).and_then(Value::as_i64) == Some(i64::from(state.turn))
+}
+
+/// R2476000: after "Summon a Trigor", the base stats its Death would summon one with ("6/6"), its own
+/// base stats down the lineage plus `grow`; the dash while its chain mark holds this turn, as it
+/// summons nothing then. Its value is that Health, 0 for none. Base stats are public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if chained(ctx.state, ctx.self_) {
+            return vec![PreviewValue {
+                label: "Summon a Trigor".to_string(),
+                value: 0,
+                display: Some(NOTHING_REMEMBERED.to_string()),
+                ids: None,
+            }];
+        }
+        let next = next_stats(ctx.state, ctx.self_, param(&ctx, "grow"));
+        vec![PreviewValue {
+            label: "Summon a Trigor".to_string(),
+            value: next.health,
+            display: Some(format!("{}/{}", next.attack, next.health)),
+            ids: None,
+        }]
+    })
+}
+
 fn trigor() -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -28,20 +62,20 @@ fn trigor() -> Script {
             };
             // R2197004: a chain body summoned this turn summons nothing when it dies this turn.
             let turn = ctx.state.turn;
-            if this.memory.get(CHAIN_MARK).and_then(Value::as_i64) == Some(i64::from(turn)) {
+            if chained(ctx.state, &this) {
                 return vec![];
             }
-            let base = base_stats_of(ctx.state, &this);
-            let grow = param(&*ctx, "grow");
             // R2197002: cumulative, so each body is larger than the last.
+            let next = next_stats(ctx.state, &this, param(&*ctx, "grow"));
             vec![summon(json_as(json!({
                 "defId": ID,
                 "player": "self",
                 "radiant": false,
-                "statsOverride": { "attack": base.attack + grow, "health": base.health + grow },
+                "statsOverride": { "attack": next.attack, "health": next.health },
                 "memory": { CHAIN_MARK: turn },
             })))]
         })),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -103,6 +137,24 @@ mod tests {
             .find(|unit| unit.def_id == ID)
             .map(|unit| unit.id)
             .unwrap_or_else(|| panic!("no Trigor on p1's side"))
+    }
+
+    /// R2476000: after "Summon a Trigor", the stats its Death would summon, to both seats: 6/6 on a 3/3;
+    /// once it dies, the 6/6 its Death made shows the dash this turn, for it summons nothing then.
+    #[test]
+    fn r2476000_it_previews_the_stats_its_death_would_summon_and_the_dash_while_chained() {
+        let mut s = game(json!([VANILLA, VANILLA, { "def": ID, "lane": 3 }]), json!([HIT_JOB, FILLER]));
+        let first = trigor_id(&s);
+        let next = vec![("Summon a Trigor".to_string(), 6, Some("6/6".to_string()))];
+        assert_eq!(crate::preview_seen(&s, P1, &first), next);
+        assert_eq!(crate::preview_seen(&s, P2, &first), next);
+        hit(&mut s, &first);
+        let second = trigor_id(&s);
+        assert_ne!(second, first);
+        assert_eq!(
+            crate::preview_seen(&s, P1, &second),
+            vec![("Summon a Trigor".to_string(), 0, Some("—".to_string()))]
+        );
     }
 
     mod base {

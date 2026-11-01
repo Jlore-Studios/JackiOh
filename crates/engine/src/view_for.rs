@@ -492,6 +492,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         pareto_optimal: None,
         play_reason: None,
         trade_reason: None,
+        tradable: None,
         choices_truncated: None,
         preview: None,
         type_: None,
@@ -710,6 +711,17 @@ fn with_trade_reason(
         && !refusal.message.is_empty()
     {
         view.trade_reason = Some(refusal.message);
+    }
+    view
+}
+
+/// R2574000: whether the viewer's own hand card may be Traded (`trade::is_tradable`),
+/// whether by its printed face, a granted keyword or an aura over its controller's hand.
+/// Present, and `true`, only on the viewer's own hand card in a live game; absent otherwise,
+/// never `false`, never on the opponent's cards or post-game hands.
+fn with_tradable(mut view: CardView, state: &GameState, card: &CardInstance) -> CardView {
+    if state.result.is_none() && crate::trade::is_tradable(state, card) {
+        view.tradable = Some(true);
     }
     view
 }
@@ -1373,7 +1385,11 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                         card,
                         viewer,
                     );
-                    with_tribute(with_pareto_hint(view, hinted.contains(&card.id)), state, card)
+                    with_tradable(
+                        with_tribute(with_pareto_hint(view, hinted.contains(&card.id)), state, card),
+                        state,
+                        card,
+                    )
                 })
                 .collect(),
         )

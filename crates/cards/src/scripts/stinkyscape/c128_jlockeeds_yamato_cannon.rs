@@ -1,11 +1,14 @@
 //! Stinkyscape #128 Jlockeed's Yamato Cannon (SPEC §8.10 row 128). (2, Embiggened 3) Unit, Jlockeed, Rare;
 //! 4/1 → 8/2.
-//!   Both faces: "Ranged, Cleave / Embiggened (3): Starship Piece."
+//!   Base:    "Ranged, Cleave / Embiggened (3): Starship Piece."
+//!   Radiant: "Ranged, Cleave, Rush / Embiggened (3): Starship Piece."
 //!
 //! Ranged (R783000) and Cleave (§6.1, R63) are printed keywords the engine plays: it takes no strike back
 //! from a defender without Ranged, and its attack splashes the Units beside its target, which never
 //! strike back. R1878001: the Embiggened version is a Starship Piece, lent by its text to the card stamped
-//! embiggened, as S #127's, so its death fuses a copy into its owner's Dormant Starship (R1852000). The
+//! embiggened, as S #127's, so its death fuses it into its owner's Dormant Starship (R1852000). The
+//! Radiant face's 8/2 and, since #2521, its Rush (§6.1: it may attack a Unit, never the hero, the turn it
+//! lands) are catalog data.
 
 use jackioh_engine::prelude::*;
 
@@ -21,14 +24,17 @@ pub fn script() -> CardScripts {
         conditional_keywords: Some(read_hook(embiggened_piece)),
         ..Script::default()
     };
-    // One script: the Radiant face's 8/2 is catalog data.
+    // One script: the Radiant face's 8/2 and Rush are catalog data.
     CardScripts {
         radiant: base.clone(),
         base,
     }
 }
 
-// Stinkyscape #128 Jlockeed's Yamato Cannon — SPEC §8.10 row 128, BUILD M12 row S 128 (R783000).
+// Stinkyscape #128 Jlockeed's Yamato Cannon — SPEC §8.10 row 128, BUILD M12 row S 128: "a 4/1 Ranged Cleave
+// Unit: its attack hits the Units beside its target too and it takes no strike back from a defender
+// without Ranged (R783000); played at (3) it is a Starship Piece, at (2) none; radiant 8/2 with Rush,
+// attacking a Unit the turn it lands" (#2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -88,12 +94,43 @@ mod tests {
             let cannon = s.unit(P1, 3).expect("the Cannon").id;
             let [left, middle, right] = [2, 3, 4].map(|lane| s.unit(P2, lane).expect("a Vanilla").id);
             s.attack(cannon.as_str(), middle.as_str());
+            // The target takes the hit, its neighbors the splash, and the 4 back never lands.
             s.expect_in_zone(middle.as_str(), "graveyard");
             s.expect_in_zone(left.as_str(), "graveyard");
             s.expect_in_zone(right.as_str(), "graveyard");
             s.expect_in_zone(cannon.as_str(), "field");
             s.expect_stats(cannon.as_str(), json!({ "health": if radiant { 2 } else { 1 } }));
         }
+    }
+
+    #[test]
+    fn radiant_rush_attacks_a_unit_the_turn_it_lands_never_the_hero() {
+        for embiggened in [false, true] {
+            let mut s = played(true, embiggened);
+            let cannon = s.unit(P1, 3).expect("the Cannon").id;
+            let has_rush = has_keyword(&s.stats(cannon.as_str()).keywords, KeywordKind::Rush);
+            assert!(has_rush, "embiggened {embiggened}");
+            s.expect_refused(|s| s.attack(cannon.as_str(), "hero"));
+            let target = s.unit(P2, 3).expect("a Vanilla").id;
+            s.attack(cannon.as_str(), target.as_str());
+            // Its 8 kills the 4/4 it hits, and the Cleave hits the 4/4s beside it.
+            s.expect_in_zone(target.as_str(), "graveyard");
+            assert!(
+                s.last_events()
+                    .iter()
+                    .any(|event| event.event_type() == GameEventType::AttackDeclared),
+                "embiggened {embiggened}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_base_face_has_no_rush_and_waits_a_turn() {
+        let mut s = played(false, false);
+        let cannon = s.unit(P1, 3).expect("the Cannon").id;
+        assert!(!has_keyword(&s.stats(cannon.as_str()).keywords, KeywordKind::Rush));
+        let target = s.unit(P2, 3).expect("a Vanilla").id;
+        s.expect_refused(|s| s.attack(cannon.as_str(), target.as_str()));
     }
 
     #[test]

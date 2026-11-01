@@ -2370,9 +2370,20 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
     }
 }
 
-// Social: watching and shared replays (#939, #940, B50, B51, R677). Watchers receive delayed
-// views from their friend's seat; hellos echo the last sent view (R1103000) and watcher
-// sockets close after receiving the terminal game view (R1107000).
+// ---- Social: watching and shared replays (#939, #940) ----
+//
+// B50, B51: a friend's live 1v1 game, ranked or unranked, watched from their seat. Each change records the view
+// of each seat as the change left it, keyed by the account that began in it (`home`; R677: a
+// Glitch's swap moves the record with the account), and each watcher is sent each recorded view of
+// its friend's seat SPECTATE_DELAY_MS after the state it shows, by the one wait the actor arms for
+// the next view due. A watcher who joins starts from the newest view already that old. Nothing a
+// watcher's socket sends reaches a reducer, log, relay or clock: a later hello is answered with the
+// view it was last sent, so its page can tell a live socket from a dead one (R1103000), and every
+// other frame is dropped unanswered, counted against the watcher's malformed budget; a watcher's
+// hellos are answered once per WATCH_HELLO_INTERVAL_MS, and past the budget its socket is closed
+// with 1008 (R2609000). A watcher's leaving changes nothing in the match but the count the
+// players are told (B51). Once the match is over, a watcher sent its seat's last view, the one with
+// the result, is let go (R1107000).
 
 use crate::actor::protocol::watchers_frame;
 use crate::actor::ws_server::WS_CLOSE;
@@ -2404,6 +2415,7 @@ struct SpectateFrame {
 
 /// One watching socket: the account behind it, the seat its friend began the match in, the last
 /// recorded view it was sent, and (R1834003) the pairs whose card picks it has been sent.
+/// R2609000: and its own `SeatGuard`, holding a seat's malformed budget and its answered hellos.
 struct Watcher {
     id: u64,
     profile_id: String,
@@ -2411,6 +2423,7 @@ struct Watcher {
     socket: Socket,
     sent: Option<u64>,
     card_picks_sent: BTreeSet<(PlayerId, String)>,
+    guard: SeatGuard,
 }
 
 /// R1834003: sends `socket` the card picks `shown` makes due, marking them in `sent`.
@@ -2484,8 +2497,11 @@ impl WatchRefused {
 }
 
 impl MatchActor {
-    /// B50: attaches watcher socket for `profile_id` to `home`'s seat (replacing prior socket).
-    /// Answers hellos (R1103000) while ignoring other frames; notifies players of count (B51).
+    /// B50: a watcher's socket, for `profile_id`'s account, on the seat the account that began in
+    /// `home` plays. A newer socket of the same account replaces its older one, so an account is one
+    /// watcher; otherwise a match already watched by SPECTATORS_PER_MATCH sockets is `Full`. From
+    /// here on the socket's hellos are answered (R1103000) and its other frames go unanswered and
+    /// count against its malformed budget (R2609000), and the players are told the new count (B51).
     pub fn attach_watcher(
         &self,
         home: PlayerId,
@@ -2519,6 +2535,7 @@ impl MatchActor {
                 socket: socket.clone(),
                 sent: None,
                 card_picks_sent: BTreeSet::new(),
+                guard: SeatGuard::default(),
             });
             (id, replaced, done)
         };
@@ -2526,14 +2543,15 @@ impl MatchActor {
         let actor = Arc::downgrade(&self.shared);
         let heard = actor.clone();
         socket.attach(SocketHandlers {
-            // B50: nothing a watcher sends reaches the reducer. R1103000: a hello is answered, and
-            // whatever else it sends, nothing reads.
+            // B50: nothing a watcher sends reaches the reducer. R1103000: a hello is answered;
+            // R2609000: anything else is counted against the watcher's malformed budget, unanswered.
             message: Box::new(move |text: String| {
-                if parse_watch_hello(&text).is_err() {
-                    return;
-                }
-                if let Some(shared) = heard.upgrade() {
-                    MatchActor { shared }.answer_watcher_hello(id);
+                let Some(shared) = heard.upgrade() else { return };
+                let actor = MatchActor { shared };
+                if parse_watch_hello(&text).is_ok() {
+                    actor.answer_watcher_hello(id);
+                } else {
+                    actor.note_watcher_junk(id);
                 }
             }),
             close: Box::new(move || {
@@ -2619,22 +2637,58 @@ impl MatchActor {
         gone.len()
     }
 
-    /// R1103000: answers watcher hello with its last sent delayed view as a liveness probe (R1441).
-    /// R1834003: omits loadouts, which were already sent upon attach.
+    /// R1103000: a watcher's later hello is answered with the view it was last sent, again, so its
+    /// page hears that the socket is alive (R1441's probe). It is never a view sooner than
+    /// SPECTATE_DELAY_MS after the state it shows, and a watcher sent no view yet is sent nothing.
+    /// R1834003: nothing else rides with it: the socket already holds the loadouts it was sent as it
+    /// attached, and a page that lost them comes back on a new socket, which is sent them again.
+    /// R2609000: at most once per `WATCH_HELLO_INTERVAL_MS`; a hello sooner after the last answered
+    /// one is dropped, and one that finds no view to send starts no interval.
     fn answer_watcher_hello(&self, id: u64) {
-        let core = self.lock();
+        let mut core = self.lock();
         if core.stopped || core.spectate.closed {
             return;
         }
-        let Some(watcher) = core.spectate.watchers.iter().find(|watcher| watcher.id == id) else {
+        let Spectate {
+            records, watchers, ..
+        } = &mut core.spectate;
+        let Some(watcher) = watchers.iter_mut().find(|watcher| watcher.id == id) else {
             return;
         };
-        let last = core.spectate.records[watcher.home]
+        let Some(record) = records[watcher.home]
             .iter()
-            .find(|record| watcher.sent == Some(record.seq));
-        if let Some(record) = last {
-            watcher.socket.send(record.frame.as_str());
+            .find(|record| watcher.sent == Some(record.seq))
+        else {
+            return;
+        };
+        // R2609000: one answer per WATCH_HELLO_INTERVAL_MS; a hello sooner is dropped unanswered.
+        if !watcher.guard.hello_answer_allowed(now_ms()) {
+            return;
         }
+        watcher.socket.send(record.frame.as_str());
+    }
+
+    /// R2609000: a frame of a watcher's that is not a hello is still unanswered (R1103000) but counts
+    /// against the watcher's own `MALFORMED_FRAMES_PER_WINDOW`, as a seat's does (R835002). Past it the
+    /// socket is closed with 1008, and its close handler takes the watcher off and tells the players
+    /// the new count (B51).
+    fn note_watcher_junk(&self, id: u64) {
+        let socket = {
+            let mut core = self.lock();
+            if core.stopped || core.spectate.closed {
+                return;
+            }
+            let Some(watcher) = core.spectate.watchers.iter_mut().find(|watcher| watcher.id == id) else {
+                return;
+            };
+            if !watcher.guard.note_malformed(now_ms()) {
+                return;
+            }
+            watcher.socket.clone()
+        };
+        tracing::warn!(event = "match.watcher.flooded", matchId = %self.match_id_str());
+        // The close calls `detach_watcher` back, which takes the actor's lock.
+        socket.close(Some(CLOSE_POLICY_VIOLATED), Some("too many malformed frames"));
     }
 
     /// A watcher's socket went: it leaves, and the players hear the new count (B51).

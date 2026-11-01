@@ -65,8 +65,8 @@ describe("what the result dialog says of a claim", () => {
   it("earningText words each answer", () => {
     expect(earningText({ kind: "pending" })).toBe("Checking this game on the server…");
     expect(earningText({ kind: "paid", jlore: 10, xp: 42, jloreCapped: false })).toBe("+10 Jlore, +42 XP");
-    expect(earningText({ kind: "refused", reason: "ai_mismatch" })).toBe(
-      "This game earned nothing (the AI's moves didn't check out).",
+    expect(earningText({ kind: "refused", reason: "result_mismatch" })).toBe(
+      "This game earned nothing (its result didn't check out).",
     );
     expect(earningText({ kind: "refused", reason: "a_reason_from_a_newer_server" })).toBe(
       "This game earned nothing (a_reason_from_a_newer_server).",
@@ -92,36 +92,12 @@ describe("what the result dialog says of a claim", () => {
       "already_claimed",
       "expired",
       "does_not_fold",
-      "ai_mismatch",
       "not_finished",
       "voided",
       "result_mismatch",
     ];
     for (const reason of reasons) {
       expect(earningText({ kind: "refused", reason }), reason).not.toBe(`This game earned nothing (${reason}).`);
-    }
-  });
-
-  it("R2208000 an ai_mismatch refusal of a game this device's clock cut says so, and every other refusal reads as before", () => {
-    expect(earningText({ kind: "refused", reason: "ai_mismatch", clockCut: true })).toBe(
-      "This game earned nothing (this device ran out of time on one of the AI's moves).",
-    );
-    expect(earningText({ kind: "refused", reason: "ai_mismatch" })).toBe(
-      "This game earned nothing (the AI's moves didn't check out).",
-    );
-    const others = [
-      "economy_off",
-      "unknown_seed",
-      "already_claimed",
-      "expired",
-      "does_not_fold",
-      "not_finished",
-      "voided",
-      "result_mismatch",
-      "a_reason_from_a_newer_server",
-    ];
-    for (const reason of others) {
-      expect(earningText({ kind: "refused", reason, clockCut: true }), reason).toBe(earningText({ kind: "refused", reason }));
     }
   });
 });

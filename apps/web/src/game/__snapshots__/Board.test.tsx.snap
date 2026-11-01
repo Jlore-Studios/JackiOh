@@ -2055,11 +2055,19 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   SS
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Can't Defend"
+                  title="Can't Defend"
+                >
+                  CD
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary, Deft, Untributable, Equip, Ranged, Flying, Cloaked, Crater, Flashback, Tradable, Starship Piece, Starship"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Deft, Untributable, Ranged, Flying, Starship Piece, Starship, Can't Defend"
                 >
                   +
-                  30
+                  24
                 </span>
               </span>
               <span
@@ -2848,19 +2856,6 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 />
               </span>
               <span
-                class="kw-fx"
-                data-keyword-fx="Stack"
-                data-kw-layer="frame"
-                data-kw-motion="on"
-              >
-                <span
-                  class="kw-part kw-anim kw-edge kw-edge--far"
-                />
-                <span
-                  class="kw-part kw-anim kw-edge kw-edge--near"
-                />
-              </span>
-              <span
                 class="cost-gem"
                 data-cost="3"
                 data-tone="base"
@@ -2902,6 +2897,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               >
                 <span
                   class="keyword keyword-icon"
+                  data-chip="hidden"
                   data-keyword="Stack"
                   title="Stack"
                 >

@@ -205,14 +205,14 @@ mod tests {
             }
 
             #[test]
-            fn s4_4_a_hit_cap_still_applies_anti_oneshot_armor_holds_the_20_to_5() {
+            fn s4_4_a_hit_cap_still_applies_anti_oneshot_armor_holds_the_20_to_4() {
                 let mut s = moon_up(
                     false,
                     json!({ "hand": [FIG, FILLER], "backrow": [{ "def": ANTI_ONESHOT, "lane": 2 }] }),
                     json!({}),
                 );
                 s.play(FIG, json!({ "targets": enemy_hero() }));
-                s.expect_health(P2, 25);
+                s.expect_health(P2, 26);
             }
 
             #[test]

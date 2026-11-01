@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #59 Fig of Life, the snapshot of Core #47 Fig of Life (`core-047`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #47 (SPEC §8.2, §3, §6.3): double target unit or hero health (R90).
+//! SPEC §8.11 Training Grounds #59 Legacy: Fig of Life,
+//! the Legacy card of Core #47 Fig of Life (`core-047`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #47 Fig of Life (SPEC §8.2): "Heal a target 20", radiant "40" — a radiant cell that changes only
+//! a number changes only that number (§8 Conventions), so the two faces are one effect at two sizes.
+//!
+//! R19 is the whole of the §8.2 Engine cell ("any unit or hero"): `side: "any"` with
+//! `of: ["unit", "hero"]`, so either side's units and both heroes are offered.
+//!
+//! The pick is a DECLARED play-time target: it travels in the play action's `targets` and never
+//! pauses resolution (R81), and R90 validates what the play carried. It arrives as `{ of: "chosen" }`.
+//! An empty target set fizzles and the spell still counts as played (§8 Conventions).
+//!
+//! "Heal 20" is §6.3's Heal row, not this card's: a unit loses up to 20 damage and never rises past
+//! its max health, while a hero gains 20 with no cap, since §3 gives a hero no maximum.
 
 use jackioh_engine::effects::heal;
 use jackioh_engine::prelude::*;

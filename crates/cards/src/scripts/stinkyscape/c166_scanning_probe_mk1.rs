@@ -16,6 +16,23 @@ use super::t_anomaly_found;
 
 pub const ID: &str = "stinkyscape-166";
 
+/// R2476000: in its owner's hand, the two chances its scan rolls at now (`anomaly_chances` of their
+/// misses so far, which both Probes share): after "5% chance" the Radiant one, after "20% chance" the
+/// plain one, each label the printed number (`ANOMALY_RADIANT_CHANCE`, `ANOMALY_PLAIN_CHANCE`). A miss
+/// is silent, so the count stays in its owner's hand, never on a public card. S #167 shows the same.
+pub fn probe_preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let (radiant, plain) = anomaly_chances(anomaly_misses_of(ctx.state, ctx.controller));
+        vec![
+            count_preview(&format!("{ANOMALY_RADIANT_CHANCE}% chance"), radiant),
+            count_preview(&format!("{ANOMALY_PLAIN_CHANCE}% chance"), plain),
+        ]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|_ctx| {
@@ -23,6 +40,7 @@ pub fn script() -> CardScripts {
                 def_id: t_anomaly_found::ID.to_string(),
             })]
         })),
+        preview: Some(probe_preview()),
         ..Script::default()
     };
     // The same script: the Radiant face's Lucky 1 is its printed keyword, which the scan reads.
@@ -110,6 +128,23 @@ mod tests {
         s.state_mut().players[P1].anomaly_misses = Some(95);
         s.play(OTHER_PROBE, json!({}));
         assert_eq!(finds(&s).len(), 1, "the other probe scans on the same count");
+    }
+
+    /// R2476000: in hand, after "5% chance" and "20% chance", the chances its scan rolls at: 5 and 20,
+    /// then 6 and 24 after one miss; the opponent reads nothing of the hand.
+    #[test]
+    fn r2476000_in_hand_it_previews_the_chances_its_misses_have_grown_to() {
+        for radiant in [false, true] {
+            let mut s = setup("probe-166-preview", json!([{ "def": PROBE, "radiant": radiant }, FILLER]), None);
+            let probe = s.card(PROBE).id.clone();
+            let chances = |radiant: i32, plain: i32| {
+                vec![("5% chance".to_string(), radiant, None), ("20% chance".to_string(), plain, None)]
+            };
+            assert_eq!(crate::preview_seen(&s, P1, &probe), chances(5, 20));
+            s.state_mut().players[P1].anomaly_misses = Some(1);
+            assert_eq!(crate::preview_seen(&s, P1, &probe), chances(6, 24));
+            assert!(crate::preview_seen(&s, PlayerId::P2, &probe).is_empty(), "radiant {radiant}");
+        }
     }
 
     #[test]

@@ -1,36 +1,76 @@
 // Entry point and the route table. The client is a `PlayerView` renderer (CLAUDE.md rule 7, SPEC
-// §10.8): this file picks a route, applies §9.4's gate once, and gets out of the way. The pathname
-// comes from `usePathname()` (`net/navigate.ts`) because the gate's redirects must re-render it.
+// §10.8): this file picks a route, applies §9.4's gate once, and gets out of the way.
 //
-// THE GATE IS UX, NOT SECURITY (SPEC §9.4): the server refuses a pending account everywhere but
-// `/api/auth/me` and `/api/codes/*`. `Gated` reads `GET /api/auth/me` and sends the browser to the
-// screen that will work; it lives in one place so there is one thing to change when §9.4 grows a
-// status. The same read says whether the account owes the username prompt (R1435) or the age check
-// or terms (R757000, R757001), which come first.
+// Routing is still a pathname switch rather than a router dependency, but the pathname now comes
+// from `usePathname()` (`net/navigate.ts`) instead of being read once at boot, because a redirect
+// has to re-render: `cy.location("pathname")` in specs 09 and 10 reads the real URL, so the gate
+// moves the URL with `history.replaceState` and this component follows it.
 //
-// NO DEAD ENDS (docs/polish/5-sign-in.md, B40): every panel this file draws itself offers a way out.
-// The landing page is imported statically because it is the first screen most visits see.
+// THE GATE IS UX, NOT SECURITY. SPEC §9.4: "A pending account can log in, verify its email and see
+// the code screen, and nothing else: no collection, loadout, queue or match." The server is what
+// enforces that — every endpoint but `/api/auth/me` and `/api/codes/*` is declared `auth: "active"`
+// and answers 403 `account_pending`, and `wsServer.ts` runs the same `assertActive` on the upgrade.
+// What `Gated` does is read `GET /api/auth/me`, the endpoint §9.4 provides precisely so "the client
+// knows to show the code screen", and send the browser to the screen that will actually work. It
+// lives in exactly one place so there is one thing to change when §9.4 grows a status. The same
+// read says whether an active account still owes the username prompt (R1435), which the gate then
+// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`),
+// and whether the account owes the age check or agreement to the terms in force (R757000, R757001),
+// which comes first (`auth/ConsentPrompt.tsx`).
 //
-// ONE GATE PER SCREEN: each route's gate is keyed by its path, so an in-app move re-reads
-// `/api/auth/me` rather than React reusing one instance and the account it read.
+// NO DEAD ENDS (docs/polish/5-sign-in.md, B40). Every panel this file draws itself — the gate's
+// error, the banned account, the 404, a screen whose code failed to load, and a check that is
+// taking too long — offers a way out: home, sign out, and try again where trying again can help.
+// The landing page is `routes/landing.tsx`, imported statically because it is the first screen most
+// visits see. The panels sit in the same tavern frame as the sign-in screens (`auth/tavern.css`),
+// since they are the waypoints between the landing and those screens.
 //
-// ONE SOCKET PER SESSION (R194): the match screen is keyed by the provider session its token belongs
-// to, so a renewal keeps its socket and only a different session, or account, opens a new one.
+// ONE GATE PER SCREEN. Every gated route renders `<Gated>` at the same place in the tree, so React
+// would reuse one instance (and the account it read) across in-app moves: a redemption on
+// `/invite` went on to `/decks` still holding the "pending" account it read before, and bounced
+// straight back. Each route's gate is keyed by its path, so a move re-reads `/api/auth/me`. It opens
+// at once on the page's last answer only for an active account that owes nothing, and reads behind
+// it (R2630000); a pending account, a redirect or a prompt always waits for the read.
 //
-// THE QUEUE FOLLOWS THE PLAYER (R765): `useQueueFollow` (`net/liveGame.ts`) takes the player to the
-// game from every screen but `/play` when the queue pairs them.
+// ONE SOCKET PER SESSION (R194). The gate renews a session shortly before its token expires and
+// hands the new token down. The match screen is keyed by the provider session the token belongs to,
+// so a renewal of the same session keeps its socket (the new token waits for the next reconnect),
+// and only a different session, or account, opens a new one.
 //
-// THE ENGINE LOADS ALONGSIDE (#778): the page paints once the language is in, and EngineGate holds
-// every screen that calls the engine until its module is in, with a retry if it never arrives.
+// EMAILED LINKS ON ANY PATH (R193). Before the route switch runs, a link is scrubbed from the
+// address bar, on `/login` too (whose screen is a lazy chunk that may be slow or fail to load), and
+// one that landed anywhere else (Supabase's Site URL fallback) is handed to `/login`.
 //
-// SCREEN CODE ON INTENT (#2116, R2116000): the screens are chunks of one map (`routes/chunks.tsx`),
-// which the prefetch shares, so intent toward a control starts its screen's code before the click.
+// A ROOM LINK (R767). Before the route switch runs, a room link on /play is taken out of the address
+// bar and kept for this tab (net/roomLink.ts), so the gate's way to /login cannot lose it; the lobby
+// uses it once.
 //
-// FRIENDS FIND THE PLAYER ANYWHERE (#936, B47, B57): the presence heartbeat and the challenge toast
-// are this file's, so neither waits on a screen's gate nor restarts with it.
+// THE QUEUE FOLLOWS THE PLAYER (R765). A player queued on `/play` may go anywhere in the client while
+// they wait. The route table's own `useQueueFollow` (`net/liveGame.ts`) watches the account on every
+// screen but `/play`, which watches for itself, and when the queue pairs them it says so over the
+// screen (`QueueFound`) and takes them to the game.
 //
-// A COMMAND MENU ON EVERY MENU (R2118000): Ctrl+K opens `routes/CommandMenu.tsx` on every menu screen,
-// never over a board (`game/boardShown.ts`); it is keyed by the path, so a move closes it.
+// THE ENGINE LOADS ALONGSIDE (#778). The engine's module is 2.31 MB gzipped, and the landing, sign-in,
+// the reset and code screens and the legal pages never call it. The page paints once the language is
+// in; EngineGate holds every other screen until the module is in, with a retry if it never arrives.
+// A gated screen that calls it (`<Gated engine>`) asks for it, and for its own code, as its gate
+// mounts, beside the account read (R2630001).
+//
+// SCREEN CODE ON INTENT (#2116, R2116000). The screens are chunks of one map
+// (`routes/chunks.tsx`), which the prefetch shares: intent toward a control starts its screen's
+// code, and a game screen's engine, before the click, and a screen whose code is already in skips
+// the loading panel.
+//
+// FRIENDS FIND THE PLAYER ANYWHERE (#936, B47, B57). While the tab holds a session, the shell sends the
+// presence heartbeat (`together/presence.ts`) and shows the challenge toast (`together/ChallengeToast.tsx`)
+// over every screen, whichever is open: both are this file's, as the queue's follow is, so neither
+// waits on a screen's gate nor restarts with it.
+//
+// A COMMAND MENU ON EVERY MENU (R2118000). Ctrl+K (Cmd+K) opens the command menu
+// (`routes/CommandMenu.tsx`, `routes/commandEntries.ts`) on every menu screen: the common actions,
+// every menu page and the Almanac shelf's cards by name, each a `navigate` move. It is never
+// mounted on a board route, nor over a board sharing a menu's path (`game/boardShown.ts`), and it
+// is keyed by the path, so a move closes it. Presentation only (CLAUDE.md rule 7).
 
 import {
   Component,
@@ -60,6 +100,7 @@ import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
+  currentPath,
   duosIdOf,
   loginPath,
   matchIdOf,
@@ -79,7 +120,7 @@ import { watchFriendOf } from "./together/watchLink.ts";
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
 import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
-import { routeChunks, watchRouteIntent } from "./routes/chunks.tsx";
+import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
@@ -105,6 +146,7 @@ const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
 const AccessibilityRoute = routeChunks.accessibility.Screen;
+const AiRoute = routeChunks.ai.Screen;
 const CopyrightRoute = routeChunks.copyright.Screen;
 const PatchNotesRoute = routeChunks.patchNotes.Screen;
 const AlmanacRoute = routeChunks.almanac.Screen;
@@ -392,6 +434,11 @@ export type GatedProps = {
    * will not agree can still delete their account or sign out there.
    */
   consentExempt?: boolean;
+  /**
+   * R2630001: the screen calls the engine (its children open with `EngineGate`), so the gate asks for
+   * the engine's module as it mounts, beside `/api/auth/me`, along with the screen's own code.
+   */
+  engine?: boolean;
   children: (account: ReadyAccount) => ReactElement;
 };
 
@@ -428,8 +475,14 @@ export function resetUsernamePromptForTests(): void {
   consentAnswered.clear();
 }
 
-export function Gated({ allowPending = false, consentExempt = false, children }: GatedProps): ReactElement {
+export function Gated({ allowPending = false, consentExempt = false, engine = false, children }: GatedProps): ReactElement {
   const account = useAccount();
+  // R2630001: the screen's code, and the engine when it calls it, start beside the account read
+  // (whose effect `useAccount` has already queued), not once it answers; with no session the gate
+  // sends the player to sign in, so nothing starts. Keyed by path, a gate mounts once per screen.
+  useEffect(() => {
+    if (readSession() !== null) startScreen(currentPath(), engine);
+  }, [engine]);
   // R757001: this gate has shown its screen to an active account that owed nothing. A later read
   // that finds the terms owed (they changed while the player was here) leaves the screen up, and
   // the next screen asks. Per gate, since each screen mounts its own (ONE GATE PER SCREEN).
@@ -606,7 +659,7 @@ export function App(): ReactElement {
     }
     if (path === paths.decks) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {() => (
             <EngineGate>
               <DecksRoute />
@@ -621,7 +674,7 @@ export function App(): ReactElement {
       // even a stale one, still meets the gate.
       if (!signedIn && readRoomLink() === null) return <PlayRoute token={null} />;
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <PlayRoute token={account.token} />
@@ -635,7 +688,7 @@ export function App(): ReactElement {
     // this route exists to remove.
     if (path === paths.account) {
       return (
-        <Gated key={path} allowPending consentExempt>
+        <Gated key={path} allowPending consentExempt engine>
           {(account) => (
             <EngineGate>
               <AccountRoute token={account.token} me={account.me} />
@@ -655,7 +708,7 @@ export function App(): ReactElement {
     // #920: the card creator keeps its cards on the account, so it is behind the gate like the decks.
     if (path === paths.creator) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <CreatorRoute token={account.token} />
@@ -666,7 +719,7 @@ export function App(): ReactElement {
     }
     if (path === paths.leaderboard) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <LeaderboardRoute token={account.token} />
@@ -677,7 +730,7 @@ export function App(): ReactElement {
     }
     if (path === paths.collection) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <CollectionRoute token={account.token} />
@@ -699,6 +752,7 @@ export function App(): ReactElement {
     // R1665000: the page is public, its disclaimer anyone's; with a session it reads the odds and the account's counters itself.
     if (path === paths.purchases) return <PurchasesRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
+    if (path === paths.ai) return <AiRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.
     if (path === paths.patchNotes) {
@@ -731,7 +785,7 @@ export function App(): ReactElement {
     // #936 B54: Play together asks for an active account the way `/play` does.
     if (path === paths.together) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {() => (
             <EngineGate>
               <TogetherRoute />
@@ -744,7 +798,7 @@ export function App(): ReactElement {
     const matchId = matchIdOf(path);
     if (matchId !== null) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <MatchRoute key={sessionKeyOf(account.token)} matchId={matchId} token={account.token} />
@@ -758,7 +812,7 @@ export function App(): ReactElement {
     const seriesId = seriesIdOf(path);
     if (seriesId !== null) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <SeriesRoute seriesId={seriesId} token={account.token} />
@@ -773,7 +827,7 @@ export function App(): ReactElement {
     if (watchId !== null) {
       const friendId = watchFriendOf(window.location.search);
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {() => (
             <EngineGate>
               <WatchRoute key={friendId} matchId={watchId} friendId={friendId} />
@@ -787,7 +841,7 @@ export function App(): ReactElement {
     const duosId = duosIdOf(path);
     if (duosId !== null) {
       return (
-        <Gated key={path}>
+        <Gated key={path} engine>
           {(account) => (
             <EngineGate>
               <DuosRoute key={sessionKeyOf(account.token)} matchId={duosId} token={account.token} />

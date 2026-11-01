@@ -1,4 +1,9 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+// #1568: the challenge dialog's deck read offers Try again when it fails, and reads again.
+// #1831: it opens on the last mode and pick, with Send focused, and remembers what it sent.
+// R2031000: All Random offers "More cards from" on the device's online pick, sent as `leanSet`.
+// R915005: a deck with a custom card, or a trio holding one, is listed off and never picked.
+
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LEAN_NEWEST } from "@jackioh/shared";
@@ -32,11 +37,23 @@ const MANY = {
   limits: { decks: 20, trios: 10, nameLength: 40 },
 };
 
+// R915005: Imps holds a card from the creator; Core holds none.
+const IMPS = { id: "d-imps", name: "Imps", cards: ["custom-ember-imp"], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 };
+const CORE = { id: "d-core", name: "Core", cards: [], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 };
+const PRACTICE = {
+  ...MANY,
+  decks: [IMPS, CORE],
+  trios: [
+    { id: "t-imps", name: "Imp trio", deckIds: ["d-core", "d-imps", "d-core"], createdAt: 0, updatedAt: 0 },
+    { id: "t-core", name: "Core trio", deckIds: ["d-core", "d-core", "d-core"], createdAt: 0, updatedAt: 0 },
+  ],
+};
+
 const ANN = { profileId: "f-ann", username: "Ann#2" };
 
-function serveDecks(): ReturnType<typeof stubServer> {
+function serveDecks(body: object = MANY): ReturnType<typeof stubServer> {
   return stubServer((call) => {
-    if (call.method === "GET" && call.path === "/api/decks") return { status: 200, body: MANY };
+    if (call.method === "GET" && call.path === "/api/decks") return { status: 200, body };
     if (call.method === "POST" && call.path === "/api/challenges") {
       return { status: 200, body: { challengeId: "ch-1", roomCode: "HJK234" } };
     }
@@ -204,5 +221,62 @@ describe("R2031000 an All Random challenge's more cards from", () => {
     });
     expect(server.to("POST", "/api/challenges")[1]?.body).toEqual({ mode: "random", friendId: "f-ann" });
     expect(readPlayLean()).toBeNull();
+  });
+});
+
+describe("R915005 the challenge dialog never offers a deck or trio with a custom card", () => {
+  it("R915005 Imps is listed off as practice only, the dialog starts on Core, says why, and Send posts Core", async () => {
+    const server = serveDecks(PRACTICE);
+    const onSent = vi.fn();
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={onSent} />);
+
+    const picker = (await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement;
+    expect(picker.value).toBe("d-core");
+    expect(within(picker).getByRole("option", { name: "Imps (practice only)" })).toBeDisabled();
+    expect(within(picker).getByRole("option", { name: "Core" })).toBeEnabled();
+    expect(screen.getByTestId(togetherTestid.challengePracticeOnly)).toHaveTextContent(
+      "A deck with a custom card plays only in practice, against the AI.",
+    );
+
+    fireEvent.click(screen.getByTestId(togetherTestid.challengeSend));
+    await waitFor(() => {
+      expect(onSent).toHaveBeenCalledTimes(1);
+    });
+    expect(server.to("POST", "/api/challenges")[0]?.body).toEqual({ mode: "bo1", deckId: "d-core", friendId: "f-ann" });
+  });
+
+  it("R915005 a remembered pick naming Imps or its trio falls back to the first that plays online", async () => {
+    window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "bo1", deckId: "d-imps", trioId: "t-imps" }));
+    serveDecks(PRACTICE);
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
+
+    expect(((await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement).value).toBe("d-core");
+    fireEvent.click(screen.getByTestId(challengeModeTestid("bo3")));
+    const trios = (await screen.findByTestId(togetherTestid.challengeTrio)) as HTMLSelectElement;
+    expect(trios.value).toBe("t-core");
+    expect(within(trios).getByRole("option", { name: "Imp trio (practice only)" })).toBeDisabled();
+    expect(screen.getByTestId(togetherTestid.challengePracticeOnly)).toHaveTextContent("cannot play Conquest");
+  });
+
+  it("R915005 with nothing practice-only there is no note", async () => {
+    serveDecks();
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
+
+    await screen.findByTestId(togetherTestid.challengeDeck);
+    expect(screen.queryByTestId(togetherTestid.challengePracticeOnly)).toBeNull();
+    fireEvent.click(screen.getByTestId(challengeModeTestid("bo3")));
+    await screen.findByTestId(togetherTestid.challengeTrio);
+    expect(screen.queryByTestId(togetherTestid.challengePracticeOnly)).toBeNull();
+  });
+
+  it("R915005 with only practice decks nothing is picked and Send stays off", async () => {
+    serveDecks({ ...PRACTICE, decks: [IMPS], trios: [] });
+    render(<ChallengeDialog friend={ANN} onClose={vi.fn()} onSent={vi.fn()} />);
+
+    const picker = (await screen.findByTestId(togetherTestid.challengeDeck)) as HTMLSelectElement;
+    expect(picker.value).toBe("");
+    expect(within(picker).getByRole("option", { name: "No deck plays online yet" })).toBeInTheDocument();
+    expect(screen.getByTestId(togetherTestid.challengeSend)).toBeDisabled();
+    expect(screen.getByTestId(togetherTestid.challengePracticeOnly)).toBeInTheDocument();
   });
 });

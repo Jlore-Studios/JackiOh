@@ -102,8 +102,9 @@ const TIER_RANK: Readonly<Record<LengthTier, number>> = { s: 0, m: 1, l: 2, xl: 
 
 /**
  * R639 favors faces whose name and rules text print at the largest size, but never excludes dense
- * cards. A hero's card counts as one, as it prints no words in the fan (R1017002); a Training
- * Grounds snapshot of one prints its words, so it does not (R2195001).
+ * cards. A hero's card counts as one (R1017002): in the fan it prints its art and no words, and with
+ * full art off it is dealt only when its text fits the fan. A Training Grounds Legacy card of one is
+ * named apart (R2511000) and prints its words, so it does not.
  */
 export function featureWeight(def: CardDef): number {
   const known = WEIGHTS.get(def.id);

@@ -264,26 +264,6 @@ export function holdersOf(compared: readonly DeckItem[], nameLength: number): Re
   return holders;
 }
 
-/**
- * R2195000: a deck holds a Core card or its Training Grounds snapshot, never both (§2.6 L3). For each
- * card the deck holds, the other of its pair, held by this deck under words that say which of the two
- * is here: the editor shows that card unavailable and refuses it as it does a compared deck's.
- */
-export function pairHolders(deckId: string, cards: readonly string[], catalog: CatalogSnapshot): ReadonlyMap<string, Holder> {
-  const holders = new Map<string, Holder>();
-  const defs = Object.values(catalog.cards);
-  for (const cardId of cards) {
-    const snapshotOf = catalog.cards[cardId]?.snapshotOf;
-    if (snapshotOf !== undefined) {
-      holders.set(snapshotOf, { deckId, name: t("this deck, as its Training Grounds snapshot") });
-    }
-    for (const def of defs) {
-      if (def.snapshotOf === cardId) holders.set(def.id, { deckId, name: t("this deck, as its Core card") });
-    }
-  }
-  return holders;
-}
-
 // The editor's moves
 
 export type AddResult =

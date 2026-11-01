@@ -245,12 +245,12 @@ mod tests {
         }
 
         #[test]
-        fn r44_counts_the_anti_oneshot_cap_a_6_damage_swing_projects_5() {
+        fn r44_counts_the_anti_oneshot_cap_a_6_damage_swing_projects_4() {
             crate::register_all();
-            let capped = swing(Swing { health: 6, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
+            let capped = swing(Swing { health: 5, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
             assert!(!arms(&capped, &attack_declared(&id_of(&capped, ATTACKER), "hero-p1", false)));
 
-            let exact = swing(Swing { health: 5, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
+            let exact = swing(Swing { health: 4, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
             assert!(arms(&exact, &attack_declared(&id_of(&exact, ATTACKER), "hero-p1", false)));
         }
 

@@ -40,7 +40,6 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
-import { namesCustomCard } from "../creator/useCustomCards.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
@@ -53,6 +52,7 @@ import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { deckPracticeOnly, practiceOnlyLabel, trioPracticeOnly } from "../together/challengeChoice.ts";
 import { attempt, messageOf } from "../together/session.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
@@ -229,18 +229,10 @@ function useLobbyData(token: string): [LobbyLoad, () => void] {
   return [load, retry];
 }
 
-export function deckPracticeOnly(deck: SavedDeck): boolean {
-  return namesCustomCard(deck.cards);
-}
-
-export function trioPracticeOnly(trio: SavedTrio, decks: readonly SavedDeck[]): boolean {
-  return trio.deckIds.some((id) => {
-    const deck = id === null ? undefined : decks.find((saved) => saved.id === id);
-    return deck !== undefined && deckPracticeOnly(deck);
-  });
-}
-
-/** Never one that plays only in practice (R915005). */
+/**
+ * The remembered deck if it is still saved, else the first complete deck, else the first deck; never
+ * one that plays only in practice (R915005).
+ */
 export function defaultDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
   const online = decks.filter((deck) => !deckPracticeOnly(deck));
   return (
@@ -264,11 +256,6 @@ export function defaultTrio(
     online[0] ??
     null
   );
-}
-
-/** "Name (practice only)": a deck or trio the picker shows but does not offer (R915005). */
-function practiceOnlyLabel(name: string): string {
-  return t("{name} (practice only)", { name });
 }
 
 /** Queue/room choice; null when its required pick is absent. */

@@ -161,7 +161,9 @@ describe("22 — tutorial lesson 1, played to a win by following the coach (§9.
         expect(debug.seed, "the lesson's own seed").to.eq(lesson.seed);
         expect(debug.humanSeat).to.eq(lesson.humanSeat);
         const aiSeat = lesson.humanSeat === "p1" ? "p2" : "p1";
-        expect(debug.handicaps[aiSeat], "the AI seat plays with the tutorial handicap (R290)").to.deep.eq(data.aiTutorial);
+        expect(debug.handicaps[aiSeat], "the AI seat plays with the tutorial handicap (R290), and its pool hold (R2434001)").to.deep.eq(
+          lesson.poolHold ? { ...data.aiTutorial, poolHold: true } : data.aiTutorial,
+        );
         expect(debug.log.some((action) => action.playerId === aiSeat), "the AI acted").to.eq(true);
 
         cy.task<{ replayHash: string; browserHash: string; errors: unknown[] }>(

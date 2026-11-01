@@ -156,7 +156,7 @@ describe("scripts/vercel-ignore.sh", () => {
       ["spec/rulings/R0195.md", "spec/INDEX.md", "training/README.md", "training/history/improve.jsonl"],
       // Tests and tooling inside the client and the crates are never imported by the bundle.
       ["apps/web/src/game/Board.test.tsx", "apps/web/src/net/x.test.ts", "apps/web/src/test/setup.ts"],
-      ["crates/engine/tests/rules/combat.rs", "crates/engine/tests/golden/games.jsonl", "crates/engine/tests/fixtures/code-input-cases.json"],
+      ["crates/engine/tests/rules/combat.rs", "crates/engine/tests/golden/pre-equip-log.json", "crates/engine/tests/fixtures/code-input-cases.json"],
       ["crates/cards/tests/cross/catalog.rs", "crates/ai/tests/ai.rs", "crates/wasm/tests/x.rs"],
       ["apps/web/scripts/gen-voice.mjs", "apps/web/README.md"],
     ]) {

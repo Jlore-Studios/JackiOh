@@ -118,10 +118,11 @@ mod tests {
 
         /// §4.4 step 3: it divides before the hit caps — a 9 halved to 5 meets Anti-oneshot Armor's 5
         #[test]
-        fn s4_4_step_3_it_divides_before_the_hit_caps_a_9_halved_to_5_meets_anti_oneshot_armors_5() {
+        fn s4_4_step_3_it_divides_before_the_hit_caps_a_9_halved_to_5_meets_anti_oneshot_armors_4() {
             let mut s = attack_on_guarded(MENACE, vec![json!(ARGUSLAND), json!(ANTI_ONESHOT)], 30);
-            assert_eq!(hero_hits(&s, P1), vec![5]);
-            s.expect_health(P1, 25);
+            // Capped first it would be 4 halved to 2.
+            assert_eq!(hero_hits(&s, P1), vec![4]);
+            s.expect_health(P1, 26);
         }
 
         /// R125 fatigue is damage and is halved: the 1st and 2nd empty draws deal 1 and 1, not 1 and 2

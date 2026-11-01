@@ -1,15 +1,24 @@
-//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). Fixture cards of the reserved
-//! Boss set, which `SHIPPED_SETS` does not list, stand in for the next held set: its cards are in no
-//! pool that names no set, in no deck and in no random deck until the patch that lists the set; a
-//! pool that names the set, or its cards, reaches them; and the testkit's preview opens the set on
-//! one thread, as the fuzz tool does. Also R1421 (a Prime pool holds the Prime tokens) and R1422
-//! (`anyTags`), the pool pieces the set's cards share, and R1371 (the newest shipped set, which a
-//! preview never moves). The held sets that have shipped, Meditative (issues #496, #553), Meditative+
-//! (#1173, R1178000; its Potion tag names no tribe), Stinkyscape (R1857000; its four tags name no
-//! tribe) and Training Grounds (R2194000), draw, deal and lean like Core.
+//! R1420: a set the catalog holds before it ships (`SHIPPED_SETS`). The Meditative set was one while
+//! issue #496 built it and shipped in v0.3.5 (issue #553), so it now draws, deals and leans like Core;
+//! the gate stays for the next set, which these tests stand in for with fixture cards of the reserved
+//! Boss set, a set `SHIPPED_SETS` does not list. Such a set's cards are in no pool that names no set,
+//! in no deck, and in no random deck, until the patch that lists the set; a pool that names the set,
+//! or names its cards, reaches them; and the testkit's preview opens the set on one thread, as the
+//! fuzz tool does. Also R1421 (a Prime pool holds the Prime tokens) and R1422 (`anyTags`), the pool
+//! pieces the set's cards share, and R1371 (the newest shipped set, which a preview never moves).
+//! R1178000: the Meditative+ set (issue #1173) was the next held set, in the catalog order after
+//! Meditative, and shipped in v0.3.15 (issue #1187), so its fixture cards here now draw, deal and lean
+//! like Meditative's, and the gate's tests stay on the Boss set; its Potion tag names no tribe.
+//! R1857000: the Stinkyscape set (issue #1836) was the third held set, after Meditative+ in the
+//! catalog order, and shipped with its release (#1884), so its fixture cards here now draw, deal and
+//! lean like Meditative+'s; its four tags name no tribe, nor do the two issue #2521 adds after them
+//! (Resource and Faction).
+//! R2194000: the Training Grounds set (issue #2193) was the fourth held set, after Stinkyscape in the
+//! catalog order, and shipped with its release (#2204), so its fixture cards here now draw, deal and
+//! lean like Stinkyscape's, and it is the newest set.
 //! Fixture definitions only (CLAUDE.md: the engine does not depend on crates/cards).
 
-use jackioh_engine::catalog::{deckable, pair_key, set_is_open};
+use jackioh_engine::catalog::{deckable, set_is_open};
 use jackioh_engine::state::validate_deck;
 use jackioh_engine::testkit::*;
 
@@ -676,6 +685,9 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
             Tag::Weapon,
             Tag::WarDoctrine,
             Tag::Swarm,
+            Tag::Legacy,
+            Tag::Resource,
+            Tag::Faction,
             Tag::Token,
         ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
@@ -743,10 +755,55 @@ mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
     }
 }
 
+/// R2511000: Legacy, the Training Grounds Legacy cards' tag (#41–#60), is a family tag no rule reads:
+/// it parses as written, follows Swarm in the union with Token still last, names no tribe, and a pool
+/// by it holds its cards and none of their tokens.
+mod r2511000_the_legacy_tag {
+    use super::*;
+
+    #[test]
+    fn r2511000_legacy_parses_as_written_follows_swarm_and_names_no_tribe() {
+        let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
+        assert_eq!(Tag::Legacy.as_str(), "Legacy");
+        assert_eq!(json_as::<Tag>(json!("Legacy")), Tag::Legacy);
+        assert_eq!(at(Tag::Legacy), at(Tag::Swarm).map(|at| at + 1));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
+        assert!(!TRIBAL_TAGS.contains(&Tag::Legacy));
+        assert!(!POOL_TOKEN_TAGS.contains(&Tag::Legacy));
+
+        let defs: Vec<CardDef> = vec![
+            card("core-002", "Core", "2", &["Human"], false),
+            card(
+                "traininggrounds-041",
+                "Training Grounds",
+                "41",
+                &["Human", "Legacy"],
+                false,
+            ),
+            card(
+                "traininggrounds-042",
+                "Training Grounds",
+                "42",
+                &["Legacy"],
+                false,
+            ),
+        ];
+        register_catalog(defs.into_iter().map(|def| (def.id.clone(), def)).collect());
+        assert_eq!(
+            pool(json!({ "tags": ["Legacy"] })),
+            vec!["traininggrounds-041", "traininggrounds-042"]
+        );
+        assert_eq!(
+            pool(json!({ "tags": ["Human"] })),
+            vec!["core-002", "traininggrounds-041"]
+        );
+    }
+}
+
 /// R1857000: the Stinkyscape set (issue #1836) was the third set R1420's gate held, as R1178000 said
 /// of Meditative+: sixth in the catalog order, right after Meditative+, and in no pool that names no
-/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Its four tags are
-/// family tags that no rule reads (R1424).
+/// set, no deck and no lean until its release (#1884) listed it in `SHIPPED_SETS`. Since then it ships
+/// as the newest set. Its four tags are family tags that no rule reads (R1424).
 mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
     use super::*;
 
@@ -796,7 +853,10 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
             assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
         }
-        assert_eq!(at(Tag::Token), Some(bean + 1 + TAGS.len()));
+        // R2511000: Legacy follows them, then issue #2521's Resource and Faction, and Token stays last.
+        assert_eq!(at(Tag::Legacy), Some(bean + 1 + TAGS.len()));
+        assert_eq!(at(Tag::Resource), Some(bean + 2 + TAGS.len()));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 
     #[test]
@@ -892,6 +952,76 @@ mod r1857000_the_stinkyscape_set_ships_after_meditative_plus {
             .map(|error| error.message.as_str())
             .collect();
         assert_eq!(l3, Vec::<&str>::new(), "{:?}", result.errors);
+    }
+}
+
+/// Issue #2521: Resource (the six Stinkyscape Resources, Reknite to Red Narcor, every one a token)
+/// and Faction (the five Faction cards, Stinkyscape #95 and #159 to #162) follow Legacy (R2511000),
+/// itself after the Stinkyscape set's four, in the union, ahead of Token. Family tags that name no tribe (R1424), whose pools take
+/// no token unless they ask for tokens, as every tag outside `POOL_TOKEN_TAGS` (R382). Fixture cards
+/// only; the real cards' tags are `crates/cards/tests/cross/catalog.rs`'s.
+mod issue_2521_resource_and_faction_follow_legacy {
+    use super::*;
+
+    /// The two tags, as written, in the union's order.
+    const TAGS: [(Tag, &str); 2] = [(Tag::Resource, "Resource"), (Tag::Faction, "Faction")];
+
+    #[test]
+    fn the_two_parse_as_written_follow_legacy_and_name_no_tribe() {
+        let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
+        let legacy = at(Tag::Legacy).expect("Legacy is in the union");
+        for (offset, (tag, text)) in TAGS.iter().enumerate() {
+            assert_eq!(tag.as_str(), *text);
+            assert_eq!(json_as::<Tag>(json!(text)), *tag);
+            assert_eq!(at(*tag), Some(legacy + 1 + offset), "{tag}");
+            assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
+            assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
+        }
+        assert_eq!(at(Tag::Token), Some(legacy + 1 + TAGS.len()));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
+    }
+
+    /// A Faction card is a card a deck may hold; a Resource is a token, which a pool reaches only
+    /// when it asks for tokens and no deck ever holds.
+    #[test]
+    fn a_faction_pool_holds_its_cards_and_a_resource_pool_its_tokens_only_when_it_asks_for_them() {
+        let defs: CardDefs = [
+            card("stinkyscape-095", "Stinkyscape", "95", &["Faction"], false),
+            card("stinkyscape-159", "Stinkyscape", "159", &["Faction"], false),
+            card(
+                "stinkyscape-t-korrelite",
+                "Stinkyscape",
+                "T-korrelite",
+                &["Resource"],
+                true,
+            ),
+            card(
+                "stinkyscape-t-narcor",
+                "Stinkyscape",
+                "T-narcor",
+                &["Resource"],
+                true,
+            ),
+        ]
+        .into_iter()
+        .map(|def| (def.id.clone(), def))
+        .collect();
+        assert!(deckable(&defs["stinkyscape-159"]));
+        assert!(!deckable(&defs["stinkyscape-t-korrelite"]), "a Token never is");
+        register_catalog(defs);
+        assert_eq!(
+            pool(json!({ "tags": ["Faction"] })),
+            vec!["stinkyscape-095", "stinkyscape-159"]
+        );
+        assert_eq!(pool(json!({ "tags": ["Resource"] })), Vec::<String>::new());
+        assert_eq!(
+            pool(json!({ "tags": ["Resource"], "withTokens": true })),
+            vec!["stinkyscape-t-korrelite", "stinkyscape-t-narcor"]
+        );
+        assert_eq!(
+            pool(json!({ "anyTags": ["Resource", "Faction"] })),
+            vec!["stinkyscape-095", "stinkyscape-159"]
+        );
     }
 }
 
@@ -1020,20 +1150,22 @@ mod r2194000_the_training_grounds_set_ships_after_stinkyscape {
     }
 }
 
-/// R2195000: a Training Grounds snapshot (#41–#60) names the Core card it copies (`snapshotOf`), and a
-/// deck holds the Core card or the snapshot, never both: `create_game`'s check and the shared
-/// validator's L3 refuse the pair, and take either alone.
-mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
+/// R2195000, R2511001: a Legacy card (Training Grounds #41–#60) is its own card, so a deck holds it
+/// beside the Core card it copies: `create_game`'s check and the shared validator's L3 take the two
+/// together, as they take either alone. R2195000's pair rule is superseded; a definition that still
+/// names its Core card (`snapshotOf`, the catalogs shipped from v0.5.5 to v0.5.7) is judged the same.
+mod r2195000_r2511001_a_deck_holds_a_core_card_and_its_legacy_card_together {
     use super::*;
     use jackioh_engine::validator::{CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutRule};
 
-    /// `defs()` with a snapshot of core-002 beside it.
-    fn with_snapshot() -> CardDefs {
+    /// `defs()` with core-002's Legacy card beside it, naming core-002 as a carried catalog of
+    /// v0.5.5 to v0.5.7 did (`marked`) or not, as the build's does.
+    fn with_legacy(marked: bool) -> CardDefs {
         let mut catalog = defs();
-        let mut snapshot = card("traininggrounds-041", "Training Grounds", "41", &[], false);
-        snapshot.name = catalog["core-002"].name.clone();
-        snapshot.snapshot_of = Some("core-002".to_string());
-        catalog.insert(snapshot.id.clone(), snapshot);
+        let mut legacy = card("traininggrounds-041", "Training Grounds", "41", &[], false);
+        legacy.name = format!("Legacy: {}", catalog["core-002"].name);
+        legacy.snapshot_of = marked.then(|| "core-002".to_string());
+        catalog.insert(legacy.id.clone(), legacy);
         catalog
     }
 
@@ -1061,52 +1193,23 @@ mod r2195000_a_deck_holds_a_core_card_or_its_snapshot_never_both {
     }
 
     #[test]
-    fn r2195000_both_are_refused_either_alone_is_taken() {
-        register_catalog(with_snapshot());
-        let catalog = with_snapshot();
-        assert_eq!(pair_key(&catalog["traininggrounds-041"]), "core-002");
-        assert_eq!(pair_key(&catalog["core-002"]), "core-002");
-        assert_eq!(pair_key(&catalog["core-003"]), "core-003");
-
-        let core: Vec<String> = (1..=20).map(|n| format!("core-{n:03}")).collect();
-        let mut both = core.clone();
-        both[19] = "traininggrounds-041".to_string();
-        let mut snapshot = core.clone();
-        snapshot[1] = "traininggrounds-041".to_string();
-
-        let refused = validate_deck(&both, &catalog, "p1", 20).expect_err("both refused");
-        assert!(
-            refused
-                .to_string()
-                .contains("a Core card and its Training Grounds snapshot"),
-            "{refused}"
-        );
-        let said = l3(&both, &catalog);
-        assert_eq!(said.len(), 1, "{said:?}");
-        assert!(
-            said[0].contains("a Core card or its Training Grounds snapshot, not both"),
-            "{}",
-            said[0]
-        );
-
-        for deck in [&core, &snapshot] {
-            assert!(validate_deck(deck, &catalog, "p1", 20).is_ok());
-            assert_eq!(l3(deck, &catalog), Vec::<String>::new());
+    fn r2195000_r2511001_both_are_taken_together_and_either_alone() {
+        for marked in [false, true] {
+            register_catalog(with_legacy(marked));
+            let catalog = with_legacy(marked);
+            let core: Vec<String> = (1..=20).map(|n| format!("core-{n:03}")).collect();
+            let mut both = core.clone();
+            both[19] = "traininggrounds-041".to_string();
+            let mut legacy = core.clone();
+            legacy[1] = "traininggrounds-041".to_string();
+            assert!(both.contains(&"core-002".to_string()));
+            for deck in [&core, &legacy, &both] {
+                assert!(
+                    validate_deck(deck, &catalog, "p1", 20).is_ok(),
+                    "{marked} {deck:?}"
+                );
+                assert_eq!(l3(deck, &catalog), Vec::<String>::new(), "{marked}");
+            }
         }
-    }
-
-    #[test]
-    fn r2195000_r1420_unpreviewed_the_snapshot_alone_is_taken_since_its_set_shipped() {
-        register_catalog(with_snapshot());
-        let catalog = with_snapshot();
-        let mut snapshot: Vec<String> = (1..=20).map(|n| format!("core-{n:03}")).collect();
-        snapshot[1] = "traininggrounds-041".to_string();
-        assert_eq!(l3(&snapshot, &catalog), Vec::<String>::new());
-        assert!(validate_deck(&snapshot, &catalog, "p1", 20).is_ok());
-        let mut both = snapshot.clone();
-        both[2] = "core-002".to_string();
-        let said = l3(&both, &catalog);
-        assert_eq!(said.len(), 1, "{said:?}");
-        assert!(said[0].contains("not both"), "{}", said[0]);
     }
 }

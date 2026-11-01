@@ -109,12 +109,12 @@ pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Pla
         );
         return Some(TakenTo::Vanished);
     }
-    // `draw::add_to_hand` burns a card entering a full hand (§2.4, R4): the same test, read before
-    // the move, names where it went.
-    let burns =
-        sink.state.players[card.owner].hand.len() as i32 >= crate::query::hand_cap_of(sink.state, card.owner);
-    crate::draw::add_to_hand(sink, &mut card);
-    Some(if burns { TakenTo::Burned } else { TakenTo::Hand })
+    // `draw::add_to_hand` burns a card entering a full hand (§2.4, R4), and its outcome names where
+    // it went.
+    Some(match crate::draw::add_to_hand(sink, &mut card) {
+        crate::draw::AddToHandOutcome::Hand => TakenTo::Hand,
+        crate::draw::AddToHandOutcome::Burned => TakenTo::Burned,
+    })
 }
 
 /// Which end of a library a draw from it takes: `library[0]` is the top (`effects/library.rs`).

@@ -131,7 +131,7 @@ description, for the person, and nothing is built); when a builder or reviser st
 then on it is `human`: nothing queues, plans or builds it, and a request gets one reply. A person
 may put the label on too, which triage treats as `human`. When the rest is the bot's once a
 person has done their part, they take the label off and queue it (`/harness build`); one who
-builds it all closes it ([`harness/human.py`](harness/human.py)).
+builds it all closes it ([`go/internal/human/`](go/internal/human/)).
 
 **Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
 an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
@@ -162,15 +162,15 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
 
 1. **The split.** A fullsend item counts as `difficulty:hard`, whatever its label says, so a
    strong model takes it. Its first run splits it as Squishy's `split` does (`prompts/split.md`,
-   `harness/split.py`), told also that the parts land on one branch and are reconciled there
-   (`split.FULLSEND_NOTES`): vertical slices, no file in two parts, `blocked_by` only where one
+   `go/internal/split/`), told also that the parts land on one branch and are reconciled there
+   (`split.FullsendNotes`): vertical slices, no file in two parts, `blocked_by` only where one
    part reads another's code, and no "make it green" part. Deliver then makes the issue's own
    branch, `bot/issue-<n>`, from `main`'s head: the integration branch. It opens the parts as
    sub-issues, each queued as `bot:build` with its plan, its difficulty and a record of where it
    lands (`onto`, `part_of`), and labels the parent `bot:tree`.
 
    **An issue split already.** On an issue whose sub-issues someone opened before (a tracker split
-   by hand), `fullsend` takes those as its parts and splits nothing (`queue.adopt`): it makes the
+   by hand), `fullsend` takes those as its parts and splits nothing (`queue.Adopt`): it makes the
    integration branch from `main`'s head through the API, writes each open sub-issue's `onto` and
    `part_of`, queues any that was not queued, and labels the parent `bot:tree`. A sub-issue
    labelled `human` or the other bot's, one a run holds, or one with a pull request of the bot's
@@ -179,14 +179,14 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    plan from a model of its plan floor (a strong one above easy), which the planning lane writes
    for the parts before the other items ([Who takes what](#subscriptions)). Once its plan is on
    record, the subscriptions whose strongest seat is weakest take it first, and one with no seat
-   of its difficulty's tier may build it on a medium seat (`config.PART_FLOOR`): Muse builds a
+   of its difficulty's tier may build it on a medium seat (`config.PartFloor`): Muse builds a
    hard part from Opus's plan, while a Claude account still builds a hard one on Opus, never on
    Sonnet. The parts build side by side with the parts that do not wait for them. Its run starts from the integration branch, not `main`, and measures every diff against
-   it (`work.Worker._part`): one builder pass and the path guard, and no checks, self check,
+   it (`work.Worker.Part`): one builder pass and the path guard, and no checks, self check,
    catch-up with `main` or review. Deliver lands the change on the integration branch
-   (`deliver.Deliverer._land_part`): a fast-forward when nothing landed since the part started,
+   (`deliver.Deliverer.LandPart`): a fast-forward when nothing landed since the part started,
    and otherwise a merge commit made without a worktree (`git merge-tree`); a push that loses a
-   race is tried once more. It refuses what `_publish` refuses: a bundle that is not the head the
+   race is tried once more. It refuses what `publish` refuses: a bundle that is not the head the
    result names, does not descend from where the work started, changes a forbidden path or holds a
    conflict marker. A part that conflicts with the parts before it, or loses the race twice, is
    kept on its own branch, `bot/issue-<part>`, and listed on the parent's record (`parked`).
@@ -213,7 +213,7 @@ Why it is built this way:
   it already starts from that branch and merges `main` into it, and its pull request closes the
   parent.
 - **One label per bot** (`bot:fullsend`, `squishy:fullsend`), so each issue has one owner
-  (`queue.owner`).
+  (`queue.Owner`).
 - **Medium builders, strong planners and a strong reconcile.** A part is one blind pass whose
   every flaw the reconcile's build, checks and review must clear anyway, so its builder may be a
   tier under its difficulty once a strong model has planned it: the strong models spend their
@@ -245,10 +245,10 @@ Every way of asking either gets an answer at once, or is found again later:
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
   - a failed, cancelled or broken CI run (`bot selftest` among its jobs) on a bot pull request's head;
-  - a label the bot uses (`config.LABELS`) that the repository does not have. It checks each
+  - a label the bot uses (`config.Labels`) that the repository does not have. It checks each
     time that list changes, so a new label exists within ten minutes of its merge, without
     `harness setup` (the method labels shipped in #328 without existing); and one it retired
-    (`config.RETIRED_LABELS`, #664), which it deletes, so nobody puts on a label that does nothing.
+    (`config.RetiredLabels`, #664), which it deletes, so nobody puts on a label that does nothing.
 
   It leaves anything younger than ten minutes to the handler that may still be running, so
   nothing is answered twice. Last, it starts a night run when one should be going and none is:
@@ -350,11 +350,11 @@ needs level 3.
 
 ## Labels
 
-`harness/config.py`'s `LABELS` is the one list of the repository's labels, each with its colour and
+`go/internal/config/`'s `Labels` is the one list of the repository's labels, each with its colour and
 description (#187): the bot's own below, the type labels (`patch`, `major version`, `architecture`,
 `night bot`, [docs/issues-and-patches.md](../docs/issues-and-patches.md#labels)), `production merge`
 (written as `scripts/promote-production.sh` writes it) and the rest of this table. The sweep creates
-any the repository lacks; `python3 -m harness setup` creates them too and brings a colour or a
+any the repository lacks; `harness setup` creates them too and brings a colour or a
 description someone changed by hand back to the list. Squishy's process holds its `squishy:*` labels
 in place of the `bot:*` ones.
 
@@ -369,7 +369,7 @@ in place of the `bot:*` ones.
 | `bot:cross-review` | a bot pull request waiting for a review run before auto-merge: one strong model, or a second medium one |
 | `bot:working` | a run holds it right now |
 | `bot:blocked` | it needs a person: a question, findings the reviewer would not let go of, or repeated failures |
-| `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
+| `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
 | `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1) |
@@ -383,21 +383,21 @@ in place of the `bot:*` ones.
 ## Triage
 
 `triage.yml` gives a new issue or pull request what it needs from fixed rules, with no model, in
-one job on GitHub's runner (`triage.py`, #664). To run it on a thread again: `gh workflow run
+one job on GitHub's runner (`go/internal/triage/`, #664). To run it on a thread again: `gh workflow run
 triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions page).
 
 - **A new issue** a trusted person opens (an owner, member or collaborator, or someone on
   `.harness/trust.txt`; the bot and apps label their own) gets:
-  - **its form's answers** (`.github/ISSUE_TEMPLATE/`, `triage.form_labels`): Difficulty and
+  - **its form's answers** (`.github/ISSUE_TEMPLATE/`, `triage.FormLabels`): Difficulty and
     Priority become `difficulty:*` and `priority:*`, and Who does it becomes `bot:build` (the bot
     queues it) or `human`. "Decide later" leaves that to you. The labels the job's own token puts
     on start no workflow, but the queue reads `bot:build` by label, so the next run sees it;
-  - **its type label** from its title's prefix (`triage.type_label`), when it has none: `Patch v…`
+  - **its type label** from its title's prefix (`triage.TypeLabel`), when it has none: `Patch v…`
     is `patch`, `vX.Y.0` `major version`, `Night bot:` `night bot`, `Architecture:` and `CI:`
     `architecture`. A `Patch:` title, every form's since #1360, names none: its form's own label
     types it, and its pull request's kind and tier are the classifier's (`kind:*`, `tier:*`, put on
     by CI's `rust (classify)`);
-  - **an issue type**, Task, Bug or Feature, when it has none (`triage.fallback_type`, read from
+  - **an issue type**, Task, Bug or Feature, when it has none (`triage.FallbackType`, read from
     the title and labels: a failure is a Bug; tooling, CI, the bot and trackers a Task; something
     new a Feature). GitHub drops a type it won't take without an error, so triage reads it back.
 - **`human`**, put on by a person (on any issue, whoever opened it; or chosen in a form), hands the
@@ -406,18 +406,18 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
   pull request's `bot:pr-open` stay.
 - **A new pull request** a trusted person opens gets its type label from its title. It keeps its
   title, which becomes the squash commit's subject: the `pr title` check (`pr-title.yml`, #187)
-  holds it to `CONVENTION`, plus the titles tools give their own (`AUTOMATED_PULL`,
-  `pull_title_ok`), and the bots' pull requests take their builder's title when it passes, else
+  holds it to `Convention`, plus the titles tools give their own (`AutomatedPull`,
+  `PullTitleOK`), and the bots' pull requests take their builder's title when it passes, else
   their issue's, else `Patch: <what it does>` with the old prefix dropped, as a workflow's
-  `CI: …` alert's fix takes (`pull_title`).
+  `CI: …` alert's fix takes (`PullTitle`).
 - **It adds, and moves only what `human` moves.** A person's labels, assignees and type stay. It
   links nothing: the queue holds a build that waits for another issue by itself, from a "Blocked
   by #n" line, GitHub's own blocked-by links and the earlier parts of a patch, the sub-issues of
-  the same parent with a lower `(part n of m)` (`queue.patch_of`, #1370)
+  the same parent with a lower `(part n of m)` (`queue.PatchOf`, #1370)
   ([Dependencies](#priority-and-human)). It retitles nothing either, so the bot's suggestions are
   asked for titles that follow the conventions (`prompts/suggest.md`).
 - **Issues triage never types.** The sweep (every ten minutes, in the status loop) types every
-  open issue still without one, with the same `triage.fallback_type`: a bot's (the CI-duration
+  open issue still without one, with the same `triage.FallbackType`: a bot's (the CI-duration
   alerts, the status issue), which never reaches triage, and any triage missed.
 - **When it can't:** a failure skips quietly. It leaves no comment.
 
@@ -426,7 +426,7 @@ and an hourly sweep locks the rest, so only collaborators can comment: the peopl
 and Squishy, whose tokens have write access. The threads `github-actions[bot]` opened (the CI
 alerts, the production countdown, the hygiene issues) stay unlocked, since the workflow's own
 token cannot comment on a locked thread; `patches ship`'s "Shipped as" comment unlocks a locked
-thread, comments and locks it again (`titles.retitle_shipped`).
+thread, comments and locks it again (`titles.RetitleShipped`).
 
 ## Subscriptions
 
@@ -453,11 +453,11 @@ A Claude account
 works only once its secret is set (Settings → Secrets and variables → Actions), so the ones you
 have not set up yet sit out. A login on the machine has no secret to check, so the bot counts it
 as set up; turn one off with `enabled: false`, or for a while, without a pull request, with
-`/harness suspend <id>` (until `/harness resume <id>`). `python3 -m harness providers` in `bot/`
+`/harness suspend <id>` (until `/harness resume <id>`). `harness providers` in `bot/`
 prints each one and whether it could start now, and `/harness status` does the same on GitHub.
 
 **The wake.** `claude-wake.yml` starts each Claude account's 5-hour session at 06:00
-America/Chicago and every four hours around it (`wake.py`'s `WAKE_AT` and `EVERY`), Squishy's
+America/Chicago and every four hours around it (`go/internal/wake/`'s `WakeAt` and `Every`), Squishy's
 included, so it resets five hours later rather than at whatever hour its next run lands. An account
 whose session the state file shows running, one whose usage limit refused a call or has a window
 (the week's, say) full, one suspended, and every account of a halted bot are left alone; each other
@@ -466,8 +466,8 @@ one-line system prompt (a few hundred tokens), in a job of its own holding only 
 once. A ping its limit refuses is reported, not failed, and the next wake time tries it again.
 GitHub starts schedules late, so it fires every hour, and a run in the hour before a wake time
 sleeps until it; run it by hand with `now` to wake them at any hour. A new Claude account is woken
-once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SET`, which
-`test_workflows.py` holds to it.
+once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRETS_SET`, which
+`go/tests/workflows_test.go` holds to it.
 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
@@ -511,7 +511,7 @@ once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SE
   - **Watched during each call.** Claude streams its usage as it works; a call stops once the
     reading crosses a cap. A call may run 150 minutes, so checking only between steps let runs
     go to 100%. agy's and Muse's calls stream none, so their `/usage` is read every ten minutes
-    during a call (`POLL_SECONDS`) and once after it.
+    during a call (`PollSeconds`) and once after it.
   - **Headroom to start.** A build, a revision or a plan starts only `start_headroom` under
     each cap (top level: 5 points of the 5-hour window, 5 of the week); a review, which is
     short, goes up to the cap. A subscription's own `start_headroom` replaces the top level's
@@ -522,7 +522,7 @@ once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SE
     under a cap but within its headroom takes reviews only, and the status issue, `status` and
     the planner's summary say so (⏸️, "starts under 45%; reviews only") with the time it can
     start a build or a plan again: its reset, or its window opening if that comes first
-    (`providers.start_reason`, `providers.frees_at`).
+    (`providers.StartReason`, `providers.FreesAt`).
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
     many (Muse has four, on one login, and claude-8 three): each run takes its own reading before
@@ -535,19 +535,19 @@ once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SE
     caps are 100% (#798), so their own limit ends such a call.
 - `last_hour: true` (claude-1, claude-4, claude-6, claude-7 and claude-8; not claude-2, and claude-5
   only in its late week, below): what is left of a
-  5-hour session is lost at its reset, so in the hour before it (`providers.LAST_HOUR`) the 5-hour
+  5-hour session is lost at its reset, so in the hour before it (`providers.LastHour`) the 5-hour
   cap that holds then is lifted, as long as the reading is still at that cap or under it (a point
-  over, `LAST_HOUR_SLACK`, is the bot's own call stopping late). A reading further over means
+  over, `LastHourSlack`, is the bot's own call stopping late). A reading further over means
   somebody else is spending the session, and the cap holds. The account still runs one item at a
   time, and a run that starts there goes on past the cap until the session resets
-  (`work.Worker.last_hour`), then under the new session's cap. The weekly cap still holds.
+  (`work.Worker.LastHour`), then under the new session's cap. The weekly cap still holds.
   The status issue says "cap 100% now (its last hour)", and a capped account's "starts again"
   time is its last hour's start when that comes before its reset.
 - `late_week` (`{"from": "Sun 17:00", "seven_day": 1.0, "five_hour": 0.8, "last_hour": true}`,
   claude-5's): from that weekday and time in the bot's time zone until the week resets, the weekly
   cap is `seven_day`, the 5-hour one `five_hour`, and with `last_hour` a session's last hour lifts
   that (as `last_hour: true` does, there alone). It holds only while the reset is at most a day
-  after its start (`LATE_WEEK_SPAN`; claude-5's is ten hours), so a week whose reset moved never
+  after its start (`LateWeekSpan`; claude-5's is ten hours), so a week whose reset moved never
   has its caps raised for days.
 - `quiet_check`: no subscription sets it. When one did (`true`), the gate waited until
   nobody else was spending it ([below](#it-no-longer-waits-for-the-subscription-to-be-quiet)).
@@ -568,7 +568,7 @@ once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SE
 At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
 included (8: the organization runs 20 hosted jobs at once, so CI keeps 12; #1455). It is one pool
 the two bots share, first come first served: Squishy's `providers.json` names the same 8, and each
-bot counts the other's live runs against it (`plan.others_on_github`, by the workflow its identity
+bot counts the other's live runs against it (`plan.OthersOnGithub`, by the workflow its identity
 names), so a free slot goes to whichever bot asks first. `machine_parallel` how
 many run at once on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have
 four each), each apart from the other, so Claude runs never wait for the night box's slots nor its
@@ -577,8 +577,8 @@ subscriptions' own lanes (the planning lane, below; 6), each still on a runner o
 slot, or one of `max_parallel`; `priority` the usage order within a tier (below), `balance` the load balancer
 that comes before it (below; on), and `tiers` each tier's models, which the router tries
 weakest-first inside the subscription. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Muse's is 4, and claude-3's and claude-8's 2; the code sets no top on it, but `max_parallel` holds every run on GitHub's runners, so the Claude accounts' lanes past it only let work go to an account with room while others are capped or outside their hours. The status issue's lanes table counts them for each subscription, Squishy's too, with the totals and these limits (`dashboard.lanes_table`). A `secret` must be one of the names the workflows hand over (the eight Claude ones,
-`CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
+(default 1) is how many items it may work on at once, each on its own runner: Muse's is 4, and claude-3's and claude-8's 2; the code sets no top on it, but `max_parallel` holds every run on GitHub's runners, so the Claude accounts' lanes past it only let work go to an account with room while others are capped or outside their hours. The status issue's lanes table counts them for each subscription, Squishy's too, with the totals and these limits (`dashboard.LanesTable`). A `secret` must be one of the names the workflows hand over (the eight Claude ones,
+`CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SecretNames`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
 many items at a time as its `lanes`. Items go in this order: forced, the priority tier, reviews,
@@ -598,9 +598,9 @@ lengthening the streak. On the machine a job reads the disk before it starts, cl
 and does no work under 3 GB free, and a disk that fills up during the work pauses the item and
 keeps what it built; neither counts against the item. While the disk is 80% full or has under
 3 GB free, the bot keeps one issue open about it, labelled `night bot` and `human`, and closes it
-at 70% ([`harness/disk.py`](harness/disk.py), [`machine/`](machine/README.md), Disk).
+at 70% ([`go/internal/disk/`](go/internal/disk/), [`machine/`](machine/README.md), Disk).
 Each job there also reads the machine's memory (stall time, swapping, memory available), and
-the status issue says whether the last 24 hours ran it short ([`harness/memory.py`](harness/memory.py),
+the status issue says whether the last 24 hours ran it short ([`go/internal/memory/`](go/internal/memory/),
 [`machine/`](machine/README.md), Memory).
 
 ### Difficulty and tiers
@@ -618,7 +618,7 @@ Every item has a difficulty, from its labels: `difficulty:easy`, `difficulty:med
 `difficulty:hard`. A person may set one; otherwise the planner rates the item when it plans it
 ([below](#rating-strikes-and-the-step-up)), and until then it counts as medium. With several, the
 hardest counts. A bot pull request keeps its issue's. The difficulty sets the weakest tier that
-may build it, and the weakest whose plan it builds from (`config.PLAN_FLOOR`, #317):
+may build it, and the weakest whose plan it builds from (`config.PlanFloor`, #317):
 
 | Difficulty | Plan written by | Builds it | Approvals it needs |
 |---|---|---|---|
@@ -651,7 +651,7 @@ lane in the harness any more, and no `training` label: the AI's training lanes r
 the training box, [`machine/`](machine/README.md#the-training-box), until #1677 stopped the two LLM
 ones; the AI now improves through the `learn` lane, a script on the owner's PC.)
 
-**The load balancer** (`balance: true`, `plan.balance`) spreads a tier's work over its
+**The load balancer** (`balance: true`, `plan.Balance_`) spreads a tier's work over its
 subscriptions instead of spending the first in the usage order up to its cap while the rest sit
 idle: claude-3, first, took 168 runs in a week to claude-5's 13, and ran into its limit while
 the others read 0%. Where the router would otherwise go by the usage order alone (between
@@ -659,8 +659,8 @@ subscriptions whose seat is the same model, the eight Claude accounts' Sonnet or
 the reviewers and the planners of a tier), it puts first the one with the most **room**: the
 share of its allowance its last reading leaves free under the caps that hold now (a window with
 no cap counts the whole allowance), its tightest window counting, a window reset since the
-reading all free, a refusal not yet over none (`providers.room`). Room goes in steps of 10%
-(`providers.BALANCE_STEP`), since a reading is only as fresh as its subscription's last run; level
+reading all free, a refusal not yet over none (`providers.Room`). Room goes in steps of 10%
+(`providers.BalanceStep`), since a reading is only as fresh as its subscription's last run; level
 ones go by the runs they hold now, the fewest first, and only then by the usage order. So with
 nothing read yet each account gets one run before claude-3 gets its second, and an account at
 80% of its week waits behind one at 10%. The tier order (Muse before agy before Codex before
@@ -684,14 +684,14 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   draft ([handing work over](#the-self-check-loop)), and must leave a weak builder no gap to fill
   (`bot/prompts/plan.md`): the files to touch by path (the
   **Files to touch** table, which the harness reads), the steps in order, the tests and commands,
-  and a checklist for done, in under 2,500 words (`issueplan.PLAN_WORDS`; the harness keeps the
-  first 30,000 characters, `PLAN_CHARS`, #208). Its plan goes into the issue's description, in a
-  **Plan** section (`harness/issueplan.py`), and into the handoff. The builder starts from that
+  and a checklist for done, in under 2,500 words (`issueplan.PlanWords`; the harness keeps the
+  first 30,000 characters, `PlanChars`, #208). Its plan goes into the issue's description, in a
+  **Plan** section (`go/internal/issueplan/`), and into the handoff. The builder starts from that
   section as it stands then, so a person can correct the plan in the description before anyone
   builds it. A person (or a session they run) can also write the plan: put it in the description
   between `<!-- jackioh-bot:plan -->` and `<!-- /jackioh-bot:plan -->`. With no planning run of the
   bot's on record, that section counts as a strong plan, so the item leaves the Needs plan stage
-  and the bot does not plan over it (`queue.plan_of`). A weak builder, which cannot plan, builds
+  and the bot does not plan over it (`queue.PlanOf`). A weak builder, which cannot plan, builds
   only from a plan that meets its floor. When no planner is free on the lane and a builder whose own
   strongest seat meets the floor takes an unplanned item, it plans it first in its own run; that
   plan goes into the description too, and when its rating puts the item beyond that run's
@@ -712,7 +712,7 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   weak builder committed markers there again and again (#203, #214, #287). A fix pass runs at `fix_effort`.
 - **Conflicts the harness resolves itself.** Before any builder sees a merge of `main`, the
   work job settles the conflicted files `resolvers` in the config names
-  ([`harness/resolve.py`](harness/resolve.py)): `spec/INDEX.md` takes `main`'s version (the daily
+  ([`go/internal/resolve/`](go/internal/resolve/)): `spec/INDEX.md` takes `main`'s version (the daily
   spec fold rewrites it), and the golden traces are blessed again from the merged tree
   (`cargo jackioh golden bless`) once nothing else is conflicted, since that builds the tree. A
   command that fails, runs out of time or leaves a marker puts the file back exactly as git left
@@ -748,7 +748,7 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
 
 Every Claude account runs two models, Opus (strong) and Sonnet at `xhigh` (medium). The router
 starts a run on the weaker one that meets the item's difficulty, and the run moves its builder
-between them as the work needs (`work.Worker._switch`), never below the item's difficulty: a hard
+between them as the work needs (`work.Worker.Switch`), never below the item's difficulty: a hard
 item stays on Opus.
 
 - **The builder chooses.** A builder on such a lane is told both models and which one it runs on.
@@ -756,7 +756,7 @@ item stays on Opus.
   or `"next_model": "sonnet"` when what is left is plain work; the run's next pass runs on that one,
   taken once the round is reviewed, so the review counts against the model that built it.
 - **Sent back twice on Sonnet.** Two rounds in a row that the reviewer sends back while the builder
-  runs on Sonnet move it to Opus for the next pass (`work.SWITCH_UP_AFTER`).
+  runs on Sonnet move it to Opus for the next pass (`work.SwitchUpAfter`).
 - **The planner's rating.** When a run's planner rates an unrated item, or rates higher one the bot
   rated before, the builder moves to the weaker model that meets the rating, up or down (never
   below the bot's earlier rating), and the run goes on, rather than sending the item back to the
@@ -771,7 +771,7 @@ switches.
 ### The easy rule
 
 `difficulty:easy` is the only difficulty a weak model may build, so "easy" means "something a
-weak model finishes" (`harness/easy.py`, written from what the weak builder did here until #2129:
+weak model finishes" (`go/internal/easy/`, written from what the weak builder did here until #2129:
 it could not resolve the conflicts in SPEC §11 and the rulings index, could not hold a big change
 together, could not plan, ran no tests where it worked, and could not judge what it could not see; its clean merges were all 7–15 files and
 under about 500 lines). An item is easy only if every line holds; if any fails, or the rater cannot
@@ -793,9 +793,9 @@ tell, it is medium at least:
 The harness holds a rating to it twice, trusting nothing the model said. **At rating**, deliver
 reads the plan's **Files to touch** table: more than `max_files` files, or one under `off_limits`,
 `review_paths` or `forbidden_paths`, makes it medium, and the comment names the line that failed
-(`easy.plan_breach`). **At delivery**, a weak builder's change on an easy item is measured
+(`easy.PlanBreach`). **At delivery**, a weak builder's change on an easy item is measured
 (`git diff --numstat` against `main`): one past `max_files` or `max_lines`, or touching an
-`off_limits` path, is not pushed (`easy.change_breach`). Its work is kept (a build's on its own
+`off_limits` path, is not pushed (`easy.ChangeBreach`). Its work is kept (a build's on its own
 branch, a revision's on `bot/wip/<pr>`), the item becomes medium (its label, or a floor under a
 person's label, `difficulty_floor`), and a medium or stronger model takes it.
 
@@ -810,16 +810,16 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   (the planner is told not to rate it), and an easy rating whose plan breaks the rule is medium.
   A plan with no rating line is medium, the bot's own rating, so a later planner may raise it
   (#735). Triage gives no difficulty beyond its form's answer; the sweep labels what is left bare
-  (`sweep._difficulty_labels`): a planned issue with none gets medium, and a bot pull request its
+  (`sweep.difficultyLabels`): a planned issue with none gets medium, and a bot pull request its
   issue's label, or medium. An issue still waiting for its plan is left to the planner, which may
   rate it easy.
-- **Strikes** (`harness/stepup.py`). A run that failed for the item's own sake is a strike: a
+- **Strikes** (`go/internal/stepup/`). A run that failed for the item's own sake is a strike: a
   failed run, a build or revision its reviewer would not approve, a review run that rejected its
   head, a head a CI fix pushed that CI still fails, a run that died. Infra, a usage pause, a halt or a stop is
   none. Strikes count on the issue (a bot pull request's on the issue it closes), and no request
   resets them: a head that meets the review rule and is green in CI (the ten-minute sweep checks,
   and a merge counts), or a step up, does.
-- **The step up.** At three strikes (`config.STEP_UP_AFTER`) the bot raises the item one step
+- **The step up.** At three strikes (`config.StepUpAfter`) the bot raises the item one step
   (easy to medium to hard), comments why, sends it back to the Needs plan stage when its plan's
   tier no longer meets the new floor, and, when a pull request is open, rebuilds it: the pull
   request closes, its branch is kept as `bot/old/issue-<n>-<date>`, and the issue is queued to
@@ -829,7 +829,7 @@ person's label, `difficulty_floor`), and a medium or stronger model takes it.
   rebuilds at once, at the same difficulty. A run whose builder never worked opens no pull
   request.
 
-**The review rule** (`harness/review_rule.py`). A commit ships when no model's rejection of it
+**The review rule** (`go/internal/reviewrule/`). A commit ships when no model's rejection of it
 stands and its lane's final audit approved it (#725): one strong model's approval for a medium
 or hard item, one medium model's for an easy item (a strong one ships it too). A weak approval
 never ships anything: weak builders review themselves in findings-only self checks, and no weak
@@ -846,15 +846,15 @@ review runs go out.
   ([`infra/github.tf`](../infra/github.tf)) once its checks pass, and the queue lands it after CI
   passes on `main` with it on top. Once one of the five checks fails there, the rest of that run
   is cancelled (ci.yml's `queue-cancel-*`), and when the queue took a cleared head out
-  (`events.on_queue_ci`, on `gh-readonly-queue/main/pr-<n>-<sha>`) it gets a CI fix with that
+  (`events.OnQueueCI`, on `gh-readonly-queue/main/pr-<n>-<sha>`) it gets a CI fix with that
   run's logs at once, with no re-run: its own CI passed, so what failed is nearly always what it
   and the newer `main` do together. The fix merges `main` first and is reviewed like any revision,
   under the same cap as any CI fix, and its auto-merge queues it again at the back. One still in
   the queue was built again without a failing pull request ahead of it, and a held pull request or
   a head that moved is left alone. One the queue took out with no failed build (a conflict with a
   pull request ahead, the queue's timeout) goes back in from the housekeeping pass, once for each
-  commit `main` is at (`queue.requeue_cleared`), unless a person took it out. Every hold
-  (`queue.hold_merge`: a revision asked for, `/harness stop`) also takes it out of the queue, where
+  commit `main` is at (`queue.RequeueCleared`), unless a person took it out. Every hold
+  (`queue.HoldMerge`: a revision asked for, `/harness stop`) also takes it out of the queue, where
   it has no auto-merge left to turn off.
 - **A conflict does not undo the reviews.** A commit that meets the rule is recorded as cleared
   (`cleared` on its pull request's record). When `main` then leaves it with conflicts, while CI
@@ -906,12 +906,12 @@ once a revision delivers or the pull request closes. Every builder also keeps no
 next, decisions and why, dead ends), and a `## Log` it adds a line to before each long step,
 saying what it is about to do and why, and after it, saying what came of it. The harness keeps
 the end of its session too. Both are saved on the item, cut to the State whole and the end of the
-Log (`journal.compact`), never to the last 8,000 characters, which lost the plan at the top. The
+Log (`journal.Compact`), never to the last 8,000 characters, which lost the plan at the top. The
 next run, on any subscription, starts with a "Picking up from another agent" section in its
 prompt. So a task agy started when its quota ran out can be finished by Codex the same hour.
 
 A plan is handed over the same way. The planner keeps its plan as it stands in an ignored
-`.bot-plan.md` (`work.PLAN_DRAFT_FILE`, the one file it may write): what it has found, the files
+`.bot-plan.md` (`work.PlanDraftFile`, the one file it may write): what it has found, the files
 to touch so far, and the sections as far as it has got. A planning session cut off before its
 plan is done leaves that draft and the end of its session as a `draft` handoff, and in its run's
 journal section; the "Planning was cut short" comment says the draft is kept. The next planner,
@@ -923,7 +923,7 @@ one morning, and every planner started from scratch.
 
 **The journal** (#342). The handoff is one slot, which the next run overwrites, so every run also
 leaves a section in its item's **journal**: `<issue>.md` on the unprotected, orphan `bot-journal`
-branch ([`harness/journal.py`](harness/journal.py)), where a pull request's runs join the issue it
+branch ([`go/internal/journal/`](go/internal/journal/)), where a pull request's runs join the issue it
 closes. Deliver appends it whatever the run did and however it ended: the run, its subscription
 and models, how it ended, a line per step the harness took (each model call, why it ran, its
 minutes and what came of it; each check run and what was red; each merge of `main`; the stop),
@@ -1009,7 +1009,7 @@ account.
 
 **Who plans (#1455).** With `"controller": true` in `.harness/config.json`, the status loop
 (`bot-status.yml`, `harness dashboard --controller`) is the planner while it goes. Each tick its
-sweep asks the gate's question (`plan.peek`), and when there is work it plans as the plan job
+sweep asks the gate's question (`plan.Peek_`), and when there is work it plans as the plan job
 below does, under a planning lock in the state file that the plan job also takes. For each run it
 claims the item with `pending:<ref>` for the run id, writes the plan to the state branch
 (`plans/<ref>.json`), starts `bot-night` with `plan_ref` and the plan's runner, CLI, secret name and
@@ -1037,7 +1037,7 @@ run, and a run started by the schedule stops at its gate. A run that gated and p
 delivers itself, in its own deliver job. A run a person starts for an item, a
 mode or by force still gates and plans itself, under the lock. When the loop is gone, everything
 works as below, so the schedule (rule 13) and the commands keep the bot going. The plans are
-pruned after a week ([`harness/controller.py`](harness/controller.py)).
+pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 
 1. **plan** (seconds, no model; one at a time across all runs). It runs only after the gate says
    go. It stops at once if `.harness/HALT` is on `main` or someone said `/harness halt`. It
@@ -1052,7 +1052,7 @@ pruned after a week ([`harness/controller.py`](harness/controller.py)).
    are open (#797). The sweep keeps that clock (`suggest.idle_since`), and each survey starts it
    again. Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,
-   [`harness/declined.py`](harness/declined.py)) and never offers one again; one it offers anyway,
+   [`go/internal/declined/`](go/internal/declined/)) and never offers one again; one it offers anyway,
    by the same title, is not opened. The survey files each suggestion under one class
    (`prompts/suggest.md`: `fuzz`, `checks`, `telemetry`, `refactor`, `ai`, `fairness`,
    `security`, `data`, `polish`, `feature`, the one picked up first when two fit), and
@@ -1062,7 +1062,7 @@ pruned after a week ([`harness/controller.py`](harness/controller.py)).
    everything not labelled low. A `feature`, an unknown class or none opens with no priority, and the
    footer names the class and the label it set; relabel it to change it. Once a day it prunes the
    state file: an item's record goes 7 days after its thread closed, and a closed thread's bulky
-   parts at once (`plan.prune`; GitHub's Contents API stops returning a file past 1 MB).
+   parts at once (`plan.Prune`; GitHub's Contents API stops returning a file past 1 MB).
 2. **work** (up to about five and a half hours, holding only the chosen subscription's secret).
    It runs on that subscription's own runner, where the CLI is installed and a machine login
    already sits in its user's home; a Claude token is written only into a private directory for
@@ -1200,12 +1200,13 @@ days.
      back to the Actions token: its comments come from `github-actions[bot]`, and its pull
      requests do not start CI, so auto-merge never fires.
 3. **Labels, the state branch and the repository settings**, once, with an admin token (a
-   logged-in `gh` works):
+   logged-in `gh` works), and the `harness` binary (`cd bot/go && go build -o ~/.local/bin/harness
+   ./cmd/harness`, or `go run ./cmd/harness …` in `bot/go`; [Working on the bot](#working-on-the-bot)):
 
    ```sh
    cd bot
-   python3 -m harness setup --repo-settings   # labels (created, or brought back to config.LABELS), bot-state branch, auto-merge, branch protection
-   python3 -m harness doctor                  # says what is still missing
+   harness setup --repo-settings   # labels (created, or brought back to config.Labels), bot-state branch, auto-merge, branch protection
+   harness doctor                  # says what is still missing
    ```
 
    `--repo-settings` allows auto-merge, deletes merged branches, and protects `main` so that
@@ -1219,13 +1220,13 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | the pinned issue **Night bot status** (#148), which `bot-status.yml` rewrites every five minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within five minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within five minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code). It opens with its date and a bar chart of how far the owner's PC's two local jobs have played, in percent (the learn lane's export, as the game it is at of 100,000, its shard's games, and gather's games, over grey bars to 100, with the shard's range, gather's patch and when the PC was heard under it, from the PC's heartbeat; `dashboard.progress`, redrawn every two minutes with the runners), then a headline (how many runs go, what the queue waits on, which subscriptions can start work now), then what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run) and a timeline of the runs going now (the owner's PC's jobs among them, each bar's name in colours that read in GitHub's light and dark themes, `dashboard.TIMELINE_STYLE`); then the lanes (`dashboard.lanes_table`): each subscription, the Claude accounts first by number, then agy, gpt and Muse, then Squishy's (from a comment its section carries, `dashboard.lanes_mark`), with how many lanes it has, how many its runs hold and how many are open, the totals for the Claude accounts and for all of them, and the limits on the lanes (`dashboard.lane_limits`: an account's `lanes`, which the code sets no top on; the Claude secrets the workflows hand over, one an account, and which are free; the runs GitHub's runners, the planning lane and the AWS boxes take at once; usage and hours; and how many more Claude runs there is room for now); every runner and what it is doing, low in the issue below the statistics and Squishy's section: as boxes, the way the subscriptions are drawn (GitHub's runners; each AWS box as its slots, `dashboard.BOX_SLOTS`: the night box's gpt's, agy's and one of Muse's lanes, with a Muse fill-in in a free one of the first two, and the Muse box's three of Muse's; the owner's PC with whether it is working, its CPU and memory in use as percentages and gather's job from the PC's heartbeat, `bot/machine/README.md`, The local runner, and the jobs queued for a runner, by label), and as a table (each job a runner holds, with the step it is on, what it is for and how long it has run, linked to the job), each folding away, with a link to the issue's one comment on what each runner and each workflow is for, which the bot rewrites only when that changes, `dashboard.explain`; every section of the issue folds away under its heading, `dashboard.fold`; redrawn alone every two minutes between the rewrites (`dashboard.refresh_runners`, from the runs going and queued and their jobs, by conditional requests that cost no rate limit while a job is unchanged); every subscription as a box, the Claude accounts and the night box's, then the training box, which shows `gather` alone since #1677 stopped its two LLM lanes (a lane named in `dashboard.TRAINING_LANES` shows its pull request again, #1272), each saying what it does or why not (working, takes queued work at the next run, idle with nothing queued for it, capped and when it can start again, outside its hours, backing off, off, or no lane free where it runs) and its usage, always; the queue in the planner's order, each item with what the next run does to it (plan, build, revise, review run), its difficulty and the tier that needs (a hard item or a revision that answers a strong audit needs a strong model; a build needs a medium or strong planner first), and either who takes it at the next run or what it waits for and which subscription frees up first, with the items held back (a `human` label, an earlier part or a blocker still open) and why ([`harness/waiting.py`](harness/waiting.py) works it out with the planner's own rules on the lanes held now, so a subscription is never called free when the planner would give it nothing); each subscription's usage as bars and charts against its cap now (and the one in or outside its hours), the line a build or a plan must start under, when the window resets, a window that reset since its reading said as such, and how old the reading is; the last runs; the learn lane, which runs on the owner's PC with no model and no harness (the generation on `main`, the lane's pull request, its next scheduled run, the owner's PC from its heartbeat: whether it is working and on which job, and its CPU and memory in use as percentages, with and without its runners, and how each of its last runs ended, read from GitHub alone: `dashboard.learn_lane`, [`training/learn.md`](../training/learn.md)); the statistics (below); and the full status folded. Or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
-| see what it has done | the same issue's statistics (`bot/harness/stats.py`; they had an issue of their own, #190, until they were folded in), counted afresh every 30 minutes by the same loop (`dashboard --stats`) and kept in the issue between counts, since a count reads every bot comment and pull request; `python3 -m harness stats --force` in `bot/` rewrites the issue with them counted now. One table sets the last 6 hours, the last 24 hours, the last 7 days and all time side by side: runs by kind, outcomes, pull requests opened and merged, issues closed, lines added and removed, files, commits, time to merge, model hours, tokens and cost; then the last two weeks day by day. Each window then has a folded section of its own: per subscription and model, its runs by kind, outcomes, pull requests opened and merged, lines merged, pauses, failures and model time; model tokens (in, out and cached) and USD cost per subscription (#695); bar charts of runs and lines by subscription (all time adds model hours and outcomes). Between the last two weeks and the windows sits which set's cards win most ([`harness/cardsets.py`](harness/cardsets.py)): the last three patches with 1,000 games or more (each a patch with its micros, read at its newest version; its live games once it has 1,000 of them, else its live and AI games), each set's cards, card-games, pooled win rate with its standard error, mean and median, its pooled rate per patch, which set is highest by each, and the cards 3 or more standard errors from 50% (the 20 furthest listed, `cardsets.OUTLIERS_SHOWN`), read from production's public `/api/stats/cards` once a day at a count (an hour after a failed read, which keeps the last figures and says it failed). Then every pull request merged, newest first, folded, with when it merged and who planned, built, revised and approved it (when the issue would pass GitHub's limit on an issue's body, the full status folded at its foot is left out first, since it is the sections' facts again and `/harness status` gives it, then fewer are listed, or none, then fewer busy runners, and the statistics last of all; a rewrite without `--stats`, bot-commands.yml's after a sweep, keeps the block the issue holds). Charts are bars and lines, never pies. Runs and builders come from the bot's own comments; a pull request from before its comments named a builder takes the last build started on its issue before it was opened, and shows as "not recorded" when there was none |
+| see what it is doing | the pinned issue **Night bot status** (#148), which `bot-status.yml` rewrites every five minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within five minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within five minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code). It opens with its date and a bar chart of how far the owner's PC's two local jobs have played, in percent (the learn lane's export, as the game it is at of 100,000, its shard's games, and gather's games, over grey bars to 100, with the shard's range, gather's patch and when the PC was heard under it, from the PC's heartbeat; `dashboard.Progress`, redrawn every two minutes with the runners), then a headline (how many runs go, what the queue waits on, which subscriptions can start work now), then what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run) and a timeline of the runs going now (the owner's PC's jobs among them, each bar's name in colours that read in GitHub's light and dark themes, `dashboard.TimelineStyle`); then the lanes (`dashboard.LanesTable`): each subscription, the Claude accounts first by number, then agy, gpt and Muse, then Squishy's (from a comment its section carries, `dashboard.LanesMark_`), with how many lanes it has, how many its runs hold and how many are open, the totals for the Claude accounts and for all of them, and the limits on the lanes (`dashboard.LaneLimits`: an account's `lanes`, which the code sets no top on; the Claude secrets the workflows hand over, one an account, and which are free; the runs GitHub's runners, the planning lane and the AWS boxes take at once; usage and hours; and how many more Claude runs there is room for now); every runner and what it is doing, low in the issue below the statistics and Squishy's section: as boxes, the way the subscriptions are drawn (GitHub's runners; each AWS box as its slots, `dashboard.BoxSlots`: the night box's gpt's, agy's and one of Muse's lanes, with a Muse fill-in in a free one of the first two, and the Muse box's three of Muse's; the owner's PC with whether it is working, its CPU and memory in use as percentages and gather's job from the PC's heartbeat, `bot/machine/README.md`, The local runner, and the jobs queued for a runner, by label), and as a table (each job a runner holds, with the step it is on, what it is for and how long it has run, linked to the job), each folding away, with a link to the issue's one comment on what each runner and each workflow is for, which the bot rewrites only when that changes, `dashboard.Explain`; every section of the issue folds away under its heading, `dashboard.Fold`; redrawn alone every two minutes between the rewrites (`dashboard.RefreshRunners`, from the runs going and queued and their jobs, by conditional requests that cost no rate limit while a job is unchanged); every subscription as a box, the Claude accounts and the night box's, then the training box, which shows `gather` alone since #1677 stopped its two LLM lanes (a lane named in `dashboard.TrainingLanes` shows its pull request again, #1272), each saying what it does or why not (working, takes queued work at the next run, idle with nothing queued for it, capped and when it can start again, outside its hours, backing off, off, or no lane free where it runs) and its usage, always; the queue in the planner's order, each item with what the next run does to it (plan, build, revise, review run), its difficulty and the tier that needs (a hard item or a revision that answers a strong audit needs a strong model; a build needs a medium or strong planner first), and either who takes it at the next run or what it waits for and which subscription frees up first, with the items held back (a `human` label, an earlier part or a blocker still open) and why ([`go/internal/waiting/`](go/internal/waiting/) works it out with the planner's own rules on the lanes held now, so a subscription is never called free when the planner would give it nothing); each subscription's usage as bars and charts against its cap now (and the one in or outside its hours), the line a build or a plan must start under, when the window resets, a window that reset since its reading said as such, and how old the reading is; the last runs; the learn lane, which runs on the owner's PC with no model and no harness (the generation on `main`, the lane's pull request, its next scheduled run, the owner's PC from its heartbeat: whether it is working and on which job, and its CPU and memory in use as percentages, with and without its runners, and how each of its last runs ended, read from GitHub alone: `dashboard.LearnLane`, [`training/learn.md`](../training/learn.md)); the statistics (below); and the full status folded. Or `/harness status` anywhere, or `harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
+| see what it has done | the same issue's statistics (`bot/go/internal/stats/`; they had an issue of their own, #190, until they were folded in), counted afresh every 30 minutes by the same loop (`dashboard --stats`) and kept in the issue between counts, since a count reads every bot comment and pull request; `harness stats --force` in `bot/` rewrites the issue with them counted now. One table sets the last 6 hours, the last 24 hours, the last 7 days and all time side by side: runs by kind, outcomes, pull requests opened and merged, issues closed, lines added and removed, files, commits, time to merge, model hours, tokens and cost; then the last two weeks day by day. Each window then has a folded section of its own: per subscription and model, its runs by kind, outcomes, pull requests opened and merged, lines merged, pauses, failures and model time; model tokens (in, out and cached) and USD cost per subscription (#695); bar charts of runs and lines by subscription (all time adds model hours and outcomes). Between the last two weeks and the windows sits which set's cards win most ([`go/internal/cardsets/`](go/internal/cardsets/)): the last three patches with 1,000 games or more (each a patch with its micros, read at its newest version; its live games once it has 1,000 of them, else its live and AI games), each set's cards, card-games, pooled win rate with its standard error, mean and median, its pooled rate per patch, which set is highest by each, and the cards 3 or more standard errors from 50% (the 20 furthest listed, `cardsets.OutliersShown`), read from production's public `/api/stats/cards` once a day at a count (an hour after a failed read, which keeps the last figures and says it failed). Then every pull request merged, newest first, folded, with when it merged and who planned, built, revised and approved it (when the issue would pass GitHub's limit on an issue's body, the full status folded at its foot is left out first, since it is the sections' facts again and `/harness status` gives it, then fewer are listed, or none, then fewer busy runners, and the statistics last of all; a rewrite without `--stats`, bot-commands.yml's after a sweep, keeps the block the issue holds). Charts are bars and lines, never pies. Runs and builders come from the bot's own comments; a pull request from before its comments named a builder takes the last build started on its issue before it was opened, and shows as "not recorded" when there was none |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
 | stop spending one subscription for a while | `/harness suspend <subscription> [reason]`, with its id as `/harness status` lists it; `/harness resume <subscription>` lifts it. For good, set `"enabled": false` in `.harness/providers.json` |
 | run now, outside a subscription's hours | `/harness run`, `/harness build --force`, or Actions → bot-night → Run workflow |
-| see each subscription | `/harness status`, or `python3 -m harness providers` in `bot/` |
+| see each subscription | `/harness status`, or `harness providers` in `bot/` |
 | add a subscription, or change its hours, limits or model | set its secret or log it in on the machine, and edit `.harness/providers.json` in a pull request; a new one on the machine also needs `setup.sh` and `register-runners.sh` ([`machine/`](machine/README.md)) |
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | set how hard an item is | label it `difficulty:easy`, `difficulty:medium` or `difficulty:hard` (Opus only), or leave it to the planner's rating ([the easy rule](#the-easy-rule)) |
@@ -1239,7 +1240,7 @@ days.
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
 | drop an item it is working on | close the issue or pull request: the run goes on until it ends, holding its lane, but nothing it made is delivered or queued again |
-| retry something it gave up on | fix what it asked about, then `/harness build`; `python3 -m harness forget <n>` clears the failure count |
+| retry something it gave up on | fix what it asked about, then `/harness build`; `harness forget <n>` clears the failure count |
 | read what the model did | the `work` artifact of the run: `result.json` and the bundle (set `upload_transcripts` to keep the full sessions too) |
 | change the rounds, budgets or checks | edit `.harness/config.json` in a pull request |
 | let someone else command it | add a line to `.harness/trust.txt` |
@@ -1247,7 +1248,7 @@ days.
 ## Squishy
 
 `@squishy-squooby` is a second bot (#60): this harness again, run from `.squishy/` instead of
-`.harness/` (each of its workflows sets `HARNESS_HOME=.squishy`, `harness/identity.py`). It works
+`.harness/` (each of its workflows sets `HARNESS_HOME=.squishy`, `go/internal/identity/`). It works
 like the night bot, under its own names, on its own Claude Max account, and it makes no
 suggestions. On top of a plain build it has four modes.
 
@@ -1270,7 +1271,7 @@ fixes, handoffs, the rules about `human` and priorities, and the paths no change
 |---|---|---|
 | `squishy:build` | `/squishy build` | a plain build, as the night bot's (an explicit `build` takes a mode label off) |
 | `squishy:oneshot` | `/squishy oneshot` | the whole issue in one run with [fullsend](../.claude/skills/fullsend/SKILL.md): a spec first, then builders and spec-testers at once, each in its own git worktree and branch (`squishy/oneshot-<n>/<slice>`), merged back and reconciled against the tests, then the checks and the review as for any build (`prompts/oneshot.md`). Every phase is a commit, so a run that is cut off resumes from its last phase on the issue's branch. It builds the ordinary way, and says why, when fullsend does not fit. `.fullsend/` never ships |
-| `squishy:split` | `/squishy split` | one Opus session reads the issue and the code and answers with sub-issues (`prompts/split.md`, `harness/split.py`); deliver opens them as GitHub sub-issues of the issue, linked by "blocked by", each with its plan as its **Plan** section, its difficulty and the parent's priority, queued as `squishy:build` |
+| `squishy:split` | `/squishy split` | one Opus session reads the issue and the code and answers with sub-issues (`prompts/split.md`, `go/internal/split/`); deliver opens them as GitHub sub-issues of the issue, linked by "blocked by", each with its plan as its **Plan** section, its difficulty and the parent's priority, queued as `squishy:build` |
 | `squishy:split-bot` | `/squishy split bot` | the same, queued for the night bot as `bot:build`; a Plan section counts as a strong plan, so the night bot builds them without planning again |
 | `squishy:fullsend` | `/squishy fullsend` | the night bot's [fullsend](#fullsend), under Squishy's names: parts Squishy builds onto `squishy/issue-<n>`, each a run of its own with no pull request, then one reconcile run and one pull request into `main`. Where `oneshot` runs fullsend's builders as agents inside one run, here each part is a run, so no single run has to hold the whole issue |
 
@@ -1281,7 +1282,7 @@ sub-issues too (for the night bot's, Squishy comments `@jgoetzmann-bot stop`).
 
 **One owner per issue.** Neither bot takes an issue that is the other's: the other's queue,
 state, pull request, mode or tree labels on it, or assigned to the other's account
-(`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
+(`queue.Owner`). Take those off to hand it over. A bot acts on the other's comment only when the
 line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
 
 **The weekly hygiene run.** Every Tuesday at 22:07 UTC, just after Squishy's weekly reset,
@@ -1295,8 +1296,8 @@ branches as checkboxes for a person: tick some and comment `/delete-branches`, a
 `hygiene-delete.yml` (an owner's, member's or collaborator's comment, no model) surveys again with the
 rule in `.github/hygiene/branches.py`, deletes the ticked ones it does not keep, strikes them and replies
 with each sha. For that, Squishy alone may change
-`.claude/skills/` (`!.claude/skills/` in `.squishy/config.json`; `git.matches` reads a leading `!` as
-an exception), and `tests/test_skills.py` holds every skill to Markdown and to frontmatter that grants
+`.claude/skills/` (`!.claude/skills/` in `.squishy/config.json`; `git.Matches` reads a leading `!` as
+an exception), and `go/tests/skills_test.go` holds every skill to Markdown and to frontmatter that grants
 no tool and adds no hook.
 
 **The code audit.** Every three days at 22:17 UTC, `.github/workflows/code-audit.yml` (#2142) opens
@@ -1318,21 +1319,29 @@ requests.
 Two secrets: `SQUISHY_GITHUB_TOKEN`, a classic token of that account with `public_repo` and
 `workflow` (as the night bot's), and `CLAUDE_CODE_OAUTH_TOKEN_SQUISHY` from `claude setup-token`
 on its Max account. Its labels and `squishy-state` are made by its first sweep, or by
-`HARNESS_HOME=.squishy python3 -m harness setup`. `HARNESS_HOME=.squishy python3 -m harness doctor`
+`HARNESS_HOME=.squishy harness setup`. `HARNESS_HOME=.squishy harness doctor`
 checks the token belongs to `@squishy-squooby`.
 
 ## Working on the bot
 
-The bot is Python 3.12+ with the standard library only. The tests use fakes for GitHub and the
-model, and real git.
+The harness is Go, with the standard library only: one module, [`go/`](go/README.md), built into one
+binary, `harness` (#467: it was Python until then, and the port changed nothing it does). The tests
+use fakes for GitHub and the model, and real git. [`go/README.md`](go/README.md) is the module's
+contract: its layout, the rules a change keeps and why it is built the way it is.
 
 ```sh
-cd bot
-python3 -m unittest discover -s tests -t .   # the suite (about ten seconds)
-python3 -m harness --help                     # every command
+cd bot/go
+go test ./...                                    # the suite, Squishy's cases in a Squishy process
+gofmt -l .                                       # prints nothing
+go vet ./...
+go build -o ~/.local/bin/harness ./cmd/harness   # the binary (or `go run ./cmd/harness …`)
+harness --help                                   # every command, from bot/ or anywhere in the checkout
 ```
 
-`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over
+`bot selftest`, a job of `ci.yml`, runs `gofmt -l`, `go vet` and `go test` in `bot/go`, starts the
+binary under both bots' configs, runs the Python suites of what stays Python (`machine/`'s Lambdas
+and scripts, `tests/test_machine.py`, and `.github/hygiene/`'s branch rule, `tests/test_hygiene.py`)
+on Python 3.12 and 3.13, and runs actionlint over
 every workflow. It runs when a pull request touches what the suite reads (the bot, its
 switches, `.github/`, `.claude/`, the scripts, the training lanes' prompts and loop, the issue and patch
 conventions, the toolchain), on every push to `main`, and whenever the job that decides fails (#1455). The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
@@ -1340,35 +1349,40 @@ conventions, the toolchain), on every push to `main`, and whenever the job that 
 Squishy's `oneshot` and `split` (which both bots' fullsend splits with too), and `reconcile`, the
 first prompt of a fullsend reconcile. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or
 `.github/workflows/`, so changes there come from people. Squishy's own cases run in a process
-started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
+started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_test.go`).
 
-| Module | Job |
+| Package | Job |
 |---|---|
-| `config.py` | `<home>/config.json` and the environment; with `identity.py`, the only reader of `os.environ` |
-| `identity.py` | which bot this process is (`HARNESS_HOME`): the night bot's or Squishy's labels, command, branches, state, workflow, marker and modes |
-| `split.py` | the splits, Squishy's and both bots' fullsend: the tree a split session answers with, checked, ordered and worded |
-| `gh.py` | the GitHub client; the only module that sends a token or writes to GitHub |
-| `trust.py`, `commands.py` | who may command it, and how a comment is read |
-| `events.py`, `queue.py` | the event workflow: commands, labels, assignment, reviews, CI |
-| `asks.py` | the reactions that follow a request from its comment to its answer |
-| `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
-| `quiet.py` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
-| `wake.py` | the wake (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago and every four hours around it |
-| `providers.py` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
-| `runner.py` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
-| `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
-| `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the `harness` package) |
-| `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
-| `triage.py` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`pull_title_ok`, `pr-title.yml`) |
-| `easy.py`, `stepup.py` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
-| `human.py` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
-| `declined.py` | the suggestions that came to nothing, which no survey offers again (#797) |
-| `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
-| `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
-| `controller.py` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run; and it delivers each such run once it ends (#1537), with the model job's upload and a fresh clone of the default branch |
-| `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --runners-every 120 --for 19800`, which sweeps first each time), its runners section redrawn alone every two, with the statistics counted every 30 minutes and kept between |
-| `waiting.py` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.pairs`) on the lanes held now |
-| `stats.py` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |
-| `cardsets.py` | which set's cards win most, in the status issue's statistics: each set's pooled, mean and median card win rate over the last three patches with 1,000 games or more, read once a day from production's public `/api/stats/cards` and kept in the issue between reads |
-| `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |
-| `journal.py` | each item's journal on `bot-journal`: a section per run, read into the next run's plan (#342) |
+| `go/internal/config/` | `<home>/config.json` and the environment; with `go/internal/identity/`, the only reader of the environment (`os.Getenv`) |
+| `go/internal/identity/` | which bot this process is (`HARNESS_HOME`): the night bot's or Squishy's labels, command, branches, state, workflow, marker and modes |
+| `go/internal/split/` | the splits, Squishy's and both bots' fullsend: the tree a split session answers with, checked, ordered and worded |
+| `go/internal/gh/` | the GitHub client; the only package that sends a token or writes to GitHub |
+| `go/internal/trust/`, `go/internal/commands/` | who may command it, and how a comment is read |
+| `go/internal/events/`, `go/internal/queue/` | the event workflow: commands, labels, assignment, reviews, CI |
+| `go/internal/asks/` | the reactions that follow a request from its comment to its answer |
+| `go/internal/plan/`, `go/internal/work/`, `go/internal/deliver/` | the jobs of a night run (`plan.Peek_` is the gate's first question) |
+| `go/internal/quiet/` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
+| `go/internal/wake/` | the wake (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago and every four hours around it |
+| `go/internal/providers/` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
+| `go/internal/runner/` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
+| `go/internal/logins/`, `go/internal/vault/` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
+| `machine/` | the machine: its setup, its runners, and the starter that wakes it (not part of the Go module) |
+| `go/internal/git/`, `go/internal/gates/` | worktrees, commits, bundles, pushes; the repository's checks |
+| `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |
+| `go/internal/easy/`, `go/internal/stepup/` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
+| `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
+| `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
+| `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
+| `go/internal/threads/`, `go/internal/prompts/`, `go/internal/verdicts/` | what the model is told, and reading what it answers |
+| `go/internal/controller/` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run; and it delivers each such run once it ends (#1537), with the model job's upload and a fresh clone of the default branch |
+| `go/internal/dashboard/` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --runners-every 120 --for 19800`, which sweeps first each time), its runners section redrawn alone every two, with the statistics counted every 30 minutes and kept between |
+| `go/internal/waiting/` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.Pairs`) on the lanes held now |
+| `go/internal/stats/` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |
+| `go/internal/cardsets/` | which set's cards win most, in the status issue's statistics: each set's pooled, mean and median card win rate over the last three patches with 1,000 games or more, read once a day from production's public `/api/stats/cards` and kept in the issue between reads |
+| `go/internal/state/`, `go/internal/status/`, `go/internal/clock/` | the state file on `bot-state`, the status report, time and windows |
+| `go/internal/journal/` | each item's journal on `bot-journal`: a section per run, read into the next run's plan (#342) |
+| `go/internal/cli/` | the command line (`go/cmd/harness/` is the binary, a few lines around it): every subcommand, the companion process, `$GITHUB_OUTPUT` and the step summary |
+| `go/internal/herr/` | the harness's errors (`GitHubError`, `ConfigError`, …), raised as typed panics and caught where the Python caught them |
+| `go/internal/pyjson/` | JSON as the Python held it: key order kept, written byte for byte as `json.dumps` writes it (the state file, the plans, `result.json`) |
+| `go/internal/py/` | the Python behaviours text and numbers depend on (`round` to even, floor division, `splitlines`, `fnmatch`, slicing by code point) |
+| `go/internal/fakes/`, `go/internal/testsupport/` | the tests' in-memory GitHub and git helpers, and their configs, contexts and clocks |

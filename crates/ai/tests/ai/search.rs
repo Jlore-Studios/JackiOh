@@ -107,12 +107,12 @@ fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
 
 /// The lanes `candidate_actions` offers the AI's hand card of `def_id`, lowest first.
 fn offered_lanes(state: &GameState, def_id: &str) -> Vec<i32> {
-    lanes_of(state, def_id, &candidate_actions(state, AI))
+    lanes_of(state, def_id, &candidate_actions(state, AI, Prices::NONE))
 }
 
 /// The lanes the search's root offers it (`root_candidate_actions`, every placement, #1635).
 fn root_offered_lanes(state: &GameState, def_id: &str) -> Vec<i32> {
-    lanes_of(state, def_id, &root_candidate_actions(state, AI))
+    lanes_of(state, def_id, &root_candidate_actions(state, AI, Prices::NONE))
 }
 
 /// The lanes `actions` play the AI's hand card of `def_id` into, lowest first.
@@ -195,7 +195,7 @@ mod candidate_actions_b14 {
     {
         let state = mid_game();
         let legal = legal_actions(&state, AI);
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let legal_keys: IndexSet<String> = legal.iter().map(action_key).collect();
 
         for action in &candidates {
@@ -278,7 +278,7 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let one_lanes: Vec<Option<i32>> = candidate_actions(&one, AI)
+        let one_lanes: Vec<Option<i32>> = candidate_actions(&one, AI, Prices::NONE)
             .iter()
             .filter(|action| is_play(action))
             .map(lane_of)
@@ -292,7 +292,7 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let mut two_lanes: Vec<Option<i32>> = candidate_actions(&two, AI)
+        let mut two_lanes: Vec<Option<i32>> = candidate_actions(&two, AI, Prices::NONE)
             .iter()
             .filter(|action| is_play(action))
             .map(lane_of)
@@ -328,6 +328,7 @@ mod candidate_actions_b14 {
             AI_BUDGET.root_branching,
             MoveOrder::Heuristic,
             &POLICY_PRIOR,
+            Prices::NONE,
         );
         assert_eq!(lanes_of(&crowded, "core-008", &root), vec![1, 2, 3, 4, 5]);
         let deeper_expansion = expansion(
@@ -336,6 +337,7 @@ mod candidate_actions_b14 {
             AI_BUDGET.branching,
             MoveOrder::Heuristic,
             &POLICY_PRIOR,
+            Prices::NONE,
         );
         assert_eq!(lanes_of(&crowded, "core-008", &deeper_expansion), deeper);
     }
@@ -350,14 +352,18 @@ mod candidate_actions_b14 {
             .take(AI_SEARCH.zone_variants as usize)
             .collect::<Vec<i32>>();
         assert_eq!(
-            lanes_of(&crowded, "core-008", &candidate_actions(&crowded, AI)),
+            lanes_of(
+                &crowded,
+                "core-008",
+                &candidate_actions(&crowded, AI, Prices::NONE)
+            ),
             capped
         );
         assert_eq!(
             lanes_of(
                 &crowded,
                 "core-008",
-                &candidate_actions_in(&crowded, AI, legal_actions(&crowded, AI))
+                &candidate_actions_in(&crowded, AI, legal_actions(&crowded, AI), Prices::NONE)
             ),
             capped
         );
@@ -366,7 +372,11 @@ mod candidate_actions_b14 {
             capped
         );
         assert_eq!(
-            lanes_of(&crowded, "core-008", &root_candidate_actions(&crowded, AI)),
+            lanes_of(
+                &crowded,
+                "core-008",
+                &root_candidate_actions(&crowded, AI, Prices::NONE)
+            ),
             vec![1, 2, 3, 4, 5]
         );
         assert_eq!(
@@ -378,7 +388,7 @@ mod candidate_actions_b14 {
     #[test]
     fn b14_an_attack_on_the_enemy_hero_leads_plays_come_before_position_switches_and_end_turn_trails() {
         let state = mid_game();
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let first = candidates.first();
         assert_eq!(first.map(|action| action.action_type()), Some(ActionType::Attack));
         let target = match first {
@@ -420,7 +430,7 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let width = AI_BUDGET.branching;
         let stand_downs: Vec<ActionBody> = candidates
             .iter()
@@ -438,7 +448,7 @@ mod candidate_actions_b14 {
         assert!(0 < kept && kept < stand_downs.len());
 
         for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
-            let expanded = expansion(&state, AI, width, order, &POLICY_PRIOR);
+            let expanded = expansion(&state, AI, width, order, &POLICY_PRIOR, Prices::NONE);
             assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
             assert_eq!(expanded[..width], candidates[..width]);
             assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
@@ -446,7 +456,14 @@ mod candidate_actions_b14 {
         }
 
         assert_eq!(
-            expansion(&state, AI, candidates.len(), MoveOrder::Heuristic, &POLICY_PRIOR),
+            expansion(
+                &state,
+                AI,
+                candidates.len(),
+                MoveOrder::Heuristic,
+                &POLICY_PRIOR,
+                Prices::NONE
+            ),
             candidates
         );
     }
@@ -462,7 +479,7 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let stand_downs: Vec<ActionBody> = candidates
             .iter()
             .filter(|action| stands_down(&state, action))
@@ -475,7 +492,14 @@ mod candidate_actions_b14 {
         let width = first + 1;
         let kept = AI_SEARCH.position_switches as usize;
         assert!(stand_downs.len() > kept);
-        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        let expanded = expansion(
+            &state,
+            AI,
+            width,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+            Prices::NONE,
+        );
         assert_eq!(expanded[..width], candidates[..width]);
         assert_eq!(expanded[width..width + kept], stand_downs[1..1 + kept]);
         assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
@@ -492,7 +516,7 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let width = AI_BUDGET.branching;
         assert!(
             candidates
@@ -500,7 +524,14 @@ mod candidate_actions_b14 {
                 .any(|action| matches!(action, ActionBody::SwitchPosition { .. }))
         );
         assert!(!candidates.iter().any(|action| stands_down(&state, action)));
-        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        let expanded = expansion(
+            &state,
+            AI,
+            width,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+            Prices::NONE,
+        );
         assert_eq!(expanded.len(), width + 1, "{expanded:?}");
     }
 
@@ -516,7 +547,7 @@ mod candidate_actions_b14 {
         }))
         .state()
         .clone();
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let width = AI_BUDGET.branching;
         let switches = |actions: &[ActionBody]| {
             actions
@@ -532,7 +563,14 @@ mod candidate_actions_b14 {
                 .position(|action| matches!(action, ActionBody::SwitchPosition { .. }))
                 .is_some_and(|first| first > width)
         );
-        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        let expanded = expansion(
+            &state,
+            AI,
+            width,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+            Prices::NONE,
+        );
         assert_eq!(switches(&expanded), 0, "{expanded:?}");
         assert_eq!(expanded.len(), width + 1);
     }
@@ -636,7 +674,7 @@ mod candidate_actions_b14 {
         let state = s.state().clone();
         assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(AI));
 
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         // R211 offers concede beside the prompt's answers, and the AI never takes it (R84, R188).
         let answers: Vec<ActionBody> = legal_actions(&state, AI)
             .into_iter()
@@ -663,7 +701,10 @@ mod candidate_actions_b14 {
             Some(PromptKind::Mulligan)
         );
         assert!(!legal_actions(&state, AI).is_empty());
-        assert_eq!(candidate_actions(&state, AI), Vec::<ActionBody>::new());
+        assert_eq!(
+            candidate_actions(&state, AI, Prices::NONE),
+            Vec::<ActionBody>::new()
+        );
     }
 
     #[test]
@@ -682,7 +723,10 @@ mod candidate_actions_b14 {
                 .iter()
                 .any(|action| matches!(action, ActionBody::AnswerDraw { .. }))
         );
-        assert_eq!(candidate_actions(&offered, AI), Vec::<ActionBody>::new());
+        assert_eq!(
+            candidate_actions(&offered, AI, Prices::NONE),
+            Vec::<ActionBody>::new()
+        );
     }
 
     #[test]
@@ -695,9 +739,12 @@ mod candidate_actions_b14 {
         }));
         s.attack("core-011", "hero");
         assert!(s.state().result.is_some());
-        assert_eq!(candidate_actions(s.state(), AI), Vec::<ActionBody>::new());
         assert_eq!(
-            candidate_actions(s.state(), PlayerId::P2),
+            candidate_actions(s.state(), AI, Prices::NONE),
+            Vec::<ActionBody>::new()
+        );
+        assert_eq!(
+            candidate_actions(s.state(), PlayerId::P2, Prices::NONE),
             Vec::<ActionBody>::new()
         );
     }
@@ -710,7 +757,10 @@ mod candidate_actions_b14 {
         )
         .state()
         .clone();
-        assert_eq!(candidate_actions(&state, AI), Vec::<ActionBody>::new());
+        assert_eq!(
+            candidate_actions(&state, AI, Prices::NONE),
+            Vec::<ActionBody>::new()
+        );
     }
 
     #[test]
@@ -741,8 +791,9 @@ mod candidate_actions_b14 {
         }));
         let state = s.state();
         let legal = legal_actions(state, AI);
-        let candidates = candidate_actions(state, AI);
+        let candidates = candidate_actions(state, AI, Prices::NONE);
 
+        // Extract distinct tribute sets for Mega Church from candidate actions
         let church_id = &state.players.p1.hand[0].id;
         let mut candidate_tribute_sets = std::collections::BTreeSet::new();
         for action in &candidates {
@@ -785,7 +836,7 @@ mod candidate_actions_b14 {
         }));
         let state = s.state();
         let legal = legal_actions(state, AI);
-        let candidates = candidate_actions(state, AI);
+        let candidates = candidate_actions(state, AI, Prices::NONE);
 
         let boom_id = &state.players.p1.hand[0].id;
         let mut legal_tribute_sets = std::collections::BTreeSet::new();
@@ -948,13 +999,13 @@ mod lanes_that_play_differently {
     #[test]
     fn score_line_replays_a_first_action_only_the_root_offers() {
         let state = lane_eater_board();
-        let play = root_candidate_actions(&state, AI)
+        let play = root_candidate_actions(&state, AI, Prices::NONE)
             .into_iter()
             .find(|action| lane_of(action) == Some(4))
             .expect("the root offers lane 4");
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let played = score_line(&state, AI, &[play], &counter, false, None).expect("in budget");
-        let passed = score_line(&state, AI, &[], &counter, false, None).expect("in budget");
+        let played = score_line(&state, AI, &[play], &counter, false, None, Prices::NONE).expect("in budget");
+        let passed = score_line(&state, AI, &[], &counter, false, None, Prices::NONE).expect("in budget");
         assert!(played > passed, "{played} > {passed}");
     }
 
@@ -1030,7 +1081,13 @@ mod lanes_that_play_differently {
         let placements = vec![2, 3, 5];
         assert_eq!(root_offered_lanes(&state, VANILLA), placements);
 
-        let lines = beam_search(&state, AI, &create_node_counter(AI_BUDGET.nodes, None), AI_BUDGET);
+        let lines = beam_search(
+            &state,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET,
+            Prices::NONE,
+        );
         let keys = lines
             .iter()
             .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
@@ -1077,7 +1134,13 @@ mod lanes_that_play_differently {
                 ..narrow
             },
         ] {
-            let lines = beam_search(&state, AI, &create_node_counter(budget.nodes, None), budget);
+            let lines = beam_search(
+                &state,
+                AI,
+                &create_node_counter(budget.nodes, None),
+                budget,
+                Prices::NONE,
+            );
             let keys = lines
                 .iter()
                 .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
@@ -1368,7 +1431,7 @@ mod enemy_targets_first {
     #[test]
     fn a_burn_at_the_enemy_is_within_branching_beside_three_own_units_and_two_face_attacks() {
         let state = burn_board();
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let first_at_enemy = candidates
             .iter()
             .position(|action| aimed_at_the_enemy(&state, action));
@@ -1387,7 +1450,10 @@ mod enemy_targets_first {
         let legal = plays_of(&legal_actions(&state, AI), &burn);
         assert_eq!(legal.len(), 6, "{legal:?}");
         let expected: Vec<String> = [5, 0, 4, 1, 2, 3].iter().map(|&at| legal[at].clone()).collect();
-        assert_eq!(plays_of(&candidate_actions(&state, AI), &burn), expected);
+        assert_eq!(
+            plays_of(&candidate_actions(&state, AI, Prices::NONE), &burn),
+            expected
+        );
     }
 
     /// #1062: Golden Grape, which only aims at the AI's own field and hand, and Mr. Vanilla from hand,
@@ -1406,7 +1472,7 @@ mod enemy_targets_first {
         .state()
         .clone();
         let legal = legal_actions(&state, AI);
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         for def_id in ["classicplus-065-4", "core-008"] {
             let id = hand_id(&state, def_id);
             let kept = plays_of(&candidates, &id);
@@ -1451,7 +1517,7 @@ mod own_prompt_lookahead {
 
     fn craft_play(state: &GameState) -> ActionBody {
         let craft = hand_id(state, CRAFT);
-        candidate_actions(state, AI)
+        candidate_actions(state, AI, Prices::NONE)
             .into_iter()
             .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == craft))
             .unwrap_or_else(|| panic!("Craft a Card is not a candidate"))
@@ -1470,7 +1536,7 @@ mod own_prompt_lookahead {
     fn craft_a_cards_best_line_casts_it_answers_both_discovers_and_plays_the_fused_unit() {
         let state = craft_turn();
         let craft = hand_id(&state, CRAFT);
-        let others: IndexSet<String> = candidate_actions(&state, AI)
+        let others: IndexSet<String> = candidate_actions(&state, AI, Prices::NONE)
             .iter()
             .filter_map(|action| match action {
                 ActionBody::Play { instance_id, .. } if *instance_id != craft => Some(instance_id.clone()),
@@ -1480,7 +1546,7 @@ mod own_prompt_lookahead {
         assert!(others.len() >= AI_BUDGET.beam_width, "{others:?}");
 
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let lines = beam_search(&state, AI, &counter, AI_BUDGET);
+        let lines = beam_search(&state, AI, &counter, AI_BUDGET, Prices::NONE);
         let best = lines.first().unwrap_or_else(|| panic!("the beam found no line"));
         let keys: Vec<String> = best.actions.iter().map(action_key).collect();
         assert!(best.actions.len() >= 4, "{keys:?}");
@@ -1524,7 +1590,8 @@ mod own_prompt_lookahead {
             .fold(f64::NEG_INFINITY, f64::max);
 
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let score = own_prompt_score(&state, AI, &counter).unwrap_or_else(|| panic!("no lookahead score"));
+        let score = own_prompt_score(&state, AI, &counter, Prices::NONE)
+            .unwrap_or_else(|| panic!("no lookahead score"));
         assert!(score >= best_first, "{score} < {best_first}");
         assert!(score > eval(&state), "{score} <= {}", eval(&state));
         assert_eq!(counter.used(), 2 * answers.len());
@@ -1534,9 +1601,9 @@ mod own_prompt_lookahead {
     #[test]
     fn a_child_with_no_prompt_of_the_seats_own_gets_no_lookahead_and_spends_no_node() {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        assert_eq!(own_prompt_score(&craft_turn(), AI, &counter), None);
+        assert_eq!(own_prompt_score(&craft_turn(), AI, &counter, Prices::NONE), None);
         assert_eq!(
-            own_prompt_score(&at_first_discover(), AI.opponent(), &counter),
+            own_prompt_score(&at_first_discover(), AI.opponent(), &counter, Prices::NONE),
             None
         );
         assert_eq!(counter.used(), 0);
@@ -1545,7 +1612,10 @@ mod own_prompt_lookahead {
     #[test]
     fn a_lookahead_the_counter_refuses_gives_no_score() {
         let counter = create_node_counter(1, None);
-        assert_eq!(own_prompt_score(&at_first_discover(), AI, &counter), None);
+        assert_eq!(
+            own_prompt_score(&at_first_discover(), AI, &counter, Prices::NONE),
+            None
+        );
         assert_eq!(counter.used(), 1);
     }
 }
@@ -1617,7 +1687,7 @@ mod rescored_own_prompts_1636 {
     /// The candidate that plays the AI's hand card of `def_id`.
     fn play_of(state: &GameState, def_id: &str) -> ActionBody {
         let id = hand_id(state, def_id);
-        candidate_actions(state, AI)
+        candidate_actions(state, AI, Prices::NONE)
             .into_iter()
             .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id))
             .unwrap_or_else(|| panic!("{def_id} is not a candidate"))
@@ -1633,7 +1703,7 @@ mod rescored_own_prompts_1636 {
 
     /// `line` scored on `world` after the opponent's reply, as `decide` re-scores a finalist.
     fn rescore(world: &GameState, line: &[ActionBody], counter: &dyn NodeCounter) -> Option<f64> {
-        score_line(world, AI, line, counter, true, None)
+        score_line(world, AI, line, counter, true, None, Prices::NONE)
     }
 
     /// #1636: the line [Scarab, its answer] found on one world, scored on a world whose offer lacks
@@ -1650,8 +1720,13 @@ mod rescored_own_prompts_1636 {
         let line = [play.clone(), answer.clone()];
 
         let world = scarab_turn("search-rescore-b", 1);
-        let Some(Ok(at_prompt)) = simulate(&world, AI, &play, &create_node_counter(AI_BUDGET.nodes, None))
-        else {
+        let Some(Ok(at_prompt)) = simulate(
+            &world,
+            AI,
+            &play,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            Prices::NONE,
+        ) else {
             panic!("the Scarab was refused");
         };
         assert_eq!(
@@ -1666,7 +1741,11 @@ mod rescored_own_prompts_1636 {
 
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         let score = rescore(&world, &line, &counter).unwrap_or_else(|| panic!("the counter ran out"));
-        assert_ne!(score, finalist_score(&at_prompt, AI, NextSwing::Enemy));
+        assert_ne!(
+            score,
+            finalist_score(&at_prompt, AI, NextSwing::Enemy, Prices::NONE)
+        );
+        // The Scarab, each answer tried, the closing endTurn, and the reply's own steps past them.
         assert!(counter.used() > 2 + offered.len(), "{} nodes", counter.used());
         let answered: Vec<f64> = offered
             .iter()
@@ -1742,6 +1821,7 @@ mod ways_of_being_played {
             AI_BUDGET.root_branching,
             MoveOrder::Heuristic,
             &POLICY_PRIOR,
+            Prices::NONE,
         );
 
         let billy_id = hand_id(&state, "classicplus-069");
@@ -1804,6 +1884,7 @@ mod ways_of_being_played {
             AI_BUDGET.root_branching,
             MoveOrder::Heuristic,
             &POLICY_PRIOR,
+            Prices::NONE,
         );
         assert!(
             root.iter().any(|action| {
@@ -1876,7 +1957,7 @@ mod ways_of_being_played {
             "legal_actions lists the lane-1 (dearer) unit's set first, so the order below is the sort's"
         );
 
-        let candidates = candidate_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI, Prices::NONE);
         let rock_plays: Vec<&ActionBody> = candidates
             .iter()
             .filter(|a| matches!(a, ActionBody::Play { instance_id, .. } if *instance_id == rock_id))

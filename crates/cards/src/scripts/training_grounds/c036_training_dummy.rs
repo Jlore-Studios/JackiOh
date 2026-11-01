@@ -3,10 +3,11 @@
 //!   Base:    "Can't be in Defense Position. / Death: Add {cards|random Radiant Training Grounds card|random
 //!            Radiant Training Grounds cards} to your hand." — cards 1
 //!   Radiant: "Death: Add {cards|…} to your hand." — cards 2
-//! Engine: C+ #48 Jlockeed's Lobbyist line for line: C+ #65.1's `neverDefense` flag, which the switch
-//!   action, `legalActions` and an effect's switch all honor (R20); the Radiant face drops it. The Death's
-//!   pool names the set (R2194001): its non-token cards but this one (R387), each Radiant, one match-rng
-//!   draw per card (R60); a full hand burns the rest (§2.4). Tunes: cards 1 ↑.
+//! Engine: C+ #48 Jlockeed's Lobbyist line for line. The restriction is Can't Defend (R2657000; C+ #65.1's `neverDefense` flag through v0.5.9f),
+//!   which the switch action, `legalActions` and a switch made as an effect all honor (R20); the Radiant
+//!   face drops it. The Death's pool names the set (`{ "set": "Training Grounds" }`), so it works while
+//!   the set is held (R2194001): every non-token card of the set but this one (R387), each Radiant, one
+//!   draw of the match rng per card (R60); a full hand burns the rest (§2.4). Tunes: cards 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -23,10 +24,6 @@ fn add_radiant_cards(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 
 pub fn script() -> CardScripts {
     let base = Script {
-        static_flags: Some(StaticFlags {
-            never_defense: Some(true),
-            ..StaticFlags::default()
-        }),
         death: Some(hook(add_radiant_cards)),
         ..Script::default()
     };
@@ -35,6 +32,13 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts { base, radiant }
+}
+
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on its
+/// base face, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under
+/// it.
+pub fn script_v0_5_9f() -> CardScripts {
+    crate::never_defense_kept(script(), true, false)
 }
 
 // TG #36 Training Dummy — SPEC §8.11 row 36, BUILD M13 row TG 36: "cannot switch to Defense (action

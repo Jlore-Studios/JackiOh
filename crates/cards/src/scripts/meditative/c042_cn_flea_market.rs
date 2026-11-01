@@ -12,8 +12,8 @@
 //! is sold on its base face or, at its Radiant price, its Radiant face (R831002). The yuan is the
 //! declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
 //!
-//! Voice audio is owed: the `card-audio.json5` entry is written, and a person with macOS renders it
-//! (`docs/ADDING_CARDS.md` §7).
+//! Voice audio is owed: the `card-audio.json5` entry and its `card-text.yaml` lines are written, and
+//! a person with macOS renders it (`docs/ADDING_CARDS.md` §7).
 
 use jackioh_engine::prelude::*;
 

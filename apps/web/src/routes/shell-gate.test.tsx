@@ -467,6 +467,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
+    // The Play door opens the hub, whose online panel is the lobby (R1578000); the test walks there directly.
     // The Play door opens the hub, whose online panel is the lobby; the test walks there directly.
     act(() => {
       navigate(paths.play);

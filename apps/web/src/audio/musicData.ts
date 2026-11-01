@@ -1,5 +1,5 @@
 // Music data access (SPEC §10.11 "Music", R631). `music-manifest.json` (written by
-// `apps/web/scripts/gen-music.mjs`) and `music-cards.json` (a card's station or intro, R1350) are imported
+// `apps/web/scripts/gen-music.mjs`) and `music-cards.json` (a card's station or intro, R1350; no card plays a theme, R822000) are imported
 // here and nowhere else, and checked once at import, so a malformed table fails at load. A card's entry is
 // looked up by a defId the viewer can read: the sentinel is never in the table.
 

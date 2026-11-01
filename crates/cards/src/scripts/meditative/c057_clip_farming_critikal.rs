@@ -12,19 +12,47 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-057";
 
+/// Combo 1 (§6.2): the card played just before `me` this turn (a cast counting, R70), read at play
+/// time, if it still exists; `None` when `me` was played first.
+fn previous_play(state: &GameState, controller: PlayerId, me: Option<&CardInstance>) -> Option<CardInstance> {
+    let at = played_earlier(state, controller, me);
+    if at < 1 {
+        return None;
+    }
+    let prev = played_ids_this_turn(state, controller).get((at - 1) as usize).cloned()?;
+    find_instance(state, &prev).cloned()
+}
+
+/// Whether the Cry returns `card`: from its controller's graveyard or exile, or Bounced as a permanent
+/// it controls (R746, R692, R747). Anywhere else nothing happens.
+fn would_return(card: &CardInstance, controller: PlayerId) -> bool {
+    matches!(card.zone, Zone::Graveyard { player } | Zone::Exile { player } if player == controller)
+        || (matches!(card.zone, Zone::Field { .. }) && card.controller == controller)
+}
+
+/// R2476000: in its owner's hand, the card a play now would return, after "the card you played before
+/// this", by name, or the dash when none would come back (played first, or that card is beyond its
+/// reach). Hand only, so only its owner, who made that play, reads it: on the field the Combo is spent,
+/// and a public value could name a face-down card set before it.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let back = previous_play(ctx.state, ctx.controller, Some(ctx.self_))
+            .filter(|card| would_return(card, ctx.controller));
+        vec![card_preview(
+            ctx.state,
+            "the card you played before this",
+            back.as_ref().map(|card| (card.def_id.as_str(), card.radiant)),
+        )]
+    })
+}
+
 fn critikal(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // Combo 1 (§6.2): one or more cards played earlier this turn, read at play time.
-            let at = played_earlier(ctx.state, ctx.controller, ctx.live_self());
-            if at < 1 {
-                return vec![];
-            }
-            let ids = played_ids_this_turn(ctx.state, ctx.controller);
-            let Some(prev) = ids.get((at - 1) as usize).cloned() else {
-                return vec![];
-            };
-            let Some(card) = find_instance(ctx.state, &prev).cloned() else {
+            let Some(card) = previous_play(ctx.state, ctx.controller, ctx.live_self()) else {
                 return vec![];
             };
             if matches!(card.zone, Zone::Graveyard { player } | Zone::Exile { player } if player == ctx.controller)
@@ -54,6 +82,7 @@ fn critikal(radiant: bool) -> Script {
             ctx.zone == ConditionZone::Hand
                 && played_earlier(ctx.state, ctx.controller, ctx.self_) >= 1
         })),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -233,6 +262,27 @@ mod tests {
                 let back = s.hand(P1).into_iter().find(|card| card.def_id == VANILLA);
                 assert_eq!(back.map(|card| card.radiant), Some(true));
             }
+        }
+    }
+
+    /// R2476000: in hand, after "the card you played before this", the card its play would return: the
+    /// dash before any play, then Stockpile once played, and the play returns it to hand.
+    #[test]
+    fn r2476000_in_hand_it_names_the_card_its_play_would_return() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = crate::scenario(json!({
+                "p1": { "hand": [STOCKPILE, { "def": CRITIKAL, "radiant": radiant }, VANILLA], "library": [VANILLA, VANILLA, VANILLA], "mana": 10 },
+                "p2": { "hand": [STOCKPILE], "library": [VANILLA, VANILLA] },
+            }));
+            let critikal = s.card(CRITIKAL).id.clone();
+            let label = "the card you played before this".to_string();
+            assert_eq!(crate::preview_seen(&s, P1, &critikal), vec![(label.clone(), 0, Some("—".to_string()))]);
+            let stockpile = s.hand(P1).into_iter().find(|card| card.def_id == STOCKPILE).expect("p1's Stockpile").id;
+            s.play(stockpile.as_str(), json!({}));
+            assert_eq!(crate::preview_seen(&s, P1, &critikal), vec![(label, 1, Some("Stockpile".to_string()))]);
+            s.play(critikal.as_str(), json!({ "zone": 1 }));
+            s.expect_in_zone(stockpile.as_str(), "hand");
         }
     }
 }

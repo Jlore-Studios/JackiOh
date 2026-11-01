@@ -1,16 +1,51 @@
 // The practice game itself: the one `GameState`, both seats' actions and the AI (SPEC §9.9, R187).
 //
-// The ONLY practice file that imports `@jackioh/engine`, `@jackioh/cards` or `@jackioh/ai` (the Rust
-// engine and AI as WebAssembly, SURFACE.md §10.4), loaded only by the worker and the jsdom tests' `host.ts`.
-// Rule 7: the state, hands and libraries stay behind `handle`, which stands where §9.1 puts the server; no
-// save, log, seed, deck or state crosses to the page, since the log names the AI's hidden cards.
+// This is the ONLY practice file that imports `@jackioh/engine`, `@jackioh/cards` or `@jackioh/ai`
+// — the Rust engine and AI, compiled to WebAssembly and reached through `src/wire/` (docs/v0.3.0/
+// SURFACE.md §10.4) — and only two things load it: the worker entry (`practice.worker.ts`) and the
+// in-thread host that jsdom tests use (`host.ts`), each of which loads the module (`loadWasm`)
+// before its first request. The page never does. That is the whole of rule 7 here: the state,
+// both hands and both libraries live on this side of `handle`, and what crosses it is a
+// `PracticeSnapshot` — `viewFor(state, human)`, the human's `legalActions`, whether the AI owes an
+// action, and the engine's refusal of the human's last action. The worker stands where §9.1 puts
+// the server. In every game it adds whether the human has a sure win this turn (R2102000, R2291000),
+// which the Rust side asks of the human's own redaction, so the AI's hidden cards never steer it.
 //
-// Nonces `h<n>` (human) and `a<n>` (AI) count only accepted actions, so the log folds exactly (R508, R433).
-// The AI draws only from `${seed}:ai`, never the match rng. Replays (R768): a listing folds none (that would
-// stall the worker), and listings and pages are refused mid-game. A resumed game claims on the seed it
-// began on (R1303001). R2208000: a clock cut is answered beside the claim, never in it.
+// Nonces: `h<n>` for the human's accepted actions and `a<n>` for the AI's, each counting only
+// actions the engine accepted, so a refused action spends nothing and the log folds exactly
+// (`fold({ seed, decks, handicaps, lastBoards, dealt, log })`, R187, R508, R433). The AI draws from its own stream,
+// `createRng(`${seed}:ai`)`, kept for the whole game; the match rng in state is never touched by it.
+// The Rust AI draws from that stream as `(seed, cursor)` and hands the cursor back, and `decide`
+// draws this object forward to it (`wire/ai.ts`), so `rng.cursor` is where the AI left it.
+//
+// Resume (R668). The worker dies with the page, so after every answer a free game in progress is
+// written to the env's save store (`saveStore.ts`, IndexedDB in a worker), as the match actor's log
+// outlives a server restart: the config, the log, the AI stream's cursor, the catalog version and
+// the state's hash. The save never crosses to the page, whose log would name the AI's hidden cards.
+// After a reload the page sends `resume` with the setup it remembers, and the log is folded again
+// through `apply`, action by action, under the same nonces, to the same hash; the AI picks its
+// stream up at the saved cursor.
+//
+// Replays (R768). A free game that has just ended (not a tutorial lesson, and not one Glitch voided,
+// R679) is kept in the same store, the newest PRACTICE_REPLAYS_KEPT of them: its config, its log,
+// the catalog version, the final state's hash, the seat the human ended in and a summary for a list.
+// `replays` answers the summaries, newest first, and folds none of them, which would stall the worker
+// game after game: each is marked unavailable with part 1's reason when it was played on another
+// catalog, or when opening it has found it no longer folds to its hash; `replay` answers a page of the
+// human's steps, `viewFor` of the seat the human played at each step (R677), and the total, from a
+// fold the worker holds for the last PRACTICE_REPLAYS_CACHED games opened. Both are refused while a
+// game is in progress. Like the save, a kept game never crosses to the page: a response holds
+// summaries and views, never the log, the seed, the decks or a state.
+//
+// Claims (R1303000). A free game on a server seed (`earning: true`) answers `claim` once it is over:
+// its seed, the result for the human and the whole log, which the page sends to the server to be
+// folded (R2560000) before it pays. The log crosses only after the end, so it can no
+// longer help the human play, and the page already holds the seed, since it asked the server for it
+// (rule 7). Any other game, and a game still running, is refused. A game resumed after a reload
+// (R668) claims on the seed it began on, which its saved config carries (R1303001). The server does not
+// re-run the AI's moves (R2560000), so such a game decides under PRACTICE_AI_CLOCK_MS like any other.
 
-import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
+import { CATALOG_VERSION, versionNameFrom } from "@jackioh/cards";
 import {
   beginGame,
   carriedVersions,
@@ -40,13 +75,7 @@ import {
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, lethalHint, type SearchBudget } from "@jackioh/ai";
 import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
-import {
-  PRACTICE_AI_CLOCK_MS,
-  PRACTICE_EARNING_AI_CLOCK_MS,
-  PRACTICE_LETHAL_HINT_CLOCK_MS,
-  PRACTICE_REPLAYS_CACHED,
-  PRACTICE_REPLAYS_KEPT,
-} from "./config.ts";
+import { PRACTICE_AI_CLOCK_MS, PRACTICE_LETHAL_HINT_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { seatOutcome } from "../game/outcome.ts";
 import { lessonById, lessonHandicaps } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
@@ -114,8 +143,6 @@ type PracticeGame = {
   kept: boolean;
   /** R768000: the number and step count it was kept under, once kept. */
   keptAs?: Pick<PracticeReplaySummary, "game" | "steps">;
-  /** R2208000: this device's clock cut an AI decision of a game on a server seed. */
-  clockCut: boolean;
 };
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
@@ -248,7 +275,6 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     aiCount: 0,
     error: null,
     kept: false,
-    clockCut: false,
   };
 }
 
@@ -346,7 +372,6 @@ function saveOf(game: PracticeGame): PracticeSave | null {
     log: JSON.parse(JSON.stringify(game.log)) as Action[],
     aiCursor: game.rng.cursor,
     hash: hashState(game.state),
-    ...(game.clockCut ? { clockCut: true as const } : {}),
   };
 }
 
@@ -375,7 +400,6 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
   }
   if (hashState(game.state) !== save.hash) throw new Error("the saved game does not fold to the state it was saved at");
   game.rng = createRng(`${save.config.seed}:ai`, save.aiCursor);
-  game.clockCut = save.clockCut === true;
   return game;
 }
 
@@ -408,10 +432,11 @@ function foldable(replay: PracticeReplay): boolean {
 
 /**
  * R1371000: the catalog a kept game or save was played on, as it is named now: one kept before the
- * version retcon carries no `versions` marker and names it the old way.
+ * version retcon carries no `versions` marker and names it the old way, and one of an older marker
+ * names a v0.5 version as it was before the v0.5 retcon (R2532000).
  */
 export function catalogOf(kept: Pick<PracticeReplay, "catalog" | "versions">): string {
-  return kept.versions === undefined ? currentVersionName(kept.catalog) : kept.catalog;
+  return versionNameFrom(kept.versions ?? 1, kept.catalog);
 }
 
 /** The AI's fallback when `decide` gave nothing usable, `endTurn` first, never one R188 forbids. */
@@ -443,15 +468,11 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     let chosen: ActionBody | null;
     try {
       const t0 = env.now();
-      // R2208000: a game on a server seed, whose claim is re-run with no clock (R1303002), gets the long cap.
-      const clock = active.config.earning === true ? PRACTICE_EARNING_AI_CLOCK_MS : PRACTICE_AI_CLOCK_MS;
       const decision = decide(active.state, seat, {
         rng: active.rng,
         budget,
-        ...(t0 > 0 ? { deadlineMs: t0 + clock } : {}),
+        ...(t0 > 0 ? { deadlineMs: t0 + PRACTICE_AI_CLOCK_MS } : {}),
       });
-      // R2208000: a decision that cap still cut marks the game, so a refused claim can say why.
-      if (active.config.earning === true && decision?.stats.stoppedBy === "clock") active.clockCut = true;
       chosen = decision?.action ?? null;
     } catch {
       // `decide` promises never to throw; if it does anyway, the fallback below still moves the game.
@@ -663,15 +684,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         if (!env.dev) return { id: request.id, type: "failed", message: "debug is available only in a development build" };
         return { id: request.id, type: "debug", debug: debugOf(current()) };
       }
-      case "claim": {
-        const active = current();
-        return {
-          id: request.id,
-          type: "claim",
-          claim: claimOf(active),
-          ...(active.clockCut ? { clockCut: true as const } : {}),
-        };
-      }
+      case "claim":
+        return { id: request.id, type: "claim", claim: claimOf(current()) };
     }
   }
 

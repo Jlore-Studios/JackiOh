@@ -2,12 +2,36 @@
 //! a per-card file (those are the `mod tests` of their card's script). Written once by part 1; the
 //! files are parts 22–27's.
 //! The helpers the files share live here, beside `scenario`: `register_fixture_script`, `fixture`,
-//! `in_hand`, `targets_of` and `tributes_of` (#1826; crates/tools/tests/acceptance.rs refuses a copy).
+//! `in_hand`, `targets_of`, `tributes_of` (#1826; crates/tools/tests/acceptance.rs refuses a copy)
+//! and `sidecar`.
 
+use indexmap::IndexMap;
 use jackioh_engine::testkit::{
     ActionBody, AttackHealth, CardDef, CardInstance, CardScripts, CardType, PlayerId, Scenario, Script,
     Selection, Zone, json, json_as, new_instance, register_scripts, registered_scripts,
 };
+use serde_json::{Map, Value};
+
+/// A sidecar `crates/tools/tests/export_card_text.rs` writes from `crates/cards/card-text.yaml`
+/// (`flavour.json`, `chinese.json`; #2498): its entries by catalog id, each kept as raw JSON so an
+/// unknown field or a value that is not a string is seen, not refused by a typed parse. The file's
+/// `"//"` entry, which says where it comes from, is checked and dropped.
+pub fn sidecar(json: &str, file: &str) -> IndexMap<String, Map<String, Value>> {
+    let mut entries: IndexMap<String, Value> =
+        serde_json::from_str(json).unwrap_or_else(|error| panic!("{file} is an object: {error}"));
+    let header = entries.shift_remove("//");
+    assert!(
+        header.as_ref().is_some_and(Value::is_string),
+        "{file} starts with its \"//\" header, as the export writes it: {header:?}"
+    );
+    entries
+        .into_iter()
+        .map(|(id, entry)| match entry {
+            Value::Object(entry) => (id, entry),
+            other => panic!("{file}: {id} is {other}, not an object"),
+        })
+        .collect()
+}
 
 pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
     jackioh_cards::register_all();
@@ -110,6 +134,8 @@ pub fn tributes_of(action: &ActionBody) -> Vec<String> {
 pub mod activate_listed;
 pub mod after_resolution;
 pub mod aura_table;
+pub mod balance_2521_a;
+pub mod balance_2521_b;
 pub mod buff_priorities;
 pub mod card_metrics;
 pub mod card_text;

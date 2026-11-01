@@ -317,6 +317,7 @@ describe("B3 with no Web Audio every call is a refused no-op", () => {
   });
 });
 
+// B4: the graph and its gains
 describe("B4 the bus graph", () => {
   it("B4 unlock wires sfx and voice buses into master, master into a compressor, and that into the destination", () => {
     const r = rig();
@@ -384,6 +385,7 @@ describe("B4 the bus graph", () => {
   });
 });
 
+// B5: the acceptance gate and the log
 describe("B5 the acceptance gate", () => {
   it("B5 an accepted sfx returns true, is logged, and plays through the sfx bus from currentTime + delayMs/1000", () => {
     const r = rig();
@@ -494,6 +496,7 @@ describe("B5 the acceptance gate", () => {
   });
 });
 
+// B6: SFX retrigger and polyphony
 describe("B6 SFX limits", () => {
   it("B6 the same id again within SFX_RETRIGGER_MS is refused and not logged, while another id is accepted", () => {
     const r = rig();
@@ -890,6 +893,7 @@ describe("B11 preloadVoices", () => {
   });
 });
 
+// B46: nothing is scheduled on a context that is not running
 describe("B46 a context that is not running schedules nothing", () => {
   for (const state of ["suspended", "interrupted"] as const) {
     it(`B46 while ${state}, cues are accepted and logged, flagged, but no node is built, nothing is fetched and no line holds the channel`, async () => {
@@ -1066,6 +1070,7 @@ describe("B48 the queue", () => {
   });
 });
 
+// B49: a rendered line plays and holds the channel for its audible span
 describe("B49 a rendered line's silent head and tail are skipped", () => {
   /** 2 s of silence with a tone from 0.30 s to 1.20 s. */
   const speechBetween = (samples: Float32Array, rate: number): void => {
@@ -1113,6 +1118,7 @@ describe("B49 a rendered line's silent head and tail are skipped", () => {
   });
 });
 
+// B50: mute and voice lines off stop the line that is speaking
 describe("B50 muting stops voice at once", () => {
   it("B50 muting cancels a spoken fallback line and drops every waiting line", async () => {
     const r = rig();
@@ -1204,6 +1210,7 @@ describe("B51 caches and prefetch", () => {
   });
 });
 
+// B58: no background voice work while the board animates
 describe("B58 background voice work waits while the engine is busy", () => {
   /** Resolves every hanging request, over and over, until nothing new is asked for. */
   async function drainFetches(r: Rig): Promise<void> {
@@ -1391,6 +1398,7 @@ describe("speaking: a line holds the voice channel from its request until it end
   });
 });
 
+// R655: card effects and the pick-up
 describe("R655 a card's effect and a Unit picked up to attack", () => {
   /** #66 The Rock: effects alone on play and attack, an effect and a line on death; #4: both on attack; #8: no attack. */
   const FX_LINES: CardAudioTable = {

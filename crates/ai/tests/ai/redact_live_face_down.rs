@@ -131,7 +131,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
                 AI,
                 &mut create_rng(&format!("redact-live-face-down:{k}"), 0),
             );
-            for candidate in candidate_actions(&world, AI) {
+            for candidate in candidate_actions(&world, AI, Prices::NONE) {
                 let key = action_key(&candidate);
                 assert!(legal.contains(&key), "{key}");
             }

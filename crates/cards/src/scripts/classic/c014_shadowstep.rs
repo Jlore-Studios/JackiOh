@@ -7,7 +7,8 @@
 //! BASE: a `destroyed` of a Unit of yours (R99: the condition is its `when`, so an enemy's death leaves
 //! it set). One firing reads the whole §4.5 step 1 pass it stands in and takes every Unit of yours (the
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
-//! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78).
+//! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78),
+//! which is yours: a Unit you stole died into your graveyard as yours (R2618000).
 //! RADIANT: a replacement at "would die" (B5 E5): your collected units Flicker (E22: reset, full health,
 //! no Cry, no Death), then a definition-remade copy of each joins your hand with what R57 gives a copy
 //! in a hand (its radiant flag, `statsOverride` and `tuning`, and R175's `armorOverride` with the size:
@@ -364,7 +365,7 @@ mod tests {
         }
 
         #[test]
-        fn sec3_2_a_stolen_unit_of_theirs_you_control_that_dies_returns_to_its_owner_s_hand() {
+        fn r2618000_a_stolen_unit_of_theirs_you_control_that_dies_returns_to_your_hand() {
             let mut s = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL, STOCKPILE], "backrow": [{ "def": SHADOWSTEP, "faceUp": false }], "library": [STOCKPILE] },
                 "p2": { "hand": [BIG_FELINOR, STOCKPILE], "field": [MENACE], "library": [STOCKPILE, STOCKPILE] },
@@ -376,7 +377,8 @@ mod tests {
             s.play(BIG_FELINOR, json!({}));
             assert_eq!(fired(&s), 1);
             s.expect_in_zone(&menace, "hand");
-            assert!(s.hand(P2).iter().any(|card| card.id == menace.id));
+            assert!(s.hand(P1).iter().any(|card| card.id == menace.id));
+            assert!(!s.hand(P2).iter().any(|card| card.id == menace.id));
         }
 
         #[test]

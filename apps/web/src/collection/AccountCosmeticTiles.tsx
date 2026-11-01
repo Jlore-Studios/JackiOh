@@ -93,6 +93,7 @@ function TileRow({
                   tier={tier}
                   held={offers.held}
                   cosmeticId={cosmetic.id}
+                  name={t(cosmetic.name)}
                   onRedeemed={offers.onRedeemed}
                   testid={T.tokenOffer(cosmetic.id)}
                   errorTestid={T.tokenOfferError(cosmetic.id)}

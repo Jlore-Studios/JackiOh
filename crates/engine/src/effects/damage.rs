@@ -7,6 +7,7 @@ use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
 // R1848001: where a stated Trample's excess goes.
 pub use crate::damage::TrampleOnto;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, resolve_target, sides_of};
+use crate::rng::Rng;
 use crate::script::Effect;
 use crate::wire::TargetAim;
 
@@ -89,7 +90,17 @@ pub fn damage(args: DamageEffectArgs) -> Effect {
     })
 }
 
-/// `damageAll`'s argument: `{ amount; heroes? } & DamageFlagArgs & BoardScope`.
+/// R2521001: one face of a sweep's weighted roll — `amount` comes up `weight` times in the odds' sum
+/// (Stinkyscape #53, #57, #61 Flak's "60%, 30%, 10%, lowest first").
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct DamageOdds {
+    pub amount: i32,
+    pub weight: i32,
+}
+
+/// `damageAll`'s argument: `{ amount; heroes?; odds?; lucky? } & DamageFlagArgs & BoardScope`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
@@ -98,6 +109,14 @@ pub struct DamageAllArgs {
     /// Also hit the hero of each scoped side, after every unit (#13's "and the enemy hero").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub heroes: Option<bool>,
+    /// R2521001: "a random N to M damage to each enemy": `amount` is set aside and each target rolls
+    /// its own amount over these odds, just before its hit (`sweep_amount`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub odds: Option<Vec<DamageOdds>>,
+    /// R2521001, §6.1 Lucky X: each target's roll is rolled this many times more and the highest
+    /// amount kept. The script states the whole X (the card's Lucky and its controller's Luck, R987).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lucky: Option<i32>,
     #[serde(flatten)]
     pub flags: DamageFlagArgs,
     #[serde(flatten)]
@@ -107,6 +126,10 @@ pub struct DamageAllArgs {
 /// §6.3 Damage over a scope: one §4.4 instance per target in `cardsInScope` order, then each scoped
 /// side's hero if `heroes` (#13). The targets are read before the first hit, since §4.5 runs no state
 /// check between one effect's hits (R59); a target that absorbs its hit fizzles silently.
+///
+/// R2521001: with `odds`, each target's amount is its own roll, made just before its hit, in hit order
+/// (the units, then the heroes), as Hearthstone's Lightning Storm does. Without `odds` nothing is
+/// drawn, so a sweep that names none replays exactly as before.
 pub fn damage_all(args: DamageAllArgs) -> Effect {
     Effect::new("damageAll", move |ctx| {
         let flags = damage_flags(&args.flags);
@@ -115,12 +138,13 @@ pub fn damage_all(args: DamageAllArgs) -> Effect {
 
         for instance in targets {
             let source = ctx.self_.clone();
+            let amount = sweep_amount(&mut *ctx.sink.rng, &args);
             deal_damage(
                 ctx,
                 DamageArgs {
                     source,
                     target: DamageTarget::Unit { instance },
-                    amount: args.amount,
+                    amount,
                     flags: Some(flags),
                 },
             );
@@ -131,15 +155,46 @@ pub fn damage_all(args: DamageAllArgs) -> Effect {
         }
         for player in sides_of(ctx, args.scope.side) {
             let source = ctx.self_.clone();
+            let amount = sweep_amount(&mut *ctx.sink.rng, &args);
             deal_damage(
                 ctx,
                 DamageArgs {
                     source,
                     target: DamageTarget::Hero { player },
-                    amount: args.amount,
+                    amount,
                     flags: Some(flags),
                 },
             );
         }
     })
+}
+
+/// R2521001: what one target of a sweep is dealt — the stated `amount`, or with `odds` one weighted
+/// roll of its own, rolled `lucky` more times with the highest kept when `lucky` is above 0 (§6.1
+/// Lucky X, `Rng::lucky`). Without `odds` it draws nothing.
+fn sweep_amount(rng: &mut Rng, args: &DamageAllArgs) -> i32 {
+    let Some(odds) = args.odds.as_deref() else {
+        return args.amount;
+    };
+    let roll = |rng: &mut Rng| roll_odds(rng, odds, args.amount);
+    let lucky = args.lucky.unwrap_or(0);
+    if lucky > 0 {
+        rng.lucky(lucky, roll, Ord::max)
+    } else {
+        roll(rng)
+    }
+}
+
+/// One weighted draw over `odds`: `rng.int` of the summed weights, walked in list order, each face
+/// taking the next `weight` of it. An empty list (nothing to weigh, so nothing drawn) is `fallback`.
+fn roll_odds(rng: &mut Rng, odds: &[DamageOdds], fallback: i32) -> i32 {
+    let total: i32 = odds.iter().map(|face| face.weight).sum();
+    let mut at = rng.int(total);
+    for face in odds {
+        if at < face.weight {
+            return face.amount;
+        }
+        at -= face.weight;
+    }
+    odds.last().map_or(fallback, |face| face.amount)
 }

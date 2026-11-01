@@ -440,6 +440,7 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
   });
 });
 
+// B37: on and off, and nothing the layer renders can be clicked, read or waited on
 describe("B37 — when the layer draws, and what it never renders", () => {
   it("B37 with effects enabled it renders data-fx=\"on\", aria-hidden, and holds fx-canvas and fx-dom", () => {
     const fx = fakeSeams();

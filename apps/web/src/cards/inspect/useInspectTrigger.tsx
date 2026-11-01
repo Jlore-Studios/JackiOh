@@ -1,6 +1,8 @@
 // One-card hover and long-press inspect (B22–B24). The caller renders `overlay` beside its trigger
-// so the trigger's click capture cannot see it. Hover is settings-gated; long press may open a
-// sheet, callback or hold preview, and suppresses its following click.
+// so the trigger's click capture cannot see it. Hover is settings-gated. A touch held on the trigger
+// is its hover (R2617000): the preview, open while the finger stays down; with previews off, the
+// sheet; with `onLongPress`, that callback. A hold suppresses its following click. Custom subjects
+// render their overlay; `openSheet` opens a sheet directly.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent, ReactElement } from "react";
@@ -27,15 +29,17 @@ export type InspectRenderSubject = { key: string; render: (state: InspectOverlay
 export type InspectOptions = {
   /** Default true: a mouse or pen hover opens the preview (also gated by settings.hoverPreviews). */
   hover?: boolean;
-  /** Default true: a touch long-press opens the sheet, or calls onLongPress when given. */
+  /**
+   * Default true: a touch long-press is the hover (R2617000), the preview while the finger stays
+   * down, or the sheet while previews are off; it calls onLongPress instead when given.
+   */
   longPress?: boolean;
   /** Default false. True: a mouse's or pen's main button held as long counts too (the hero portrait, R1449). */
   holdAnyPointer?: boolean;
   onLongPress?: () => void;
-  /** Without `onLongPress`, a hold opens the default sheet or a settings-gated preview; disabled previews leave a plain tap. */
-  touchHold?: "sheet" | "preview";
-  /** A mouse right-click calls it and prevents the native menu (the deck builder's, the hero portrait's
-      while nothing is targeted): the board's cards leave right-click to the drag cancel. */
+  /** A mouse right-click calls it and prevents the native menu. The deck builder's, and the hero
+      portrait's, which acts only while nothing is targeted (R1449): the board's cards leave
+      right-click to the drag cancel. */
   onContextMenu?: () => void;
   /** Which side the hover preview tries first; "beside" (B27's order) by default. */
   prefer?: PreviewPrefer;
@@ -204,13 +208,8 @@ export function useInspectTrigger(
             return;
           }
           const onLongPress = now.options.onLongPress;
-          const previewHold = onLongPress === undefined && now.options.touchHold === "preview";
-          if (previewHold && !hoverAllowed()) {
-            // Disabled previews leave a plain tap, without swallowing its click.
-            press.current = null;
-            pressState.current = "idle";
-            return;
-          }
+          // R2617000: a hold is the hover; with previews off it opens the sheet, so a touch screen can still read the card.
+          const previewHold = onLongPress === undefined && hoverAllowed();
           pressState.current = "fired";
           armSuppressor();
           if (previewHold) {

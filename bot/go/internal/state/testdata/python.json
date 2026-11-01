@@ -1,0 +1,6 @@
+{
+ "raw": "{\"items\": {\"12\": {\"note\": \"é ✓ \\ud83d\\ude00\", \"at\": 1.5, \"n\": 3, \"big\": 1e20, \"tiny\": 1e-07}}, \"suggest\": 4, \"zeta\": [1, 2.0, null, true], \"halted\": true, \"a\": {}}",
+ "dump": "{\n  \"a\": {},\n  \"halt\": {},\n  \"halted\": true,\n  \"items\": {\n    \"12\": {\n      \"at\": 1.5,\n      \"big\": 1e+20,\n      \"n\": 3,\n      \"note\": \"\\u00e9 \\u2713 \\ud83d\\ude00\",\n      \"tiny\": 1e-07\n    }\n  },\n  \"last_run\": null,\n  \"providers\": {},\n  \"rate_limited_until\": null,\n  \"suggest\": {\n    \"last_run\": null,\n    \"requested\": false\n  },\n  \"usage\": null,\n  \"version\": 1,\n  \"zeta\": [\n    1,\n    2.0,\n    null,\n    true\n  ]\n}\n",
+ "default": "{\n  \"halt\": {},\n  \"halted\": false,\n  \"items\": {},\n  \"last_run\": null,\n  \"providers\": {},\n  \"rate_limited_until\": null,\n  \"suggest\": {\n    \"last_run\": null,\n    \"requested\": false\n  },\n  \"usage\": null,\n  \"version\": 1\n}\n",
+ "normalise_list": "{\n  \"halt\": {},\n  \"halted\": false,\n  \"items\": {},\n  \"last_run\": null,\n  \"providers\": {},\n  \"rate_limited_until\": null,\n  \"suggest\": {\n    \"last_run\": null,\n    \"requested\": false\n  },\n  \"usage\": null,\n  \"version\": 1\n}\n"
+}

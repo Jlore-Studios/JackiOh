@@ -79,9 +79,15 @@ fn r1183002_a_line_that_hands_the_autopilot_a_turn_comes_back_with_that_turn_owe
     }));
     let state = s.state().clone();
     // The search ends the AI's turn: p2's draw casts Cognitive Offloading.
-    let line = simulate(&state, AI, &ActionBody::EndTurn, &create_node_counter(20, None))
-        .expect("the counter gives the step a node")
-        .expect("End turn is accepted");
+    let line = simulate(
+        &state,
+        AI,
+        &ActionBody::EndTurn,
+        &create_node_counter(20, None),
+        Prices::NONE,
+    )
+    .expect("the counter gives the step a node")
+    .expect("End turn is accepted");
     assert_eq!(line.active, HUMAN, "the line passed the turn");
     assert_eq!(
         subsystems::autopilot::due(&line),

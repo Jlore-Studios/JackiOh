@@ -81,13 +81,32 @@ fn steal_one() -> TriggerDef {
     .with_when(|ctx, event| answered(ctx, event).is_some())
 }
 
+/// The Spells the Radiant face has stolen so far, as `memory.stolen` holds them: 0 before the first.
+fn stolen_in(stored: Option<&Value>) -> i32 {
+    stored.and_then(Value::as_f64).map_or(0, |n| n as i32)
+}
+
+/// R2476000: the Radiant face's count, after "Once it has stolen {threshold}" filled as the face prints
+/// it now (R386). On the field only, where it counts (R78 resets it as it leaves). Each steal was a
+/// public counter and cast. The base face Tributes on its first steal, so it counts nothing.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let label = format!("Once it has stolen {}", param(&ctx, "threshold"));
+        vec![count_preview(&label, stolen_in(ctx.self_.memory.get(STOLEN)))]
+    })
+}
+
+/// Radiant: steal each one, count them, and Tribute this once it has stolen {threshold}.
 fn steal_some() -> TriggerDef {
     TriggerDef::new("palantir-spells", &[GameEventType::CardAnnounced], |ctx, event| {
         let Some(spell) = answered(ctx, event) else {
             return vec![];
         };
-        let before = recalled(ctx, STOLEN);
-        let total = before.as_ref().and_then(Value::as_f64).map_or(0, |n| n as i32) + 1;
+        // The count so far, 0 before the first steal.
+        let total = stolen_in(recalled(ctx, STOLEN).as_ref()) + 1;
         let mut effects = steal_and_cast(&spell);
         effects.push(remember(json_as(json!({ "key": STOLEN, "value": total }))));
         if total >= param(&*ctx, "threshold") {
@@ -109,6 +128,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         draw_limit: Some(limit),
         triggers: vec![steal_some()],
+        preview: Some(preview()),
         ..Script::default()
     };
 
@@ -390,6 +410,8 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 let book = s.card(BOOK).clone();
+                // Book of Knowledge draws 2 or 3 since #2657: both ends at 3, so it draws 3.
+                set_param(s.card_mut(book.id.as_str()), "least", 3);
 
                 s.play(&book, json!({}));
 
@@ -617,6 +639,21 @@ mod tests {
                 assert_eq!(s.card(&stockpile).owner, P2);
                 s.expect_in_zone(&palantir, "field");
                 assert!(stolen(&s, &palantir).is_none());
+            }
+
+            /// R2476000: the Radiant face shows the Spells it has stolen after "Once it has stolen 3", to
+            /// both seats: 0, then 1 after it steals a Stockpile, and it stays on the field until 3.
+            #[test]
+            fn r2476000_it_previews_the_spells_it_has_stolen_toward_its_threshold() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({}), true);
+                let palantir = s.card(PALANTIR).id.clone();
+                let label = "Once it has stolen 3".to_string();
+                assert_eq!(crate::preview_seen(&s, P1, &palantir), vec![(label.clone(), 0, None)]);
+                s.play(STOCKPILE, json!({}));
+                s.expect_in_zone(palantir.as_str(), "field");
+                assert_eq!(crate::preview_seen(&s, P1, &palantir), vec![(label.clone(), 1, None)]);
+                assert_eq!(crate::preview_seen(&s, P2, &palantir), vec![(label, 1, None)]);
             }
 
             #[test]

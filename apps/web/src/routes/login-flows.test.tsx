@@ -1113,6 +1113,7 @@ describe("R193 B30 recovery and error links", () => {
   });
 });
 
+// R323, R324: PKCE links (a one-time code in the query, exchanged with the verifier kept here)
 describe("R323 R324 PKCE links", () => {
   /** A GoTrue auth code: a UUID. */
   const CODE = "3f9c6c1e-5a6b-4c2d-9e8f-0a1b2c3d4e5f";

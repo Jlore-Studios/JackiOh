@@ -489,6 +489,7 @@ describe("a co-op socket refused for its sign-in", () => {
   });
 });
 
+// R1483000: the daily cap's flag on view frames
 describe("R1483000 a finished view carries jloreCapped, absent while false", () => {
   it("R1483000 a finished view carries jloreCapped, absent while false", () => {
     const h = connected();

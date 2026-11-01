@@ -26,7 +26,7 @@ import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace, faceText } from "./CardFace.tsx";
 import { questProgress, questWords, stageWords } from "./cardState.ts";
-import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
+import { HOVER_DELAY_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_EXTENDED, INSPECT_FACE, INSPECT_HOVER, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
@@ -108,12 +108,9 @@ function hover(element: HTMLElement): HTMLElement {
   return screen.getByTestId(INSPECT_HOVER);
 }
 
-function longPress(element: HTMLElement): HTMLElement {
-  fireEvent.pointerDown(element, { pointerType: "touch", clientX: 10, clientY: 10 });
-  act(() => {
-    vi.advanceTimersByTime(LONG_PRESS_MS * 2);
-  });
-  fireEvent.pointerUp(element, { pointerType: "touch", clientX: 10, clientY: 10 });
+/** The I key on `element` opens its inspect sheet (a touch hold shows the preview, R2617000), and the sheet. */
+function sheetOf(element: HTMLElement): HTMLElement {
+  fireEvent.keyDown(element, { key: "i" });
   return screen.getByTestId(INSPECT_SHEET);
 }
 
@@ -203,10 +200,10 @@ describe("R404 In Too Deep's quest line in the inspect overlays", () => {
     expect(states.textContent).not.toContain("{");
   });
 
-  it("R404 the sheet a long-press opens lists the same, and a line holding only an aura still says so", () => {
+  it("R404 the sheet lists the same, and a line holding only an aura still says so", () => {
     vi.useFakeTimers();
     render(withCatalog(<Board view={boardWith(questCard(FIRST))} />));
-    const sheet = longPress(screen.getByTestId(testid.card("itd")));
+    const sheet = sheetOf(screen.getByTestId(testid.card("itd")));
     const lines = questLines(sheet);
     expect(lines.map((line) => line.id)).toEqual(["1"]);
     expect(lines[0]?.words).toContain("Quest: Draw 2 cards (1/2)");

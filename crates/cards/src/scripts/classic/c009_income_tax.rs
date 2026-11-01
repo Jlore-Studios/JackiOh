@@ -54,6 +54,19 @@ fn carried_data(ctx: &EffectContext<'_>) -> Value {
     Value::Object(ctx.data.clone().into_iter().collect())
 }
 
+/// R2476000: the words the count follows on both faces.
+const DRAWN: &str = "the cards your opponent has drawn in a turn";
+
+/// R2476000: the cards the opponent has drawn this turn so far (`draws_this_turn`, the count `taxes`
+/// matches as `turnDraw`), in its owner's hand and, face-down, to its controller alone. Draws are
+/// public. A count past `draws` means this turn's has gone by.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        let drawn = jackioh_engine::draw::draws_this_turn(ctx.state, opponent_of(ctx.controller));
+        vec![count_preview(DRAWN, drawn)]
+    })
+}
+
 fn tax(radiant: bool) -> TriggerDef {
     TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
         if zone_count(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
@@ -103,6 +116,7 @@ fn deferred() -> Hook {
 pub fn script() -> CardScripts {
     let base = Script {
         triggers: vec![tax(false)],
+        preview: Some(preview()),
         resume: IndexMap::from([
             (
                 "keep",
@@ -115,6 +129,7 @@ pub fn script() -> CardScripts {
 
     let radiant = Script {
         triggers: vec![tax(true)],
+        preview: Some(preview()),
         resume: IndexMap::from([
             (
                 "keep",
@@ -310,6 +325,21 @@ mod tests {
                 assert_eq!(moved.controller, P2);
             }
             s.expect_in_zone(TAX, "graveyard");
+        }
+
+        /// R2476000: face-down, its controller reads the opponent's draws this turn after "the cards your
+        /// opponent has drawn in a turn": 1 after their start-of-turn draw. The opponent reads nothing.
+        #[test]
+        fn r2476000_it_previews_the_opponents_draws_this_turn_to_its_controller_alone() {
+            for radiant in [false, true] {
+                let mut s = tax_board(json!({ "p1Library": [FELINORS], "radiantFace": radiant }));
+                let tax = s.card(TAX).id.clone();
+                let label = "the cards your opponent has drawn in a turn".to_string();
+                assert_eq!(crate::preview_seen(&s, P2, &tax), vec![(label.clone(), 0, None)], "radiant {radiant}");
+                s.start_turn();
+                assert_eq!(crate::preview_seen(&s, P2, &tax), vec![(label, 1, None)], "radiant {radiant}");
+                assert!(crate::preview_seen(&s, P1, &tax).is_empty(), "radiant {radiant}");
+            }
         }
 
         #[test]

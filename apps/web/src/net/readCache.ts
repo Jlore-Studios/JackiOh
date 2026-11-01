@@ -1,8 +1,12 @@
-// The menus' kept answers (#2125, R2125000): the last answer of each menu `GET`, in tab memory only. A screen
-// draws it at once and reads again behind it; a failed read keeps it silently, so an error or a skeleton shows
-// only on a first visit (R2115000). Keyed by path and account (the token's `sub`, so a renewal keeps it); a
-// sign-out or account switch empties it. Never a match's, series', duos room's, watch's or replay's reads.
-// CLAUDE.md rule 7: only this account's own answers are kept; nothing here predicts, enforces or reveals game state.
+// The menus' kept answers (#2125, R2125000): the last answer of each menu `GET`, in tab memory only.
+// A screen with a kept answer draws it at once, reads again behind it and takes the new answer; a failed read
+// behind a kept answer keeps it and says nothing, so an error or a skeleton shows only on a first visit (R2115000).
+// An entry is keyed by its path (query included) and its account (the token's `sub`, so a renewal keeps it).
+// Sign-out and an account switch empty the cache; a mutating answer that carries a new value updates its entry.
+// Never kept: a match's, a series', a duos room's, a watch's or a replay's reads, and anything that isn't a `GET`.
+// R2630000: the gate keeps its `/api/auth/me` answer here too, for the next screen to open on.
+// CLAUDE.md rule 7: only this account's own answers from the server are kept; nothing here predicts, enforces
+// or reveals game state.
 
 import { tokenClaim } from "../auth/claims.ts";
 
@@ -45,6 +49,11 @@ export function rememberRead(token: string | null, path: string, value: unknown)
 export function updateCachedRead<T>(token: string | null, path: string, update: (before: T) => T): void {
   const before = cachedRead<T>(token, path);
   if (before !== undefined) rememberRead(token, path, update(before));
+}
+
+/** Drops `token`'s account's kept answer for `path` (R2630000: the gate's, when the account changes). */
+export function forgetRead(token: string | null, path: string): void {
+  entries.delete(`${accountOf(token)}\n${path}`);
 }
 
 /** Sign-out (`net/session.ts`) and every test (`test/setup.ts`). */

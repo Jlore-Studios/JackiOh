@@ -6,9 +6,21 @@
 //!   Radiant: "Cry: Craft a custom Radiant Potion. It costs (1).
 //!             Death: Shuffle a Radiant Jazakus Prime into your deck."
 //!
-//! Cry: craft prompt in potion mode (#17, R1182000, R1563008, R1563007); transient def named by digest (R882, §2.4, R881).
-//! Death: shuffle Jazakus Prime (M+ #16.1) into deck (Catalyst, C+ #38, R1421).
-//! Voice audio renders with release (R1420, R1448).
+//! THE CRY (R1182000, R1563008). Meditative #17's `craft` prompt in its potion mode, with no cost
+//! prompt: the frame is fixed, a Spell tagged Potion with no stats whose one hat is When cast, with
+//! the effects the player snaps under it, at cost (1) (`CRAFT_POTION_COST`), `CRAFT_POTION_POINTS`
+//! points and 24 lines. The blocks are the prompt's offer (R1563007): the keywords a Spell takes, its
+//! When cast, and three verbs that fit the points, drawn as the prompt opens. A valid recipe compiles
+//! into a transient definition named by its digest (R882), of the Meditative+ set, tagged Potion, and
+//! a fresh card of it reaches the hand at (1), Radiant on the Radiant face, or burns on a full one
+//! (§2.4). The prompt's options are seeded Potions of the offer, so the AI, the random policy and a
+//! timeout answer with one (R881). The picks travel in `ctx.targets`, read with `chosen_recipe`.
+//!
+//! THE DEATH (Catalyst, C+ #38's shape, R1421): a Jazakus Prime (M+ #16.1) shuffled into its owner's
+//! deck, Radiant on the Radiant face.
+//!
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::effects::{choose_craft, chosen_recipe, craft_card, shuffle_into};
 use jackioh_engine::prelude::*;

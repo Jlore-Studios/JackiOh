@@ -158,11 +158,36 @@ fn roll_wait(ctx: &mut EffectContext<'_>, weights: &[i32]) -> i32 {
 
 /// R1865002: the reward factor the card holds on its stay.
 fn factor_of(ctx: &EffectContext<'_>) -> i32 {
-    recalled(ctx, REWARD_FACTOR_KEY)
-        .and_then(|value| value.as_i64())
-        .map_or(BASE_FACTOR, |factor| {
-            factor.clamp(i64::from(BASE_FACTOR), i64::from(REWARD_FACTOR_CAP)) as i32
-        })
+    factor_in(recalled(ctx, REWARD_FACTOR_KEY).as_ref())
+}
+
+/// R1865002: the reward factor as `memory.rewardFactor` holds it, 1 before any re-application.
+fn factor_in(stored: Option<&Value>) -> i32 {
+    stored.and_then(Value::as_i64).map_or(BASE_FACTOR, |factor| {
+        factor.clamp(i64::from(BASE_FACTOR), i64::from(REWARD_FACTOR_CAP)) as i32
+    })
+}
+
+/// R2476000: on the field, to both seats, what its rewards come to now: after "Buff it 5 times" (its
+/// `buffs` as it stands, R386) the Buffs the resume would get, its `buffs` times the factor; after "add
+/// a Paycheck" the Paychecks a turn, the factor; and after "Add your resume" the resume held beneath
+/// it, by name, or the dash. Both seats read the resume while it waits (R1865000), and a re-application
+/// is a public Activate. Dying and coming back starts it over (R78).
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let factor = factor_in(ctx.self_.memory.get(REWARD_FACTOR_KEY));
+        let buffs = param(&ctx, "buffs");
+        let times = if buffs == 1 { "time" } else { "times" };
+        let resume = held_beneath(ctx.state, ctx.self_);
+        vec![
+            count_preview(&format!("Buff it {buffs} {times}"), buffs * factor),
+            count_preview("add a Paycheck", factor),
+            card_preview(ctx.state, "Add your resume", resume.first().map(|card| (card.def_id.as_str(), card.radiant))),
+        ]
+    })
 }
 
 /// R1865002: "with every reward tripled", never past `REWARD_FACTOR_CAP`.
@@ -314,6 +339,7 @@ fn resummon(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 
 fn job_application() -> Script {
     Script {
+        preview: Some(preview()),
         stages: stages(),
         triggers: vec![stage_completed()],
         start_of_turn: Some(hook(paychecks)),
@@ -510,6 +536,28 @@ mod tests {
         assert!(paychecks_given(s) == 0, "none on the opponent's turn");
         s.end_turn();
         paychecks_given(s)
+    }
+
+    /// R2476000: on the field, to both seats: Buff it 5 times {5}, add a Paycheck {1} and Add your resume
+    /// {—}; the resume sent in shows by name, and a tripled factor shows 15 Buffs and 3 Paychecks.
+    #[test]
+    fn r2476000_it_previews_its_rewards_and_the_resume_it_holds() {
+        let mut s = setup("job-preview", false, &[]);
+        let job = played(&mut s, Some(1));
+        let shown = |s: &Scenario, buffs: i32, paychecks: i32, resume: (i32, &str)| {
+            let want = vec![
+                ("Buff it 5 times".to_string(), buffs, None),
+                ("add a Paycheck".to_string(), paychecks, None),
+                ("Add your resume".to_string(), resume.0, Some(resume.1.to_string())),
+            ];
+            assert_eq!(crate::preview_seen(s, P1, &job), want);
+            assert_eq!(crate::preview_seen(s, P2, &job), want);
+        };
+        shown(&s, 5, 1, (0, "—"));
+        send(&mut s, VANILLA);
+        shown(&s, 5, 1, (1, "Mr. Vanilla"));
+        remember_on_it(&mut s, "rewardFactor", json!(3));
+        shown(&s, 15, 3, (1, "Mr. Vanilla"));
     }
 
     fn remember_on_it(s: &mut Scenario, key: &str, value: Value) {

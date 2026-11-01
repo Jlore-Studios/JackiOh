@@ -4,11 +4,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactElement } from "react";
 
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { MULLIGAN_CLOCK_MS, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
+import { DISCONNECT_GRACE_SECONDS, MULLIGAN_CLOCK_MS, RANK_STREAK_FLAME_LENGTH as N, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
 
@@ -16,14 +17,16 @@ import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
+import { leaveMatchTestid } from "../game/ConfirmLeaveMatch.tsx";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import { streakWords } from "../rank/StreakFlame.tsx";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
-import { navigate } from "../net/navigate.ts";
+import { navigate, paths, usePathname } from "../net/navigate.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";
 import { foldedReplaySteps } from "../test/replay.ts";
+import { navTestid } from "./nav.tsx";
 
 vi.mock("../net/navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/navigate.ts")>();
@@ -1525,5 +1528,171 @@ describe("R768000 a finished match's replay from its result panel", () => {
     expect(await screen.findByTestId("result-back")).toBeInTheDocument();
     expect(screen.queryByTestId(matchTestid.watchReplay)).toBeNull();
     expect(screen.queryByTestId(matchTestid.shareLastTurn)).toBeNull();
+  });
+});
+
+// R2479000: the leave guard (R1754000) holds every way off a live online board. The real `navigate`
+// goes back in for these tests so that the board's Back meets the guard; the rest keep the bare mock.
+describe("R2479000 Back in a live online match asks first, and names the disconnect grace", () => {
+  const WORDS = `It goes on without you. Come back within ${String(DISCONNECT_GRACE_SECONDS)} seconds or it counts as a loss.`;
+  const AT = paths.match("m-1");
+  const over = baseView({ viewer: "p1", active: "p1", phase: "over", result: { winner: "p2", reason: "hero-death" } });
+
+  /** The match, and what a move off it lands on: `usePathname`'s `popstate` listener needs a reader. */
+  function Shell(): ReactElement {
+    const path = usePathname();
+    return path === AT ? (
+      <MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />
+    ) : (
+      <p data-testid="elsewhere">{path}</p>
+    );
+  }
+
+  /** The browser's Back, waited for until its `popstate` has fired. */
+  async function browserBack(): Promise<void> {
+    await act(async () => {
+      const popped = new Promise((resolve) => {
+        window.addEventListener("popstate", resolve, { once: true });
+      });
+      window.history.back();
+      await popped;
+    });
+  }
+
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof import("../net/navigate.ts")>("../net/navigate.ts");
+    vi.mocked(navigate).mockImplementation(actual.navigate);
+    window.history.replaceState(null, "", paths.play);
+    window.history.pushState(null, "", AT);
+  });
+
+  afterEach(() => {
+    vi.mocked(navigate).mockReset();
+  });
+
+  it("R2479000 the board's Back on a live match asks first and stays; Stay sends nothing, Leave goes to the menu", () => {
+    render(<Shell />);
+    attach();
+    const sent = live().sent.length;
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    const dialog = screen.getByTestId(leaveMatchTestid.dialog);
+    expect(window.location.pathname).toBe(AT);
+    expect(dialog).toHaveTextContent("Leave the match?");
+    expect(dialog).toHaveTextContent(WORDS);
+    expect(document.activeElement).toBe(screen.getByTestId(leaveMatchTestid.stay));
+
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.stay));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(AT);
+    expect(live().sent).toHaveLength(sent);
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.leave));
+    expect(window.location.pathname).toBe(paths.landing);
+    expect(screen.getByTestId("elsewhere")).toHaveTextContent(paths.landing);
+  });
+
+  it("R2479000 Escape and the browser's Back on the question answer Stay", async () => {
+    render(<Shell />);
+    attach();
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(AT);
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    await browserBack();
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(AT);
+  });
+
+  it("R2479000 the browser's Back off a live match is held the same way, and Leave goes back", async () => {
+    render(<Shell />);
+    attach();
+
+    await browserBack();
+    expect(window.location.pathname).toBe(AT);
+    expect(screen.getByTestId(leaveMatchTestid.dialog)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.stay));
+    // This Back takes two steps over the dialog's spent back-layer entry, so it waits for the question.
+    await browserBack();
+    await screen.findByTestId(leaveMatchTestid.dialog);
+    expect(window.location.pathname).toBe(AT);
+
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.leave));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.play);
+    });
+    expect(await screen.findByTestId("elsewhere")).toHaveTextContent(paths.play);
+  });
+
+  it("R2479000 once the view has a result the question closes and Back leaves at once", () => {
+    render(<Shell />);
+    attach();
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(screen.getByTestId(leaveMatchTestid.dialog)).toBeInTheDocument();
+
+    pushView(over);
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(paths.landing);
+  });
+
+  it("R2479000 a match voided or refused mid-game is left at once", () => {
+    render(<Shell />);
+    attach();
+
+    act(() => {
+      live().onclose?.({ code: VOIDED_CLOSE_CODE, reason: "voided", wasClean: true });
+    });
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(window.location.pathname).toBe(paths.landing);
+
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      act(() => {
+        navigate(AT);
+      });
+      attach();
+      act(() => {
+        live().onclose?.({ code: FORBIDDEN_CLOSE, reason: "", wasClean: true });
+      });
+      fireEvent.click(screen.getByTestId(navTestid.back));
+      expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+      expect(window.location.pathname).toBe(paths.landing);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("R2479000 a forced move goes at once, an unforced one is held, and the guard leaves with the route", () => {
+    render(<Shell />);
+    attach();
+
+    act(() => {
+      navigate(paths.together);
+    });
+    expect(screen.getByTestId(leaveMatchTestid.dialog)).toBeInTheDocument();
+    expect(window.location.pathname).toBe(AT);
+    fireEvent.click(screen.getByTestId(leaveMatchTestid.stay));
+
+    act(() => {
+      navigate(paths.play, { force: true });
+    });
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(leaveMatchTestid.dialog)).toBeNull();
+    expect(screen.getByTestId("elsewhere")).toBeInTheDocument();
+
+    act(() => {
+      navigate(paths.landing);
+    });
+    expect(window.location.pathname).toBe(paths.landing);
   });
 });

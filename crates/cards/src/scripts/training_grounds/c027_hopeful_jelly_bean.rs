@@ -59,7 +59,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4; Radiant 12/12.
     const WEAPONS: &str = "core-014"; // Field Spell: your Units have +3 Attack (Radiant +6).
     const TRAP: &str = "core-041"; // Sheepish, a Trap.
-    const MEGABASE: &str = "stinkyscape-116"; // Field Spell, Immune to Spells.
+    const MEGABASE: &str = "stinkyscape-116"; // Unit, Immune to Spells.
 
     fn board(radiant: bool, mine: Value, my_backrow: Value, theirs: Value) -> Scenario {
         scenario(json!({
@@ -187,12 +187,15 @@ mod tests {
         fn r2198003_a_neighbour_immune_to_spells_is_passed_by() {
             let mut s = board(
                 true,
+                json!([
+                    { "def": MEGABASE, "lane": 1 },
+                    { "def": VANILLA, "lane": 2 },
+                    { "def": VANILLA, "lane": 3 },
+                ]),
                 json!([]),
-                json!([{ "def": MEGABASE, "lane": 1 }, { "def": WEAPONS, "lane": 2 }, { "def": WEAPONS, "lane": 3 }]),
                 json!([]),
             );
-            let immune = s.backrow(P1, 1).expect("Megabase");
-            let (pick, right) = (s.backrow(P1, 2).unwrap(), s.backrow(P1, 3).unwrap());
+            let (immune, pick, right) = (s.unit_at(P1, 1), s.unit_at(P1, 2), s.unit_at(P1, 3));
             s.play(BEAN, on(&pick));
             assert!(s.card(&pick).radiant && s.card(&right).radiant);
             assert!(!s.card(&immune).radiant);

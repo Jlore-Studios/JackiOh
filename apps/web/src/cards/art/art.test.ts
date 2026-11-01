@@ -137,6 +137,7 @@ describe("B1: artSpec is pure and deterministic", () => {
   });
 });
 
+// B2
 describe("B2: the radiant variant keeps the base geometry and gilds it", () => {
   it("B2 base and radiant share composition, every ridge path, and the emblem's glyph and position", () => {
     for (const card of DEFS) {
@@ -260,6 +261,7 @@ describe("per-card variety within a theme", () => {
   });
 });
 
+// B3
 describe("B3: artDataUri draws a clean, self-contained SVG for every card", () => {
   it("B3 every catalog id, both variants: a data:image/svg+xml URI with no NaN, undefined, <text or <title", () => {
     for (const card of DEFS) {
@@ -322,7 +324,7 @@ describe("B3: artDataUri draws a clean, self-contained SVG for every card", () =
   });
 });
 
-/** Surface A's priority list, first match wins, with the families in their places (R503). */
+/** B4: Surface A's priority list, first match wins, with the families in their places (R503). */
 const PRIORITY: readonly (readonly [Tag, ArtThemeId])[] = [
   ["Call to Chaos", "chaos"],
   ["AI", "ai"],

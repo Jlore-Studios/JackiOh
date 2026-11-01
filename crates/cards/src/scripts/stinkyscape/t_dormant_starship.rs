@@ -1,11 +1,19 @@
 //! S T-dormant-starship Dormant Starship (SPEC §8.10 row T-dormant-starship; R349, R1839000, R1852000,
-//! R1852003–R1852007, R1857001, R1859013): (3) Unit, Legendary, 0/0, the set's one entry that is
-//! neither a numbered card nor a token, of the Stinkyscape set.
+//! R1852003–R1852007, R1857001, R1859013, R2521000): (3) Unit, Legendary, 0/0, the set's one entry that
+//! is neither a numbered card nor a token, of the Stinkyscape set.
 //!
 //! Base and Radiant: "Dormant until it launches. Your Starship Pieces that die fuse into this.
 //! \nActivate: Pay (3) to launch this." (R2249000: the rest is the Starship and Launch terms'.)
 //! Engine: its text is the engine's rules written out (R1859013), so its script is the hull alone:
-//! stats only what fuses into it (R77). The engine summons it when a piece dies (R1852000), exiles a
+//! `StaticFlags { slumber, starshipHull }` on both faces, Dormant with no countdown (R1839000), its
+//! stats only what fuses into it (R77). The engine summons it when a piece dies (R1852000) and fuses
+//! into it the dead piece's base version (R2521000): the piece it was printed as, never a card fused
+//! into it, on its Radiant face if it was Radiant, with its printed numbers and none of its Buffs, Nerfs
+//! or Upgrades. The engine exiles a Stack card played onto it (R1852007) and gives it its one ability,
+//! the launch for `STARSHIP_LAUNCH_COST` (`starship::launch_decl`, R1852003, moved by R1852006): a name
+//! from `STARSHIP_NAMES` (R1852004), its fused Cries, then its fused When launched. No token, so it
+//! reaches a graveyard; in no pool and no deck (R1857001); its Radiant face is R349's fallback
+//! (`radiantFallback`). Declares no numbers: the price is the engine's constant.
 
 use jackioh_engine::prelude::*;
 
@@ -27,7 +35,13 @@ pub fn script() -> CardScripts {
 }
 
 // S T-dormant-starship Dormant Starship — SPEC §8.10 row T-dormant-starship, BUILD M12 row S
-// (R1839000, R1852000, R1852003, R1852004, R1852006, R1852007, R1857001, R349).
+// T-dormant-starship: "a Starship Piece's death summons it 0/0 into its owner's leftmost open unit zone,
+// else on top of lane 3, and the piece's copy fuses in at once (R1852000); it is Dormant, unattackable and
+// unreachable (R1839000); a Stack card played onto it is exiled before it resolves (R1852007); its
+// Activate for (3) launches it: the Starship keyword, a name (R1852004), its fused Cries, then When
+// launched (R1852003); "Your Starship launch costs (0)" prices it (R1852006); no pool and no deck holds it
+// (R1857001); radiant R349's fallback, 0/0". Issue #2521: the copy is the dead piece's base version
+// (R2521000).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -40,7 +54,10 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    // Issue #2521: Stratos (S #68) is no Starship Piece any more (B9), so a keywords-only piece stands in.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
+    const FLAK_V3: &str = "stinkyscape-053"; // (2) 0/4 Starship Piece, Equip; Radiant 0/8, Lucky 1.
+    const OVERDRIVE: &str = "stinkyscape-101"; // (2) 5/5 Starship Piece, Equip, Brittle 2, Reborn.
     const CAPSULE: &str = "stinkyscape-040"; // (3) 2/2 Starship Piece, "Cry: Place 2 Plague Counters."
     const CAPACITOR: &str = "stinkyscape-133"; // When launched: +1/+1 per other piece.
     const MONKEY: &str = "classic-077"; // (2) 5/5 Stack, "Aura: Spells cost (1) more."
@@ -48,7 +65,10 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-005";
     const TRAP: &str = "core-085"; // (2) Trap, set face down to fill a backrow.
+    /// R2521000: what a test's Buff (an Upgrade's tuning, B3.4) adds to a piece's attack and health.
+    const BUFF: i32 = 2;
 
+    /// Every zone of a backrow taken by a face-down Trap, so a Starship finds none open (R2249000).
     fn full_backrow() -> Value {
         json!(vec![json!({ "def": TRAP, "faceUp": false }); BACKROW_ZONES as usize])
     }
@@ -62,12 +82,14 @@ mod tests {
         .expect("the middle of the backrow shows the Starship")
     }
 
+    /// p1's Dormant Starship holding one AP Rounds, standing in the middle of the backrow (R2249000), a
+    /// Vanilla in unit lane 1.
     fn one_piece(seed: &str, p1: Value, p2: Value) -> (Scenario, String) {
         let mut p1 = p1;
         let mut field = vec![json!({ "def": VANILLA, "lane": 1 })];
         field.extend(p1["field"].as_array().cloned().unwrap_or_default());
         p1["field"] = json!(field);
-        built_starship(seed, json!([{ "def": STRATOS, "lane": 2 }]), p1, p2)
+        built_starship(seed, json!([{ "def": AP_ROUNDS, "lane": 2 }]), p1, p2)
     }
 
     fn launched_name(s: &Scenario, ship: &str) -> Option<String> {
@@ -75,6 +97,42 @@ mod tests {
             .starship
             .as_ref()
             .and_then(|memory| memory.name.clone())
+    }
+
+    /// R1852005: one piece as a Starship's memory holds it.
+    fn record(def_id: &str, radiant: bool) -> StarshipPieceRecord {
+        StarshipPieceRecord {
+            def_id: def_id.to_string(),
+            radiant: if radiant { Some(true) } else { None },
+        }
+    }
+
+    /// The definitions a fused definition lists, in ingredient order (`CardDef.ingredients`).
+    fn ingredient_ids(s: &Scenario, def_id: &str) -> Vec<String> {
+        jackioh_engine::catalog::find_def(Some(s.state()), def_id)
+            .and_then(|def| def.ingredients.clone())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|spec| spec.def_id)
+            .collect()
+    }
+
+    /// p1's main phase with a Hit Job and `hand` in hand and `field` on the field, mana to spare.
+    fn hit_job_board(seed: &str, hand: Value, field: Value) -> Scenario {
+        let mut cards = vec![json!(HIT_JOB)];
+        cards.extend(hand.as_array().cloned().unwrap_or_default());
+        crate::scenario(json!({
+            "seed": seed,
+            "active": "p1",
+            "p1": { "hand": cards, "field": field, "library": crate::filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
+        }))
+    }
+
+    fn the_ship(s: &Scenario) -> CardInstance {
+        dormant_starship_of(s.state(), P1)
+            .expect("p1's Dormant Starship")
+            .clone()
     }
 
     #[test]
@@ -97,8 +155,8 @@ mod tests {
     fn r1859013_a_dying_piece_summons_it_holding_the_copy_and_its_launch_is_offered_at_3() {
         let (mut s, ship) = built_starship(
             "r1859013-hull",
-            json!([{ "def": STRATOS, "lane": 2 }]),
-            json!({ "field": [{ "def": STRATOS, "lane": 1 }] }),
+            json!([{ "def": AP_ROUNDS, "lane": 2 }]),
+            json!({ "field": [{ "def": AP_ROUNDS, "lane": 1 }] }),
             json!({}),
         );
         let card = s.card(ship.as_str()).clone();
@@ -111,7 +169,7 @@ mod tests {
             }
         );
         let stats = s.stats(ship.as_str());
-        assert_eq!((stats.attack, stats.health), (3, 3), "only what fused into it");
+        assert_eq!((stats.attack, stats.health), (3, 1), "only what fused into it");
         let unit = ship_on_view(&s);
         let abilities = unit.activations.clone().expect("the launch");
         assert_eq!(abilities.len(), 1);
@@ -136,18 +194,21 @@ mod tests {
             "active": "p1",
             "p1": {
                 "hand": [HIT_JOB, FILLER],
-                "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
+                "field": [VANILLA, VANILLA, VANILLA, VANILLA, OVERDRIVE],
                 "backrow": full_backrow(),
                 "library": crate::filler(4),
                 "mana": 10,
             },
-            "p2": { "hand": [FILLER], "field": [STRATOS], "library": crate::filler(4) },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
         }));
-        // p1's Stratos, stolen: its death fuses into its owner's Starship (R1852002), p1's rows full.
-        let piece = s.unit_at(P2, 1).id;
-        s.card_mut(piece.as_str()).owner = P1;
+        // p1's Overdrive Module dies, and Reborn returns it to its zone before its copy fuses (§4.5
+        // step 4), so p1's rows are full again when the Starship is summoned. A piece dies on its
+        // controller's side and builds its controller's ship (R2618000), so only a body that comes
+        // back leaves that side full.
+        let piece = s.unit_at(P1, 5).id;
         let beneath = s.unit_at(P1, STARSHIP_FULL_ROW_LANE).id;
         s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
+        assert_eq!(s.unit_at(P1, 5).id, piece, "Reborn brought it back first");
         let ship = dormant_starship_of(s.state(), P1)
             .expect("p1's Dormant Starship")
             .id
@@ -164,7 +225,7 @@ mod tests {
         let stats = s.stats(ship.as_str());
         assert_eq!(
             (stats.attack, stats.health),
-            (3, 3),
+            (5, 5),
             "the piece's copy fused in at once"
         );
     }
@@ -226,6 +287,7 @@ mod tests {
         assert_eq!(launched_name(&s, &ship), None);
         launch_starship(&mut s, &ship);
         let name = launched_name(&s, &ship).expect("a name");
+        // An AP Rounds holds no tag, so the name is one that suits any ship.
         let untagged: Vec<&str> = STARSHIP_NAMES
             .iter()
             .filter(|(_, tag)| tag.is_none())
@@ -301,6 +363,110 @@ mod tests {
                 .map(|def| def.id.clone())
                 .collect();
             assert!(!pool.contains(&ID.to_string()), "{args}");
+        }
+    }
+
+    // B10–B12 (issue #2521): a dead piece fuses its base version.
+
+    #[test]
+    fn r2521000_a_flak_v3_with_a_card_fused_into_it_fuses_flak_v3_alone() {
+        let mut s = hit_job_board(
+            "r2521000-flak",
+            json!([AP_ROUNDS]),
+            json!([{ "def": FLAK_V3, "lane": 1 }]),
+        );
+        let host = s.unit_at(P1, 1).id;
+        s.play(AP_ROUNDS, json!({ "zone": 1, "equip": true }));
+        assert_eq!(s.unit_at(P1, 1).id, host, "Flak v3 is the card the Equip keeps");
+        let fused = s.card(host.as_str()).def_id.clone();
+        assert_eq!(
+            ingredient_ids(&s, &fused),
+            vec![AP_ROUNDS.to_string(), FLAK_V3.to_string()]
+        );
+        s.play(HIT_JOB, json!({ "targets": pick::id(&host) }));
+        s.expect_in_zone(host.as_str(), "graveyard");
+        let ship = the_ship(&s);
+        // The memory and the event name Flak v3 alone, not the fusion.
+        assert_eq!(starship_pieces_of(&ship), vec![record(FLAK_V3, false)]);
+        assert!(s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::StarshipFused { piece_id, def_id, .. } if *piece_id == host && def_id == FLAK_V3
+        )));
+        // The Starship gains only Flak v3's text: its 0/4, none of the AP Rounds' 3/1 or Pierce.
+        let stats = s.stats(ship.id.as_str());
+        assert_eq!((stats.attack, stats.health), (0, 4));
+        assert!(
+            !stats
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::Pierce)
+        );
+        let held = ingredient_ids(&s, &ship.def_id);
+        assert!(held.contains(&FLAK_V3.to_string()), "{held:?}");
+        assert!(!held.contains(&AP_ROUNDS.to_string()), "{held:?}");
+    }
+
+    #[test]
+    fn r2521000_a_buffed_piece_fuses_with_its_printed_numbers() {
+        for radiant in [false, true] {
+            let mut s = hit_job_board(
+                "r2521000-buffed",
+                json!([]),
+                json!([{ "def": AP_ROUNDS, "lane": 1, "radiant": radiant }]),
+            );
+            let piece = s.unit_at(P1, 1).id;
+            s.card_mut(piece.as_str()).tuning = Some(Tuning {
+                attack: Some(BUFF),
+                health: Some(BUFF),
+                ..Tuning::default()
+            });
+            let printed = if radiant { (6, 2) } else { (3, 1) };
+            let buffed = s.stats(piece.as_str());
+            assert_eq!(
+                (buffed.attack, buffed.health),
+                (printed.0 + BUFF, printed.1 + BUFF),
+                "radiant {radiant}"
+            );
+            s.play(HIT_JOB, json!({ "targets": pick::id(&piece) }));
+            let ship = the_ship(&s);
+            assert_eq!(
+                starship_pieces_of(&ship),
+                vec![record(AP_ROUNDS, radiant)],
+                "radiant {radiant}"
+            );
+            // The Buff was the dead card's: the Starship holds the printed numbers and no tuning.
+            let stats = s.stats(ship.id.as_str());
+            assert_eq!((stats.attack, stats.health), printed, "radiant {radiant}");
+            assert_eq!(ship.tuning, None, "radiant {radiant}");
+        }
+    }
+
+    #[test]
+    fn r2521000_a_radiant_piece_fuses_on_its_radiant_face() {
+        for radiant in [false, true] {
+            let (s, ship) = built_starship(
+                "r2521000-radiant",
+                json!([
+                    { "def": AP_ROUNDS, "lane": 1, "radiant": radiant },
+                    { "def": FLAK_V3, "lane": 2, "radiant": radiant },
+                ]),
+                json!({}),
+                json!({}),
+            );
+            assert_eq!(
+                starship_pieces_of(s.card(ship.as_str())),
+                vec![record(AP_ROUNDS, radiant), record(FLAK_V3, radiant)],
+                "radiant {radiant}"
+            );
+            // Base 3/1 and 0/4; Radiant 6/2 and 0/8, with the Radiant Flak v3's Lucky 1.
+            let stats = s.stats(ship.as_str());
+            let expected = if radiant { (6, 10) } else { (3, 5) };
+            assert_eq!((stats.attack, stats.health), expected, "radiant {radiant}");
+            let lucky = stats
+                .keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::Lucky);
+            assert_eq!(lucky, radiant, "radiant {radiant}");
         }
     }
 }

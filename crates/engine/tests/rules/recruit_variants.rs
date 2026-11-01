@@ -111,9 +111,11 @@ mod e25_recruit_from_the_opponent_s_exile_classic_c1_radiant {
             "{summoned}"
         );
 
-        // It goes back to its owner's piles when it leaves the field (§3.2).
+        // It goes back to its owner's piles when it leaves the field (§3.2), but for a graveyard, which
+        // is its controller's (R2618000).
         move_to_zone(state, &mut card, OffFieldZone::Graveyard, Default::default());
-        assert!(ids(&state.players.p2.graveyard).contains(&newest.id));
+        assert!(ids(&state.players.p1.graveyard).contains(&newest.id));
+        assert!(!ids(&state.players.p2.graveyard).contains(&newest.id));
     }
 
     #[test]

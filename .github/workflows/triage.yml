@@ -1,4 +1,4 @@
-# Triage (bot/harness/triage.py, #664), from fixed rules and no model. An issue someone trusted
+# Triage (bot/go/internal/triage, #664), from fixed rules and no model. An issue someone trusted
 # opens gets its issue form's answers as labels (difficulty, priority, and who does it: `bot:build`
 # or `human`), the type label its title's prefix names, and an issue type; a pull request someone
 # trusted opens gets its type label; an issue a person labels `human` is assigned to both people
@@ -25,10 +25,6 @@ on:
 
 permissions: {}
 
-env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
-
 jobs:
   triage:
     name: triage
@@ -47,9 +43,7 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       # Trusted author (owner, member, collaborator or .harness/trust.txt) for a new thread, not
       # the bot or an app, which label their own; a person for `human`; anyone's thread for a
@@ -58,4 +52,4 @@ jobs:
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python3 -m harness triage --payload "$GITHUB_EVENT_PATH"
+        run: harness triage --payload "$GITHUB_EVENT_PATH"

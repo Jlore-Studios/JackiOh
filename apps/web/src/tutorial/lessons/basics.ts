@@ -1,6 +1,11 @@
-// Lesson 1 data (SPEC §9.10, R291, R2434001); ../lessons.ts defines its fields and ../scripts/basics.ts
-// is the coach. Mostly vanilla units, at most `deckCopies` of each (R2433001). Deck order fixes this
-// seed's deal (`scripts/lesson-deal.ts basics`): reordering it changes the game, so rerun the lesson's tests.
+// Lesson 1 data (SPEC §9.10, R291, R2434001, R2533001); ../lessons.ts defines its fields and
+// ../scripts/basics.ts is the coach. The first steps, and nothing else: the player's deck is mostly
+// vanilla units, copies of Training Grounds' three with no text at all and of its Rush-only Boulder Fist
+// Ogre, at most `deckCopies` (4) of each (R2433001), with six Cry units; the AI's is twelve Training
+// Grounds units too, copies of the same vanilla units (its own `deckCopies`, R2533001) and two Cry units.
+// No spell, keyword but Rush, backrow card, Legendary or Mythic, the pool hold on. Deck order fixes this
+// seed's deal (`scripts/lesson-deal.ts basics`): reordering it changes the game, so rerun the lesson's
+// tests.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -10,21 +15,21 @@ export const lesson: TutorialLesson = {
   title: "First steps",
   summary: "Play units, attack, and bring the enemy hero down to 0.",
   discoveries: ["mana", "play-unit", "attack-hero", "trade", "winning"],
-  seed: "core-basics-5",
+  seed: "tg-basics-1",
   humanSeat: "p1",
   poolHold: true,
   humanDeck: [
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-044", // Duplicating Felinors, Rare
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-001", // Spikey Steven, Common
     "traininggrounds-008", // Clobberer, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-023", // Quadrupling Felinors, Rare
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-008", // Clobberer, Common
@@ -32,22 +37,22 @@ export const lesson: TutorialLesson = {
     "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
   ],
   aiDeck: [
-    "core-008", // Mr. Vanilla, Common
-    "core-004", // Gary the Gambler, Common
-    "core-012", // Duplicating Felinors, Rare
-    "core-015", // Me and Mr Token, Common
-    "core-030", // Archivist, Rare
-    "core-053", // Reno, Common
-    "core-061", // Prejudiced Postdoc, Rare
-    "core-068", // Twisted Sorcerer, Common
-    "core-077", // Professor Curvature, Rare
-    "core-002", // Bigot, Common
-    "core-032", // Prem Panther, Rare
-    "core-089", // Corpse Eater, Epic
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-004", // Boulder Fist Ogre, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
+    "traininggrounds-001", // Spikey Steven, Common
+    "traininggrounds-008", // Clobberer, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-004", // Boulder Fist Ogre, Common
+    "traininggrounds-022", // Right-Hand Felinor, Rare
   ],
   retryTip: "Play a unit every turn, trade only when your unit survives the hit, and send everything else at the enemy hero.",
 };

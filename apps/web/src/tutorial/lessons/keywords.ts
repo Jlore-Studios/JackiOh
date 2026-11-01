@@ -1,6 +1,9 @@
-// Lesson 2 data (SPEC §9.10, R291, R2434001); ../lessons.ts defines its fields and ../scripts/keywords.ts
-// is the coach. Units with Cries and keywords, and no spell, Aura, Death or backrow card. Deck order fixes
-// this seed's deal (`scripts/lesson-deal.ts keywords`): reordering it changes the game, so rerun its tests.
+// Lesson 2 data (SPEC §9.10, R291, R2434001, R2533001); ../lessons.ts defines its fields and
+// ../scripts/keywords.ts is the coach. The player's deck is Training Grounds units, many with a Cry or a
+// keyword (Taunt, Armor, Divine Shield, Rush, Pierce), and no spell, Aura, Death or backrow card; the AI's
+// is twelve Training Grounds units, most with a Cry or a keyword. No Legendary or Mythic, the pool hold
+// on. Deck order fixes this seed's deal (`scripts/lesson-deal.ts keywords`): reordering it changes the
+// game, so rerun its tests.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -17,37 +20,37 @@ export const lesson: TutorialLesson = {
     "traininggrounds-002", // Personal Trainer, Common
     "traininggrounds-005", // Midlane Menace, Common
     "traininggrounds-022", // Right-Hand Felinor, Rare
-    "traininggrounds-044", // Duplicating Felinors, Rare
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
     "traininggrounds-023", // Quadrupling Felinors, Rare
     "traininggrounds-017", // Flaming Felinor, Rare
-    "traininggrounds-041", // Bigot, Common
+    "traininggrounds-041", // Legacy: Bigot, Common
     "traininggrounds-033", // Guerilla Felinor, Epic
     "traininggrounds-006", // Chosen by the Sun, Common
     "traininggrounds-007", // Chosen by the Moon, Common
     "traininggrounds-004", // Boulder Fist Ogre, Common
     "traininggrounds-009", // Ravager, Common
-    "traininggrounds-047", // Midrange Menace, Common
+    "traininggrounds-047", // Legacy: Midrange Menace, Common
     "traininggrounds-018", // Knife Juggler, Rare
     "traininggrounds-016", // Celestial Caller, Rare
     "traininggrounds-001", // Spikey Steven, Common
-    "traininggrounds-043", // Mr. Vanilla, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
     "traininggrounds-008", // Clobberer, Common
-    "traininggrounds-056", // Corpse Eater, Epic
-    "traininggrounds-048", // Jlockeed Shredder-10, Common
+    "traininggrounds-056", // Legacy: Corpse Eater, Epic
+    "traininggrounds-048", // Legacy: Jlockeed Shredder-10, Common
   ],
   aiDeck: [
-    "core-008", // Mr. Vanilla, Common
-    "core-012", // Duplicating Felinors, Rare
-    "core-019", // Midrange Menace, Common
-    "core-025", // 4-mana 7/7, Common
-    "core-032", // Prem Panther, Rare
-    "core-053", // Reno, Common
-    "core-068", // Twisted Sorcerer, Common
-    "core-004", // Gary the Gambler, Common
-    "core-030", // Archivist, Rare
-    "core-061", // Prejudiced Postdoc, Rare
-    "core-077", // Professor Curvature, Rare
-    "core-015", // Me and Mr Token, Common
+    "traininggrounds-006", // Chosen by the Sun, Common
+    "traininggrounds-047", // Legacy: Midrange Menace, Common
+    "traininggrounds-018", // Knife Juggler, Rare
+    "traininggrounds-004", // Boulder Fist Ogre, Common
+    "traininggrounds-005", // Midlane Menace, Common
+    "traininggrounds-044", // Legacy: Duplicating Felinors, Rare
+    "traininggrounds-022", // Right-Hand Felinor, Rare
+    "traininggrounds-023", // Quadrupling Felinors, Rare
+    "traininggrounds-033", // Guerilla Felinor, Epic
+    "traininggrounds-002", // Personal Trainer, Common
+    "traininggrounds-043", // Legacy: Mr. Vanilla, Common
+    "traininggrounds-001", // Spikey Steven, Common
   ],
   retryTip: "Read the keywords: break a Divine Shield with a small hit, and attack the Taunt units first.",
 };

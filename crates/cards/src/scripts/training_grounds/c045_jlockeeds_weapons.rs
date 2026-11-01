@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #45 Jlockeed's Weapons, the snapshot of Core #14 Jlockeed's Weapons (`core-014`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #14 (SPEC §8.1, §8): Field Spell (§4.1, §4.3). Ongoing aura (§10.4 layer 5, R83; standing backrow included, R1081000; not permanent R78). Params read via catalog (R1, R386; #15, #36).
+//! SPEC §8.11 Training Grounds #45 Legacy: Jlockeed's Weapons,
+//! the Legacy card of Core #14 Jlockeed's Weapons (`core-014`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +3 attack,
+//! Rush, First Strike", radiant "+6 attack": only the number changes (§8 Conventions).
+//!
+//! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
+//! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
+//! M3-T2) and vanishes the instant the card stops being an aura source. `applies` reads instance data
+//! only and never calls back into `unit_view`, or the layers would recurse.
+//!
+//! "Your units": the controller's units in the `units` row or standing in the backrow (R1081000), so the
+//! aura skips its own backrow card and a stolen unit stops matching because `controller` is compared
+//! (R78 resets it on the way out). Rush from this aura is what R83's "a Reborn body the board has
+//! granted Rush may attack again" refers to.
 
 use jackioh_engine::prelude::*;
 

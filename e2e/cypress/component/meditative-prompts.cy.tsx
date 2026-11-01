@@ -1,20 +1,38 @@
-// MN09 (#552), mobile: the prompt kinds the Meditative set adds, at phone width with long-press inspect
+// MN09 (#552), mobile: the prompt kinds the Meditative set adds, at phone width with a touch hold
 // (docs/polish/7-mobile-ux.md: the prompt as a bottom sheet, 44 px touch targets, no horizontal scroll;
-// docs/polish/6-cards.md: a card is read by a long-press on a touch screen).
+// R2617000: on a touch screen a card is read by holding it, which shows its hover preview).
+//
 //   craft   ME-CRAFT (Meditative #17, R880): the block editor docked as one sheet
 //   market  ME-MARKET (Meditative #42): the night market's stall
-// A long-press on the card a sheet shows picks nothing: a lot is read, not bought.
-// The play-time choices (R81) are no prompt kind of their own: a card's modes, picked in a "Choose one"
-// before the play is sent (#617): #22 Mind Games' secret choice (ME-SECRET), #22.1 Fortify Mind's guess
-// and #98 Showdown's lane. Their options are words, so the card is read from its name in the title.
-// The mount is mobile-ux.cy.tsx's (the narrowest box the board is given), with the real catalog, since
-// the market draws its lots from it. The block editor's meters and face are the engine's `craftPreview`,
-// so the WebAssembly module loads first, as `main.tsx` loads it before anything renders.
+//
+// At 360x780 (the narrowest phone the client is laid out for) and 390x844 (BUILD M5-T1's phone), each
+// prompt is a bottom sheet across the whole width resting on the bottom edge, never taller than the
+// screen; nothing in it scrolls sideways, every control is a 44 px target, and the card it shows has
+// a box inside the sheet. A touch held on that card shows its hover preview on the screen while the
+// finger is down, and the hold itself picks nothing: a lot is read, not bought.
+//
+// The play-time choices (R81) the set adds are no prompt kind of their own: a card's modes, declared
+// with the play, picked in a "Choose one" before it is sent (#617):
+//
+//   secret      #22 Mind Games' secret choice (ME-SECRET): Greed, Attack or Defend
+//   prediction  #22.1 Fortify Mind's guess at it
+//   lane        #98 Showdown's lane, the target that names a lane: Lane 1 to Lane 5
+//
+// Each opens from a tap on the card in hand as the same sheet, under the same checks; its options are
+// words, so the card is read from its name in the title, and a hold there shows its preview.
+//
+// The Created status (ME-CREATED, R943) of a card in hand at both phone sizes: no mark on its face
+// (R2647000), and a hold on the card shows its preview, which says it was made during the game.
+//
+// The mount is mobile-ux.cy.tsx's (`Game` inside `.app-shell.app-shell--wide`, the narrowest box the
+// board is ever given), with the real catalog, since the market draws its lots from it. The block
+// editor's meters and face are the engine's own `craftPreview`, so the WebAssembly module is loaded
+// first, as `main.tsx` loads it before anything renders.
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, PendingOption, PlayerView } from "@jackioh/shared";
 
-import { INSPECT_CLOSE, INSPECT_SHEET, closeInspect } from "../../../apps/web/src/cards/index.ts";
+import { INSPECT_HOVER, closeInspect } from "../../../apps/web/src/cards/index.ts";
 import { testid } from "../../../apps/web/src/game/contract.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
@@ -97,7 +115,7 @@ type Kind = {
   legal: readonly ActionBody[];
   /** A play-time choice opens from a tap on this hand card. */
   open?: string;
-  /** The card face a long-press reads, and the name its sheet must show. */
+  /** The card face a hold reads, and the name its preview must show. */
   card: { selector: string; name: string };
 };
 
@@ -133,21 +151,36 @@ function openSheet(entry: Kind): void {
   cy.get(`${PROMPT}[data-prompt-kind="${entry.shows}"]`).should("be.visible");
 }
 
-/** Holds a touch until the inspect sheet opens, then lifts it where it was. */
-function longPress(selector: string): void {
+/**
+ * Holds a touch on the element until its hover preview opens (R2617000), checks the preview while the
+ * finger is still down, then lifts it where it was and sees the preview go.
+ */
+function hold(selector: string, whileHeld: (preview: HTMLElement) => void): void {
   cy.get(selector).should("be.visible");
   cy.get(selector).then(($face) => {
     const box = rectOf($face[0] as Element);
     const at = { clientX: box.left + box.width / 2, clientY: box.top + box.height / 3 };
     cy.get(selector).trigger("pointerdown", { eventConstructor: "PointerEvent", pointerType: "touch", pointerId: 7, isPrimary: true, button: 0, ...at });
   });
-  // The hold opens the sheet after LONG_PRESS_MS; the retry is the wait.
-  cy.get(ts(INSPECT_SHEET)).should("be.visible");
-  // Forced: the sheet now covers the finger, and Cypress would refuse an element under it.
+  // The hold opens the preview after LONG_PRESS_MS; the retry is the wait.
+  cy.get(ts(INSPECT_HOVER)).should("be.visible");
+  cy.get(ts(INSPECT_HOVER)).should(($preview) => {
+    whileHeld($preview[0] as HTMLElement);
+  });
+  // The press lifts where it began: forced, since the preview may lie over the finger.
   cy.get(selector).trigger("pointerup", { eventConstructor: "PointerEvent", pointerType: "touch", pointerId: 7, isPrimary: true, button: 0, force: true });
   // The lift's lone click, as the browser sends it after a long-press: `cy.click()` would play a
   // fresh tap (a new pointerdown first) that no finger made.
   cy.get(selector).trigger("click", { force: true });
+  cy.get(ts(INSPECT_HOVER)).should("not.exist");
+}
+
+/** The preview starts on the screen, inside its width and below its top. */
+function expectOnScreen(preview: HTMLElement, width: number, label: string): void {
+  const box = rectOf(preview);
+  expect(box.left, `${label}: the preview is on the screen`).to.be.at.least(-EPSILON);
+  expect(box.right, `${label}: the preview is on the screen`).to.be.at.most(width + EPSILON);
+  expect(box.top, `${label}: the preview is on the screen`).to.be.at.least(-EPSILON);
 }
 
 /* helpers */
@@ -210,9 +243,9 @@ function nameOf(element: Element): string {
   return `${element.tagName.toLowerCase()}.${(element.getAttribute("class") ?? "").split(/\s+/)[0] ?? ""} "${name}"`;
 }
 
-/* specs */
+/* ------------------------------------------------------------------------------------- specs */
 
-describe("MN09: the Meditative prompt kinds at phone width, with long-press inspect", () => {
+describe("MN09: the Meditative prompt kinds at phone width, with a touch hold", () => {
   beforeEach(() => {
     cy.wrap(loadWasm(), { timeout: WASM_TIMEOUT_MS });
   });
@@ -236,24 +269,14 @@ describe("MN09: the Meditative prompt kinds at phone width, with long-press insp
         });
       });
 
-      it(`MN09 a long-press on the ${label}'s card opens its inspect sheet on the screen, and picks nothing`, () => {
+      it(`MN09 R2617000 a hold on the ${label}'s card shows its preview on the screen while the finger is down, and picks nothing`, () => {
         cy.viewport(phone.width, phone.height);
         openSheet(entry);
-        longPress(entry.card.selector);
-        cy.document().should((doc) => {
-          const sheet = doc.querySelector<HTMLElement>(ts(INSPECT_SHEET));
-          expect(sheet, `${label}: the inspect sheet`).to.not.eq(null);
-          if (sheet === null) return;
-          expect(sheet.textContent ?? "", `${label}: the sheet reads the card`).to.contain(entry.card.name);
-          const box = rectOf(sheet);
-          expect(box.left, `${label}: the sheet is on the screen`).to.be.at.least(-EPSILON);
-          expect(box.right, `${label}: the sheet is on the screen`).to.be.at.most(phone.width + EPSILON);
-          expect(box.top, `${label}: the sheet is on the screen`).to.be.at.least(-EPSILON);
-          const close = doc.querySelector<HTMLElement>(ts(INSPECT_CLOSE));
-          expect(close, `${label}: the sheet's Close`).to.not.eq(null);
-          if (close !== null) expect(rectOf(close).height, `${label}: Close is a 44 px target`).to.be.at.least(TOUCH_PX - EPSILON);
-          expect(sent, `${label}: the long-press picked nothing`).to.deep.equal([]);
+        hold(entry.card.selector, (preview) => {
+          expect(preview.textContent ?? "", `${label}: the preview reads the card`).to.contain(entry.card.name);
+          expectOnScreen(preview, phone.width, label);
         });
+        cy.wrap(sent).should("deep.equal", []);
       });
     }
   }
@@ -273,37 +296,23 @@ function createdView(): PlayerView {
   });
 }
 
-/** Every way the Created mark on the hand card fails, as readable lines. */
+/** R2647000: every way a hand card still wears the Created mark, as readable lines. */
 function createdProblems(doc: Document, label: string): string[] {
   const root = doc.querySelector<HTMLElement>(ts(testid.handCard(CREATED)));
   if (root === null) return [`${label}: no created hand card`];
-  const mark = root.querySelector<HTMLElement>('.cf-state[data-state="created"]');
-  if (mark === null || !shown(mark)) return [`${label}: no Created mark on the created card`];
+  if (root.querySelector(".cf") === null) return [`${label}: no face`];
   const problems: string[] = [];
-  const own = rectOf(mark);
-  const face = root.querySelector<HTMLElement>(".cf");
-  if (face === null) return [`${label}: no face`];
-  const box = rectOf(face);
-  if (own.left < box.left - EPSILON || own.right > box.right + EPSILON || own.top < box.top - EPSILON || own.bottom > box.bottom + EPSILON) {
-    problems.push(`${label}: the Created mark runs off the card`);
-  }
-  for (const part of [".card-name", ".cost-gem"]) {
-    const other = face.querySelector<HTMLElement>(part);
-    if (other === null || !shown(other)) continue;
-    const them = rectOf(other);
-    const overlaps = own.left < them.right - EPSILON && own.right > them.left + EPSILON && own.top < them.bottom - EPSILON && own.bottom > them.top + EPSILON;
-    if (overlaps) problems.push(`${label}: the Created mark covers ${part}`);
-  }
+  if (root.querySelector('.cf-state[data-state="created"]') !== null) problems.push(`${label}: the created card wears a Created mark on its face`);
   const dealt = doc.querySelector<HTMLElement>(ts(testid.handCard(DEALT)));
   if (dealt?.querySelector('.cf-state[data-state="created"]') !== null) problems.push(`${label}: a dealt card carries the Created mark`);
   return problems;
 }
 
-describe("MN09: the Created mark at phone width, with long-press inspect", () => {
+describe("MN09 R2647000: a created card at phone width wears no Created mark, and a hold's preview says it", () => {
   for (const phone of PHONES) {
-    const label = `the Created mark at ${String(phone.width)}x${String(phone.height)}`;
+    const label = `a created card at ${String(phone.width)}x${String(phone.height)}`;
 
-    it(`MN09 ${label} sits on the created card in hand, inside it and clear of its name and cost`, () => {
+    it(`MN09 R2647000 ${label} wears no Created mark on its face in hand`, () => {
       cy.viewport(phone.width, phone.height);
       mount(createdView());
       cy.get(ts(testid.handCard(CREATED))).should("be.visible");
@@ -312,21 +321,15 @@ describe("MN09: the Created mark at phone width, with long-press inspect", () =>
       });
     });
 
-    it(`MN09 a long-press on the created card at ${String(phone.width)}x${String(phone.height)} opens its sheet, which says it was made during the game`, () => {
+    it(`MN09 R2617000 a hold on the created card at ${String(phone.width)}x${String(phone.height)} shows its preview, which says it was made during the game`, () => {
       cy.viewport(phone.width, phone.height);
       mount(createdView());
-      longPress(ts(testid.handCard(CREATED)));
-      cy.document().should((doc) => {
-        const sheet = doc.querySelector<HTMLElement>(ts(INSPECT_SHEET));
-        expect(sheet, `${label}: the inspect sheet`).to.not.eq(null);
-        if (sheet === null) return;
-        expect(sheet.textContent ?? "", `${label}: the sheet reads the card`).to.contain(cardName("meditative-022-1"));
-        expect(sheet.textContent ?? "", `${label}: the sheet says it was created`).to.contain("made during the game");
-        const box = rectOf(sheet);
-        expect(box.left, `${label}: the sheet is on the screen`).to.be.at.least(-EPSILON);
-        expect(box.right, `${label}: the sheet is on the screen`).to.be.at.most(phone.width + EPSILON);
-        expect(sent, `${label}: the long-press played nothing`).to.deep.equal([]);
+      hold(ts(testid.handCard(CREATED)), (preview) => {
+        expect(preview.textContent ?? "", `${label}: the preview reads the card`).to.contain(cardName("meditative-022-1"));
+        expect(preview.textContent ?? "", `${label}: the preview says it was created`).to.contain("made during the game");
+        expectOnScreen(preview, phone.width, label);
       });
+      cy.wrap(sent).should("deep.equal", []);
     });
   }
 });

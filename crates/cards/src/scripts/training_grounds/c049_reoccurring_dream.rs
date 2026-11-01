@@ -1,8 +1,46 @@
-//! SPEC §8.11 Training Grounds #49 Reoccurring Dream, the snapshot of Core #23 Reoccurring Dream (`core-023`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #23 (SPEC §8.2, §8, §5.1): seeded RNG roll (CLAUDE.md rule 4, R60; Lucky X §6.1). Graveyard trigger in §2.2 cleanup (R68, §10.5) returns to hand (burns if full, R4, §2.4; R129, R987, R177, §9.1).
-//! Radiant stays through zone moves (R1438). Kept face v0.4.0f (R767000, R1748003).
+//! SPEC §8.11 Training Grounds #49 Legacy: Reoccurring Dream,
+//! the Legacy card of Core #23 Reoccurring Dream (`core-023`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #23 Reoccurring Dream (SPEC §8.2, R60, R68, §5.1).
+//!
+//! Base: "30% chance a random card in your hand becomes Radiant. End of turn: returns from the GY to
+//! your hand". Radiant restates the roll only — "Lucky 1 (two rolls, keep the success) at 40%" — so
+//! the return-from-the-graveyard clause is kept (§8 Conventions).
+//!
+//! The pick is `setRadiantRandom`, which is R60's random pick: it draws from the non-Radiant cards of
+//! the zone and does nothing when none are left. The spell itself is in `resolving` while its script
+//! runs (§10.5), so it can never pick itself.
+//!
+//! Both rolls go through the seeded `ctx.rng` (CLAUDE.md rule 4), the base one roll at the declared
+//! `chance` (30%) and the radiant `lucky(1, …)` — two rolls at its 40%, keeping a success, which is §6.1's Lucky X read on a
+//! yes/no roll. The X is the face's printed Lucky as it always was (0, or 1 on the Radiant face; a
+//! Nerf or a Buff never reaches it, D14) plus any Lucky given (`given_lucky_on`, R1438), so a base
+//! face given Lucky 1 rolls twice at 0.3, and a Radiant face given Lucky 1 three times at 0.4. No
+//! effect verb gates on a probability, so the hook does the roll and returns either
+//! the effect or nothing; see the report for the `chanceOf` verb this wants. With an empty hand the
+//! effect has nothing to do, so it rolls nothing (R129, R60). A hand that is all Radiant is rolled
+//! like any other: whether the hand holds a base-face card is the hand's (§9.1), so neither the roll
+//! nor the cue may hang on it — a success over it cues the pick it could not make on a Radiant card
+//! (R177's `cueUnpicked`), and the hand's size, which decides the roll, is public (R177).
+//!
+//! §5.1: "Spells with 'End of turn: add this back to your hand' are flagged
+//! `returnToHandAtEndOfTurn` when played and return from the graveyard at the end of that turn, as
+//! graveyard triggers (R68)". No effect verb sets that flag yet (reported), so the hook gates on the
+//! flag OR this turn's play log, which is the same set of cards for a spell played normally: a copy
+//! that reached the graveyard by being discarded or milled is not in the log and stays there.
+//!
+//! Tunes: chance 30 ↑ (Radiant 40), a percentage stepping 10 up to 100 (R1748003); the Radiant face's
+//! Lucky 1 stays fixed (D14). Through v0.4.4b the chances were printed, not declared;
+//! `script_v0_4_4b` keeps that (R767000).
+//!
+//! The snapshot has no shipped history, so it copies neither `script_v0_4_4b` nor the printed odds it
+//! read (R2195003): its one script reads the declared `chance`.
 
 use jackioh_engine::prelude::*;
 

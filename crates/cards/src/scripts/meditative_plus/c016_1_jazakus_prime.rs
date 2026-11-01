@@ -3,8 +3,16 @@
 //!   Base:    "Cry: Craft a HUGE custom Potion. It costs (3)."
 //!   Radiant: "Cry: Craft a HUGE custom Radiant Potion. It costs (3)."
 //!
-//! HUGE Potion crafter (M+ #16, R1182001, R1563008): cost (3) with 5x potion points; blocks from offer (R1563007, R881).
-//! Voice audio renders with release (R1420, R1448).
+//! M+ #16 Jazakus's crafter in its HUGE frame (R1182001): the same fixed frame, a Spell tagged Potion
+//! with no stats whose one hat is When cast (R1563008), at cost (3) (`CRAFT_HUGE_POTION_COST`) with
+//! `CRAFT_HUGE_POTION_BUDGET_MULTIPLE` (5) times a Potion's points, 20 against 4: "about 5 times
+//! better than the normal custom potion". Its lines (24), effects (8) and numbers (1 to 10) are the
+//! frame's, its blocks the prompt's offer (R1563007). The prompt's seeded HUGE Potions answer for the
+//! AI, the policy and a timeout (R881). Only M+ #16's Death puts one in a deck (a Radiant one on its
+//! Radiant face).
+//!
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::effects::{choose_craft, chosen_recipe, craft_card};
 use jackioh_engine::prelude::*;

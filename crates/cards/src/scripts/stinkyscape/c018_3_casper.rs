@@ -41,12 +41,35 @@ fn turn_watch() -> TriggerDef {
     .with_when(|ctx, event| matches!(event, GameEvent::TurnEnded { player, .. } if *player == ctx.controller))
 }
 
+/// R1866003: the Float CASPER saw `controller`'s last turn end with, `None` before it has seen one of
+/// theirs (a record of another seat's is a turn it never saw for them, after a change of control).
+fn float_seen(seen: Option<&Value>, controller: PlayerId) -> Option<i64> {
+    let seen = seen?;
+    if seen["player"] != json!(controller) {
+        return None;
+    }
+    seen["float"].as_i64()
+}
+
+/// R2476000: after "if you Floated on your last turn", the Float it saw that turn end with, which it
+/// votes on when above 0; the dash before it has seen one of its controller's turns end. On the field,
+/// to both seats: unspent mana is public (§10.8). R78 forgets it as it leaves.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let label = "if you Floated on your last turn".to_string();
+        vec![match float_seen(ctx.self_.memory.get(LAST_TURN_KEY), ctx.controller) {
+            Some(float) => PreviewValue { label, value: float as i32, display: None, ids: None },
+            None => PreviewValue { label, value: 0, display: Some(NOTHING_REMEMBERED.to_string()), ids: None },
+        }]
+    })
+}
+
 /// R1866003: "votes to remove you if you Floated on your last turn".
 fn vote_if_floated(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let floated = recalled(ctx, LAST_TURN_KEY).is_some_and(|seen| {
-        seen["player"] == json!(ctx.controller) && seen["float"].as_i64().is_some_and(|float| float > 0)
-    });
-    if floated {
+    if float_seen(recalled(ctx, LAST_TURN_KEY).as_ref(), ctx.controller).is_some_and(|float| float > 0) {
         vec![vote_out(Default::default())]
     } else {
         vec![]
@@ -150,6 +173,7 @@ fn casper(radiant: bool) -> Script {
     Script {
         triggers: vec![turn_watch()],
         start_of_turn: Some(hook(vote_if_floated)),
+        preview: Some(preview()),
         activations: vec![activate],
         resume,
         ..Script::default()
@@ -243,6 +267,27 @@ mod tests {
             s.end_turn();
             until_active(&mut s, P1);
             votes(&s)
+        }
+
+        /// R2476000: after "if you Floated on your last turn", the Float it saw: the dash before any
+        /// turn end, then 2 once p1's turn ends with 2 unspent, to both seats, and it votes.
+        #[test]
+        fn r2476000_it_previews_the_float_it_saw_your_last_turn_end_with() {
+            for radiant in [false, true] {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "backrow": [{ "def": CASPER, "radiant": radiant }], "mana": 2, "library": filler(4) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let casper = s.card(CASPER).id.clone();
+                let label = "if you Floated on your last turn".to_string();
+                assert_eq!(crate::preview_seen(&s, P1, &casper), vec![(label.clone(), 0, Some("—".to_string()))]);
+                s.end_turn();
+                let seen = vec![(label, 2, None)];
+                assert_eq!(crate::preview_seen(&s, P1, &casper), seen, "radiant {radiant}");
+                assert_eq!(crate::preview_seen(&s, PlayerId::P2, &casper), seen, "radiant {radiant}");
+                until_active(&mut s, P1);
+                assert_eq!(votes(&s), 1, "radiant {radiant}");
+            }
         }
 
         #[test]

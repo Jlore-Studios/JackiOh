@@ -94,7 +94,9 @@ for the watch and the replay share). `/decks` opens the workshop on the kept dec
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
-**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `PracticeLeave` and `ChatPanel` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
+An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
+
+**Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`), `SettingsPanel`, `ConfirmConcede`, `ConfirmLeaveMatch`, `PracticeLeave`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown (`DrillDownBackLayer` in `routes/stats.tsx`) and, through `BackLayer` mounted with their panels, the match's `Marketplace` and the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker` call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
 
 **The command menu** (R2118000): Ctrl+K (⌘K) opens a modal menu on every menu screen —
 `routes/CommandMenu.tsx` (the shortcut and the dialog, `commandMenuTestid` and
@@ -154,6 +156,8 @@ present for exactly that window.
 focus on open and is what Escape, Back and a click outside do; Tab stays in the dialog, and the focus goes
 back to the control when it closes. A hotseat hand-over or the game's end drops the question.
 
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks nothing.
+
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
 the end of the offerer's turn. `DrawOffer.tsx` draws one element, `draw-toast` (the element the
@@ -209,7 +213,7 @@ zone is picked by clicking the unit or its zone.
 **The Trade** (SPEC §6.1, §10.10, R1838000). A hand card of the viewer's that `legal` lists a `trade`
 for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
 (`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
-`trade-<instanceId>`, "Trade" with the price and the Trades left from the view's `trades`. It is live
+`trade-<instanceId>`, "Trade" with the Trades left from the view's `trades`. It is live
 exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
 reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
 Game's own bar is off (`tradeBar={false}`).
@@ -222,14 +226,24 @@ play is built as a hand card's.
 **Credits** (issue #1840, R1840005). `Hero.tsx` draws each seat's `marketCredits` from the view alone,
 as a pill in the hero's badge row beside the Jade Counter's (`market-credits-<side>`, on both seats),
 and nothing while the view carries none; a count of 0 still shows. A Resource is a hand card since
-#2250 (R2250000), so the hand draws it and there is no Resource tray.
+#2250 (R2250000), so the hand draws it and there is no Resource tray. A Resource's face prints
+`Credits: <min>–<max>` under its text, its face's `resource` prices (`cards/model.ts`, R2521009).
 
 **The Marketplace** (issue #1853, R1853003). Once the view carries `marketplace`, `Marketplace.tsx` puts
-a toggle (`marketplace-button`) on the table that opens its panel (`marketplace-panel`): the viewer's
+a toggle (`marketplace-button`) in the board's control bar (the pill at the bottom left where the board has
+its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
 Credits, the turn the offering re-rolls on, each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), and a "Sell" (`market-sell-<instanceId>`) for each
 sale the view lists, tray Resources then hand cards such as Spice (R1861000). Each is live exactly when `legal` lists its `marketBuy` or
 `marketSell` and sends that body; otherwise it is greyed, a lot's tooltip the engine's `reason`.
+
+**The match menu** (#2645). On a phone (`game/phoneBar.ts`, board.css's two phone layouts) the control bar
+keeps to one row: End turn, the Marketplace toggle while the view carries a marketplace, the log toggle,
+⋯ (`match-menu`) and the gear. ⋯'s menu (`match-menu-panel`, `game/MatchMenu.tsx`) holds Offer draw,
+Concede and Friends, each a full-width 44px row with its whole label; it decides nothing, so Concede still
+only asks (`ConfirmConcede`) and Offer draw keeps its words, ⋯ wearing a dot while a declined offer blocks
+it. A press on a row, ⋯, Escape and Back close the menu, and the menu and the shop are never open together.
+Tablets and desktops keep the buttons in the bar.
 
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
@@ -263,9 +277,15 @@ The tests share their support in `src/test/`: `setup.ts` patches jsdom's gaps (`
 `fixtures.ts` holds the fixture `PlayerView`s; `stubServer.ts` the stubbed `fetch`, `must` and sign-in;
 `settle.ts` the one wait for the page to settle, whose depth (`ticks`, `macrotasks`) and fake-timer
 mode (`advance`, `runAllTimers`) are named options; `history.ts` the browser's Back and Forward
-(`pressBack`, `pressForward`), which need real timers; and `board.tsx` `withCatalog` and `renderBoard`,
+(`pressBack`, `pressForward`), which need real timers; `seedSearch.ts` `seedWhere`, which finds a
+test's seed at run time instead of pinning one a card change re-deals (#2569); and `board.tsx` `withCatalog` and `renderBoard`,
 the board mounted inside the shipped catalog. `src/test/helpers.test.ts` fails any test file that
 defines its own `settle`, `withCatalog`, `renderBoard` or `ensurePointerEvent` (#2215).
+
+`scripts/github-releases.ts` prints every shipped version's GitHub release as JSON (`src/patches/github.ts`:
+the Patch notes page as Markdown, a pre-release while only staging has the version), which
+`.github/workflows/releases.yml` publishes. It needs no WebAssembly; to read the newest one's notes:
+`pnpm --dir apps/web exec tsx scripts/github-releases.ts | jq -r '.releases[-1].body'`.
 
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
@@ -548,15 +568,16 @@ The landing page offers three doors — Play (to the `/play` hub, R1578000), Col
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). While any modifier is live on either side, the rail carries `game/ModifierList.tsx`'s chip (`modifier-list`, its count in `data-count`), which opens every label in full under You and Opponent; on a phone the badges beside each hero are cut short, and each is a button (`game/ModifierBadge.tsx`) whose tap opens its own whole label beside it (`modifier-full-<id>`, #2321) and whose second tap, a tap elsewhere or focus leaving it closes it, with no key handler (R2126000). Practice and the lessons show the same chip in their HUD, under You and AI, the Duos board shows it for the seat's own duel, and the watch screen (the newest view) and the replay player (the step on the board) show it in their rail. A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
-- the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
-  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
+- the pass control on an inspected hand card sends `Pass` only when `legal` holds it, with the pass
+  cost and the passes left beside it (SPEC §13.5); it is the only way to pass, and a hand card
+  dragged onto the portal or the teammate's board passes nothing (#2619);
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
 - the Both boards toggle (`duos-both`, `aria-pressed`) shows the teammate's duel beside the own one
   (R2095000): the second board is the portal's read-only board in `duos-board-teammate` next to
   `duos-board-own`, silent so it feeds no audio and draws no effects layer, with pings and inspection working on it and a hand
-  card dragged onto it passing when `legal` lists it. The choice is kept per device in
+  card dragged onto it doing nothing. The choice is kept per device in
   `localStorage` (off until pressed); the portal stays mounted and CSS hides it on a wide
   screen while both boards show, and below 600px the toggle hides and the board falls back to one
   with the portal flipping: the rail rides whichever board the portal names, so the one drawn
@@ -605,8 +626,8 @@ src/practice/
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, the clock mark (R2208000), in IndexedDB `jackioh.practice`
-                      (memory in jsdom), and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
+                      PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
@@ -630,7 +651,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   outlines the enemy hero and End turn, and the `lethal-hint` line "You have lethal") once it shows
   the newest view, never on a replay. Online and hotseat boards never set it.
 - A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
-- A game on a server seed gives each AI decision `PRACTICE_EARNING_AI_CLOCK_MS`, not `PRACTICE_AI_CLOCK_MS` (R2208000), since the server re-runs its moves with no clock (R1303002). A decision that cap still cuts marks the game (`clockCut`, kept in the worker's save). The worker's `claim` answer carries the mark beside the claim, never in it. The dialog words a marked `ai_mismatch` as "this device ran out of time on one of the AI's moves".
+- A game on a server seed decides under `PRACTICE_AI_CLOCK_MS` like every practice game: the server folds a claim's log and re-runs no AI move (R2560000, superseding R2208000).
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the
@@ -797,9 +818,12 @@ Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edi
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
 comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`; `CARD_HOOKS` in
-`constants.ts`) gives a voice line (`voice` and `text`), an `effect`, or both — a `trigger` (R1088)
-gives a voice and a non-empty `lines` list instead, one of which plays when the runner starts the
-`summoned` entry the card caused. `voiceData.ts` checks it
+`constants.ts`) gives a voice line (its `voice`), an `effect`, or both — a `trigger` (R1088) gives
+a voice for a non-empty list of lines, one of which plays when the runner starts the `summoned`
+entry the card caused, and an `emotes` section gives each portrait's voice (R644). The words the
+lines speak are not in it: they are each card's `voice` and the portraits' `emotes` in
+`crates/cards/card-text.yaml` (#2498), which `cargo test -p jackioh-tools --test export_card_text`
+writes into `src/audio/voice-text.json`. `voiceData.ts` joins the two (`withVoiceText`), checks them
 at load and names the path of any mistake. The voice files are generated from its lines and
 committed, so CI never runs a synthesizer. Each voice names its backend (R501): Core's voices are
 macOS `say` (the default), and the Classic and Classic+ voices are `backend: "sapi"`, Windows SAPI
@@ -853,7 +877,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `@jackioh/server-config` are the generated Rust constants, `@jackioh/validator` the validator,
   `@jackioh/cards` the catalog and its version (read from `crates/cards/patches/patches.json`), and
   `@jackioh/cards/catalog.json`, `flavour.json`, `chinese.json` and `chinese-terms.json` the files in
-  `crates/cards`.
+  `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
+  entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
   `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they

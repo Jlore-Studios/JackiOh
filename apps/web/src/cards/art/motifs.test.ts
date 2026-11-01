@@ -78,9 +78,10 @@ describe("R503 the Book, Pancake and AI families", () => {
         if (card.tags.includes(tag)) expect(themeFor(card.tags, card.type), card.id).toBe(theme);
       }
     }
-    // T-AI-1 to 10, Meditative+ #1.1 to #1.4 (Bob's Plan's plans, R1563003) and the Stinkyscape set's
-    // ten AI cards (R1857000).
-    expect(DEFS.filter((card) => setShips(card.set) && themeFor(card.tags, card.type) === "ai")).toHaveLength(24);
+    // T-AI-1 to 10, Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day,
+    // the plans Bob's Plan offers (R1563003), and since its release the Stinkyscape set's ten AI cards
+    // (R1857000), and #1.5 Star Chart, Bob's Plan's plan for Alteran Reach (R2521008).
+    expect(DEFS.filter((card) => setShips(card.set) && themeFor(card.tags, card.type) === "ai")).toHaveLength(25);
   });
 
   it("R503 each family has its palette, its own emblem first in its pool, a hue drift and its motes", () => {
@@ -396,8 +397,12 @@ describe("R503 one distinct picture per catalog entry", () => {
 describe("R503 Core keeps the pictures v0.1 gave it", () => {
   type Recorded = readonly [ArtThemeId, string, number, number];
   const recorded = CORE_V01 as unknown as Readonly<Record<string, Recorded>>;
-  /** R1837000: the Core cards a patch re-tagged, as their tags theme them now (#62 lost Felinor in #1837). */
-  const RETAGGED: Readonly<Record<string, ArtThemeId>> = { "core-062": "spell" };
+  /**
+   * R1837000: the Core cards a later patch re-tagged, and the theme their tags give now. A theme is read
+   * off the tags, so #62 Friend of Felinors, no Felinor since #1837, wears the plain Spell's, and #84 Going
+   * Long, no Quickdraw since #2521, the plain Field Spell's; every other Core card keeps v0.1's picture.
+   */
+  const RETAGGED: Readonly<Record<string, ArtThemeId>> = { "core-062": "spell", "core-084": "field-spell" };
   const kept = Object.entries(recorded).filter(([id]) => !(id in RETAGGED));
 
   it("R503 the fixture covers every Core entry", () => {

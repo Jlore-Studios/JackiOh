@@ -78,14 +78,16 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const VANILLA: &str = "core-008"; // (1) 4/4, no piece.
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
 
+    /// p1's Starship (one AP Rounds) and, in p2's backrow lane 2, a set Stimulus (Radiant if `radiant`);
+    /// p1 holds `hand` beside it. Returns the scenario, the Starship's id and the Stimulus's.
     fn setup(seed: &str, radiant: bool, hand: Value) -> (Scenario, String, String) {
         let (s, ship) = built_starship(
             seed,
-            json!([{ "def": STRATOS, "lane": 1 }]),
+            json!([{ "def": AP_ROUNDS, "lane": 1 }]),
             json!({ "hand": hand }),
             json!({ "backrow": [{ "def": ID, "lane": 2, "faceUp": false, "radiant": radiant }] }),
         );
@@ -126,7 +128,7 @@ mod tests {
     fn r1859003_with_no_open_unit_zone_it_stays_face_up_in_the_backrow() {
         let (mut s, ship) = built_starship(
             "r1859003-full",
-            json!([{ "def": STRATOS, "lane": 1 }]),
+            json!([{ "def": AP_ROUNDS, "lane": 1 }]),
             json!({}),
             json!({
                 "field": (1..=5).map(|lane| json!({ "def": VANILLA, "lane": lane })).collect::<Vec<_>>(),
@@ -142,17 +144,17 @@ mod tests {
 
     #[test]
     fn r1859003_a_piece_played_leaves_the_base_face_set() {
-        let (mut s, _ship, id) = setup("r1859003-played-base", false, json!([STRATOS]));
-        s.play(STRATOS, json!({ "zone": 3 }));
+        let (mut s, _ship, id) = setup("r1859003-played-base", false, json!([AP_ROUNDS]));
+        s.play(AP_ROUNDS, json!({ "zone": 3 }));
         assert!(is_set(&s, &id));
     }
 
     #[test]
     fn r1859003_radiant_it_also_reveals_on_a_piece_played_as_a_12_12() {
-        let (mut s, _ship, id) = setup("r1859003-played-radiant", true, json!([VANILLA, STRATOS]));
+        let (mut s, _ship, id) = setup("r1859003-played-radiant", true, json!([VANILLA, AP_ROUNDS]));
         s.play(VANILLA, json!({ "zone": 3 }));
         assert!(is_set(&s, &id), "a Unit that is no piece leaves it set");
-        s.play(STRATOS, json!({ "zone": 4 }));
+        s.play(AP_ROUNDS, json!({ "zone": 4 }));
         let card = s.card(id.as_str()).clone();
         assert!(matches!(card.zone, Zone::Field { player: P2, row: Row::Units, .. }), "{:?}", card.zone);
         let stats = s.stats(card.id.as_str());

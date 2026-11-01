@@ -6,16 +6,22 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { PlayerView } from "@jackioh/shared";
+import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Board from "../../game/Board.tsx";
 import Game from "../../game/Game.tsx";
 import { NO_HIGHLIGHT, type Highlight } from "../../game/contract.ts";
+import { offerDrawControlText } from "../../game/DrawOffer.tsx";
 import { hasMovesLeft } from "../../game/glow.ts";
+import { usePathname } from "../../net/navigate.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, card, emptySide, heroPower, pendingFor, unit } from "../fixtures.ts";
+import { pressBack } from "../history.ts";
+import { stubPhoneBar } from "../phoneBar.ts";
+import { at } from "../stubServer.ts";
 
 afterEach(() => {
   cleanup();
@@ -393,7 +399,7 @@ describe("B27 the board reflects drag to play and hover previews, live", () => {
 
 // B33: safe areas and the 390 px width scan, read off the stylesheets
 
-function css(file: "board.css" | "prompt.css"): string {
+function css(file: "board.css" | "market.css" | "prompt.css"): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "game", file), "utf8");
 }
 
@@ -461,6 +467,7 @@ describe("B43 a phone opens the log from the control bar", () => {
   });
 });
 
+// #785: the control bar on a phone held upright
 describe("#785 a phone held upright keeps the control bar to one row", () => {
   it("board.css hides the board's mute and language buttons on a phone held upright, where the settings gear holds both", () => {
     const text = css("board.css");
@@ -488,39 +495,252 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
   });
 });
 
-describe("#1831 the Friends button in the board's phone bars", () => {
-  it("#1831 board.css places the Friends button in the phone bars", () => {
-    const text = css("board.css");
-    const start = text.indexOf("@media (max-width: 600px) {");
-    const portrait = text.slice(start, text.indexOf("@media", start + 1));
+// #2645: the control bar on a phone holds the match menu
 
-    expect(start).toBeGreaterThan(-1);
-    expect(text).toMatch(/\.board \.control-bar \.friends-button--game\s*\{\s*flex:\s*0 0 auto;/);
-    // An online match's rail row holds it at its end: the rail gives up 50px (its 44px button and a gap).
-    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) > \.board-rail\s*\{\s*order:\s*-2;\s*flex-basis:\s*calc\(100% - 50px\);/);
-    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) > \.friends-button--game\s*\{\s*order:\s*-1;/);
-    // Any other bar tightens, as the narrow phone's does, to take one more 44px button.
-    const bar = String.raw`\.board \.control-bar:has\(> \.friends-button--game\):not\(:has\(> \.board-rail\)\)`;
-    expect(portrait).toMatch(new RegExp(`${bar}\\s*\\{\\s*gap:\\s*4px;`));
-    expect(portrait).toMatch(new RegExp(`${bar} \\.control\\s*\\{\\s*padding-inline:\\s*6px;`));
-    expect(portrait).toMatch(new RegExp(`${bar} \\[data-testid="settings-open-game"\\]\\s*\\{\\s*padding-inline:\\s*10px;`));
-    expect(portrait).toMatch(
-      new RegExp(`${bar} \\.control-offer-draw,\\s*${bar} \\.control-concede\\s*\\{[^}]*flex-shrink:\\s*1;[^}]*white-space:\\s*normal;`),
-    );
+describe("#2645 a phone's control bar holds the match menu", () => {
+  let restore: (() => void) | undefined;
+  afterEach(() => {
+    restore?.();
+    restore = undefined;
   });
 
-  it("#1831 board.css hides the button in the dev hotseat's bar at 380px, where it has no room", () => {
-    const text = css("board.css");
-    const start = text.indexOf("@media (max-width: 380px) {");
-    const narrow = text.slice(start, text.indexOf("@media", start + 1));
+  function phone(matches: boolean): void {
+    restore = stubPhoneBar(matches);
+  }
 
-    expect(start).toBeGreaterThan(-1);
-    expect(narrow).toMatch(
-      /:not\(\.practice-table\) > \.game > \.board > \.control-bar:not\(:has\(> \.board-rail\)\) > \.friends-button--game\s*\{\s*display:\s*none;/,
+  function bar(): HTMLElement {
+    const found = screen.getByTestId("board").querySelector<HTMLElement>(".control-bar");
+    if (found === null) throw new Error("no control bar");
+    return found;
+  }
+
+  const MARKET_VIEW: Partial<PlayerView> = { marketplace: { offers: [], sales: [] } };
+  const LEGAL: ActionBody[] = [{ type: "endTurn" }, { type: "offerDraw" }, { type: "concede" }];
+
+  it("#2645 on a phone the bar holds End turn, the log toggle, ⋯ and the gear, and ⋯'s closed menu holds Offer draw and Concede", () => {
+    phone(true);
+    render(<Board view={boardView()} highlight={NOTHING_LEFT} />);
+    const toggle = screen.getByTestId("match-menu");
+    const panel = screen.getByTestId("match-menu-panel");
+
+    expect(toggle.parentElement).toBe(bar());
+    expect(screen.getByTestId("log-toggle").parentElement).toBe(bar());
+    expect(screen.getByTestId("settings-open-game").parentElement).toBe(bar());
+    expect(screen.getByTestId("end-turn").closest(".control-bar")).toBe(bar());
+    expect(panel.contains(screen.getByTestId("offer-draw"))).toBe(true);
+    expect(panel.contains(screen.getByTestId("concede"))).toBe(true);
+    expect(panel).not.toBeVisible();
+    expect(bar().querySelector(":scope > [data-testid='offer-draw']")).toBeNull();
+    expect(bar().querySelector(".audio-toggle")).toBeNull();
+    expect(bar().querySelector(".language-button--game")).toBeNull();
+    expect(screen.queryByTestId("marketplace-button")).toBeNull();
+  });
+
+  it("#2645 ⋯ opens and closes the menu, and Escape closes it and gives ⋯ the focus", () => {
+    phone(true);
+    render(<Board view={boardView()} highlight={NOTHING_LEFT} />);
+    const toggle = screen.getByTestId("match-menu");
+    const panel = screen.getByTestId("match-menu-panel");
+
+    expect(toggle).toHaveAccessibleName("Match menu");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-controls", panel.id);
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(panel).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(panel).not.toBeVisible();
+
+    fireEvent.click(toggle);
+    fireEvent.keyDown(screen.getByTestId("concede"), { key: "Escape" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(panel).not.toBeVisible();
+    expect(toggle).toHaveFocus();
+  });
+
+  it("#2645 the browser's Back closes the open menu and gives ⋯ the focus, keeping the match's address", async () => {
+    phone(true);
+    at("/decks");
+    window.history.pushState(null, "", "/practice");
+    // Reads the path: its `usePathname` installs `navigate.ts`'s `popstate` listener, where Back's layers are read.
+    function Path(): ReactElement {
+      return <p data-testid="path">{usePathname()}</p>;
+    }
+    render(
+      <>
+        <Board view={boardView()} highlight={NOTHING_LEFT} />
+        <Path />
+      </>,
     );
+    const toggle = screen.getByTestId("match-menu");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await pressBack();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId("match-menu-panel")).not.toBeVisible();
+    expect(toggle).toHaveFocus();
+    expect(window.location.pathname).toBe("/practice");
+  });
+
+  it("#2645 Concede from the menu opens ConfirmConcede and sends no concede, and Cancel gives ⋯ the focus", () => {
+    phone(true);
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    render(<Game view={boardView()} legal={LEGAL} onAction={onAction} />);
+    const toggle = screen.getByTestId("match-menu");
+
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByTestId("concede"));
+    expect(screen.getByTestId("concede-dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("match-menu-panel")).not.toBeVisible();
+    expect(onAction).not.toHaveBeenCalledWith({ type: "concede" });
+
+    fireEvent.click(screen.getByTestId("concede-cancel"));
+    expect(screen.queryByTestId("concede-dialog")).toBeNull();
+    expect(onAction).not.toHaveBeenCalledWith({ type: "concede" });
+    expect(toggle).toHaveFocus();
+
+    fireEvent.click(toggle);
+    fireEvent.click(screen.getByTestId("concede"));
+    fireEvent.click(screen.getByTestId("concede-confirm"));
+    expect(onAction).toHaveBeenCalledWith({ type: "concede" });
+  });
+
+  it("#2645 Offer draw in the menu sends its control and closes the menu", () => {
+    phone(true);
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    render(<Game view={boardView()} legal={LEGAL} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId("match-menu"));
+    fireEvent.click(screen.getByTestId("offer-draw"));
+    expect(onAction).toHaveBeenCalledWith({ type: "offerDraw" });
+    expect(screen.getByTestId("match-menu-panel")).not.toBeVisible();
+    expect(screen.getByTestId("match-menu")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("#2645 ⋯ wears a dot while a declined offer blocks Offer draw, whose row keeps its label and title", () => {
+    phone(true);
+    const { rerender } = render(<Board view={boardView()} highlight={NOTHING_LEFT} />);
+    expect(screen.getByTestId("match-menu")).not.toHaveAttribute("data-dot");
+
+    const blocked = boardView({ drawOfferBlockedTurns: 2 });
+    rerender(<Board view={blocked} highlight={NOTHING_LEFT} />);
+    const text = offerDrawControlText(blocked);
+    const row = screen.getByTestId("offer-draw");
+
+    expect(screen.getByTestId("match-menu")).toHaveAttribute("data-dot", "true");
+    expect(text.title).toBeDefined();
+    expect(row).toHaveTextContent(text.label);
+    expect(row).toHaveAttribute("title", text.title);
+  });
+
+  it("#2645 ⋯ carries the glow of the control a tutorial points at while the menu is closed, and the row carries it once it is open", () => {
+    phone(true);
+    render(<Board view={boardView()} highlight={highlight(["end-turn", "concede"], ["concede"])} />);
+    const toggle = screen.getByTestId("match-menu");
+
+    expect(toggle).toHaveAttribute("data-glow", "ready");
+    expect(screen.getByTestId("concede")).toHaveAttribute("data-glow", "ready");
+
+    fireEvent.click(toggle);
+    expect(toggle).not.toHaveAttribute("data-glow");
+    expect(screen.getByTestId("concede")).toHaveAttribute("data-glow", "ready");
+  });
+
+  it("#2645 the Marketplace toggle is a button of the bar only while the view carries a marketplace, and it and the menu are never open together", () => {
+    phone(true);
+    const market = { legal: [], onAction: vi.fn() };
+    const { rerender } = render(<Board view={boardView()} highlight={NOTHING_LEFT} market={market} />);
+    expect(screen.queryByTestId("marketplace-button")).toBeNull();
+
+    rerender(<Board view={boardView(MARKET_VIEW)} highlight={NOTHING_LEFT} market={market} />);
+    const shop = screen.getByTestId("marketplace-button");
+    const toggle = screen.getByTestId("match-menu");
+    expect(shop.parentElement).toBe(bar());
+    expect(shop).toHaveAccessibleName("Marketplace");
+
+    fireEvent.click(shop);
+    expect(screen.getByTestId("marketplace-panel").parentElement).toBe(bar());
+    fireEvent.click(toggle);
+    expect(screen.queryByTestId("marketplace-panel")).toBeNull();
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(shop);
+    expect(screen.getByTestId("marketplace-panel")).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByTestId("match-menu-panel")).not.toBeVisible();
+
+    rerender(<Board view={boardView()} highlight={NOTHING_LEFT} market={market} />);
+    expect(screen.queryByTestId("marketplace-button")).toBeNull();
+    rerender(<Board view={boardView(MARKET_VIEW)} highlight={NOTHING_LEFT} />);
+    expect(screen.queryByTestId("marketplace-button")).toBeNull();
+  });
+
+  it("#2645 on a desktop Offer draw and Concede stay buttons of the bar and there is no ⋯", () => {
+    phone(false);
+    render(<Board view={boardView(MARKET_VIEW)} highlight={NOTHING_LEFT} market={{ legal: [], onAction: vi.fn() }} />);
+
+    expect(screen.queryByTestId("match-menu")).toBeNull();
+    expect(screen.queryByTestId("match-menu-panel")).toBeNull();
+    expect(screen.getByTestId("offer-draw").parentElement).toBe(bar());
+    expect(screen.getByTestId("concede").parentElement).toBe(bar());
+    expect(screen.getByTestId("marketplace-button").parentElement).toBe(bar());
+    expect(bar().querySelector(".audio-toggle")).not.toBeNull();
+  });
+
+  it("#2645 board.css keeps Friends out of the phone bars and lays the landscape column in two rows", () => {
+    const text = css("board.css");
+    const portraitAt = text.indexOf("@media (max-width: 600px) {");
+    const portrait = text.slice(portraitAt, text.indexOf("\n@media", portraitAt + 1));
+    const narrowAt = text.indexOf("@media (max-width: 380px) {");
+    const narrow = text.slice(narrowAt, text.indexOf("\n@media", narrowAt + 1));
+    const landscapeAt = text.indexOf("@media (orientation: landscape) and (max-height: 500px) {");
+    const landscape = text.slice(landscapeAt, text.indexOf("\n@media", landscapeAt + 1));
+
+    expect(portraitAt).toBeGreaterThan(-1);
+    expect(narrowAt).toBeGreaterThan(-1);
+    expect(landscapeAt).toBeGreaterThan(-1);
+    // The desktop bar's Friends button stays a button of the bar at its natural size.
+    expect(text).toMatch(/\.board \.control-bar \.friends-button--game\s*\{\s*flex:\s*0 0 auto;/);
+    // On a phone it is a row of the match menu, so nothing in the phone blocks makes room for it, and
+    // Offer draw and Concede are never squeezed into wrapping their labels.
+    expect(portrait).not.toContain("friends-button--game");
+    expect(narrow).not.toContain("friends-button--game");
+    expect(portrait).not.toMatch(/control-offer-draw,\s*[^{]*control-concede\s*\{[^}]*white-space:\s*normal/);
+    expect(narrow).not.toMatch(/control-offer-draw|control-concede/);
+    // The landscape column is two rows: End turn and the gear, then the toggles of the Marketplace, the log and ⋯.
+    expect(landscape).toMatch(
+      /\.board \.control-bar \.marketplace-toggle,\s*\.board \.control-bar \.log-toggle,\s*\.board \.control-bar \.match-menu-toggle\s*\{\s*order:\s*2;\s*flex:\s*1 1 0;/,
+    );
+    // A menu's items are never given a `display`: practice.css and duos.css hide them by selector.
+    expect(text).toMatch(/\.match-menu\[hidden\]\s*\{\s*display:\s*none;/);
+    const items = text.match(/\.board \.control-bar \.match-menu > \.control,\s*\.board \.control-bar \.match-menu > \.friends-button\s*\{([^}]*)\}/);
+    expect(items).not.toBeNull();
+    expect(items?.[1]).not.toMatch(/display:/);
+    expect(items?.[1]).toMatch(/min-height:\s*44px;/);
+    expect(items?.[1]).toMatch(/white-space:\s*nowrap;/);
+  });
+
+  it("#2645 market.css opens the panel upward from the bar and keeps the floating pill to the sidebar layout, and duos.css hides an empty menu's ⋯", () => {
+    const text = css("market.css");
+    const base = text.match(/\n\.marketplace-panel\s*\{([^}]*)\}/);
+    const sidebarAt = text.indexOf("@media (min-width: 1025px) and (min-height: 501px)");
+    const sidebar = text.slice(sidebarAt, text.indexOf("\n}\n", sidebarAt));
+    const duos = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "duos", "duos.css"), "utf8");
+
+    expect(base).not.toBeNull();
+    expect(base?.[1]).toMatch(/position:\s*absolute;/);
+    expect(base?.[1]).toMatch(/bottom:\s*calc\(100% \+ 6px\);/);
+    expect(sidebarAt).toBeGreaterThan(-1);
+    expect(sidebar).toMatch(/\.board \.marketplace-toggle,\s*\.marketplace-panel\s*\{[^}]*position:\s*fixed;/);
+    expect(duos).toMatch(/\.duos-board \.match-menu-toggle:not\(:has\(~ \.match-menu \.friends-button\)\)\s*\{\s*display:\s*none;/);
   });
 });
 
+// #990: an online match's rail (Back, chat, the ranks) on a phone
 describe("#990 an online match's rail on a phone", () => {
   it("#990 board.css gives a rail a row of its own above the controls, End turn's housing room in the row under it, and the cards the rail's height", () => {
     const text = css("board.css");
@@ -567,7 +787,6 @@ describe("#990 an online match's rail on a phone", () => {
     expect(empty?.[1]).toMatch(/position:\s*absolute;/);
     expect(empty?.[1]).not.toMatch(/display:\s*none/);
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.language-button--game\s*\{\s*display:\s*none;/);
-    expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \[data-testid="settings-open-game"\]\s*\{\s*order:\s*3;/);
     expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.turn-plate\s*\{[^}]*flex-flow:\s*row wrap;/);
   });
 });

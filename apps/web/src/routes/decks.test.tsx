@@ -303,6 +303,7 @@ describe("what the screen opens with", () => {
   });
 });
 
+// The portraits the picker offers (R1827000)
 describe("the portrait picker's offer (R1827000)", () => {
   async function offeredOnANewDeck(): Promise<(string | null)[]> {
     await waitFor(() => {

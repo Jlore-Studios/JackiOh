@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #47 Midrange Menace, the snapshot of Core #19 Midrange Menace (`core-019`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #19 (SPEC §8.1, §8): Taunt/Immutable keywords (§10.4, R23, R781001; #41, #13). Controller's end of turn (§6.2) heals to full (§6.3, §4; R17, R78, §10.8, §9.3).
+//! SPEC §8.11 Training Grounds #47 Legacy: Midrange Menace,
+//! the Legacy card of Core #19 Midrange Menace (`core-019`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #19 Midrange Menace (SPEC §8.1): 9/9 → 18/18, "Taunt; End of turn: heal to full", radiant
+//! "Taunt, Immutable; same". Engine cell: "Heal removes all damage".
+//!
+//! The radiant cell lists keywords without "Plus", so `[Taunt, Immutable]` is the radiant form's
+//! complete keyword list, and "same" restates the end-of-turn clause (§8 Conventions): both faces carry
+//! the identical hook. Neither keyword is granted here: both are PRINTED in the catalog and applied by
+//! §10.4's layer system (combat enforces the Taunt; R23's Immutable scope is the effects library's), so
+//! a re-grant would double it.
+//!
+//! "End of turn" is the controller's own (§6.2), never the opponent's, as in #13. "Heal to full" is
+//! §6.3's Heal with `toFull`: it takes ALL damage off and raises nothing. §4 says damage stays between
+//! turns, which is why the card needs this at all.
 
 use jackioh_engine::prelude::*;
 

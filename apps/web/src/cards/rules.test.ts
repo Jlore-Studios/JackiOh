@@ -94,8 +94,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Chance to reveal",
     // R2199000: TG #31 Level Up! prints no such term.
     "After one of your Units attacks",
-    // R2285000, R2285001: the two attack timings; the cards print them in their own words.
+    // R2285000, R2285001, R2396000: the three attack timings, rules only; the cards print them in their
+    // own words.
     "When this attacks",
+    "Whenever this attacks",
     "After this attacks",
   ],
   "§6.3": [
@@ -225,7 +227,6 @@ const TRIGGERS: readonly TriggerTermId[] = [
 
 /** R512: §6.1's statuses that are not keyword kinds. */
 const STATUSES: readonly StatusTermId[] = [
-  "Can't be in Defense Position",
   "Can't be attacked",
   "Only Units in this lane can attack this",
   "Berserk",
@@ -267,7 +268,11 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Mark in a hand",
 ];
 
-/** Each kind's mark: R346's PI, R636's WF, R637's TE, R1220's UT, R1086's MG and #783's RG FL CK CR FB among them. */
+/**
+ * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT,
+ * then R1086's MG, then #783's RG FL CK CR FB, then R1838000's TD, R1852000's SP SS and R2657000's CD.
+ */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
   Rush: "RU",
@@ -304,6 +309,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Tradable: "TD",
   "Starship Piece": "SP",
   Starship: "SS",
+  "Can't Defend": "CD",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -616,6 +622,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     expect(GLOSSARY.Recruit.rule).toBe("Summon from deck, scanning top down");
     expect(GLOSSARY.Radiant.rule).toContain("In hand or deck");
     expect(GLOSSARY.Indestructible.rule).toContain("tributed");
+    // R500: Tribute's reminder is short and says Units, not the rules' "sacrifice".
     expect(GLOSSARY.Tribute.rule).toBe("Playing this also costs X of your Units, which go to the graveyard");
     // Backrow zone reads backrow, and the retired turn-trigger prose reads label-style.
     expect(GLOSSARY["Animated on your turn"].rule).toBe("A Unit on your turn; back in its backrow on your opponent's");
@@ -645,8 +652,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry.section, id).toBe("§6.1");
       expect(entry.rule.trim(), id).not.toBe("");
     }
-    // The catalog writes "Can't"; aliases are empty (#45).
-    expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
+    // R2657000: the status "Can't be in Defense Position" is the keyword Can't Defend now, no status.
+    expect(Object.keys(GLOSSARY)).not.toContain("Can't be in Defense Position");
   });
 
   it("R512 R1320 Nerf and Buff are two terms with a §6.3 row each, each rule its own word", () => {
@@ -719,6 +726,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       "End the turn": ["end the turn"],
       Allure: ["Allured"],
       Launch: ["launch", "launches"],
+      // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
+      Activate: ["Activated"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -797,7 +806,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 each new status, and the v0.2.0 keyword kinds, are found where a card prints them", () => {
-    expect(termsIn(played("classicplus-051"))).toEqual(expect.arrayContaining(["Can't be in Defense Position", "Can't be attacked"]));
+    expect(termsIn(played("classicplus-051"))).toContain("Can't be attacked");
     expect(termsIn(played("classicplus-019-1"))).toContain("Only Units in this lane can attack this");
     expect(termsIn(played("classicplus-019-1", "radiant"))).toContain("Immune to Spells");
     expect(termsOf(played("classicplus-019-5"))).toContainEqual({ text: "Berserk:", term: "Berserk" });
@@ -857,6 +866,38 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     for (const { where, text } of PLAYED_TEXTS) {
       expect(joined(text), where).toBe(text);
     }
+  });
+});
+
+describe("R2657000: Can't Defend, the keyword that took over from the status Can't be in Defense Position", () => {
+  it("R2657000 Can't Defend is a §6.1 keyword with its own mark, bold on the keyword line of every card that printed the status", () => {
+    const entry = GLOSSARY["Can't Defend"];
+    expect(entry.section).toBe("§6.1");
+    expect(entry.rule).toBe("Never in Defense Position");
+    expect(entry.aliases).toEqual([]);
+    expect(rowOf(entry)).toBe("Can't Defend");
+    expect(KEYWORD_MARK["Can't Defend"]).toBe("CD");
+    expect(KEYWORD_KINDS).toContain("Can't Defend");
+    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines.
+    expect(termsOf(played("classicplus-019-1"))).toEqual(
+      expect.arrayContaining([
+        { text: "Armor 2", term: "Armor" },
+        { text: "Can't Defend", term: "Can't Defend" },
+      ]),
+    );
+    expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
+    expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
+    // Jlockeed's J15 Fighter no longer has it at all.
+    expect(termsIn(played("classicplus-051"))).not.toContain("Can't Defend");
+  });
+
+  it("R2657000 the status's spellings are plain words now, and Warp Disruptor's aura stays plain words", () => {
+    expect(termsOf("Can't be in Defense Position.")).toEqual([]);
+    expect(termsOf("Cannot be in Defense Position.")).toEqual([]);
+    expect(termsIn(played("stinkyscape-023"))).not.toContain("Can't Defend");
+    expect(played("stinkyscape-023")).toContain("Units can't be in Defense Position");
+    // No catalog face prints the old status.
+    expect(PLAYED_TEXTS.filter(({ text }) => text.includes("Can't be in Defense Position"))).toEqual([]);
   });
 });
 

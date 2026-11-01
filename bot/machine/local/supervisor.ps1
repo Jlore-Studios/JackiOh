@@ -31,7 +31,7 @@
   its runners, the size of its memory, whether it is calm, and each runner container with the
   CPUs it uses, whether it is throttled and, while it plays games, how many of how many
   (Get-Progress), as pc.json in a secret gist of the signed-in account.
-  The status issue's runners section and learn lane read it (bot/harness/dashboard.py), so it
+  The status issue's runners section and learn lane read it (bot/go/internal/dashboard), so it
   says how loaded the PC is and what it and its gather job are doing. The gist is
   made once; its id is kept in pc-gist.txt beside the scripts and in the repository variable
   JACKIOH_PC_GIST, which bot-status.yml hands the status loop. A heartbeat that fails is logged

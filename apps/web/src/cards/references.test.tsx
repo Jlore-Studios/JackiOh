@@ -1,3 +1,6 @@
+// R279: a name in a card's text that its `refs` link is a reference: marked everywhere, a control where
+// the surface allows one (a tooltip with the named face), and the hover preview lists the named faces.
+
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

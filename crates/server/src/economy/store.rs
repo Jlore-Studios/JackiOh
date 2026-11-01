@@ -1,30 +1,40 @@
 //! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
 //! `FakeTables::economy`). Migration 0047's practice seeds (§14.8, #1303) live here too: a seed is
-//! no holding and has no ledger, and a claim burns it in place. So do migration 0067's idempotency
-//! keys (R2124000).
+//! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`). So
+//! do migration 0067's idempotency keys (R2124000): a spend's key and the answer it committed,
+//! written in the spend's transaction and swept after `IDEMPOTENCY_KEY_TTL_HOURS`. Migration 0071
+//! keeps a claim with its seed until it settles (R2422000): the burn writes the claim, and the pay
+//! or the refusal marks the seed settled (`economy_practice_seed_settle`), once.
 //!
-//! Every store method is one method on `Tx`, named `economy_<table>_<verb>`, whose body dispatches
-//! to this file's `pg::<name>` or `fake::<name>`. A grant writes its holding and its ledger row
-//! together, in the caller's transaction, and a grant the holding cannot take answers `None` or
-//! `false` and writes nothing (§14.1, §14.5). A grant the schema refuses by its checks is refused
-//! here first, before either store, as `StoreError::Other("economy: …")`, so both answer it alike.
+//! Same shape as `duos::store`: every store method is one method on `Tx`, named
+//! `economy_<table>_<verb>`, whose body dispatches to this file's `pg::<name>` or `fake::<name>`.
+//! A grant writes its holding and its ledger row together, in the caller's transaction, and a grant
+//! the holding cannot take (a spend the wallet cannot cover, a quest not held, a cosmetic already
+//! owned) answers `None` or `false` and writes nothing (§14.1, §14.5). A grant the schema refuses
+//! by its checks (a zero change, a `dev` reason without the `dev` mark, a key its item does not
+//! take) is refused here first, before either store, as `StoreError::Other("economy: …")`, so both
+//! answer it alike.
 //!
 //! Lists come in their key's byte order (Postgres's `collate "C"`), a count that fell to zero
-//! included; ledgers come oldest first. Times are epoch milliseconds, as everywhere in the store.
+//! included; ledgers come oldest first. Integers are `i64`, times epoch milliseconds, as everywhere
+//! in the store.
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::config::Difficulty;
 use jackioh_engine::wire::PrintedRarity;
-use jackioh_engine::{LastBoardEntry, LeanPick, PlayerId};
+use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::config::SET_TRACK_FIRST_LEVEL;
 use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
+use crate::economy::practice::ClaimedResult;
 
+// ---------------------------------------------------------------------------
 // The literals
+// ---------------------------------------------------------------------------
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
 /// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
@@ -253,8 +263,35 @@ pub struct PracticeSetup {
     pub catalog_version: String,
 }
 
+/// A practice claim as it was sent (R2422000; `practice_seeds.claim`, migration 0071): the result
+/// it says the human had and the game's log, kept with its seed from the burn until it settles.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PracticeClaim {
+    pub result: ClaimedResult,
+    pub log: Vec<Action>,
+}
+
+/// How a practice claim settled (R2422000; `practice_seeds.settled`): paid, or refused by its check.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PracticeOutcome {
+    Paid,
+    Refused,
+}
+
+/// A practice claim's mark (R2422000; `practice_seeds.settled` and `settled_at`): how and when it
+/// settled.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PracticeSettled {
+    pub outcome: PracticeOutcome,
+    pub at: i64,
+}
+
 /// One row of `public.practice_seeds` (migration 0047): a seed issued for a practice game, and
-/// when it was claimed (R1303001).
+/// when it was claimed (R1303001); with migration 0071, the claim kept until it settles and the
+/// mark it settled with (R2422000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PracticeSeed {
@@ -263,6 +300,13 @@ pub struct PracticeSeed {
     pub setup: PracticeSetup,
     pub issued_at: i64,
     pub claimed_at: Option<i64>,
+    /// The claim that burned the seed, until it settles; `None` before the burn, after the
+    /// settle, and for a seed claimed before migration 0071.
+    #[serde(default)]
+    pub claim: Option<PracticeClaim>,
+    /// The claim's mark, once it settled.
+    #[serde(default)]
+    pub settled: Option<PracticeSettled>,
 }
 
 /// One row of `public.idempotency_keys` (migration 0067, R2124000): a spend's key under its
@@ -734,15 +778,40 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seed_get(profile_id, seed))
     }
 
-    /// R1303001: marks the profile's seed claimed at `at`. False, writing nothing, when it has no
-    /// such seed or it was claimed already, so two claims racing for one seed burn it once.
+    /// R1303001: marks the profile's seed claimed at `at`, keeping `claim` with it until it settles
+    /// (R2422000). False, writing nothing, when it has no such seed or it was claimed already, so
+    /// two claims racing for one seed burn it once.
     pub async fn economy_practice_seed_claim(
         &mut self,
         profile_id: &str,
         seed: &str,
         at: i64,
+        claim: &PracticeClaim,
     ) -> StoreResult<bool> {
-        economy_dispatch!(self, practice_seed_claim(profile_id, seed, at))
+        economy_dispatch!(self, practice_seed_claim(profile_id, seed, at, claim))
+    }
+
+    /// R2422000: marks the profile's claimed seed settled with `outcome` at `at`, and clears the
+    /// claim it kept. False, writing nothing, when the profile has no such seed, it is unclaimed,
+    /// or it settled already, so a pay that marks it first in its own transaction lands once
+    /// whoever runs it.
+    pub async fn economy_practice_seed_settle(
+        &mut self,
+        profile_id: &str,
+        seed: &str,
+        outcome: PracticeOutcome,
+        at: i64,
+    ) -> StoreResult<bool> {
+        economy_dispatch!(self, practice_seed_settle(profile_id, seed, outcome, at))
+    }
+
+    /// R2422000: every profile's seeds that keep a claim not yet settled, claimed before
+    /// `claimed_before`, oldest claim first (then by seed): what the retention loop settles.
+    pub async fn economy_practice_seeds_unsettled(
+        &mut self,
+        claimed_before: i64,
+    ) -> StoreResult<Vec<PracticeSeed>> {
+        economy_dispatch!(self, practice_seeds_unsettled(claimed_before))
     }
 
     /// R2379000: deletes the profile's seed `seed` while it is unclaimed. False, writing nothing,
@@ -761,7 +830,8 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seeds_open(profile_id, issued_since))
     }
 
-    /// R1303001: deletes the profile's seeds issued before `issued_before`, claimed or not.
+    /// R1303001: deletes the profile's seeds issued before `issued_before`, claimed or not, but a
+    /// claim not yet settled, which stays until it settles (R2422000).
     pub async fn economy_practice_seeds_prune(
         &mut self,
         profile_id: &str,
@@ -838,9 +908,11 @@ mod pg {
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
         EconomyReason, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry, InventoryGrant,
-        JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack,
-        TrackGrant, count_after, from_literal, literal, track_after,
+        JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim, PracticeOutcome, PracticeSeed,
+        PracticeSettled, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal,
+        literal, track_after,
     };
+    use crate::auth::is_uuid;
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
     use crate::db::store::StoreError;
@@ -934,6 +1006,11 @@ mod pg {
         until: i64,
         reference: &str,
     ) -> Result<GameJloreTotals, StoreError> {
+        // A deleted seat reads back as the empty id (`db/pg.rs`, KNOWN DIVERGENCES, deleted
+        // accounts), which has no rows and which Postgres would refuse as a uuid.
+        if !is_uuid(profile_id) {
+            return Ok(GameJloreTotals::default());
+        }
         run_as(t, Some(profile_id)).await?;
         let (day, reference): (i64, i64) = sqlx::query_as(
             "select coalesce(sum(delta), 0)::bigint,
@@ -1692,23 +1769,65 @@ mod pg {
         })
     }
 
-    /// Migration 0047. `setup` crosses as text cast to `jsonb`, and reads back as text.
+    /// Migration 0047. `setup` crosses as text cast to `jsonb`, and reads back as text; so does
+    /// migration 0071's `claim`.
     pub async fn practice_seed_insert(t: &mut PgTx<'_>, seed: &PracticeSeed) -> Result<(), StoreError> {
         run_as(t, Some(seed.profile_id.as_str())).await?;
+        let claim = seed.claim.as_ref().map(serde_json::to_string).transpose()?;
+        let outcome = seed
+            .settled
+            .as_ref()
+            .map(|settled| literal(&settled.outcome))
+            .transpose()?;
         sqlx::query(
-            "insert into public.practice_seeds (seed, profile_id, setup, issued_at, claimed_at)
+            "insert into public.practice_seeds
+                    (seed, profile_id, setup, issued_at, claimed_at, claim, settled, settled_at)
              values ($1::text, $2::uuid, $3::jsonb, to_timestamp($4::double precision / 1000.0),
                      case when $5::double precision is null then null
-                          else to_timestamp($5::double precision / 1000.0) end)",
+                          else to_timestamp($5::double precision / 1000.0) end,
+                     $6::jsonb, $7::text,
+                     case when $8::double precision is null then null
+                          else to_timestamp($8::double precision / 1000.0) end)",
         )
         .bind(seed.seed.as_str())
         .bind(seed.profile_id.as_str())
         .bind(serde_json::to_string(&seed.setup)?)
         .bind(seed.issued_at)
         .bind(seed.claimed_at)
+        .bind(claim)
+        .bind(outcome)
+        .bind(seed.settled.as_ref().map(|settled| settled.at))
         .execute(&mut **t)
         .await?;
         Ok(())
+    }
+
+    /// A row of `setup::text as setup, issued_at, claimed_at, claim::text as claim, settled,
+    /// settled_at` as the seed `seed` of `profile_id`.
+    fn practice_seed_of(row: &PgRow, seed: String, profile_id: String) -> Result<PracticeSeed, StoreError> {
+        let setup: String = row.try_get("setup")?;
+        let claimed_at: Option<OffsetDateTime> = row.try_get("claimed_at")?;
+        let claim: Option<String> = row.try_get("claim")?;
+        let outcome: Option<String> = row.try_get("settled")?;
+        let settled_at: Option<OffsetDateTime> = row.try_get("settled_at")?;
+        let settled = match (outcome, settled_at) {
+            (Some(outcome), Some(at)) => Some(PracticeSettled {
+                outcome: from_literal(outcome)?,
+                at: ms_of(at),
+            }),
+            _ => None,
+        };
+        Ok(PracticeSeed {
+            seed,
+            profile_id,
+            setup: serde_json::from_str(&setup)?,
+            issued_at: ms_of(row.try_get("issued_at")?),
+            claimed_at: claimed_at.map(ms_of),
+            claim: claim
+                .map(|claim| serde_json::from_str::<PracticeClaim>(&claim))
+                .transpose()?,
+            settled,
+        })
     }
 
     pub async fn practice_seed_get(
@@ -1718,25 +1837,16 @@ mod pg {
     ) -> Result<Option<PracticeSeed>, StoreError> {
         run_as(t, Some(profile_id)).await?;
         let row = sqlx::query(
-            "select setup::text as setup, issued_at, claimed_at from public.practice_seeds
+            "select setup::text as setup, issued_at, claimed_at, claim::text as claim, settled, settled_at
+               from public.practice_seeds
               where seed = $1::text and profile_id = $2::uuid",
         )
         .bind(seed)
         .bind(profile_id)
         .fetch_optional(&mut **t)
         .await?;
-        row.map(|row| -> Result<PracticeSeed, StoreError> {
-            let setup: String = row.try_get("setup")?;
-            let claimed_at: Option<OffsetDateTime> = row.try_get("claimed_at")?;
-            Ok(PracticeSeed {
-                seed: seed.to_string(),
-                profile_id: profile_id.to_string(),
-                setup: serde_json::from_str(&setup)?,
-                issued_at: ms_of(row.try_get("issued_at")?),
-                claimed_at: claimed_at.map(ms_of),
-            })
-        })
-        .transpose()
+        row.map(|row| practice_seed_of(&row, seed.to_string(), profile_id.to_string()))
+            .transpose()
     }
 
     /// One statement: the row changes only while it is unclaimed.
@@ -1745,18 +1855,70 @@ mod pg {
         profile_id: &str,
         seed: &str,
         at: i64,
+        claim: &PracticeClaim,
     ) -> Result<bool, StoreError> {
         run_as(t, Some(profile_id)).await?;
         let done = sqlx::query(
-            "update public.practice_seeds set claimed_at = to_timestamp($3::double precision / 1000.0)
+            "update public.practice_seeds
+                set claimed_at = to_timestamp($3::double precision / 1000.0), claim = $4::jsonb
               where seed = $1::text and profile_id = $2::uuid and claimed_at is null",
         )
         .bind(seed)
         .bind(profile_id)
         .bind(at)
+        .bind(serde_json::to_string(claim)?)
         .execute(&mut **t)
         .await?;
         Ok(done.rows_affected() == 1)
+    }
+
+    /// One statement: the row changes only while it is claimed and unsettled. A second settle of
+    /// the row waits on the first's row lock, then finds it settled and changes nothing.
+    pub async fn practice_seed_settle(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        seed: &str,
+        outcome: PracticeOutcome,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let done = sqlx::query(
+            "update public.practice_seeds
+                set settled = $3::text, settled_at = to_timestamp($4::double precision / 1000.0),
+                    claim = null
+              where seed = $1::text and profile_id = $2::uuid
+                and claimed_at is not null and settled_at is null",
+        )
+        .bind(seed)
+        .bind(profile_id)
+        .bind(literal(&outcome)?)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
+
+    /// Every profile's rows, so it runs as no subject: `service_role` bypasses RLS. Migration
+    /// 0071's partial index `practice_seeds_unsettled` serves it.
+    pub async fn practice_seeds_unsettled(
+        t: &mut PgTx<'_>,
+        claimed_before: i64,
+    ) -> Result<Vec<PracticeSeed>, StoreError> {
+        run_as(t, None).await?;
+        let rows = sqlx::query(
+            "select seed, profile_id::text as profile_id, setup::text as setup, issued_at, claimed_at,
+                    claim::text as claim, settled, settled_at
+               from public.practice_seeds
+              where claim is not null and settled_at is null
+                and claimed_at < to_timestamp($1::double precision / 1000.0)
+              order by claimed_at, seed collate \"C\"",
+        )
+        .bind(claimed_before)
+        .fetch_all(&mut **t)
+        .await?;
+        rows.iter()
+            .map(|row| practice_seed_of(row, row.try_get("seed")?, row.try_get("profile_id")?))
+            .collect()
     }
 
     /// One statement: the row goes only while it is unclaimed.
@@ -1802,7 +1964,8 @@ mod pg {
         run_as(t, Some(profile_id)).await?;
         sqlx::query(
             "delete from public.practice_seeds
-              where profile_id = $1::uuid and issued_at < to_timestamp($2::double precision / 1000.0)",
+              where profile_id = $1::uuid and issued_at < to_timestamp($2::double precision / 1000.0)
+                and (claim is null or settled_at is not null)",
         )
         .bind(profile_id)
         .bind(issued_before)
@@ -1881,8 +2044,9 @@ mod fake {
     use super::{
         CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
         EconomyReason, EconomyTables, GameJloreTotals, HeldQuest, IdempotencyRow, InventoryEntry,
-        InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange,
-        QuestGrant, SetTrack, TrackGrant, count_after, literal, track_after,
+        InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeClaim, PracticeOutcome,
+        PracticeSeed, PracticeSettled, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
+        literal, track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::ProfileKind;
@@ -2386,6 +2550,7 @@ mod fake {
         profile_id: &str,
         seed: &str,
         at: i64,
+        claim: &PracticeClaim,
     ) -> Result<bool, StoreError> {
         let tables = call(f, "economy.practiceSeeds.claim")?;
         match tables
@@ -2395,10 +2560,54 @@ mod fake {
         {
             Some(held) => {
                 held.claimed_at = Some(at);
+                held.claim = Some(claim.clone());
                 Ok(true)
             }
             None => Ok(false),
         }
+    }
+
+    pub fn practice_seed_settle(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        seed: &str,
+        outcome: PracticeOutcome,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.settle")?;
+        match tables.practice_seeds.iter_mut().find(|held| {
+            held.seed == seed
+                && held.profile_id == profile_id
+                && held.claimed_at.is_some()
+                && held.settled.is_none()
+        }) {
+            Some(held) => {
+                held.settled = Some(PracticeSettled { outcome, at });
+                held.claim = None;
+                Ok(true)
+            }
+            None => Ok(false),
+        }
+    }
+
+    pub fn practice_seeds_unsettled(
+        f: &mut FakeTx<'_>,
+        claimed_before: i64,
+    ) -> Result<Vec<PracticeSeed>, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.unsettled")?;
+        let unsettled: Vec<PracticeSeed> = tables
+            .practice_seeds
+            .iter()
+            .filter(|held| {
+                held.claim.is_some()
+                    && held.settled.is_none()
+                    && held
+                        .claimed_at
+                        .is_some_and(|claimed_at| claimed_at < claimed_before)
+            })
+            .cloned()
+            .collect();
+        Ok(sorted_by(unsettled, |held| (held.claimed_at, held.seed.clone())))
     }
 
     pub fn practice_seed_release(
@@ -2436,9 +2645,11 @@ mod fake {
         issued_before: i64,
     ) -> Result<(), StoreError> {
         let tables = call(f, "economy.practiceSeeds.prune")?;
-        tables
-            .practice_seeds
-            .retain(|held| held.profile_id != profile_id || held.issued_at >= issued_before);
+        tables.practice_seeds.retain(|held| {
+            held.profile_id != profile_id
+                || held.issued_at >= issued_before
+                || (held.claim.is_some() && held.settled.is_none())
+        });
         Ok(())
     }
 

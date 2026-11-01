@@ -1,12 +1,12 @@
 //! SPEC §8.10 Stinkyscape 76 Honey Badger, a card of the Stinkyscape set.
-//!   Base:    "Starship Piece, Rush\nWhenever this attacks, gain a random Stinkyscape Resource." (4/6)
-//!   Radiant: "Starship Piece, Rush\nWhenever this attacks, gain a random Radiant Stinkyscape
-//!            Resource." (8/12)
+//!   Base:    "Rush\nWhen this attacks, gain a random Stinkyscape Resource." (4/6)
+//!   Radiant: "Rush\nWhen this attacks, gain a random Radiant Stinkyscape Resource." (8/12)
 //!
-//! S #75 Badger's line ("whenever this attacks" is the `whenAttacks` hook, before any damage: declared
+//! S #75 Badger's line ("when this attacks" is the `whenAttacks` hook, R2396000, before any damage: declared
 //! or forced attacks, R53, R2285000, never a defense or an attack called off, R44) with Rush (§6.1), a
 //! printed keyword, so it may attack an enemy Unit, never the hero, the turn it lands and gain then.
-//! Starship Piece: its death fuses a copy into its owner's Dormant Starship (R1852000). Radiant: a
+//! Since #2521 it is no Starship Piece: its death fuses nothing (R1852000 reads the keyword). Radiant:
+//! a Radiant Resource.
 
 use jackioh_engine::effects::gain_resources;
 use jackioh_engine::prelude::*;
@@ -34,7 +34,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 76 Honey Badger — SPEC §8.10 row 76, BUILD M12 row S 76.
+// S 76 Honey Badger — SPEC §8.10 row 76, BUILD M12 row S 76: "with Rush, attacks an enemy Unit the turn
+// it lands and gains one random Resource, never the hero that turn; no Starship Piece, so its death fuses
+// nothing (#2521); radiant 8/12, Radiant Resources".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -46,6 +48,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008";
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
 
     fn landing(radiant: bool) -> Scenario {
         scenario(json!({
@@ -71,6 +74,20 @@ mod tests {
         s.play(ID, json!({}));
         s.expect_refused(|s| s.attack(ID, "hero"));
         assert!(crate::resources_in_hand(&s, P1).is_empty());
+    }
+
+    #[test]
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [HIT_JOB, FILLER], "field": [ID], "library": filler(4) },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        let me = s.card(ID).clone();
+        assert!(!has_keyword(&s.stats(&me).keywords, KeywordKind::StarshipPiece));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+        s.expect_in_zone(&me, "graveyard");
+        assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship");
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
     }
 
     #[test]

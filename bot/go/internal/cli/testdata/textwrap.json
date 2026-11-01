@@ -1,0 +1,417 @@
+{
+ "wrap": [
+  {
+   "text": "rewrite the pinned status issue (bot-status runs it every five minutes, its runners every two)",
+   "width": 7,
+   "lines": [
+    "rewrite",
+    "the",
+    "pinned",
+    "status",
+    "issue",
+    "(bot-",
+    "status",
+    "runs it",
+    "every",
+    "five mi",
+    "nutes,",
+    "its",
+    "runners",
+    "every",
+    "two)"
+   ]
+  },
+  {
+   "text": "rewrite the pinned status issue (bot-status runs it every five minutes, its runners every two)",
+   "width": 11,
+   "lines": [
+    "rewrite the",
+    "pinned",
+    "status",
+    "issue (bot-",
+    "status runs",
+    "it every",
+    "five",
+    "minutes,",
+    "its runners",
+    "every two)"
+   ]
+  },
+  {
+   "text": "rewrite the pinned status issue (bot-status runs it every five minutes, its runners every two)",
+   "width": 20,
+   "lines": [
+    "rewrite the pinned",
+    "status issue (bot-",
+    "status runs it every",
+    "five minutes, its",
+    "runners every two)"
+   ]
+  },
+  {
+   "text": "rewrite the pinned status issue (bot-status runs it every five minutes, its runners every two)",
+   "width": 33,
+   "lines": [
+    "rewrite the pinned status issue",
+    "(bot-status runs it every five",
+    "minutes, its runners every two)"
+   ]
+  },
+  {
+   "text": "rewrite the pinned status issue (bot-status runs it every five minutes, its runners every two)",
+   "width": 54,
+   "lines": [
+    "rewrite the pinned status issue (bot-status runs it",
+    "every five minutes, its runners every two)"
+   ]
+  },
+  {
+   "text": "rewrite the pinned status issue (bot-status runs it every five minutes, its runners every two)",
+   "width": 78,
+   "lines": [
+    "rewrite the pinned status issue (bot-status runs it every five minutes, its",
+    "runners every two)"
+   ]
+  },
+  {
+   "text": "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option! A-b-c x--y well--done",
+   "width": 7,
+   "lines": [
+    "a",
+    "logged-",
+    "in `gh`",
+    "with",
+    "re-ran",
+    "self-",
+    "check",
+    "and",
+    "goof-",
+    "ball --",
+    "use the",
+    "-b",
+    "option!",
+    "A-b-c x",
+    "--y",
+    "well--",
+    "done"
+   ]
+  },
+  {
+   "text": "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option! A-b-c x--y well--done",
+   "width": 11,
+   "lines": [
+    "a logged-in",
+    "`gh` with",
+    "re-ran",
+    "self-check",
+    "and goof-",
+    "ball -- use",
+    "the -b",
+    "option!",
+    "A-b-c x--y",
+    "well--done"
+   ]
+  },
+  {
+   "text": "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option! A-b-c x--y well--done",
+   "width": 20,
+   "lines": [
+    "a logged-in `gh`",
+    "with re-ran self-",
+    "check and goof-ball",
+    "-- use the -b",
+    "option! A-b-c x--y",
+    "well--done"
+   ]
+  },
+  {
+   "text": "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option! A-b-c x--y well--done",
+   "width": 33,
+   "lines": [
+    "a logged-in `gh` with re-ran",
+    "self-check and goof-ball -- use",
+    "the -b option! A-b-c x--y well--",
+    "done"
+   ]
+  },
+  {
+   "text": "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option! A-b-c x--y well--done",
+   "width": 54,
+   "lines": [
+    "a logged-in `gh` with re-ran self-check and goof-ball",
+    "-- use the -b option! A-b-c x--y well--done"
+   ]
+  },
+  {
+   "text": "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option! A-b-c x--y well--done",
+   "width": 78,
+   "lines": [
+    "a logged-in `gh` with re-ran self-check and goof-ball -- use the -b option!",
+    "A-b-c x--y well--done"
+   ]
+  },
+  {
+   "text": "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens here",
+   "width": 7,
+   "lines": [
+    "superca",
+    "lifragi",
+    "listice",
+    "xpialid",
+    "ocious-",
+    "and-",
+    "then-",
+    "some-",
+    "more-",
+    "words-",
+    "joined-",
+    "by-",
+    "hyphens",
+    "here"
+   ]
+  },
+  {
+   "text": "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens here",
+   "width": 11,
+   "lines": [
+    "supercalifr",
+    "agilisticex",
+    "pialidociou",
+    "s-and-then-",
+    "some-more-",
+    "words-",
+    "joined-by-",
+    "hyphens",
+    "here"
+   ]
+  },
+  {
+   "text": "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens here",
+   "width": 20,
+   "lines": [
+    "supercalifragilistic",
+    "expialidocious-and-",
+    "then-some-more-",
+    "words-joined-by-",
+    "hyphens here"
+   ]
+  },
+  {
+   "text": "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens here",
+   "width": 33,
+   "lines": [
+    "supercalifragilisticexpialidociou",
+    "s-and-then-some-more-words-",
+    "joined-by-hyphens here"
+   ]
+  },
+  {
+   "text": "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens here",
+   "width": 54,
+   "lines": [
+    "supercalifragilisticexpialidocious-and-then-some-more-",
+    "words-joined-by-hyphens here"
+   ]
+  },
+  {
+   "text": "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens here",
+   "width": 78,
+   "lines": [
+    "supercalifragilisticexpialidocious-and-then-some-more-words-joined-by-hyphens",
+    "here"
+   ]
+  },
+  {
+   "text": "-----leading dashes and trailing----- and word--- end",
+   "width": 7,
+   "lines": [
+    "-----le",
+    "ading",
+    "dashes",
+    "and tra",
+    "iling--",
+    "--- and",
+    "word---",
+    "end"
+   ]
+  },
+  {
+   "text": "-----leading dashes and trailing----- and word--- end",
+   "width": 11,
+   "lines": [
+    "-----leadin",
+    "g dashes",
+    "and trailin",
+    "g----- and",
+    "word--- end"
+   ]
+  },
+  {
+   "text": "-----leading dashes and trailing----- and word--- end",
+   "width": 20,
+   "lines": [
+    "-----leading dashes",
+    "and trailing-----",
+    "and word--- end"
+   ]
+  },
+  {
+   "text": "-----leading dashes and trailing----- and word--- end",
+   "width": 33,
+   "lines": [
+    "-----leading dashes and",
+    "trailing----- and word--- end"
+   ]
+  },
+  {
+   "text": "-----leading dashes and trailing----- and word--- end",
+   "width": 54,
+   "lines": [
+    "-----leading dashes and trailing----- and word--- end"
+   ]
+  },
+  {
+   "text": "-----leading dashes and trailing----- and word--- end",
+   "width": 78,
+   "lines": [
+    "-----leading dashes and trailing----- and word--- end"
+   ]
+  },
+  {
+   "text": "The command line: `python -m harness <command>` from the `bot/` directory. The workflows call `peek`.",
+   "width": 7,
+   "lines": [
+    "The",
+    "command",
+    "line:",
+    "`python",
+    "-m",
+    "harness",
+    "<comman",
+    "d>`",
+    "from",
+    "the",
+    "`bot/`",
+    "directo",
+    "ry. The",
+    "workflo",
+    "ws call",
+    "`peek`."
+   ]
+  },
+  {
+   "text": "The command line: `python -m harness <command>` from the `bot/` directory. The workflows call `peek`.",
+   "width": 11,
+   "lines": [
+    "The command",
+    "line:",
+    "`python -m",
+    "harness",
+    "<command>`",
+    "from the",
+    "`bot/`",
+    "directory.",
+    "The",
+    "workflows",
+    "call",
+    "`peek`."
+   ]
+  },
+  {
+   "text": "The command line: `python -m harness <command>` from the `bot/` directory. The workflows call `peek`.",
+   "width": 20,
+   "lines": [
+    "The command line:",
+    "`python -m harness",
+    "<command>` from the",
+    "`bot/` directory.",
+    "The workflows call",
+    "`peek`."
+   ]
+  },
+  {
+   "text": "The command line: `python -m harness <command>` from the `bot/` directory. The workflows call `peek`.",
+   "width": 33,
+   "lines": [
+    "The command line: `python -m",
+    "harness <command>` from the",
+    "`bot/` directory. The workflows",
+    "call `peek`."
+   ]
+  },
+  {
+   "text": "The command line: `python -m harness <command>` from the `bot/` directory. The workflows call `peek`.",
+   "width": 54,
+   "lines": [
+    "The command line: `python -m harness <command>` from",
+    "the `bot/` directory. The workflows call `peek`."
+   ]
+  },
+  {
+   "text": "The command line: `python -m harness <command>` from the `bot/` directory. The workflows call `peek`.",
+   "width": 78,
+   "lines": [
+    "The command line: `python -m harness <command>` from the `bot/` directory. The",
+    "workflows call `peek`."
+   ]
+  }
+ ],
+ "timedelta": [
+  {
+   "us": 0,
+   "text": "0:00:00"
+  },
+  {
+   "us": 1,
+   "text": "0:00:00.000001"
+  },
+  {
+   "us": 999999,
+   "text": "0:00:00.999999"
+  },
+  {
+   "us": 1000000,
+   "text": "0:00:01"
+  },
+  {
+   "us": 61000000,
+   "text": "0:01:01"
+  },
+  {
+   "us": 3600000000,
+   "text": "1:00:00"
+  },
+  {
+   "us": 14400000000,
+   "text": "4:00:00"
+  },
+  {
+   "us": 86400000000,
+   "text": "1 day, 0:00:00"
+  },
+  {
+   "us": 86400000001,
+   "text": "1 day, 0:00:00.000001"
+  },
+  {
+   "us": 177825000000,
+   "text": "2 days, 1:23:45"
+  },
+  {
+   "us": -1,
+   "text": "-1 day, 23:59:59.999999"
+  },
+  {
+   "us": -86400000000,
+   "text": "-1 day, 0:00:00"
+  },
+  {
+   "us": -90000000000,
+   "text": "-2 days, 23:00:00"
+  },
+  {
+   "us": 2472345678,
+   "text": "0:41:12.345678"
+  }
+ ]
+}

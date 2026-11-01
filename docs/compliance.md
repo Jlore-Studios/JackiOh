@@ -113,3 +113,38 @@ game in them. The retention loop empties a record's detail `GAME_RECORD_RAW_RETE
 it was written and keeps only its id, source, mode, patch and time, so the same game is not counted
 twice; the totals are kept as long as the statistics are. The Privacy Policy's "for as long as the
 statistics are kept" covers both, so this changed none of its words.
+
+## 8. What the Terms say about AI opponents (R2614000)
+
+The ladder bots (SPEC §9.12) pass as people: nothing in the game marks one. The Terms' "AI opponents"
+section (`apps/web/src/routes/terms.tsx`) is how players learn of them, as Hearthstone's patch notes
+and Fortnite's support page are for theirs: when ranked may seat one and why, what one looks like and
+does, that nothing marks it, and that a friend's challenge is always that friend.
+
+- Keep it true. A change to what a bot is, wears or does that the section names (its name, portrait,
+  cosmetics, rank, leaderboard row, pace, emotes, concessions, draw answers, timeouts, rematches, which
+  modes and ranks it plays, or a new way to seat one) changes the section in the same pull request, and
+  the Terms' version with it (section 4).
+- Tuning a number changes none of its words: it says "a short wait" for the fallback time and "near
+  your rating" for the rating window.
+- Say what changed for players in the pull request's `## Player note` too, so the patch notes carry it,
+  as Hearthstone's did.
+- Whether this is enough under the EU AI Act's rule that people be told when they deal with an AI
+  (Article 50, applying since 2 August 2026) is the lawyer's call; marking a bot's seat would be the
+  change if it is not.
+
+## 9. How JackiOh uses AI (R2631000)
+
+`/ai` (`apps/web/src/routes/ai.tsx`) is the public statement of where AI is used: the computer
+opponents, what was made with AI, and what AI does with a player's data. It is no part of the Terms,
+so changing it asks no one to agree again, but it must stay true.
+
+- A change to where AI is used changes the page in the same pull request: a new kind of computer
+  opponent, AI-made art, cards, text or sound, or any AI service a player's data reaches (the last
+  also changes the Privacy Policy, section 4). Change `AI_LAST_UPDATED` and re-quote the page in
+  `apps/web/static-pages.ts`.
+- Keep the records the page points to: `assets/music/LICENSES.md` for the music and
+  `assets/voice/SOURCES.md` for the voice lines.
+- The voice lines' licence is open: they are spoken by Apple's and Microsoft's system voices, whose
+  licences limit what their output may be used for. Confirm both with the lawyer, or re-render with a
+  voice licensed for distribution (`assets/voice/SOURCES.md` says how).

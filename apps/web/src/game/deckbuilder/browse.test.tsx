@@ -423,6 +423,7 @@ describe("the pool grid (B30)", () => {
   });
 });
 
+// B31: filters
 describe("filtering (B31)", () => {
   it("B31 every set, cost, type, tag and rarity chip is a toggle button with aria-pressed, inside db-filters", () => {
     mount();
@@ -560,6 +561,7 @@ describe("filtering (B31)", () => {
   });
 });
 
+// B32: search
 describe("searching (B32)", () => {
   it("B32 every term must occur: 'field trap' finds the Field Trap only", () => {
     mount();
@@ -623,6 +625,7 @@ describe("searching (B32)", () => {
   });
 });
 
+// B33: owned
 describe("the owned filter (B33)", () => {
   it("B33 is checked by default and limits the pool to owned cards", () => {
     mount();
@@ -688,6 +691,7 @@ describe("the owned filter (B33)", () => {
   });
 });
 
+// B34: sorting
 describe("sorting (B34)", () => {
   it("B34 the default is cost ascending", () => {
     mount();
@@ -820,6 +824,7 @@ describe("sorting by win rate (B34)", () => {
 });
 
 
+// B35: the sidebar
 describe("the deck sidebar (B35)", () => {
   it("B35 db-sidebar holds the deck's count against DECK_SIZE and its drop region", () => {
     mount(["x-01", "x-05"]);
@@ -914,6 +919,7 @@ describe("the deck sidebar (B35)", () => {
   });
 });
 
+// B36: the mana curve
 describe("the mana curve (B36)", () => {
   const DECK = ["x-05", "x-08", "x-01", "x-07", "x-02", "x-04", "x-06"];
 
@@ -948,6 +954,7 @@ describe("the mana curve (B36)", () => {
   });
 });
 
+// B37: where a card already is
 describe("held badges (B37)", () => {
   it("B37 a pool card the open deck holds shows .db-held and data-in-deck", () => {
     mount(["x-01"]);
@@ -972,6 +979,7 @@ describe("held badges (B37)", () => {
   });
 });
 
+// B38: inspect in the builder
 describe("inspecting in the builder (B38)", () => {
   it("B38 a right-click on a pool card opens inspect-detail for it, prevents the menu and adds nothing", () => {
     mount();
@@ -1103,14 +1111,15 @@ describe("inspecting in the builder (B38)", () => {
     expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
   });
 
-  it("B24 a touch long-press on a deck tile opens the sheet, and the click after it does not remove the card", () => {
+  it("B24 R2617000 a touch held on a deck tile shows its preview while the finger is down, and the click after it does not remove the card", () => {
     vi.useFakeTimers();
     mount(["x-02"]);
     const tile = screen.getByTestId(deckCardId("x-02"));
     fireEvent.pointerDown(tile, pointer("touch"));
     advance(LONG_PRESS_MS);
+    expect(openInspectOverlays()).toEqual([INSPECT_HOVER]);
     fireEvent.pointerUp(tile, pointer("touch"));
-    expect(openInspectOverlays()).toEqual([INSPECT_SHEET]);
+    expect(openInspectOverlays()).toEqual([]);
 
     fireEvent.click(tile);
     expect(screen.getByTestId(deckCardId("x-02")), "the swallowed click removed nothing").toBeInTheDocument();

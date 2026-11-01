@@ -1,33 +1,62 @@
-// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): Hearthstone's minion on
-// the board. The board's tests and the e2e specs read `.stats`, `.stat-attack[data-attack]`,
-// `.stat-health[data-health][data-max-health]` whose text is "health/max" (BUILD M5-T1's "current
-// over max"), `.stat-armor[data-armor]`, `.keywords .keyword[data-keyword][data-n][title]` and
-// `.shield-icon`. The numbers are the view's (UnitView); the tones only compare them with the face.
+// The board minion (docs/polish/6-cards.md, Surface B "MinionFace DOM"): an oval portrait with its
+// cost, a name plate, attack and health, keyword chips, the Divine Shield bubble and a Taunt frame
+// — Hearthstone's minion on the board.
 //
-// Every keyword keeps its `[data-keyword]` badge, but one the minion draws as a state (Taunt's
-// frame, Divine Shield's bubble, Armor's plate) gets no chip, and past KEYWORD_CHIPS_MAX the last
-// becomes a "+n" count. Every keyword also has a treatment drawn by shape, carrying
-// `data-keyword-fx="<kind>"` (R438; keywordVisuals.ts, KeywordFx.tsx, keywords.css).
+// Every element the board's tests and the e2e specs read lives here under its old name:
+// `.stats`, `.stat-attack[data-attack]`, `.stat-health[data-health][data-max-health]` whose text is
+// still "health/max" (BUILD M5-T1's "current over max"), `.stat-armor[data-armor]`,
+// `.keywords .keyword[data-keyword][data-n][title]` and `.shield-icon`. The numbers are the
+// view's (UnitView) and nothing else; the tones only compare them with the printed face.
 //
-// A unit a Vanilla took the text of (§6.3, R115) is marked Vanilla in the view (`UnitView.vanilla`,
-// R243), since its definition still names what it lost; its chips already leave the lost ones out.
-// SPEC §10.8's states: Brittle and Animated are keyword treatments (the view's `brittle` count draws
-// the cracks even when no Brittle keyword lists it); the rest ride the rail (CardStates.tsx: R386,
-// E39), and a tuned stat carries `data-tuned`, the number itself unchanged.
+// Keywords. Every keyword keeps its `[data-keyword]` badge in the DOM, but only the ones the minion
+// does not already draw as a state get a visible chip: Taunt is the shield frame, Divine Shield the
+// bubble, Armor the steel plate by the health gem. R2577000: nor do the keywords that do nothing on the
+// field (`onField: false` in keywordVisuals.ts: Equip, Tradable, Cloaked, Crater, Flashback, Stack,
+// Temporary), which leave the "+n" count too. At most KEYWORD_CHIPS_MAX chips show, legible
+// at a pixel floor (cards.css); past that the last one becomes a "+n" count, and the hover preview
+// and the inspect sheet list them all.
 //
-// The "zzz" (R849000) is drawn where the view marks the unit `sick`, on both seats. `canAct` draws
+// Keyword visuals (R438). Beside its chip, every keyword that can act on the field (R2577000) has a
+// treatment on the minion drawn by shape: a frame round the portrait, a veil over its art, a glyph
+// in the top row, or Armor's plate
+// (keywordVisuals.ts has the map, the layers' caps and the cap on loops; KeywordFx.tsx draws them;
+// keywords.css their look and motion). Each carries `data-keyword-fx="<kind>"`: Taunt's shield,
+// which used to be the portrait's ::before, is now its own treatment, and the Divine Shield bubble
+// and the Armor plate carry the attribute on their existing elements.
+//
+// Vanilla. A unit a Vanilla took the text of (§6.3, R115) is marked Vanilla in the view
+// (`UnitView.vanilla`, R243), since its definition still names what it lost: the minion wears a
+// plain "Vanilla" stamp at its portrait's corner (`.cf-vanilla`, a "V" on a minion too small for
+// the word), and its hover preview's rules box says the text is gone. Its keyword chips are the view's, which already leave the lost ones out.
+//
+// Patch v0.2.0's states (SPEC §10.8). Brittle's count and the Animated cog are keyword treatments
+// above (the view's `brittle` count draws the cracks even when no Brittle keyword lists it). The rest
+// ride a small rail of badges just over the name plate (CardStates.tsx): the tuned mark (▲ Buffed,
+// ▼ Nerfed, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
+// ▼ pip beside its tone (cardstate.css), the number itself unchanged.
+//
+// The "zzz" (R849000). The face draws it (`.cf-sick[data-sick]`) where the view marks the unit `sick`:
+// summoning sick with neither Rush nor Charge (`combat::is_asleep`), on both seats. `canAct` still draws
 // nothing here: it is false for every unit whose controller is not the active player, and a
 // summoning-sick unit may still switch (§4.1), so read bare it can say neither "asleep" nor "can
-// attack". A spent unit wears game/spent.ts's cue (#258); whether a unit can attack is
-// `legalActions`', drawn by the board's highlight (task 7's green), never read here (CLAUDE.md rule 7).
+// attack". A spent unit of the player acting now wears only the cue from game/spent.ts (#258). Whether
+// a unit can attack is `legalActions`', drawn by the board's highlight (task 7's green), never read off
+// the view here (CLAUDE.md rule 7).
 //
-// ME-CN, R1301: a Chinese unit's name and keyword titles are the table's (chinese.ts); its art keeps
-// the English name's motif. R1839000: a Dormant card wears `data-dormant` and the seal
-// (DormantSeal.tsx), which breaks on `awakened` (R1839002) until the board catches up
-// (game/awakening.ts). R1177001: a token unit wears the token mark in its stats row, where a token
-// is met most; the row's tests read its stats by their own classes, never its whole text.
-// R1295000: the viewer's own unit (`worn`) wears the device's card cosmetics as its full face does
-// (CardFace.tsx, cosmetics.ts).
+// ME-CN, R1301: a Chinese unit's name plate is the model's Chinese name and its keyword titles are
+// the table's words (chinese.ts); its chips keep their marks, and its art the English name's motif.
+//
+// R1839000: a Dormant card wears `data-dormant` (its countdown, or "true" with none) and the
+// binding seal (DormantSeal.tsx), greyed and bound under the state rail. On `awakened` (R1839002)
+// the seal breaks (game/animations.css) and stays broken until the board catches up
+// (game/awakening.ts's `data-awakening`).
+//
+// R2647000: a token unit wears no mark of it, its stats row holding only its numbers; its hover preview's
+// full face says "Token Unit" (R1177001). No Created badge either (CardStates.tsx).
+//
+// R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics as its full
+// face does (CardFace.tsx, cosmetics.ts): the border as a rim inside its panel, the finish and the
+// foil over its portrait's art.
 
 import { useRef, type ReactElement } from "react";
 
@@ -36,7 +65,7 @@ import { hasKeyword, keywordKey, type Keyword, type UnitView } from "@jackioh/sh
 import { CardArt } from "./art/index.ts";
 import type { StateBadgeKind } from "./cardState.ts";
 import { CardStates } from "./CardStates.tsx";
-import { TokenMark, costDigits, hasCrest } from "./CardFace.tsx";
+import { costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
 import { useCosmeticAttributes } from "./cosmetics.ts";
@@ -45,7 +74,7 @@ import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
 import { DormantSeal, dormantAttr } from "./DormantSeal.tsx";
 import { KeywordFx } from "./KeywordFx.tsx";
-import { keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
+import { KEYWORD_VISUALS, keywordFxAttributes, keywordFxPlan, type KeywordFxPlan } from "./keywordVisuals.ts";
 import { foilFor, frameRarity, type FaceModel } from "./model.ts";
 import { useCardSettings } from "./settings.ts";
 
@@ -76,9 +105,9 @@ export function drawnAsState(keyword: Keyword, armor: number): boolean {
   return keyword.kind === "Armor" && armor > 0;
 }
 
-/** The keywords that get a visible chip, and the ones folded into the "+n" count. */
+/** The keywords that get a visible chip, and the ones folded into the "+n" count; a keyword that does nothing on the field (R2577000) is neither. */
 export function keywordChips(keywords: readonly Keyword[], armor: number): { shown: Keyword[]; folded: Keyword[] } {
-  const chips = keywords.filter((keyword) => !drawnAsState(keyword, armor));
+  const chips = keywords.filter((keyword) => KEYWORD_VISUALS[keyword.kind].onField && !drawnAsState(keyword, armor));
   const room = chips.length <= KEYWORD_CHIPS_MAX ? chips.length : KEYWORD_CHIPS_MAX - 1;
   return { shown: chips.slice(0, room), folded: chips.slice(room) };
 }
@@ -200,8 +229,6 @@ export function MinionFace({ face, unit, className, worn = false }: MinionFacePr
           <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone} data-tuned={face.tuning?.attack}>
             {unit.attack}
           </span>
-          {/* R1177001: a token unit says so between its numbers, as its full face's type line does. */}
-          <TokenMark face={face} />
           <span
             className="stat stat-health"
             data-health={unit.health}

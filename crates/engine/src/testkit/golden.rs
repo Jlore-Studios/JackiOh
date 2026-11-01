@@ -1,6 +1,8 @@
 //! The golden replay (SURFACE §13.3), its pure half: the canonical texts, one recorded game's replay
-//! to its first `Mismatch` and the hotseat fixture's fold. The engine's `tests/golden.rs` and
-//! `cargo jackioh golden check` both replay with it, so the two can never disagree about a game (#1641).
+//! to its first `Mismatch` and the hotseat fixture's fold. `cargo jackioh golden check --file` replays a
+//! `golden record` file with it, on this build or another (`luau diff`, `classify`), and the engine's
+//! `tests/golden.rs` folds the hotseat fixture with it. The 240 committed traces both once replayed
+//! (#1641) were retired in #2578.
 //!
 //! A mismatch carries the Rust side's canonical text (`text`) and never writes it: the engine's
 //! `clippy.toml` bans file I/O here, so each caller writes it to `target/golden-diff/` under
@@ -222,9 +224,10 @@ fn check_snapshot(
     Ok(())
 }
 
-/// Replays one parsed line of `games.jsonl` (§13.3): `create_recorded_game(args)`, `begin_game`, check `begin`; then
-/// per step check `l` for the actor, apply `a` with `reduce`, check `s`, `v` and `e`; last, the ending and
-/// length must be `end`. `Ok` carries the number of steps replayed.
+/// Replays one parsed line of a recorded traces file (what `golden record` writes, §13.3):
+/// `create_recorded_game(args)`, `begin_game`, check `begin`; then per step check `l` for the actor,
+/// apply `a` with `reduce`, check `s`, `v` and `e`; last, the ending and length must be `end`. `Ok`
+/// carries the number of steps replayed.
 pub fn replay_game(seed: &str, game: &Value) -> Result<usize, Box<Mismatch>> {
     let fail = |step: &str, which: &'static str, expected: String, actual: String| {
         Box::new(Mismatch {

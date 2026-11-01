@@ -14,6 +14,9 @@ pub const ID: &str = "meditative-069";
 /// "Whenever you spend mana, place 1 Plague Counter on this": one placement per mana the
 /// controller spent — never the opponent's, never the Maestro's own play (R212: it was not on the
 /// field yet).
+/// "place 1 Plague Counter": what it printed before it declared `counters` (#2657).
+const PRINTED_COUNTERS: i32 = 1;
+
 fn mana_trigger() -> TriggerDef {
     TriggerDef::new("maestro-mana-spent", &[GameEventType::ManaSpent], |ctx, event| {
         let GameEvent::ManaSpent { player, amount, .. } = event else {
@@ -22,8 +25,10 @@ fn mana_trigger() -> TriggerDef {
         if *player != ctx.controller {
             return vec![];
         }
+        // R2657006: the declared `counters`, 1 as printed before #2657 (`param_or`).
+        let counters = param_or(&*ctx, "counters", PRINTED_COUNTERS);
         (0..*amount)
-            .map(|_| place_plague(json_as(json!({ "amount": 1 }))))
+            .map(|_| place_plague(json_as(json!({ "amount": counters }))))
             .collect()
     })
 }

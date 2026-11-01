@@ -491,6 +491,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       seriesAs(seatTwo, seriesId).should((view) => {
         expect(view.status).to.eq("picking");
         expect(view.opponent.picked, "R331: seat two sees THAT the browser picked").to.eq(true);
+        // R336: the opponent projection excludes its selected deck.
         expect(Object.keys(view.opponent).sort(), "R336: no pick and no deck in the opponent's projection").to.deep.eq([
           "decks",
           "picked",

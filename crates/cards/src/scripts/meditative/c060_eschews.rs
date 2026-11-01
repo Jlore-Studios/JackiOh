@@ -28,6 +28,18 @@ fn deaths_counted(memory: &IndexMap<String, Value>) -> i64 {
         .sum()
 }
 
+/// R2476000: "Once 5 of your Units have died" — the deaths it has counted since it arrived, after "of
+/// your Units have died", which both faces print; the count `tribute_when` holds to `deaths`. On the
+/// field only (R78 forgets it as it leaves), to both seats: each death was public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        vec![count_preview("of your Units have died", deaths_counted(&ctx.self_.memory) as i32)]
+    })
+}
+
 fn eschews(radiant: bool) -> Script {
     Script {
         end_of_turn: Some(hook(move |ctx| {
@@ -68,6 +80,7 @@ fn eschews(radiant: bool) -> Script {
         tribute_when: Some(read_hook(|read| {
             deaths_counted(&read.self_.memory) >= i64::from(param(&read, "deaths"))
         })),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -127,6 +140,23 @@ mod tests {
 
     fn eschews_on_field(s: &Scenario) -> bool {
         s.backrow(P1, 1).is_some_and(|card| card.def_id == ESCHEWS)
+    }
+
+    /// R2476000: on the field, the deaths it has counted after "of your Units have died", to both seats:
+    /// 0 as it lands, 2 after two of your Timmies die.
+    #[test]
+    fn r2476000_it_previews_the_deaths_it_has_counted() {
+        for radiant in [false, true] {
+            let mut s = boarded("eschews-preview", radiant);
+            s.play(ESCHEWS, json!({ "zone": 1 }));
+            let eschews = s.card(ESCHEWS).id.clone();
+            let label = "of your Units have died".to_string();
+            assert_eq!(crate::preview_seen(&s, P1, &eschews), vec![(label.clone(), 0, None)], "radiant {radiant}");
+            kill_timmy(&mut s, 1);
+            kill_timmy(&mut s, 2);
+            assert_eq!(crate::preview_seen(&s, P1, &eschews), vec![(label.clone(), 2, None)], "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, PlayerId::P2, &eschews), vec![(label, 2, None)], "radiant {radiant}");
+        }
     }
 
     mod m60_eschews {

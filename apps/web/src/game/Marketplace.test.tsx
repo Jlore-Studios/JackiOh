@@ -3,8 +3,10 @@
 // viewer's offers' index, face, price and copies left, the engine's `reason` on one it refuses, the
 // viewer's priced hand cards that sell, R1861000); the shop must send exactly the `marketBuy` or
 // `marketSell` `legal` lists, and nothing for an offer or a sale it does not (CLAUDE.md rule 7).
+// R2127000: Back closes the open shop, as Escape does.
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -13,7 +15,10 @@ import type { ActionBody, MarketplaceView, PlayerView } from "@jackioh/shared";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
-import { baseView, card, emptySide } from "../test/fixtures.ts";
+import { guardLeaving, paths, usePathname } from "../net/navigate.ts";
+import { pressBack } from "../test/history.ts";
+import { baseView, card, emptySide, pendingFor } from "../test/fixtures.ts";
+import { at } from "../test/stubServer.ts";
 
 afterEach(cleanup);
 
@@ -138,5 +143,103 @@ describe("R1853003 the Marketplace's shop", () => {
     expect(greyed.disabled).toBe(true);
     fireEvent.click(greyed);
     expect(marketSent(unlisted)).toEqual([]);
+  });
+});
+
+describe("R2127000 Back closes the Marketplace", () => {
+  /** Reads the path: its `usePathname` installs `navigate.ts`'s `popstate` listener, where the leave guard is read. */
+  function Path(): ReactElement {
+    return <p data-testid="path">{usePathname()}</p>;
+  }
+
+  function tree(view: PlayerView, legal: readonly ActionBody[], onAction: (body: ActionBody) => void): ReactElement {
+    return (
+      <CatalogContext.Provider value={lookup}>
+        <Game view={view} legal={legal} onAction={onAction} />
+        <Path />
+      </CatalogContext.Provider>
+    );
+  }
+
+  /** The match's address with the deck builder's under it, as a player arrives in a game. */
+  function arrive(): void {
+    at("/decks");
+    window.history.pushState(null, "", paths.match("m1"));
+  }
+
+  it("R2127000 one Back closes the open Marketplace and keeps the match's address without asking the leave guard; the next Back meets it", async () => {
+    arrive();
+    const held: (() => void)[] = [];
+    const release = guardLeaving((leave) => {
+      held.push(leave);
+    });
+    try {
+      render(tree(marketView(MARKET), [BUY_0, SELL_R9, END_TURN], vi.fn()));
+      openShop();
+      button(testid.marketBuy(0)).focus();
+      await pressBack();
+      expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
+      expect(screen.getByTestId(testid.marketplace)).toHaveFocus();
+      expect(window.location.pathname).toBe(paths.match("m1"));
+      expect(held).toHaveLength(0);
+      // The layer is spent: the next Back is the page's, and the guard holds it.
+      await pressBack();
+      expect(held).toHaveLength(1);
+      expect(window.location.pathname).toBe(paths.match("m1"));
+    } finally {
+      release();
+    }
+  });
+
+  it("R2127000 Escape closes the Marketplace once and leaves no layer: the next Back meets the leave guard", async () => {
+    arrive();
+    const held: (() => void)[] = [];
+    const release = guardLeaving((leave) => {
+      held.push(leave);
+    });
+    try {
+      render(tree(marketView(MARKET), [BUY_0, SELL_R9, END_TURN], vi.fn()));
+      openShop();
+      const buy = button(testid.marketBuy(0));
+      buy.focus();
+      fireEvent.keyDown(buy, { key: "Escape" });
+      expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
+      expect(screen.getByTestId(testid.marketplace)).toHaveFocus();
+      await pressBack();
+      expect(held).toHaveLength(1);
+      expect(window.location.pathname).toBe(paths.match("m1"));
+    } finally {
+      release();
+    }
+  });
+
+  it("R2127000 with a prompt drawn over the open Marketplace, Back closes the Marketplace and the prompt stays unanswered", async () => {
+    arrive();
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    const { rerender } = render(tree(marketView(MARKET), [END_TURN], onAction));
+    openShop();
+    rerender(
+      tree(
+        {
+          ...marketView(MARKET),
+          pending: pendingFor("discover", [
+            { key: "mode:core-043", label: "Flood", defId: "core-043" },
+            { key: "mode:core-055", label: "Archivist", defId: "core-055" },
+          ]),
+        },
+        [END_TURN],
+        onAction,
+      ),
+    );
+    expect(screen.getByTestId("prompt-modal")).toBeInTheDocument();
+    await pressBack();
+    expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
+    expect(screen.getByTestId("prompt-modal")).toBeInTheDocument();
+    expect(onAction.mock.calls.filter(([body]) => body.type === "answer")).toEqual([]);
+    expect(marketSent(onAction)).toEqual([]);
+    expect(window.location.pathname).toBe(paths.match("m1"));
+    // A prompt is never a layer: the next Back leaves the match's page.
+    await pressBack();
+    expect(window.location.pathname).toBe("/decks");
   });
 });

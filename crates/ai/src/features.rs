@@ -56,12 +56,17 @@ const SIDE_FIELDS: &[&str] = &[
 /// The two sides, the seat's own first.
 const SIDES: [&str; 2] = ["own", "enemy"];
 
-/// Keyword kinds omitted to preserve `FEATURES_VERSION` compatibility (R1010000):
-/// Tradable (R1838000), StarshipPiece (R1852000), and Starship (R1852003).
+/// The keyword kinds no count reads: a hand keyword newer than the layout, which does nothing on the
+/// field where the counts are taken (R1838000's Tradable), and Stinkyscape's Starship Piece and
+/// Starship (R1852000, R1852003), which came after the layout was fitted and wait for its next refit,
+/// as does Can't Defend (R2657000). Left out, so the layout stays the one `FEATURES_VERSION` names and
+/// the weights fitted on it still read it (R1010000); a Unit carrying one counts its other keywords as
+/// before.
 const UNCOUNTED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Tradable,
     KeywordKind::StarshipPiece,
     KeywordKind::Starship,
+    KeywordKind::CantDefend,
 ];
 
 /// The keyword kinds the layout counts, one dense feature a side each, in `KeywordKind::ALL`'s order.

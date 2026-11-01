@@ -24,7 +24,7 @@
 # Once a promotion has merged (the push that runs this changed patches.json), `retitle` names the
 # version on the threads it shipped (#1360, #1370): the pull request whose commit added each patch's
 # fragment and the issues that pull request closes become `Patch v<version>: <what it does>`, each
-# with a comment naming the version (`bot/harness/titles.py`). Versions are named by tier when they
+# with a comment naming the version (`bot/go/internal/titles`). Versions are named by tier when they
 # ship (R1366000), so no title holds one before.
 #
 # A promotion that is still open STUCK_AFTER_SECONDS (2 hours) after it opened, its checks done and
@@ -166,16 +166,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
       - name: the shipped patches' issues and pull requests, titled with their versions
         working-directory: bot
         env:
           GH_TOKEN: ${{ github.token }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
-        run: python3 -m harness.titles shipped --before "$BEFORE" --after "$AFTER"
+        run: harness titles shipped --before "$BEFORE" --after "$AFTER"
 
   # The header's stuck pull request, a promotion or a log: open STUCK_AFTER_SECONDS, no check still
   # running, and a check red or a conflict with main. One issue holds the escalations: the first opens
@@ -204,7 +202,7 @@ jobs:
           REPO: ${{ github.repository }}
           STUCK_AFTER_SECONDS: "7200"
           NIGHT_BOT: jgoetzmann-bot
-          # bot/harness/titles.py's LEFT_ALONE holds it, so no retitle hides the issue from this.
+          # bot/go/internal/titles' LeftAlone holds it, so no retitle hides the issue from this.
           TITLE: "CI: a patches promotion or log is stuck"
           TECHNICAL: crates/cards/patches/technical.json
         run: |

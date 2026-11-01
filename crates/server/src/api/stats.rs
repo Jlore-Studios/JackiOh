@@ -1,13 +1,32 @@
-//! Public card and player statistics API (SPEC §9.11, R654).
+//! Public card and player statistics page API (SPEC §9.11, R654).
 //!
-//! Routes:
-//! - `GET /api/stats/cards`: card stats over windowed reports (R1367000, R978000, `CARD_STATS_CACHE_TTL_SECONDS`).
-//! - `GET /api/stats/cards/:id`: card drill-down stats (R1044000).
-//! - `GET /api/stats/play-rates`: live game card play rates (R1583000, `PLAY_RATES_REFRESH_SECONDS`).
-//! - `GET /api/stats/games`: game aggregates and turn stats (R1994000, R1256000, R1044001).
-//! - `PUT /api/stats/player`: player stats updates (R1771000, R1142000).
+//! R1367000 (amends R654): `GET /api/stats/cards` reads each card over its own window, through the
+//! engine's `windowed_card_stats`, the function `cargo jackioh stats report --window` and `winrates`
+//! call too; the drill-down's per-patch rates stay per patch.
+//!
+//! R978000: the card figures are read off a patch's totals once and kept for
+//! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=`, `?pilot=` and `?mode=`
+//! (`KeptReports`), and both card routes read the kept reports. R1044000: the totals are the records
+//! folded as they were written (`db::store::Tx::stats_totals_load`), and read the same figures the
+//! records did.
+//!
+//! R2491000 (amends R978000): the drill-down's patch history is one kept history per `?pilot=` and
+//! `?mode=` (`KeptHistory`), read off every patch's totals in one load and shared by every card's
+//! page; its turn and co-played figures still read the current patch's kept report.
+//!
+//! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every
+//! live game, read off every patch's totals and kept for `PLAY_RATES_REFRESH_SECONDS`.
+//!
+//! R1771000: `PUT /api/stats/player` keeps R1142000's summary inputs alone, for catalog cards, and
+//! drops every other key, id and value (`account_copy`).
+//!
+//! R1994000: `GET /api/stats/games` is the patch's game figures (the first seat's wins, the endings,
+//! the turns, R1256000's counts) over the window every card shares, read through the engine's
+//! `windowed_game_figures` off the totals' whole games (`StatsTotals.game_totals`, which outlive
+//! R1044001's purge), kept with the cards' windowed report and cached as long.
 
 use std::cmp::Ordering;
+use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
@@ -454,15 +473,15 @@ fn query_trimmed(req: &Req, name: &str) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-/// R1044000: one patch's totals over both sources and every mode, each card's turn and co-played
-/// counts only with `drills`.
-async fn totals_for(app: &App, patch: &str, drills: bool) -> Result<StatsTotals, ApiError> {
+/// R1044000: one patch's totals (every patch's with `None`) over both sources and every mode, each
+/// card's turn and co-played counts only with `drills`.
+async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<StatsTotals, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let totals = tx
         .stats_totals_load(&StatsTotalsQuery {
             source: SourceFilter::All,
             mode: None,
-            patch: Some(patch.to_string()),
+            patch: patch.map(str::to_string),
             drills,
         })
         .await?;
@@ -591,19 +610,21 @@ type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
 /// across a computation.
 #[derive(Default)]
 pub struct KeptReports {
-    entries: Kept<Arc<PatchReport>>,
+    entries: Kept<ReportKey, Arc<PatchReport>>,
     /// R1367000: the windowed reports `GET /api/stats/cards` reads, kept as the per-patch ones are.
-    windows: Kept<Arc<KeptWindow>>,
+    windows: Kept<ReportKey, Arc<KeptWindow>>,
+    /// R2491000: the card drill-downs' patch histories, one per `?pilot=` and `?mode=`.
+    histories: Kept<(PublicStatsPilot, PublicStatsMode), Arc<KeptHistory>>,
     /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
     play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
 }
 
 /// Kept cells by what they were computed from, each with when it was first asked for.
-type Kept<T> = Mutex<IndexMap<ReportKey, (i64, Arc<OnceCell<T>>)>>;
+type Kept<K, T> = Mutex<IndexMap<K, (i64, Arc<OnceCell<T>>)>>;
 
 /// The cell for `key` in `entries`: the one made less than `CARD_STATS_CACHE_TTL_SECONDS` before
 /// `now`, or a new empty one, dropping the oldest to stay within `CARD_STATS_KEPT_REPORTS`.
-fn kept_cell<T>(entries: &Kept<T>, key: ReportKey, now: i64) -> Arc<OnceCell<T>> {
+fn kept_cell<K: Hash + Eq, T>(entries: &Kept<K, T>, key: K, now: i64) -> Arc<OnceCell<T>> {
     let mut entries = lock(entries);
     entries.retain(|_, (made_at, _)| now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND);
     if let Some((_, cell)) = entries.get(&key) {
@@ -624,6 +645,10 @@ impl KeptReports {
 
     fn window_cell(&self, key: ReportKey, now: i64) -> KeptWindowCell {
         kept_cell(&self.windows, key, now)
+    }
+
+    fn history_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptHistoryCell {
+        kept_cell(&self.histories, key, now)
     }
 
     /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
@@ -794,7 +819,7 @@ async fn kept_report(
     let current = patch == app.catalog.version;
     let compute = || async move {
         let with_drills = current && source == SourceParam::Default;
-        let totals = totals_for(app, patch, with_drills).await?;
+        let totals = totals_for(app, Some(patch), with_drills).await?;
         Ok::<_, ApiError>(Arc::new(patch_report(
             &totals,
             patch,
@@ -814,6 +839,56 @@ async fn kept_report(
         mode,
     };
     let cell = app.card_stats.cell(key, now_ms());
+    let kept = cell.get_or_try_init(compute).await?;
+    Ok(Arc::clone(kept))
+}
+
+/// R2491000: one `?pilot=` and `?mode=`'s patch history, which every card's drill-down reads: each
+/// shipped patch whose live games clear R654's gate, in `patches.json`'s order, with each card's
+/// in-deck tally there as `patch_report` counts it.
+struct KeptHistory {
+    patches: Vec<(String, IndexMap<String, Tally>)>,
+}
+
+type KeptHistoryCell = Arc<OnceCell<Arc<KeptHistory>>>;
+
+/// R2491000: the patch history of `versions` for `pilot` and `mode`, as kept: read off every
+/// patch's totals in one load when none was made in the last `CARD_STATS_CACHE_TTL_SECONDS`, once
+/// however many requests miss it together, each version cut from it by `patch_report` as its own
+/// load was (R978000), so the figures are the same.
+async fn kept_history(
+    app: &App,
+    versions: &[String],
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+) -> Result<Arc<KeptHistory>, ApiError> {
+    let compute = || async move {
+        let totals = totals_for(app, None, false).await?;
+        let patches = versions
+            .iter()
+            .filter_map(|version| {
+                let kept = patch_report(
+                    &totals,
+                    version,
+                    SourceParam::Default,
+                    pilot.filter(),
+                    mode.filter(),
+                    false,
+                );
+                (kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES).then(|| {
+                    let cards: IndexMap<String, Tally> = kept
+                        .report
+                        .cards
+                        .into_iter()
+                        .map(|stat| (stat.card, stat.in_deck))
+                        .collect();
+                    (version.clone(), cards)
+                })
+            })
+            .collect();
+        Ok::<_, ApiError>(Arc::new(KeptHistory { patches }))
+    };
+    let cell = app.card_stats.history_cell((pilot, mode), now_ms());
     let kept = cell.get_or_try_init(compute).await?;
     Ok(Arc::clone(kept))
 }
@@ -1095,21 +1170,22 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
 
-    // R978000: each patch's history and the current patch's drill-down read the kept reports.
+    // R2491000: every shipped patch's history reads one kept history, and R978000: the current
+    // patch's turn and co-played figures read its kept report.
     let versions = load_patch_versions().await;
-    let mut patch_history: Vec<PatchRate> = Vec::new();
-
-    for version in &versions {
-        let kept = kept_report(app, &versions, version, SourceParam::Default, pilot, mode).await?;
-        if kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES {
-            let stat = kept.report.cards.iter().find(|stat| stat.card == card_id);
-            patch_history.push(PatchRate {
-                patch: version.clone(),
-                games: stat.map(|stat| tally_of(&stat.in_deck).0).unwrap_or(0),
-                win_rate: stat.and_then(|stat| win_rate(&stat.in_deck)),
-            });
-        }
-    }
+    let history = kept_history(app, &versions, pilot, mode).await?;
+    let patch_history: Vec<PatchRate> = history
+        .patches
+        .iter()
+        .map(|(patch, cards)| {
+            let tally = cards.get(&card_id);
+            PatchRate {
+                patch: patch.clone(),
+                games: tally.map(|tally| tally_of(tally).0).unwrap_or(0),
+                win_rate: tally.and_then(win_rate),
+            }
+        })
+        .collect();
 
     let current = kept_report(
         app,

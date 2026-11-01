@@ -335,12 +335,14 @@ pub fn fire_trap(
     let at = crate::zones::slot_of(sink.state, trap);
     // `controller` names the seat that reads the trap's identity (R154), and a trap stolen since the
     // event is face-down on its new controller's side: the flip is announced to the seat it sits on.
+    // R2657001: a Field Trap already face-up reveals nothing as it fires again (`again`).
     sink.events.push(GameEvent::TrapFired {
         instance_id: trap.id.clone(),
         def_id: trap.def_id.clone(),
         controller: trap.controller,
         row: at.map_or(Row::Backrow, |slot| slot.row),
         lane: at.map_or(0, |slot| slot.lane),
+        again: fires_again(sink.state, trap),
     });
 
     // §5.1: it has fired, and it is face-up from this moment (R33) — which also keeps it out of every
@@ -362,6 +364,13 @@ pub fn fire_trap(
         },
     );
     true
+}
+
+/// R2657001: `Some(true)` when the trap firing is a Field Trap that has fired before and stands face-up,
+/// so it reveals nothing this time; `None` for a reveal. What `trapFired.again` carries.
+pub fn fires_again(state: &GameState, trap: &CardInstance) -> Option<bool> {
+    let live = find_instance(state, &trap.id).unwrap_or(trap);
+    (live.face_up == Some(true) && is_field_trap(state, live)).then_some(true)
 }
 
 /// R1849009 (Stinkyscape #174 Aerelret, #22 Gatinsir): "30% chance to Reveal". A face-down trap whose face

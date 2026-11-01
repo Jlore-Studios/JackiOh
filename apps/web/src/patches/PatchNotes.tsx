@@ -8,7 +8,6 @@ import { createPortal } from "react-dom";
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
 import { listSeparator, readerName } from "../cards/chinese.ts";
-import { isGlitch } from "../cards/glitch.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "../cards/inspect/store.ts";
@@ -19,7 +18,7 @@ import { ChangeList, changeSummary } from "./ChangeList.tsx";
 import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
-import { currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
+import { cardCount, countsLine, currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, type Release } from "./releases.ts";
 import type { Patch, PlayerNote } from "./source.ts";
@@ -31,27 +30,8 @@ type OpenCard = (id: string) => void;
 
 const NO_DEFS: CardDefs = {};
 
-function cards(count: number): string {
-  return count === 1 ? t("1 card") : t("{n} cards", { n: count });
-}
-
 function patchCount(count: number): string {
   return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
-}
-
-export function countsLine(patch: Patch): string {
-  // R674: Glitch is not counted, as it is not listed (history.ts `patchCards`).
-  const count = (kind: Patch["changes"][number]["kind"]): number =>
-    patch.changes.filter((change) => change.kind === kind && !isGlitch(change.id)).length;
-  const parts = [
-    [count("added"), (n: number) => t("{cards} added", { cards: cards(n) })],
-    [count("changed"), (n: number) => t("{cards} changed", { cards: cards(n) })],
-    [count("removed"), (n: number) => t("{cards} removed", { cards: cards(n) })],
-  ] as const;
-  return parts
-    .filter(([n]) => n > 0)
-    .map(([n, line]) => line(n))
-    .join(" · ");
 }
 
 /** A card's name that opens its history; `link-button` keeps the wood-button rule off it (patches.css draws the gold link). */
@@ -314,7 +294,7 @@ function PatchEntry({
               setOpen((was) => !was);
             }}
           >
-            {open ? t("Hide the cards") : t("Show the {cards}", { cards: cards(patch.changes.length) })}
+            {open ? t("Hide the cards") : t("Show the {cards}", { cards: cardCount(patch.changes.length) })}
           </button>
           <div id={panelId} className="patch__panel" hidden={!open}>
             {open ? <PatchCardsPanel patch={patch} patches={patches} onOpen={onOpen} /> : null}

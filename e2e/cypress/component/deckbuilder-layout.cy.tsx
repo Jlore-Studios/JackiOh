@@ -209,6 +209,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
+  // B38: the detail actions remain visible when it opens.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 

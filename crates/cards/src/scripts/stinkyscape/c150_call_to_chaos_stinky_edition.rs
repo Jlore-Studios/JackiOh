@@ -1,18 +1,20 @@
 //! SPEC §8.10 Stinkyscape 150 Call to Chaos (Stinky Edition) (R28, R87, R423, R436, R1882001–R1882004).
 //! (4) Spell, Call to Chaos, Legendary.
-//!   Base:    "One random effect: Add a Radiant ETHICS and a Radiant Vanguard Coalition to your hand; add A
-//!            Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3 random Quest or
-//!            Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape Unit to your hand
-//!            and refresh as much mana as it costs; switch every enemy Unit to Attack Position and Freeze
-//!            them; fill your board with random Human Stinkyscape Units; Allure every enemy Unit; for the
-//!            rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to
-//!            Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
+//!   Base:    "One random effect: Add a Radiant Faction: ETHICS and a Radiant Faction: Vanguard Coalition to
+//!            your hand; add A Very Dandy Lad and an Arctic Citadel to your hand, which cost (0); summon 3
+//!            random Quest or Wincon Field Spells into your backrow; add a random Acclaimed Stinkyscape
+//!            Unit to your hand and refresh as much mana as it costs; switch every enemy Unit to Attack
+//!            Position and Freeze them; fill your board with random Human Stinkyscape Units; Allure every
+//!            enemy Unit; for the rest of the game, whenever an Acclaimed card dies, its controller casts a
+//!            random Call to Chaos; summon a Stinkyscape Golem; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_STINKY_EFFECTS`,
 //! `subsystems/call_to_chaos_stinky.rs`): the roll, the announcement both players read (R436), the
 //! chain cap counting casts of every edition (R28) and the order the Radiant's three resolve in (R423)
-//! are the one rule every edition shares. The face is passed explicitly, as C+ #73's file does.
+//! are the one rule every edition shares. The face is passed explicitly, as C+ #73's file does. Its first
+//! entry's S #159 and S #95 are named Faction: ETHICS and Faction: Vanguard Coalition since #2521, the
+//! cards and the entry unchanged.
 
 use jackioh_engine::prelude::*;
 
@@ -64,6 +66,7 @@ mod tests {
         "stinkyscape-151",
         "traininggrounds-039",
     ];
+    /// S #159 Faction: ETHICS and S #95 Faction: Vanguard Coalition, the first entry's.
     const ETHICS: &str = "stinkyscape-159";
     const VANGUARD: &str = "stinkyscape-095";
     const DANDY_LAD: &str = "stinkyscape-113";
@@ -226,7 +229,7 @@ mod tests {
         }
 
         #[test]
-        fn entry_ethics_adds_a_radiant_ethics_and_a_radiant_vanguard_coalition() {
+        fn entry_ethics_adds_a_radiant_faction_ethics_and_a_radiant_faction_vanguard_coalition() {
             let s = chaos("ethics", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s, P1);
             let ids: Vec<&str> = added.iter().map(|card| card.def_id.as_str()).collect();

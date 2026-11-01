@@ -58,6 +58,48 @@ const CLASSIC_PLUS_C_PREVIEWED: [&str; 3] = [SNAKE, FROZEN_WASTES, BOOK_WORM];
 /// last-element lines (R280, R982).
 const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
 
+/// R2476000: the cards that show what they remember, each proved in its own script file (issue #2476's
+/// pass over the catalog). Palantir's base face Tributes on its first steal, so only its Radiant face
+/// counts; Memory Leak's Radiant face chooses no mode, so only its base face marks one.
+const REMEMBERED: [&str; 33] = [
+    "core-022",
+    "core-039",
+    "classic-004",
+    "classic-007",
+    "classic-009",
+    "classic-038",
+    "classicplus-012-8",
+    "classicplus-029",
+    "classicplus-034",
+    "classicplus-037",
+    "classicplus-t-ai-02",
+    "classicplus-t-ai-05",
+    "classicplus-t-ai-08",
+    "meditative-057",
+    "meditative-060",
+    "meditative-094",
+    "meditative-096-1",
+    "meditativeplus-020-1",
+    "stinkyscape-005",
+    "stinkyscape-009",
+    "stinkyscape-018-2",
+    "stinkyscape-018-3",
+    "stinkyscape-112",
+    "stinkyscape-135-1",
+    "stinkyscape-153",
+    "stinkyscape-166",
+    "stinkyscape-167",
+    "stinkyscape-169",
+    "stinkyscape-170",
+    "stinkyscape-171",
+    "stinkyscape-172",
+    "traininggrounds-025",
+    "traininggrounds-057",
+];
+/// R2476000: of `REMEMBERED`, the one whose base face alone previews, and the one whose Radiant face alone does.
+const BASE_FACE_ONLY: &str = "classicplus-034";
+const RADIANT_FACE_ONLY: &str = "classic-004";
+
 const RAPID_REPLENISH: &str = "core-010"; // 0-cost Spell; Combo 3, so nothing at one play — a free anchor
 const TEMPO_TIMMY: &str = "core-011"; // 1-cost Unit
 const BIG_D_FENDER: &str = "core-001"; // 2-cost Unit
@@ -224,7 +266,7 @@ mod r280_the_core_cards_that_declare_preview {
 
     // R372 added #93 Combo-Index, whose grade is a counter on the card in play, so its hook answers
     #[test]
-    fn r280_r372_r583_are_exactly_18_31_38_40_70_91_and_93_and_the_new_sets_listed_ones_on_both_faces_and_c_44_and_45_on_the_radiant_face()
+    fn r280_r372_r583_r2476000_are_exactly_18_31_38_40_70_91_and_93_the_new_sets_listed_ones_and_the_remembering_ones_on_their_faces()
      {
         jackioh_cards::register_all();
         let cards = scripts_of();
@@ -242,19 +284,26 @@ mod r280_the_core_cards_that_declare_preview {
             .chain(NEW_SET_PREVIEWED.iter())
             .chain(MEDITATIVE_PREVIEWED.iter())
             .chain(AUDITS.iter())
+            .chain(REMEMBERED.iter())
             .map(|id| (*id).to_string())
             .collect();
         expected.sort();
         assert_eq!(hooked, expected);
         for id in &hooked {
             let card = &cards[id.as_str()];
-            // R583: an Audit's base face marks nothing; its Radiant face "highlights targets".
-            if AUDITS.contains(&id.as_str()) {
+            // R583: an Audit's base face marks nothing; its Radiant face "highlights targets". R2476000:
+            // Palantir's base face counts no steals.
+            if AUDITS.contains(&id.as_str()) || id == RADIANT_FACE_ONLY {
                 assert!(card.base.preview.is_none(), "{id} base");
             } else {
                 assert!(card.base.preview.is_some(), "{id} base");
             }
-            assert!(card.radiant.preview.is_some(), "{id} radiant");
+            // R2476000: Memory Leak's Radiant face chose no mode.
+            assert_eq!(
+                card.radiant.preview.is_some(),
+                id != BASE_FACE_ONLY,
+                "{id} radiant"
+            );
         }
     }
 
@@ -904,6 +953,79 @@ mod r280_a_fused_core_card_lists_its_ingredients_previews_in_order {
             hits_on(&s, PlayerId::P2),
             list.iter().map(|entry| entry.value).collect::<Vec<i32>>()
         );
+    }
+}
+
+// =============================================================================================
+// R2476000: a fused card's ingredients each show what their own text remembered (R102)
+// =============================================================================================
+
+mod r2476000_a_fused_card_previews_what_each_ingredient_remembers {
+    use super::*;
+
+    const CUBE: &str = "core-022";
+    const POINTMASTER: &str = "core-020";
+
+    /// Two Carnivorous Cubes crafted into one card each eat a Unit and remember it under their own key
+    /// (`eaten@0`, `eaten@1`, R102). Each ingredient's preview reads its own, as its text does: the
+    /// fused card names both meals, in ingredient order, each after its own "remember it".
+    #[test]
+    fn r2476000_r102_a_crafted_cube_cube_names_both_meals_each_after_its_own_remember_it() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "p1": { "mana": 10, "hand": [CUBE, CUBE, STOCKPILE], "field": [MENACE, POINTMASTER] },
+            "p2": { "hand": [STOCKPILE], "field": [MENACE] },
+        }));
+        let cubes: Vec<CardInstance> = s
+            .hand(PlayerId::P1)
+            .iter()
+            .filter(|card| card.def_id == CUBE)
+            .cloned()
+            .collect();
+        let crafted = must(
+            fuse_on(
+                &mut s,
+                FuseArgs {
+                    ingredients: cubes,
+                    to_hand: Some(PlayerId::P1),
+                    ..FuseArgs::default()
+                },
+            ),
+            "the crafted card",
+        );
+        let pointmaster = s.unit_at(PlayerId::P1, 2);
+        let menace = s.unit_at(PlayerId::P1, 1);
+        s.play(
+            &crafted.id,
+            json!({
+                "zone": 3,
+                "targets": [
+                    { "pick": "instance", "instanceId": pointmaster.id },
+                    { "pick": "instance", "instanceId": menace.id },
+                ],
+            }),
+        );
+        let fused = s.unit_at(PlayerId::P1, 3);
+        let list = must(shown_of(&fused_view(&s, &fused.id)), "the fused Cube's preview");
+        assert_eq!(
+            json_of(&list),
+            json!([
+                { "label": "remember it", "value": 1, "display": "Pointmaster" },
+                { "label": "remember it", "value": 1, "display": "Midrange Menace" },
+            ])
+        );
+    }
+
+    /// The fused unit's view as p1 reads it, by id.
+    fn fused_view(s: &Scenario, id: &str) -> Value {
+        let view = json_of(&s.view(PlayerId::P1));
+        view["you"]["units"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .flat_map(|lane| lane.as_array().cloned().unwrap_or_else(|| vec![lane.clone()]))
+            .find(|unit| unit["instanceId"] == json!(id))
+            .unwrap_or(Value::Null)
     }
 }
 

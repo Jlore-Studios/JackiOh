@@ -53,7 +53,7 @@
 # write contents and pull requests on this repository alone (a pull request opened with the run's
 # own token would start no CI). Without it, a passing promotion stops at its artifact
 # (`learn-<run>/promotion.patch`) and the run says so in red. The night bot's status issue shows the
-# lane (bot/harness/dashboard.py, `learn_lane`).
+# lane (bot/go/internal/dashboard, `LearnLane`).
 name: learn
 
 on:

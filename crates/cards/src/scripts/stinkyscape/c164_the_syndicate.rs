@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 164 The Syndicate, a card of the Stinkyscape set.
-//!   (2) Field Spell, Epic.
+//!   (1) Field Spell, Epic (#2521: was (2)).
 //!   Base:    "Tradable / Aura: Cards in your hand have Tradable. / Whenever you Trade a card, the card
 //!            you put into your deck has a {exileChance}% chance to be exiled and a {radiantChance}%
 //!            chance to become Radiant." (30% and 30%)
@@ -221,8 +221,19 @@ mod tests {
 
     #[test]
     fn r1864003_r129_a_card_drawn_straight_back_rolls_nothing() {
-        let back = seed_where("syndicate-back", |seed| outcome_on(seed, false) == Outcome::DrawnBack);
-        assert_eq!(cursor_after(&back, ID, &[]), cursor_after(&back, TRADE_UNION, &[]), "nothing rolled");
+        // The Trade Union lends the same Tradable and never rolls, so its cursor is the Trade's alone. A
+        // traded card is drawn straight back only from a deck it is alone in (R2657003).
+        let back = |field_spell: &str| {
+            let mut s = scenario(json!({
+                "seed": "syndicate-back",
+                "p1": { "hand": [FILLER, FILLER], "field": [{ "def": field_spell, "lane": 1 }], "library": [] },
+                "p2": { "hand": [PRESTIGE, FILLER], "library": filler(4) },
+            }));
+            let (_, became) = traded(&mut s);
+            assert_eq!(became, Outcome::DrawnBack);
+            s.state().rng_cursor
+        };
+        assert_eq!(back(ID), back(TRADE_UNION), "nothing rolled");
         let kept = seed_where("syndicate-kept", |seed| outcome_on(seed, false) != Outcome::DrawnBack);
         assert_eq!(cursor_after(&kept, ID, &[]), cursor_after(&kept, TRADE_UNION, &[]) + 1, "one roll");
     }

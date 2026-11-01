@@ -123,7 +123,7 @@ mod tests {
             assert_eq!(paid(&s), 2);
             assert_eq!(s.card(long.as_str()).embiggened, Some(true));
             assert!(!s.card(long.as_str()).radiant);
-            assert_eq!(hero_armor_of(s.state(), P1), 4, "the Embiggened version's Armor");
+            assert_eq!(hero_armor_of(s.state(), P1), 5, "the Embiggened version's Armor");
         }
 
         #[test]
@@ -139,7 +139,7 @@ mod tests {
             assert_eq!(paid(&s), 4);
             assert!(s.card(long.as_str()).radiant);
             assert_eq!(s.card(long.as_str()).embiggened, Some(true));
-            assert_eq!(hero_armor_of(s.state(), P1), 8, "the Radiant Embiggened version's Armor");
+            assert_eq!(hero_armor_of(s.state(), P1), 10, "the Radiant Embiggened version's Armor");
         }
 
         #[test]
@@ -160,7 +160,7 @@ mod tests {
             );
             s.play(long.as_str(), json!({ "zone": 2 }));
             assert_eq!(paid(&s), 2);
-            assert_eq!(hero_armor_of(s.state(), P1), 8, "Radiant and Embiggened at (2)");
+            assert_eq!(hero_armor_of(s.state(), P1), 10, "Radiant and Embiggened at (2)");
         }
 
         #[test]
@@ -227,7 +227,7 @@ mod tests {
             let long = in_hand(&s, GOING_LONG);
             s.play(long.as_str(), json!({ "zone": 1 }));
             assert_eq!(paid(&s), 2);
-            assert_eq!(hero_armor_of(s.state(), P1), 4);
+            assert_eq!(hero_armor_of(s.state(), P1), 5);
         }
 
         #[test]
@@ -309,7 +309,7 @@ mod tests {
             s.play(long.as_str(), json!({ "zone": 2, "embiggen": true }));
             assert_eq!(paid(&s), 3);
             assert!(s.card(long.as_str()).radiant);
-            assert_eq!(hero_armor_of(s.state(), P1), 8);
+            assert_eq!(hero_armor_of(s.state(), P1), 10);
         }
 
         #[test]

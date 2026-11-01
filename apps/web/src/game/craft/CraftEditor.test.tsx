@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CraftMode, CraftOffer, CraftRecipe, PendingOption, PendingPromptView } from "../../wire/index.ts";
 import { CRAFT_HAT_PRICES } from "../../wire/engineConfig.ts";
-import { INSPECT_SHEET, closeInspect } from "../../cards/index.ts";
+import { INSPECT_HOVER, INSPECT_SHEET, closeInspect } from "../../cards/index.ts";
 import { LONG_PRESS_MS } from "../../cards/inspect/index.ts";
 import { CraftEditor } from "./CraftEditor.tsx";
 import { HAT_LABELS } from "./recipe.ts";
@@ -267,8 +267,9 @@ describe("R883 the palettes offer what the card's type takes", () => {
   });
 });
 
-// #552 (MN09, mobile): the card being crafted is read as any card is.
-describe("R880 the crafted card opens on a long-press", () => {
+// #552 (MN09, mobile): the card being crafted is read as any card is: a touch long-press on its face
+// opens the inspect sheet, and crafts nothing.
+describe("R880 the crafted card shows on a touch hold", () => {
   afterEach(() => {
     act(() => {
       closeInspect();
@@ -276,7 +277,7 @@ describe("R880 the crafted card opens on a long-press", () => {
     vi.useRealTimers();
   });
 
-  it("R880 a touch long-press on the preview face opens its inspect sheet and sends no answer", () => {
+  it("R880 R2617000 a touch held on the preview face shows its preview while the finger is down and sends no answer", () => {
     vi.useFakeTimers();
     const props = editorProps();
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
@@ -285,8 +286,9 @@ describe("R880 the crafted card opens on a long-press", () => {
     act(() => {
       vi.advanceTimersByTime(LONG_PRESS_MS);
     });
-    expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent("Pure Closure");
+    expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent("Pure Closure");
     fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
     expect(props.onAction).not.toHaveBeenCalled();
   });
 });
@@ -427,6 +429,7 @@ describe("R1182002 R1563010 the from-scratch code editor", () => {
         vi.advanceTimersByTime(LONG_PRESS_MS);
       });
       expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+      expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
       fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
     } finally {
       vi.useRealTimers();

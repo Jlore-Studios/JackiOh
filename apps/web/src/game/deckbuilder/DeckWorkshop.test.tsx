@@ -16,6 +16,7 @@ import { formatDateTime } from "../../i18n/i18n.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { navigate, newDeckPath } from "../../net/navigate.ts";
 import { expectEmptyState } from "../../test/empty.ts";
+import { pressBack } from "../../test/history.ts";
 import { at } from "../../test/stubServer.ts";
 import { UNDO_WINDOW_MS } from "../../undo/hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO } from "../../undo/UndoToast.tsx";
@@ -354,6 +355,7 @@ describe("a deck", () => {
   });
 });
 
+// Practice with this deck (#1991)
 describe("issue #1991 Practice with this deck", () => {
   afterEach(() => {
     window.history.replaceState(null, "", "/");
@@ -660,6 +662,7 @@ describe("a trio", () => {
   });
 });
 
+// Undoing a deletion (R2119000)
 describe("undoing a deletion (R2119000)", () => {
   const full = [savedDeck("a", "Aggro", ONE, 1), savedDeck("c", "Control", TWO, 2), savedDeck("m", "Midrange", THREE, 3)];
   const ladder = savedTrio("t", "Ladder", ["a", "c", "m"], 4);
@@ -1481,5 +1484,62 @@ describe("R2118000 New deck from the command menu", () => {
       navigate(newDeckPath());
     });
     expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "new-1");
+  });
+});
+
+describe("R2127000 Back closes the deck builder's panels on /decks", () => {
+  afterEach(() => {
+    at("/");
+  });
+
+  /** The deck builder's address with the page before it under it, as a player arrives on it. */
+  function arrive(): void {
+    at("/play");
+    window.history.pushState(null, "", "/decks");
+  }
+
+  it("R2127000 one Back closes the deck history and the page stays on /decks; after Escape, one Back leaves", async () => {
+    arrive();
+    const server = fakeDeckServer();
+    server.versions.set("a", [{ id: "v1", name: "Aggro", cards: ONE, savedAt: Date.UTC(2026, 9, 27, 12) }]);
+    mount({ server, decks: [savedDeck("a", "Aggro", ONE, 1)], initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(DECK_HISTORY_BUTTON));
+    await within(screen.getByTestId(DECK_HISTORY_PANEL)).findAllByTestId(DECK_HISTORY_ROW);
+
+    await pressBack();
+    expect(screen.queryByTestId(DECK_HISTORY_PANEL)).toBeNull();
+    expect(screen.getByTestId(DECK_HISTORY_BUTTON)).toHaveFocus();
+    expect(window.location.pathname).toBe("/decks");
+    expect(screen.getByTestId(DECK_EDITOR)).toBeInTheDocument();
+
+    // Escape closes it once and leaves no layer: the next Back is the page's.
+    fireEvent.click(screen.getByTestId(DECK_HISTORY_BUTTON));
+    await within(screen.getByTestId(DECK_HISTORY_PANEL)).findAllByTestId(DECK_HISTORY_ROW);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId(DECK_HISTORY_PANEL)).toBeNull();
+    expect(window.location.pathname).toBe("/decks");
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
+  });
+
+  it("R2127000 one Back closes the deck cosmetics and the page stays on /decks; after Escape, one Back leaves", async () => {
+    arrive();
+    mount({ decks: [savedDeck("a", "Aggro", ONE, 1)], initialOpen: { kind: "deck", id: "a" } });
+    fireEvent.click(screen.getByTestId(DECK_COSMETICS_BUTTON));
+    expect(screen.getByTestId("deck-cosmetic-table")).toBeInTheDocument();
+
+    await pressBack();
+    expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
+    expect(screen.getByTestId(DECK_COSMETICS_BUTTON)).toHaveFocus();
+    expect(window.location.pathname).toBe("/decks");
+    expect(screen.getByTestId(DECK_EDITOR)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(DECK_COSMETICS_BUTTON));
+    expect(screen.getByTestId("deck-cosmetic-table")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
+    expect(window.location.pathname).toBe("/decks");
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
   });
 });

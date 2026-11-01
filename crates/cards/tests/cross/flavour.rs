@@ -1,12 +1,20 @@
-//! R660: the flavour sidecar (`flavour.json`, the client's `apps/web/src/cards/flavour.ts`) against the
-//! catalog. Its keys are catalog ids and nothing else, every card and token has a line, and each entry
-//! is plain words under its caps. Whether a line speaks rules words is the client's test
-//! (apps/web/src/cards/flavour.test.ts), beside the list the voice lines answer to (issue #115).
+//! R660: the flavour sidecar (`flavour.json`, which `crates/tools/tests/export_card_text.rs` writes from
+//! each card's `flavour` and `artist` in `crates/cards/card-text.yaml`, and the client's
+//! `apps/web/src/cards/flavour.ts` reads) against the catalog. Its keys are catalog ids and nothing
+//! else, every card and token has a line, and each entry is plain words under its caps. Whether a line
+//! speaks rules words is the client's test (apps/web/src/cards/flavour.test.ts), beside the list the
+//! voice lines answer to (issue #115).
+//!
+//! Port of `packages/cards/test/flavour.test.ts`.
 
 use indexmap::IndexMap;
 use jackioh_cards::{CATALOG, flavour_json};
 use serde_json::{Map, Value};
 
+use super::sidecar;
+
+/// A flavour line's longest length, in characters (UTF-16 code units, as JS counts them): one or two
+/// short lines under the rules. The client's `FLAVOUR_MAX_CHARS` (`packages/cards/src/flavour.ts`,
 /// which moves to the web, SURFACE §7.4); the sidecar's contract, held here at the same number.
 const FLAVOUR_MAX_CHARS: usize = 120;
 
@@ -15,7 +23,7 @@ const ARTIST_MAX_CHARS: usize = 60;
 const FIELDS: &[&str] = &["flavour", "artist"];
 
 fn flavour() -> IndexMap<String, Map<String, Value>> {
-    serde_json::from_str(flavour_json()).expect("crates/cards/flavour.json is an object of objects")
+    sidecar(flavour_json(), "crates/cards/flavour.json")
 }
 
 fn problem_with(value: &Value, cap: usize) -> Option<String> {

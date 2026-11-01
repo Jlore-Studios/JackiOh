@@ -1,0 +1,137 @@
+{
+ "rule": "An item is **easy** only if every line below holds. If any line fails, or you cannot\ntell, it is **medium** at least.\n\n1. **Small, with room to spare.** At most $max_files files changed in all, the tests it adds\n   included, and at most $max_lines lines added plus removed (generated files such as\n   `apps/web/src/wire/generated/` aside). Close to either limit is **medium**, not easy.\n2. **One place.** All of it inside one crate or app, except a test of the same feature in that\n   crate's `tests/`.\n3. **None of the conflict hot spots:** `SPEC.md` and the spec's notes in `spec/` (no new ruling,\n   no ruling cited or renumbered, nothing `spec/INDEX.md` lists), `BUILD.md`.\n4. **None of the shared surfaces:** `crates/engine/src/wire/events.rs`, `crates/engine/src/script.rs`,\n   `crates/engine/src/state.rs`, `crates/engine/src/effects/mod.rs`.\n5. **No rules or data work:** nothing in `crates/engine/src/` or `crates/ai/src/`, no change to\n   `crates/cards/catalog.json`, `crates/cards/patches/` or the catalog version, no card script\n   (`crates/cards/src/scripts/`), no database migration (`crates/server/migrations/`).\n6. **No review-only or forbidden path** (every `package.json` and `Cargo.toml`, the lockfiles,\n   `rust-toolchain.toml`, the build and test configs, `scripts/`, `vercel.json`, `render.yaml`;\n   `.github/`, `.harness/`, `bot/`), and no new dependency.\n7. **Checked by a unit test** in the same crate or app, which the plan names; no Cypress or e2e\n   spec change, and no judging by eye (animation, layout, sound or art tuning).\n8. **No decisions left:** the plan names each file, what changes in it, and the test that proves\n   it. If the builder would choose between two designs, it is not easy.\n9. **Stands alone:** blocked by no open issue, and no open pull request touches the same files.\n\nNever easy: a patch that changes cards or rules, anything that adds an R number, engine or AI\nwork, visual polish.\n\n- **medium:** anything that fails the easy rule and is not hard: a new ruling, a card or catalog\n  change, a shared surface, several crates or apps, e2e work, visual polish.\n- **hard:** engine rules or the resolution loop (`crates/engine/src/`), the AI's search\n  (`crates/ai/src/`), design across crates, a database migration, or about 40 files or more.\n\nWhen torn between two, choose the higher. A borderline easy is **medium**: any doubt on\nany line above rates **medium** at least.",
+ "plan_paths": [
+  [
+   "",
+   []
+  ],
+  [
+   "no table here",
+   []
+  ],
+  [
+   "## Files to touch\n\n| Path | Change |\n|---|---|\n| `a/b.rs` | x |\n| c.md | y |\n| `a/b.rs` | z |\n| nope | w |\n\nafter\n| d/e | f |",
+   [
+    "a/b.rs",
+    "c.md"
+   ]
+  ],
+  [
+   "1. **Files to touch**\n| File |\n| --- |\n| `x/y` and `z/w` |\n",
+   [
+    "x/y"
+   ]
+  ],
+  [
+   "### FILES TO TOUCHED\n| `a/b` |\n\n## Files to touch:\n| `c/d` |\n",
+   [
+    "c/d"
+   ]
+  ],
+  [
+   "Files to touché\n| `a/b` |\n",
+   []
+  ],
+  [
+   "# Files to touch\n| `q/r` |\n",
+   [
+    "q/r"
+   ]
+  ],
+  [
+   "\n\n   ## 2.   files to touch\n\n\n| `m/n` |\n|:-:|\n|  |\n",
+   [
+    "m/n"
+   ]
+  ],
+  [
+   "## Files to touch\r\n| `crlf/a` |\r\n| `crlf/b` |\r\n",
+   [
+    "crlf/a",
+    "crlf/b"
+   ]
+  ]
+ ],
+ "uncertain": [
+  [
+   "one file, one test",
+   false
+  ],
+  [
+   "Borderline: two crates",
+   true
+  ],
+  [
+   "I am torn",
+   true
+  ],
+  [
+   "leaning medium",
+   true
+  ],
+  [
+   "leant",
+   false
+  ],
+  [
+   "lean",
+   true
+  ],
+  [
+   "Judgment call",
+   true
+  ],
+  [
+   "judgement call",
+   false
+  ],
+  [
+   "close to the limit",
+   true
+  ],
+  [
+   "close to the line",
+   true
+  ],
+  [
+   "either way",
+   true
+  ],
+  [
+   "uncertainty",
+   false
+  ],
+  [
+   "notsure",
+   false
+  ],
+  [
+   "not sure",
+   true
+  ],
+  [
+   "x_torn",
+   false
+  ],
+  [
+   "é torn",
+   true
+  ],
+  [
+   "torné",
+   false
+  ],
+  [
+   "Close Call!",
+   true
+  ],
+  [
+   "",
+   false
+  ],
+  [
+   "on the fence.",
+   true
+  ]
+ ]
+}

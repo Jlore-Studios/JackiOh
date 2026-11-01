@@ -808,6 +808,10 @@ pub mod patches_io {
         /// changes to a field that plays and its fragment's `plays` (R1365000). Recorded with `tier`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub plays: Option<Vec<String>>,
+        /// R2529000: a system the owner names (`classify::SYSTEM_RELEASES`) alone made this patch one.
+        /// Card statistics read it as a micro over its `plays`, since it moves no other card.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        pub system: bool,
         /// GENERATED from the snapshots: every card the patch added, changed or removed, in catalog
         /// order.
         #[serde(default)]
@@ -1071,6 +1075,13 @@ pub mod patches_io {
         /// R1329000: the patch ships `crates/cards/data/win_rates.json` as it stands.
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         pub win_rates: bool,
+        /// R2529000: the patch changes how cards look (`classify::CARD_VISUALS`), a micro.
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        pub visual: bool,
+        /// R2529000: the tracker issue of a system the owner names (`classify::SYSTEM_RELEASES`),
+        /// which ships as a patch.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub system: Option<u32>,
     }
 
     /// One shipped patch's provenance: the commit that shipped it and its snapshot's blob.
@@ -1344,12 +1355,26 @@ pub mod patches_io {
             for problem in player_note_problems(&fragment.player) {
                 problems.push(format!("pending/{name}'s player note {problem} (R724001)"));
             }
-            // A patch changes a card, a card's play, a rule or the win-rate table; one that claims none
-            // would bump the version over nothing (R650, R1329000, R1366000).
-            if fragment.cards.is_empty() && fragment.plays.is_empty() && !fragment.rule && !fragment.win_rates
+            // A patch changes a card, a card's play or look, a rule, the win-rate table or a system;
+            // one that claims none would bump the version over nothing (R650, R1329000, R1366000,
+            // R2529000).
+            if fragment.cards.is_empty()
+                && fragment.plays.is_empty()
+                && !fragment.rule
+                && !fragment.win_rates
+                && !fragment.visual
+                && fragment.system.is_none()
             {
                 problems.push(format!(
-                    "pending/{name} claims nothing (no card, no --plays, no --rule, no win-rate table), but a patch ships a change"
+                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system, no win-rate table), but a patch ships a change"
+                ));
+            }
+            // R2529000: only the owner names a system.
+            if let Some(issue) = fragment.system
+                && !crate::classify::system_named(issue)
+            {
+                problems.push(format!(
+                    "pending/{name} claims the system of issue #{issue}, but the owner names no such system (classify::SYSTEM_RELEASES, R2529000)"
                 ));
             }
             // R1366000: a card plays differently only where it ships.
@@ -1431,8 +1456,22 @@ pub mod patches_io {
 
 /* versions */
 
-/// R1366000: patch version named from tier when shipping (R388, R2204000, R2455000, R1365000):
-/// major `v0.(Z+1).0`, patch `v0.Z.(X+1)`, or micro with letter suffix. Opaque elsewhere (R105).
+/// R1366000: a patch's version, named from its tier when it ships, after the newest version in
+/// `patches.json` (the last entry, R388's order):
+///
+/// - a **major** (a set reaches `SHIPPED_SETS`, unless the owner wraps it into the current line,
+///   `classify::WRAPPED_SETS`, R2204000, when it earns its cards' tier) is `v0.(Z+1).0`: after
+///   v0.3.17 it is v0.4.0;
+/// - a **patch** (`PATCH_MIN_REPRINTS` or more families reprinted, `PATCH_MIN_CARDS` or more that play
+///   differently, or a rule every game meets, R2455000, R2499000) is `v0.Z.(X+1)`: after v0.3.17 or
+///   v0.3.17c it is v0.3.18;
+/// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
+///   v0.3.17b, after v0.3.17b v0.3.17c.
+///
+/// No title, flag or label names a tier (R1365000). This is the one place a version string is
+/// read, and only here, when a patch ships: R105 still holds everywhere else, where a version is
+/// compared for equality and never parsed or ordered, and later readers read the `tier` recorded
+/// beside it.
 pub mod versions {
     use anyhow::{Context as _, bail};
 
@@ -1595,6 +1634,11 @@ pub struct FragmentArgs {
     pub plays: Option<Vec<String>>,
     /// `--rule`: a divergence no card explains (R1366000). Left out, a fragment written again keeps it.
     pub rule: Option<bool>,
+    /// `--visual`: a change to how cards look (R2529000). Left out, a fragment written again keeps it.
+    pub visual: Option<bool>,
+    /// `--system <issue>`: a system the owner names (R2529000). Left out, a fragment written again
+    /// keeps it.
+    pub system: Option<u32>,
     /// R724001: the player note. No flag sets it: it is written by hand in the fragment, and a
     /// fragment written again keeps the one it holds.
     pub player: Option<PlayerNote>,
@@ -1637,6 +1681,8 @@ pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<N
         plays: args.plays.clone().unwrap_or(held.plays),
         rule: args.rule.unwrap_or(held.rule),
         win_rates: !claimed_elsewhere && win_rates_changed(&paths, &newest.version)?,
+        visual: args.visual.unwrap_or(held.visual),
+        system: args.system.or(held.system),
     };
     fs::create_dir_all(&paths.pending_dir)
         .with_context(|| format!("{} cannot be created", paths.pending_dir.display()))?;
@@ -1898,6 +1944,8 @@ struct Proved {
     version: String,
     tier: Tier,
     plays: Vec<String>,
+    /// R2529000: a named system alone made it a patch.
+    system: bool,
     raw: String,
     table: String,
     /// R2173000: the version's BUSTED and complicated lists, once it holds a card that reads them.
@@ -1918,8 +1966,24 @@ pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
     sets
 }
 
-/// R1366000: computes tier and families playing differently from diff and fragment (R1365000, R1329000).
-fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>) {
+/// R1366000: a patch's tier and the families that play differently in it, from the snapshot before it
+/// and its own, each with the sets its cards belong to, and the fragment's `plays` and `rule`
+/// (`classify::read_diff` and `classify::classify`, R1365000). The claims were confirmed against the
+/// base build by the pull request's `classify` check, so they count as stage 2's. A patch that
+/// changes no card (the win-rate table alone, R1329000, or how cards look, R2529000) is a micro: every
+/// patch bumps the version. R2529000: a fragment claiming a system the owner names is a patch
+/// whatever its cards earn, and the third value says whether the system alone made it one.
+fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>, bool) {
+    tier_among(previous, snapshot, fragment, classify::SYSTEM_RELEASES)
+}
+
+/// `tier_of` with the systems the owner names passed in.
+fn tier_among(
+    previous: &Catalog,
+    snapshot: &Catalog,
+    fragment: &PendingFragment,
+    systems: &[(u32, &str)],
+) -> (Tier, Vec<String>, bool) {
     let before = classify::Side::of_catalog(previous.clone(), sets_of(previous));
     let after = classify::Side::of_catalog(snapshot.clone(), sets_of(snapshot));
     let diff = classify::read_diff(&before, &after, &[]);
@@ -1929,7 +1993,14 @@ fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -
         ..classify::Checked::default()
     };
     let classification = classify::classify(&diff, Some(&checked));
-    (classification.tier.unwrap_or(Tier::Micro), classification.cards)
+    let tier = classification.tier.unwrap_or(Tier::Micro);
+    let named = |issue: u32| systems.iter().any(|(named, _)| *named == issue);
+    let system = tier < Tier::Patch && fragment.system.is_some_and(named);
+    (
+        if system { Tier::Patch } else { tier },
+        classification.cards,
+        system,
+    )
 }
 
 /// R646: `previous` with each of `claims` as `current` holds it (dropped where `current` has none)
@@ -2100,7 +2171,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             .iter()
             .any(|id| snapshot.contains_key(id))
             .then(|| lists_text.clone());
-        let (tier, plays) = tier_of(&previous, &snapshot, &fragment);
+        let (tier, plays, system) = tier_of(&previous, &snapshot, &fragment);
         let version = next_ship_name(
             &taken,
             &name_by_tier(tier, &newest_name).with_context(|| format!("pending/{name} cannot be named"))?,
@@ -2116,6 +2187,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             version,
             tier,
             plays,
+            system,
             raw,
             table: table_text,
             lists,
@@ -2138,6 +2210,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         version,
         tier,
         plays,
+        system,
         raw,
         table,
         lists,
@@ -2164,6 +2237,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             reconstructed: Some(false),
             tier: Some(tier),
             plays: Some(plays),
+            system,
             changes: Vec::new(),
         });
         let written =
@@ -2210,8 +2284,7 @@ fn is_iso_date(text: &str) -> bool {
         })
 }
 
-const FRAGMENT_USAGE: &str =
-    "usage: patches \"<title>\" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule]";
+const FRAGMENT_USAGE: &str = "usage: patches \"<title>\" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule] [--visual] [--system <issue>]";
 
 /// Whether a positional argument is the old form's version (`patches <version> [date] "<title>"`):
 /// `v` and a digit, as every version and placeholder (`v0.3.X`) opens.
@@ -2233,12 +2306,15 @@ fn id_list(text: &str) -> Vec<String> {
 fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
     let mut positional: Vec<&str> = Vec::new();
     let mut flags: IndexMap<&str, &str> = IndexMap::new();
-    let mut rule = None;
+    let (mut rule, mut visual) = (None, None);
     let mut i = 0;
     while i < argv.len() {
         let arg = argv[i].as_str();
         if arg == "--rule" {
             rule = Some(true);
+            i += 1;
+        } else if arg == "--visual" {
+            visual = Some(true);
             i += 1;
         } else if let Some(flag) = arg.strip_prefix("--") {
             let Some(value) = argv.get(i + 1) else {
@@ -2266,6 +2342,15 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
     {
         bail!("\"{date}\" is not a YYYY-MM-DD date");
     }
+    let system = match flags.get("system") {
+        Some(issue) => Some(
+            issue
+                .trim_start_matches('#')
+                .parse::<u32>()
+                .with_context(|| format!("--system takes an issue number, not \"{issue}\""))?,
+        ),
+        None => None,
+    };
     Ok(FragmentArgs {
         version: version.map(str::to_string),
         title: title.to_string(),
@@ -2275,6 +2360,8 @@ fn parse_fragment_args(argv: &[String]) -> anyhow::Result<FragmentArgs> {
         cards: flags.get("cards").map(|cards| id_list(cards)),
         plays: flags.get("plays").map(|plays| id_list(plays)),
         rule,
+        visual,
+        system,
         player: None,
     })
 }
@@ -2472,7 +2559,7 @@ mod tests {
                     catalog
                 };
                 let fragment = PendingFragment::default();
-                let (tier, plays) = crate::patches::tier_of(
+                let (tier, plays, _) = crate::patches::tier_of(
                     &previous,
                     &with("Training Grounds", "traininggrounds"),
                     &fragment,
@@ -2481,9 +2568,102 @@ mod tests {
                 assert_eq!(plays.len(), crate::classify::PATCH_MIN_CARDS);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.5.1");
                 assert_eq!(name_by_tier(tier, "v0.5.0d").unwrap(), "v0.5.1");
-                let (tier, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
+                let (tier, _, _) = crate::patches::tier_of(&previous, &with("Classic", "classic"), &fragment);
                 assert_eq!(tier, Tier::Major);
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.6.0");
+            }
+
+            // R2529000: a fragment claiming only how cards look ships as a micro; one claiming a system
+            // the owner names ships as a patch, recorded as the system's alone, unless its cards earn
+            // a patch by themselves; and a system no one named is refused.
+            #[test]
+            fn r2529000_card_looks_ship_as_a_micro_and_a_named_system_as_a_patch() {
+                use crate::patches::patches_io::{
+                    Catalog, CheckFragmentsArgs, NamedFragment, PendingFragment,
+                };
+                let entry = |id: String, cost: i64| {
+                    let json = serde_json::json!({ "id": id, "name": id, "set": "Core", "cost": cost });
+                    (id, serde_json::from_value(json).expect("an entry"))
+                };
+                let bar = crate::classify::PATCH_MIN_REPRINTS;
+                let costing = |changed: usize| -> Catalog {
+                    (1..=bar)
+                        .map(|k| entry(format!("core-{k:03}"), if k <= changed { 2 } else { 1 }))
+                        .collect()
+                };
+                let systems: &[(u32, &str)] = &[(7, "Card packs")];
+                let looks = PendingFragment {
+                    visual: true,
+                    ..PendingFragment::default()
+                };
+                let tier = |fragment: &PendingFragment, changed: usize| {
+                    let (tier, _, system) =
+                        crate::patches::tier_among(&costing(0), &costing(changed), fragment, systems);
+                    (tier, system)
+                };
+                assert_eq!(tier(&looks, 0), (Tier::Micro, false));
+                let packs = PendingFragment {
+                    system: Some(7),
+                    ..PendingFragment::default()
+                };
+                assert_eq!(tier(&packs, 0), (Tier::Patch, true));
+                assert_eq!(tier(&packs, bar), (Tier::Patch, false));
+                let unnamed = PendingFragment {
+                    system: Some(8),
+                    ..PendingFragment::default()
+                };
+                assert_eq!(tier(&unnamed, 0), (Tier::Micro, false));
+
+                let named = |name: &str, fragment: PendingFragment| NamedFragment {
+                    name: name.to_string(),
+                    fragment: PendingFragment {
+                        title: name.to_string(),
+                        sources: "#1".to_string(),
+                        notes: "n".to_string(),
+                        player: super::super::patches_ship_test::test_note(),
+                        ..fragment
+                    },
+                };
+                let catalog = costing(0);
+                let check = |fragment: NamedFragment| {
+                    crate::patches::patches_io::check_fragments(&CheckFragmentsArgs {
+                        files: &[fragment],
+                        catalog: &catalog,
+                        newest: &catalog,
+                        win_rates_changed: false,
+                    })
+                };
+                assert_eq!(check(named("looks.json", looks)), Vec::<String>::new());
+                let refused = check(named("packs.json", packs));
+                assert_eq!(refused.len(), 1, "{refused:?}");
+                assert!(refused[0].contains("names no such system"), "{refused:?}");
+                let args = crate::patches::parse_fragment_args(&super::super::strings(&[
+                    "Patch: t", "--visual", "--system", "#7",
+                ]))
+                .unwrap();
+                assert_eq!((args.visual, args.system), (Some(true), Some(7)));
+            }
+
+            // R2499000: a fragment that reprints `PATCH_MIN_REPRINTS` cards ships as a patch, one
+            // fewer as a micro, read from the two snapshots alone.
+            #[test]
+            fn r2499000_a_balance_pass_of_the_reprint_bar_ships_as_a_patch() {
+                use crate::patches::patches_io::{Catalog, PendingFragment};
+                let entry = |id: String, cost: i64| {
+                    let json = serde_json::json!({ "id": id, "name": id, "set": "Core", "cost": cost });
+                    (id, serde_json::from_value(json).expect("an entry"))
+                };
+                let bar = crate::classify::PATCH_MIN_REPRINTS;
+                let costing = |changed: usize| -> Catalog {
+                    (1..=bar)
+                        .map(|k| entry(format!("core-{k:03}"), if k <= changed { 2 } else { 1 }))
+                        .collect()
+                };
+                let fragment = PendingFragment::default();
+                let (tier, plays, _) = crate::patches::tier_of(&costing(0), &costing(bar), &fragment);
+                assert_eq!((tier, plays.len()), (Tier::Patch, bar));
+                let (tier, _, _) = crate::patches::tier_of(&costing(0), &costing(bar - 1), &fragment);
+                assert_eq!(tier, Tier::Micro);
             }
 
             #[test]
@@ -2658,7 +2838,7 @@ mod tests {
                 assert_eq!(
                     check(&none, &newest, &newest),
                     strings(&[
-                        "pending/t.json claims nothing (no card, no --plays, no --rule, no win-rate table), but a patch ships a change"
+                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system, no win-rate table), but a patch ships a change"
                     ])
                 );
                 let mut plays = none.clone();
@@ -2988,6 +3168,7 @@ mod tests {
                     reconstructed: None,
                     tier: None,
                     plays: None,
+                    system: false,
                     changes,
                 }
             }

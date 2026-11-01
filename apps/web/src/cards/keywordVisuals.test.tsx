@@ -1,4 +1,4 @@
-// R438: keyword visuals on the board (issue #40). Every keyword kind has a treatment on the board
+// R438: keyword visuals on the board (issue #40). Every keyword kind that acts on the field (R2577000) has a treatment on the board
 // minion, each drawn by shape and found by `data-keyword-fx`; several compose inside their layers'
 // caps with at most AMBIENT_MAX loops; reduced motion (the media query and the settings panel's
 // attribute) stops every loop and leaves the still mark; a Vanilla unit shows only what its view
@@ -30,7 +30,7 @@ import {
   treatedKinds,
   type KeywordLayer,
 } from "./keywordVisuals.ts";
-import { MinionFace } from "./MinionFace.tsx";
+import { MinionFace, keywordChips } from "./MinionFace.tsx";
 import { faceModel } from "./model.ts";
 
 afterEach(() => {
@@ -78,7 +78,13 @@ function fxOf(cf: HTMLElement, kind: KeywordKind): HTMLElement | null {
 
 const EVERY_KEYWORD: Keyword[] = KEYWORD_KINDS.map((kind) => keywordOf(kind));
 
-/* keywords.css, parsed */
+/** R2577000: the kinds a unit on the field draws, and the ones it leaves to its preview. */
+const FIELD_KINDS: KeywordKind[] = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].onField);
+const OFF_FIELD_KINDS: KeywordKind[] = KEYWORD_KINDS.filter((kind) => !KEYWORD_VISUALS[kind].onField);
+
+/* ------------------------------------------------------------------------------------------- *
+ * keywords.css, parsed
+ * ------------------------------------------------------------------------------------------- */
 
 function readSheet(fromWeb: string): string {
   for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
@@ -213,7 +219,7 @@ describe("R438 the keyword visuals map", () => {
 /* One keyword at a time */
 
 describe("R438 a unit with each keyword renders its treatment", () => {
-  for (const kind of KEYWORD_KINDS) {
+  for (const kind of FIELD_KINDS) {
     it(`R438 ${kind}: one [data-keyword-fx] on its layer, drawn by keywords.css`, () => {
       const keyword = keywordOf(kind, 3);
       const cf = renderUnit({ keywords: [keyword], armor: kind === "Armor" ? 3 : 0 });
@@ -312,7 +318,7 @@ describe("R438 several keywords compose", () => {
       drawn.filter((el) => el.getAttribute("data-kw-layer") === layer).map((el) => el.getAttribute("data-keyword-fx") as KeywordKind);
 
     for (const layer of Object.keys(LAYER_CAP) as KeywordLayer[]) {
-      const kinds = KEYWORD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].layer === layer).sort(
+      const kinds = FIELD_KINDS.filter((kind) => KEYWORD_VISUALS[kind].layer === layer).sort(
         (a, b) => KEYWORD_VISUALS[a].priority - KEYWORD_VISUALS[b].priority,
       );
       // Each layer draws exactly its first LAYER_CAP kinds by priority.
@@ -488,7 +494,7 @@ describe("R438 motion is cheap, capped and stops under reduced motion", () => {
           rule.selectors.some((s) => norm(s) === `.cf .${className}`) &&
           (rule.decls.get("opacity") === "0" || rule.decls.get("display") === "none"),
       );
-    for (const kind of KEYWORD_KINDS) {
+    for (const kind of FIELD_KINDS) {
       if (DRAWN_BY_MINION.includes(kind)) continue;
       const one = renderUnit({ keywords: [keywordOf(kind)] });
       const parts = [...(fxOf(one, kind)?.querySelectorAll<HTMLElement>(".kw-part") ?? [])];
@@ -515,5 +521,65 @@ describe("#2437 temporaryLeft: the count a card's Temporary keywords give it", (
     expect(temporaryLeft([{ kind: "Temporary" }])).toBe(1);
     expect(temporaryLeft([{ kind: "Temporary", n: 2 }])).toBe(2);
     expect(temporaryLeft([{ kind: "Temporary", n: 2 }, { kind: "Temporary" }, { kind: "Temporary", n: 3 }])).toBe(3);
+  });
+});
+
+describe("R2577000 a unit on the field draws only the keywords that can still act there", () => {
+  it("R2577000 Equip, Tradable, Cloaked, Crater, Flashback, Stack and Temporary are the kinds off the field", () => {
+    expect([...OFF_FIELD_KINDS].sort()).toEqual(["Cloaked", "Crater", "Equip", "Flashback", "Stack", "Temporary", "Tradable"]);
+    for (const kind of ["Starship Piece", "Starship", "Can't Defend", "Charge", "Rush", "Brittle"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
+  });
+
+  for (const kind of OFF_FIELD_KINDS) {
+    it(`R2577000 ${kind}: no treatment and no chip on the field, its badge hidden in the DOM`, () => {
+      const cf = renderUnit({ keywords: [keywordOf(kind)] });
+      expect(treatments(cf)).toHaveLength(0);
+      expect(cf.querySelector(".kw-fx, .kw-glyphs")).toBeNull();
+      expect(cf.querySelector(`.keywords > [data-keyword="${kind}"]`)?.getAttribute("data-chip")).toBe("hidden");
+      expect(cf.querySelector(".cf-kw-more")).toBeNull();
+    });
+  }
+
+  it("R2577000 a unit with Equip and Taunt shows no EQ chip and no magnet, and keeps its Taunt shield", () => {
+    const cf = renderUnit({ keywords: [{ kind: "Taunt" }, { kind: "Equip" }] });
+    expect(treatments(cf).map((el) => el.getAttribute("data-keyword-fx"))).toEqual(["Taunt"]);
+    expect(cf.querySelector(".kw-magnet")).toBeNull();
+    expect(cf.querySelectorAll(".keywords > [data-keyword]:not([data-chip='hidden'])")).toHaveLength(0);
+    expect(cf.querySelectorAll(".keywords > [data-keyword]")).toHaveLength(2);
+  });
+
+  it("R2577000 Equip, Cloaked and Tradable beside three live keywords leave the three live chips and no +n", () => {
+    const keywords: Keyword[] = [{ kind: "Equip" }, { kind: "Poisonous" }, { kind: "Cloaked" }, { kind: "Lifesteal" }, { kind: "Tradable" }, { kind: "Windfury" }];
+    expect(keywordChips(keywords, 0)).toEqual({ shown: [{ kind: "Poisonous" }, { kind: "Lifesteal" }, { kind: "Windfury" }], folded: [] });
+    const cf = renderUnit({ keywords });
+    const visible = [...cf.querySelectorAll<HTMLElement>(".keywords > [data-keyword]:not([data-chip='hidden'])")];
+    expect(visible.map((chip) => chip.textContent)).toEqual(["PO", "LS", "WF"]);
+    expect(cf.querySelector(".cf-kw-more")).toBeNull();
+    expect(cf.querySelectorAll(".keywords > [data-keyword]")).toHaveLength(keywords.length);
+  });
+
+  it("R2577000 a dead keyword takes no live one's glyph slot or loop", () => {
+    // Temporary (24) and Equip (27) used to fill both glyph slots and both loops.
+    const plan = keywordFxPlan({ keywords: [{ kind: "Temporary" }, { kind: "Equip" }, { kind: "Starship Piece" }, { kind: "Starship" }], canAct: true, armor: 0 });
+    expect(plan.map((entry) => [entry.kind, entry.motion])).toEqual([["Starship Piece", "on"], ["Starship", "on"]]);
+    expect(treatedKinds({ keywords: [{ kind: "Stack" }, { kind: "Crater" }, { kind: "Flashback" }], canAct: true, armor: 0 })).toEqual([]);
+  });
+
+  it("R2577000 a Starship Piece unit still shows SP and its hull-plate glyph", () => {
+    const cf = renderUnit({ keywords: [{ kind: "Starship Piece" }, { kind: "Equip" }] });
+    const chip = cf.querySelector<HTMLElement>('.keywords > [data-keyword="Starship Piece"]');
+    expect(chip?.hasAttribute("data-chip")).toBe(false);
+    expect(chip?.textContent).toBe("SP");
+    expect(fxOf(cf, "Starship Piece")?.querySelector(".kw-starship-piece")).not.toBeNull();
+    expect(fxOf(cf, "Equip")).toBeNull();
+  });
+
+  it("R2657000 a Can't Defend unit shows CD and its split-shield glyph: it still acts on the field", () => {
+    const cf = renderUnit({ keywords: [{ kind: "Can't Defend" }] });
+    const chip = cf.querySelector<HTMLElement>(`.keywords > [data-keyword="Can't Defend"]`);
+    expect(chip?.hasAttribute("data-chip")).toBe(false);
+    expect(chip?.textContent).toBe("CD");
+    expect(fxOf(cf, "Can't Defend")?.getAttribute("data-kw-layer")).toBe("glyph");
+    expect(fxOf(cf, "Can't Defend")?.querySelector(".kw-split-shield")).not.toBeNull();
   });
 });

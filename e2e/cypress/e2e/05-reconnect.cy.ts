@@ -74,6 +74,7 @@ type SideLike = { hand?: { instanceId: string }[] | { count: number } };
 function handIdsOf(view: Record<string, unknown> | null | undefined): string[] {
   const you = (view?.you ?? {}) as SideLike;
   const hand = you.hand;
+  // §10.8: the viewer's own hand is full cards; only the opponent's is a count.
   expect(Array.isArray(hand), "the viewer's own hand arrives as cards, not a count (§10.8)").to.eq(
     true,
   );

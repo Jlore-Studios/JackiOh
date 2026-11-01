@@ -520,6 +520,12 @@
   gap: 4px;
 }
 
+.challenge-toast__note {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: var(--type-md);
+}
+
 .challenge-toast__refusal {
   margin: 0;
   padding-left: 8px;

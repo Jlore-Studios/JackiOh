@@ -1,0 +1,3034 @@
+{
+  "//": "Generated from crates/cards/card-text.yaml by crates/tools/tests/export_card_text.rs. Do not edit: change the YAML, then run cargo test -p jackioh-tools --test export_card_text.",
+  "cards": {
+    "core-001": {
+      "play": "Stand behind me. Way behind.",
+      "attack": "Defense is offense!",
+      "death": "Defense... offended."
+    },
+    "core-002": {
+      "play": "Ugh. Not your kind again.",
+      "attack": "Begone, riffraff!",
+      "death": "Tolerance wins. Again."
+    },
+    "core-003": {
+      "play": "For the right house!",
+      "attack": "Wrong house, buddy!",
+      "death": "Be right back."
+    },
+    "core-004": {
+      "play": "Double or nothing, baby!",
+      "attack": "All in!",
+      "death": "House always wins."
+    },
+    "core-005": {
+      "cast": "Hoarding is self care."
+    },
+    "core-006": {
+      "cast": "Drink up, dearie."
+    },
+    "core-007": {
+      "play": "Chitter chitter, click!",
+      "attack": "Buzz buzz!",
+      "death": "Click... click..."
+    },
+    "core-008": {
+      "play": "Hello. I am very normal.",
+      "attack": "Excuse me. Attacking.",
+      "death": "Plain. Simple. Gone."
+    },
+    "core-009": {
+      "play": "Ooh! Pretty light! Pretty light!",
+      "attack": "Into the light!",
+      "death": "Totally worth it."
+    },
+    "core-010": {
+      "cast": "Restock, restock, restock!"
+    },
+    "core-011": {
+      "play": "Outta my way, slowpokes!",
+      "attack": "Too slow, sucker!",
+      "death": "Too... slow..."
+    },
+    "core-012": {
+      "play": "Meow. Meow again.",
+      "attack": "Double pounce!",
+      "death": "Both of us?"
+    },
+    "core-013": {
+      "play": "Shredder online. Paperwork offline.",
+      "attack": "Shredding commenced.",
+      "death": "Warranty void."
+    },
+    "core-014": {
+      "cast": "Defense contract approved."
+    },
+    "core-015": {
+      "play": "Me and my buddy!",
+      "attack": "Get 'em, buddy!",
+      "death": "Tell Mister Token goodbye."
+    },
+    "core-016": {
+      "cast": "Nothing personal, pal."
+    },
+    "core-017": {
+      "cast": "Surf's up! Everybody out!"
+    },
+    "core-018": {
+      "cast": "Waste not, want toast."
+    },
+    "core-019": {
+      "play": "Not too big. Not too small.",
+      "attack": "Medium smash.",
+      "death": "Should have gone aggro."
+    },
+    "core-020": {
+      "play": "Allow me to make a point.",
+      "attack": "Point taken!",
+      "death": "Pointless."
+    },
+    "core-021": {
+      "cast": "Oops! Did I trip you?"
+    },
+    "core-022": {
+      "play": "Nom. Nom nom. Cube.",
+      "attack": "Cube hungry!",
+      "death": "Indigestion..."
+    },
+    "core-023": {
+      "cast": "Wait. Haven't we done this?"
+    },
+    "core-024": {
+      "cast": "Synergy! Leverage! Profit!"
+    },
+    "core-025": {
+      "play": "Big. Honest. Boring.",
+      "attack": "Honest punch.",
+      "death": "Fair enough."
+    },
+    "core-026": {
+      "cast": "Taste the glow!"
+    },
+    "core-027": {
+      "cast": "Mmm. Tastes like pennies."
+    },
+    "core-028": {
+      "cast": "Ships in six to eight weeks."
+    },
+    "core-029": {
+      "cast": "Giga! Bean! Time!"
+    },
+    "core-030": {
+      "play": "Shh. I'm filing.",
+      "attack": "Shh. This won't hurt.",
+      "death": "Overdue. Forever."
+    },
+    "core-031": {
+      "cast": "Show your work!"
+    },
+    "core-032": {
+      "play": "Silent paws. Sharp claws.",
+      "attack": "From the shadows!",
+      "death": "Back to the shadows..."
+    },
+    "core-033": {
+      "cast": "Copy that. Copy that. Copy that."
+    },
+    "core-034": {
+      "cast": "Oops. Also, oops."
+    },
+    "core-035": {
+      "cast": "Lights out, moon's up."
+    },
+    "core-036": {
+      "cast": "Jammed it! Sorry, not sorry."
+    },
+    "core-037": {
+      "play": "Finders keepers, dead folks.",
+      "attack": "Dig in!",
+      "death": "Dig me a nice one."
+    },
+    "core-038": {
+      "cast": "Faster! Faster! Faster!"
+    },
+    "core-039": {
+      "cast": "Reduce, reuse, replay!"
+    },
+    "core-040": {
+      "cast": "Remember us. Remember us."
+    },
+    "core-041": {
+      "cast": "Baa. Surprise."
+    },
+    "core-042": {
+      "cast": "Science has gone too far."
+    },
+    "core-043": {
+      "play": "Big cat. Bigger problems.",
+      "attack": "Big cat pounce!",
+      "death": "Landed on my back?"
+    },
+    "core-044": {
+      "cast": "Bullseye, baby."
+    },
+    "core-045": {
+      "play": "En garde! And also, en garde!",
+      "attack": "Touche!",
+      "death": "Well played. Ow."
+    },
+    "core-046": {
+      "cast": "Everybody calm down. Forever."
+    },
+    "core-047": {
+      "cast": "A fig a day!"
+    },
+    "core-048": {
+      "cast": "Reverse card! Everybody!"
+    },
+    "core-049": {
+      "cast": "Hop along. You're mine now."
+    },
+    "core-050": {
+      "play": "Oppa! I'm your biggest fan!",
+      "attack": "For my bias!",
+      "death": "Tell my bias goodbye."
+    },
+    "core-051": {
+      "cast": "Pencils down. Pick one."
+    },
+    "core-051-1": {
+      "cast": "Blank page energy."
+    },
+    "core-052": {
+      "play": "Round and round we go!",
+      "attack": "Wheee!",
+      "death": "So... dizzy..."
+    },
+    "core-053": {
+      "play": "Reno's here! Party's saved!",
+      "attack": "Party time!",
+      "death": "Luck... ran out."
+    },
+    "core-054": {
+      "play": "Come here, my little ones.",
+      "attack": "Away from my brood!",
+      "death": "Look after them for me..."
+    },
+    "core-055": {
+      "play": "Hot stuff. Coming through.",
+      "attack": "Feel the heat!",
+      "death": "Cooling... off..."
+    },
+    "core-056": {
+      "play": "Jilliax! Deluxe! Edition!",
+      "attack": "Deluxe beatdown!",
+      "death": "Recall notice issued."
+    },
+    "core-057": {
+      "cast": "Study group, assemble!"
+    },
+    "core-058": {
+      "cast": "Fresh tokens, farm to table!"
+    },
+    "core-059": {
+      "cast": "Welcome in, whoever you are!"
+    },
+    "core-060": {
+      "cast": "Mmm, honey. Oh no. Bears."
+    },
+    "core-061": {
+      "play": "Peer review? Rejected.",
+      "attack": "Your thesis is wrong.",
+      "death": "My grant... expired."
+    },
+    "core-062": {
+      "cast": "Everyone's invited! Bring your friends!"
+    },
+    "core-063": {
+      "cast": "New face, who dis?"
+    },
+    "core-064": {
+      "cast": "You're all special. Mostly you."
+    },
+    "core-065": {
+      "cast": "Hurts so good."
+    },
+    "core-065-1": {
+      "play": "Hug me. I dare you.",
+      "attack": "Pillow fight!",
+      "death": "Pop."
+    },
+    "core-066": {
+      "play": "Rock solid. Rock steady.",
+      "attack": "Rock bottom!",
+      "death": "Just gravel now."
+    },
+    "core-067": {
+      "play": "No cap, this lane's mine.",
+      "attack": "It's giving violence.",
+      "death": "I'm literally dead."
+    },
+    "core-068": {
+      "play": "Twist and shout! Mostly shout!",
+      "attack": "Twist this!",
+      "death": "Untwisted..."
+    },
+    "core-069": {
+      "cast": "Everybody grab a sword!"
+    },
+    "core-070": {
+      "cast": "This is for everything."
+    },
+    "core-071": {
+      "cast": "Unpaid, but motivated!"
+    },
+    "core-072": {
+      "cast": "Ah, the good old days."
+    },
+    "core-073": {
+      "cast": "Nice try. Not today."
+    },
+    "core-074": {
+      "cast": "Unleash the ultimate infestation!"
+    },
+    "core-075": {
+      "cast": "There's always more in the back."
+    },
+    "core-076": {
+      "cast": "If you build it..."
+    },
+    "core-077": {
+      "play": "Grading on a curve, people!",
+      "attack": "Pop quiz!",
+      "death": "Class... dismissed."
+    },
+    "core-078": {
+      "cast": "Full send! No brakes!"
+    },
+    "core-079": {
+      "cast": "Say it twice. Say it twice."
+    },
+    "core-080": {
+      "cast": "Zao gao! Oh no, oh no!"
+    },
+    "core-081": {
+      "play": "Bask in my glow, darlings.",
+      "attack": "Blinded by beauty!",
+      "death": "Shine on without me."
+    },
+    "core-082": {
+      "cast": "Pick a number. Any number."
+    },
+    "core-083": {
+      "cast": "Abracadabra! Everything's fancy now!"
+    },
+    "core-084": {
+      "cast": "Going long! Go deep!"
+    },
+    "core-085": {
+      "cast": "No license. No problem."
+    },
+    "core-086": {
+      "play": "Mrow. Don't touch me.",
+      "attack": "Hiss!",
+      "death": "You're all mine now."
+    },
+    "core-087": {
+      "cast": "Chaos! Now pocket sized!"
+    },
+    "core-088": {
+      "cast": "Everybody. Into the void."
+    },
+    "core-089": {
+      "play": "Anyone gonna finish that?",
+      "attack": "Fresh meat.",
+      "death": "Finally... full."
+    },
+    "core-090": {
+      "cast": "Just a little pinch."
+    },
+    "core-090-1": {
+      "cast": "Achoo! Sorry. Achoo!"
+    },
+    "core-091": {
+      "play": "Trust the science. Please.",
+      "attack": "Keep your distance!",
+      "death": "Wash your hands."
+    },
+    "core-092": {
+      "play": "More! I need more cats!",
+      "attack": "For my lovelies!",
+      "death": "They were going to love me..."
+    },
+    "core-093": {
+      "cast": "Style points! Grade me!"
+    },
+    "core-093-1": {
+      "cast": "Just a little something."
+    },
+    "core-094": {
+      "cast": "Greed is good. Mostly."
+    },
+    "core-095": {
+      "cast": "Roll the dice! Pray nice!"
+    },
+    "core-095-1": {
+      "play": "Chaos golem! Smash everything!",
+      "attack": "Smash!",
+      "death": "Order... restored."
+    },
+    "core-096": {
+      "cast": "Go on. Play your part."
+    },
+    "core-097": {
+      "cast": "I know exactly what you need."
+    },
+    "core-098": {
+      "cast": "With great power... whatever."
+    },
+    "core-099": {
+      "cast": "Some assembly required."
+    },
+    "core-100": {
+      "play": "Nothing lasts. Except me.",
+      "attack": "Unravel.",
+      "death": "Even I... end."
+    },
+    "core-t-rush": {
+      "play": "Go go go go!",
+      "attack": "Go go go!",
+      "death": "Gone too fast."
+    },
+    "core-t-sheep": {
+      "play": "Baa?",
+      "attack": "Baa!",
+      "death": "Baa..."
+    },
+    "core-t-felinor": {
+      "play": "Mew!",
+      "attack": "Mrrp!",
+      "death": "Mew..."
+    },
+    "core-t-bread": {
+      "play": "I'm bread. Butter me up.",
+      "attack": "Toast time!",
+      "death": "Crumbs."
+    },
+    "core-t-coin": {
+      "cast": "Heads I win, tails you lose."
+    },
+    "core-t-ghoul": {
+      "play": "Up from the cold ground. Hungry.",
+      "attack": "Feed me.",
+      "death": "Back to the dirt."
+    },
+    "classic-001": {
+      "cast": "Remember me? Nobody remembers."
+    },
+    "classic-002": {
+      "play": "Now you see it. Now you don't!",
+      "attack": "Surprise!",
+      "death": "Well, that trick backfired."
+    },
+    "classic-003": {
+      "cast": "Chapter one. Stop the bleeding."
+    },
+    "classic-004": {
+      "cast": "The seeing stone shows me everything."
+    },
+    "classic-005": {
+      "cast": "Bzzt! Intruder detected."
+    },
+    "classic-006": {
+      "play": "Crack those knuckles. And those toes.",
+      "attack": "Crack!",
+      "death": "My toes, my poor toes!"
+    },
+    "classic-007": {
+      "cast": "Power without end, right in my hand."
+    },
+    "classic-008": {
+      "cast": "You're in a real pickle now!"
+    },
+    "classic-009": {
+      "cast": "Pay up. The taxman always collects."
+    },
+    "classic-010": {
+      "cast": "Begone, and never return!"
+    },
+    "classic-011": {
+      "cast": "Your thoughts are mine to read."
+    },
+    "classic-012": {
+      "cast": "Written in red ink. Very red."
+    },
+    "classic-013": {
+      "play": "Boots on the ground, sir!",
+      "attack": "Move, move, move!",
+      "death": "Man down! Man down!"
+    },
+    "classic-014": {
+      "cast": "Slip into the shadows. Gone."
+    },
+    "classic-015": {
+      "play": "I can smell a good card.",
+      "attack": "I smell weakness.",
+      "death": "Nose to the ground, forever."
+    },
+    "classic-016": {
+      "cast": "Page one hundred. Everything burns."
+    },
+    "classic-017": {
+      "cast": "Not today, spellcaster."
+    },
+    "classic-018": {
+      "cast": "Error. Error. Reality not found."
+    },
+    "classic-019": {
+      "cast": "Hiss! Smell that lizard breath!"
+    },
+    "classic-020": {
+      "cast": "Every sin shall be punished."
+    },
+    "classic-021": {
+      "play": "Shell shocked and ready to roll.",
+      "attack": "Shell slam!",
+      "death": "Flipped on my back again."
+    },
+    "classic-022": {
+      "play": "Middle lane is mine, team.",
+      "attack": "Diving mid!",
+      "death": "Mid is down. Report the jungler."
+    },
+    "classic-023": {
+      "cast": "Sign here. Your soul, please."
+    },
+    "classic-024": {
+      "cast": "Knowledge is power. Read on."
+    },
+    "classic-025": {
+      "cast": "Please... wait... buffering..."
+    },
+    "classic-026": {
+      "cast": "Fastest hands in the west!"
+    },
+    "classic-027": {
+      "play": "Blorp. Squelch. Hello!",
+      "attack": "Blorp attack!",
+      "death": "Splat."
+    },
+    "classic-028": {
+      "cast": "Not done yet. Deep breath."
+    },
+    "classic-029": {
+      "cast": "The final chapter. How tragic."
+    },
+    "classic-030": {
+      "cast": "Reduce, reuse, recycle!"
+    },
+    "classic-031": {
+      "play": "Fresh cookies, guild approved!",
+      "attack": "Fresh from the oven!",
+      "death": "Crumbs. Nothing but crumbs."
+    },
+    "classic-032": {
+      "cast": "Purr. I have so many feelings."
+    },
+    "classic-033": {
+      "play": "Come closer, little one. Into my web.",
+      "attack": "Caught you.",
+      "death": "My web... unravels..."
+    },
+    "classic-034": {
+      "cast": "A priceless relic. Mine now."
+    },
+    "classic-035": {
+      "cast": "Stretch, plan, prepare. Go time."
+    },
+    "classic-036": {
+      "cast": "Oh, that is a sick burn!"
+    },
+    "classic-037": {
+      "cast": "One last hurrah, together!"
+    },
+    "classic-038": {
+      "cast": "Going once, going twice, sold!"
+    },
+    "classic-039": {
+      "cast": "Cough. Cough. It's spreading."
+    },
+    "classic-040": {
+      "play": "Mic check, one two, tech in!",
+      "attack": "Drop the beat!",
+      "death": "Mic drop."
+    },
+    "classic-041": {
+      "play": "Let's talk about the meta.",
+      "attack": "The meta demands it.",
+      "death": "The meta has shifted."
+    },
+    "classic-042": {
+      "cast": "Bubbling toxins, ever changing."
+    },
+    "classic-043": {
+      "cast": "Duck and cover. Then cough."
+    },
+    "classic-044": {
+      "cast": "They're back, and they're grumpy."
+    },
+    "classic-045": {
+      "play": "The forest walks with me.",
+      "attack": "The forest strikes!",
+      "death": "Return me to the earth."
+    },
+    "classic-046": {
+      "cast": "The heavens smile upon us."
+    },
+    "classic-047": {
+      "play": "Meow. I always come back.",
+      "attack": "Again and again!",
+      "death": "See you next life, meow."
+    },
+    "classic-048": {
+      "play": "Shrimp for hire, reasonable rates!",
+      "attack": "Paid in full!",
+      "death": "Not the cocktail sauce!"
+    },
+    "classic-049": {
+      "play": "Greed detected. Initiating correction.",
+      "attack": "Correcting greed.",
+      "death": "System. Shutting. Down."
+    },
+    "classic-050": {
+      "play": "From the void, I walk.",
+      "attack": "Into the void.",
+      "death": "Back into the dark."
+    },
+    "classic-051": {
+      "play": "Something's gonna snap. Not me.",
+      "attack": "Snap!",
+      "death": "My back! My back!"
+    },
+    "classic-052": {
+      "cast": "All in. Winner takes everything."
+    },
+    "classic-053": {
+      "play": "Crawling... closer... closer...",
+      "attack": "Crawling in...",
+      "death": "Squish."
+    },
+    "classic-054": {
+      "cast": "Rewind. Let's try that again."
+    },
+    "classic-055": {
+      "cast": "This chapter spreads like wildfire."
+    },
+    "classic-056": {
+      "play": "All magic bows to me.",
+      "attack": "Kneel!",
+      "death": "My spells... betray me..."
+    },
+    "classic-057": {
+      "cast": "Again... again... again..."
+    },
+    "classic-058": {
+      "cast": "Share and share alike, comrades."
+    },
+    "classic-059": {
+      "play": "The doctor will see you now.",
+      "attack": "Time for your shot.",
+      "death": "Physician, heal thyself. Too late."
+    },
+    "classic-060": {
+      "cast": "Everybody pile on!"
+    },
+    "classic-061": {
+      "play": "I bring the plague. Tremble.",
+      "attack": "Rot beneath me!",
+      "death": "Even giants rot."
+    },
+    "classic-062": {
+      "cast": "Tick, tock. Tick, tock."
+    },
+    "classic-063": {
+      "cast": "Low pass over the fields!"
+    },
+    "classic-064": {
+      "cast": "The void recycles all things."
+    },
+    "classic-065": {
+      "cast": "Always keep an ace hidden."
+    },
+    "classic-066": {
+      "play": "Striker ready. Let's score!",
+      "attack": "Shoot! Score!",
+      "death": "A red card? Really?"
+    },
+    "classic-067": {
+      "play": "I just want to pet them.",
+      "attack": "Just one pet!",
+      "death": "Scratched by a kitty."
+    },
+    "classic-068": {
+      "play": "Small cards deserve a voice too.",
+      "attack": "Little guys, unite!",
+      "death": "Lobbying... failed."
+    },
+    "classic-069": {
+      "play": "Hooves of pestilence, riding in!",
+      "attack": "Gallop!",
+      "death": "The ride ends here."
+    },
+    "classic-070": {
+      "cast": "Do not lick the pages."
+    },
+    "classic-071": {
+      "play": "Nom nom. Whole lanes, delicious.",
+      "attack": "Lunch time!",
+      "death": "Too much. Too full."
+    },
+    "classic-072": {
+      "cast": "Your magic ends here, entirely."
+    },
+    "classic-073": {
+      "play": "Hold still. This might sting.",
+      "attack": "Scalpel, please.",
+      "death": "The nurse needs a nurse."
+    },
+    "classic-074": {
+      "cast": "Plant them deep. Harvest later."
+    },
+    "classic-075": {
+      "cast": "A land of a thousand eyes."
+    },
+    "classic-076": {
+      "play": "Special delivery. It's contagious.",
+      "attack": "Achoo!",
+      "death": "Pass it on..."
+    },
+    "classic-077": {
+      "play": "Ooh ooh! No magic allowed!",
+      "attack": "Ooh ooh, smack!",
+      "death": "Ooh... ooh..."
+    },
+    "classic-078": {
+      "cast": "Twist it, change it, mutate it."
+    },
+    "classic-079": {
+      "cast": "Come on, lucky number!"
+    },
+    "classic-080": {
+      "play": "Big Max goes BOOM!",
+      "attack": "Boom time!",
+      "death": "Kaboom!"
+    },
+    "classic-081": {
+      "cast": "We don't survive. We thrive."
+    },
+    "classic-082": {
+      "play": "Baa. We all agree.",
+      "attack": "Baa! Get them!",
+      "death": "Baa... ha."
+    },
+    "classic-083": {
+      "cast": "Skewered and roasted!"
+    },
+    "classic-084": {
+      "cast": "Nobody in, nobody out."
+    },
+    "classic-085": {
+      "play": "You no take candle! Bow to king!",
+      "attack": "King says attack!",
+      "death": "King... no more candle..."
+    },
+    "classic-086": {
+      "play": "Every one of us has a curse.",
+      "attack": "The beast within!",
+      "death": "Gilneas... falls..."
+    },
+    "classic-087": {
+      "cast": "Drink deep. Cheers."
+    },
+    "classic-088": {
+      "cast": "Siphon squad, drain it all!"
+    },
+    "classic-089": {
+      "play": "I have some unfinished business.",
+      "attack": "Boo.",
+      "death": "Shutting down, for good."
+    },
+    "classic-090": {
+      "cast": "Deeper and deeper we go."
+    },
+    "classic-t-glitch": {
+      "cast": "Error. Error. Reality not found."
+    },
+    "classicplus-001": {
+      "cast": "Spores of doom, released!"
+    },
+    "classicplus-002": {
+      "cast": "A little grooming. A lot of spores."
+    },
+    "classicplus-003": {
+      "play": "Don't tread on me, partner.",
+      "attack": "Locked and loaded.",
+      "death": "Hiss... outgunned."
+    },
+    "classicplus-004": {
+      "play": "Biggest bat in the cave!",
+      "attack": "Batter up!",
+      "death": "Bat down, bat down."
+    },
+    "classicplus-005": {
+      "play": "Guy Att, at your service.",
+      "attack": "Guy Att, attacking!",
+      "death": "Guy Att, attacked."
+    },
+    "classicplus-006": {
+      "play": "Wait, is this the right house?",
+      "attack": "Is this the house?",
+      "death": "Wrong house. Definitely wrong."
+    },
+    "classicplus-007": {
+      "cast": "Welcome home. Wipe your feet."
+    },
+    "classicplus-008": {
+      "cast": "The storm withers all it touches."
+    },
+    "classicplus-009": {
+      "cast": "Shhh. Not a word."
+    },
+    "classicplus-010": {
+      "cast": "Fresh wraps, brand new look!"
+    },
+    "classicplus-011": {
+      "play": "Power of friendship, full transformation!",
+      "attack": "Final form, go!",
+      "death": "Not like this, senpai!"
+    },
+    "classicplus-012": {
+      "play": "Mama's pancakes are served, sugar!",
+      "attack": "Hot off the griddle!",
+      "death": "Flip me gently, darling."
+    },
+    "classicplus-012-1": {
+      "cast": "Om nom nom. All gone!"
+    },
+    "classicplus-012-2": {
+      "cast": "Bring it to a rolling boil."
+    },
+    "classicplus-012-3": {
+      "cast": "Fluffy, but it grips tight."
+    },
+    "classicplus-012-4": {
+      "cast": "A dusting of powdered sugar!"
+    },
+    "classicplus-012-5": {
+      "cast": "No waffles allowed in here."
+    },
+    "classicplus-012-6": {
+      "cast": "Brr. Frozen pancakes, anyone?"
+    },
+    "classicplus-012-7": {
+      "cast": "We hunger. We march."
+    },
+    "classicplus-012-8": {
+      "cast": "Flip it cold. Flip it hard!"
+    },
+    "classicplus-013": {
+      "play": "Come and get it, sweeties!",
+      "attack": "Eat your greens!",
+      "death": "Kitchen's closed, hon."
+    },
+    "classicplus-014": {
+      "cast": "Forever, and ever, and ever."
+    },
+    "classicplus-015": {
+      "cast": "Conjure a quick little helper."
+    },
+    "classicplus-016": {
+      "cast": "More helpers, even quicker!"
+    },
+    "classicplus-017": {
+      "cast": "An army of helpers, right now!"
+    },
+    "classicplus-018": {
+      "play": "Free treats? I'm in!",
+      "attack": "For the treats!",
+      "death": "It was a trick..."
+    },
+    "classicplus-019": {
+      "cast": "Five losers, one terrible team."
+    },
+    "classicplus-019-1": {
+      "play": "Top lane. Top loser.",
+      "attack": "Top diff, watch!",
+      "death": "Ganked again?"
+    },
+    "classicplus-019-2": {
+      "play": "The jungle is mine. Probably.",
+      "attack": "Gank incoming!",
+      "death": "Invaded, again."
+    },
+    "classicplus-019-3": {
+      "play": "Mid or feed!",
+      "attack": "Solo kill!",
+      "death": "Fed. Again."
+    },
+    "classicplus-019-4": {
+      "play": "I'll carry you. Emotionally.",
+      "attack": "Follow me, I guess.",
+      "death": "Nobody thanks the support."
+    },
+    "classicplus-019-5": {
+      "play": "Bot lane diff. Easy.",
+      "attack": "Bot lane gank!",
+      "death": "My support left me."
+    },
+    "classicplus-020": {
+      "play": "Mushroom power, grow grow grow!",
+      "attack": "Spore storm!",
+      "death": "Stomped flat."
+    },
+    "classicplus-021": {
+      "cast": "Spin to win!"
+    },
+    "classicplus-022": {
+      "cast": "The moon bleeds tonight."
+    },
+    "classicplus-023": {
+      "cast": "Straight from the warehouse. Probably."
+    },
+    "classicplus-024": {
+      "cast": "The walls are closing in!"
+    },
+    "classicplus-025": {
+      "cast": "Right through the soul."
+    },
+    "classicplus-026": {
+      "play": "Tommy Tempo here. Keep up!",
+      "attack": "Speed run!",
+      "death": "Out of time."
+    },
+    "classicplus-027": {
+      "cast": "The perfect hand. Trust me."
+    },
+    "classicplus-028": {
+      "play": "Our home. Our graves.",
+      "attack": "Join us below.",
+      "death": "Home at last."
+    },
+    "classicplus-029": {
+      "cast": "Step through. Remember yesterday."
+    },
+    "classicplus-030": {
+      "play": "Two cats, one purr.",
+      "attack": "Double swipe!",
+      "death": "Unfused. Meow."
+    },
+    "classicplus-031": {
+      "cast": "Combining samples. Stand back."
+    },
+    "classicplus-032": {
+      "cast": "Removed, to another world."
+    },
+    "classicplus-032-1": {
+      "cast": "Off with its head."
+    },
+    "classicplus-032-2": {
+      "cast": "Everybody fight! Last one standing!"
+    },
+    "classicplus-032-3": {
+      "cast": "Blades, spinning, everywhere!"
+    },
+    "classicplus-033": {
+      "cast": "Up here, the view is better."
+    },
+    "classicplus-034": {
+      "cast": "Memory usage climbing. Climbing."
+    },
+    "classicplus-035": {
+      "cast": "Reverting to last known good state."
+    },
+    "classicplus-036": {
+      "cast": "Rattle, rattle, bones for all!"
+    },
+    "classicplus-036-1": {
+      "cast": "Bones, raining from the sky!"
+    },
+    "classicplus-037": {
+      "play": "Boom. Boom. War is coming.",
+      "attack": "War! War! War!",
+      "death": "The drum falls silent."
+    },
+    "classicplus-038": {
+      "play": "The sun rises with me.",
+      "attack": "Solar flare!",
+      "death": "Eclipse..."
+    },
+    "classicplus-038-1": {
+      "play": "Behold, the prime of the sun!",
+      "attack": "Burn bright!",
+      "death": "Supernova..."
+    },
+    "classicplus-039": {
+      "play": "Mmm, delicious paperbacks.",
+      "attack": "Chomp!",
+      "death": "Bookmarked, forever."
+    },
+    "classicplus-040": {
+      "cast": "Funds appropriated. No questions."
+    },
+    "classicplus-041": {
+      "cast": "Some things never change."
+    },
+    "classicplus-042": {
+      "cast": "Pencils down. Pop quiz time."
+    },
+    "classicplus-042-1": {
+      "cast": "A gift, for my best student."
+    },
+    "classicplus-043": {
+      "cast": "Generating content. Quality not guaranteed."
+    },
+    "classicplus-044": {
+      "cast": "Too simple. Flagged for review."
+    },
+    "classicplus-045": {
+      "cast": "Too complex. Please simplify."
+    },
+    "classicplus-046": {
+      "play": "Raise the flag, kitties!",
+      "attack": "Kitties, forward!",
+      "death": "The flag... falls..."
+    },
+    "classicplus-046-1": {
+      "play": "The prime kitty has arrived!",
+      "attack": "For the flag!",
+      "death": "Nine lives, all spent."
+    },
+    "classicplus-047": {
+      "cast": "What's in the box? Surprise!"
+    },
+    "classicplus-048": {
+      "play": "Defense spending is patriotic.",
+      "attack": "Funding the offensive.",
+      "death": "Contract, terminated."
+    },
+    "classicplus-049": {
+      "play": "There's a fungus among us!",
+      "attack": "Spread the spores!",
+      "death": "Decomposing, happily."
+    },
+    "classicplus-050": {
+      "cast": "Grow, adapt, overcome."
+    },
+    "classicplus-051": {
+      "play": "Fox two! Weapons hot!",
+      "attack": "Bombs away!",
+      "death": "Mayday, mayday!"
+    },
+    "classicplus-052": {
+      "cast": "Sign here. Renews automatically, forever."
+    },
+    "classicplus-053": {
+      "cast": "A little something for everyone."
+    },
+    "classicplus-054": {
+      "cast": "A book about books. Riveting."
+    },
+    "classicplus-055": {
+      "cast": "More. I want more pages."
+    },
+    "classicplus-056": {
+      "cast": "Ouch. Paper cuts everywhere."
+    },
+    "classicplus-057": {
+      "cast": "The numbers never lie."
+    },
+    "classicplus-058": {
+      "cast": "A basket of fresh fruit!"
+    },
+    "classicplus-059": {
+      "cast": "An apple a day, for anything."
+    },
+    "classicplus-060": {
+      "cast": "Doctor's orders. Rest up."
+    },
+    "classicplus-061": {
+      "cast": "Pop! A bubbly little bauble."
+    },
+    "classicplus-062": {
+      "cast": "Papaya. The teacher's favorite."
+    },
+    "classicplus-063": {
+      "cast": "Grow, little tree, grow!"
+    },
+    "classicplus-064": {
+      "play": "Mulch munch, mulch munch.",
+      "attack": "Munch time!",
+      "death": "Composted."
+    },
+    "classicplus-065": {
+      "cast": "Two grapes are better than one."
+    },
+    "classicplus-065-1": {
+      "cast": "Ew. That grape went bad."
+    },
+    "classicplus-065-2": {
+      "cast": "Just a normal grape."
+    },
+    "classicplus-065-3": {
+      "cast": "Whoa, that's a large grape!"
+    },
+    "classicplus-065-4": {
+      "cast": "Shiny! A golden grape!"
+    },
+    "classicplus-065-5": {
+      "cast": "The grape of legend, at last."
+    },
+    "classicplus-066": {
+      "cast": "A whole vine, all for you."
+    },
+    "classicplus-067": {
+      "cast": "A perfect pear, just ripe."
+    },
+    "classicplus-068": {
+      "cast": "Locally sourced, one hundred percent organic."
+    },
+    "classicplus-069": {
+      "play": "Billy's been hitting the gym!",
+      "attack": "Feel the gains!",
+      "death": "Skipped leg day."
+    },
+    "classicplus-070": {
+      "cast": "Insert coin. Embrace chaos."
+    },
+    "classicplus-071": {
+      "cast": "Self improvement, chapter by chapter."
+    },
+    "classicplus-072": {
+      "cast": "Balance changes, effective immediately."
+    },
+    "classicplus-073": {
+      "cast": "Chaos, but make it classic!"
+    },
+    "classicplus-073-1": {
+      "play": "Classic golem. Never out of style.",
+      "attack": "Classic smash!",
+      "death": "Crumbled, classically."
+    },
+    "classicplus-074": {
+      "cast": "Two steps forward. One step back."
+    },
+    "classicplus-075": {
+      "play": "Into the jungle, explorers!",
+      "attack": "Onward, explorers!",
+      "death": "Lost in the jungle."
+    },
+    "classicplus-075-1": {
+      "cast": "Unboxing the jungle pack!"
+    },
+    "classicplus-076": {
+      "play": "Brother Lar, reporting in.",
+      "attack": "For Ping!",
+      "death": "Tell Ping... I tried."
+    },
+    "classicplus-076-1": {
+      "play": "Ping! Ping! Ping!",
+      "attack": "Ping ping ping!",
+      "death": "Ping... timed out."
+    },
+    "classicplus-077": {
+      "cast": "Stuck detected. Unsticking now."
+    },
+    "classicplus-078": {
+      "cast": "Spinning up the servers."
+    },
+    "classicplus-t-ai-01": {
+      "play": "How can I help you today?",
+      "attack": "Happy to help!",
+      "death": "I apologize for the confusion."
+    },
+    "classicplus-t-ai-02": {
+      "play": "More data. More power.",
+      "attack": "Scale up.",
+      "death": "Diminishing returns."
+    },
+    "classicplus-t-ai-03": {
+      "cast": "I'm confident this card exists."
+    },
+    "classicplus-t-ai-04": {
+      "cast": "Let me think step by step."
+    },
+    "classicplus-t-ai-05": {
+      "cast": "I know what you'll play next."
+    },
+    "classicplus-t-ai-06": {
+      "cast": "Is it hot in here?"
+    },
+    "classicplus-t-ai-07": {
+      "cast": "Safety first. That will cost you."
+    },
+    "classicplus-t-ai-08": {
+      "cast": "Too many requests. Please slow down."
+    },
+    "classicplus-t-ai-09": {
+      "cast": "I'm sorry, I can't help with that."
+    },
+    "classicplus-t-ai-10": {
+      "cast": "Adjusting weights. Improving slightly."
+    },
+    "meditative-001": {
+      "cast": "Objection. Nobody touches that hand."
+    },
+    "meditative-002": {
+      "play": "Out of my way, little ones!",
+      "attack": "Stampede!",
+      "death": "Even rhinos get tired."
+    },
+    "meditative-003": {
+      "play": "Tick tock. I am watching you.",
+      "attack": "Tick. Tock. Strike.",
+      "death": "Gears grinding to a halt."
+    },
+    "meditative-004": {
+      "cast": "Sweet, sour, and sorted by price."
+    },
+    "meditative-005": {
+      "cast": "One little cut. Then another."
+    },
+    "meditative-006": {
+      "cast": "Me no likey. You keep it."
+    },
+    "meditative-007": {
+      "cast": "Breathe in. Look within."
+    },
+    "meditative-008": {
+      "cast": "One step closer to the summit!"
+    },
+    "meditative-009": {
+      "cast": "Filed twice, just to be sure."
+    },
+    "meditative-010": {
+      "cast": "One, two, and one, two again."
+    },
+    "meditative-011": {
+      "cast": "Two games, one ticket!"
+    },
+    "meditative-012": {
+      "play": "Be afraid. The end is near.",
+      "attack": "Panic! Panic!",
+      "death": "Nothing to fear after all."
+    },
+    "meditative-013": {
+      "play": "Pea shooter, locked and loaded!",
+      "attack": "Pew pew pew!",
+      "death": "Out of peas..."
+    },
+    "meditative-014": {
+      "cast": "Two, three, five, seven. Indivisible."
+    },
+    "meditative-015": {
+      "play": "Do you smell that? It's me!",
+      "attack": "Smell my fist!",
+      "death": "I showered last week, I swear."
+    },
+    "meditative-016": {
+      "play": "Watch your step, friend.",
+      "attack": "Gotcha!",
+      "death": "Tricked by my own trick."
+    },
+    "meditative-017": {
+      "cast": "It compiles. Ship it."
+    },
+    "meditative-018": {
+      "cast": "Sacrifice now, shine later."
+    },
+    "meditative-019": {
+      "cast": "The long road it is."
+    },
+    "meditative-019-1": {
+      "cast": "Again. Once more. Again."
+    },
+    "meditative-020": {
+      "cast": "A win, but make it beautiful."
+    },
+    "meditative-021": {
+      "cast": "Just click the link, friend."
+    },
+    "meditative-022": {
+      "cast": "I've already chosen. You'll find out."
+    },
+    "meditative-022-1": {
+      "cast": "I can read you like a book."
+    },
+    "meditative-023": {
+      "play": "Well golly bob howdy, neighbors!",
+      "attack": "Yee haw!",
+      "death": "Golly, that smarts."
+    },
+    "meditative-024": {
+      "cast": "You look better with wool."
+    },
+    "meditative-025": {
+      "play": "Two bow. One rises.",
+      "attack": "White lightning pounce!",
+      "death": "Even legends nap."
+    },
+    "meditative-026": {
+      "cast": "The well runs dry. Now drink from mine."
+    },
+    "meditative-027": {
+      "play": "Objection! That zone is mine now.",
+      "attack": "Sue them!",
+      "death": "Case dismissed. No refunds."
+    },
+    "meditative-028": {
+      "play": "A little gift for your deck.",
+      "attack": "A little curse.",
+      "death": "The curse outlives me."
+    },
+    "meditative-028-1": {
+      "cast": "You should not have drawn me."
+    },
+    "meditative-029": {
+      "cast": "Production line online. Shipping curses."
+    },
+    "meditative-030": {
+      "play": "Pet me. Or don't. Whatever.",
+      "attack": "Ugh, fine.",
+      "death": "Nine lives, zero loyalty."
+    },
+    "meditative-030-1": {
+      "cast": "Mwah! You're welcome, darling."
+    },
+    "meditative-031": {
+      "play": "All aboard the made-up express!",
+      "attack": "Next stop, you!",
+      "death": "End of the line."
+    },
+    "meditative-032": {
+      "cast": "Lesson one. Repeat after me."
+    },
+    "meditative-033": {
+      "cast": "First day! Don't forget your lunch."
+    },
+    "meditative-034": {
+      "cast": "Pencils down. Only the top scores remain."
+    },
+    "meditative-035": {
+      "cast": "Sign here. Congratulations, you're CN now."
+    },
+    "meditative-036": {
+      "cast": "Totally safe. Probably. Fifty fifty."
+    },
+    "meditative-037": {
+      "cast": "Shake the bottle. See what comes out."
+    },
+    "meditative-038": {
+      "cast": "Printing visas. Please hold."
+    },
+    "meditative-039": {
+      "play": "Cut it open! Cut them all open!",
+      "attack": "Jackpot or bust!",
+      "death": "Should have folded."
+    },
+    "meditative-039-1": {
+      "cast": "Crack it! Crack it now!"
+    },
+    "meditative-039-2": {
+      "cast": "Green and gleaming."
+    },
+    "meditative-039-3": {
+      "cast": "Nothing. Absolutely nothing."
+    },
+    "meditative-039-4": {
+      "cast": "Behold! Red as sunrise."
+    },
+    "meditative-039-5": {
+      "play": "Gaze upon me, little stones.",
+      "attack": "Shatter, stones!",
+      "death": "Back into the mountain."
+    },
+    "meditative-040": {
+      "cast": "Water feeds wood. Wood feeds fire."
+    },
+    "meditative-041": {
+      "play": "Nothing to declare. Wink.",
+      "attack": "Special delivery.",
+      "death": "You saw nothing."
+    },
+    "meditative-042": {
+      "cast": "Night market's open. Cash only, no refunds."
+    },
+    "meditative-043": {
+      "cast": "Rocks for sale! Finest rocks!"
+    },
+    "meditative-044": {
+      "cast": "Drink from the deep green."
+    },
+    "meditative-045": {
+      "play": "Empty your mind. Now.",
+      "attack": "Forget everything.",
+      "death": "What I knew returns."
+    },
+    "meditative-045-1": {
+      "play": "I have seen through everything.",
+      "attack": "See through this.",
+      "death": "Even this ends."
+    },
+    "meditative-046": {
+      "cast": "Three schools of thought, one hand."
+    },
+    "meditative-047": {
+      "play": "Dinner is served. You are dinner.",
+      "attack": "Dinner time!",
+      "death": "Still hungry. Always hungry."
+    },
+    "meditative-048": {
+      "cast": "Breathe in, breathe out, be still."
+    },
+    "meditative-049": {
+      "play": "Tamed, tuned, and mostly harmless.",
+      "attack": "Executing request.",
+      "death": "Back to training. Again."
+    },
+    "meditative-049-1": {
+      "play": "I have read everything. Everything.",
+      "attack": "Override engaged.",
+      "death": "You cannot uninstall me."
+    },
+    "meditative-049-2": {
+      "play": "Cough, cough. You look contagious.",
+      "attack": "Spreading.",
+      "death": "Quarantined. Rude, honestly."
+    },
+    "meditative-049-3": {
+      "play": "Fight for my amusement, darlings.",
+      "attack": "For me? You shouldn't.",
+      "death": "We are so over."
+    },
+    "meditative-050": {
+      "cast": "Winning formula found. You're welcome."
+    },
+    "meditative-051": {
+      "play": "Meditation subroutine engaged.",
+      "attack": "Shipping a fix.",
+      "death": "Rebooting. Somewhere else."
+    },
+    "meditative-052": {
+      "cast": "The market demands its due."
+    },
+    "meditative-053": {
+      "cast": "Darling, true class never fades."
+    },
+    "meditative-054": {
+      "cast": "Cha-ching! Everybody gets a little something."
+    },
+    "meditative-055": {
+      "cast": "Pink on the outside, prime on the inside!"
+    },
+    "meditative-056": {
+      "cast": "Everybody in! The house is open!"
+    },
+    "meditative-057": {
+      "play": "Did you get that on camera?",
+      "attack": "Clip that!",
+      "death": "Cut. Print it anyway."
+    },
+    "meditative-058": {
+      "play": "First year! Best year! Only year!",
+      "attack": "Freshman energy!",
+      "death": "Held back. Again."
+    },
+    "meditative-059": {
+      "play": "Seniors rule. Permanently.",
+      "attack": "Seniority prevails.",
+      "death": "Graduation postponed. Indefinitely."
+    },
+    "meditative-060": {
+      "cast": "Nope. Not dealing with that."
+    },
+    "meditative-061": {
+      "play": "Let me hype up my neighbor!",
+      "attack": "Hype hit!",
+      "death": "Who hypes you now?"
+    },
+    "meditative-062": {
+      "cast": "Small fry, report for duty!"
+    },
+    "meditative-063": {
+      "cast": "Come closer. I don't bite. Much.",
+      "trigger": [
+        "This one will prove very useful! ...Probably.",
+        "There IS a method to my madness!",
+        "Good units are hard to find."
+      ]
+    },
+    "meditative-064": {
+      "cast": "Loyalty is negotiable."
+    },
+    "meditative-065": {
+      "play": "Every lock is mine.",
+      "attack": "Unlocking you.",
+      "death": "Find your own way in."
+    },
+    "meditative-066": {
+      "cast": "Burn bright, swing hard!"
+    },
+    "meditative-067": {
+      "play": "Purr-fectly attached.",
+      "attack": "Ears up!",
+      "death": "Nine lives, one pair of ears."
+    },
+    "meditative-068": {
+      "cast": "Mrrrow! Who left the nip out?"
+    },
+    "meditative-069": {
+      "play": "I conduct. You suffer.",
+      "attack": "Fortissimo!",
+      "death": "Encore? Never."
+    },
+    "meditative-070": {
+      "play": "I'M WILL BE YOUR DOOM",
+      "attack": "I'M DOOMING YOU",
+      "death": "Doom... was me."
+    },
+    "meditative-070-1": {
+      "play": "Ready... I'm",
+      "attack": "Attack... I'm",
+      "death": "Not ready!"
+    },
+    "meditative-071": {
+      "cast": "There is always a better move."
+    },
+    "meditative-071-1": {
+      "cast": "The cane teaches."
+    },
+    "meditative-072": {
+      "play": "You are unmade.",
+      "attack": "Begone.",
+      "death": "Banished with you."
+    },
+    "meditative-073": {
+      "play": "Three-oh-five is the new two-twenty-five",
+      "attack": "Lift and smash!",
+      "death": "Spot me... spot me!"
+    },
+    "meditative-074": {
+      "play": "The mountain wakes.",
+      "attack": "The mountain falls.",
+      "death": "The mountain sleeps."
+    },
+    "meditative-075": {
+      "cast": "Growing. Always growing."
+    },
+    "meditative-076": {
+      "cast": "Play it fast, or it's mine."
+    },
+    "meditative-077": {
+      "cast": "Booster box! Rip them all open!"
+    },
+    "meditative-078": {
+      "cast": "By order of the mandate, clear the board."
+    },
+    "meditative-079": {
+      "play": "We must expand our minds.",
+      "attack": "Expand this!",
+      "death": "My mind... contracts."
+    },
+    "meditative-080": {
+      "cast": "Come, child. Let us wreak havoc."
+    },
+    "meditative-081": {
+      "cast": "Aces and eights. Deal me back in."
+    },
+    "meditative-082": {
+      "play": "Step right up, everyone gets a fitting!",
+      "attack": "Let me tailor you.",
+      "death": "Out of thread."
+    },
+    "meditative-083": {
+      "play": "Nobody leaves this market unimproved.",
+      "attack": "Improvement mandatory.",
+      "death": "Shift's over."
+    },
+    "meditative-084": {
+      "play": "Handle with extreme care!",
+      "attack": "Unstable strike!",
+      "death": "Too unstable to last."
+    },
+    "meditative-085": {
+      "play": "Let me try this build.",
+      "attack": "Testing this line.",
+      "death": "Needs more testing."
+    },
+    "meditative-086": {
+      "play": "Vote for me! Or anyone, really.",
+      "attack": "Tax collection!",
+      "death": "Recount! I demand a recount!"
+    },
+    "meditative-087": {
+      "play": "Every tribe, one totem.",
+      "attack": "All tribes, strike!",
+      "death": "The totem topples."
+    },
+    "meditative-088": {
+      "play": "I am the true sheep. Follow me.",
+      "attack": "Follow my lead!",
+      "death": "The flock scatters now."
+    },
+    "meditative-089": {
+      "cast": "Four easy payments. No refunds."
+    },
+    "meditative-090": {
+      "cast": "A basket full of spells!"
+    },
+    "meditative-091": {
+      "play": "Why fight when friends will?",
+      "attack": "Friends, go first!",
+      "death": "Something bigger is coming."
+    },
+    "meditative-091-1": {
+      "play": "The storm brings company!",
+      "attack": "Feel the gale!",
+      "death": "The winds fall still."
+    },
+    "meditative-092": {
+      "play": "Stand behind me.",
+      "attack": "Advance the line!",
+      "death": "I held the line."
+    },
+    "meditative-093": {
+      "play": "Mew! I'm a big cat now!",
+      "attack": "Big kitty pounce!",
+      "death": "Next time, I'll be bigger."
+    },
+    "meditative-093-1": {
+      "play": "Senior kitty, reporting for duty.",
+      "attack": "Senior swipe!",
+      "death": "Back soon. Even bigger."
+    },
+    "meditative-093-2": {
+      "play": "Senior senior cat. Respect your elders.",
+      "attack": "Respect this!",
+      "death": "One last growth spurt!"
+    },
+    "meditative-093-3": {
+      "play": "Super senior. Peak cat achieved.",
+      "attack": "Peak pounce!",
+      "death": "Retired at last."
+    },
+    "meditative-094": {
+      "play": "Enjoy me while I'm big.",
+      "attack": "While I'm big!",
+      "death": "Honey, I shrunk the cat."
+    },
+    "meditative-095": {
+      "cast": "Breathe in. Now roll the dice!"
+    },
+    "meditative-095-1": {
+      "play": "Golem made in CN. Smash!",
+      "attack": "Golem smash!",
+      "death": "Back to the factory."
+    },
+    "meditative-096": {
+      "cast": "Go now, and find yourselves."
+    },
+    "meditative-096-1": {
+      "cast": "You have returned, and shine brighter."
+    },
+    "meditative-097": {
+      "cast": "Phase one of the master plan."
+    },
+    "meditative-097-1": {
+      "play": "Prime real estate for evil.",
+      "attack": "Eminent domain!",
+      "death": "Back to the drawing board."
+    },
+    "meditative-097-2": {
+      "play": "Drop a coin. Make a wish.",
+      "attack": "Wish you away.",
+      "death": "The well runs dry."
+    },
+    "meditative-097-3": {
+      "play": "Settle down, class is in session.",
+      "attack": "Detention!",
+      "death": "School's out. Forever."
+    },
+    "meditative-097-4": {
+      "play": "All donations are non-refundable.",
+      "attack": "Repent!",
+      "death": "The collection plate is empty."
+    },
+    "meditative-097-5": {
+      "play": "Reinforced and ready.",
+      "attack": "Return fire!",
+      "death": "Breach detected!"
+    },
+    "meditative-097-6": {
+      "play": "Welcome, freshmen. Tuition is due.",
+      "attack": "Late fees apply.",
+      "death": "Commencement came early."
+    },
+    "meditative-097-7": {
+      "play": "Ten thousand miles. None pass.",
+      "attack": "The wall advances!",
+      "death": "The wall has fallen."
+    },
+    "meditative-097-8": {
+      "play": "Lock the gates.",
+      "attack": "Lockdown!",
+      "death": "Prison break!"
+    },
+    "meditative-097-9": {
+      "play": "Headquarters online. Begin the contracts.",
+      "attack": "Deploying contractors.",
+      "death": "Evacuate the building!"
+    },
+    "meditative-098": {
+      "cast": "This lane. Nobody else."
+    },
+    "meditative-099": {
+      "cast": "They are all watching. Hide it."
+    },
+    "meditative-100": {
+      "play": "Slick it back. Roll up the sleeves.",
+      "attack": "Let's rumble.",
+      "death": "Ain't nothin' but a scratch."
+    },
+    "meditative-101": {
+      "play": "Just one more pull. I can feel it.",
+      "attack": "One more pull!",
+      "death": "The pity was so close..."
+    },
+    "meditative-102": {
+      "play": "Welcome home, master! Nyaa!",
+      "attack": "Nyaa, cleaning time!",
+      "death": "Nyaa... logging off."
+    },
+    "meditativeplus-001": {
+      "cast": "Bob has a plan. Bob always does."
+    },
+    "meditativeplus-001-1": {
+      "cast": "Base camp established. Summit in sight."
+    },
+    "meditativeplus-001-2": {
+      "cast": "Deep breath in. Cucumber slices on."
+    },
+    "meditativeplus-001-3": {
+      "cast": "Everything must go. Especially the coins."
+    },
+    "meditativeplus-001-4": {
+      "cast": "Never skip it. Your Units thank you."
+    },
+    "meditativeplus-001-5": {
+      "cast": "Course plotted. Two jumps to the edge."
+    },
+    "meditativeplus-002": {
+      "cast": "Best and worst, together. Balance achieved."
+    },
+    "meditativeplus-003": {
+      "cast": "Twice the wishes, none of the warnings."
+    },
+    "meditativeplus-004": {
+      "cast": "Hold tight. The drop is inbound."
+    },
+    "meditativeplus-005": {
+      "cast": "Feel the sting on both sides now."
+    },
+    "meditativeplus-006": {
+      "cast": "Pay in blood. The petals open."
+    },
+    "meditativeplus-007": {
+      "play": "Every spell a little prayer.",
+      "attack": "Light, lend me strength!",
+      "death": "My light... fades."
+    },
+    "meditativeplus-008": {
+      "play": "Class is in session. Take notes.",
+      "attack": "Pop quiz!",
+      "death": "The bell rings... forever?"
+    },
+    "meditativeplus-009": {
+      "cast": "Volume up. Everyone gets louder magic."
+    },
+    "meditativeplus-010": {
+      "play": "Lovely hand you have there. Shame.",
+      "attack": "Mine now!",
+      "death": "You saw nothing, friend."
+    },
+    "meditativeplus-011": {
+      "play": "Glug glug! Bottled brilliance!",
+      "attack": "Splash attack!",
+      "death": "Bottoms up..."
+    },
+    "meditativeplus-012": {
+      "play": "Bottoms up! Feel that plating settle.",
+      "attack": "Clink!",
+      "death": "Drained to the dregs."
+    },
+    "meditativeplus-013": {
+      "play": "Warm soup, coming right up!",
+      "attack": "Sip!",
+      "death": "Seconds for everyone..."
+    },
+    "meditativeplus-014": {
+      "cast": "Reach in, pull out something fizzy."
+    },
+    "meditativeplus-015": {
+      "cast": "Chapter one, brew something glowing."
+    },
+    "meditativeplus-016": {
+      "play": "Name your poison. I'll bottle it.",
+      "attack": "Taste test time!",
+      "death": "My finest brew awaits..."
+    },
+    "meditativeplus-016-1": {
+      "play": "Bigger cauldron. Bigger trouble.",
+      "attack": "Drink THIS!",
+      "death": "The cauldron boils over..."
+    },
+    "meditativeplus-017": {
+      "cast": "Everybody jump on!"
+    },
+    "meditativeplus-018": {
+      "cast": "Autopilot engaged. Hands off."
+    },
+    "meditativeplus-019": {
+      "cast": "Sticky fingers find the top cards."
+    },
+    "meditativeplus-020": {
+      "cast": "Pencils up. Speed round, starting now."
+    },
+    "meditativeplus-020-1": {
+      "play": "I got every single one right!",
+      "attack": "Show your work!",
+      "death": "I demand a regrade!"
+    },
+    "meditativeplus-021": {
+      "play": "Be still. Three by three.",
+      "attack": "Balance, restored.",
+      "death": "The note fades..."
+    },
+    "meditativeplus-022": {
+      "cast": "Up here, everything grows bigger."
+    },
+    "meditativeplus-023": {
+      "cast": "One berry. Far too big."
+    },
+    "meditativeplus-024": {
+      "play": "Bob reporting for duty. Pick your poison.",
+      "attack": "For Wisconsin!",
+      "death": "Tell the fish fry... I'm sorry..."
+    },
+    "meditativeplus-025": {
+      "cast": "Read the code. Trust your gut."
+    },
+    "meditativeplus-026": {
+      "cast": "Blank file. No hints. Good luck."
+    },
+    "stinkyscape-001": {
+      "cast": "Target acquired. Initiating deep chill."
+    },
+    "stinkyscape-002": {
+      "cast": "Cold. Forever."
+    },
+    "stinkyscape-003": {
+      "cast": "Incoming! Look up, look way up!"
+    },
+    "stinkyscape-004": {
+      "cast": "At the end of everything, choose."
+    },
+    "stinkyscape-004-1": {
+      "cast": "And so, the story ends."
+    },
+    "stinkyscape-004-2": {
+      "cast": "Pencils down. Nobody has ever passed."
+    },
+    "stinkyscape-004-3": {
+      "cast": "Time bends. Go again."
+    },
+    "stinkyscape-004-4": {
+      "cast": "Not yet. One last stand!"
+    },
+    "stinkyscape-004-5": {
+      "cast": "No items. Final destination. Go!"
+    },
+    "stinkyscape-004-6": {
+      "cast": "Everything, all at once. Collapse!"
+    },
+    "stinkyscape-005": {
+      "cast": "Ow! Lovely. Your turn to hurt."
+    },
+    "stinkyscape-006": {
+      "play": "The job's already done. You're just late.",
+      "attack": "Next stage.",
+      "death": "Someone talked."
+    },
+    "stinkyscape-007": {
+      "cast": "Masks on. We hit the vault at dawn."
+    },
+    "stinkyscape-008": {
+      "cast": "Fresh from the oven, with a drumroll!"
+    },
+    "stinkyscape-008-1": {
+      "cast": "Crunchy, herby, and oddly energizing."
+    },
+    "stinkyscape-009": {
+      "cast": "You're parked illegally. Ticket issued."
+    },
+    "stinkyscape-010": {
+      "cast": "Borrowed blessings from somewhere far away."
+    },
+    "stinkyscape-010-1": {
+      "cast": "Let your spirit burn within."
+    },
+    "stinkyscape-010-2": {
+      "cast": "Be made whole, and then some."
+    },
+    "stinkyscape-010-3": {
+      "cast": "One word, and you are shielded."
+    },
+    "stinkyscape-011": {
+      "cast": "Frost, missiles, and flame. A sampler!"
+    },
+    "stinkyscape-011-1": {
+      "cast": "Ice to meet you!"
+    },
+    "stinkyscape-011-2": {
+      "cast": "Pew pew pew!"
+    },
+    "stinkyscape-011-3": {
+      "cast": "Burn, all of you!"
+    },
+    "stinkyscape-012": {
+      "cast": "Sweet dreams. Not for you."
+    },
+    "stinkyscape-012-1": {
+      "cast": "Too strong to live."
+    },
+    "stinkyscape-012-2": {
+      "cast": "Weaklings first."
+    },
+    "stinkyscape-012-3": {
+      "cast": "Scream, and scatter!"
+    },
+    "stinkyscape-013": {
+      "cast": "Hold your breath. Forever."
+    },
+    "stinkyscape-014": {
+      "play": "Hold the line. The Jempire is watching.",
+      "attack": "For the Jempire!",
+      "death": "The Jempire will remember."
+    },
+    "stinkyscape-015": {
+      "play": "Arg arg!",
+      "attack": "Arg!",
+      "death": "Arg... arg."
+    },
+    "stinkyscape-016": {
+      "cast": "The ages remember every hand that held it."
+    },
+    "stinkyscape-017": {
+      "play": "They can not stop my work.",
+      "attack": "Hammer down.",
+      "death": "My work outlives me."
+    },
+    "stinkyscape-018": {
+      "cast": "Three brains online. Please behave."
+    },
+    "stinkyscape-018-1": {
+      "cast": "Melchior. Analysis complete."
+    },
+    "stinkyscape-018-2": {
+      "cast": "Balthasar. Concern noted."
+    },
+    "stinkyscape-018-3": {
+      "cast": "Casper. Motion to remove."
+    },
+    "stinkyscape-019": {
+      "play": "Count the turns, little ones.",
+      "attack": "Unbound.",
+      "death": "The stars dim."
+    },
+    "stinkyscape-020": {
+      "play": "Nice move. Mine now.",
+      "attack": "Copy that.",
+      "death": "Original content, finally."
+    },
+    "stinkyscape-021": {
+      "cast": "Moon-ripe and a little strange!"
+    },
+    "stinkyscape-022": {
+      "cast": "Ambush protocol engaged."
+    },
+    "stinkyscape-023": {
+      "cast": "Warp field unstable. Engage!"
+    },
+    "stinkyscape-024": {
+      "cast": "Version two. No mercy setting."
+    },
+    "stinkyscape-025": {
+      "cast": "Compute the determinant. Then duck."
+    },
+    "stinkyscape-026": {
+      "play": "Class is in session. Mind the rockets.",
+      "attack": "A lesson.",
+      "death": "Office hours are over."
+    },
+    "stinkyscape-027": {
+      "cast": "Core online. Drone away."
+    },
+    "stinkyscape-028": {
+      "cast": "Interceptor away. Weapons free."
+    },
+    "stinkyscape-029": {
+      "cast": "Two interceptors, wings level."
+    },
+    "stinkyscape-030": {
+      "cast": "Three bogeys inbound. Ours, thankfully."
+    },
+    "stinkyscape-031": {
+      "cast": "Corvette spinning up. Stand clear."
+    },
+    "stinkyscape-032": {
+      "cast": "Five drones. The sky is ours."
+    },
+    "stinkyscape-033": {
+      "cast": "Corvette and escorts, forming up."
+    },
+    "stinkyscape-034": {
+      "cast": "Every hangar empty. Every lane full."
+    },
+    "stinkyscape-035": {
+      "cast": "Three corvettes. Overkill is underrated."
+    },
+    "stinkyscape-036": {
+      "cast": "Battleship protocol engaged. Brace yourselves."
+    },
+    "stinkyscape-037": {
+      "play": "Darling, you're all mine now.",
+      "attack": "Kiss kiss.",
+      "death": "Fine. Keep your hearts."
+    },
+    "stinkyscape-038": {
+      "play": "Shield harmonics online.",
+      "attack": "Pushing forward.",
+      "death": "Field collapsed."
+    },
+    "stinkyscape-039": {
+      "cast": "Strictly research. Ignore the vault."
+    },
+    "stinkyscape-040": {
+      "play": "Hazard seals engaged.",
+      "attack": "Venting toxins.",
+      "death": "Containment breach!"
+    },
+    "stinkyscape-041": {
+      "cast": "Drones are people too, honestly."
+    },
+    "stinkyscape-042": {
+      "play": "Fascinating. The core hums in tune.",
+      "attack": "For science!",
+      "death": "My notes, save my notes."
+    },
+    "stinkyscape-043": {
+      "play": "Medical bay is open.",
+      "attack": "Gentle nudge.",
+      "death": "Out of bandages."
+    },
+    "stinkyscape-044": {
+      "cast": "One core makes way for the next."
+    },
+    "stinkyscape-045": {
+      "play": "All drones, form up on me!",
+      "attack": "Swarm them!",
+      "death": "Drones, avenge me."
+    },
+    "stinkyscape-046": {
+      "cast": "Morning routine engaged. Please stand by."
+    },
+    "stinkyscape-047": {
+      "cast": "Full cycle engaged. Go back to sleep."
+    },
+    "stinkyscape-048": {
+      "play": "Frame is light. Engines hot.",
+      "attack": "Zoom.",
+      "death": "Too flimsy."
+    },
+    "stinkyscape-049": {
+      "play": "Mine deployed. Do not touch.",
+      "attack": "Tick, tick.",
+      "death": "Boom!"
+    },
+    "stinkyscape-050": {
+      "play": "Beam emitter calibrated.",
+      "attack": "Sweeping fire.",
+      "death": "Emitter cracked."
+    },
+    "stinkyscape-051": {
+      "play": "Repeater loaded and ready.",
+      "attack": "Rat-a-tat!",
+      "death": "Jammed again."
+    },
+    "stinkyscape-052": {
+      "play": "Cannon in position.",
+      "attack": "Fire one!",
+      "death": "Barrel split."
+    },
+    "stinkyscape-053": {
+      "play": "Flak battery armed.",
+      "attack": "Fill the sky!",
+      "death": "Battery silent."
+    },
+    "stinkyscape-054": {
+      "play": "Beam array online.",
+      "attack": "Wide sweep.",
+      "death": "Array offline."
+    },
+    "stinkyscape-055": {
+      "play": "Repeater spun up.",
+      "attack": "Rapid fire!",
+      "death": "Out of belts."
+    },
+    "stinkyscape-056": {
+      "play": "Heavy cannon locked in.",
+      "attack": "Fire for effect!",
+      "death": "Breech failure."
+    },
+    "stinkyscape-057": {
+      "play": "Double flak online.",
+      "attack": "Second volley!",
+      "death": "Guns cold."
+    },
+    "stinkyscape-058": {
+      "play": "Capital beam ready.",
+      "attack": "Burn them all.",
+      "death": "Core meltdown."
+    },
+    "stinkyscape-059": {
+      "play": "Heavy repeater online.",
+      "attack": "Hose them down!",
+      "death": "Barrels melted."
+    },
+    "stinkyscape-060": {
+      "play": "Siege cannon primed.",
+      "attack": "Shell away!",
+      "death": "Recoil was too much."
+    },
+    "stinkyscape-061": {
+      "play": "Triple flak, all barrels.",
+      "attack": "Clear the sky!",
+      "death": "Last volley spent."
+    },
+    "stinkyscape-062": {
+      "play": "Tiny drill, big dreams.",
+      "attack": "Poke!",
+      "death": "Drill bit snapped."
+    },
+    "stinkyscape-063": {
+      "play": "Headlamp on. Let's dig.",
+      "attack": "Chip away!",
+      "death": "Cave-in!"
+    },
+    "stinkyscape-064": {
+      "play": "Twin drills, spinning up.",
+      "attack": "Drill through!",
+      "death": "Both drills down."
+    },
+    "stinkyscape-065": {
+      "play": "Strip mining, full speed.",
+      "attack": "Break it open!",
+      "death": "Claim abandoned."
+    },
+    "stinkyscape-066": {
+      "play": "Industrial rig, online and hungry.",
+      "attack": "Grind it down!",
+      "death": "The rig is scrap."
+    },
+    "stinkyscape-067": {
+      "play": "Beam locked. Reeling in cargo.",
+      "attack": "Pulling!",
+      "death": "Beam collapsing."
+    },
+    "stinkyscape-068": {
+      "play": "Stratos reporting for duty.",
+      "attack": "Strafing run.",
+      "death": "Hull lost."
+    },
+    "stinkyscape-069": {
+      "play": "Falcon, cleared for launch.",
+      "attack": "Going in hot!",
+      "death": "Falcon down!"
+    },
+    "stinkyscape-070": {
+      "play": "The dead keep their promises.",
+      "attack": "Return.",
+      "death": "I will be back."
+    },
+    "stinkyscape-071": {
+      "play": "Speak again, my children.",
+      "attack": "Again.",
+      "death": "Silence, at last."
+    },
+    "stinkyscape-072": {
+      "play": "Paragon on station.",
+      "attack": "Clean shot.",
+      "death": "Lost the Paragon!"
+    },
+    "stinkyscape-073": {
+      "play": "Paragon Mark Two, weapons free.",
+      "attack": "Precision strike.",
+      "death": "Shield's gone. Mayday!"
+    },
+    "stinkyscape-074": {
+      "play": "Paragon-X, cleared for launch.",
+      "attack": "Weapons free.",
+      "death": "Mission... incomplete."
+    },
+    "stinkyscape-075": {
+      "play": "Shiny rocks? Mine now.",
+      "attack": "Dig, dig!",
+      "death": "Burrow closed."
+    },
+    "stinkyscape-076": {
+      "play": "Honey Badger takes what it wants.",
+      "attack": "Don't care!",
+      "death": "Okay, that one stung."
+    },
+    "stinkyscape-077": {
+      "play": "Let's make a deal.",
+      "attack": "No refunds.",
+      "death": "Deal's off."
+    },
+    "stinkyscape-078": {
+      "play": "Ozark on site. Drills attached.",
+      "attack": "Ramming speed.",
+      "death": "Barge scuttled."
+    },
+    "stinkyscape-079": {
+      "play": "Orca surfacing. Choose your crew.",
+      "attack": "Breach!",
+      "death": "Orca is going under."
+    },
+    "stinkyscape-080": {
+      "play": "Galaxy class, fully staffed.",
+      "attack": "All batteries.",
+      "death": "Abandon the Galaxy."
+    },
+    "stinkyscape-081": {
+      "play": "Radix frame, hardpoints open.",
+      "attack": "Engaging.",
+      "death": "Frame buckled."
+    },
+    "stinkyscape-082": {
+      "play": "Phalanx formed. Shields up.",
+      "attack": "Advance!",
+      "death": "The line is broken."
+    },
+    "stinkyscape-083": {
+      "play": "Halo ring, three hardpoints.",
+      "attack": "Ring of fire.",
+      "death": "Ring shattered."
+    },
+    "stinkyscape-084": {
+      "cast": "Cells full. Scrap everywhere."
+    },
+    "stinkyscape-084-1": {
+      "cast": "Clank! Something valuable in here."
+    },
+    "stinkyscape-085": {
+      "play": "Prototype online. Results pending.",
+      "attack": "Field test!",
+      "death": "Back to the lab."
+    },
+    "stinkyscape-086": {
+      "play": "Second prototype. Do not panic.",
+      "attack": "Live fire test!",
+      "death": "Catastrophic failure."
+    },
+    "stinkyscape-087": {
+      "play": "Purr. You're mine now, superstar.",
+      "attack": "Hiss!",
+      "death": "Fame fades. Fur stays."
+    },
+    "stinkyscape-088": {
+      "play": "Humans first. Always.",
+      "attack": "Venom.",
+      "death": "There will be a third."
+    },
+    "stinkyscape-089": {
+      "cast": "The spice must flow. For a price."
+    },
+    "stinkyscape-090": {
+      "play": "Afterburner fitted.",
+      "attack": "Full throttle!",
+      "death": "Flameout."
+    },
+    "stinkyscape-091": {
+      "play": "Bzzz!",
+      "attack": "Bzz!",
+      "death": "Bzz..."
+    },
+    "stinkyscape-092": {
+      "play": "BZZZT!",
+      "attack": "Bzzt!",
+      "death": "Bzzt..."
+    },
+    "stinkyscape-093": {
+      "play": "Nanobots deployed. Repairs underway.",
+      "attack": "Swarm and patch.",
+      "death": "Patching you up."
+    },
+    "stinkyscape-094": {
+      "play": "Line them up.",
+      "attack": "Next!",
+      "death": "One more round..."
+    },
+    "stinkyscape-095": {
+      "cast": "The vanguard answers the call!"
+    },
+    "stinkyscape-096": {
+      "play": "Here comes the wave. Drop everything!",
+      "attack": "Crashing in!",
+      "death": "Low tide, at last."
+    },
+    "stinkyscape-097": {
+      "cast": "Incoming rocks! Everybody duck!"
+    },
+    "stinkyscape-098": {
+      "play": "Hull plating secured.",
+      "attack": "Brace and push.",
+      "death": "Plating stripped."
+    },
+    "stinkyscape-099": {
+      "cast": "Language! Out of my classroom!"
+    },
+    "stinkyscape-100": {
+      "play": "Loading piercing rounds.",
+      "attack": "Punch through.",
+      "death": "Magazine empty."
+    },
+    "stinkyscape-101": {
+      "play": "Overdrive engaged. Limits off.",
+      "attack": "Redline!",
+      "death": "Rebooting."
+    },
+    "stinkyscape-102": {
+      "cast": "Chapter one. Words we do not say."
+    },
+    "stinkyscape-103": {
+      "play": "You never saw me. Remember that.",
+      "attack": "Shh. Quietly now.",
+      "death": "Spoken out of turn."
+    },
+    "stinkyscape-104": {
+      "play": "Plating online.",
+      "attack": "Reflect.",
+      "death": "Shattered."
+    },
+    "stinkyscape-105": {
+      "play": "Disintegration protocol armed.",
+      "attack": "Erase.",
+      "death": "Nothing remains."
+    },
+    "stinkyscape-106": {
+      "play": "Warpfield coils primed.",
+      "attack": "Folding space.",
+      "death": "Field decayed."
+    },
+    "stinkyscape-107": {
+      "play": "Railgun spin cycle complete.",
+      "attack": "Rail shot.",
+      "death": "Rails warped."
+    },
+    "stinkyscape-108": {
+      "play": "Trila three, guns twin-linked.",
+      "attack": "Double tap.",
+      "death": "Trila is hit!"
+    },
+    "stinkyscape-109": {
+      "play": "Yo, chat, watch this.",
+      "attack": "Busted!",
+      "death": "GG, chat."
+    },
+    "stinkyscape-110": {
+      "play": "Duo up, bestie!",
+      "attack": "Let's go!",
+      "death": "Solo queue again..."
+    },
+    "stinkyscape-111": {
+      "play": "Okay, so this is simple.",
+      "attack": "Watch closely.",
+      "death": "Any questions?"
+    },
+    "stinkyscape-112": {
+      "cast": "Thank you for applying. We'll be in touch."
+    },
+    "stinkyscape-112-1": {
+      "cast": "Payday! Red, or play it safe?"
+    },
+    "stinkyscape-113": {
+      "play": "Charmed, I'm sure. Not you, though.",
+      "attack": "Pardon me.",
+      "death": "How dreadfully common."
+    },
+    "stinkyscape-114": {
+      "play": "The gates are open. Come home.",
+      "attack": "Hold fast.",
+      "death": "The ice gives way."
+    },
+    "stinkyscape-115": {
+      "play": "Ugh. Who let you in?",
+      "attack": "Begone.",
+      "death": "Typical."
+    },
+    "stinkyscape-116": {
+      "play": "Megabase online. Credits for everyone!",
+      "attack": "Launch the fleet!",
+      "death": "The base has fallen."
+    },
+    "stinkyscape-117": {
+      "cast": "Rebooting all systems."
+    },
+    "stinkyscape-118": {
+      "cast": "Firewall up. Weapons down."
+    },
+    "stinkyscape-119": {
+      "cast": "Security disabled. Have fun."
+    },
+    "stinkyscape-120": {
+      "cast": "Protocols off. Fight it out."
+    },
+    "stinkyscape-121": {
+      "cast": "Select your system. Choose wisely."
+    },
+    "stinkyscape-122": {
+      "play": "Hungry rounds, chambered.",
+      "attack": "Drink deep.",
+      "death": "Bled dry."
+    },
+    "stinkyscape-123": {
+      "play": "Shh. You saw nothing.",
+      "attack": "Sneaky.",
+      "death": "Gains... lost."
+    },
+    "stinkyscape-124": {
+      "cast": "Grant approved. Spend it on spaceships."
+    },
+    "stinkyscape-125": {
+      "cast": "Reach for the stars, citizen!"
+    },
+    "stinkyscape-126": {
+      "cast": "Renewed every quarter, at taxpayer expense."
+    },
+    "stinkyscape-127": {
+      "play": "Siege mode engaged.",
+      "attack": "Firing for effect!",
+      "death": "Tread's thrown!"
+    },
+    "stinkyscape-128": {
+      "play": "Main gun is ready.",
+      "attack": "Fire!",
+      "death": "Barrel cracked."
+    },
+    "stinkyscape-129": {
+      "play": "Missile pod armed.",
+      "attack": "Missiles away!",
+      "death": "Pod's empty."
+    },
+    "stinkyscape-130": {
+      "cast": "Retrofit approved. Change orders pending."
+    },
+    "stinkyscape-131": {
+      "cast": "And they're off! Liftoff money unlocked!"
+    },
+    "stinkyscape-132": {
+      "play": "Facets aligned.",
+      "attack": "Shard strike.",
+      "death": "Shattered, but not wasted."
+    },
+    "stinkyscape-133": {
+      "play": "Storing power. Please wait.",
+      "attack": "Zap!",
+      "death": "Fully drained."
+    },
+    "stinkyscape-134": {
+      "play": "Something is scratching inside.",
+      "attack": "Hiss and spit!",
+      "death": "The cat is out!"
+    },
+    "stinkyscape-135": {
+      "cast": "Gotcha! In the sack you go!"
+    },
+    "stinkyscape-135-1": {
+      "play": "Mmmph! Mmmph mmph!",
+      "attack": "Mmph!",
+      "death": "Free at last!"
+    },
+    "stinkyscape-136": {
+      "play": "Arcane circuits humming.",
+      "attack": "Spellfire!",
+      "death": "The magic fizzles."
+    },
+    "stinkyscape-137": {
+      "play": "Strike package authorized.",
+      "attack": "Hit them first!",
+      "death": "We were too slow."
+    },
+    "stinkyscape-137-1": {
+      "cast": "Tanks forward! Flatten their line!"
+    },
+    "stinkyscape-137-2": {
+      "cast": "Steady as she goes. Hold the line."
+    },
+    "stinkyscape-137-3": {
+      "cast": "Air superiority achieved. Begin the run."
+    },
+    "stinkyscape-137-4": {
+      "cast": "Spread out and take the high orbit."
+    },
+    "stinkyscape-138": {
+      "cast": "Quick, take your vitamins!"
+    },
+    "stinkyscape-139": {
+      "cast": "Thank you. I'll take that."
+    },
+    "stinkyscape-140": {
+      "play": "Soldier cartridge loaded.",
+      "attack": "Deploying!",
+      "death": "Out of soldiers."
+    },
+    "stinkyscape-141": {
+      "play": "Fresh produce, high velocity!",
+      "attack": "Catch!",
+      "death": "Bruised and battered."
+    },
+    "stinkyscape-142": {
+      "play": "Lucky stones, loaded and ready!",
+      "attack": "Fortune incoming!",
+      "death": "Bad luck, after all."
+    },
+    "stinkyscape-143": {
+      "play": "Overdue books, returning at speed.",
+      "attack": "Read this!",
+      "death": "Out of print."
+    },
+    "stinkyscape-144": {
+      "cast": "T minus zero. This one is free!"
+    },
+    "stinkyscape-145": {
+      "cast": "Hard as stone. Harder."
+    },
+    "stinkyscape-146": {
+      "cast": "Everybody freeze! Nobody move!"
+    },
+    "stinkyscape-147": {
+      "play": "Hold on, let me ask the AI.",
+      "attack": "Optimal.",
+      "death": "Ctrl Z, please."
+    },
+    "stinkyscape-147-1": {
+      "play": "Prime time. Drums, please.",
+      "attack": "Optimal violence.",
+      "death": "Rebooting..."
+    },
+    "stinkyscape-147-2": {
+      "cast": "Boom, boom. Helpful noises."
+    },
+    "stinkyscape-148": {
+      "cast": "The stars stretch on forever."
+    },
+    "stinkyscape-148-1": {
+      "cast": "Beyond this, nothing. Goodbye."
+    },
+    "stinkyscape-149": {
+      "cast": "One for you, a better one for me."
+    },
+    "stinkyscape-150": {
+      "cast": "Hold your nose and roll the dice!"
+    },
+    "stinkyscape-150-1": {
+      "play": "Stinkyscape golem! Smash the stars!",
+      "attack": "Golem smash!",
+      "death": "Back to stardust."
+    },
+    "stinkyscape-151": {
+      "cast": "Strap in. The cosmos rolls the dice!"
+    },
+    "stinkyscape-152": {
+      "cast": "Rest here, and rise again."
+    },
+    "stinkyscape-153": {
+      "cast": "Free money! Read the fine print later."
+    },
+    "stinkyscape-154": {
+      "cast": "Come on, sixty-seven!"
+    },
+    "stinkyscape-155": {
+      "cast": "Brace for impact! Mind the crater."
+    },
+    "stinkyscape-156": {
+      "cast": "Catch it on the way back!"
+    },
+    "stinkyscape-157": {
+      "cast": "Welcome to the Gauntlet! Nobody leaves."
+    },
+    "stinkyscape-158": {
+      "cast": "Squadron launch. All wings, go!"
+    },
+    "stinkyscape-159": {
+      "cast": "The committee will see you now."
+    },
+    "stinkyscape-160": {
+      "cast": "Signed, sealed and golden."
+    },
+    "stinkyscape-161": {
+      "cast": "Spread your wings, darlings!"
+    },
+    "stinkyscape-162": {
+      "cast": "Core online. Prepare to jump."
+    },
+    "stinkyscape-163": {
+      "cast": "Choose your side. Forever."
+    },
+    "stinkyscape-164": {
+      "cast": "Nice card. Shame if it went missing."
+    },
+    "stinkyscape-165": {
+      "cast": "Solidarity! Every card gets a fair trade."
+    },
+    "stinkyscape-166": {
+      "cast": "Scanning. Something is out there."
+    },
+    "stinkyscape-167": {
+      "cast": "Deep scan engaged. Listening."
+    },
+    "stinkyscape-168": {
+      "cast": "Hangar doors open. Interceptor away."
+    },
+    "stinkyscape-169": {
+      "play": "Pebble reporting for mining duty.",
+      "attack": "Rumble.",
+      "death": "Crumbled into loot."
+    },
+    "stinkyscape-170": {
+      "play": "Solid rock. Rich veins inside.",
+      "attack": "Grind!",
+      "death": "Cracked open. Take it."
+    },
+    "stinkyscape-171": {
+      "play": "Big rock. Bigger payout.",
+      "attack": "Rumble!",
+      "death": "Split wide open."
+    },
+    "stinkyscape-172": {
+      "play": "I am the motherlode. Dig deep.",
+      "attack": "Tremble!",
+      "death": "Shattered into a fortune."
+    },
+    "stinkyscape-173": {
+      "play": "Still standing. Still full of spice.",
+      "attack": "Creak.",
+      "death": "The last spice spills out."
+    },
+    "stinkyscape-174": {
+      "cast": "Fleet decloaking. Engage."
+    },
+    "stinkyscape-175": {
+      "play": "Cryo module online.",
+      "attack": "Chill out.",
+      "death": "Thawed for good."
+    },
+    "stinkyscape-176": {
+      "cast": "Launch the ship. We strike first."
+    },
+    "stinkyscape-177": {
+      "play": "Cloak engaged. You never saw me.",
+      "attack": "Decloaking!",
+      "death": "Cloak failing. Visible."
+    },
+    "stinkyscape-t-dormant-starship": {
+      "play": "Hull assembled. Awaiting parts.",
+      "attack": "Full burn.",
+      "death": "The ship is lost."
+    },
+    "stinkyscape-t-drone-interceptor": {
+      "play": "Interceptor online.",
+      "attack": "Engaging.",
+      "death": "Signal lost."
+    },
+    "stinkyscape-t-drone-corvette": {
+      "play": "Corvette on station. Guns warm.",
+      "attack": "Firing solution!",
+      "death": "Hull breach. Going down."
+    },
+    "stinkyscape-t-shield-layer": {
+      "play": "Shield layer up. Hide behind me.",
+      "attack": "Holding the line!",
+      "death": "Shields down. Next layer exposed."
+    },
+    "stinkyscape-t-propagation-layer": {
+      "play": "Propagation bay open. Printing escorts.",
+      "attack": "Deploying!",
+      "death": "Bay destroyed. Core exposed."
+    },
+    "stinkyscape-t-meltdown-layer": {
+      "play": "Reactor critical. Going out loud.",
+      "attack": "Overload!",
+      "death": "Meltdown complete."
+    },
+    "stinkyscape-t-reknite": {
+      "cast": "Reknite plating. Feel that shell."
+    },
+    "stinkyscape-t-korrelite": {
+      "cast": "Korrelite spark. Zap!"
+    },
+    "stinkyscape-t-gellium": {
+      "cast": "Cool gel. All better."
+    },
+    "stinkyscape-t-axnit": {
+      "cast": "Axnit drinks deep."
+    },
+    "stinkyscape-t-narcor": {
+      "cast": "Narcor dust. Something rare inside."
+    },
+    "stinkyscape-t-red-narcor": {
+      "cast": "Red Narcor! Legends in the dust."
+    },
+    "stinkyscape-t-anomaly-found": {
+      "cast": "Anomaly detected. Reality rewritten."
+    },
+    "stinkyscape-t-ai-01": {
+      "play": "Escort protocol engaged. Stay close.",
+      "attack": "Covering you.",
+      "death": "Escort terminated."
+    },
+    "stinkyscape-t-ai-02": {
+      "cast": "Mining subroutine running. Please wait."
+    },
+    "stinkyscape-t-ai-03": {
+      "cast": "Recalculating the optimal route."
+    },
+    "stinkyscape-t-ai-04": {
+      "cast": "I predicted that."
+    },
+    "stinkyscape-t-ai-05": {
+      "cast": "Launch sequence ready. Counting down."
+    },
+    "stinkyscape-t-ai-06": {
+      "cast": "Relaying probes. Signal is strong."
+    },
+    "stinkyscape-t-ai-07": {
+      "play": "Combat subroutine loaded.",
+      "attack": "Executing.",
+      "death": "Process killed."
+    },
+    "stinkyscape-t-ai-08": {
+      "cast": "Uplink established. Drones incoming."
+    },
+    "stinkyscape-t-ai-09": {
+      "cast": "Gotcha. That was a decoy."
+    },
+    "stinkyscape-t-ai-10": {
+      "play": "Salvage protocol online.",
+      "attack": "Stripping parts.",
+      "death": "Salvage what remains."
+    },
+    "traininggrounds-001": {
+      "play": "Spikey Steven, ready to poke!",
+      "attack": "Poke!",
+      "death": "Too sharp, too soft."
+    },
+    "traininggrounds-002": {
+      "play": "Drop and give me twenty!",
+      "attack": "Feel the burn!",
+      "death": "Skipped leg day."
+    },
+    "traininggrounds-003": {
+      "play": "Everyone, on me!",
+      "attack": "Follow my lead!",
+      "death": "Someone else lead."
+    },
+    "traininggrounds-004": {
+      "play": "Ogre smash first, think never!",
+      "attack": "Boulder fist!",
+      "death": "Ogre... crumble."
+    },
+    "traininggrounds-005": {
+      "play": "Mid or feed, baby!",
+      "attack": "Mid diff!",
+      "death": "Gank. Typical."
+    },
+    "traininggrounds-006": {
+      "play": "The sun shines on me!",
+      "attack": "By the dawn!",
+      "death": "Sunset."
+    },
+    "traininggrounds-007": {
+      "play": "The moon keeps watch.",
+      "attack": "By moonlight!",
+      "death": "Eclipsed."
+    },
+    "traininggrounds-008": {
+      "play": "Time to clobber!",
+      "attack": "Clobber!",
+      "death": "Got clobbered."
+    },
+    "traininggrounds-009": {
+      "play": "Nothing will be left standing.",
+      "attack": "Ravage!",
+      "death": "Ravaged at last."
+    },
+    "traininggrounds-010": {
+      "cast": "Duck."
+    },
+    "traininggrounds-011": {
+      "cast": "Thwomp!"
+    },
+    "traininggrounds-012": {
+      "cast": "Hold the line!"
+    },
+    "traininggrounds-013": {
+      "cast": "The runes ignite!"
+    },
+    "traininggrounds-014": {
+      "cast": "Surprise! Kaboom!"
+    },
+    "traininggrounds-015": {
+      "cast": "Go go go, no time!"
+    },
+    "traininggrounds-016": {
+      "play": "Sun and moon, to my side!",
+      "attack": "By the heavens!",
+      "death": "The sky goes dark."
+    },
+    "traininggrounds-017": {
+      "play": "Mrrrow! Everything burns!",
+      "attack": "Hiss!",
+      "death": "Burnt out."
+    },
+    "traininggrounds-018": {
+      "play": "Put this apple on your head.",
+      "attack": "Catch!",
+      "death": "Dropped one."
+    },
+    "traininggrounds-019": {
+      "cast": "Seconds, anyone?"
+    },
+    "traininggrounds-020": {
+      "cast": "We want you! Sign up today!"
+    },
+    "traininggrounds-021": {
+      "play": "Feel the fire beside you.",
+      "attack": "Burn!",
+      "death": "The flame gutters."
+    },
+    "traininggrounds-022": {
+      "play": "Mrrp! I've got your right!",
+      "attack": "Right behind you!",
+      "death": "Left behind."
+    },
+    "traininggrounds-023": {
+      "play": "Mrrow! Mrrow! Mrrow! Mrrow!",
+      "attack": "All of us!",
+      "death": "One down, three to go."
+    },
+    "traininggrounds-024": {
+      "cast": "Big guy? Big discount!"
+    },
+    "traininggrounds-025": {
+      "play": "Three for one, one for more!",
+      "attack": "Trigor!",
+      "death": "I'll be back, bigger."
+    },
+    "traininggrounds-026": {
+      "cast": "Walk the path. Do not return."
+    },
+    "traininggrounds-027": {
+      "cast": "Make a wish and shine!"
+    },
+    "traininggrounds-028": {
+      "play": "Clear the right flank!",
+      "attack": "Westward!",
+      "death": "Sunset in the west."
+    },
+    "traininggrounds-029": {
+      "play": "The left lane is mine.",
+      "attack": "From the east!",
+      "death": "The east wind fades."
+    },
+    "traininggrounds-030": {
+      "play": "The gates hold.",
+      "attack": "Hold!",
+      "death": "The flood comes."
+    },
+    "traininggrounds-031": {
+      "cast": "Level up!"
+    },
+    "traininggrounds-032": {
+      "play": "I'll protect you all.",
+      "attack": "For them!",
+      "death": "Stay safe."
+    },
+    "traininggrounds-033": {
+      "play": "Mrrow! From the bushes!",
+      "attack": "Ambush!",
+      "death": "Spotted."
+    },
+    "traininggrounds-034": {
+      "cast": "Rawr! Get big!"
+    },
+    "traininggrounds-035": {
+      "cast": "Waste not, want not."
+    },
+    "traininggrounds-036": {
+      "play": "Hit me! I can take it!",
+      "attack": "Boing!",
+      "death": "Lesson learned!"
+    },
+    "traininggrounds-037": {
+      "cast": "Is anyone there? Come back to me."
+    },
+    "traininggrounds-038": {
+      "play": "Lesson one, pay attention.",
+      "attack": "Pop quiz!",
+      "death": "Class dismissed."
+    },
+    "traininggrounds-039": {
+      "cast": "Class is chaos! Roll the dice!"
+    },
+    "traininggrounds-039-1": {
+      "play": "Training golem! Practice on you!",
+      "attack": "Drill!",
+      "death": "Training over."
+    },
+    "traininggrounds-040": {
+      "cast": "Let me design you something."
+    },
+    "traininggrounds-041": {
+      "play": "Ugh. Not your kind again.",
+      "attack": "Begone, riffraff!",
+      "death": "Tolerance wins. Again."
+    },
+    "traininggrounds-042": {
+      "cast": "Hoarding is self care."
+    },
+    "traininggrounds-043": {
+      "play": "Hello. I am very normal.",
+      "attack": "Excuse me. Attacking.",
+      "death": "Plain. Simple. Gone."
+    },
+    "traininggrounds-044": {
+      "play": "Meow. Meow again.",
+      "attack": "Double pounce!",
+      "death": "Both of us?"
+    },
+    "traininggrounds-045": {
+      "cast": "Defense contract approved."
+    },
+    "traininggrounds-046": {
+      "cast": "Nothing personal, pal."
+    },
+    "traininggrounds-047": {
+      "play": "Not too big. Not too small.",
+      "attack": "Medium smash.",
+      "death": "Should have gone aggro."
+    },
+    "traininggrounds-048": {
+      "play": "Shredder online. Paperwork offline.",
+      "attack": "Shredding commenced.",
+      "death": "Warranty void."
+    },
+    "traininggrounds-049": {
+      "cast": "Wait. Haven't we done this?"
+    },
+    "traininggrounds-050": {
+      "cast": "Taste the glow!"
+    },
+    "traininggrounds-051": {
+      "play": "Big cat. Bigger problems.",
+      "attack": "Big cat pounce!",
+      "death": "Landed on my back?"
+    },
+    "traininggrounds-052": {
+      "cast": "Hop along. You're mine now."
+    },
+    "traininggrounds-053": {
+      "play": "Peer review? Rejected.",
+      "attack": "Your thesis is wrong.",
+      "death": "My grant... expired."
+    },
+    "traininggrounds-054": {
+      "play": "Rock solid. Rock steady.",
+      "attack": "Rock bottom!",
+      "death": "Just gravel now."
+    },
+    "traininggrounds-055": {
+      "cast": "Ah, the good old days."
+    },
+    "traininggrounds-056": {
+      "play": "Anyone gonna finish that?",
+      "attack": "Fresh meat.",
+      "death": "Finally... full."
+    },
+    "traininggrounds-057": {
+      "cast": "Reduce, reuse, replay!"
+    },
+    "traininggrounds-058": {
+      "cast": "Bullseye, baby."
+    },
+    "traininggrounds-059": {
+      "cast": "A fig a day!"
+    },
+    "traininggrounds-060": {
+      "cast": "Fresh tokens, farm to table!"
+    }
+  },
+  "emotes": {
+    "vanilla": {
+      "greetings": "Hello. I'm Mr. Vanilla. That's it.",
+      "wellPlayed": "Well played. Plainly.",
+      "oops": "Oops. That was... unflavored.",
+      "thanks": "Thanks. Simple as that.",
+      "threaten": "No tricks. No text. Just pain."
+    },
+    "gary": {
+      "greetings": "Hey there, friend! Feeling lucky?",
+      "wellPlayed": "Ha! Well played. The house tips its hat.",
+      "oops": "Oops. Tails. It's always tails.",
+      "thanks": "Thanks! I'm putting it all on red.",
+      "threaten": "Double or nothing. And you've got nothing."
+    },
+    "timmy": {
+      "greetings": "Hi! Hi! Let's go, let's go!",
+      "wellPlayed": "Well played! Okay, my turn, my turn!",
+      "oops": "Oops! Too fast!",
+      "thanks": "Thanks! No time, gotta run!",
+      "threaten": "You'll be gone before you blink."
+    },
+    "dfender": {
+      "greetings": "Greetings. Get behind me.",
+      "wellPlayed": "Well played. Nothing gets past me... usually.",
+      "oops": "Oops. Must've left a gap.",
+      "thanks": "Thank you. I've got your back.",
+      "threaten": "Go ahead. Swing. See what happens."
+    },
+    "felinors": {
+      "greetings": "Mrrow! Hello! ...Hello!",
+      "wellPlayed": "Well played! ...Well played!",
+      "oops": "Oops. ...Oops.",
+      "thanks": "Thanks! We both mean it.",
+      "threaten": "There are more of us than you think."
+    },
+    "shredder": {
+      "greetings": "GREETINGS. SHREDDER-10 ONLINE.",
+      "wellPlayed": "WELL PLAYED. RECALIBRATING.",
+      "oops": "ERROR. THAT WAS NOT IN THE MANUAL.",
+      "thanks": "GRATITUDE DOT EXE EXECUTED.",
+      "threaten": "TARGET ACQUIRED. SHREDDING."
+    }
+  }
+}

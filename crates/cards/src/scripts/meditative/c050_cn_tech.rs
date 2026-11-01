@@ -4,21 +4,27 @@
 //! Radiant: "Add the highest win rate card to your hand. It is Radiant."
 //! Engine: ME-STATS (docs/meditative-set.md M5, MD-D1, MD-D2) — the compiled table
 //! `crates/cards/data/win_rates.json` (R377's in-deck wins and games per card id) read through
-//! `win_rate_leader`, never CN Tech itself (R387); a random non-token card when no row qualifies
-//! (R142). The table is a development run's (provisional, R1101), and a replay folds against the
-//! table its version shipped with (R1266000).
+//! `win_rate_leader`, never CN Tech itself (R387). The table is a development run's (provisional,
+//! R1101), and a replay folds against the table its version shipped with (R1266000).
+//!
+//! The fallback (#2521, R2521007): when no row qualifies it adds `FALLBACK_LEADER`, Core #35 Lunar
+//! Eclipse, the leader of the table every version since v0.4.0 has shipped (v0.4.0's provisional run,
+//! 33 wins in 48 games), Radiant on the Radiant face, and draws nothing: no random card any more (it
+//! was one before, R142).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-050";
 
+/// R2521007: the card added when the table names no leader: Core #35 Lunar Eclipse, 33/48, the
+/// leader of `crates/cards/patches/win_rates/v0.5.9b.json` (v0.4.0's provisional run).
+pub const FALLBACK_LEADER: &str = "core-035";
+
 fn tech(radiant: bool) -> Script {
     Script {
-        cry: Some(hook(move |_ctx| match win_rate_leader(ID) {
-            Some(id) => vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))],
-            None => vec![add_random_from_catalog(json_as(
-                json!({ "query": {}, "radiant": radiant }),
-            ))],
+        cry: Some(hook(move |_ctx| {
+            let id = win_rate_leader(ID).unwrap_or_else(|| FALLBACK_LEADER.to_string());
+            vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))]
         })),
         ..Script::default()
     }
@@ -31,7 +37,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50, MD-D3.
+// M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50: "Add the highest win rate card (the
+// compiled table's pick, R377's in-deck rate) to your hand (MD-D1), never itself (R387), the Radiant
+// face's Radiant (MD-D3); Lunar Eclipse when the table names none (R2521007), no random card, hidden
+// from the opponent (R440), burned by a full hand".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -245,18 +254,25 @@ mod tests {
         }
 
         #[test]
-        fn r1101_the_same_table_and_seed_give_the_same_card() {
-            // The fallback draws from the match rng: the same seed makes the same card, server or client.
-            let one = picked(vec![], "cn-tech-same");
-            let two = picked(vec![], "cn-tech-same");
-            assert_eq!(one, two);
+        fn r2521007_with_no_leader_the_same_card_on_every_seed_and_no_random_draw() {
+            // The fallback is a named card: every seed makes the same one, whoever runs the engine,
+            // and the match rng is not drawn.
+            for n in 0..4 {
+                assert_eq!(picked(vec![], &format!("cn-tech-same-{n}")), FALLBACK_LEADER);
+            }
             register_win_rates(table(vec![]));
             let mut s = casting("cn-tech-same", false);
             let cursor = s.state().rng_cursor;
             s.play(TECH, json!({}));
-            assert!(
-                s.state().rng_cursor > cursor,
-                "the fallback drew from the match rng"
+            assert_eq!(s.state().rng_cursor, cursor, "the fallback draws nothing");
+        }
+
+        #[test]
+        fn r2521007_a_table_with_no_qualifying_row_falls_back_too() {
+            // Thin rows only (fewer than CN_TECH_MIN_GAMES games) and CN Tech's own: no leader.
+            assert_eq!(
+                picked(vec![("core-008", 19, 19), (TECH, 40, 40)], "cn-tech-thin"),
+                FALLBACK_LEADER
             );
         }
 
@@ -290,18 +306,31 @@ mod tests {
         }
 
         #[test]
-        fn falls_back_to_a_random_non_token_card_hidden_from_the_opponent() {
+        fn r2521007_falls_back_to_lunar_eclipse_hidden_from_the_opponent() {
             register_win_rates(table(vec![]));
             let mut s = casting("cn-tech-fallback", false);
             let before = s.hand(PlayerId::P1).len();
             s.play(TECH, json!({}));
             let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
             assert_eq!(added.len(), 1);
-            let def = crate::card_def(&added[0].def_id);
-            assert!(!def.token, "no token (R142)");
+            assert_eq!(added[0].def_id, FALLBACK_LEADER);
+            assert!(!added[0].radiant);
             // The opponent sees a count, never the card (R440).
             let view: Value = js(&view_for(s.state(), PlayerId::P2));
             assert_eq!(view["opponent"]["hand"], json!({ "count": 2 }));
+            assert!(!view.to_string().contains(&added[0].id), "the opponent never sees its id");
+        }
+
+        #[test]
+        fn r2521007_the_radiant_face_falls_back_to_a_radiant_lunar_eclipse() {
+            register_win_rates(table(vec![]));
+            let mut s = casting("cn-tech-fallback-radiant", true);
+            let before = s.hand(PlayerId::P1).len();
+            s.play(TECH, json!({}));
+            let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
+            assert_eq!(added.len(), 1);
+            assert_eq!(added[0].def_id, FALLBACK_LEADER);
+            assert!(added[0].radiant);
         }
 
         #[test]
@@ -328,6 +357,70 @@ mod tests {
                 .filter(|card| card.def_id == LEADER)
                 .collect();
             assert_eq!(burned.len(), 1);
+        }
+
+        #[test]
+        fn r2386000_the_compiled_table_holds_a_pickable_row_of_every_shipped_set() {
+            assert_eq!(
+                crate::sets_without_win_rates(&crate::WIN_RATES),
+                Vec::<SetName>::new(),
+                "run cargo jackioh stats, then winrates --refresh",
+            );
+        }
+
+        #[test]
+        fn r2386000_a_set_counts_only_with_a_deckable_row_of_cn_tech_min_games() {
+            crate::register_all();
+            let firsts: Vec<String> = SHIPPED_SETS
+                .into_iter()
+                .map(|set| {
+                    crate::CATALOG
+                        .values()
+                        .find(|def| def.set == set && deckable(def))
+                        .map(|def| def.id.clone())
+                        .unwrap_or_else(|| panic!("a deckable {set} card"))
+                })
+                .collect();
+            let rows = |ids: &[String], wins: i32, games: i32| WinRateTable {
+                patch: "v0.2.7".to_string(),
+                source: WinRateSource::Provisional,
+                cards: ids
+                    .iter()
+                    .map(|id| WinRateRow {
+                        id: id.clone(),
+                        wins,
+                        games,
+                    })
+                    .collect(),
+            };
+            // Every set but the first covered: only the first is missing.
+            assert_eq!(
+                crate::sets_without_win_rates(&rows(&firsts[1..], 10, CN_TECH_MIN_GAMES)),
+                vec![SHIPPED_SETS[0]]
+            );
+            // A row under the floor, and a token's row and an unknown id at it, leave the first set missing.
+            let token = crate::CATALOG
+                .values()
+                .find(|def| def.set == SHIPPED_SETS[0] && def.is_token())
+                .map(|def| def.id.clone())
+                .expect("a Core token");
+            let mut table = rows(&firsts[1..], 10, CN_TECH_MIN_GAMES);
+            for (id, games) in [
+                (firsts[0].clone(), CN_TECH_MIN_GAMES - 1),
+                (token, CN_TECH_MIN_GAMES),
+                ("core-999".to_string(), CN_TECH_MIN_GAMES),
+            ] {
+                table.cards.push(WinRateRow { id, wins: 10, games });
+            }
+            assert_eq!(
+                crate::sets_without_win_rates(&table),
+                vec![SHIPPED_SETS[0]]
+            );
+            // Every set's first deckable card at the floor: nothing is missing.
+            assert_eq!(
+                crate::sets_without_win_rates(&rows(&firsts, 10, CN_TECH_MIN_GAMES)),
+                Vec::<SetName>::new()
+            );
         }
 
         #[test]

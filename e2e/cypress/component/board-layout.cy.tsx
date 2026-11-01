@@ -120,6 +120,7 @@ describe("BUILD M5-T1 — the full fixture board fits 1280x720, 844x390, 768x102
   }
 });
 
+// R504: measure empty hand rows in a browser and keep the field in place at every viewport.
 describe("R504 an empty hand keeps its place at every size", () => {
   function handRows(doc: Document): { you: number; opponent: number; fieldTop: number } {
     const height = (id: string): number => doc.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect().height ?? -1;
@@ -170,8 +171,11 @@ describe("R504 an empty hand keeps its place at every size", () => {
   }
 });
 
-// #2330: where the board has the room the four rows are one height, the lanes fill the field and a DEF
-// card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. No field card leaves its zone.
+// #2330: where the board has the room the four rows are one height and the lanes fill the field,
+// and a DEF card is drawn at full size; on a phone the backrow keeps B29's 44 px floor. At every
+// size no field card, a turned DEF card included, leaves its zone. #2556: on a phone, upright or on
+// its side, a DEF card's footprint fills its unit zone's inside, its width or its height, whichever
+// runs out first, unless the card is already at full size.
 describe("#2330 equal board rows, and DEF cards only as small as their zone needs", () => {
   /** The issue's sizes; `roomy` is the 761px-and-up layouts (a desktop, a tablet held upright). */
   const SIZES = [
@@ -180,6 +184,11 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
     { label: "tablet", width: 768, height: 1024, roomy: true },
     { label: "phone", width: 390, height: 844, roomy: false },
     { label: "landscape", width: 844, height: 390, roomy: false },
+    // #2556's phones, upright and on their side.
+    { label: "phone", width: 360, height: 780, roomy: false },
+    { label: "phone", width: 430, height: 932, roomy: false },
+    { label: "landscape", width: 780, height: 360, roomy: false },
+    { label: "landscape", width: 932, height: 430, roomy: false },
   ] as const;
   /** B29's touch floor, which a phone's backrow row keeps. */
   const BACKROW_FLOOR_PX = 44;
@@ -195,6 +204,16 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
     );
   }
 
+  /** A zone's inside: its border box less its borders (a zone has no padding). */
+  function insideOf(zone: HTMLElement): { width: number; height: number } {
+    const box = zone.getBoundingClientRect();
+    const style = getComputedStyle(zone);
+    return {
+      width: box.width - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth),
+      height: box.height - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth),
+    };
+  }
+
   for (const size of SIZES) {
     const where = `${size.label} ${size.width}x${size.height}`;
 
@@ -206,6 +225,8 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
         </div>,
       );
       cy.get(FIELD_CARDS).should("have.length", FIELD_CARD_COUNT);
+
+      const out: { defs?: unknown[] } = {};
 
       cy.document({ log: false }).should((doc) => {
         const field = doc.querySelector<HTMLElement>(`${BOARD} .field`);
@@ -239,13 +260,32 @@ describe("#2330 equal board rows, and DEF cards only as small as their zone need
 
         const defs = [...field.querySelectorAll<HTMLElement>('.card[data-position="DEF"]')];
         expect(defs, "fullBoardView's two DEF units").to.have.length(2);
-        if (!size.roomy) return;
+        const rows: unknown[] = [];
+        out.defs = rows;
         for (const def of defs) {
-          // Turned at full size, the footprint is the card's own box on its side.
+          const name = def.dataset.testid ?? "?";
           const box = def.getBoundingClientRect();
-          expect(box.width, `${def.dataset.testid ?? "?"} footprint width at ${where}`).to.be.closeTo(def.offsetHeight, SLACK_PX);
-          expect(box.height, `${def.dataset.testid ?? "?"} footprint height at ${where}`).to.be.closeTo(def.offsetWidth, SLACK_PX);
+          // Turned at full size, the footprint is the card's own box on its side.
+          const full = Math.abs(box.width - def.offsetHeight) <= SLACK_PX && Math.abs(box.height - def.offsetWidth) <= SLACK_PX;
+          if (size.roomy) {
+            expect(box.width, `${name} footprint width at ${where}`).to.be.closeTo(def.offsetHeight, SLACK_PX);
+            expect(box.height, `${name} footprint height at ${where}`).to.be.closeTo(def.offsetWidth, SLACK_PX);
+            continue;
+          }
+          const zone = def.parentElement;
+          expect(zone, `${name} sits in a zone`).to.not.eq(null);
+          if (zone === null) continue;
+          const room = insideOf(zone);
+          expect(box.width, `${name} fits its zone's width at ${where}`).to.be.at.most(room.width + SLACK_PX);
+          expect(box.height, `${name} fits its zone's height at ${where}`).to.be.at.most(room.height + SLACK_PX);
+          const fills = Math.abs(box.width - room.width) <= SLACK_PX || Math.abs(box.height - room.height) <= SLACK_PX;
+          expect(fills || full, `#2556 ${name} fills its zone's width or height at ${where}`).to.eq(true);
+          rows.push({ issue: 2556, size: where, card: name, scale: Number((box.width / def.offsetHeight).toFixed(3)), footprint: [Math.round(box.width), Math.round(box.height)], zone: [Math.round(room.width), Math.round(room.height)], row: Math.round(zone.getBoundingClientRect().height) });
         }
+      });
+
+      cy.then(() => {
+        cy.task("layout:report", out.defs ?? [], { log: false });
       });
     });
   }

@@ -3,9 +3,9 @@
 //! Base:    "Fill your hand with random Common cards."
 //! Radiant: "Fill your hand with random Radiant Common cards."
 //! Engine:
-//! - **How many:** this player's hand cap (`hand_cap_of`: `HAND_CAP`, or the hand size Meditative #79
-//!   set, R1143) less the cards in hand as it resolves; Bulk Booster itself is resolving, not in hand.
-//!   "Fill" is C+ #42's reward wording, which reads the same. A full hand adds nothing and draws
+//! - **How many:** the room in this player's hand as it resolves (`room_in`: its hand cap, `HAND_CAP`
+//!   or the hand size Meditative #79 set, R1143, less the cards in it); Bulk Booster itself is
+//!   resolving, not in hand. "Fill" is C+ #42's reward wording, which reads the same. A full hand adds nothing and draws
 //!   nothing from the rng (R129).
 //! - **The pool:** `add_random_from_catalog` over `{ rarity: Common }`: non-token Commons of every set
 //!   that ships (R380, R382, R1420), never this card (R387), repeats allowed (R60), each on its base
@@ -19,8 +19,8 @@ pub const ID: &str = "meditative-077";
 fn bulk_booster(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let room = hand_cap_of(ctx.state, ctx.controller) - zone_count(ctx.state, ctx.controller, OffFieldZone::Hand);
-            if room <= 0 {
+            let room = room_in(ctx.state, ctx.controller, OffFieldZone::Hand);
+            if room == 0 {
                 return vec![];
             }
             vec![add_random_from_catalog(json_as(json!({

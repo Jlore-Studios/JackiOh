@@ -1,8 +1,24 @@
-//! SPEC §8.11 Training Grounds #51 Big Felinor, the snapshot of Core #43 Big Felinor (`core-043`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #43 (SPEC §8.2, §8): destroy_all non-Felinor units; marks collected in one state check (§10.3, R59; §6.3, §4.5).
-//! Dormant under Stack spared (R13); Indestructible spares (R46, R69; #12, #20, #21, #25, #66, R11, R82, §5).
+//! SPEC §8.11 Training Grounds #51 Legacy: Big Felinor,
+//! the Legacy card of Core #43 Big Felinor (`core-043`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #43 Big Felinor (SPEC §8.2). Unit 3/10 → 6/20, Felinor, cost 3, Rare.
+//!   Base:    "Cry: destroy all non-Felinor units on both sides"
+//!   Radiant: "Enemy non-Felinor units only" (§8 Conventions: a restated clause replaces the base one).
+//!   Engine:  "Simultaneous destroy, one state check."
+//!
+//! R59 IS WHY THIS IS ONE EFFECT: `destroy` only MARKS a card (`markedDestroyed`) and §4.5 step 1
+//! "collects" every mark "at once"; the state check runs after the Cry's whole list (§10.3), never
+//! between its effects, so nothing dies early while the rest of the board is still being marked.
+//! `destroy_all` marks every active unit its `BoardScope` matches (`side` is relative to `ctx.controller`,
+//! `tags`/`notTags` read the def's §5 tags), so a card dormant under a Stack is not hit (R13).
+//! Indestructible is §4.5's business, not the filter's (R46, R69). Big Felinor is Felinor-tagged, so
+//! `notTags: ["Felinor"]` already spares it; the tests prove that.
 
 use jackioh_engine::effects::destroy_all;
 use jackioh_engine::prelude::*;

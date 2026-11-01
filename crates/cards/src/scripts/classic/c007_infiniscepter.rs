@@ -53,6 +53,24 @@ fn within_limit(args: TargetCheckArgs<'_>) -> bool {
         && effective_cost(args.state, candidate, Default::default()) <= param(&limit, "costLimit")
 }
 
+/// R2476000: "that Spell" — the Spell the Scepter holds, by name ("Radiant " before a Radiant one), or
+/// the dash when its Cry found none (R90). On the field only, where it holds one (R78 clears it as the
+/// card leaves). The Spell was picked from a hidden hand, but it lies in the public exile now. A fused
+/// Scepter's ingredient reads its own, its memory read as that ingredient's text reads it (R102).
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let held = held_spell(Some(ctx.self_), &IndexMap::new());
+        vec![card_preview(
+            ctx.state,
+            "that Spell",
+            held.as_ref().map(|held| (held.def_id.as_str(), held.radiant)),
+        )]
+    })
+}
+
 fn cry(ctx: &EffectContext<'_>) -> Vec<Effect> {
     let Some(picked) = instance_of(ctx, &json_as(json!({ "of": "chosen" }))) else {
         return vec![];
@@ -72,6 +90,7 @@ pub fn script() -> CardScripts {
         )],
         target_checks: IndexMap::from([(WITHIN_LIMIT, target_check(within_limit))]),
         cry: Some(hook(|ctx| cry(ctx))),
+        preview: Some(preview()),
         activations: vec![ActivationDecl {
             id: "cast-copy".to_string(),
             label: "Cast a copy of that Spell".to_string(),
@@ -179,6 +198,26 @@ mod tests {
 
                 s.expect_in_zone(&spell, "exile");
                 assert_eq!(remembered(&s, SCEPTER), Some(json!({ "defId": STOCKPILE, "radiant": false })));
+            }
+
+            /// R2476000: after "that Spell", the Spell it holds by name, to both seats; nothing in hand.
+            #[test]
+            fn r2476000_it_names_the_spell_it_holds_after_that_spell() {
+                crate::register_all();
+                for radiant in [false, true] {
+                    let mut s = setup(
+                        json!({ "hand": [{ "def": SCEPTER, "radiant": radiant }, { "def": STOCKPILE, "radiant": true }, FILLER] }),
+                        false,
+                        json!({}),
+                    );
+                    let scepter = s.card(SCEPTER).id.clone();
+                    assert!(crate::preview_seen(&s, P1, &scepter).is_empty(), "radiant {radiant}");
+                    let targets = pick::instance(s.card(STOCKPILE));
+                    s.play(SCEPTER, json!({ "zone": 1, "targets": targets }));
+                    let named = vec![("that Spell".to_string(), 1, Some("Radiant Stockpile".to_string()))];
+                    assert_eq!(crate::preview_seen(&s, P1, &scepter), named, "radiant {radiant}");
+                    assert_eq!(crate::preview_seen(&s, P2, &scepter), named, "radiant {radiant}");
+                }
             }
 
             #[test]

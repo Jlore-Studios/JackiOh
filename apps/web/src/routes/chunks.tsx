@@ -67,6 +67,7 @@ export const routeChunks = {
   terms: routeChunk(() => import("./terms.tsx")),
   purchases: routeChunk(() => import("./purchases.tsx")),
   accessibility: routeChunk(() => import("./accessibility.tsx")),
+  ai: routeChunk(() => import("./ai.tsx")),
   copyright: routeChunk(() => import("./copyright.tsx")),
   patchNotes: routeChunk(() => import("./patch-notes.tsx")),
   almanac: routeChunk(() => import("./almanac.tsx")),
@@ -120,6 +121,17 @@ export function prefetchRoute(path: string): void {
   prefetched.add(name);
   void routeChunks[name]?.load().catch(() => undefined);
   if (ENGINE_CHUNKS.has(name)) void loadWasm().catch(() => undefined);
+}
+
+/**
+ * R2630001: a gated screen's own code, and the engine's module when the screen calls it, asked for as
+ * its gate mounts, beside `/api/auth/me` rather than after it. The player is going there, so saving
+ * data does not hold either back, as it holds back a prefetch on intent. Both loads are shared.
+ */
+export function startScreen(path: string, engine: boolean): void {
+  const name = chunkAt(path);
+  if (name !== null) void routeChunks[name]?.load().catch(() => undefined);
+  if (engine) void loadWasm().catch(() => undefined);
 }
 
 const INTENT_EVENTS = ["pointerenter", "focus", "touchstart"] as const;

@@ -58,7 +58,7 @@ mod tests {
     const ROCK: &str = "core-066"; // (4) Unit 10/10, Indestructible.
     const TRAP: &str = "core-041"; // Sheepish, a Trap.
     const RUSH_TOKEN: &str = "core-t-rush";
-    const MEGABASE: &str = "stinkyscape-116"; // Field Spell, Immune to Spells.
+    const MEGABASE: &str = "stinkyscape-116"; // Unit, Immune to Spells.
 
     fn board(radiant: bool, mine: Value, theirs: Value) -> Scenario {
         board_with(radiant, mine, theirs, json!([]))
@@ -188,8 +188,8 @@ mod tests {
 
         #[test]
         fn r2198003_a_neighbour_immune_to_spells_is_passed_by() {
-            let mut s = board_with(true, json!([]), json!([]), json!([{ "def": MEGABASE, "lane": 1 }, { "def": TRAP, "lane": 2 }]));
-            let (immune, pick) = (s.backrow(P2, 1).expect("Megabase"), s.backrow(P2, 2).unwrap());
+            let mut s = board(true, json!([]), json!([{ "def": MEGABASE, "lane": 1 }, { "def": VANILLA, "lane": 2 }]));
+            let (immune, pick) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
             s.play(PATH, on(&pick));
             s.expect_in_zone(&pick, "exile");
             s.expect_in_zone(&immune, "field");

@@ -680,7 +680,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
     }
 
     #[test]
-    fn r102_r124_a_going_long_paid_4_fused_onto_a_going_long_paid_2_gives_armor_4_and_2_each_at_its_own_cards_price_6_3_embiggen()
+    fn r102_r124_a_going_long_paid_4_fused_onto_a_going_long_paid_2_gives_armor_5_and_2_each_at_its_own_cards_price_6_3_embiggen()
      {
         let mut g = scenario(json!({
             "active": "p2",
@@ -693,7 +693,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         }));
         g.play(GOING_LONG, json!({ "zone": 1, "embiggen": true }));
         assert!(is_fused_id(&backrow_at(&g, P1, 1).def_id, "core-084+core-084"));
-        assert_eq!(hero_armor_of(g.state(), P1), 6);
+        // The Embiggened version's 5 (4 until #2657) and the plain one's 2.
+        assert_eq!(hero_armor_of(g.state(), P1), 7);
     }
 
     #[test]

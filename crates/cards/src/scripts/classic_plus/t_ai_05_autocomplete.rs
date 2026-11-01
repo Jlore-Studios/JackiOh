@@ -36,14 +36,32 @@ fn autocomplete(ctx: &EffectContext<'_>, cost_override: Option<i32>) -> Vec<Effe
     vec![add_to_hand(json_as(args))]
 }
 
+/// R2476000: the words the copied card's name follows on both faces.
+const LAST_PLAYED: &str = "the last Unit, Spell or Field Spell your opponent played";
+
+/// R2476000: in its owner's hand, the card a play now would copy, by name ("Radiant " before a Radiant
+/// one), or the dash before the opponent has played one. The record keeps face-up plays alone, so it
+/// names nothing hidden (R451).
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let last = last_face_up_played(ctx.state, opponent_of(ctx.controller));
+        vec![card_preview(ctx.state, LAST_PLAYED, last.as_ref().map(|last| (last.def_id.as_str(), last.radiant)))]
+    })
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
         base: Script {
             cry: Some(hook(|ctx| autocomplete(ctx, None))),
+            preview: Some(preview()),
             ..Script::default()
         },
         radiant: Script {
             cry: Some(hook(|ctx| autocomplete(ctx, Some(RADIANT_COST)))),
+            preview: Some(preview()),
             ..Script::default()
         },
     }
@@ -117,6 +135,27 @@ mod tests {
 
         mod base {
             use super::*;
+
+            /// R2476000: in hand, after its words, the card it would copy by name: Menace once p2 has
+            /// played it, and a play then copies exactly that.
+            #[test]
+            fn r2476000_in_hand_it_names_the_card_it_would_copy() {
+                for radiant in [false, true] {
+                    let mut s = after_their_turn(&[(MENACE, Some(1))], json!({}), json!({}), radiant);
+                    let autocomplete = s.card(AUTOCOMPLETE).id.clone();
+                    assert_eq!(
+                        crate::preview_seen(&s, P1, &autocomplete),
+                        vec![(
+                            "the last Unit, Spell or Field Spell your opponent played".to_string(),
+                            1,
+                            Some("Midrange Menace".to_string())
+                        )],
+                        "radiant {radiant}"
+                    );
+                    s.play(AUTOCOMPLETE, json!({}));
+                    assert_eq!(copies_in(&s, MENACE), 1, "radiant {radiant}");
+                }
+            }
 
             #[test]
             fn r451_adds_a_copy_of_the_last_unit_they_played_at_its_printed_cost() {

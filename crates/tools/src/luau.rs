@@ -1,8 +1,28 @@
-//! `cargo jackioh luau diff`, `bench` (#442, #559), and `surface` (#560).
+//! `cargo jackioh luau diff` and `cargo jackioh luau bench` (#442's L13 and L15; groundwork for its
+//! part 7, #559), and `cargo jackioh luau surface` (groundwork for its part 6, #560), which is
+//! `surface.rs`'s.
 //!
-//! Compares this build to a parent binary built from base commit.
-//! `diff` plays games with forced cards and replays against parent oracle.
-//! `bench` compares wall time, slowest decision, and golden step time against budgets.
+//! Both hold this build to a parent: `jackioh` built from the base commit, whatever the cards are
+//! written in. Nothing in either is specific to Luau.
+//!
+//! `diff --parent-bin <path> --cards <ids> [--games N] [--seed base]` plays N games (200 by default,
+//! seeds base..base+N-1, 1 by default, which `golden record` keeps within 1–240) with the cards forced
+//! into both decks, recorded by `golden record` on this build into a temporary file. The parent's
+//! `golden check --file` then replays the file as the oracle, and its report is printed as it is: each
+//! divergence's seed, step, which hash and the action. Exit 1 on any mismatch, with the traces kept
+//! where the error says. `--traces <path>` checks a `golden record` file instead of recording one, and
+//! never deletes it.
+//!
+//! `bench --parent-bin <path> [--record <path>]` is the performance gate (L13). It measures three
+//! numbers on the parent and then on this build, on the same machine in the same run: the wall time of
+//! `fuzz --seeds 200`; the slowest decision of `gate`'s perf gate, scaled as `gate` reports it; and the
+//! mean time of one golden step, `golden check --file` on one thread over golden seeds
+//! `BENCH_GOLDEN_FIRST..=BENCH_GOLDEN_LAST`, which this build records first. It exits 1 when this
+//! build's slowest decision is over `BENCH_BUDGETS.decision_ratio` times the parent's or not
+//! under `AI_GATE.max_decision_ms`, or when either other number is over its ratio times the parent's.
+//! `--record` writes the numbers, the machine and the date as JSON, whether the bench passed or not.
+//! Only `bench_failures`, a pure function of the two measurements and the budgets, is unit-tested; the
+//! timings are not.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,7 +37,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::gate::MS_PER_SECOND;
-use crate::golden::{GAMES_PATH, record_seeds};
+use crate::golden::record_seeds;
 
 mod surface;
 
@@ -32,6 +52,17 @@ const BENCH_FUZZ_SEEDS: u32 = 200;
 
 /// The golden replay's thread count in the bench: one, so a step's time is not shared with another's.
 const BENCH_GOLDEN_THREADS: &str = "1";
+
+/// L13: the golden seeds, first..=last, the bench records on this build and times both builds
+/// replaying: a fixed handful since #2578 retired the 240 committed games.
+const BENCH_GOLDEN_FIRST: u32 = 1;
+const BENCH_GOLDEN_LAST: u32 = 20;
+
+/// Where the bench writes those games (the workspace's `target/`), removed after both replays.
+const BENCH_TRACES: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../target/luau-bench/golden.jsonl"
+);
 
 /// Where the bench reads the machine's CPU model, when the machine has one.
 const CPUINFO: &str = "/proc/cpuinfo";
@@ -271,8 +302,8 @@ fn run_timed(bin: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(Output,
     Ok((output, started.elapsed().as_secs_f64() * MS_PER_SECOND))
 }
 
-/// The three numbers of `bin`, through commands every build has.
-fn measure(bin: &Path) -> Result<BenchNumbers> {
+/// The three numbers of `bin`, through commands every build has; its golden step replays `traces`.
+fn measure(bin: &Path, traces: &Path) -> Result<BenchNumbers> {
     let name = bin.display();
     println!("luau bench: measuring {name}");
 
@@ -291,17 +322,18 @@ fn measure(bin: &Path) -> Result<BenchNumbers> {
     let slowest_decision_ms = slowest_decision(&String::from_utf8_lossy(&gated.stdout))
         .ok_or_else(|| anyhow!("{name} gate printed no [gate perf] timing"))?;
 
-    // This checkout's traces for both builds, so the same steps are replayed on each.
+    // This build's recording for both builds, so the same steps are replayed on each.
+    let file = traces.display().to_string();
     let (replayed, replay_ms) = run_timed(
         bin,
-        &["golden", "check", "--file", GAMES_PATH],
+        &["golden", "check", "--file", &file],
         &[("RAYON_NUM_THREADS", BENCH_GOLDEN_THREADS)],
     )?;
     let replayed_out = String::from_utf8_lossy(&replayed.stdout);
     let steps = match summary_counts(&replayed_out) {
         Some((steps, _)) if replayed.status.success() && steps > 0 => steps,
         _ => bail!(
-            "{name} golden check --file {GAMES_PATH} did not replay clean:\n{replayed_out}{}",
+            "{name} golden check --file {file} did not replay clean:\n{replayed_out}{}",
             String::from_utf8_lossy(&replayed.stderr)
         ),
     };
@@ -343,7 +375,7 @@ fn cpu_model() -> Option<String> {
         .map(|(_, model)| model.trim().to_string())
 }
 
-/// What `--record` writes (part 4 or part 7 makes `docs/v0.4.0/perf.json` of it at the branch point).
+/// What `--record` writes (part 7 took `docs/v0.4.0`'s baseline from it at the branch point).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchRecord {
@@ -358,9 +390,24 @@ struct BenchRecord {
 }
 
 fn run_bench(args: &BenchArgs) -> Result<()> {
-    let parent = measure(&args.parent_bin)?;
+    let traces = Path::new(BENCH_TRACES);
+    if let Some(dir) = traces.parent() {
+        fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    }
+    let seeds: Vec<u32> = (BENCH_GOLDEN_FIRST..=BENCH_GOLDEN_LAST).collect();
+    let recorded = record_seeds(&seeds, &[], traces)?;
+    println!(
+        "luau bench: recorded {} golden games ({} steps) into {}",
+        recorded.games,
+        recorded.steps,
+        traces.display()
+    );
+
+    let parent = measure(&args.parent_bin, traces)?;
     let this_bin = std::env::current_exe().context("finding this binary")?;
-    let current = measure(&this_bin)?;
+    let current = measure(&this_bin, traces)?;
+    // A leftover file under `target/` is no harm, so a failed removal is not an error.
+    let _ = fs::remove_file(traces);
 
     let machine = Machine::here();
     println!(

@@ -2719,45 +2719,29 @@ mod r253_what_may_be_queued_through_the_real_validator {
         );
     }
 
-    /// R2195000: with the Training Grounds set shipped (issue #2204), the server's validator refuses a
-    /// deck holding a Core card and its snapshot under L3, and takes either alone.
+    /// R2195000, R2511001: the server's validator queues a deck holding a Core card and its Legacy
+    /// card, each its own card, as it queues either alone.
     #[tokio::test(start_paused = true)]
-    async fn r2195000_refuses_a_best_of_1_deck_holding_a_core_card_and_its_snapshot_l3() {
+    async fn r2195000_r2511001_queues_a_best_of_1_deck_holding_a_core_card_and_its_legacy_card() {
         let w = real_wiring().await;
-        let (core, snapshot) = ("core-002", "traininggrounds-041");
-        assert!(w.pool.iter().any(|id| id == snapshot), "the snapshot ships");
+        let (core, legacy) = ("core-002", "traininggrounds-041");
+        assert!(w.pool.iter().any(|id| id == legacy), "the Legacy card ships");
+        assert!(w.pool.iter().any(|id| id == core), "the Core card ships");
         let rest: Vec<String> = w
             .pool
             .iter()
-            .filter(|id| *id != core && *id != snapshot)
+            .filter(|id| *id != core && *id != legacy)
             .take(w.size - 2)
             .cloned()
             .collect();
-        let both: Vec<String> = [core, snapshot]
+        let both: Vec<String> = [core, legacy]
             .iter()
             .map(|id| (*id).to_string())
             .chain(rest.iter().cloned())
             .collect();
-        let pair_deck = save_deck_for(&w.app, "real", &both, "Twins").await;
-        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": pair_deck }), "L3").await;
-        assert!(
-            refused["error"]["message"]
-                .as_str()
-                .unwrap_or("")
-                .contains("snapshot"),
-            "{refused}"
-        );
-        let mut one: Vec<String> = vec![snapshot.to_string()];
-        one.extend(
-            w.pool
-                .iter()
-                .filter(|id| *id != core && *id != snapshot)
-                .take(w.size - 1)
-                .cloned(),
-        );
-        let one_deck = save_deck_for(&w.app, "real", &one, "Snapshot alone").await;
+        let both_deck = save_deck_for(&w.app, "real", &both, "Twins").await;
         let (status, body) =
-            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": one_deck })).await;
+            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": both_deck })).await;
         assert_eq!(status, 200, "{body}");
     }
 

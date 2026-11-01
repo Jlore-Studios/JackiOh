@@ -76,6 +76,7 @@ const PROMPT_BUDGET = 10;
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
 const ROWS: readonly Row[] = ["units", "backrow"];
 
+// Catalog display name (SPEC §8).
 function nameOf(defId: string): string {
   const name = CARD_NAMES[Number(defId.replace(/^core-/, ""))];
   expect(name, `SPEC §8 names ${defId}`).to.not.eq(undefined);

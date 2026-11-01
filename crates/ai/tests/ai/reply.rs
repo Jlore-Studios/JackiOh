@@ -59,7 +59,7 @@ mod simulate_reply {
     fn b41_swings_an_unblocked_unit_at_the_open_face_ends_the_turn_and_stops_at_the_seats_next_main_phase() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
         let counter = create_node_counter(20, None);
-        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI));
+        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE);
         assert!(after.is_some());
         let reply = after.expect("a reply");
         assert!(reply.result.is_none());
@@ -79,6 +79,7 @@ mod simulate_reply {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert_eq!(
@@ -94,7 +95,8 @@ mod simulate_reply {
             "p2": { "field": ["core-008"] },
         }));
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert!(on_field(&reply, HUMAN, "core-008"));
         assert_eq!(reply.players[AI].hero.health, 30);
         assert_eq!(reply.active, AI);
@@ -114,7 +116,8 @@ mod simulate_reply {
     fn switches_a_deft_unit_out_of_defense_position_and_swings_it_at_the_open_face() {
         let state = handed_over(json!({ "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert_eq!(reply.players[AI].hero.health, 26);
         assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Atk);
         assert_eq!(reply.active, AI);
@@ -125,7 +128,8 @@ mod simulate_reply {
     fn leaves_a_unit_without_deft_in_defense_position_and_ends_its_turn() {
         let state = handed_over(json!({ "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert_eq!(reply.players[AI].hero.health, 30);
         assert_eq!(reply.active, AI);
         assert_eq!(counter.used(), 1);
@@ -138,7 +142,8 @@ mod simulate_reply {
             "p2": { "field": [{ "def": "core-045", "position": "DEF" }] },
         }));
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Def);
         assert_eq!(reply.players[AI].hero.health, 30);
         assert_eq!(counter.used(), 2);
@@ -152,6 +157,7 @@ mod simulate_reply {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert!(in_graveyard(&reply, AI, "core-020"));
@@ -181,6 +187,7 @@ mod simulate_reply {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert!(in_graveyard(&reply, AI, "core-008"));
@@ -200,6 +207,7 @@ mod simulate_reply {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert_eq!(reply.active, AI);
@@ -232,7 +240,9 @@ mod simulate_reply {
         assert_eq!(ended.turn, TURN + 1);
         assert!(ended.players[HUMAN].hand.iter().any(|card| card.id == menace));
 
-        let reply = simulate_reply(&ended, AI, &create_node_counter(40, None), &hidden).expect("a reply");
+        let reply = simulate_reply(&ended, AI, &create_node_counter(40, None), &hidden, Prices::NONE)
+            .expect("a reply");
+        // Midrange Menace came back; the Mr. Vanilla p2 held from the start stayed in its hand.
         assert!(on_field(&reply, HUMAN, "core-019"));
         assert!(!on_field(&reply, HUMAN, "core-008"));
 
@@ -241,6 +251,7 @@ mod simulate_reply {
             AI,
             &create_node_counter(40, None),
             &hidden_card_ids(&ended, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert!(!on_field(&blind, HUMAN, "core-019"));
@@ -255,7 +266,8 @@ mod simulate_reply {
                 &state,
                 AI,
                 &create_node_counter(0, None),
-                &hidden_card_ids(&state, AI)
+                &hidden_card_ids(&state, AI),
+                Prices::NONE,
             )
             .is_none()
         );
@@ -284,14 +296,22 @@ mod reply_score {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&ended, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         let counter = create_node_counter(20, None);
-        let score = reply_score(&ended, AI, TURN, &counter, &hidden_card_ids(&ended, AI));
+        let score = reply_score(
+            &ended,
+            AI,
+            TURN,
+            &counter,
+            &hidden_card_ids(&ended, AI),
+            Prices::NONE,
+        );
         // A finalist's score (#1010): the hand eval while the switch is off.
         assert_eq!(
             score,
-            Some(finalist_score(&after, AI, NextSwing::Seat) - AI_EVAL.unspent_mana * 2.0)
+            Some(finalist_score(&after, AI, NextSwing::Seat, Prices::NONE) - AI_EVAL.unspent_mana * 2.0)
         );
         assert_eq!(counter.used(), 2);
         assert_eq!(after.players[AI].hero.health, 26);
@@ -322,8 +342,8 @@ mod reply_score {
         );
         let counter = create_node_counter(20, None);
         assert_eq!(
-            reply_score(&won, AI, TURN, &counter, &hidden_card_ids(&won, AI)),
-            Some(static_score(&won, AI, TURN))
+            reply_score(&won, AI, TURN, &counter, &hidden_card_ids(&won, AI), Prices::NONE),
+            Some(static_score(&won, AI, TURN, Prices::NONE))
         );
         assert_eq!(counter.used(), 0);
     }
@@ -337,7 +357,8 @@ mod reply_score {
                 AI,
                 TURN,
                 &create_node_counter(1, None),
-                &hidden_card_ids(&state, AI)
+                &hidden_card_ids(&state, AI),
+                Prices::NONE,
             )
             .is_none()
         );
@@ -447,6 +468,7 @@ mod visible_activations {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert_eq!(reply.turn, TURN + 1);
@@ -459,6 +481,7 @@ mod visible_activations {
             TURN,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         );
         assert_eq!(score, loss_score(&state));
     }
@@ -494,6 +517,7 @@ mod visible_activations {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
@@ -503,6 +527,7 @@ mod visible_activations {
             TURN,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         );
         assert_eq!(score, loss_score(&state));
     }
@@ -528,6 +553,7 @@ mod visible_activations {
             AI,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
@@ -547,6 +573,7 @@ mod visible_activations {
             AI,
             &create_node_counter(40, None),
             &hidden_card_ids(&state, AI),
+            Prices::NONE,
         )
         .expect("a reply");
         let still = reply.players[HUMAN].backrow[0].as_ref().expect("still set");
@@ -580,6 +607,7 @@ mod visible_activations {
                 AI,
                 &create_node_counter(40, None),
                 &hidden_card_ids(&world, AI),
+                Prices::NONE,
             )
             .expect("a reply");
             let still = reply.players[HUMAN].backrow[0].as_ref().expect("still set");
@@ -669,7 +697,7 @@ mod open_lethal_1634 {
         let hidden = hidden_card_ids(&state, AI);
 
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply_with(&state, AI, &counter, &hidden, true).expect("a reply");
+        let reply = simulate_reply_with(&state, AI, &counter, &hidden, true, Prices::NONE).expect("a reply");
         assert_eq!(
             reply.result.map(|result| result.winner),
             Some(Winner::from(HUMAN))
@@ -677,13 +705,23 @@ mod open_lethal_1634 {
         assert!(on_field(&reply, AI, "core-008"));
         assert_eq!(counter.used(), 2);
 
-        let blind =
-            simulate_reply_with(&state, AI, &create_node_counter(20, None), &hidden, false).expect("a reply");
+        // One hit at a time, the kill outranks the face: Mr. Vanilla dies and the seat lives on 1.
+        let blind = simulate_reply_with(
+            &state,
+            AI,
+            &create_node_counter(20, None),
+            &hidden,
+            false,
+            Prices::NONE,
+        )
+        .expect("a reply");
         assert!(blind.result.is_none());
         assert!(in_graveyard(&blind, AI, "core-008"));
         assert_eq!(blind.players[AI].hero.health, 1);
 
-        let shipped = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden).expect("a reply");
+        // `simulate_reply` plays by the shipped switch.
+        let shipped = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden, Prices::NONE)
+            .expect("a reply");
         assert_eq!(shipped.result.is_some(), AI_REPLY.open_lethal);
     }
 
@@ -740,7 +778,8 @@ mod defense_switch_1696 {
         assert!(switch_gain(&state, "core-008") > 0.0);
 
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert_eq!(
             unit_view(&reply, &unit_of(&reply, "core-008")).position,
             Position::Def
@@ -760,7 +799,8 @@ mod defense_switch_1696 {
         assert!(switch_gain(&state, "core-008") < 0.0);
 
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert_eq!(
             unit_view(&reply, &unit_of(&reply, "core-008")).position,
             Position::Atk
@@ -777,7 +817,8 @@ mod defense_switch_1696 {
             "p2": { "health": 7, "field": ["core-045"] },
         }));
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
+            .expect("a reply");
         assert_eq!(reply.players[AI].hero.health, 26);
         assert_eq!(
             unit_view(&reply, &unit_of(&reply, "core-045")).position,

@@ -13,7 +13,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{CHINESE_TAG, HAND_CAP};
+use crate::config::{CHINESE_TAG, HAND_CAP, LIBRARY_CAP};
 use crate::damage::DamageTarget;
 use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
@@ -104,10 +104,27 @@ pub fn zone_count(state: &GameState, player: PlayerId, zone: OffFieldZone) -> i3
     pile_of(state, player, zone).len() as i32
 }
 
-/// §2.4, R4, R1143: the most cards this player's hand holds before an arriving card is burned: `HAND_CAP`,
-/// or the size an effect set for the game (Meditative #79). Every rule reads the cap here. Public (§10.8).
+/// §2.4, R4, R1143: the most cards this player's hand holds before a card arriving is burned —
+/// `HAND_CAP`, or the hand size an effect set for the rest of the game (Meditative #79). Whether the
+/// hand has room is `room_in`'s question, not this one's. Public (§10.8).
 pub fn hand_cap_of(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].hand_cap.unwrap_or(HAND_CAP)
+}
+
+/// §2.4, R4, R80, R1143: how many more cards this player's `pile` takes before the next one is burned
+/// (a hand, at its `hand_cap_of`) or turned away (a library, at `LIBRARY_CAP`). It is the one test
+/// of a full pile: the two arrivals that enforce the caps (`draw::add_to_hand`, the library's
+/// shuffle-in) and every rule that asks first — "fill your hand", "your hand is full", a buy, a pass,
+/// a Trade — read it here. Never below 0: a hand already above a lowered cap keeps its cards and has
+/// no room (R1143). A graveyard or an exile pile has no cap, so it always has room (`i32::MAX`).
+/// Public (§10.8).
+pub fn room_in(state: &GameState, player: PlayerId, pile: OffFieldZone) -> i32 {
+    let cap = match pile {
+        OffFieldZone::Hand => hand_cap_of(state, player),
+        OffFieldZone::Library => LIBRARY_CAP,
+        OffFieldZone::Graveyard | OffFieldZone::Exile => return i32::MAX,
+    };
+    (cap - zone_count(state, player, pile)).max(0)
 }
 
 /// R2250000: whether this player's hand holds a card of one of these definitions ("if you have a
@@ -382,6 +399,39 @@ pub fn last_face_up_played(state: &GameState, player: PlayerId) -> Option<FaceUp
         .game_log
         .as_ref()
         .and_then(|log| log.last_face_up_play.clone())
+}
+
+/// R1850003, R1865000, R2476000: the cards held beneath `holder` on its stay now (`effects::hold`), in
+/// the order taken: Stinkyscape #9 Ticketed's permanent, #135.1 Sack's Unit, #112 Job Application's
+/// resume. A card held on an earlier stay of the holder's is not its own (`stays`). Each was taken in
+/// public, so its preview may name it. Copies.
+pub fn held_beneath(state: &GameState, holder: &CardInstance) -> Vec<CardInstance> {
+    state
+        .held
+        .iter()
+        .flatten()
+        .filter(|held| {
+            held.holder_id == holder.id
+                && !crate::stays::left_field_after(state, held.holder_mark, &holder.id)
+        })
+        .map(|held| held.card.clone())
+        .collect()
+}
+
+/// R1855003, R2476000: how many of `player`'s Anomaly scans have missed this game, which the Scanning
+/// Probes' chances grow by (`effects::anomaly_chances`). A miss is silent, so only the player may read
+/// it: a preview of it stays in their own hand.
+pub fn anomaly_misses_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].anomaly_misses.unwrap_or(0)
+}
+
+/// R1849004, R2476000: how much more `card`'s own-turn redirect (Stinkyscape #5 Masochism Unmasked)
+/// may take off its controller's hero this turn: its declared `cap` (R386) less what it has taken this
+/// turn, at least 0. `None` for a card with no such redirect.
+pub fn own_turn_redirect_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let redirect = crate::scripts::flags_of(state, card).own_turn_redirect?;
+    let cap = crate::params::declared_or(state, card, "cap", redirect.cap).max(0);
+    Some((cap - crate::damage::own_turn_redirect_moved(state, card)).max(0))
 }
 
 // Readers for the Classic #1–#45 cards (card-specific)

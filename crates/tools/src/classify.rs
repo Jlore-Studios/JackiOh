@@ -1,7 +1,44 @@
-//! `cargo jackioh classify`: detects impact of commit diffs (#1360, #1365, R1365000).
-//! Reports kind (Cards, AI, App, Internal), tier (major, patch, micro), and playing families.
-//! Stage 1 diffs catalog wording, scripts, and sets (R1420, R2050000, R2173001, R1846000, R2204000).
-//! Stage 2 verifies script divergences, engine rule impacts (R2455000), and AI equivalence.
+//! `cargo jackioh classify --base <rev> [--head <rev>] [--parent-bin <path>] [--json]` (#1365,
+//! R1365000): what a change between two commits does to the game, read from its effect rather than
+//! its paths, so a patch number moves exactly when the cards do (#1360). It names a **kind**, the
+//! highest the change reaches of Cards, AI, App and Internal, and for Cards a **tier** (major, patch
+//! or micro) and the card families that play differently. Nothing overrides it: no flag, title or
+//! label.
+//!
+//! A card change is a patch when `PATCH_MIN_REPRINTS` families are reprinted (their catalog entry
+//! changed and they play differently: a balance pass), when `PATCH_MIN_CARDS` families play
+//! differently by any route, or when a rule every game meets changed (R2455000, R2499000); anything
+//! smaller is a micro. R2529000: a change to how cards look (`CARD_VISUALS`) is a micro too, with no
+//! family, and a system the owner names (`SYSTEM_RELEASES`) ships as a patch, its fragment's claim.
+//!
+//! Stage 1 reads the diff. `catalog.json` card by card: the wording fields (`WORDING_FIELDS`) a
+//! player reads and no game does, every other field plays. Each card script's code, the lines
+//! `catalog loc` counts, so its tests, comments, `use` lines and layout are not code. The sets
+//! `SHIPPED_SETS` names on each side: a set that ships is a major, unless the owner wraps it into an
+//! earlier set's line (`WRAPPED_SETS`, R2204000), when it earns the tier its cards do; every card of a
+//! set that ships plays differently, and a card of a set that has not shipped is no change (R1420). And the paths of everything else (`area`), whose code is the same
+//! lines with their `use` declarations kept, since an import can change which code runs (R2050000).
+//! R2173001: while a card that reads the BUSTED or complicated lists (R1846000) ships on both sides, a
+//! change that moves a card that can join a pool across `BUSTED_CODE_LINES` or `COMPLICATED_CODE_LINES`
+//! (each side's scripts counted by `card_lists`, each side's thresholds) plays every such reader
+//! differently, so `--claims` asks for its fragment.
+//!
+//! Stage 2 (`--parent-bin`, the base's build, with this binary built from the head) asks the base
+//! build what the diff cannot say:
+//! - a card claimed only through its script keeps the claim only when its forced games diverge
+//!   between the builds (`luau diff`'s check), so a refactor claims nothing;
+//! - a change to code a card's play can rest on (`Area::PlayCode`) replays `UNFORCED_GAMES` unforced
+//!   games, and the cards each divergence touches play differently; divergences that touch no card
+//!   are a rule every game meets, and make a patch, once they reach `RULE_MIN_GAMES` of the games
+//!   (R2455000), and fewer count as no card;
+//! - a change to the AI plays the same self-play games on both builds: identical logs mean the AI
+//!   decides as it did, and the change is Internal. `--selfplay-side` plays one side's games into a
+//!   directory and `--selfplay-dir` compares two such runs instead, so CI plays each side in a job of
+//!   its own (#2651).
+//!
+//! It stops once `PATCH_MIN_CARDS` families play differently, the tier being a patch already.
+//! Without `--parent-bin`, stage 1's answer stands, and the output names what stage 2 would have
+//! checked: script claims count unconfirmed, a change to play code counts as none.
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -46,6 +83,12 @@ const UNFORCED_GAMES: u32 = 200;
 /// statistics enough to restart them all, and counts as no card.
 const RULE_MIN_GAMES: usize = UNFORCED_GAMES as usize / 4;
 
+/// R2499000: the families a change must reprint for a patch, however few others it reaches. A
+/// reprinted family's catalog entry changed and it plays differently: a balance pass, which moves
+/// those cards' stats on purpose, as an engine change that only reaches cards does not
+/// (`PATCH_MIN_CARDS`).
+pub(crate) const PATCH_MIN_REPRINTS: usize = 15;
+
 /// Stage 2: the self-play games a change to the AI plays on both builds, and their seed base.
 const SELFPLAY_GAMES: u32 = 8;
 const SELFPLAY_SEED: &str = "classify";
@@ -59,6 +102,22 @@ pub(crate) const WRAPPED_SETS: &[(SetName, SetName)] = &[(SetName::TrainingGroun
 /// R2204000: whether `set`, as its name is written, is wrapped into an earlier set's line.
 pub(crate) fn wrapped(set: &str) -> bool {
     WRAPPED_SETS.iter().any(|(wrapped, _)| wrapped.as_str() == set)
+}
+
+/// R2529000: where the cards' look lives in the client: their faces, art, frames, foils and marks,
+/// and the CSS that draws them. A change there (its tests aside) changes how cards look and not how
+/// they play, so it is a micro of no family, claimed by a fragment's `visual`.
+const CARD_VISUALS: &str = "apps/web/src/cards/";
+
+/// R2529000: the systems the owner names a patch, each by its tracker issue and a name. The
+/// classifier cannot tell a huge system from a big refactor, so a fragment claims one
+/// (`patches --system <issue>`) and `patches ship` names it a patch whatever its cards earn. Naming
+/// one is the owner's call, never a builder's, as wrapping a set is (R2204000).
+pub(crate) const SYSTEM_RELEASES: &[(u32, &str)] = &[];
+
+/// R2529000: whether the owner names `issue` a system (`SYSTEM_RELEASES`).
+pub(crate) fn system_named(issue: u32) -> bool {
+    SYSTEM_RELEASES.iter().any(|(named, _)| *named == issue)
 }
 
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
@@ -83,6 +142,35 @@ pub struct Args {
     /// does not show. Needs `--parent-bin` whenever stage 1 leaves something unchecked.
     #[arg(long)]
     claims: bool,
+    /// #2651: play one side of stage 2's AI check, `SELFPLAY_GAMES` self-play games on
+    /// `SELFPLAY_SEED` (`head` on this binary, `base` on `--parent-bin`), into
+    /// `<--selfplay-dir>/<side>` and stop, so each side plays in a CI job of its own. Nothing plays
+    /// unless stage 1 finds a change to the AI and none to the cards (`plays_selfplay`).
+    #[arg(long, value_enum, requires = "selfplay_dir")]
+    selfplay_side: Option<SelfplaySide>,
+    /// #2651: with `--selfplay-side`, where that side's games go; beside `--parent-bin` alone, where
+    /// stage 2's AI check reads both sides' games (`<dir>/head`, `<dir>/base`) instead of playing them.
+    #[arg(long, value_name = "DIR")]
+    selfplay_dir: Option<PathBuf>,
+}
+
+/// One side of stage 2's AI check (`--selfplay-side`, #2651).
+#[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+enum SelfplaySide {
+    /// The head's games, on this binary.
+    Head,
+    /// The base's games, on `--parent-bin`.
+    Base,
+}
+
+impl SelfplaySide {
+    /// The side's directory under `--selfplay-dir`, and under stage 2's own temporary one.
+    fn dir_name(self) -> &'static str {
+        match self {
+            SelfplaySide::Head => "head",
+            SelfplaySide::Base => "base",
+        }
+    }
 }
 
 /// `--json --claims`: the classification, the labels CI puts on the pull request, and what the
@@ -145,6 +233,8 @@ enum Area {
     /// crate outside the scripts (shared helpers, the compiled data, the build script).
     PlayCode,
     Ai,
+    /// R2529000: the cards' look in the client (`CARD_VISUALS`).
+    CardVisual,
     App,
     Internal,
 }
@@ -180,6 +270,9 @@ fn area(path: &str) -> Area {
     }
     if path == "crates/ai/generation.json" {
         return Area::Ai;
+    }
+    if path.starts_with(CARD_VISUALS) {
+        return Area::CardVisual;
     }
     if let Some(file) = path.strip_prefix("crates/ai/src/") {
         return if AI_TOOLING.contains(&file) {
@@ -323,6 +416,8 @@ pub(crate) struct Diff {
     pub scripts: BTreeSet<String>,
     pub play_code: bool,
     pub ai: bool,
+    /// R2529000: the cards' look changed (`CARD_VISUALS`).
+    pub visual: bool,
     pub app: bool,
 }
 
@@ -387,6 +482,7 @@ pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Di
             }
             Area::PlayCode => diff.play_code = true,
             Area::Ai => diff.ai = true,
+            Area::CardVisual => diff.visual = true,
             Area::App => diff.app = true,
             Area::Catalog | Area::Internal => {}
         }
@@ -436,10 +532,15 @@ pub(crate) struct Classification {
     pub sets: Vec<String>,
     /// The families that play differently.
     pub cards: Vec<String>,
+    /// R2499000: the families of `cards` whose catalog entry changed, a field that plays or their
+    /// wording beside a change to their play.
+    pub reprinted: Vec<String>,
     /// The families whose wording alone changed.
     pub wording: Vec<String>,
     /// A rule every game meets (`Checked::rule`) made the tier a patch.
     pub rule: bool,
+    /// R2529000: the cards' look changed, a micro of no family at least.
+    pub visual: bool,
     pub stage2: &'static str,
     /// What stage 2 would have checked, when it did not run.
     pub unchecked: Vec<String>,
@@ -466,11 +567,16 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
         }
     }
     let rule = checked.is_some_and(|checked| checked.rule);
+    let reprinted: Vec<String> = cards
+        .iter()
+        .filter(|family| diff.play.contains(*family) || diff.wording.contains(*family))
+        .cloned()
+        .collect();
     let tier = if diff.sets.iter().any(|set| !wrapped(set)) {
         Some(Tier::Major)
-    } else if rule || cards.len() >= PATCH_MIN_CARDS {
+    } else if rule || cards.len() >= PATCH_MIN_CARDS || reprinted.len() >= PATCH_MIN_REPRINTS {
         Some(Tier::Patch)
-    } else if !cards.is_empty() || !diff.wording.is_empty() {
+    } else if !cards.is_empty() || !diff.wording.is_empty() || diff.visual {
         Some(Tier::Micro)
     } else {
         None
@@ -499,7 +605,9 @@ pub(crate) fn classify(diff: &Diff, checked: Option<&Checked>) -> Classification
             .cloned()
             .collect(),
         cards: cards.into_iter().collect(),
+        reprinted,
         rule,
+        visual: diff.visual,
         stage2: if checked.is_some() { "ran" } else { "skipped" },
         unchecked,
     }
@@ -744,7 +852,8 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
 /// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353): each
 /// plays its games on every core but then waits on its slowest, and one after the other they took
 /// `rust (classify)` past seven minutes. On four cores one run took 162 s, nearly all of it one game
-/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same.
+/// of 159 s; the two took 324 s in turn and 226 s side by side, their lines the same. Or each in a CI
+/// job of its own (`--selfplay-side`, #2651).
 fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
     fs::create_dir_all(out).with_context(|| format!("creating {}", out.display()))?;
     let games = SELFPLAY_GAMES.to_string();
@@ -757,9 +866,8 @@ fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
         .with_context(|| format!("running {} selfplay", bin.display()))
 }
 
-/// A self-play run's games, once it has finished, as the comparison reads them: seed, log, final hash
-/// and result (not the catalog version or the commit, which name the build).
-fn selfplay_games(bin: &Path, out: &Path, run: Child) -> Result<Vec<Value>> {
+/// Waits for a self-play run `start_selfplay` started, and fails when the run did.
+fn finish_selfplay(bin: &Path, run: Child) -> Result<()> {
     let output = run
         .wait_with_output()
         .with_context(|| format!("running {} selfplay", bin.display()))?;
@@ -770,7 +878,18 @@ fn selfplay_games(bin: &Path, out: &Path, run: Child) -> Result<Vec<Value>> {
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
-    let file = out.join(format!("selfplay-{SELFPLAY_SEED}-1-{SELFPLAY_GAMES}.jsonl"));
+    Ok(())
+}
+
+/// The file a self-play run of `SELFPLAY_GAMES` on `SELFPLAY_SEED` writes into `out`.
+fn selfplay_file(out: &Path) -> PathBuf {
+    out.join(format!("selfplay-{SELFPLAY_SEED}-1-{SELFPLAY_GAMES}.jsonl"))
+}
+
+/// A self-play run's games, in `out`, as the comparison reads them: seed, log, final hash and result
+/// (not the catalog version or the commit, which name the build).
+fn selfplay_games(out: &Path) -> Result<Vec<Value>> {
+    let file = selfplay_file(out);
     let text = fs::read_to_string(&file).with_context(|| format!("reading {}", file.display()))?;
     text.lines()
         .map(|line| {
@@ -794,8 +913,15 @@ const PARENT_REFUSED_DECKS: &str = "cards (§2.6 L2), got ";
 /// panics on them (it catches no unwind), so `parent_check` fails with the panic's text in its
 /// stderr: the change moved what every game is dealt, a rule.
 fn refuses_decks(error: &anyhow::Error) -> bool {
-    format!("{error:#}").contains(PARENT_REFUSED_DECKS)
+    let text = format!("{error:#}");
+    text.contains(PARENT_REFUSED_DECKS) || text.contains(PARENT_REFUSED_PAIR)
 }
+
+/// R2511001: the text of a parent's refusal of a deck holding a Core card beside its Training Grounds
+/// snapshot, which builds from before issue #2511 word as "… a deck holds one of the two (§2.6 L3,
+/// R2195000)". The head lifted that part of §2.6 L3, so it deals decks the parent refuses: a deck
+/// rule, read as R1705004 reads a refused deck size.
+const PARENT_REFUSED_PAIR: &str = "a deck holds one of the two (§2.6 L3, R2195000)";
 
 /// R1884002: the text of the parent's refusal of a card of a set it does not ship (§2.6 L3, R1420),
 /// which `validate_setup` words as "\"<id>\" is a card of <set>, which has not shipped yet".
@@ -828,8 +954,15 @@ fn every_game(cardless: &BTreeSet<String>) -> bool {
     cardless.len() >= RULE_MIN_GAMES
 }
 
+/// Whether stage 2's AI check can run on stage 1's reading: the AI changed and, by the diff alone,
+/// no card did (a catalog field, wording, the cards' look, a set that ships). `check` also skips it
+/// when its own checks find a card change; `--selfplay-side` plays nothing when this is false.
+fn plays_selfplay(diff: &Diff) -> bool {
+    diff.ai && diff.play.is_empty() && diff.wording.is_empty() && !diff.visual && diff.sets.is_empty()
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
-fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
+fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -> Result<Checked> {
     let mut checked = Checked::default();
     let enough = |checked: &Checked| {
         diff.play.len() + checked.scripts.len() + checked.touched.len() >= PATCH_MIN_CARDS || checked.rule
@@ -884,24 +1017,59 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         }
         let _ = fs::remove_file(&traces);
     }
-    let cards_changed = !diff.play.is_empty()
-        || !diff.wording.is_empty()
-        || !diff.sets.is_empty()
-        || !checked.scripts.is_empty()
-        || !checked.touched.is_empty()
-        || checked.rule;
-    if diff.ai && !cards_changed {
-        let dir = temp_traces().with_extension("selfplay");
-        let current = std::env::current_exe().context("this binary's path")?;
-        let (head_out, base_out) = (dir.join("head"), dir.join("base"));
-        let ours = start_selfplay(&current, &head_out);
-        let theirs = start_selfplay(parent, &base_out);
-        let ours = ours.and_then(|run| selfplay_games(&current, &head_out, run));
-        let theirs = theirs.and_then(|run| selfplay_games(parent, &base_out, run));
-        let _ = fs::remove_dir_all(&dir);
-        checked.ai = Some(ours? != theirs?);
+    let found = !checked.scripts.is_empty() || !checked.touched.is_empty() || checked.rule;
+    if plays_selfplay(diff) && !found {
+        checked.ai = Some(match selfplay_dir {
+            // #2651: each side was played in a job of its own (`--selfplay-side`).
+            Some(dir) => {
+                selfplay_games(&dir.join(SelfplaySide::Head.dir_name()))?
+                    != selfplay_games(&dir.join(SelfplaySide::Base.dir_name()))?
+            }
+            None => {
+                let dir = temp_traces().with_extension("selfplay");
+                let current = std::env::current_exe().context("this binary's path")?;
+                let (head_out, base_out) = (
+                    dir.join(SelfplaySide::Head.dir_name()),
+                    dir.join(SelfplaySide::Base.dir_name()),
+                );
+                // Both start before either is waited on, so they play side by side (#2353).
+                let ours = start_selfplay(&current, &head_out);
+                let theirs = start_selfplay(parent, &base_out);
+                let ours = ours
+                    .and_then(|run| finish_selfplay(&current, run))
+                    .and_then(|()| selfplay_games(&head_out));
+                let theirs = theirs
+                    .and_then(|run| finish_selfplay(parent, run))
+                    .and_then(|()| selfplay_games(&base_out));
+                let _ = fs::remove_dir_all(&dir);
+                ours? != theirs?
+            }
+        });
     }
     Ok(checked)
+}
+
+/// `--selfplay-side`: one side of stage 2's AI check, played into `<dir>/<side>` for another run's
+/// `--selfplay-dir` to compare (#2651): `head` on this binary, `base` on `parent`. It plays only
+/// when `plays_selfplay` holds, and prints one JSON line saying whether it played.
+fn play_side(side: SelfplaySide, diff: &Diff, parent: Option<&Path>, dir: &Path) -> Result<()> {
+    let out = dir.join(side.dir_name());
+    let played = plays_selfplay(diff);
+    if played {
+        let bin = match side {
+            SelfplaySide::Head => std::env::current_exe().context("this binary's path")?,
+            SelfplaySide::Base => parent
+                .context("--selfplay-side base needs --parent-bin, the base's build")?
+                .to_path_buf(),
+        };
+        let run = start_selfplay(&bin, &out)?;
+        finish_selfplay(&bin, run)?;
+    }
+    println!(
+        "{}",
+        serde_json::json!({ "selfplay": side.dir_name(), "played": played, "out": out.display().to_string() })
+    );
+    Ok(())
 }
 
 // The command
@@ -948,12 +1116,22 @@ pub fn run(args: Args) -> Result<()> {
     let (before, after) = (side_at(&root, &base)?, side_at(&root, &head)?);
     let diff = read_diff(&before, &after, &files);
 
+    if let Some(side) = args.selfplay_side {
+        if side == SelfplaySide::Head && rev("HEAD")? != head {
+            bail!("--selfplay-side head plays this build as the head's, but the checkout is not at {head}");
+        }
+        let dir = args
+            .selfplay_dir
+            .as_deref()
+            .context("--selfplay-side needs --selfplay-dir")?;
+        return play_side(side, &diff, args.parent_bin.as_deref(), dir);
+    }
     let checked = match &args.parent_bin {
         Some(parent) => {
             if rev("HEAD")? != head {
                 bail!("stage 2 runs this build as the head's, but the checkout is not at {head}");
             }
-            Some(check(&diff, &after, parent)?)
+            Some(check(&diff, &after, parent, args.selfplay_dir.as_deref())?)
         }
         None => None,
     };
@@ -1003,6 +1181,7 @@ fn print_classification(classification: &Classification) {
     for (label, list) in [
         ("sets that ship", &classification.sets),
         ("cards that play differently", &classification.cards),
+        ("of them reprinted", &classification.reprinted),
         ("wording only", &classification.wording),
         ("not checked (no --parent-bin)", &classification.unchecked),
     ] {
@@ -1012,6 +1191,9 @@ fn print_classification(classification: &Classification) {
     }
     if classification.rule {
         println!("  divergences no card explains: a rule every game meets");
+    }
+    if classification.visual {
+        println!("  how cards look changed");
     }
 }
 
@@ -1053,20 +1235,71 @@ mod tests {
         assert!(classified.cards.is_empty());
     }
 
+    // R2499000: a balance pass is a patch from `PATCH_MIN_REPRINTS` reprinted families.
     #[test]
-    fn r1365000_r2455000_one_family_short_of_the_bar_is_a_micro_and_the_bar_a_patch() {
+    fn r2499000_fourteen_reprinted_families_are_a_micro_and_fifteen_a_patch() {
         for (n, tier) in [
-            (10, Tier::Micro),
-            (PATCH_MIN_CARDS - 1, Tier::Micro),
-            (PATCH_MIN_CARDS, Tier::Patch),
+            (PATCH_MIN_REPRINTS - 1, Tier::Micro),
+            (PATCH_MIN_REPRINTS, Tier::Patch),
         ] {
             let diff = read_diff(
                 &side(cards(n, 1, "T."), SHIPPED),
                 &side(cards(n, 2, "T."), SHIPPED),
                 &[],
             );
-            assert_eq!(classify(&diff, None).tier, Some(tier), "{n} cards");
+            let classified = classify(&diff, None);
+            assert_eq!(
+                (classified.tier, classified.reprinted.len()),
+                (Some(tier), n),
+                "{n} cards"
+            );
         }
+    }
+
+    // R2455000, R2499000: families an engine change only reaches reprint nothing, so they need the
+    // wider bar, `PATCH_MIN_CARDS`.
+    #[test]
+    fn r2455000_r2499000_families_the_engine_only_reaches_need_the_wider_bar() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = Diff {
+            play_code: true,
+            ..read_diff(&both, &both, &[])
+        };
+        for (n, tier) in [
+            (PATCH_MIN_REPRINTS, Tier::Micro),
+            (PATCH_MIN_CARDS - 1, Tier::Micro),
+            (PATCH_MIN_CARDS, Tier::Patch),
+        ] {
+            let reached = Checked {
+                touched: (1..=n).map(|k| format!("core-{k:03}")).collect(),
+                ..Checked::default()
+            };
+            let classified = classify(&diff, Some(&reached));
+            assert_eq!(
+                (classified.tier, classified.reprinted.len()),
+                (Some(tier), 0),
+                "{n} cards"
+            );
+        }
+    }
+
+    // R2499000: a rework rewrites a card's text and its script, so its wording beside a script that
+    // plays reprints it; its wording alone does not.
+    #[test]
+    fn r2499000_a_rework_reprints_its_card_through_its_wording_and_its_script() {
+        let diff = read_diff(
+            &side(cards(PATCH_MIN_REPRINTS, 1, "Old."), SHIPPED),
+            &side(cards(PATCH_MIN_REPRINTS, 1, "New."), SHIPPED),
+            &[],
+        );
+        let reworked = Checked {
+            scripts: diff.wording.clone(),
+            ..Checked::default()
+        };
+        let classified = classify(&diff, Some(&reworked));
+        assert_eq!(classified.reprinted.len(), PATCH_MIN_REPRINTS);
+        assert_eq!(classified.tier, Some(Tier::Patch));
+        assert_eq!(classify(&diff, Some(&Checked::default())).tier, Some(Tier::Micro));
     }
 
     #[test]
@@ -1301,6 +1534,40 @@ mod tests {
         assert!(classification.cards.contains(&"stinkyscape-109".to_string()));
     }
 
+    // R2529000: how cards look is a micro of no family; its tests and the rest of the client are not.
+    #[test]
+    fn r2529000_a_change_to_how_cards_look_is_a_micro_of_no_family() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let face = |path: &str| {
+            read_diff(
+                &both,
+                &both,
+                &[file(path, "export const gold = 1;\n", "export const gold = 2;\n")],
+            )
+        };
+        let looks = classify(&face("apps/web/src/cards/CardFace.tsx"), None);
+        assert_eq!(
+            (looks.kind, looks.tier, looks.visual),
+            (Kind::Cards, Some(Tier::Micro), true)
+        );
+        assert!(looks.cards.is_empty());
+        assert_eq!(labels(&looks), vec!["kind:cards", "tier:micro"]);
+        let test = classify(&face("apps/web/src/cards/CardFace.test.tsx"), None);
+        assert_eq!((test.kind, test.tier, test.visual), (Kind::Internal, None, false));
+        let board = classify(&face("apps/web/src/game/Game.tsx"), None);
+        assert_eq!((board.kind, board.tier, board.visual), (Kind::App, None, false));
+        let comment = read_diff(
+            &both,
+            &both,
+            &[file(
+                "apps/web/src/cards/CardFace.tsx",
+                "export const gold = 1;\n",
+                "// The gold.\nexport const gold = 1;\n",
+            )],
+        );
+        assert_eq!(classify(&comment, None).kind, Kind::Internal);
+    }
+
     #[test]
     fn r1365000_a_script_edit_to_comments_tests_or_layout_is_internal() {
         let edited = SCRIPT
@@ -1385,6 +1652,9 @@ mod tests {
         for (path, expected) in [
             ("apps/web/src/game/Game.tsx", Area::App),
             ("apps/web/src/game/Game.test.tsx", Area::Internal),
+            ("apps/web/src/cards/CardFace.tsx", Area::CardVisual),
+            ("apps/web/src/cards/cards.css", Area::CardVisual),
+            ("apps/web/src/cards/CardFace.test.tsx", Area::Internal),
             ("crates/server/src/api/stats.rs", Area::App),
             ("crates/engine/src/wire/stats.rs", Area::App),
             ("crates/engine/src/combat.rs", Area::PlayCode),
@@ -1600,6 +1870,19 @@ mod tests {
         assert!(!refuses_decks(&handicap));
     }
 
+    #[test]
+    fn r2511001_a_base_build_refusing_a_core_card_beside_its_legacy_card_is_a_rule() {
+        // `parent_check`'s failure when a build from before #2511 panics in `create_game` on a deck
+        // holding core-026 beside traininggrounds-050.
+        let refused = anyhow::anyhow!(
+            "/tmp/main-jackioh could not check /tmp/traces.jsonl: thread '<unnamed>' panicked at \
+             crates/engine/src/state.rs:2585:9:\np2: \"traininggrounds-050\" and \"core-026\" are a Core \
+             card and its Training Grounds snapshot; a deck holds one of the two (§2.6 L3, R2195000)"
+        );
+        assert!(refuses_decks(&refused));
+        assert!(read_refusal(refused, false).expect("a rule"));
+    }
+
     // R2455000: divergences that touch no card are a rule every game meets only once they hold a
     // quarter of the unforced games; fewer leave the change to the families its divergences name, so
     // a narrow engine fix (v0.5.10's six families) is a micro.
@@ -1659,5 +1942,98 @@ mod tests {
         let decks = || anyhow::anyhow!("p1: deck must hold exactly 20 cards (§2.6 L2), got 25");
         assert!(read_refusal(decks(), false).expect("a rule"));
         assert!(read_refusal(decks(), true).expect("a rule"));
+    }
+
+    // #2651: each side of stage 2's AI check can play in a job of its own.
+    #[derive(clap::Parser, Debug)]
+    struct Cli {
+        #[command(flatten)]
+        args: Args,
+    }
+
+    fn parse(argv: &[&str]) -> Result<Args, clap::Error> {
+        use clap::Parser;
+        Cli::try_parse_from(std::iter::once("classify").chain(argv.iter().copied())).map(|cli| cli.args)
+    }
+
+    #[test]
+    fn the_selfplay_flags_parse_and_a_side_needs_its_dir() {
+        let args = parse(&["--base", "b", "--selfplay-side", "base", "--selfplay-dir", "d"]).unwrap();
+        assert_eq!(args.selfplay_side, Some(SelfplaySide::Base));
+        assert_eq!(args.selfplay_dir, Some(PathBuf::from("d")));
+        assert!(parse(&["--base", "b", "--selfplay-side", "head"]).is_err());
+        assert!(parse(&["--selfplay-side", "left", "--selfplay-dir", "d", "--base", "b"]).is_err());
+        let args = parse(&["--base", "b", "--parent-bin", "p", "--selfplay-dir", "d"]).unwrap();
+        assert_eq!(
+            (args.selfplay_side, args.selfplay_dir),
+            (None, Some(PathBuf::from("d")))
+        );
+    }
+
+    /// The AI's file changed and nothing else: stage 1 finds an AI change and no card.
+    fn ai_only() -> (Side, Diff) {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let diff = read_diff(
+            &both,
+            &both,
+            &[file("crates/ai/src/evaluate.rs", "fn a() { 1 }", "fn a() { 2 }")],
+        );
+        (both, diff)
+    }
+
+    #[test]
+    fn a_selfplay_dir_is_compared_by_seed_log_hash_and_result() {
+        let (both, diff) = ai_only();
+        let dir = temp_traces().with_extension("selfplay-test");
+        // A side's one game, its log and the build's name as given.
+        let play = |side: SelfplaySide, log: Value, build: &str| {
+            let out = dir.join(side.dir_name());
+            fs::create_dir_all(&out).unwrap();
+            let game = json!({
+                "seed": "classify:1", "decks": [[], []], "log": log, "hash": "h", "result": null,
+                "turns": 1, "catalog": build, "commit": build
+            });
+            fs::write(selfplay_file(&out), format!("{game}\n")).unwrap();
+        };
+        let log = || json!([{ "type": "endTurn" }]);
+        let checked = || check(&diff, &both, Path::new("no-parent-is-run"), Some(&dir));
+        // The builds' names differ and nothing else does: the AI decides as it did.
+        play(SelfplaySide::Head, log(), "head-build");
+        play(SelfplaySide::Base, log(), "base-build");
+        assert_eq!(checked().unwrap().ai, Some(false));
+        // One log differs: the AI decides differently.
+        play(SelfplaySide::Base, json!([]), "base-build");
+        assert_eq!(checked().unwrap().ai, Some(true));
+        // A side that never played is an error, not "the same".
+        fs::remove_dir_all(&dir).unwrap();
+        assert!(checked().is_err());
+    }
+
+    #[test]
+    fn a_side_plays_only_when_the_ai_check_can_run() {
+        let (both, ai_diff) = ai_only();
+        assert!(plays_selfplay(&ai_diff));
+        // The AI changed, and so did a card's wording: stage 2 skips the AI check.
+        let reworded = read_diff(
+            &side(cards(1, 1, "Old."), SHIPPED),
+            &side(cards(1, 1, "New."), SHIPPED),
+            &[file("crates/ai/src/evaluate.rs", "fn a() { 1 }", "fn a() { 2 }")],
+        );
+        assert!(reworded.ai && !plays_selfplay(&reworded));
+        let server = read_diff(
+            &both,
+            &both,
+            &[file("crates/server/src/main.rs", "fn a() { 1 }", "fn a() { 2 }")],
+        );
+        assert!(!plays_selfplay(&server));
+
+        let dir = temp_traces().with_extension("selfplay-side-test");
+        // Nothing to play: it says so and writes nothing.
+        play_side(SelfplaySide::Base, &server, None, &dir).unwrap();
+        assert!(!dir.exists());
+        // The base's side without the base's build is an error. (The head's side would run this
+        // test binary as `selfplay`, so it is not tried.)
+        assert!(play_side(SelfplaySide::Base, &ai_diff, None, &dir).is_err());
+        assert!(!dir.exists());
     }
 }

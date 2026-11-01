@@ -1,16 +1,37 @@
 // MN09 (#552): every Meditative face reads, measured in a real layout engine. The set is read off the
-// catalog (tokens included), so a card a later part adds is measured with no list to update here.
-//   FIT    base, Radiant and Chinese faces (ME-CN, #516, R1301: `crates/cards/chinese.json`) at the
-//          inspect view's two sizes; only a face in LONG_FACES may clamp, and only on the phone sheet,
-//          since the sheet prints the rules whole beside it.
-//   BOARD  the same cards in the hand, on the field and face up in the backrow, through `Game`.
-//   MARKS  the set mark (R503, the ensō), and "All Tribes" (R1382) leading the tags line of a card
-//          with every tribal tag (R1424).
-//   ART    each card's procedural art is its own, base or Radiant.
-// No face reads what ships (CardFace.tsx, cards/setMark.ts), so a catalog face is the shipped one (R1420).
-// The Created mark (ME-CREATED, R943) is of the card in play: meditative-prompts.cy.tsx checks it (#617).
-// Each measurement sits in `.should()`, retrying while `useFitText` settles, with a control (the face
-// fills its box, the name has a box and reads the card's name), since a collapsed box "fits" perfectly.
+// catalog (every entry of `Meditative`, its tokens included), so a card a later part adds is measured
+// the day it lands, with no list to update here.
+//
+//   FIT    every Meditative card's base and Radiant face, and its Chinese face on both (ME-CN, #516,
+//          R1301: `crates/cards/chinese.json` gives every Meditative card one), at the inspect view's
+//          two sizes — the hover preview's (PREVIEW_HEIGHT_PX tall) and the touch sheet's on the
+//          smallest phone (`.inspect-face--sheet`'s 56dvh of a 640 px screen) — keeps `.card-name` and
+//          `.card-text` inside their boxes on both axes (cards/fit.ts), and nothing clamps but a face
+//          named in LONG_FACES (which may clamp only on the sheet, at the
+//          reading floor, since the sheet prints the rules whole beside it).
+//   BOARD  the same cards where the board draws them: in the hand, as a Unit on the field and as a
+//          face-up Field Spell or Trap in the backrow, through `Game` with the real catalog at
+//          1280x720, 390x844 and 360x780. Every name stays inside its plate unclamped, except that a
+//          board minion's plate may end a long name in an ellipsis at its floor (cards.css, fit.ts:
+//          the hover preview shows it whole), and every face has a box.
+//   MARKS  the set mark (R503, the ensō) is on the face and clear of the gems, the name, the rules
+//          box, the stats and the crest at every size it shows, and gone below SET_MARK_MIN_FACE_PX;
+//          "All Tribes" (R1382) leads the tags line of a card with every tribal tag (R1424) and sits
+//          inside the face, clear of the rules box and the stats — on the catalog's cards that have
+//          them, and on a Meditative Unit given them, so the check holds before #87 lands.
+//   ART    each card's procedural art is its own: no two Meditative cards draw the same picture,
+//          base or Radiant.
+//
+// "With the set previewed": no face reads what ships (CardFace.tsx and cards/setMark.ts take the
+// set straight off the definition), so a face drawn from the catalog is the face a player will see
+// once the set ships (R1420); nothing here has to pretend `SHIPPED_SETS` lists it.
+//
+// The Created status (ME-CREATED, `CardView.created`, R943) is drawn on no face (R2647000):
+// meditative-prompts.cy.tsx checks a card in hand at phone width, and its hold's preview (#617).
+//
+// Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and each
+// carries a control (the face fills its box, the name has a box and reads the card's name), since a
+// collapsed box "fits" perfectly.
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";

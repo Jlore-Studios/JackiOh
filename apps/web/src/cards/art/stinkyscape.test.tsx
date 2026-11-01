@@ -197,7 +197,9 @@ describe("R2170000: CardArt draws the set's art and leaves every other card's", 
 
 describe("R503: a shipped Stinkyscape card keeps the picture v0.5.0 shipped it with", () => {
   // The hash of `stinkyscapeSvg`'s output on each face, recorded as the set shipped (v0.5.0, #1884),
-  // as `core-art-v0.1.json` records Core's: a change to the set's art fails here.
+  // as `core-art-v0.1.json` records Core's: a change to the set's art fails here, entry by entry.
+  // #2521 recorded S #176 Preemptive Strike and S #177 Cloaking Module as they ship, and S #137 again:
+  // renamed Starfleet Commander, a Human, it draws from its new name.
   const recorded = STINKYSCAPE_V050 as unknown as Readonly<Record<string, readonly [number, number]>>;
 
   it("R503 the fixture covers every Stinkyscape entry", () => {

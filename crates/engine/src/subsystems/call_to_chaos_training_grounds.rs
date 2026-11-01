@@ -14,7 +14,7 @@ use crate::config::{
 use crate::effects::add_to_hand::AddToHandArgs;
 use crate::effects::delay::ForRestOfGameArgs;
 use crate::prelude::json_as;
-use crate::query::{hand_cap_of, zone_count};
+use crate::query::room_in;
 use crate::script::{Effect, EffectContext, EffectPart, Hook, hook};
 use crate::state::{GameState, ModifierKind};
 use crate::subsystems::call_to_chaos::{CHAOS_TAG, ChaosEffectDef, cast_random_call_to_chaos};
@@ -171,11 +171,10 @@ fn build_fortify() -> Effect {
 ///    Refresh 4 (R364).
 fn build_designs() -> Effect {
     entry("designs", |ctx| {
-        let room = hand_cap_of(ctx.state, ctx.controller)
-            - zone_count(ctx.state, ctx.controller, OffFieldZone::Hand);
+        let room = room_in(ctx.state, ctx.controller, OffFieldZone::Hand);
         let mut effects: Vec<Effect> = match def_id_of(SetName::TrainingGrounds, DESIGN_INDEX) {
             None => vec![],
-            Some(def_id) => (0..room.max(0))
+            Some(def_id) => (0..room)
                 .map(|_| crate::effects::add_to_hand::add_to_hand(json_as(json!({ "defId": def_id }))))
                 .collect(),
         };

@@ -1,12 +1,15 @@
 //! SPEC §8.10 Stinkyscape 149 Wildar (R60, R97, R380, R1420, R1882000). (3) Spell, Legendary.
 //!   Base:    "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random Radiant
 //!            Call to Chaos to your hand."
-//!   Radiant: "Add a random Radiant Call to Chaos to your hand."
+//!   Radiant: "Add a random Call to Chaos to your opponent's hand. It costs (0). Then add a random
+//!            Radiant Call to Chaos to your hand. It costs (0)." (through v0.5.9f "Add a random Radiant
+//!            Call to Chaos to your hand.", `script_v0_5_9f`, kept, R767000)
 //!
 //! Two independent picks (R60, R1882000) from the Call to Chaos pool, the cards tagged Call to Chaos of
 //! the sets that ship (R380; the set's own two join it as it ships, R1420): the first a fresh card of the
 //! opponent's, owned by them, at `costOverride` 0, its edition hidden from its caster (R97); then the
 //! second its caster's, Radiant (§5.2), at its printed cost. A full hand burns its card (§2.4). The
+//! Radiant face does the same and its caster's card costs (0) too.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -25,28 +28,53 @@ fn add_call_to_chaos(riders: Value) -> Effect {
     add_random_from_catalog(json_as(args))
 }
 
-/// Then "add a random Radiant Call to Chaos to your hand".
-fn add_own() -> Effect {
-    add_call_to_chaos(json!({ "radiant": true }))
+/// "It costs (0)": the caster's Radiant Call to Chaos on the Radiant face (`costOverride`, a price,
+/// R1748003).
+const OWN_RADIANT_COST: i32 = 0;
+
+/// Then "add a random Radiant Call to Chaos to your hand", at `cost` when it names one.
+fn add_own(cost: Option<i32>) -> Effect {
+    let mut riders = json!({ "radiant": true });
+    if let Some(cost) = cost {
+        riders["costOverride"] = json!(cost);
+    }
+    add_call_to_chaos(riders)
+}
+
+/// "Add a random Call to Chaos to your opponent's hand. It costs (0)."
+fn add_theirs() -> Effect {
+    add_call_to_chaos(json!({ "player": "enemy", "costOverride": OPPONENT_COST }))
+}
+
+fn base_face() -> Script {
+    Script {
+        cry: Some(hook(|_ctx| vec![add_theirs(), add_own(None)])),
+        ..Script::default()
+    }
 }
 
 pub fn script() -> CardScripts {
-    let base = Script {
-        cry: Some(hook(|_ctx| {
-            vec![
-                add_call_to_chaos(json!({ "player": "enemy", "costOverride": OPPONENT_COST })),
-                add_own(),
-            ]
-        })),
-        ..Script::default()
-    };
-
     let radiant = Script {
-        cry: Some(hook(|_ctx| vec![add_own()])),
+        cry: Some(hook(|_ctx| vec![add_theirs(), add_own(Some(OWN_RADIANT_COST))])),
         ..Script::default()
     };
+    CardScripts {
+        base: base_face(),
+        radiant,
+    }
+}
 
-    CardScripts { base, radiant }
+/// R767000: through v0.5.9f the Radiant face added only its caster's Radiant Call to Chaos, at its
+/// printed cost; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    let radiant = Script {
+        cry: Some(hook(|_ctx| vec![add_own(None)])),
+        ..Script::default()
+    };
+    CardScripts {
+        base: base_face(),
+        radiant,
+    }
 }
 
 #[cfg(test)]
@@ -162,13 +190,29 @@ mod tests {
     }
 
     #[test]
-    fn radiant_adds_only_its_caster_s_radiant_call_to_chaos() {
+    fn radiant_gives_the_opponent_a_free_one_and_its_caster_a_free_radiant_one() {
         let s = wildar_at(0, true);
-        assert!(gained(&s, P2).is_empty());
+        let theirs = gained(&s, P2);
+        assert_eq!(theirs.len(), 1);
+        assert!(SHIPPED_EDITIONS.contains(&theirs[0].def_id.as_str()));
+        assert!(!theirs[0].radiant);
+        assert_eq!(cost_of(&s, &theirs[0]), OPPONENT_COST);
         let mine = gained(&s, P1);
         assert_eq!(mine.len(), 1);
         assert!(SHIPPED_EDITIONS.contains(&mine[0].def_id.as_str()));
         assert!(mine[0].radiant);
-        assert_eq!(cost_of(&s, &mine[0]), 4);
+        assert_eq!(cost_of(&s, &mine[0]), OWN_RADIANT_COST);
+    }
+
+    #[test]
+    fn r767000_the_script_kept_for_v0_5_9f_adds_only_its_caster_s_radiant_call_to_chaos() {
+        crate::under_kept(ID, script_v0_5_9f(), || {
+            let s = wildar_at(0, true);
+            assert!(gained(&s, P2).is_empty());
+            let mine = gained(&s, P1);
+            assert_eq!(mine.len(), 1);
+            assert!(mine[0].radiant);
+            assert_eq!(cost_of(&s, &mine[0]), 4);
+        });
     }
 }

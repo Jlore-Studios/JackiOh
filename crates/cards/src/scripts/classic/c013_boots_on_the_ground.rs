@@ -1,13 +1,13 @@
 //! C #13 Boots on the Ground (SPEC §8.6 row 13). (1) Unit, Human, Common, 2/1 → 4/2.
-//!   Base:    "Charge\nAfter this attacks, draw {draw}." — draw 1
-//!   Radiant: "Charge\nAfter this attacks, Recruit {recruits|card|cards}." — recruits 1
+//!   Base:    "Charge\nWhen this attacks, draw {draw}." — draw 1
+//!   Radiant: "Charge\nWhen this attacks, Recruit {recruits|card|cards}." — recruits 1
 //!
 //! Charge is printed on both catalog faces, so §10.4 layer 1 grants it and nothing here does.
 //!
-//! "After this attacks" is the `afterAttack` hook: the engine runs it after the state check that closes
-//! each combat this card attacked in, declared or forced (R53, #9 Moths to the Flame), and only while it
-//! is still on the field on the stay it attacked from, so one that died in the combat does nothing
-//! (R2285001). Defending is not attacking.
+//! "When this attacks" is the `whenAttacks` hook (R2285000, R2396000): the engine runs it before any
+//! damage of each attack this card makes, a declared one's once its trap window has closed and a forced
+//! one's before its combat (R53, #9 Moths to the Flame), so it draws or Recruits though it dies in that
+//! combat. An attack called off in its trap window runs nothing (R44), and defending is not attacking.
 //!
 //! Radiant: §6.3 Recruit, the first permanent from the top of your deck, summoned into its row per R64
 //! with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full. The
@@ -17,26 +17,52 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-013";
 
+/// "Draw {draw}."
+fn draws() -> Hook {
+    hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])
+}
+
+/// "Recruit {recruits|card|cards}.": one top-down scan per recruit.
+fn recruits() -> Hook {
+    hook(|ctx| {
+        (0..param(&*ctx, "recruits"))
+            .map(|_| recruit(json_as(json!({ "player": "self" }))))
+            .collect()
+    })
+}
+
 pub fn script() -> CardScripts {
+    // "When this attacks, draw {draw}."
     let base = Script {
-        after_attack: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        when_attacks: Some(draws()),
         ..Script::default()
     };
-
+    // "When this attacks, Recruit {recruits|card|cards}."
     let radiant = Script {
-        after_attack: Some(hook(|ctx| {
-            (0..param(&*ctx, "recruits"))
-                .map(|_| recruit(json_as(json!({ "player": "self" }))))
-                .collect()
-        })),
+        when_attacks: Some(recruits()),
         ..Script::default()
     };
     CardScripts { base, radiant }
 }
 
-// C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 after each combat it
-// attacked in and survived, forced ones included (R2285001); dying in it or defending draws nothing.
-// Radiant 4/2: Recruits instead, a recruited trap landing face-down (R33); numbers via `param()` (R386).
+/// R767000: the scripts v0.5.11 and before ran: "After this attacks", only for a survivor (R2285001).
+pub fn script_v0_5_11() -> CardScripts {
+    let base = Script {
+        after_attack: Some(draws()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        after_attack: Some(recruits()),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
+
+// C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 when it attacks,
+// before the damage, forced attacks included, and so though it dies in that combat (R2285000,
+// R2396000); an attack called off in its trap window (R44) or defending draws nothing. Radiant 4/2:
+// Recruits instead, a recruited trap landing face-down (R33); numbers via `param()` (R386). Forced
+// attacks come from #9 Moths to the Flame (start of turn: every enemy Unit attacks this).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,6 +82,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell.
     const SHEEPISH: &str = "core-041"; // (1) Trap.
     const ANCHOR: &str = "core-010";
+    const PAWN: &str = "core-096"; // Trap: cancels an attack lethal to its controller's hero (R44).
     const A: &str = "core-020";
     const B: &str = "core-001";
 
@@ -78,11 +105,33 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Charge)
     }
 
+    /// R2285000, R2396000: whether the first event `hit` matches comes before the first damage, in the
+    /// last action's events.
+    fn before_the_damage(s: &Scenario, hit: impl Fn(&GameEvent) -> bool) -> bool {
+        let events = s.events();
+        let first = events.iter().position(hit);
+        let damage = events.iter().position(|event| matches!(event, GameEvent::Damage { .. }));
+        matches!((first, damage), (Some(first), Some(damage)) if first < damage)
+    }
+
+    /// R44: p2 at 2 health with My Pawn face-down, so an attack on its hero is lethal and called off.
+    fn pawned(boots: Value) -> Scenario {
+        scenario(json!({
+            "p1": { "hand": [VANILLA], "field": [boots], "library": [TEMPO, A] },
+            "p2": {
+                "hand": [ANCHOR],
+                "library": [VANILLA, VANILLA],
+                "health": 2,
+                "backrow": [{ "def": PAWN, "faceUp": false }],
+            },
+        }))
+    }
+
     mod base {
         use super::*;
 
         #[test]
-        fn is_a_2_1_with_charge_played_this_turn_it_hits_the_hero_at_once_and_then_draws_1() {
+        fn is_a_2_1_with_charge_played_this_turn_it_draws_1_as_it_attacks_and_then_hits_the_hero() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOTS, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
 
             s.play(BOOTS, json!({}));
@@ -91,7 +140,7 @@ mod tests {
 
             s.expect_health(P2, 28);
             assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
-            s.expect_events(json!(["attackDeclared", "damage", "drawn"]));
+            s.expect_events(json!(["attackDeclared", "drawn", "damage"]));
         }
 
         #[test]
@@ -115,7 +164,19 @@ mod tests {
         }
 
         #[test]
-        fn r2285001_it_draws_nothing_when_it_died_in_that_combat() {
+        fn r2396000_draws_before_the_damage() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
+                "p2": { "hand": [ANCHOR], "field": [MENACE] },
+            }));
+
+            s.attack(BOOTS, MENACE);
+
+            assert!(before_the_damage(&s, |event| matches!(event, GameEvent::Drawn { player: P1, .. })));
+        }
+
+        #[test]
+        fn r2396000_draws_though_it_dies_in_that_combat() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -124,12 +185,12 @@ mod tests {
             s.attack(BOOTS, MENACE);
 
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR]);
-            assert_eq!(draws_by(&s, P1), 0);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
+            assert_eq!(draws_by(&s, P1), 1);
         }
 
         #[test]
-        fn r53_r2285001_moths_to_the_flame_forces_it_to_attack_and_it_dies_so_it_draws_nothing() {
+        fn r2396000_r53_a_forced_attack_into_moths_draws_though_it_dies() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
                 "p2": { "hand": [ANCHOR], "field": [MOTHS], "library": [VANILLA] },
@@ -139,7 +200,21 @@ mod tests {
 
             assert!(s.events().iter().any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })));
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR]);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
+            assert!(before_the_damage(&s, |event| matches!(event, GameEvent::Drawn { player: P1, .. })));
+        }
+
+        #[test]
+        fn r2396000_r44_an_attack_my_pawn_calls_off_runs_neither_face() {
+            for radiant in [false, true] {
+                let mut s = pawned(json!({ "def": BOOTS, "radiant": radiant }));
+
+                s.attack(BOOTS, "hero");
+
+                s.expect_health(P2, 2);
+                assert_eq!(draws_by(&s, P1), 0, "radiant: {radiant}");
+                assert_eq!(def_ids(&s.pile(P1, "library")), [TEMPO, A], "radiant: {radiant}");
+            }
         }
 
         #[test]
@@ -163,13 +238,15 @@ mod tests {
                 "p2": { "hand": [ANCHOR], "field": [MENACE] },
             }));
 
-            // It dies attacking, so it draws nothing (R2285001), and from the graveyard it answers nothing.
+            // It draws as it attacks, though it dies there (R2396000), and from the graveyard it answers
+            // nothing.
             s.attack(BOOTS, MENACE);
-            assert_eq!(draws_by(&s, P1), 0);
+            assert_eq!(draws_by(&s, P1), 1);
             s.expect_in_zone(BOOTS, "graveyard");
             s.attack(VANILLA, MENACE);
 
-            assert_eq!(draws_by(&s, P1), 0);
+            assert_eq!(draws_by(&s, P1), 1);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
         }
 
         #[test]
@@ -187,7 +264,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_4_2_with_charge_that_after_attacking_recruits_the_first_permanent_from_the_top_of_your_deck_instead_of_drawing() {
+        fn is_a_4_2_with_charge_that_when_it_attacks_recruits_the_first_permanent_from_the_top_of_your_deck_instead_of_drawing() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOTS, "radiant": true }, ANCHOR], "library": [STOCKPILE, TEMPO, VANILLA] },
                 "p2": { "hand": [ANCHOR] },
@@ -281,7 +358,7 @@ mod tests {
         }
 
         #[test]
-        fn r2285001_it_recruits_nothing_when_it_died_in_that_combat() {
+        fn r2396000_recruits_though_it_dies() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [{ "def": BOOTS, "radiant": true }], "library": [TEMPO] },
                 "p2": { "hand": [ANCHOR], "field": [MENACE] },
@@ -290,11 +367,31 @@ mod tests {
             s.attack(BOOTS, MENACE);
 
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(unit_defs(&s, P1), lanes([None, None, None, None, None]));
+            assert_eq!(unit_defs(&s, P1), lanes([None, Some(TEMPO), None, None, None]));
         }
 
         #[test]
-        fn r53_a_forced_attack_it_survives_recruits_too() {
+        fn r2396000_r33_a_recruited_trap_lands_face_down_before_the_damage() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ANCHOR], "field": [{ "def": BOOTS, "radiant": true }], "library": [SHEEPISH] },
+                "p2": { "hand": [ANCHOR], "field": [MENACE] },
+            }));
+
+            s.attack(BOOTS, MENACE);
+
+            s.expect_in_zone(BOOTS, "graveyard");
+            let trap = s.backrow(P1, 1).expect("the recruited trap");
+            assert_eq!(trap.def_id, SHEEPISH);
+            assert_ne!(trap.face_up, Some(true));
+            // It landed before any damage of the attack: the first event that names it comes first.
+            let named = format!("\"{}\"", trap.id);
+            assert!(before_the_damage(&s, |event| {
+                serde_json::to_string(event).is_ok_and(|text| text.contains(&named))
+            }));
+        }
+
+        #[test]
+        fn r53_a_forced_attack_recruits_too() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "field": [{ "def": BOOTS, "radiant": true }], "library": [TEMPO, VANILLA] },
                 "p2": { "hand": [ANCHOR], "field": [MOTHS], "library": [VANILLA] },
@@ -317,6 +414,26 @@ mod tests {
             s.attack(BOOTS, "hero");
 
             assert_eq!(unit_defs(&s, P1), lanes([Some(BOOTS), Some(TEMPO), Some(VANILLA), None, None]));
+        }
+    }
+
+    // R767000: a game on v0.5.11 folds under the script it ran, "After this attacks" for a survivor.
+    mod v0_5_11 {
+        use super::*;
+
+        #[test]
+        fn r767000_a_game_on_v0_5_11_that_dies_draws_nothing() {
+            crate::under_kept(BOOTS, super::super::script_v0_5_11(), || {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [ANCHOR], "field": [BOOTS], "library": [A, B] },
+                    "p2": { "hand": [ANCHOR], "field": [MENACE] },
+                }));
+
+                s.attack(BOOTS, MENACE);
+
+                s.expect_in_zone(BOOTS, "graveyard");
+                assert_eq!(draws_by(&s, P1), 0);
+            });
         }
     }
 }

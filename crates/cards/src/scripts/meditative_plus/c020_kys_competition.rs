@@ -6,9 +6,19 @@
 //!   Radiant: "Answer one- and two-digit sums one after another until you stop, miss one or 60 seconds
 //!             pass. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
 //!
-//! Engine question sequence (C+ #42, R420, R465): answer prompt repeated until wrong, Stop, timeout (R1184001) or 60s (R1563006).
-//! Summons Lil' Kenny (M+ #20.1) with stats by correct answers (R1184003; Radiant 2X/2X).
-//! Voice audio renders with release (R1420, R1448).
+//! The whole card is the engine's question sequence (`subsystems/ky_competition.rs`): C+ #42's
+//! `answer` prompt asked again after each right answer, with Stop, the streak in the prompt's resume
+//! data, each question rolled from the match rng (three-digit addition or subtraction; the Radiant
+//! face one- and two-digit), the key never leaving the engine (R465); a wrong answer, Stop or a timeout
+//! (R1184001) ends it, and so does the `KY_COMPETITION_MAX`th right answer. The 60 seconds are its
+//! host's to keep (R1563006): the server's match clock and the practice controller answer Stop when
+//! they pass, as a timeout does; the engine names the open question for them. Then M+ #20.1 Lil' Kenny is
+//! summoned with X the right answers (R1184003), Radiant on the Radiant face, whose own face makes it
+//! 2X/2X; none at X = 0. Both faces run the same script: the steps read the face that cast it.
+//! Declares no numbers.
+//!
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::prelude::*;
 

@@ -1,14 +1,34 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B35, B36 and B37: the pre-rendered voice set
 // on disk, its manifest, its size budget and `gen-voice.mjs --check`.
-//   B35  exactly one `<defId>-<hook>` file under apps/web/public/audio/voice/ per hook in card-audio.json5
-//        that names a voice (R1448's attack line among them), each an MP4 within VOICE_FILE_MAX_MS, and a
-//        manifest of exactly those keys with each file's size and voiceHash.
-//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (R501, R1448, R1884000).
-//   B37  `--check` exits 0 on the committed tree; on a temp copy with one thing broken it exits 1 with
-//        one line per problem, each starting with the key (the Surface's contract).
-//   R655 the manifest's keys are exactly the file's voice lines; an effect-only hook expects no file.
-// voiceHash (macOS `say`) and sapiHash (Windows SAPI, R501) are recomputed here from the formula, never
-// imported, so the script and this test cannot share a mistake.
+//
+//   B35  the expected files (one `<defId>-<hook>` per hook in card-audio.json5 that names a voice,
+//        which covers a play, an attack (R1448) and a death line per catalog Unit and one cast line
+//        per anything else)
+//        exist under apps/web/public/audio/voice/, each an MP4 with `ftyp` at byte 4 and brand
+//        `M4A ` at byte 8; the manifest lists exactly those keys with each file's size and its
+//        recomputed voiceHash; the directory holds nothing else.
+//        Each file's MP4 header (moov/mvhd) also puts it within VOICE_FILE_MAX_MS.
+//   B36  sum over the files of ceil(bytes / 4096) * 4096 <= VOICE_BUDGET_BYTES (6 MiB since R501, 12 MiB since R1448, 16 MiB since R1884000).
+//   B37  `node apps/web/scripts/gen-voice.mjs --check` exits 0 on the committed tree; with `--root`
+//        on a temp copy whose core-004 play line was edited it exits 1 and prints a line starting
+//        `core-004-play`.
+//   R655 the move from voice-lines.json kept every line: the manifest's keys are exactly the file's
+//        voice lines, each hashing as the manifest records; and a hook that is only an effect expects
+//        no file, though since R1448 a unit's attack hook names a voice like its play and death.
+//
+// The Surface's `--check` contract (every expected key has a manifest entry whose hash matches and
+// a file of that size, no orphan files or entries; otherwise one line per problem, each starting
+// with the key, and exit 1) is what the further B37 cases below exercise, one broken thing at a
+// time, each in its own copy of the tree.
+//
+// voiceHash = sha1(JSON.stringify({ v: 1, say, rate, pbas, pmod, text })).hex.slice(0, 16), keys in
+// exactly that order, over the fields of the voice the hook names, for a voice rendered by macOS
+// `say`; and, since R501, sha1(JSON.stringify({ v: 1, backend: "sapi", voice, rate, semitones,
+// filter, text })) for one rendered by Windows SAPI and ffmpeg. Both are recomputed here from the
+// formula, never imported, so the script and this test cannot share a mistake. So is the join of a
+// line's words, which are voice-text.json's (written from crates/cards/card-text.yaml, #2498), to
+// the hook in card-audio.json5 that names its voice. The edits below parse a temp copy with JSON5
+// and write it back as JSON, which is JSON5 too.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -43,12 +63,14 @@ const WEB = resolve(here, "../..");
 const REPO = resolve(WEB, "../..");
 const CATALOG_PATH = join(REPO, "crates/cards/catalog.json");
 const AUDIO_PATH = join(here, "card-audio.json5");
+const VOICE_TEXT_PATH = join(here, "voice-text.json");
 const MANIFEST_PATH = join(here, "voice-manifest.json");
 const VOICE_DIR = join(WEB, "public/audio/voice");
 const GEN_VOICE = join(WEB, "scripts/gen-voice.mjs");
 
 /** Where `--root` expects each file, relative to the web dir it is pointed at (Surface). */
 const REL_AUDIO = join("src", "audio", "card-audio.json5");
+const REL_VOICE_TEXT = join("src", "audio", "voice-text.json");
 const REL_MANIFEST = join("src", "audio", "voice-manifest.json");
 const REL_VOICE_DIR = join("public", "audio", "voice");
 
@@ -97,7 +119,36 @@ const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG)
   )
   .filter(voicedNow);
 
-const AUDIO = readJson5(AUDIO_PATH);
+/**
+ * #2498: `table` with each voiced hook's text (a trigger's lines) and each portrait's five lines
+ * taken from `voiceText` (`voice-text.json`), where the table has none of its own: gen-voice.mjs's
+ * join, written again here.
+ */
+function withLines(table: Json, voiceText: Json): Json {
+  const lines = isRecord(voiceText.cards) ? voiceText.cards : {};
+  for (const [defId, entry] of Object.entries(isRecord(table.cards) ? table.cards : {})) {
+    const own = lines[defId];
+    if (!isRecord(entry) || !isRecord(own)) continue;
+    for (const [hook, assignment] of Object.entries(entry)) {
+      if (!isRecord(assignment) || assignment.voice === undefined || !Object.hasOwn(own, hook)) continue;
+      if (hook === "trigger") assignment.lines ??= own[hook];
+      else assignment.text ??= own[hook];
+    }
+  }
+  const spoken = isRecord(voiceText.emotes) ? voiceText.emotes : {};
+  for (const [portrait, entry] of Object.entries(isRecord(table.emotes) ? table.emotes : {})) {
+    const own = spoken[portrait];
+    if (!isRecord(entry) || !isRecord(own)) continue;
+    for (const line of EMOTE_LINES) entry[line] ??= own[line];
+  }
+  return table;
+}
+
+/** R644: the emotes section's five issue-§3 lines per portrait, keyed `emote-<portrait>-<line>`. */
+const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
+
+/** The committed table, its words joined in. */
+const AUDIO = withLines(readJson5(AUDIO_PATH), readJson(VOICE_TEXT_PATH));
 
 function cardsOf(table: Json): Record<string, Json> {
   if (!isRecord(table.cards)) throw new Error("card-audio.json5: no cards section");
@@ -122,8 +173,6 @@ function voicedKeys(table: Json): string[] {
   );
 }
 
-/** R644: the emotes section's five issue-§3 lines per portrait, keyed `emote-<portrait>-<line>`. */
-const EMOTE_LINES = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
 const EXPECTED_EMOTE_KEYS: readonly string[] = Object.keys(
   isRecord(AUDIO.emotes) ? AUDIO.emotes : {},
 ).flatMap((portrait) => EMOTE_LINES.map((line) => `emote-${portrait}-${line}`));
@@ -286,6 +335,7 @@ function copyWebTree(): string {
   mkdirSync(join(root, "src", "audio"), { recursive: true });
   mkdirSync(join(root, "public", "audio"), { recursive: true });
   copyFileSync(AUDIO_PATH, join(root, REL_AUDIO));
+  copyFileSync(VOICE_TEXT_PATH, join(root, REL_VOICE_TEXT));
   copyFileSync(MANIFEST_PATH, join(root, REL_MANIFEST));
   cpSync(VOICE_DIR, join(root, REL_VOICE_DIR), { recursive: true });
   return root;
@@ -297,6 +347,15 @@ function editAudio(root: string, edit: (table: Json) => void): void {
   const table = readJson5(path);
   edit(table);
   writeJson(path, table);
+}
+
+/** Edits a copy's voice-text.json, the words its lines speak. */
+function editVoiceText(root: string, edit: (cards: Record<string, Json>) => void): void {
+  const path = join(root, REL_VOICE_TEXT);
+  const voiceText = readJson(path);
+  if (!isRecord(voiceText.cards)) throw new Error("voice-text.json: no cards section");
+  edit(voiceText.cards as Record<string, Json>);
+  writeJson(path, voiceText);
 }
 
 function editManifest(root: string, edit: (files: Json) => void): void {
@@ -504,10 +563,10 @@ describe("gen-voice.mjs --check (B37)", () => {
     "B37 exits 1 and prints a line starting core-004-play when that line was edited",
     () => {
       const root = copyWebTree();
-      editAudio(root, (table) => {
-        const play = cardsOf(table)["core-004"]?.play;
-        if (!isRecord(play)) throw new Error("card-audio.json5: no core-004 play hook to edit");
-        play.text = play.text === "Double or nothing, pal!" ? "Double or nothing, baby!" : "Double or nothing, pal!";
+      editVoiceText(root, (cards) => {
+        const lines = cards["core-004"];
+        if (!isRecord(lines) || typeof lines.play !== "string") throw new Error("voice-text.json: no core-004 play line to edit");
+        lines.play = lines.play === "Double or nothing, pal!" ? "Double or nothing, baby!" : "Double or nothing, pal!";
       });
       expectReported(root, ["core-004-play"]);
     },
@@ -747,7 +806,7 @@ describe("gen-voice.mjs --check (B37)", () => {
       editAudio(root, (table) => {
         const entry = cardsOf(table)["core-004"];
         if (!isRecord(entry)) throw new Error("no core-004 entry");
-        expect(entry.attack, "core-004's attack line").toEqual({ voice: "hustler", text: "All in!" });
+        expect(entry.attack, "core-004's attack hook, its line in voice-text.json").toEqual({ voice: "hustler" });
         entry.attack = { effect: "zip" };
       });
       expectReported(root, ["core-004-attack"]);

@@ -447,6 +447,7 @@ describe("actions", () => {
   });
 });
 
+// Portraits and emotes (R642, R643)
 describe("portraits and emotes", () => {
   it("R642 a `portraits` frame names both seats' heroes, on join and again on reconnect", () => {
     const h = connected();
@@ -543,6 +544,7 @@ describe("portraits and emotes", () => {
   });
 });
 
+// Loadouts (R1834003)
 describe("loadouts", () => {
   const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";
   /** A seat's six picks as the `loadouts` frame carries them: every default but those named. */
@@ -821,6 +823,7 @@ describe("a silent socket", () => {
   });
 });
 
+// The token a socket's handshake offered (R1379000).
 function handshakeToken(socket: FakeSocket): string | null {
   return tokenFromProtocols(socket.protocols);
 }

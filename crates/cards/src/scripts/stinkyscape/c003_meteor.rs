@@ -2,12 +2,17 @@
 //!   Base:    "Deal {damage} damage to a Unit, trampling onto the Units adjacent to it. Lock its zone."
 //!            — 15.
 //!   Radiant: "Deal {damage} damage to a Unit, trampling onto the Units adjacent to it and then its
-//!            hero. Lock its zone." — 20.
+//!            hero. Lock its zone." — 15 (20 before #2521's balance pass, which tuned it down; it still
+//!            tramples on to the hero).
 //!
 //! Engine: a declared target, any Unit on either side (R81); one `damage` whose `trampleOnto` sends
 //! its excess past the target's Health onto the Units beside it in its row on its side (§3.1), one
-//! drawn from the match rng when there are two, each counting it only up to its Health, a neighbour
+//! drawn from the match rng when there are two, each counting it only up to its Health, a neighbor
 //! Immune to Spells passed by and one that takes the hit whole stopping the rest (R1848001); with no
+//! neighbor the excess is lost. The Radiant face's `adjacentAndHero` sends what passes both on to
+//! the target's controller's hero. Then `lock` on the target's zone (§6.3 Lock), in the text's order:
+//! a target the hit killed still stands there until the state check, so its zone is Locked whether
+//! it died or not.
 
 use jackioh_engine::prelude::*;
 
@@ -43,7 +48,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3 (R1848001).
+// S #3 Meteor — SPEC §8.10 row S 3, BUILD M12 row S 3: "15 to a chosen Unit, its excess going to one
+// neighbor drawn at random, then the other (R1848001), each counting it only up to its Health; a
+// neighbor's Divine Shield stops the rest; a neighbor Immune to Spells is passed by; with no
+// neighbor the excess is lost; the target's zone is Locked whether it died or not, and no card can
+// be played into it; damage reads through `param()`; radiant 15 (#2521), and what passes both
+// neighbors hits the target's controller's hero".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -88,6 +98,7 @@ mod tests {
 
             s.play(METEOR, json!({ "targets": pick::instance(&units[1]) }));
 
+            // 4 to the target, 4 to each neighbor, and the last 3 lost.
             for unit in &units {
                 s.expect_in_zone(unit, "graveyard");
             }
@@ -220,7 +231,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1848001_20_and_the_rest_hits_its_controllers_hero() {
+        fn r1848001_15_and_the_rest_hits_its_controllers_hero() {
             let mut s = meteor_board(true, json!([VANILLA, VANILLA, VANILLA]));
             let units: Vec<CardInstance> = (1..=3).map(|lane| s.unit_at(P2, lane)).collect();
 
@@ -229,7 +240,8 @@ mod tests {
             for unit in &units {
                 s.expect_in_zone(unit, "graveyard");
             }
-            assert_eq!(hero_health(&s, P2), HERO_HEALTH - 8);
+            // 15 less 4 for each of the three is 3 on their hero (#2521: the Radiant face deals 15).
+            assert_eq!(hero_health(&s, P2), HERO_HEALTH - 3);
             assert_eq!(hero_health(&s, P1), HERO_HEALTH);
         }
     }

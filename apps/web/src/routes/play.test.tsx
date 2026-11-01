@@ -814,6 +814,7 @@ describe("the lobby's answers", () => {
   });
 });
 
+// R1075000: a room's host cancels it, and a reload finds it again
 describe("R1075000 a room's host cancels it, and a reload finds it again", () => {
   afterEach(() => {
     window.sessionStorage.clear();
@@ -910,6 +911,7 @@ describe("R1075000 a room's host cancels it, and a reload finds it again", () =>
   });
 });
 
+// R1372, R924000: All Random's "More cards from"
 describe("R1372 R924000 All Random's more cards from", () => {
   it("R1372 R924000 the picker is All Random's alone, names the newest set and starts at none", async () => {
     await renderLobby();
@@ -1189,6 +1191,7 @@ describe("the lobby's queue state", () => {
   });
 });
 
+// R767: a room shared as a link
 describe("R767 a room shared as a link", () => {
   afterEach(() => {
     window.history.replaceState(null, "", "/");

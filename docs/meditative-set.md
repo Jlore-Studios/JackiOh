@@ -215,7 +215,7 @@ list (in M6, after its cards) says more.
   a view is optional and skipped when absent (as `berserk` is), so a game that never uses it serializes,
   hashes and replays as before and no golden trace moves. Where a shipped game must change (ME-CREATED's
   flag on The Coin, MN05's Armor field on the damage event), the part says so and re-blesses the golden
-  traces after merging `main`, never by hand-merging `games.jsonl`.
+  traces after merging `main`, never by hand-merging the trace file (retired in #2578).
 
 ## M6. Cards, card by card
 

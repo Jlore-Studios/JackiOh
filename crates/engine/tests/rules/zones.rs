@@ -338,7 +338,7 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
     }
 
     #[test]
-    fn r12_a_card_always_goes_to_its_owners_zone_even_under_another_controller() {
+    fn r12_an_exile_always_goes_to_its_owners_pile_even_under_another_controller() {
         let mut state = game();
         let mut card = new_instance(
             &mut state,
@@ -354,15 +354,11 @@ mod r11_tokens_leaving_a_zone_m1_t4 {
         );
         assert_eq!(live(&state, &card.id).controller, PlayerId::P1);
 
+        // A graveyard is the controller's (R2618000); every other pile is the owner's.
         let mut moving = live(&state, &card.id).clone();
-        let _ = move_to_zone(
-            &mut state,
-            &mut moving,
-            OffFieldZone::Graveyard,
-            Default::default(),
-        );
-        assert_eq!(ids(&state.players.p2.graveyard), vec![card.id.clone()]);
-        assert_eq!(state.players.p1.graveyard.len(), 0);
+        let _ = move_to_zone(&mut state, &mut moving, OffFieldZone::Exile, Default::default());
+        assert_eq!(ids(&state.players.p2.exile), vec![card.id.clone()]);
+        assert_eq!(state.players.p1.exile.len(), 0);
         assert_eq!(live(&state, &card.id).controller, PlayerId::P2);
     }
 

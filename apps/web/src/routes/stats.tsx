@@ -27,6 +27,7 @@ import {
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
@@ -171,6 +172,15 @@ function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: st
     cost: cost ? Number(cost) : undefined,
     mode: mode ? mode : undefined,
   };
+}
+
+/**
+ * R2127000: the card drill-down's Back layer. It is mounted only while the drill-down is open, so Back
+ * closes the drill-down as its Close does, and with it shut Back leaves the page as before.
+ */
+function DrillDownBackLayer({ onClose }: { onClose: () => void }): null {
+  useBackLayer(onClose);
+  return null;
 }
 
 export default function StatsRoute(): ReactElement {
@@ -396,8 +406,11 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
-  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md, B25).
-  // Its opener is kept when pressed, not read off the focus, which a click does not move in every browser.
+  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md,
+  // B25): the focus moves to its Close when it opens, Tab and Shift+Tab stay inside, Escape and Back
+  // (R2127000, `DrillDownBackLayer`) close it, and the control that opened it has the focus back once
+  // it closes. That control is kept when it is pressed, not read off the focus, which a click on a
+  // button does not move in every browser.
   const drillDownOpener = useRef<HTMLElement | null>(null);
   const drillDownDialog = useRef<HTMLDivElement>(null);
   const drillDownCloseButton = useRef<HTMLButtonElement>(null);
@@ -1449,6 +1462,7 @@ export default function StatsRoute(): ReactElement {
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
           <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)}>
+            <DrillDownBackLayer onClose={() => setCardDrillDownId(null)} />
             <div
               ref={drillDownDialog}
               className="stats-drilldown-modal"

@@ -29,6 +29,7 @@ import {
 import { LeanSetPicker } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
+import { followInApp } from "../routes/nav.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { DeckPreview } from "./DeckPreview.tsx";
 import {
@@ -110,7 +111,7 @@ function savedHint(saved: SavedDecks): ReactElement | null {
         <>
           {reasons.map((reason) => `${t(reason)} `).join("")}
           {before}
-          <a href={paths.decks}>{t("Decks")}</a>
+          <a href={paths.decks} onClick={followInApp(paths.decks)}>{t("Decks")}</a>
           {after}
         </>
       );
@@ -127,7 +128,7 @@ function savedHint(saved: SavedDecks): ReactElement | null {
       return (
         <>
           {before}
-          <a href={paths.decks}>{t("Decks")}</a>
+          <a href={paths.decks} onClick={followInApp(paths.decks)}>{t("Decks")}</a>
           {after}
         </>
       );

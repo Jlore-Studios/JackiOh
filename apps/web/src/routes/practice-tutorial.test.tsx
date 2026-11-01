@@ -417,6 +417,7 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
   });
 });
 
+// R1108000: a lesson's board (practice.tsx) prints no full art; a practice game's still does.
 describe("R1108000 a lesson's board prints no full art", () => {
   /** Mr. Vanilla, the card `snapshotFor` holds in hand, and a hero's card, so full art when allowed. */
   function heroDefs(): CardDefs {

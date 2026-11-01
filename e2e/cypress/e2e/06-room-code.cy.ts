@@ -2,7 +2,10 @@
 // R79/R104 define the imported room-code length and alphabet; R110 makes finished players queueable.
 // Seat 2 claims `POST /api/rooms/:code/join` before opening its socket (§9.5).
 // CLAUDE.md rule 7/§10.8: Node sees the opponent's hand count, while the browser renders its own.
+// R767 covers a guest following the room link and choosing its deck.
+// R345: both seats turn R82's automatic turn end off, so the fixture's turns wait for End turn and the draw offer.
 
+import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
 import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
@@ -129,9 +132,8 @@ function renderedHandCards(): Cypress.Chainable<number> {
 
 describe("06 room code — a networked match between a browser and a Node client", () => {
   it("opens a room, plays it out and leaves both players queue-eligible", () => {
-    // With R2368000's three-card opening hand this seed deals seat 1 a card it can play on its first
-    // turn, so R82 does not end that turn by itself.
-    const seed = seedFor("06-room-code-1");
+    // Both seats turn R82's automatic turn end off (R345), so no turn of the fixture ends by itself whatever the seed deals.
+    const seed = seedFor("06-room-code");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
     let roomCode = "";
@@ -209,7 +211,12 @@ describe("06 room code — a networked match between a browser and a Node client
         const view = asView(result.view);
         expect(view.viewer, "seat 2's view is seat 2's").to.eq(SEAT_TWO_ID);
       });
-      cy.visitAs(seatOne, routes.match(matchId));
+      cy.wsPlayer({ action: "send", name: SEAT_TWO, body: { type: "setAutoEndTurn", enabled: false, playerId: SEAT_TWO_ID } });
+      cy.visitAs(seatOne, routes.match(matchId), {
+        onBeforeLoad: (win) => {
+          win.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ autoEndTurn: false }));
+        },
+      });
     });
 
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");

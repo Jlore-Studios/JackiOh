@@ -180,7 +180,9 @@ mod r174_r59_a_delayed_effect_that_asks_is_still_followed_by_the_check_before_th
      {
         register_all();
         let mut s = scenario(json!({
-            "p1": { "hand": [KPOP_FANATIC, RENO], "library": [RENO, RENO] },
+            // A (0) Spell keeps p1's turn open after the play (R82), as the Fanatic's own switch to Defense
+            // Position did until Can't Defend (R2657000).
+            "p1": { "hand": [KPOP_FANATIC, RENO, "core-010"], "library": [RENO, RENO] },
             "p2": { "field": [TEMPO_TIMMY], "hand": [RENO], "library": [RENO, RENO] },
         }));
         fixture(

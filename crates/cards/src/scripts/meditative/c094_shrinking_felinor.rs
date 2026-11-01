@@ -17,23 +17,52 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-094";
 
+/// The base stats the Death summons the next Felinor with: this one's base stats less the shrink,
+/// attack floored at 0; `None` when its health would be 0 or less (R1181), which ends the chain.
+fn next_body(state: &GameState, this: &CardInstance, shrink_attack: i32, shrink_health: i32) -> Option<AttackHealth> {
+    let base = base_stats_of(state, this);
+    let health = base.health - shrink_health;
+    (health > 0).then(|| AttackHealth { attack: (base.attack - shrink_attack).max(0), health })
+}
+
+/// R2476000: after "Summon a Shrinking Felinor", the base stats its Death would summon one with ("6/6"),
+/// its own base stats down the chain less the shrink; the dash where the chain ends. Its value is that
+/// Health, 0 for none. On the field, where a chain lowers its base stats; in hand the face's numbers
+/// say it already (R78). Base stats are public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let next = next_body(ctx.state, ctx.self_, param(&ctx, "shrinkAttack"), param(&ctx, "shrinkHealth"));
+        vec![PreviewValue {
+            label: "Summon a Shrinking Felinor".to_string(),
+            value: next.map_or(0, |next| next.health),
+            display: Some(next.map_or_else(
+                || NOTHING_REMEMBERED.to_string(),
+                |next| format!("{}/{}", next.attack, next.health),
+            )),
+            ids: None,
+        }]
+    })
+}
+
 fn shrinking(summons_radiant: bool) -> Script {
     Script {
         death: Some(hook(move |ctx| {
             let Some(this) = ctx.self_.clone() else {
                 return vec![];
             };
-            let base = base_stats_of(ctx.state, &this);
-            let health = base.health - param(&*ctx, "shrinkHealth");
-            if health <= 0 {
+            let Some(next) =
+                next_body(ctx.state, &this, param(&*ctx, "shrinkAttack"), param(&*ctx, "shrinkHealth"))
+            else {
                 return vec![];
-            }
-            let attack = (base.attack - param(&*ctx, "shrinkAttack")).max(0);
+            };
             vec![summon(json_as(json!({
                 "defId": ID,
                 "player": "self",
                 "radiant": summons_radiant,
-                "statsOverride": { "attack": attack, "health": health },
+                "statsOverride": { "attack": next.attack, "health": next.health },
             })))]
         })),
         ..Script::default()
@@ -42,9 +71,10 @@ fn shrinking(summons_radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     // R1828003: both faces summon a base body; the Radiant face still shrinks by its own numbers.
+    // R2476000: the preview is the current faces' alone; the kept script below ran without one.
     CardScripts {
-        base: shrinking(false),
-        radiant: shrinking(false),
+        base: Script { preview: Some(preview()), ..shrinking(false) },
+        radiant: Script { preview: Some(preview()), ..shrinking(false) },
     }
 }
 
@@ -229,5 +259,18 @@ mod tests {
                 .unwrap_or_else(|| panic!("expected a p1 unit in lane 1"))
                 .id
         }
+    }
+
+    /// R2476000: after "Summon a Shrinking Felinor", the stats its Death would summon, to both seats: 6/6
+    /// on the 9/9, and 3/3 on the 6/6 that Death summons.
+    #[test]
+    fn r2476000_it_previews_the_stats_its_death_would_summon() {
+        let mut s = game(json!([ID]), 1);
+        let first = s.unit(P1, 1).expect("the Felinor").id;
+        let label = "Summon a Shrinking Felinor".to_string();
+        assert_eq!(crate::preview_seen(&s, P1, &first), vec![(label.clone(), 6, Some("6/6".to_string()))]);
+        assert_eq!(crate::preview_seen(&s, PlayerId::P2, &first), vec![(label.clone(), 6, Some("6/6".to_string()))]);
+        let next = shrink(&mut s).expect("a 6/6");
+        assert_eq!(crate::preview_seen(&s, P1, &next.id), vec![(label, 3, Some("3/3".to_string()))]);
     }
 }

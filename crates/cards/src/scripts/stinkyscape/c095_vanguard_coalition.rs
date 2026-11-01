@@ -1,11 +1,17 @@
-//! S #95 Vanguard Coalition (SPEC §8.10 row S 95; §2.4, §5.2, §6.3): (3) Spell, Rare.
+//! S #95 Faction: Vanguard Coalition (SPEC §8.10 row S 95; §2.4, §5.2, §6.3): (2) Spell, Faction, Rare.
 //!   Base:    "Add a Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand."
 //!   Radiant: "Add a Radiant Scornboi, Ocean Tsunami, Tylannt, Vxyl, Siva 1 and Siva 2 to your hand."
 //!
 //! Engine: one `add_to_hand` per card named, S #115 Scornboi, S #96 Ocean Tsunami, S #6 Tylannt, S #103 Vxyl,
 //! S #87 Siva 1, S #88 Siva 2, in the order printed (S #10 Otherworldly Endurance's pattern), each a new card
+//! on its own face at its own price, a full hand burning what does not fit, in that order (§2.4). Radiant:
 //! each `radiant: true` (§5.2, R1880000). ST8: the Radiant face keeps Vxyl, which the designer's line
 //! dropped. The cards are named, so they reach the hand whether or not the set ships (R1420). Declares no
+//! numbers.
+//!
+//! #2521: renamed from Vanguard Coalition, tagged Faction and (2) where it was (3). It and the six cards it
+//! adds are the Vanguard Coalition faction that S #163 Swear Loyalities keeps or exiles (R2521004). Tylannt
+//! is ETHICS' too.
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -40,7 +46,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #95 Vanguard Coalition — SPEC §8.10 row S 95, BUILD M12 row S 95.
+// S #95 Faction: Vanguard Coalition — SPEC §8.10 row S 95, BUILD M12 row S 95: "adds the 6 named cards in
+// order, each on its base face at its printed cost; a hand with room for fewer keeps the first and burns the
+// rest; radiant all of them Radiant".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -1,5 +1,5 @@
 //! A kill credited to another unit (R42, R412): Classic+ #19.2 Jungle Loser's Radiant face credits the
-//! kill its attack makes to Classic+ #19.5 Bot Loser, whose "Whenever this destroys a Unit" then fires.
+//! kill its attack makes to Classic+ #19.5 Bot Loser, whose "After this destroys a Unit" then fires.
 //!
 //! R42's killer is set the moment a hit dooms its victim (`damage::credit_killer`), and it is what the
 //! `destroyed` event names and every kill trigger reads. A credit in force on the striker names the

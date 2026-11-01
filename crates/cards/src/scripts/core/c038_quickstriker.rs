@@ -264,7 +264,7 @@ mod tests {
         }
 
         #[test]
-        fn r281_anti_oneshot_armors_cap_clamps_the_radiant_2x_once_x_3_deals_6_capped_to_5_not_3_plus_3() {
+        fn r281_anti_oneshot_armors_cap_clamps_the_radiant_2x_once_x_3_deals_6_capped_to_4_not_3_plus_3() {
             let mut s = scn(json!({
                 "p1": {
                     "backrow": [{ "def": QUICKSTRIKER, "radiant": true }],
@@ -280,9 +280,9 @@ mod tests {
                 .play(BIG_D_FENDER, json!({}))
                 .play(POINTMASTER, json!({}));
 
-            // X = 1, 2 and 3: 2, 4 and 6, and the cap (5 on the base face of #73) takes the last down to 5.
-            assert_eq!(hits_on_p2(&s), vec![2, 4, 5]);
-            s.expect_health("p2", HERO - 11);
+            // X = 1, 2 and 3: 2, 4 and 6, and the cap (4 on the base face of #73) takes the last down to 4.
+            assert_eq!(hits_on_p2(&s), vec![2, 4, 4]);
+            s.expect_health("p2", HERO - 10);
         }
 
         #[test]

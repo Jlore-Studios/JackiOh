@@ -1,4 +1,5 @@
 //! SPEC §8.10 Stinkyscape 39 The Narcor Project, a card of the Stinkyscape set.
+//!   (3) Field Spell, Legendary (#2521: was (4)).
 //!   Base:    "Brittle 4\nEnd of turn: Gain a Narcor.\nActivate: Discard a Narcor to lower this card's
 //!            Brittle by 1.\nDeath: If Brittle destroyed this, for the rest of the game, gain two Narcors
 //!            at the end of each of your turns."

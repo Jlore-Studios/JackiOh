@@ -153,6 +153,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
       cy.gameState().should((after) => {
         const now = handOf(after, "p1");
+        // R10 adds turn one's draw to R9's replacements.
         expect(now, "the kept card and R9's replacements, plus R10's turn-1 draw").to.have.length(
           constants.OPENING_DRAW[0] + 1,
         );
@@ -193,6 +194,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     openGame(SEEDS.discover);
     ensureSeat("p1");
 
+    // A resolving Cry opens a `PendingChoice` (§9.3).
     select("Jewelosco Scarab");
     pickerOpensOnce("zone");
     cy.answerPrompt("zone", { zones: [{ side: "you", row: "units", lane: 1 }] });

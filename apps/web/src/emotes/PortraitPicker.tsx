@@ -13,6 +13,7 @@ import { EMOJI_EMOTE_IDS, PORTRAITS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 import { getAudioEngine } from "../audio/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import { t } from "../i18n/i18n.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { useOfferedPortraits } from "./ownedPortraits.ts";
 import { emoteShowInfo, playEmote } from "./play.ts";
@@ -85,9 +86,19 @@ export function PortraitPicker({
   const panelId = useId();
   const offered = useOfferedPortraits(portrait);
 
-  // Outside press and Escape close the picker, like the match's emote menu (issue §2). Escape gives the
-  // focus back to the portrait button unless the player has put it elsewhere (#1569); an outside press
-  // leaves it where the press put it.
+  // Escape and Back (R2127000) give the focus back to the portrait button unless the player has put
+  // it elsewhere on the page (#1569).
+  const closeMenu = useCallback((): void => {
+    setOpen(false);
+    const focused = document.activeElement;
+    if (focused === null || focused === document.body || root.current?.contains(focused) === true) {
+      toggle.current?.focus({ preventScroll: true });
+    }
+  }, []);
+
+  // Outside press and Escape close the picker, like the match's emote menu does (issue §2's
+  // lifetime carried over — the picker's a menu of the same kind); an outside press leaves the focus
+  // where the press put it.
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent): void => {
@@ -95,11 +106,7 @@ export function PortraitPicker({
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== "Escape") return;
-      setOpen(false);
-      const focused = document.activeElement;
-      if (focused === null || focused === document.body || root.current?.contains(focused) === true) {
-        toggle.current?.focus({ preventScroll: true });
-      }
+      closeMenu();
     };
     window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("keydown", onKeyDown, true);
@@ -107,7 +114,7 @@ export function PortraitPicker({
       window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   // A preview's show expires on its own span, the same as the board's (session.expire's job
   // there; a one-shot here).
@@ -150,6 +157,7 @@ export function PortraitPicker({
 
       {open ? (
         <div className="portrait-menu" id={menuId} role="dialog" aria-label={t("Choose a hero portrait")}>
+          <BackLayer onClose={closeMenu} />
           <div className="portrait-grid" role="listbox" aria-label={t("Portraits")}>
             {offered.map((id) => (
               <PortraitTile

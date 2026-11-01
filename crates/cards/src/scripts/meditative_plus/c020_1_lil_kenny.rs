@@ -5,9 +5,15 @@
 //!             Lifesteal; 30, Indestructible."
 //!   Radiant: the same text, on a 2X/2X.
 //!
-//! Summoned by M+ #20 with X correct answers; stats via xStats (B2.7, C+ #69).
-//! Keywords via conditional_keywords on X (R1184003; Vanilla takes keywords and keeps X/X, R781003).
-//! Voice audio renders with release (R1420, R1448).
+//! Only M+ #20 KY's Competition makes one, summoned with X its right answers (`summon`'s `x`). Its
+//! stats are its faces' `xStats`, 1/1 and 2/2 times X (B2.7, as C+ #69 Buff Billy's), so the Radiant
+//! face's 2X/2X is data. Its keywords are a `conditional_keywords` read of its X (C #69's shape), each
+//! threshold cumulative: they read X, never the stats, so a buff gives none, and the Radiant face has the
+//! same thresholds on X; a Vanilla takes them and keeps X/X (R781003, X being no buff). Both faces run
+//! the same script. Declares no numbers: the thresholds are the frame.
+//!
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry and
+//! its `card-text.yaml` lines are written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::prelude::*;
 
@@ -23,6 +29,18 @@ const KEYWORDS_BY_X: &[(i32, Keyword)] = &[
     (30, Keyword::Indestructible),
 ];
 
+/// R2476000: after "With X", its X as its summon fixed it (`x_of`, a Buff or Nerf of X included), the
+/// number its keywords are read from. On the field, to both seats: the summon's X/X showed it. A Kenny
+/// anywhere else has no X and shows nothing.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        vec![count_preview("With X", x_of(ctx.self_))]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         conditional_keywords: Some(read_hook(|args| {
@@ -33,6 +51,7 @@ pub fn script() -> CardScripts {
                 .map(|(_, keyword)| keyword.clone())
                 .collect()
         })),
+        preview: Some(preview()),
         ..Script::default()
     };
     let radiant = base.clone();
@@ -215,6 +234,20 @@ mod tests {
                 json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
             );
             assert_eq!(read(&s), (16, 16, vec![]));
+        }
+    }
+
+    /// R2476000: after "With X", the X its summon fixed, to both seats, on either face: 5, though the
+    /// Radiant one stands 10/10.
+    #[test]
+    fn r2476000_it_previews_its_x() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let s = kenny(5, radiant, &[FILLER], &[]);
+            let kenny = the_kenny(&s).id;
+            let x = vec![("With X".to_string(), 5, None)];
+            assert_eq!(crate::preview_seen(&s, P1, &kenny), x, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, PlayerId::P2, &kenny), x, "radiant {radiant}");
         }
     }
 }

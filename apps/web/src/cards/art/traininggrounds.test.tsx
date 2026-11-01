@@ -97,9 +97,9 @@ describe("R2202000: the Training Grounds set draws its own families", () => {
       expect(isTrainingGroundsArt(snapshot), snapshot).toBe(false);
       expect(snapshotArtOf(snapshot)).toBe(of);
       const card = core(of);
-      // A snapshot that has landed is its Core card's name and type (P2, #2195).
+      // A Legacy card is its Core card's name after "Legacy: " and its type (R2511000).
       const landed = CATALOG[snapshot];
-      if (landed !== undefined) expect([landed.name, landed.type], snapshot).toEqual([card.name, card.type]);
+      if (landed !== undefined) expect([landed.name, landed.type], snapshot).toEqual([`Legacy: ${card.name}`, card.type]);
     }
     expect(snapshotArtOf("traininggrounds-001")).toBeNull();
     expect(snapshotArtOf("core-002")).toBeNull();
@@ -153,10 +153,12 @@ describe("R2202000: CardArt draws the set's art and leaves every other card's", 
     expect(art?.style.backgroundImage).toContain(trainingGroundsArtUri(card.id, card.name, card.tags, card.type, false));
   });
 
-  it("R2202000 a snapshot draws its Core card's picture, base and Radiant", () => {
+  it("R2202000 R2511000 a Legacy card draws its Core card's picture, base and Radiant, under its own name and tags", () => {
     const card = core("core-002");
+    const legacy = CATALOG["traininggrounds-041"];
+    if (legacy === undefined) throw new Error("no traininggrounds-041");
     for (const radiant of [false, true]) {
-      const snapshot = render(<CardArt defId="traininggrounds-041" radiant={radiant} tags={card.tags} type={card.type} name={card.name} shape="portrait" />);
+      const snapshot = render(<CardArt defId={legacy.id} radiant={radiant} tags={legacy.tags} type={legacy.type} name={legacy.name} shape="portrait" />);
       const drawn = snapshot.container.querySelector<HTMLElement>(".cf-art");
       cleanup();
       const original = render(<CardArt defId={card.id} radiant={radiant} tags={card.tags} type={card.type} name={card.name} shape="portrait" />);

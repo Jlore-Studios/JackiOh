@@ -1,8 +1,9 @@
 //! SPEC §8.10 Stinkyscape 68 Stratos, a card of the Stinkyscape set.
-//! (1) Unit, Common, 3/3 → 6/6: Starship Piece, Flying.
+//! (1) Unit, Common, 3/1 → 6/2: Flying, Ranged.
 //!
-//! Keywords only (§6.1): its script is empty. Starship Piece: its death fuses a copy into its
-//! owner's Dormant Starship, summoned first if they have none (R1852000).
+//! Keywords only (§6.1): its script is empty. Flying: only a Flying or Ranged Unit in Attack Position
+//! may attack it (R783002); Ranged: it takes no strike back from a defender without Ranged (R783000).
+//! Since #2521 it is no Starship Piece: its death fuses nothing (R1852000 reads the keyword).
 
 use jackioh_engine::prelude::*;
 
@@ -15,7 +16,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #68 Stratos — SPEC §8.10 row 68, BUILD M12 row S 68 (R1852000, R783002).
+// Stinkyscape #68 Stratos — SPEC §8.10 row 68, BUILD M12 row S 68: "a vanilla 3/1 Flying Ranged Unit:
+// attacked only by Flying or Ranged Units in Attack Position (R783002), taking no strike back from a
+// defender without Ranged (R783000); no Starship Piece, so its death fuses nothing (#2521); radiant 6/2".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,6 +29,7 @@ mod tests {
 
     const STRATOS: &str = "stinkyscape-068";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
+    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
@@ -37,13 +41,13 @@ mod tests {
     }
 
     #[test]
-    fn prints_starship_piece_and_flying_3_3_radiant_6_6() {
+    fn prints_flying_and_ranged_3_1_radiant_6_2() {
         crate::register_all();
         let def = crate::card_def(STRATOS);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Starship Piece", "Flying"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Starship Piece", "Flying"]);
-        assert_eq!((def.base.attack, def.base.health), (Some(3), Some(3)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(6), Some(6)));
+        assert_eq!(kinds_of(&def.base.keywords), vec!["Flying", "Ranged"]);
+        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Flying", "Ranged"]);
+        assert_eq!((def.base.attack, def.base.health), (Some(3), Some(1)));
+        assert_eq!((def.radiant.attack, def.radiant.health), (Some(6), Some(2)));
     }
 
     #[test]
@@ -60,35 +64,49 @@ mod tests {
     }
 
     #[test]
-    fn death_fuses_a_copy_into_the_dormant_starship() {
+    fn ranged_takes_no_strike_back_from_a_defender_without_ranged() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [ANCHOR], "field": [STRATOS], "library": filler(4) },
+            "p2": { "hand": [ANCHOR], "field": [MENACE], "library": filler(4) },
+        }));
+        // R783000: the 9/9 without Ranged strikes back nothing, so the 3/1 stands undamaged.
+        s.attack(STRATOS, MENACE);
+
+        s.expect_in_zone(STRATOS, "field");
+        assert_eq!(s.card(STRATOS).damage, 0);
+        assert_eq!(s.card(MENACE).damage, 3);
+    }
+
+    #[test]
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [STRATOS], "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
         }));
         let me = s.card(STRATOS).clone();
+        assert!(!has_keyword(&s.stats(&me).keywords, KeywordKind::StarshipPiece));
         s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
 
-        s.expect_in_zone(STRATOS, "graveyard");
-        let ship = dormant_starship_of(s.state(), PlayerId::P1).cloned();
-        assert!(ship.is_some(), "a piece that died fuses a copy into a Dormant Starship");
-        assert_eq!(
-            starship_pieces_of(&ship.expect("the ship"))
-                .iter()
-                .map(|piece| piece.def_id.as_str())
-                .collect::<Vec<_>>(),
-            vec![STRATOS]
+        s.expect_in_zone(&me, "graveyard");
+        assert!(
+            dormant_starship_of(s.state(), PlayerId::P1).is_none(),
+            "no piece died, so no Dormant Starship"
         );
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
     }
 
     #[test]
-    fn radiant_is_a_6_6_with_the_same_keywords() {
+    fn radiant_is_a_6_2_with_the_same_keywords() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": STRATOS, "radiant": true }, ANCHOR], "mana": 10, "library": filler(4) },
             "p2": { "hand": [ANCHOR], "library": filler(4) },
         }));
         s.play(STRATOS, json!({ "zone": 1 }));
-        s.expect_stats(STRATOS, json!({ "attack": 6, "health": 6 }));
+        s.expect_stats(STRATOS, json!({ "attack": 6, "health": 2 }));
+        let live = kinds_of(&s.stats(STRATOS).keywords);
+        assert!(live.contains(&"Flying".to_string()) && live.contains(&"Ranged".to_string()), "{live:?}");
     }
 }

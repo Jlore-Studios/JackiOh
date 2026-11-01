@@ -1,16 +1,40 @@
 // #1050 44: watching a friend's live game (#936, SPEC S7, §9.5 "Watching a friend"; B50, B56).
-// Three accounts, because a watcher holds no seat (`watchable_in` refuses one that does): `one` hosts an
-// unranked room and is the friend watched (seat p1), `pending` joins as seat p2, and `two` watches in the
-// browser. Neither seat attaches a socket (R744: a seat that never attached starts no grace), so the match
-// just stands while it is watched. `pending` is the fixture account waiting at the invite gate, so `before`
-// reseeds the server and redeems the good code for it: only spec 10 reads that account, and it reseeds first. The spec opens no socket itself: an account is one watcher and a
-// newer socket replaces the older.
-// "Full" (`SPECTATORS_PER_MATCH`) takes nine friend accounts and the E2E server seeds three: the server's
-// `b50_b51_a_full_match_is_forbidden_to_one_watcher_more` covers it, and WatchRoute.test.tsx its `forbidden`.
-// A watcher who comes after `SPECTATE_DELAY_MS` is sent the first view at once, so the waiting panel shows
-// only to one who comes sooner; a page visit alone can take that long, so the browser is on Play together
-// before the join. Networked (`E2E=1 cargo run --release -p jackioh-server`); daily only, as every spec
-// outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed at compile time.
+//
+// Three accounts, because a watcher holds no seat (`watchable_in` refuses one that does): `one`
+// hosts an unranked room and is the friend watched (seat p1), `pending` joins it as seat p2, and
+// `two` is the friend who watches, in the browser. Neither seat attaches a socket (R744: a seat that
+// never attached starts no grace), so the match just stands while it is watched. `pending` is the
+// fixture account waiting at the invite gate, so `before` reseeds the server (R144) and redeems the
+// good code for it, which leaves nothing for a spec after this one: only spec 10 reads that account
+// and it reseeds first.
+//
+// What it asserts, by behavior (every frame read is one the watch screen's own socket received;
+// an account is one watcher and a newer socket replaces the older, so the spec opens none itself):
+// - B56: a friend's row in a live unranked match offers Watch, and the click opens `/watch/:matchId`
+//   with the friend in the query;
+// - B50: the screen waits (its waiting panel) until the first view, which comes `SPECTATE_DELAY_MS`
+//   after the state it shows, then draws the friend's board read-only from the friend's seat;
+// - B50, §10.8: every `view` frame carries `legal: []`, the friend's seat's hand in full and the
+//   other seat's hand as a count alone;
+// - R2615000: the account's settings carry no watching switch, so a friend may always watch;
+// - B50 (revocation): the friend removing the watcher mid-watch ends it with a `forbidden` frame and
+//   the refused screen, the friendship being the way out;
+// - B50 (refusal): with the two no longer friends, the watch link is refused the same way, and the
+//   way back leads to Play together.
+//
+// "Full" (`SPECTATORS_PER_MATCH`) is not covered here: an account is one watcher, so filling a match
+// takes nine friend accounts and the E2E server seeds three. The server's own test covers it
+// (`b50_b51_a_full_match_is_forbidden_to_one_watcher_more`) and the client shows it as any other
+// `forbidden` (WatchRoute.test.tsx).
+//
+// The first view is due `SPECTATE_DELAY_MS` after the join, and a watcher who comes later is sent it
+// at once, so the waiting panel shows only to one who comes sooner. A page visit alone can take that
+// long, so the browser is on Play together before the join: `one` asks `two` to be friends, and `two`
+// accepts there just after it, which reads the friends list again with `one` in the match.
+//
+// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only,
+// as every spec outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed
+// at compile time, and the spec waits it out.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
@@ -67,16 +91,6 @@ function incomingRequestRow(profileId: string): string {
 /** The watch link a friend row's Watch follows (`watchLink` in apps/web/src/together/watchLink.ts). */
 function watchPath(matchId: string, friendId: string): string {
   return `/watch/${matchId}?${new URLSearchParams({ friend: friendId }).toString()}`;
-}
-
-/** `PUT /api/settings` with the account's `allowSpectators` alone. */
-function allowSpectators(account: E2EAccount, allow: boolean): Cypress.Chainable<Cypress.Response<{ settings: { allowSpectators: boolean } }>> {
-  return cy.request<{ settings: { allowSpectators: boolean } }>({
-    method: "PUT",
-    url: apiUrl("/api/settings"),
-    headers: bearerHeaders(account.token),
-    body: { allowSpectators: allow },
-  });
 }
 
 // The frames the watch screen's socket received
@@ -155,7 +169,7 @@ describe("44 watching a friend's live game", () => {
       .should("eq", "active");
   });
 
-  it("B50: waits out the delay, then draws the friend's seat read-only, and is ended when the friend turns watching off", () => {
+  it("B50 R2615000: waits out the delay, then draws the friend's seat read-only, and is ended when the friend removes the watcher", () => {
     const one = accounts.p1();
     const two = accounts.p2();
     const joiner = accounts.pending();
@@ -179,10 +193,10 @@ describe("44 watching a friend's live game", () => {
       expect(twoName, "R1435: the watcher has a username to be found by").to.not.eq("");
     });
 
-    // §9.5: a friend allows watching until they say otherwise.
-    cy.request<{ settings: { allowSpectators: boolean } }>({ method: "GET", url: apiUrl("/api/settings"), headers: bearerHeaders(one.token) })
-      .its("body.settings.allowSpectators")
-      .should("eq", true);
+    // R2615000: no setting turns watching off; the account's settings carry no switch.
+    cy.request<{ settings: Record<string, unknown> }>({ method: "GET", url: apiUrl("/api/settings"), headers: bearerHeaders(one.token) })
+      .its("body.settings")
+      .should("not.have.property", "allowSpectators");
 
     // B43: `one` asks `two` to be friends, and `two` opens Play together, where the request waits.
     cy.then(() => {
@@ -270,9 +284,10 @@ describe("44 watching a friend's live game", () => {
       }
     });
 
-    // B50, B46: the friend turns watching off, and the watcher is let go at once.
+    // B50, B45: the friend removes the watcher, and the watcher is let go at once (R2615000: the
+    // friendship is the way out).
     cy.then(() => {
-      allowSpectators(one, false).its("body.settings.allowSpectators").should("eq", false);
+      cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
     });
     cy.get(ts(WATCH_REFUSED), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(WATCH_SCREEN)).should("have.attr", "data-connection", "refused");
@@ -282,21 +297,8 @@ describe("44 watching a friend's live game", () => {
       expect(last?.code, "B50: a revoked watcher is told forbidden").to.eq("forbidden");
     });
 
-    // With watching off, the row no longer offers Watch, and a watch link is refused.
-    cy.visitAs(two, TOGETHER);
+    // No longer friends: a watch link is refused the same way, and the way back leads to Play together.
     cy.then(() => {
-      cy.get(friendRow(oneId), { timeout: timeouts.view })
-        .should("have.attr", "data-status", "inMatch")
-        .and("have.attr", "data-watchable", "false");
-      cy.get(friendRow(oneId)).find(ts(TOGETHER_WATCH)).should("not.exist");
-      cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
-    });
-    expectRefused();
-
-    // Watching back on, but no longer friends: the same refusal, and the way back leads to Play together.
-    cy.then(() => {
-      allowSpectators(one, true).its("status").should("eq", 200);
-      cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
       cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
     });
     expectRefused();

@@ -26,13 +26,30 @@ struct Kill {
 
 /// The kills this card remembers; anything but a list reads as none.
 fn kills_of(ctx: &EffectContext) -> Vec<Kill> {
-    match recalled(ctx, KILLS) {
+    kills_in(recalled(ctx, KILLS).as_ref())
+}
+
+/// The kills as `memory.kills` stores them: what Death summons copies of and the preview counts.
+fn kills_in(stored: Option<&Value>) -> Vec<Kill> {
+    match stored {
         Some(Value::Array(kills)) => kills
-            .into_iter()
-            .filter_map(|kill| serde_json::from_value::<Kill>(kill).ok())
+            .iter()
+            .filter_map(|kill| serde_json::from_value::<Kill>(kill.clone()).ok())
             .collect(),
         _ => Vec::new(),
     }
+}
+
+/// R2476000: "every Unit this destroyed" — how many it remembers, on the field to both seats (each kill
+/// was a public destruction; R78 forgets them as it leaves). A kill in the pass of its own death is not
+/// remembered yet (its Death reads it off that pass's events), which no value asked now can foresee.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        vec![count_preview("every Unit this destroyed", kills_in(ctx.self_.memory.get(KILLS)).len() as i32)]
+    })
 }
 
 /// A `destroyed` event this card is the killer of, as a remembered kill.
@@ -76,6 +93,7 @@ fn frostspatula(radiant: bool) -> Script {
                 }
             },
         )],
+        preview: Some(preview()),
         death: Some(hook(move |ctx| {
             let view: &EffectContext = ctx;
             // A kill in the same pass as its own death never reached the trigger: read it off this action's events.
@@ -174,6 +192,22 @@ mod tests {
             assert_eq!(taken.unit(P1, 1).map(|card| card.id), Some(spatula_id(&taken)));
             let full = played(false, 2, json!({ "field": [MENACE, MENACE, MENACE, MENACE, MENACE] }), json!({}));
             assert_eq!(full.backrow(P1, 2).map(|card| card.id), Some(spatula_id(&full)));
+        }
+
+        /// R2476000: after "every Unit this destroyed", how many it remembers, to both seats: 0, then 1
+        /// once its Rush attack destroys a Unit.
+        #[test]
+        fn r2476000_it_previews_the_units_it_has_destroyed() {
+            for radiant in [false, true] {
+                let mut s = played(radiant, 1, json!({}), json!({}));
+                let spatula = spatula_id(&s);
+                let label = "every Unit this destroyed".to_string();
+                assert_eq!(crate::preview_seen(&s, P1, &spatula), vec![(label.clone(), 0, None)], "radiant {radiant}");
+                s.attack(SPATULA, TOKENS);
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == TOKENS));
+                assert_eq!(crate::preview_seen(&s, P1, &spatula), vec![(label.clone(), 1, None)], "radiant {radiant}");
+                assert_eq!(crate::preview_seen(&s, P2, &spatula), vec![(label, 1, None)], "radiant {radiant}");
+            }
         }
 
         /// R83 summoning sick on arrival: its Rush reaches units, never the hero

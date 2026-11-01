@@ -1,7 +1,19 @@
-//! SPEC §8.11 Training Grounds #43 Mr. Vanilla, the snapshot of Core #8 Mr. Vanilla (`core-008`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #8 (SPEC §8.1): 4/4 → 12/12 vanilla Human Unit. Empty Scripts; swaps stat layer in place (§5.2).
+//! SPEC §8.11 Training Grounds #43 Legacy: Mr. Vanilla,
+//! the Legacy card of Core #8 Mr. Vanilla (`core-008`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #8 Mr. Vanilla (SPEC §8.1): a 1-cost 4/4 → 12/12 Human Unit with no text on either face (patch
+//! v0.1.1 took away its Immutable and the Radiant face's Divine Shield, and made it a true vanilla:
+//! its Radiant face is its stats alone, tripled). A card with no text has no hooks, so both Scripts
+//! are empty — an empty Script is the answer, not a placeholder.
+//!
+//! Nothing about it is special any more: Transform, Vanilla and Fuse-onto all reach it like any unit,
+//! and making it Radiant on the field swaps its stat layer in place (§5.2), keeping its damage.
 
 use jackioh_engine::prelude::*;
 

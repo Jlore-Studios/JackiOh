@@ -1,23 +1,51 @@
-//! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001): (1) Spell, Epic.
+//! M+ #2 NA Tech (SPEC §8.9 row 2; R1100, R1183000, R1183001, R2521007): (1) Spell, Epic.
 //!
 //! Base:    "Fuse the card with the lowest win rate and the card with the highest win rate, and add
 //!          it to your hand. It costs ({setCost})."
 //! Radiant: "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win
 //!          rate, and add it to your hand. It costs ({setCost})."
-//! Reads CN Tech table (M #50) from both ends: win_rate_leader (R1100) and win_rate_trailer (R1183000; never self, R387);
-//! fuses trailer first into transient card at setCost (R1108, R77, R102, R1183001). Radiant fuses Radiant faces (R469).
+//! Engine: M #50 CN Tech's compiled table read from both ends — the leader (`win_rate_leader`,
+//! R1100) and the trailer (`win_rate_trailer`, R1183000: the same floor and tie-breaks, the lowest
+//! rate, never the leader), neither ever NA Tech itself (R387) — fused trailer first into one
+//! transient hand card (`fuse_generated`'s two pools, R1108; R77, R102) at a `costOverride` of
+//! setCost (R1183001). The Radiant face fuses both ingredients on their Radiant faces (R469). Tunes:
+//! setCost 2 ↓ (Radiant 0).
+//!
+//! The fallback (#2521, R2521007): an end the table cannot name is a named card, no random one —
+//! `FALLBACK_TRAILER`, Core #75 Infinite Reserves (7/43), for the lowest, and `FALLBACK_LEADER`, Core
+//! #35 Lunar Eclipse (33/48), for the highest: the two ends of the table every version since v0.4.0
+//! has shipped (v0.4.0's provisional run). Only when the other end the table names is that very card
+//! does the missing end stay a random non-token card of the sets that ship, never the other ingredient
+//! (`distinct`), so the two ends stay distinct.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditativeplus-002";
 
+/// R2521007: the highest end when the table names none: Core #35 Lunar Eclipse, 33/48, the leader of
+/// `crates/cards/patches/win_rates/v0.5.9b.json` (v0.4.0's provisional run), as M #50 CN Tech's.
+pub const FALLBACK_LEADER: &str = "core-035";
+/// R2521007: the lowest end when the table names none: Core #75 Infinite Reserves, 7/43, that
+/// table's trailer.
+pub const FALLBACK_TRAILER: &str = "core-075";
+
+/// R2521007: an end's fallback card, unless the other end is that card already (`None`: random).
+fn fallback(card: &str, other_end: Option<&str>) -> Option<String> {
+    (other_end != Some(card)).then(|| card.to_string())
+}
+
 fn tech(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            let leader = win_rate_leader(ID);
+            let named_leader = win_rate_leader(ID);
             let mut skipped = vec![ID];
-            skipped.extend(leader.as_deref());
-            let trailer = win_rate_trailer(&skipped);
+            skipped.extend(named_leader.as_deref());
+            let named_trailer = win_rate_trailer(&skipped);
+            // R2521007: a missing end is its hard-coded card, unless the other end the table names is it.
+            let leader = named_leader
+                .clone()
+                .or_else(|| fallback(FALLBACK_LEADER, named_trailer.as_deref()));
+            let trailer = named_trailer.or_else(|| fallback(FALLBACK_TRAILER, named_leader.as_deref()));
             // R1183001: a named end is its own pool; a missing one is any card but the named ones.
             let named: Vec<&str> = [trailer.as_deref(), leader.as_deref()].into_iter().flatten().collect();
             let pool = |end: &Option<String>| match end {
@@ -43,7 +71,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2 (R1100, R77).
+// M+ #2 NA Tech — SPEC §8.9 row 2, BUILD M11 row M+ 2: "with a fixture win-rate table, fuses the
+// trailer and the leader (both eligible past the games floor, ties as R1100) into one transient card
+// (summed stats, union of keywords, both scripts, R77) added to your hand at (2); with an empty table
+// Infinite Reserves and Lunar Eclipse stand in, an end named by the table that is the other's fallback
+// leaving that end random (R2521007); a full hand burns it; setCost reads through `param()`; radiant
+// both ingredients Radiant and it costs (0)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,33 +205,47 @@ mod tests {
         }
 
         #[test]
-        fn r1183001_with_one_eligible_card_it_is_the_leader_and_a_random_card_the_lowest() {
+        fn r2521007_with_one_eligible_card_it_is_the_leader_and_infinite_reserves_the_lowest() {
             register_win_rates(table(vec![(LEADER, 30, 40)]));
             let mut s = casting("na-tech-one", false, 1);
             let card = fused(&mut s);
-            let made = ingredients(&s, &card);
-            assert_eq!(made[1].0, LEADER);
-            assert_ne!(made[0].0, LEADER, "two different cards");
-            let stand_in = def_of(Some(s.state()), &made[0].0);
-            assert!(!stand_in.token, "a non-token card stands in");
-            assert_ne!(stand_in.id, ID, "never NA Tech itself");
+            assert_eq!(
+                ingredients(&s, &card),
+                vec![(FALLBACK_TRAILER.to_string(), false), (LEADER.to_string(), false)]
+            );
         }
 
         #[test]
-        fn r1183001_with_an_empty_table_two_different_random_cards_stand_in() {
+        fn r2521007_with_an_empty_table_infinite_reserves_and_lunar_eclipse_stand_in() {
             register_win_rates(table(vec![]));
-            for n in 0..8 {
+            for n in 0..4 {
                 let mut s = casting(&format!("na-tech-empty-{n}"), false, 1);
+                let card = fused(&mut s);
+                assert_eq!(
+                    ingredients(&s, &card),
+                    vec![(FALLBACK_TRAILER.to_string(), false), (FALLBACK_LEADER.to_string(), false)],
+                    "the same two on every seed, no random card"
+                );
+                assert_eq!(card.cost_override, Some(2));
+            }
+        }
+
+        #[test]
+        fn r2521007_a_leader_that_is_infinite_reserves_leaves_the_lowest_a_random_card() {
+            // The only eligible row is the trailer's fallback itself: the two ends stay distinct, so
+            // the lowest is a random non-token card of the sets that ship, as before #2521.
+            register_win_rates(table(vec![(FALLBACK_TRAILER, 30, 40)]));
+            for n in 0..4 {
+                let mut s = casting(&format!("na-tech-same-end-{n}"), false, 1);
                 let card = fused(&mut s);
                 let made = ingredients(&s, &card);
                 assert_eq!(made.len(), 2);
-                assert_ne!(made[0].0, made[1].0, "two different cards");
-                for (id, _) in &made {
-                    let def = def_of(Some(s.state()), id);
-                    assert!(!def.token, "{id} is no token");
-                    assert!(set_ships(def.set), "{id} is of a set that ships");
-                    assert_ne!(id, ID);
-                }
+                assert_eq!(made[1].0, FALLBACK_TRAILER, "the table's leader");
+                assert_ne!(made[0].0, FALLBACK_TRAILER, "two different cards");
+                let stand_in = def_of(Some(s.state()), &made[0].0);
+                assert!(!stand_in.token, "a non-token card stands in");
+                assert!(set_ships(stand_in.set), "of a set that ships");
+                assert_ne!(stand_in.id, ID, "never NA Tech itself");
             }
         }
 
@@ -285,6 +332,19 @@ mod tests {
                 )
             );
             assert!(has_keyword(&def.radiant.keywords, KeywordKind::Charge));
+        }
+
+        #[test]
+        fn r2521007_the_radiant_face_fuses_the_two_fallbacks_radiant() {
+            register_win_rates(table(vec![]));
+            let mut s = casting("na-tech-empty-radiant", true, 1);
+            let card = fused(&mut s);
+            assert_eq!(
+                ingredients(&s, &card),
+                vec![(FALLBACK_TRAILER.to_string(), true), (FALLBACK_LEADER.to_string(), true)]
+            );
+            assert!(card.radiant);
+            assert_eq!(card.cost_override, Some(0));
         }
 
         #[test]

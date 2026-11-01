@@ -1,8 +1,25 @@
-// docs/polish/2-sound.md B41 to B43 and R655: `voiceData.ts`'s lookups (B41: `voiceKey`, `voiceUrl`,
-// `lineFor`; B43: `voiceKeysForView`), its parser of `card-audio.json5` (B42: the shipped file parses,
-// adding only each card's kind and each effect's default pitch and gain, and a malformed one fails naming
-// its path; word limits and every card's lines are B33's and B34's) and the file's layout (voices sorted
-// by name, cards in catalog order, a trailing newline).
+// Polish task 2 (docs/polish/2-sound.md), behaviors B41 to B43 and R655: the lookups in
+// `voiceData.ts` that the engine, the cue table and the hook read, its parser of `card-audio.json5`,
+// and the file's layout.
+//
+//   B41  `voiceKey` joins "<defId>-<line>" (defIds contain "-"), `voiceUrl` serves it from
+//        BASE_URL's `audio/voice/`, and `lineFor` returns the line's text with the voice its hook
+//        names, or null for the sentinel, an unknown id, a hook the card's kind does not have, or a
+//        hook that is only an effect.
+//   B42  `parseCardAudio` accepts the shipped file, adding only each card's kind and each effect's
+//        default pitch and gain, and rejects a malformed one with `card-audio.json5: <path>:
+//        <problem>`; it does not check word limits or the lines every card must have (B33, B34 do).
+//   B43  `voiceKeysForView` lists, deduped and in this order, the viewer's hand (unit -> play,
+//        spell -> cast, traps none), every unit on both boards (death), the viewer's own units
+//        (attack, R655) and the viewer's own face-up backrow traps (cast); a card it cannot name, or
+//        a hook with no line, adds nothing.
+//   R655 every shape error names its path, JSON5's comments and trailing commas parse, a card's kind
+//        comes from its catalog type, and `hookFor`, `lineFor` and `effectFor` read a hook that is a
+//        line, an effect or both. `withVoiceText` joins the words of `voice-text.json` (written from
+//        crates/cards/card-text.yaml, #2498) to the hooks and portraits that speak them, refusing a
+//        line the table writes itself, a line no voice speaks and a voice with nothing to speak.
+//
+// Plus the file's layout: voices sorted by name, cards in catalog order, a trailing newline.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -28,15 +45,19 @@ import {
   voiceKey,
   voiceKeysForView,
   voiceUrl,
+  withVoiceText,
 } from "./voiceData.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
 const AUDIO_PATH = resolve(here, "card-audio.json5");
+const VOICE_TEXT_PATH = resolve(here, "voice-text.json");
 const CATALOG_PATH = resolve(REPO, "crates/cards/catalog.json");
 
 const SHIPPED_CATALOG = JSON.parse(readFileSync(CATALOG_PATH, "utf8")) as CatalogTypes;
+/** The shipped lines' words, as crates/tools/tests/export_card_text.rs writes them. */
+const VOICE_TEXT = JSON.parse(readFileSync(VOICE_TEXT_PATH, "utf8")) as unknown;
 
 function shippedText(): string {
   return readFileSync(AUDIO_PATH, "utf8");
@@ -200,8 +221,8 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
 
 describe("B42 parseCardAudio", () => {
   it("B42 accepts the shipped card-audio.json5, adding only each card's kind and each effect's default pitch and gain", () => {
-    const raw = shippedRaw();
-    const parsed = parseCardAudioText(shippedText(), SHIPPED_CATALOG);
+    const raw = withVoiceText(shippedRaw(), VOICE_TEXT) as RawTable;
+    const parsed = parseCardAudioText(shippedText(), SHIPPED_CATALOG, VOICE_TEXT);
     const kindOf = (type: string): string => (type === "Unit" ? "unit" : type.endsWith("Spell") ? "spell" : "trap");
 
     expect(parsed.voices).toEqual(raw.voices);
@@ -606,10 +627,123 @@ describe("R655 hookFor, lineFor and effectFor", () => {
     expect(entryFor(table, "core-041")).toBeNull();
   });
 
-  it("R655 CARD_AUDIO is the shipped card-audio.json5, parsed against the shipped catalog", () => {
-    expect(CARD_AUDIO).toEqual(parseCardAudioText(shippedText(), SHIPPED_CATALOG));
+  it("R655 CARD_AUDIO is the shipped card-audio.json5 with its words, parsed against the shipped catalog", () => {
+    expect(CARD_AUDIO).toEqual(parseCardAudioText(shippedText(), SHIPPED_CATALOG, VOICE_TEXT));
     expect(Object.keys(CARD_AUDIO.cards)).toEqual(Object.keys(SHIPPED_CATALOG));
     expect(effectFor(CARD_AUDIO, "core-066", "attack")?.name).toBe("rumble");
+  });
+
+  /** A table that writes no words, and the words for it, as voice-text.json holds them. */
+  function wordless(): Record<string, Record<string, unknown>> {
+    return {
+      voices: { hustler: { ...SAY }, crone: { ...CRONE } },
+      effects: { zip: { sfx: "whoosh" } },
+      cards: {
+        "core-004": { play: { voice: "hustler" }, attack: { effect: "zip" }, death: { voice: "hustler", effect: "zip" } },
+        "core-006": { cast: { voice: "crone" }, trigger: { voice: "crone" } },
+      },
+      emotes: { gary: { persona: "hustler" } },
+    };
+  }
+  const GARY = { greetings: "Hey there!", wellPlayed: "Well played.", oops: "Oops.", thanks: "Thanks!", threaten: "All in." };
+  function words(): { "//": string; cards: Record<string, Record<string, unknown>>; emotes: Record<string, unknown> } {
+    return {
+      "//": "generated",
+      cards: {
+        "core-004": { play: "Double or nothing, baby!", death: "House always wins." },
+        "core-006": { cast: "Drink up, dearie.", trigger: ["First.", "Second."] },
+      },
+      emotes: { gary: { ...GARY } },
+    };
+  }
+
+  it("R655 withVoiceText fills each voiced hook's text, a trigger's lines and each portrait's five lines", () => {
+    const raw = wordless();
+    const filled = withVoiceText(raw, words()) as Record<string, Record<string, Record<string, unknown>>>;
+
+    expect(filled).toEqual({
+      voices: raw.voices,
+      effects: raw.effects,
+      cards: {
+        "core-004": {
+          play: { voice: "hustler", text: "Double or nothing, baby!" },
+          attack: { effect: "zip" },
+          death: { voice: "hustler", text: "House always wins.", effect: "zip" },
+        },
+        "core-006": { cast: { voice: "crone", text: "Drink up, dearie." }, trigger: { voice: "crone", lines: ["First.", "Second."] } },
+      },
+      emotes: { gary: { persona: "hustler", ...GARY } },
+    });
+    expect(Object.keys(filled), "the sections keep their order").toEqual(["voices", "effects", "cards", "emotes"]);
+    expect(Object.keys(filled.cards?.["core-004"]?.death ?? {}), "a hook's fields keep theirs").toEqual(["voice", "text", "effect"]);
+    expect(raw.cards?.["core-004"], "the table itself is untouched").toEqual(wordless().cards?.["core-004"]);
+
+    const table = parseCardAudio(filled, CATALOG);
+    expect(lineFor(table, "core-004", "play")).toEqual({ text: "Double or nothing, baby!", persona: SAY });
+    expect(lineFor(table, "core-006", "trigger2")).toEqual({ text: "Second.", persona: CRONE });
+    expect(emoteLineFor(table, "gary", "thanks")).toEqual({ text: "Thanks!", persona: SAY });
+  });
+
+  it("R655 withVoiceText refuses a line written in card-audio.json5, a line no voice speaks and a voice with nothing to speak", () => {
+    const joinError = (edit: (raw: Record<string, Record<string, unknown>>, text: ReturnType<typeof words>) => void): string => {
+      const raw = wordless();
+      const text = words();
+      edit(raw, text);
+      try {
+        withVoiceText(raw, text);
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return "(no error)";
+    };
+    const hooksOf = (raw: Record<string, Record<string, unknown>>, id: string): Record<string, Record<string, unknown>> =>
+      raw.cards?.[id] as Record<string, Record<string, unknown>>;
+
+    expect(joinError(() => undefined)).toBe("(no error)");
+    expect(
+      joinError((raw) => {
+        hooksOf(raw, "core-004").play = { voice: "hustler", text: "Double or nothing, baby!" };
+      }),
+    ).toBe("card-audio.json5: cards.core-004.play.text: a line belongs in card-text.yaml");
+    expect(
+      joinError((raw) => {
+        hooksOf(raw, "core-006").trigger = { voice: "crone", lines: ["First."] };
+      }),
+    ).toBe("card-audio.json5: cards.core-006.trigger.lines: a line belongs in card-text.yaml");
+    expect(
+      joinError((raw) => {
+        (raw.emotes as Record<string, unknown>).gary = { persona: "hustler", oops: "Oops." };
+      }),
+    ).toBe("card-audio.json5: emotes.gary.oops: a line belongs in card-text.yaml");
+    expect(
+      joinError((_raw, text) => {
+        (text.cards["core-004"] as Record<string, unknown>).attack = "All in!";
+      }),
+    ).toBe("card-text.yaml: core-004.voice.attack: no voice in card-audio.json5 speaks it");
+    expect(
+      joinError((_raw, text) => {
+        text.cards["core-005"] = { cast: "Hoarding is self care." };
+      }),
+    ).toBe("card-text.yaml: core-005.voice.cast: no voice in card-audio.json5 speaks it");
+    expect(
+      joinError((_raw, text) => {
+        text.emotes.timmy = { ...GARY };
+      }),
+    ).toBe("card-text.yaml: emotes.timmy: card-audio.json5 has no such portrait");
+    expect(
+      joinError((_raw, text) => {
+        delete text.cards["core-004"]?.death;
+      }),
+    ).toBe("card-text.yaml: core-004.voice.death: missing (card-audio.json5 gives the hook a voice)");
+    expect(
+      joinError((_raw, text) => {
+        delete text.emotes.gary;
+      }),
+    ).toBe("card-text.yaml: emotes.gary: missing (card-audio.json5 gives the portrait a voice)");
+  });
+
+  it("R655 the shipped card-audio.json5 parses only with its words: it writes none itself", () => {
+    expect(() => parseCardAudioText(shippedText(), SHIPPED_CATALOG)).toThrow(/^card-audio\.json5: cards\.core-001\.play\.text: /);
   });
 });
 

@@ -3361,7 +3361,8 @@ fn keep_only<T>(rows: &mut Vec<T>, wanted: impl FnMut(&T) -> bool) -> usize {
 /// its invite-code attempts lose their link to it, a room it opened that nobody joined goes too,
 /// and (0029, R1442) so does the play telemetry of every seat it held.
 /// Finished matches, results and series stay for the other player. Postgres empties this profile's
-/// seat on them; here the id stays, since no port read of a finished match looks the seat up.
+/// seat on them and reads it back as the empty id; here the id stays (`db/pg.rs`, KNOWN
+/// DIVERGENCES, deleted accounts), and a read of it finds no profile.
 pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     if keep_only(&mut tables.profiles, |row| row.id != profile_id) == 0 {
         return false;
@@ -4197,8 +4198,8 @@ use crate::db::store::{
     FriendRequestRow, FriendshipRow,
 };
 
-/// The tables migration 0038 adds, and `profiles.allow_spectators`, which `Profile` does not carry:
-/// held as the profiles that turned it off (the column defaults to on).
+/// The tables migration 0038 adds. Its `profiles.allow_spectators` is read no longer (R2615000), so
+/// the fake holds none of it.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SocialTables {
     pub friend_requests: Vec<FriendRequestRow>,
@@ -4209,7 +4210,6 @@ pub struct SocialTables {
     pub challenges: Vec<ChallengeRow>,
     pub chat_messages: Vec<ChatMessageRow>,
     pub chat_reports: Vec<ChatReportRow>,
-    pub spectators_refused: IndexSet<String>,
 }
 
 /// The pair in the store's order, as `friendships`' check holds it (`a < b`).
@@ -4253,7 +4253,6 @@ pub fn remove_social_rows(tables: &mut FakeTables, profile_id: &str) {
     keep_only(&mut social.chat_reports, |row| {
         row.reporter != profile_id && !gone.contains(&row.message_id)
     });
-    social.spectators_refused.shift_remove(profile_id);
 }
 
 // friends (B43–B45)
@@ -4539,7 +4538,6 @@ pub fn presence_watchable(
             row.status == MatchStatus::Live
                 && seated(id.as_str())
                 && !seated(viewer)
-                && !tables.social.spectators_refused.contains(id.as_str())
                 && friends_unblocked_in(tables, viewer, id.as_str())
         })
         .cloned()
@@ -4555,33 +4553,6 @@ pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Prof
         .iter()
         .find(|row| row.id == profile_id)
         .cloned())
-}
-
-pub fn profiles_allows_spectators(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
-    call(f, "profiles.allowsSpectators")?;
-    let tables = f.tables();
-    if !tables.profiles.iter().any(|row| row.id == profile_id) {
-        return Ok(false);
-    }
-    Ok(!tables.social.spectators_refused.contains(profile_id))
-}
-
-pub fn profiles_set_allow_spectators(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    allow: bool,
-) -> Result<(), StoreError> {
-    call(f, "profiles.setAllowSpectators")?;
-    if !f.tables().profiles.iter().any(|row| row.id == profile_id) {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    let refused = &mut f.tables().social.spectators_refused;
-    if allow {
-        refused.shift_remove(profile_id);
-    } else {
-        refused.insert(profile_id.to_string());
-    }
-    Ok(())
 }
 
 // challenges (B48, B49)

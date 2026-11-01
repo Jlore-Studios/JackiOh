@@ -9,6 +9,15 @@
 //! co-op match holds them (B42, read as `duos::live_match_of` reads it); else `online` while their
 //! last heartbeat is at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it
 //! reads as a person who is away, and in a match as a person in one (R1452).
+//!
+//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, which has
+//! fewer than `SPECTATORS_PER_MATCH` watchers; no setting of the friend's refuses it (R2615000). The
+//! watch socket judges it again at its hello (`social::watch`).
+//!
+//! `standings` reads every friend's at once, in the caller's transaction, by a fixed number of
+//! set-based reads (heartbeats, series, co-op matches, the watch checks), whatever the number of
+//! friends, so `GET /api/friends`, which a client reads every `PRESENCE_HEARTBEAT_MS`, costs one
+//! transaction and no per-friend query.
 
 use std::sync::Arc;
 

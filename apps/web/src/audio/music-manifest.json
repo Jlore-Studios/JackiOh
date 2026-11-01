@@ -1227,16 +1227,16 @@
       "handoff": 4.848485
     },
     "intro-meditative-080": {
-      "hash": "9df1b07eae5245b5",
-      "bytes": 53114,
-      "bpm": 117,
+      "hash": "68cd94cce7970a47",
+      "bytes": 59711,
+      "bpm": 100,
       "beatsPerBar": 4,
       "loop": false,
-      "intro": 4.102564,
-      "duration": 5.102564,
+      "intro": 4.8,
+      "duration": 5.8,
       "loopStart": null,
       "loopEnd": null,
-      "handoff": 4.102564
+      "handoff": 4.8
     },
     "intro-meditative-086": {
       "hash": "96fee3aa4a3e514f",
@@ -1862,6 +1862,18 @@
       "loopEnd": null,
       "handoff": 3.72093
     },
+    "intro-stinkyscape-137": {
+      "hash": "eaa7c0c4fa45157b",
+      "bytes": 50229,
+      "bpm": 124,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 3.870968,
+      "duration": 4.870968,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 3.870968
+    },
     "intro-stinkyscape-137-1": {
       "hash": "ed43aabfdf9d47c8",
       "bytes": 51416,
@@ -2053,6 +2065,18 @@
       "loopStart": null,
       "loopEnd": null,
       "handoff": 3.478261
+    },
+    "intro-stinkyscape-176": {
+      "hash": "2c549ef425ce562e",
+      "bytes": 48749,
+      "bpm": 129,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 3.72093,
+      "duration": 4.72093,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 3.72093
     },
     "intro-stinkyscape-t-dormant-starship": {
       "hash": "71c0d23f3e370aea",

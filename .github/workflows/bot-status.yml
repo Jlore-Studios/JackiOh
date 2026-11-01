@@ -1,5 +1,5 @@
-# The pinned "Night bot status" issue (bot/harness/dashboard.py, #148), rewritten every five
-# minutes, with its statistics (bot/harness/stats.py) counted afresh every 30 minutes and kept in
+# The pinned "Night bot status" issue (bot/go/internal/dashboard, #148), rewritten every five
+# minutes, with its statistics (bot/go/internal/stats) counted afresh every 30 minutes and kept in
 # the issue between counts. (They had an issue of their own, #190, until they were folded in.)
 #
 # GitHub fires this repository's schedules late and rarely (the ten-minute sweep has gone hours
@@ -10,21 +10,21 @@
 # every 30 minutes), and the loop's one runner is busy either way, so five minutes costs no
 # more runner time than ten.
 # Between the rewrites the loop redraws the issue's runners section alone every two minutes
-# (`dashboard.refresh_runners`): what every runner is doing, read from the runs going and queued
+# (`dashboard.RefreshRunners`): what every runner is doing, read from the runs going and queued
 # and their jobs. It costs a few calls and one a run, and a run's jobs read again unchanged cost no
-# rate limit (a conditional request, `gh._CACHED`).
+# rate limit (a conditional request, `gh.Cached`).
 # The hourly schedule only restarts the loop if it ever stops; the concurrency group keeps one
 # loop going and at most one waiting. Each tick also runs the sweep (bot-commands' scheduled job,
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
 # within five minutes, not hours. Each tick also settles the issue about the bot machine's disk
-# (bot/harness/disk.py): open while the disk is filling up, closed once it is not.
+# (bot/go/internal/disk): open while the disk is filling up, closed once it is not.
 # With the config's `controller` on (#1455), each tick's sweep also plans the night bot's work and
-# starts each bot-night run with its plan made (`--controller`, bot/harness/controller.py), so a run
+# starts each bot-night run with its plan made (`--controller`, bot/go/internal/controller), so a run
 # waits in GitHub's queue once, for its model job, not for a gate and a plan job first; while this
 # loop goes, nothing else plans (bot-night's gate defers to it, and the planning lock holds the
 # rest). The loop also delivers those runs once they end (#1537): bot-night gives them no deliver
 # job, so each tick, before it plans, the sweep downloads a finished run's `work` upload, clones the
-# default branch into RUNNER_TEMP and delivers it as deliver did (`controller.deliver`). That needs
+# default branch into RUNNER_TEMP and delivers it as deliver did (`controller.Deliver`). That needs
 # this job's write grants: the plans go on the state branch, the runs start from its token, and a
 # delivery pushes the branch and opens or updates the pull request with the bot's.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
@@ -45,8 +45,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
   EVERY_SECONDS: "300"
   RUNNERS_EVERY_SECONDS: "120"
   LOOP_SECONDS: "19800"
@@ -68,15 +66,13 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - uses: ./.github/actions/harness
 
       - name: Sweep and rewrite the status issue every five minutes, its runners every two
         working-directory: bot
         env:
           BOT_GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
-          # Squishy's own token, for its sweep (`config.companion_env`); the night bot's
+          # Squishy's own token, for its sweep (`config.CompanionEnv`); the night bot's
           # process never writes with it.
           SQUISHY_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -97,7 +93,7 @@ jobs:
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
-          python -m harness dashboard --sweep --stats --companions --controller \
+          harness dashboard --sweep --stats --companions --controller \
             --every "${EVERY_SECONDS}" --runners-every "${RUNNERS_EVERY_SECONDS}" \
             --for "${LOOP_SECONDS}"
 

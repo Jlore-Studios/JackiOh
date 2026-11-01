@@ -500,8 +500,10 @@ mod tests {
                 let offered = offered_ids(&s);
                 assert_eq!(offered.len(), 3, "Discover {step}");
                 for id in &offered {
+                    // An embiggen card prints `{ base, embiggen }`: its play costs `base`.
                     let cost = def_json(id)["cost"].clone();
-                    assert!(cost.as_i64().is_some_and(|price| price <= i64::from(subsystems::STITCHING_MAX_COST)));
+                    let price = cost.as_i64().or_else(|| cost["base"].as_i64());
+                    assert!(price.is_some_and(|price| price <= i64::from(subsystems::STITCHING_MAX_COST)), "{id}: {cost}");
                 }
                 s.answer(json!(must(offered.first().cloned(), "an offered Unit")));
             }

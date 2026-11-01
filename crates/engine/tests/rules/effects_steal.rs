@@ -221,7 +221,8 @@ mod r15_steal_s6_3_m3_t1 {
     }
 
     #[test]
-    fn r12_keeps_the_owner_so_a_stolen_unit_that_dies_goes_to_its_owners_graveyard() {
+    fn r12_r2618000_keeps_the_owner_on_the_field_but_a_stolen_unit_that_dies_goes_to_the_thief_s_graveyard_as_theirs()
+     {
         let mut state = game();
         let victim = put(
             &mut state,
@@ -243,16 +244,17 @@ mod r15_steal_s6_3_m3_t1 {
         assert_eq!(
             state
                 .players
-                .p2
+                .p1
                 .graveyard
                 .iter()
                 .map(|card| card.id.clone())
                 .collect::<Vec<_>>(),
             vec![victim.id.clone()]
         );
-        assert_eq!(state.players.p1.graveyard.len(), 0);
-        // R78: leaving the field hands control back to the owner.
-        assert_eq!(live(&state, &victim.id).controller, PlayerId::P2);
+        assert_eq!(state.players.p2.graveyard.len(), 0);
+        // R2618000: it lands as the thief's own card, so R78 hands control back to the thief.
+        assert_eq!(live(&state, &victim.id).owner, PlayerId::P1);
+        assert_eq!(live(&state, &victim.id).controller, PlayerId::P1);
     }
 
     #[test]

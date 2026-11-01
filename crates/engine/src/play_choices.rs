@@ -684,9 +684,11 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
         && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
-/// §2.3, R348: why this X is not one the player may choose for this card ("1 ≤ X ≤ current mana",
-/// `MIN_CHOSEN_X`; `most` defaults to that mana), or `Ok`. `legal_x_values` offers exactly what this
-/// passes, so the picker and the reducer's refusal cannot disagree.
+/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is —
+/// "X is chosen at play time, 1 ≤ X ≤ the mana the player can spend" (`MIN_CHOSEN_X`): their current
+/// mana plus what a credit line still lends them (`credit::spendable_mana`). `legal_x_values` offers
+/// exactly the values this passes and `refuse_x` refuses exactly the ones it names, so the picker and
+/// the reducer's refusal cannot disagree. `most` defaults to the mana the player can spend.
 pub fn why_x_refused(
     state: &GameState,
     player: PlayerId,
@@ -712,8 +714,8 @@ pub fn why_x_refused(
     Ok(())
 }
 
-/// The most X a play of this card may choose: the player's current mana for an X-cost card, and for a
-/// copier with an X-cost text the mana left once its own price is paid (B5 E14, R545).
+/// The most X a play of this card may choose: the mana the player can spend for an X-cost card (R1223),
+/// and for a copier with an X-cost text what is left of it once its own price is paid (B5 E14, R545).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
     // R1223: an X may be chosen out of borrowed mana too.
     let mana = crate::credit::spendable_mana(state, player);
@@ -1842,7 +1844,7 @@ pub fn listed_play_choices(
 /// Every `play` action this card could legally produce: R81's five choice kinds crossed, skipping the
 /// prices the player cannot pay. This is what `legal_actions` lists for a card in hand.
 pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
-    // R2433000: a seat that plays only Core cards lists no play of any other card.
+    // R2533000: a seat that plays only the tutorial's cards lists no play of any other card.
     if crate::state::barred_from_play(state, player, card) {
         return Vec::new();
     }
@@ -1973,7 +1975,7 @@ pub fn graveyard_play_actions_for(
 ) -> Vec<PlayAction> {
     if !crate::graveyard_play::playable_from_graveyard(state, card)
         || card.zone.player() != player
-        // R2433000: nor from the graveyard.
+        // R2533000: nor from the graveyard.
         || crate::state::barred_from_play(state, player, card)
     {
         return Vec::new();

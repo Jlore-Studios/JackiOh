@@ -10,7 +10,8 @@ import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { PatchSourceProvider } from "./context.tsx";
 import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
-import { PatchNotes, countsLine } from "./PatchNotes.tsx";
+import { PatchNotes } from "./PatchNotes.tsx";
+import { countsLine } from "./history.ts";
 import { RELEASES, majors, releaseGroups, type Release } from "./releases.ts";
 import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type Patch, type PatchSource, type TechnicalEntry } from "./source.ts";
 import { patchTestid } from "./testids.ts";
@@ -414,7 +415,7 @@ describe("R724000 the Patch notes page by release line", () => {
     }));
     shipped.push({
       ...base,
-      version: "v0.5.1",
+      version: "v0.5.0b",
       tier: "patch",
       changes: [{ id: "traininggrounds-001", name: "Spikey Steven", kind: "added" }],
     });
@@ -422,7 +423,7 @@ describe("R724000 the Patch notes page by release line", () => {
     expect(groups.map(({ release }) => release.id)).toEqual([...sets].reverse());
     const newest = groups[0];
     expect(newest?.release.name).toBe("Stinkyscape & Training Grounds");
-    expect(newest?.patches.map((patch) => patch.version)).toEqual(["v0.5.1", "v0.5.0"]);
+    expect(newest?.patches.map((patch) => patch.version)).toEqual(["v0.5.0b", "v0.5.0"]);
     expect(newest?.release.summary).toContain("Training Grounds");
   });
 

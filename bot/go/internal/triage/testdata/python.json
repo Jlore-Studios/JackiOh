@@ -1,0 +1,810 @@
+{
+ "pull_title_ok": [
+  ["Patch v0.3.X: Bigot costs (3)", false],
+  ["Patch v0.3.Y: a fix", false],
+  ["Patch v0.3.17b: a fix", true],
+  ["Patch: a fix", true],
+  ["v0.6.0: daily quests", false],
+  ["Night bot: a seventh subscription", false],
+  ["CI: daily super run failed", false],
+  ["Architecture: patch numbers (part 2 of 8): fragments", false],
+  ["Patch v0.2.X (part 2 of 4): the lobby", false],
+  ["Patch (part 2 of 4): the lobby", true],
+  ["Share a room as an invite link", false],
+  ["", false],
+  ["   ", false],
+  ["Patch:x", false],
+  ["Patch:  spaced  out ", false],
+  ["  Patch   v1.2.3:\tthe\nthing  ", false],
+  ["Patch v١.٢.٣: arabic digits", true],
+  ["Patch v1.2.3ab: two letters", false],
+  ["Patch v1.2.Xa: x", false],
+  ["v1.2.3: not a major", false],
+  ["CI (part 1 of 2): a part", false],
+  ["Patch v0.3.X (part ٢ of 4): unicode part", false],
+  ["patch: lower", false],
+  ["Patch: Patch: twice", true],
+  ["Night bot:no space", false],
+  ["Architecture:  nbsp", false],
+  ["x\u001cy Patch: sep", false],
+  ["Patch\u001c: sep", false],
+  ["Patch v1.2.3 (part 1 of 2):", false],
+  ["Patch: ", false],
+  ["CI: a job ran over 7 minutes", false],
+  ["CI: a job ran over 7 minutes", false],
+  ["CI: daily super run failed", false],
+  ["Render: the live server is not serving main's catalog", false],
+  ["patches ship refused to promote the pending patches", false],
+  ["CI: a patches promotion or log is stuck", false],
+  ["Night bot: the machine's disk is filling up", false],
+  ["Architecture: weekly hygiene, dead files and archives, 2026-10-19", false],
+  ["Architecture: weekly hygiene", false],
+  ["Architecture: weekly hygienes", false],
+  ["Architecture: weekly hygiene_x", false],
+  ["Night bot status", false],
+  ["Squishy status", false],
+  ["patches ship: v0.3.17", true],
+  ["AI gen 13 (improve): in training", true],
+  ["Promote main to production: 3 commit(s) up to abc1234", true],
+  ["Revert \"Patch v0.3.X: a fix\"", false],
+  ["Merging to production in 3 hours", false],
+  ["Merging to productions", false],
+  ["CI: the learn lane folds an export", false],
+  ["CI: a job ran over 7 minutes later", false],
+  ["  CI:  daily super   run failed ", false],
+  ["AI gen ١ x", false],
+  ["patches ship: v0.3.1, v0.3.2b", true],
+  ["patches ship: v0.3.1,v0.3.2", false],
+  ["patches log: abc1234..def5678", true],
+  ["patches log: abc123..def5678", false],
+  ["Promote main to production: 28 commit(s) up to 6d44be2", true],
+  ["AI gen 8 (improve): x", true],
+  ["AI gen 8 (other): x", false],
+  ["Revert \"Revert \"Patch: x\"\"", true],
+  ["Revert \"Night bot: x\"", false],
+  ["Patch:  x", false],
+  ["Patch: 　x", false],
+  ["Patch: \u001cx", false],
+  ["Patch: ​x", true],
+  ["Revert \"Patch: x\"\n", true],
+  ["Patch v1.2.3 (part 1 of 2): x", true],
+  ["Patch v1.2 : x", false],
+  ["AI gen 8 (learn):  ", false]
+ ],
+ "pull_title": [
+  ["Patch: a", "CI: b", "Patch: a"],
+  ["CI: a", "Patch: b", "Patch: b"],
+  ["CI: a", "Night bot: b", "Patch: a"],
+  ["", "CI:  b  ", "Patch: b"],
+  ["  ", "", ""],
+  ["Fix it", "", "Patch: Fix it"],
+  ["", "", ""],
+  ["Patch:  x  y", "z", "Patch: x y"]
+ ],
+ "type_label": [
+  ["Patch v0.3.X: Bigot costs (3)", "patch"],
+  ["Patch v0.3.Y: a fix", "patch"],
+  ["Patch v0.3.17b: a fix", "patch"],
+  ["Patch: a fix", ""],
+  ["v0.6.0: daily quests", "major version"],
+  ["Night bot: a seventh subscription", "night bot"],
+  ["CI: daily super run failed", "architecture"],
+  ["Architecture: patch numbers (part 2 of 8): fragments", "architecture"],
+  ["Patch v0.2.X (part 2 of 4): the lobby", "patch"],
+  ["Patch (part 2 of 4): the lobby", ""],
+  ["Share a room as an invite link", ""],
+  ["", ""],
+  ["   ", ""],
+  ["Patch:x", ""],
+  ["Patch:  spaced  out ", ""],
+  ["  Patch   v1.2.3:\tthe\nthing  ", ""],
+  ["Patch v١.٢.٣: arabic digits", "patch"],
+  ["Patch v1.2.3ab: two letters", "patch"],
+  ["Patch v1.2.Xa: x", "patch"],
+  ["v1.2.3: not a major", ""],
+  ["CI (part 1 of 2): a part", ""],
+  ["Patch v0.3.X (part ٢ of 4): unicode part", "patch"],
+  ["patch: lower", ""],
+  ["Patch: Patch: twice", ""],
+  ["Night bot:no space", "night bot"],
+  ["Architecture:  nbsp", "architecture"],
+  ["x\u001cy Patch: sep", ""],
+  ["Patch\u001c: sep", ""],
+  ["Patch v1.2.3 (part 1 of 2):", "patch"],
+  ["Patch: ", ""],
+  ["CI: a job ran over 7 minutes", "architecture"],
+  ["PATCH V1: x", "patch"],
+  ["v1.2.0", "major version"],
+  ["v1.2.0x", ""],
+  ["v1.2.0_", ""],
+  ["v1.2.0.1", "major version"],
+  ["v1.2.05", ""],
+  ["night BOT: x", "night bot"],
+  ["ci: x", "architecture"],
+  ["Architecture:x", "architecture"],
+  ["v١.2.0 x", "major version"],
+  ["Make it faster", ""]
+ ],
+ "form_answers": [
+  ["### What it does\n\nA thing.\n\n### Difficulty (a guess)\n\nhard\n\n### Priority\n\nlow\n\n### Who does it\n\nPeople (human)\n", [["What it does", "A thing."], ["Difficulty (a guess)", "hard"], ["Priority", "low"], ["Who does it", "People (human)"]]],
+  ["### A\n### B\nval", [["A", ""], ["B", "val"]]],
+  ["### A\n\n### B\n\nval", [["A", ""], ["B", "val"]]],
+  ["### Label  \t\nanswer  \n\n", [["Label", "answer"]]],
+  ["### \nfoo\nbar", [["\nfoo", "bar"]]],
+  ["###  \nx", [[" ", "x"]]],
+  ["### A", []],
+  ["x\n### A\n\ny", [["A", "y"]]],
+  ["### A\r\n\r\nB\r\n### C\r\n\r\nD", [["A", "B"], ["C", "D"]]],
+  ["### A\n\n  \n### B\n\nc", [["A", ""], ["B", "c"]]],
+  ["### A\n\nline1\nline2\n\n### B\n\n", [["A", "line1\nline2"], ["B", ""]]],
+  ["### A\n\nfoo ### B\n\nbar", [["A", "foo ### B\n\nbar"]]],
+  ["### A\n\nfoo\n \n### B\nbar\n", [["A", "foo"], ["B", "bar"]]],
+  ["### A\n\nfoo ### B\n\nbar", [["A", "foo ### B\n\nbar"]]],
+  ["### A\n\nfoo\n \n### B\n\nbar", [["A", "foo"], ["B", "bar"]]],
+  ["### Difficulty\n\nEasy, a guess\n\n### priority\n\nHIGH\n", [["Difficulty", "Easy, a guess"], ["priority", "HIGH"]]],
+  ["### Difficulty (a guess)\n\nNot sure\n\n### Priority\n\nNo priority\n\n### Who does it\n\nDecide later", [["Difficulty (a guess)", "Not sure"], ["Priority", "No priority"], ["Who does it", "Decide later"]]],
+  ["### Difficulty\n\nmedium\n### Difficulty again\n\nhard", [["Difficulty", "medium"], ["Difficulty again", "hard"]]],
+  ["### Priority\n\nmedium\n\n### Priority\n\nhigh", [["Priority", "medium"], ["Priority", "high"]]],
+  ["", []],
+  ["no form here", []],
+  ["### A\n\n### \n\nx", [["A", ""], ["\n", "x"]]],
+  ["#### A\n\nb", []],
+  [" ### A\n\nb", []],
+  ["### A\n\n\n\n", [["A", ""]]],
+  ["### A\n\nb\n### ", [["A", "b"]]],
+  ["a\t#### ", []],
+  ["\r\n#Bc\r\n\n\n### A\n", [["A", ""]]],
+  ["\t### A\n#\r\n", []],
+  ["#####\n\n#\n\t## #", []],
+  ["\u001c###  x yaBc### ", []],
+  ["", []],
+  ["Bc### A\n\u001cx y\t\u001ca\n\n ### A\n\r\naBcBc", []],
+  ["", []],
+  [" \t\u001c", []],
+  ["### A\n##", [["A", "##"]]],
+  ["\n\r\n ", []],
+  ["x y\t### \u001cx y\n\n ### A\n\r\n\n\nBc####", []],
+  [" \r\n", []],
+  ["", []],
+  ["a", []],
+  ["\n\n\r\n\n\n## x y ### A\n### x y\n\n\r\n", [["x y", ""]]],
+  ["Bc##  \t#### A\n\u001c", []],
+  ["Bc ", []],
+  [" #\n\n### a#\t###  ", []],
+  ["##\n\n ## \tx yx y\t", []],
+  ["", []],
+  ["\n\n ##### # aa### A\n##### A\nBc### A\n\n", []],
+  ["#a### A\n\n\n### A\n x y ", [["A", " x y"]]],
+  ["", []],
+  ["### A\n   ", [["A", ""]]],
+  ["#### x ya\naa##\n", []],
+  ["### # x yx y  Bc\n\nBc ", [["# x yx y  Bc", "Bc"]]],
+  ["\u001c \u001c\n\n\n\n", []],
+  [" x y### \r\n# \r\nBc### A\naBcx y", []],
+  ["aBc ### x y", []],
+  ["####### A\n Bc\nBc", []],
+  ["##\n\nBc\n\n\t\n\n\nBc####x y", []],
+  ["### ### A\n### a# ### A\n#Bc \t#### A\n\t", [["### A", ""], ["a# ### A", "#Bc \t#### A"]]],
+  ["### ### \r\n x yBc\t### A\n\u001c\n\n", [["###", " x yBc\t### A"]]],
+  ["a\n\n###  ### A\n ", [[" ### A", ""]]],
+  ["#x y### ", []],
+  ["### A\n\r\n ### \r\na### A\n a", [["A", " ### \na### A\n a"]]],
+  ["\t### ### \n Bc\na\r\n### A\n", [["A", ""]]],
+  ["#\na### A\n\n\n\n\n", []],
+  [" a #a\n\n\r\n ##Bc", []],
+  ["### \u001cBc \u001c ### A\nx y", [["\u001cBc \u001c ### A", "x y"]]],
+  ["ax yBc", []],
+  [" \n\n\r\nx y ", []],
+  ["\n### A\n\r\nBcBc### A\n#\n#aa## ", [["A", "BcBc### A\n#\n#aa##"]]],
+  ["\t", []],
+  ["\ta## ###  \ta", []],
+  ["  \t", []],
+  ["\t## ### A\n### \n\n\u001c###\t", [["\n", "\u001c###"]]],
+  ["### \u001c", []],
+  ["### A\naBc\t\t##### ##\u001cBca### x y\n", [["A", "aBc\t\t##### ##\u001cBca### x y"]]],
+  [" Bc\n Bc\u001c\t\r\n # Bc", []],
+  ["### A\n\u001c### ### A\naBc\t\u001c### A\n ### A\n\t\u001ca", [["A", "\u001c### ### A\naBc\t\u001c### A\n ### A\n\t\u001ca"]]],
+  ["\n### A\n\u001c\n### A\n \n\n\t", [["A", ""], ["A", ""]]],
+  ["\n\r\n ", []],
+  ["\u001c x y\u001c### \u001c  ##x yx y", []],
+  ["### A\n   \r\n  a\t\r\n \ta ", [["A", "   \n  a\t\n \ta"]]],
+  ["### A\n \u001c", [["A", ""]]],
+  ["### A\n\u001c ##", [["A", "\u001c ##"]]],
+  ["###", []],
+  ["\r\na ### A\n  x y  aBc##\u001c ", []],
+  ["##\t## Bc\u001c### ", []],
+  ["\n\n#\r\n  a# ## ", []],
+  ["\t### A\nx y # ", []],
+  ["### A\n\r\na", [["A", "a"]]],
+  [" \u001cx y##\t \n\t\u001c", []],
+  ["##\u001c# #### x y", []],
+  ["\na x y  Bcax y", []],
+  [" Bc##x y\n### x y \n\n\n\n\n \n\n", [["x y", ""]]],
+  ["##a", []],
+  ["\n\tBcx y\n\t\u001c\n\na", []],
+  ["\t#### a\t\nBc\n\n\t### #", []],
+  ["\t\u001c\r\nx y\r\n\t\t### ", []],
+  ["\r\n\r\na\t##\nBc ", []],
+  ["Bc\u001cBc### aBc#", []],
+  [" \n\n### A\n### A\nx y### ", [["A", ""], ["A", "x y###"]]],
+  ["\r\n##x y### A\n ## \r\na", []],
+  ["", []],
+  ["", []],
+  ["### A\n\u001cBc###  \r\n\n\u001c## ", [["A", "\u001cBc###  \n\n\u001c##"]]],
+  ["Bcx y\tx y a\u001c\u001c", []],
+  [" Bc### \t  \t\t", []],
+  ["\u001cBcx y\t\t##a##\n\n\n\n", []],
+  ["\tBc### A\n\u001c x y#\na ", []],
+  [" ##### A\n\tx y#\n", []],
+  ["\n\n###  # ", []],
+  ["#", []],
+  ["\n\r\n \u001c\u001c\r\n", []],
+  ["\n####Bcx y", []],
+  ["#\u001cx y ### A\n", []],
+  ["  Bca## a##", []],
+  ["\n\n\r\n\n\n\n\r\n\n\n#aBc\t\u001c", []],
+  [" \u001c\r\n### ", []],
+  [" ", []],
+  ["\n\nx y\n\nx y", []],
+  ["### A\n# ### A\n\n\u001c### A\n ", [["A", "# ### A\n\n\u001c### A"]]],
+  ["a\n\n\t ### A\n##### ", []],
+  ["x y\n### A\n", [["A", ""]]],
+  ["\r\na \n\n   ### A\n\r\n##", []],
+  ["\r\naa  #aBc\n\n\n", []],
+  [" ", []],
+  ["x y\n\n\u001c#", []],
+  ["\r\n a### A\n \u001c####", []],
+  ["\t###    \t\t", []],
+  ["\n\n  x yx yBcBc \n\nax y##\t", []],
+  ["#### A\n### \n\n### A\nBc\ta\t### x y\u001c\t### ", [["\n", ""], ["A", "Bc\ta\t### x y\u001c\t###"]]],
+  [" ", []],
+  ["\n", []],
+  ["ax y ax yBc \r\n", []],
+  ["a### A\n", []],
+  ["a\nx y###Bc\n\n \n\n\n\t\n", []],
+  ["a\r\nBc\n\n a###  ", []],
+  [" \r\n##", []],
+  ["x yaa### \n\n\u001c\n\nBc##\n### A\n\n\n", [["A", ""]]],
+  ["\n \n## ### #\tx yBc\r\n", []],
+  ["### \u001c ### ##### A\n\t### A\n\n#", [["\u001c ### ##### A", "\t### A\n\n#"]]],
+  ["\r\n##", []],
+  ["##\n\n", []],
+  ["\tx y\t \n\n\nBc### A\n", []],
+  ["### \r\n\r\n", [["\n", ""]]],
+  ["### \n\n ##Bc", [["\n", " ##Bc"]]],
+  ["\r\n#\n##\u001c \n", []],
+  ["\n\u001c##\n\n##  a### A\n####", []],
+  ["##", []],
+  ["\n\n# Bc ##", []],
+  ["##\tBc\n\n#\n\nx yBca### A\n \na", []],
+  ["\tx y \u001cax y ", []],
+  ["\n\n\n\nBcx y### ### A\nBc### \n\n\u001c", []],
+  ["### A\n\n\n \t### A\n \n### \n", [["A", " \t### A"]]],
+  ["", []],
+  ["x yax yax y  \tx y#", []],
+  ["\n\nBc", []],
+  ["x y  ### ## ", []],
+  ["#\n\n  \u001cx y### x y\n\nx yx y ", []],
+  ["#\r\n#", []],
+  ["", []],
+  [" \nx y", []],
+  ["aBc\r\n \n\n", []],
+  ["##### A\nBc  a\n\n### A\nBcx ya### A\n### ", [["A", "Bcx ya### A"]]],
+  [" \t ### A\n\n\n\u001c### A\n\u001c", []],
+  ["\t \n \n\n## \tx ya### ###   ", []],
+  ["\r\n###  #### A\n### A\n ", [[" #### A", ""], ["A", ""]]],
+  ["Bc\u001c\r\n\n\u001c###  \nBc### ### A\n### ", []],
+  [" ### A\n##\n\na\r\na###   #", []],
+  ["\n\n\n\n### \n\n##\r\n\n  \n\n  ", [["\n", "##"]]],
+  ["  \u001c# \t\u001c   ### A\n", []],
+  ["\n\n### \u001cBc", []],
+  ["  a \u001caaaBcBc###", []],
+  ["x y \t\t\u001c### A\n\n\na\n", []],
+  ["### A\n\nBca### ##\r\n", [["A", "Bca### ##"]]],
+  ["#### A\n\t####  ### # a \n\n", []],
+  [" \u001c\t \n#", []],
+  ["a\n\n \r\nBc### \t\n\n\t", []],
+  ["a\r\n### \n\n### A\n### \t\n\n\n\n  \na", [["\n", ""], ["A", ""], ["\t", "  \na"]]],
+  ["### A\n\n\n\n#  ### A\n \t#\n\n\t", [["A", "#  ### A\n \t#"]]],
+  [" #\t", []],
+  ["\r\n### ", []],
+  ["ax y\n\n", []],
+  ["", []],
+  ["  \n\n##\n\n##### ### A\n\r\n\u001c ### A\n\u001c### A\n", []],
+  ["\n\u001c\na # \n \t", []],
+  ["\n\na\u001c\n\r\n##", []],
+  [" \u001c \t### \nx y\n\n", []],
+  [" ", []],
+  ["### A\n\n\n\n a\t ", [["A", " a"]]],
+  ["x yx y### A\n\r\n\n\nx y##\n### ", []],
+  ["#\n\n\n\n####Bc\n\n\u001c ", []],
+  ["##### A\n#\n\n \r\n\nBc\t", []],
+  ["### A\n### A\n\u001c \n\nBc BcBc \na", [["A", ""], ["A", "\u001c \n\nBc BcBc \na"]]],
+  ["a\n\n##Bc  \r\n\ta", []],
+  [" x y### #\n ", []],
+  ["\n\nx y\n\nBc", []],
+  ["####\n#", []],
+  ["### A\n### A\na\n\n\n\n", [["A", ""], ["A", "a"]]],
+  ["### A\na## \u001c### A\n\r\naa\n#", [["A", "a## \u001c### A\n\naa\n#"]]],
+  ["# Bc", []],
+  ["", []],
+  ["\n\n\na   aBcBc\r\n", []],
+  ["#\r\n\n\n", []],
+  ["a x y\u001cx y### ", []],
+  ["x y\r\nx y", []],
+  [" ### Bc", []],
+  ["Bc", []],
+  ["\n\n\r\n\n\n\r\n \r\n ###  ", []],
+  ["##", []],
+  ["a ", []],
+  ["##\u001c\n\n\n#\n\n#\r\n\r\n", []],
+  ["#Bca\t \u001cBc ", []],
+  ["\t### A\n\n\n\r\n", []],
+  ["Bc\u001c\t\n\tBc\n\n", []],
+  ["\t#x yx y", []],
+  ["\r\n \n", []],
+  ["##", []],
+  ["\r\n \n\n \n", []],
+  ["### A\n###\n\nBc", [["A", "###\n\nBc"]]],
+  [" ### x y# Bc\n#", []],
+  ["\r\n###", []],
+  ["\t\n### #\r\n", [["#", ""]]],
+  ["  x y\u001c### ", []],
+  ["\u001ca \r\n\r\n\r\n x y\tBc\tBc  ", []],
+  ["\n\na\n\r\n\n ##x y", []],
+  ["### A\n", [["A", ""]]],
+  ["\r\na \n\n### A\n\n\n a", [["A", " a"]]],
+  ["###  ### A\n\ta", [[" ### A", "\ta"]]],
+  ["\n ##BcBc\tBc  ### A\naa", []],
+  ["#", []],
+  ["### \n\n#### A\n\n\n ", [["\n", "#### A"]]],
+  ["a### # x y\t\r\n\u001c#x y", []],
+  [" Bca ### A\n###   \t##\n\n \r\n ", [["  \t##", ""]]],
+  ["### A\nBc\n\n### A\n###  ##x y\n### \n \u001c", [["A", "Bc"], ["A", ""], [" ##x y", ""]]],
+  ["\u001c\n\n \t\r\n### ", []],
+  [" # \t##### a", []],
+  ["###   \n\r\nBcx y\n\n \n\n\nx yx y\t", [["  ", "Bcx y\n\n \n\n\nx yx y"]]],
+  ["\t### A\n", []],
+  ["##", []],
+  ["  ", []],
+  ["### A\n\r\n Bc\n\tx y## x y ", [["A", " Bc\n\tx y## x y"]]],
+  [" \t\n\n", []],
+  ["### A\n##", [["A", "##"]]],
+  ["##\n\n\tBc\t##x yBc", []],
+  ["a\n\nBcBc \n\n#x y##x y", []],
+  ["Bc\u001c### A\n", []],
+  ["\r\n ", []],
+  ["x y #### ", []],
+  ["\tx y\n\nBc\u001cBcBc\n\t\n### \u001c", []],
+  [" ### ", []],
+  ["Bc ### A\n \r\nax y ### A\n\r\n  \n\n ", []],
+  ["x y\nBc", []],
+  [" \u001ca\u001c##\t  x yBc\n", []],
+  ["### A\na##", [["A", "a##"]]],
+  ["# a### a", []],
+  ["### ax y\r\n\u001cax y", [["ax y", "\u001cax y"]]],
+  ["###   x yBc### A\n \n\n### A\n\n### A\n\t", [["  x yBc### A", ""], ["A", ""], ["A", ""]]],
+  ["Bc#a ### \u001cBcBc \n\n", []],
+  ["\n##\n", []],
+  ["### \t\r\n## x y ### A\n\n\n\r\n \r\n### ", [["\t", "## x y ### A"]]],
+  [" ### A\nx y", []],
+  [" ### \ta ##\r\n#\r\n", []],
+  ["  ", []],
+  ["\r\n ### A\n\n##### A\n \t\t\r\n", []],
+  ["Bcx y###   x y\r\n# ### ", []],
+  ["###Bc\n\n\u001c\t\n### A\n\u001c", [["A", ""]]],
+  [" ### A\n\n\n\n\n \r\n\n#x y\n\n ", []],
+  ["\nBcaBc ", []],
+  [" \n\naa### A\nx y", []],
+  ["x y\n\na##### A\n### BcBc", []],
+  ["##\n\n\n\n\n### a\n#", [["a", "#"]]],
+  ["  ##\u001c", []],
+  ["### A\nx y\r\n\n### A\n  \u001cBc\r\n", [["A", "x y"], ["A", "  \u001cBc"]]],
+  ["### ### A\n\r\n", [["### A", ""]]],
+  ["", []],
+  ["\n\n###  a##  ", []],
+  ["", []],
+  ["", []],
+  ["\r\n \t \n\n## #x y", []],
+  ["Bc#", []],
+  ["### A\n###\r\nBc##\r\n", [["A", "###\nBc##"]]],
+  ["Bcx y\n ### Bc### A\n ## ### Bc##", []],
+  ["### \r\n### ###  Bc   Bc\n### A\n### A\n ", [["\n### ###  Bc   Bc", ""], ["A", ""], ["A", ""]]],
+  [" ", []],
+  ["\u001c\r\n\n### Bc", []],
+  ["#### \tx y### ### A\n\n\n\n\nBca", []],
+  ["\u001c##\r\nBc\n\n a", []],
+  ["\n\n \nx y##\u001c ", []],
+  ["#\u001c### A\n#\tx y\t### Bcx y", []],
+  ["\r\n###\t \u001ca", []],
+  ["", []],
+  ["", []],
+  ["\n\r\n ### ", []],
+  [" ", []],
+  ["x y\u001c##\r\n\n\n### A\n### A\n### ###", [["A", ""], ["A", ""]]],
+  ["a \n\n#\n### Bc##   ", []],
+  ["  ##Bc\r\na ### \t", []],
+  ["\r\n### \t\u001cx y### \n", [["\t\u001cx y###", ""]]],
+  ["### A\n a#", [["A", " a#"]]],
+  ["\r\n##\u001cx y\u001c\r\n \r\na\u001c\r\n#\u001c", []],
+  [" Bc### A\nx y### A\nx y##\t#a\u001c\n\r\n### ", []],
+  [" ### ### A\n ##\tBc  #x y### A\n\t### A\n", []],
+  ["\r\n", []],
+  ["a ##a###  \n #### x y", []],
+  ["\u001c\n\n\r\nBc#  \n\n### A\na  ##\n\n", [["A", "a  ##"]]],
+  ["##\u001c##\t#### A\nx y\n\n\r\n\tx y\n", []],
+  ["### A\n### A\n\n", [["A", ""], ["A", ""]]],
+  ["Bc\n\n### A\na", [["A", "a"]]],
+  ["### ", []],
+  ["\u001c  Bc ### ", []],
+  ["", []],
+  ["Bc### #\n #", []],
+  ["### A\n### #####  a \n\n#\r\n", [["A", ""], ["#####  a ", "#"]]],
+  ["\u001c", []],
+  ["# x y### ", []],
+  [" ", []],
+  [" \nx y\n\t##  ", []],
+  ["x y#", []],
+  ["### A\n\nx y", [["A", "x y"]]],
+  ["\n\n \n\n\n\n\r\n##\n\nBc### A\n##", []],
+  ["a##### x y ", []],
+  [" \n\nBc ### A\n### A\n### A\n", [["A", ""], ["A", ""]]],
+  ["Bca \r\n### ", []],
+  ["aBcx ya### A\nx y \u001c### A\n x y##\n", []],
+  [" a##\n\n\n\n", []],
+  ["\n\n  \n\n ### A\n### A\n#", [["A", "#"]]],
+  ["\n \r\n \t\r\n### A\n ### A\nBc### A\n#", [["A", " ### A\nBc### A\n#"]]],
+  ["#### \n\n\u001c\n\nx y\n  \r\na\u001c### \n", []],
+  ["a ", []],
+  ["x y\r\n \t ### ###  \u001c### \t\n\n", []],
+  ["\u001cBcx y### #", []],
+  [" ## ### A\n", []],
+  ["# Bc\t #\u001c### A\n", []],
+  [" \n\n\n\n ", []],
+  ["### ", []],
+  ["\n\n\ta###  \n\n\n ", []],
+  ["\u001c\na\tx y\nBc\u001c\t \t### A\n", []],
+  ["  \n\r\n", []],
+  ["Bc\n#\t#### \n\n### ", []],
+  ["\n\na   ### ", []],
+  ["x y###  ", []],
+  ["a", []],
+  ["a\u001c\n\n Bc\n\n\n\n### #  \u001c### #", []],
+  ["\n### \n\n\n\u001cBca", [["\n", "\u001cBca"]]],
+  ["##\na", []],
+  ["\n\n ### A\nBca\n\n\u001cx y  \r\n ##", []],
+  [" \n ", []],
+  ["\r\n Bc\t\n### A\n\r\n\u001c### x y", [["A", "\u001c### x y"]]],
+  ["### x y#x y\n\n\n##x y### A\n\r\n\t ### \t", [["x y#x y", "##x y### A\n\n\t ###"]]],
+  ["", []],
+  ["\n #x y### \n\t", []],
+  ["### A\n\u001c#  \t\t\n\n", [["A", "\u001c#"]]],
+  ["x y  x y##\r\nx y \u001ca x y\u001c##", []],
+  ["#Bc\u001c", []],
+  ["### \t\u001c", []],
+  ["\r\n # ", []],
+  ["  \n\n\n\na", []],
+  ["\n\nx y \n\n", []],
+  [" #### ", []],
+  ["", []],
+  ["\n\n### ### A\n ##\t##Bc x y", [["### A", " ##\t##Bc x y"]]],
+  ["", []],
+  ["\n\n## Bcx y\r\n", []],
+  ["   x ya\n a x y \u001c##", []],
+  ["##\n\nx y \r\n\n\n", []],
+  [" #", []],
+  ["\u001c\r\n\r\n\r\n\tBcBc\n### \u001cBc Bc", []],
+  ["Bc   x yBc \n", []],
+  ["#\n  \n###\r\n ", []],
+  [" \n\n\n### A\n### A\n##### #", [["A", ""], ["A", "##### #"]]],
+  ["  ### ## \nBc\n\r\n", []],
+  ["\r\nBc\r\nx y Bc a\n\na", []],
+  ["\u001ca##\tBc##\n\n### A\n x y\n\n\n\n  ", [["A", " x y"]]],
+  ["\n\n ", []],
+  ["\n\n### A\n  #\n \n\n ### x y\u001c ", [["A", "  #\n \n\n ### x y"]]],
+  ["### \t# ### Bcx y", []],
+  [" ### ### ", []],
+  ["\r\n", []],
+  ["\u001c\n ", []],
+  ["\n\n a  a \n\n", []],
+  [" \u001c ##BcBca\n\n##### A\n a  ", []],
+  [" ##  ### x y", []],
+  ["  ### ### \na\na\n\n ###  ", []],
+  ["Bc\r\n\u001c## ", []],
+  [" ### \u001cBc", []],
+  ["a### A\n  Bc", []],
+  ["### A\n ### ", [["A", " ###"]]],
+  ["\u001c#Bc### \r\naa x y", []],
+  ["a x ya### \na##\t ### A\n", []],
+  [" \t\n\n a\n\n## x yBcx y##", []],
+  ["#a", []],
+  ["### A\nBc###Bc ### \n\n### A\n# Bc", [["A", "Bc###Bc ###"], ["A", "# Bc"]]],
+  ["### A\n\na\r\n", [["A", "a"]]],
+  [" ### A\n\r\n\r\n### x y\n\n#a", [["x y", "#a"]]],
+  [" \r\n  #\n\n\t \r\n", []],
+  ["\tx y\n\n\t### A\n\t### A\n##Bcx y\u001c### \n\n\u001c", []],
+  ["aa", []],
+  ["a\n\n#\n\n ### \u001c### A\n\u001c\r\n\u001c### A\n", []],
+  [" # \r\n\n\r\nx y", []],
+  ["x y### A\nx y\t#Bc### A\n### A\n\n### A\n### A\nx y\n\n", [["A", ""], ["A", ""], ["A", "x y"]]],
+  [" \n\tBc ###  x y###  ", []],
+  ["\u001c##", []],
+  ["## \t", []],
+  ["BcBc\r\na#Bc", []],
+  ["######### \r\n\u001cx y", []],
+  ["##Bc\u001c\n### A\n\u001c##### ### A\n", [["A", "\u001c##### ### A"]]],
+  ["### \t# \r\n aa x y", [["\t# ", " aa x y"]]],
+  ["", []],
+  ["\t \n\n\n ", []],
+  ["#Bcx y\n\na a###", []],
+  [" a  a\r\n#a\r\n", []],
+  ["### A\n", [["A", ""]]],
+  ["", []],
+  ["\u001c#", []],
+  ["\r\n", []],
+  ["\n\n\n##\r\n\u001c### a\n### A\na\t \r\n\n\n", [["A", "a"]]],
+  ["\t", []],
+  ["x y## ####  a a", []],
+  ["\n\n \t\t \u001c", []],
+  ["##### #a ### \n\r\nx y\u001c   ", []],
+  ["  Bcx y### A\n### A\nBc\n## \u001cx y", [["A", "Bc\n## \u001cx y"]]],
+  ["\n\n\n##Bc BcaBc", []],
+  ["\u001c### A\n #a  \n\na\tx y### A\nBc\n", []],
+  ["a### A\na", []],
+  ["\n### A\n\n\u001c \n", [["A", ""]]],
+  ["#\u001c\n\nBc### x y#", []],
+  [" Bcx yx yBc### A\n### \n\n\u001c\n\n\u001c\n\r\n", [["\n", ""]]],
+  ["### A\nx y\n\nBc\u001c### \n\n\n\u001c### ### ", [["A", "x y\n\nBc\u001c### \n\n\n\u001c### ###"]]],
+  ["a\n \n\n\r\n", []],
+  ["\n\na \n ##\n### A\n\t#\r\n", [["A", "\t#"]]],
+  [" ", []],
+  [" a### A\n a  Bc", []],
+  [" \r\n##### A\n x y\na#", []],
+  ["", []],
+  ["Bc##x y## \n", []],
+  [" ##a ##\u001c \r\n  a", []],
+  ["\n\n x y### ", []],
+  [" Bc \r\n ", []],
+  ["\u001c\u001c\r\n##\n\n\na###  Bc \n### A\n", [["A", ""]]],
+  [" \r\n\n#### \n\n \t\t\u001c ####\n\n", []],
+  ["", []],
+  ["\u001c### A\n### A\n", [["A", ""]]],
+  ["Bc\t a", []],
+  [" \n\n### #", []],
+  ["Bc#### A\nBc### A\n### ##a### ", []],
+  ["\nBca", []],
+  ["\t\r\nx y### \n\n\t", []],
+  ["### x y\u001c", []],
+  ["\u001cx y### ###  a\t Bc#a", []],
+  ["x yBc \u001c", []],
+  ["\r\n \n\n\n Bc### A\n", []],
+  ["  ### A\n", []],
+  [" \n\n\r\nx y\n\nx yx y#a##aBc\n\r\n", []],
+  ["\t\n\n### ###  \r\n", [["###  ", ""]]],
+  ["\u001c ##\n\n### A\n#\n", [["A", "#"]]],
+  ["Bc\t", []],
+  ["  Bc### A\n### A\n \n\n\n\n\u001c ", [["A", ""]]],
+  ["Bc#", []],
+  [" \u001c", []],
+  ["", []],
+  [" ### Bc#### \n## \r\n \u001c", []],
+  ["\n\n  ##", []],
+  ["#     \r\na\u001cBc### A\n", []],
+  [" ##a# ###\t\n\n\n\n", []],
+  ["\n\n\n\n\r\n \n", []],
+  ["### A\nx y\t\t\nx y\nBc\n \n\t", [["A", "x y\t\t\nx y\nBc"]]],
+  ["\n\n", []],
+  ["", []],
+  ["a \n\n\n### A\n\u001c", [["A", ""]]],
+  ["Bc", []],
+  ["###  \nBc##", [[" ", "Bc##"]]],
+  ["\u001c", []],
+  ["\u001c\n\r\n\u001c Bc#Bca\u001c\u001c\n### a", []],
+  ["# Bcx yBca", []],
+  ["\t##\n\u001c Bc\u001c\r\n", []],
+  ["  ", []],
+  ["\n\n", []],
+  ["Bc\t\n#\n\n", []],
+  ["\n\n", []],
+  [" ###  \n\n##\n", []],
+  ["##a### A\n\u001c### A\n### aax y\r\n##Bc", [["aax y", "##Bc"]]],
+  ["\t### A\nx y", []],
+  ["a a\u001c\r\nBc\u001c", []],
+  ["x y## \u001c### ### A\nBc\n\n#\n\n\n\r\n##", []],
+  ["\u001c #\n##a### Bc\n#\nBc#", []],
+  ["### \n\n", [["\n", ""]]],
+  ["a \t\na\r\n x y  \r\n### x y", []],
+  ["###### A\n", []],
+  [" ##", []],
+  ["### \n\n x y \r\n\t##", [["\n", " x y \n\t##"]]],
+  [" ### ## \r\n### A\n", [["A", ""]]],
+  ["aBc### A\n", []],
+  ["####\u001c ##", []],
+  [" a### A\n \n \u001c\u001c### A\n ", []],
+  ["\n\n\n\n ### \n\n  \r\n\r\n\r\n", []],
+  ["\u001cx y \ta", []],
+  ["\t##  ", []],
+  ["Bc  ### A\nx y\t", []],
+  ["\nx yx y##\u001cx y# # a", []],
+  ["##", []],
+  ["#\r\n\n\n ", []],
+  ["# x y### ### \n\n##\u001c#", []],
+  ["\ta#a ", []],
+  ["x y \u001c ", []],
+  ["\t### A\n", []],
+  ["\t\n\n ### A\nBc\r\n### A\n", [["A", ""]]],
+  ["", []],
+  ["\n\n\r\n x ya  ### #", []],
+  ["##\t ### #Bc\r\n", []],
+  ["\u001c \t#x y\n\n\u001c#### \u001c\t\n\t", []],
+  ["a\n", []],
+  ["\n \u001ca#\t### A\n ", []],
+  ["#### A\n ### ### ", []],
+  ["\n\n\t\t\r\nBc ", []],
+  ["### ### #\tBc\n##Bc\r\na\t ", [["### #\tBc", "##Bc\na"]]],
+  ["a##", []],
+  ["##### ##\n \n\n\n", []],
+  ["### A\n\n\n##x ya\n\na", [["A", "##x ya\n\na"]]],
+  [" \n\n#\n\n\r\n\r\n", []],
+  ["\t BcBc\r\n", []],
+  ["##\n\n\r\n\n\n", []],
+  ["   ### \n### A\n \u001c### A\nx y \n##### ", [["A", " \u001c### A\nx y \n#####"]]],
+  ["\n\r\n x ya \u001c\r\n  ", []],
+  ["### ", []],
+  [" a\u001c  ", []],
+  ["", []],
+  ["Bc a \n\n\u001c##", []],
+  ["# \n\n##\n ", []],
+  [" ", []],
+  ["\n### A\n### \u001c### \t\n\n# aBc\u001c##", [["A", ""], ["\u001c###", "# aBc\u001c##"]]],
+  [" \n\n ### A\na", []],
+  ["###  a\n ###  \n\n\u001c## ", [[" a", " ###  \n\n\u001c##"]]],
+  ["### ", []],
+  ["\n\n ", []],
+  ["\r\n\t### \r\n### \n\n\n\n### A\n###  ##\n\n ", [["\n", ""], ["A", ""], [" ##", ""]]],
+  ["\r\n \u001c Bc\tBc##", []],
+  ["\r\n\n  \r\n\u001c\r\n  #ax y\n\n ", []],
+  [" x y### A\n ##\r\n\t ### ", []],
+  ["\n\n\n\n\n### A\n## ## ax y #", [["A", "## ## ax y #"]]],
+  ["###\t x yx yBc\n\n#\u001c \r\n", []],
+  ["\r\n#\u001ca### A\n##x y\r\n\r\n Bc \r\n#", []],
+  ["\r\n##x y\r\n\u001c", []],
+  [" \n\nBc #", []],
+  ["### a", []],
+  ["\r\n### A\n\n\n\u001c### A\nx y", [["A", "\u001c### A\nx y"]]],
+  [" ### \u001c\r\n### x y ", []],
+  ["  \n\n", []],
+  ["x yx y \r\n\n x y### A\nBcx yBc", []],
+  ["", []],
+  ["a  a\u001c  \n\n", []],
+  ["x y\n\n\t\t##\n### ", []],
+  ["#\u001c", []],
+  ["Bcx y\t \t ", []],
+  [" x y\r\n", []],
+  ["#x y ", []],
+  ["\nBcBcBc### A\n x y###  \n\n\n", []],
+  ["### A\n### A\n\n\n\tx y ", [["A", ""], ["A", "\tx y"]]],
+  ["### A\naBc", [["A", "aBc"]]],
+  ["\t\r\n\u001c\u001cBc \t Bc", []],
+  [" \n\n\r\n\r\n\u001c\nax yx y\t\n\n", []],
+  ["\n\n##Bc\u001cBc\n # \t\n", []],
+  ["###### x y##x y\t a## Bc\tx y", []],
+  ["\n### A\n # ### A\n#a\r\n\nx y### A\n\n\n ", [["A", " # ### A\n#a\n\nx y### A"]]],
+  ["\n Bc ### A\n \t### A\n### Bc", []],
+  ["##\u001c##x y\n\n\n#a### A\nBca ", []],
+  ["\t\n\n### A\n##\r\nBcx y", [["A", "##\nBcx y"]]],
+  ["", []],
+  ["\u001c##x yx y Bc\t##", []],
+  ["a### \u001c### ### \u001c\r\n### \n\n### A\n\u001c \n", [["\n", ""], ["A", ""]]],
+  ["a\u001cBc#", []],
+  ["Bc### ##Bc\u001c a", []],
+  ["##\r\n\n\tBc\n", []],
+  ["x y\r\nBc\nx y### A\n### A\n\n### A\n###    \u001c", [["A", ""], ["A", ""]]],
+  ["", []],
+  ["\u001cx yBc#", []],
+  ["\t\n#  ##a a\tBc  \n", []],
+  ["# Bca\nx y###Bc Bcx y", []],
+  ["Bcx y\ta", []],
+  ["\r\n\t\r\n\u001c## ### A\nx y\u001c#### A\n\n\nx y", []],
+  ["## # ###  x y Bc####", []],
+  ["\ta\r\n### A\n\u001c### A\n\u001c", [["A", "\u001c### A"]]],
+  [" ### A\n\n\n \n### \r\na#\t\na\r\n\n\n", [["\na#", "a"]]],
+  ["\u001c\r\n##\n  ## ", []],
+  ["a### \n", []],
+  ["\r\n\u001c \u001c### aa\r\n  ", []],
+  ["##### A\n\n\n\tBc\r\nx y ### A\n ###", []],
+  ["Bc\t\u001c ##\r\n### ", []],
+  ["\t", []],
+  ["  \n\ta ### A\n ### A\nx y\t", []],
+  ["x y \r\n", []],
+  ["\n\n\r\n\n### Bc\ta  #Bc### A\n \n", [["Bc\ta  #Bc### A", ""]]],
+  ["### ### A\n   ### ###   Bc### ", [["### A", "   ### ###   Bc###"]]],
+  ["### A\n\n\n ##### \n\n", [["A", " #####"]]],
+  ["\u001cx y\r\na\u001cBc", []],
+  ["x y \u001c  ### ### x y### \n", []],
+  ["x yBc", []],
+  ["##\r\nBc  #  \r\n ### A\n##a", []],
+  ["\n\nBc\n\n\n\nx y \n# ", []],
+  ["##### A\n\r\n\n\n\n\n\r\na\r\n###  ", []],
+  ["a### #", []],
+  ["##\u001c\t\n\n\n\n# ", []],
+  ["\u001ca#\n\n\r\n\n\n\r\na x y", []],
+  ["\r\n#", []],
+  ["## x y\n##  \u001c", []],
+  ["", []],
+  ["x y\u001c##### A\n\r\n\n\n### ", []],
+  ["Bc\r\nBcx y#### \ta\n ", []],
+  ["#\r\nx y\n\nBc", []],
+  ["\n# \n\u001c\n\n\n", []],
+  ["\n\r\n", []],
+  ["x y\u001c\n x y", []],
+  ["Bc###  Bc\r\n### ", []],
+  [" \t\t\n\n", []],
+  ["\nx y a### A\n\n   ###   x y### A\n", []],
+  [" ", []],
+  ["\u001c\n   \n\n\n", []],
+  [" \t\n", []],
+  ["\t\t### ### A\n##### ### A\n\n\n", []],
+  ["\n\n  ###  ### ", []],
+  ["Bc\r\na \t### A\n\n\n### A\n\n", [["A", ""]]],
+  ["##\n\n\u001c x y\n", []],
+  ["aBc\n### A\n ### A\n", [["A", " ### A"]]],
+  ["\t \n", []],
+  ["x y### A\n#", []],
+  ["Bc\r\n### # a # # \n\n", [["# a # #", ""]]]
+ ],
+ "form_labels": [
+  ["### What it does\n\nA thing.\n\n### Difficulty (a guess)\n\nhard\n\n### Priority\n\nlow\n\n### Who does it\n\nPeople (human)\n", ["difficulty:hard", "priority:low", "human"]],
+  ["### A\n### B\nval", []],
+  ["### A\n\n### B\n\nval", []],
+  ["### Label  \t\nanswer  \n\n", []],
+  ["### \nfoo\nbar", []],
+  ["###  \nx", []],
+  ["### A", []],
+  ["x\n### A\n\ny", []],
+  ["### A\r\n\r\nB\r\n### C\r\n\r\nD", []],
+  ["### A\n\n  \n### B\n\nc", []],
+  ["### A\n\nline1\nline2\n\n### B\n\n", []],
+  ["### A\n\nfoo ### B\n\nbar", []],
+  ["### A\n\nfoo\n \n### B\nbar\n", []],
+  ["### A\n\nfoo ### B\n\nbar", []],
+  ["### A\n\nfoo\n \n### B\n\nbar", []],
+  ["### Difficulty\n\nEasy, a guess\n\n### priority\n\nHIGH\n", ["difficulty:easy", "priority:high"]],
+  ["### Difficulty (a guess)\n\nNot sure\n\n### Priority\n\nNo priority\n\n### Who does it\n\nDecide later", []],
+  ["### Difficulty\n\nmedium\n### Difficulty again\n\nhard", ["difficulty:medium"]],
+  ["### Priority\n\nmedium\n\n### Priority\n\nhigh", ["priority:high"]],
+  ["", []],
+  ["no form here", []],
+  ["### A\n\n### \n\nx", []],
+  ["#### A\n\nb", []],
+  [" ### A\n\nb", []],
+  ["### A\n\n\n\n", []],
+  ["### A\n\nb\n### ", []]
+ ],
+ "fallback_type": [
+  ["The board crashes on a trap", [], "Bug"],
+  ["Night bot: a thing", [], "Task"],
+  ["A new leaderboard page", [], "Feature"],
+  ["It crashes", [], "Bug"],
+  ["Make it faster", [], "Task"],
+  ["make it faster", [{"name": "Night Bot"}], "Task"],
+  ["Tests: x", [], "Task"],
+  ["The bug-fix", [], "Bug"],
+  ["debugging", [], "Task"],
+  ["doesnt work", [], "Bug"],
+  ["doesn't work", [], "Bug"],
+  ["A newer thing", [], "Task"],
+  ["Adds a page", [], "Feature"],
+  ["ébug", [], "Task"],
+  ["bugé", [], "Task"],
+  ["BUG", [], "Bug"],
+  ["hangs", [], "Bug"],
+  ["stalling out", [], "Bug"],
+  ["laggy", [], "Bug"],
+  ["lagging", [], "Task"],
+  ["refactor: new page", [], "Task"],
+  ["ci: new", [], "Task"],
+  ["errors_", [], "Task"],
+  ["error", [], "Bug"]
+ ]
+}

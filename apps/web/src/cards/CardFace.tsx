@@ -6,25 +6,67 @@
 // class token: those belong to the board's root element (game/Card.tsx) and the minion form, and a
 // face in a hover preview must never answer an e2e selector meant for the board (B12, B20).
 //
-// `layout="compact"` is a face-up backrow card: no rules box, tags or stats.
+// `layout="compact"` is a face-up backrow card: cost, art, name, rarity gem and type line, with no
+// rules box, tags or stats.
 //
-// A face in play (FaceModel.inPlay, SPEC §10.10) prints the card as it stands; a fused card's text
-// is a line per ingredient (R102). RulesText marks in gold what a Radiant face adds (R277), links
-// its `refs` (R279) and prints in play the values its formula comes to (R280).
-// SPEC §10.8: a face in play wears the view's states on a rail of badges (CardStates.tsx: R385,
-// R386, E39, R383); a tuned card also marks what changed in its text, stats and keywords.
+// A face in play (FaceModel.inPlay, SPEC §10.10) prints the card as it stands: the rules box ends
+// with the keywords it has gained since it was printed (`.cf-text-gained`), and a Vanilla unit's box
+// says its text is gone. A fused card's text is a line per ingredient (R102), which the box keeps.
 //
-// ME-CN, R1301: a Chinese face prints the model's name and text and chinese.ts's words; its art
+// The rules box prints the face's whole text (`.cf-text-base`, on both faces): a Radiant face its
+// catalog Radiant text with what the base face lacks marked in gold (R277), the names its `refs`
+// link as references (R279), and in play the values its formula comes to, "{7}" (R280) — all
+// drawn by RulesText. A printed Radiant unit's attack and health that the Radiant face raised are
+// marked too (`data-grew`).
+//
+// Patch v0.2.0 (SPEC §10.8): a face in play wears the states the view gives the card on a rail of
+// badges (CardStates.tsx): its Brittle count (R385), its tuned mark (R386), its enchantments (E39) and
+// a card standing as a Unit (R383). A tuned card also marks what changed where it shows: the numbers
+// in its text that moved (RulesText's `.cf-tuned`), its stats (`data-tuned` on the sword and drop,
+// a ▲ or ▼ pip, beside the usual tones) and its keywords (a "+" chip for each one a Buff added, a struck
+// "−" chip for each one a Nerf removed, at the foot of the rules box). An Animated Field Spell or Trap
+// shows the attack and health of the Unit it becomes (B3.1), on its full face.
+//
+// R503: every face with a set shows it as a small mark on the frame (`.cf-set[data-set]`, setMark.ts),
+// and a token that prints a rarity (B2.5's `printedRarity`) wears that rarity's frame, gem, crest and
+// foil rather than Token's, for display only. The art gets the card's name, which picks its motif.
+//
+// ME-CN, R1301: a Chinese face (`face.chinese`) prints its name and text as the model gives them (the
+// Chinese table's) and its type line, tags and keywords in the table's words (chinese.ts); its art
 // keeps the English name's motif, so the picture is the same card's.
-// R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" for the five.
-// R1177001: a token says so on every face, in its type line ("Token Unit"), where no crowded tag
-// row can cut the word, or where the type line hides, in a token mark (TokenMark). Glitch stays
-// blank (R674): its every word is corrupted, so it wears neither.
 //
-// R1017001: a hero portrait's card (fullArt.ts) prints only its art on its full face; the Full-art
-// cards setting turns it off, and so does a tutorial lesson's board (R1108000).
-// R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics (cosmetics.ts);
-// every other face, and a face wearing the defaults, carries none.
+// R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line in
+// place of the five, its other tags after it; its tags themselves are unchanged.
+//
+// R1177001: a token says so on its full face. Its type line reads "Token Unit", "Token Spell" (衍生物单位
+// on a Chinese face), so no crowded tag row can cut the word, and the tag row prints no Token chip.
+// R2647000: where the type line hides (a face under FACE_TEXT_MIN_HEIGHT_PX, a full-art face) and on
+// the board minion nothing marks it, since it rarely matters in combat: the hover preview's full face
+// says it. A token that prints a rarity (R503) keeps that rarity's frame and gem. Glitch stays blank (R674).
+//
+// Issue #814: a Summit face given its Ascent level prints its header and only the next Ascent
+// line (shortText.ts). Issue #1017: a face whose text runs past the measured limit prints a short
+// form, or clamps with "…", and never shrinks its art for it (`faceText`); its whole text stands on
+// the left of its hover preview (inspect/Extended.tsx). With hover previews off, the rules box's
+// tooltip carries it instead (#912).
+//
+// R2450000: a Quest card (the Quest tag, R1837000) prints only the stage it stands at (questFace.ts):
+// on the field the stage the view's line stands at, with its quest's progress and its reward, its wait
+// to hear back, or "Quest complete"; off the field Stage 1 of n; In Too Deep its text and then its open
+// quests, their rewards and its auras. A staged face prints less than its whole text, which stands
+// on the left of its hover preview, every stage in it, as a short form's does.
+//
+// R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
+// words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
+// the hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's board (R1108000).
+//
+// R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, a foil over
+// its art, a finish and a border, each on its own attribute apart from the rarity foil
+// (cosmetics.ts, cosmetics.css). Every other face, and a face wearing the defaults, carries none.
+//
+// R2521009: a Resource's full face prints what it sells for on the face shown, "Credits: 2–5"
+// (`.cf-text-credits`, the model's `credits`), as a line under its text, in hand, in the inspect
+// views, the Almanac and the deck builder alike, since each draws this face.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -41,7 +83,7 @@ import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
 import { showsFullArt, useFullArt } from "./fullArt.ts";
-import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
+import { ALL_TRIBES, creditsLine, foilFor, frameRarity, frameTags, type FaceModel, type FaceText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { StarshipPieces } from "./StarshipPieces.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -109,14 +151,8 @@ export function tuningLine(face: FaceModel): string {
   ].join(" ");
 }
 
-/** R1177001: the word a token's type line and mark print. */
+/** R1177001: the word a token's type line prints. */
 export const TOKEN_WORD = "Token";
-
-/** R1177001: the token mark's one letter, where the foot has no room for the word (cards.css). */
-export const TOKEN_GLYPH = "T";
-
-/** R1177001: the token mark's one character on a Chinese face, the word's first. */
-const CHINESE_TOKEN_GLYPH = [...CHINESE_TERMS.tags.Token][0] ?? CHINESE_TERMS.tags.Token;
 
 /**
  * R1177001: the type line in the face's words: the card type, after "Token" on a token ("Token
@@ -128,23 +164,6 @@ export function typeLine(face: FaceModel): string {
     return face.token === true ? `${CHINESE_TERMS.tags.Token}${type}` : type;
   }
   return face.token === true ? `${TOKEN_WORD} ${face.type}` : face.type;
-}
-
-/**
- * R1177001: the token mark, where a face shows no type line (a small face, a full-art face, the
- * board minion): a slot at the foot holding a pill, the word or its one letter (TOKEN_GLYPH).
- */
-export function TokenMark({ face }: { face: FaceModel }): ReactElement | null {
-  if (face.token !== true || isGlitch(face.defId)) return null;
-  const chinese = face.chinese === true;
-  return (
-    <span className="cf-token" data-token="true" role="img" aria-label={t("Token")} title={t("Token")}>
-      <span className="cf-token-pill" aria-hidden="true">
-        <span className="cf-token-word">{chinese ? CHINESE_TERMS.tags.Token : TOKEN_WORD}</span>
-        <span className="cf-token-glyph">{chinese ? CHINESE_TOKEN_GLYPH : TOKEN_GLYPH}</span>
-      </span>
-    </span>
-  );
 }
 
 /** A frame tag in the face's words (R1301). */
@@ -159,7 +178,7 @@ function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
  */
 function printedText(face: FaceModel, text: string): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${text}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${text}${values}`, creditsLine(face), gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
 /** What a face's rules box prints (issues #814, #1017). */
@@ -385,8 +404,6 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         {!fullArt && <span className="card-type">{glitch ? GLITCH_WORDS.type : typeLine(face)}</span>}
 
-        <TokenMark face={face} />
-
         {full && !fullArt && (
           <span
             className="card-text"
@@ -408,6 +425,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
                   {...(words.tuned === undefined ? {} : { tuned: words.tuned })}
                   chinese={face.chinese === true}
                 />
+              </span>
+            )}
+            {face.credits != null && (
+              <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>
+                {creditsLine(face)}
               </span>
             )}
             {face.gained.length > 0 && (

@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #50 Glowy Jelly Bean, the snapshot of Core #26 Glowy Jelly Bean (`core-026`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #26 (SPEC §8.2, §8): declared hand choice in play action (R81, R90, §9.1; R177, #13, R97). Radiant flag swaps stats/text in hand (§5.2, R74; §6.3).
+//! SPEC §8.11 Training Grounds #50 Legacy: Glowy Jelly Bean,
+//! the Legacy card of Core #26 Glowy Jelly Bean (`core-026`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #26 Glowy Jelly Bean (SPEC §8.2): "Choose a card in your hand; it becomes Radiant", radiant
+//! "Choose 2" — a Radiant cell that changes only a number changes only that number (§8 Conventions),
+//! so the radiant face is the same effect, taken twice.
+//!
+//! The pick is a DECLARED `hand` choice: it travels in the play action's `targets` and never pauses
+//! resolution (R81). R90: a hand declaration offers only the chooser's own hand (§9.1), never the bean
+//! itself, and never the same card twice. A play stays legal with the answers that exist, so with one
+//! other card in hand ("Radiant takes both cards it can", §8.2 Engine) the second `setRadiant`
+//! fizzles (§8 Conventions) and the spell still counts as played.
+//!
+//! R74 makes the radiant flag the whole model, so the chosen card's stats and text swap while it sits
+//! in hand (§5.2); a card that is already Radiant is untouched (§6.3 Make Radiant).
 
 use jackioh_engine::prelude::*;
 

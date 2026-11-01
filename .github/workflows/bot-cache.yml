@@ -7,7 +7,7 @@
 # Only this workflow saves the entry, and only from main: a model job restores it and never saves,
 # so nothing a model ran in one job reaches the next job, on another subscription, through the
 # cache. It runs no model and holds no secret. It builds what the harness's gates build
-# (.harness/config.json, `gates`) and runs none of them; bot/tests/test_workflows.py holds the two
+# (.harness/config.json, `gates`) and runs none of them; bot/go/tests/workflows_test.go holds the two
 # lists, and the directories, profile and cache inputs both jobs key the entry on, together.
 #
 # A push to main that changes what the entry is keyed on (the manifests, the lockfile, .cargo/ and

@@ -65,9 +65,14 @@ mod tests {
     const PEPTIDES: &str = "meditative-036";
 
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
-    /// R1444): M #36, #86 and #102 (not #65, R781004, nor Core #42, R831014), Stinkyscape's #77, #112,
-    /// #145, #153, #166 and #167 (#1884) and Training Grounds' #49, Core #23's snapshot (#2204).
-    const SHIPPED_POOL: [&str; 17] = [
+    /// R1444), the Meditative set's among them since it ships: #36 CN Peptides, #86 Mayor Medinamogger
+    /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004, and Core #42
+    /// Eugenics with patch v0.3.10, R831014). Re-pinned for the Stinkyscape release (#1884): its #77
+    /// Yuma, #112 Job Application, #145 Fortify Flesh, #153 Stimmycheck and #166 and #167, the Scanning
+    /// Probes, join it; and for the Training Grounds release (#2204): its #49 Reoccurring Dream, the
+    /// snapshot of Core #23; and for #2521: Stinkyscape #53, #57 and #61, the Flaks, whose Radiant faces
+    /// print Lucky 1.
+    const SHIPPED_POOL: [&str; 20] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -78,6 +83,9 @@ mod tests {
         "meditative-036",
         "meditative-086",
         "meditative-102",
+        "stinkyscape-053",
+        "stinkyscape-057",
+        "stinkyscape-061",
         "stinkyscape-077",
         "stinkyscape-112",
         "stinkyscape-145",

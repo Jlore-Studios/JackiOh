@@ -253,6 +253,10 @@ pub struct TriggerDef {
     /// reads a trap's; every other trigger's is read as its queued entry resolves (R2271000).
     pub when: Option<TriggerWhen>,
     pub run: TriggerRun,
+    /// R2396000: "Whenever this destroys a Unit": answers a `destroyed` its card is R42's killer of
+    /// though the card has left the field since, as the snapshot it killed with
+    /// (`triggers::offer_to_gone_killer`).
+    pub even_if_gone: bool,
 }
 
 impl TriggerDef {
@@ -266,6 +270,7 @@ impl TriggerDef {
             on: on.to_vec(),
             when: None,
             run: Arc::new(run),
+            even_if_gone: false,
         }
     }
 
@@ -274,6 +279,12 @@ impl TriggerDef {
         when: impl Fn(&mut EffectContext<'_>, &GameEvent) -> bool + Send + Sync + 'static,
     ) -> TriggerDef {
         self.when = Some(Arc::new(when));
+        self
+    }
+
+    /// R2396000: the same trigger, answering a kill even once its card is gone.
+    pub fn even_if_gone(mut self) -> TriggerDef {
+        self.even_if_gone = true;
         self
     }
 }
@@ -1040,16 +1051,21 @@ pub struct Script {
     /// the layers with its printed keywords (§10.4), so a Vanilla takes them. A PURE READ of instance
     /// data that must never call back into `unit_view`, or the layers would recurse.
     pub conditional_keywords: Option<ConditionalKeywordsHook>,
-    /// "When this attacks" (Classic #45 Nature Titan, Classic+ #73.1, Stinkyscape #75 Badger): run for
-    /// the attacker before any damage of each attack, a declared one's once its trap window has closed
-    /// (before the defender's `allyAttacked`), a forced one's before its combat (R2285000). Parkable (R113);
-    /// `ctx.data`: `combat::when_attacks_of`. An attacker or target gone after it does not fight (R220).
+    /// "When this attacks" (Classic #13 Boots on the Ground, Classic #45 Nature Titan, Classic+ #73.1,
+    /// Stinkyscape #75 Badger): run for the attacker before any damage of each attack, a declared one's
+    /// once its trap window has closed (before the defender's `allyAttacked`), a forced one's before its
+    /// combat (R2285000). Parkable (R113); `ctx.data`: `combat::when_attacks_of`. An attacker or target
+    /// gone after it does not fight (R220).
     pub when_attacks: Option<Hook>,
-    /// "After this attacks" (Classic #13 Boots on the Ground, Classic+ #73.1, Core #32 Prem Panther): run
-    /// for the attacker once the state check closing each of its combats (declared or forced) has run,
-    /// only while it is still on the field on the stay it attacked from (R2285001), never for an attack
-    /// called off before it fought (R44). `ctx.data`: `combat::after_attack_of`.
+    /// "After this attacks" (Classic+ #73.1, Stinkyscape #38, #91, #92 and #94): run for the attacker
+    /// once the state check closing each of its combats (declared or forced) has run, only while it is
+    /// still on the field on the stay it attacked from (R2285001), unless `after_attack_even_if_gone`;
+    /// never for an attack called off before it fought (R44). `ctx.data`: `combat::after_attack_of`.
     pub after_attack: Option<Hook>,
+    /// R2396000: "Whenever this attacks" (Core #32 Prem Panther): `after_attack` runs also for an
+    /// attacker that died or left the field in that combat, as the snapshot it fought with
+    /// (`prompts::SELF_KEY`), `survived` false.
+    pub after_attack_even_if_gone: bool,
     /// "After this is attacked" (Meditative #49.3 AI Girlfriend): run for the defender once the state
     /// check closing each combat it was the target of (declared or forced) has run, also when it died
     /// there, then on the snapshot it fought with (R78, R89). Not for a Cleave splash nor an attack on the

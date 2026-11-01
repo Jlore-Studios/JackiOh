@@ -1,21 +1,38 @@
 // The board (BUILD M5-T1): five lanes as columns, two seats, two hands, the control bar and the
-// log, all drawn from one `PlayerView` (CLAUDE.md rule 7, SPEC §10.8). `viewFor` has already
-// oriented the view, so the DOM speaks in "you" and "opponent". Nothing here decides anything: every
-// clickable element takes `data-legal` from `props.highlight.legal` (built by `actions.ts` from the
-// engine's `legalActions`) and fires `props.onClick` only when that says true (or, R979000, to show
-// the reason a hand card of yours cannot be played, which sends nothing). With the default
-// `NO_HIGHLIGHT` the whole board is greyed out, the honest default for "not told what is legal".
+// log — all of it drawn from one `PlayerView` (CLAUDE.md rule 7, SPEC §10.8).
 //
-// Polish task 7 (docs/polish/7-mobile-ux.md S6, S11): the glow is `data-glow`, a subset of `legal`;
-// `data-legal` stays the only click gate. `dragToPlay` becomes `data-drag` on the root (drag.css keys
-// touch-action off it); `confirmEndTurn` makes End turn ask twice while something is still playable.
-// board.css's grid keeps the children below in this order, and on a phone hides the log for
-// `log-toggle`. While a hand card of yours is hovered or
-// selected, the field rings the cards its preview names (#991, SPEC §10.10). R1297000: the viewer's
-// half wears the playmat and backdrop the wearer picked; R1834004: an online board's other half wears
-// its seat's frozen loadout.
+// `viewFor` has already oriented the view, so the DOM speaks in "you" and "opponent" and the
+// board never has to know which seat is which. Nothing here decides anything: every clickable
+// element takes `data-legal` from `props.highlight.legal` (built by `actions.ts` from the
+// engine's `legalActions`) and fires `props.onClick` only when that says true (or, R979000, to
+// show the reason a hand card of yours cannot be played, which sends nothing). With the default
+// `NO_HIGHLIGHT` the whole board is greyed out, which is the honest default for "the client has
+// not been told what is legal".
+//
+// Polish task 7 (docs/polish/7-mobile-ux.md S6, S11): the green glow is `data-glow`, written from
+// `highlight.glow` (a subset of `legal`); `data-legal` stays the only click gate. The board reads
+// two settings: `dragToPlay` becomes `data-drag` on the root (drag.css keys touch-action off it),
+// and `confirmEndTurn` makes End turn ask twice while something is still playable (Hand.tsx reads
+// the third, `hoverPreviews`). The layout itself is board.css's grid, which keeps the children
+// below in this order. A phone has no room for the log beside the field, so board.css hides it
+// there and shows `log-toggle` instead, which opens it over the top of the board
+// (`data-log="open"`) until it is pressed again.
+//
+// #2645: on a phone (`usePhoneBar`, the same two layouts) the control bar keeps to one row: End turn, the
+// Marketplace's toggle while `market` is given and the view carries one, the log toggle, ⋯ and the gear.
+// Offer draw, Concede and Friends are the rows of ⋯'s menu (`MatchMenu.tsx`), the same controls the
+// desktop bar holds as buttons, built once; the menu and the shop are never open together, and neither
+// decides anything.
+//
+// While a hand card of yours is hovered or selected, the field rings the cards its preview names
+// (#991, SPEC §10.10).
+//
+// R1297000: the viewer's half wears the playmat and backdrop the wearer picked. R1834004: an online
+// board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts), as a second mat
+// under the opponent's rows (`data-their-table`) and a second backdrop behind them
+// (`data-their-backdrop`); a watched or replayed game's lower half wears its own seat's too.
 
-import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
@@ -29,7 +46,6 @@ import {
   sideOf,
   sideView,
   testid,
-  touchHoldMode,
   type AnimatingMap,
   type AnimationFrames,
   type BoardControl,
@@ -40,6 +56,9 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
+import Marketplace from "./Marketplace.tsx";
+import MatchMenu from "./MatchMenu.tsx";
+import { usePhoneBar } from "./phoneBar.ts";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
@@ -306,7 +325,6 @@ function Pile({
   animating,
   browse,
   plays,
-  touchHold,
   back,
   children,
 }: {
@@ -319,8 +337,6 @@ function Pile({
   browse?: PileBrowse;
   /** B5 E11: the viewer's graveyard offers "Play" on the cards `legalActions` lists, and glows then. */
   plays?: PilePlays;
-  /** #165: what a touch hold on the pile opens (contract.ts's `touchHoldMode`). */
-  touchHold?: "sheet" | "preview";
   /** R1297000: the viewer's card back on their own deck pile; absent where it wears the default. */
   back?: string;
   /** R318: the pile's overflow notice (OverflowNotices.tsx), drawn inside it. */
@@ -347,7 +363,6 @@ function Pile({
             ),
         }
       : null,
-    { touchHold },
   );
 
   const open = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void => {
@@ -417,10 +432,8 @@ function Seat({
   emotes?: BoardProps["emotes"];
 }): ReactElement {
   const seat = sideView(view, side);
-  // #165: on the opponent's turn a touch hold is the mouse-over the screen lacks.
-  const touchHold = touchHoldMode(view);
   // R1297000: the viewer's deck wears their card back; R1834004: the other seat's its loadout's, else
-  // the default, which adds no attribute.
+  // the default. A default back adds no attribute, so a board wearing nothing is the board it was before.
   const { cardBack } = useSeatDeckCosmetics(seat.player);
   const back = cardBack === DEFAULT_CARD_COSMETICS.cardBack ? undefined : cardBack;
   // R1639000: the empty deck's resting badge, from the view alone; it stands down while R318's notice
@@ -454,7 +467,6 @@ function Seat({
           {...(side === "you" && seat.ownLibrary !== undefined
             ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view, ...(back === undefined ? {} : { back }) } }
             : {})}
-          touchHold={touchHold}
           back={back}
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
@@ -472,7 +484,6 @@ function Seat({
           animating={animating}
           browse={{ kind: "pile", title: side === "you" ? t("Your graveyard") : t("Opponent's graveyard"), cards: seat.graveyard, view }}
           {...(side === "you" ? { plays: { highlight, onClick } } : {})}
-          touchHold={touchHold}
         />
         <Pile
           label={t("Exile")}
@@ -481,7 +492,6 @@ function Seat({
           count={seat.exile.length}
           animating={animating}
           browse={{ kind: "pile", title: side === "you" ? t("Your exile") : t("Opponent's exile"), cards: seat.exile, view }}
-          touchHold={touchHold}
         />
       </span>
       {/* R98: a card mid-resolution is public and still itself, so it is shown rather than
@@ -495,7 +505,6 @@ function Seat({
               testId={testid.card(card.instanceId)}
               card={card}
               className="card-resolving"
-              touchHold={touchHold}
               highlight={highlight}
               animating={animating}
             />
@@ -570,6 +579,7 @@ export default function Board({
   matchStatus,
   boardRail,
   boardNotices,
+  market,
   sandDisabled = false,
   onClick,
   onControl,
@@ -591,8 +601,6 @@ export default function Board({
   const yourHand: CardView[] | { count: number } = view.you.hand;
   const dragToPlay = useSetting("dragToPlay");
   const confirmEndTurn = useSetting("confirmEndTurn");
-  // #165: on the opponent's turn a touch hold on a card is the mouse-over the screen lacks.
-  const touchHold = touchHoldMode(view);
   const field = useRef<HTMLDivElement>(null);
   // "Turn 3": split around the number, so English keeps the two text nodes it always had.
   const [turnBefore = "", turnAfter = ""] = t("Turn {n}").split("{n}");
@@ -614,8 +622,27 @@ export default function Board({
   const ownTurn = view.result === null && view.active === view.viewer;
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
-  // A default adds no attribute and no element. R1833000: an unowned pick of the viewer's own draws
-  // as the default.
+  // #2645: on a phone the bar holds End turn, the Marketplace's toggle, the log's, ⋯ and the gear, and
+  // Offer draw, Concede and Friends are rows of ⋯'s menu (MatchMenu.tsx).
+  const phoneBar = usePhoneBar();
+  // The menu is the seat's that opened it (a hotseat hand-over closes it); it and the shop are never open together.
+  const [menuFor, setMenuFor] = useState<PlayerId | null>(null);
+  const [marketOpen, setMarketOpen] = useState(false);
+  const menuOpen = menuFor === view.viewer;
+  const openMenu = useCallback(
+    (open: boolean): void => {
+      setMenuFor(open ? view.viewer : null);
+      if (open) setMarketOpen(false);
+    },
+    [view.viewer],
+  );
+  const openMarket = useCallback((open: boolean): void => {
+    setMarketOpen(open);
+    if (open) setMenuFor(null);
+  }, []);
+  // R1297000: the playmat and backdrop the viewer's half wears; R1834004: and the other half, from its
+  // seat's loadout. A default adds no attribute and no element. R1833000: an unowned pick of the
+  // viewer's own draws as the default.
   const wear: Wear = { seat: wearCosmetics ? view.viewer : null, deck: deckCosmetics, loadouts, viewer: view.viewer };
   const account = useCosmetics();
   const owns = useOwnsAccountCosmetic();
@@ -626,6 +653,28 @@ export default function Board({
   const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
   const theirBackdrop = theirSlots.field === DEFAULT_CARD_COSMETICS.field ? undefined : theirSlots.field;
   const theirTable = theirSlots.table === DEFAULT_CARD_COSMETICS.table ? undefined : theirSlots.table;
+
+  const offerDraw = (
+    <ControlButton
+      control="offer-draw"
+      testId={testid.offerDraw}
+      label={offerDrawText.label}
+      title={offerDrawText.title}
+      highlight={highlight}
+      animating={animating}
+      onPress={() => onControl?.("offer-draw")}
+    />
+  );
+  const concede = (
+    <ControlButton
+      control="concede"
+      testId={testid.concede}
+      label={t("Concede")}
+      highlight={highlight}
+      animating={animating}
+      onPress={() => onControl?.("concede")}
+    />
+  );
 
   function pressEndTurn(): void {
     if (needsConfirm && !armed) {
@@ -674,7 +723,7 @@ export default function Board({
           emotes={emotes}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
-        <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
         <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
           {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
@@ -699,7 +748,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} view={view} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
@@ -748,23 +797,11 @@ export default function Board({
             />
             {turnClock ?? (view.clockMs !== null && <span className="clock turn-mechanism-clock">{formatSeconds(Math.ceil(view.clockMs / 1000))}</span>)}
           </div>
-          <ControlButton
-            control="offer-draw"
-            testId={testid.offerDraw}
-            label={offerDrawText.label}
-            title={offerDrawText.title}
-            highlight={highlight}
-            animating={animating}
-            onPress={() => onControl?.("offer-draw")}
-          />
-          <ControlButton
-            control="concede"
-            testId={testid.concede}
-            label={t("Concede")}
-            highlight={highlight}
-            animating={animating}
-            onPress={() => onControl?.("concede")}
-          />
+          {market === undefined ? null : (
+            <Marketplace view={view} legal={market.legal} onAction={market.onAction} open={marketOpen} onOpenChange={openMarket} />
+          )}
+          {phoneBar ? null : offerDraw}
+          {phoneBar ? null : concede}
           {/* Phones only (board.css): the log's own place on the board is hidden there. */}
           <button
             type="button"
@@ -777,12 +814,28 @@ export default function Board({
           >
             <span className="log-toggle-icon" aria-hidden="true" />
           </button>
-          {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
-              sat on the practice HUD's Menu and the match bar's clock (integration). */}
-          <AudioToggle className="audio-toggle--bar" />
-          {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
-          <FriendsButton placement="game" />
-          <LanguageButton placement="game" />
+          {phoneBar ? (
+            <MatchMenu
+              open={menuOpen}
+              onOpenChange={openMenu}
+              dot={offerDrawText.title !== undefined}
+              glow={glowAttr(highlight, testid.offerDraw) ?? glowAttr(highlight, testid.concede)}
+              animating={animating?.get(testid.offerDraw) ?? animating?.get(testid.concede)}
+            >
+              {offerDraw}
+              {concede}
+              <FriendsButton placement="menu" />
+            </MatchMenu>
+          ) : (
+            <>
+              {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
+                  sat on the practice HUD's Menu and the match bar's clock (integration). */}
+              <AudioToggle className="audio-toggle--bar" />
+              {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
+              <FriendsButton placement="game" />
+              <LanguageButton placement="game" />
+            </>
+          )}
           <SettingsButton placement="game" />
         </div>
 

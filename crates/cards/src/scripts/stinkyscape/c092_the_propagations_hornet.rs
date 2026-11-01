@@ -1,4 +1,4 @@
-//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 4/4 → 8/8, of the
+//! S #92 The Propagation's Hornet (SPEC §8.10 row 92): (2) Unit, Swarm, Rare, 3/4 → 6/8 (4/4 → 8/8 until #2657), of the
 //! Stinkyscape set.
 //!   Base:    "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
 //!   Radiant: "Rush / After this attacks, summon a copy of this, then evolve. / Evolve: Gain Flying."
@@ -9,7 +9,7 @@
 //! the original has it; one that died attacking does nothing, neither copy nor evolve (R2285001); a
 //! full unit row summons no copy. The copy has Rush too, a copy of
 //! the card, so it may attack a Unit that turn and copy again. Radiant: the same text, the copy of a
-//! Radiant Hornet a Radiant 8/8.
+//! Radiant Hornet a Radiant 6/8.
 
 use jackioh_engine::prelude::*;
 
@@ -81,13 +81,13 @@ mod tests {
             let hornet = s.unit_at(P1, 1);
             assert!(!flies(&s, &hornet));
             s.attack(&hornet, "hero");
-            s.expect_health(P2, HERO_HEALTH - 4);
+            s.expect_health(P2, HERO_HEALTH - 3);
             let copies = copies(&s);
             assert_eq!(copies.len(), 1);
             assert_eq!(s.unit_at(P1, 2).id, copies[0].id, "R64: the leftmost open zone");
             assert!(!flies(&s, &copies[0]), "made before it evolved");
             assert!(flies(&s, &hornet));
-            s.expect_stats(&copies[0], json!({ "attack": 4, "health": 4 }));
+            s.expect_stats(&copies[0], json!({ "attack": 3, "health": 4 }));
         }
 
         #[test]
@@ -147,13 +147,13 @@ mod tests {
         fn copies_at_double_size() {
             let mut s = board(true, json!([]), json!([]));
             let hornet = s.unit_at(P1, 1);
-            s.expect_stats(&hornet, json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(&hornet, json!({ "attack": 6, "health": 8 }));
             s.attack(&hornet, "hero");
-            s.expect_health(P2, HERO_HEALTH - 8);
+            s.expect_health(P2, HERO_HEALTH - 6);
             let copies = copies(&s);
             assert_eq!(copies.len(), 1);
             assert!(copies[0].radiant);
-            s.expect_stats(&copies[0], json!({ "attack": 8, "health": 8 }));
+            s.expect_stats(&copies[0], json!({ "attack": 6, "health": 8 }));
             assert!(!flies(&s, &copies[0]));
             assert!(flies(&s, &hornet));
         }

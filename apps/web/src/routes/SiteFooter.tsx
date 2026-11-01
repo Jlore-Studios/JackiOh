@@ -1,7 +1,10 @@
-// The site footer, on the landing and sign-in screens (where a visitor decides whether to hand over an
-// email address), kept off the board: purchases (R1665000), patch notes (R388), the Card Almanac (R630),
-// replays (R768000), the command menu's key (R2126000). The contact is the owner's address, the one the
-// Terms, the Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
+// The site footer: the privacy policy, the terms, the purchases page (R1665000), the accessibility and
+// copyright pages, how JackiOh uses AI (R2631000), the patch notes (R388), the Card Almanac (R630), the replays (R768000), a way to
+// reach the people who run JackiOh and, on a keyboard device, the command menu's key (R2126000).
+//
+// On the landing page and the sign-in screen, where a visitor decides whether to hand over an
+// email address. Kept off the board. The contact is the owner's email address, the one the Terms,
+// the Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
 
 import type { ReactElement } from "react";
 
@@ -23,6 +26,7 @@ export const siteFooterTestid = {
   terms: "site-footer-terms",
   purchases: "site-footer-purchases",
   accessibility: "site-footer-accessibility",
+  ai: "site-footer-ai",
   copyright: "site-footer-copyright",
   patchNotes: "site-footer-patch-notes",
   almanac: "site-footer-almanac",
@@ -51,6 +55,9 @@ export function SiteFooter(): ReactElement {
           onClick={followInApp(paths.accessibility)}
         >
           {t("Accessibility")}
+        </a>
+        <a href={paths.ai} data-testid={siteFooterTestid.ai} onClick={followInApp(paths.ai)}>
+          {t("AI use")}
         </a>
         <a href={paths.copyright} data-testid={siteFooterTestid.copyright} onClick={followInApp(paths.copyright)}>
           {t("Copyright")}

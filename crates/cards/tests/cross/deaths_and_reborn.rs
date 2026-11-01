@@ -250,7 +250,9 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
         // p1's next start of turn A steals Big Felinor first (R68's creation order), the Fiender dies at
         // 5/7 and Reborn returns it; B's target left the field in between, so B fizzles (R76).
         let mut g = scenario(json!({
-            "p1": { "hand": [KPOP, KPOP, VANILLA], "library": LIBRARY },
+            // A (0) Spell keeps p1's turn open after the two plays (R82): the Fanatics' own switch to
+            // Defense Position did until Can't Defend (R2657000).
+            "p1": { "hand": [KPOP, KPOP, VANILLA, "core-010"], "library": LIBRARY },
             "p2": {
                 "hand": [VANILLA],
                 "field": [

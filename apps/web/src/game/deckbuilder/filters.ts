@@ -1,16 +1,25 @@
 // The deck builder's browse semantics: which pool cards a filter keeps, the order a sort puts them
 // in, the mana curve of a deck and the order its list tiles are drawn in.
 //
-// PURE, AND THE ONLY PLACE THESE LIVE: the components decide nothing, so a filter or a sort is
-// proved here without mounting anything (docs/polish/6-cards.md, Surface D). NO RULE LIVES HERE
-// EITHER: ownership is `poolFrom`'s (which drops Tokens, since L3 bans them from a deck) and a
-// deck's legality `@jackioh/validator`'s alone; a filter only hides cards, never refuses one. The
-// workshop keeps its filter and sort per device (`savedBrowse.ts`, #263).
+// PURE, AND THE ONLY PLACE THESE LIVE. The components render what this module returns and decide
+// nothing themselves, so a filter or a sort is proved here without mounting anything
+// (docs/polish/6-cards.md, Surface D).
 //
-// The Card Almanac (R630) browses with the same filter and sort over every catalog card, tokens
-// included (`almanacPool`), since L3's reason for hiding them is a deck's. Both lists of chips
-// follow what ships (R1380, R1381): a tag chip shows only while a card of a shipped set carries its
-// tag (`shippedTags`), so a set's chip and its tags' arrive with the set and never before.
+// NO RULE LIVES HERE EITHER. Ownership comes from `poolFrom` (which already drops Tokens, since L3
+// bans them from a deck), and whether a deck is legal is `@jackioh/validator`'s alone. A filter only
+// hides cards from view; it never refuses one. The workshop keeps its filter and sort per device
+// (`savedBrowse.ts`, #263), and "Clear filters" clears the saved copy along with the chips.
+//
+// The Card Almanac (R630) browses with the same filter and sort. Its shelf is `almanacPool`: every
+// catalog card, tokens included, since L3's reason for hiding them is a deck's and the almanac
+// builds none, and its tag chips are `ALMANAC_TAGS`.
+//
+// Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
+// chip shows only while a card of a shipped set carries its tag (`shippedTags`), so a set's chip and
+// its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's, the Stinkyscape
+// set's and its four, R1883000) arrive with the set and never before. Issue #2521's two tags reach
+// cards of a set that already ships, so their chips show from the patch that adds them: Faction in
+// both lists, Resource in the almanac's alone.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -76,11 +85,20 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Drone Core",
   "Weapon",
   "Swarm",
+  // R2511000: Training Grounds #41 to #60, the Legacy cards.
+  "Legacy",
+  // Issue #2521: the Stinkyscape set's five Faction cards, #95 and #159 to #162, which a deck may
+  // hold. "Resource" is left out with "War Doctrine": only the six Resource tokens carry it.
+  "Faction",
 ];
 
-/** The almanac's tag chips (R630): the deck builder's, then the five only tokens carry ("Prime" is
- *  R1421's), since the almanac shows tokens. */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Token"];
+/**
+ * The almanac's tag chips (R630): the deck builder's, then the six only tokens carry, "Prime" (the
+ * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000),
+ * "War Doctrine" (Stinkyscape #137.1 to #137.4, R1883000), "Resource" (the Stinkyscape set's six
+ * Resources, issue #2521) and "Token", since the almanac shows tokens. Every tag a catalog card carries.
+ */
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {

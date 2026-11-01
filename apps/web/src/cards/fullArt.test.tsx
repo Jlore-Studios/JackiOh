@@ -27,8 +27,7 @@ function faceOf(id: string, radiant: boolean, layout: "full" | "compact" = "full
   return cf;
 }
 
-// R2195001: a Training Grounds snapshot shares its Core card's name, not its full art.
-const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name) && def.snapshotOf === undefined);
+const HEROES = DEFS.filter((def) => FULL_ART_NAMES.has(def.name));
 
 afterEach(() => {
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
@@ -76,10 +75,10 @@ describe("R1017001 full-art faces", () => {
     }
   });
 
-  it("R2195001 a Training Grounds snapshot of a hero's card prints its normal face", () => {
-    const snapshots = DEFS.filter((def) => def.snapshotOf !== undefined && FULL_ART_NAMES.has(def.name));
-    expect(snapshots.length).toBeGreaterThan(0);
-    for (const def of snapshots) {
+  it("R2195001 R2511000 a Training Grounds Legacy card of a hero's card prints its normal face", () => {
+    const legacy = DEFS.filter((def) => def.tags.includes("Legacy") && FULL_ART_NAMES.has(def.name.replace(/^Legacy: /, "")));
+    expect(legacy.length).toBeGreaterThan(0);
+    for (const def of legacy) {
       const cf = faceOf(def.id, false);
       expect(cf.hasAttribute("data-full-art"), def.id).toBe(false);
       expect(cf.querySelector(".card-type"), def.id).not.toBeNull();

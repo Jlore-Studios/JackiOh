@@ -629,14 +629,6 @@ fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
 }
 
 fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
-    let Some(p2) = row.p2_profile_id else {
-        // Only an `open` room reaches this, and `matches_get`/`matches_live` filter those out
-        // before here.
-        return Err(StoreError::from(format!(
-            "match {} has no second player; it is still an open room",
-            row.id
-        )));
-    };
     let status = from_literal(if row.status == "over" { "finished" } else { "live" })?;
     let boards = (
         last_board_of(&row.p1_last_board)?,
@@ -660,8 +652,12 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     Ok(MatchRow {
         id: row.id,
         seed: row.seed,
-        // See KNOWN DIVERGENCES (deleted accounts): a deleted seat reads back as an empty id.
-        players: (row.p1_profile_id.unwrap_or_default(), p2),
+        // See KNOWN DIVERGENCES (deleted accounts): a deleted seat, either one, reads back as an
+        // empty id.
+        players: (
+            row.p1_profile_id.unwrap_or_default(),
+            row.p2_profile_id.unwrap_or_default(),
+        ),
         decks: (card_list_of(&row.p1_deck)?, card_list_of(&p2_deck)?),
         catalog_version: row.catalog_version,
         status,
@@ -1818,7 +1814,11 @@ pub async fn profiles_get_by_user_id(t: &mut PgTx<'_>, user_id: &str) -> Result<
 }
 
 pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Result<Vec<Profile>, StoreError> {
-    if profile_ids.is_empty() {
+    // A deleted seat reads back as the empty id (KNOWN DIVERGENCES, deleted accounts). An id that is
+    // not a uuid names no profile, and Postgres would refuse it, so it is left out, as
+    // `ranked_standings_subset` leaves it out.
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
         return Ok(Vec::new());
     }
     run_as(t, None).await?;
@@ -1829,7 +1829,7 @@ pub async fn profiles_get_many(t: &mut PgTx<'_>, profile_ids: &[String]) -> Resu
         profile_from!(),
         " where p.id = any($1::uuid[])"
     ))
-    .bind(profile_ids.to_vec())
+    .bind(ids)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
@@ -3531,11 +3531,13 @@ pub async fn matches_seats(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Ma
     }))
 }
 
+// ---------------------------------------------------------------------------
 // Replays (R768)
+// ---------------------------------------------------------------------------
 
-/// One finished match with a result, read for its replay. Unlike `to_match`'s other callers it
-/// reads a deleted second seat as the empty id too (KNOWN DIVERGENCES, deleted accounts), so a
-/// player keeps the replay of a match whose opponent has deleted their account.
+/// One finished match with a result, read for its replay. A deleted seat reads as the empty id
+/// (`to_match`, KNOWN DIVERGENCES, deleted accounts), so a player keeps the replay of a match whose
+/// opponent has deleted their account.
 async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Option<ReplayRow>, StoreError> {
     let row = sqlx::query(concat!(
         "select ",
@@ -3550,8 +3552,7 @@ async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Op
     let Some(row) = row else {
         return Ok(None);
     };
-    let mut row = MatchDbRow::read(&row)?;
-    row.p2_profile_id.get_or_insert_with(String::new);
+    let row = MatchDbRow::read(&row)?;
     let row = to_match(row)?;
     let Some(result) = results_get_by_match(t, match_id).await? else {
         return Ok(None);
@@ -3642,9 +3643,7 @@ pub async fn replays_list_with_modes(
     .map_err(db_error)?;
     let mut replays = Vec::with_capacity(rows.len());
     for row in &rows {
-        let mut shape = MatchDbRow::read(row)?;
-        // As `replay_row` reads it: a deleted second seat is the empty id, so the replay is kept.
-        shape.p2_profile_id.get_or_insert_with(String::new);
+        let shape = MatchDbRow::read(row)?;
         let replay = ReplayRow {
             row: to_match(shape)?,
             result: to_result(ResultDbRow {
@@ -7333,7 +7332,6 @@ pub async fn presence_watchable(
         "select p.id from public.profiles p
            join public.matches m on m.id = p.current_match_id
           where p.id = any($2::uuid[]) and p.id <> $1::uuid
-            and p.allow_spectators
             and m.status = 'live'
             and p.id in (m.p1_profile_id, m.p2_profile_id)
             and $1::uuid is distinct from m.p1_profile_id
@@ -7356,50 +7354,13 @@ pub async fn presence_watchable(
     Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
 }
 
-// profiles (B46, B50)
+// profiles (B46)
 
 pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(None);
     }
     profiles_get_by_id(t, profile_id).await
-}
-
-pub async fn profiles_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(false);
-    }
-    run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
-        .bind(profile_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    match row {
-        Some(row) => get(&row, "allow_spectators"),
-        None => Ok(false),
-    }
-}
-
-pub async fn profiles_set_allow_spectators(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    allow: bool,
-) -> Result<(), StoreError> {
-    if !is_uuid(profile_id) {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set allow_spectators = $2::boolean where id = $1::uuid")
-        .bind(profile_id)
-        .bind(allow)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    if done.rows_affected() == 0 {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    Ok(())
 }
 
 // challenges (B48, B49)
@@ -8016,95 +7977,130 @@ pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result
 }
 // ---- end Social: watching and shared replays ----
 
-// KNOWN DIVERGENCES from `src/db/fake.rs`
+// =============================================================================
+// KNOWN DIVERGENCES from `src/db/fake.rs` (TS: `src/api/e2e-store.ts`)
 //
 // Every one of these is a place where the port and the schema (which this file may not change:
 // the migrations are append-only and checksum-locked) do not hold the same information. They are
-// listed here and asserted in `tests/store/contract.rs` where they are observable.
+// listed here, asserted in `tests/store/contract.rs` where they are observable, and repeated in the
+// report that came with this file.
 //
 //  * redemption limits. §9.4's "more than 5 attempts", "more than 20" and "the last hour" are
-//    written into `app.redeem_invite_code`'s body, and the breaker's knobs into `app.settings`, so
-//    neither can be made to read `ApiLimits`. The fake takes all three as options defaulting to the
-//    same `src/config.rs` constants, so a test can shrink them on the fake path only. Changing a
-//    number for a real deployment means `app.settings` and a new migration, not `src/config.rs`.
-//  * attempt reason. `CodeAttempt.reason` has no column in `public.code_attempts`, which stores
-//    only `succeeded`, so it is dropped on write and a round-trip cannot return it. Nothing reads it
-//    back, and `redeem` returns a result code rather than a reason for the same reason.
+//    written into `app.redeem_invite_code`'s body, and the breaker's knobs into `app.settings`;
+//    the migrations are checksum-locked, so neither can be made to read `ApiLimits`. The in-memory
+//    store takes all three as options defaulting to the same `src/config.rs` constants
+//    `default_limits()` copies into `ApiLimits`, so the two agree at today's values and a test can
+//    shrink them on the fake path only. Changing a number for a real deployment means
+//    `app.settings` and a new migration, not `src/config.rs`.
+//  * attempt reason. `CodeAttempt.reason` ("a coarse reason for operators") has no column in
+//    `public.code_attempts`, which stores only `succeeded`. It is dropped on write, so a store
+//    round-trip cannot return it. Nothing reads it back today (the code store has no attempt read),
+//    and `redeem` returns a result code rather than a reason for the same reason: the
+//    granularity the fake can record is granularity Postgres cannot.
 //  * redemption's email check. `app.redeem_invite_code` reads `auth.users.email_confirmed_at`
-//    itself; the fake answers through `RedemptionSettings.email_verified`. The server refuses an
+//    itself; the in-memory store has no such table and answers through
+//    `RedemptionSettings.email_verified`, true unless a caller says otherwise. The server refuses an
 //    unverified caller from the access token (R159) before either store is reached, so this only
-//    shows up in a test that calls the port directly, as `tests/store/contract.rs` does.
+//    shows up in a test that calls the port directly — which `tests/store/contract.rs` does.
 //  * redemption's circuit breaker. The SQL function refuses when `app.settings.redemption_enabled`
-//    is false OR when its own count of recent failures crosses R106's threshold. The fake
-//    implements the switch and not the counter, because the server's own R106 breaker
-//    (`src/api/codes.rs`) is checked first with the same numbers, and a fake that counted as well
-//    would open during BUILD M6-T1's timing test, whose whole point is 150 uninterrupted failures.
-//  * profile email. `public.profiles` has no email column, so `Profile.email` is read from
-//    `auth.users` (`service_role` needs SELECT on it, which Supabase grants), the `email` argument
-//    to `profiles_create` is ignored, and the `auth.users` row must exist, because `profiles.id`
+//    is false OR when its own count of recent failures crosses R106's threshold. The in-memory
+//    store implements the switch and not the counter, because the server's own R106 breaker
+//    (`src/api/codes.rs`) is checked before the store is touched, holds the same numbers and is
+//    what alerts — a fake that counted as well would open during BUILD M6-T1's 150-sample timing
+//    test, whose whole point is 150 uninterrupted failures.
+//  * profile email. `public.profiles` has no email column — §9.4's managed auth provider owns it
+//    on `auth.users` — so `Profile.email` is read from there (`service_role` needs SELECT on
+//    `auth.users`, which Supabase grants) and the `email` argument to `profiles_create` is ignored.
+//    `profiles_create` also requires the `auth.users` row to exist, because `profiles.id`
 //    references it; the fake has no such requirement.
-//  * foreign keys. A result, a ticket or an in-match pointer for a match that was never created, or
+//  * foreign keys. `results.match_id`, `tickets.match_id` and `profiles.current_match_id` all
+//    reference `public.matches`, and `decks`, `trios` and both sides of `series` reference
+//    `public.profiles`, so a result or an in-match pointer for a match that was never created, or
 //    a deck, a trio or a series for a profile that does not exist, raises here and is accepted by
-//    the fake. Every caller in `src/api/**` writes the match or has the profile first.
-//    `series.next_match_id` is the one match id with NO foreign key, on purpose (R263: it is
-//    reserved before its match exists).
+//    the fake. Every caller in `src/api/**` writes the match or has the profile first, so this
+//    only shows up in a test that skipped it. `series.next_match_id` is the one match id with NO
+//    foreign key, on purpose (R263: it is reserved before its match exists).
 //  * deck and trio strictness. `app.upsert_deck` and `app.upsert_trio` (0007) refuse — by raising —
 //    a profile that is not active, a blank name, a name past `deck_name_max_length` or holding a
 //    control character (D1, T1), more than `deck_size` cards (D2), more than `max_copies` of one id
-//    (D4) and a cards value that is not an array of strings; the fake checks none of these, because
-//    `check_deck_draft` / `check_trio_draft` refuse them first with a sentence a player reads. This
-//    is §9.4's "defense in depth" by design. D3 (a deckable card) is checked by neither: see 0007.
+//    (D4) and a cards value that is not an array of strings; the in-memory store checks none of
+//    these, because the server's `check_deck_draft` / `check_trio_draft` refuse them first with a
+//    sentence a player reads. The real store is strictly stricter, which is §9.4's "defense in
+//    depth" by design. D3 (a deckable card) is checked by neither store: see 0007.
 //  * tutorial strictness (R320). `app.merge_tutorial_progress` (0011) refuses — by raising — a
 //    profile that is not active, a lesson id that is not a lower-case slug of at most
-//    `tutorial_lesson_id_max_length` characters and a choice with no time; the fake checks none of
-//    these, because `src/api/tutorial.rs` refuses a malformed body first and its route is `active`.
-//    Its cap is the smaller of the caller's and `app.settings.tutorial_lessons_max`, as for caps.
+//    `tutorial_lesson_id_max_length` characters, and a choice with no time; and a profile with no
+//    `public.profiles` row fails its foreign key. The in-memory store checks none of these, because
+//    `src/api/tutorial.rs` refuses a malformed body first and its route is `active`. The merge
+//    itself (the union, the strictly-newer choice, the `limit` outcome) is the same in both and is
+//    asserted in `tests/store/contract.rs`. Its cap is the smaller of the caller's and
+//    `app.settings.tutorial_lessons_max`, as for the deck caps below.
 //  * player settings strictness (R633). `app.merge_player_settings` (0018) refuses — by raising — a
 //    profile that is not active and a group that is not `{ at: whole milliseconds, values: an
-//    object }`; the fake checks neither, because `src/api/settings.rs` refuses a malformed body
-//    first. Its caps are the smaller of the caller's and `app.settings`' `player_settings_groups_max`
-//    / `player_settings_bytes_max`; the byte cap counts the text jsonb prints, which the fake
-//    reproduces (`jsonb_text_bytes`) for ordinary values.
+//    object }`; the in-memory store checks neither, because `src/api/settings.rs` refuses a
+//    malformed body first and its route is `active`. The merge itself (the strictly-later group,
+//    the groups a write leaves alone, the `limit` outcome) is the same in both and is asserted in
+//    `tests/store/contract.rs`. Its caps are the smaller of the caller's and `app.settings`'
+//    `player_settings_groups_max` / `player_settings_bytes_max`. The byte cap counts the text
+//    jsonb prints, which the in-memory store reproduces (`jsonb_text_bytes`) for ordinary values.
 //  * custom card strictness (R915008). `app.create_custom_card` and `app.update_custom_card` (0037)
 //    refuse, by raising, a profile that is missing or not active, and `public.custom_cards`' checks
-//    refuse a malformed id, a version under 1, a frame that is not an object and an oversized source
-//    or builder. The fake checks none of these, because `src/api/custom_cards.rs` refuses a card the
-//    engine's validator refuses first (R915001). jsonb also reorders a builder's object keys and
-//    keeps one of a doubled key; neither changes the value the port reads back.
-//  * caps. The SQL applies the smaller of the port's cap and `app.settings.max_saved_decks` /
-//    `max_saved_trios` (0007, mirroring `MAX_SAVED_DECKS` and `MAX_SAVED_TRIOS`) / `max_custom_cards`
-//    (0037, mirroring `CUSTOM_CARDS_PER_ACCOUNT`); equal today. Raising a cap in `src/config.rs`
-//    alone raises it only in memory; the database needs a migration updating its row.
-//  * deck and trio timestamps. `app.upsert_deck` / `app.upsert_trio` take one instant, for
-//    `updated_at` and, on a new row, `created_at`, and this store hands them `updated_at`; the fake
-//    stores a new deck's `created_at` as given. The two agree for a caller that stamps both from one
-//    clock read, which is what a save is.
-//  * R254's decks. A deck migration 0007 made from a loadout holds its cards in `app.resolve_deck`
-//    order, which is card-id order; every deck saved since keeps the order it was saved in.
+//    refuse an id that is not `custom-` and 1 to 57 lowercase letters, digits and hyphens, a
+//    version under 1, a frame that is not an object, a source over 8192 bytes and a builder whose
+//    jsonb text passes twice the engine's 16384 bytes. The in-memory store checks none of these,
+//    because `src/api/custom_cards.rs` refuses a card the engine's validator refuses first
+//    (R915001) and its routes are `active`. jsonb also keeps a builder's object keys in its own
+//    order and one of a doubled key; neither changes the value the port reads back.
+//  * caps. The port passes the cap (`max_decks`, `max_trios`, `max_cards`); the SQL applies the
+//    smaller of it and `app.settings.max_saved_decks` / `max_saved_trios` (0007, mirroring
+//    `MAX_SAVED_DECKS` and `MAX_SAVED_TRIOS`) / `max_custom_cards` (0037, mirroring
+//    `CUSTOM_CARDS_PER_ACCOUNT`). Equal today. Raising a cap in `src/config.rs` alone raises it only
+//    in memory; the database needs a migration updating its row, as for the redemption limits.
+//  * deck and trio timestamps. `app.upsert_deck` / `app.upsert_trio` take one instant: `updated_at`
+//    always, `created_at` too when the row is new, and this store hands them `updated_at`. The fake
+//    stores a new deck's `created_at` as given. The two agree for any caller that stamps a new
+//    deck's `created_at` and `updated_at` from one clock read, which is what a save is.
+//  * R254's decks. A deck migration 0007 made from a loadout holds its cards in
+//    `app.resolve_deck` order, which is card-id order: a loadout never had any other. Every deck
+//    saved since keeps the order it was saved in.
 //  * launch grant. Migration 0002's trigger grants every NON-TOKEN card of the current catalog
-//    version; the fake also skips BANNED ids (§9.4 L6), so with a banned card in the catalog the
-//    database grants a card the fake does not.
+//    version; the fake also skips BANNED ids (§9.4 L6). With no banned card in the catalog the two
+//    agree exactly; with one, the database grants a card the fake does not.
 //  * action timestamps. `app.append_match_action` stamps `at` with the database clock and
-//    `match_actions` is append-only, so `MatchActionRow.at` cannot be written by the caller. `seq`
-//    is unaffected, and only a replay tool and `timing-backfill` (R1442) read `at` back, whose think
-//    times therefore run from one commit to the next.
-//  * rooms. There is no `rooms` table: a room is a `public.matches` row with `status = 'open'`,
-//    `Room.expires_at` is kept in `ceiling_at` (which migration 0004 documents as meaningless while a
-//    room is open), and `rooms_claim` rewrites the row's id to the match id the server minted. A
-//    row with no `room_mode` (0008) — written before 0008, or by 0004's `app.create_room` — reads as
-//    `bo1`, which is all a room could be then.
-//  * reserved match ids. Here the id `tickets_claim_pair`, `tickets_claim_for_bot` or `rooms_claim`
-//    reserves is an `open` row, so `matches_discard_open` (R263) deletes a row: the claimed tickets'
-//    `match_id` goes back to null and a claimed room's code is free again. The fake keeps only the
-//    time a pair or a bot was claimed (`FakeTables.reserved`, R1450, R1454), which its
-//    `discard_open` drops; there a matched ticket keeps the discarded id. `matches_reap_open`
-//    (R1450) does the same in both stores.
-//  * deleted accounts. Migrations 0012 and 0022 set a deleted profile's seat on its finished
-//    matches, results, series and `rated_games` sides to NULL (cascading its `season_ranks` away).
-//    A Rust `String` cannot hold that null, so a deleted seat reads back as the empty string (a
-//    match's second seat excepted: `to_match` refuses a row with no `p2_profile_id`, except for a
-//    replay's read, `replay_row`, R768). The fake keeps the id (it has no foreign keys).
+//    `match_actions` is append-only, so `MatchActionRow.at` cannot be written by the caller. The
+//    log's order (`seq`) is unaffected, and nothing reads `at` back except a replay tool and
+//    `timing-backfill` (R1442), whose think times therefore run from one commit to the next.
+//  * rooms. There is no `rooms` table: a room is a `public.matches` row with `status = 'open'`, and
+//    `Room.expires_at` is kept in `ceiling_at`, the column migration 0004 documents as meaningless
+//    while a room is open. `rooms_claim` rewrites the row's id to the match id the server minted.
+//    `Room.mode` and `Room.host_trio` are `room_mode` / `room_trio` (0008); a room row with no mode
+//    — written before 0008, or by 0004's `app.create_room` — reads as `bo1`, which is all a room
+//    could be then.
+//  * reserved match ids. In Postgres the id `tickets_claim_pair`, `tickets_claim_for_bot` or
+//    `rooms_claim` reserves is an `open` row, so `matches_discard_open` (R263) deletes a row: the
+//    claimed tickets' `match_id` goes back to null (`tickets.match_id` is `on delete set null`) and
+//    a claimed room's code is free again. The fake keeps no such row, only the time a pair or a
+//    bot was claimed (`FakeTables.reserved`, R1450, R1454), which its `discard_open` drops and
+//    nothing else; there a matched ticket keeps the discarded id. `matches_reap_open` (R1450)
+//    deletes the same rooms and reservations in both stores and lets go of what pointed at them,
+//    as the foreign keys do here.
+//  * deleted accounts. Migration 0012 sets a deleted profile's seat on its finished matches,
+//    results and series to NULL, and migration 0022 does the same on `rated_games`' sides while
+//    cascading its `season_ranks` away, so `matches_get`, `results_get_by_match`, `series_get` and
+//    `ranked_game` can read back a null where the port types a profile id. TS handed that null on in
+//    a string-typed slot; a Rust `String` cannot hold it, so a deleted seat reads back as the empty
+//    string, either seat of a match included (`to_match`). An open room, whose second seat nobody
+//    has taken, never reaches `to_match`: `matches_get` and the replays read only `live` and
+//    `over` rows, and `matches_live` skips a row with no second seat. The in-memory store keeps
+//    the id (it has no foreign keys). Many reads hand a finished match's seats on (a replay, R768,
+//    the rematch routes, the ranks read, the match socket's reopen, a game record's refile), so a
+//    read that binds a profile id takes an id that is not a uuid, the empty one among them, as
+//    naming nothing (`profiles_get_many`, `ranked_standings_subset`, `blocks_between`, the
+//    economy's `game_jlore_totals`) instead of handing it to Postgres. A live match or series
+//    cannot lose a seat: the delete is refused, by constraint here and by `DELETE /api/account`
+//    first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
-//    `grace_deadline_at` plus two `*_disconnected_at`, which carry the per-player deadlines while
-//    `grace_deadline_at` keeps the nearer of them. A migration adding `p1_grace_deadline_at` /
-//    `p2_grace_deadline_at` would retire this.
+//    `grace_deadline_at` plus two `*_disconnected_at`. The per-player deadlines are stored in the
+//    two `*_disconnected_at` columns and `grace_deadline_at` keeps the nearer of them. A migration
+//    adding `p1_grace_deadline_at` / `p2_grace_deadline_at` would retire this.
+// =============================================================================

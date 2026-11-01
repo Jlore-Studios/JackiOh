@@ -11,11 +11,12 @@ trap backrow. This file binds every agent, not only Claude.
 - `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass tables); `REVIEW.md` is
   the audit, its reports in `reviews/`.
 - Each crate's and app's `README.md` (`crates/*`, `apps/web`, `e2e`) is its contract: read it before you
-  change that code. So is `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708). Also:
-  `docs/ADDING_CARDS.md`, `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers),
-  `docs/architecture.md`, `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`,
-  `training/README.md`, `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client) and
-  `docs/v0.4.0/` (the Luau card scripts, #442, and their return to Rust, #902).
+  change that code. So are `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708), and
+  `bot/go/README.md`, for the bots' harness in Go (#467). Also: `docs/ADDING_CARDS.md`,
+  `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers), `docs/architecture.md`,
+  `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`, `training/README.md`, `docs/v0.3.0/SURFACE.md`
+  (every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442, and
+  their return to Rust, #902).
 - The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md` and the design briefs `docs/*-set*.md`,
   each named in REVIEW.md's Part A inputs) are what REVIEW Part A checks the spec against; read them only
   when the task is about them.
@@ -46,14 +47,13 @@ trap backrow. This file binds every agent, not only Claude.
    what would break purity, tests included. The only statics are the catalog and the script registry,
    `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
    among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled
-   chunks and scripts and no game state (#442 L8), and four thread-locals, each set for one call and put
-   back after it: three of the engine's (the shipped catalog a replay is folding under, R767000; the
-   custom-script host `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight
-   holds its game's random pools, `catalog::with_pool_hold`, R2201001) and the AI's Death prices for the
-   decision in flight (`evaluate::with_death_prices`, R2424000). A Luau script is kept pure by its host: the sandbox
-   (L5), the integer boundary every value crosses (L6) and the lint (L6, L7), all in
-   `crates/luau/README.md`. Data reaches a pure crate only at compile time (`include_str!`,
-   `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
+   chunks and scripts and no game state (#442 L8), and three thread-locals of the engine's, each set for one
+   call and put back after it (the shipped catalog a replay is folding under, R767000; the custom-script host
+   `custom::with_custom_scripts` lends, #915, R915002; and whether the step in flight holds its game's random
+   pools, `catalog::with_pool_hold`, R2201001). A Luau script is kept pure by its host: the sandbox (L5), the
+   integer boundary every value crosses (L6) and the lint (L6, L7), all in `crates/luau/README.md`. Data
+   reaches a pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs the
+   disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
    reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
    `EffectContext` and the engine's read helpers and returns effects. (A custom card's Luau script does the
@@ -73,7 +73,7 @@ trap backrow. This file binds every agent, not only Claude.
    fails when a run changes them. Nothing else states a number.
 10. Before any card work (adding, changing or removing a card), read `docs/ADDING_CARDS.md`.
 11. An agent that opens an issue gives it one `difficulty:*` label by `docs/issues-and-patches.md` (How hard
-    it is; `bot/harness/easy.py` holds the easy rule), **hard** for engine rules, the AI, design across
+    it is; `bot/go/internal/easy` holds the easy rule), **hard** for engine rules, the AI, design across
     crates, a migration, or about 40 files or more. Torn between two, take the harder. The bot never changes
     your label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner
     rates it.
@@ -92,19 +92,19 @@ Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules 
 ## Commands
 
 `rust-toolchain.toml` pins Rust and its two WebAssembly targets for `crates/`, and `crates/luau` needs a C++
-compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only.
-`cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
+compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only; Go for
+`bot/go` (its `go.mod` pins it). `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --`.
 
 ```
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
-cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
+cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the hotseat fixture's fold included; rewrites apps/web/src/wire/ (commit any diff)
 cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored   # the daily tests: the many-game sweeps marked #[ignore = "daily: …"]
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
-cargo jackioh golden check         # the golden traces from the TypeScript engine, replayed (cargo test replays them too)
+cargo jackioh golden check         # the hotseat fixture's fold (cargo test folds it too); `golden record` + `golden check --file` compare two builds
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
 cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
 cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
@@ -115,7 +115,8 @@ pnpm --dir apps/web build          # the production bundle
 pnpm --dir apps/web typecheck
 pnpm --dir apps/web test           # the web's unit tests (vitest, jsdom)
 pnpm exec eslint apps/web e2e
-cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
+cd bot/go && go test ./...                             # the bot selftest's harness suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
+cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's Python suites: what stays Python (bot/machine's Lambdas and scripts, .github/hygiene's branch rule)
 sh crates/server/tests/sql/run.sh          # schema, RLS and trigger invariants (Docker: a throwaway postgres:16)
 sh crates/server/tests/db/run.sh           # the server's store against postgres:16 (Docker; KEEP_DB=1 keeps it)
 cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--handicap for the handicapped wave)
@@ -183,9 +184,10 @@ keeps its rule per pull request, which its `daily:` reason names. Each workflow'
 
 ## The night bot
 
-`@jgoetzmann-bot` (the night bot, `.harness/`) and `@squishy-squooby` (Squishy, `.squishy/`) build issues on
-the owner's subscriptions; `bot/README.md` says which issues each takes. `human` keeps every bot off an issue,
-and `bot:build` queues one for the night bot, so never add it while retitling or relabeling.
+`@jgoetzmann-bot` (the night bot, `.harness/`) and `@squishy-squooby` (Squishy, `.squishy/`), one harness
+(`bot/go/`, a Go binary) under two configs, build issues on the owner's subscriptions; `bot/README.md` says
+which issues each takes. `human` keeps every bot off an issue, and `bot:build` queues one for the night bot,
+so never add it while retitling or relabeling.
 
 A bot's builder or reviewer must not change `.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/`, except
 that Squishy may change `.claude/skills/` (the full lists are `forbidden_paths` in each bot's `config.json`):

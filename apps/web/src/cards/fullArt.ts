@@ -22,7 +22,6 @@ import { OwnershipContext, TheirCopyContext, ownsCosmetic, useCardPicks, type Ca
 import type { FaceModel } from "./model.ts";
 import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
-import { snapshotArtOf } from "./art/traininggrounds.ts";
 
 /** The English names of the cards whose faces print full art: every hero portrait's card. */
 export const FULL_ART_NAMES: ReadonlySet<string> = new Set(Object.values(PORTRAITS).map((portrait) => portrait.cardName));
@@ -34,11 +33,11 @@ export function isFullArt(englishName: string): boolean {
 
 /**
  * Whether the card `defId`, named `englishName` in English, has a full-art face at all: a hero
- * portrait's card, never the Glitch. R2195001: a Training Grounds snapshot shares its Core card's name
- * but not its full art, a cosmetic of that card's own (R1313000), so it has none.
+ * portrait's card, never the Glitch. A Training Grounds Legacy card is named apart from its Core card
+ * (`Legacy: …`, R2511000), so the Core card's full art (R1313000) is never its.
  */
 export function isFullArtCard(defId: string, englishName: string): boolean {
-  return !isGlitch(defId) && snapshotArtOf(defId) === null && isFullArt(englishName);
+  return !isGlitch(defId) && isFullArt(englishName);
 }
 
 /**

@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use jackioh_ai::{
-    AI_EVAL, FEATURES_VERSION, NextSwing, POLICY_KEYS_VERSION, PolicyLabel, create_node_counter, dense_names,
-    evaluate, features_of, hidden_card_ids, policy_label, simulate_reply,
+    AI_EVAL, FEATURES_VERSION, NextSwing, POLICY_KEYS_VERSION, PolicyLabel, Prices, create_node_counter,
+    dense_names, evaluate, features_of, hidden_card_ids, policy_label, simulate_reply,
 };
 use jackioh_engine::{
     ActionBody, CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for,
@@ -204,7 +204,7 @@ fn reply_row(
         return Err(Dropped::NoResult);
     };
     let counter = create_node_counter(REPLY_NODES, None);
-    let Some(after) = simulate_reply(end, seat, &counter, &hidden_card_ids(end, seat)) else {
+    let Some(after) = simulate_reply(end, seat, &counter, &hidden_card_ids(end, seat), Prices::NONE) else {
         return Ok(None);
     };
     if after.result.is_some() {

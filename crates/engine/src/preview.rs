@@ -146,3 +146,40 @@ pub fn tallies_on(state: &GameState, unit: &CardInstance, viewer: PlayerId) -> O
         .collect();
     if tallies.is_empty() { None } else { Some(tallies) }
 }
+
+/// R2476000: what a value that names something prints before there is anything to name (R982's dash):
+/// a Carnivorous Cube that has eaten nothing, a Ticketed holding nothing.
+pub const NOTHING_REMEMBERED: &str = "—";
+
+/// R2476000: a value that names a card a card remembers, by its name as its face prints it, "Radiant "
+/// before a Radiant one (`display`, R372), and 1; or, remembering none, the dash and 0. The name is
+/// the catalog's (a card shown in Chinese reads it as every engine-made line does).
+pub fn card_preview(state: &GameState, label: &str, named: Option<(&str, bool)>) -> PreviewValue {
+    let display = named
+        .and_then(|(def_id, radiant)| {
+            crate::catalog::find_def(Some(state), def_id).map(|def| {
+                if radiant {
+                    format!("Radiant {}", def.name)
+                } else {
+                    def.name.clone()
+                }
+            })
+        })
+        .unwrap_or_else(|| NOTHING_REMEMBERED.to_string());
+    PreviewValue {
+        label: label.to_string(),
+        value: i32::from(display != NOTHING_REMEMBERED),
+        display: Some(display),
+        ids: None,
+    }
+}
+
+/// R2476000: a value that counts what a card remembers, a number printed as it is.
+pub fn count_preview(label: &str, value: i32) -> PreviewValue {
+    PreviewValue {
+        label: label.to_string(),
+        value,
+        display: None,
+        ids: None,
+    }
+}

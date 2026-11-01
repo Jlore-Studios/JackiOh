@@ -97,7 +97,15 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #19.2 Jungle Loser — SPEC §8.7 row 19.2, BUILD M9 Classic+ row C+ 19.2 (R42).
+// C+ #19.2 Jungle Loser — SPEC §8.7 row 19.2, BUILD M9 Classic+ row C+ 19.2: "Can't attack: it declares no
+// attack, and `legalActions` holds none; at its controller's end of turn a seeded 100% roll, one roll still
+// drawn (a Nerf tunes it to 90%); on success a forced attack (R53: no exertion, sickness ignored, the target
+// strikes back; §4.2 step 1, where Can't attack lives, skipped) on a random enemy Unit it may attack under
+// §4.2 step 2 (never a Can't be attacked Unit, a Top Loser only from its lane); an empty enemy board draws no
+// roll (R129); if it destroys (R42) the enemy Unit in your Bot Loser's lane, your Bot Loser goes Berserk, and
+// with no Bot Loser nothing more happens; the chance reads through `param()` (step 10%); radiant also Can't
+// attack and 100%, and that kill is credited to your Bot Loser instead: its "After this destroys a Unit"
+// trigger fires and the `destroyed` event names it as the killer".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -454,7 +462,7 @@ mod tests {
                     matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == victim.id)
                 });
                 assert_eq!(killer_of(death), Some(bot.id.clone()));
-                s.expect_stats(&bot, json!({ "attack": 8 }));
+                s.expect_stats(&bot, json!({ "attack": 7 }));
                 assert_eq!(s.card(&bot).berserk, None);
             }
 

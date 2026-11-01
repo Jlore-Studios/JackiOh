@@ -13,8 +13,28 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-135-1";
 
+/// R2476000: after "the Unit stuffed into it", the card held beneath it on its stay now (`held_beneath`), by name
+/// ("Radiant " before a Radiant one), or the dash when it holds none. On the field, to both seats: only
+/// a face-up permanent is held (R1850003), and the hold was public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let held = held_beneath(ctx.state, ctx.self_);
+        vec![card_preview(
+            ctx.state,
+            "the Unit stuffed into it",
+            held.first().map(|card| (card.def_id.as_str(), card.radiant)),
+        )]
+    })
+}
+
 pub fn script() -> CardScripts {
-    let base = Script::default();
+    let base = Script {
+        preview: Some(preview()),
+        ..Script::default()
+    };
     // The Radiant face's 0/8 and Brittle 1 are catalog data, the release the engine's: the same script.
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -63,6 +83,18 @@ mod tests {
             .flat_map(|player| (1..=5).filter_map(move |lane| s.unit(player, lane)))
             .find(|card| card.def_id == ID)
             .expect("a Sack")
+    }
+
+    /// R2476000: after "the Unit stuffed into it", the Unit it holds by name, to both seats.
+    #[test]
+    fn r2476000_it_names_the_unit_stuffed_into_it() {
+        for radiant in [false, true] {
+            let (s, _) = sacked(radiant, json!([]), json!([FILLER]));
+            let sack = sack(&s).id;
+            let named = vec![("the Unit stuffed into it".to_string(), 1, Some("Twisted Sorcerer".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &sack), named, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, P2, &sack), named, "radiant {radiant}");
+        }
     }
 
     fn back_for(s: &Scenario, id: &str, player: PlayerId) -> bool {

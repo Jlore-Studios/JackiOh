@@ -1,8 +1,11 @@
 //! SPEC §8.10 Stinkyscape 75 Badger, a card of the Stinkyscape set.
-//!   Base:    "Starship Piece\nWhenever this attacks, gain a random Stinkyscape Resource." (2/3)
-//!   Radiant: "Starship Piece\nWhenever this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
+//!   Base:    "When this attacks, gain a random Stinkyscape Resource." (2/3)
+//!   Radiant: "When this attacks, gain a random Radiant Stinkyscape Resource." (4/6)
 //!
-//! Starship (R1852000). "Whenever this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature
+//! Since #2521 it is no Starship Piece: its death fuses nothing (R1852000 reads the keyword).
+//! "When this attacks" is the engine's `whenAttacks` hook, Classic #45 Nature Titan's (R2396000:
+//! "When", not "Whenever", which resolves after the attack): it runs for the player who controls this
+//! card before any damage of each attack it makes,
 //! declared or forced (R53, R2285000), so a Badger that dies in the combat has already gained; it never
 //! runs for a defending Badger, nor for an attack called off in its trap window (R44, Core #96 My
 //! Pawn). It is `gain_resources` of one random Resource into the hand (R1840000, R1840002), a ninth
@@ -34,7 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75.
+// S 75 Badger — SPEC §8.10 row 75, BUILD M12 row S 75: "attacking a Unit or the hero gains one random
+// Resource into its controller's hand, defending none; a forced attack gains one; no Starship Piece, so
+// its death fuses nothing (#2521); radiant 4/6, Radiant Resources".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -140,13 +145,16 @@ mod tests {
     }
 
     #[test]
-    fn r1852000_its_death_builds_a_ship() {
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
         let mut s = scenario(json!({
             "p1": { "hand": [NETHER, FILLER], "library": filler(4), "field": [ID] },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
+        assert!(!has_keyword(&s.stats(ID).keywords, KeywordKind::StarshipPiece));
         s.play(NETHER, json!({}));
-        assert!(building_a_ship(s.state(), P1));
+        s.expect_in_zone(ID, "graveyard");
+        assert!(!building_a_ship(s.state(), P1), "no piece died, so no Dormant Starship");
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
     }
 
     #[test]

@@ -1,7 +1,24 @@
-//! SPEC §8.11 Training Grounds #44 Duplicating Felinors, the snapshot of Core #12 Duplicating Felinors (`core-012`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #12 (SPEC §8.1, §8): 3/4 → 6/8 Felinor. Summons copy into leftmost open zone (R57, R64, §4.1; CLAUDE.md rule 5). Copies fire no Cry (R1, §6.2, R275; §3.1, R78).
+//! SPEC §8.11 Training Grounds #44 Legacy: Duplicating Felinors,
+//! the Legacy card of Core #12 Duplicating Felinors (`core-012`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #12 Duplicating Felinors (SPEC §8.1): 3/4 → 6/8 Unit, Felinor, cost 2, Rare. Base "Cry: summon a
+//! copy of this unit"; the radiant cell says "Same", so the radiant face runs the same text (§8
+//! Conventions) on the 6/8 body, and its copy is a Radiant 6/8 too (R275). §8's Engine cell: "Copy
+//! per R57, placed per R64; the copy's Cry does not fire (§6.2)".
+//!
+//! R57: the copy keeps the radiant flag, buffs, granted keywords, Vanilla state and `statsOverride`
+//! and resets damage, exertion and counters; as a new instance it takes the current turn as its
+//! `summonedTurn` (§4.1). R64: with no zone named it takes the leftmost free zone and fizzles
+//! silently when the row has none. R1 / §6.2: copies fire no Cry, so the chain ends after one copy.
+//!
+//! The clone is the engine's `summon_copy` (engine/src/effects/summon.rs). A card file may not
+//! rebuild buffs, keywords and Vanilla state off the instance (CLAUDE.md rule 5), hence a verb.
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;

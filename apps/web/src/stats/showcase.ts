@@ -1,10 +1,18 @@
-// R1584000: the stats the floor below the tavern's showcase shows, one at a time, each a title, a card and
-// the player's number; one with no data is left out. Only showcaseStage.ts's types are taken, so the effects
-// layer stays off the first screen until the showcase is drawn. R1743000: a stat's card is never a token nor
-// one the catalog no longer holds; the order is `nextInBag`'s, a shuffled bag drawn from the page's random source.
+// R1584000: the stats the floor below the tavern's showcase shows, one at a time: each with a title,
+// the card it is about and the player's number for it. A stat the device holds no data for is left
+// out. This module only chooses and words them; StatShowcase.tsx draws them and showcaseStage.ts
+// plays the board's animation for each. It takes the stage's types and nothing else of it, so the
+// effects layer stays off the first screen until the showcase is drawn.
+//
+// R1743000: there are 35 of them, and a stat's card is never a token: every choice passes over a card
+// whose catalog entry is a token, as it does one the catalog no longer holds. The order they come in
+// is the showcase's (`nextInBag`), a shuffled bag drawn from the page's random source.
+//
+// R2648000: a stat names the right kind of card (Unbreakable, Glass Cannon and Workhorse a Unit; Hot
+// Streak, The Record and Ride or Die read the wins), and `animationFor` fits a lunge to the card's type.
 
 import catalogJson from "@jackioh/cards/catalog.json";
-import type { CardDefs } from "@jackioh/shared";
+import { hasKeyword, type CardDefs, type KeywordKind } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 import type { Side } from "../game/contract.ts";
@@ -49,7 +57,7 @@ export const SHOWCASE_KEYS = [
   "medic",
   "cardShark",
   "shineOn",
-  "comebackKid",
+  "luckyCharm",
   "jinx",
   "hotStreak",
   "marathon",
@@ -94,6 +102,24 @@ function showable(id: string): boolean {
   return def !== undefined && !def.token;
 }
 
+/** R2648000: the card's catalog type is Unit. */
+function isUnit(id: string): boolean {
+  return CATALOG[id]?.type === "Unit";
+}
+
+/** R2648000: either face of the card prints one of `kinds`. */
+function prints(id: string, ...kinds: KeywordKind[]): boolean {
+  const def = CATALOG[id];
+  return def !== undefined && kinds.some((kind) => hasKeyword(def.base.keywords, kind) || hasKeyword(def.radiant.keywords, kind));
+}
+
+/** R2648000: a lunge is a Unit's or an Animated card's; a Spell or Field Spell casts, a Trap or Field Trap is revealed. Anything else is kept. */
+export function animationFor(defId: string, wanted: StageAnimation): StageAnimation {
+  const type = CATALOG[defId]?.type;
+  if (wanted !== "lunge" || type === undefined || type === "Unit" || prints(defId, "Animated", "Animated on your turn")) return wanted;
+  return type === "Trap" || type === "Field Trap" ? "trap" : "cast";
+}
+
 function byId(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -106,8 +132,9 @@ function ranked(counts: Readonly<Record<string, number>>): CardTally[] {
     .sort((a, b) => b.count - a.count || byId(a.id, b.id));
 }
 
-function column(stats: PlayerStats, score: (counts: CardCounters) => number): Record<string, number> {
-  return Object.fromEntries(Object.entries(stats.cards).map(([id, counts]) => [id, score(counts)]));
+/** Each card's score by id. */
+function column(stats: PlayerStats, score: (counts: CardCounters, id: string) => number): Record<string, number> {
+  return Object.fromEntries(Object.entries(stats.cards).map(([id, counts]) => [id, score(counts, id)]));
 }
 
 /** The showable card with the most of one counter, or, with `at`, the one that many places below it. */
@@ -124,13 +151,13 @@ type Share = { readonly id: string; readonly part: number; readonly whole: numbe
  */
 function topShare(
   stats: PlayerStats,
-  part: (counts: CardCounters) => number,
+  part: (counts: CardCounters, id: string) => number,
   whole: (counts: CardCounters) => number,
 ): Share | undefined {
   let best: Share | undefined;
   for (const [id, counts] of Object.entries(stats.cards).sort(([a], [b]) => byId(a, b))) {
     const total = whole(counts);
-    const share = Math.min(part(counts), total);
+    const share = Math.min(part(counts, id), total);
     if (!showable(id) || total < SHOWCASE_MIN_PLAYS || share === 0) continue;
     if (best === undefined || share * best.whole > best.part * total) best = { id, part: share, whole: total };
   }
@@ -215,7 +242,11 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ...counted(stats, "destroyed", { key: "fallen", title: () => t("Fallen Hero"), animation: "death", side: "you" }, (n) =>
       t("lost {n}×", { n }),
     ),
-    ...about(seen?.id, { key: "record", title: () => t("The Record"), animation: "radiant", side: "you" }, () => recordLine(stats)),
+    ...about(
+      ranked(column(stats, (c) => c.playedInWin + c.playedInLoss))[0]?.id,
+      { key: "record", title: () => t("The Record"), animation: "radiant", side: "you" },
+      () => recordLine(stats),
+    ),
     ...counted(stats, "lethal", { key: "lastLaugh", title: () => t("Last Laugh"), animation: "lunge", side: "you" }, (n) =>
       t("dealt the winning blow {n}×", { n }),
     ),
@@ -223,16 +254,20 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
       t("sprung {n}×", { n }),
     ),
     ...counted(stats, "survived", { key: "survivor", title: () => t("Survivor"), animation: "shield", side: "you" }, (n) =>
-      t("survived to the end {n}×", { n }),
+      t("standing at the end of a win {n}×", { n }),
     ),
     // R1743000: from the counters the device already kept.
     ...shared(
-      topShare(stats, (c) => c.destroyed, (c) => c.played),
+      topShare(stats, (c, id) => (isUnit(id) ? c.destroyed : 0), (c) => c.played),
       { key: "glassCannon", title: () => t("Glass Cannon"), animation: "death", side: "you" },
       (n, m) => t("destroyed {n} of the {m} times you played it", { n, m }),
     ),
     ...tallied(
-      ranked(column(stats, (c) => (c.destroyed === 0 ? c.played : 0)))[0],
+      ranked(
+        column(stats, (c, id) =>
+          c.destroyed === 0 && c.played >= SHOWCASE_MIN_PLAYS && isUnit(id) && !prints(id, "Indestructible") ? c.played : 0,
+        ),
+      )[0],
       { key: "unbreakable", title: () => t("Unbreakable"), animation: "shield", side: "you" },
       (n) => t("played {n}×, never destroyed", { n }),
     ),
@@ -260,9 +295,9 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
       (n, m) => t("sprung {n} of the {m} times you set it", { n, m }),
     ),
     ...shared(
-      topShare(stats, (c) => c.survived, (c) => c.played),
+      topShare(stats, (c) => c.survived, (c) => c.playedInWin),
       { key: "rideOrDie", title: () => t("Ride or Die"), animation: "shield", side: "you" },
-      (n, m) => t("still standing {n} of the {m} times you played it", { n, m }),
+      (n, m) => t("still standing at the end of {n} of the {m} wins you played it in", { n, m }),
     ),
     ...tallied(seen, { key: "familiarFace", title: () => t("Familiar Face"), animation: "radiant", side: "you" }, (n) =>
       stats.games === 1 ? t("in {n} of your {m} game", { n, m: stats.games }) : t("in {n} of your {m} games", { n, m: stats.games }),
@@ -287,8 +322,10 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
       () => t("seen {n} of {m} cards", { n: seenInPool.length, m: ROTATION_POOL.length }),
     ),
     // R1743000: from the counters read off the views' events.
-    ...counted(stats, "damageDealt", { key: "workhorse", title: () => t("Workhorse"), animation: "lunge", side: "you" }, (n) =>
-      t("dealt {n} damage", { n }),
+    ...tallied(
+      ranked(column(stats, (c, id) => (isUnit(id) ? c.damageDealt : 0)))[0],
+      { key: "workhorse", title: () => t("Workhorse"), animation: "lunge", side: "you" },
+      (n) => t("dealt {n} damage", { n }),
     ),
     ...counted(stats, "biggestHit", { key: "heavyHitter", title: () => t("Heavy Hitter"), animation: "lunge", side: "you" }, (n) =>
       t("hit for {n} once", { n }),
@@ -310,7 +347,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ),
     ...shared(
       topShare(stats, (c) => c.playedInWin, (c) => c.playedInWin + c.playedInLoss),
-      { key: "comebackKid", title: () => t("Comeback Kid"), animation: "radiant", side: "you" },
+      { key: "luckyCharm", title: () => t("Lucky Charm"), animation: "radiant", side: "you" },
       (n, m) => t("won {n} of the {m} games you played it in", { n, m }),
     ),
     ...shared(
@@ -320,7 +357,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
     ),
     // R1743000: from the game-level totals.
     ...about(
-      stats.bestStreak > 0 ? played[0]?.id : undefined,
+      stats.bestStreak > 0 ? topCard(stats, "playedInWin")?.id : undefined,
       { key: "hotStreak", title: () => t("Hot Streak"), animation: "radiant", side: "you" },
       () =>
         stats.bestStreak === 1
@@ -336,7 +373,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, ran
           : t("longest game: {n} turns", { n: stats.longestGame }),
     ),
   ];
-  return out;
+  return out.map((stat) => ({ ...stat, animation: animationFor(stat.cardId, stat.animation) }));
 }
 
 /** R1743000: the showcase's order: what is left of this round, and the stat shown now. */

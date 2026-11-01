@@ -63,28 +63,49 @@ fn excluded_id(ctx: &EffectContext<'_>) -> Option<String> {
     ctx.self_.as_ref().map(|card| card.id.clone())
 }
 
-/// R71: the log is read here, when the delayed effect runs, so later plays are in it. R86: an id
-/// whose instance no longer exists is skipped. R133: one copy per card, not per play; deduping by id
-/// leaves R86's skip untouched.
+/// R71, R86, R133: the other cards `player` played this turn that still exist, each once, in play order:
+/// the cards the end of turn copies, and the count its preview shows (R2476000).
+fn other_plays(state: &GameState, player: PlayerId, self_id: Option<&str>) -> Vec<CardInstance> {
+    let mut seen: IndexSet<String> = IndexSet::new();
+    let mut out = Vec::new();
+    for id in played_ids_this_turn(state, player) {
+        let id: String = id.to_string();
+        if self_id == Some(id.as_str()) || !seen.insert(id.clone()) {
+            continue;
+        }
+        if let Some(card) = find_instance(state, &id) {
+            out.push(card.clone());
+        }
+    }
+    out
+}
+
+/// R2476000: the words the count follows on both faces.
+const OTHER_PLAYS: &str = "each other card you played this turn";
+
+/// R2476000: in its owner's hand, the copies its end of turn would add were it played now: the other
+/// cards played this turn so far. A floor, as cards played after it are copied too (R71). Plays are
+/// public. Once played it is in exile, where no preview is asked.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let count = other_plays(ctx.state, ctx.controller, Some(ctx.self_.id.as_str())).len();
+        vec![count_preview(OTHER_PLAYS, count as i32)]
+    })
+}
+
+/// R71: the log is read here, when the delayed effect runs, so later plays are in it — through the
+/// engine's read-only `playedIdsThisTurn` (engine/src/query.ts), which gives the ids in play order.
+/// R86: an id whose instance no longer exists is skipped rather than fizzled on.
+/// R133: the log holds one entry per play, so a card played, bounced and replayed is two entries and
+/// one card. "Every other card you played this turn" is the set of cards, not the list of plays, so
+/// each id yields one copy; deduping by id leaves R86's skip untouched.
 fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
-    let self_id = excluded_id(ctx);
     let discount = discount_of(ctx, terms);
     let mut out: Vec<Effect> = Vec::new();
-    let mut seen: IndexSet<String> = IndexSet::new();
-
-    for id in played_ids_this_turn(&*ctx.state, ctx.controller) {
-        let id: String = id.to_string();
-        if self_id.as_deref() == Some(id.as_str()) {
-            continue;
-        }
-        if seen.contains(&id) {
-            continue;
-        }
-        seen.insert(id.clone());
-        let Some(card) = find_instance(&*ctx.state, &id) else {
-            continue;
-        };
-
+    for card in other_plays(&*ctx.state, ctx.controller, excluded_id(ctx).as_deref()) {
         let mut args = json!({
             "defId": card.def_id,
             "player": "self",
@@ -127,6 +148,7 @@ fn recycling_initiative(terms: CopyTerms) -> Script {
             ]
         })),
         resume: IndexMap::from([(COPY_STEP, copy_step)]),
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -213,6 +235,32 @@ mod tests {
             .into_iter()
             .find(|card| card.def_id == def_id)
             .unwrap_or_else(|| panic!("no copy of {def_id} in p1's hand"))
+    }
+
+    /// R2476000: on either face, in hand, the copies its end of turn would add, after "each other card you
+    /// played this turn": 0, then 1 once Timmy is played, and the end of turn adds exactly that one copy.
+    #[test]
+    fn r2476000_in_hand_it_previews_the_other_cards_played_this_turn_and_copies_that_many() {
+        for radiant in [false, true] {
+            let mut s = scn(json!({
+                "p1": {
+                    "hand": [TIMMY, { "def": RECYCLING, "radiant": radiant }, STOCKPILE],
+                    "library": [MENACE, POSTDOC],
+                    "mana": 10,
+                },
+                "p2": spare(),
+            }));
+            let spell = s.card(RECYCLING).id.clone();
+            let seen = |s: &Scenario| crate::preview_seen(s, PlayerId::P1, &spell);
+            let label = "each other card you played this turn".to_string();
+            assert_eq!(seen(&s), vec![(label.clone(), 0, None)], "radiant {radiant}");
+            s.play(TIMMY, json!({ "zone": 1 }));
+            assert_eq!(seen(&s), vec![(label.clone(), 1, None)], "radiant {radiant}");
+            s.play(spell.as_str(), json!({}));
+            assert!(seen(&s).is_empty(), "radiant {radiant}: no preview in exile");
+            s.end_turn();
+            assert_eq!(count_in(&s, "p1", "hand", TIMMY), 1, "radiant {radiant}");
+        }
     }
 
     mod base {

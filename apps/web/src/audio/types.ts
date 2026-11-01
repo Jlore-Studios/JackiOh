@@ -144,7 +144,7 @@ export type EmoteLineEntry = {
   threaten: string;
 } & Overrides;
 
-/** `card-audio.json5` as `voiceData.ts` parses it (R655). */
+/** `card-audio.json5`, its words joined in from `voice-text.json` (#2498), as `voiceData.ts` parses it (R655). */
 export type CardAudioTable = {
   /** The voices bank: what each voice's lines are rendered and spoken with. */
   voices: Record<string, Persona>;

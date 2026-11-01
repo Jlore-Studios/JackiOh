@@ -1,7 +1,7 @@
 //! C #35 Prep (SPEC §8.6 row 35). (0) Spell, Common; Embiggened (2) since issue #2179.
 //!   Base:    "Your next Spell this turn costs ({discount}) less.
-//!             Embiggened (2): Also draw the highest cost Spell from your deck." — discount 2
-//!   Radiant: the same — discount 4
+//!             Embiggened (2): Also draw a random Spell from your deck." — discount 2
+//!   Radiant: "… Embiggened (2): Also draw the highest cost Spell from your deck." — discount 4
 //!   Engine:  "#35 Lunar Eclipse's modifier (`costDiscount`, `onlyType: "Spell"`, this turn, consumed
 //!            on use or at cleanup; Cost, §6.3, R65). Tunes: discount 2 ↑."
 //!
@@ -11,12 +11,14 @@
 //! R70: a cast pays nothing and never uses a discount, so it is left for the next Spell played.
 //! The amount is the declared `discount` (R386), read through `param`; both faces run this script.
 //!
-//! The Embiggened version (§6.3 Embiggen, R81: `instance.embiggened`) then draws the Spell (the card
-//! type, not a Field Spell) of the highest current cost in its controller's library, as #30 Archivist
-//! draws its highest card (R24: R65's costs, ties to the card nearest the top), by §6.3's
-//! `drawFromLibrary`, so it is a draw: R55's counter, the hand cap, the cast-on-draw path. A library
-//! with no Spell draws nothing. Through v0.5.2 it had one price and no draw, which `script_v0_5_2`
-//! keeps (R767000).
+//! The Embiggened version (§6.3 Embiggen, R81: `instance.embiggened`) then draws a Spell (the card
+//! type, not a Field Spell) from its controller's library by §6.3's `drawFromLibrary`, so it is a draw:
+//! R55's counter, the hand cap, the cast-on-draw path. The base face's is a random one, one uniform pick
+//! of the match rng over the library's Spells (R60; one Spell draws nothing, R129), since #2657; the
+//! Radiant face's the one of the highest current cost, as #30 Archivist draws its highest card (R24:
+//! R65's costs, ties to the card nearest the top), as both faces did through v0.5.9f
+//! (`script_v0_5_9f`). A library with no Spell draws nothing. Through v0.5.2 it had one price and no
+//! draw, which `script_v0_5_2` keeps (R767000).
 
 use jackioh_engine::effects::{add_player_modifier, draw_from_library};
 use jackioh_engine::prelude::*;
@@ -55,14 +57,40 @@ fn highest_spell(ctx: &EffectContext<'_>) -> Option<CardInstance> {
     best
 }
 
-fn prep(draws: bool) -> Script {
+/// R60, R129: a library Spell picked uniformly by the match rng, none drawn from a library with one.
+fn random_spell(ctx: &mut EffectContext<'_>) -> Option<CardInstance> {
+    let spells: Vec<CardInstance> = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library)
+        .into_iter()
+        .filter(|card| card_type_of(ctx.state, card) == CardType::Spell)
+        .collect();
+    if spells.len() <= 1 {
+        return spells.into_iter().next();
+    }
+    ctx.rng.pick(&spells).cloned()
+}
+
+/// Which Spell the Embiggened version draws: none (v0.5.2), the highest cost one, or a random one (the
+/// base face's since #2657).
+#[derive(Clone, Copy)]
+enum Draws {
+    Nothing,
+    Highest,
+    Random,
+}
+
+fn prep(draws: Draws) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut effects = vec![discount(ctx)];
-            if draws
-                && ctx.embiggened
-                && let Some(card) = highest_spell(ctx)
-            {
+            if !ctx.embiggened {
+                return effects;
+            }
+            let card = match draws {
+                Draws::Nothing => None,
+                Draws::Highest => highest_spell(ctx),
+                Draws::Random => random_spell(ctx),
+            };
+            if let Some(card) = card {
                 effects.push(draw_from_library(json_as(json!({ "instanceId": card.id }))));
             }
             effects
@@ -72,13 +100,23 @@ fn prep(draws: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = prep(true);
+    // The Radiant face's 4 is its declared `discount`, which `param` reads off the running face.
+    CardScripts {
+        base: prep(Draws::Random),
+        radiant: prep(Draws::Highest),
+    }
+}
+
+/// R767000: through v0.5.9f both faces drew the highest cost Spell; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    let base = prep(Draws::Highest);
     CardScripts { radiant: base.clone(), base }
 }
 
 /// R767000: through v0.5.2 it had one price and drew nothing; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_2() -> CardScripts {
-    let base = prep(false);
+    let base = prep(Draws::Nothing);
     CardScripts { radiant: base.clone(), base }
 }
 
@@ -340,26 +378,48 @@ mod tests {
         }
 
         #[test]
-        fn r81_r24_embiggened_it_draws_the_highest_cost_spell_and_the_discount_still_applies() {
+        fn r81_r60_embiggened_the_base_face_draws_a_random_spell_and_the_discount_still_applies() {
+            crate::register_all();
+            let mut seen: Vec<String> = Vec::new();
+            for n in 0..24 {
+                let mut s = scenario(json!({
+                    "seed": format!("c035-random-{n}"),
+                    "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
+                    "p2": { "hand": [ANCHOR] },
+                }));
+                let spells = [s.card(STOCKPILE).id.clone(), s.card(FLOOD).id.clone()];
+                s.play(PREP, json!({ "embiggen": true }));
+                let got = drawn(&s);
+                assert_eq!(got.len(), 1, "{n}");
+                assert!(spells.contains(&got[0]), "{n}: a Spell, never a Unit or a Field Spell");
+                let def = s.card(got[0].as_str()).def_id.clone();
+                if def == FLOOD {
+                    // The (4) Flood is the next Spell: it costs (2) less.
+                    s.play(got[0].as_str(), json!({}));
+                    assert_eq!(paid_for(&s, FLOOD), vec![2]);
+                }
+                seen.push(def);
+            }
+            assert!(seen.iter().any(|def| def == FLOOD) && seen.iter().any(|def| def == STOCKPILE));
+        }
+
+        #[test]
+        fn r81_r24_embiggened_the_radiant_face_draws_the_highest_cost_spell() {
             crate::register_all();
             let mut s = scenario(json!({
-                "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
+                "p1": { "hand": [{ "def": PREP, "radiant": true }, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
                 "p2": { "hand": [ANCHOR] },
             }));
             let flood = s.card(FLOOD).id.clone();
-
             s.play(PREP, json!({ "embiggen": true }));
-            assert_eq!(drawn(&s), vec![flood.clone()]);
-            s.expect_in_zone(flood.as_str(), "hand");
-            s.play(flood.as_str(), json!({}));
-            assert_eq!(paid_for(&s, FLOOD), vec![2]);
+            assert_eq!(drawn(&s), vec![flood]);
         }
 
         #[test]
         fn r24_a_tie_goes_to_the_spell_nearest_the_top() {
             crate::register_all();
             let mut s = scenario(json!({
-                "p1": { "hand": [PREP, ANCHOR], "library": [STOCKPILE, FLOOD, FLOOD], "mana": 6 },
+                "p1": { "hand": [{ "def": PREP, "radiant": true }, ANCHOR], "library": [STOCKPILE, FLOOD, FLOOD], "mana": 6 },
                 "p2": { "hand": [ANCHOR] },
             }));
             let top = s.pile(PlayerId::P1, "library")[1].id.clone();
@@ -397,6 +457,21 @@ mod tests {
             assert_eq!(drawn(&s), vec![flood.clone()]);
             s.play(flood.as_str(), json!({}));
             assert_eq!(paid_for(&s, FLOOD), vec![0]);
+        }
+
+        /// R767000: the script kept for the replays of v0.5.9f and before, whose base face drew the
+        /// highest cost Spell.
+        #[test]
+        fn r767000_a_game_on_v0_5_9f_draws_the_highest_cost_spell_on_the_base_face() {
+            crate::under_kept(PREP, crate::scripts::classic::c035_prep::script_v0_5_9f(), || {
+                let mut s = scenario(json!({
+                    "p1": { "hand": [PREP, ANCHOR], "library": [VANILLA, STOCKPILE, MENACE, FLOOD, ARMOR], "mana": 6 },
+                    "p2": { "hand": [ANCHOR] },
+                }));
+                let flood = s.card(FLOOD).id.clone();
+                s.play(PREP, json!({ "embiggen": true }));
+                assert_eq!(drawn(&s), vec![flood]);
+            });
         }
 
         /// R767000: the script kept for the replays of v0.5.2 and before, which drew nothing.

@@ -223,6 +223,7 @@ describe("B20 submit", () => {
   });
 });
 
+// B21: tries left
 describe("B21 tries left", () => {
   it.each([[5], [3], [1], [0]] as const)(
     "B21 shows %i tries left from /api/codes/status in invite-attempts",
@@ -297,6 +298,7 @@ describe("B21 tries left", () => {
   });
 });
 
+// B22 / R192: a rate limit is a rate limit
 describe("B22 a rate-limited redemption", () => {
   it("B22 shows the server's sentence verbatim, the wait, and disables submit", async () => {
     vi.mocked(redeemCode).mockRejectedValue(rateLimited(WINDOW_MS));

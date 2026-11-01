@@ -77,7 +77,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // Draw 2. Heal your hero 2.
     const MENACE: &str = "core-019"; // 9/9 Taunt; end of turn: heal this to full.
     const FILLER: &str = "core-008"; // Mr. Vanilla, a (1) 4/4: a plain card to play or hold
-    const PANTHER: &str = "core-032"; // Prem Panther: after it attacks and survives, draw 2 for each Unit it destroyed
+    const PANTHER: &str = "core-032"; // Prem Panther: whenever this attacks, draw 2 for each Unit it destroyed
     const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn, every enemy Unit attacks this
     const NOSE: &str = "classic-015"; // Nose Hunter: "Activate: Discard a random card. …"
     const FREE: &str = "core-010"; // Rapid Replenish, a (0) Spell: an action Tommy's Cry leaves the mana for

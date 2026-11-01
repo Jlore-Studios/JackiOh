@@ -24,10 +24,11 @@ use crate::config::{
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, QuestBook, Script,
-    SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
-    TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
-    condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook, target_check, would_counter_hook,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, PreviewHook,
+    QuestBook, Script, SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck,
+    TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TriggerWhen, TuneMultiplier, WouldCounterHook,
+    attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook,
+    target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -951,7 +952,24 @@ fn any_flag(values: impl IntoIterator<Item = Option<bool>>) -> Option<bool> {
     }
 }
 
-/// A number of the combined static flags: the larger — the stricter requirement, not a doubled one.
+/// R2396000: an ingredient's `afterAttack` as the fused card runs it: a "Whenever this attacks" part
+/// whatever became of the attacker, an "After this attacks" part only for a survivor (R2285001).
+fn after_attack_part(record: &Script) -> Option<Hook> {
+    let run = record.after_attack.clone()?;
+    if record.after_attack_even_if_gone {
+        return Some(run);
+    }
+    Some(hook(move |ctx| {
+        if crate::combat::after_attack_of(ctx).is_some_and(|facts| !facts.survived) {
+            Vec::new()
+        } else {
+            run(ctx)
+        }
+    }))
+}
+
+/// A number of the combined static flags: the larger, which is the one stricter requirement rather
+/// than a doubled one (`staticFlags.tribute`).
 fn max_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     values.into_iter().flatten().max()
 }
@@ -1195,7 +1213,10 @@ fn combine_objects(records: &[Script]) -> Script {
             records.iter().map(|s| s.conditional_keywords.clone()).collect(),
         )),
         when_attacks: hooks(|s| s.when_attacks.clone(), "whenAttacks"),
-        after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
+        after_attack: hooks(after_attack_part, "afterAttack"),
+        // R2396000: a fusion runs its `afterAttack` for a gone attacker when any ingredient's is a
+        // "Whenever this attacks"; `after_attack_part` keeps the others to a survivor.
+        after_attack_even_if_gone: records.iter().any(|s| s.after_attack_even_if_gone),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
         evolve: hooks(|s| s.evolve.clone(), "evolve"),
         ally_attacked: hooks(|s| s.ally_attacked.clone(), "allyAttacked"),
@@ -1325,8 +1346,29 @@ fn script_record(script: &Script, def_id: &str, index: usize) -> Script {
             .iter()
             .map(|decl| in_activation_ingredient(decl, index))
             .collect(),
+        preview: script
+            .preview
+            .clone()
+            .map(|preview| in_preview_ingredient(preview, index)),
         ..script.clone()
     }
+}
+
+/// R280, R2476000: an ingredient's `preview` asked as that ingredient's text reads the card
+/// (`as_ingredient_text`), so a number it shows from what its text remembered is its own (R102): two
+/// Carnivorous Cubes crafted into one card show two meals, each after its own "remember it".
+fn in_preview_ingredient(preview: PreviewHook, index: usize) -> PreviewHook {
+    condition_hook(move |ctx| {
+        let card = as_ingredient_text(ctx.self_, index);
+        preview(ConditionContext {
+            state: ctx.state,
+            self_: &card,
+            controller: ctx.controller,
+            radiant: ctx.radiant,
+            zone: ctx.zone,
+            your_turn: ctx.your_turn,
+        })
+    })
 }
 
 /// R102, R384: an ingredient's Activate ability in its place in the fusion. Its list builds and applies

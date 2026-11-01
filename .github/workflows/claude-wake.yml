@@ -1,5 +1,5 @@
 # Starts every Claude subscription's 5-hour session at 06:00 America/Chicago and every four hours
-# around it (02:00, 06:00, 10:00, 14:00, 18:00, 22:00; bot/harness/wake.py's WAKE_AT and EVERY),
+# around it (02:00, 06:00, 10:00, 14:00, 18:00, 22:00; bot/go/internal/wake's WakeAt and Every),
 # so each resets five hours later, rather than at whatever hour its next run lands. A session the
 # bots' state files show running is left alone, and so is one whose usage limit refused a call or
 # has a window full; each other one gets one turn of Haiku at low effort with no tools, skills or
@@ -13,8 +13,8 @@
 # them at any hour.
 #
 # The accounts are every Claude subscription in either bot's pool (`wake --list`), so a new one is
-# woken once its secret is in providers.SECRETS and in the list below, which
-# bot/tests/test_workflows.py holds to it. Each subscription's turn runs in a job of its
+# woken once its secret is in providers.SecretNames and in the list below, which
+# bot/go/tests/workflows_test.go holds to it. Each subscription's turn runs in a job of its
 # own, all at once, holding that one secret and no write token.
 name: claude wake
 
@@ -34,10 +34,6 @@ concurrency:
   group: claude-wake
   cancel-in-progress: false
 
-env:
-  PYTHONUTF8: "1"
-  PYTHONDONTWRITEBYTECODE: "1"
-
 jobs:
   clock:
     name: wait for the wake time
@@ -55,10 +51,8 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: The harness (bot/go)
+        uses: ./.github/actions/harness
 
       - name: Sleep until the wake time
         id: wait
@@ -68,12 +62,12 @@ jobs:
           NOW: ${{ inputs.now }}
         run: |
           if [ "${NOW}" = "true" ]; then
-            python -m harness wake --wait --now
+            harness wake --wait --now
           else
-            python -m harness wake --wait
+            harness wake --wait
           fi
 
-      # Which provider secrets exist, never their values (providers.SECRETS).
+      # Which provider secrets exist, never their values (providers.SecretNames).
       - name: The sessions not running, the night bot's and Squishy's
         id: list
         if: steps.wait.outputs.go == 'true'
@@ -94,8 +88,8 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           set -euo pipefail
-          night="$(python -m harness wake --list | tail -n 1)"
-          squishy="$(HARNESS_HOME=.squishy python -m harness wake --list | tail -n 1)"
+          night="$(harness wake --list | tail -n 1)"
+          squishy="$(HARNESS_HOME=.squishy harness wake --list | tail -n 1)"
           echo "accounts=$(jq -cn --argjson a "${night}" --argjson b "${squishy}" '$a + $b')" \
             >> "$GITHUB_OUTPUT"
 
@@ -117,10 +111,8 @@ jobs:
           ref: ${{ github.event.repository.default_branch || 'main' }}
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      - name: The harness (bot/go)
+        uses: ./.github/actions/harness
 
       - name: Install the claude CLI
         run: |
@@ -133,4 +125,4 @@ jobs:
           HARNESS_HOME: ${{ matrix.account.home }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets[matrix.account.secret] }}
           ACCOUNT: ${{ matrix.account.id }}
-        run: python -m harness wake --ping "${ACCOUNT}"
+        run: harness wake --ping "${ACCOUNT}"

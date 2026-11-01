@@ -1,7 +1,25 @@
-//! SPEC §8.11 Training Grounds #46 Hit Job, the snapshot of Core #16 Hit Job (`core-016`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #16 (SPEC §8.1, §8): §6.3 destroy, Indestructible survives (§4.5, R46). One effect list dies together (R59). Adjacency is N-1 and N+1 (§3.1). Target picked in play action (R81, R90; #66, §5.2, §8.3, R60).
+//! SPEC §8.11 Training Grounds #46 Legacy: Hit Job,
+//! the Legacy card of Core #16 Hit Job (`core-016`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #16 Hit Job (SPEC §8.1): "Destroy target unit", radiant "Destroy target unit and the units
+//! adjacent to it on its side". Engine cell: "Adjacency 3.1; Indestructible survives".
+//!
+//! The target is destroyed on both faces (§8 Conventions); only the neighbours are radiant-only.
+//!
+//! Nothing here knows about Indestructible: §6.3 Destroy only marks the card and §4.5 step 1 collects
+//! it at the next state check, where R46 lets an Indestructible unit ignore the mark. Both destroys
+//! are in one effect list, so the target and its neighbours die together (R59).
+//!
+//! §3.1: "Adjacent means index N-1 and N+1 on the same side and same row", never across the center
+//! line. The target is picked with the play (R81), so it arrives in `ctx.targets` as
+//! `{ of: "chosen" }`. `destroy_adjacent_to` (engine/src/effects/destroy.rs) only marks, like
+//! `destroy`, and fizzles silently when the target is off the field or has no neighbour.
 
 use jackioh_engine::effects::{destroy, destroy_adjacent_to};
 use jackioh_engine::prelude::*;

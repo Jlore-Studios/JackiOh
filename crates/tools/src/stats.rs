@@ -1,12 +1,59 @@
-//! `cargo jackioh stats`: internal AI development runs and card win rates (SPEC §9.11, R378, SURFACE §12).
-//! Plays AI-vs-AI All Random games (`devGameRecord`), outputting JSONL records tagged with dev series and patch.
+//! `cargo jackioh stats [--games N] [--from N] [--patch v] [--series name] [--force id] [--out file]`
+//! (SPEC §9.11, R378; SURFACE §12): an internal AI development run of the build in this checkout. Port of
+//! `packages/ai/scripts/stats.ts` (`pnpm ai:stats`).
 //!
-//! Subcommands and options:
-//! - Default: runs AI games in parallel chunks, writing game records.
-//! - `--force <id>` / `compare`: forces card in alternate seats to compare win rates across builds (R1284000).
-//! - `report`: calculates card win rates (R377) and game-level metrics (R1256000) over record files.
-//! - `fit-dealt`: refits dealt quality parameters over arena records (`dealt_fit.rs`).
-//! - `from-selfplay`: converts selfplay logs into dev records (`selfplay_records.rs`, R1676000).
+//! Plays AI-against-AI All Random games (`devGameRecord`, `crates/ai/src/dev_run.rs`), writes each
+//! finished one as a game record, one JSON line per game, and prints the run's card win rates. The
+//! records are tagged `source: "dev"` and filed under the patch the run tests, so once they are
+//! loaded with `jackioh-server stats-import <file>`, `stats-cards --source=dev --patch=<version>`
+//! reads them, to compare with what `stats-cards --patch=<version>` reads of that patch's live games,
+//! and no live figure ever counts them unless asked.
+//!
+//! ```text
+//! cargo jackioh stats                               AI_DEV_RUN.games games of the "dev" series,
+//!                                                   tagged with the newest patch in patches.json
+//! cargo jackioh stats --games 50 --from 51          games 51-100, a shard to run on another machine
+//! cargo jackioh stats --patch v0.2.5 --out v0.2.5.jsonl
+//!                                                   a pre-release run of v0.2.5, kept in a file
+//! cargo jackioh stats --series tuning-a             another seed series: other games
+//! cargo jackioh stats --force core-090 --out a.jsonl
+//!                                                   core-090 in one seat's deck in every game, p1's in
+//!                                                   odd games and p2's in even ones (R1284000)
+//! cargo jackioh stats compare --before a.jsonl --after b.jsonl --card core-090
+//!                                                   two such runs of the same seeds, on two builds,
+//!                                                   compared on the seat that holds the card (R1284000)
+//! ```
+//!
+//! A game takes seconds at the browser's budget, so a full run takes a while; progress goes to
+//! stderr. `--out` is resolved against the directory the command was started in, and the file is
+//! written a line per game as the run goes, so a run that is stopped keeps the games it finished.
+//!
+//! The games play on rayon's pool in chunks of one game per thread (RAYON_NUM_THREADS sets the
+//! width). Each chunk's records are written in game order and flushed before the next chunk starts,
+//! so --out is byte-identical to a serial run's file and a stopped run keeps every whole chunk.
+//!
+//! `cargo jackioh stats report <file>…` reads record files instead (what `--out` writes, what
+//! `jackioh-server stats-export` writes of the live games, what the training lanes keep) and prints
+//! R377's card win rates over them with no database, with `stats-cards`' flags: the figures a
+//! notebook computes over the same files (`analysis/`) are checked against these.
+//!
+//! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
+//! per patch, mode and source: how often the first seat won of the decided games (with its 95% Wilson
+//! interval; unknown when every game was drawn, R2567000), how the games ended, how long they lasted,
+//! and what R1256000's counts say of fatigue, Traps, position switches and Radiant upgrades. A record
+//! written before those counts is unknown for them, not zero. The training lanes keep these figures
+//! beside the card figures (`training/README.md`).
+//!
+//! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
+//! `stats report`, never for `stats-import` (R1284000).
+//!
+//! `cargo jackioh stats fit-dealt <file>…` refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena record
+//! files and prints them to paste (`dealt_fit.rs`).
+//!
+//! `cargo jackioh stats from-selfplay <log>… --out <file>` files `selfplay` logs, the learn lane's
+//! exports, as development records instead (`selfplay_records.rs`, R1676000).
+//!
+//! Tooling, so it may read files, the clock and the console; `crates/ai` stays pure.
 
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -347,13 +394,17 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
             "{patch} {mode} {source}: {games} games, {} drawn",
             figures.draws
         ));
-        lines.push(format!(
-            "  first seat won {} of {games}: {}, 95% interval {} to {}",
-            figures.first_wins,
-            percent(figures.first_share),
-            percent(figures.first_low),
-            percent(figures.first_high)
-        ));
+        lines.push(match figures.first_share {
+            Some(share) => format!(
+                "  first seat won {} of {} decided: {}, 95% interval {} to {}",
+                figures.first_wins,
+                figures.games - figures.draws,
+                percent(share),
+                percent(figures.first_low),
+                percent(figures.first_high)
+            ),
+            None => "  first seat: unknown, no game was won".to_string(),
+        });
         let endings: Vec<String> = figures
             .reasons
             .iter()
@@ -1202,7 +1253,7 @@ mod tests {
                     {
                         "patch": "v0.2.3", "mode": "random", "source": "dev",
                         "games": 3, "draws": 1, "firstWins": 1,
-                        "firstShare": 0.333, "firstLow": 0.061, "firstHigh": 0.792,
+                        "firstShare": 0.5, "firstLow": 0.095, "firstHigh": 0.905,
                         "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
                         "turnQuartiles": [9, 12, 40],
                         "counted": 2, "fatigueGames": 1, "fatigueShare": 0.5, "fatigueDamageMean": 1.5,
@@ -1231,7 +1282,7 @@ mod tests {
             "Games: AI development runs, every mode, every patch, human and AI pilots (unified).",
             "",
             "v0.2.3 random dev: 3 games, 1 drawn",
-            "  first seat won 1 of 3: 33.3%, 95% interval 6.1% to 79.2%",
+            "  first seat won 1 of 2 decided: 50.0%, 95% interval 9.5% to 90.5%",
             "  endings: hero-death 2, turn-cap 1",
             "  turns, quartiles: 9, 12, 40",
             "  fatigue: a draw from an empty library in 1 of 2 games (50.0%), 1.50 damage a game",
@@ -1241,7 +1292,7 @@ mod tests {
             "  (fatigue, traps, switches and upgrades over the 2 of 3 games whose records carry R1256000's counts)",
             "",
             "v0.2.2b random dev: 1 games, 0 drawn",
-            "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
+            "  first seat won 1 of 1 decided: 100.0%, 95% interval 20.7% to 100.0%",
             "  endings: alt-win 1",
             "  turns, quartiles: 15, 15, 15",
             "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts",
@@ -1300,6 +1351,29 @@ mod tests {
         assert!(render_games(&report, false).contains(
             "  (fatigue, traps, switches and upgrades over the 2 of 4 games whose records carry R1256000's counts)"
         ));
+    }
+
+    #[test]
+    fn r2567000_games_report_reads_the_first_seat_over_decided_games_and_unknown_when_all_drawn() {
+        let lines = [
+            game_line("dev:v0.2.3:dev:1", "v0.2.3", "draw", "turn-cap", 40, None),
+            game_line("dev:v0.2.3:dev:2", "v0.2.3", "draw", "draw-accepted", 20, None),
+        ];
+        let report = game_report(
+            &parse_game_record_lines(&lines.join("\n")).unwrap(),
+            &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
+        );
+        let figures = &report.groups[0].figures;
+        assert_eq!((figures.games, figures.draws, figures.first_share), (2, 2, None));
+        assert_eq!(
+            serde_json::to_value(&report).unwrap()["groups"][0]["firstShare"],
+            Value::Null
+        );
+        let text = render_games(&report, false);
+        assert!(
+            text.contains("v0.2.3 random dev: 2 games, 2 drawn\n  first seat: unknown, no game was won\n"),
+            "{text}"
+        );
     }
 
     #[test]

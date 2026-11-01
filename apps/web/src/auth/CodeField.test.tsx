@@ -296,6 +296,7 @@ describe("B15 the field's DOM", () => {
   });
 });
 
+// B16: typing upper-cases and groups; the caret follows
 describe("B16 typing", () => {
   it("B16 typing abcdefgh shows ABCD-EFGH with the caret at the end", async () => {
     const user = userEvent.setup();
@@ -495,6 +496,7 @@ describe("R191 B17 pasting", () => {
   });
 });
 
+// B18 / R191: an excluded character is refused and named, never dropped
 describe("R191 B18 excluded characters", () => {
   it.each(EXCLUDED.map((character) => [character] as const))(
     "R191 B18 typing %s leaves the value unchanged and names it and the excluded set",

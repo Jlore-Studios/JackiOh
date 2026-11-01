@@ -1,6 +1,6 @@
 // #936 S8 B60: `CoopPanel`, the co-op room on /together: create a room, share its code, join by code,
 // and both players go on to `/duos/:matchId`. A refusal (B33) is shown in the server's words and moves
-// nobody.
+// nobody. R2031000: the Random deck offers "More cards from", sent as `leanSet` on the create and join.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -788,5 +788,66 @@ describe("R2094000 a co-op link fills the join form", () => {
       expect(window.location.pathname).toBe("/duos/dm-9");
     }, SLOW);
     expect(window.localStorage.getItem(COOP_DECK_KEY)).toBe("d-aggro");
+  });
+});
+
+describe("R915005 the co-op panel never offers a deck with a custom card", () => {
+  // Imps holds a card from the creator; the saved Aggro holds none.
+  const IMPS = { ...must(DECKS.decks[0], "the saved deck"), id: "d-imps", name: "Imps", cards: ["custom-ember-imp"] };
+
+  function serveDecks(decks: readonly object[]): StubServer {
+    return serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/decks" ? { status: 200, body: { ...DECKS, decks } } : undefined,
+    );
+  }
+
+  it("R915005 the remembered Imps is listed off, the panel starts on the first deck that plays online, says why, and creates with it", async () => {
+    window.localStorage.setItem(COOP_DECK_KEY, "d-imps");
+    const server = serveDecks([IMPS, ...DECKS.decks]);
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(3);
+    }, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("d-aggro");
+    }, SLOW);
+    const picker = screen.getByTestId("coop-deck");
+    expect(within(picker).getByRole("option", { name: "Imps (practice only)" })).toBeDisabled();
+    expect(within(picker).getByRole("option", { name: "Aggro" })).toBeEnabled();
+    expect(screen.getByTestId("coop-practice-only")).toHaveTextContent(
+      "A deck with a custom card plays only in practice, against the AI.",
+    );
+
+    await createRoom(server);
+    expect(await created(server)).toEqual({ difficulty: "easy", deckId: "d-aggro" });
+  });
+
+  it("R915005 with only practice decks the panel starts on Random deck", async () => {
+    window.localStorage.setItem(COOP_DECK_KEY, "d-imps");
+    const server = serveDecks([IMPS]);
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    await flush();
+    expect(screen.getByTestId<HTMLSelectElement>("coop-deck").value).toBe("random");
+    expect(screen.getByTestId("coop-practice-only")).toBeInTheDocument();
+
+    await createRoom(server);
+    expect(await created(server)).toEqual({ difficulty: "easy", random: true });
+  });
+
+  it("R915005 with nothing practice-only there is no note", async () => {
+    serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(screen.getByTestId<HTMLSelectElement>("coop-deck").options).toHaveLength(2);
+    }, SLOW);
+    expect(screen.queryByTestId("coop-practice-only")).toBeNull();
+  });
+
+  it("R915005 defaultCoopDeck passes over a practice deck, even the remembered one", () => {
+    expect(defaultCoopDeck([IMPS, ...DECKS.decks], "d-imps")?.id).toBe("d-aggro");
+    expect(defaultCoopDeck([IMPS], "d-imps")).toBeNull();
   });
 });

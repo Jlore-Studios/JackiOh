@@ -302,6 +302,7 @@ describe("#219 each voice item carries its arc drop as the --emote-arc-drop the 
   });
 });
 
+// R1345: MN03's fourteen emoji are stickers: inline SVG, no words, each with its own accessible name.
 describe("R1345 every emoji of the pool is an inline sticker with its own name", () => {
   it("R1345 each draws one emote-emoji-svg, hidden from the accessibility tree, with no <text> in it", () => {
     for (const emote of EMOJI_EMOTE_IDS) {

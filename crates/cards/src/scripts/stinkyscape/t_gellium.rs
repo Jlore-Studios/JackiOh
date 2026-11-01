@@ -1,10 +1,10 @@
-//! SPEC §7 Stinkyscape T-gellium Gellium, a Resource token of the Stinkyscape set.
+//! SPEC §7 Stinkyscape T-gellium Gellium, a Resource token of the Stinkyscape set (§7's token table).
 //!   Base:    "Heal your hero {heal}." (4)
 //!   Radiant: the same (8).
 //!
-//! A Resource (R1840000), played from its owner's hand at (0) for its Credits (R2250001). "Heal your
-//! hero" is §6.3 Heal on a hero, which has no cap (§3), so it heals past 30. The number is the
-//! declared `heal` (R386).
+//! A Resource (R1840000), tagged Resource and Token (§5's tags, issue #2521), played from its owner's
+//! hand at (0) for its Credits (R2250000, R2250001). "Heal your hero" is §6.3 Heal on a hero, which
+//! has no cap (§3), so it heals past 30. The number is the declared `heal` (R386).
 
 use jackioh_engine::effects::heal;
 use jackioh_engine::prelude::*;
@@ -29,13 +29,14 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S T-gellium — SPEC §7, BUILD M12 row S T-gellium.
+// S T-gellium — SPEC §7, BUILD M12 row S T-gellium: "played from the hand, heals its caster's hero 4,
+// past 30 too; heal reads through `param()`; radiant 8". Tagged Resource and Token (issue #2521).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     use super::ID;
-    use crate::{play_resource, scenario};
+    use crate::{card_def, play_resource, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const FILLER: &str = "core-005";
@@ -44,6 +45,11 @@ mod tests {
         scenario(
             json!({ "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "health": health } }),
         )
+    }
+
+    #[test]
+    fn tagged_resource_and_token() {
+        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
     }
 
     #[test]

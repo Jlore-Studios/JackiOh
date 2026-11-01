@@ -1,4 +1,10 @@
-//! Shared test store helpers (#1491, #2385): fake store access, transactions, JSON conversion, and time advancement.
+//! The helpers every server test file carried its own copy of (#1491, #2385): the fake store behind the
+//! test app (`fake`, `fake_ref`, `fake_lock`), its tables (`table`, `fake_read`) and its injected faults
+//! (`fail_on`, `stop_failing`) and its call log (`record_calls`), one store call in a transaction of
+//! its own (`q!`, `store!`, `try_store!`), a value as JSON and back (`to_json`, `from`), a
+//! client-minted id (`uuid`), an HMAC-SHA256 as hex (`hmac_sha256_hex`) and three steps of tokio's
+//! paused clock (`advance`, `advance_and_yield`, `sleep_settled`). A copy that behaved differently keeps a name of its own;
+//! `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`) refuses a new copy.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -73,6 +79,17 @@ pub async fn fail_on(app: &App, method: &'static str, message: &'static str) {
 /// Every store method answers again.
 pub async fn stop_failing(app: &App) {
     fake(app).lock().await.on_call = None;
+}
+
+/// Every store method called from now on, by name and in order, until `stop_failing`.
+pub async fn record_calls(app: &App) -> Arc<std::sync::Mutex<Vec<String>>> {
+    let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = Arc::clone(&calls);
+    fake(app).lock().await.on_call = Some(Arc::new(move |called: &str| {
+        seen.lock().expect("call log").push(called.to_string());
+        Ok(())
+    }));
+    calls
 }
 
 /// HMAC-SHA256 as lower-case hex (RFC 2104 over `sha2`, so a test needs no MAC crate's API).

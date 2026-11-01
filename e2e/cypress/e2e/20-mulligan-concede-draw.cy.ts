@@ -1,8 +1,12 @@
 // Spec 20: concurrent mulligans, confirmed concede, and draw offers over browser and socket views.
 // CLAUDE.md rule 7: each seat sees only its `viewFor` data (R266, §9.1, §10.8).
-// Fixture turns stay actionable under R82 and R244; kept and redrawn cards follow R9 and R10.
+// R265 and R268 cover sealed mulligans and their shared clock; R36 and R269 cover draw offers.
+// The browser turns R82's automatic turn end off (R345), so turn 1 stays open whatever the seed deals it;
+// kept and redrawn cards follow R9 and R10.
 // Room setup follows R143 and R257 (SPEC §11; §§2.1, 2.5, 9.5; SURFACE §11.3); clocks follow R79.
+// BUILD M6 and M7-T1 supply the server and clock; M8 requires isolated seeds and retried waits.
 
+import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
 import { MULLIGAN_CLOCK_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
@@ -255,7 +259,11 @@ function openMatch(seed: string): void {
           expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);
           const matchId = joined.body.matchId;
           cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
-          cy.visitAs(seatOne, routes.match(matchId));
+          cy.visitAs(seatOne, routes.match(matchId), {
+            onBeforeLoad: (win) => {
+              win.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ autoEndTurn: false }));
+            },
+          });
         });
       });
     });

@@ -1,20 +1,28 @@
 // The Marketplace (R1853000–R1853003, R2250002, SPEC §10.10): Stinkyscape's shop, open for the rest of
-// the game once either player gains a Resource or Credits. A toggle opens a panel that draws
-// `view.marketplace` and `legal` alone: the viewer's Credits, the offers rolled for them at the start of
-// their turn, each on the face it is sold on with its price and the copies the viewer may still buy,
-// and each card in their hand that sells from there (R1861000) with its quote. "Buy" is live exactly
-// when `legal` lists that lot's `marketBuy`, and a sale exactly when `legal` lists its `marketSell`;
-// each sends the listed body. Otherwise the button is greyed, a lot's tooltip the engine's reason
-// (`reason`), and sends nothing. Every number shown is the view's: nothing here prices, filters or
-// refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is closed.
+// the game once either player gains a Resource or Credits.
+//
+// A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits, the
+// offers rolled for them at the start of their turn (R2250002), each on the face it is sold on with its
+// price and the copies the viewer may still buy, and each card in their hand that sells from there
+// (R1861000) with its quote. "Buy" is
+// live exactly when `legal` lists that lot's `marketBuy`, and a sale exactly when `legal` lists its
+// `marketSell`; each sends the listed body. Otherwise the button is greyed, a lot's tooltip the
+// engine's reason (`reason`), and sends nothing. Every number shown is the view's: nothing here
+// prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is
+// closed, and then nothing is drawn. Escape and Back (R2127000) close the panel.
+//
+// The toggle is a button of the control bar (Board.tsx, #2645), which owns whether the panel is open
+// (the match menu and the shop are never open together): an icon on a phone, the pill's label where the
+// board has its sidebar (market.css). The panel opens upward from the bar's top edge.
 
-import { useId, useState, type ReactElement } from "react";
+import { useCallback, useId, useRef, type ReactElement } from "react";
 
 import type { ActionBody, CardDef, MarketOfferView, MarketSaleView, PlayerView } from "@jackioh/shared";
 
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { useCardInfo } from "./catalog.ts";
 import { testid } from "./contract.ts";
 import "./market.css";
@@ -23,6 +31,9 @@ type MarketplaceProps = {
   view: PlayerView;
   legal: readonly ActionBody[];
   onAction: (action: ActionBody) => void;
+  /** Whether the panel is open, which the board holds (#2645). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 type MarketBuy = Extract<ActionBody, { type: "marketBuy" }>;
@@ -98,10 +109,19 @@ function Sale(props: { sale: MarketSaleView; listed: MarketSell | undefined; onA
   );
 }
 
-export default function Marketplace({ view, legal, onAction }: MarketplaceProps): ReactElement | null {
+export default function Marketplace({ view, legal, onAction, open, onOpenChange }: MarketplaceProps): ReactElement | null {
   useLocale();
-  const [open, setOpen] = useState(false);
   const panelId = useId();
+  const toggle = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
+  // Escape and Back (R2127000) close the shop and give the focus back to its toggle, unless the
+  // player put it elsewhere (a prompt drawn over the shop keeps it), as the portrait picker does (#1569).
+  const close = useCallback((): void => {
+    const focused = document.activeElement;
+    const inside = focused === null || focused === document.body || panel.current?.contains(focused) === true;
+    onOpenChange(false);
+    if (inside) toggle.current?.focus({ preventScroll: true });
+  }, [onOpenChange]);
   const market = view.marketplace;
   if (market === undefined) return null;
 
@@ -115,27 +135,38 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
   return (
     <>
       <button
+        ref={toggle}
         type="button"
         className="marketplace-toggle"
         data-testid={testid.marketplace}
         aria-expanded={open}
         aria-controls={panelId}
+        aria-label={t("Marketplace")}
+        title={t("Marketplace")}
         onClick={() => {
-          setOpen((was) => !was);
+          onOpenChange(!open);
         }}
       >
-        {t("Marketplace")}
+        <span className="marketplace-toggle-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+            <circle cx="12" cy="12" r="4" fill="currentColor" />
+          </svg>
+        </span>
+        <span className="marketplace-toggle-label">{t("Marketplace")}</span>
       </button>
       {open ? (
         <section
+          ref={panel}
           className="marketplace-panel"
           id={panelId}
           data-testid={testid.marketplacePanel}
           aria-label={t("Marketplace")}
           onKeyDown={(event) => {
-            if (event.key === "Escape") setOpen(false);
+            if (event.key === "Escape") close();
           }}
         >
+          <BackLayer onClose={close} />
           <header className="marketplace-header">
             <h2 className="market-title">{t("Marketplace")}</h2>
             {/* R1840005: the view's Credits are absent until first gained: none yet. */}

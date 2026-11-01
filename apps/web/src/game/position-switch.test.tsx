@@ -80,12 +80,16 @@ describe("#37 positionSwitched turns the card between its two resting transforms
   });
 });
 
-describe("#2330 a DEF card is scaled only as far as its lane needs", () => {
-  it("the inline scale is the lane's --def-scale: 0.72 on a phone, 1 on a desktop or a tablet", () => {
+describe("#2330 a DEF card is scaled only as far as its zone needs", () => {
+  it("the inline scale is the lane's --def-scale: on a phone worked out from its zone (#2556), 1 on a desktop or a tablet", () => {
     expect(renderUnit("DEF").style.transform).toContain("scale(var(--def-scale, 1))");
-    expect(laneRule(0)).toContain("--def-scale: 0.72;");
+    const phone = laneRule(0);
+    expect(phone).toContain("container-type: inline-size;");
+    expect(phone).toMatch(/--def-scale: min\(1, tan\(atan2\(/);
+    expect(phone).not.toMatch(/--def-scale: [\d.]+;/);
     const roomy = board.indexOf("@media (min-width: 761px) and (min-height: 501px) {");
     expect(roomy).toBeGreaterThan(-1);
     expect(laneRule(roomy)).toContain("--def-scale: 1;");
+    expect(laneRule(roomy)).toContain("container-type: normal;");
   });
 });

@@ -1,7 +1,7 @@
 //! Stinkyscape #80 Galaxy (SPEC §8.10 row 80). Unit 10/10 → 20/20, cost 4, Legendary.
-//!   Base:    "Tribute 2, Starship Piece, Flying
+//!   Base:    "Tribute 2, Flying
 //!            Cry: Discover 2 Radiant Miners and Equip them into this."
-//!   Radiant: "Tribute 2, Starship Piece, Flying
+//!   Radiant: "Tribute 2, Flying
 //!            Cry: Equip a Radiant copy of every Miner into this."
 //!
 //! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
@@ -9,7 +9,9 @@
 //! to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420),
 //! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
 //! with it (R1751000): two Discovers of three in turn, the second without the first; the Radiant face
-//! plays; it stays a piece, the kept card being one (R1852001).
+//! fuses all five, v1 first, asking nothing. Flying is a catalog keyword the engine plays. Since #2521 it
+//! is no Starship Piece, and the Miners it takes, each a piece, leave it none (R1852001), so its death
+//! fuses nothing (R1852000 reads the keyword).
 
 use jackioh_engine::effects::equip_picks;
 use jackioh_engine::prelude::*;
@@ -70,7 +72,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80 (R101, R1841002).
+// Stinkyscape #80 Galaxy — SPEC §8.10 row 80, BUILD M12 row S 80: "Tribute 2: two of your Units sacrificed
+// as it is played (R101); its Cry asks two Discovers in turn, each three of the five Radiant Miners it does
+// not hold, and fuses each pick into it (R1841002); radiant 20/20 and all five Radiant Miners fused, no
+// prompt". Since #2521 it is no Starship Piece, its Miners leaving it none (R1852001).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,7 +87,10 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const VANILLA: &str = "core-008"; // (1) 4/4.
+    const FILLER: &str = "core-005"; // (1) Spell.
+    const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
 
+    /// p1 plays the Galaxy (Radiant on `radiant`) into lane 3, its two Vanillas the Tribute.
     fn played(radiant: bool) -> (Scenario, String) {
         let mut s = weapon_board(
             "s080",
@@ -133,7 +141,8 @@ mod tests {
             held.push(offered[0].clone());
         }
         assert!(s.state().pending.is_none());
-        assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+        // R1852001: each Miner is a piece, the kept Galaxy none, so the fusion is none.
+        assert!(!unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
         s.activate(host.as_str(), json!({ "ability": "mine" }));
         assert_eq!(resources_in_hand_of(s.state(), P1).len(), 1);
     }
@@ -168,6 +177,36 @@ mod tests {
             }
         }
         assert_eq!(order, MINERS.map(String::from).to_vec());
-        assert!(unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+        assert!(!unit_has(s.state(), s.card(host.as_str()), KeywordKind::StarshipPiece));
+    }
+
+    /// `radiant`'s Galaxy standing in p1's lane 1 (no Cry: set up there), destroyed by a Hit Job.
+    fn destroyed(radiant: bool) -> Scenario {
+        let mut s = crate::scenario(json!({
+            "p1": {
+                "hand": [HIT_JOB, FILLER],
+                "field": [{ "def": ID, "radiant": radiant }],
+                "library": crate::filler(4),
+            },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
+        }));
+        let me = s.card(ID).clone();
+        assert!(!unit_has(s.state(), &me, KeywordKind::StarshipPiece));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
+        s.expect_in_zone(&me, "graveyard");
+        s
+    }
+
+    #[test]
+    fn its_death_fuses_nothing_it_is_no_starship_piece() {
+        let s = destroyed(false);
+        assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship");
+        assert!(!s.events().iter().any(|event| matches!(event, GameEvent::StarshipFused { .. })));
+    }
+
+    #[test]
+    fn radiant_its_death_fuses_nothing() {
+        let s = destroyed(true);
+        assert!(dormant_starship_of(s.state(), P1).is_none(), "no Dormant Starship");
     }
 }

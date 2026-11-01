@@ -44,6 +44,26 @@ mod tests {
 
     const GRANT: &str = "stinkyscape-124";
     const FILLER: &str = "core-005";
+    /// S #177 Cloaking Module, a piece since it was added (#2521).
+    const CLOAKING_MODULE: &str = "stinkyscape-177";
+    /// The fifteen Units that #2521 took off the Starship Pieces: the pool offers none of them.
+    const NO_LONGER_PIECES: [&str; 15] = [
+        "stinkyscape-068",
+        "stinkyscape-069",
+        "stinkyscape-072",
+        "stinkyscape-073",
+        "stinkyscape-074",
+        "stinkyscape-075",
+        "stinkyscape-076",
+        "stinkyscape-077",
+        "stinkyscape-078",
+        "stinkyscape-080",
+        "stinkyscape-081",
+        "stinkyscape-082",
+        "stinkyscape-083",
+        "stinkyscape-085",
+        "stinkyscape-086",
+    ];
 
     fn holding(radiant: bool, seed: &str, fillers: usize) -> Scenario {
         let mut hand = vec![json!({ "def": GRANT, "radiant": radiant })];
@@ -84,11 +104,27 @@ mod tests {
                 assert!(prints_piece(&def_id), "{def_id} is a Starship Piece");
                 assert!(!crate::card_def(&def_id).is_token(), "{def_id} is no token");
                 assert_ne!(def_id, DORMANT_STARSHIP_DEF_ID);
+                assert!(!NO_LONGER_PIECES.contains(&def_id.as_str()), "{def_id}");
                 assert!(!radiant);
                 seen.insert(def_id);
             }
         }
         assert!(seen.len() > 3, "{seen:?}");
+    }
+
+    #[test]
+    fn r1878000_the_pool_holds_cloaking_module_and_none_of_the_fifteen_former_pieces() {
+        crate::register_all();
+        let pool: Vec<String> = crate::query::query(&crate::query::starship_pieces())
+            .into_iter()
+            .map(|def| def.id.clone())
+            .collect();
+        assert!(pool.iter().all(|def_id| prints_piece(def_id)), "{pool:?}");
+        assert!(pool.iter().any(|def_id| def_id == CLOAKING_MODULE), "{pool:?}");
+        for former in NO_LONGER_PIECES {
+            assert!(!pool.iter().any(|def_id| def_id == former), "{former} in {pool:?}");
+            assert!(!prints_piece(former), "{former}");
+        }
     }
 
     #[test]

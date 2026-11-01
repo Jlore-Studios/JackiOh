@@ -1,7 +1,22 @@
-//! SPEC §8.11 Training Grounds #42 Stockpile, the snapshot of Core #5 Stockpile (`core-005`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #5 (SPEC §8, §8.1): Draw 2, heal 2; radiant Draw 4, heal 4 (§2.4, R4 full hand burn; §3, §10.5).
+//! SPEC §8.11 Training Grounds #42 Legacy: Stockpile,
+//! the Legacy card of Core #5 Stockpile (`core-005`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! SPEC §8.1 #5 Stockpile — Spell, cost 1.
+//! Base: "Draw 2; heal your hero 2". Radiant: "Draw 4; heal 4" — the cell changes only the numbers
+//! of the base clause (§8 Conventions), and "heal 4" is still the hero.
+//!
+//! Engine cell: the hand cap applies. That is the draw pipeline's job (§2.4, R4: hand size 10, a
+//! card drawn into a full hand is burned to the graveyard), so this file just asks for the draws.
+//! A hero has no maximum health (§3), so the heal may take it above 30; `heal` with an `amount` on
+//! a hero adds health with no cap (effects/heal.rs).
+//!
+//! A Spell's on-resolve script hangs off `cry` (§10.5 step 5).
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;

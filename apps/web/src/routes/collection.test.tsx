@@ -14,6 +14,7 @@ import {
   writeCardPick,
   writeCosmetics,
 } from "../cards/cosmetics.ts";
+import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { collectionTestid as T } from "../collection/collection.ts";
 import { fullCollection, questsHeld, tracksOf } from "../collection/fixtures.ts";
 import {
@@ -35,6 +36,7 @@ import { rememberRead } from "../net/readCache.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { SETTINGS_GROUPS } from "../settings/groups.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { navTestid } from "./nav.tsx";
 import CollectionRoute from "./collection.tsx";
@@ -359,6 +361,41 @@ describe("R1655000 the Collection's card view", () => {
     expect(readCosmetics().foil).toBe("foil-none");
     // Ownership is the session's (`useCanEquip`): the section reads nothing more for it.
     expect(getOwnedCosmetics).not.toHaveBeenCalled();
+  });
+
+  it("R2127000 Back closes the card's text, then the card's view, one per Back, gives the focus back to the card and keeps ?section=cards and the open set; with none open Back leaves for the hub", async () => {
+    answerAll();
+    window.history.replaceState(null, "", paths.collection);
+    window.history.pushState(null, "", paths.collectionSection("cards"));
+    render(<CollectionRoute token={TOKEN} />);
+
+    fireEvent.click(await screen.findByTestId(T.setToggle("Core")));
+    const card = screen.getByTestId(T.card("core-001"));
+    card.focus();
+    fireEvent.click(card);
+    expect(screen.getByTestId(T.cardView)).toHaveAttribute("data-card", "core-001");
+    fireEvent.click(screen.getByTestId(T.cardViewText));
+    expect(screen.getByTestId(INSPECT_DETAIL)).toBeInTheDocument();
+
+    // One Back closes the text over the view, and only it.
+    await pressBack();
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    expect(screen.getByTestId(T.cardView)).toBeInTheDocument();
+    expect(window.location.search).toBe("?section=cards");
+
+    // The next closes the view: the section, the open set and the focus are as they were.
+    await pressBack();
+    expect(screen.queryByTestId(T.cardView)).toBeNull();
+    expect(card).toHaveFocus();
+    expect(window.location.pathname).toBe(paths.collection);
+    expect(window.location.search).toBe("?section=cards");
+    expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "cards");
+    expect(screen.getByTestId(T.setToggle("Core"))).toHaveAttribute("aria-expanded", "true");
+
+    // With none open, Back leaves the section as it did.
+    await pressBack();
+    expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "hub");
+    expect(window.location.search).toBe("");
   });
 });
 

@@ -164,8 +164,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     function hits(x: number, y: number): readonly Element[] {
       try {
         // R2095000: a replay board (the Duos teammate's, beside this one) is no drop target of this
-        // board's drag: its test ids repeat this board's own, and a pass dropped on it is the Duos
-        // board's to send.
+        // board's drag: its test ids repeat this board's own, so a card dropped on it does nothing.
         return document.elementsFromPoint(x, y).filter((element) => element.closest('[data-replay="true"]') === null);
       } catch {
         // jsdom has no elementsFromPoint: nothing is under the pointer.

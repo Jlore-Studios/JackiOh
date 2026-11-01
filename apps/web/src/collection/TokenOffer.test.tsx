@@ -1,5 +1,8 @@
-// R1953001 (#1953): a held cosmetic token is offered on a locked cosmetic its tier covers (R1305003),
-// in a card's view and the account's tiles.
+// R1953001 (#1953): a held cosmetic token is offered where a locked cosmetic is shown, a card's own
+// cosmetics view and the account's tiles, and only where its tier covers the cosmetic (R1305003):
+// the offer redeems it through `POST /api/tokens/redeem-cosmetic` and the cosmetic shows owned once
+// the screen's ownership reads again; a refusal shows the server's words and changes nothing.
+// R2480000 (#2480): the offer asks first; Confirm redeems, Cancel and Escape spend nothing.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -86,6 +89,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     expect(screen.getByTestId(T.stripItem("foil-galaxy"))).toHaveAttribute("data-owned", "false");
 
     fireEvent.click(offer);
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("foil-galaxy")));
 
     await waitFor(() => {
       expect(screen.getByTestId(T.stripItem("foil-galaxy"))).toHaveAttribute("data-owned", "true");
@@ -144,6 +148,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     cardViewOf(read);
 
     fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-galaxy")));
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("foil-galaxy")));
 
     expect(await screen.findByTestId(T.tokenOfferError("foil-galaxy"))).toHaveTextContent("that cosmetic is already owned there");
     expect(screen.getByTestId(T.tokenOffer("foil-galaxy"))).toHaveTextContent("Unlock with an Epic token (1 held)");
@@ -158,6 +163,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     cardViewOf(vi.fn<(token: string) => Promise<OwnedByCard>>().mockResolvedValue(new Map()));
 
     fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-galaxy")));
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("foil-galaxy")));
 
     expect(await screen.findByTestId(T.tokenOfferError("foil-galaxy"))).toHaveTextContent("服务器返回了 500");
   });
@@ -181,6 +187,7 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     expect(screen.queryByTestId(T.tokenOffer("table-felt"))).toBeNull();
 
     fireEvent.click(offer);
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("table-marble")));
 
     await waitFor(() => {
       expect(screen.getByTestId(T.tile("table-marble"))).toHaveAttribute("data-owned", "true");
@@ -202,5 +209,94 @@ describe("R1953001 a held cosmetic token, offered in place", () => {
     expect(screen.getByTestId(T.tile("table-marble"))).toHaveAttribute("data-owned", "false");
     expect(screen.queryByTestId(T.tokenOffer("table-marble"))).toBeNull();
     expect(server.to("GET", "/api/tokens")).toHaveLength(0);
+  });
+});
+
+describe("R2480000 spending a cosmetic token asks first", () => {
+  it("R2480000 the first click sends nothing and asks in the card view, naming the cosmetic and the token, with Cancel focused", async () => {
+    const server = tokenServer({ cosmeticEpic: 2 }, refusal(500, "internal", "unused"));
+    cardViewOf(() => Promise.resolve(new Map()));
+
+    fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-galaxy")));
+
+    const dialog = screen.getByTestId(T.tokenOfferDialog("foil-galaxy"));
+    expect(screen.getByRole("alertdialog", { name: "Unlock Galaxy? This spends 1 Epic token." })).toBe(dialog);
+    expect(screen.getByTestId(T.cardView)).toContainElement(dialog);
+    expect(screen.queryByTestId(T.tokenOffer("foil-galaxy"))).toBeNull();
+    expect(screen.getByTestId(T.tokenOfferCancel("foil-galaxy"))).toHaveFocus();
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(0);
+  });
+
+  it("R2480000 a Rare token's question names the Rare token", async () => {
+    tokenServer({ cosmeticRare: 1 }, refusal(500, "internal", "unused"));
+    cardViewOf(() => Promise.resolve(new Map()));
+
+    fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-sunburst")));
+
+    expect(screen.getByRole("alertdialog", { name: "Unlock Sunburst? This spends 1 Rare token." })).toBeInTheDocument();
+  });
+
+  it("R2480000 Confirm sends exactly one redemption, of the token the question named", async () => {
+    const server = tokenServer({ cosmeticEpic: 1 }, { status: 200, body: barsHolding({}) });
+    const read = vi
+      .fn<(token: string) => Promise<OwnedByCard>>()
+      .mockResolvedValueOnce(new Map())
+      .mockResolvedValue(new Map([["core-001", new Set(["foil-sunburst"])]]));
+    cardViewOf(read);
+
+    fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-sunburst")));
+    expect(screen.getByTestId(T.tokenOfferDialog("foil-sunburst"))).toHaveTextContent("Unlock Sunburst? This spends 1 Epic token.");
+
+    fireEvent.click(screen.getByTestId(T.tokenOfferConfirm("foil-sunburst")));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(T.stripItem("foil-sunburst"))).toHaveAttribute("data-owned", "true");
+    });
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(1);
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")[0]?.body).toEqual({ token: "Epic", cosmeticId: "foil-sunburst", cardId: "core-001" });
+    expect(screen.queryByTestId(T.tokenOfferDialog("foil-sunburst"))).toBeNull();
+  });
+
+  it("R2480000 Cancel and Escape send nothing and put the offer back, and Escape leaves the card view open", async () => {
+    const server = tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
+    const read = vi.fn<(token: string) => Promise<OwnedByCard>>().mockResolvedValue(new Map());
+    cardViewOf(read);
+
+    fireEvent.click(await screen.findByTestId(T.tokenOffer("foil-galaxy")));
+    fireEvent.click(screen.getByTestId(T.tokenOfferCancel("foil-galaxy")));
+
+    expect(screen.queryByTestId(T.tokenOfferDialog("foil-galaxy"))).toBeNull();
+    const offer = screen.getByTestId(T.tokenOffer("foil-galaxy"));
+    expect(offer).toHaveTextContent("Unlock with an Epic token (1 held)");
+    expect(offer).toHaveFocus();
+
+    fireEvent.click(offer);
+    fireEvent.keyDown(screen.getByTestId(T.tokenOfferCancel("foil-galaxy")), { key: "Escape" });
+
+    expect(screen.queryByTestId(T.tokenOfferDialog("foil-galaxy"))).toBeNull();
+    expect(screen.getByTestId(T.cardView)).toBeInTheDocument();
+    expect(screen.getByTestId(T.tokenOffer("foil-galaxy"))).toHaveFocus();
+
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(0);
+    expect(screen.getByTestId(T.stripItem("foil-galaxy"))).toHaveAttribute("data-owned", "false");
+    expect(read, "nothing was granted, so ownership is not read again").toHaveBeenCalledTimes(1);
+  });
+
+  it("R2480000 a locked tile asks in the tile's own place", async () => {
+    const server = tokenServer({ cosmeticEpic: 1 }, refusal(500, "internal", "unused"));
+    render(
+      <ViewerAccountCosmetics token={TOKEN} gated read={() => Promise.resolve(new Set())}>
+        <AccountCosmeticTiles token={TOKEN} />
+      </ViewerAccountCosmetics>,
+    );
+
+    fireEvent.click(await screen.findByTestId(T.tokenOffer("table-marble")));
+
+    const dialog = screen.getByTestId(T.tokenOfferDialog("table-marble"));
+    expect(screen.getByRole("alertdialog", { name: "Unlock Marble? This spends 1 Epic token." })).toBe(dialog);
+    expect(screen.getByTestId(T.tile("table-marble"))).toContainElement(dialog);
+    expect(screen.getByTestId(T.tokenOfferCancel("table-marble"))).toHaveFocus();
+    expect(server.to("POST", "/api/tokens/redeem-cosmetic")).toHaveLength(0);
+    expect(screen.getByTestId(T.tile("table-marble"))).toHaveAttribute("data-owned", "false");
   });
 });

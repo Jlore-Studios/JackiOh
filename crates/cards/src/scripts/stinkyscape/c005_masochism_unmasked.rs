@@ -38,6 +38,22 @@ fn takes_damage_on_own_turn(ctx: &EffectContext<'_>, event: &GameEvent) -> bool 
         && *target_id == format!("hero-{}", ctx.controller)
 }
 
+/// R2476000: after "up to 20 each turn" (its `cap` as it stands, R386), how much more it may move this
+/// turn: the cap less what it has moved (`own_turn_redirect_left`, the count its redirect reads). On
+/// the opponent's turn it moves nothing, and the count starts again on its controller's next. Its
+/// controller reads it face-down, both seats face-up: every moved hit was a public damage event.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let Some(left) = own_turn_redirect_left(ctx.state, ctx.self_) else {
+            return vec![];
+        };
+        vec![count_preview(&format!("up to {} each turn", param(&ctx, "cap")), left)]
+    })
+}
+
 fn masochism(radiant: bool) -> Script {
     let reveal = TriggerDef::new(
         "masochism-unmasked",
@@ -54,6 +70,7 @@ fn masochism(radiant: bool) -> Script {
             ..StaticFlags::default()
         }),
         triggers: vec![reveal],
+        preview: Some(preview()),
         ..Script::default()
     }
 }
@@ -136,6 +153,21 @@ mod tests {
             s.expect_health(P1, HERO_HEALTH - SORCERER_HIT);
             s.expect_health(P2, P2_HEALTH - SORCERER_HIT);
             assert_eq!(redirected(&s), 1);
+        }
+
+        /// R2476000: after "up to 20 each turn", the cap left this turn, to both seats once face-up:
+        /// 20, then 16 after one 4-damage hit moves.
+        #[test]
+        fn r2476000_it_previews_the_cap_left_this_turn() {
+            let mut s = board(false, true, sorcerers(false, 1));
+            let trap = s.backrow(P1, 1).expect("the trap").id;
+            let label = format!("up to {CAP} each turn");
+            assert_eq!(crate::preview_seen(&s, P1, &trap), vec![(label.clone(), CAP, None)]);
+            hit_self(&mut s, 1);
+            assert_eq!(redirected(&s), 1);
+            let left = vec![(label, CAP - SORCERER_HIT, None)];
+            assert_eq!(crate::preview_seen(&s, P1, &trap), left);
+            assert_eq!(crate::preview_seen(&s, P2, &trap), left);
         }
 
         #[test]

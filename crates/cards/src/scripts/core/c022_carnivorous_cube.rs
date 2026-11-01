@@ -88,7 +88,11 @@ fn meal_of(ctx: &EffectContext<'_>) -> Option<Eaten> {
 
 fn eaten_of(ctx: &EffectContext<'_>) -> Option<Eaten> {
     // `recalled` reads what this Cube remembered — on a fused card, this ingredient's own meal (R102).
-    let stored = recalled(ctx, EATEN)?;
+    eaten_in(&recalled(ctx, EATEN)?)
+}
+
+/// The meal as `memory.eaten` stores it, read back: what Death copies and the preview names.
+fn eaten_in(stored: &Value) -> Option<Eaten> {
     let value = stored.as_object()?;
     let def_id = value.get("defId").and_then(Value::as_str)?.to_string();
     Some(Eaten {
@@ -116,6 +120,27 @@ fn copy_args(eaten: &Eaten) -> Value {
     args
 }
 
+/// R2476000: the words the meal's name follows on the face.
+const REMEMBER_IT: &str = "remember it";
+
+/// R2476000: "remember it" — the meal this Cube remembers, by name ("Radiant " before a Radiant one),
+/// or the dash before it has eaten (a Cry that fizzled, R41). On the field only: a Cube anywhere else
+/// has left the field and remembers nothing (R78). A fused Cube's ingredient reads its own meal, its
+/// memory read as that ingredient's text reads it (R102). The meal was a Unit eaten in public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let meal = ctx.self_.memory.get(EATEN).and_then(eaten_in);
+        vec![card_preview(
+            ctx.state,
+            REMEMBER_IT,
+            meal.as_ref().map(|meal| (meal.def_id.as_str(), meal.radiant)),
+        )]
+    })
+}
+
 /// One copy of the meal: R57's flags, and R64 puts it in the leftmost free zone of its own row.
 fn copy_of(eaten: &Eaten) -> Effect {
     summon(json_as(copy_args(eaten)))
@@ -138,6 +163,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         targets: targets(),
         cry: Some(cry()),
+        preview: Some(preview()),
         death: Some(hook(|ctx| {
             let Some(eaten) = eaten_of(ctx) else {
                 return vec![]; // R41: nothing eaten → Death does nothing.
@@ -151,6 +177,7 @@ pub fn script() -> CardScripts {
     let radiant = Script {
         targets: targets(),
         cry: Some(cry()),
+        preview: Some(preview()),
         death: Some(hook(|ctx| {
             let Some(eaten) = eaten_of(ctx) else {
                 return vec![];
@@ -498,6 +525,44 @@ mod tests {
                 ));
             }
         }
+    }
+
+    /// R2476000: on either face the Cube names the meal it remembers after "remember it", on the field and
+    /// to both seats, a Radiant meal as Radiant; in hand it has eaten nothing and shows nothing.
+    #[test]
+    fn r2476000_the_cube_names_the_meal_it_remembers_on_the_field_to_both_seats() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "seed": "cube-preview",
+                "p1": { "hand": [{ "def": CUBE, "radiant": radiant }, FILLER], "field": [{ "def": TIMMY, "radiant": true }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let cube = s.card(CUBE).id.clone();
+            assert!(crate::preview_seen(&s, P1, &cube).is_empty(), "radiant {radiant}: nothing in hand");
+            let timmy = s.card(TIMMY).id.clone();
+            s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": timmy }] }));
+            let named = vec![("remember it".to_string(), 1, Some("Radiant Tempo Timmy".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &cube), named, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, PlayerId::P2, &cube), named, "radiant {radiant}");
+        }
+    }
+
+    /// R2476000, R41: a Cube whose Cry found nothing to eat shows the dash, and its Death copies nothing.
+    #[test]
+    fn r2476000_a_cube_that_ate_nothing_shows_the_dash() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "cube-preview-hungry",
+            "p1": { "hand": [CUBE, FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        s.play(CUBE, json!({}));
+        let cube = s.card(CUBE).id.clone();
+        assert_eq!(
+            crate::preview_seen(&s, P1, &cube),
+            vec![("remember it".to_string(), 0, Some("—".to_string()))]
+        );
     }
 
     /// R1081000: a Unit standing in the backrow is one of your other Units, so the Cube eats it.

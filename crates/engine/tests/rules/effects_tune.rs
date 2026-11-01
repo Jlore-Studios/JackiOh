@@ -212,9 +212,11 @@ mod b3_4_the_menu_row_by_row_r386 {
             upgrade(json_as(json!({ "instanceId": spell.id, "times": 5 }))),
             RunOptions::default(),
         );
+        // R2657005: a Buff may give any card Flashback, so one of the five gives it that and the
+        // other four take the cost from (4) to (0).
         assert_eq!(
             change_kinds(&upgraded),
-            vec!["cost", "cost", "cost", "cost", "none"]
+            vec!["keyword", "cost", "cost", "cost", "cost"]
         );
         assert_eq!(
             effective_cost(&state, &live(&state, &spell.id), Default::default()),
@@ -227,7 +229,11 @@ mod b3_4_the_menu_row_by_row_r386 {
         let mut state = game("tune");
         let bolt = card(&mut state, &instance_fx::x_bolt.id);
         assert_eq!(rows(&state, &bolt.id, TuneDirection::Degrade), json!(["x"]));
-        assert_eq!(rows(&state, &bolt.id, TuneDirection::Upgrade), json!(["x"]));
+        // R2657005: and Flashback, which a Buff may give any card.
+        assert_eq!(
+            rows(&state, &bolt.id, TuneDirection::Upgrade),
+            json!(["keyword", "x"])
+        );
     }
 
     #[test]
@@ -430,10 +436,18 @@ mod b3_4_the_menu_row_by_row_r386 {
         }
         let mut state = game("tune");
         let constant = card(&mut state, &instance_fx::constant.id);
+        // R2657005: a Spell takes no combat keyword, and its keyword row is Flashback alone.
         assert_eq!(
             rows(&state, &constant.id, TuneDirection::Upgrade),
-            json!(["cost"])
+            json!(["cost", "keyword"])
         );
+        let added = (0..10)
+            .flat_map(|_| changes(&once(&mut state, &constant.id, TuneDirection::Upgrade)))
+            .find_map(|change| match change {
+                TuningChange::Keyword { keyword, .. } => Some(keyword.kind()),
+                _ => None,
+            });
+        assert_eq!(added, Some(KeywordKind::Flashback));
         let silenced = put(
             &mut state,
             &instance_fx::free_body.id,
@@ -662,7 +676,11 @@ mod b3_4_the_menu_row_by_row_r386 {
             let card = live_mut(&mut state, &spell.id);
             card.cost_mod = -card.cost_mod - 2; // a (0): no cost row for an Upgrade
         }
-        assert_eq!(rows(&state, &spell.id, TuneDirection::Upgrade), json!(["number"]));
+        // R2657005: and Flashback, which a Buff may give any card.
+        assert_eq!(
+            rows(&state, &spell.id, TuneDirection::Upgrade),
+            json!(["keyword", "number"])
+        );
         let mut seen: IndexSet<String> = IndexSet::new();
         for _ in 0..40 {
             if let Some(TuningChange::Number { key, .. }) =
@@ -1671,8 +1689,23 @@ mod r1160_tune_multiplier {
                     saw_cost = true;
                 }
                 TuningChange::Stats { .. } => {}
-                TuningChange::Keyword { keyword, added, also } => {
-                    assert!(!added);
+                // R2657005: a Nerf may give a Unit in a hand Crater, the one keyword it adds, so a
+                // doubled add stops at one.
+                TuningChange::Keyword {
+                    keyword,
+                    added: true,
+                    also,
+                } => {
+                    assert_eq!(keyword.kind(), KeywordKind::Crater);
+                    assert!(also.as_ref().is_none_or(|also| also.is_empty()));
+                    let added = live(&state, &card.id)
+                        .tuning
+                        .clone()
+                        .and_then(|tuning| tuning.add_keywords)
+                        .unwrap_or_default();
+                    assert!(added.iter().any(|kept| kept.kind() == KeywordKind::Crater));
+                }
+                TuningChange::Keyword { keyword, also, .. } => {
                     let also = also.as_ref().expect("a doubled remove takes two keywords");
                     assert_eq!(also.len(), 1);
                     assert_ne!(keyword.kind(), also[0].kind());
@@ -1792,8 +1825,17 @@ mod r1160_tune_multiplier {
                     assert_eq!(attack + health, 3 * TUNE_STAT_TOTAL);
                     up_stats = true;
                 }
-                TuningChange::Keyword { added, also, .. } => {
-                    assert!(added);
+                // R2657005: a Buff may take its Can't attack off, the one keyword it removes, so a
+                // tripled removal stops at one.
+                TuningChange::Keyword {
+                    keyword,
+                    added: false,
+                    also,
+                } => {
+                    assert_eq!(keyword.kind(), KeywordKind::CantAttack);
+                    assert!(also.as_ref().is_none_or(|also| also.is_empty()));
+                }
+                TuningChange::Keyword { also, .. } => {
                     assert_eq!(also.as_ref().map(Vec::len), Some(2));
                     up_keyword = true;
                 }
@@ -1815,8 +1857,8 @@ mod r1160_tune_multiplier {
             let downs = tuned(&events, GameEventType::Degraded);
             assert_eq!(downs.len(), 1);
             match &downs[0].change {
-                TuningChange::Keyword { added, also, .. } => {
-                    assert!(!added);
+                // A removal, or since R2657005 Crater added to it in the hand: one keyword either way.
+                TuningChange::Keyword { also, .. } => {
                     assert_eq!(also, &None);
                     down_keyword = true;
                 }
@@ -1984,9 +2026,10 @@ mod r2261000_tribute_in_play {
             rows(&state, &held.id, TuneDirection::Upgrade),
             json!(["cost", "stats", "keyword", "x"])
         );
+        // R2657005: a Nerf may give a Unit in a hand Crater.
         assert_eq!(
             rows(&state, &held.id, TuneDirection::Degrade),
-            json!(["cost", "stats", "x"])
+            json!(["cost", "stats", "keyword", "x"])
         );
         assert_eq!(play_choices::tribute_cost_of(&state, &live(&state, &held.id)), 2);
         // R386: Buffs in hand until one lands on its Tribute, 2 down to 1, which is what its play asks.

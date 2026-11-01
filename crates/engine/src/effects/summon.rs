@@ -407,8 +407,8 @@ fn summon_existing(
     if card.zone.z() == ZoneName::Field {
         return None;
     }
-    // R2433000: a card in the hand of a seat that plays only Core cards, and of another set, is put
-    // onto the field by no effect: a summon out of a hand is that hand's play.
+    // R2533000: a card in the hand of a seat that plays only the tutorial's cards, and not one of them,
+    // is put onto the field by no effect: a summon out of a hand is that hand's play.
     if let Zone::Hand { player: holder } = card.zone
         && crate::state::barred_from_play(ctx.state, holder, card)
     {
@@ -945,8 +945,9 @@ pub struct RecruitArgs {
 
 /// §6.3 Recruit: summon the library's first matching permanent, top down, per R64 (a Trap face-down).
 /// B5 E25: `from: "exile"` scans newest first; `whose` names whose pile (Classic #1 Radiant takes the
-/// opponent's, its owner unchanged, §3.2, R12); `count` is N whole scans, so a card with no zone fizzles
-/// and the next finds it again (Classic #31 and #65 Radiant, Core #69). (X)-cost cards come last (R690).
+/// opponent's, its owner unchanged, §3.2, R12, but into a graveyard it lands as its controller's,
+/// R2618000); `count` is N whole scans, so a card with no zone fizzles and the next finds it again
+/// (Classic #31 and #65 Radiant, Core #69). (X)-cost cards come last (R690).
 pub fn recruit(args: RecruitArgs) -> Effect {
     Effect::new("recruit", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -1177,7 +1178,7 @@ pub fn summon_random_from_hand(args: SummonRandomFromHandArgs) -> Effect {
             .hand
             .iter()
             .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
-            // R2433000: the pick is among the Units the hand may play.
+            // R2533000: the pick is among the Units the hand may play.
             .filter(|card| !crate::state::barred_from_play(ctx.state, player, card))
             .cloned()
             .collect();

@@ -1,4 +1,4 @@
-//! M #95.1 CN Golem (SPEC §8.8 row 95.1, §7; R42, R80, R311, R1245): (4) Unit, CN, Token, printed
+//! M #95.1 CN Golem (SPEC §8.8 row 95.1, §7; R42, R80, R311, R1245, R2396000): (4) Unit, CN, Token, printed
 //! Legendary, 10/10 → 20/20.
 //!
 //! Base:    "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle
@@ -6,9 +6,11 @@
 //! Radiant: "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle
 //!          {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your opponent's deck."
 //! Engine: the keywords are catalog data (§6.1). A kill trigger, C+ #19.5 Bot Loser's: on each
-//! `destroyed` whose `killerId` is this (R42), Cleave and Poisonous kills included, while it still
-//! stands on the field as the event is dispatched (R1245), `shuffle_into` the opponent's deck
-//! `viruses` CN-Viruses (Core #90.1), the opponent's cards, Radiant on the Radiant face.
+//! `destroyed` whose `killerId` is this (R42), Cleave and Poisonous kills included, even when it has
+//! left the field since, dying in that combat, as the snapshot it killed with and for the player who
+//! controlled it then ("Whenever", `even_if_gone`, R2396000, R212), `shuffle_into` the opponent's deck
+//! `viruses` CN-Viruses (Core #90.1), the opponent's cards, Radiant on the Radiant face; the shuffle-in
+//! is public and recorded in their list (R311), and a full deck refuses it (R80).
 
 use jackioh_engine::prelude::*;
 
@@ -17,9 +19,10 @@ pub const ID: &str = "meditative-095-1";
 /// §7: the CN-Virus it shuffles in.
 const CN_VIRUS: &str = "core-090-1";
 
-/// "Whenever this destroys a Unit, shuffle {viruses} CN-Virus into your opponent's deck."
-fn on_kill(radiant: bool) -> TriggerDef {
-    TriggerDef::new("cn-golem-kill", &[GameEventType::Destroyed], move |ctx, event| {
+/// "Whenever this destroys a Unit, shuffle {viruses} CN-Virus into your opponent's deck." `gone`: it
+/// answers the kill even once it has left the field (R2396000); the v0.5.11 script's did not (R1245).
+fn on_kill(radiant: bool, gone: bool) -> TriggerDef {
+    let trigger = TriggerDef::new("cn-golem-kill", &[GameEventType::Destroyed], move |ctx, event| {
         let killed_by_me = match (event, ctx.self_.as_ref()) {
             (
                 GameEvent::Destroyed {
@@ -40,22 +43,36 @@ fn on_kill(radiant: bool) -> TriggerDef {
         } else {
             Vec::new()
         }
-    })
+    });
+    if gone { trigger.even_if_gone() } else { trigger }
 }
 
-pub fn script() -> CardScripts {
+fn scripts(gone: bool) -> CardScripts {
     let base = Script {
-        triggers: vec![on_kill(false)],
+        triggers: vec![on_kill(false, gone)],
         ..Script::default()
     };
     let radiant = Script {
-        triggers: vec![on_kill(true)],
+        triggers: vec![on_kill(true, gone)],
         ..Script::default()
     };
     CardScripts { base, radiant }
 }
 
-// M #95.1 CN Golem — SPEC §8.8 row 95.1, R1245.
+pub fn script() -> CardScripts {
+    scripts(true)
+}
+
+/// R767000: the scripts v0.5.11 and before ran: the kill answered only while the Golem still stood on
+/// the field as it was dispatched (R1245).
+pub fn script_v0_5_11() -> CardScripts {
+    scripts(false)
+}
+
+// M #95.1 CN Golem — SPEC §8.8 row 95.1, R1245, R2396000: "Rush, Poisonous, Cleave, Pierce, 10/10;
+// whenever it is R42's killer of a Unit, Cleave kills included, even when it has left the field since,
+// `viruses` CN-Viruses go into the opponent's deck, theirs and listed (R311), a full deck refusing them
+// (R80); radiant 20/20 with Windfury (R636), and the viruses Radiant".
 #[cfg(test)]
 mod tests {
     use super::{CN_VIRUS, ID};
@@ -202,20 +219,43 @@ mod tests {
             }
 
             #[test]
-            fn r1245_a_golem_dying_in_the_same_combat_shuffles_nothing() {
+            fn r2396000_a_golem_dying_in_the_same_combat_shuffles_its_virus() {
                 // 9 damage on it already: the Vanilla's 4 back kills it as it kills the Vanilla.
                 let mut s = game(json!({ "damage": 9 }), json!([{ "def": VANILLA, "lane": 3 }]), 4);
                 let golem = golem_id(&s);
                 let target = crate::unit_or_blank(&s, P2, 3);
                 attack_lane(&mut s, &golem, 3);
-                // It was R42's killer of the Vanilla, but no longer stood on the field to hear it.
+                // It was R42's killer of the Vanilla, and "Whenever" answers the kill though it is gone.
                 assert!(destroyed(&s).contains(&(target, Some(golem.clone()))));
                 assert!(destroyed(&s).iter().any(|(id, _)| *id == golem));
                 // A Token that leaves the field ceases to exist.
                 s.expect_in_zone(golem.as_str(), "gone");
-                assert!(viruses(&s, P2).is_empty());
-                assert!(shuffled_in(&s).is_empty());
-                assert_eq!(s.pile(P2, "library").len(), 4);
+                let added = viruses(&s, P2);
+                assert_eq!(added.len(), 1);
+                assert_eq!((added[0].owner, added[0].radiant), (P2, false));
+                assert_eq!(shuffled_in(&s), vec![(P2, CN_VIRUS.to_string())]);
+                assert_eq!(s.pile(P2, "library").len(), 5);
+                assert!(viruses(&s, P1).is_empty());
+            }
+
+            #[test]
+            fn r2396000_a_dying_golem_s_two_cleave_kills_shuffle_two() {
+                let mut s = game(
+                    json!({ "damage": 9 }),
+                    json!([{ "def": VANILLA, "lane": 3 }, { "def": VANILLA, "lane": 4 }]),
+                    4,
+                );
+                let golem = golem_id(&s);
+                attack_lane(&mut s, &golem, 3);
+                // Both Vanillas died, the Golem their killer, and the Golem died with them.
+                let kills = destroyed(&s)
+                    .iter()
+                    .filter(|(_, killer)| killer.as_deref() == Some(golem.as_str()))
+                    .count();
+                assert_eq!(kills, 2);
+                s.expect_in_zone(golem.as_str(), "gone");
+                assert_eq!(viruses(&s, P2).len(), 2);
+                assert_eq!(s.pile(P2, "library").len(), 6);
             }
 
             #[test]
@@ -292,6 +332,25 @@ mod tests {
                 assert_eq!(added.len(), 1);
                 assert!(added[0].radiant);
                 assert_eq!(added[0].owner, P2);
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.5.11 and before, which answered a kill only
+        /// while the Golem still stood on the field (R1245).
+        mod v0_5_11 {
+            use super::*;
+
+            #[test]
+            fn r767000_a_dying_golem_shuffles_nothing() {
+                crate::under_kept(ID, super::super::super::script_v0_5_11(), || {
+                    let mut s = game(json!({ "damage": 9 }), json!([{ "def": VANILLA, "lane": 3 }]), 4);
+                    let golem = golem_id(&s);
+                    attack_lane(&mut s, &golem, 3);
+                    s.expect_in_zone(golem.as_str(), "gone");
+                    assert!(viruses(&s, P2).is_empty());
+                    assert!(shuffled_in(&s).is_empty());
+                    assert_eq!(s.pile(P2, "library").len(), 4);
+                });
             }
         }
     }

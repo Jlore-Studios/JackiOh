@@ -1,11 +1,16 @@
 //! S #137.3 Air Doctrine (SPEC §8.10 row 137.3; R59, R60, R1748001, R1852005, R1859007, R1859010):
 //! (4) Spell, War Doctrine, Token (printed Legendary), `dealsDamage`, a token of the Stinkyscape
-//! set, which #137 Firststrike Capability Discovers and casts.
+//! set, which #137 Starfleet Commander Discovers and casts.
 //!
 //! Base and Radiant: "For the rest of the game, your Units have Rush. Deal damage equal to
 //! {multiplier}× your Starship's Attack, split randomly among all enemies." Multiplier 1, Radiant 2.
 //! Engine: `give_units_keyword { Rush }`, a `unitsHaveKeyword` player modifier for the rest of the
+//! game: every Unit its caster controls has Rush, those that arrive later too, but a Vanilla one
 //! (R1859007). Then, once, as it is cast: §6.3 Damage's split (`damage_split`), N hits of 1, N =
+//! multiplier × the Attack of its caster's launched Starship (`launched_starship_of`, R1852005) as it
+//! stands, each to a random enemy still standing, the hero or a Unit, by the match rng (R60), the
+//! caster's Spell Damage raising each hit (R1859010); no launched Starship, nothing. Tunes: multiplier
+//! 1 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -43,7 +48,7 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-    const STRATOS: &str = "stinkyscape-068"; // (1) 3/3 Starship Piece, Flying: keywords only.
+    const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const VANILLA: &str = "core-008"; // (1) 4/4.
 
     fn hits(s: &Scenario) -> Vec<String> {
@@ -56,10 +61,13 @@ mod tests {
             .collect()
     }
 
+    /// p1's Starship (two AP Rounds, 6/2), launched if `launch`; p2 with two Mr. Vanillas; the Doctrine
+    /// (Radiant if `radiant`) in p1's hand, not yet cast. Returns the scenario and what an enemy hit may
+    /// name: p2's hero and Units.
     fn board(seed: &str, radiant: bool, launch: bool) -> (Scenario, Vec<String>) {
         let (mut s, ship) = built_starship(
             seed,
-            json!([{ "def": STRATOS, "lane": 1 }, { "def": STRATOS, "lane": 2 }]),
+            json!([{ "def": AP_ROUNDS, "lane": 1 }, { "def": AP_ROUNDS, "lane": 2 }]),
             json!({
                 "hand": [{ "def": ID, "radiant": radiant }, VANILLA],
                 "field": [{ "def": VANILLA, "lane": 3 }],

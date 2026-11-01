@@ -190,6 +190,7 @@ describe("B28 Game plays sound in step with its runner", () => {
   });
 });
 
+// B29: the mute toggle
 describe("B29 AudioToggle", () => {
   it("B29 renders an unpressed button labeled Mute sound while not muted", () => {
     render(<AudioToggle />);
@@ -266,6 +267,7 @@ describe("B29 AudioToggle", () => {
   });
 });
 
+// B30: the full controls
 describe("B30 AudioControls", () => {
   function input(id: string): HTMLInputElement {
     const el = screen.getByTestId(id);
@@ -377,6 +379,7 @@ describe("B30 AudioControls", () => {
   });
 });
 
+// B31: UI ticks
 describe("B31 UI click and hover sounds", () => {
   const PAGE = (
     <>
@@ -699,6 +702,7 @@ describe("B58 the board's animations hold background voice work", () => {
   });
 });
 
+// B52: one set of page-wide listeners
 describe("B52 the unlock and the UI ticks are page-wide, installed once", () => {
   it("B52 the app root and a Game share one set of listeners: a click ticks once and unlocks once", () => {
     const engine = recordingEngine({ state: "locked" });
@@ -749,6 +753,7 @@ describe("B52 the unlock and the UI ticks are page-wide, installed once", () => 
   });
 });
 
+// B54: a setting you can hear
 describe("B54 changing a sound setting answers with a sound", () => {
   it("B54 unmuting with the toggle plays uiClick after the store says unmuted; muting plays nothing more", () => {
     const engine = recordingEngine({ state: "running" });

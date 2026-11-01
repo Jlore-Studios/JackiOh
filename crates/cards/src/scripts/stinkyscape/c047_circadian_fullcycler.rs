@@ -1,8 +1,8 @@
-//! S #47 Circadian Fullcycler (SPEC §8.10 row 47): (2) Field Spell, Epic, a card of the Stinkyscape set.
-//!   Base:    "Brittle 5. Aura: The AI plays each of your turns. End of turn: Summon a Drone Corvette."
-//!   Radiant: "Brittle 5. Aura: The AI plays each of your turns. End of turn: Summon a Radiant Drone
+//! S #47 Circadian Fullcycler (SPEC §8.10 row 47): (3) Field Spell ((2) with Brittle 5 until #2657), Epic, a card of the Stinkyscape set.
+//!   Base:    "Brittle 3. Aura: The AI plays each of your turns. End of turn: Summon a Drone Corvette."
+//!   Radiant: "Brittle 3. Aura: The AI plays each of your turns. End of turn: Summon a Radiant Drone
 //!             Corvette."
-//! Engine: Brittle 5 is the catalog's numbered keyword, its count started as the card enters (R385). The
+//! Engine: Brittle 3 is the catalog's numbered keyword, its count started as the card enters (R385). The
 //!   autopilot as an aura (R1844000), `pilotsTurn`: each of its controller's turns while it stands is
 //!   R1183002's autopilot's from its start, its first prompts too, within R1183003's bound; a whole turn
 //!   beats any count, and one that crumbles as a turn begins leaves that turn to its player. One that
@@ -37,7 +37,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #47 Circadian Fullcycler — SPEC §8.10 row 47, BUILD M12 row S 47 (R1183003, R1844000, R385).
+// S #47 Circadian Fullcycler — SPEC §8.10 row 47, BUILD M12 row S 47: "each of your turns while it stands
+// is the autopilot's, within its bound (R1844000, R1183003); End of turn: a Drone Corvette summoned;
+// Brittle 3 crumbles it (R385); radiant: a Radiant Corvette".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -114,7 +116,7 @@ mod tests {
         assert!(!engaged(s.last_events(), P1), "the turn it arrives is p1's own");
         assert_eq!(s.state().active, P1);
         let id = s.backrow(P1, 1).expect("the Fullcycler in lane 1").id;
-        assert_eq!(active_brittle_count(s.card(id.as_str())), Some(5), "Brittle 5 starts as it enters");
+        assert_eq!(active_brittle_count(s.card(id.as_str())), Some(3), "Brittle 3 starts as it enters");
     }
 
     #[test]

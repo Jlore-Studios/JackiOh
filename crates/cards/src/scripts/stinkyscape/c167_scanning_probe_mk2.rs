@@ -23,6 +23,8 @@ pub fn script() -> CardScripts {
                 def_id: t_anomaly_found::ID.to_string(),
             })]
         })),
+        // R2476000: the chances its scan rolls at, as S #166 shows them.
+        preview: Some(super::c166_scanning_probe_mk1::probe_preview()),
         ..Script::default()
     };
     // The same script: each face's Lucky (1, Radiant 3) is its printed keyword, which the scan reads.
@@ -146,6 +148,22 @@ mod tests {
             let (shiny, plain) = rates(true);
             assert!((245..=303).contains(&(shiny + plain)), "{} finds in {SEEDS}", shiny + plain);
             assert!((50..=98).contains(&shiny), "{shiny} Radiant finds in {SEEDS}");
+        }
+    }
+
+    /// R2476000: in hand, the Mk2 previews the chances its scan rolls at as the Mk1 does: 5 and 20, and
+    /// 6 and 24 after a miss of either Probe's.
+    #[test]
+    fn r2476000_in_hand_it_previews_the_chances_its_misses_have_grown_to() {
+        for radiant in [false, true] {
+            let mut s = setup("probe-167-preview", json!([{ "def": PROBE, "radiant": radiant }, FILLER]), None);
+            let probe = s.card(PROBE).id.clone();
+            let chances = |radiant: i32, plain: i32| {
+                vec![("5% chance".to_string(), radiant, None), ("20% chance".to_string(), plain, None)]
+            };
+            assert_eq!(crate::preview_seen(&s, P1, &probe), chances(5, 20));
+            s.state_mut().players[P1].anomaly_misses = Some(1);
+            assert_eq!(crate::preview_seen(&s, P1, &probe), chances(6, 24), "radiant {radiant}");
         }
     }
 }

@@ -1,7 +1,41 @@
-//! `cargo jackioh patches retcon`: renames shipped versions to match classifier tiering (#306, #1360, #1371, R1371000).
-//! Computes version names sequentially using `versions::name_by_tier` (R1366000).
-//! Updates patch snapshots, win rates, card metrics (R2173000), `patches.json`, `aliases.json`, and database migrations.
-//! Flag `--records <dir>` rewrites external record files. Idempotent once `aliases.json` exists.
+//! `cargo jackioh patches retcon [--dry-run] [--records <dir>...]` (#1371, part 7 of #1360,
+//! R1371000): every shipped version renamed to what the classifier would have called it.
+//!
+//! The map is computed, never written by hand. In `patches.json`'s order, each shipped version's
+//! tier is `classify::classify` over stage 1 (`classify::read_diff`) of its snapshot against the one
+//! before it, each with the sets its cards belong to (as `patches ship` reads it, R1366000), plus the
+//! card scripts its own shipping commits changed (`commits`, each against its first parent), from the
+//! Rust scripts on (v0.3.0, #306; the TypeScript scripts before them leave the snapshots, the recorded
+//! `changes`, to speak alone). A script change counts only when it shipped beside a catalog change,
+//! in the commit that shipped the patch: the mass rewrites (the Rust rewrite, the Luau port and its
+//! return) shipped in no patch, so they claim nothing. No stage 2 runs here. The names follow in order
+//! from `FIRST_VERSION`, each named after the one before it by `versions::name_by_tier`.
+//!
+//! The dry run prints the map. The write renames every version the repository stores, once:
+//! - `crates/cards/patches/`: the snapshots, `win_rates/<version>.json` and
+//!   `card_metrics/<version>.json` (R2173000) renamed, `patches.json`'s
+//!   versions with each patch's `tier` and `plays`, `shipped.json`, `index.json`, and
+//!   `aliases.json`, the map, which only readers of an unmarked file consult (R1371000);
+//! - every `CATALOG_VERSION` site (`patch::bump_sites`);
+//! - every other file that spells an old version (`rewrite_tree`): its data files whole, its code's
+//!   string literals, never its comments or its docs, which keep their old names (the map table in
+//!   `docs/issues-and-patches.md` translates them), and a file named after a version renamed;
+//! - the migration that renames every catalog version the database holds, `NNNN_version_retcon.sql`
+//!   under `crates/server/migrations/`, written from the map (`migration_sql`).
+//!
+//! A tree holding `aliases.json` was retconned already, and a second run changes nothing. `--records
+//! <dir>` rewrites the record files under a directory outside the repository (the training boxes'
+//! `~/training-out`) and marks each (`mark_record`), skipping any already marked.
+//!
+//! R2532000: `patches retcon --from <version> [--rule <version>]... [--dry-run]` is the v0.5 retcon
+//! (#2532), a second run over a tree whose `aliases.json` names an older scheme than
+//! `VERSIONS_SCHEME`. Every version before `--from` keeps its name, tier and plays; from it on each
+//! takes the tier the classifier names now (R2455000, R2499000), read as `patches ship` reads a
+//! patch: its snapshot against the one before it, the families its record plays, and a rule every
+//! game meets where `--rule` names it, as stage 2 measured against the base build (no record holds
+//! it). The write renames as the first run does, through the migration `NNNN_v0_5_retcon.sql`, and
+//! `aliases.json` keeps scheme 1's names, now mapped to today's, and gains `marked`: each older
+//! marked scheme's names this run renamed.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -149,6 +183,20 @@ pub fn map_table(map: &[Renamed]) -> String {
 pub struct Aliases {
     pub versions: u32,
     pub aliases: IndexMap<String, String>,
+    /// R2532000: for each older marked scheme, its names a later run renamed, to their names now.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub marked: IndexMap<String, IndexMap<String, String>>,
+}
+
+impl Aliases {
+    /// R2532000: what a file of `scheme` renames to reach today's names: scheme 1's map, an older
+    /// marked scheme's renames, or nothing.
+    pub fn renames_from(&self, scheme: u32) -> IndexMap<String, String> {
+        if scheme <= 1 {
+            return self.aliases.clone();
+        }
+        self.marked.get(&scheme.to_string()).cloned().unwrap_or_default()
+    }
 }
 
 pub fn aliases_path(repo_root: &Path) -> PathBuf {
@@ -163,7 +211,108 @@ pub fn aliases_of(map: &[Renamed]) -> Aliases {
             .iter()
             .map(|renamed| (renamed.old.clone(), renamed.new.clone()))
             .collect(),
+        marked: IndexMap::new(),
     }
+}
+
+/// R2532000: the second run's map: every version before `from` as it is, and from it on each by the
+/// tier the classifier names now (module header), `rules` naming those whose rule every game meets.
+pub fn compute_scoped_map(dir: &Path, from: &str, rules: &[String]) -> anyhow::Result<Vec<Renamed>> {
+    let patches = read_patches(&dir.join("patches.json"))?;
+    let start = patches
+        .iter()
+        .position(|patch| patch.version == from)
+        .with_context(|| format!("--from {from} is no shipped version"))?;
+    for rule in rules {
+        if !patches[start..].iter().any(|patch| &patch.version == rule) {
+            bail!("--rule {rule} names no version from {from} on");
+        }
+    }
+    let mut previous: Option<Catalog> = None;
+    let mut newest: Option<String> = None;
+    let mut map = Vec::with_capacity(patches.len());
+    for (at, patch) in patches.into_iter().enumerate() {
+        let snapshot = read_snapshot(&patch.version, dir)?;
+        let renamed = if at < start {
+            Renamed {
+                tier: patch
+                    .tier
+                    .with_context(|| format!("{} records no tier", patch.version))?,
+                plays: patch.plays.unwrap_or_default(),
+                new: patch.version.clone(),
+                old: patch.version,
+            }
+        } else {
+            let plays = patch.plays.unwrap_or_default();
+            let rule = rules.contains(&patch.version);
+            let (tier, plays) = scoped_tier(previous.as_ref(), &snapshot, &plays, rule);
+            let after = newest
+                .as_deref()
+                .with_context(|| format!("--from {from} has no version before it"))?;
+            let new =
+                name_by_tier(tier, after).with_context(|| format!("{} cannot be named", patch.version))?;
+            Renamed {
+                old: patch.version,
+                new,
+                tier,
+                plays,
+            }
+        };
+        newest = Some(renamed.new.clone());
+        previous = Some(snapshot);
+        map.push(renamed);
+    }
+    let names: BTreeSet<&str> = map.iter().map(|renamed| renamed.new.as_str()).collect();
+    if names.len() != map.len() {
+        bail!("the map names two versions alike");
+    }
+    Ok(map)
+}
+
+/// R2532000: one version's tier now and its families, as `patches ship` reads a patch (R1366000).
+pub fn scoped_tier(
+    previous: Option<&Catalog>,
+    snapshot: &Catalog,
+    plays: &[String],
+    rule: bool,
+) -> (Tier, Vec<String>) {
+    let before = previous.map_or_else(
+        || Side::of_catalog(Catalog::new(), Vec::new()),
+        |catalog| Side::of_catalog(catalog.clone(), sets_of(catalog)),
+    );
+    let after = Side::of_catalog(snapshot.clone(), sets_of(snapshot));
+    let diff = classify::read_diff(&before, &after, &[]);
+    let checked = classify::Checked {
+        scripts: plays.iter().map(|id| classify::family(id)).collect(),
+        rule,
+        ..classify::Checked::default()
+    };
+    let classification = classify::classify(&diff, Some(&checked));
+    (classification.tier.unwrap_or(Tier::Micro), classification.cards)
+}
+
+/// R2532000: the map file after a second run: scheme 1's names mapped on to today's, and the
+/// renames of the scheme `held` names, under its number. A third run would compose the marked
+/// schemes too, so it is refused until it is needed.
+pub fn scoped_aliases(held: &Aliases, map: &[Renamed]) -> anyhow::Result<Aliases> {
+    if !held.marked.is_empty() {
+        bail!("aliases.json already maps a marked scheme; a third retcon must compose them");
+    }
+    let renames: IndexMap<String, String> = map
+        .iter()
+        .filter(|renamed| renamed.old != renamed.new)
+        .map(|renamed| (renamed.old.clone(), renamed.new.clone()))
+        .collect();
+    let now = |name: &String| renames.get(name).cloned().unwrap_or_else(|| name.clone());
+    Ok(Aliases {
+        versions: VERSIONS_SCHEME,
+        aliases: held
+            .aliases
+            .iter()
+            .map(|(old, new)| (old.clone(), now(new)))
+            .collect(),
+        marked: [(held.versions.to_string(), renames)].into_iter().collect(),
+    })
 }
 
 /// What a write changed, for the summary it prints.
@@ -177,8 +326,22 @@ pub struct Written {
 
 /// R1371000: renames stored versions through map, computing all changes before writing.
 pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written> {
+    write_with(repo_root, map, &aliases_of(map), &FIRST_RETCON)
+}
+
+/// R1371000, R2532000: the write, with the map file it leaves (`aliases`) and the migration it adds
+/// (`retcon`).
+fn write_with(
+    repo_root: &Path,
+    map: &[Renamed],
+    aliases: &Aliases,
+    retcon: &RetconSql,
+) -> anyhow::Result<Written> {
     let dir = repo_root.join(PATCHES_REL);
-    let names: IndexMap<String, String> = aliases_of(map).aliases;
+    let names: IndexMap<String, String> = map
+        .iter()
+        .map(|renamed| (renamed.old.clone(), renamed.new.clone()))
+        .collect();
     let new_of = |old: &str| -> anyhow::Result<String> {
         names
             .get(old)
@@ -249,8 +412,8 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
         }
     }
     let tree = rewrite_tree(repo_root, &names)?;
-    let (number, migration) = migration_path(repo_root)?;
-    let sql = migration_sql(number, map);
+    let (number, migration) = migration_path(repo_root, retcon.suffix)?;
+    let sql = migration_sql_for(number, map, retcon);
     let migration_name = migration
         .file_name()
         .and_then(|name| name.to_str())
@@ -309,7 +472,7 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
         }
     }
     // Last, the marker: a run that failed before here runs again over the same tree.
-    write_json(&aliases_path(repo_root), &aliases_of(map))?;
+    write_json(&aliases_path(repo_root), aliases)?;
     Ok(Written {
         snapshots: snapshots.len(),
         files: tree.iter().filter(|file| file.text.is_some()).count() + others.len(),
@@ -322,18 +485,21 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
 pub fn run(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     let mut dry_run = false;
     let mut records = Vec::new();
+    let (mut from, mut rules) = (None, Vec::new());
     let mut args = argv.iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--dry-run" => dry_run = true,
             "--records" => records.push(PathBuf::from(args.next().context("--records needs a directory")?)),
+            "--from" => from = Some(args.next().context("--from needs a version")?.clone()),
+            "--rule" => rules.push(args.next().context("--rule needs a version")?.clone()),
             other => bail!("patches retcon: unknown argument {other}"),
         }
     }
     if !records.is_empty() {
         let aliases = read_aliases(repo_root)?;
         for dir in &records {
-            let report = rewrite_records(dir, &aliases.aliases, dry_run)?;
+            let report = rewrite_records(dir, &aliases, dry_run)?;
             println!(
                 "patches retcon: {}: {} record file(s) marked, {} renamed, {} already marked{}",
                 dir.display(),
@@ -350,11 +516,44 @@ pub fn run(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
         return Ok(());
     }
     if aliases_path(repo_root).exists() {
+        let held = read_aliases(repo_root)?;
+        if held.versions >= VERSIONS_SCHEME {
+            println!(
+                "patches retcon: {} names scheme {}, so this tree was retconned already; nothing changed",
+                aliases_path(repo_root).display(),
+                held.versions
+            );
+            return Ok(());
+        }
+        // R2532000: a tree of an older scheme takes the scoped run.
+        let from = from.context(format!(
+            "aliases.json names scheme {}, older than {VERSIONS_SCHEME}: name the first version to rename with --from",
+            held.versions
+        ))?;
+        let map = compute_scoped_map(&repo_root.join(PATCHES_REL), &from, &rules)?;
+        print!("{}", map_table(&map));
+        let aliases = scoped_aliases(&held, &map)?;
+        if dry_run {
+            let renamed = map.iter().filter(|renamed| renamed.old != renamed.new).count();
+            println!(
+                "patches retcon --dry-run: {renamed} of {} versions renamed from {from}; nothing written",
+                map.len()
+            );
+            return Ok(());
+        }
+        let written = write_with(repo_root, &map, &aliases, &V05_RETCON)?;
         println!(
-            "patches retcon: {} exists, so this tree was retconned already; nothing changed",
+            "patches retcon: renamed the versions from {from} ({} snapshots), rewrote {} file(s), renamed {}, wrote {} and {}",
+            written.snapshots,
+            written.files,
+            written.renamed,
+            written.migration.display(),
             aliases_path(repo_root).display()
         );
         return Ok(());
+    }
+    if from.is_some() || !rules.is_empty() {
+        bail!("--from and --rule are for a tree retconned before (aliases.json)");
     }
     let map = compute_map(repo_root, &repo_root.join(PATCHES_REL))?;
     print!("{}", map_table(&map));
@@ -409,11 +608,13 @@ const SKIP_PREFIXES: &[&str] = &[
 const SKIP_FILES: &[&str] = &[
     "crates/cards/src/versions.rs",
     "apps/web/src/replay/retcon.test.ts",
+    "apps/web/src/replay/retcon-v05.test.ts",
     "crates/tools/src/patches.rs",
     "crates/tools/src/classify.rs",
     "crates/tools/src/retcon.rs",
     "crates/server/tests/sql/14_patch_retcon.sql",
     "crates/server/tests/sql/28_version_retcon.sql",
+    "crates/server/tests/sql/38_v0_5_retcon.sql",
 ];
 
 /// How a file's versions are found: everywhere in a data file, in a code file's string literals.
@@ -605,7 +806,31 @@ pub fn rewrite_tree(repo_root: &Path, map: &IndexMap<String, String>) -> anyhow:
 /* the migration */
 
 const MIGRATIONS_REL: &str = "crates/server/migrations";
-const MIGRATION_SUFFIX: &str = "_version_retcon.sql";
+
+/// Which retcon a migration is: the issue its temporary table and function are named after, its
+/// heading, the scheme marker a game record takes, and its file's suffix.
+pub struct RetconSql {
+    pub issue: u32,
+    pub title: &'static str,
+    pub marker: u32,
+    pub suffix: &'static str,
+}
+
+/// R1371000: the version retcon's, migration 0049.
+pub const FIRST_RETCON: RetconSql = RetconSql {
+    issue: 1371,
+    title: "the version retcon (issue #1371, part 7 of #1360, R1371000)",
+    marker: 2,
+    suffix: "_version_retcon.sql",
+};
+
+/// R2532000: the v0.5 retcon's.
+pub const V05_RETCON: RetconSql = RetconSql {
+    issue: 2532,
+    title: "the v0.5 retcon (issue #2532, R2532000)",
+    marker: VERSIONS_SCHEME,
+    suffix: "_v0_5_retcon.sql",
+};
 
 /// R1371000: the season a version plays in (R609's `v<major>.<minor>`), `None` for a name it cannot read.
 fn season_of(version: &str) -> Option<String> {
@@ -623,12 +848,29 @@ fn season_of(version: &str) -> Option<String> {
 /// map: a single statement per column joined to the map, so a name the map reuses (the old v0.3.4
 /// becomes v0.2.7b while the new v0.3.4 is the old v0.3.12) is renamed from its old value only. A
 /// column a key holds goes through a `~` name first, so no row meets a name another row still holds.
-pub fn migration_sql(number: u32, map: &[Renamed]) -> String {
-    let pairs: Vec<String> = map
+/// R2532000: `retcon` names the run: the first (`FIRST_RETCON`) or the v0.5 retcon (`V05_RETCON`).
+pub fn migration_sql_for(number: u32, map: &[Renamed], retcon: &RetconSql) -> String {
+    let RetconSql {
+        issue, title, marker, ..
+    } = retcon;
+    let renamed: Vec<&Renamed> = map.iter().filter(|renamed| renamed.old != renamed.new).collect();
+    let pairs: Vec<String> = renamed
         .iter()
-        .filter(|renamed| renamed.old != renamed.new)
         .map(|renamed| format!("  ('{}', '{}')", renamed.old, renamed.new))
         .collect();
+    // R2532000: the renaming function holds the map as two constant arrays, so a call never queries,
+    // the longest names first, so a name another holds (v0.5.1 in v0.5.10) is looked for after it.
+    let mut renamed = renamed;
+    renamed.sort_by(|a, b| b.old.len().cmp(&a.old.len()).then_with(|| a.old.cmp(&b.old)));
+    let quoted = |names: Vec<&str>| {
+        names
+            .iter()
+            .map(|name| format!("'{name}'"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let olds = quoted(renamed.iter().map(|renamed| renamed.old.as_str()).collect());
+    let news = quoted(renamed.iter().map(|renamed| renamed.new.as_str()).collect());
     let mut table = String::new();
     for renamed in map {
         table.push_str(&format!("--   {:<9} {}\n", renamed.old, renamed.new));
@@ -661,7 +903,7 @@ end $$;
     };
     format!(
         r#"-- ============================================================================
--- Migration {number:04}: the version retcon (issue #1371, part 7 of #1360, R1371000)
+-- Migration {number:04}: {title}
 -- ============================================================================
 -- GENERATED by `cargo jackioh patches retcon` from its map; never edit it.
 --
@@ -670,8 +912,8 @@ end $$;
 --
 --   old       new
 {table}--
--- Old and new names overlap (the old v0.3.4 is the new v0.2.7b while the new
--- v0.3.4 is the old v0.3.12), so no name is renamed twice: each column is
+-- Old and new names overlap (a new name can be another version's old one), so
+-- no name is renamed twice: each column is
 -- renamed in one statement joined to the map on its old value, and a column a
 -- key holds (a record id, a totals table's patch) goes through a `~` name
 -- first. Not safe to re-apply (the migration runner applies each file once).
@@ -683,90 +925,109 @@ end $$;
 -- version of `seasons`; a game record's
 -- patch and id (`dev:<patch>:<series>:<n>`, its series' own versions too),
 -- with their copies in its record, which takes the scheme marker
--- (`versions: 2`) so an export of it is never read through the map again; the
--- totals' patches and the record ids they keep; and `app.settings`' catalog
+-- (`versions: {marker}`) so an export of it is never read through the map again,
+-- each of a renamed version alone; the totals' patches (`game_totals`' among
+-- them, 0063) and the record ids they keep; and `app.settings`' catalog
 -- version, last, after the `cards` it names, so its launch grant (0016) finds
 -- every card granted. What stays, as in 0025: `collection_grants` is
 -- append-only and keeps its `launch:<version>` references, which nothing
 -- reads; the loadout tables are never written again (R254).
 -- ============================================================================
 
-create temporary table retcon_1371 (
+create temporary table retcon_{issue} (
   old text primary key,
   new text not null unique
 ) on commit drop;
 
-insert into retcon_1371 (old, new) values
+insert into retcon_{issue} (old, new) values
 {pairs};
 
 -- Every version in a text, each renamed once (`rename_versions` in
 -- crates/tools/src/retcon.rs): a `v<n>.<n>.<n>` and at most one letter, with
 -- no letter, digit, `_` or `.` before it and no letter or digit, nor a dot
--- and a digit, after it.
-create function pg_temp.retcon_1371(s text) returns text
-language plpgsql stable as $fn$
+-- and a digit, after it. Each old name becomes a placeholder first and each
+-- placeholder its new name after, so a name another one is renamed to is
+-- never renamed again; every pass is one `regexp_replace` or `replace` over
+-- the whole text, taken only for a name the text holds, so a long text (a
+-- card's co-played map) costs a pass per name it holds, never a call per
+-- version (R2532000: 0049's call per version ran for minutes over a season of
+-- totals and timed the deploy out).
+create function pg_temp.retcon_{issue}(s text) returns text
+language plpgsql immutable as $fn$
 declare
-  pattern constant text := '(?<![0-9A-Za-z_.])v[0-9]+\.[0-9]+\.[0-9]+[a-z]?(?![0-9A-Za-z]|\.[0-9])';
-  pieces text[];
-  tokens text[];
-  result text;
+  olds constant text[] := array[{olds}]::text[];
+  news constant text[] := array[{news}]::text[];
 begin
-  if s is null then
-    return null;
+  if s is null or s !~ 'v[0-9]' then
+    return s;
   end if;
-  pieces := regexp_split_to_array(s, pattern);
-  select array_agg(t.m[1] order by t.n) into tokens
-    from regexp_matches(s, '(' || pattern || ')', 'g') with ordinality as t(m, n);
-  result := pieces[1];
-  for i in 1 .. coalesce(array_length(tokens, 1), 0) loop
-    result := result || coalesce((select r.new from retcon_1371 r where r.old = tokens[i]), tokens[i])
-      || pieces[i + 1];
+  for k in 1 .. coalesce(array_length(olds, 1), 0) loop
+    if strpos(s, olds[k]) > 0 then
+      -- A record id's version stands between `:`s (its patch) or `-`s (a
+      -- series'); those are renamed by `replace`, anything else by the regex.
+      s := replace(replace(s, ':' || olds[k] || ':', ':' || chr(1) || k || chr(2) || ':'),
+                   '-' || olds[k] || '-', '-' || chr(1) || k || chr(2) || '-');
+      if strpos(s, olds[k]) > 0 then
+        s := regexp_replace(s, '(?<![0-9A-Za-z_.])' || replace(olds[k], '.', '\.') || '(?![0-9A-Za-z]|\.[0-9])',
+                            chr(1) || k || chr(2), 'g');
+      end if;
+    end if;
   end loop;
-  return result;
+  if strpos(s, chr(1)) = 0 then
+    return s;
+  end if;
+  for k in 1 .. coalesce(array_length(news, 1), 0) loop
+    s := replace(s, chr(1) || k || chr(2), news[k]);
+  end loop;
+  return s;
 end $fn$;
 
 update public.cards t set catalog_version = m.new
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.tickets t set catalog_version = m.new
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.matches t set catalog_version = m.new
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.decks t set catalog_version = m.new
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.series t set catalog_version = m.new, version = t.version + 1
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.match_checkpoints t set catalog_version = m.new
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.bots t set decks_catalog_version = m.new
-  from retcon_1371 m where t.decks_catalog_version = m.old;
+  from retcon_{issue} m where t.decks_catalog_version = m.old;
 update public.bots t set trio_catalog_version = m.new
-  from retcon_1371 m where t.trio_catalog_version = m.old;
+  from retcon_{issue} m where t.trio_catalog_version = m.old;
 update public.duos_matches t
    set options = jsonb_set(t.options, '{{catalogVersion}}', to_jsonb(m.new))
-  from retcon_1371 m where t.options ->> 'catalogVersion' = m.old;
+  from retcon_{issue} m where t.options ->> 'catalogVersion' = m.old;
 update public.practice_seeds t
    set setup = jsonb_set(t.setup, '{{catalogVersion}}', to_jsonb(m.new))
-  from retcon_1371 m where t.setup ->> 'catalogVersion' = m.old;
+  from retcon_{issue} m where t.setup ->> 'catalogVersion' = m.old;
 update public.rated_games t set patch_version = m.new
-  from retcon_1371 m where t.patch_version = m.old;
+  from retcon_{issue} m where t.patch_version = m.old;
 update public.rated_games t set catalog_version = m.new
-  from retcon_1371 m where t.catalog_version = m.old;
+  from retcon_{issue} m where t.catalog_version = m.old;
 update public.seasons t set patch_version = m.new
-  from retcon_1371 m where t.patch_version = m.old;
+  from retcon_{issue} m where t.patch_version = m.old;
 
--- A game record: its patch, its id and their copies in one statement
--- (`game_records_copies_check`), a development id through `dev:~` first
--- (`game_records_dev_id_check` holds throughout), then back.
+-- A game record of a renamed version: its patch, its id and their copies in
+-- one statement (`game_records_copies_check`), a development id through `dev:~`
+-- first (`game_records_dev_id_check` holds throughout), then back. A record
+-- names the version it was played on, and its id a series of that version or
+-- an earlier one (`learned-<version>-…`), so no other record holds a renamed
+-- name, and the rest are left as they are.
 update public.game_records g
    set patch = r.patch,
        id = case when r.renamed = g.id then g.id else 'dev:~' || substr(r.renamed, 5) end,
        record = case when g.record is null then null
                      else g.record || jsonb_build_object(
                        'id', case when r.renamed = g.id then g.id else 'dev:~' || substr(r.renamed, 5) end,
-                       'patch', r.patch, 'versions', 2) end
-  from (select id, pg_temp.retcon_1371(id) as renamed,
-               coalesce((select m.new from retcon_1371 m where m.old = patch), patch) as patch
-          from public.game_records) r
+                       'patch', r.patch, 'versions', {marker}) end
+  from (select id, pg_temp.retcon_{issue}(id) as renamed,
+               coalesce((select m.new from retcon_{issue} m where m.old = patch), patch) as patch
+          from public.game_records
+         where patch in (select old from retcon_{issue})) r
  where g.id = r.id;
 update public.game_records
    set id = 'dev:' || substr(id, 6),
@@ -774,29 +1035,31 @@ update public.game_records
                      else record || jsonb_build_object('id', 'dev:' || substr(id, 6)) end
  where starts_with(id, 'dev:~');
 
--- The totals (0041): their patch is in their key, so through `~` first.
+-- The totals (0041): their patch is in their key, so through `~` first, and a
+-- renamed version's rows take the record ids they keep (a card's co-played
+-- map, a decklist's first record) renamed in the same statement. As with the
+-- records, only a renamed version's rows can hold a renamed name.
 update public.record_totals t set patch = '~' || m.new
-  from retcon_1371 m where t.patch = m.old;
+  from retcon_{issue} m where t.patch = m.old;
 update public.record_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.card_totals t set patch = '~' || m.new
-  from retcon_1371 m where t.patch = m.old;
-update public.card_totals set patch = substr(patch, 2) where starts_with(patch, '~');
 update public.card_totals t
-   set co = (select coalesce(jsonb_object_agg(e.key,
-               case when jsonb_typeof(e.value -> 2) = 'string'
-                    then jsonb_set(e.value, '{{2}}', to_jsonb(pg_temp.retcon_1371(e.value ->> 2)))
-                    else e.value end), '{{}}'::jsonb)
-             from jsonb_each(t.co) e)
- where t.co::text ~ 'v[0-9]';
-update public.decklist_totals t set patch = '~' || m.new
-  from retcon_1371 m where t.patch = m.old;
+   set patch = '~' || m.new,
+       co = pg_temp.retcon_{issue}(t.co::text)::jsonb
+  from retcon_{issue} m where t.patch = m.old;
+update public.card_totals set patch = substr(patch, 2) where starts_with(patch, '~');
+update public.decklist_totals t
+   set patch = '~' || m.new,
+       first_record = pg_temp.retcon_{issue}(t.first_record)
+  from retcon_{issue} m where t.patch = m.old;
 update public.decklist_totals set patch = substr(patch, 2) where starts_with(patch, '~');
-update public.decklist_totals set first_record = pg_temp.retcon_1371(first_record)
- where first_record ~ 'v[0-9]';
+-- The whole games' totals (0063), keyed by patch as the others are.
+update public.game_totals t set patch = '~' || m.new
+  from retcon_{issue} m where t.patch = m.old;
+update public.game_totals set patch = substr(patch, 2) where starts_with(patch, '~');
 {season_sql}
 -- Last: the live version, after the cards it names.
 update app.settings s set value = to_jsonb(m.new)
-  from retcon_1371 m
+  from retcon_{issue} m
  where s.key = 'catalog_version' and s.value = to_jsonb(m.old);
 "#,
         pairs = pairs.join(",\n"),
@@ -856,8 +1119,8 @@ fn registered_migration(
     Ok(out)
 }
 
-/// The migration's path: the one a retcon wrote, else the next number after the newest.
-fn migration_path(repo_root: &Path) -> anyhow::Result<(u32, PathBuf)> {
+/// The migration's path: the one this retcon wrote (`suffix`), else the next number after the newest.
+fn migration_path(repo_root: &Path, suffix: &str) -> anyhow::Result<(u32, PathBuf)> {
     let dir = repo_root.join(MIGRATIONS_REL);
     let mut newest = 0;
     for entry in fs::read_dir(&dir).with_context(|| format!("{} cannot be read", dir.display()))? {
@@ -868,13 +1131,13 @@ fn migration_path(repo_root: &Path) -> anyhow::Result<(u32, PathBuf)> {
         let Ok(number) = digits.parse::<u32>() else {
             continue;
         };
-        if name.ends_with(MIGRATION_SUFFIX) {
+        if name.ends_with(suffix) {
             return Ok((number, dir.join(name)));
         }
         newest = newest.max(number);
     }
     let number = newest + 1;
-    Ok((number, dir.join(format!("{number:04}{MIGRATION_SUFFIX}"))))
+    Ok((number, dir.join(format!("{number:04}{suffix}"))))
 }
 
 /* records outside the repository */
@@ -905,26 +1168,38 @@ fn rename_json(value: &Json, map: &IndexMap<String, String>) -> Json {
     }
 }
 
-/// R1371000: one record object marked: `None` when it carries the marker already (or is no object),
-/// else its versions renamed and `versions: 2` added.
-pub fn mark_record(value: &Json, map: &IndexMap<String, String>) -> Option<Json> {
+/// R1371000: one record object marked: `None` when it carries today's marker already (or is no
+/// object), else its versions renamed from the scheme it names (R2532000: 1 unmarked, else its
+/// `versions`) and `versions: VERSIONS_SCHEME` set.
+pub fn mark_record(value: &Json, aliases: &Aliases) -> Option<Json> {
     let object = value.as_object()?;
-    if object.contains_key("versions") {
-        return None;
-    }
-    let Json::Object(mut renamed) = rename_json(value, map) else {
+    let scheme = match object.get("versions") {
+        None => 1,
+        Some(Json::Number(scheme)) if *scheme >= f64::from(VERSIONS_SCHEME) => return None,
+        Some(Json::Number(scheme)) => *scheme as u32,
+        Some(_) => return None,
+    };
+    let Json::Object(mut renamed) = rename_json(value, &aliases.renames_from(scheme)) else {
         return None;
     };
     renamed.insert("versions".to_string(), Json::Number(f64::from(VERSIONS_SCHEME)));
     Some(Json::Object(renamed))
 }
 
+/// Whether a record object carries today's marker.
+fn marked_now(value: &Json) -> bool {
+    matches!(
+        value.as_object().and_then(|object| object.get("versions")),
+        Some(Json::Number(scheme)) if *scheme >= f64::from(VERSIONS_SCHEME)
+    )
+}
+
 /// A record file's new text: a `.json` file's one object, or a `.jsonl` file's every line, marked;
 /// `None` when the file is marked already or holds no object to mark.
-fn marked_text(text: &str, lines: bool, map: &IndexMap<String, String>) -> anyhow::Result<Option<String>> {
+fn marked_text(text: &str, lines: bool, aliases: &Aliases) -> anyhow::Result<Option<String>> {
     if !lines {
         let value = js::parse(text).context("not JSON")?;
-        return Ok(mark_record(&value, map).map(|marked| format!("{}\n", js::stringify(&marked))));
+        return Ok(mark_record(&value, aliases).map(|marked| format!("{}\n", js::stringify(&marked))));
     }
     let mut out = String::with_capacity(text.len());
     let mut any = false;
@@ -935,17 +1210,12 @@ fn marked_text(text: &str, lines: bool, map: &IndexMap<String, String>) -> anyho
             continue;
         }
         let value = js::parse(line).context("a line is not JSON")?;
-        match mark_record(&value, map) {
+        match mark_record(&value, aliases) {
             Some(marked) => {
                 any = true;
                 out.push_str(&js::stringify(&marked));
             }
-            None if value
-                .as_object()
-                .is_some_and(|object| object.contains_key("versions")) =>
-            {
-                return Ok(None);
-            }
+            None if marked_now(&value) => return Ok(None),
             None => out.push_str(line),
         }
         out.push('\n');
@@ -953,23 +1223,30 @@ fn marked_text(text: &str, lines: bool, map: &IndexMap<String, String>) -> anyho
     Ok(any.then_some(out))
 }
 
-/// R1371000: the file `--records` leaves in a directory it rewrote. A name carries no marker of its
-/// own, so a directory holding this one is never renamed again.
-pub const RECORDS_MARKER: &str = ".jackioh-versions-2";
+/// R1371000: the file `--records` leaves in a directory it rewrote, `.jackioh-versions-<scheme>`. A
+/// name carries no marker of its own, so a directory holding today's is never renamed again, and one
+/// holding an older one (R2532000) has its names read as that scheme's.
+pub const RECORDS_MARKER_PREFIX: &str = ".jackioh-versions-";
+
+/// The scheme a directory's file names are in: the newest `RECORDS_MARKER_PREFIX` file it holds, else 1.
+fn records_scheme(dir: &Path) -> u32 {
+    (2..=VERSIONS_SCHEME)
+        .rev()
+        .find(|scheme| dir.join(format!("{RECORDS_MARKER_PREFIX}{scheme}")).exists())
+        .unwrap_or(1)
+}
 
 /// R1371000: `--records <dir>`: every `.json` and `.jsonl` file under `dir` (record files, self-play
 /// and positions files, weights) marked and its versions renamed, and every file whose name names an
 /// old version renamed. A marked file's text is left as it is, and a directory holding
-/// `RECORDS_MARKER` is left whole, so a second run changes nothing.
-pub fn rewrite_records(
-    dir: &Path,
-    map: &IndexMap<String, String>,
-    dry_run: bool,
-) -> anyhow::Result<RecordsReport> {
+/// today's `RECORDS_MARKER_PREFIX` file is left whole, so a second run changes nothing.
+pub fn rewrite_records(dir: &Path, aliases: &Aliases, dry_run: bool) -> anyhow::Result<RecordsReport> {
     let mut report = RecordsReport::default();
-    if dir.join(RECORDS_MARKER).exists() {
+    let scheme = records_scheme(dir);
+    if scheme >= VERSIONS_SCHEME {
         return Ok(report);
     }
+    let map = aliases.renames_from(scheme);
     let mut pending = vec![dir.to_path_buf()];
     let mut files = Vec::new();
     while let Some(next) = pending.pop() {
@@ -993,7 +1270,7 @@ pub fn rewrite_records(
         let text = if lines || name.ends_with(".json") {
             let text =
                 fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
-            let marked = marked_text(&text, lines, map).with_context(|| format!("{}", path.display()))?;
+            let marked = marked_text(&text, lines, aliases).with_context(|| format!("{}", path.display()))?;
             if marked.is_none() {
                 report.skipped += 1;
             }
@@ -1001,7 +1278,7 @@ pub fn rewrite_records(
         } else {
             None
         };
-        let renamed = rename_versions(&name, map);
+        let renamed = rename_versions(&name, &map);
         let to = path.with_file_name(&renamed);
         if text.is_some() {
             report.marked += 1;
@@ -1027,8 +1304,11 @@ pub fn rewrite_records(
         }
     }
     if !dry_run {
-        fs::write(dir.join(RECORDS_MARKER), format!("{VERSIONS_SCHEME}\n"))
-            .with_context(|| format!("{} cannot be marked", dir.display()))?;
+        fs::write(
+            dir.join(format!("{RECORDS_MARKER_PREFIX}{VERSIONS_SCHEME}")),
+            format!("{VERSIONS_SCHEME}\n"),
+        )
+        .with_context(|| format!("{} cannot be marked", dir.display()))?;
     }
     Ok(report)
 }
@@ -1316,7 +1596,12 @@ mod tests {
         )
         .expect("a record file");
         fs::write(out.join("cursor-v0.3.4"), "7\n").expect("a cursor");
-        let report = rewrite_records(&out, &map, false).expect("the records");
+        let aliases = Aliases {
+            versions: VERSIONS_SCHEME,
+            aliases: map,
+            marked: IndexMap::new(),
+        };
+        let report = rewrite_records(&out, &aliases, false).expect("the records");
         assert_eq!(
             report,
             RecordsReport {
@@ -1328,10 +1613,12 @@ mod tests {
         let text = fs::read_to_string(out.join("games-v0.3.4.jsonl")).expect("renamed");
         assert_eq!(
             text,
-            "{\"id\":\"dev:v0.3.4:gather:1\",\"patch\":\"v0.3.4\",\"versions\":2}\n{\"id\":\"dev:v0.2.7b:gather:2\",\"patch\":\"v0.2.7b\",\"versions\":2}\n"
+            format!(
+                "{{\"id\":\"dev:v0.3.4:gather:1\",\"patch\":\"v0.3.4\",\"versions\":{VERSIONS_SCHEME}}}\n{{\"id\":\"dev:v0.2.7b:gather:2\",\"patch\":\"v0.2.7b\",\"versions\":{VERSIONS_SCHEME}}}\n"
+            )
         );
         assert!(out.join("cursor-v0.2.7b").exists());
-        let again = rewrite_records(&out, &map, false).expect("the records again");
+        let again = rewrite_records(&out, &aliases, false).expect("the records again");
         assert_eq!(again, RecordsReport::default());
         assert!(
             out.join("cursor-v0.2.7b").exists(),
@@ -1344,21 +1631,208 @@ mod tests {
         );
     }
 
+    /// A tree the first retcon left (scheme 2): v0.5.0 a major, v0.5.1 a patch by a rule alone (one
+    /// family), and v0.5.1b a micro, each with its tier and plays recorded.
+    fn scheme_two() -> TempDir {
+        let dir = TempDir::new();
+        let root = &dir.0;
+        let patches = root.join(PATCHES_REL);
+        fs::create_dir_all(&patches).expect("a folder");
+        fs::create_dir_all(root.join(MIGRATIONS_REL)).expect("a folder");
+        let one = card("core-001", "Core", "One", 1);
+        let snapshots = [
+            ("v0.4.0", vec![one.clone()], "major", vec!["core-001"]),
+            (
+                "v0.5.0",
+                vec![one.clone(), card("stinkyscape-001", "Stinkyscape", "Two", 2)],
+                "major",
+                vec!["stinkyscape-001"],
+            ),
+            (
+                "v0.5.1",
+                vec![one.clone(), card("stinkyscape-001", "Stinkyscape", "Two", 2)],
+                "patch",
+                vec!["core-001"],
+            ),
+            (
+                "v0.5.1b",
+                vec![
+                    card("core-001", "Core", "One", 2),
+                    card("stinkyscape-001", "Stinkyscape", "Two", 2),
+                ],
+                "micro",
+                vec!["core-001"],
+            ),
+        ];
+        for (version, cards, _, _) in &snapshots {
+            fs::write(patches.join(format!("{version}.json")), catalog(cards)).expect("a snapshot");
+        }
+        let list: Vec<_> = snapshots
+            .iter()
+            .map(|(version, _, tier, plays)| {
+                let mut entry = patch(version);
+                entry["tier"] = json!(tier);
+                entry["plays"] = json!(plays);
+                entry
+            })
+            .collect();
+        fs::write(
+            patches.join("patches.json"),
+            serde_json::to_string_pretty(&list).expect("JSON"),
+        )
+        .expect("a list");
+        dir
+    }
+
+    // R2532000: the scoped run keeps every version before `--from` and names the rest by today's
+    // tiers: a patch by a rule alone is a micro unless `--rule` names it.
+    #[test]
+    fn r2532000_the_scoped_map_keeps_what_comes_before_and_retiers_the_rest() {
+        let dir = scheme_two();
+        let patches = dir.0.join(PATCHES_REL);
+        let names = |rules: &[String]| -> Vec<(String, String, Tier)> {
+            compute_scoped_map(&patches, "v0.5.0", rules)
+                .expect("a map")
+                .into_iter()
+                .map(|renamed| (renamed.old, renamed.new, renamed.tier))
+                .collect()
+        };
+        let row = |old: &str, new: &str, tier: Tier| (old.to_string(), new.to_string(), tier);
+        assert_eq!(
+            names(&[]),
+            vec![
+                row("v0.4.0", "v0.4.0", Tier::Major),
+                row("v0.5.0", "v0.5.0", Tier::Major),
+                row("v0.5.1", "v0.5.0b", Tier::Micro),
+                row("v0.5.1b", "v0.5.0c", Tier::Micro),
+            ]
+        );
+        assert_eq!(
+            names(&["v0.5.1".to_string()]),
+            vec![
+                row("v0.4.0", "v0.4.0", Tier::Major),
+                row("v0.5.0", "v0.5.0", Tier::Major),
+                row("v0.5.1", "v0.5.1", Tier::Patch),
+                row("v0.5.1b", "v0.5.1b", Tier::Micro),
+            ]
+        );
+        assert!(compute_scoped_map(&patches, "v0.5.0", &["v0.4.0".to_string()]).is_err());
+        assert!(compute_scoped_map(&patches, "v9.9.9", &[]).is_err());
+    }
+
+    // R2532000: scheme 1's names are mapped on to today's, and the older marked scheme's renames
+    // are kept under its number; the records of either are read through them, once.
+    #[test]
+    fn r2532000_the_map_file_chains_its_schemes_and_records_are_read_once() {
+        let held = Aliases {
+            versions: 2,
+            aliases: [("v0.3.15", "v0.4.0"), ("v0.3.99", "v0.5.1")]
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .into(),
+            marked: IndexMap::new(),
+        };
+        let dir = scheme_two();
+        let map = compute_scoped_map(&dir.0.join(PATCHES_REL), "v0.5.0", &[]).expect("a map");
+        let aliases = scoped_aliases(&held, &map).expect("the map file");
+        assert_eq!(aliases.versions, VERSIONS_SCHEME);
+        assert_eq!(aliases.aliases.get("v0.3.15").map(String::as_str), Some("v0.4.0"));
+        assert_eq!(
+            aliases.aliases.get("v0.3.99").map(String::as_str),
+            Some("v0.5.0b")
+        );
+        let two = aliases.renames_from(2);
+        assert_eq!(two.get("v0.5.1").map(String::as_str), Some("v0.5.0b"));
+        assert_eq!(two.get("v0.5.1b").map(String::as_str), Some("v0.5.0c"));
+        assert!(!two.contains_key("v0.5.0"), "a name kept is no rename");
+        assert!(
+            scoped_aliases(&aliases, &map).is_err(),
+            "a third run must compose"
+        );
+
+        let out = dir.0.join("training-out");
+        fs::create_dir_all(&out).expect("a folder");
+        fs::write(out.join(format!("{RECORDS_MARKER_PREFIX}2")), "2\n").expect("the old marker");
+        fs::write(
+            out.join("games-v0.5.1.jsonl"),
+            "{\"id\":\"dev:v0.5.1:gather:1\",\"patch\":\"v0.5.1\",\"versions\":2}\n",
+        )
+        .expect("a record file");
+        let report = rewrite_records(&out, &aliases, false).expect("the records");
+        assert_eq!((report.marked, report.renamed), (1, 1));
+        assert_eq!(
+            fs::read_to_string(out.join("games-v0.5.0b.jsonl")).expect("renamed"),
+            format!(
+                "{{\"id\":\"dev:v0.5.0b:gather:1\",\"patch\":\"v0.5.0b\",\"versions\":{VERSIONS_SCHEME}}}\n"
+            )
+        );
+        assert_eq!(
+            rewrite_records(&out, &aliases, false).expect("again"),
+            RecordsReport::default()
+        );
+        let sql = migration_sql_for(70, &map, &V05_RETCON);
+        assert!(sql.contains("create temporary table retcon_2532"));
+        assert!(sql.contains("('v0.5.1', 'v0.5.0b')"));
+        assert!(sql.contains(&format!("'versions', {VERSIONS_SCHEME}")));
+        assert!(sql.contains("update public.game_totals t set patch = '~' || m.new"));
+        assert!(!sql.contains("public.seasons (id"), "v0.5 stays v0.5");
+    }
+
+    // R2532000: migration 0068 is what the generator writes from the map its own header lists, so a
+    // fix to the generator reaches the file (this run rewrites it when they differ: commit it). The
+    // first write renamed each co-played record id with a call per version, which ran for minutes
+    // over a season of totals and timed Render's release out; the generator renames a text in one
+    // pass per name, and only a renamed version's rows.
+    #[test]
+    fn r2532000_migration_0068_is_what_the_generator_writes() {
+        let path = repo_root().join(MIGRATIONS_REL).join("0068_v0_5_retcon.sql");
+        let held = fs::read_to_string(&path).expect("migration 0068");
+        let map: Vec<Renamed> = held
+            .lines()
+            .skip_while(|line| !line.starts_with("--   old"))
+            .skip(1)
+            .map_while(|line| line.strip_prefix("--   "))
+            .filter_map(|row| {
+                let mut names = row.split_whitespace();
+                Some(Renamed {
+                    old: names.next()?.to_string(),
+                    new: names.next()?.to_string(),
+                    tier: Tier::Micro,
+                    plays: Vec::new(),
+                })
+            })
+            .collect();
+        assert!(
+            map.iter()
+                .any(|renamed| renamed.old == "v0.5.11" && renamed.new == "v0.5.7")
+        );
+        let written = migration_sql_for(68, &map, &V05_RETCON);
+        if written != held {
+            fs::write(&path, &written).expect("rewrite migration 0068");
+            panic!(
+                "{} differed from what the generator writes; this run rewrote it: commit the result",
+                path.display()
+            );
+        }
+        assert!(
+            !written.contains("jsonb_each(t.co)"),
+            "a co-played map is renamed as one text"
+        );
+    }
+
     // The repository itself, retconned.
 
     #[test]
     fn r1371000_a_marked_replay_under_v0_4_0_and_an_unmarked_one_under_v0_3_15_fold_under_meditative_plus() {
         jackioh_cards::register_all();
-        let marked =
-            crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.4.0", "versions": 2 }), true)
-                .expect("carried")
-                .expect("an older catalog");
+        let marked = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.4.0", "versions": 2 }), 2)
+            .expect("carried")
+            .expect("an older catalog");
         assert!(
             marked.defs().contains_key("meditativeplus-001"),
             "v0.4.0 is Meditative+'s release"
         );
         assert_eq!(marked.version(), "v0.4.0");
-        let unmarked = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.3.15" }), false)
+        let unmarked = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.3.15" }), 1)
             .expect("carried")
             .expect("an older catalog");
         assert!(
@@ -1370,7 +1844,7 @@ mod tests {
     #[test]
     fn r1371000_an_unmarked_v0_3_4_folds_under_the_old_v0_3_4_not_the_new() {
         jackioh_cards::register_all();
-        let unmarked = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.3.4" }), false)
+        let unmarked = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.3.4" }), 1)
             .expect("carried")
             .expect("an older catalog");
         assert_eq!(unmarked.version(), "v0.2.7b");
@@ -1378,10 +1852,9 @@ mod tests {
             !unmarked.defs().contains_key("meditative-001"),
             "the old v0.3.4 shipped before Meditative"
         );
-        let marked =
-            crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.3.4", "versions": 2 }), true)
-                .expect("carried")
-                .expect("an older catalog");
+        let marked = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.3.4", "versions": 2 }), 2)
+            .expect("carried")
+            .expect("an older catalog");
         assert!(
             marked.defs().contains_key("meditative-001"),
             "the new v0.3.4 is the old v0.3.12"
@@ -1400,6 +1873,29 @@ mod tests {
         assert_eq!(
             jackioh_cards::versions::current_version_name("v0.3.17b"),
             "v0.4.0d"
+        );
+    }
+
+    // R2532000: the old v0.5.7 is Training Grounds' release and the new v0.5.7 is the old v0.5.11,
+    // so a replay marked 2 at v0.5.7 folds under the carried new v0.5.5.
+    #[test]
+    fn r2532000_a_replay_marked_2_folds_under_its_v0_5_name_now() {
+        jackioh_cards::register_all();
+        let old = crate::replay::pinned_catalog(&json!({ "catalogVersion": "v0.5.7", "versions": 2 }), 2)
+            .expect("carried")
+            .expect("an older catalog");
+        assert_eq!(old.version(), "v0.5.5");
+        assert!(old.defs().contains_key("traininggrounds-001"));
+        let aliases = read_aliases(&repo_root()).expect("the map");
+        assert_eq!(aliases.versions, VERSIONS_SCHEME);
+        assert_eq!(
+            aliases.renames_from(2).get("v0.5.11").map(String::as_str),
+            Some("v0.5.7")
+        );
+        assert_eq!(
+            aliases.renames_from(2).len(),
+            17,
+            "the v0.5 line's renames, and nothing before it"
         );
     }
 
@@ -1445,13 +1941,13 @@ mod tests {
                 plays: Vec::new(),
             },
         ];
-        let sql = migration_sql(47, &map);
+        let sql = migration_sql_for(47, &map, &FIRST_RETCON);
         assert!(
             sql.contains("insert into public.seasons (id, patch_version, started_at)\n      select 'v0.4'")
         );
         assert!(sql.contains("where id = 'v0.3'"));
         assert!(
-            !migration_sql(
+            !migration_sql_for(
                 47,
                 &map[..1]
                     .iter()
@@ -1459,7 +1955,8 @@ mod tests {
                         new: "v0.3.16".to_string(),
                         ..renamed.clone()
                     })
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>(),
+                &FIRST_RETCON
             )
             .contains("public.seasons (id"),
             "a season that keeps its name is left alone"

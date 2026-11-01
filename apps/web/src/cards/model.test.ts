@@ -243,10 +243,18 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
   });
 
   it("R277 every catalog radiant face prints its catalog text and marks at least one stretch the base text lacks", () => {
-    // Radiant faces that only drop words of the base text mark nothing; #55 Lava Golem's doubled stats
-    // are what R277 marks on it. Meditative #22.1 (R862), #48 (R1021) and #89 (R1225), Classic #28, #29,
-    // #60, Classic+ #5, #34, Meditative+ #11, #12, #13 and Stinkyscape #9, #149 drop words too
-    // (radiantDiff.test.ts names all fourteen).
+    // Designer patch v0.1.1: #55 Lava Golem's Radiant face is its base text less the drawback ("If
+    // opposing Units are used, summon for your opponent."), so its text adds nothing to mark; its
+    // doubled stats are what R277 marks on it.
+    // Classic #60 and Classic+ #5 drop words too, and patch v0.2.1's Classic+ #34 drops "Choose
+    // one." Balance patch 1 gives Classic #28's base face the same minimum price as its Radiant
+    // face, so its Radiant face is its base text less the exile replacement. Meditative #89 Jlarna's
+    // Radiant face is its base text less the end-of-turn Tribute (R1225); #22.1 Fortify Mind's is its
+    // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
+    // as is Classic #29 Book of Vital Kill's since patch v0.3.10, and Meditative+ #11 Living Mana
+    // Potion's less its Tribute, with #12 Living Armor Potion's and #13 Living Health Potion's
+    // The Stinkyscape set's #9 Ticketed drops its Brittle 3 (radiantDiff.test.ts names all thirteen;
+    // #149 Wildar's Radiant face adds "It costs (0)." since #2657, a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
       "classic-028",
@@ -261,7 +269,6 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "meditativeplus-012",
       "meditativeplus-013",
       "stinkyscape-009",
-      "stinkyscape-149",
     ]);
     for (const card of DEFS) {
       const f = face(card.id, true);

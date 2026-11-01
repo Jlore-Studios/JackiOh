@@ -58,10 +58,12 @@ impl Tier {
     }
 }
 
-/// `AI_TUTORIAL` without its Core-only bar (R2433000): the tier's resources. The frozen run deals both
-/// seats from every set, which a lesson's opponent never holds, so the bar would only re-deal it.
+/// `AI_TUTORIAL` without its bar (R2533000) and copies (R2533001): the tier's resources. The frozen run
+/// deals both seats from every set, which a lesson's opponent never holds, so the bar would only
+/// re-deal it, and its decks are distinct.
 const UNBARRED_AI_TUTORIAL: Handicap = Handicap {
-    core_only: None,
+    tutorial_cards_only: None,
+    deck_copies: None,
     ..AI_TUTORIAL
 };
 

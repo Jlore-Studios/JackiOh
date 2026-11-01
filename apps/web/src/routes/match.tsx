@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
+import ConfirmLeaveMatch from "../game/ConfirmLeaveMatch.tsx";
 import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { OnceRevealed } from "../game/Result.tsx";
@@ -40,7 +41,7 @@ import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
 import { getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
-import { navigate, paths } from "../net/navigate.ts";
+import { guardLeaving, navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankCaption, rankShortWords, rankWords } from "../rank/rank.ts";
@@ -330,6 +331,23 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     document.title = yourMove ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
   }, [yourMove, matchId, locale]);
 
+  // R2479000: while the match is live, every way off the board (its Back, the browser's Back, any
+  // in-app move but a forced one) asks first and names the disconnect grace (§9.5). A finished,
+  // voided or refused match has nothing to come back to, so it is left at once.
+  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
+  const atStake =
+    view !== null && view.result === null && match.connection !== "closed" && match.connection !== "refused";
+  useEffect(() => {
+    if (!atStake) return;
+    const release = guardLeaving((leave) => {
+      setLeaving({ leave });
+    });
+    return () => {
+      release();
+      setLeaving(null);
+    };
+  }, [atStake]);
+
   if (view === null) {
     if (match.connection === "refused") {
       return (
@@ -588,6 +606,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         function from the first render on.
       */}
       <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider>
+      {leaving === null ? null : (
+        <ConfirmLeaveMatch
+          onStay={() => {
+            setLeaving(null);
+          }}
+          onLeave={leaving.leave}
+        />
+      )}
     </div>
   );
 }

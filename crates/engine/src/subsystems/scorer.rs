@@ -876,8 +876,10 @@ pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec
     scored
 }
 
-/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`. R2204001: one offer never holds both
-/// cards of a Core-or-snapshot pair; a card whose pair a better-ranked card holds is passed over.
+/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`. R2204001, R2511001: a card whose pair
+/// key (`catalog::pair_key`) a better-ranked card holds is passed over for the next. Only a carried
+/// catalog of v0.5.5 to v0.5.7 pairs two cards, so a replay of those games offers what it did; the
+/// build's catalog pairs none, so its offer is the top three.
 pub fn top_three(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
     let mut pairs: Vec<String> = Vec::new();
     rank(state, viewer, options)

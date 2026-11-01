@@ -15,7 +15,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-078";
 
-/// §8.7: "a random AI generated card" — the AI tag's tokens, which a pool names by asking for tokens.
+/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563, twenty-four since the Stinkyscape release, twenty-five since #2521 added M+ #1.5 Star Chart), which a pool names by asking for tokens.
 fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
@@ -105,8 +105,10 @@ mod tests {
 
     use crate::js;
 
-    /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10, M+ #1.1 to
-    /// #1.4 (#1187, #1563) and Stinkyscape's T-AI-1 to T-AI-10 (#1884).
+    /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1
+    /// Base Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two
+    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen; and the
+    /// Stinkyscape release (#1884) its T-AI-1 to T-AI-10, twenty-four; #2521 M+ #1.5 Star Chart, twenty-five.
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect();
         ids.extend(
@@ -115,6 +117,7 @@ mod tests {
                 "meditativeplus-001-2",
                 "meditativeplus-001-3",
                 "meditativeplus-001-4",
+                "meditativeplus-001-5",
             ]
             .map(String::from),
         );
@@ -195,7 +198,7 @@ mod tests {
         }
 
         #[test]
-        fn s7_the_pool_its_text_names_is_the_twenty_four_ai_generated_cards_tokens_all() {
+        fn s7_the_pool_its_text_names_is_the_twenty_five_ai_generated_cards_tokens_all() {
             crate::register_all();
             let mut pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["AI"], "token": true })))
                 .iter()
@@ -227,7 +230,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_every_seed_draws_from_the_twenty_four_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
+            fn r60_every_seed_draws_from_the_twenty_five_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
                 let mut seen: IndexSet<String> = IndexSet::new();
                 for seed in 0..24 {
                     let seed = format!("datacenter-{seed}");

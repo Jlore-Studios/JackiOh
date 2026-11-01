@@ -2666,3 +2666,40 @@ mod r1379000_the_credential_on_the_handshake {
         assert!(view.is_some(), "{:?}", client.frames());
     }
 }
+
+mod r2478000_co_op_and_watch_upgrades_count_against_the_accounts_budget {
+    //! R2478000: a co-op or watch upgrade is one request against its account's R109 budget, and one
+    //! past it is answered `forbidden` and closed with 4429, as `/ws/match`'s is.
+    use jackioh_server::actor::ws_server::WATCH_PATH;
+    use jackioh_server::api::http::account_key;
+    use jackioh_server::config::API_REQUESTS_PER_MINUTE;
+
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r2478000_a_co_op_or_watch_upgrade_past_the_accounts_budget_is_closed_with_4429() {
+        let app = empty_test_app().await;
+        let ana = account(&app, 1, "ana").await;
+        for _ in 0..API_REQUESTS_PER_MINUTE {
+            assert!(app.limiter.allow(&account_key(&ana.id), now_ms()));
+        }
+        let served = serve(&app);
+
+        for path in [DUOS_PATH, WATCH_PATH] {
+            let client = served.connect(path, &ana.token).await;
+            let (_, _, refusal) = client
+                .wait_for(0, PROMPTLY, |frame| {
+                    frame["type"] == "error" && frame["code"] == "forbidden"
+                })
+                .await
+                .unwrap_or_else(|| panic!("{path}: no forbidden: {:?}", client.frames()));
+            assert_eq!(refusal["message"], "too many requests; slow down", "{path}");
+            assert_eq!(
+                client.wait_closed(PROMPTLY).await,
+                Some(WS_CLOSE.rate_limited),
+                "{path}"
+            );
+            assert!(client.of_type("view").is_empty(), "{path}: {:?}", client.frames());
+        }
+    }
+}

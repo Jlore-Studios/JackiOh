@@ -66,6 +66,18 @@ fn run(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
     vec![]
 }
 
+/// R2476000: "Reveals when you have played 3 cards in a turn" — the cards its controller has played
+/// this turn so far, after "in a turn", until it has activated; then nothing, as the count is spent.
+/// In hand and, face-down, to its controller alone. Plays are public (Core #38's count).
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.self_.memory.get(ACTIVATED).and_then(Value::as_bool) == Some(true) {
+            return vec![];
+        }
+        vec![count_preview("in a turn", cards_played_this_turn(ctx.state, ctx.controller))]
+    })
+}
+
 fn auction() -> TriggerDef {
     TriggerDef::new("auctioneer", &[GameEventType::CardPlayed], run).with_when(|ctx, event| answer(ctx, event).is_some())
 }
@@ -73,6 +85,7 @@ fn auction() -> TriggerDef {
 pub fn script() -> CardScripts {
     let base = Script {
         triggers: vec![auction()],
+        preview: Some(preview()),
         ..Script::default()
     };
 
@@ -159,6 +172,25 @@ mod tests {
 
         mod base {
             use super::*;
+
+            /// R2476000: face-down, its controller reads the plays this turn after "in a turn", 0 then 2;
+            /// the opponent reads nothing; once it has activated it shows nothing.
+            #[test]
+            fn r2476000_it_previews_your_plays_this_turn_until_it_activates() {
+                crate::register_all();
+                for radiant in [false, true] {
+                    let mut s = setup(json!({}), json!({}), radiant);
+                    let auction = s.card(AUCTION).id.clone();
+                    let seen = |s: &Scenario| crate::preview_seen(s, P1, &auction);
+                    assert_eq!(seen(&s), vec![("in a turn".to_string(), 0, None)], "radiant {radiant}");
+                    play_fillers(&mut s, 1, P1);
+                    assert_eq!(seen(&s), vec![("in a turn".to_string(), 1, None)], "radiant {radiant}");
+                    assert!(crate::preview_seen(&s, P2, &auction).is_empty(), "radiant {radiant}");
+                    play_fillers(&mut s, if radiant { 1 } else { 2 }, P1);
+                    assert_eq!(count(s.events(), "trapFired"), 1, "radiant {radiant}");
+                    assert!(seen(&s).is_empty(), "radiant {radiant}: spent once active");
+                }
+            }
 
             #[test]
             fn r395_face_down_only_the_reveal_condition_is_live_your_1st_and_2nd_plays_do_nothing() {

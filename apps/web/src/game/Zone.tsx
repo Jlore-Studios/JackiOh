@@ -19,7 +19,6 @@ import {
   laneIndex,
   sideView,
   testid,
-  touchHoldMode,
   type AnimatingMap,
   type ClickTarget,
   type Highlight,
@@ -115,7 +114,6 @@ export default function Zone(props: ZoneProps): ReactElement {
           unit={unit}
           switchTarget
           target={{ on: "unit", instanceId: unit.instanceId, side, lane }}
-          touchHold={touchHoldMode(view)}
           highlight={props.highlight}
           animating={props.animating}
           onClick={props.onClick}
@@ -128,7 +126,6 @@ export default function Zone(props: ZoneProps): ReactElement {
           side={side}
           seat={seat.player}
           lane={lane}
-          touchHold={touchHoldMode(view)}
           highlight={props.highlight}
           animating={props.animating}
           onClick={props.onClick}

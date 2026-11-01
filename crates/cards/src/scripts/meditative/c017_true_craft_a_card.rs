@@ -20,8 +20,8 @@
 //! THE CLOCK runs while crafting, as for Classic+ #42 KY's Test (R420, R79): no prompt of its own.
 //! The opponent sees only that a prompt is open, then a hidden card (R97).
 //!
-//! Voice audio is owed: the `card-audio.json5` entry is written, and a person with macOS renders
-//! it (`docs/ADDING_CARDS.md` §7).
+//! Voice audio is owed: the `card-audio.json5` entry and its `card-text.yaml` lines are written, and
+//! a person with macOS renders it (`docs/ADDING_CARDS.md` §7).
 //!
 //! `CRAFT_MAX_COST` lives in `config.rs` (CLAUDE.md rule 9).
 

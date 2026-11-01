@@ -1,7 +1,27 @@
-//! SPEC §8.11 Training Grounds #54 The Rock, the snapshot of Core #66 The Rock (`core-066`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #66 (SPEC §8.3): Indestructible; R81, R90 target checks; R17, §4.5, §6.1.
+//! SPEC §8.11 Training Grounds #54 Legacy: The Rock,
+//! the Legacy card of Core #66 The Rock (`core-066`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! #66 The Rock (SPEC §8.3, §6.3 Tribute, §3.2, R23, R46, R69, R81, R90).
+//!
+//! Base "Tribute 1, Indestructible"; radiant "Plus Immutable" (§8 Conventions: the base list plus X).
+//! Both lists are on the catalog faces and §10.4 layer 1 reads them off the def, so this file grants
+//! no keyword. It carries only the Tribute cost (§6.3: "an additional cost of playing a card"), which
+//! `play_choices.rs` validates: `tribute_cost_of` reads `static_flags.tribute`; `tribute_value_of` gives
+//! the Sheep Token 2 and any other unit 1 (§3.2, §6.3); `legal_tribute_units` offers only the chooser's
+//! own units (only #55 Lava Golem sets `tribute_enemies`); `refuse_tributes` refuses an unpayable play.
+//! Chosen units travel in the `play` action's `tributes` (R81, R90), so there is no hook.
+//!
+//! Engine-side: Indestructible takes no damage (§4.4 step 4); R46 and §4.5 step 1 ignore a destroy
+//! mark, and the unit switches to Attack Position and loses Taunt for the turn; R69: it dies anyway
+//! once max health is 0 or less, since no destroy effect is involved; §6.1: Sacrifice and Exile still
+//! remove it. Immutable (R23) blocks Vanilla, Transform and Fuse-onto; Radiant is still allowed and
+//! #41 Sheepish still fires, consumed for nothing (R17).
 
 use jackioh_engine::prelude::*;
 

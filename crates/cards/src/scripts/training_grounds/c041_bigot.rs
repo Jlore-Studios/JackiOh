@@ -1,7 +1,25 @@
-//! SPEC §8.11 Training Grounds #41 Bigot, the snapshot of Core #2 Bigot (`core-002`),
-//! a card of the held Training Grounds set (R1420, R2194000), built by #2195.
-//! Snapshot code not re-exported (R2195003); shares Core name (R2195001), deck holds one (R2195000).
-//! Core #2 (SPEC §8, §8.1): Cry destroy target non-Human (R81, R90); radiant destroy all in one state check (R59).
+//! SPEC §8.11 Training Grounds #41 Legacy: Bigot,
+//! the Legacy card of Core #2 Bigot (`core-002`), a card of the held Training Grounds set (R1420,
+//! R2194000), built by #2195.
+//!
+//! The code is a copy of the Core card's at the foundation's commit, not a re-export, so a later Core
+//! patch does not move it (R2195003); it is named `Legacy: <the Core card's name>`, tagged Legacy
+//! (R2511000), and is its own card, which a deck holds beside the Core card (R2511001). The Core
+//! file's notes, as they stood:
+//!
+//! SPEC §8.1 #2 Bigot — 4/1 → 8/2 Unit, Human, cost 2.
+//! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
+//! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
+//! the radiant form declares no target at all.
+//!
+//! Engine cell: a targeted Cry with a tag filter. The pick is a play-time choice, not a prompt: it
+//! travels in the `play` action and never pauses resolution (R81), the engine checks it against this
+//! declaration and against the board (R90), and a board with no legal enemy non-Human still allows
+//! the play — the unit enters and the Cry fizzles (§8 Conventions, R90).
+//!
+//! The radiant sweep is `destroy_all` (engine/src/effects/destroy.rs) over the enemy's non-Human
+//! units. It marks every match exactly as `destroy` does, so they are all collected in one state
+//! check (R59) and nothing dies between the marks.
 
 use jackioh_engine::effects::{destroy, destroy_all};
 use jackioh_engine::prelude::*;

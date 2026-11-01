@@ -66,7 +66,7 @@ fn change_of<T>(
     }
 }
 
-/// `PUT /api/card-picks` (`AuthLevel::Active`).
+/// `PUT /api/card-picks` (`AuthLevel::Active`), in the account's economy turn (R2378000).
 pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let card_id = str(&req.body, "cardId")?;
@@ -85,6 +85,9 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
     }
     let full_art = change_of(&req.body, FULL_ART_SETTING, Value::as_bool, "a boolean")?;
 
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock below.
+    let _turn = app.spends.claim(&profile.id).await?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     // The row is read, changed and written back: two devices' writes take turns, so neither's
     // change is lost.
@@ -176,7 +179,7 @@ fn keepable(mut picks: CardPicks, owned: &OwnedCosmetics) -> CardPicks {
     picks
 }
 
-/// `POST /api/card-picks/upload` (`AuthLevel::Active`).
+/// `POST /api/card-picks/upload` (`AuthLevel::Active`), in the account's economy turn (R2378000).
 pub async fn upload_card_picks(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let Some(entries) = req.body.get("cards").and_then(Value::as_array) else {
@@ -193,6 +196,9 @@ pub async fn upload_card_picks(app: &Arc<App>, req: Req) -> ApiResult {
         .map(upload_entry)
         .collect::<Result<Vec<CardPicks>, ApiError>>()?;
 
+    // R2378000: the account's turn first, so a burst waits here holding no database
+    // connection, not on the economy lock below.
+    let _turn = app.spends.claim(&profile.id).await?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     // What the account owns is read and the rows it lacks are written: under the lock
     // `put_card_pick` takes, a `PUT` from another device takes its turn instead of writing over

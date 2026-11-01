@@ -15,6 +15,21 @@ pub const ID: &str = "classicplus-t-ai-02";
 const PER_AI_CARD: i32 = 1;
 const RADIANT_PER_AI_CARD: i32 = 2;
 
+/// R2476000: in its owner's hand, where hand stats leave layer 2 to the field (R243), the AI generated
+/// cards its play would count, after "for each AI generated card you've played this game": those played
+/// so far and, being one, itself (it counts itself once played). On the field its stats show it, so
+/// it previews nothing there. Plays are public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let itself = i32::from(tags_of(ctx.state, ctx.self_).contains(&Tag::Ai));
+        let count = played_this_game_with_tag(ctx.state, ctx.controller, Tag::Ai) + itself;
+        vec![count_preview("for each AI generated card you've played this game", count)]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         set_stat: Some(read_hook(|args: HookArgs<'_>| {
@@ -25,6 +40,7 @@ pub fn script() -> CardScripts {
                 max_health: Some(bonus),
             }
         })),
+        preview: Some(preview()),
         ..Script::default()
     };
     CardScripts {
@@ -67,6 +83,23 @@ mod tests {
 
         mod base {
             use super::*;
+
+            /// R2476000: in hand, the AI cards its play would count, itself included: 1, then 2 after a
+            /// Hallucination; played, it is 2/2 plus 2.
+            #[test]
+            fn r2476000_in_hand_it_previews_the_ai_cards_its_play_would_count() {
+                crate::register_all();
+                let mut s = scenario(json!({ "p1": { "hand": [SCALING, HALLUCINATION, FILLER] }, "p2": { "hand": [FILLER] } }));
+                let scaling = s.card(SCALING).id.clone();
+                let label = "for each AI generated card you've played this game".to_string();
+                assert_eq!(crate::preview_seen(&s, P1, &scaling), vec![(label.clone(), 1, None)]);
+                s.play(HALLUCINATION, json!({}));
+                assert_eq!(crate::preview_seen(&s, P1, &scaling), vec![(label, 2, None)]);
+                s.play(SCALING, json!({ "zone": 1 }));
+                let unit = s.unit_at(P1, 1);
+                s.expect_stats(&unit, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
+                assert!(crate::preview_seen(&s, P1, &scaling).is_empty());
+            }
 
             #[test]
             fn s10_4_it_counts_itself_once_played_3_3_as_the_games_first_ai_card() {

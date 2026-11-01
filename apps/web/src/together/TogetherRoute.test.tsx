@@ -957,3 +957,17 @@ describe("R2094000 a co-op link opens Play together filled", () => {
     }, SLOW);
   });
 });
+
+describe("R2615000 watching has no switch", () => {
+  it("R2615000 the Watching panel says friends may always watch and how to stop one, and offers no switch", async () => {
+    const server = await renderPage();
+    const panel = must(screen.getByRole("heading", { name: "Watching" }).closest("section"), "the Watching panel");
+    expect(within(panel).getByTestId(togetherTestid.watchingNote)).toHaveTextContent(
+      "Your friends can always watch your online games, a few seconds behind. To stop someone watching, remove them as a friend or block them.",
+    );
+    expect(within(panel).queryByRole("checkbox")).toBeNull();
+    expect(within(panel).queryByRole("switch")).toBeNull();
+    // Nothing on the page reads or writes a watching setting.
+    expect(server.calls.some((call) => call.path === "/api/settings")).toBe(false);
+  });
+});

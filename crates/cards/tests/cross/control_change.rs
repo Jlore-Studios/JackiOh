@@ -519,7 +519,7 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
     use super::*;
 
     #[test]
-    fn r172_c81_a_stolen_saintess_dies_for_the_thief_radiating_the_thiefs_units_and_goes_to_her_owners_graveyard()
+    fn r172_r2618000_c81_a_stolen_saintess_dies_for_the_thief_radiating_the_thiefs_units_and_goes_to_the_thiefs_graveyard()
      {
         let mut g = setup(json!({
             "p1": { "hand": [MIND_CONTROL, SORCERER], "mana": 10, "field": [{ "def": POINTMASTER, "lane": 5 }] },
@@ -542,26 +542,32 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
             matches!(
                 died[0],
                 GameEvent::Destroyed {
-                    owner: PlayerId::P2,
+                    owner: PlayerId::P1,
                     ..
                 }
             ),
-            "{:?} should match {{ owner: \"p2\" }}",
+            "{:?} should match {{ owner: \"p1\" }}",
             died[0]
         );
         assert!(g.card(&mine).radiant);
         assert!(!g.card(&theirs).radiant);
-        // Off the field she is her owner's again (R12).
+        // She died on the thief's side, so she is the thief's card in the thief's graveyard (R2618000).
         assert!(g.unit("p1", 2).is_none());
         assert!(
-            g.pile("p2", "graveyard")
+            g.pile("p1", "graveyard")
+                .iter()
+                .any(|card| card.id == saintess.id)
+        );
+        assert!(
+            !g.pile("p2", "graveyard")
                 .iter()
                 .any(|card| card.id == saintess.id)
         );
     }
 
     #[test]
-    fn r172_radiant_c3_a_stolen_right_house_defenders_death_summons_its_base_copy_on_the_thiefs_side() {
+    fn r172_r2618000_radiant_c3_a_stolen_right_house_defenders_death_summons_its_base_copy_on_the_thiefs_side()
+     {
         let mut g = setup(json!({
             "p1": { "hand": [MIND_CONTROL, VANILLA], "field": [{ "def": POINTMASTER, "lane": 5 }], "library": LIBRARY },
             "p2": {
@@ -592,7 +598,8 @@ mod r172_a_stolen_unit_dies_as_its_controllers {
         assert_eq!(copy.as_ref().map(|c| c.controller), Some(PlayerId::P1));
         assert_eq!(g.unit("p1", 2).map(|c| c.id), Some(defender.id.clone()));
         assert_eq!(g.card(&defender).controller, PlayerId::P1);
-        assert_eq!(g.card(&defender).owner, PlayerId::P2);
+        // It came back from p1's graveyard, where it died as p1's card (R2618000).
+        assert_eq!(g.card(&defender).owner, PlayerId::P1);
         for lane in 1..=3 {
             assert!(g.unit("p2", lane).is_none(), "p2 lane {lane} should be empty");
         }

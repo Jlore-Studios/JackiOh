@@ -21,7 +21,7 @@ mod config_constants_build_s2 {
         assert_eq!(DRAW_OFFER_BLOCK_TURNS, 3);
         assert_eq!(CALL_TO_CHAOS_CHAIN_CAP, 20);
         assert_eq!(CAST_ON_DRAW_CHAIN_CAP, 20);
-        assert_eq!(ANTI_ONESHOT_CAP, ByFace { base: 5, radiant: 3 });
+        assert_eq!(ANTI_ONESHOT_CAP, ByFace { base: 4, radiant: 3 }); // 5 and 3 until #2657
         assert_eq!(FUSE_COST_CAP, 4);
         assert_eq!(LIBRARY_CAP, 60);
         assert_eq!(MULLIGAN_ORDER, "draw-then-shuffle");

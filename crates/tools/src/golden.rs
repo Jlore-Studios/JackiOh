@@ -1,8 +1,32 @@
-//! `cargo jackioh golden check`, `bless` and `record` (SURFACE §12, §13).
+//! `cargo jackioh golden check [--file <path> [--seed K]…]` and `cargo jackioh golden record --seeds A..B
+//! [--force ids] --out <path>` (SURFACE §12, §13; part 23).
 //!
-//! `check` replays `crates/engine/tests/golden/games.jsonl` against the Rust engine (§13.3, #1641).
-//! `bless` rewrites `games.jsonl` from the Rust engine for seeds 1..=N (§13.1).
-//! `record` plays golden seeds with forced cards (§2.6, R279, R1420, R2195000).
+//! `check` with no `--file` folds the hotseat fixture, which must fold to `golden::HOTSEAT_HASH`, and
+//! exits 1 unless it does. `check --file <path>` replays a traces file against this build with
+//! `jackioh_engine::testkit::golden::replay_game` (§13.3, #1641): for each line `create_game(args)`,
+//! `begin_game`, check `begin`; then for each step check `l` (the actor's legal actions, as a set) for
+//! the actor `a.playerId`, apply `a` with `reduce`, check `s` (`hash_state`), `v` (both seats'
+//! `view_for`) and `e` (the step's events); last, the ending and the length must be the line's `end`. A
+//! game's first mismatch names the seed, the step, which hash and the action, and writes this build's
+//! canonical text to `target/golden-diff/<seed>-<step>-<which>.json`. The hotseat fixture is folded too
+//! unless `--seed` picks seeds (which needs `--file`). Games run in parallel (rayon); the report lists
+//! every divergent game, earliest seed first. Exit 1 on any divergence.
+//!
+//! `record --seeds A..B [--force ids] --out <path>` plays the golden seeds A..=B (each within 1–240,
+//! so the decks, game seeds and policy streams are §13.1's) with the recorder into a file of its own,
+//! playing each seed exactly as `scripts/golden/record.ts` did: the same decks, game seeds, policy and
+//! mulligan-order streams, nonces and step cap, and the same line format. Each id of `--force` goes
+//! into both decks, in the first slots, in place of the deck's own cards from the end (a deck keeps its
+//! size and holds no card twice). A token cannot be in a deck (§2.6 L3), so one is forced through the
+//! card whose `refs` name it (R279), the smallest such id of a card that can be in a deck; a token no
+//! deck card names, a card of a set that has not shipped (R1420) and an id the catalog lacks are
+//! refused. A forced card the deck already holds takes its own place (`fuzz::deal_deck`); a Core card
+//! and its Legacy card are two cards, forced together (R2511001).
+//! The file replays with `check --file` on this build or on any other: `luau diff` and `classify`
+//! record with it and have a parent build replay it.
+//!
+//! The 240 golden games once committed as `crates/engine/tests/golden/`'s traces, and `bless`, which
+//! rewrote them, were retired in #2578; `golden bless` now fails, pointing to `record`.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -23,7 +47,7 @@ use jackioh_engine::testkit::golden::{
 };
 use jackioh_engine::{
     Action, CardDef, CreateGameArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, Winner,
-    begin_game, create_game, deckable, hash_state, pair_key, reduce,
+    begin_game, create_game, deckable, hash_state, reduce,
 };
 
 use crate::fuzz::{
@@ -31,11 +55,9 @@ use crate::fuzz::{
     handicap_decks_for_seed_from, handicap_for_seed,
 };
 
+// ---------------------------------------------------------------------------------------------
 // The recording's shape (§13.1, §13.3), as scripts/golden/record.ts has it
-
-/// §13.3: the file `check` reads and `bless` writes, by default.
-pub(crate) const GAMES_PATH: &str =
-    concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/tests/golden/games.jsonl");
+// ---------------------------------------------------------------------------------------------
 
 /// §13.3: where a divergence leaves the Rust side's canonical text (the workspace's `target/`).
 const DIFF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/golden-diff");
@@ -48,15 +70,14 @@ const PLAIN_LAST: u32 = 200;
 const HANDICAP_FIRST: u32 = 201;
 const HANDICAP_LAST: u32 = 240;
 
-/// `bless --seeds N` records one handicapped game per this many plain ones (200 → 40, 150 → 30).
-const PLAIN_PER_HANDICAPPED: u32 = 5;
-
 /// §13.1: a game is recorded to its end or to this many actions, whichever comes first.
 const STEP_CAP: usize = 3000;
 
+// ---------------------------------------------------------------------------------------------
 // The command line (SURFACE §12)
+// ---------------------------------------------------------------------------------------------
 
-/// `golden check`, `golden bless [--seeds N]`, `golden record --seeds A..B [--force ids] --out <path>`.
+/// `golden check [--file <path> [--seed K]…]`, `golden record --seeds A..B [--force ids] --out <path>`.
 #[derive(clap::Args)]
 pub struct Args {
     #[command(subcommand)]
@@ -65,33 +86,36 @@ pub struct Args {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Replay every golden game and the hotseat fixture against the Rust engine; exit 1 on a divergence.
+    /// Fold the hotseat fixture; with --file, replay a recorded traces file too; exit 1 on a divergence.
     Check(CheckArgs),
-    /// Rewrite games.jsonl from the Rust engine. Only after an intended rules change: v0.3.0 has none.
-    Bless(BlessArgs),
+    /// Retired with the 240 committed golden games (#2578).
+    #[command(hide = true)]
+    Bless(RetiredArgs),
     /// Record golden seeds with cards forced into both decks, into another file.
     Record(RecordArgs),
 }
 
 #[derive(clap::Args)]
 struct CheckArgs {
-    /// The traces to replay.
-    #[arg(long, value_name = "PATH", default_value = GAMES_PATH)]
-    file: PathBuf,
-    /// Replay only this seed (the number `record.ts --seed` takes); repeatable.
-    #[arg(long = "seed", value_name = "K")]
+    /// The traces to replay, as `golden record` writes them; without it, the hotseat fixture alone.
+    #[arg(long, value_name = "PATH")]
+    file: Option<PathBuf>,
+    /// Replay only this seed (the number `record.ts --seed` takes); repeatable; needs --file.
+    #[arg(long = "seed", value_name = "K", requires = "file")]
     seeds: Vec<u32>,
 }
 
+/// Whatever `golden bless` is given, taken so every old invocation gets `BLESS_RETIRED`.
 #[derive(clap::Args)]
-struct BlessArgs {
-    /// Plain seeds 1..=N (at most 200), with handicapped seeds 201..=200+N/5.
-    #[arg(long, value_name = "N", default_value_t = PLAIN_LAST)]
-    seeds: u32,
-    /// The file to write.
-    #[arg(long, value_name = "PATH", default_value = GAMES_PATH)]
-    file: PathBuf,
+struct RetiredArgs {
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true, hide = true)]
+    given: Vec<String>,
 }
+
+/// #2578: what `golden bless` answers since the 240 committed games it rewrote were retired.
+const BLESS_RETIRED: &str = "golden bless is retired with the 240 committed golden games (#2578): \
+     record games with `cargo jackioh golden record --seeds A..B [--force ids] --out <path>` and \
+     replay them on any build with `cargo jackioh golden check --file <path>`";
 
 #[derive(clap::Args)]
 struct RecordArgs {
@@ -110,7 +134,7 @@ pub fn run(args: Args) -> Result<()> {
     register_all();
     match args.command {
         Command::Check(check) => run_check(&check),
-        Command::Bless(bless) => run_bless(&bless),
+        Command::Bless(_) => bail!("{BLESS_RETIRED}"),
         Command::Record(record) => run_record(&record),
     }
 }
@@ -180,7 +204,19 @@ fn write_diff(mismatch: &mut Mismatch) {
 type Replayed = Result<usize, Box<Mismatch>>;
 
 fn run_check(args: &CheckArgs) -> Result<()> {
-    let text = fs::read_to_string(&args.file).with_context(|| format!("reading {}", args.file.display()))?;
+    let Some(file) = &args.file else {
+        return match check_hotseat() {
+            Ok(hash) => {
+                println!("hotseat fixture: folds to {hash}");
+                Ok(())
+            }
+            Err(message) => {
+                println!("hotseat fixture: {message}");
+                bail!("{message}")
+            }
+        };
+    };
+    let text = fs::read_to_string(file).with_context(|| format!("reading {}", file.display()))?;
     let lines: Vec<(usize, &str)> = text
         .lines()
         .enumerate()
@@ -236,7 +272,7 @@ fn run_check(args: &CheckArgs) -> Result<()> {
     if games == 0 {
         bail!(
             "no golden game in {} matches --seed {:?}",
-            args.file.display(),
+            file.display(),
             args.seeds
         );
     }
@@ -262,7 +298,7 @@ fn run_check(args: &CheckArgs) -> Result<()> {
 
     if !failures.is_empty() {
         bail!(
-            "{} of {games} golden games diverged from their TypeScript trace",
+            "{} of {games} golden games diverged from their recorded trace",
             failures.len()
         );
     }
@@ -272,7 +308,10 @@ fn run_check(args: &CheckArgs) -> Result<()> {
     Ok(())
 }
 
-// bless: decks and policy streams dealt by `fuzz.rs`
+// ---------------------------------------------------------------------------------------------
+// The decks and policy streams, dealt by `fuzz.rs`, as scripts/golden/record.ts copied them from
+// the fuzz files
+// ---------------------------------------------------------------------------------------------
 
 /// One seed's game: its setup and its two policy streams.
 struct GameSpec {
@@ -366,13 +405,8 @@ fn hashes_of(state: &GameState, events: &[GameEvent]) -> Hashes {
     }
 }
 
-/// Plays seed k's game as `record.ts` does (fuzz.test.ts's `playGame` loop, nonce `golden-<n>`,
-/// stopped at the game's end or STEP_CAP) and records it.
-fn record_seed(k: u32) -> Result<GameLine> {
-    record_game(spec_for_seed(k)?)
-}
-
-/// Plays `spec`'s game and records it: `record_seed`'s body, so `bless` and `record` share one recorder.
+/// Plays `spec`'s game as `record.ts` does (fuzz.test.ts's `playGame` loop, nonce `golden-<n>`, stopped
+/// at the game's end or STEP_CAP) and records it: the one recorder `record` and the bench share.
 fn record_game(spec: GameSpec) -> Result<GameLine> {
     let args = CreateGameArgs {
         seed: spec.seed.clone(),
@@ -442,37 +476,9 @@ fn record_game(spec: GameSpec) -> Result<GameLine> {
     })
 }
 
-fn run_bless(args: &BlessArgs) -> Result<()> {
-    if args.seeds < PLAIN_FIRST || args.seeds > PLAIN_LAST {
-        bail!("--seeds takes {PLAIN_FIRST}–{PLAIN_LAST}, not {}", args.seeds);
-    }
-    let handicapped = args.seeds / PLAIN_PER_HANDICAPPED;
-    let seeds: Vec<u32> = (PLAIN_FIRST..=args.seeds)
-        .chain(HANDICAP_FIRST..HANDICAP_FIRST + handicapped)
-        .collect();
-
-    let games: Vec<GameLine> = seeds
-        .par_iter()
-        .map(|&k| record_seed(k))
-        .collect::<Result<Vec<_>>>()?;
-    let steps: usize = games.iter().map(|game| game.steps.len()).sum();
-
-    let mut text = String::new();
-    for game in &games {
-        text.push_str(&serde_json::to_string(game)?);
-        text.push('\n');
-    }
-    fs::write(&args.file, text).with_context(|| format!("writing {}", args.file.display()))?;
-    println!(
-        "golden bless: wrote {} games ({} plain, {handicapped} handicapped, {steps} steps) to {}",
-        games.len(),
-        args.seeds,
-        args.file.display()
-    );
-    Ok(())
-}
-
+// ---------------------------------------------------------------------------------------------
 // record: the same games with cards forced into both decks
+// ---------------------------------------------------------------------------------------------
 
 /// `--seeds A..B` as the seeds A through B.
 fn parse_seed_range(text: &str) -> Result<Vec<u32>> {
@@ -524,15 +530,8 @@ pub(crate) fn resolve_forced(id: &str) -> Result<String> {
     carrier_of(id, def)
 }
 
-/// R2195000: the card a deck holds one of for `id` (`pair_key`), or the id itself for one the catalog lacks.
-fn pair_of(id: &str) -> String {
-    CATALOG
-        .get(id)
-        .map_or_else(|| id.to_string(), |def| pair_key(def).to_string())
-}
-
-/// What `--force` puts in a deck: each id as `resolve_forced` reads it; no id twice, never both of
-/// an R2195000 pair, in the order given.
+/// What `--force` puts in a deck: each id as `resolve_forced` reads it; no id twice, in the order
+/// given (a Core card and its Legacy card are two, R2511001).
 pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
     let mut forced: Vec<String> = Vec::new();
     for id in ids {
@@ -540,15 +539,14 @@ pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
         if forced.contains(&resolved) {
             continue;
         }
-        if let Some(other) = forced.iter().find(|held| pair_of(held) == pair_of(&resolved)) {
-            bail!("{resolved} and {other} are one card for a deck (R2195000): force one of them");
-        }
         forced.push(resolved);
     }
     Ok(forced)
 }
 
-/// `deck` with `forced` in its first slots: no duplicates or paired cards (R2195000, #2387).
+/// `deck` with `forced` in its first slots and as many of its own cards after them as fit: the same
+/// size and no card twice (`fuzz::deal_deck`);
+/// `fuzz --cards` forces with it too (#2387). No rng (`begin_game` shuffles the library).
 pub(crate) fn force_into(deck: &[String], forced: &[String]) -> Vec<String> {
     deal_deck(&mut forced.iter().chain(deck).cloned(), deck.len())
 }
@@ -643,18 +641,23 @@ mod tests {
     }
 
     #[test]
-    fn a_forced_card_takes_its_pair_s_place_and_two_of_a_pair_are_refused() {
-        // Traininggrounds-041's `snapshotOf` is core-002 (R2195000), so forcing core-002 beside it
-        // takes its place instead.
+    fn r2511001_a_forced_card_the_deck_holds_takes_its_own_place_and_a_legacy_card_goes_beside_its_core_card()
+    {
+        assert_eq!(
+            force_into(&ids(&["core-002", "core-001", "core-003"]), &ids(&["core-002"])),
+            ids(&["core-002", "core-001", "core-003"])
+        );
         assert_eq!(
             force_into(
                 &ids(&["traininggrounds-041", "core-001", "core-003"]),
                 &ids(&["core-002"])
             ),
-            ids(&["core-002", "core-001", "core-003"])
+            ids(&["core-002", "traininggrounds-041", "core-001"])
         );
-        let refused = resolve_force(&ids(&["core-002", "traininggrounds-041"])).unwrap_err();
-        assert!(refused.to_string().contains("R2195000"), "{refused:?}");
+        assert_eq!(
+            resolve_force(&ids(&["core-002", "traininggrounds-041"])).unwrap(),
+            ids(&["core-002", "traininggrounds-041"])
+        );
     }
 
     #[test]

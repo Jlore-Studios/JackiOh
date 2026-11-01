@@ -20,6 +20,23 @@ pub const ID: &str = "stinkyscape-009";
 /// R1875001: the pick is a permanent the hold can take, so never a face-down one (R1850003).
 const FACE_UP: &str = "faceUp";
 
+/// R2476000: after "the permanent beneath it", the card held beneath it on its stay now (`held_beneath`), by name
+/// ("Radiant " before a Radiant one), or the dash when it holds none. On the field, to both seats: only
+/// a face-up permanent is held (R1850003), and the hold was public.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Field {
+            return vec![];
+        }
+        let held = held_beneath(ctx.state, ctx.self_);
+        vec![card_preview(
+            ctx.state,
+            "the permanent beneath it",
+            held.first().map(|card| (card.def_id.as_str(), card.radiant)),
+        )]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         targets: vec![TargetDecl::target(
@@ -32,6 +49,7 @@ pub fn script() -> CardScripts {
             target_check(|args| args.candidate.is_some_and(|card| !is_face_down(args.state, card))),
         )]),
         cry: Some(hook(|_ctx| vec![hold_beneath(HoldArgs::default())])),
+        preview: Some(preview()),
         ..Script::default()
     };
     // The Radiant face drops Brittle 3: catalog data, the same script.
@@ -87,6 +105,20 @@ mod tests {
 
     mod base {
         use super::*;
+
+        /// R2476000: after "the permanent beneath it", the Unit it holds by name, to both seats.
+        #[test]
+        fn r2476000_it_names_the_permanent_it_holds() {
+            for radiant in [false, true] {
+                let mut s = board(radiant, json!([]), json!([{ "def": LAR, "lane": 2 }]), json!([]));
+                let lar = s.unit_at(P2, 2).id;
+                ticket(&mut s, &lar);
+                let ticketed = s.backrow(P1, 1).expect("Ticketed").id;
+                let named = vec![("the permanent beneath it".to_string(), 1, Some("Brother Lar".to_string()))];
+                assert_eq!(crate::preview_seen(&s, P1, &ticketed), named, "radiant {radiant}");
+                assert_eq!(crate::preview_seen(&s, P2, &ticketed), named, "radiant {radiant}");
+            }
+        }
 
         #[test]
         fn r1850003_it_holds_a_chosen_enemy_unit_with_no_death_and_frees_its_zone() {

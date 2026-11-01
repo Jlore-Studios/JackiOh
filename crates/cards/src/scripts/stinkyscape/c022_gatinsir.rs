@@ -2,9 +2,17 @@
 //!   Base:    "{chance}% chance to reveal when an enemy Unit attacks: Summon {disruptors|Warp Disruptor|Warp
 //!            Disruptors}, then {phalanxes|Phalanx|Phalanxes}. The attack goes on."
 //!   Radiant: the same, every summon Radiant.
-//! Reveal chance on enemy unit attack (R121, R1875002, R1849009, R987, R33, §4.2 step 4).
-//! Summons Warp Disruptors (S #23) and Phalanxes (S #82, R64, R411, R2176000). Attack continues (ST9 AMBUSH).
-//! Radiant summons Radiant.
+//! Engine: set face-down, it answers an attack an enemy Unit declares (never a forced one, R121;
+//! R1875002) with a chance to reveal (`revealChance`, R1849009): the match rng rolls once against the
+//! declared `chance` out of 100, its controller's Luck rolling again (R987), and a miss leaves it set
+//! and silent (R33). A hit fires it in §4.2 step 4's trap window, before the combat: it summons
+//! {disruptors} S #23 Warp Disruptors into its controller's open backrow zones, then {phalanxes} S #82
+//! Phalanxes into open unit zones (R64), a summon that finds no zone doing nothing. A summon that names
+//! its card fires that card's Cry (R411): each Phalanx that arrived then runs its Cry for Gatinsir's
+//! controller, in the order they arrived (R2176000; a Warp Disruptor prints none). The attack then goes
+//! on as declared (ST9's AMBUSH, R1875002). The Warp Disruptors' aura acts at once.
+//! Radiant: all of them Radiant (Phalanx 6/6). Tunes: chance 30 ↑ (step 10, max 100), disruptors 2 ↑,
+//! phalanxes 2 ↑.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -89,7 +97,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22 (R1875002, R2176000, R411).
+// S #22 Gatinsir — SPEC §8.10 row 22, BUILD M12 row S 22: "set face-down, an enemy attack reveals it on a
+// roll under 30 and not on one above (a seed of each); on a miss it stays set and no event is seen;
+// revealed, two Warp Disruptors and then two Phalanxes arrive for its controller before the combat,
+// which goes on to its declared target; with one open unit zone one Phalanx arrives; chance, disruptors
+// and phalanxes read through `param()`; radiant all four are Radiant (Phalanx 6/6)". Each Phalanx it
+// summons runs its Cry (R411, R2176000), and a forced attack rolls nothing (R1875002).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -337,7 +350,8 @@ mod tests {
                 vec![(PHALANX.to_string(), true), (PHALANX.to_string(), true)]
             );
             let phalanx = s.unit_at(P2, 1);
-            s.expect_stats(&phalanx, json!({ "attack": 8 + 2 + 2, "health": 8 }));
+            // A Phalanx 6/6 (8/8 until #2657), with the two Disruptors' +2 each, before its Cry arms it.
+            s.expect_stats(&phalanx, json!({ "attack": 6 + 2 + 2, "health": 6 }));
             assert_eq!(answer_phalanx_discovers(&mut s), 2 * PHALANX_PICKS);
         }
 

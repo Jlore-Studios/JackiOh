@@ -1,0 +1,62 @@
+{
+ "table": "| Gate | Result | Time |\n|---|---|---|\n| unit (`pnpm test`) | pass | 12s |\n| lint (`eslint`) | fail (exit 1), also red on main | 2s |\n| e2e (`cypress`) | timed out: inconclusive, left to CI | 4s |\n| fmt (`cargo fmt`) | **fail** (exit 2) | 0s |\n| late (`x`) | skipped (no time left) | 0s |",
+ "failures": "### fmt: `cargo fmt` exited 2\n\n\n\n### late: `x` exited -1\n\nno time left",
+ "dicts": [
+  {
+   "name": "unit",
+   "run": "pnpm test",
+   "ok": true,
+   "exit_code": 0,
+   "seconds": 12.5,
+   "tail": "fine",
+   "pre_existing": false,
+   "skipped": "",
+   "inconclusive": false
+  },
+  {
+   "name": "lint",
+   "run": "eslint",
+   "ok": false,
+   "exit_code": 1,
+   "seconds": 2.5,
+   "tail": "boom",
+   "pre_existing": true,
+   "skipped": "",
+   "inconclusive": false
+  },
+  {
+   "name": "e2e",
+   "run": "cypress",
+   "ok": false,
+   "exit_code": 124,
+   "seconds": 3.5,
+   "tail": "slow",
+   "pre_existing": false,
+   "skipped": "",
+   "inconclusive": true
+  },
+  {
+   "name": "fmt",
+   "run": "cargo fmt",
+   "ok": false,
+   "exit_code": 2,
+   "seconds": 0.4,
+   "tail": "",
+   "pre_existing": false,
+   "skipped": "",
+   "inconclusive": false
+  },
+  {
+   "name": "late",
+   "run": "x",
+   "ok": false,
+   "exit_code": -1,
+   "seconds": 0.0,
+   "tail": "",
+   "pre_existing": false,
+   "skipped": "no time left",
+   "inconclusive": false
+  }
+ ],
+ "empty_table": "_No gates ran._"
+}

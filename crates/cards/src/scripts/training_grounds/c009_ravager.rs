@@ -1,13 +1,16 @@
 //! TG #9 Ravager (SPEC §8.11 row 9): (4) Unit, Human, Common, 7/7 → 14/17, a card of the held Training
 //! Grounds set (R1420, R2194000).
-//!   Base and Radiant: "Rush / Whenever this destroys a Unit, it gains +{buff}/+{buff}." — buff 5, Radiant 10
-//! Kill trigger: `destroyed` with `killer_id` of this card (R42; C+ #19.5). Dies in same combat gains nothing (R1245). Permanent stat buff. Tunes: buff 5 ↑.
+//!   Base and Radiant: "Rush / After this destroys a Unit, it gains +{buff}/+{buff}." — buff 5, Radiant 10
+//! Engine: C+ #19.5 Bot Loser's kill trigger: a `destroyed` whose `killer_id` is this card, R42's killer
+//!   (the hit, or Poisonous hit, that first dooms the victim, on any turn, a defending kill included); a
+//!   destroy effect credits nobody. A field trigger, "After", so a Ravager that dies in the same combat
+//!   gains nothing (R1245, R2396000). The gain is a permanent buff to both stats; the damage it took stays. Tunes: buff 5 ↑.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-009";
 
-/// "Whenever this destroys a Unit, it gains +{buff}/+{buff}." (`when` is read for traps only, so the test is in `run`.)
+/// "After this destroys a Unit, it gains +{buff}/+{buff}." (`when` is read for traps only, so the test is in `run`.)
 fn on_kill() -> TriggerDef {
     TriggerDef::new("ravager-kill", &[GameEventType::Destroyed], |ctx, event| {
         let killed_by_me = match (event, ctx.self_.as_ref()) {

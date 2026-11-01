@@ -20,6 +20,7 @@ export type ActivationOfArgs = {
 instanceId: string?,
 target: TargetSpec?,
 ability: string?,
+spendUse: boolean?,
 }
 
 export type ActivationUses = number | "unlimited"
@@ -542,6 +543,8 @@ export type CraftVerb = "damageTarget" | "damageEnemyHero" | "damageRandomEnemy"
 export type DamageAllArgs = {
 amount: number,
 heroes: boolean?,
+odds: {DamageOdds}?,
+lucky: number?,
 ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
@@ -569,6 +572,11 @@ halfToHeroes: boolean?,
 
 export type DamageEnemyOrHealFriendArgs = {
 amount: number,
+}
+
+export type DamageOdds = {
+amount: number,
+weight: number,
 }
 
 export type DamageSplitArgs = {
@@ -1213,6 +1221,7 @@ defId: string,
 controller: PlayerId,
 row: Row,
 lane: number,
+again: boolean?,
 } | {
 ["type"]: "attackDeclared",
 attackerId: string,
@@ -1738,9 +1747,11 @@ n: number?,
 ["kind"]: "Starship Piece",
 } | {
 ["kind"]: "Starship",
+} | {
+["kind"]: "Can't Defend",
 }
 
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship"
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship" | "Can't Defend"
 
 export type LaneSpec = number | TargetSpec
 
@@ -1785,6 +1796,8 @@ export type ManaSpentFor = "play" | "activate"
 
 export type MayAttackAgainArgs = {
 target: TargetSpec,
+keepSick: boolean?,
+liftSick: boolean?,
 }
 
 export type ModeDecl = {
@@ -1827,6 +1840,10 @@ key: NumberedKey,
 } | {
 ["kind"]: "param",
 key: string,
+} | {
+["kind"]: "temporary",
+} | {
+["kind"]: "plague",
 }
 
 export type NumberWhich = NumberRef | string
@@ -2488,7 +2505,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,

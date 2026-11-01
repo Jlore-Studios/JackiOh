@@ -29,6 +29,7 @@ import {
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
+import { useBackLayer } from "../net/backLayers.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import {
@@ -253,6 +254,9 @@ export default function CardCosmeticsView({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [textOpen, onClose]);
+  // R2127000: Back closes the view as Close does, and the focus goes back as above. The card's text,
+  // opened over it, is a layer of its own on top, so Back closes that first.
+  useBackLayer(onClose);
 
   const equip = (item: StripItem): void => {
     if (!item.owned) return;
@@ -273,6 +277,7 @@ export default function CardCosmeticsView({
         tier={tier}
         held={tokens}
         cosmeticId={item.id}
+        name={item.name}
         cardId={def.id}
         onRedeemed={setTokens}
         testid={T.tokenOffer(item.id)}

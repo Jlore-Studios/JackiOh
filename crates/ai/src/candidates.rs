@@ -12,7 +12,7 @@ use jackioh_engine::{
 use serde_json::Value;
 
 use crate::config::{AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
-use crate::evaluate::{can_swing, deft_in_defense};
+use crate::evaluate::{Prices, can_swing, deft_in_defense};
 use crate::reply::trade_value;
 
 /// Canonical JSON of an action body (SURFACE §5.2).
@@ -328,9 +328,13 @@ fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: 
     4
 }
 
-/// #1779, #1821: value of unit attack resulting in even trade or better by `trade_value`; `None` otherwise.
-fn even_trade(state: &GameState, attacker_id: &str, target_id: &str) -> Option<f64> {
-    let trade = trade_value(state, find_instance(state, attacker_id)?, target_id);
+/// #1779: what an attack on a unit is worth when it kills its target, or with Cleave a neighbour
+/// (#1821), at an even trade or better by the opponent model's static read (`trade_value`: the
+/// target's worth, less the attacker's when it dies too), else `None`. Each attacker's best one goes
+/// just after the winning trades (`in_move_order`). Its screen, 400 games of improve-dev against the
+/// parent (`496b5cd87`), read 199-201, edge -0.005 (-0.034 to 0.024).
+fn even_trade(state: &GameState, attacker_id: &str, target_id: &str, prices: &Prices) -> Option<f64> {
+    let trade = trade_value(state, find_instance(state, attacker_id)?, target_id, prices);
     ((trade.kills || trade.splash_kills) && trade.value >= 0.0).then_some(trade.value)
 }
 
@@ -775,25 +779,35 @@ fn pool(
 /// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play the lowest lane of each
 /// placement, at most AI_SEARCH.zone_variants, `collapse_zones`), in move order. endTurn, when legal, is
 /// last.
-pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
-    candidate_actions_in(state, seat, legal_actions(state, seat))
+pub fn candidate_actions(state: &GameState, seat: PlayerId, prices: &Prices) -> Vec<ActionBody> {
+    candidate_actions_in(state, seat, legal_actions(state, seat), prices)
 }
 
 /// `candidate_actions` on a legal_actions already in hand (reply.rs asks for both the raw and the
 /// ordered lists of one state).
-pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>) -> Vec<ActionBody> {
-    in_move_order(state, seat, candidate_pool(state, seat, legal))
+pub fn candidate_actions_in(
+    state: &GameState,
+    seat: PlayerId,
+    legal: Vec<ActionBody>,
+    prices: &Prices,
+) -> Vec<ActionBody> {
+    in_move_order(state, seat, candidate_pool(state, seat, legal), prices)
 }
 
 /// `candidate_actions` at the search's root (#1635): `root_candidate_set` in move order.
-pub fn root_candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
-    in_move_order(state, seat, root_candidate_set(state, seat))
+pub fn root_candidate_actions(state: &GameState, seat: PlayerId, prices: &Prices) -> Vec<ActionBody> {
+    in_move_order(state, seat, root_candidate_set(state, seat), prices)
 }
 
 /// The candidates `actions` in move order: hero attacks, winning trades, even trades (each attacker's
 /// best, #1779), plays round-robin, answers, Trades of Tradable hand cards (R1838000), buys and sales at
 /// the Marketplace (R1853004), other attacks, position switches, endTurn.
-fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) -> Vec<ActionBody> {
+fn in_move_order(
+    state: &GameState,
+    seat: PlayerId,
+    actions: Vec<ActionBody>,
+    prices: &Prices,
+) -> Vec<ActionBody> {
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();
     let mut plays: Vec<ActionBody> = Vec::new();
@@ -821,7 +835,7 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
                 } else if tier == 1 {
                     good_trades.push(action);
                 } else {
-                    let even = even_trade(state, attacker_id, target_id);
+                    let even = even_trade(state, attacker_id, target_id, prices);
                     late_attacks.push((action, even));
                 }
             }
@@ -927,9 +941,12 @@ mod tests {
             { "def": OOMEN, "lane": 3 },
         ]));
         let (cleaver, reno) = (s.card(CLEAVER), s.card(RENO));
-        let trade = trade_value(s.state(), cleaver, &reno.id);
+        let trade = trade_value(s.state(), cleaver, &reno.id, Prices::NONE);
         assert!(!trade.kills && trade.splash_kills);
-        assert_eq!(even_trade(s.state(), &cleaver.id, &reno.id), Some(trade.value));
+        assert_eq!(
+            even_trade(s.state(), &cleaver.id, &reno.id, Prices::NONE),
+            Some(trade.value)
+        );
     }
 
     #[test]
@@ -937,8 +954,8 @@ mod tests {
         // The same hit on Reno with no neighbour to splash: a chip worth more than 0, and no kill.
         let s = facing(json!([{ "def": RENO, "lane": 2 }]));
         let (cleaver, reno) = (s.card(CLEAVER), s.card(RENO));
-        let trade = trade_value(s.state(), cleaver, &reno.id);
+        let trade = trade_value(s.state(), cleaver, &reno.id, Prices::NONE);
         assert!(!trade.kills && !trade.splash_kills && trade.value > 0.0);
-        assert_eq!(even_trade(s.state(), &cleaver.id, &reno.id), None);
+        assert_eq!(even_trade(s.state(), &cleaver.id, &reno.id, Prices::NONE), None);
     }
 }

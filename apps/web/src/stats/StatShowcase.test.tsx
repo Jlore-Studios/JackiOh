@@ -47,7 +47,7 @@ const PICK: PocketPick = { id: "core-005", playerRate: 0.8, baseRate: 0.2 };
 const KEYS: readonly ShowcaseKey[] = ["toppled", "coveted", "faithful", "record"];
 
 /** Toppled, Coveted, Old Faithful and The Record, all on core-004 (the tally's other stats are left off). */
-const FOUR: readonly ShowcaseStat[] = showcaseStats(tally({ "core-004": { defeated: 37, allured: 6, played: 9, seen: 12 } }), null, seeded(1)).filter(
+const FOUR: readonly ShowcaseStat[] = showcaseStats(tally({ "core-004": { defeated: 37, allured: 6, played: 9, playedInWin: 9, seen: 12 } }), null, seeded(1)).filter(
   (stat) => KEYS.includes(stat.key),
 );
 
@@ -303,6 +303,13 @@ describe("R1584000 the card's animation", () => {
     advance(SHOWCASE_LEAD_MS);
     expect(card().getAttribute("data-animating")).toBe("attackDeclared");
     expect(card().style.getPropertyValue("--lunge-dir")).toBe("1");
+  });
+
+  it("R2648000 a Spell's lunge stat plays the board's cardPlayed on the stage card", () => {
+    show(showcaseStats(tally({ "core-005": { playedAgainst: 3 } }), null, seeded(1)).filter((stat) => stat.key === "nemesis"));
+    advance(SHOWCASE_LEAD_MS);
+    expect(card().getAttribute("data-def-id")).toBe("core-005");
+    expect(card().getAttribute("data-animating")).toBe("cardPlayed");
   });
 
   it("R1584000 with effects off the keyframes play without the effects layer", () => {

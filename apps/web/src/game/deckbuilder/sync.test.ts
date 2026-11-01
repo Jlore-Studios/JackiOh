@@ -938,6 +938,7 @@ describe("a trio import", () => {
   });
 });
 
+// The deck's playmat, backdrop and card back (R1297000)
 describe("the deck's playmat, backdrop and card back (R1297000)", () => {
   it("R1297000 a deck's picks ride the snapshot, the mirror and the PUT, and null clears one", async () => {
     const server = fakeServer();
@@ -1024,6 +1025,7 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
   });
 });
 
+// The deck's portrait (R641)
 describe("the deck's portrait (R641)", () => {
   it("R641 a created deck's portrait rides the snapshot, the mirror and the PUT", async () => {
     const server = fakeServer();

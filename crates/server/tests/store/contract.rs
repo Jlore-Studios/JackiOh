@@ -794,6 +794,20 @@ mod profiles {
         assert_eq!(sorted(&ids_of(&many)), sorted(&[a.id.clone(), b.id.clone()]));
     }
 
+    /// A deleted seat reads back as the empty id on Postgres (KNOWN DIVERGENCES, deleted accounts):
+    /// an id that is not a uuid names no profile, and the read answers the others.
+    async fn reads_many_profiles_past_an_id_that_is_not_a_uuid(harness: &StoreHarness) {
+        let a = pending_profile(harness, None).await;
+        let ids = [String::new(), a.id.clone(), "not-a-uuid".to_string()];
+        let many = q!(harness, t => t.profiles_get_many(&ids));
+        assert_eq!(ids_of(&many), vec![a.id.clone()], "{}", harness.name);
+        assert!(
+            q!(harness, t => t.profiles_get_many(&[String::new()])).is_empty(),
+            "{}",
+            harness.name
+        );
+    }
+
     async fn moves_the_rating_and_the_in_match_pointer(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
         let match_id = id();
@@ -966,6 +980,7 @@ mod profiles {
         creates_a_pending_profile_and_reads_it_back_by_id_and_by_user_id,
         returns_null_for_an_unknown_profile,
         reads_many_profiles_at_once,
+        reads_many_profiles_past_an_id_that_is_not_a_uuid,
         moves_the_rating_and_the_in_match_pointer,
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
@@ -6322,6 +6337,7 @@ mod ranked {
 
 mod profiles_remove {
     use super::*;
+    use jackioh_server::economy::store::GameJloreTotals;
 
     /// Account deletion.
     async fn removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match(
@@ -6530,10 +6546,60 @@ mod profiles_remove {
         }
     }
 
+    /// A finished match stays readable, its first seat whole, once its second player deletes their
+    /// account: Postgres empties the seat (migration 0012) and reads it back as the empty id, the
+    /// memory store keeps the id (KNOWN DIVERGENCES, deleted accounts), and neither reaches a query
+    /// as a uuid in the reads the rematch and ranks routes, the socket's reopen and the refile make.
+    async fn a_finished_match_reads_back_once_its_second_player_is_deleted(harness: &StoreHarness) {
+        let other = active_profile(harness, None).await;
+        let gone = active_profile(harness, None).await;
+        let now = harness.now();
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &other.id, &gone.id, harness, now)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [other.id, gone.id],
+            "winnerProfileId": other.id,
+            "reason": "concede",
+            "turns": 3,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1016, 984],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.matches_finish(&match_id, now));
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        let row = must(q!(harness, t => t.matches_get(&match_id)), "the finished match");
+        assert_eq!(j(&row)["status"], "finished", "{}", harness.name);
+        assert_eq!(row.players.0, other.id, "{}", harness.name);
+        assert!(
+            row.players.1.is_empty() || row.players.1 == gone.id,
+            "{}: the deleted seat reads {:?}",
+            harness.name,
+            row.players.1
+        );
+        // The seats as the ranks read, the actor's rebuild and the refile hand them on.
+        let seats = [row.players.0.clone(), row.players.1.clone()];
+        let profiles = q!(harness, t => t.profiles_get_many(&seats));
+        assert_eq!(ids_of(&profiles), vec![other.id.clone()], "{}", harness.name);
+        // What `game_jlore_caps` asks of each seat when an actor is rebuilt on the finished match.
+        for seat in &seats {
+            assert_eq!(
+                q!(harness, t => t.economy_game_jlore_totals(seat, 0, now + 1, &match_id)),
+                GameJloreTotals::default(),
+                "{}: seat {seat:?}",
+                harness.name
+            );
+        }
+    }
+
     both_stores!(
         removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match,
         r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss,
         r1843004_a_deleted_winner_leaves_each_new_ending_as_it_was,
+        a_finished_match_reads_back_once_its_second_player_is_deleted,
     );
 }
 
@@ -8201,7 +8267,7 @@ mod bots {
 
 // Play together (#936): migration 0038's social rows and 0039's co-op rows
 
-/// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence, the spectator setting,
+/// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence,
 /// challenges, rooms freed by a challenge, chat and replay shares, as `social/*` reads and writes
 /// them.
 mod social {
@@ -8374,8 +8440,8 @@ mod social {
     }
 
     /// B47: a heartbeat never moves back; profiles that never beat are left out. The client's id is
-    /// found only when a profile holds it, and the spectator setting is on until turned off.
-    async fn s7_presence_profiles_find_and_the_spectator_setting(harness: &StoreHarness) {
+    /// found only when a profile holds it.
+    async fn s7_presence_and_profiles_find(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
         let c = active_profile(harness, None).await;
@@ -8395,18 +8461,6 @@ mod social {
         );
         assert!(q!(harness, t => t.profiles_find("not-a-uuid")).is_none());
         assert!(q!(harness, t => t.profiles_find(&id())).is_none());
-
-        assert!(q!(harness, t => t.profiles_allows_spectators(&a.id)));
-        q!(harness, t => t.profiles_set_allow_spectators(&a.id, false));
-        assert!(!q!(harness, t => t.profiles_allows_spectators(&a.id)));
-        assert!(q!(harness, t => t.profiles_allows_spectators(&b.id)));
-        q!(harness, t => t.profiles_set_allow_spectators(&a.id, true));
-        assert!(q!(harness, t => t.profiles_allows_spectators(&a.id)));
-        assert!(
-            !q!(harness, t => t.profiles_allows_spectators(&id())),
-            "no profile allows nothing"
-        );
-        assert!(call!(harness, t => t.profiles_set_allow_spectators(&id(), false)).is_err());
     }
 
     /// B48, B49: one open, unlapsed challenge per challenger and friend; a lapsed one is expired by
@@ -8800,24 +8854,23 @@ mod social {
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
     /// and whose live 1v1 the viewer may watch (friends, unblocked, live, ranked or unranked, seating
-    /// the friend and not the viewer, the friend allowing it). Each answers in the order named.
+    /// the friend and not the viewer; no setting of the friend's refuses it, R2615000). Each answers in
+    /// the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
         let watched = active_profile(harness, None).await;
         let ranked = active_profile(harness, None).await;
-        let shy = active_profile(harness, None).await;
         let blocked = active_profile(harness, None).await;
         let stranger = active_profile(harness, None).await;
         let picking = active_profile(harness, None).await;
         let coop = active_profile(harness, None).await;
         let idle = active_profile(harness, None).await;
         let now = harness.now();
-        for friend in [&watched, &ranked, &shy, &blocked, &picking, &coop, &idle] {
+        for friend in [&watched, &ranked, &blocked, &picking, &coop, &idle] {
             q!(harness, t => t.friends_make(&viewer.id, &friend.id, now));
         }
         q!(harness, t => t.blocks_add(&blocked.id, &viewer.id, now));
-        q!(harness, t => t.profiles_set_allow_spectators(&shy.id, false));
         let live = |p1: &str, ranked: bool| -> MatchRow {
             from(spread(
                 j(&match_row(&id(), p1, &rival.id, harness, now)),
@@ -8827,7 +8880,6 @@ mod social {
         for (player, is_ranked) in [
             (&watched, false),
             (&ranked, true),
-            (&shy, false),
             (&blocked, false),
             (&stranger, false),
         ] {
@@ -8840,12 +8892,10 @@ mod social {
         q!(harness, t => t.matches_create(&against));
         q!(harness, t => t.profiles_set_in_match(&idle.id, Some(against.id.as_str())));
 
-        let named: Vec<String> = [
-            &idle, &shy, &watched, &ranked, &blocked, &stranger, &picking, &coop,
-        ]
-        .iter()
-        .map(|profile| profile.id.clone())
-        .collect();
+        let named: Vec<String> = [&idle, &watched, &ranked, &blocked, &stranger, &picking, &coop]
+            .iter()
+            .map(|profile| profile.id.clone())
+            .collect();
         assert_eq!(
             q!(harness, t => t.presence_watchable(&viewer.id, &named)),
             vec![watched.id.clone(), ranked.id.clone()]
@@ -9088,7 +9138,7 @@ mod social {
         s7_friend_requests_are_one_per_direction_and_go_between_a_pair,
         s7_friendships_are_one_per_pair_and_take_the_requests_with_them,
         s7_blocks_are_directed_and_judged_either_way,
-        s7_presence_profiles_find_and_the_spectator_setting,
+        s7_presence_and_profiles_find,
         s7_challenges_open_close_accept_and_lapse,
         s7_a_freed_room_goes_only_while_unjoined,
         s7_chat_pages_reads_reports_and_purges,
@@ -9471,10 +9521,19 @@ mod duos {
 mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
+    use jackioh_server::economy::practice::ClaimedResult;
     use jackioh_server::economy::store::{
         CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, IdempotencyRow, InventoryGrant,
-        JloreGrant, PracticeSeed, QuestGrant, TrackGrant,
+        JloreGrant, PracticeClaim, PracticeOutcome, PracticeSeed, PracticeSettled, QuestGrant, TrackGrant,
     };
+
+    /// A practice claim as the burn keeps it (R2422000): a loss on a log of no actions.
+    fn practice_claim() -> PracticeClaim {
+        PracticeClaim {
+            result: ClaimedResult::Loss,
+            log: Vec::new(),
+        }
+    }
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
         from(json!({
@@ -9982,13 +10041,15 @@ mod economy {
     }
 
     /// §14.8, R1303001: a practice seed reads back for its own profile alone, with its setup; a
-    /// claim burns it once, and no other profile's claim does; a prune deletes the profile's seeds
-    /// issued before its time, claimed or not, and no other profile's.
+    /// claim burns it once, keeping the claim (R2422000), and no other profile's claim does; a prune
+    /// deletes the profile's seeds issued before its time, unclaimed or settled, and no other
+    /// profile's.
     async fn practice_seeds_issue_claim_once_and_prune(harness: &StoreHarness) {
         let owner = pending_profile(harness, None).await;
         let other = pending_profile(harness, None).await;
         let card_id = must(harness.playable_ids.first().cloned(), "a card");
         let now = harness.now();
+        let claim = practice_claim();
         let seed = |name: &str, issued_at: i64| -> PracticeSeed {
             from(json!({
                 "seed": name, "profileId": owner.id, "issuedAt": issued_at, "claimedAt": null,
@@ -10010,13 +10071,14 @@ mod economy {
             None
         );
 
-        assert!(!q!(harness, t => t.economy_practice_seed_claim(&other.id, "seed-new", now + 1)));
-        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 1)));
-        assert!(!q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 2)));
+        assert!(!q!(harness, t => t.economy_practice_seed_claim(&other.id, "seed-new", now + 1, &claim)));
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 1, &claim)));
+        assert!(!q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 2, &claim)));
         assert_eq!(
             q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
             Some(PracticeSeed {
                 claimed_at: Some(now + 1),
+                claim: Some(claim.clone()),
                 ..new.clone()
             })
         );
@@ -10028,6 +10090,12 @@ mod economy {
             None
         );
         assert!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")).is_some());
+        assert!(q!(harness, t => t.economy_practice_seed_settle(
+            &owner.id,
+            "seed-new",
+            PracticeOutcome::Refused,
+            now + 2
+        )));
         q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now + 1));
         assert_eq!(
             q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
@@ -10170,7 +10238,8 @@ mod economy {
         ] {
             q!(harness, t => t.economy_practice_seed_insert(&held));
         }
-        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1)));
+        let claim = practice_claim();
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1, &claim)));
         let open = |profile_id: &str, since: i64| {
             let profile_id = profile_id.to_string();
             async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
@@ -10204,9 +10273,10 @@ mod economy {
             }))
         };
         let (open, claimed) = (seed("seed-open"), seed("seed-claimed"));
+        let claim = practice_claim();
         q!(harness, t => t.economy_practice_seed_insert(&open));
         q!(harness, t => t.economy_practice_seed_insert(&claimed));
-        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1)));
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1, &claim)));
 
         assert!(!q!(harness, t => t.economy_practice_seed_release(&other.id, "seed-open")));
         assert_eq!(
@@ -10218,6 +10288,7 @@ mod economy {
             q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-claimed")),
             Some(PracticeSeed {
                 claimed_at: Some(now + 1),
+                claim: Some(claim.clone()),
                 ..claimed.clone()
             })
         );
@@ -10229,6 +10300,143 @@ mod economy {
             None
         );
         assert!(!q!(harness, t => t.economy_practice_seed_release(&owner.id, "seed-open")));
+    }
+
+    /// R2422000: a burn keeps its claim until the claim settles, and it settles once. The sweep's
+    /// list holds every profile's claims kept and unsettled, claimed before its time, oldest first,
+    /// and no seed claimed before migration 0071 (no claim kept) nor any unclaimed one; a settle by
+    /// another profile, of an unclaimed seed, or in a transaction rolled back changes nothing; the
+    /// prune keeps an unsettled claim; two settles at once mark the seed once, so only one pays; and
+    /// a settled claim drops its log, leaves the list, and goes with the next prune.
+    async fn r2422000_a_practice_claim_is_kept_until_it_settles_once(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let claim = practice_claim();
+        let seed = |name: &str, profile_id: &str, claimed_at: Option<i64>| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": now - 100, "claimedAt": claimed_at,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("seed-mine", &owner.id, None),
+            seed("seed-open", &owner.id, None),
+            seed("seed-legacy", &owner.id, Some(now - 50)),
+            seed("seed-theirs", &other.id, None),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-mine", now - 20, &claim)));
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&other.id, "seed-theirs", now - 10, &claim)));
+        let unsettled = |claimed_before: i64| async move {
+            q!(harness, t => t.economy_practice_seeds_unsettled(claimed_before))
+                .into_iter()
+                .map(|held| (held.seed, held.profile_id, held.claim))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            unsettled(now).await,
+            vec![
+                ("seed-mine".to_string(), owner.id.clone(), Some(claim.clone())),
+                ("seed-theirs".to_string(), other.id.clone(), Some(claim.clone())),
+            ]
+        );
+        assert_eq!(
+            unsettled(now - 10).await,
+            vec![("seed-mine".to_string(), owner.id.clone(), Some(claim.clone()))],
+            "a claim made at the time is not before it"
+        );
+
+        let paid = PracticeOutcome::Paid;
+        assert!(!q!(harness, t => t.economy_practice_seed_settle(&other.id, "seed-mine", paid, now)));
+        assert!(!q!(harness, t => t.economy_practice_seed_settle(&owner.id, "seed-open", paid, now)));
+        q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now));
+        let held = |name: &'static str| {
+            let profile_id = owner.id.clone();
+            async move { q!(harness, t => t.economy_practice_seed_get(&profile_id, name)) }
+        };
+        assert_eq!(
+            held("seed-mine").await.map(|held| (held.claim, held.settled)),
+            Some((Some(claim.clone()), None)),
+            "{}: the prune keeps an unsettled claim",
+            harness.name
+        );
+        assert_eq!(held("seed-legacy").await, None);
+        assert_eq!(held("seed-open").await, None);
+
+        {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            assert!(
+                t.economy_practice_seed_settle(&owner.id, "seed-mine", paid, now)
+                    .await
+                    .unwrap_or_else(|error| panic!("{}: the settle: {error}", harness.name))
+            );
+            // `t` is dropped here without a commit: the rollback takes the mark with it.
+        }
+        assert_eq!(held("seed-mine").await.and_then(|held| held.settled), None);
+
+        // Two settles at once, each paying only when it marked the seed: one pays.
+        let settle = |at: i64| {
+            let profile_id = owner.id.clone();
+            async move {
+                let mut t = harness.db.begin(None).await.expect("begin");
+                let marked = t
+                    .economy_practice_seed_settle(&profile_id, "seed-mine", paid, at)
+                    .await
+                    .unwrap_or_else(|error| panic!("{}: the settle: {error}", harness.name));
+                if marked {
+                    t.economy_jlore_grant(&jlore(&profile_id, 10, "game", false, at))
+                        .await
+                        .unwrap_or_else(|error| panic!("{}: the pay: {error}", harness.name));
+                }
+                t.commit().await.expect("commit");
+                marked
+            }
+        };
+        let (first, second) = tokio::join!(settle(now + 1), settle(now + 2));
+        assert!(
+            first != second,
+            "{}: exactly one settle marks the seed ({first}, {second})",
+            harness.name
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&owner.id));
+        assert_eq!(
+            ledger.jlore.iter().map(|grant| grant.delta).collect::<Vec<_>>(),
+            vec![10]
+        );
+        let at = if first { now + 1 } else { now + 2 };
+        let settled = must(held("seed-mine").await, "seed-mine");
+        assert_eq!(
+            (settled.claim, settled.settled),
+            (
+                None,
+                Some(PracticeSettled {
+                    outcome: PracticeOutcome::Paid,
+                    at
+                })
+            )
+        );
+        assert!(!q!(harness, t => t.economy_practice_seed_settle(
+            &owner.id,
+            "seed-mine",
+            PracticeOutcome::Refused,
+            now + 3
+        )));
+        assert_eq!(
+            unsettled(now + 100).await,
+            vec![("seed-theirs".to_string(), other.id.clone(), Some(claim.clone()))]
+        );
+
+        q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now));
+        assert_eq!(
+            held("seed-mine").await,
+            None,
+            "a settled claim goes with the prune"
+        );
     }
 
     /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
@@ -10384,6 +10592,7 @@ mod economy {
         r2210000_removed_quest_count_uses_one_window_change_and_reason,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
         r2379000_a_practice_seed_release_deletes_only_the_owners_unclaimed_seed,
+        r2422000_a_practice_claim_is_kept_until_it_settles_once,
         r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
         r2124000_an_idempotency_key_keeps_one_answer_per_account_and_sweeps,
     );

@@ -1,11 +1,13 @@
 // R291 lessons are deterministic R187 practice games with the R290 handicap; the practice core exposes
-// only the human's view (rule 7). R2205003, R2434001: five lessons, one subject each; the human's decks
-// Training Grounds cards, the AI's Core cards; Legendary and Mythic cards, and no pool hold, only in the last.
+// only the human's view (rule 7). R2205003, R2434001: five lessons, one subject each; the human's
+// decks Training Grounds cards; no Legendary or Mythic card in either deck before the last and the
+// pool hold on both seats there; the last lesson's human deck holding the set's Legendary and Mythic
+// cards. R2533001: the AI's decks Training Grounds cards too, never Legendary or Mythic.
 
 import { describe, expect, it } from "vitest";
 
 import { beginGame, createGame, hashState, registeredCatalog } from "@jackioh/engine";
-import { AI_TUTORIAL, HERO_HEALTH, TUTORIAL_HUMAN } from "@jackioh/engine/config";
+import { AI_TUTORIAL, HERO_HEALTH, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN } from "@jackioh/engine/config";
 import { SHADOW_BAN_IDS } from "@jackioh/ai";
 import { opponentOf, type CardDef, type PlayerId } from "@jackioh/shared";
 
@@ -24,9 +26,7 @@ const catalog = registeredCatalog();
 const SHOWPIECE_RARITIES: readonly string[] = ["Legendary", "Mythic"];
 /** R2205003: the set every human deck's cards come from. */
 const HUMAN_SET = "Training Grounds";
-/** R2434001: the set every AI deck's cards come from. */
-const AI_SET = "Core";
-/** R2434001: the lesson ids in path order (R2434000). */
+/** R2434001: the lesson ids in path order, `basics` and `finale` kept, the three between new (R2434000). */
 const LESSON_IDS: readonly string[] = ["basics", "keywords", "casting", "backrow", "finale"];
 /** R2205003, R2434001: the Legendary and Mythic cards the last lesson's human holds, at the least. */
 const FINALE_SHOWPIECES: readonly string[] = ["traininggrounds-037", "traininggrounds-038", "traininggrounds-039", "traininggrounds-040"];
@@ -134,15 +134,24 @@ describe("R291 the tutorial's lessons", () => {
     }
   });
 
-  it("R291 R2434001 give the AI exactly the tutorial handicap's deck of distinct Core cards, free of the shadow ban and of every Legendary and Mythic", () => {
+  it("R291 R2533001 give the AI exactly the tutorial handicap's deck of Training Grounds cards, none Legendary or Mythic, free of the shadow ban", () => {
+    expect(TUTORIAL_CARD_SET).toBe(HUMAN_SET);
+    expect([...TUTORIAL_BARRED_RARITIES].sort()).toEqual([...SHOWPIECE_RARITIES].sort());
     for (const lesson of TUTORIAL_LESSONS) {
       const deck = lesson.aiDeck;
       expect(deck.length, lesson.id).toBe(AI_TUTORIAL.deckSize);
-      expect(new Set(deck).size, `${lesson.id}: no duplicates`).toBe(deck.length);
+      // R2533001: a card comes twice only when it is a vanilla unit, at most AI_TUTORIAL's deckCopies.
+      const seen = new Map<string, number>();
+      for (const id of deck) {
+        if (seen.has(id)) expect(vanilla(def(id)), `${lesson.id}: ${id} ${def(id).name} comes twice`).toBe(true);
+        seen.set(id, (seen.get(id) ?? 0) + 1);
+      }
+      for (const [id, copies] of seen) expect(copies, `${lesson.id}: ${id}`).toBeLessThanOrEqual(AI_TUTORIAL.deckCopies ?? 1);
       for (const id of deck) {
         const card = def(id);
         const where = `${lesson.id}: ${id} ${card.name}`;
-        expect(card.set, `${where} is a Core card`).toBe(AI_SET);
+        expect(card.set, `${where} is a Training Grounds card`).toBe(TUTORIAL_CARD_SET);
+        expect(TUTORIAL_BARRED_RARITIES, where).not.toContain(card.rarity);
         expect(card.token, where).toBe(false);
         if (lesson.aiShadowBanned?.[id] === undefined) expect(SHADOW_BAN_IDS, where).not.toContain(id);
         expect(SHOWPIECE_RARITIES, where).not.toContain(card.rarity);
@@ -173,13 +182,15 @@ describe("R291 the tutorial's lessons", () => {
     expect(untaught).toEqual([]);
   });
 
-  it("R2206001 R2434001 make lesson 1 vanilla first: most of the human's deck is vanilla units, the rest a few Cries, and the AI's units carry at most a Cry or Rush", () => {
+  it("R2206001 R2434001 R2533001 make lesson 1 vanilla first: most of each deck is vanilla units, the rest a few Cries, and the AI's units carry at most a Cry or Rush", () => {
     const [basics] = TUTORIAL_LESSONS;
     if (basics === undefined) throw new Error("no lessons");
-    const plain = basics.humanDeck.filter((id) => vanilla(def(id)));
-    expect(plain.length, "vanilla units are most of the deck").toBeGreaterThan(basics.humanDeck.length / 2);
-    for (const id of basics.humanDeck.filter((each) => !vanilla(def(each)))) {
-      expect(def(id).base.text, `${id}: the rest are Cries`).toMatch(/^Cry:/);
+    for (const [who, deck] of [["human", basics.humanDeck], ["AI", basics.aiDeck]] as const) {
+      const plain = deck.filter((id) => vanilla(def(id)));
+      expect(plain.length, `${who}: vanilla units are most of the deck`).toBeGreaterThan(deck.length / 2);
+      for (const id of deck.filter((each) => !vanilla(def(each)))) {
+        expect(def(id).base.text, `${who}: ${id}: the rest are Cries`).toMatch(/^Cry:/);
+      }
     }
     for (const id of basics.aiDeck) {
       const card = def(id);
@@ -249,8 +260,8 @@ describe("R291 the tutorial's lessons", () => {
       expect(debug.debug.decks).toEqual(decksOf(lesson));
       const handicaps = lessonHandicaps(lesson);
       expect(debug.debug.handicaps).toEqual({ [aiSeat]: handicaps.ai, [lesson.humanSeat]: handicaps.human });
-      // R2433000, R2434001: the opponent's decks are Core cards, so it plays AI_TUTORIAL whole, its Core-only bar on.
-      expect(handicaps.ai.coreOnly, lesson.id).toBe(true);
+      // R2533000, R2533001: the opponent's decks are its own cards, so it plays AI_TUTORIAL whole, its bar on.
+      expect(handicaps.ai.tutorialCardsOnly, lesson.id).toBe(true);
     }
   });
 

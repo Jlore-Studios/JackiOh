@@ -9,7 +9,7 @@
 use indexmap::IndexSet;
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus,
-    MatchHooks, Matchup, NextSwing, NodeCounter, action_key, candidate_actions, create_node_counter,
+    MatchHooks, Matchup, NextSwing, NodeCounter, Prices, action_key, candidate_actions, create_node_counter,
     damage_past_taunts, determinize, evaluate, face_threat, find_lethal, find_lethal_with_quick_nodes,
     game_config, line_status, play_match, ready_gap, redact, search_signature, simulate,
 };
@@ -142,7 +142,7 @@ fn play_out(state: &GameState, line: &[ActionBody]) -> GameState {
     let counter = create_node_counter(line.len() * per_action, None);
     let mut current = state.clone();
     for action in line {
-        match simulate(&current, AI, action, &counter) {
+        match simulate(&current, AI, action, &counter, Prices::NONE) {
             Some(Ok(next)) => current = next,
             _ => panic!(
                 "the line was refused at {}",
@@ -238,7 +238,7 @@ mod the_lethal_solvers_walks {
     fn finds_the_golems_tribute_lethal_on_a_wide_hand_within_the_allowance_and_it_wins_on_every_world() {
         let dets = worlds(&wide_board(), "lethal-wide", 2);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let line = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes);
+        let line = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE);
         assert!(line.is_some());
         assert!(counter.used() <= AI_BUDGET.lethal_nodes);
         assert!(counter.used() > AI_SEARCH.lethal_quick_nodes as usize);
@@ -279,7 +279,8 @@ mod the_lethal_solvers_walks {
                 AI,
                 &counter,
                 AI_BUDGET.lethal_nodes,
-                AI_BUDGET.lethal_nodes
+                AI_BUDGET.lethal_nodes,
+                Prices::NONE,
             )
             .is_none()
         );
@@ -302,7 +303,8 @@ mod the_lethal_solvers_walks {
                 &worlds(s.state(), "lethal-small", 2),
                 AI,
                 &counter,
-                AI_BUDGET.lethal_nodes
+                AI_BUDGET.lethal_nodes,
+                Prices::NONE,
             )
             .is_none()
         );
@@ -336,6 +338,7 @@ mod the_lethal_solvers_walks {
             AI,
             &create_node_counter(AI_BUDGET.nodes, None),
             AI_BUDGET.lethal_nodes,
+            Prices::NONE,
         );
         let expected = vec![
             ActionBody::SwitchPosition {
@@ -366,7 +369,8 @@ mod the_lethal_solvers_walks {
                 &dets,
                 AI,
                 &create_node_counter(AI_BUDGET.nodes, None),
-                AI_BUDGET.lethal_nodes
+                AI_BUDGET.lethal_nodes,
+                Prices::NONE,
             )
             .is_none()
         );
@@ -422,7 +426,7 @@ mod the_positions_the_search_merges {
 
         let dets = worlds(&state, "lethal-silence", 2);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let line = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes).unwrap_or_default();
+        let line = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE).unwrap_or_default();
         assert_eq!(line.first().map(action_key), Some(action_key(&on_taunt)));
         for det in &dets {
             assert_eq!(
@@ -445,8 +449,8 @@ mod the_positions_the_search_merges {
                 };
                 let counter = create_node_counter(1_000_000, None);
                 let mut groups: IndexMap<String, Vec<GameState>> = IndexMap::new();
-                for action in candidate_actions(&state, seat) {
-                    let Some(Ok(child)) = simulate(&state, seat, &action, &counter) else {
+                for action in candidate_actions(&state, seat, Prices::NONE) {
+                    let Some(Ok(child)) = simulate(&state, seat, &action, &counter, Prices::NONE) else {
                         continue;
                     };
                     if line_status(&child, seat, state.turn) != LineStatus::Open {
@@ -684,13 +688,14 @@ mod free_replays_r1965000 {
         let start = board(&[COIN]);
         let dets = worlds(&start, "r1965000-trim");
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let found = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes).expect("a lethal");
+        let found = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE).expect("a lethal");
         let coin = mine(&start, AI, COIN).id;
         assert!(
             matches!(found.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == coin),
             "the walk opens with the Coin: {found:?}"
         );
-        let trimmed = trim_lethal(&dets, AI, found, &counter).expect("the trim fits the budget");
+        let trimmed =
+            trim_lethal(&dets, AI, found, &counter, Prices::NONE).expect("the trim fits the budget");
         let bigot = mine(&start, AI, BIGOT).id;
         let seven = mine(&start, AI, SEVEN_SEVEN).id;
         let token = mine(&start, HUMAN, FELINOR_TOKEN).id;
@@ -794,12 +799,15 @@ mod free_replays_r1965000 {
 
         let dets = worlds(&start, "r1965000-base-camp");
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let found = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes).expect("a lethal");
+        let found = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE).expect("a lethal");
         assert!(
             matches!(found.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == camp),
             "{found:?}"
         );
-        assert_eq!(trim_lethal(&dets, AI, found.clone(), &counter), Some(found));
+        assert_eq!(
+            trim_lethal(&dets, AI, found.clone(), &counter, Prices::NONE),
+            Some(found)
+        );
 
         let turn = ai_turn(&start);
         assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));

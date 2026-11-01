@@ -809,6 +809,9 @@ const lock: Recipe = (event, p) => {
 const trap: Recipe = (event, p) => {
   if (event.type !== "trapFired") return [];
   const at = anchor(p.tgt);
+  // R2657001: a face-up Field Trap firing again reveals nothing: the short flare an activation gets
+  // (`cast`'s), with no reveal burst and no shake.
+  if (event.again === true) return [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "point", 0, "cast")];
   const delay = frac(FX_TRAP_BURST_AT, p.D);
   // #1447: the burst takes the card's flavor only when the view shows this very instance (§10.8, R33): an
   // opponent's face-down trap is not in it, so its burst stays arcane.

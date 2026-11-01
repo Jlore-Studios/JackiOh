@@ -283,6 +283,22 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0067_idempotency_keys.sql",
         include_str!("../../migrations/0067_idempotency_keys.sql"),
     ),
+    (
+        "0068_v0_5_retcon.sql",
+        include_str!("../../migrations/0068_v0_5_retcon.sql"),
+    ),
+    (
+        "0069_legacy_tag.sql",
+        include_str!("../../migrations/0069_legacy_tag.sql"),
+    ),
+    (
+        "0070_resource_and_faction_tags.sql",
+        include_str!("../../migrations/0070_resource_and_faction_tags.sql"),
+    ),
+    (
+        "0071_practice_settles.sql",
+        include_str!("../../migrations/0071_practice_settles.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is
@@ -314,7 +330,16 @@ comment on table app.migrations is
 /// 0013_retention_purge.sql: its first version gave app.purge_expired_rows a `set
 /// jackioh.retention_purge` clause, which only a superuser may create since Postgres 15, so it failed
 /// on Supabase, whose migrating role is not one. Where a superuser applied it, it works as written.
-pub const REWRITTEN: &[(&str, &[&str])] = &[("0013_retention_purge.sql", &["16b93e4d"])];
+///
+/// 0068_v0_5_retcon.sql (R2532000): its first version renamed each record id a card's co-played
+/// map keeps with a PL/pgSQL call per id, over every row of `card_totals`, which ran for minutes on
+/// a season of totals: Render's `release` outran its boot window on every deploy, and the
+/// transaction rolled back each time, so production never applied it. Where a database did, its
+/// renames are the same.
+pub const REWRITTEN: &[(&str, &[&str])] = &[
+    ("0013_retention_purge.sql", &["16b93e4d"]),
+    ("0068_v0_5_retcon.sql", &["5827754e"]),
+];
 
 /// The earlier checksums a database may hold for `filename`.
 pub fn rewritten(filename: &str) -> &'static [&'static str] {

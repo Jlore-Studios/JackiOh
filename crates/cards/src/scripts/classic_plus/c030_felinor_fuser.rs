@@ -302,8 +302,16 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [FUSER, FILLER] }, "p2": { "hand": [FILLER] } }));
                 let card = s.card(FUSER).clone();
                 s.play(FUSER, json!({ "zone": 2 }));
+                // R2657000: a pick with Can't Defend would take the fusion out of Defense Position at
+                // the state check, so the test takes the first offer without it.
+                let no_cant_defend = |s: &Scenario| -> String {
+                    offered(&open(s))
+                        .into_iter()
+                        .find(|id| !has_keyword(&def_of(Some(s.state()), id).base.keywords, KeywordKind::CantDefend))
+                        .unwrap_or_default()
+                };
                 let mut picks: Vec<String> = Vec::new();
-                picks.push(offered(&open(&s)).first().cloned().unwrap_or_default());
+                picks.push(no_cant_defend(&s));
                 s.answer(json!(picks[0]));
                 // Between the two Discovers the Fuser stands hurt and in defense, which the Fuse keeps.
                 {
@@ -311,7 +319,7 @@ mod tests {
                     live.damage = 1;
                     live.position = Some(Position::Def);
                 }
-                picks.push(offered(&open(&s)).first().cloned().unwrap_or_default());
+                picks.push(no_cant_defend(&s));
                 s.answer(json!(picks[1]));
                 let kept = s.unit(P1, 2).expect("the Fuser left its zone");
                 assert_eq!(kept.id, card.id);

@@ -1,5 +1,6 @@
-// Inspecting a card (docs/polish/6-cards.md, B22–B26): hover opens a preview after HOVER_DELAY_MS, a
-// touch long-press a sheet after LONG_PRESS_MS. Overlays are portals, so they are queried through `screen`.
+// Inspecting a card (docs/polish/6-cards.md, B22–B26): hover opens a preview after HOVER_DELAY_MS. A
+// touch held LONG_PRESS_MS is the hover (R2617000): the same preview while the finger is down, or with
+// previews off a sheet. The I key opens the sheet. Overlays are portals, so they are queried through `screen`.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState, type ReactElement, type ReactNode } from "react";
@@ -17,7 +18,7 @@ import { faceModel, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
 import { CLICK_SUPPRESS_MS, HOVER_DELAY_MS, LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./constants.ts";
-import { CardDetail, closeInspect, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
+import { CardDetail, closeInspect, isInspectKey, useInspectTrigger, type InspectOptions, type InspectSubject } from "./index.ts";
 import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
@@ -91,6 +92,17 @@ function longPress(element: Element): void {
   lift(element, "touch");
 }
 
+/** The I key on a trigger opens its sheet, as on the board's cards (keys.ts). */
+function openSheetBy(element: Element): void {
+  fireEvent.keyDown(element, { key: "i" });
+}
+
+function previewsOff(): void {
+  act(() => {
+    writeCardSettings({ hoverPreviews: false });
+  });
+}
+
 function hover(element: Element): void {
   enter(element, "mouse");
   advance(HOVER_DELAY_MS);
@@ -144,7 +156,14 @@ function Trigger({ id, subject, options, onClick }: TriggerProps): ReactElement 
   const inspect = useInspectTrigger(subject, options);
   return (
     <>
-      <div data-testid={id} {...inspect.handlers} onClick={onClick}>
+      <div
+        data-testid={id}
+        {...inspect.handlers}
+        onClick={onClick}
+        onKeyDown={(event) => {
+          if (isInspectKey(event)) inspect.openSheet(event.currentTarget);
+        }}
+      >
         {subject === null ? "face-down" : subject.face.name}
       </div>
       {inspect.overlay}
@@ -421,6 +440,7 @@ describe("hover preview (B22)", () => {
   });
 });
 
+// B23: what closes the preview, and one overlay at a time
 describe("closing the preview, and one overlay at a time (B23)", () => {
   function openPreview(key: string): HTMLElement {
     render(
@@ -498,7 +518,7 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
     expect(nameIn(screen.getByTestId(INSPECT_HOVER))).toBe(defOf("core-002").name);
   });
 
-  it("B23 a long-press sheet closes an open preview", () => {
+  it("B23 a sheet opening closes an open preview", () => {
     render(
       <Scene>
         <Trigger id="a" subject={subjectOf("b23-hover-a", "core-043")} />
@@ -506,7 +526,7 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
       </Scene>,
     );
     hover(screen.getByTestId("a"));
-    longPress(screen.getByTestId("b"));
+    openSheetBy(screen.getByTestId("b"));
     expect(openOverlays()).toEqual([INSPECT_SHEET]);
     expect(screen.getByTestId(INSPECT_SHEET)).toHaveAttribute("aria-label", defOf("core-002").name);
   });
@@ -518,7 +538,7 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
         <Trigger id="a" subject={subject} />
       </Scene>,
     );
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     expect(openOverlays()).toEqual([INSPECT_SHEET]);
 
     rerender(
@@ -547,17 +567,17 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
     expect(openOverlays()).toEqual([INSPECT_DETAIL]);
   });
 
-  it("B23 a long-press on a second card replaces the first card's sheet: one inspect-sheet, the second card's", () => {
+  it("B23 a sheet on a second card replaces the first card's sheet: one inspect-sheet, the second card's", () => {
     render(
       <Scene>
         <Trigger id="a" subject={subjectOf("b23-sheet-first", "core-043")} />
         <Trigger id="b" subject={subjectOf("b23-sheet-second", "core-002")} />
       </Scene>,
     );
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     expect(screen.getByTestId(INSPECT_SHEET)).toHaveAttribute("aria-label", defOf("core-043").name);
 
-    longPress(screen.getByTestId("b"));
+    openSheetBy(screen.getByTestId("b"));
     expect(openOverlays()).toEqual([INSPECT_SHEET]);
     expect(screen.getByTestId(INSPECT_SHEET)).toHaveAttribute("aria-label", defOf("core-002").name);
     expect(screen.getByTestId("a-open")).toHaveTextContent("none");
@@ -594,7 +614,7 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
     expect(nameIn(screen.getByTestId(INSPECT_HOVER))).toBe(defOf("core-043").name);
   });
 
-  it("B23 a long-press sheet opening closes an open CardDetail", () => {
+  it("B23 a sheet opening closes an open CardDetail", () => {
     const onClose = vi.fn<() => void>();
     render(
       <Scene>
@@ -604,7 +624,7 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
     );
     expect(openOverlays()).toEqual([INSPECT_DETAIL]);
 
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     expect(onClose).toHaveBeenCalled();
     expect(openOverlays()).toEqual([INSPECT_SHEET]);
     expect(screen.getByTestId(INSPECT_SHEET)).toHaveAttribute("aria-label", defOf("core-043").name);
@@ -638,8 +658,10 @@ describe("closing the preview, and one overlay at a time (B23)", () => {
   });
 });
 
+// B24: long-press
 describe("long-press (B24)", () => {
-  it("B24 a touch held LONG_PRESS_MS opens inspect-sheet as a modal dialog named for the card, focused on inspect-close", () => {
+  it("B24 R2617000 with hover previews off, a touch held LONG_PRESS_MS opens inspect-sheet as a modal dialog named for the card, focused on inspect-close", () => {
+    previewsOff();
     const { container } = render(
       <Scene>
         <Trigger id="a" subject={subjectOf("b24-open", "core-043")} />
@@ -695,7 +717,7 @@ describe("long-press (B24)", () => {
     press(trigger, "touch");
     move(trigger, "touch", START_X + LONG_PRESS_SLOP_PX, START_Y);
     advance(LONG_PRESS_MS);
-    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+    expect(openOverlays()).toEqual([INSPECT_HOVER]);
   });
 
   it("B24 lifting before LONG_PRESS_MS cancels the long-press, and the tap's click still goes through", () => {
@@ -733,16 +755,19 @@ describe("long-press (B24)", () => {
     expect(onLongPress).not.toHaveBeenCalled();
   });
 
-  it("B24 the click after a long-press on a board card is swallowed, so the Board's onClick is not called", () => {
+  it("B24 R2617000 the click after a hold on a legal board card on your own turn is swallowed, so the Board's onClick is not called", () => {
     const view = fullBoardView();
+    expect(view.active, "the fixture is the viewer's turn").toBe(view.viewer);
     const unit = yourUnit(view, 0);
     const id = testid.card(unit.instanceId);
     const onClick = vi.fn<(target: ClickTarget) => void>();
     renderBoard(view, { highlight: { legal: new Set([id]), selected: new Set() }, onClick });
 
     const card = screen.getByTestId(id);
-    longPress(card);
-    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+    press(card, "touch");
+    advance(LONG_PRESS_MS);
+    expect(openOverlays()).toEqual([INSPECT_HOVER]);
+    lift(card, "touch");
     fireEvent.click(card);
     expect(onClick).not.toHaveBeenCalled();
   });
@@ -816,11 +841,13 @@ describe("long-press (B24)", () => {
   });
 });
 
-describe("a touch hold as the mouse-over (#165)", () => {
-  it("#165 a held touch opens the preview, not the sheet, and lifting closes it", () => {
+// R2617000: a touch hold is the hover, the preview open while the finger is down, on either turn
+
+describe("a touch hold is the hover (R2617000)", () => {
+  it("R2617000 a held touch opens the preview, not the sheet, and lifting closes it", () => {
     render(
       <Scene>
-        <Trigger id="a" subject={subjectOf("hold-open", "core-043")} options={{ touchHold: "preview" }} />
+        <Trigger id="a" subject={subjectOf("hold-open", "core-043")} />
       </Scene>,
     );
     const trigger = screen.getByTestId("a");
@@ -836,8 +863,8 @@ describe("a touch hold as the mouse-over (#165)", () => {
     expect(screen.getByTestId("a-open")).toHaveTextContent("none");
   });
 
-  it("#165 a pointercancel closes the preview a hold opened", () => {
-    render(<Trigger id="a" subject={subjectOf("hold-cancel", "core-043")} options={{ touchHold: "preview" }} />);
+  it("R2617000 a pointercancel closes the preview a hold opened", () => {
+    render(<Trigger id="a" subject={subjectOf("hold-cancel", "core-043")} />);
     const trigger = screen.getByTestId("a");
     press(trigger, "touch");
     advance(LONG_PRESS_MS);
@@ -846,8 +873,8 @@ describe("a touch hold as the mouse-over (#165)", () => {
     expect(openOverlays()).toEqual([]);
   });
 
-  it("#165 a move past LONG_PRESS_SLOP_PX closes the preview a hold opened", () => {
-    render(<Trigger id="a" subject={subjectOf("hold-drift", "core-043")} options={{ touchHold: "preview" }} />);
+  it("R2617000 a move past LONG_PRESS_SLOP_PX closes the preview a hold opened", () => {
+    render(<Trigger id="a" subject={subjectOf("hold-drift", "core-043")} />);
     const trigger = screen.getByTestId("a");
     press(trigger, "touch");
     advance(LONG_PRESS_MS);
@@ -858,9 +885,9 @@ describe("a touch hold as the mouse-over (#165)", () => {
     expect(openOverlays()).toEqual([]);
   });
 
-  it("#165 the click after a preview hold is swallowed, and the next one goes through", () => {
+  it("R2617000 the click after a hold is swallowed, and the next one goes through", () => {
     const onClick = vi.fn<() => void>();
-    render(<Trigger id="a" subject={subjectOf("hold-click", "core-043")} options={{ touchHold: "preview" }} onClick={onClick} />);
+    render(<Trigger id="a" subject={subjectOf("hold-click", "core-043")} onClick={onClick} />);
     const trigger = screen.getByTestId("a");
     press(trigger, "touch");
     advance(LONG_PRESS_MS);
@@ -871,19 +898,23 @@ describe("a touch hold as the mouse-over (#165)", () => {
     expect(onClick, "the one after it").toHaveBeenCalledTimes(1);
   });
 
-  it("#165 with the default a hold still opens the sheet and stays open on the lift", () => {
-    render(<Trigger id="a" subject={subjectOf("hold-sheet", "core-043")} />);
+  it("R2617000 with hover previews off a hold opens the sheet, which stays open on the lift, and swallows the lift's click", () => {
+    previewsOff();
+    const onClick = vi.fn<() => void>();
+    render(<Trigger id="a" subject={subjectOf("hold-off", "core-043")} onClick={onClick} />);
     const trigger = screen.getByTestId("a");
     press(trigger, "touch");
     advance(LONG_PRESS_MS);
     expect(openOverlays()).toEqual([INSPECT_SHEET]);
     lift(trigger, "touch");
-    expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(onClick).not.toHaveBeenCalled();
+    expect(openOverlays()).toEqual([INSPECT_SHEET]);
   });
 
-  it("#165 onLongPress still wins over touchHold, and lifting opens and closes nothing", () => {
+  it("R2617000 onLongPress still wins over the hold's preview, and lifting opens and closes nothing", () => {
     const onLongPress = vi.fn<() => void>();
-    render(<Trigger id="a" subject={subjectOf("hold-callback", "core-043")} options={{ touchHold: "preview", onLongPress }} />);
+    render(<Trigger id="a" subject={subjectOf("hold-callback", "core-043")} options={{ onLongPress }} />);
     const trigger = screen.getByTestId("a");
     press(trigger, "touch");
     advance(LONG_PRESS_MS);
@@ -893,53 +924,45 @@ describe("a touch hold as the mouse-over (#165)", () => {
     expect(openOverlays()).toEqual([]);
   });
 
-  it("#165 with hover previews off a hold opens nothing and its release click is a plain tap", () => {
-    act(() => {
-      writeCardSettings({ hoverPreviews: false });
+  for (const turn of ["your", "the opponent's"] as const) {
+    const active = turn === "your" ? "p1" : "p2";
+
+    it(`R2617000 on ${turn} turn a hold on a hand card or a unit shows its preview while the finger is down`, () => {
+      const view = fullBoardView({ active });
+      const card = must(Array.isArray(view.you.hand) ? view.you.hand[0] : null, "a hand card");
+      renderBoard(view);
+      for (const el of [screen.getByTestId(testid.handCard(card.instanceId)), screen.getByTestId(testid.card(yourUnit(view, 0).instanceId))]) {
+        press(el, "touch");
+        advance(LONG_PRESS_MS);
+        expect(openOverlays()).toEqual([INSPECT_HOVER]);
+        lift(el, "touch");
+        expect(openOverlays()).toEqual([]);
+      }
     });
-    const onClick = vi.fn<() => void>();
-    render(<Trigger id="a" subject={subjectOf("hold-off", "core-043")} options={{ touchHold: "preview" }} onClick={onClick} />);
-    const trigger = screen.getByTestId("a");
-    press(trigger, "touch");
-    advance(LONG_PRESS_MS * 2);
-    expect(openOverlays()).toEqual([]);
-    lift(trigger, "touch");
-    fireEvent.click(trigger);
-    expect(onClick).toHaveBeenCalledTimes(1);
-  });
 
-  it("#165 on the opponent's turn a hold on a hand card shows the preview while the finger is down", () => {
-    const view = fullBoardView({ active: "p2" });
-    const card = must(Array.isArray(view.you.hand) ? view.you.hand[0] : null, "a hand card");
-    renderBoard(view);
-    const el = screen.getByTestId(testid.handCard(card.instanceId));
-    press(el, "touch");
-    advance(LONG_PRESS_MS);
-    expect(openOverlays()).toEqual([INSPECT_HOVER]);
-    lift(el, "touch");
-    expect(openOverlays()).toEqual([]);
-  });
+    it(`R2617000 R370 on ${turn} turn a hold on a face-down backrow card shows its back's preview`, () => {
+      renderBoard(fullBoardView({ active }));
+      const zone = screen.getByTestId(testid.zone("you", "backrow", 3));
+      const back = must(zone.querySelector(".card-back"), "a card back in the face-down zone");
+      press(back, "touch");
+      advance(LONG_PRESS_MS);
+      const preview = screen.getByTestId(INSPECT_FACE_DOWN);
+      expect(preview.textContent).toContain("Face-down trap");
+      expect(preview.closest('[role="dialog"]'), "a preview, not the modal sheet").toBeNull();
+      lift(back, "touch");
+      expect(screen.queryByTestId(INSPECT_FACE_DOWN)).toBeNull();
+    });
 
-  it("#165 on the viewer's own turn the same hold still opens the sheet", () => {
-    const view = fullBoardView();
-    const card = must(Array.isArray(view.you.hand) ? view.you.hand[0] : null, "a hand card");
-    renderBoard(view);
-    const el = screen.getByTestId(testid.handCard(card.instanceId));
-    press(el, "touch");
-    advance(LONG_PRESS_MS);
-    expect(openOverlays()).toEqual([INSPECT_SHEET]);
-    lift(el, "touch");
-  });
-
-  it("#165 on the opponent's turn a hold on a browsable pile shows its list preview", () => {
-    renderBoard(fullBoardView({ active: "p2" }));
-    const pile = screen.getByTestId(testid.graveyard("you"));
-    press(pile, "touch");
-    advance(LONG_PRESS_MS);
-    expect(screen.getByTestId(INSPECT_LIST_HOVER)).toBeInTheDocument();
-    lift(pile, "touch");
-    expect(screen.queryByTestId(INSPECT_LIST_HOVER)).toBeNull();
-  });
+    it(`R2617000 on ${turn} turn a hold on a browsable pile shows its list preview`, () => {
+      renderBoard(fullBoardView({ active }));
+      const pile = screen.getByTestId(testid.graveyard("you"));
+      press(pile, "touch");
+      advance(LONG_PRESS_MS);
+      expect(screen.getByTestId(INSPECT_LIST_HOVER)).toBeInTheDocument();
+      lift(pile, "touch");
+      expect(screen.queryByTestId(INSPECT_LIST_HOVER)).toBeNull();
+    });
+  }
 });
 
 describe("closing the sheet and the detail (B25)", () => {
@@ -952,7 +975,7 @@ describe("closing the sheet and the detail (B25)", () => {
     const outside = screen.getByTestId("outside");
     outside.focus();
     expect(outside).toHaveFocus();
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     expect(screen.getByTestId(INSPECT_SHEET)).toBeInTheDocument();
     return outside;
   }
@@ -1072,14 +1095,14 @@ describe("Tab stays inside a modal overlay (B25)", () => {
     expect(screen.getByTestId(INSPECT_DETAIL).contains(document.activeElement)).toBe(true);
   });
 
-  it("B25 the touch sheet traps Tab too: Close is its only control, so Tab keeps it", () => {
+  it("B25 the sheet traps Tab too: Close is its only control, so Tab keeps it", () => {
     // R2098000: a term would be a control here; Mr. Vanilla prints none, so Close is the only one.
     render(
       <Scene>
         <Trigger id="a" subject={subjectOf("b25-trap-sheet", "core-008")} />
       </Scene>,
     );
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     const close = screen.getByTestId(INSPECT_CLOSE);
     expect(close).toHaveFocus();
     expect(tabFrom(close)).toBe(false);
@@ -1122,7 +1145,7 @@ describe("events inside an overlay stay inside it (B25)", () => {
         <Trigger id="a" subject={subjectOf("b25-sheet", "core-043")} />
       </Fence>,
     );
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     const sheet = screen.getByTestId(INSPECT_SHEET);
     clearSpies(spies);
     fireEverything(faceIn(sheet));
@@ -1155,7 +1178,7 @@ describe("events inside an overlay stay inside it (B25)", () => {
     const onClick = vi.fn<(target: ClickTarget) => void>();
     renderBoard(view, { highlight: { legal: new Set([cardId, zoneId]), selected: new Set() }, onClick });
 
-    longPress(screen.getByTestId(cardId));
+    openSheetBy(screen.getByTestId(cardId));
     const sheet = screen.getByTestId(INSPECT_SHEET);
     realClick(faceIn(sheet));
     fireEvent.keyDown(faceIn(sheet), { key: "Enter" });
@@ -1223,7 +1246,7 @@ describe("the glossary (B26)", () => {
 
   it("B26 the sheet carries the same glossary, in the same order", () => {
     render(<Trigger id="a" subject={{ key: "b26-sheet", face: ORDERED_FACE }} />);
-    longPress(screen.getByTestId("a"));
+    openSheetBy(screen.getByTestId("a"));
     expect(glossaryTerms(screen.getByTestId(INSPECT_SHEET))).toEqual(ORDER);
   });
 

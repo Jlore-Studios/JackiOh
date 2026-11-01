@@ -1,18 +1,21 @@
-//! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (10) Unit, CN, Acclaimed, Prime, Token (printed
-//! Mythic), 8/20 → 16/40, Can't attack (Radiant: Can't attack, Armor 5). YileGPT Unleashed until #1563.
+//! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (8) Unit, CN, Acclaimed, Prime, Token (printed
+//! Mythic), 8/20 → 16/40 (Radiant: Armor 5). YileGPT Unleashed until #1563. Through v0.5.9f it cost
+//! (10), had Can't attack and "Start of turn: Make [a random permanent / {radiants} random permanents]
+//! of yours Radiant" (`script_v0_5_9f`, kept for those replays, R767000).
 //!
-//! "Start of turn: Make [a random permanent / {radiants} random permanents] of yours Radiant" and
 //! "Float reduces cost." plus "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …"
 //! Engine:
-//! - "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a
-//!   deck trigger (R464) on its owner's `turnEnded`: the event's `unspentMana`, the Float, becomes a
-//!   `costMod` of minus that (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile
-//!   (R766), and the price floors at 0.
+//! - "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464)
+//!   on its owner's `turnEnded`: the event's `unspentMana`, the Float, becomes a `costMod` of minus
+//!   that (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile (R766), and the
+//!   price floors at 0. Through v0.5.9f it was a deck trigger too (R2657002). Until #1563 the face
+//!   printed it as "Whenever your turn ends with unspent mana, this costs that much less", the same
+//!   rule.
 //! - The Cry is ME-PICK-N (MD-C23) over the five entries below: the base face does `picks` different
 //!   ones by the match rng, named to both players and resolved in list order; the Radiant face does
 //!   all five in order, with two Radiant Viruses for the opponent in place of the fill (MD-C24).
-//! - Start of turn: `set_radiant_random` among your non-Radiant permanents on the field (R60, R242),
-//!   this one included.
+//! - Through v0.5.9f, start of turn: `set_radiant_random` among your non-Radiant permanents on the
+//!   field (R60, R242), this one included.
 
 use jackioh_engine::effects::{
     DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board, set_radiant_random,
@@ -26,7 +29,7 @@ pub const ID: &str = "meditative-049-1";
 const DATACENTERS: &str = "classicplus-078";
 /// C #18 Glitch in the System, added Radiant at (0).
 const GLITCH: &str = "classic-018";
-/// M #49.3 AI Girlfriend, summoned to animate at once.
+/// M #49.3 AI Girlfriend, summoned straight into a unit zone (R64).
 const GIRLFRIEND: &str = "meditative-049-3";
 /// M #49.2 Yile's Virus, filling the opponent's board (or two Radiant ones, Radiant face).
 const VIRUS: &str = "meditative-049-2";
@@ -114,7 +117,9 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
     ]
 }
 
-fn unleashed(radiant: bool) -> Script {
+/// One face. `v0_5_9f` builds the face v0.5.9f shipped: its start-of-turn Radiant and its Float deck
+/// trigger, both gone since #2657.
+fn unleashed(radiant: bool, v0_5_9f: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             if radiant {
@@ -129,23 +134,39 @@ fn unleashed(radiant: bool) -> Script {
                 })]
             }
         })),
-        start_of_turn: Some(hook(move |ctx| {
-            vec![set_radiant_random(json_as(json!({
-                "zones": "field",
-                "count": param(&*ctx, "radiants"),
-            })))]
-        })),
-        // "Float reduces cost" (R1563000), its trigger ids kept from before the keyword.
+        start_of_turn: v0_5_9f.then(|| {
+            hook(move |ctx| {
+                vec![set_radiant_random(json_as(json!({
+                    "zones": "field",
+                    "count": param(&*ctx, "radiants"),
+                })))]
+            })
+        }),
+        // "Float reduces cost" (R1563000), its trigger ids kept from before the keyword; in the hand
+        // alone since R2657002.
         hand_triggers: vec![float_reduces_cost("unleashed-discount-hand")],
-        deck_triggers: vec![float_reduces_cost("unleashed-discount-deck")],
+        deck_triggers: if v0_5_9f {
+            vec![float_reduces_cost("unleashed-discount-deck")]
+        } else {
+            vec![]
+        },
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: unleashed(false),
-        radiant: unleashed(true),
+        base: unleashed(false, false),
+        radiant: unleashed(true, false),
+    }
+}
+
+/// R767000: through v0.5.9f it made permanents Radiant at the start of its controller's turn and a
+/// Float lowered its cost in the deck too; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    CardScripts {
+        base: unleashed(false, true),
+        radiant: unleashed(true, true),
     }
 }
 
@@ -261,21 +282,22 @@ mod tests {
         use super::*;
 
         #[test]
-        fn it_cannot_attack() {
+        fn it_attacks_since_it_lost_cant_attack() {
             let mut s = scenario(json!({
                 "seed": "unleashed-cannot-attack",
                 "p1": { "field": [{ "def": UNLEASHED, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
                 "p2": { "hand": [FILLER], "library": [FILLER] },
             }));
             let me = s.unit(P1, 1).expect("unleashed");
-            s.expect_refused(|s| s.attack(&me, "hero"));
+            s.attack(&me, "hero");
+            s.expect_health(P2, jackioh_engine::config::HERO_HEALTH - 8);
         }
 
         mod discount {
             use super::*;
 
             #[test]
-            fn r1022_r1563000_a_float_lowers_its_cost_in_hand_and_deck_never_below_0() {
+            fn r1022_r1563000_r2657002_a_float_lowers_its_cost_in_hand_never_in_the_deck_never_below_0() {
                 let mut s = scenario(json!({
                     "seed": "unleashed-discount",
                     "p1": {
@@ -290,9 +312,10 @@ mod tests {
 
                 s.end_turn();
 
-                // Each copy costs 10 less: a permanent `costMod`, kept in hand and deck (R766).
+                // The copy in hand costs 10 less, a permanent `costMod` (R766); the deck's is untouched
+                // (R2657002).
                 assert_eq!(s.card(hand_id.as_str()).cost_mod, -10);
-                assert_eq!(s.card(deck_id.as_str()).cost_mod, -10);
+                assert_eq!(s.card(deck_id.as_str()).cost_mod, 0);
                 assert_eq!(price_of(&s, &hand_id), 0);
                 // Ending another turn with mana left lowers it again, and the price floors at 0.
                 s.end_turn();
@@ -395,10 +418,40 @@ mod tests {
             }
 
             #[test]
-            fn r1025_an_ai_girlfriend_animating() {
+            fn r1025_an_ai_girlfriend_summoned_straight_into_a_unit_zone() {
                 let s = rolling("AI Girlfriend", None);
                 assert!(field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
                 assert!(!backrow_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+            }
+
+            #[test]
+            fn r1025_with_a_full_board_the_girlfriend_entry_summons_nothing() {
+                // Every unit zone full at Cry resolution: the summon fizzles (R64).
+                for n in 0..96 {
+                    let mut s = scenario(json!({
+                        "seed": format!("unleashed-girlfriend-full-{n}"),
+                        "p1": {
+                            "field": [
+                                { "def": "core-012", "lane": 1 },
+                                { "def": "core-012", "lane": 2 },
+                                { "def": "core-012", "lane": 3 },
+                                { "def": "core-012", "lane": 4 },
+                            ],
+                            "hand": [UNLEASHED, FILLER],
+                            "library": [FILLER, FILLER, FILLER, FILLER],
+                            "mana": 10,
+                        },
+                        "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                    }));
+                    s.play(UNLEASHED, json!({ "zone": 5 }));
+                    if !rolled(&s).iter().any(|label| label.contains("AI Girlfriend")) {
+                        continue;
+                    }
+                    assert!(!field_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+                    assert!(!backrow_defs(&s, P1).contains(&GIRLFRIEND.to_string()));
+                    return;
+                }
+                panic!("no seed rolled AI Girlfriend");
             }
 
             #[test]
@@ -433,23 +486,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_at_your_start_of_turn_one_non_radiant_permanent_itself_included() {
-                // Its only non-Radiant permanent is itself: it becomes Radiant.
-                let mut s = scenario(json!({
-                    "seed": "unleashed-sot-self",
-                    "p1": {
-                        "field": [
-                            { "def": UNLEASHED, "lane": 1 },
-                            { "def": "core-012", "radiant": true, "lane": 2 },
-                        ],
-                        "hand": [FILLER],
-                        "library": [FILLER, FILLER],
-                    },
-                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
-                }));
-                s.start_turn();
-                assert!(s.unit(P1, 1).expect("unleashed").radiant);
-                // With two plain permanents beside it, exactly one becomes Radiant.
+            fn its_start_of_turn_makes_nothing_radiant_since_2657() {
                 let mut s = scenario(json!({
                     "seed": "unleashed-sot-one",
                     "p1": {
@@ -469,7 +506,7 @@ mod tests {
                     .iter()
                     .filter(|event| matches!(event, GameEvent::RadiantSet { .. }))
                     .count();
-                assert_eq!(set, 1);
+                assert_eq!(set, 0);
             }
 
             #[test]
@@ -485,7 +522,7 @@ mod tests {
             }
 
             #[test]
-            fn r1023_two_different_entries_named_and_in_order() {
+            fn r60_r1023_two_different_entries_named_and_in_order() {
                 let mut pairs: Vec<Vec<String>> = Vec::new();
                 for n in 0..16 {
                     let mut s = holding(&format!("unleashed-pick-{n}"), false);
@@ -529,7 +566,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_radiant_makes_two_permanents_radiant() {
+            fn radiant_makes_nothing_radiant_at_the_start_of_turn_since_2657() {
                 let mut s = scenario(json!({
                     "seed": "unleashed-radiant-sot",
                     "p1": {
@@ -548,7 +585,7 @@ mod tests {
                 let radiant = (2..=4)
                     .filter(|lane| s.unit(P1, *lane).expect("felinors").radiant)
                     .count();
-                assert_eq!(radiant, 2);
+                assert_eq!(radiant, 0);
             }
 
             #[test]

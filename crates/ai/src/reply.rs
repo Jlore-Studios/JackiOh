@@ -22,7 +22,9 @@ use jackioh_engine::{
 
 use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY};
-use crate::evaluate::{NextSwing, coming_mana, evaluate, heal_converted, heal_worth, kill_worth, unit_worth};
+use crate::evaluate::{
+    NextSwing, Prices, coming_mana, evaluate_priced, heal_converted, heal_worth, kill_worth, unit_worth,
+};
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
@@ -39,10 +41,26 @@ pub(crate) struct Trade {
     pub(crate) splash_kills: bool,
 }
 
-/// Static value of `attacker` hitting `target` (§4.3, §4.5, #1796): target kill value less own death,
-/// accounting for First Strike, Ranged (R783000), Cleave (R63), Trample (§4.4), and Lifesteal (#1820).
-/// `kills`/`splash_kills` feed move ordering (#1779, #1821).
-pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> Trade {
+/// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
+/// (`kill_worth`: a unit with Reborn unspent less the body it comes back as, §4.5 step 4, #1796), less
+/// what its own death removes when it dies too, with First Strike deciding who strikes first and no
+/// strike back at all on a Ranged attacker unless the target is Ranged too (R783000). A hit that kills
+/// nothing is worth a little per point dealt, so a second attacker can finish what the first one
+/// started. A Cleave attack also prices what its splash kills or unshields on the target's neighbours
+/// (R63): a killed neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the
+/// same share of the Divine Shield weight. A Trample attacker's hits add what they land beyond each
+/// struck unit's health on the target's hero, priced as a face hit (`reply_face_value`, §4.4 step 9),
+/// and a Lifesteal attacker's add what healing its own hero by all they deal is worth (`heal_worth`,
+/// step 8; #1820). `kills` says whether the strike kills the target itself, `splash_kills` whether the
+/// splash kills a neighbour; the move order reads all three (`candidates.rs`'s even trades, #1779,
+/// #1821). Its screen (#1796), 400 games of improve-dev against the parent (`633568b99`), read 196-202
+/// with 2 aborted, edge -0.015 (-0.041 to 0.011).
+pub(crate) fn trade_value(
+    state: &GameState,
+    attacker: &CardInstance,
+    target_id: &str,
+    prices: &Prices,
+) -> Trade {
     let Some(target) = find_instance(state, target_id) else {
         return Trade {
             value: f64::NEG_INFINITY,
@@ -89,7 +107,7 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
             splashed += on_unit(splash.dealt, &n);
             if splash.kills {
                 splash_kills = true;
-                cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL);
+                cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL, prices);
             } else if splash.pops_shield {
                 cleave_value += AI_REPLY.cleave_share * AI_EVAL.keyword.divine_shield;
             }
@@ -97,7 +115,7 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
     }
 
     let mut value = if kills {
-        kill_worth(state, target, &AI_EVAL)
+        kill_worth(state, target, &AI_EVAL, prices)
     } else {
         AI_REPLY.chip_per_damage * f64::from(out.dealt.min(t.view.health))
     };
@@ -105,7 +123,7 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
         value += AI_EVAL.keyword.divine_shield;
     }
     if dies {
-        value -= kill_worth(state, attacker, &AI_EVAL);
+        value -= kill_worth(state, attacker, &AI_EVAL, prices);
     }
     // §4.4 step 9: what the attack's hits deal beyond each unit's health goes on to the target's hero
     // through its Armor and caps (`projected_damage`: a Cleave's hits too, R176, and nothing when a
@@ -160,6 +178,7 @@ fn ranked_attacks(
     seat: PlayerId,
     legal: &[ActionBody],
     face_is_lethal: bool,
+    prices: &Prices,
 ) -> Vec<ActionBody> {
     let hero = format!("hero-{}", seat.as_str());
     let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
@@ -182,7 +201,7 @@ fn ranked_attacks(
                 subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
             reply_face_value(state, seat, damage)
         } else {
-            trade_value(state, attacker, target_id).value
+            trade_value(state, attacker, target_id, prices).value
         };
         if value > 0.0 {
             ranked.push((action, value));
@@ -224,9 +243,10 @@ fn reduce_for(
     }
 }
 
-/// Candidate search outcome for known plays, activations, and switches.
-enum Known {
-    /// The counter refused a node.
+/// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer: TS's
+/// `GameState | null | undefined`.
+pub(crate) enum Known {
+    /// The counter refused a node (TS `null`).
     Cut,
     /// No such play is worth making.
     Nothing,
@@ -240,27 +260,35 @@ fn known_play(
     legal: &[ActionBody],
     hidden: &IndexSet<String>,
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Known {
     let opp = seat.opponent();
-    let plays: Vec<ActionBody> = candidate_actions_in(state, opp, legal.to_vec())
+    let plays: Vec<ActionBody> = candidate_actions_in(state, opp, legal.to_vec(), prices)
         .into_iter()
         .filter(
             |action| matches!(action, ActionBody::Play { instance_id, .. } if !hidden.contains(instance_id)),
         )
         .take(AI_REPLY.known_plays.max(0) as usize)
         .collect();
-    best_try(state, opp, &plays, counter)
+    best_try(state, opp, &plays, counter, prices)
 }
 
-/// Best of `tries` for `opp` by static evaluation: winning action leads, else max improvement over baseline.
-fn best_try(state: &GameState, opp: PlayerId, tries: &[ActionBody], counter: &dyn NodeCounter) -> Known {
+/// The best of `tries` for `opp` by its own evaluation: one that wins the game at once, else the one
+/// whose result beats standing still by the most (ties keep the list's order).
+fn best_try(
+    state: &GameState,
+    opp: PlayerId,
+    tries: &[ActionBody],
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Known {
     if tries.is_empty() {
         return Known::Nothing;
     }
     let mut best: Option<GameState> = None;
-    let mut best_value = evaluate(state, opp, NextSwing::Enemy, &AI_EVAL);
+    let mut best_value = evaluate_priced(state, opp, NextSwing::Enemy, &AI_EVAL, prices);
     for action in tries {
-        let next = match simulate(state, opp, action, counter) {
+        let next = match simulate(state, opp, action, counter, prices) {
             None => return Known::Cut,
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
@@ -271,7 +299,7 @@ fn best_try(state: &GameState, opp: PlayerId, tries: &[ActionBody], counter: &dy
         {
             return Known::Played(Box::new(next));
         }
-        let value = evaluate(&next, opp, NextSwing::Enemy, &AI_EVAL);
+        let value = evaluate_priced(&next, opp, NextSwing::Enemy, &AI_EVAL, prices);
         // Strictly greater, so ties keep move order.
         if value > best_value {
             best_value = value;
@@ -327,14 +355,18 @@ fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionB
         && find_instance(state, instance_id).is_some_and(|card| subsystems::is_acting_on_field(state, card))
 }
 
-/// Step 2: best visible activation by opponent evaluation if beating standing still.
-/// Tries up to `AI_REPLY.visible_activations`, ordered by `aim_of` (enemy hero first).
-fn visible_activation(
+/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's
+/// own evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried,
+/// ordered by `aim_of` and in legal_actions order within each aim: `legal_actions` lists the
+/// activating side's own targets first, so the seat's hero would otherwise come last. R2564000: the
+/// root's activation probes try each unit's uses through it too.
+pub(crate) fn visible_activation(
     state: &GameState,
     seat: PlayerId,
     legal: &[ActionBody],
     hidden: &IndexSet<String>,
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Known {
     let mut tries: Vec<ActionBody> = legal
         .iter()
@@ -344,12 +376,20 @@ fn visible_activation(
     // Stable, so each aim keeps legal_actions order.
     tries.sort_by_key(|action| aim_of(state, seat, action));
     tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
-    best_try(state, seat.opponent(), &tries, counter)
+    best_try(state, seat.opponent(), &tries, counter, prices)
 }
 
-/// Step 3 (R49): trials switching Deft units in Defense to Attack (`deft_ready_switch`).
-/// The first whose best ranked attack is its own keeps the switch.
-fn deft_switch(state: &GameState, seat: PlayerId, legal: &[ActionBody], counter: &dyn NodeCounter) -> Known {
+/// Step 3, R49: the opponent's Deft units in Defense Position may switch to Attack and still attack.
+/// Each one whose switch `legal` lists and whose attack is unspent (`deft_ready_switch`), in
+/// legal_actions order, is switched on trial, one node; the first whose best-ranked attack after the
+/// switch is one of its own keeps the switch. Otherwise every such unit stays in Defense.
+fn deft_switch(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    counter: &dyn NodeCounter,
+    prices: &Prices,
+) -> Known {
     let opp = seat.opponent();
     for action in legal {
         let ActionBody::SwitchPosition { instance_id } = action else {
@@ -366,7 +406,9 @@ fn deft_switch(state: &GameState, seat: PlayerId, legal: &[ActionBody], counter:
         };
         let after = legal_actions(&switched, opp);
         // The trial ranks as before #1634: one hit at a time.
-        let best = ranked_attacks(&switched, seat, &after, false).into_iter().next();
+        let best = ranked_attacks(&switched, seat, &after, false, prices)
+            .into_iter()
+            .next();
         if matches!(&best, Some(ActionBody::Attack { attacker_id, .. }) if attacker_id == instance_id) {
             return Known::Played(Box::new(switched));
         }
@@ -381,6 +423,7 @@ fn defense_switch(
     seat: PlayerId,
     legal: &[ActionBody],
     counter: &dyn NodeCounter,
+    prices: &Prices,
 ) -> Known {
     let tries: Vec<ActionBody> = legal
         .iter()
@@ -392,7 +435,7 @@ fn defense_switch(
         .take(AI_REPLY.defense_switches.max(0) as usize)
         .cloned()
         .collect();
-    best_try(state, seat.opponent(), &tries, counter)
+    best_try(state, seat.opponent(), &tries, counter, prices)
 }
 
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
@@ -412,8 +455,9 @@ pub fn simulate_reply(
     seat: PlayerId,
     counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
+    prices: &Prices,
 ) -> Option<GameState> {
-    simulate_reply_with(state, seat, counter, hidden, AI_REPLY.open_lethal)
+    simulate_reply_with(state, seat, counter, hidden, AI_REPLY.open_lethal, prices)
 }
 
 /// `simulate_reply` with the open-lethal switch given (`AI_REPLY.open_lethal`, #1634), for tests and
@@ -424,6 +468,7 @@ pub fn simulate_reply_with(
     counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
     open_lethal: bool,
+    prices: &Prices,
 ) -> Option<GameState> {
     let opp = seat.opponent();
     let mut current = state.clone();
@@ -437,7 +482,8 @@ pub fn simulate_reply_with(
                 return Some(current);
             }
             let answerer = pending.player_id;
-            let Ok(next) = best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "reply")?
+            let Ok(next) =
+                best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "reply", prices)?
             else {
                 return Some(current);
             };
@@ -451,7 +497,7 @@ pub fn simulate_reply_with(
         // One legal_actions serves the known-play try (its ordered candidates), the visible
         // activations, the Deft switches, the static trader's attack list and the switches to Defense.
         let legal = legal_actions(&current, opp);
-        match known_play(&current, seat, &legal, hidden, counter) {
+        match known_play(&current, seat, &legal, hidden, counter, prices) {
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;
@@ -459,7 +505,7 @@ pub fn simulate_reply_with(
             }
             Known::Nothing => {}
         }
-        match visible_activation(&current, seat, &legal, hidden, counter) {
+        match visible_activation(&current, seat, &legal, hidden, counter, prices) {
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;
@@ -467,7 +513,7 @@ pub fn simulate_reply_with(
             }
             Known::Nothing => {}
         }
-        match deft_switch(&current, seat, &legal, counter) {
+        match deft_switch(&current, seat, &legal, counter, prices) {
             Known::Cut => return None,
             Known::Played(switched) => {
                 current = *switched;
@@ -478,13 +524,13 @@ pub fn simulate_reply_with(
 
         // #1634: one board read per step: do the attacks left reach the face together?
         let face_is_lethal = open_lethal && ready_gap(&current, opp) <= 0.0;
-        let attack = ranked_attacks(&current, seat, &legal, face_is_lethal)
+        let attack = ranked_attacks(&current, seat, &legal, face_is_lethal, prices)
             .into_iter()
             .next();
         // #1696: no attack is worth making, so before it ends its turn the opponent switches a unit
         // its evaluation would rather have in Defense Position.
         if attack.is_none() {
-            match defense_switch(&current, seat, &legal, counter) {
+            match defense_switch(&current, seat, &legal, counter, prices) {
                 Known::Cut => return None,
                 Known::Played(switched) => {
                     current = *switched;
@@ -521,36 +567,37 @@ pub fn reply_score(
     root_turn: i32,
     counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
+    prices: &Prices,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
     if status == LineStatus::Over {
-        return Some(static_score(end, seat, root_turn));
+        return Some(static_score(end, seat, root_turn, prices));
     }
     // A line that stopped on the seat's own prompt keeps its static score, from the evaluation that
     // scores the finalists (#1010).
     if status == LineStatus::Open {
-        return Some(finalist_score(end, seat, NextSwing::Enemy));
+        return Some(finalist_score(end, seat, NextSwing::Enemy, prices));
     }
     let unspent = if status == LineStatus::Passed {
         end.players[seat].turn_log.unspent_at_end.unwrap_or(0)
     } else {
         0
     };
-    let after = simulate_reply(end, seat, counter, hidden)?;
-    let first = replied_score(end, &after, seat, unspent);
+    let after = simulate_reply(end, seat, counter, hidden, prices)?;
+    let first = replied_score(end, &after, seat, unspent, prices);
     // #1995: a countdown still waiting at the seat's next decision is scored a second time, fired.
     let Some((fired, wait)) = countdowns_due(end, &after, seat) else {
         return Some(first);
     };
-    let refired = simulate_reply(&fired, seat, counter, hidden)?;
-    let second = replied_score(end, &refired, seat, unspent);
+    let refired = simulate_reply(&fired, seat, counter, hidden, prices)?;
+    let second = replied_score(end, &refired, seat, unspent, prices);
     let share = (0..wait).fold(1.0, |share, _| share * AI_REPLY.countdown_share);
     Some(first + share * (second - first))
 }
 
 /// A passed line's score at `after`, where the reply from `end` stopped: the finalists' evaluation
 /// with whoever swings next, less the crystals the line left `unspent`.
-fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i32) -> f64 {
+fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i32, prices: &Prices) -> f64 {
     let next = if after.active == seat {
         NextSwing::Seat
     } else {
@@ -563,7 +610,7 @@ fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i3
     } else {
         0.0
     };
-    finalist_score(after, seat, next) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
+    finalist_score(after, seat, next, prices) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
 }
 
 /// #1995: advances countdowns waiting at `after` (public badges, R1181000, R169, R185) to seat's
@@ -651,9 +698,9 @@ mod tests {
     fn a_kill_of_a_reborn_unit_is_worth_its_worth_less_its_one_health_return() {
         let s = facing_barker(json!({ "def": CURVATURE, "radiant": true }));
         let barker = s.card(BARKER);
-        let trade = trade_value(s.state(), s.card(CURVATURE), &barker.id);
+        let trade = trade_value(s.state(), s.card(CURVATURE), &barker.id, Prices::NONE);
         assert!(trade.kills);
-        let worth = unit_worth(s.state(), barker, &AI_EVAL);
+        let worth = unit_worth(s.state(), barker, &AI_EVAL, Prices::NONE);
         assert!(
             (trade.value - (worth - barker_return())).abs() < 1e-9,
             "{}",
@@ -666,9 +713,9 @@ mod tests {
         let mut s = facing_barker(json!({ "def": CURVATURE, "radiant": true }));
         s.card_mut(BARKER).reborn_spent = Some(true);
         let barker = s.card(BARKER);
-        let trade = trade_value(s.state(), s.card(CURVATURE), &barker.id);
+        let trade = trade_value(s.state(), s.card(CURVATURE), &barker.id, Prices::NONE);
         assert!(trade.kills);
-        let worth = unit_worth(s.state(), barker, &AI_EVAL);
+        let worth = unit_worth(s.state(), barker, &AI_EVAL, Prices::NONE);
         assert!((trade.value - worth).abs() < 1e-9, "{}", trade.value);
         assert!(
             (worth - (4.0 * AI_EVAL.attack + 4.0 * AI_EVAL.health)).abs() < 1e-9,
@@ -685,10 +732,10 @@ mod tests {
         }));
         let barker = s.card(BARKER);
         let vanilla = s.card(VANILLA);
-        let trade = trade_value(s.state(), barker, &vanilla.id);
+        let trade = trade_value(s.state(), barker, &vanilla.id, Prices::NONE);
         assert!(trade.kills);
-        let expected = unit_worth(s.state(), vanilla, &AI_EVAL)
-            - (unit_worth(s.state(), barker, &AI_EVAL) - barker_return());
+        let expected = unit_worth(s.state(), vanilla, &AI_EVAL, Prices::NONE)
+            - (unit_worth(s.state(), barker, &AI_EVAL, Prices::NONE) - barker_return());
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
@@ -698,9 +745,9 @@ mod tests {
             json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [OOMEN] } }),
             &[Keyword::Trample],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
-        let kill = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL);
+        let kill = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE);
         // §4.4 step 9: 4 on a 2-health Oomen sends 2 on to p2's hero.
         let expected = kill + AI_REPLY.face_per_damage * 2.0;
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
@@ -714,7 +761,7 @@ mod tests {
             &[Keyword::Trample],
         );
         s.card_mut(OOMEN).granted_keywords.push(Keyword::Indestructible);
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         // §4.4 step 4: the Oomen takes no damage, so there is no step 5 and no excess for step 9.
         assert!(!trade.kills);
         assert!(trade.value.abs() < 1e-9, "{}", trade.value);
@@ -726,10 +773,10 @@ mod tests {
             json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "field": [OOMEN] } }),
             &[Keyword::Lifesteal],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
         // §4.4 step 5: all 4 dealt heal, not only the Oomen's 2 health.
-        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 4);
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE) + healed(10, 4);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
@@ -742,11 +789,12 @@ mod tests {
             }),
             &[Keyword::Trample, Keyword::Lifesteal],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
         // 2 land on the Oomen and 2 trample on, of which p2's Armor takes 1: 3 heal.
-        let expected =
-            kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + AI_REPLY.face_per_damage * 1.0 + healed(10, 3);
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE)
+            + AI_REPLY.face_per_damage * 1.0
+            + healed(10, 3);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
@@ -759,10 +807,10 @@ mod tests {
             }),
             &[Keyword::Lifesteal],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
         // R1180003: the Radiant Life Mage doubles the 4 healed.
-        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 8);
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE) + healed(10, 8);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
@@ -775,11 +823,11 @@ mod tests {
             }),
             &[Keyword::Lifesteal],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
         // E8, R413: the 4 healed become 4 Pierce damage on p1's own hero instead.
-        let expected =
-            kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) - reply_face_value(s.state(), PlayerId::P1, 4);
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE)
+            - reply_face_value(s.state(), PlayerId::P1, 4);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
         assert!(trade.value < 0.0, "{}", trade.value);
     }
@@ -799,10 +847,10 @@ mod tests {
                 converter_id: "moon".into(),
             },
         });
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
-        let expected =
-            kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) - reply_face_value(s.state(), PlayerId::P1, 4);
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE)
+            - reply_face_value(s.state(), PlayerId::P1, 4);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
         assert!(trade.value < 0.0, "{}", trade.value);
     }
@@ -816,10 +864,10 @@ mod tests {
             }),
             &[Keyword::Lifesteal],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id, Prices::NONE);
         assert!(trade.kills);
         // R33, R1487000: a face-down card's text sleeps, so the trap stays unmodeled.
-        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 4);
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL, Prices::NONE) + healed(10, 4);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
@@ -829,10 +877,11 @@ mod tests {
             json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "field": [POINTMASTER] } }),
             &[Keyword::Lifesteal],
         );
-        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(POINTMASTER).id);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(POINTMASTER).id, Prices::NONE);
         // §4.3 step 1: the Pointmaster's 7 destroys the Vanilla before it strikes.
         assert!(!trade.kills);
-        let expected = AI_REPLY.chip_per_damage * 1.0 - kill_worth(s.state(), s.card(VANILLA), &AI_EVAL);
+        let expected =
+            AI_REPLY.chip_per_damage * 1.0 - kill_worth(s.state(), s.card(VANILLA), &AI_EVAL, Prices::NONE);
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
@@ -852,6 +901,7 @@ mod tests {
             PlayerId::P1,
             &legal_actions(s.state(), PlayerId::P2),
             false,
+            Prices::NONE,
         )
         .into_iter()
         .next()

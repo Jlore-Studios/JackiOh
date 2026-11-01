@@ -200,7 +200,7 @@ function LandingFanCard({
   const face = faceModel({ defId: def.id, def, radiant });
   const inspect = useInspectTrigger(
     { key: `landing-fan-${def.id}`, face },
-    { hover: false, touchHold: "preview", prefer: "above" },
+    { hover: false, prefer: "above" },
   );
   // R704 fixes this mount's opening-deal or swap apparition.
   const [entry] = useState<"deal" | "swap">(swapped ? "swap" : "deal");

@@ -468,6 +468,7 @@ describe("B32 — the director fires each cue on time and leaves nothing behind"
   });
 });
 
+// B33: clear() and a hidden page.
 describe("B32 — review fixes: one banner at a time, a quiet canvas, wall-clock ages", () => {
   it("B32 a banner replaces one still fading, so two never read over each other", () => {
     const h = harness();
@@ -815,6 +816,7 @@ describe("B35 — the shake goes through the sink", () => {
   });
 });
 
+// B41: flash presets bloom at their origin.
 describe("B41 — bursts of a flash preset bloom at their origin", () => {
   it("B41 a spark burst leaves a bloom running after its particles are counted, and it is gone within the preset's flash time", () => {
     const flashMs = PARTICLE_PRESETS.spark.flash?.ms ?? 0;

@@ -12,6 +12,21 @@ pub const ID: &str = "classicplus-029";
 /// The step the Discover's answer re-enters (§10.6).
 const PICKED: &str = "picked";
 
+/// R2476000: in its owner's hand, the different cards it can give from the board the caster's last game
+/// ended with, after the words both faces print: the candidates `discover_from_last_board` and
+/// `add_random_from_last_board` draw from (R564), never its own definitions (R387). 0 is a fizzle
+/// (R129: hotseat, a first game). The board is the caster's own, so only they see the count.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        if ctx.zone != ConditionZone::Hand {
+            return vec![];
+        }
+        let own = self_def_ids(Some(ctx.state), &ctx.self_.def_id);
+        let count = subsystems::last_boards::last_board_candidates(ctx.state, ctx.controller, &own).len();
+        vec![count_preview("the board your last game ended with", count as i32)]
+    })
+}
+
 /// "It costs (0)", "Each costs (0)": the declared number `setCost` (R386), less being better.
 pub fn script() -> CardScripts {
     let base = Script {
@@ -20,6 +35,7 @@ pub fn script() -> CardScripts {
             PICKED,
             hook(|ctx| vec![add_from_last_board(json_as(json!({ "costOverride": param(&*ctx, "setCost") })))]),
         )]),
+        preview: Some(preview()),
         ..Script::default()
     };
     let radiant = Script {
@@ -29,6 +45,7 @@ pub fn script() -> CardScripts {
                 "costOverride": param(&*ctx, "setCost"),
             })))]
         })),
+        preview: Some(preview()),
         ..Script::default()
     };
     CardScripts { base, radiant }
@@ -133,6 +150,25 @@ mod tests {
                 for def_id in &options {
                     assert!(BOARD_IDS.contains(&def_id.as_str()));
                 }
+            }
+
+            /// R2476000: in hand, the different cards of the caster's last board it can give: two
+            /// different cards on a board of three, and the Discover then offers those two.
+            #[test]
+            fn r2476000_in_hand_it_previews_the_different_cards_of_your_last_board() {
+                crate::register_all();
+                for radiant in [false, true] {
+                    let s = game(&[BOARD[0], BOARD[0], BOARD[1]], radiant, 1);
+                    let portal = s.card(PORTAL).id.clone();
+                    assert_eq!(
+                        crate::preview_seen(&s, P1, &portal),
+                        vec![("the board your last game ended with".to_string(), 2, None)],
+                        "radiant {radiant}"
+                    );
+                }
+                let empty = game(&[], false, 1);
+                let portal = empty.card(PORTAL).id.clone();
+                assert_eq!(crate::preview_seen(&empty, P1, &portal), vec![("the board your last game ended with".to_string(), 0, None)]);
             }
 
             #[test]

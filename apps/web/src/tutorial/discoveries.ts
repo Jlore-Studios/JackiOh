@@ -50,6 +50,11 @@ function myPlays(ctx: CoachCtx): { event: Extract<GameEvent, { type: "cardPlayed
     .map((event) => ({ event, def: defOf(ctx, event.defId) }));
 }
 
+/** The traps this batch reveals: every `trapFired` but a face-up Field Trap's firing again, which reveals nothing (R2657001). */
+function trapReveals(ctx: CoachCtx): Extract<GameEvent, { type: "trapFired" }>[] {
+  return freshOf(ctx, "trapFired").filter((event) => event.again !== true);
+}
+
 function mine(view: PlayerView, instanceId: string): UnitView | undefined {
   return unitsOf(view, "you").find((unit) => unit.instanceId === instanceId);
 }
@@ -232,14 +237,14 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     name: "Traps",
     rule: "you set a Trap face-down, and it springs by itself when its moment comes, on either turn.",
     lesson: "backrow",
-    found: (ctx) => freshOf(ctx, "trapFired").some((event) => event.controller === ctx.view.viewer),
+    found: (ctx) => trapReveals(ctx).some((event) => event.controller === ctx.view.viewer),
   },
   {
     id: "enemy-backrow",
     name: "Face-down cards",
     rule: "the enemy's face-down cards are hidden until they spring.",
     lesson: "backrow",
-    found: (ctx) => freshOf(ctx, "trapFired").some((event) => event.controller !== ctx.view.viewer),
+    found: (ctx) => trapReveals(ctx).some((event) => event.controller !== ctx.view.viewer),
   },
   {
     id: "field-spell",
@@ -253,7 +258,7 @@ export const FIELD_GUIDE: readonly Discovery[] = [
     name: "Field Traps",
     rule: "a Field Trap springs like a Trap, then stays to keep working.",
     lesson: "backrow",
-    found: (ctx) => freshOf(ctx, "trapFired").some((event) => defOf(ctx, event.defId)?.type === "Field Trap"),
+    found: (ctx) => trapReveals(ctx).some((event) => defOf(ctx, event.defId)?.type === "Field Trap"),
   },
   // Lesson 5, The final exam: everything else the game holds.
   {

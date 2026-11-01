@@ -19,7 +19,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 
-use jackioh_ai::{AI_BUDGET, AiOptions, duos_decide};
+use jackioh_ai::{AiOptions, duos_decide};
 use jackioh_engine::duos::DuosState;
 use jackioh_engine::wire::{
     ActionBody, DUOS_SEATS, DuosAction, DuosActionBody, DuosResult, DuosSeat, DuosView,
@@ -36,7 +36,7 @@ use crate::app::{App, now_ms};
 use crate::bots::seat::r188_forbidden;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
-    BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS,
+    BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_BUDGET, DUOS_AI_STEP_DELAY_MS,
     DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MATCH_RECORD_RESULT_ATTEMPTS,
     MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
@@ -247,9 +247,10 @@ impl AiJob {
         let wait = Duration::from_millis(u64::try_from(BOT_DECISION_DEADLINE_MS).unwrap_or(0));
         let deadline = std::time::Instant::now() + wait;
         let should_stop = move || std::time::Instant::now() >= deadline;
+        // R2575000: the practice AI's budget before #2575 doubled it, cut short by the deadline.
         let mut options = AiOptions {
             rng: Rng::new(&format!("{}:duos-ai:{}", self.seed, self.seat), self.cursor),
-            budget: AI_BUDGET,
+            budget: DUOS_AI_BUDGET,
             should_stop: Some(&should_stop),
         };
         let body = self

@@ -132,15 +132,15 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
             &anti_oneshot().id,
             slot(P1, Row::Backrow, 2),
             json!({}),
-        ); // caps it at 5
+        ); // caps it at 4 (5 until #2657)
         state.players.p1.hero.armor = 1;
         let (dealt, events) = hit_alone(&mut state, None, Aim::Hero(P1), 12, None);
-        // 12 − 1 Armor = 11, halved and rounded up = 6, capped at 5: the Armor took 1 of it.
-        assert_eq!(dealt, 5);
+        // 12 − 1 Armor = 11, halved and rounded up = 6, capped at 4: the Armor took 1 of it.
+        assert_eq!(dealt, 4);
         assert_eq!(
             wire(&events_of_type(&json_events(&events), GameEventType::Damage)),
             vec![
-                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p1", "amount": 5, "combat": false, "absorbed": 1 })
+                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p1", "amount": 4, "combat": false, "absorbed": 1 })
             ]
         );
     }

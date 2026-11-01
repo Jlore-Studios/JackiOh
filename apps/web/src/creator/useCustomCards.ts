@@ -108,7 +108,7 @@ export function customCardsOfDeck(
   return { cards: found, missing };
 }
 
-/** R915005's practice deck: one that names a custom card, which no online path offers. */
+/** Whether a deck names a custom card: R915005's practice deck, which every online picker (the lobby's, the challenge's and the co-op panel's) lists off and never picks (`deckPracticeOnly`, `together/challengeChoice.ts`). */
 export function namesCustomCard(deck: readonly string[]): boolean {
   return deck.some((id) => id.startsWith(CUSTOM_ID_PREFIX));
 }

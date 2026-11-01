@@ -5,10 +5,11 @@
 //!   Radiant: "… Death: Gain {resources|random Radiant Stinkyscape Resource|…}.\nActivate: Tribute
 //!            this." (0/12; 2)
 //!
-//! A mining node (R1840006): Can't attack is printed, and `StaticFlags.never_defense` keeps it out of
+//! A mining node (R1840006): Can't attack is printed, and Can't Defend (R2657000) keeps it out of
 //! Defense Position (§4.1). Activate (§6.2, R384), once a turn: its controller's hero takes `selfDamage`
 //! (§4.4), then a Sacrifice of it (§6.3), a death, so its Death runs: `gain_resources` of `resources`
 //! random Resources into its controller's hand (R1840000, R1840002). Any other death pays too; an exile
+//! or a Bounce nothing. Radiant: the Activate is the Sacrifice alone, and the Resources are Radiant.
 //! The numbers are declared (R386), `selfDamage` on the base face only (R1431).
 
 use jackioh_engine::effects::{damage, gain_resources, sacrifice};
@@ -53,16 +54,13 @@ fn mine(radiant: bool) -> ActivationDecl {
 
 fn face(radiant: bool) -> Script {
     Script {
-        static_flags: Some(StaticFlags {
-            never_defense: Some(true),
-            ..StaticFlags::default()
-        }),
         activations: vec![mine(radiant)],
         death: Some(hook(move |ctx| {
             vec![gain_resources(json_as(
                 json!({ "count": param(&*ctx, "resources"), "radiant": radiant }),
             ))]
         })),
+        preview: Some(super::c169_tiny_asteroid::pool_preview()),
         ..Script::default()
     }
 }
@@ -72,6 +70,12 @@ pub fn script() -> CardScripts {
         base: face(false),
         radiant: face(true),
     }
+}
+
+/// R767000: through v0.5.9f "Can't be in Defense Position" was the static flag `never_defense` on both
+/// faces, before R2657000 made it the keyword Can't Defend; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_5_9f() -> CardScripts {
+    crate::never_defense_kept(script(), true, true)
 }
 
 // S 170 Medium Asteroid — SPEC §8.10 row 170, BUILD M12 row S 170.
@@ -164,5 +168,27 @@ mod tests {
         let in_hand = crate::resources_in_hand(&s, P1);
         assert_eq!(in_hand.len(), RESOURCES);
         assert!(in_hand.iter().all(|card| card.radiant));
+    }
+
+    /// R2476000, R1855002: with no rider it previews nothing; with an Anomaly board's rider it names the
+    /// pool after "random Stinkyscape Resource" (Radiant: "random Radiant Stinkyscape Resource"), to
+    /// both seats, and its Death's Resources come from that pool alone.
+    #[test]
+    fn r2476000_it_names_the_resource_pool_its_rider_holds() {
+        for radiant in [false, true] {
+            let mut s = node(radiant);
+            let rock = s.unit_at(P1, 1).id;
+            assert!(crate::preview_seen(&s, P1, &rock).is_empty(), "radiant {radiant}: no rider");
+            let pool = ["stinkyscape-t-narcor", "stinkyscape-t-red-narcor"];
+            s.card_mut(&rock).memory.insert(jackioh_engine::effects::RESOURCE_POOL_KEY.to_string(), json!(pool));
+            let label = if radiant { "random Radiant Stinkyscape Resource" } else { "random Stinkyscape Resource" };
+            let named = vec![(label.to_string(), 2, Some("Narcor or Red Narcor".to_string()))];
+            assert_eq!(crate::preview_seen(&s, P1, &rock), named, "radiant {radiant}");
+            assert_eq!(crate::preview_seen(&s, P2, &rock), named, "radiant {radiant}");
+            mined(&mut s);
+            let gained = crate::resources_in_hand(&s, P1);
+            assert!(!gained.is_empty(), "radiant {radiant}");
+            assert!(gained.iter().all(|card| pool.contains(&card.def_id.as_str())), "radiant {radiant}");
+        }
     }
 }
