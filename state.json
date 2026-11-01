@@ -12200,7 +12200,7 @@
       "taken_asks": []
     },
     "2648": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -12220,12 +12220,12 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "claude-2",
       "queued_at": "2026-11-01T02:58:06Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "41279273162",
+      "run_id": "pending:1b8de96c-1793515041",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-01T06:03:29Z",
+      "started_at": "2026-11-01T06:37:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -12403,9 +12403,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T06:37:09Z",
+    "at": "2026-11-01T06:37:33Z",
     "url": "",
-    "what": "build #2647 on claude-8"
+    "what": "build #2648 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-01T06:28:34Z",
