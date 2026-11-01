@@ -257,10 +257,6 @@ export const FX_FATIGUE_FLIGHT_FRACTION = 0.6; // …and reaches the hero at 0.9
 export const FX_OVERFLOW_FIZZLE_AT = 0.45;     // R318: a card a full library refuses fizzles here
 export const FX_MANA_STAGGER_MS = 40;
 export const FX_MANA_MAX_SPARKS = 10;
-export const FX_SHAKE_MIN_DAMAGE = 3;
-export const FX_TRAUMA_PER_DAMAGE = 0.15;
-export const FX_SHAKE_MAX_TRAUMA = 0.8;
-export const FX_HERO_TRAUMA_MULT = 1.25;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;
 export const FX_SLAM_MAX_TRAUMA = 0.5;
@@ -589,7 +585,7 @@ point. `side(x)` is `sideOf(view, x)`. Fractions such as `FX_SLAM_AT·D` are rou
 |---|---|---|
 | `cast` | `cardPlayed` | `[]` if the entry also holds a `summoned` with the same `instanceId`. If tgt is `hand-card-*` or `card-*`: `burst(arcane, tgt, area, 0)`, `ring(arcane, tgt, 0)`. Otherwise (the opponent's `hand-opponent`): `burst(arcane, tgt, point, 0)`. |
 | `summon` | `summoned` | Let slam = `FX_SLAM_AT·D`. Backrow row, or `env.card(defId)` undefined: `burst(dust, tgt at(0.5,1), ring, slam)` only. Units row with readable facts: `ring(dust, tgt, slam)`, `burst(dust, tgt at(0.5,1), ring, slam)`. Legendary adds `rays(legendary, tgt, 0)` and `burst(gold, tgt, area, slam)`; Mythic adds `rays(mythic, tgt, 0)` and `burst(prismatic, tgt, area, slam)`. Then `shake(trauma, slam)` with trauma = slamTrauma + (Legendary or Mythic ? `FX_LEGENDARY_TRAUMA` : 0), where slamTrauma = stats ≥ `FX_SLAM_STATS_MIN` ? `min(FX_SLAM_MAX_TRAUMA, (stats − FX_SLAM_STATS_MIN + 1)·FX_SLAM_TRAUMA_PER_STAT)` : 0, and stats = attack + health (missing counts as 0). |
-| `impact` | `damage` | Let src = `sourceAnchor(sourceId)`. If `combat` is false and src exists with a testid ≠ tgt's: `projectile(p, src → tgt, 0, flight = FX_PROJECTILE_FLIGHT_FRACTION·D)`, where p is `poison` for a Poisonous unit source, `arcane` for unit, backrow and trap sources, and `fire` for hand and hero sources. Then hit = flight, else hit = 0. Then `burst(spark, tgt, point, hit)`, `splat(damage, amount, tgt, hit)` (only when amount > 0), `burst(poison, tgt, area, hit)` if the source unit in `view` has Poisonous, and `shake(t, hit)` with t = amount < `FX_SHAKE_MIN_DAMAGE` ? 0 : `min(FX_SHAKE_MAX_TRAUMA, amount·FX_TRAUMA_PER_DAMAGE)`, ×`FX_HERO_TRAUMA_MULT` when tgt is `hero-*`. |
+| `impact` | `damage` | Let src = `sourceAnchor(sourceId)`. If `combat` is false and src exists with a testid ≠ tgt's: `projectile(p, src → tgt, 0, flight = FX_PROJECTILE_FLIGHT_FRACTION·D)`, where p is `poison` for a Poisonous unit source, `arcane` for unit, backrow and trap sources, and `fire` for hand and hero sources. Then hit = flight, else hit = 0. Then `burst(spark, tgt, point, hit)`, `splat(damage, amount, tgt, hit)` (only when amount > 0), `burst(poison, tgt, area, hit)` if the source unit in `view` has Poisonous, and `shake(traumaForShakePx(damageFeel(amount).shakePx), hit)`: the amount's tier in `game/damageFeel.ts`'s `DAMAGE_FEEL` (#57), so a hit below Moderate shakes nothing, on a unit or a hero alike. |
 | `drain` | `healthLost` | `burst(void, tgt, area, 0)`, `splat(loss, amount, tgt, 0)` |
 | `heal` | `healed` | `rays(holy, tgt, 0)`, `burst(holy, tgt, area, 0)`, `splat(heal, amount, tgt, FX_HEAL_SPLAT_AT·D)` |
 | `shieldBreak` | `divineShieldLost` | `ring(gold, tgt, 0)`, `burst(shard, tgt, ring, 0)` |
@@ -859,7 +855,7 @@ Planner (slice C):
 - **B8** R200: for every recipe sample and every D from `MIN_ENTRY_MS` to 1400 ms, each `planFx` cue has `0 ≤ delayMs ≤ D`, each projectile has `delayMs + flightMs ≤ D`, and each cue with a `durationMs` has `delayMs + durationMs ≤ D + FX_MAX_TAIL_MS`. *Observed:* a property loop in `cues.test.ts`.
 - **B9** `planFx` multiplies every burst `count` and every shake `trauma` by `FX_INTENSITY_SCALE[intensity]`, so low < normal < high, and returns `[]` at intensity 0. *Observed:* counts compared across three envs.
 - **B10** A non-combat `damage` whose source resolves to a different element than its target plans a `projectile` from source to target, and its spark burst, splat and shake all sit at `delayMs === flightMs`. Combat damage plans no projectile and impacts at 0. *Observed:* `cues.test.ts`.
-- **B11** `damage` plans a `damage` splat with the event's amount at the target and a `spark` burst. The shake trauma is 0 below `FX_SHAKE_MIN_DAMAGE`, grows with the amount up to `FX_SHAKE_MAX_TRAUMA`, and is ×`FX_HERO_TRAUMA_MULT` on a hero. *Observed:* amounts 1, 3, 6 and 20 on a unit and on a hero.
+- **B11** `damage` plans a `damage` splat with the event's amount at the target and a `spark` burst. The shake is the amount's tier's `shakePx` in `game/damageFeel.ts`'s `DAMAGE_FEEL` (#57): none below Moderate, and the same on a unit as on a hero. *Observed:* amounts 1, 3, 6 and 20 on a unit and on a hero.
 - **B12** A `damage` whose source unit in the planning view has Poisonous adds a `poison` burst at the target and flies a `poison` projectile. *Observed:* `fullBoardView()`, whose second unit has every keyword.
 - **B13** A non-combat damage source resolves in this order: a rendered instance, then the zone of a trap remembered from an earlier `trapFired`, then the hero of the player remembered from its `cardPlayed`, then nothing (no projectile). *Observed:* four cases with `createFxMemory`.
 - **B14** `summoned` into units plans a dust `ring` and a `dust` burst at the zone. A readable Legendary or Mythic def adds `rays` in its tone, a `gold` or `prismatic` burst and `FX_LEGENDARY_TRAUMA`. Attack + health ≥ `FX_SLAM_STATS_MIN` adds slam trauma. A backrow set, or an unknown or `"hidden"` def, plans only the dust burst. *Observed:* `env.card` stubs per rarity.
@@ -954,9 +950,9 @@ Visual pass 2 (stage effects), and the review that followed it:
   new layer banner replaces one still fading. *Observed:* `css.test.ts`, `director.test.ts`.
 - **B51** The reduce setting and intensity "off" draw nothing, the cocoon included, and the reduce
   setting zeroes `--anim-scale` on the game root. *Observed:* `FxLayer.test.tsx`, `css.test.ts`.
-- **B52** The shake reads: `FX_SHAKE_MAX_PX` 18 and 0.15 trauma per damage point move the board
-  several pixels for a third of a second on a 4 or 5 damage hit, and a full shake is spent inside
-  `FX_MAX_TAIL_MS`. *Observed:* `constants.test.ts`, `cues.test.ts`.
+- **B52** The shake reads: at `FX_SHAKE_MAX_PX` 18 the result's thump is the hardest and a trap
+  reveal is still felt, a damage hit shakes by its tier's `shakePx` (`game/damageFeel.ts`, #57), and
+  a full shake is spent inside `FX_MAX_TAIL_MS`. *Observed:* `constants.test.ts`, `cues.test.ts`.
 - **B53** A hand anchor (`hand-you`, `hand-opponent`) resolves to its cards plus the next card's slot,
   inside the strip; an empty hand is the strip. *Observed:* `anchors.test.ts`.
 - **B54** Particles and canvas shapes age by real time; a projectile's trail and arrival burst scale
