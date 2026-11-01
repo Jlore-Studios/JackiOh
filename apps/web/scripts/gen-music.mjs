@@ -3,7 +3,12 @@
 // each in src/audio/music-manifest.json (SPEC §10.11 "Music", R631).
 //
 //   node apps/web/scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>]
+//   node apps/web/scripts/gen-music.mjs --candidates --root <scratchDir>
 //   pnpm --filter @jackioh/web gen:music
+//
+// `--candidates` renders the audition candidates (scripts/music/candidates.mjs) instead of the
+// shipped tracks, into a scratch tree only (it needs a `--root` outside this app) and with no size
+// budget: the owner listens to them, and the ones kept move into tracks.mjs.
 //
 // THE MUSIC IS COMPOSED HERE. Each track is a score written as code (scripts/music/tracks.mjs, on
 // the toolkit in compose.mjs): a key, a tempo, chord progressions, parts and melodies built on one
@@ -79,7 +84,7 @@ const PEAK_DB = -1.5;
 const BUDGET_BYTES = 28 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 const FILE_MODE = 0o644;
-const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>]";
+const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>] [--candidates]";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -90,11 +95,12 @@ function usage(message) {
 }
 
 function parseArgs(argv) {
-  const opts = { check: false, force: false, only: null, root: path.resolve(SCRIPT_DIR, "..") };
+  const opts = { check: false, force: false, only: null, root: path.resolve(SCRIPT_DIR, ".."), candidates: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--check") opts.check = true;
     else if (arg === "--force") opts.force = true;
+    else if (arg === "--candidates") opts.candidates = true;
     else if (arg === "--only" || arg === "--root") {
       const value = argv[++i];
       if (value === undefined || value.startsWith("--")) usage(`${arg} needs a value`);
@@ -102,6 +108,7 @@ function parseArgs(argv) {
       else opts.root = path.resolve(value);
     } else usage(`unknown argument ${arg}`);
   }
+  if (opts.candidates && opts.root === path.resolve(SCRIPT_DIR, "..")) usage("--candidates renders into a scratch --root only");
   return opts;
 }
 
@@ -434,12 +441,15 @@ function fileSize(file) {
   }
 }
 
-function main() {
+async function main() {
   const opts = parseArgs(process.argv.slice(2));
+  const list = opts.candidates ? (await import("./music/candidates.mjs")).CANDIDATES : TRACKS;
+  // Candidates are auditioned, never shipped, so they answer to no budget.
+  const budget = opts.candidates ? Infinity : BUDGET_BYTES;
   const manifestPath = path.join(opts.root, "src/audio/music-manifest.json");
   const outDir = path.join(opts.root, "public/audio/music");
   const old = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, "utf8")) : { version: 1, format: FORMAT, files: {} };
-  const tracks = TRACKS.map((def) => ({ ...def.build(), id: def.id, loop: def.loop }));
+  const tracks = list.map((def) => ({ ...def.build(), id: def.id, loop: def.loop }));
   if (opts.only !== null && !tracks.some((t) => t.id === opts.only)) usage(`no track ${opts.only}`);
   const problems = [];
   const files = {};
@@ -489,7 +499,7 @@ function main() {
   if (opts.check) {
     for (const stray of strays) problems.push(`${stray}: not a track in scripts/music/tracks.mjs`);
     for (const id of Object.keys(old.files)) if (!known.has(id)) problems.push(`${id}: in the manifest but not a track`);
-    if (total > BUDGET_BYTES) problems.push(`budget: ${total} bytes on disk is over ${BUDGET_BYTES}`);
+    if (total > budget) problems.push(`budget: ${total} bytes on disk is over ${budget}`);
     if (problems.length > 0) {
       for (const p of problems) console.log(p);
       process.exit(1);
@@ -503,11 +513,11 @@ function main() {
   const next = `${JSON.stringify({ version: 1, format: FORMAT, files: ordered }, null, 2)}\n`;
   if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== next) fs.writeFileSync(manifestPath, next);
   if (scratch !== null) fs.rmSync(scratch, { recursive: true, force: true });
-  if (total > BUDGET_BYTES) {
+  if (total > budget) {
     console.error(`gen-music: ${total} bytes on disk is over the ${BUDGET_BYTES} budget`);
     process.exit(1);
   }
   console.log(`gen-music: done, ${Object.keys(ordered).length} files, ${total} bytes on disk`);
 }
 
-main();
+await main();
