@@ -13017,15 +13017,18 @@
       "asks": [],
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_at": "2026-11-01T18:22:31Z",
       "pending_by": "jgoetzmann",
       "pending_request": true,
       "provider": "claude-3",
+      "round_tier": "",
       "run_id": "41334849658",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T18:06:13Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2726": {
       "cleared": {
