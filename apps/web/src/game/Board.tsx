@@ -18,6 +18,12 @@
 // there and shows `log-toggle` instead, which opens it over the top of the board
 // (`data-log="open"`) until it is pressed again.
 //
+// #2645: on a phone (`usePhoneBar`, the same two layouts) the control bar keeps to one row: End turn, the
+// Marketplace's toggle while `market` is given and the view carries one, the log toggle, ⋯ and the gear.
+// Offer draw, Concede and Friends are the rows of ⋯'s menu (`MatchMenu.tsx`), the same controls the
+// desktop bar holds as buttons, built once; the menu and the shop are never open together, and neither
+// decides anything.
+//
 // While a hand card of yours is hovered or selected, the field rings the cards its preview names
 // (#991, SPEC §10.10).
 //
@@ -26,7 +32,7 @@
 // under the opponent's rows (`data-their-table`) and a second backdrop behind them
 // (`data-their-backdrop`); a watched or replayed game's lower half wears its own seat's too.
 
-import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import { useCallback, useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
 import type { CardView, CreditView, GameEvent, GameEventType, LibraryView, PlayerId, PlayerView, Row } from "@jackioh/shared";
 
@@ -50,6 +56,9 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
+import Marketplace from "./Marketplace.tsx";
+import MatchMenu from "./MatchMenu.tsx";
+import { usePhoneBar } from "./phoneBar.ts";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
@@ -593,6 +602,7 @@ export default function Board({
   matchStatus,
   boardRail,
   boardNotices,
+  market,
   sandDisabled = false,
   onClick,
   onControl,
@@ -635,6 +645,24 @@ export default function Board({
   const ownTurn = view.result === null && view.active === view.viewer;
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
+  // #2645: on a phone the bar holds End turn, the Marketplace's toggle, the log's, ⋯ and the gear, and
+  // Offer draw, Concede and Friends are rows of ⋯'s menu (MatchMenu.tsx).
+  const phoneBar = usePhoneBar();
+  // The menu is the seat's that opened it (a hotseat hand-over closes it); it and the shop are never open together.
+  const [menuFor, setMenuFor] = useState<PlayerId | null>(null);
+  const [marketOpen, setMarketOpen] = useState(false);
+  const menuOpen = menuFor === view.viewer;
+  const openMenu = useCallback(
+    (open: boolean): void => {
+      setMenuFor(open ? view.viewer : null);
+      if (open) setMarketOpen(false);
+    },
+    [view.viewer],
+  );
+  const openMarket = useCallback((open: boolean): void => {
+    setMarketOpen(open);
+    if (open) setMenuFor(null);
+  }, []);
   // R1297000: the playmat and backdrop the viewer's half wears; R1834004: and the other half, from its
   // seat's loadout. A default adds no attribute and no element. R1833000: an unowned pick of the
   // viewer's own draws as the default.
@@ -648,6 +676,28 @@ export default function Board({
   const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
   const theirBackdrop = theirSlots.field === DEFAULT_CARD_COSMETICS.field ? undefined : theirSlots.field;
   const theirTable = theirSlots.table === DEFAULT_CARD_COSMETICS.table ? undefined : theirSlots.table;
+
+  const offerDraw = (
+    <ControlButton
+      control="offer-draw"
+      testId={testid.offerDraw}
+      label={offerDrawText.label}
+      title={offerDrawText.title}
+      highlight={highlight}
+      animating={animating}
+      onPress={() => onControl?.("offer-draw")}
+    />
+  );
+  const concede = (
+    <ControlButton
+      control="concede"
+      testId={testid.concede}
+      label={t("Concede")}
+      highlight={highlight}
+      animating={animating}
+      onPress={() => onControl?.("concede")}
+    />
+  );
 
   function pressEndTurn(): void {
     if (needsConfirm && !armed) {
@@ -772,23 +822,11 @@ export default function Board({
             />
             {turnClock ?? (view.clockMs !== null && <span className="clock turn-mechanism-clock">{formatSeconds(Math.ceil(view.clockMs / 1000))}</span>)}
           </div>
-          <ControlButton
-            control="offer-draw"
-            testId={testid.offerDraw}
-            label={offerDrawText.label}
-            title={offerDrawText.title}
-            highlight={highlight}
-            animating={animating}
-            onPress={() => onControl?.("offer-draw")}
-          />
-          <ControlButton
-            control="concede"
-            testId={testid.concede}
-            label={t("Concede")}
-            highlight={highlight}
-            animating={animating}
-            onPress={() => onControl?.("concede")}
-          />
+          {market === undefined ? null : (
+            <Marketplace view={view} legal={market.legal} onAction={market.onAction} open={marketOpen} onOpenChange={openMarket} />
+          )}
+          {phoneBar ? null : offerDraw}
+          {phoneBar ? null : concede}
           {/* Phones only (board.css): the log's own place on the board is hidden there. */}
           <button
             type="button"
@@ -801,12 +839,28 @@ export default function Board({
           >
             <span className="log-toggle-icon" aria-hidden="true" />
           </button>
-          {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
-              sat on the practice HUD's Menu and the match bar's clock (integration). */}
-          <AudioToggle className="audio-toggle--bar" />
-          {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
-          <FriendsButton placement="game" />
-          <LanguageButton placement="game" />
+          {phoneBar ? (
+            <MatchMenu
+              open={menuOpen}
+              onOpenChange={openMenu}
+              dot={offerDrawText.title !== undefined}
+              glow={glowAttr(highlight, testid.offerDraw) ?? glowAttr(highlight, testid.concede)}
+              animating={animating?.get(testid.offerDraw) ?? animating?.get(testid.concede)}
+            >
+              {offerDraw}
+              {concede}
+              <FriendsButton placement="menu" />
+            </MatchMenu>
+          ) : (
+            <>
+              {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
+                  sat on the practice HUD's Menu and the match bar's clock (integration). */}
+              <AudioToggle className="audio-toggle--bar" />
+              {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
+              <FriendsButton placement="game" />
+              <LanguageButton placement="game" />
+            </>
+          )}
           <SettingsButton placement="game" />
         </div>
 
