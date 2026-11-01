@@ -76,6 +76,7 @@ import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
 import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
+import { attempt, messageOf } from "../net/errors.ts";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -256,7 +257,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
         if (!canceled) setProfile(next);
       })
       .catch((cause: unknown) => {
-        if (!canceled) setError(cause instanceof Error ? cause.message : String(cause));
+        if (!canceled) setError(messageOf(cause));
       });
     // R612: the visible rank, read beside the record. A failure here never hides the record:
     // the screen shows what it has and says nothing about the rest.
@@ -521,14 +522,12 @@ function AccountSecretId({ id }: { id: string }): ReactElement {
     );
   }
   const copy = (): void => {
-    Promise.resolve()
-      .then(() => navigator.clipboard.writeText(id))
-      .then(
-        () => {
-          setCopied(true);
-        },
-        () => undefined,
-      );
+    attempt(() => navigator.clipboard.writeText(id)).then(
+      () => {
+        setCopied(true);
+      },
+      () => undefined,
+    );
   };
   return (
     <div className="account-username">
@@ -610,7 +609,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
       })
       .catch((cause: unknown) => {
         setBusy(false);
-        setError(cause instanceof Error ? cause.message : String(cause));
+        setError(messageOf(cause));
       });
   };
 

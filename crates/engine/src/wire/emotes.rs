@@ -262,11 +262,7 @@ pub fn pick_portrait(mut rng: impl FnMut() -> f64) -> PortraitId {
 
 /// A tiny deterministic hash → [0,1), for server-side portrait deals keyed on the match seed.
 fn hash_unit(seed: &str) -> f64 {
-    let mut h: u32 = 0x811c_9dc5;
-    for unit in seed.encode_utf16() {
-        h ^= u32::from(unit);
-        h = h.wrapping_mul(0x0100_0193);
-    }
+    let mut h = crate::replay::fnv1a32_utf16_u32(seed);
     // Avalanche (MurmurHash3's fmix32): FNV-1a diffuses a differing last character into a small
     // multiple of the prime, so `${seed}:portrait:p1` and `${seed}:portrait:p2` fell in the same
     // portrait bucket ~95% of the time instead of R642's independent ~1/6. The finalizer spreads

@@ -65,7 +65,7 @@ fn sink_of<'c>(ctx: &'c mut EffectContext<'_>) -> EngineSink<'c> {
 
 /// §7: a token summon needs the token's def id, which the catalog holds under its index in Core.
 fn token_def_id(index: &str) -> Option<String> {
-    crate::catalog::def_by_index(TOKEN_SET, index).map(|def| def.id.clone())
+    crate::catalog::def_id_by_index(TOKEN_SET, index)
 }
 
 /// The kind of one entry's lazy part: an effect's kind is a `&'static str`, so the ten are spelled out.

@@ -5,7 +5,7 @@
 import { useState, type FormEvent, type ReactElement } from "react";
 
 import { emailProblem, normalizeEmail } from "../auth/validation.ts";
-import { AUTH_MESSAGES, AUTH_NOTICES, AuthError, authConfig, requestEmailChange } from "../net/auth.ts";
+import { AUTH_MESSAGES, AUTH_NOTICES, AuthError, authConfig, authMessageOf, requestEmailChange } from "../net/auth.ts";
 import { renewAfterUnauthorized } from "../net/gate.ts";
 import { readSession } from "../net/session.ts";
 import { t } from "../i18n/i18n.ts";
@@ -39,10 +39,6 @@ export function tokenEmail(token: string): string | null {
   } catch {
     return null;
   }
-}
-
-function failureMessage(cause: unknown): string {
-  return cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service;
 }
 
 /** The request, renewed once if the provider refused the token as expired (R194). */
@@ -88,7 +84,7 @@ export default function ChangeEmail(): ReactElement | null {
       setPhase({ kind: "sent", address: email });
       setValue("");
     } catch (cause) {
-      setPhase({ kind: "failed", message: failureMessage(cause) });
+      setPhase({ kind: "failed", message: authMessageOf(cause) });
     }
   }
 

@@ -964,7 +964,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023, #2385).
+/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -1021,6 +1021,12 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "ids_of",
             "types_of",
             "hand_ids",
+            "run_as_p1",
+            "run_with_options",
+            "run_with_targets",
+            "apply_now",
+            "run_on_sink",
+            "past_the_mulligans",
         ],
         statics: &["NONCE"],
         structs: &[&["events", "rng"]],
@@ -1074,7 +1080,17 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
             "fail_on",
             "stop_failing",
             "hmac_sha256_hex",
+            "befriend",
+            "named_cards",
         ],
+        statics: &[],
+        structs: &[],
+        dirs: SERVER_SUPPORT_READERS,
+        more_than: 80,
+    },
+    SharedHelpers {
+        home: "crates/server/tests/support/socket.rs",
+        names: &["read_frame_now"],
         statics: &[],
         structs: &[],
         dirs: SERVER_SUPPORT_READERS,

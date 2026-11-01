@@ -39,7 +39,7 @@ use crate::support::engine::{
     FOLD_GATE_WAIT, FoldGate, TEST_FLEE, TEST_FOLD_GATE, TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game,
     fake_deck, hand_card, hand_ids, install_gated_test_cards, install_test_cards,
 };
-use crate::support::store::{fake_read, fake_ref, store, to_json};
+use crate::support::store::{assert_match, fake_read, fake_ref, store, to_json};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -49,23 +49,6 @@ const A: &str = "profile-a";
 const B: &str = "profile-b";
 
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
-
-/// Every key `expected` names holds the same value in `actual` (objects
-/// partially, arrays element for element), and nothing else is compared.
-fn assert_match(actual: &Value, expected: &Value) {
-    fn matches(actual: &Value, expected: &Value) -> bool {
-        match (actual, expected) {
-            (Value::Object(have), Value::Object(want)) => want
-                .iter()
-                .all(|(key, value)| have.get(key).is_some_and(|got| matches(got, value))),
-            (Value::Array(have), Value::Array(want)) => {
-                have.len() == want.len() && have.iter().zip(want).all(|(got, value)| matches(got, value))
-            }
-            _ => actual == expected,
-        }
-    }
-    assert!(matches(actual, expected), "expected {actual} to match {expected}");
-}
 
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     Value::Array(

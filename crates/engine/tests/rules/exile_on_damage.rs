@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, indestructible, plain, shielded};
 use crate::rules::fixtures::combat_judge::{banisher, banisher_cleave, combat_judge_game};
-use crate::rules::fixtures::harness::{live, put, sink_for, slot};
+use crate::rules::fixtures::harness::{live, put, run_on_sink as run, slot};
 
 /// A game at turn 4, P1's main phase, with the combat-judge fixtures registered.
 fn board(seed: &str) -> GameState {
@@ -25,14 +25,6 @@ fn board(seed: &str) -> GameState {
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-/// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
-fn run<R>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> R) -> (R, Vec<GameEvent>) {
-    let mut sink = sink_for(state);
-    let out = f(&mut sink);
-    let events = sink.events.clone();
-    (out, events)
 }
 
 /// `declareAttack(sink, attacker, target)` with both read live off the sink.

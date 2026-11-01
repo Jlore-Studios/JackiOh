@@ -88,7 +88,7 @@ fn add_free(name: &'static str, pool: Value, count: i32) -> Effect {
 /// Entries 5 and 8: a Meditative token by its index, placed per R64; nothing on a full row.
 fn summon_token(name: &'static str, index: &'static str) -> Effect {
     entry(name, move |_ctx| {
-        let def_id = crate::catalog::def_by_index(TOKEN_SET, index).map(|def| def.id.clone());
+        let def_id = crate::catalog::def_id_by_index(TOKEN_SET, index);
         match def_id {
             None => vec![],
             Some(def_id) => vec![crate::effects::summon::summon(json_as(

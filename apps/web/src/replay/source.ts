@@ -6,6 +6,7 @@ import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 
 import type { SeatLoadouts } from "../cards/loadouts.ts";
 import { t } from "../i18n/i18n.ts";
+import { messageOf } from "../net/errors.ts";
 
 /**
  * One replay, a page of steps at a time.
@@ -59,7 +60,7 @@ export const REPLAY_FAILURE_TEXT: Record<Exclude<ReplayFailureReason, "error">, 
 /** `cause` as a failure: itself when it is one, otherwise an `error` carrying the cause's message. */
 export function replayFailureOf(cause: unknown): ReplayFailure {
   if (cause instanceof ReplayFailure) return cause;
-  return new ReplayFailure("error", cause instanceof Error ? cause.message : String(cause));
+  return new ReplayFailure("error", messageOf(cause));
 }
 
 /** What the player tells the viewer: the reason's sentence, or an `error`'s own message. */

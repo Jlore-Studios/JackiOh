@@ -23,6 +23,7 @@ import {
   writeSession,
   type Session,
 } from "./session.ts";
+import { messageOf } from "./errors.ts";
 
 export type Account =
   /** The `/api/auth/me` round trip has not answered yet. */
@@ -79,7 +80,7 @@ function errorAccount(cause: unknown, retry: () => void): Account {
       ...(wait === null ? {} : { retryAfterMs: wait }),
     };
   }
-  return { kind: "error", message: cause instanceof Error ? cause.message : String(cause), retry };
+  return { kind: "error", message: messageOf(cause), retry };
 }
 
 /** A screen's own failed read: the error's own sentence, and the wait a rate limit stated (R192). */
@@ -89,7 +90,7 @@ export type ReadFailure = { message: string; retryAfterMs?: number };
 export function readFailureOf(cause: unknown): ReadFailure {
   const wait = retryAfterMsOf(cause);
   return {
-    message: cause instanceof Error ? cause.message : String(cause),
+    message: messageOf(cause),
     ...(wait === null ? {} : { retryAfterMs: wait }),
   };
 }
