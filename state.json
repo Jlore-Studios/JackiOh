@@ -15179,10 +15179,10 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-01T16:50:00Z",
-          "utilization": 0.41
+          "utilization": 0.97
         },
-        "observed_at": "2026-11-01T14:54:14Z",
-        "status": "allowed"
+        "observed_at": "2026-11-01T16:07:24Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
