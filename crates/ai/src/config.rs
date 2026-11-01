@@ -123,9 +123,8 @@ pub struct AiSearch {
     pub zone_variants: i32,
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
-    /// endTurn: switches are the move order's last tier, so below the root a full board cut every one.
-    /// Bounds a level's children at `width` + this + 1. A switch back to Attack is kept only where the
-    /// width holds it.
+    /// endTurn: switches are the move order's last tier, so below the root a full board cut every one. A
+    /// switch back to Attack is kept only where the width holds it.
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
@@ -325,8 +324,7 @@ pub struct EvalWeights {
     /// Per point of unitView.attack.
     pub attack: f64,
     /// The share of a Defense-Position unit's attack that counts (§4.1: it cannot attack until a
-    /// switch spends its exertion, but it still strikes back in full). A Deft unit's switch spends no
-    /// attack (R49), so with `deft_defense_attacks` it keeps its whole attack.
+    /// switch spends its exertion, but it still strikes back in full).
     pub defense_attack_share: f64,
     /// Whether a Deft unit in Defense Position (R49: it can switch to Attack and attack in the same
     /// turn) keeps its whole attack in `unit_worth` and counts as an attacker in `face_threat`. Off, it
@@ -697,11 +695,10 @@ pub enum LearnedReach {
 pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
-/// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
-/// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick. Every
-/// term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and each flag that
-/// opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
-/// `standing_unit_priced_once`) is off, as the baseline read none of them.
+/// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
+/// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
+/// each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
+/// `standing_unit_priced_once`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -937,11 +934,9 @@ pub struct AiWinRate {
     pub floor: f64,
 }
 
-/// #750 (R1454): a ladder bot's random decks lean on the cards that win. At `strength` s (0 to 1) a
-/// card whose row has at least `min_games` in-deck games has its weight multiplied by `1 + s ×
-/// max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`; every other card, and every
-/// card at strength 0, keeps its weight, so a deal with no strength is the one the seed always dealt.
-/// 20 games is CN Tech's floor and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits under
+/// #750 (R1454): a ladder bot's random decks lean on the cards that win, by its `strength` (0 to 1;
+/// `deck.rs`'s `win_rate_weight` holds the formula), so a deal with no strength is the one the seed
+/// always dealt. 20 games is CN Tech's floor and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits under
 /// `AI_DECK.themeBoost` (4.0), so a win rate never outweighs the theme or the curve.
 pub const AI_WIN_RATE: AiWinRate = AiWinRate {
     min_games: CN_TECH_MIN_GAMES,

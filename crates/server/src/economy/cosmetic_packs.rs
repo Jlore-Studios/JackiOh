@@ -325,14 +325,13 @@ fn no_pack_held() -> ApiError {
     ApiError::new(ApiErrorCode::Conflict, "no unopened cosmetic pack")
 }
 
-/// §14.6: opens one unopened cosmetic pack, in one transaction. Under the account's lock
-/// (R1301003) it rolls the opening from `seed` ([`roll_cosmetic_pack`] over the shipped sets' pool)
-/// and writes every grant: the pack spent, the new cards (the collection and its ledger, reason
-/// `pack`), the cosmetics, the Chase Shard bar's one, and both token bars' points, each bar that
-/// reached its size paying its tokens with the overflow kept (R1305000, R1306001). Every economy
-/// row's `ref` is the opening's log; the collection's rows have no `ref` and share the opening's
-/// `at`. No pack held is 409. A refusal or failure returns before the commit, so it writes nothing.
-/// With no key, [`open_cosmetic_pack_once`]'s opening.
+/// §14.6: opens one unopened cosmetic pack, in one transaction. Under the account's lock (R1301003) it
+/// rolls the opening from `seed` ([`roll_cosmetic_pack`] over the shipped sets' pool) and writes every
+/// grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the cosmetics, the
+/// Chase Shard bar's one, and both token bars' points, each full bar paying its tokens with the overflow
+/// kept (R1305000, R1306001). Every economy row's `ref` is the opening's log; the collection's rows have no
+/// `ref` and share the opening's `at`. No pack held is 409, writing nothing. With no key,
+/// [`open_cosmetic_pack_once`]'s opening.
 pub async fn open_cosmetic_pack(
     app: &App,
     profile_id: &str,
@@ -482,14 +481,13 @@ pub async fn open_cosmetic_pack_once(
     Ok(Spent::Now(opened))
 }
 
-/// §14.6: a full Chase Shard bar buys any chase cosmetic, a Legendary or Mythic one (R1333000),
-/// the account does not own: a per-card one for a card the account owns (a full art names its own
-/// card alone, R1313000) or an account one, in one transaction: the cosmetic's grant, then the
-/// bar emptied (R1306002). An unknown cosmetic id is 400. Refuses with 409, writing nothing, when
-/// the bar is not full, the cosmetic sits below Legendary, a per-card cosmetic names no owned card,
-/// an account cosmetic is given one, or it is already owned (a ledger row, or a default or
-/// starter, which §14.2 gives every account), in that order. With no key, [`buy_chase_once`]'s
-/// purchase.
+/// §14.6: a full Chase Shard bar buys any chase cosmetic (Legendary or Mythic, R1333000) the account does
+/// not own, per-card for a card the account owns (a full art names its own card alone, R1313000) or on the
+/// account, in one transaction: the cosmetic's grant, then the bar emptied (R1306002). An unknown cosmetic
+/// id is 400. Refuses with 409, writing nothing, when the bar is not full, the cosmetic sits below
+/// Legendary, a per-card cosmetic names no owned card, an account cosmetic is given one, or it is already
+/// owned (a ledger row, or a default or starter, which §14.2 gives every account), in that order. With no
+/// key, [`buy_chase_once`]'s purchase.
 pub async fn buy_chase(
     app: &App,
     profile_id: &str,

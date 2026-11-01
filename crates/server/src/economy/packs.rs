@@ -134,11 +134,10 @@ pub(crate) fn delta_of(count: usize) -> Result<i64, ApiError> {
     i64::try_from(count).map_err(|_| ApiError::internal(format!("{count} does not fit a ledger delta")))
 }
 
-/// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction. A wallet that cannot cover the price is
-/// 409 and writes nothing (§14.1). Under an `Idempotency-Key` (R2124000) a keyed buy takes the account's lock
-/// first, so a retry racing its first try waits for it (through the route it waits its turn first, R2378000),
-/// then answers a key it already committed as it did then, and keeps the answer of one it buys in the same
-/// transaction. A buy with no key takes no lock and keeps nothing.
+/// §14.3: buys a pack for `PACK_PRICE_JLORE`, in one transaction; a wallet that cannot cover it is 409 and
+/// writes nothing (§14.1). A keyed buy (R2124000) takes the account's lock first, so a retry racing its first
+/// try waits for it (after its turn, R2378000), then answers a committed key as it did then and keeps a new
+/// buy's answer in its transaction. A buy with no key takes no lock and keeps nothing.
 pub async fn buy_pack_once(
     app: &App,
     profile_id: &str,
@@ -423,8 +422,7 @@ pub(crate) async fn settle_bars(
 /// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock (R1301003)
 /// it rolls the opening from `seed` (`roll::roll_opening`) and writes every grant. Every economy row's `ref`
 /// is the opening's log; the collection's rows have no `ref` and share the opening's `at`. No pack held is
-/// 409. Every refusal and failure returns before the commit, so it writes nothing. With no key,
-/// [`open_pack_once`]'s opening.
+/// 409, writing nothing. With no key, [`open_pack_once`]'s opening.
 pub async fn open_pack(
     app: &App,
     profile_id: &str,

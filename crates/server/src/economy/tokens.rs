@@ -4,8 +4,7 @@
 //! A pack opening pays its bars through [`settle_bar`] in its own transaction
 //! (`economy::packs::open_pack`, R1305000, R1305001); the cycle's stored position is the
 //! `CosmeticTokenCycle` counter. Every redemption runs under the account's lock (R1301003), so a
-//! token spent and a bar paying cannot interleave, and commits whole or not at all (§14.11): a
-//! refusal returns before the commit and spends nothing.
+//! token spent and a bar paying cannot interleave, and commits whole or not at all (§14.11).
 
 use std::sync::Arc;
 
@@ -215,10 +214,9 @@ pub(crate) fn choice_of(
     }
 }
 
-/// §14.5: a cosmetic token buys any cosmetic at its tier or below (§14.2's scale, Common to Mythic; a
-/// token is a [`CosmeticRarity`] too, so Legendary and Mythic are unreachable: no token exceeds Epic): a
-/// per-card cosmetic for a card the account owns, or an account cosmetic ([`Choice`]), never a chase, in
-/// one transaction, every row with the same `at`. A token outside Rare and Epic is 400, as is an unknown
+/// §14.5: a cosmetic token buys any cosmetic at its tier or below on §14.2's scale (no token exceeds Epic,
+/// so never a chase): a per-card cosmetic for a card the account owns, or an account cosmetic ([`Choice`]),
+/// in one transaction, every row with the same `at`. A token outside Rare and Epic is 400, as is an unknown
 /// cosmetic id. With no key, [`redeem_cosmetic_token_once`]'s redemption.
 pub async fn redeem_cosmetic_token(
     app: &App,

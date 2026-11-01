@@ -181,12 +181,10 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 // Passing
 
 /// The cards `seat` should pass now (at the end of its own turn), best first: ids of its hand cards
-/// (B28). A card qualifies when the seat cannot play it this turn and its teammate can (`has_zone_for`,
-/// else `mate_can_play`), or, with the team's `pass_cost` 0, when the teammate can afford it next turn
-/// and the seat cannot. The playable ones come first, ranked by the teammate's best bounded follow-up
-/// (R1127000), and are named only when worth passing (R1723000, `pass_gain`). B29: it reads the redacted
-/// probe `decide` lists the seat's actions on and, of the teammate, only its own side and the determinized
-/// probe the follow-ups are scored on.
+/// (B28). A card qualifies when the seat cannot play it this turn and its teammate can, or, with the
+/// team's `pass_cost` 0, when the teammate can afford it next turn and the seat cannot. The playable ones
+/// come first, ranked by the teammate's best bounded follow-up (R1127000), and are named only when worth
+/// passing (R1723000). B29: of the teammate it reads only its own side and the determinized probe.
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
     catch_unwind(AssertUnwindSafe(|| passes_of(state, seat))).unwrap_or_default()

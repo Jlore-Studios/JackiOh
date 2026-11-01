@@ -82,10 +82,9 @@ fn forced_slot(slots: &[PrintedRarity], forced: &[bool], rarity: PrintedRarity) 
         .or_else(|| order.iter().copied().find(|at| shared(*at)))
 }
 
-/// The level curve's exact total in `i128`: `total_xp_for_level` below saturates to
-/// `i64::MAX` past level 429,496,730, and the correction loops in `level_for_xp` compare
-/// against this, never the saturated total, so they cannot walk that plateau one level at
-/// a time (at `i64::MAX` that walk would run from the ~429M guess to `u32::MAX`).
+/// The level curve's exact total in `i128`: `total_xp_for_level` below saturates to `i64::MAX` past
+/// level 429,496,730, and the correction loops in `level_for_xp` compare against this, never the
+/// saturated total, so they cannot walk that plateau one level at a time.
 fn exact_total_xp_for_level(level: u32) -> i128 {
     let step = i128::from(SET_TRACK_XP_PER_LEVEL);
     step * i128::from(level.saturating_sub(1)) * i128::from(level) / 2

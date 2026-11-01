@@ -75,11 +75,11 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 }
 
 /// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
-/// Competition), the option its statement works out to (`worked_answer`) read off the redacted prompt, so
-/// the key is never read (R465); a search would spend the budget on a guess, past the turn clock (R79).
-/// It never stops. R1563005: it answers right `AI_KY_COMPETITION_ACCURACY` of the time
-/// (`AI_KY_COMPETITION_RADIANT_ACCURACY` when Radiant), else wrong, drawn from its own stream. `None` for
-/// any other prompt, or a statement it cannot work out, which the search then answers.
+/// Competition), worked out from the redacted prompt's statement (`worked_answer`), so the key is never
+/// read (R465) and no search spends the budget on a guess, past the turn clock (R79). It never stops.
+/// R1563005: right `AI_KY_COMPETITION_ACCURACY` of the time (the Radiant face's own when Radiant), else
+/// wrong, drawn from its own stream. `None` for any other prompt, or a statement it cannot work out,
+/// which the search then answers.
 fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {

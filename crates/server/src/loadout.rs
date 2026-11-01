@@ -244,16 +244,16 @@ impl CardPicks {
 
 /// R1834002: a seat's loadout as its match starts, from the account's ledger (`owned`), its settings'
 /// picks (`account`), the deck's slots (`deck`, none for an All Random seat), its cards' own picks
-/// (`card_picks`) and the cards of its deck (`deck_cards`). Every id that leaves is one of `registry`,
-/// of its slot's kind, that the account owns where it is worn; anything else is the kind's default:
+/// (`card_picks`) and the cards of its deck (`deck_cards`). Every id that leaves is one of `registry`, of
+/// its slot's kind, owned where it is worn; anything else is the kind's default:
 ///
-///  - a deck slot wears the deck's pick when the deck carries one and it is owned, else the default (the
-///    deck's word is final); with no pick, the account's if owned, else the default;
-///  - a card slot wears its kind's default: never the account's foil, finish or border;
-///  - each card of the deck wears its own pick of a kind when owned on the card, else the default
-///    (R1655000, R1953001). Its full art is its own pick's, else its Epic when the account's Full-art
-///    cards setting is on, and prints when owned on the card: `true` for the Epic, its id for a Legendary
-///    or a Mythic (R2655000). A card is listed only where it differs from the seat.
+///  - a deck slot wears the deck's pick when there is one and it is owned (the deck's word is final);
+///    with no pick, the account's if owned;
+///  - a card slot wears its kind's default, never the account's foil, finish or border;
+///  - each card of the deck wears its own pick of a kind when owned on the card (R1655000, R1953001); its
+///    full art is its own pick's, else its Epic when the Full-art cards setting is on, and prints when
+///    owned on the card: `true` for the Epic, its id for a Legendary or a Mythic (R2655000). A card is
+///    listed only where it differs from the seat.
 pub fn freeze_loadout(
     registry: &[Cosmetic],
     owned: &OwnedCosmetics,

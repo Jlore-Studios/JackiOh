@@ -1704,9 +1704,8 @@ impl Tx<'_> {
         dispatch!(self, profiles_set_glicko(profile_id, glicko))
     }
 
-    /// R1434: the tag a claim of the base whose key is `key` would carry now: none when no other
-    /// profile holds the bare name, otherwise the lowest tag from 1 that no other profile holds.
-    /// `profile_id`'s own name never counts as taken against it. A read: nothing is reserved.
+    /// R1434: the tag a claim of the base whose key is `key` would carry now: none when no other profile
+    /// holds the bare name, else the lowest tag from 1 no other profile holds. A read: nothing is reserved.
     pub async fn profiles_username_tag_for(
         &mut self,
         profile_id: &str,
@@ -1743,10 +1742,9 @@ impl Tx<'_> {
         dispatch!(self, profiles_set_in_match(profile_id, match_id))
     }
 
-    /// Clears the seat only while it points at `match_id` (R890000): a start-failure cleanup that
-    /// never wipes a rival match's flag. Always `Ok`, even when the seat points elsewhere or the
-    /// profile is missing. §9.5: every ending clears both players' flags through it, so a late
-    /// result never wipes a newer match's (R1896000).
+    /// Clears the seat only while it points at `match_id` (R890000), so neither a start-failure cleanup
+    /// nor a late result (every ending clears both players' flags through it, §9.5) wipes a newer match's
+    /// (R1896000). Always `Ok`, even when the seat points elsewhere or the profile is missing.
     pub async fn profiles_clear_in_match(&mut self, profile_id: &str, match_id: &str) -> StoreResult<()> {
         dispatch!(self, profiles_clear_in_match(profile_id, match_id))
     }
@@ -1795,8 +1793,8 @@ impl Tx<'_> {
 
     /// §9.4 step 6: one atomic statement. Increments `uses` only while the code is unrevoked,
     /// unexpired and unexhausted; returns false otherwise. Two concurrent callers cannot both win
-    /// the last use. Redemption does not call this — `redeem` is the whole transaction. It stays
-    /// because the fake builds step 6 out of it and the contract suite drives it directly.
+    /// the last use. `redeem` does not call it: the fake builds step 6 out of it, and the contract
+    /// suite drives it.
     pub async fn codes_claim(&mut self, code_id: &str, now: i64) -> StoreResult<bool> {
         dispatch!(self, codes_claim(code_id, now))
     }
@@ -1837,8 +1835,7 @@ impl Tx<'_> {
     }
 
     /// §9.8: one row per IP hash with an attempt at or after `since`, ordered by `ip_hash`: how many
-    /// distinct accounts and how many attempts it made. Read only by the operator's
-    /// `invite-clusters` report; nothing acts on it.
+    /// distinct accounts and attempts it made. Read only by the operator's `invite-clusters` report.
     pub async fn codes_invite_clusters(&mut self, since: i64) -> StoreResult<Vec<InviteCluster>> {
         dispatch!(self, codes_invite_clusters(since))
     }
@@ -1849,8 +1846,7 @@ impl Tx<'_> {
     }
 
     /// Flips §9.4's database-side kill switch (`app.settings.redemption_enabled`), which step 5's
-    /// lookup reads and `Tx::redeem` answers `CircuitOpen` from. Answers the previous value, so a
-    /// caller prints what changed.
+    /// lookup reads and `Tx::redeem` answers `CircuitOpen` from. Answers the previous value.
     pub async fn redemption_set_enabled(&mut self, enabled: bool) -> StoreResult<bool> {
         dispatch!(self, redemption_set_enabled(enabled))
     }
@@ -1863,9 +1859,8 @@ impl Tx<'_> {
         dispatch!(self, collection_get(profile_id))
     }
 
-    /// SETS each card's quantity to the absolute value given; it does not add to it. The caller has
-    /// already read the current total inside the same transaction and computed the new one, so the
-    /// Postgres side must `set quantity = excluded.quantity`, never `quantity + excluded`.
+    /// SETS each card's quantity to the absolute value given, never adds to it: the caller read the
+    /// total in this transaction and computed the new one (`set quantity = excluded.quantity`).
     pub async fn collection_upsert_quantities(
         &mut self,
         profile_id: &str,
@@ -2109,8 +2104,7 @@ impl Tx<'_> {
     }
 
     /// R768: the same rows, order, limit and offset semantics as `replays_list`, each paired with
-    /// what `matches_mode_of` answers for its match. One query instead of one per row, so a page
-    /// costs a constant number of statements however many rows it holds.
+    /// what `matches_mode_of` answers for its match, in one query rather than one per row.
     pub async fn replays_list_with_modes(
         &mut self,
         profile_id: &str,
@@ -2144,8 +2138,7 @@ impl Tx<'_> {
     }
 
     /// Counts the host's unclaimed unexpired open rooms (R890000): the advisory half of the
-    /// per-host open-room cap, so one host cannot amplify into unbounded rooms. Advisory only;
-    /// the seat compare-and-set is the guard.
+    /// per-host open-room cap; the seat compare-and-set is the guard.
     pub async fn rooms_count_open_by_host(&mut self, host_profile_id: &str, at: i64) -> StoreResult<i64> {
         dispatch!(self, rooms_count_open_by_host(host_profile_id, at))
     }
