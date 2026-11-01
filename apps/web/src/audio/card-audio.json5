@@ -179,9 +179,9 @@
       cast: { voice: "crone", effect: "wellDrip" },
     },
     "core-007": { // Jewelosco Scarab
-      play: { voice: "goof" },
-      attack: { voice: "goof" },
-      death: { voice: "goof" },
+      play: { voice: "alien" },
+      attack: { voice: "alien", effect: "rattle" },
+      death: { voice: "alien" },
     },
     "core-008": { // Mr. Vanilla
       play: { voice: "plain" },
@@ -361,9 +361,9 @@
       death: { voice: "hustler" },
     },
     "core-054": { // Straaza
-      play: { voice: "diva" },
-      attack: { voice: "diva" },
-      death: { voice: "diva" },
+      play: { voice: "storyteller", effect: "rumble" },
+      attack: { voice: "storyteller", effect: "fireWhoosh" },
+      death: { voice: "storyteller" },
     },
     "core-055": { // Lava Golem
       play: { voice: "brute" },
@@ -440,7 +440,7 @@
       cast: { voice: "guard" },
     },
     "core-074": { // Adaptive UI
-      cast: { voice: "robot" },
+      cast: { voice: "announcer" },
     },
     "core-075": { // Infinite Reserves
       cast: { voice: "hustler" },
@@ -507,9 +507,9 @@
       death: { voice: "elder" },
     },
     "core-092": { // Felinor Fiender
-      play: { voice: "crone" },
-      attack: { voice: "crone" },
-      death: { voice: "crone" },
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
     },
     "core-093": { // Combo-Index
       cast: { voice: "announcer" },
@@ -529,7 +529,7 @@
       death: { voice: "brute-golem" },
     },
     "core-096": { // My Pawn
-      cast: { voice: "snob", effect: "gong" },
+      cast: { voice: "plain", effect: "gong" },
     },
     "core-097": { // Zephrys
       cast: { voice: "whisper" },

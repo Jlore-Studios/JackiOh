@@ -693,7 +693,7 @@
 }
 
 /* The signature sits over the art below its middle, clear of the cost gem, the rarity gem, the set
-   mark and the crest above it and of the name banner, a Unit's stats and a token's mark below it. */
+   mark and the crest above it and of the name banner and a Unit's stats below it. */
 .cf .cf-signature {
   position: absolute;
   z-index: 2;

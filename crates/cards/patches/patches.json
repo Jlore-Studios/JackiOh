@@ -19652,5 +19652,29 @@
       "traininggrounds-054"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.5.9f",
+    "date": "2026-11-01",
+    "title": "Patch: drop the at-a-glance Token and Created marks, keep them in the hover preview",
+    "source": "#2647",
+    "notes": "A card's Token and Created status rarely matters in combat, so no face wears the token mark (R1177001) or the Created pill (R943) any more; the hover preview still says both, a token's full face on its type line and a Created card in its state notes (R2647000). The wire and the views are unchanged. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Cleaner card faces",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Cards no longer wear a Token or Created mark on the board, in hand or in the backrow. Hover over a card, or hold it on a touch screen, to see either."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "cb89afaf1fe6cd0430f02f80ff73f23f2f1e996c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

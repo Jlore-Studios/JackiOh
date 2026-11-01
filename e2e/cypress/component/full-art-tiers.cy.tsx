@@ -3,7 +3,7 @@
 // declares (cards/cosmetics.test.tsx); what only a layout and style engine can say is measured here:
 // one full-art face of each card type (a Unit, a Spell, a Field Spell, a Field Trap, and two tokens
 // that wear their parent's full art, R2655002) at each tier, at the hand and inspect sizes, keeps its
-// cost gem, rarity gem, set mark, crest, name banner, stats and token mark apart, and a Mythic's
+// cost gem, rarity gem, set mark, crest, name banner and stats apart, and a Mythic's
 // signature is on the art, clear of all of them; and under Reduce motion no tier moves and the
 // signature stands whole.
 //
@@ -34,8 +34,8 @@ const CARDS = [
   { id: "classicplus-019", why: "a Spell (League of Losers: no stats, a Legendary crest)" },
   { id: "classic-090", why: "a Field Spell (In Too Deep: a Mythic crest)" },
   { id: "core-018", why: "a Field Trap (Bread and Butter, the Trap row: no crest)" },
-  { id: "classicplus-019-1", why: "a token Unit (Top Loser, printed Legendary, its token mark)" },
-  { id: "classicplus-012-1", why: "a token Spell (Devour, printed Legendary, its token mark)" },
+  { id: "classicplus-019-1", why: "a token Unit (Top Loser, printed Legendary)" },
+  { id: "classicplus-012-1", why: "a token Spell (Devour, printed Legendary)" },
 ] as const;
 
 /**
@@ -46,14 +46,14 @@ const CARDS = [
 const WIDTHS = [270, 170, 100] as const;
 
 /** What a face's parts must keep apart: none of them may cover another. */
-const PARTS = [".cost-gem", ".cf-gem", ".cf-set", ".cf-crest", ".card-name", ".cf-atk", ".cf-hp", ".cf-token", ".cf-signature"] as const;
+const PARTS = [".cost-gem", ".cf-gem", ".cf-set", ".cf-crest", ".card-name", ".cf-atk", ".cf-hp", ".cf-signature"] as const;
 
 /**
- * What a full-art face adds to the small face's layout: the signature, and a token's mark. A small
- * face (FACE_TEXT_MIN_HEIGHT_PX) is every hand card's layout, full art or not, whose grown cost gem
- * reaches under a Legendary's crest; there only these must keep clear of everything else.
+ * What a full-art face adds to the small face's layout: the signature. A small face
+ * (FACE_TEXT_MIN_HEIGHT_PX) is every hand card's layout, full art or not, whose grown cost gem
+ * reaches under a Legendary's crest; there only it must keep clear of everything else.
  */
-const SMALL_FACE_PARTS: readonly string[] = [".cf-token", ".cf-signature"];
+const SMALL_FACE_PARTS: readonly string[] = [".cf-signature"];
 
 /** The widest face drawn at the small layout (100 px wide is 140 px tall, under 150). */
 const SMALL_FACE_MAX_WIDTH = 100;
@@ -144,7 +144,6 @@ describe("R2655003 the full-art tiers on real faces", () => {
               expect(parts.some((part) => part.selector === selector), `${where}: ${selector} draws`).to.eq(true);
             }
             expect(parts.some((part) => part.selector === ".cf-signature"), `${where}: the signature`).to.eq(tier === "Mythic");
-            if (CATALOG[id]?.token === true) expect(parts.some((part) => part.selector === ".cf-token"), `${where}: the token mark`).to.eq(true);
             for (const part of parts) {
               expect(part.box.left, `${where}: ${part.selector} inside`).to.be.at.least(face.left - 0.5);
               expect(part.box.right, `${where}: ${part.selector} inside`).to.be.at.most(face.right + 0.5);

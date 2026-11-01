@@ -26,8 +26,8 @@
 // set straight off the definition), so a face drawn from the catalog is the face a player will see
 // once the set ships (R1420); nothing here has to pretend `SHIPPED_SETS` lists it.
 //
-// The Created mark (ME-CREATED, `CardView.created`, R943) is a mark of the card in play, not of its
-// printed face: meditative-prompts.cy.tsx places it on a card in hand at phone width (#617).
+// The Created status (ME-CREATED, `CardView.created`, R943) is drawn on no face (R2647000):
+// meditative-prompts.cy.tsx checks a card in hand at phone width, and its hold's preview (#617).
 //
 // Every measurement sits inside `.should()`, so it retries while `useFitText` settles, and each
 // carries a control (the face fills its box, the name has a box and reads the card's name), since a
