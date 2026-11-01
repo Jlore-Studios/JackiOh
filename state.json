@@ -12242,6 +12242,13 @@
     "2651": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T06:53:46Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 8 holds (every name and test is fixed below), but the change is half of a two-part fix whose CI half a person makes, the cross-job file contract must match exactly, and one wrong ordering silently serializes the two self-play runs; medium"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
