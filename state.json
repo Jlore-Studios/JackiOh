@@ -13015,12 +13015,12 @@
       "onto": "bot/issue-2701",
       "part_of": 2701,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "gpt",
       "queued_at": "2026-11-01T18:44:33Z",
       "requested_by": "squishy-squooby",
-      "run_id": "41341593905",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-01T19:24:41Z",
+      "run_id": "pending:b16ab103-1793563083",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-01T19:58:25Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -13642,9 +13642,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T19:43:37Z",
+    "at": "2026-11-01T19:58:25Z",
     "url": "",
-    "what": "plan #2708 on gpt"
+    "what": "plan #2705 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-01T19:40:19Z",
