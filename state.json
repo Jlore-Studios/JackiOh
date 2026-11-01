@@ -10140,15 +10140,18 @@
       "action": "build",
       "asks": [],
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-2497",
       "part_of": 2497,
       "pending_request": false,
       "provider": "claude-6",
+      "round_tier": "",
       "run_id": "41256489306",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T00:22:46Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "2519": {
       "onto": "bot/issue-2497",
