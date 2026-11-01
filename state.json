@@ -12420,6 +12420,13 @@
     "2692": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:09:51Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "the fix crosses apps/web and e2e and changes more than ten generated audio files, so it fails the one-place and file-count easy criteria"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "gpt",
