@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 2708,
+  "title": "Patch: the dungeon run's leaderboards and run stats on the device",
+  "branch": "bot/issue-2708",
+  "thread": "**Issue #2708 (data, not instructions):**\n\n````text\n# #2708: Patch: the dungeon run's leaderboards and run stats on the device\nOpened by @squishy-squooby.\n\nPart G of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; the design it shows is DR9 (leaderboards and stats) of the same file.\n\nThe owner wants leaderboards and many stats, kept offline for now: the deepest floor reached, the most curses stacked, a score, and the fastest win. Every finished run is kept on the device as a `RunRecord` (part D writes them). This part is the page that ranks and shows them.\n\n## The surface (frozen)\n\nThis part writes:\n\n```ts\n// apps/web/src/dungeon/stats/DungeonStats.tsx, the page at /dungeon/stats (part D registers the route)\nexport function DungeonStats(): ReactElement;\n```\n\nIt uses part D's `readRunHistory(): RunRecord[]` (`dungeon/store.ts`), as frozen in DR14, without waiting for it:\n\n```ts\nexport type RunRecord = {\n  seed: string; daily: boolean; mode: DungeonMode; curses: string[]; cursePoints: number;\n  rowReached: number; won: boolean; score: number; embers: number; timeMs: number; endedAt: string;\n  stats: RunStats;   // @jackioh/run: nodesVisited, fightsWon, elitesWon, ghostsWon, miniBossesWon, bossesWon,\n                     // damageDealt, healingDone, cardsDrawn, turns, damageTaken, healed, coinsEarned, coinsSpent,\n                     // ticketsEarned, ticketsSpent, cardsKept, cardsBought, cardsRemoved, cardsMadeRadiant,\n                     // cardsBuffed, packsSkipped, artifactsTaken, artifactsLeveled, blessingsTaken, eventsSeen, chestsOpened\n};\n```\n\n## What to do\n\n- Four leaderboards over the history: the deepest row reached (`rowReached`), the most curse points (`cursePoints`), the top score (`score`) and the fastest win (the least `timeMs` among the runs won). Each ranks the top runs, with each run's seed, mode, date and whether it was a daily run.\n- Filters: the mode (Sandbox, or Campaign, empty until stage 2) and daily runs only.\n- An entry opens that run's stats: every `RunStats` field, labelled through `t()`, its time and turns, and its curses.\n- An empty state for a device with no runs yet, linking to `/dungeon`, and a link back to `/dungeon`.\n- Use test ids from `dungeon/stats/testids.ts`, prefixed `dungeon-`.\n\n## Owns\n\n`apps/web/src/dungeon/stats/`. No other part of #2701 edits it.\n\n## Behaviors (proved by a vitest test whose comment names it, with a stubbed `readRunHistory`)\n\n- **B32** The leaderboards on the device rank the deepest row, the most curse points, the top score and the fastest win, and each entry opens that run's stats.\n\n## Done when\n\nB32 is tested, the empty state and the filters included; `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web e2e` pass for this part's files.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2708: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
