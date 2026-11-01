@@ -12441,6 +12441,8 @@
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T16:27:59Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
