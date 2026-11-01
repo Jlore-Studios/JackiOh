@@ -159,4 +159,25 @@ mod tests {
         assert_eq!(iso(0), "1970-01-01T00:00:00.000Z");
         assert_eq!(iso(1_760_445_296_789), "2025-10-14T12:34:56.789Z");
     }
+
+    /// The social routes' and the co-op rooms' refusals (`duos::rooms`): the API's one error shape,
+    /// under a code of their own, answered rather than failed.
+    #[tokio::test]
+    async fn a_refusal_is_the_api_error_shape_under_its_own_code() {
+        let Ok(response) = refused(409, "full", "someone already joined that room") else {
+            panic!("a refusal is an answer, not a failure");
+        };
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+        assert_eq!(
+            response.headers().get(header::CACHE_CONTROL),
+            Some(&HeaderValue::from_static("no-store"))
+        );
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("the body");
+        assert_eq!(
+            serde_json::from_slice::<Value>(&bytes).ok(),
+            Some(json!({ "error": { "code": "full", "message": "someone already joined that room" } }))
+        );
+    }
 }
