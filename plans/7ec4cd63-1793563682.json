@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2727,
+  "title": "Patch: in a hand, a Buff may give Cloaked or remove Crater, and a Nerf may remove Cloaked or give Crater",
+  "branch": "bot/issue-2727",
+  "thread": "**Issue #2727 (data, not instructions):**\n\n```text\n# #2727: Patch: in a hand, a Buff may give Cloaked or remove Crater, and a Nerf may remove Cloaked or give Crater\nOpened by @jgoetzmann.\n\n### What it does\n\nIn a hand, a Buff and a Nerf move a card's Cloaked and Crater in opposite directions (the owner's request):\n\n| In a hand | Cloaked (helps the card) | Crater (hurts the card) |\n|---|---|---|\n| **Buff** | may add it (**new**, R2727000) | may remove it (**new**, R2727001) |\n| **Nerf** | may remove it (already so; **new test**, R2727000) | may add it (already so, R2657005; unchanged) |\n\nToday a Buff's keyword row (\u00a76.3 Nerf / Buff, R386, R2657005; `crates/engine/src/effects/tune.rs`, `keyword_row`) never adds Cloaked: it is in none of R21's pool, `TUNE_FIELD_SPELL_KEYWORDS`, `TUNE_DAMAGE_KEYWORDS` or `TUNE_BUFF_ANY_KEYWORDS`. A Buff's removals are only Can't attack and Can't Defend (`TUNE_BUFF_REMOVES`), so it never removes Crater either. A Nerf's row already removes any keyword the card has of its own that is not harmful (`TUNE_HARMFUL_KEYWORDS`), so it already strips a printed Cloaked (Classic #6 Cloaked Toe Cracker), never one an aura lends (R442, R783007). A Nerf also already adds Crater to a Unit, a Field Spell, a Trap or a Field Trap in a hand (`TUNE_NERF_HAND_KEYWORDS`, R2657005).\n\nThe rule, every part decided here:\n\n1. **Buff adds Cloaked, in a hand (R2727000).** A Buff's keyword row also offers Cloaked to a Unit, a Spell or a Field Spell that lacks it of its own while the card is in a hand: a new `TUNE_BUFF_HAND_KEYWORDS: &[KeywordKind] = &[KeywordKind::Cloaked]` in `crates/engine/src/config.rs`, added after the row's other additions (R21's pool or `non_unit_candidates`, then `TUNE_BUFF_ANY_KEYWORDS`). It mirrors a Nerf's hand-only Crater.\n   - Never to a Trap or a Field Trap, which no Cloaked sets (R783004), and never to a Vanilla card, whose text is gone.\n   - Never in a deck or on the field: Cloaked acts only from a hand (R2577000).\n   - \"Lacks it of its own\" is the row's reading in a hand (`keywords_now`, which is `card_keywords` there), so an aura's lent Cloaked does not count. A Unit that Knowledge Breaker lends Cloaked to (Meditative #45, R1040), or a Spell that Paranoia does (Meditative #99, R1044), may still take one from a Buff, and that one outlasts the aura.\n   - Cloaked stays out of R21's random keyword pool, so Plastic Surgery, Zao Gao, the Conjure Rush Tokens and Keymaster Keenus still never give it.\n2. **Nerf removes Cloaked, in a hand (R2727000).** A Nerf's row removes a Cloaked the card has of its own (printed, given or Buff-added), never one an aura lends (R442, R783007). The row already does this, so this part is a proving test, and if the test fails, fix the row to match it. A Nerf never adds Cloaked. Its removal of a printed Cloaked in a deck or on the field is unchanged.\n3. **Buff removes Crater, in a hand (R2727001).** While the card is in a hand, a Buff's row also removes a Crater the card has of its own, from a card of any type (printed, as on Classic #80 BOOM! Big Max, Classic+ #1 Doom Shroom, Classic+ #34 Memory Leak and Stinkyscape #155 Comet Crash; given; or added by a Nerf). It never removes one an aura lends. This is a new `TUNE_BUFF_HAND_REMOVES: &[KeywordKind] = &[KeywordKind::Crater]` in `config.rs`, read beside `TUNE_BUFF_REMOVES` only while the card is in a hand.\n   - Not in a deck or on the field, where a Buff leaves Crater alone, as before.\n   - Crater stays in `TUNE_HARMFUL_KEYWORDS`, so a Nerf still never removes it.\n   - Removals come first in the draw, as R2657005 orders them, in the order the card lists its keywords.\n4. **Nerf adds Crater, in a hand: unchanged** (R2657005, `TUNE_NERF_HAND_KEYWORDS`). A Crater a Nerf added is the card's own, so a later Buff in a hand may take it off again.\n5. **Shared by all four.** One draw still picks uniformly among the row's removals and additions (R442), and a multiplier keeps to its first draw's way (R1160). Each change is `tuning` (R386, R78), part of the card in every zone, with no new code expected for what follows:\n   - A Buff-given Cloaked opens the face-down play (`alt_play::is_cloaked` reads the layers; `faceDown: \"cloaked\"`, R783004) at the card's own price (R783005), and the set card reveals by its Activate: Reveal (R783006).\n   - A card destroyed or bounced before it reveals comes back with it (R783008).\n   - A copy keeps the changes (R57), a Fuse sums them (R102), a Transform drops them and a Vanilla hides them.\n   - A Crater Buffed off in a hand Locks nothing as the card arrives, or fires face-down (R783010, R783011, R1850006).\n   - On the field, Cloaked does nothing and the board draws nothing for it (R2577000).\n6. **Hidden information is unchanged.** A Buff or a Nerf on a hand card is hidden like any hand event (R440), and a set card hides as every set card does (R1046). `determinize` (R783009) keeps sampling a hidden backrow card from the Trap pool, the printed Cloaked cards and the aura-lent ones only, since the seat cannot see a Buff in a hand. The AI plays its own Buff-given Cloaked cards through `legal_actions`, as it does every other play.\n\n**Cards whose games change:** every card that Buffs a card in a hand, among them Classic+ #70 Chaos Machine, Radiant Classic+ #71 Book of Buff, Classic+ T-AI-10 Fine-Tuning, Meditative #82 Medina Outfitter, #83 Medina Enforcer and #87 Tatches the Totem.\n- `cargo jackioh classify --base origin/main --claims` names them. Claim them with a pending fragment (`cargo jackioh patches \"<title>\" --plays <ids>`, plus `--rule` if the classifier finds one).\n- A Buff that reaches a card in a hand now draws from one more change when the card could take Cloaked or carries Crater. A game recorded before this in which that happened is refused as `rules_changed` (R767000), as with R2436000.\n\n**Spec, in the same PR (CLAUDE.md rule 3):**\n- `spec/rulings/R2727000.md` (a Buff in a hand may add Cloaked; a Nerf there removes a card's own Cloaked) and `spec/rulings/R2727001.md` (a Buff in a hand may remove Crater), each amending R386's and R2657005's keyword clauses. Their \u00a711 paragraphs go in `spec/pending/2727.md`.\n- \u00a76.3's Nerf and Buff rows, \u00a76.1's Cloaked row (\"printed, given, Buffed or lent by an aura\") and \u00a76.1's Crater row are edited to link them.\n\n### Acceptance\n\n- `crates/engine/tests/rules/` (beside `balance_2657.rs`, using `fixtures/keywords_783.rs`' cards) has tests named `r2727000_\u2026` proving:\n  - a Buff on a Unit, a Spell and a Field Spell in a hand may add Cloaked, after which `legal_actions` offers its `faceDown: \"cloaked\"` play and the card sets and reveals as R783004 and R783006 say;\n  - a Buff never adds Cloaked to a Trap, a Field Trap, a Vanilla card, a card that has it of its own, or a card in a deck or on the field;\n  - Cloaked is the row's last addition, after Flashback, so a seeded draw over a known row picks what that order says;\n  - a Unit lent Cloaked by an aura (`cloak_units`) may take a Buff's Cloaked, and keeps it and its face-down play after the aura leaves;\n  - a Nerf in a hand removes a printed Cloaked and a Buff-given one, after which the face-down play is gone, and never removes an aura-lent one;\n  - a card with a Buff-given Cloaked that is set face-down and bounced before it reveals is Cloaked again in the hand (R783008).\n- Tests named `r2727001_\u2026` prove:\n  - a Buff in a hand removes a printed Crater from a Unit, a Trap and a Field Spell, and the card then Locks no zone as it arrives, fires or enters;\n  - a Crater a Nerf added in a hand may be removed by a later Buff there;\n  - a Buff never removes Crater from a card in a deck or on the field, and a Nerf still never removes it.\n- `spec/rulings/R2727000.md` and `R2727001.md` exist with their test files in `proven_in`, `spec/pending/2727.md` holds both paragraphs, \u00a76.1 and \u00a76.3 are edited, and `cargo jackioh spec check` is green.\n- `TUNE_BUFF_HAND_KEYWORDS` and `TUNE_BUFF_HAND_REMOVES` are named constants in `crates/engine/src/config.rs` (CLAUDE.md rule 9).\n- `cargo jackioh classify --base origin/main --claims` and `cargo jackioh patches check` are green, with the fragment claiming what the classifier names.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh fuzz --seeds 200`, `cargo jackioh golden check` and `cargo jackioh gate` are green.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2727: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
