@@ -195,21 +195,30 @@ export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 /**
  * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default
  * (R1953001; the Full-art cards setting, for `fullArt`); a pick of a kind's default id is a pick. An
- * id this client does not know reads as its kind's default.
+ * id this client does not know reads as its kind's default. R2655000: `fullArt` is `false`, `true`
+ * (the card's Epic full art) or a full art's id, kept as written; fullArt.ts reads which tier it names.
  */
-export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean };
+export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean | string };
 
 /** One card's picks as stored: a short text is kept for each kind, known or not (as `normalizeCosmetics` keeps one). */
-export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean };
+export type StoredCardPicks = { foil?: string; finish?: string; border?: string; fullArt?: boolean | string };
 
 /** R1834000: what one write changed of a card's picks, field by field: the new pick, or null where it was cleared. */
-export type CardPickChange = { foil?: string | null; finish?: string | null; border?: string | null; fullArt?: boolean | null };
+export type CardPickChange = { foil?: string | null; finish?: string | null; border?: string | null; fullArt?: boolean | string | null };
 
 const CARD_PICK_FIELDS = [...CARD_SLOT_KINDS, "fullArt"] as const;
 const NO_PICKS: CardPicks = Object.freeze({});
 
 function isPickText(value: unknown): value is string {
   return typeof value === "string" && value !== "" && value.length <= COSMETIC_ID_MAX_LENGTH;
+}
+
+/** R2655000: what every full art's registry id starts with, as the account's store holds it to (migration 0072). */
+const FULL_ART_ID_PREFIX = "full-art-";
+
+/** R2655000: a card's full-art pick as stored: a boolean, or a full art's id, known or not. */
+function isFullArtPick(value: unknown): value is boolean | string {
+  return typeof value === "boolean" || (isPickText(value) && value.startsWith(FULL_ART_ID_PREFIX));
 }
 
 function normalizeStoredPicks(raw: unknown): StoredCardPicks {
@@ -219,7 +228,8 @@ function normalizeStoredPicks(raw: unknown): StoredCardPicks {
     const value = record[kind];
     if (isPickText(value)) out[kind] = value;
   }
-  if (typeof record["fullArt"] === "boolean") out.fullArt = record["fullArt"];
+  const fullArt = record["fullArt"];
+  if (isFullArtPick(fullArt)) out.fullArt = fullArt;
   return out;
 }
 
@@ -386,11 +396,14 @@ export function writeCardPick(defId: string, kind: CardSlotKind, id: CosmeticId 
   });
 }
 
-/** Sets whether `defId`'s full art prints, or clears the pick with null, which leaves it to the Full-art cards setting. */
-export function writeCardFullArt(defId: string, on: boolean | null): void {
+/**
+ * Sets `defId`'s full-art pick: `false` for none, `true` for its Epic, or a full art's id (R2655000,
+ * `fullArtPickOf`); null clears the pick, which leaves it to the Full-art cards setting.
+ */
+export function writeCardFullArt(defId: string, pick: boolean | string | null): void {
   updateCardPicks(defId, (picks) => {
-    if (on === null) delete picks.fullArt;
-    else picks.fullArt = on;
+    if (isFullArtPick(pick)) picks.fullArt = pick;
+    else delete picks.fullArt;
   });
 }
 

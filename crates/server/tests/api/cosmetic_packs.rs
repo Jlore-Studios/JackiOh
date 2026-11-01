@@ -1570,3 +1570,38 @@ async fn r2378000_an_opening_or_a_chase_sent_past_the_waiting_ones_is_refused_at
     assert_eq!(status, 200, "its turn come, the pack opens: {body}");
     assert_eq!(held(&app, InventoryItem::CosmeticPack, "").await, 0);
 }
+
+#[tokio::test]
+async fn r2655000_a_full_shard_bar_buys_a_full_art_chase_on_an_owned_card() {
+    let (app, token) = setup().await;
+    let card = "core-004".to_string();
+    set_counter(&app, Counter::ChaseShardBar, CHASE_SHARD_PACKS).await;
+    let chase = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/cosmetic-packs/chase", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    // With no Gary the Gambler of its own, the account has nowhere to wear its signed full art.
+    let signed = json!({ "cosmeticId": "full-art-gary-the-gambler-signed", "cardId": card });
+    let before = everything(&app).await;
+    let (status, answer) = chase(signed.clone()).await;
+    assert_eq!(status, 409, "{answer}");
+    assert_eq!(everything(&app).await, before);
+
+    // Owning the card, its Epic full art is no chase and is refused, and the signed one, a chase
+    // no account is granted (R2655000), is bought on it, and the bar empties.
+    own(&app, std::slice::from_ref(&card)).await;
+    let before = everything(&app).await;
+    let (status, answer) = chase(json!({ "cosmeticId": "full-art-gary-the-gambler", "cardId": card })).await;
+    assert_eq!(status, 409, "{answer}");
+    assert_eq!(everything(&app).await, before);
+    assert!(!owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler-signed").await);
+    let (status, answer) = chase(signed).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler-signed").await);
+    assert!(!owns_cosmetic(&app, Some(&card), "full-art-gary-the-gambler").await);
+    assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 0);
+}

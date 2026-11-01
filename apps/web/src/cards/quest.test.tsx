@@ -592,7 +592,8 @@ describe("R2450000 a Quest card's face prints only the stage it stands at", () =
       // Off the field its tree has no quest open, and it prints its text as it is.
       const off = questFace(ITD, face.radiant);
       expect(questFaceText(off), face.label).toBeNull();
-      expect(faceText(off).shown, face.label).toBe(full);
+      // R2655001: this card prints full art now; the test reads its words.
+      expect(faceText(off, undefined, false).shown, face.label).toBe(full);
     }
   });
 

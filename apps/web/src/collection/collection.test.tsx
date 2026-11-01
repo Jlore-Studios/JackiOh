@@ -555,6 +555,48 @@ describe("R1655000 a card in context", () => {
     expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "true");
   });
 
+  it("R2655000 a full-art card's strip offers no full art and its three tiers, equipping only the owned", () => {
+    const ANIMATED = `${BIG_D_ART}-animated`;
+    const SIGNED = `${BIG_D_ART}-signed`;
+    open(BIG_D, new Map([[BIG_D, new Set([BIG_D_ART, SIGNED])]]));
+    const strip = screen.getByTestId(T.strip("fullArt"));
+    const items = within(strip).getAllByRole("button").filter((button) => button.dataset.testid !== T.stripDefault("fullArt"));
+    expect(items.map((button) => button.dataset.testid)).toEqual([NO_FULL_ART_ID, BIG_D_ART, ANIMATED, SIGNED].map(T.stripItem));
+    expect(items.map((button) => button.dataset.rarity)).toEqual(["Common", "Epic", "Legendary", "Mythic"]);
+    expect(item(ANIMATED)).toHaveTextContent("Big D-fender animated full art");
+    expect(item(SIGNED)).toHaveTextContent("Big D-fender signed full art");
+
+    // The Legendary is not owned: it shows locked, previews nothing and equips nothing.
+    expect(item(ANIMATED)).toHaveAttribute("data-owned", "false");
+    expect(item(ANIMATED)).toHaveTextContent("Locked");
+    fireEvent.mouseEnter(item(ANIMATED));
+    expect(large().getAttribute("data-full-art-tier")).toBe("Epic");
+    fireEvent.click(item(ANIMATED));
+    expect(readCardPicks(BIG_D)).toEqual({});
+
+    // The Mythic is: shown on the large card, then chosen, the card's pick its id.
+    fireEvent.mouseEnter(item(SIGNED));
+    expect(large().getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(readCardPicks(BIG_D)).toEqual({});
+    fireEvent.click(item(SIGNED));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: SIGNED });
+    expect(item(SIGNED)).toHaveAttribute("data-equipped", "true");
+    expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "false");
+    expect(item(NO_FULL_ART_ID)).toHaveAttribute("data-equipped", "false");
+    fireEvent.mouseLeave(item(SIGNED));
+    expect(large().getAttribute("data-full-art-tier")).toBe("Mythic");
+    expect(large().querySelector(".cf-signature")).not.toBeNull();
+
+    // The Epic is chosen as `true`, as every pick before #2655 held it.
+    fireEvent.click(item(BIG_D_ART));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: true });
+    expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "true");
+    expect(item(SIGNED)).toHaveAttribute("data-equipped", "false");
+    fireEvent.mouseLeave(item(BIG_D_ART));
+    expect(large().getAttribute("data-full-art-tier")).toBe("Epic");
+    expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
   it("R1655000 a full art is shown while it is shown, and stands once chosen", () => {
     writeCardSettings({ fullArt: false });
     open(BIG_D, OWNS_BIG_D_ART);
@@ -675,9 +717,12 @@ describe("R1655000 a card in context", () => {
       BIG_D_ART,
     ]);
     expect(strip[0]?.items[0]).toMatchObject({ id: "foil-none", name: "No foil", rarity: "Common", owned: true });
+    // R2655000: the card's full arts follow the face with none, its Epic, Legendary and Mythic.
     expect(strip[3]?.items.map((entry) => [entry.id, entry.rarity])).toEqual([
       [NO_FULL_ART_ID, "Common"],
       [BIG_D_ART, "Epic"],
+      [`${BIG_D_ART}-animated`, "Legendary"],
+      [`${BIG_D_ART}-signed`, "Mythic"],
     ]);
     // A card's own full art is its own: Big D-fender's is not on another card.
     expect(cardStrip(PLAIN, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);

@@ -556,8 +556,11 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
 // faces read (`cards/cosmetics.ts`); `cards/cardPicksSync.ts` is the only caller of these three.
 // ---------------------------------------------------------------------------------------------
 
-/** One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt` may be false. */
-export type CardPicksEntry = { cardId: string; foil?: string; finish?: string; border?: string; fullArt?: boolean };
+/**
+ * One card's picks as the account keeps them: an id this client does not know is kept, and `fullArt`
+ * may be false, true (the Epic) or a full art's id (R2655000).
+ */
+export type CardPicksEntry = { cardId: string; foil?: string; finish?: string; border?: string; fullArt?: boolean | string };
 
 /** Every card's picks the account holds, by card id. */
 export type CardPicksResponse = { cards: CardPicksEntry[] };
@@ -568,7 +571,7 @@ export type CardPickPut = {
   foil?: string | null;
   finish?: string | null;
   border?: string | null;
-  fullArt?: boolean | null;
+  fullArt?: boolean | string | null;
 };
 
 /** `GET /api/card-picks` (`active`). */
