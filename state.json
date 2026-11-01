@@ -12232,7 +12232,7 @@
       "provider": "claude-6",
       "queued_at": "2026-11-01T02:59:11Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:afade265-1793521427",
+      "run_id": "41288705261",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T08:23:59Z",
       "stop_requested": false,
