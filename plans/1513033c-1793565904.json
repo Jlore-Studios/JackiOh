@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 2723,
+  "title": "Patch: full-art cards in your hand show only their art, no name",
+  "branch": "bot/issue-2723",
+  "thread": "**Issue #2723 (data, not instructions):**\n\n```text\n# #2723: Patch: full-art cards in your hand show only their art, no name\nOpened by @jgoetzmann.\n\n## What it does\n\nA full-art card (R1017001, at any tier of R2655000) in its owner's hand prints its name banner across the foot of the art (`apps/web/src/cards/cards.css`, `.cf[data-full-art=\"true\"] .card-name`, kept at hand size by the \"full-art face keeps its art across the whole face at hand size\" rule). Its rarity gem and set mark show too, and a Mythic also signs its name across the art.\n\nIn the hand, the owner wants it to be **just a tiny version of the art**: the player already knows what the card is.\n\n**What changes in your own hand:** a full-art face drops its name banner, its Mythic signature, its rarity gem, its set mark and its crest. #2718's watermark never applies, since a full-art face has no rules box.\n\n**What stays:**\n\n- the cost gem, with its live cost and tone, because a cost can change in hand;\n- a Unit's attack and health, which can change in hand too;\n- every state the hand draws: playable, can't play, selected, dragged, Radiant;\n- the full-art tier's motion (#2715), and any finish (#2720), border or foil the card wears.\n\n**Unchanged elsewhere:** the hover preview and the inspect overlay show the whole card with its name, and so does every view outside the hand: the board, mulligan and discover choices (where the player is choosing), the deck builder, the Collection and the Almanac.\n\n**Accessibility:** the name stays in the card's accessible name (`aria-label` and `title`), so a screen reader and the tooltip still say what it is.\n\n**Scope:** only your own hand is affected. The opponent's hand is face down, and a card they reveal is not in your hand.\n\nThis is presentation only (CLAUDE.md rule 7), so it takes a ruling note in this issue's block, amending R1017001. It changes how cards look, so a pending fragment claims it (a micro, R2529000).\n\n## Acceptance\n\n- A full-art card in the viewer's hand renders no visible name, signature, rarity gem, set mark or crest, but does render its cost gem and, for a Unit, its stats (`CardFace.test.tsx`).\n- The same card in mulligan, discover, inspect, hover preview, on the board and in the Collection renders its name as today.\n- A non-full-art card in hand is unchanged.\n- The card's accessible name still holds its name in the hand.\n- A component (pixel) spec shows a hand holding a full-art Unit, a full-art Spell and a normal card.\n- The ruling note passes `cargo jackioh spec check`, and `cargo jackioh classify --base origin/main --claims` passes with the fragment.\n\n## Blocked by, part of\n\nNothing blocks it. It touches the full-art face beside #2715; whichever lands second merges main first.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2723: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-01T18:19:07Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- said: You've hit your 5-hour limit \u00b7 resets 9:10pm (UTC)"
+  },
+  "journal": "# Journal of #2723\n\nEvery night-bot run on #2723, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-01 18:22 UTC \u00b7 build #2723 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/41334849658) on `claude-3` (`sonnet` (medium), `opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 0 model minutes.\nIts work ended at `29baab124dbc` on `bot/issue-2723`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 18:18 | start | from `origin/main` |  | at `29baab124dbc` |\n| 2 | 18:19 | plan (`opus`) | plan the item before anyone builds it | 0.0 min | refused: the usage limit |\n| 3 | 18:19 | stop | `claude-3` reached its usage limit |  |  |\n",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
