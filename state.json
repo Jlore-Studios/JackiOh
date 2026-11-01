@@ -12643,18 +12643,24 @@
       "suggestion": true
     },
     "2691": {
-      "asks": [
-        "c:6559755849"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "gpt",
       "queued_at": "2026-11-01T15:09:31Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:56df1a21-1793549354",
+      "runs_on": "night-vm-gpt",
+      "started_at": "2026-11-01T16:09:27Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6559755849"
+      ]
     },
     "2692": {
       "action": "plan",
@@ -12723,9 +12729,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T16:09:00Z",
+    "at": "2026-11-01T16:09:27Z",
     "url": "",
-    "what": "plan #2688 on claude-6"
+    "what": "plan #2691 on gpt"
   },
   "last_sweep": {
     "at": "2026-11-01T15:53:24Z",
