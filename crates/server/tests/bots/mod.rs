@@ -1,3 +1,4 @@
+pub mod budget;
 pub mod calibrate;
 pub mod cosmetics;
 pub mod persona;

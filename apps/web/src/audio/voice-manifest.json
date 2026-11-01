@@ -2690,7 +2690,15 @@
       "hash": "e7877bb94f2f10a6",
       "bytes": 15991
     },
-    "meditative-049-3-cast": {
+    "meditative-049-3-attack": {
+      "hash": "eff74bd8377698c1",
+      "bytes": 9837
+    },
+    "meditative-049-3-death": {
+      "hash": "7bf76a3779fb9b1c",
+      "bytes": 8479
+    },
+    "meditative-049-3-play": {
       "hash": "0fe47ba7fae7a8d0",
       "bytes": 13263
     },
@@ -4690,7 +4698,15 @@
       "hash": "c315d8d4a60f0c56",
       "bytes": 11738
     },
-    "stinkyscape-116-cast": {
+    "stinkyscape-116-attack": {
+      "hash": "8910857bb0827136",
+      "bytes": 3878
+    },
+    "stinkyscape-116-death": {
+      "hash": "02429b0874bd62a6",
+      "bytes": 4516
+    },
+    "stinkyscape-116-play": {
       "hash": "0947241543ab3028",
       "bytes": 11294
     },
