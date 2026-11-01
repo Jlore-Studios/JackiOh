@@ -420,15 +420,18 @@ describe("MN09: the set mark and the All Tribes label sit where they should on e
     it(`MN09 R1382 "All Tribes" leads the tags line, inside the face and clear of the rules and the stats${chinese ? ", on a Chinese face" : ""}`, () => {
       cy.viewport(1280, 900);
       cy.mount(
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8 }}>
-          {[PREVIEW_HEIGHT_PX, Math.round(170 / FACE_ASPECT)].flatMap((height) =>
-            TRIBAL.map((def) => (
-              <div key={`${def.id}-${String(height)}`} data-tribal={def.id} style={{ width: widthFor(height), height, flex: "none" }}>
-                <CardFace face={faceModel({ defId: def.id, def, radiant: false, ...(chinese ? { chinese: true } : {}) })} layout="full" />
-              </div>
-            )),
-          )}
-        </div>,
+        // R2655001: Tatches the Totem prints full art now; the test reads its tags line.
+        <FullArtAllowed allowed={false}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8 }}>
+            {[PREVIEW_HEIGHT_PX, Math.round(170 / FACE_ASPECT)].flatMap((height) =>
+              TRIBAL.map((def) => (
+                <div key={`${def.id}-${String(height)}`} data-tribal={def.id} style={{ width: widthFor(height), height, flex: "none" }}>
+                  <CardFace face={faceModel({ defId: def.id, def, radiant: false, ...(chinese ? { chinese: true } : {}) })} layout="full" />
+                </div>
+              )),
+            )}
+          </div>
+        </FullArtAllowed>,
       );
       cy.document({ timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
         const faces = [...doc.querySelectorAll<HTMLElement>("[data-tribal] > .cf")];
