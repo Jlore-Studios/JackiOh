@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2682,
+  "title": "Patch: Back closes the home screen's Quests scroll, the match's modifier list and the emote menus, as it closes every other sheet",
+  "branch": "bot/issue-2682",
+  "thread": "**Issue #2682 (data, not instructions):**\n\n```text\n# #2682: Patch: Back closes the home screen's Quests scroll, the match's modifier list and the emote menus, as it closes every other sheet\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a phone, the back gesture is how most people close things, and today it closes nearly every sheet and dialog in JackiOh. Three small panels still ignore it: the quests scroll on the home screen, the list of active modifiers opened from a match's controls, and the emote menu that hangs off a hero portrait. With one of them open, Back leaves the home screen, or in an online match asks whether you want to leave the game, while the panel stays where it was. Once built, Back closes the panel first, as it already closes the Marketplace, the deck builder's pickers and a card's view.\n\n## Why\n- R2127000 (`spec/rulings/R2127000.md`, \u00a710.10): Back closes the topmost sheet or dialog a player dismisses before it leaves the screen. Its \u201cWhich\u201d list names every overlay it covers; #2563 and #2604 added the ones that had been missed.\n- Three dismissable overlays close on Escape and on an outside press, but never on Back, and none of their files mounts `BackLayer` or `useBackLayer` (`apps/web/src/net/backLayers.ts:180`, `:202`):\n  - the home screen's Quests scroll, `QuestsBookmark` (`apps/web/src/routes/landing.tsx:359-377`, its panel at `:410-421`);\n  - the modifier list's panel (`apps/web/src/game/ModifierList.tsx:40-56`), mounted in practice, lessons, the online match, Duos, watching and replays;\n  - the emote picker and the opponent's mute menu (`useMenuLifetime`, `apps/web/src/emotes/ui.tsx:53-73`, used at `:136` and `:227`).\n- The siblings do it: `game/deckbuilder/DeckHistory.tsx:188`, `game/Marketplace.tsx:170`, `emotes/PortraitPicker.tsx:169`.\n- In a live online match a Back with no layer open meets the leave guard (R1754000), so a player who opens the emote menu and swipes back is asked whether to leave the game, with the menu still open behind the question.\n\n## Proposal\n- Mount a Back layer while each is open, closing through its own close, as R2127000's How asks:\n  - Quests: `close`, then the focus back on the bookmark, as its Escape does;\n  - the modifier list: `setOpen(false)`;\n  - the emote menus: `onClose`, only when not `inline` (inside the hero's inspect view, that view's own layer owns the menu).\n- Escape keeps each panel's own handler, so one Escape never closes two things.\n- Edit R2127000 in place: add the three to \u201cWhich\u201d, cite this issue in `cards`, and list the new tests' files in `proven_in`.\n\n## Where it lands\n- `apps/web/src/routes/landing.tsx`, `apps/web/src/game/ModifierList.tsx`, `apps/web/src/emotes/ui.tsx`\n- Tests: `apps/web/src/routes/landing-quests.test.tsx`, `apps/web/src/game/ModifierList.test.tsx`, `apps/web/src/emotes/ui.test.tsx`\n- `spec/rulings/R2127000.md`; SPEC \u00a710.10\n\n## Acceptance criteria\n- [ ] With the Quests scroll open, Back closes it, leaves the address and the screen as they were, and puts the focus on the bookmark; a second Back leaves the screen as before.\n- [ ] With the modifier list open, Back closes it and nothing else.\n- [ ] With the emote picker or the mute menu open in a live match, Back closes the menu and the leave question does not appear; a second Back meets the leave guard as before.\n- [ ] An emote menu drawn inline in the hero's inspect view adds no layer of its own.\n- [ ] Each case is an `R2127000` test in the files above, listed in the note's `proven_in`; `cargo jackioh spec check` passes.\n- [ ] `pnpm --dir apps/web test` on the touched files, `pnpm --dir apps/web typecheck` and eslint pass.\n\n## Size and risks\nSmall: about three lines of component code each, plus three tests and the note's edit. Client only (CLAUDE.md rule 7). Risk: the emote menu's outside-press close and its layer must not both fire on one tap; the layer closes only on Back.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-01T15:05:46Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "gpt",
+  "cli": "codex",
+  "secret": "",
+  "family": "gpt",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-gpt",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "gpt",
+      "model": "gpt-5.6-sol",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2682: needs a plan; `gpt` (codex, `gpt-5.6-sol`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `gpt` (codex, `gpt-5.6-sol`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#2691 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first"
+  ]
+}
