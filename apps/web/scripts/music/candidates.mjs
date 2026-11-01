@@ -117,7 +117,7 @@ function tavernWaltz() {
     [16, A, ["oompah", "perc", "lead"]],
     [16, B, ["oompah", "pad", "fiddle"]],
     [16, A, ["oompah", "perc", "lead", "counter"]],
-    [8, B, ["pad", "sparkle", "counter"]],
+    [8, B, ["oompah", "pad", "sparkle", "counter"]],
     [16, B, ["oompah", "perc", "pad", "lead"]],
     [16, A, ["oompah", "perc", "sparkle", "fiddle", "pad"]],
   ]);
@@ -369,7 +369,7 @@ function edmSynthwave() {
     polyArp: (s) => arp(s, { ch: 2, step: 0.5, pattern: [0, 2, 4, 2, 1, 3, 5, 3], center: 60, vel: 52 }),
   };
   return arrange(song, parts, [
-    [8, A, ["pad", "arp"]],
+    [8, A, ["pad", "arp", "bass"]],
     [16, A, ["pad", "arp", "bass", "drums", "lead"]],
     [8, B, ["bass", "chords", "drums", "strings"]],
     [8, A, ["pad", "polyArp", "bass", "drums"]],
@@ -406,15 +406,15 @@ function edmHalftime() {
     },
     drop: (s) => {
       drums(s, { pattern: halftime, fill: [...halftime, ...at(DR.snare, 80, [3, 3.25, 3.5])] });
-      roots(s, { ch: 2, octave: -2, vel: 90 });
-      bass(s, { ch: 1, pattern: [[0, "R", 3.9, 1]], vel: 96, octave: -1 });
+      roots(s, { ch: 2, octave: -2, vel: 78 });
+      bass(s, { ch: 1, pattern: [[0, "R", 3.9, 1]], vel: 82, octave: -1 });
       for (let bar = 0; bar < s.bars; bar += 1) wobble(s, { ch: 1, cycle: rates[bar % rates.length], from: bar * 4, to: bar * 4 + 4 });
       comp(s, { ch: 6, hits: [[0, 0.5, 1]], center: 60, vel: 66 });
     },
     lead: (s, i) => melody(s, { ch: 0, rhythms: RHYTHMS.edm, range: [4, 11], vel: 74, motifBars: [0, 4], start: 7, seed: 10 + i }),
   };
   return arrange(song, parts, [
-    [8, A, ["pad", "bells", "hats"]],
+    [8, A, ["pad", "choir", "bells", "hats"]],
     [8, A, ["pad", "choir", "build"]],
     [16, A, ["drop", "lead"]],
     [8, B, ["pad", "choir", "bells"]],
@@ -450,12 +450,13 @@ function edmChip() {
     drums: (s) => drums(s, { pattern: beat, fill: [...at(DR.kick, 90, [0, 2]), ...at(DR.esnare, 84, [1, 2.5, 3, 3.25, 3.5, 3.75])] }),
     lead: (s, i) => melody(s, { ch: 0, rhythms: CHIP, range: [4, 12], vel: 82, motifBars: [0, 4, 8], start: 7, seed: i }),
     harmony: (s, i) => melody(s, { ch: 2, rhythms: RHYTHMS.edm, range: [2, 9], vel: 66, motifBars: [], start: 4, seed: 10 + i }),
+    hats: (s) => drums(s, { pattern: [...at(DR.hat, 44, every(0.5)), [0, DR.kick, 70]] }),
   };
   return arrange(song, parts, [
     [8, A, ["vibrato", "arp", "bass"]],
     [16, A, ["arp", "bass", "drums", "lead"]],
     [16, B, ["arp", "bass", "drums", "lead", "harmony"]],
-    [8, C, ["arp", "harmony"]],
+    [8, C, ["arp", "bass", "harmony", "hats"]],
     [16, A, ["arp", "bass", "drums", "lead", "harmony"]],
     [16, B, ["arp", "bass", "drums", "lead"]],
   ]);
@@ -499,7 +500,7 @@ function edmTrap() {
     brass: (s) => comp(s, { ch: 5, hits: [[0, 0.6, 1], [2.5, 0.4, 0.8]], center: 55, vel: 60 }),
   };
   return arrange(song, parts, [
-    [8, A, ["pizz", "bells"]],
+    [8, A, ["pizz", "choir", "bells", "eight08"]],
     [16, A, ["pizz", "drums", "eight08", "flute"]],
     [8, B, ["choir", "flute", "bells"]],
     [16, A, ["pizz", "drums", "eight08", "flute", "brass"]],
@@ -538,7 +539,7 @@ function lofiJazzhop() {
     strings: (s) => pad(s, { ch: 4, center: 62, vel: 36 }),
   };
   return arrange(song, parts, [
-    [4, A, ["piano"]],
+    [4, A, ["piano", "walk", "strings"]],
     [8, A, ["piano", "walk", "drums"]],
     [8, A, ["piano", "walk", "drums", "trumpet"]],
     [8, B, ["piano", "walk", "drums", "sax", "strings"]],
@@ -763,7 +764,7 @@ function epicRequiem() {
     },
   };
   return arrange(song, parts, [
-    [4, A, ["organ", "bells"]],
+    [4, A, ["organ", "oohs", "bells", "low"]],
     [8, A, ["organ", "low", "choir", "bells"]],
     [8, B, ["organ", "low", "brass", "tuba"]],
     [8, A, ["oohs", "low", "cello", "choir"]],
@@ -808,7 +809,7 @@ function epicFiveFour() {
   return arrange(song, parts, [
     [8, A, ["taiko", "low"]],
     [16, A, ["ostinato", "taiko", "low", "horn"]],
-    [8, B, ["ostinato", "low", "choir", "timp"]],
+    [8, B, ["ostinato", "low", "choir", "choirPad", "stabs", "timp"]],
     [8, A, ["ostinato", "taiko", "low", "stabs", "violin"]],
     [8, B, ["ostinato", "taiko", "low", "horn", "choirPad", "stabs", "timp"]],
     [8, A, ["ostinato", "taiko", "low", "choir", "violin"]],
@@ -848,8 +849,8 @@ function epicTrailer() {
     timp: (s) => roots(s, { ch: 6, octave: -2, vel: 78, hits: [[0, 1, 1], [3, 0.25, 0.6], [3.5, 0.25, 0.8]] }),
   };
   return arrange(song, parts, [
-    [8, A, ["atmos", "piano"]],
     [8, A, ["atmos", "piano", "pulse"]],
+    [8, A, ["atmos", "piano", "pulse", "ostinato"]],
     [8, A, ["pulse", "ostinato", "braam", "drums", "timp"]],
     [8, B, ["pulse", "ostinato", "choir", "atmos"]],
     [8, A, ["pulse", "ostinato", "braam", "drums", "brassLead", "timp"]],
@@ -970,7 +971,7 @@ function housePiano() {
   return arrange(song, parts, [
     [8, A, ["drums", "bass", "organ"]],
     [16, A, ["drums", "bass", "piano", "hook"]],
-    [8, B, ["strings", "solo"]],
+    [8, B, ["bass", "strings", "organ", "solo"]],
     [16, A, ["drums", "bass", "piano", "hookHigh", "strings"]],
     [16, B, ["drums", "bass", "piano", "organ", "solo"]],
   ]);
@@ -1079,7 +1080,7 @@ function houseAfro() {
     pad: (s) => pad(s, { ch: 5, center: 60, vel: 44 }),
   };
   return arrange(song, parts, [
-    [8, A, ["perc"]],
+    [8, A, ["perc", "pad"]],
     [8, A, ["perc", "kick", "marimba"]],
     [16, A, ["perc", "kick", "marimba", "bass", "flute"]],
     [8, B, ["perc", "chant", "pad", "kalimba"]],

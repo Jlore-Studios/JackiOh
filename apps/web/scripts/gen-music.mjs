@@ -511,7 +511,11 @@ async function main() {
   const ordered = {};
   for (const track of tracks) if (files[track.id] !== undefined) ordered[track.id] = files[track.id];
   const next = `${JSON.stringify({ version: 1, format: FORMAT, files: ordered }, null, 2)}\n`;
-  if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== next) fs.writeFileSync(manifestPath, next);
+  if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== next) {
+    // A scratch --root (the candidates') starts with no src/audio.
+    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    fs.writeFileSync(manifestPath, next);
+  }
   if (scratch !== null) fs.rmSync(scratch, { recursive: true, force: true });
   if (total > budget) {
     console.error(`gen-music: ${total} bytes on disk is over the ${BUDGET_BYTES} budget`);
