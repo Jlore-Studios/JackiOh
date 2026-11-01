@@ -980,6 +980,18 @@ mod r768_bounded_cost {
         assert_eq!(cache.held(ttl_ms), 0);
         assert!(cache.get("m-new", ttl_ms).is_none());
     }
+
+    /// The retention purge's clear (the co-op registry's cache is this one, over a co-op match's
+    /// steps): every replay goes, however recently it was opened.
+    #[test]
+    fn the_cache_forgets_every_replay_when_cleared() {
+        let cache = ReplayCache::default();
+        cache.put("m-1", refused(), 0);
+        cache.put("m-2", refused(), 0);
+        cache.clear();
+        assert_eq!(cache.held(0), 0);
+        assert!(cache.get("m-1", 0).is_none());
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
