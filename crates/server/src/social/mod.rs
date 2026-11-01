@@ -100,15 +100,18 @@ pub(crate) async fn profiles_by_id(
         .collect())
 }
 
-/// Epoch ms as an ISO-8601 instant in UTC, as `Date.prototype.toISOString` writes it.
+/// Epoch ms as an ISO-8601 instant in UTC, as `Date.prototype.toISOString` writes it, or the
+/// number itself for an instant `OffsetDateTime` cannot hold.
 pub fn iso(ms: i64) -> String {
-    let Ok(at) = OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * NANOS_PER_MS) else {
-        return ms.to_string();
-    };
-    time::format_description::parse_borrowed::<1>(ISO_FORMAT)
-        .ok()
-        .and_then(|format| at.format(&format).ok())
-        .unwrap_or_else(|| ms.to_string())
+    try_iso(ms).unwrap_or_else(|_| ms.to_string())
+}
+
+/// `iso`, or why the instant cannot be written: `mint-code` fails on that rather than print a
+/// number for an invite's expiry (`cli::mint_code`).
+pub(crate) fn try_iso(ms: i64) -> Result<String, time::Error> {
+    let at = OffsetDateTime::from_unix_timestamp_nanos(i128::from(ms) * NANOS_PER_MS)?;
+    let format = time::format_description::parse_borrowed::<1>(ISO_FORMAT)?;
+    Ok(at.format(&format)?)
 }
 
 /// A refusal with a code of S7's own, in the API's one error shape (`{ "error": { code, message }
@@ -156,6 +159,22 @@ mod tests {
     fn iso_writes_what_to_iso_string_writes() {
         assert_eq!(iso(0), "1970-01-01T00:00:00.000Z");
         assert_eq!(iso(1_760_445_296_789), "2025-10-14T12:34:56.789Z");
+        assert_eq!(
+            try_iso(1_760_445_296_789).ok().as_deref(),
+            Some("2025-10-14T12:34:56.789Z")
+        );
+    }
+
+    /// An instant past what `OffsetDateTime` holds: the social routes write the number, and
+    /// `mint-code` fails with the range error's own words.
+    #[test]
+    fn an_instant_out_of_range_is_its_number_or_the_range_error() {
+        assert_eq!(iso(i64::MAX), i64::MAX.to_string());
+        let range = OffsetDateTime::from_unix_timestamp_nanos(i128::from(i64::MAX) * NANOS_PER_MS)
+            .err()
+            .map(|error| error.to_string());
+        assert!(range.is_some());
+        assert_eq!(try_iso(i64::MAX).err().map(|error| error.to_string()), range);
     }
 
     /// The social routes' and the co-op rooms' refusals (`duos::rooms`): the API's one error shape,
