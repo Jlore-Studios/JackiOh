@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 2706,
+  "title": "Patch: the dungeon run's fights: practice games against the run's enemy, the artifact tray and the timer",
+  "branch": "bot/issue-2706",
+  "thread": "**Issue #2706 (data, not instructions):**\n\n````text\n# #2706: Patch: the dungeon run's fights: practice games against the run's enemy, the artifact tray and the timer\nOpened by @squishy-squooby.\n\nPart E of #2701, the dungeon run's stage 1: a `bot:fullsend` tree, so this part is built on the tree's integration branch and reconciled there. Its frozen spec is `docs/dungeon-run.md` DR14; the design it shows is DR5 and DR6 of the same file.\n\nWhen the run stands on a fight (`RunPhase` `fight`), the page plays it as a practice game against the AI: the run's deck and HP against the enemy's deck and strength. This part starts that game from the run, draws each side's artifacts beside its hero, shows the run's timer, and reports the finished game back to the run.\n\n## The surface (frozen)\n\nThis part writes:\n\n```ts\n// apps/web/src/dungeon/fight/FightScreen.tsx (DungeonPage, part D, renders it in the fight phase)\nexport function FightScreen(props: { dungeon: Dungeon }): ReactElement;\n// practice/protocol.ts\nPracticeStartConfig.run?: RunFightSetup;   // when set: its decks, handicaps, deck marks and seed replace\n                                           // `deck`, `difficulty`'s handicap and the dealt AI deck\n// a new worker request and its answers\n{ type: \"runReport\" }  \u2192  { type: \"runReport\", action: RunAction } | { type: \"runReport\", error: string }\n// game/Game.tsx\nheroAside?: { own?: ReactNode; enemy?: ReactNode };   // drawn beside each hero, as boardRail is a route slot\n```\n\nIt uses, as frozen in DR14 and without waiting for their parts:\n- part D's `Dungeon` (`dungeon/store.ts`): `dungeon.run`, `dungeon.content`, `dungeon.startedAt`, `dungeon.act(action)`;\n- part C's `runFightSetup(state, content)` and `runFightReport(game, human)` (`apps/web/src/wasm/index.ts`);\n- part B's `RunFightSetup { seed, humanDeck, humanHandicap, humanMarks, enemyDeck, enemyHandicap, enemy }` (`@jackioh/run`);\n- part A's `CreateGameOptions.deckMarks` (`{ p1?: DeckMark[], p2?: DeckMark[] }`, `DeckMark { index, radiant, upgrades }`).\n\n## What to do\n\n- **The worker.** In `practice/core.ts`, `decksAndHandicap`/`startGame` read `config.run`, as they read a lesson's fixed decks: the human's deck and handicap at `humanSeat`, the enemy's at the other seat, `deckMarks` for the human's seat, and the setup's seed. Answer `runReport` from the finished game's seed, decks, handicaps, deck marks and log (the worker keeps them) through `runFightReport`. Give `practice/controller.ts` a method that asks for it. A practice game without `run` is unchanged, and every practice test still passes.\n- **The screen.** `FightScreen` builds the setup with `runFightSetup`, starts the controller with `{ seed, humanSeat: \"p1\", run: setup, customCards }` (the Sandbox's), and renders the board as `routes/practice.tsx`'s `PracticeScreen` does (`Shell`, `Game` and its props). It shows the enemy's name, and a timer, the time since `dungeon.startedAt`, in `matchStatus` or `boardRail`. It shows no Play again: when the game is over it asks the worker for the report and sends its `FightOver` with `dungeon.act`. A lost game leaves the run dead, and part F's run-over screen follows.\n- **The tray.** `dungeon/fight/ArtifactTray.tsx`, passed as `heroAside`: one icon per artifact (the human's run artifacts and blessings, the enemy's `setup.enemy.artifacts`), each showing its tier, with a button that opens a list of their names, text and levels from `dungeon.content.passives`. It is reachable by keyboard and labelled for screen readers. `Game` threads `heroAside` to `Board`'s seat, beside `<Hero>`. Components still take a `PlayerView` and nothing else; the aside is a route's slot, as `boardRail` is.\n- Give every string to `t()`. Use test ids from `dungeon/fight/testids.ts`, prefixed `dungeon-`.\n\n## Owns\n\n`apps/web/src/dungeon/fight/`, `apps/web/src/practice/` (`protocol.ts`, `core.ts`, `controller.ts`, `practice.worker.ts` and their tests) and `game/Game.tsx`, `game/Board.tsx` and `game/Hero.tsx`. No other part of #2701 edits these.\n\n## Behaviors (each proved by a vitest test whose comment names it)\n\n- **B22** A fight node starts a practice game from `runFightSetup`, the AI playing the enemy, whose name is shown (core test: the created game's decks, handicaps and marks are the setup's).\n- **B23** Both sides' artifacts show in a tray beside their hero, and a button opens each one's name and text.\n- **B24** A timer shows the run's time on screen.\n- **B25** When the game ends, the page asks the worker for `runReport` and sends its `FightOver` to the run.\n- **B26** A lost fight ends the run.\n\n## Done when\n\nB22\u2013B26 have tests; the existing practice and `game/` tests pass; `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web e2e` pass.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-2701",
+  "part_of": 2701,
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2706: needs a plan; `claude-2` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first"
+  ]
+}
