@@ -12229,9 +12229,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-01T03:27:56Z",
+    "at": "2026-11-01T04:08:47Z",
     "url": "",
-    "what": "plan #2646 on claude-2"
+    "what": "suggestions on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-01T04:02:04Z",
@@ -22841,13 +22841,31 @@
         "number": 2483,
         "title": "Patch: the tab title says when a Conquest series is waiting for your deck pick",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-31T20:05:00Z",
+        "number": 2613,
+        "title": "Patch: with Drag to play off, a co-op hand card dropped on the portal or the teammate's board passes nothing",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-31T20:02:33Z",
+        "number": 2608,
+        "title": "Patch: the fuzz monitor checks that no hand grows past its cap and no library past 60",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-31T19:58:15Z",
+        "number": 2606,
+        "title": "Patch: a stolen card on your side says it is the opponent's",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-11-01T03:34:41Z",
-    "last_run": "2026-10-31T16:04:05Z",
-    "provider": null,
+    "idle_since": "2026-11-01T04:08:47Z",
+    "last_run": "2026-11-01T04:08:47Z",
+    "provider": "claude-2",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:5310e7ba-1793506118",
     "taken_asks": []
   },
   "usage": null,
