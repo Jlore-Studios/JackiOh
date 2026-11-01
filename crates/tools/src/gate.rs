@@ -7,10 +7,9 @@
 //! B30, Hard's handicap against Easy). The subject must win `gateNeeded(matchup, n)` of n games; a
 //! draw counts for nothing. Every game must be clean (B31): nothing rejected, thrown or fallen back, a
 //! log that folds to the live hash, and no panic caught in an AI's search (#1429), in the browser a
-//! trap. The perf gate (B42, #1240) then times decisions. `--full` (or `JACKIOH_AI_GATE=full`) plays
-//! the full seed counts. A game is a pure function of matchup and number, so parallel runs match a
-//! sequential one; a failed gate returns `Err` naming every problem (exit 1). `gate --duos` plays the
-//! Duos gate (#936 B32, #1760; `duos_gate.rs`).
+//! trap. The perf gate (B42, #1240) then times decisions. A game is a pure function of matchup and
+//! number, so parallel runs match a sequential one; a failed gate returns `Err` naming every problem
+//! (exit 1). `gate --duos` plays the Duos gate (#936 B32, #1760; `duos_gate.rs`).
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -28,8 +27,7 @@ use jackioh_ai::{
     binomial_tail, build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games,
     greedy_action, play_match, run_gate_games, subject_seat_of,
 };
-/// Issue #1113: the seeded fixtures' deck rule and runners; the `cargo test` smokes alone play
-/// them, so they (and this import) exist only in test builds.
+/// Issue #1113: only the `cargo test` smokes play the seeded fixtures, so these exist in test builds.
 #[cfg(test)]
 use jackioh_ai::{FIXTURE_BANNED_IDS, fixture_game_config, run_fixture_gate_games};
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP};
@@ -143,7 +141,6 @@ fn brief_count(matchup: Matchup, games: i32) -> i32 {
     (AI_GATE.brief_rate[matchup] * f64::from(games)).ceil() as i32
 }
 
-/// The game's seed, `${AI_GATE.seedSeries}:${matchup}:${n}`.
 fn gate_seed(matchup: Matchup, n: i32) -> String {
     format!("{}:{}:{n}", AI_GATE.seed_series, matchup_name(matchup))
 }
@@ -270,7 +267,6 @@ struct ShardFile {
     games: Vec<ShardGame>,
 }
 
-/// One game of a shard file.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct ShardGame {
@@ -282,8 +278,7 @@ struct ShardGame {
     result: Value,
 }
 
-/// Writes a shard's games to `dir` (`--out`, `JACKIOH_AI_GATE_OUT`, default `ai-gate-shards/` in the
-/// cwd) and answers the file's path.
+/// Writes a shard's games to `dir` and answers the file's path.
 fn write_shard(
     run: &GateReport,
     total: i32,
@@ -421,7 +416,6 @@ fn merge(dir: &Path) -> Result<()> {
     }
 }
 
-// The matchups
 
 /// Plays the listed games of a matchup (1-based), each folded with its handicaps to fill
 /// replayHash/replayErrors; one game per rayon task, collected in the listed order.
@@ -620,7 +614,6 @@ fn check_gate_rule() -> Result<()> {
         for games in [smoke_seeds(), full_seeds(matchup)] {
             let needed = needed(matchup, games);
             let label = format!("{}, {games} games: {needed}", matchup_name(matchup));
-            // Never more than the brief asks for.
             expect_that(needed <= brief_count(matchup, games), || {
                 format!("{label}: more than the brief asks for")
             })?;
@@ -886,7 +879,6 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
 // scaled by `calibrationRefMs`), since a wall-clock limit failed whenever the machine was busy. The
 // shadow-ban sweep times its slow decisions again with this yardstick (R977000, `sweep.rs`'s `still_slow`).
 
-/// One decision's timing.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Timing {
@@ -898,7 +890,6 @@ pub(crate) struct Timing {
     reason: String,
 }
 
-/// A decision of a gate game, timed.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Timed {
@@ -938,17 +929,14 @@ const WIDE_HAND: [&str; 6] = [
 ];
 const WIDE_FIELD: [&str; 5] = ["core-020", "core-008", "core-011", "core-045", "core-030"];
 const WIDE_ENEMY: [&str; 5] = ["core-019", "core-025", "core-037", "core-032", "core-068"];
-/// The wide boards' turn, and their crystals at Hard and at Easy.
 const WIDE_TURN: i32 = 9;
 const WIDE_HARD_MANA: i32 = 7;
 const WIDE_EASY_MANA: i32 = 4;
-/// The enemy hero's health on the wide boards.
 const WIDE_ENEMY_HEALTH: i32 = 30;
 /// Wide enough to be the worst case: 195 candidates at Easy's four crystals, more at Hard's seven
 /// (R90, R348).
 const WIDE_MIN_CANDIDATES: usize = 190;
 
-/// The two wide boards' scenario options, by name.
 fn wide_boards() -> Vec<(&'static str, Value)> {
     let board = |mana: i32| {
         json!({
@@ -991,7 +979,6 @@ const PINNED: [(&str, &str); 3] = [
     ),
 ];
 
-/// A pinned position's state, seat and stream.
 fn pinned_position(text: &str) -> Result<(GameState, PlayerId, Rng)> {
     let fixture: Value = serde_json::from_str(text)?;
     let state: GameState = serde_json::from_value(fixture["state"].clone())?;
@@ -1190,7 +1177,6 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
     problems
 }
 
-// The command
 
 /// A switch's value from its flag, else its environment variable.
 fn flag_or_env(flag: Option<String>, variable: &str) -> Option<String> {
@@ -1236,7 +1222,6 @@ mod tests {
     use super::*;
     use jackioh_ai::{MatchRecord, SimPanic};
 
-    /// The games each matchup's smoke test plays.
     const SMOKE_GAMES: i32 = 4;
 
     fn smoke(name: &str) {

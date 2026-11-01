@@ -1,18 +1,16 @@
 //! Public card and player statistics page API (SPEC §9.11, R654).
 //!
 //! R1367000 (amends R654): `GET /api/stats/cards` reads each card over its own window, through the
-//! engine's `windowed_card_stats`, the function `cargo jackioh stats report --window` and `winrates`
-//! call too; the drill-down's per-patch rates stay per patch.
+//! engine's `windowed_card_stats` (as `cargo jackioh stats report --window` and `winrates` do); the
+//! drill-down's per-patch rates stay per patch.
 //!
 //! R978000: the card figures are read off a patch's totals once and kept for
 //! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=`, `?pilot=` and `?mode=`
-//! (`KeptReports`), and both card routes read the kept reports. R1044000: the totals are the records
-//! folded as they were written (`db::store::Tx::stats_totals_load`), and read the same figures the
-//! records did.
+//! (`KeptReports`). R1044000: the totals are the records folded as they were written
+//! (`db::store::Tx::stats_totals_load`), and read the same figures the records did.
 //!
 //! R2491000 (amends R978000): the drill-down's patch history is one kept history per `?pilot=` and
-//! `?mode=` (`KeptHistory`), read off every patch's totals in one load and shared by every card's
-//! page; its turn and co-played figures still read the current patch's kept report.
+//! `?mode=` (`KeptHistory`), read off every patch's totals in one load and shared by every card's page.
 //!
 //! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every
 //! live game, read off every patch's totals and kept for `PLAY_RATES_REFRESH_SECONDS`.
@@ -22,8 +20,8 @@
 //!
 //! R1994000: `GET /api/stats/games` is the patch's game figures (the first seat's wins, the endings,
 //! the turns, R1256000's counts) over the window every card shares, read through the engine's
-//! `windowed_game_figures` off the totals' whole games (`StatsTotals.game_totals`, which outlive
-//! R1044001's purge), kept with the cards' windowed report and cached as long.
+//! `windowed_game_figures` off `StatsTotals.game_totals` (which outlive R1044001's purge), kept with
+//! the cards' windowed report and cached as long.
 
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -198,7 +196,6 @@ impl PublicStatsSource {
         }
     }
 
-    /// R1367000: the source a window's figures were counted from.
     fn of(source: WindowSource) -> PublicStatsSource {
         match source {
             WindowSource::Live => PublicStatsSource::Live,
@@ -766,7 +763,6 @@ fn patch_report(
 ) -> PatchReport {
     let live_games = totals.live_games(patch);
 
-    // R654 publication gate.
     let cleared = live_games >= PUBLIC_STATS_MIN_LIVE_GAMES;
 
     let source = if cleared || source_param == SourceParam::Live {
@@ -929,7 +925,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .filter(|value| !value.is_empty());
     let cost_param = req.query.get("cost").cloned();
     let card_param = query_trimmed(&req, "card");
-    // The card, set, rarity and cost asked for, which both tables read.
     let shown = |id: &str, def: &CardDef| {
         if card_param.as_ref().is_some_and(|card| id != card) {
             return false;

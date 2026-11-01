@@ -26,7 +26,6 @@ const SEEDS: usize = 200;
 const SIZES: [i32; 3] = [25, 30, 35];
 const BUCKETS: [&str; 4] = ["0-1", "2", "3", "4+"];
 
-/// TS's object literal as `AiDeckOptions`.
 fn options(literal: Value) -> AiDeckOptions {
     json_as(literal)
 }
@@ -48,7 +47,6 @@ fn defs_of(deck: &[String]) -> Vec<CardDef> {
     deck.iter().map(|id| def_of(None, id).clone()).collect()
 }
 
-/// A bucket's literal, as TS's `CostBucket` writes it.
 fn bucket_name(bucket: CostBucket) -> String {
     serde_json::to_value(bucket)
         .ok()
@@ -56,7 +54,6 @@ fn bucket_name(bucket: CostBucket) -> String {
         .unwrap_or_default()
 }
 
-/// TS `Record<CostBucket, number>` read by literal.
 fn per_bucket(record: Value) -> IndexMap<String, f64> {
     BUCKETS
         .iter()
@@ -145,10 +142,8 @@ mod build_ai_deck_b22 {
     #[test]
     fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_meditative_plus_stinkyscape_and_training_grounds_alike()
      {
-        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the AI's soft gate is empty and #1186's
-        // sweep banned none of the set, so its cards are dealt beside the four sets before it. Since
-        // #1885 the gate is empty again, and the Stinkyscape set is dealt beside them.
-        // Re-pinned for the Training Grounds release (#2204): no gate holds it, so it is dealt too.
+        // The AI's soft gate is empty (#1885), so every set that ships is dealt: Meditative+ too, as #1186's
+        // sweep banned none of it (#1187), and Training Grounds (#2204).
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -328,7 +323,6 @@ mod build_ai_deck_b22 {
             AI_DIFFICULTY.hard.deck_size,
             &options(json!({ "manaCap": AI_DIFFICULTY.hard.mana_cap })),
         );
-        // `create_game` panics where TS threw.
         create_game(&CreateGameOptions {
             seed: "deck-test-legal".to_string(),
             decks: (human, hard),
@@ -550,7 +544,7 @@ mod the_curve_and_the_theme_b23 {
             &decks(20, &options(json!({ "theme": "Human" })), "themed"),
             is_human,
         );
-        // TS's `theme: null` (no theme), told apart from an absent theme (roll one): `Some(None)`.
+        // `theme: null` (no theme), told apart from an absent theme (roll one): `Some(None)`.
         let no_theme = AiDeckOptions {
             theme: Some(None),
             ..AiDeckOptions::default()
@@ -662,9 +656,8 @@ mod r1370_a_deck_that_leans_on_a_set {
             if let Some((tag, in_pool)) = theme {
                 let needed = floor_of(size, AI_DECK.theme_min_share);
                 // R817000: a deck holding `maxQuickdraw` Quickdraw cards is dealt no more, so a theme's
-                // Quickdraw cards are out of reach once it does. Re-pinned for the Training Grounds
-                // release (#2204): a lean on the set deals TG #40 Goetzmann Game Design, a Quickdraw
-                // card, which can fill the cap before C+ #37, an Acclaimed Quickdraw card, is dealt.
+                // Quickdraw cards are out of reach once it does (#2204: a lean on the set deals TG #40
+                // Goetzmann Game Design, a Quickdraw card, which can fill the cap before C+ #37 is dealt).
                 let capped = deck
                     .iter()
                     .filter(|id| def_of(None, id).tags.contains(&Tag::Quickdraw))
@@ -698,22 +691,11 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_without_a_lean_set_these_seeds_deal_the_decks_they_always_did_and_take_no_extra_rng_draw() {
         register_cards();
-        // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
-        // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
-        // Re-dealt for patch v0.3.10 (#831), again for patch v0.3.12 (#1149) and again for patch v0.3.13
-        // (#1194), whose costs move the builder's curve: the same seeds stop at the same cursors.
-        // The themed pin was re-dealt for patch v0.3.16 (#1151), whose Human tag on MC Tech joins the
-        // Human theme's pool: its seed stops at the same cursor.
-        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the decks were dealt before the Meditative+
-        // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
-        // Every pin was re-dealt for #1704, whose costs move the builder's curve again.
-        // Re-pinned for the Stinkyscape release (#1884) the same way: the literals gate it too, and
-        // deal the decks unchanged. Every pin was re-dealt again for #2179, whose costs move the curve.
-        // And for the Training Grounds release (#2204): the literals gate it as well, so the decks are
-        // still the ones dealt before it was in any pool. The human and themed pins were re-dealt for
-        // #2521, whose Memory Leak and Going Long changes move the builder's picks: their seeds stop at
-        // the same cursors. Every pin was re-dealt again for #2657, whose costs move the curve:
-        // the same seeds stop at the same cursors.
+        // Dealt by the deck builder before R1370, with the cursor its rng stopped at, and before Meditative
+        // and each set after it (#1187, #1884, #2204) was in any pool, so the literals gate them (R1390: a
+        // gate deals what the draw dealt before). A patch that moves the builder's curve or picks re-deals
+        // the pins, their seeds stopping at the same cursors (#831, #1149, #1194, #1704, #2179, #2657; #1151
+        // the themed pin only, #2521 the human and themed pins).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -1001,15 +983,12 @@ mod r1370_a_deck_that_leans_on_a_set {
             .cloned()
             .collect();
         // Ban all but six of the set's cards, short of the 13 a 25-card deck owes. A player's deck, so
-        // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. Re-pinned for
-        // v0.3.15 (Meditative+ ships, #1187): the newest set is Meditative+, whose first six ids are all
-        // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
-        // gave the units' up (seed 7). Its last six hold two Units (M+ #21, #24), as Meditative's first
-        // six did (M #2, #3), so every floor stays in reach and the units' is still held. Re-pinned for
-        // the Training Grounds release (#2204): the newest set's Legacy cards (#41–#60) are left out, so
-        // the six kept stay the set's own printed cards (R2511000), and so is #40 Goetzmann Game Design, a
-        // Quickdraw card the cap may keep out (R817000), so the six kept are TG #34–#39, two of them Units
-        // (#36, #38).
+        // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. The six kept
+        // must hold Units for every floor to stay in reach and the units' to be held (R1370, seed 7): the
+        // first six of Meditative+ (#1187) are all Spells, its last six hold two Units (M+ #21, #24). In
+        // Training Grounds (#2204) the Legacy cards (#41–#60) are left out (R2511000), and so is #40
+        // Goetzmann Game Design, a Quickdraw card the cap may keep out (R817000): the six are TG #34–#39,
+        // two of them Units (#36, #38).
         let kept: Vec<String> = printed[printed.len() - 6..].to_vec();
         assert!(
             kept.iter()
@@ -1058,9 +1037,8 @@ mod r1370_a_deck_that_leans_on_a_set {
     fn r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card() {
         register_cards();
         // `AI_DECK.leanBoost`'s measurement, at every tier's size: a human's 25 cards, Easy's 25 (the
-        // shadow ban kept out), Medium's 30 at cap 5 and Hard's 35 at cap 7 (R1705000). Re-measured for
-        // v0.3.15 (Meditative+ ships, #1187): every set that ships, not the newest alone, since a small
-        // newest set and a big pool moved the boost the newest set had needed.
+        // shadow ban kept out), Medium's 30 at cap 5 and Hard's 35 at cap 7 (R1705000), on every set that
+        // ships, not the newest alone (#1187): a small newest set and a big pool moved the boost.
         let sizes: [(i32, Option<i32>, bool); 4] = [
             (25, None, true),
             (25, None, false),
@@ -1211,10 +1189,8 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_a_lean_on_meditative_leans_on_the_newest_shipped_set_that_is_not_gated() {
         register_cards();
         let gate = GATE;
-        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the newest set that ships was Meditative+,
-        // which this gate leaves, so a lean on gated Meditative landed on it and no longer on
-        // Classic+. Re-pinned for the Stinkyscape release (#1884): the newest set is Stinkyscape now,
-        // and for the Training Grounds release (#2204): Training Grounds is.
+        // The newest set that ships, which this gate leaves, is Training Grounds (#2204; Stinkyscape #1884
+        // and Meditative+ #1187 before it), so a lean on gated Meditative lands on it, not on Classic+.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
             Some(SetName::TrainingGrounds)
@@ -1292,8 +1268,7 @@ mod r1390_the_ai_decks_soft_gate {
         register_cards();
         // The gate is a filter on the pool and nothing more: gating a set deals exactly the deck that
         // banning its every card would, and leaves the rng at the same cursor, so an empty gate, which
-        // filters nothing, deals what the draw dealt before the gate. Before the Meditative set shipped
-        // a gate on it removed nothing; now that it ships the gate is these bans.
+        // filters nothing, deals what the draw dealt before the gate.
         let gated_ids: Vec<String> = query(&CatalogQueryArgs::default())
             .into_iter()
             .filter(|def| GATE.contains(&def.set))
@@ -1355,8 +1330,7 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative. The list held
-        // the Stinkyscape set from its release (#1884) until #1885 measured the AI on it.
+        // own decks are dealt from it, and a lean on Meditative is a lean on Meditative.
         assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
@@ -1385,9 +1359,9 @@ mod r1390_the_ai_decks_soft_gate {
         }
     }
 
-    /// The Stinkyscape set shipped with the AI dealing itself none of it (#1884, `docs/stinkyscape-set.md`
-    /// D8) until #1885's sweep of record measured the AI on it and emptied the list: the AI's own decks
-    /// are dealt from it at every tier, and a lean on it is a lean on it.
+    /// The Stinkyscape set (#1884, `docs/stinkyscape-set.md` D8) left the list when #1885's sweep of
+    /// record measured the AI on it: the AI's own decks are dealt from it at every tier, and a lean on it
+    /// is a lean on it.
     #[test]
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_stinkyscape_cards() {
         register_cards();

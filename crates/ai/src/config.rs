@@ -23,8 +23,7 @@ pub const AI_KY_COMPETITION_ACCURACY: f64 = 0.85;
 pub const AI_KY_COMPETITION_RADIANT_ACCURACY: f64 = 0.93;
 
 /// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays the skill miss
-/// (`skill::skill_miss_action`, R2214000) at every decision, 1.0 follows the AI at every decision as it
-/// did before the knob.
+/// (`skill::skill_miss_action`, R2214000) at every decision, 1.0 follows the AI at every decision.
 pub const AI_SKILL_MIN: f64 = 0.0;
 pub const AI_SKILL_MAX: f64 = 1.0;
 
@@ -35,9 +34,9 @@ pub const AI_SKILL_MAX: f64 = 1.0;
 pub const AI_SKILL_MISS_TEMPERATURE: f64 = 4.0;
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180). R2575000 (#2575): 1200
-/// and 300 lethal nodes in the search shape of before; a fat state still scales from at most
-/// `AI_SEARCH.fat_budget_nodes`, and the server's middle-strength ladder bots and Duos seats keep 600
-/// and 150 (`BOT_MID_STRENGTH_BUDGET`, `DUOS_AI_BUDGET` in `crates/server/src/config.rs`).
+/// and 300 lethal nodes; a fat state still scales from at most `AI_SEARCH.fat_budget_nodes`, and the
+/// server's middle-strength ladder bots and Duos seats keep 600 and 150 (`BOT_MID_STRENGTH_BUDGET`,
+/// `DUOS_AI_BUDGET` in `crates/server/src/config.rs`).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
     nodes: 1200,
     lethal_nodes: 300,
@@ -50,8 +49,7 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 };
 
 /// The quality gates' budget, and the shadow-ban sweep's: the browser's own, so that the gates
-/// (docs/polish/3-ai.md B28–B31) and the sweep (R186) measure the AI that ships. Its own name, so the
-/// gates can be given less, with the same algorithm, if CI ever needs them faster.
+/// (docs/polish/3-ai.md B28–B31) and the sweep (R186) measure the AI that ships.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
 /// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
@@ -83,9 +81,8 @@ pub const DUOS_GATE_GREEDY_WIN_FLOOR: f64 = 0.7;
 pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 
 /// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
-/// card's own plays first, then the rest in `legal_actions` order. Bounds scoring at one hand of
-/// cards times this many single `reduce` calls per `duos_passes` call, with no search and no reply
-/// simulation.
+/// card's own plays first, then the rest in `legal_actions` order: bounds scoring at one hand of
+/// cards times this many single `reduce` calls per `duos_passes` call.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
 /// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
@@ -103,22 +100,21 @@ pub struct AiSearch {
     /// Plays identical but for `zone` keep the lowest lane of each placement, or its midlane lane when
     /// it has one (R2203001) (candidates.rs `placement_key`), at most this many (#1014; 3 let a Tribute
     /// play's sets outgrow the lethal allowance), everywhere but the search's root, which keeps every
-    /// placement (#1635) so a card that reads its lane or its neighbours is tried in each. In the beam, a
-    /// line that differs from an earlier one only in where its units stand is a lane variant, at most
-    /// this many of a position; it is closed beside the first rather than played on (#1797).
+    /// placement (#1635). In the beam, a line that differs from an earlier one only in where its units
+    /// stand is a lane variant, at most this many of a position; it is closed beside the first (#1797).
     pub zone_variants: i32,
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
-    /// endTurn: switches are the move order's last tier, so below the root a full board cut every one,
-    /// unlike the opponent's reply (`AI_REPLY.defense_switches`). Bounds a level's children at `width` +
-    /// this + 1. A switch back to Attack is kept only where the width holds it.
+    /// endTurn: switches are the move order's last tier, so below the root a full board cut every one.
+    /// Bounds a level's children at `width` + this + 1. A switch back to Attack is kept only where the
+    /// width holds it.
     pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
     /// (`simulate`'s, the opponent's reply's and `own_prompt_score`'s auto-answers, #891): each one
     /// node. A prompt with more answers tries this many drawn from all of them (#1382,
-    /// `auto_answer_seed`), never the first ones it lists.
+    /// `auto_answer_seed`).
     pub max_auto_answer_options: i32,
     /// #1382: the stream the answers an auto-answered prompt tries are drawn on, beside the world's
     /// own seed and the prompt's id, when it has more than `max_auto_answer_options`.
@@ -197,7 +193,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
 /// are already gone). A keyword kind with no entry here (Armor, Deft, …) is worth nothing of its
-/// own; `of` answers `None` for it, as TS's `weights[keyword.kind]` was `undefined`.
+/// own; `of` answers `None` for it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct KeywordWeights {
     #[serde(rename = "Taunt")]
@@ -304,7 +300,7 @@ pub struct EvalWeights {
     pub position_grants: f64,
     /// Whether Defense Position's discount (`position_grants`) leaves a unit's own Taunt alone and
     /// takes its Armor off only when Armor is on the body. Off, it takes a Taunt unit's Taunt and a
-    /// point of Armor off whatever the Taunt's source, as the frozen baseline did.
+    /// point of Armor off whatever the Taunt's source.
     pub defense_own_taunt_kept: bool,
     /// Per point of heroArmorOf.
     pub hero_armor: f64,
@@ -316,7 +312,7 @@ pub struct EvalWeights {
     pub defense_attack_share: f64,
     /// Whether a Deft unit in Defense Position (R49: it can switch to Attack and attack in the same
     /// turn) keeps its whole attack in `unit_worth` and counts as an attacker in `face_threat`. Off, it
-    /// is read as any Defense-Position unit is, as the frozen baseline did.
+    /// is read as any Defense-Position unit is.
     pub deft_defense_attacks: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
@@ -342,7 +338,7 @@ pub struct EvalWeights {
     /// R423: per effect a Radiant Call to Chaos rolls past its base face's one, the share of the card's
     /// per-cost hand price (`hand_per_cost` × min(cost, `hand_cost_cap`)) it adds. Its Radiant text is
     /// then priced at what it does, two more casts of the base face, in place of `radiant_in_hand`'s flat
-    /// price when that is more (#1886: Wildar's Radiant Call to Chaos).
+    /// price when that is more (#1886).
     pub radiant_chaos_effect: f64,
     /// #1143: when both faces of an own hand card are Units, the share that counts of what the face
     /// it will enter with (its Radiant face when it is Radiant, its buffs and tuning) is worth over its
@@ -371,7 +367,7 @@ pub struct EvalWeights {
     pub extra_turn: f64,
     /// R846: the share of `extra_turn` an own hand card of `AI_EXTRA_TURN_CARDS` counts on top of its
     /// hand value: a turn it owes once cast, which the beam sees only on the turn it can pay for it
-    /// (#1886: Olivian Expanse's Discover offers Event Horizon and Last Word at the cost of the rest).
+    /// (#1886).
     pub extra_turn_in_hand: f64,
     /// R1855003: per miss a side's Scanning Probes have banked (`PlayerState.anomaly_misses`), each
     /// adding its steps to every later scan's chances. Own side only: a miss is silent (#1886).
@@ -411,8 +407,7 @@ pub struct EvalWeights {
     pub death: f64,
     /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
     /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
-    /// seat can read, either side's, and `unit_worth` adds for each unit on the field. A face-down card
-    /// is priced as before.
+    /// seat can read, either side's, and `unit_worth` adds for each unit on the field.
     pub turn_hook: f64,
     /// R2564000: the share of what one use of a unit's Activate gives its controller
     /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units
@@ -425,8 +420,7 @@ pub struct EvalWeights {
     pub backrow_base: f64,
     pub backrow_per_cost: f64,
     /// R2490000: a Unit standing in the backrow is priced once, as the Unit the unit walk priced
-    /// — the backrow walk skips it. Off, it keeps the old backrow price on top, as the frozen
-    /// baseline did.
+    /// — the backrow walk skips it. Off, it keeps the old backrow price on top.
     pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
@@ -495,13 +489,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         first_strike: 1.0,
         trample: 0.5,
         cleave: 1.0,
-        // R346: its hits ignore Armor, worth about what Trample is.
         pierce: 0.5,
         indestructible: 4.0,
         immutable: 0.3,
         stack: 0.0,
         lucky: 0.2,
-        // E35: no Spell targets it or touches it — protection from removal, and from its owner's buffs.
         immune_to_spells: 1.0,
         // Patch v0.3.7 (#841): untuned, conservative starts for the training lanes to move. R783000:
         // Ranged spares its attacks the strike back, as First Strike spares a kill's, but guards
@@ -510,14 +502,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         // R783002: the reach Flying denies ground attackers is counted by `face_threat` and the reply
         // already, so on its own it is worth what Trample is.
         flying: 0.5,
-        // R783004, R783010: a hand card's play and an arrival's Lock, nothing left on the field.
         cloaked: 0.0,
         crater: 0.0,
         // R783012: no card prints it yet (§6.1), so nothing until one does and the lanes measure it.
         flashback: 0.0,
-        // #1602: off. At 1.0 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
-        // 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing (training/improve.md, A screen);
-        // the training lanes may move it.
+        // #1602: off. At 1.0 its screen (400 games of improve-dev against the parent) read 201-199, edge
+        // 0.005 (-0.005 to 0.015), which keeps nothing (training/improve.md, A screen).
         windfury: 0.0,
     },
     spell_damage: 0.5,
@@ -554,9 +544,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     start_of_turn_effect: 3.0,
     alt_win: 60.0,
     doomed_hand_discount: 0.5,
-    // #1506: off. At 0.5 and 1.0 its screen, 400 games of improve-dev against the parent (8a366430a),
-    // read 200-200, edge 0.0 (-0.024 to 0.024), which keeps nothing (training/improve.md, A screen);
-    // the training lanes may move them.
+    // #1506: off. At 0.5 and 1.0 its screen (400 games of improve-dev against the parent) read 200-200,
+    // edge 0.0 (-0.024 to 0.024), which keeps nothing (training/improve.md, A screen).
     dormant_share: 0.0,
     dormant_card: 0.0,
     // R2380000: untuned starts for the training lanes, as #1886's are. A turn's wait at half, so
@@ -574,21 +563,18 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
-    // R2490000: a Unit standing in the backrow counts once, as the Unit it is.
     standing_unit_priced_once: true,
     enemy_face_down: 2.0,
-    // #1602: off. At 0.8 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
-    // 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen); the
-    // training lanes may move it.
+    // #1602: off. At 0.8 its screen (400 games of improve-dev against the parent) read 201-199, edge
+    // 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen).
     enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1602: off. At 1.0 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
-    // 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing (training/improve.md, A screen); the
-    // training lanes may move it.
+    // #1602: off. At 1.0 its screen (400 games of improve-dev against the parent) read 199-201, edge
+    // -0.005 (-0.022 to 0.012), which keeps nothing (training/improve.md, A screen).
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
-    // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
+    // R1224: a debt counts as unspent mana does.
     owed_mana: 0.8,
     // #1224: untuned starts: a crystal a coming refresh will or will not give counts as one left
     // unspent does.
@@ -631,8 +617,7 @@ pub enum EvalKind {
     Learned,
 }
 
-/// The switch: one line turns the learned evaluation on or off. A promotion that ships a network sets
-/// it with the weights in one change (#1012).
+/// The switch: a promotion that ships a network sets it with the weights in one change (#1012).
 pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;
 
 /// R1012001: the share of the network's correction a finalist's score takes, `hand + share·(points
@@ -652,8 +637,7 @@ pub enum MoveOrder {
     Learned,
 }
 
-/// The switch: one line turns the policy prior on or off. A promotion that ships a table sets it with
-/// the table in one change.
+/// The switch: a promotion that ships a table sets it with the table in one change.
 pub const AI_MOVE_ORDER: MoveOrder = MoveOrder::Heuristic;
 
 /// R1171000: move-order ranks at or past this share one key (`rank:24`); every rank the root expands
@@ -684,19 +668,20 @@ pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
-/// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick.
+/// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick. Every
+/// term and keyword AI_EVAL gained after that (R346, patches v0.2.0 and v0.3.7, #1602, #1886, …) is 0
+/// here, and each flag that opts into a later reading (`defense_own_taunt_kept`, `deft_defense_attacks`,
+/// `standing_unit_priced_once`) is off, as the baseline read none of them.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
     hero_health: 1.0,
     enemy_health: 1.0,
     position_grants: 0.0,
-    // The baseline is frozen: it discounted a Taunt unit's own Taunt in Defense Position, as it did.
     defense_own_taunt_kept: false,
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
-    // The baseline is frozen: it read a Deft unit in Defense Position as one that cannot attack.
     deft_defense_attacks: false,
     health: 1.0,
     armor_point: 0.8,
@@ -711,22 +696,17 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
         first_strike: 1.0,
         trample: 0.5,
         cleave: 1.0,
-        // R346 came after the gates were fixed, so the frozen baseline gives Pierce nothing, as it did.
         pierce: 0.0,
         indestructible: 4.0,
         immutable: 0.3,
         stack: 0.0,
         lucky: 0.2,
-        // E35, E6, B3.1, B3.3 and B3.4 (patch v0.2.0) came after the gates were fixed, so the frozen
-        // baseline gives each of these terms nothing, as it did.
         immune_to_spells: 0.0,
-        // Patch v0.3.7's keywords came after the gates were fixed too: nothing, as it gave them.
         ranged: 0.0,
         flying: 0.0,
         cloaked: 0.0,
         crater: 0.0,
         flashback: 0.0,
-        // #1602's Windfury came after the gates were fixed too: nothing, as it gave it.
         windfury: 0.0,
     },
     spell_damage: 0.0,
@@ -736,57 +716,39 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
-    // #1886's Radiant Call to Chaos reading came after the gates were fixed: the flat price, as it gave.
     radiant_chaos_effect: 0.0,
-    // The baseline is frozen: it read no hand card's face when the gates were fixed, as it did.
     radiant_face_share: 0.0,
-    // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,
-    // as it did.
     plague_counter: 0.0,
     grade_counter: 0.0,
     hand_cost_delta: 0.0,
-    // #1086's banked terms came after the gates were fixed too: nothing, as it gave them.
     temporary_discount: 0.0,
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
     extra_turn_in_hand: 0.0,
     anomaly_miss: 0.0,
-    // #2389's Credits came after the gates were fixed: nothing, as it gave them.
     market_credit: 0.0,
-    // #1722's modifier terms and doomed hand came after the gates were fixed too: nothing, as it gave
-    // them.
     start_of_turn_effect: 0.0,
     alt_win: 0.0,
     doomed_hand_discount: 0.0,
-    // #1506's dormant cards came after the gates were fixed too: nothing, as it gave them.
     dormant_share: 0.0,
     dormant_card: 0.0,
-    // R2380000's Dormant cards came after the gates were fixed too: nothing, as it gave them.
     slumber_turn_share: 0.0,
     slumber_waiting_share: 0.0,
-    // R2424000 came after the gates were fixed: nothing, as it gave a Death.
     death: 0.0,
-    // R2477000 came after the gates were fixed: nothing, as it gave a turn hook.
     turn_hook: 0.0,
-    // R2564000 came after the gates were fixed: nothing, as it gave an Activate.
     activation: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
-    // The baseline is frozen: it priced a standing Unit again as a backrow card, as it did.
     standing_unit_priced_once: false,
     enemy_face_down: 2.0,
-    // #1602's shown cost and fatigue came after the gates were fixed too: nothing, as it gave them.
     enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
     fatigue_draw: 0.0,
     unspent_mana: 0.8,
-    // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
-    // them did.
     owed_mana: 0.0,
-    // #1224's mana terms came after the gates were fixed too: nothing, as it gave them.
     lost_refresh: 0.0,
     next_turn_mana: 0.0,
     threat_per_damage: 0.4,
@@ -824,7 +786,7 @@ pub struct AiReply {
     /// #1634: the static trader's lethal counts every attack it has left. When `lethal::ready_gap`
     /// says the opponent's attacks still to come reach the seat's hero past its Taunts, every attack
     /// on that hero is worth `AI_EVAL.win`, so the face goes first; false scores one hit at a time
-    /// (`reply_face_value`), as before.
+    /// (`reply_face_value`).
     pub open_lethal: bool,
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
@@ -844,13 +806,12 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
-    // #1634: off. On, its screen, 400 games of improve-dev against the parent (82d7eb4b8), read
-    // 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing (training/improve.md, A screen); the
-    // training lanes may turn it on.
+    // #1634: off. On, its screen (400 games of improve-dev against the parent) read 203-197, edge 0.015
+    // (-0.002 to 0.032), which keeps nothing (training/improve.md, A screen).
     open_lethal: false,
-    // #1696: on. Its screen, 400 games of improve-dev against the parent (20b20f9ad), read 199-199 with
-    // deal 136 aborted at the action cap in both seatings (the parent aborts it against itself too),
-    // edge 0.0 (-0.057 to 0.057), every other game clean (training/improve.md, A screen); 0 turns it off.
+    // #1696: on. Its screen (400 games of improve-dev against the parent) read 199-199 with deal 136
+    // aborted at the action cap in both seatings (the parent aborts it against itself too), edge 0.0
+    // (-0.057 to 0.057), every other game clean (training/improve.md, A screen); 0 turns it off.
     defense_switches: 4,
     // #1995: untuned; the training lanes may move it.
     countdown_share: 0.5,
@@ -872,7 +833,7 @@ pub const GREEDY_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiMulliganCurve {
-    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` exactly, as before #993.
+    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` exactly.
     pub on: bool,
     /// A card costing at most this is a first-turn play. The mana bonus (R181) does not raise it: the
     /// cap is on the cheapest bodies, so a Hard seat's two-drops are not capped.
@@ -913,8 +874,8 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// R1390: the soft gate. The sets the AI's randomized decks are never dealt from, whatever ships or a
 /// thread previews (R1420): `build_ai_deck`'s default `gated_sets`, while a player's random deck
 /// (`gated_sets: Some(vec![])`) is dealt from every set. A lean on a gated set leans on the newest
-/// ungated set instead. It held Meditative until #732 measured the AI on it (MN08 of #496), and
-/// Stinkyscape from its release (#1884) until #1885's sweep banned 10 of its 175 cards (R1885000).
+/// ungated set instead. Meditative was gated until #732 (MN08 of #496), Stinkyscape from #1884 until
+/// #1885's sweep (R1885000).
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 /// R846, #1886: the cards that owe their caster an extra turn when cast (`take_extra_turn`), priced in

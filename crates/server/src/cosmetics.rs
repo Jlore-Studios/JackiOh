@@ -4,10 +4,9 @@
 //! `apps/web/src/wire/generated/cosmetics.ts` for the client, which draws them.
 //!
 //! [`problems`] is the registry's check: no id twice, every id a lower-case slug short enough to
-//! travel as a settings text (R633, the client keeps a player's picks in a settings group), and
-//! exactly one default per kind a player picks, and a chase exactly when Legendary or Mythic
-//! (R1333000). A cosmetic never enters `PlayerView`, an action, the log or a replay hash: none of
-//! it is a rule (CLAUDE.md rule 7).
+//! travel as a settings text (R633, the client keeps a player's picks in a settings group), exactly
+//! one default per kind a player picks, and a chase exactly when Legendary or Mythic (R1333000). A
+//! cosmetic never enters `PlayerView`, an action, the log or a replay hash (CLAUDE.md rule 7).
 //!
 //! R1827000: the hero portraits (R641) are account cosmetics, one `portrait-<id>` entry per
 //! `PortraitId`, `portrait-vanilla` the kind's default and a starter and the other five owned, so
@@ -36,11 +35,11 @@ use crate::economy::store::OwnedCosmetics;
 /// The registry's text, compiled in.
 pub const COSMETICS_JSON: &str = include_str!("../cosmetics.json");
 
-/// The slot a cosmetic fills: on a card, a foil over the art, a finish on the print and a border
-/// round the frame (R1295000); on a deck, the playmat (`Table`), the ambient backdrop behind the
-/// board (`Field`) and the back of its face-down cards and deck (`CardBack`) (R1297000); a hero
-/// portrait's card's full-art face (`FullArt`), owned on its card and never picked (R1313000); and
-/// the deck's hero portrait (`Portrait`), an account cosmetic (R641, R1827000).
+/// The slot a cosmetic fills: on a card, a foil, a finish and a border (R1295000); on a deck, the
+/// playmat (`Table`), the ambient backdrop behind the board (`Field`) and the back of its face-down
+/// cards and deck (`CardBack`) (R1297000); a hero portrait's card's full-art face (`FullArt`), owned
+/// on its card and never picked (R1313000); and the deck's hero portrait (`Portrait`), an account
+/// cosmetic (R641, R1827000).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CosmeticKind {
@@ -166,7 +165,6 @@ impl fmt::Display for CosmeticRarity {
     }
 }
 
-/// One entry of the registry.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Cosmetic {
@@ -302,7 +300,6 @@ pub fn parse(json: &str) -> Result<Vec<Cosmetic>, String> {
     }
 }
 
-/// The registry this build ships.
 pub fn shipped() -> Result<Vec<Cosmetic>, String> {
     parse(COSMETICS_JSON)
 }
@@ -654,8 +651,7 @@ mod tests {
             .filter_map(|cosmetic| cosmetic.card.as_deref())
             .collect();
         cards.sort_unstable();
-        // R1017001's six: Big D-fender, Gary the Gambler, Mr. Vanilla, Tempo Timmy, Duplicating
-        // Felinors and Jlockeed Shredder-10.
+        // R1017001's six hero cards.
         assert_eq!(
             cards,
             [

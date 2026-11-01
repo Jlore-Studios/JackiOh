@@ -4,8 +4,8 @@
 //! (B27). Like `decide` it never concedes, so it never opens a team's concede offer.
 //!
 //! Knowledge (B29): `decide` reads its duel only through `redact` and its determinizations (R185), and
-//! `duos_passes` reads of the teammate only its own side. An opponent's hidden card never reaches a
-//! decision, so two states that differ only there decide alike under the same options.
+//! `duos_passes` reads of the teammate only its own side, so an opponent's hidden card never reaches a
+//! decision.
 //!
 //! The gate (B32): `duos_gate` plays the Easy AI team against a `DuosOpponent` (#1760); a refused
 //! action, a fallback (#1385) or a caught panic (#1429) fails it. Pure and seeded (CLAUDE.md rule 4):
@@ -139,10 +139,9 @@ fn pass_or_end(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> D
         })
 }
 
-/// What the seat sends when `decide` answered nothing the wrapper offers: the turn's end (after its
-/// passes) when offered, else the first answer or mulligan, else the first other duel action §10.7's
-/// policy would take (`match_.rs`'s `replacements_for` order). None when only passes and the concede
-/// are left: the seat waits (another seat's prompt in its duel blocks it).
+/// What the seat sends when `decide` answered nothing the wrapper offers: `duel_fallback`, with the
+/// turn's end taken after its passes. None when only passes and the concede are left: the seat waits
+/// (another seat's prompt in its duel blocks it).
 fn fallback(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> Option<DuosActionBody> {
     if offers(legal, ActionType::EndTurn) {
         return Some(pass_or_end(state, seat, legal));
@@ -185,8 +184,7 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 /// (B28). A card qualifies when the seat cannot play it this turn and its teammate can (`has_zone_for`,
 /// else `mate_can_play`), or, with the team's `pass_cost` 0, when the teammate can afford it next turn
 /// and the seat cannot. The playable ones come first, ranked by the teammate's best bounded follow-up
-/// (R1127000), and are named only when worth passing (R1723000, `pass_gain`); never more than the
-/// passes left, the teammate's free hand slots or the passes the seat's mana pays for.
+/// (R1127000), and are named only when worth passing (R1723000, `pass_gain`).
 ///
 /// B29: it reads the redacted probe `decide` lists the seat's actions on and, of the teammate, only its
 /// own side and the determinized probe the follow-ups are scored on.
@@ -398,9 +396,8 @@ fn pass_score(
         return f64::NEG_INFINITY;
     };
     let (receiving, given) = received(own_probe, passed, mate_probe, mate);
-    // The passed card's own plays first, then the teammate's other plays in `legal_actions`
-    // order: the card sits at the hand's end, so a plain prefix would cut its plays off behind a
-    // full hand's and score every candidate alike. Still at most `DUOS_PASS_MAX_FOLLOWUPS` steps.
+    // The passed card's own plays first, then the teammate's other plays in `legal_actions` order: the
+    // card sits at the hand's end, so a plain prefix would cut its plays off behind a full hand's.
     let mut own_plays = Vec::new();
     let mut other_plays = Vec::new();
     for action in legal_actions(&receiving, mate) {
@@ -716,7 +713,7 @@ pub struct DuosGateGame {
     pub seed: String,
     /// The team the AI played (`duos_gate_subject`).
     pub subject: Team,
-    /// The team the AI played (#1760).
+    /// The team the AI played against (#1760).
     pub opponent: DuosOpponent,
     pub won: bool,
     pub drawn: bool,

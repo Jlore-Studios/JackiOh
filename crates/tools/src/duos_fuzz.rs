@@ -77,7 +77,6 @@ pub const DUOS_ENDINGS_CONCEDE_CHANCE: f64 = 0.004;
 pub const DUOS_ENDINGS_CEILING_CHANCE: f64 = 0.0015;
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
-/// With `json`, prints the wave as one JSON object instead of the text summary.
 pub fn run(from: u32, seeds: Option<u32>, json: bool) -> anyhow::Result<()> {
     let ran = duos_wave_size(seeds);
     let outcomes = play_duos_wave(from, ran);
@@ -156,7 +155,6 @@ impl DuosSetup {
         }
     }
 
-    /// What a failure prints for the setup: `AI team <tier>, dealt <seats, or none>`.
     fn label(self) -> String {
         let dealt: Vec<&str> = self.dealt.iter().map(|seat| seat.as_str()).collect();
         let dealt = if dealt.is_empty() {
@@ -181,8 +179,7 @@ fn duos_setup_for_seed(seed: u32) -> DuosSetup {
 }
 
 /// One seeded shuffle of the pool dealt in seat order (A1, A2, B1, B2), each seat its handicap's
-/// deck size (R184) or DECK_SIZE, so no card is in two decks. Team A's two decks, and with no
-/// handicap all four, are the ones every seed was dealt before #1573.
+/// deck size (R184) or DECK_SIZE, so no card is in two decks.
 fn duos_decks_for_handicaps(seed: u32, handicaps: &DuosHandicaps) -> DuosDecks {
     let mut rng = Rng::new(&format!("jackioh-duos-fuzz-decks-{seed}"), 0);
     let mut rest = rng.shuffle(FUZZ_POOL.as_slice()).into_iter();
@@ -221,12 +218,10 @@ fn max_duos_actions() -> usize {
     usize::try_from(TURN_CAP_PLAYER_TURNS).unwrap_or(0) * AI_PLAYOUT_STEP_CAP * DUOS_DUELS
 }
 
-/// One played game: the setup, the log and where it ended.
 struct DuosRun {
     options: DuosCreateOptions,
     log: Vec<DuosAction>,
     state: DuosState,
-    /// This game's heaviest action by each measure (#1364).
     heaviest: Heaviest,
     /// The prefix lengths whose end state held paused work in some duel (#1387): step 0 is the
     /// setup state, otherwise the state after that many actions.
@@ -471,7 +466,6 @@ fn probe_duos_state(
     })
 }
 
-/// Assertion 1: one game played out, every offered action accepted.
 fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
     play_duos_game_inner(seed, duos_reduce, |_, _, _, _| {})
 }
@@ -738,7 +732,6 @@ fn check_duos_serial_restart(
     Ok((step, was_paused, ms))
 }
 
-/// One seed's verdict.
 #[derive(Clone, Debug)]
 struct DuosSeedOutcome {
     seed: u32,
@@ -1153,7 +1146,6 @@ mod tests {
 
     #[test]
     fn r679_duos_seed_1427_whose_glitch_voids_the_game_passes() {
-        // The seed of the 2,000-seed wave a Glitch voided, before `voided` was an ending here.
         assert_eq!(failure_lines(&[fuzz_duos_seed(1427)]), Vec::<String>::new());
     }
 

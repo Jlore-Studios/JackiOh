@@ -5,9 +5,8 @@
 //! Rows whose behavior belongs to a card that does not exist until M4 test the engine machinery the
 //! card will call and name the card test that proves the rest.
 //!
-//! Surface contract: SURFACE §4.1, §8. A card a helper hands back is a copy, so a write goes through
-//! `edit` (the card under that id in the state) and a read after a change re-reads it with
-//! `instance_in`.
+//! Surface contract: SURFACE §4.1, §8. A card a helper hands back is a copy: write through `edit`,
+//! re-read with `instance_in`.
 
 use std::borrow::Borrow;
 use std::collections::BTreeSet;
@@ -109,7 +108,6 @@ fn unit_def_of(
     json_as(def)
 }
 
-/// A Core fixture of any type without stats.
 fn card_def_of(next: &mut i32, name: &str, card_type: &str, overrides: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -240,7 +238,6 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// One of this file's definitions by id.
 fn def(id: &str) -> CardDef {
     must(defs().into_iter().find(|def| def.id == id), id)
 }
@@ -684,7 +681,6 @@ fn delayed_resume(def_id: &str, instance_id: Option<&str>, data: Value) -> Resum
     }))
 }
 
-/// The effective cost of the card as it stands in the state now.
 fn price_now(state: &GameState, card: &CardInstance) -> i32 {
     effective_cost(state, &instance_in(state, &card.id), Default::default())
 }
@@ -804,7 +800,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(def_ids(active_units_of(sink.state, P1)), vec![PLAIN]);
         assert_eq!(def_ids(&sink.state.players.p1.library), vec![NOOP]);
 
-        // And that activation is the turn's use.
         sink.state.players.p1.mana.current = 3;
         assert_eq!(
             refusal(why_cannot_activate_ability(sink.state, P1, &card.id, None)),
@@ -835,8 +830,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(chosen.is_some_and(|chosen| legal_actions(&live, P1).contains(&chosen)));
         assert_eq!(AI_END_TURN_PROBABILITY, 0.1);
 
-        // The cancellation itself is My Pawn's, and rides the `attackCancelled` event (§10.3).
-        // M4: My Pawn's own tests prove the card half.
+        // The cancellation itself is My Pawn's, and rides the `attackCancelled` event (§10.3); My Pawn's own
+        // tests (M4) prove the card half.
         assert!(
             GameEventType::ALL
                 .iter()
@@ -2387,8 +2382,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
             Some(75_000)
         );
         assert_eq!(view_for(&clean, P1).clock_ms, None);
-        // R79: the server owns the clock, grace, ceiling, room-code and ranked ladder (R603–R612)
-        // numbers, in `crates/server/src/config.rs` (BUILD §2, M6/M7).
+        // R79: the server owns the clock, grace, ceiling, room-code and ranked ladder (R603–R612) numbers, in
+        // `crates/server/src/config.rs` (BUILD §2, M6/M7).
     }
 
     #[test]

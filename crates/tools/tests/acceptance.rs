@@ -129,7 +129,6 @@ fn v2_the_reader_sees_through_tables_and_inline_tables() {
 /// One use of every path the pure crates' `clippy.toml` bans (its header says why nothing compiles it).
 const PURITY_FIXTURE: &str = include_str!("fixtures/purity.rs");
 
-/// Every `path = "…"` entry of a `clippy.toml`, in its order.
 fn banned_paths(toml: &str) -> Vec<String> {
     toml.lines()
         .filter_map(|line| line.split_once("path = \"")?.1.split_once('"'))

@@ -204,7 +204,7 @@ pub(super) fn run(args: &SurfaceArgs) -> Result<()> {
     }
 }
 
-/* ---------------------------------------------------------------------------------- the lexer */
+// The lexer
 
 /// A blanked character: a space, or the newline itself so lines keep their numbers.
 fn blank(out: &mut String, ch: char) {
@@ -327,7 +327,7 @@ fn code_text(source: &str) -> String {
     out
 }
 
-/* --------------------------------------------------------------------------- scanning helpers */
+// Scanning helpers
 
 fn is_ident_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
@@ -352,7 +352,6 @@ fn skip_space(text: &[u8], mut at: usize) -> usize {
     at
 }
 
-/// The end of the identifier run that starts at `at`.
 fn run_end(text: &[u8], mut at: usize) -> usize {
     while at < text.len() && is_ident_byte(text[at]) {
         at += 1;
@@ -360,12 +359,10 @@ fn run_end(text: &[u8], mut at: usize) -> usize {
     at
 }
 
-/// The last byte before `at` that is not whitespace.
 fn prev_byte(text: &[u8], at: usize) -> Option<usize> {
     text[..at].iter().rposition(|b| !b.is_ascii_whitespace())
 }
 
-/// The identifier that ends right before `at`, whitespace skipped.
 fn prev_word(text: &[u8], at: usize) -> Option<Range<usize>> {
     let last = prev_byte(text, at)?;
     if !is_ident_byte(text[last]) {
@@ -725,7 +722,7 @@ fn find_edits(
     edits
 }
 
-/* --------------------------------------------------------------------------- the engine's names */
+// The engine's names
 
 /// What the engine and the cards crate offer a script, found in their sources.
 #[derive(Debug, Default)]
@@ -926,7 +923,7 @@ fn load_names(root: &Path) -> Result<Names> {
     Ok(names)
 }
 
-/* ------------------------------------------------------------------------------ one card file */
+// One card file
 
 /// One script file's code, with what the reading of a face needs.
 struct Code<'a> {
@@ -1251,7 +1248,6 @@ impl Code<'_> {
     }
 }
 
-/// A text that is one identifier and nothing else.
 fn is_lone_ident(text: &str) -> bool {
     text.bytes().next().is_some_and(is_ident_start) && text.bytes().all(is_ident_byte)
 }
@@ -1308,7 +1304,7 @@ fn read_card(source: &str, names: &Names) -> Result<CardSurface, String> {
     })
 }
 
-/* ------------------------------------------------------------------------------ the survey */
+// The survey
 
 /// The id a card file declares, as `crates/cards/build.rs` reads it: `pub const ID: &str = "…";`.
 fn read_id(text: &str) -> Option<String> {
@@ -1436,7 +1432,7 @@ fn survey(root: &Path, only: &[String]) -> Result<Report> {
     Ok(report)
 }
 
-/* ------------------------------------------------------------------------------ the printer */
+// The printer
 
 /// A table cell holding names, `—` when there are none.
 fn cell<'a>(names: impl IntoIterator<Item = &'a String>) -> String {
@@ -1762,7 +1758,7 @@ mod tests {
         assert_eq!(report.summary.verbs["steal"].cards, 1);
         assert_eq!(report.summary.verbs["steal"].ids, ["classic-032"]);
         assert!(survey(&repo_root(), &["nope".into()]).is_err());
-        // Every card is Rust again since #902, Bigot (once the first card ported) among them.
+        // Every card is Rust (#902), Bigot among them.
         let bigot = survey(&repo_root(), &["core-002".into()]).unwrap();
         assert_eq!(bigot.cards.len(), 1);
         assert!(bigot.unreadable.is_empty());

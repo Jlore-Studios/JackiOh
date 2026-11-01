@@ -4,7 +4,7 @@
 // the real catalog's names, is measured here, in Chrome, on real client components:
 //   B15  every catalog card, base and radiant face, as a full CardFace 270 px and 170 px wide.
 //   R1017002  every card the homescreen's hand can deal (`rotationPool`, the widest pool).
-//   §10.10  faces in play (the live card, `faceModel` with `inPlay`).
+//   §10.10  faces in play (the live card, `faceModel` with `inPlay`), and #82's Discover of numbers (R247).
 //   B21  `Game` rendering `fullBoardView()` with the real catalog in `CatalogContext`; board-layout.cy.tsx
 //        measures the same board with no catalog, where every name is a short def id.
 // Every measurement sits inside `.should()`, so it retries while `useFitText` settles. Each also

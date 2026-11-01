@@ -226,7 +226,6 @@ fn is_test(path: &str) -> bool {
         || path.ends_with(".test.tsx")
 }
 
-/// R1365000: where a changed path lands.
 fn area(path: &str) -> Area {
     if path == CATALOG_PATH {
         return Area::Catalog;
@@ -336,7 +335,6 @@ pub(crate) struct Side {
 }
 
 impl Side {
-    /// A side read off its catalog alone, with no scripts.
     pub(crate) fn of_catalog(catalog: Catalog, sets: Vec<SetName>) -> Side {
         Side {
             catalog,
@@ -382,7 +380,6 @@ pub(crate) struct FileChange {
     pub after: Option<String>,
 }
 
-/// Stage 1's reading of a diff.
 #[derive(Default, Debug, PartialEq)]
 pub(crate) struct Diff {
     /// The sets the head ships and the base does not.
@@ -400,7 +397,6 @@ pub(crate) struct Diff {
     pub app: bool,
 }
 
-/// R1365000: stage 1, from both sides and the changed files.
 pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Diff {
     let mut diff = Diff {
         sets: after
@@ -488,7 +484,6 @@ pub(crate) fn script_id(source: &str) -> Option<String> {
     after.split('"').next().map(str::to_string)
 }
 
-/// What stage 2 found against the base build.
 #[derive(Default, Debug, PartialEq)]
 pub(crate) struct Checked {
     /// Families whose script change made their forced games diverge.
@@ -502,7 +497,6 @@ pub(crate) struct Checked {
     pub ai: Option<bool>,
 }
 
-/// R1365000's answer.
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Classification {
@@ -639,7 +633,6 @@ pub(crate) fn divergences(report: &str) -> Vec<Divergence> {
     out
 }
 
-/// Every string inside a JSON value.
 fn strings_in(value: &Value, out: &mut BTreeSet<String>) {
     match value {
         Value::String(text) => {
@@ -828,9 +821,9 @@ fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
     Ok(diverged)
 }
 
-/// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353): each
-/// waits on its slowest game, and in turn they took `rust (classify)` past seven minutes (324 s against
-/// 226 s on four cores). Or each in a CI job of its own (`--selfplay-side`, #2651).
+/// Starts `bin`'s self-play run into `out`. The head's and the base's run side by side (#2353), since
+/// each waits on its slowest game and in turn they took `rust (classify)` past seven minutes; or each
+/// in a CI job of its own (`--selfplay-side`, #2651).
 fn start_selfplay(bin: &Path, out: &Path) -> Result<Child> {
     fs::create_dir_all(out).with_context(|| format!("creating {}", out.display()))?;
     let games = SELFPLAY_GAMES.to_string();
@@ -997,7 +990,6 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
     let found = !checked.scripts.is_empty() || !checked.touched.is_empty() || checked.rule;
     if plays_selfplay(diff) && !found {
         checked.ai = Some(match selfplay_dir {
-            // #2651: each side was played in a job of its own (`--selfplay-side`).
             Some(dir) => {
                 selfplay_games(&dir.join(SelfplaySide::Head.dir_name()))?
                     != selfplay_games(&dir.join(SelfplaySide::Base.dir_name()))?

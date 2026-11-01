@@ -1,5 +1,6 @@
 // Spec 28 checks the DOM only (CLAUDE.md rule 7; SPEC §10.10).
 // Face-down cost is SPEC §8 #41 (R351, R370, R432); #93 Combo-Index relies on R82, R345 and R372.
+// Face-down traps (R371, R373), Combo-Index, and the landing fan (R374) are covered here.
 // `--expose shots=1` captures treatments; use 1600x1200 because Headless Chrome crops tall viewports.
 
 import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/testids.ts";

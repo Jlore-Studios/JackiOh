@@ -23,7 +23,9 @@ use jackioh_server::cli::seed_catalog::read_catalog;
 
 const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalog.json");
 
-/// R1178000, R1857000: tags carried by held sets wait for release migration (#1187, #1884).
+/// R1178000, R1857000: a tag only a held set's cards carry (Meditative+'s Potion, #1187's 0043; the
+/// Stinkyscape set's four, #1884's 0065) waits for that set's release migration: until the set ships the
+/// latest check need not admit it and only that set's entries may carry it; once it ships the check must.
 const AWAITING_RELEASE: &[(Tag, SetName)] = &[
     (Tag::Potion, SetName::MeditativePlus),
     (Tag::DroneCore, SetName::Stinkyscape),
@@ -206,9 +208,8 @@ mod read_catalog_ {
             .collect::<IndexSet<_>>()
             .into_iter()
             .collect();
-        // R1420: the sets that ship, in catalog order: Core, Classic and Classic+, Meditative from
-        // the patch that ships it, Meditative+ from the patch that ships it (R1178000), and
-        // Stinkyscape from its release (#1884, R1857000).
+        // R1420: the sets that ship, in catalog order, each held set from the patch that ships it
+        // (Meditative+ R1178000, Stinkyscape #1884, R1857000).
         assert_eq!(
             sets,
             SHIPPED_SETS
@@ -272,7 +273,9 @@ mod read_catalog_ {
     }
 }
 
-/// Tag validation: reads migrations to catch catalog tags reaching schema before migrations.
+/// The seed writes the whole catalog in one transaction, so one tag the schema refuses fails every row.
+/// This reads the migrations, not a database, so `cargo test` catches a tag that reaches the catalog
+/// before the schema; `test:sql` CHECK 18 and `test:db` (this file's second half) prove it on Postgres.
 mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     use super::*;
 
@@ -549,17 +552,15 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             "core-013",
             "core-014",
         ];
-        // R1420: the Meditative set's three, #87 Tatches the Totem, #97 Jlockeed's Evil
-        // Blueprints and its token #97.9 Jlockeed's Headquarters, once it ships.
+        // R1420: the Meditative set's three (#87, #97 and its token #97.9), once it ships.
         if set_ships(SetName::Meditative) {
             expected.extend(["meditative-087", "meditative-097", "meditative-097-9"]);
         }
-        // R1178000: the Meditative+ set's one, #4 Jlockeed's Supply Drop, once it ships.
+        // R1178000: the Meditative+ set's one, #4, once it ships.
         if set_ships(SetName::MeditativePlus) {
             expected.push("meditativeplus-004");
         }
-        // R1857000: the Stinkyscape set's seven, #124 to #130, Jlockeed's space program, once it
-        // ships.
+        // R1857000: the Stinkyscape set's seven, #124 to #130, once it ships.
         if set_ships(SetName::Stinkyscape) {
             expected.extend([
                 "stinkyscape-124",
@@ -571,8 +572,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 "stinkyscape-130",
             ]);
         }
-        // R2204000: the Training Grounds set's two, #45 Jlockeed's Weapons and #48 Jlockeed
-        // Shredder-10, the Legacy cards of Core #14 and #13 that carry its tags (R2195003), once it ships.
+        // R2204000: the Training Grounds set's two, #45 and #48, the Legacy cards of Core #14 and #13 that
+        // carry its tags (R2195003), once it ships.
         if set_ships(SetName::TrainingGrounds) {
             expected.extend(["traininggrounds-045", "traininggrounds-048"]);
         }
@@ -594,10 +595,9 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // Classic+ #7 The House is the 18th since #1704, and #39 Book Worm the 19th since #1828;
         // the Stinkyscape set adds #40 Poison Capsule.
         assert_eq!(tagged("Plague"), 19 + meditative(2) + stinkyscape(1));
-        // v0.3.10 (#967) made Meditative #49 YileGPT a Catalyst and its #49.1 a Prime, beside #45
-        // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone. Meditative+ adds a
-        // Catalyst and a Prime, #16 Jazakus and its #16.1 Jazakus Prime, and no Acclaimed; the
-        // Stinkyscape set #147 IN33DH3, a Catalyst, its #147.1 IN33DH3 Prime, and nine Acclaimed.
+        // #967: Meditative #49 is a Catalyst and its #49.1 a Prime, beside #45 and #91 and their tokens,
+        // and Acclaimed is on #49 and #49.1 alone. Meditative+ adds a Catalyst and a Prime (#16, #16.1) and
+        // no Acclaimed; the Stinkyscape set #147 (a Catalyst), #147.1 (a Prime) and nine Acclaimed.
         for (tag, theirs, plus, stinky) in [("Catalyst", 3, 1, 1), ("Prime", 3, 1, 1), ("Acclaimed", 2, 0, 9)]
         {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
@@ -607,8 +607,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 "{tag}"
             );
         }
-        // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20, and the
-        // Stinkyscape set's #148 Alteran Reach and #148.1 Edge of the Universe.
+        // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20 and the Stinkyscape
+        // set's #148 and #148.1.
         assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
         assert_eq!(tagged("Wincon"), meditative(2) + stinkyscape(2));
         // R1178000: Potion, the tag 0043 admits, is on the Meditative+ set's #11, #12 and #13, the
@@ -616,12 +616,11 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // R882, and no catalog entry).
         assert_eq!(rows_tagged("Potion"), tagged("Potion"));
         assert_eq!(tagged("Potion"), meditative_plus(3));
-        // R1837000: the five tags 0058 admits, on Core #100 (Terminus), Classic #90 (Quest),
-        // Classic+ #32 (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly
-        // Bean); and, once it ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), its two
-        // Quests (#7 The Greatest Heist and #112 Job Application), its three Otherworldlies (#10 to
-        // #12) and their nine spells (Other-Origins); and, once it ships, on the Training Grounds
-        // set's #27 Hopeful Jelly Bean and #50 Legacy: Glowy Jelly Bean, a Legacy card (R2195003).
+        // R1837000: the five tags 0058 admits, on Core #100 (Terminus), Classic #90 (Quest), Classic+ #32
+        // (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly Bean); and, once each
+        // ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), two Quests (#7, #112), three
+        // Otherworldlies (#10 to #12) and their nine spells (Other-Origins), and the Training Grounds set's
+        // #27 and #50, a Legacy card (R2195003).
         for (tag, count, stinky, grounds) in [
             ("Terminus", 1, 6, 0),
             ("Quest", 1, 2, 0),
@@ -652,9 +651,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // cards, #41 to #60, alone.
         assert_eq!(rows_tagged("Legacy"), tagged("Legacy"));
         assert_eq!(tagged("Legacy"), training_grounds(20));
-        // #2521: the two tags 0070 admits, the Stinkyscape set's alone: its six Resources, Reknite,
-        // Korrelite, Gellium, Axnit, Narcor and Red Narcor, every one a token (Resource), and its
-        // five Faction cards, #95 and #159 to #162 (Faction).
+        // #2521: the two tags 0070 admits, the Stinkyscape set's alone: its six Resource tokens and its
+        // five Faction cards, #95 and #159 to #162.
         for (tag, count) in [("Resource", 6), ("Faction", 5)] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), stinkyscape(count), "{tag}");

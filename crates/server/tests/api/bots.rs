@@ -3,6 +3,8 @@
 //! - R641000 (Conquest bot trios), R1451 (bot telemetry vs card stats, R654).
 //! - R1452 (client indistinguishability), R640000 (season row/leaderboard).
 //! - R640001 (MAX_FAIR_GAP fallback), R639000 (bot rematch behavior).
+//!
+//! Everything runs through `try_pair` on tokio's paused clock, on the fake store and the real registry.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -198,7 +200,8 @@ async fn series_post(app: &Arc<App>, series_id: &str, action: &str, token: &str,
     view
 }
 
-/// R641000: person and bot paired into Conquest series by fallback, game 1 begun.
+/// R641000: a person and a bot paired into a Conquest series by the fallback, game 1 begun: the person
+/// picks, the sweeper makes the bot's pick. Answers `(person, their token, bot, series id)`.
 async fn series_in_game_1(app: &Arc<App>) -> (String, String, String, String) {
     let (person, token) = new_person(app, 1000.0).await;
     let bot = new_bot(app, BotSpec::rated(1000.0)).await;
@@ -402,7 +405,6 @@ async fn r1453_no_bot_before_the_fallback_time() {
     let app = app_with_bots(true).await;
     let (person, _) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
-    // A Best-of-1 ticket one second short of its own fallback time.
     let id = next_id("ticket");
     let wait = fallback_seconds(&id) * MS_PER_SECOND;
     let early: Ticket = from(json!({
@@ -424,7 +426,6 @@ async fn r1453_no_bot_before_the_fallback_time() {
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty());
 
-    // Once it is due, the next sweep pairs it.
     tokio::time::advance(std::time::Duration::from_millis(1_000)).await;
     assert!(fallback_due(&early, now_ms()));
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
@@ -482,7 +483,6 @@ async fn r1453_the_closest_free_scheduled_bot_pairs() {
         vec![closest.clone()]
     );
 
-    // The ticket is matched, both seats are in the match, and it is ranked (R604) and Best of 1.
     let row = fake_lock(&app).await.tables.matches[0].clone();
     let held = q!(app, tickets_get(&waiting.id)).expect("the ticket");
     assert_eq!(
@@ -495,7 +495,6 @@ async fn r1453_the_closest_free_scheduled_bot_pairs() {
         let profile = q!(app, profiles_get_by_id(id)).expect("the profile");
         assert_eq!(profile.in_match_id.as_deref(), Some(row.id.as_str()));
     }
-    // The person plays their frozen deck, the bot the deck it holds.
     let (person_deck, bot_deck) = if row.players.0 == person {
         (&row.decks.0, &row.decks.1)
     } else {
@@ -607,7 +606,6 @@ async fn r641000_a_conquest_ticket_pairs_with_a_bot_holding_a_trio() {
         matches(&app).await.is_empty(),
         "no game starts before both have picked"
     );
-    // The ticket is matched to game 1's reserved id, and neither side is in a match yet.
     let held = q!(app, tickets_get(&conquest.id)).expect("the ticket");
     assert_eq!(
         serde_json::to_value(&held).expect("a ticket")["status"],
@@ -644,7 +642,6 @@ async fn r641000_a_bot_in_a_series_is_seated_nowhere_else_until_it_ends() {
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty());
 
-    // The person forfeits between games, the series is over, and the bot is free again.
     series_post(&app, &series_id, "forfeit", &token, json!({})).await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     // R1989000: the coin on the match seed seats the pair.
@@ -693,7 +690,6 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     let due = pick_due_at(&opened, bot_player).expect("a pick phase");
     let wanted = pick_slot(&opened, bot_player, &app.catalog.defs).expect("a pick");
 
-    // A sweep a moment before its delay ends picks nothing.
     tokio::time::advance(Duration::from_millis(
         u64::try_from(due - 1 - now_ms()).expect("a wait"),
     ))
@@ -709,7 +705,6 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     };
     assert_eq!(bot_pick, None);
 
-    // The sweep at its delay makes it, and the pick that completes both begins game 1.
     tokio::time::advance(Duration::from_millis(1)).await;
     let swept = sweep_series(&app).await.expect("a sweep");
     assert_eq!(swept.bot_picked, vec![opened.id.clone()]);
@@ -1244,7 +1239,8 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
         q!(app, ranked_put_rank(&mythic_row(&id)));
         people.push(id);
     }
-    // Tied on rating, profiles listed by profile id as text.
+    // Tied on rating, Jlorious lists them by profile id as text (`ladder.rs`): `mythic-100` comes
+    // before `mythic-98`.
     people.sort();
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
@@ -1281,7 +1277,8 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
 
 #[tokio::test(start_paused = true)]
 async fn r640001_past_the_gap_a_far_person_is_not_paired_and_the_near_one_gets_a_bot() {
-    // Stops at MAX_FAIR_GAP: near gets bot, other (rated above every bot, R1453) waits.
+    // Two people 500 apart who have both waited 120 s: the window stops at MAX_FAIR_GAP, so the one a
+    // bot is near gets the bot and the other (rated above every bot, R1453) waits on.
     const WAITED_MS: i64 = 120 * MS_PER_SECOND;
     const {
         assert!(1500 - 1000 > MAX_FAIR_GAP);
@@ -1325,7 +1322,6 @@ async fn r639000_a_bot_accepts_a_rematch_when_its_plan_says_and_plays_it() {
     let finished = bot_match_on(&app, &person, &bot, &seed).await;
     concede_bot_match(&app, &person).await;
 
-    // The person offers while the bot is still on the match.
     let offered = offer_rematch(&app, &finished, &token).await;
     assert!(offered["matchId"].is_null(), "{offered}");
     // The bot meets it a person's reply later, not at once.
@@ -1453,14 +1449,13 @@ async fn r639000_a_bot_offers_a_rematch_when_its_plan_says() {
         .expect("the bot's signals row");
     assert_eq!(bot_row["rematchOffered"], json!(true), "{bot_row}");
 
-    // The person meets it: the rematch is made at once.
     let made = offer_rematch(&app, &finished, &token).await;
     assert!(made["matchId"].is_string(), "{made}");
 }
 
 #[tokio::test(start_paused = true)]
 async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
-    // Bot stays present while result written to prevent presence flicker.
+    // A person's socket stays open from the game's end, so a bot reading as gone mid-write would flicker.
     let app = app_with_bots(true).await;
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -1496,7 +1491,8 @@ async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
 
 #[tokio::test(start_paused = true)]
 async fn r639000_a_bot_that_means_to_answer_stays_until_its_answer_lands() {
-    // Bot stays on match until answer lands for late linger offer.
+    // As a person reaching for the button late does not read as gone, a bot meeting a late offer stays on
+    // the match until its answer lands.
     let app = app_with_bots(true).await;
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
@@ -1509,7 +1505,6 @@ async fn r639000_a_bot_that_means_to_answer_stays_until_its_answer_lands() {
     pass(plan.linger_ms - early).await;
     let offered = offer_rematch(&app, &finished, &token).await;
     assert!(offered["matchId"].is_null(), "{offered}");
-    // Past the linger, the answer not yet in: still on the match.
     pass(plan.reply_ms - early / 2).await;
     let waiting = rematch_status(&app, &finished, &token).await;
     assert!(waiting["matchId"].is_null(), "{waiting}");
@@ -1585,7 +1580,6 @@ async fn r1555000_above_every_bot_the_closest_free_grinder_in_the_gap_pairs() {
         seated(&app, &[&not_grinding, &busy, &at_the_gap, &past_the_gap]).await,
         vec![at_the_gap.clone()]
     );
-    // R1989000: the coin on the match seed seats the pair.
     let row = fake_lock(&app)
         .await
         .tables
@@ -1770,7 +1764,6 @@ async fn r1555000_an_empty_queue_starts_one_bot_match_for_the_lowest_grinder() {
     }
     assert_eq!(bot_row(&app, &high).await.in_match_id, None);
 
-    // One is live: no second.
     assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
     assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
 }
@@ -1793,7 +1786,6 @@ async fn r1555000_a_bot_match_whose_start_fails_lets_both_bots_go() {
         assert_eq!(bot_row(&app, id).await.in_match_id, None, "{id} is free again");
     }
     assert!(matches(&app).await.is_empty(), "no match started");
-    // And the next sweep's kickoff starts one.
     assert!(
         kick_off_bot_match(&app, now_ms())
             .await
@@ -1859,7 +1851,6 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
         .await
         .expect("a kickoff")
         .expect("a match between two bots");
-    // R1989000: the seed's coin seats the grinder and its opponent, in either order.
     let row = match_row(&app, &started).await;
     let winner_is_p1 = row.players.0 == winner;
     assert_eq!(
@@ -1957,7 +1948,6 @@ async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
         .collect();
     assert_eq!(jlorious, vec![json!(bystander)], "{listed}");
 
-    // And it was offered no rematch: still the one match.
     pass(BOT_REMATCH_LINGER_MAX_MS + BOT_REMATCH_DELAY_MAX_MS).await;
     assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
 }
@@ -1972,7 +1962,6 @@ async fn r1555000_a_bot_match_waits_out_the_gap_and_the_grinder_s_recent_opponen
         .await
         .expect("a kickoff")
         .expect("a match between two bots");
-    // R1989000: the seed's coin seats the grinder and its opponent, in either order.
     let first_row = match_row(&app, &first).await;
     let climbing_is_p1 = seat_coin_p1_first(&first_row.seed);
     assert_eq!(
@@ -2208,7 +2197,6 @@ async fn r1523000_a_bot_another_door_holds_or_an_old_epoch_starts_no_bot_match()
     assert_eq!(fenced.code.as_str(), "unavailable", "{}", fenced.message);
     assert_no_bot_match(&app, &[&one, &other], "an old epoch").await;
 
-    // On the current epoch the next kickoff starts one.
     let epoch = fake_lock(&app).await.tables.seat_epoch;
     app.seats.set_epoch(epoch);
     assert!(
@@ -2221,7 +2209,8 @@ async fn r1523000_a_bot_another_door_holds_or_an_old_epoch_starts_no_bot_match()
 
 // R1989000 — the match seed's coin seats the person and the bot
 
-/// R1989000: bot door match seed coin seats person and bot deterministically.
+/// R1989000, the bot half: a fixed seed set seats both orders, the same seed seats the same way twice,
+/// and an end-to-end `seat` pin skips the coin; the module holds the queue tests' `SEED_MAP` meanwhile.
 mod r1989000_the_seed_coin_seats_the_bot {
     use super::*;
     use crate::api::queue::SEED_MAP;
@@ -2242,7 +2231,8 @@ mod r1989000_the_seed_coin_seats_the_bot {
         "bot-coin-hotel",
     ];
 
-    /// Person queued against fallback: the match made once past fallback time.
+    /// A person with a saved Best-of-1 deck, queued with `seed` (and maybe `seat`) against the fallback:
+    /// the match the sweeper makes once past its fallback time, with the person's id.
     async fn bot_pair_on(
         app: &Arc<App>,
         name: &str,
@@ -2279,7 +2269,8 @@ mod r1989000_the_seed_coin_seats_the_bot {
         let (status, _, queued) = call(app, "POST", "/api/queue", Some(&token), body).await;
         assert_eq!(status, 200, "{queued}");
         assert_eq!(queued["status"], "open", "{queued}");
-        // Advance past fallback; signed-in request refreshes presence before sweep (R897000).
+        // Past every fallback time, then a signed-in request refreshes presence: R897000 would cancel the
+        // ticket as stale otherwise.
         tokio::time::advance(Duration::from_secs((BOT_FALLBACK_MAX_SECONDS + 1) as u64)).await;
         let (status, _, _) = call(app, "GET", "/api/queue/population", Some(&token), json!({})).await;
         assert_eq!(status, 200);

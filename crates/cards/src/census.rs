@@ -9,7 +9,6 @@
 
 use jackioh_engine::{SetName, Tag, set_ships};
 
-/// One set's census.
 pub struct SetCensus {
     /// The set's name, as `SetName::as_str` writes it.
     pub set: &'static str,
@@ -29,12 +28,10 @@ pub struct SetCensus {
 }
 
 impl SetCensus {
-    /// Its cards, numbered and not.
     pub const fn card_count(&self) -> usize {
         self.cards + self.shared_cards.len()
     }
 
-    /// Its tokens.
     pub const fn token_count(&self) -> usize {
         self.card_defined_tokens.len() + self.shared_tokens.len()
     }
@@ -52,9 +49,8 @@ impl SetCensus {
 /// Every set the catalog holds, in the order `catalog check` prints them.
 pub const CENSUS: &[SetCensus] = &[
     // §8 + §7: the Core indices, the tokens its cards define, and the named ones: the tokens several
-    // cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token, a card of its own
-    // in patch v0.1.1 (R353). §8's distribution, as patch v0.2.9 (issue #44, which made #27, #28 and
-    // #40 Rare) left it.
+    // cards share, The Coin, which §2.1's setup deals (R244), and the Ghoul Token (R353). §8's
+    // distribution, as issue #44 (which made #27, #28 and #40 Rare) left it.
     SetCensus {
         set: "Core",
         segment: "core",
@@ -70,8 +66,8 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 5),
         ],
     },
-    // B2.1, B2.5: its cards and the designer's rarities, as patch v0.2.9 (issue #44) left them, and
-    // the shared token issue #170 adds, Glitch, which only R673's roll ever makes (R674).
+    // B2.1, B2.5: its cards and the designer's rarities, as issue #44 left them, and the shared token
+    // Glitch (issue #170), which only R673's roll ever makes (R674).
     SetCensus {
         set: "Classic",
         segment: "classic",
@@ -88,7 +84,7 @@ pub const CENSUS: &[SetCensus] = &[
         ],
     },
     // B2.1, B2.3, B2.5, B8: its cards, the tokens they define and the AI generated cards, with the
-    // rarities patch v0.2.9 (issue #44) left them.
+    // rarities as issue #44 left them.
     SetCensus {
         set: "Classic+",
         segment: "classicplus",
@@ -112,8 +108,7 @@ pub const CENSUS: &[SetCensus] = &[
         ],
     },
     // R1420: the Meditative set (issue #496, docs/meditative-set.md M2): its cards and the tokens they
-    // define, and the designer's rarities, those it left out filled in by §8's rubric. It ships since
-    // issue #553.
+    // define, and the designer's rarities, those it left out filled in by §8's rubric (shipped by #553).
     SetCensus {
         set: "Meditative",
         segment: "meditative",
@@ -134,10 +129,9 @@ pub const CENSUS: &[SetCensus] = &[
         ],
     },
     // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): its cards
-    // and the tokens they define (#1.1 Base Camp, #1.2 Spa Day, since #1563 #1.3 Garage Sale and #1.4
-    // Leg Day, and since #2521 #1.5 Star Chart, the AI generated helpers of #1 Bob's Plan; #16.1
-    // Jazakus Prime; #20.1 Lil' Kenny), the rarities the designer printed and #26 Scratch Pad's
-    // Mythic. It ships since its release (#1187).
+    // and the tokens they define (#1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day
+    // (#1563), #1.5 Star Chart (#2521), the AI generated helpers of #1 Bob's Plan; #16.1 Jazakus Prime;
+    // #20.1 Lil' Kenny), the rarities the designer printed and #26 Scratch Pad's Mythic.
     SetCensus {
         set: "Meditative+",
         segment: "meditativeplus",
@@ -158,8 +152,7 @@ pub const CENSUS: &[SetCensus] = &[
     // Strike and #177 Cloaking Module), the tokens they define, the Dormant Starship (a card outside
     // the numbers, the set's shared card), and its shared tokens: the drones, the Drone Battleship's
     // layers, the Resources, Anomaly Found! and the AI generated cards. Its rarities count the Dormant
-    // Starship among the Legendaries (#2521: #137 Starfleet Commander, Common until then, and #176 are
-    // Legendary, #177 Rare). It ships since its release (#1884).
+    // Starship among the Legendaries (#2521: #137 Starfleet Commander and #176 are Legendary, #177 Rare).
     SetCensus {
         set: "Stinkyscape",
         segment: "stinkyscape",
@@ -204,8 +197,7 @@ pub const CENSUS: &[SetCensus] = &[
     },
     // R1420, R2194000: the Training Grounds set (issue #2193, docs/training-grounds-set.md TG2): its
     // cards (the designer's, then part 2's Legacy cards) and the one token #39 defines, #39.1, with
-    // the designer's rarity bands and the Legacy cards' Core rarities. It ships since its release
-    // (#2204).
+    // the designer's rarity bands and the Legacy cards' Core rarities.
     SetCensus {
         set: "Training Grounds",
         segment: "traininggrounds",
@@ -225,18 +217,18 @@ pub const CENSUS: &[SetCensus] = &[
 
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included, so a tag that drifts
 /// onto or off a card fails catalog check (R278: Jlockeed is Core #13 and #14's and the three
-/// Classic+ Jlockeed cards'). The match is exhaustive over the union. Each count is Core's,
-/// Classic's and Classic+'s plus each later set's from its brief, counted once its set ships (R1420,
-/// R1178000, R1857000, R2194000); the Token count is the census's token total.
+/// Classic+ Jlockeed cards'). Each count is Core's, Classic's and Classic+'s plus each later set's
+/// from its brief, counted once its set ships (R1420, R1178000, R1857000, R2194000); the Token count
+/// is the census's token total.
 pub fn tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         // Stinkyscape #6, #14, #15, #17, #26, #37, #42, #45, #88, #94, #96, #103, #109, #110, #111, #113,
-        // #114, #115, #147 and #147.1, and since #2521 #137 Starfleet Commander.
+        // #114, #115, #147 and #147.1, and #137 Starfleet Commander (#2521).
         // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
         Tag::Human => 39 + meditative(16) + meditative_plus(5) + stinkyscape(21) + training_grounds(15),
-        // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
+        // Not Core #62 Friend of Felinors nor Classic #32 Felinor Feelings (#1837, R1837000).
         // Stinkyscape #87.
         // Training Grounds #17, #22, #23 and #33, and the Legacy cards #44 and #51.
         Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6),
@@ -247,9 +239,9 @@ pub fn tag_count(tag: Tag) -> usize {
         // Stinkyscape #142.
         // Training Grounds #29 Oriental.
         Tag::Cn => 7 + meditative(33) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
-        // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
-        // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
+        // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; not C+ #61 Bauble Bubble (#831) nor
+        // Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field Spells that make Fruit
+        // (#1837, R1837000). Meditative+ #23 Enormous Elderberry.
         // Stinkyscape #21.
         // Training Grounds' Legacy card #59 Legacy: Fig of Life.
         Tag::Fruit => 12 + meditative(2) + meditative_plus(1) + stinkyscape(1) + training_grounds(1),
@@ -257,7 +249,7 @@ pub fn tag_count(tag: Tag) -> usize {
         // Stinkyscape #150 and #151.
         // Training Grounds #39.
         Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1),
-        // Core #84 Going Long and Meditative #80 Aluneth lost it in #2521.
+        // Not Core #84 Going Long nor Meditative #80 Aluneth (#2521).
         // Meditative+ #1 Bob's Plan.
         // Stinkyscape #16, #44, #116, #148 and #154.
         // Training Grounds #40 Goetzmann Game Design.
@@ -271,19 +263,19 @@ pub fn tag_count(tag: Tag) -> usize {
         // Stinkyscape #102.
         Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
         Tag::Pancake => 10,
-        // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and, since #2521,
-        // #1.5 Star Chart, #1 Bob's Plan's AI generated helpers.
+        // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and #1.5 Star Chart
+        // (#2521), #1 Bob's Plan's AI generated helpers.
         // Stinkyscape's ten AI generated cards, T-AI-1 to T-AI-10.
         Tag::Ai => 10 + meditative_plus(5) + stinkyscape(10),
-        // Classic+ #7 The House since #1704, and #39 Book Worm since #1828.
+        // Classic+ #7 The House (#1704) and #39 Book Worm (#1828).
         // Stinkyscape #40 Poison Capsule.
         Tag::Plague => 19 + meditative(2) + stinkyscape(1),
-        // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
+        // Meditative #45, #49 (#831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         // Stinkyscape #147 (Catalyst) and its #147.1 (Prime).
         Tag::Catalyst => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
         Tag::Prime => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
-        // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.10 (#831).
+        // Meditative #49 and #49.1, not #49.2 nor #49.3 (#831).
         // Stinkyscape #6, #26, #37, #87, #88, #109, #110, #111 and #115.
         Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
@@ -344,7 +336,7 @@ fn stinkyscape(count: usize) -> usize {
     if set_ships(SetName::Stinkyscape) { count } else { 0 }
 }
 
-/// R2194000: `count` once the Training Grounds set ships, else 0.
+/// R2194000: `count` once the Training Grounds set ships (#2204), else 0.
 fn training_grounds(count: usize) -> usize {
     if set_ships(SetName::TrainingGrounds) {
         count

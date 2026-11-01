@@ -900,9 +900,10 @@ export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
   return `duos-dev-seat-${seat}`;
 }
 
-// #1310 (SPEC §14): the economy's selectors, for spec 45, mirroring the client's `accountTestid`,
-// `devToolsTestid`, `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, none of which
-// this project can import (each reaches `@jackioh/*`, which only the client's own build resolves).
+// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid`, `devToolsTestid`,
+// `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, in `apps/web/src/` routes/account.tsx,
+// routes/DevTools.tsx, shop/shop.ts, packs/packs.ts, routes/QuestsPanel.tsx and collection/collection.ts;
+// this project can import none of them (each reaches `@jackioh/*`, which only the client's own build resolves).
 
 /** `/account`: the Dev tools toggle (R1300000). */
 export const ACCOUNT_SCREEN = "account-screen";

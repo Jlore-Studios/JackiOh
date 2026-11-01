@@ -1,8 +1,35 @@
-//! `cargo jackioh sweep` (R186, R390; SURFACE §12): decides AI shadow bans in two passes.
-//! Pass 1 forces cards into AI decks against greedy baseline to find at-risk cards.
-//! Pass 2 runs additional games for at-risk cards to determine `SHADOW_BAN` and `SHADOW_WATCH` (R1675000).
-//! Subcommands `--write` and `--check` update or verify `crates/ai/src/shadow_ban.rs` against reports.
-//! Subcommand `--due` lists ids due for sweep since given revision (R1678000). Retimes slow decisions (R977000).
+//! `cargo jackioh sweep` (R186, R390; SURFACE §12): the run that decides the AI's shadow ban, in two
+//! passes. Pass 1: for every non-token card of every set and every tier in AI_SWEEP.tiers, `sweepCard`
+//! forces the card into AI decks on that tier's handicap against the greedy baseline
+//! (AI_SWEEP.seedsPerCard games each, at AI_GATE_BUDGET); `atRiskIds` reads the at-risk cards off it
+//! (plus today's SHADOW_BAN and SHADOW_WATCH). Pass 2: `sweepAtRisk` forces each at-risk card into
+//! AI_SWEEP.seedsPerCardAtRisk more games per tier, every at-risk card dealt more often as filler.
+//! `sweepVerdict` joins a card's tiers and passes. The report ends with the SHADOW_BAN and SHADOW_WATCH
+//! entries, the ids it cleared (R1675000) and the header line for `crates/ai/src/shadow_ban.rs`, whose
+//! tables are never copied in by hand: `--write` rewrites its header block and both tables from the
+//! reports of record (this output, committed under `training/history/`, oldest first), and `--check`
+//! (and the `shadow_ban_rs_is_what_its_reports_of_record_dictate` test) fails with a line diff when the
+//! file is anything else. Both read a report's section for the file through one parser (`parse_block`).
+//!
+//! ```text
+//! cargo jackioh sweep                              both passes over every card, then the report
+//! cargo jackioh sweep core-011 classic-020         only these ids (pass 2: those of them at risk)
+//! cargo jackioh sweep --json core-011 …            pass 1 only: one JSON SweepResult per line (a slice)
+//! cargo jackioh sweep --pass2 a.jsonl,b.jsonl …    pass 2 from every slice's pass-1 lines: one JSON
+//!                                                  SweepPass2 per line, for the at-risk ids listed
+//!                                                  after the files (default every at-risk id); slice it too
+//! cargo jackioh sweep --report a.jsonl p2.jsonl …  the report from pass-1 and pass-2 lines
+//! cargo jackioh sweep --write [reports …]          rewrite shadow_ban.rs's header block and tables from
+//!                                                  the reports of record (default: its header's)
+//! cargo jackioh sweep --check [reports …]          fail with a diff unless the file is what they dictate
+//! cargo jackioh sweep --due [REV]                  the ids a sweep is due over since REV (R1678000)
+//! ```
+//!
+//! Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
+//! A slice writes each line as it lands, so one cut short keeps what it finished: rerun the rest.
+//! Tooling, so it may read the clock (`Instant`, for decision timing), files and the console;
+//! `crates/ai` stays pure and receives the clock as `now`, and R977000's re-timer, which times again a
+//! decision the clock found slow against the perf gate's yardstick, as `retime` (`still_slow`).
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -716,8 +743,16 @@ struct Record {
     watch: Vec<(String, String)>,
 }
 
-/// Composes tables dictated by reports of record, overriding between ban and watch (R600, R1675000).
-/// Covers historical sweeps: Meditative (R732000), Meditative+ (#1186, R1186000), and unbans (R732001).
+/// The tables the reports of record (path and block, oldest first) dictate. A card takes the row of
+/// the latest report that lists it: a ban takes it off `SHADOW_WATCH` and a watch row off
+/// `SHADOW_BAN` (R600), and a card a later report cleared has no row in either (R1675000). Each sweep
+/// of record covered some cards alone, so each keeps the earlier reports' rows for the rest: the
+/// 2026-10-12 sweep the Meditative set (R732000), #1186's the Meditative+ set (R1186000), #1675's the
+/// 17 Meditative cards banned then (R1675000). `SHADOW_BAN` holds `BAN_SETS`' cards only, an older
+/// sweep's bans of the earlier sets left out (R732000), less `unbanned`, the unban lane's removals
+/// (R732001). Refuses an unsorted list, a report that both clears and lists a card (R1675000), a ban
+/// in the newest report outside `BAN_SETS`, a set banned past its ceiling (`ban_ceiling`) and an
+/// `unbanned` id no report of record bans.
 fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
     let Some((newest_path, newest)) = reports.last() else {
         bail!("no report of record");

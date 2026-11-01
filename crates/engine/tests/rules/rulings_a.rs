@@ -120,7 +120,6 @@ fn ra_unit(next: &mut i32, name: &str, attack: i32, health: i32, keywords: Value
     json_as(def)
 }
 
-/// A Core fixture of any type without stats.
 fn ra_card(next: &mut i32, name: &str, card_type: &str, extra: Value) -> CardDef {
     *next += 1;
     let index = *next;
@@ -683,7 +682,6 @@ fn pluck(events: &[Value], key: &str) -> Vec<Value> {
     events.iter().map(|event| event[key].clone()).collect()
 }
 
-/// Index of the first match, -1 when none.
 fn find_index(events: &[GameEvent], mut matches: impl FnMut(isize, &Value) -> bool) -> isize {
     for (index, event) in events.iter().enumerate() {
         let index = index as isize;
@@ -724,7 +722,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r1_fires_cry_only_on_a_play_from_hand_or_a_cast_never_on_a_summon_recruit_or_transform() {
-        // Played from hand: the Cry resolves.
         let mut played = playing("r1");
         let card = at(&in_hand(&mut played, CRIER, P1, 1), 0);
         let result = play(&played, &card.id, "r1-play");
@@ -776,9 +773,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(TURN_CAP_PLAYER_TURNS, 60);
 
         let mut state = playing("r2");
-        // R389: two DECK_SIZE-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so both
-        // seats hold #75 Infinite Reserves, whose empty-library draws never fatigue, and the cap is what
-        // ends the game.
+        // R389: two DECK_SIZE-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so
+        // both seats hold #75 Infinite Reserves, which never fatigues, and the cap ends the game.
         let reserves = infinite_reserves().id;
         put(&mut state, &reserves, slot(P1, BACKROW, 1), json!({}));
         put(&mut state, &reserves, slot(P2, BACKROW, 1), json!({}));
@@ -1317,8 +1313,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
         let result = play(&state, &card.id, "r17-play");
         assert_eq!(result.error, None);
-        // The Cry ran first — the crier's 3 reached p2's hero — and then the trap answered the play's
-        // resolution: the played unit is a Sheep.
+        // The Cry ran first (the crier's 3 reached p2's hero), then the trap answered the play's resolution:
+        // the played unit is a Sheep.
         assert_eq!(result.state.players.p2.hero.health, health - 3);
         assert_eq!(
             must(card_at(&result.state, slot(P1, UNITS, 1)), "sheep").def_id,
@@ -2234,8 +2230,8 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert!(!options.contains(&sel(&hungry)));
         assert!(!options.contains(&sel(&beside)));
 
-        // What it ate lives on its own instance and drives the Death copies, read from the last-known
-        // state of the instance as it left the field (R78).
+        // What it ate lives on its own instance and drives the Death copies, read from its last-known state
+        // (R78).
         run(
             &mut state,
             effects::remember(json_as(json!({ "key": "eaten", "value": TRAP }))),

@@ -3,13 +3,10 @@
 //! nor the server rulings R104 to R112. Every fixture is this file's own (defs prefixed `rc-`,
 //! indexes from 1901, registered over the shared catalog by `game()`), so none collides (BUILD §0).
 //!
-//! R91's "no error" and each side of R94 get tests of their own, being easy to half-implement: an
-//! already-held position must be noticed *before* exertion is read (or an acted unit is refused),
-//! and the defender's attack too is read once, before the hit; the fixture aura moves it in between.
+//! R91's "no error" and each side of R94 get tests of their own: an already-held position must be
+//! noticed *before* exertion is read, and the defender's attack too is read once, before the hit.
 //!
-//! Helpers hand back copies: a read after the engine ran re-finds the card by id (`live`), a write
-//! goes to the card in the state (`live_mut`). `Bench` lends its events and rng to an `EngineSink`
-//! per call, so they carry from call to call while the test reads the state in between.
+//! Helpers hand back copies: re-find a card by id after the engine ran (`live`), write through `live_mut`.
 
 use std::collections::BTreeSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -62,8 +59,7 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// A unit fixture: each face's extras spread over a default face, so a fixture names only the
-/// keywords it is about and the helper supplies the rest, §8's `text` included.
+/// A unit fixture: each face's extras spread over a default face, §8's `text` included.
 fn unit(name: &str, index: u32, attack: i32, health: i32, extra: Value) -> CardDef {
     let mut rest = extra;
     let base_extra = rest
@@ -99,10 +95,8 @@ fn quick() -> CardDef {
         json!({ "base": { "keywords": [{ "kind": "First Strike" }] }, "radiant": { "keywords": [{ "kind": "First Strike" }] } }),
     )
 }
-/// #20 Pointmaster's printed line: 7/2 with First Strike. It is the card R93 names, and the only
-/// fixture here whose step-1 strike KILLS an ordinary attacker, which is the half of the ruling a
-/// survivor can never show — a defender that lives through the exchange proves the order of the two
-/// hits, not that the second one never happens.
+/// #20 Pointmaster's printed line: 7/2 with First Strike, the card R93 names. Its step-1 strike KILLS an
+/// ordinary attacker, the half of the ruling a surviving defender cannot show.
 const POINTMASTER: &str = "rc-pointmaster";
 fn pointmaster() -> CardDef {
     unit(
@@ -131,8 +125,7 @@ fn cleaver() -> CardDef {
 }
 
 /// R94 needs a stat that changes *during* a combat: a Field Spell whose layer-5 aura reads
-/// `unit.damage`, instance data an `applies` predicate may read (§10.4). A damaged unit loses 3
-/// attack, so "the attack it had before the hit landed" and "the attack it has now" differ.
+/// `unit.damage`, instance data an `applies` predicate may read (§10.4): a damaged unit loses 3 attack.
 const WEAKENER: &str = "rc-weakener";
 fn weakener() -> CardDef {
     def("weakener", "Field Spell", 1906, json!({}))
@@ -191,9 +184,8 @@ const FUSE_DEAR: &str = "rc-fuse-dear";
 fn fuse_dear() -> CardDef {
     unit("fuse-dear", 1915, 1, 1, json!({ "cost": 3 }))
 }
-/// R102: an ingredient with a `cost` hook. Its printed cost is 3 but the hook answers 1, so the
-/// fused def's cost is 1 + 1 = 2 while a surviving hook would still answer 1 — the two numbers
-/// differ, which is what makes "any ingredient `cost` hook is dropped" observable.
+/// R102: an ingredient with a `cost` hook: printed cost 3, the hook answers 1, so the fused cost is
+/// 1 + 1 = 2 while a surviving hook would still answer 1.
 const FUSE_HOOKED: &str = "rc-fuse-hooked";
 fn fuse_hooked() -> CardDef {
     unit("fuse-hooked", 1916, 1, 1, json!({ "cost": 3 }))
@@ -225,8 +217,8 @@ const FUSE_DYING: &str = "rc-fuse-dying";
 fn fuse_dying() -> CardDef {
     unit("fuse-dying", 1922, 2, 2, json!({}))
 }
-/// R102: one ingredient fused onto two different targets in turn (radiant #85). Its 7/3 is unlike
-/// either host, so which fusion picked up its stats is readable off the fused def.
+/// R102: one ingredient fused onto two different targets in turn (radiant #85); its 7/3 is unlike either
+/// host, so the fused def shows which fusion picked up its stats.
 const FUSE_SHARED: &str = "rc-fuse-shared";
 fn fuse_shared() -> CardDef {
     unit("fuse-shared", 1923, 7, 3, json!({}))
@@ -261,8 +253,8 @@ const FRAIL: &str = "rc-frail";
 fn frail() -> CardDef {
     unit("frail", 1927, 1, 3, json!({}))
 }
-/// R114: #32's shape with two more keywords bolted on, so one hit can be asked all three questions
-/// at once — does the unit take damage, is it marked Poisonous, and does the source heal off it.
+/// R114: #32's shape with two more keywords bolted on, so one hit is asked about damage, the Poisonous
+/// mark and the source's heal at once.
 const TRAMPLER: &str = "rc-trampler";
 fn trampler() -> CardDef {
     unit(
@@ -384,7 +376,6 @@ fn felinor() -> CardDef {
     unit("felinor", 1948, 3, 10, json!({ "tags": ["Felinor"] }))
 }
 
-/// The definitions, in the catalog's insertion order.
 fn defs() -> Vec<CardDef> {
     vec![
         body(),
@@ -440,7 +431,6 @@ fn defs() -> Vec<CardDef> {
 
 // Fixture scripts.
 
-/// Deal `amount` to the enemy hero: the one visible thing a fixture script needs to do.
 fn hit(amount: i32) -> Hook {
     hook(move |_| {
         vec![effects::damage(json_as(
@@ -452,7 +442,6 @@ fn hit(amount: i32) -> Hook {
 /// R115: what `projector`'s set-stat hook adds, chosen so a total and a delta read differently.
 const PROJECTOR_SETS: i32 = 5;
 
-/// R117 and R118: the note log lives in p1's backrow lane 5, so `reduce`'s state clone carries it.
 const NOTE_LANE: i32 = 5;
 
 fn log_of(state: &GameState) -> Option<&CardInstance> {
@@ -608,8 +597,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R99: the predicate admits only an event the other player caused, and never spends the trap on
-    // one of its controller's own.
+    // R99: the predicate admits only an event the other player caused, never spending the trap on its own.
     scripts.insert(
         PICKY_TRAP.to_string(),
         both(Script {
@@ -664,7 +652,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R102: the hook answers 1 where the printed cost is 3.
     scripts.insert(
         FUSE_HOOKED.to_string(),
         both(Script {
@@ -692,8 +679,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R102: both traps call their trigger "fire", both watch `cardPlayed`, and their predicates are
-    // opposites, so a fusion that lost the namespacing or merged the predicates reads differently.
     scripts.insert(
         FUSE_TRAP_MINE.to_string(),
         both(Script {
@@ -736,8 +721,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             radiant: heroic_script(),
         },
     );
-    // R115: one card doing both of the things Vanilla has to silence — projecting an aura at layer 5
-    // and setting its own stats at layer 2 — plus the printed face Vanilla must leave alone.
+    // R115: one card with an aura (layer 5), a set-stat hook (layer 2) and the printed face Vanilla keeps.
     scripts.insert(
         PROJECTOR.to_string(),
         both(Script {
@@ -761,8 +745,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R116: a delta. It reads the other set-stat card on the board through `stats_with_buffs`, which is
-    // layers 1 to 4 and therefore excludes layer 2 — so the two can never read each other.
+    // R116: a delta, read off the other set-stat card through `stats_with_buffs` (layers 1 to 4, not 2).
     scripts.insert(
         SETTER.to_string(),
         both(Script {
@@ -806,8 +789,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R117 and R118: the trap's answer is a prompt for its own controller, which pauses the play that
-    // emitted the `summoned` event partway through §10.5.
+    // R117 and R118: the trap's answer prompts its own controller, pausing the play partway through §10.5.
     scripts.insert(
         ASK_TRAP.to_string(),
         both(Script {
@@ -820,8 +802,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R118 and R17: the trap takes the played permanent off the field, so there is no card left to
-    // resolve and the Cry is genuinely lost rather than merely delayed.
+    // R118 and R17: the trap takes the played permanent off the field, so the Cry is lost, not delayed.
     scripts.insert(
         EAT_TRAP.to_string(),
         both(Script {
@@ -860,8 +841,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R123: one declaration carrying both halves — a pick the script reads out of `ctx.targets`, and
-    // an `amount` that is §6.3's Tribute cost.
+    // R123: one declaration with a pick (from `ctx.targets`) and an `amount` that is §6.3's Tribute cost.
     scripts.insert(
         GUARD.to_string(),
         both(Script {
@@ -930,9 +910,8 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ..Script::default()
         }),
     );
-    // R131: "all your Felinors" means every OTHER Felinor you control, matched by instance and not by
-    // tag — so this counts itself out by id even though its own def carries the Felinor tag. R132: the
-    // sums accumulate first and each stat is floored once, on its combined total.
+    // R131: "all your Felinors" is every OTHER Felinor, matched by instance not tag, so this counts itself
+    // out by id. R132: the sums accumulate first and each stat is floored once, on its combined total.
     scripts.insert(
         FIENDER.to_string(),
         both(Script {
@@ -991,7 +970,6 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     put_with(state, def_id, at, json!({ "radiant": true }))
 }
 
-/// One call on a fresh sink.
 fn with_sink<T>(state: &mut GameState, call: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
     let mut sink = Bench::new(state);
     sink.run(state, call)
@@ -1012,7 +990,6 @@ fn apply_as(sink: &mut Bench, state: &mut GameState, controller: PlayerId, list:
     });
 }
 
-/// A refusal's message, or `None`.
 fn refusal<T>(result: Result<T, EngineError>) -> Option<String> {
     result.err().map(|error| error.message)
 }
@@ -1052,24 +1029,20 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// `act_result` with the player apart from the body.
 fn act_result_as(state: &GameState, player_id: PlayerId, body: ActionBody) -> ReduceResult {
     act_result(state, ActionInput { body, player_id })
 }
 
-/// `act` with the player apart from the body.
 fn act_as(state: &GameState, player_id: PlayerId, body: ActionBody) -> GameState {
     act(state, ActionInput { body, player_id })
 }
 
-/// A `play` action body from its fields after `type: "play"`.
 fn play_body(fields: Value) -> ActionBody {
     let mut body = json!({ "type": "play" });
     body = spread(body, fields);
     json_as(body)
 }
 
-/// A `PlayAction` from its fields after `type: "play"`.
 fn play_action(fields: Value) -> PlayAction {
     let mut action = json!({ "type": "play" });
     action = spread(action, fields);
@@ -1085,7 +1058,7 @@ fn fuse_args(ingredients: &[&CardInstance], target: &CardInstance) -> FuseArgs {
 }
 
 /// Past the mulligans, in p1's main phase, with the note log in p1's backrow lane 5. R117 and R118
-/// are about the play pipeline of §10.5, so they go through `reduce` rather than driving it.
+/// go through `reduce` rather than driving the play pipeline of §10.5.
 fn playing(seed: &str) -> GameState {
     let mut state = reduce::begin_game(&game(seed)).state;
     let keep = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
@@ -1106,7 +1079,6 @@ fn on_hero(player: PlayerId) -> AttackTarget {
     AttackTarget::Hero { player }
 }
 
-/// One damage instance: (source, target, amount).
 #[derive(Debug, PartialEq)]
 struct Hit {
     from: String,
@@ -1159,7 +1131,6 @@ fn count_of(events: &[GameEvent], kind: GameEventType) -> usize {
     events.iter().filter(|event| event.event_type() == kind).count()
 }
 
-/// The `instanceId` of every `trapFired` event.
 fn trap_fired_ids(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -1170,7 +1141,6 @@ fn trap_fired_ids(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// The `attackerId` of every `attackDeclared` event.
 fn attackers_declared(events: &[GameEvent]) -> Vec<String> {
     events
         .iter()
@@ -1185,7 +1155,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// The ids of a player's active units.
 fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     zones::active_units_of(state, player)
         .iter()
@@ -1283,8 +1252,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         assert_eq!(live(&state, &unit).position, Some(Position::Def));
         assert!(!live(&state, &unit).exertion.switched);
 
-        // #48's "switch every unit" reaches units already in the position it would set (R20's effect
-        // path spends no exertion either way, so the event list is what says nothing happened).
+        // #48's "switch every unit" reaches units already in that position (R20's path spends no exertion).
         let mut sweep_events = Bench::new(&state);
         let already = put(&mut state, BODY, slot(P1, Row::Units, 2));
         assert_eq!(
@@ -1310,8 +1278,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let unit = put(&mut state, BODY, slot(P1, Row::Units, 1));
         live_mut(&mut state, &unit).exertion.attacked = true; // it attacked this turn, so it has no switch left (§4.1, R6)
 
-        // R91: "Does nothing: no error, no event and no exertion spent." Nothing about the unit's
-        // exertion changes that, because nothing is being spent — there is no switch to refuse.
+        // R91: "Does nothing: no error, no event and no exertion spent." Nothing is being spent.
         let mut events = Bench::new(&state);
         let current = live(&state, &unit);
         assert_eq!(
@@ -1352,7 +1319,6 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         );
         assert_eq!(live(&state, &held).position, None);
 
-        // On the field it switches like any other unit.
         let under = put(&mut state, BODY, slot(P1, Row::Units, 1));
         assert_eq!(
             refusal(with_sink(&mut state, |sink| {
@@ -1362,8 +1328,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         );
         assert_eq!(live(&state, &under).position, Some(Position::Def));
 
-        // Dormant under a Stack: in the lane, but not on the field for anything (§3.2, R13). The same
-        // refusal R13 gives an attack, and the position it had is left exactly where it was.
+        // Dormant under a Stack: not on the field for anything (§3.2, R13): the refusal R13 gives an attack.
         live_mut(&mut state, &under).exertion = Exertion {
             attacked: false,
             switched: false,
@@ -1436,7 +1401,6 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         assert_eq!(live(&state, &defender).damage, 2);
         assert_eq!(live(&state, &attacker).damage, 4);
 
-        // A First Strike defender: likewise one hit each, the defender's first.
         let mut other = game("r93-defender");
         let plain_attacker = put(&mut other, BODY, slot(P1, Row::Units, 1));
         let quick_defender = put(&mut other, QUICK, slot(P2, Row::Units, 1));
@@ -1455,9 +1419,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             ]
         );
 
-        // R93: a First Strike DEFENDER that kills its attacker in step 1 takes nothing back. #20
-        // Pointmaster is a 7/2, so a 3/3 attacking into it dies before its own blow lands and
-        // Pointmaster survives on 2 health.
+        // R93: a First Strike DEFENDER that kills its attacker in step 1 takes nothing back (7/2 vs a 3/3).
         let mut lethal = game("r93-defender-kills");
         let attacking = put(&mut lethal, DOOMED, slot(P1, Row::Units, 1));
         let point = put(&mut lethal, POINTMASTER, slot(P2, Row::Units, 1));
@@ -1514,8 +1476,7 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             None
         );
 
-        // The defender strikes in step 1, the attacker is damaged by it, and the aura drops its
-        // *current* attack to 1 — so "read once, at the start" and "read now" are different numbers.
+        // The defender's step-1 strike damages the attacker, and the aura drops its *current* attack to 1.
         assert_eq!(live(&state, &attacker).damage, 2);
         assert_eq!(
             layers::unit_view(&state, &live(&state, &attacker)).attack,
@@ -1550,14 +1511,12 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
             None
         );
 
-        // The attacker's step-1 hit damages the defender, and the aura drops its *current* attack to 1.
         assert_eq!(live(&state, &defender).damage, 2);
         assert_eq!(
             layers::unit_view(&state, &live(&state, &defender)).attack,
             4 - WEAKEN_BY
         );
-        // R94: "A First Strike survivor is struck back with the attack the defender had before the hit
-        // landed" — 4, not the 1 the aura leaves it on.
+        // R94: struck back "with the attack the defender had before the hit landed": 4, not 1.
         assert_eq!(
             hits(&events.events),
             vec![
@@ -1675,8 +1634,8 @@ mod spec_11_r91_r96_positions_and_combat_m3_gate {
         let present = put(&mut state, BODY, slot(P1, Row::Units, 2));
         let victim = put(&mut state, BODY, slot(P2, Row::Units, 1));
 
-        // Whatever removed the first attacker — a trap, its own Death, a bounce — it is not there when
-        // the sequence reaches it (R53 only says the sequence stops when the *target* is gone).
+        // Whatever removed the first attacker, it is gone when the sequence reaches it (R53 is about
+        // *targets*).
         zones::remove_from_any_zone(&mut state, &mut gone);
         gone.zone = Zone::Graveyard { player: P1 };
 
@@ -1737,8 +1696,8 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         let mut state = game("r99-predicate");
         let trap = put(&mut state, PICKY_TRAP, slot(P1, Row::Backrow, 1));
 
-        // The trigger's `on` matches an event p1 caused, but the predicate refuses it: the trap is not
-        // fired, not consumed and not turned face up, because R61 leaves `run` no way to say so.
+        // `on` matches an event p1 caused but the predicate refuses it: the trap is not fired, consumed or
+        // turned face up, because R61 leaves `run` no way to say so.
         assert_eq!(
             traps::traps_watching(&state, &played(P1))
                 .iter()
@@ -1809,7 +1768,6 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         };
 
         assert!(traps::is_trap_window_event(&turn_ended));
-        // The trap is watching, so this is the withholding and not a failure to match.
         assert_eq!(
             traps::traps_watching(&state, &turn_ended)
                 .iter()
@@ -1836,8 +1794,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 1);
 
-        // It is a Field Trap, so it is still armed; offering the same event to the immediate check
-        // again still fires nothing, which is what "once per turn end rather than twice" means.
+        // A Field Trap is still armed; offering the same event to the immediate check fires nothing again.
         assert_eq!(
             zones::card_at(&state, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
             Some(trap.id.clone())
@@ -1883,8 +1840,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
             ))
         };
 
-        // An unpayable Tribute makes the play illegal rather than fizzling on resolution (#66), and the
-        // message names the card and the number: "<name> needs Tribute N".
+        // An unpayable Tribute makes the play illegal rather than fizzling (#66): "<name> needs Tribute N".
         let needs = format!(
             "{} needs Tribute 2",
             catalog::def_of(Some(&state), &card.def_id).name
@@ -1893,12 +1849,10 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
         let one = put(&mut state, BODY, slot(P1, Row::Units, 1));
         assert_eq!(play(&state, vec![one.id.clone()]), Some(needs.clone()));
 
-        // Two ordinary bodies pay it exactly.
         let two = put(&mut state, BODY, slot(P1, Row::Units, 2));
         assert_eq!(play(&state, vec![one.id.clone(), two.id.clone()]), None);
 
-        // Minimal: no unit could be dropped from the set and it still pay. A third body could be, so
-        // the set of three is refused even though it pays.
+        // Minimal: no unit could be dropped and it still pay, so a third body is refused though it pays.
         let three = put(&mut state, BODY, slot(P1, Row::Units, 4));
         assert!(
             must(
@@ -1908,8 +1862,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
             .contains("tributes 2, no more")
         );
 
-        // The Sheep Token counts 2, which is what makes overshooting unavoidable: it pays Tribute 2 on
-        // its own, and is minimal doing it, while pairing it with a body is not.
+        // The Sheep Token counts 2: it pays Tribute 2 alone and is minimal doing so; with a body it is not.
         let woolly = put(&mut state, SHEEP, slot(P1, Row::Units, 5));
         assert_eq!(play_choices::tribute_value_of(&state, &woolly), 2);
         assert_eq!(play_choices::tribute_value_of(&state, &one), 1);
@@ -1930,8 +1883,7 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
     #[test]
     fn r101_lets_only_a_card_that_says_so_tribute_the_opponents_units() {
         let mut state = game("r101-enemies");
-        // Two of p1's own, so its board can pay Tribute 2 on its own and the refusal below is about
-        // *whose* units were named rather than about a board that cannot pay at all.
+        // Two of p1's own, so the refusal is about *whose* units were named, not a board that can't pay.
         let mine = vec![
             put(&mut state, BODY, slot(P1, Row::Units, 1)),
             put(&mut state, BODY, slot(P1, Row::Units, 2)),
@@ -1972,8 +1924,8 @@ mod spec_11_r99_r101_traps_and_tribute_m3_gate {
             .contains("cannot be tributed")
         );
 
-        // #55 says so, so both sides are fodder — and an enemy Sheep is still worth 2 (§3.2 names no
-        // side), which is how three of Tribute 3 can be paid by two enemy units.
+        // #55 says so, so both sides are fodder, and an enemy Sheep is still worth 2 (§3.2 names no side):
+        // three of Tribute 3 can be paid by two enemy units.
         let golem = must(
             in_hand(&mut state, TRIBUTE_ENEMIES, P1, 1).into_iter().next(),
             "a Tribute 3 card that may take enemies",
@@ -2014,7 +1966,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     #[test]
     fn r102_caps_the_fused_cost_and_drops_every_ingredients_cost_hook_so_the_cap_wins_over_a_cost_rewriting_hook()
      {
-        // The cap: two printed costs that sum past it.
         let mut capped = game("r102-cost-cap");
         let target = put(&mut capped, FUSE_PRICEY, slot(P1, Row::Units, 1)); // cost 4
         let food = must(
@@ -2103,7 +2054,6 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             in_hand(&mut state, FUSE_TRAP_THEIRS, P1, 1).into_iter().next(),
             "a second trap",
         );
-        // Both ingredients call their trigger "fire" and both watch `cardPlayed`.
         assert_eq!(
             scripts::scripts_for(&state, FUSE_TRAP_MINE)
                 .base
@@ -2148,8 +2098,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
                 .collect::<Vec<_>>(),
             vec![vec![GameEventType::CardPlayed], vec![GameEventType::CardPlayed]]
         );
-        // Each kept its own R99 predicate, so only the one whose condition was met runs: p2's play
-        // satisfies "theirs" (2) and not "mine" (1), so the hero takes 2 rather than 3.
+        // Each kept its own R99 predicate: p2's play meets "theirs" (2) not "mine" (1): the hero takes 2.
         assert!(triggers.iter().all(|trigger| trigger.when.is_some()));
         sink.run(&mut state, |engine| {
             traps::fire_traps_for(engine, &played(P2));
@@ -2177,14 +2126,12 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
         let first_base = catalog::def_of(Some(&state), &first.def_id).base.clone();
         assert_eq!((first_base.attack, first_base.health), (Some(8), Some(4)));
 
-        // The premise of the ruling: it is held by no pile now, so nothing could look it up by id — a
-        // second fusion that tried to re-find it would have nothing to fuse.
+        // The premise: no pile holds it now, so nothing could look it up by id.
         assert!(find_instance(&state, &shared.id).is_none());
         assert!(zones::card_at(&state, slot(P1, Row::Units, 3)).is_none());
 
-        // R102: the ingredients were resolved once, so the same resolved instance fuses again — which is
-        // what lets radiant #85 fuse one played permanent onto every matching target, one at a time.
-        // The copy is marked gone, as the first fusion left it (R86).
+        // R102: the ingredients were resolved once, so the same instance fuses again (radiant #85 fuses one
+        // played permanent onto each matching target in turn). The copy is marked gone (R86).
         shared.zone = Zone::Gone { player: P1 };
         let second = must(
             sink.run(&mut state, |engine| {
@@ -2242,8 +2189,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
     #[test]
     fn r103_stores_the_thirteen_power_names_each_its_activate_abilitys_id_a_card_that_has_not_rolled_has_none()
      {
-        // §11 R103 writes them out, and they are state, so they stay stable across versions: R352 added
-        // `stitching` and R752 the five after it, each at the end, and the reworked powers kept theirs.
+        // §11 R103 writes them out; they are state, so stable across versions (R352, R752 appended theirs).
         let names = json!([
             "recruit",
             "draw",
@@ -2380,8 +2326,7 @@ mod spec_11_r102_r103_fuse_and_the_heroic_power_surface_m3_gate {
             Some("that ability has already been used this turn".to_string())
         );
 
-        // A power that summons a token resolves it by catalog index and fizzles in silence when the
-        // catalog has no such token (§5.3, §7).
+        // A power that summons a token by catalog index fizzles in silence when there is none (§5.3, §7).
         let mut missing = game("r103-missing-token");
         let without_token: CardDefs = catalog::registered_catalog()
             .iter()
@@ -2439,8 +2384,8 @@ mod spec_11_r113_the_work_cursor_m3_gate {
         assert!(state.work.is_empty());
         assert_eq!(state.work_cursor, 0);
 
-        // One pause cascade, exactly R113's example: a Cry's effect list pauses inside play step 5, so
-        // the Cry parks its own tail first and the pipeline then parks steps 6 to 8.
+        // One pause cascade, R113's example: a Cry's list pauses inside play step 5, so the Cry parks its
+        // tail first and the pipeline then parks steps 6 to 8.
         let (cry_tail, play_tail) = sink.run(&mut state, |engine| {
             work::begin_work_cascade(engine);
             let cry_tail = work::push_work(engine, resume_of("cry-tail"), None);
@@ -2448,14 +2393,13 @@ mod spec_11_r113_the_work_cursor_m3_gate {
             (cry_tail, play_tail)
         });
 
-        // "The sequences parked by one pause land innermost-first": step 6 comes after step 5, not
-        // inside it, so the Cry's tail is owed first. A stack would have buried it.
+        // Innermost-first: step 6 comes after step 5, so the Cry's tail is owed first; a stack would bury it.
         assert_eq!(steps(&state), vec!["cry-tail", "play-steps-6-8"]);
         assert_eq!(state.work_cursor, 2);
         assert!(cry_tail.seq < play_tail.seq);
 
-        // "Taking an item resets the cursor to 0, so a pause that happens during a resumption is
-        // inserted ahead of everything still owed": the Cry's tail resumes and opens a second prompt.
+        // "A pause during a resumption is inserted ahead of everything still owed": the Cry's tail opens a
+        // second prompt.
         assert_eq!(
             work::take_work(&mut state).map(|item| item.id),
             Some(cry_tail.id.clone())
@@ -2485,8 +2429,8 @@ mod spec_11_r113_the_work_cursor_m3_gate {
     fn r113_raises_rather_than_drop_a_work_item_nothing_knows_how_to_resume() {
         let mut state = game("r113-raise");
         let mut sink = Bench::new(&state);
-        // No engine sequence registered this hook and `body`'s script has no step by that name, so
-        // nothing can resume it: a lost sequence must never be dropped in silence.
+        // No engine sequence registered this hook and `body`'s script has no step by that name: a lost
+        // sequence must never be dropped in silence.
         let orphan = sink.run(&mut state, |engine| {
             work::push_work(
                 engine,
@@ -2529,7 +2473,6 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         let source = put(&mut state, TRAMPLER, slot(P1, Row::Units, 1)); // 5/5 Trample, Lifesteal, Poisonous
         let victim = put(&mut state, FRAIL, slot(P2, Row::Units, 1)); // 1/3
 
-        // The fixture really does carry all three keywords, or the three negatives below are decoration.
         assert!(layers::unit_has(
             &state,
             &live(&state, &source),
@@ -2546,8 +2489,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
             KeywordKind::Poisonous
         ));
 
-        // The control: the same source into a *healthy* unit deals, marks and heals. Without this the
-        // negatives below could pass on an inert fixture.
+        // The control: the same source into a *healthy* unit deals, marks and heals, so the fixture is live.
         let mut control = game("r114-control");
         let control_source = put(&mut control, TRAMPLER, slot(P1, Row::Units, 1));
         let control_victim = put(&mut control, FRAIL, slot(P2, Row::Units, 1));
@@ -2585,9 +2527,8 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         // 3 off the unit plus 2 off the hero: the total healed is 5.
         assert_eq!(control.players.p1.hero.health - control_before, 5);
 
-        // Now the ruling. One earlier instance takes the victim to exactly 0 health and the state check
-        // has not collected it yet (R59: no state check between the hits of one effect), so it is at 0
-        // and still on the field — which is the whole premise of the row.
+        // The ruling: an earlier instance takes the victim to exactly 0 health and the state check has not
+        // collected it (R59), so it is at 0 and still on the field.
         with_sink(&mut state, |sink| {
             damage::deal_damage(
                 sink,
@@ -2628,8 +2569,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
             )
         });
 
-        // Nothing to the unit: no damage dealt, no `damage` event naming it, no `lastDamagedBy` for an
-        // on-damage trigger to read, and no Poisonous mark.
+        // Nothing to the unit: no damage, no `damage` event naming it, no `lastDamagedBy`, no Poisonous mark.
         assert_eq!(dealt, 0);
         assert_eq!(live(&state, &victim).damage, 3);
         assert!(live(&state, &victim).last_damaged_by.is_none());
@@ -2649,8 +2589,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         assert_eq!(hits(&events.events), vec![Hit::new(&source.id, "hero-p2", 5)]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 5);
 
-        // Lifesteal heals it once, off the hero instance only, so the total healed is unchanged: 5 here
-        // and 5 in the control above.
+        // Lifesteal heals once, off the hero instance only: 5 healed in all, as in the control above.
         let healed: Vec<(String, i32)> = events
             .events
             .iter()
@@ -2682,10 +2621,8 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         // Vanilla clears its scripts, and an aura and a set-stat hook are both scripts (§6.3, §10.9).
         live_mut(&mut state, &source).vanilla = true;
 
-        // It stops projecting at layer 5.
         assert_eq!(view(&state, &ally).attack, 3);
         assert_eq!(view(&state, &ally).max_health, 4);
-        // And stops setting at layer 2, keeping its printed face.
         assert_eq!(view(&state, &source).attack, 2);
         assert_eq!(view(&state, &source).max_health, 2);
 
@@ -2710,15 +2647,14 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
         assert_eq!(view(&state, &one).attack, 2); // nothing to measure yet
         assert_eq!(view(&state, &one).max_health, 6);
 
-        // A delta: the hook returns the other card's layer-4 attack, which is *added* to 2/6. A total
-        // would have read 4/4, so the two readings are distinguishable.
+        // A delta: the hook returns the other card's layer-4 attack, *added* to 2/6 (a total would read 4/4).
         let two = put(&mut state, OTHER_SETTER, slot(P1, Row::Units, 2)); // printed 4/8
         assert_eq!(buffed(&state, &two).attack, 4);
         assert_eq!(view(&state, &one).attack, 2 + 4);
         assert_eq!(view(&state, &one).max_health, 6 + 4);
 
-        // Neither reads the other's layer 2, because `stats_with_buffs` is layers 1 to 4: `two` sees
-        // `one`'s printed 2, not the 6 that layer 2 gives it, so the pair cannot recurse or escalate.
+        // Neither reads the other's layer 2 (`stats_with_buffs` is layers 1 to 4): `two` sees `one`'s printed
+        // 2, not the 6 layer 2 gives it, so the pair cannot recurse or escalate.
         assert_eq!(view(&state, &two).attack, 4 + 2);
         assert_eq!(view(&state, &two).max_health, 8 + 2);
 
@@ -2765,8 +2701,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
 
     #[test]
     fn r117_owes_a_plays_remaining_steps_only_at_the_moment_it_pauses_never_in_advance() {
-        // The control first: a play that never pauses owes nothing at all, and its Cry fires once. If
-        // the pipeline parked itself in advance this queue would not be empty.
+        // The control: a play that never pauses owes nothing at all, and its Cry fires once.
         let mut clean = playing("r117-no-pause");
         let clean_card = must(
             in_hand(&mut clean, CRIER, P1, 1).into_iter().next(),
@@ -2781,8 +2716,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         assert!(straight.state.work.is_empty());
         assert_eq!(notes(&straight.state), vec!["cry"]);
 
-        // Now a trap prompts partway through the same play. Only now is the remainder owed, and only
-        // once: one item for one play, belonging to the player whose pipeline it is.
+        // Now a trap prompts partway through the play: one owed item, for the player whose pipeline it is.
         let mut state = playing("r117-pause");
         put(&mut state, ASK_TRAP, slot(P2, Row::Backrow, 1));
         let card = must(
@@ -2808,8 +2742,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             .collect();
         assert_eq!(owed.len(), 1);
         assert_eq!(owed.iter().map(|item| item.owner).collect::<Vec<_>>(), vec![P1]);
-        // Ahead of it, the trap's own end (§10.3: it resolves to completion before the play goes on,
-        // R113), owed at the same pause and no sooner.
+        // Ahead of it, the trap's own end (§10.3, R113), owed at the same pause and no sooner.
         assert_eq!(
             paused
                 .state
@@ -2820,9 +2753,8 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             vec![traps::TRAP_FIRING_WORK, play_steps::PLAY_WORK_KIND]
         );
 
-        // While the driver was on the stack the steps were the driver's alone: step 4's nested `settle`
-        // drains `state.work` before it pops a trigger, and it neither took nor ran the steps it was
-        // standing in — so the Cry has not fired yet.
+        // While the driver was on the stack the steps were its alone: step 4's nested `settle` neither took
+        // nor ran them, so the Cry has not fired yet.
         assert!(notes(&paused.state).is_empty());
 
         // The answer runs the trap's continuation and then the owed remainder, once each.
@@ -2862,8 +2794,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         assert!(notes(&paused.state).is_empty());
 
         let answered = act_as(&paused.state, P2, answer(&paused.state));
-        // The trap resolved to completion first, then the play resumed at the step after the one that
-        // paused: the Cry fires, after the trap, exactly once (R1).
+        // The trap resolved first, then the play resumed after the paused step: the Cry fires once (R1).
         assert_eq!(notes(&answered), vec!["answered", "cry"]);
         assert!(answered.work.is_empty());
         // And the card is where the play put it, so nothing about the pause unwound the play.
@@ -2873,8 +2804,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         );
         assert!(act_result_as(&answered, P1, ActionBody::EndTurn).error.is_none());
 
-        // R17's "the Cry is lost" is the other case, and only that case: a trap that takes the card off
-        // the field leaves nothing to resolve, so the Cry never fires.
+        // R17's "the Cry is lost" is only this case: with the card off the field there is nothing to resolve.
         let mut eaten = playing("r118-cry-lost");
         put(&mut eaten, EAT_TRAP, slot(P2, Row::Backrow, 1));
         let doomed = must(
@@ -2908,8 +2838,8 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
             "a Spell in hand",
         );
 
-        // p1 plays a Spell; p2's trap answers the `cardPlayed` and prompts, so the play stops between
-        // step 4 and step 5 with its remainder owed (R117).
+        // p1 plays a Spell; p2's trap answers the `cardPlayed` and prompts, so the play stops between step 4
+        // and step 5 with its remainder owed (R117).
         let paused = act_result_as(&state, P1, play_body(json!({ "instanceId": spell.id })));
         assert!(paused.error.is_none());
         let mut held = paused.state;
@@ -2920,8 +2850,7 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         assert_eq!(ids(&held.players.p1.resolving), vec![spell.id.clone()]);
         assert!(!ids(&held.players.p1.graveyard).contains(&spell.id));
 
-        // Answer it through `answer_prompt` directly rather than through `reduce`: R122 puts the drain in
-        // the answering action itself, so a caller driving the engine does not lose the remainder.
+        // Answer through `answer_prompt` directly, not `reduce`: R122 puts the drain in the answering action.
         let choice_id = held
             .pending
             .as_ref()
@@ -2941,8 +2870,8 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
             None
         );
 
-        // The trap's continuation ran, then the owed play steps, in R113's order — so the Cry fired and
-        // the Spell reached its graveyard rather than stopping short of it.
+        // The trap's continuation ran, then the owed play steps in R113's order: the Cry fired and the Spell
+        // reached its graveyard.
         assert_eq!(notes(&held), vec!["answered", "spell"]);
         assert!(held.pending.is_none());
         assert!(held.work.is_empty());
@@ -2996,8 +2925,7 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         let one = put(&mut state, BODY, slot(P1, Row::Units, 1));
         let two = put(&mut state, BODY, slot(P1, Row::Units, 2));
 
-        // Both halves travel: the units in `tributes` as the cost, and the pick in `targets` as the
-        // declared choice the script reads.
+        // Both halves travel: `tributes` as the cost, `targets` as the declared choice the script reads.
         assert_eq!(
             play(
                 &state,
@@ -3112,19 +3040,15 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert_eq!(state.players.p2.hero.armor, 0);
         assert_eq!(hit_hero(&mut state, 6).0, 6);
 
-        // One Going Long paid 2.
         state.players.p2.hero.armor = 2;
         assert_eq!(hit_hero(&mut state, 6).0, 4);
 
-        // A second granting card contributes like any other layer: two Going Longs paid 2 give Armor 4,
-        // not 2 — so the reduction is the sum and never the largest single source.
+        // A second granting card adds like any other layer: two Going Longs give Armor 4, never the largest.
         state.players.p2.hero.armor = 4;
         assert_eq!(hit_hero(&mut state, 6).0, 2);
-        // Plus any Armor written on the hero itself, on top of both.
         state.players.p2.hero.armor = 4 + 1;
         assert_eq!(hit_hero(&mut state, 6).0, 1);
-        // And enough of it zeroes the hit, which R63 makes no damage instance at all: R1361's report of
-        // the Armor taking it whole is all that comes of it.
+        // Enough Armor zeroes the hit, which R63 makes no damage instance: only R1361's report remains.
         state.players.p2.hero.armor = 6;
         let stopped = hit_hero(&mut state, 6);
         assert_eq!(stopped.0, 0);
@@ -3138,8 +3062,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
             }]
         );
 
-        // The opposite case, in the same pipeline: step 3's Anti-oneshot cap is a *ceiling*, so two of
-        // those cards give the smallest cap either provides, never their sum.
+        // The opposite case: step 3's Anti-oneshot cap is a *ceiling*, so two such cards give the smaller.
         let mut capped = game("r124-cap-mins");
         capped.players.p2.hero.armor = 0;
         put(&mut capped, GUARD, slot(P2, Row::Backrow, 1)); // base: cap 5
@@ -3156,8 +3079,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
 
     #[test]
     fn r125_r1362_sends_fatigue_through_the_whole_damage_pipeline_so_armor_absorbs_the_early_draws() {
-        // The control first: with no Armor, the Nth empty draw takes the full N (§2.4, R3). Without this
-        // the assertions below could pass on a fatigue that never fired.
+        // The control: with no Armor, the Nth empty draw takes the full N (§2.4, R3).
         let mut bare = game("r125-no-armor");
         bare.players.p1.library = vec![];
         let mut bare_sink = Bench::new(&bare);
@@ -3171,10 +3093,8 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         }
         assert_eq!(bare.players.p1.fatigue_count, 4);
 
-        // Now behind Going Long's Armor 3. Fatigue is an ordinary damage instance on its own hero, so
-        // step 2 applies: draws 1 to 3 are absorbed entirely, and R63's zero rule makes each no damage
-        // instance. Each is still a draw that happened, so it is reported (R240), by the pipeline's
-        // `damageAbsorbed` with the whole hit (R1362), and by no `damage`.
+        // Behind Going Long's Armor 3, fatigue is ordinary damage, so draws 1 to 3 are absorbed whole: no
+        // damage instance (R63), but reported (R240, R1362) by `damageAbsorbed` with the whole hit.
         let mut armored = game("r125-armour");
         armored.players.p1.library = vec![];
         armored.players.p1.hero.armor = 3;
@@ -3192,8 +3112,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert!(hits(&sink.events).is_empty());
         assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
 
-        // The escalating Nth-draw damage is what eventually beats the Armor: the 4th draw is 4, so 1
-        // gets through, and the 5th lets 2 through.
+        // The escalating Nth-draw damage eventually beats the Armor: the 4th draw is 4, so 1 gets through.
         assert!(matches!(
             sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
             DrawOutcome::Fatigue
@@ -3213,8 +3132,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         );
         assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
 
-        // Step 3's cap rides along too, since it is the same pipeline: a fatigue above the cap is
-        // clamped to it.
+        // Step 3's cap rides along: a fatigue above the cap is clamped to it.
         let mut capped = game("r125-capped");
         capped.players.p1.library = vec![];
         put_radiant(&mut capped, GUARD, slot(P1, Row::Backrow, 1)); // cap 3
@@ -3231,8 +3149,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
             ANTI_ONESHOT_CAP.radiant
         );
 
-        // Only "lose health" escapes the pipeline (R18), which is what makes the contrast above a rule
-        // about fatigue rather than about heroes.
+        // Only "lose health" escapes the pipeline (R18): the contrast is a rule about fatigue, not heroes.
         let mut losing = game("r125-lose-health");
         losing.players.p1.hero.armor = 3;
         let mut losing_sink = Bench::new(&losing);
@@ -3299,9 +3216,8 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
 
     #[test]
     fn r126_re_enters_a_delayed_continuation_that_lives_in_the_cards_resume_step_table() {
-        // Same continuation, spelled the other way §10.6 allows: `resume.hook` names the step table and
-        // `resume.step` picks the entry. One reader must resolve both shapes, so this must run too — and
-        // a card must never have to register its continuation under two keys to be re-entered.
+        // The same continuation spelled the other way §10.6 allows (`resume.hook` names the step table,
+        // `resume.step` the entry): one reader must resolve both.
         let card = Resume {
             def_id: DELAYED_STEP_CARD.to_string(),
             hook: RESUME_HOOK.to_string(),
@@ -3329,16 +3245,14 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
                 .contains_key("later")
         );
 
-        // A panic here fails the test.
         sink.run(&mut state, |engine| turn::start_turn(engine, P1));
         assert_eq!(notes(&state), vec!["delayed:step"]);
     }
 
     #[test]
     fn r127_resolves_a_delayed_continuation_whose_instance_is_gone_with_ctx_self_null_and_its_data() {
-        // #50 K-Pop Fanatic's ordinary case (R76): the card that scheduled the delay has left play. The
-        // continuation names its script by stored def id, so it still re-enters — dropping it would
-        // silently lose a sequence, which R113 forbids.
+        // #50 K-Pop Fanatic (R76): the card that scheduled the delay has left play; the continuation names
+        // its script by stored def id and still re-enters, since R113 forbids a lost sequence.
         let mut data = IndexMap::new();
         data.insert("carried".to_string(), json!("payload"));
         let resume = Resume {
@@ -3353,12 +3267,10 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         assert_eq!(state.delayed.len(), 1);
         assert!(state.delayed[0].resume.instance_id.is_none());
 
-        // A panic here fails the test.
         sink.run(&mut state, |engine| turn::start_turn(engine, P1));
         assert_eq!(notes(&state), vec!["orphan:no-self:payload"]);
 
-        // The same continuation is resolved this way on the work path, which is the shape R127 asks the
-        // delayed path to match (§9.3's resumable-work queue).
+        // The work path resolves it the same way, the shape R127 asks the delayed path to match (§9.3).
         let mut other = game("r127-work-path");
         put(&mut other, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut work_sink = Bench::new(&other);
@@ -3409,7 +3321,6 @@ mod spec_11_r126_r127_delayed_continuations_m3_gate {
         scheduler.zone = Zone::Gone { player: P1 };
         assert!(find_instance(&state, &scheduler.id).is_none());
 
-        // A panic here fails the test.
         sink.run(&mut state, |engine| turn::start_turn(engine, P1));
         assert_eq!(notes(&state), vec!["orphan:no-self:payload"]);
         assert!(state.delayed.is_empty());
@@ -3473,9 +3384,8 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         expected.extend(["hero-p2".to_string(), "hero-p1".to_string()]);
         assert_eq!(targets_hit(&flipped_sink.events), expected);
 
-        // The target list is fixed when the effect begins: a unit the sweep has already taken to 0 or
-        // less health still gets its own instance, and the units after it are still reached, because the
-        // state check waits for the whole effect (R59).
+        // The target list is fixed when the effect begins: a unit the sweep took to 0 health still gets its
+        // instance and the units after it are still reached, since the state check waits (R59).
         let mut lethal = game("r128-sweep-lethal");
         let doomed = put(&mut lethal, FRAIL, slot(P1, Row::Units, 1)); // 1/3
         let after = put(&mut lethal, BODY, slot(P1, Row::Units, 2));
@@ -3501,8 +3411,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
 
     #[test]
     fn r129_has_a_fizzling_effect_draw_no_randomness_which_is_why_a_whole_hand_discard_is_its_own_verb() {
-        // The hazard, made concrete: a random discard repeated by hand size moves the cursor once per
-        // card, so `rngCursor` would depend on the board at that moment (§10.7).
+        // The hazard: a discard repeated by hand size makes `rngCursor` depend on the board (§10.7).
         let mut random = game("r129-random-discard");
         in_hand(&mut random, BODY, P1, 5);
         let mut random_sink = Bench::new(&random);
@@ -3531,8 +3440,7 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
         assert_eq!(whole.players.p1.graveyard.len(), 5);
         assert_eq!(whole_sink.rng.cursor() - before, 0);
 
-        // And an effect that finds nothing to do takes no draw either, so the cursor does not depend on
-        // whether the hand happened to be empty.
+        // An effect that finds nothing to do takes no draw either, so the cursor ignores an empty hand.
         let mut empty = game("r129-fizzle");
         let mut empty_sink = Bench::new(&empty);
         let empty_before = empty_sink.rng.cursor();
@@ -3547,17 +3455,15 @@ mod spec_11_r128_r130_sweeps_fizzles_and_lucky_m3_gate {
 
     #[test]
     fn r130_leaves_a_roll_with_no_better_outcome_alone_so_lucky_costs_it_no_draw() {
-        // The hazard, made concrete: applying Lucky where "better" cannot distinguish the outcomes still
-        // burns the extra draws, which moves `rngCursor` and desynchronises a replay (R129).
+        // Lucky where "better" cannot tell outcomes apart still burns draws and desyncs a replay (R129).
         let mut one = Rng::new("r130", 0);
         one.coin();
         let mut lucky_rng = Rng::new("r130", 0);
         lucky_rng.lucky(1, |rng| rng.coin(), |a, _| a); // an identity comparator: no better outcome
         assert_eq!(lucky_rng.cursor(), one.cursor() + 1);
 
-        // R130 and R32: a coin-stat effect pays out on both faces, so it has no better outcome and Lucky
-        // does nothing to it — the effect takes exactly one draw per coin, and the cursor lands where a
-        // game with no Lucky anywhere would leave it.
+        // R130 and R32: a coin-stat effect pays out on both faces, so it has no better outcome and Lucky does
+        // nothing: one draw per coin, the cursor where a game with no Lucky would leave it.
         let mut state = game("r130-coins");
         let target = put(&mut state, BODY, slot(P1, Row::Units, 1));
         let mut sink = Bench::new(&state);
@@ -3608,8 +3514,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         assert_eq!(view(&state, &me).attack, 5);
         assert_eq!(view(&state, &me).max_health, 7);
 
-        // A second Fiender is a Felinor to the first, and contributes only its printed and buffed stats
-        // — never its own layer-2 total, so the layer cannot recurse (R116).
+        // A second Fiender is a Felinor to the first: its printed and buffed stats, never its layer-2 total.
         let second = put(&mut state, FIENDER, slot(P1, Row::Units, 2)); // 5/7, also tagged Felinor
         assert_eq!(buffed_attack(&state, &second), 5);
         assert_eq!(view(&state, &me).attack, 5 + 5);
@@ -3634,24 +3539,20 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
             health: 0,
         };
 
-        // The control: the helper really does read permanent buffs, so a positive one lands in full.
-        // Without this the negative case below could fail on buffs that were never applied.
+        // The control: the helper reads permanent buffs, so a positive one lands in full.
         assert_eq!(buffed_attack(&state, &plus), 3 + 4);
 
-        // R132 and R116: each Felinor is measured at layers 1 to 4 — printed plus permanent buffs — and
-        // the floor belongs to the combined total, so a Felinor carrying a negative buff contributes a
-        // negative attack and pulls the sum toward 0.
+        // R132 and R116: each Felinor is measured at layers 1 to 4 and the floor belongs to the combined
+        // total, so a negative buff contributes a negative attack and pulls the sum toward 0.
         assert_eq!(buffed_attack(&state, &minus), 3 - 5);
 
-        // The sum is 7 + (-2) = 5, so the total is 5 + 5 = 10. A floor applied per Felinor instead would
-        // read 7 + 0 = 7 and give 12.
+        // The sum is 7 + (-2) = 5, so the total is 10; a floor per Felinor would read 7 + 0 and give 12.
         assert_eq!(view(&state, &me).attack, 10);
 
         // Each stat is floored on its own: the health sum is untouched by whatever the attack sum did.
         assert_eq!(view(&state, &me).max_health, 7 + 10 + 10);
 
-        // And neither sum goes below 0: enough negative attack floors the attack contribution at 0
-        // without dragging the health contribution down with it.
+        // And neither sum goes below 0: negative attack floors the attack contribution, not the health one.
         live_mut(&mut state, &minus).buffs = AttackHealth {
             attack: -99,
             health: 0,
@@ -3666,8 +3567,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let card = put(&mut state, BODY, slot(P1, Row::Units, 1));
         let mut other = put(&mut state, FRAIL, slot(P1, Row::Units, 2));
 
-        // The premise the row states: `playedIds` records one entry per play, so a card played, bounced
-        // and replayed appears twice in the log.
+        // The premise: `playedIds` has one entry per play, so a replayed card appears twice.
         state.players.p1.turn_log.played_ids = vec![card.id.clone(), other.id.clone(), card.id.clone()];
         state.players.p1.turn_log.cards_played = 3;
         assert_eq!(
@@ -3675,8 +3575,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
             vec![card.id.clone(), other.id.clone(), card.id.clone()]
         );
 
-        // R133: the pool a random pick draws from is the SET of cards played, so the replayed card is
-        // one candidate and not two.
+        // R133: a random pick's pool is the SET of cards played, so the replayed card is one candidate.
         let pool = played_cards_this_turn(&state, P1);
         assert_eq!(
             pool.iter().map(|entry| entry.id.clone()).collect::<Vec<_>>(),
@@ -3723,16 +3622,14 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         assert!(!grade_rises(&state, &live(&state, &index)));
         state.players.p2.turn_log.cards_played = 2;
         assert!(grade_rises(&state, &live(&state, &index)));
-        // And p1's log no longer decides it, which is what "the counter is the card's, the threshold is
-        // the controller's" means.
         state.players.p1.turn_log.cards_played = 0;
         assert!(grade_rises(&state, &live(&state, &index)));
     }
 
     #[test]
     fn r135_exiles_each_card_on_its_own_and_needs_a_verb_that_walks_library_then_hand_then_graveyard() {
-        // The per-card half, on a verb that ships: R55's counter moves once per card and anything
-        // watching sees one `exiled` event per card rather than a batch.
+        // The per-card half, on a verb that ships: R55's counter moves once per card and watchers see one
+        // `exiled` event per card, not a batch.
         let mut state = game("r135-per-card");
         let hand = in_hand(&mut state, BODY, P1, 3);
         let mut sink = Bench::new(&state);
@@ -3756,10 +3653,9 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
             .collect();
         assert_eq!(exiled, ids(&hand));
 
-        // The ordering half needs a verb that can walk the three zones by cost in §8's order. #94's own
-        // clauses are blocked on it, so the order has no home yet: library, then hand, then graveyard,
-        // with the draw clause running first so a drawn card is never exiled by the same play.
-        // Naming both verbs is the check that they exist.
+        // The ordering half (library, hand, graveyard, the draw clause first so a drawn card is never exiled
+        // by the same play) needs a verb that walks the zones by cost in §8's order; #94's own clauses are
+        // blocked on it. Naming both verbs checks they exist.
         let _exile_matching = effects::exile_matching;
         let _draw_from_library = effects::draw_from_library;
     }
@@ -3800,8 +3696,8 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
 
     #[test]
     fn r136_gives_a_script_its_own_event_window_so_an_earlier_event_in_the_same_action_is_not_its_own() {
-        // The control: with no `summoned` event on the list at all, the filter compels nobody — so the
-        // failure below is caused by the event, not by the filter being ignored.
+        // The control: with no `summoned` event on the list the filter compels nobody, so the failure below
+        // is caused by the event.
         let mut quiet = game("r136-control");
         put(&mut quiet, BODY, slot(P1, Row::Units, 1));
         let quiet_victim = put(&mut quiet, BODY, slot(P2, Row::Units, 1));
@@ -3822,8 +3718,8 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         let victim = put(&mut state, BODY, slot(P2, Row::Units, 1));
         let mut sink = Bench::new(&state);
 
-        // Something earlier in the same action summoned a unit, so its `summoned` event is already on
-        // the sink's list — a second copy of a card, or a trap firing mid-action, does exactly this.
+        // An earlier effect in the same action summoned a unit, so its `summoned` event is already on the
+        // sink's list (a second copy of a card, or a trap firing mid-action).
         sink.events.push(GameEvent::Summoned {
             player: P1,
             instance_id: earlier.id.clone(),
@@ -3878,8 +3774,7 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         let donor = put(&mut state, FELINOR, slot(P1, Row::Units, 2)); // printed 3/10
         let view = |state: &GameState, card: &CardInstance| layers::unit_view(state, &live(state, card));
 
-        // The control: the layer-4 reading really does see permanent buffs, so the negative case below
-        // is about the floor and not about a buff that never applied.
+        // The control: the layer-4 reading sees permanent buffs, so the negative case is about the floor.
         live_mut(&mut state, &donor).buffs = AttackHealth { attack: 4, health: 0 };
         assert_eq!(
             layers::stats_with_buffs(&state, &live(&state, &donor)).attack,
@@ -3887,8 +3782,7 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         );
         assert_eq!(view(&state, &summer).attack, 5 + 7);
 
-        // R150: the layer-4 reading has no per-unit floor, so a contributor with a negative buff pulls
-        // the total down rather than contributing nothing.
+        // R150: the layer-4 reading has no per-unit floor, so a negative buff pulls the total down.
         live_mut(&mut state, &donor).buffs = AttackHealth {
             attack: -5,
             health: 0,
@@ -3934,23 +3828,21 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
             other => panic!("not a trapFired event: {other:?}"),
         }
 
-        // R154: the zone that flipped, so a client can animate the lane without being told which card
-        // it was — which is the whole point, since a face-down trap is given no instance id (R97).
+        // R154: the zone that flipped, so a client can animate the lane without a face-down trap's instance
+        // id (R97).
         let keys = as_json(&fired);
         assert!(keys.as_object().is_some_and(|object| object.contains_key("row")));
         assert!(keys.as_object().is_some_and(|object| object.contains_key("lane")));
 
-        // `viewFor` reads its event stream off `state.applied`, which only a completed `reduce` writes
-        // (`remember_nonce`). This fixture drives the sink directly, so the action has to be recorded
-        // the way `reduce` would before any view can see it.
+        // `viewFor` reads its events off `state.applied`, which only a completed `reduce` writes
+        // (`remember_nonce`): this fixture drives the sink directly, so the action is recorded by hand.
         state.applied = vec![AppliedAction {
             nonce: "r154".to_string(),
             events: sink.events.clone(),
         }];
 
-        // Its identity follows §10.8's redaction: the controller reads it, the other player reads the
-        // sentinel — keyed to the controller and NOT to the card's current zone, because firing the
-        // trap moves it to a public graveyard (R97's exception, stated in R154).
+        // §10.8's redaction: the controller reads the identity, the other player the sentinel, keyed to the
+        // controller and NOT the card's zone, since firing moves the trap to a public graveyard (R97, R154).
         let owner = view_for::view_for(&state, P1);
         let other = view_for::view_for(&state, P2);
         assert_eq!(seen_by(&owner), (trap.id.clone(), trap.def_id.clone()));
@@ -4003,8 +3895,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
 
     #[test]
     fn r138_counts_a_cast_permanent_with_no_zone_as_played_resolves_it_and_sends_it_to_the_graveyard() {
-        // The control first: with a free zone the same cast lands on the field, so the fixture really
-        // does cast a permanent and the row below is about the full row rather than a broken cast.
+        // The control: with a free zone the cast lands on the field, so the row below is about a full row.
         let mut roomy = game("r138-control");
         put(&mut roomy, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut roomy_sink = Bench::new(&roomy);
@@ -4069,8 +3960,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
             Some("that ability has already been used this turn".to_string())
         );
 
-        // R139: the count is stored with the turn it was made on, so it is spent only while the game is
-        // still on that turn. The stored value does not move — the turn does.
+        // R139: the count is stored with its turn, so it is spent only while the game is still on that turn.
         state.turn += 1;
         state.active = P2;
         assert_eq!(
@@ -4116,8 +4006,7 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert_eq!(play(&state, None), None);
         assert_eq!(play(&state, Some(3)), None);
 
-        // Fill every unit zone. A named occupied zone is still legal — that is exactly the refusal
-        // Stack lifts (§3.2, R64).
+        // Fill every unit zone. A named occupied zone is still legal: the refusal Stack lifts (§3.2, R64).
         let occupants: Vec<CardInstance> = [1, 2, 3, 4, 5]
             .into_iter()
             .map(|lane| put(&mut state, BODY, slot(P1, Row::Units, lane)))
@@ -4132,18 +4021,16 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
             vec![1, 2, 3, 4, 5]
         );
 
-        // R140: the zone-less path still wants an EMPTY zone, so a full row refuses it even though
-        // every lane would accept a named one. The asymmetry is confined to the convenience path.
+        // R140: the zone-less path wants an EMPTY zone, so a full row refuses it though every lane would
+        // accept a named one.
         assert!(must(play(&state, None), "a refusal").contains("no free units zone"));
 
-        // And with one lane freed it takes the leftmost empty one, not the first that would accept a
-        // Stack — lane 4 here, with 1, 2, 3 and 5 still occupied.
+        // With one lane freed it takes the leftmost empty one: lane 4, with 1, 2, 3 and 5 still occupied.
         let mut freed = must(occupants.get(3).cloned(), "the lane-4 occupant");
         zones::remove_from_any_zone(&mut state, &mut freed);
         freed.zone = Zone::Graveyard { player: P1 };
         assert_eq!(play(&state, None), None);
-        // "The leftmost empty, unlocked zone" is lane 4, not lane 1: lane 1 would accept a *named*
-        // Stack play, and the convenience path deliberately does not take it.
+        // Lane 1 would accept a *named* Stack play, but the convenience path does not take it.
         assert_eq!(
             zones::first_free_zone(&state, P1, Row::Units),
             Some(slot(P1, Row::Units, 4))
@@ -4156,8 +4043,8 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
 
     #[test]
     fn r152_clears_the_ai_lockout_at_the_end_of_the_turn_it_was_set_for() {
-        // `aiPlaysOutTurn` sets the lockout and then plays the turn out, so the flag is only observable
-        // mid-turn; R152 is about where it is *cleared*, which is what this sets up directly.
+        // `aiPlaysOutTurn` sets the lockout and plays the turn out, so the flag is only observable mid-turn;
+        // R152 is about where it is *cleared*.
         let mut state = game("r152-ai-turn");
         let mut sink = Bench::new(&state);
         assert!(!state.players.p1.ai_turn);
@@ -4165,13 +4052,11 @@ mod spec_11_r138_r140_and_r152_plays_limits_and_lockouts_m3_gate {
         assert_eq!(state.active, P1);
         let locked_on = state.turn;
 
-        // §8's "until end of turn": the end of THIS turn clears it, not that player's next turn start —
-        // otherwise a player stays locked out of a turn that is no longer the one the effect took.
+        // §8's "until end of turn": the end of THIS turn clears it, not that player's next turn start.
         sink.run(&mut state, turn::end_turn);
         assert!(!state.players.p1.ai_turn);
 
-        // And it was cleared by the end of the turn it was set for, not by p1 reaching another turn:
-        // it is p2's turn now, and p1 has not started one since.
+        // Cleared by the end of the turn it was set for: it is p2's turn now and p1 has started none since.
         assert_eq!(state.active, P2);
         assert!(state.turn > locked_on);
     }
@@ -4187,14 +4072,13 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
         let mut state = game("r151-arrival");
         let mut sink = Bench::new(&state);
 
-        // A copy that reached a hand some other way than the opening draw: returned from a graveyard.
-        // The premise, and the bug R151 closes — it carries no power, so it would cost 0 for ever.
+        // A copy that reached a hand otherwise than by the opening draw (returned from a graveyard): R151's
+        // bug is that it carries no power, so it would cost 0 for ever.
         let card = new_instance(&mut state, HEROIC, P1, Zone::Graveyard { player: P1 });
         state.players.p1.graveyard.push(card.clone());
         assert!(!card.memory.contains_key(POWER_KEY));
         assert!(power_of(&card).is_none());
 
-        // It arrives somewhere a card can be looked at.
         let mut arriving = card.clone();
         assert!(matches!(
             sink.run(&mut state, |engine| draw::add_to_hand(engine, &mut arriving)),
@@ -4232,8 +4116,7 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
      {
         let mut state = game("r153-zone-hooks");
 
-        // The control: on the field the card IS a holder for all three hooks, so the enumerator is live
-        // and the negatives below are about the zone rather than about a hook that never registered.
+        // The control: on the field the card holds all three hooks, so the negatives are about the zone.
         let on_field = put(&mut state, ZONE_HOOKS, slot(P1, Row::Backrow, 1));
         let holders = |state: &GameState, hook: HookName| -> Vec<String> {
             triggers::trigger_holders_with_hook(state, hook, None)
@@ -4245,9 +4128,8 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
         assert_eq!(holders(&state, HookName::EndOfTurn), vec![on_field.id.clone()]);
         assert_eq!(holders(&state, HookName::OnPlayHook), vec![on_field.id.clone()]);
 
-        // In a hand a card answers only its `handTriggers` (#89 Corpse Eater). A Field Spell held in
-        // hand must not summon its token every turn, and a Gifted Program in hand must not make a play
-        // Radiant — which is what an unfiltered enumeration lets both of them do.
+        // In a hand a card answers only its `handTriggers` (#89 Corpse Eater): a held Field Spell must not
+        // summon its token every turn, nor a held Gifted Program make a play Radiant.
         let held = must(
             in_hand(&mut state, ZONE_HOOKS, P1, 1).into_iter().next(),
             "a copy in hand",
@@ -4256,8 +4138,8 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
         assert!(!holders(&state, HookName::EndOfTurn).contains(&held.id));
         assert!(!holders(&state, HookName::OnPlayHook).contains(&held.id));
 
-        // In a graveyard only the end-of-turn return of a spell that flagged itself when it was played
-        // (#23, #24, #31) — so an unflagged card there answers nothing at all.
+        // In a graveyard only the end-of-turn return of a spell flagged when it was played (#23, #24, #31):
+        // an unflagged card there answers nothing.
         let buried = new_instance(&mut state, ZONE_HOOKS, P1, Zone::Graveyard { player: P1 });
         state.players.p1.graveyard.push(buried.clone());
         assert_ne!(buried.return_to_hand_at_end_of_turn, Some(true));
@@ -4265,8 +4147,6 @@ mod spec_11_r151_and_r153_arrivals_and_zone_gated_hooks_m3_gate {
         assert!(!holders(&state, HookName::OnPlayHook).contains(&buried.id));
         assert!(!holders(&state, HookName::EndOfTurn).contains(&buried.id));
 
-        // The field copy is still the one holder for each, so nothing above was achieved by emptying
-        // the enumeration.
         assert_eq!(holders(&state, HookName::StartOfTurn), vec![on_field.id.clone()]);
         assert_eq!(holders(&state, HookName::OnPlayHook), vec![on_field.id.clone()]);
     }
@@ -4295,8 +4175,7 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
         let mut sink = Bench::new(&state);
 
-        // The real call site: a cast goes through the same landing a play does (R70), so this is §10.5
-        // step 7 doing the flagging rather than the setter being poked directly.
+        // The real call site: a cast lands as a play does (R70), so §10.5 step 7 does the flagging.
         let spell = must(
             in_hand(&mut state, RETURN_SPELL, P1, 1).into_iter().next(),
             "a returning Spell",
@@ -4307,10 +4186,9 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         assert!(ids(&state.players.p1.graveyard).contains(&spell.id));
         assert_eq!(live(&state, &spell).return_to_hand_at_end_of_turn, Some(true));
 
-        // Each of step 7's three conditions, checked by a card that fails exactly one of them. None of
-        // these may be flagged, or the flag would mean no more than "in the graveyard this turn".
-        // Not a Spell: #13's shape, a Unit with an end-of-turn hook that died the turn it was played.
-        // It is in the play log AND in the graveyard, which is why the log cannot stand in for this.
+        // Each of step 7's three conditions, checked by a card that fails exactly one: none may be flagged.
+        // Not a Spell: #13's shape, a Unit with an end-of-turn hook that died the turn it was played. It is
+        // in the play log AND in the graveyard, which is why the log cannot stand in for the flag.
         let mut unit = must(
             in_hand(&mut state, DYING_UNIT, P1, 1).into_iter().next(),
             "a Unit with an end-of-turn hook",
@@ -4386,8 +4264,8 @@ mod spec_11_r155_the_return_to_hand_flag_m3_gate {
         live_mut(&mut state, &flagged).return_to_hand_at_end_of_turn = Some(true);
         assert_eq!(end_of_turn_holders(&state), vec![flagged.id.clone()]);
 
-        // An identical Spell in the same graveyard, played this very turn but never flagged — because
-        // it never landed there through step 7 — answers nothing. Being in the log is not the gate.
+        // An identical Spell in the same graveyard, played this turn but never flagged (it never landed there
+        // through step 7), answers nothing: being in the log is not the gate.
         let unflagged = new_instance(&mut state, RETURN_SPELL, P1, Zone::Graveyard { player: P1 });
         state.players.p1.graveyard.push(unflagged.clone());
         state.players.p1.turn_log.played_ids.push(unflagged.id.clone());

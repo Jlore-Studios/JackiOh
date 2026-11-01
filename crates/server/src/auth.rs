@@ -39,7 +39,6 @@ use crate::config::{
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthUser {
-    /// The provider's user id (Supabase `auth.users.id`).
     pub user_id: String,
     pub email: Option<String>,
     pub email_verified: bool,
@@ -100,7 +99,6 @@ pub enum AuthError {
     Unavailable(String),
 }
 
-// Tunables SPEC does not pin down
 
 /// Supabase issues project JWTs with this audience for a signed-in user.
 const AUTHENTICATED_AUDIENCE: &str = "authenticated";
@@ -136,7 +134,6 @@ pub struct AuthApiUser {
     pub mfa_enrolled: bool,
 }
 
-/// What an admin lookup of a user can say.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AdminLookup {
     Ok(AuthApiUser),
@@ -146,7 +143,6 @@ pub enum AdminLookup {
     Unavailable,
 }
 
-/// What deleting a user can say: done, already gone, or nobody answered.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AdminDeletion {
     Deleted,
@@ -283,7 +279,6 @@ pub(crate) fn is_uuid(id: &str) -> bool {
 #[derive(Clone)]
 pub struct AdminAuthClient {
     http: reqwest::Client,
-    /// `${SUPABASE_URL}/auth/v1`.
     auth_base: String,
     secret_key: String,
 }
@@ -366,7 +361,6 @@ impl AdminAuthClient {
     }
 }
 
-/// The Supabase clients; no password half.
 #[derive(Clone, Debug)]
 pub struct SupabaseAuthClients {
     pub admin: Option<AdminAuthClient>,
@@ -394,7 +388,6 @@ pub fn create_real_clients(input: &SupabaseAuthClientInput, http: &reqwest::Clie
 /// No `Debug`: it holds the secret key and the shared secret.
 #[derive(Clone, Default)]
 pub struct SupabaseAuthInput {
-    /// `env.supabase_url`, e.g. `https://<ref>.supabase.co`.
     pub url: String,
     /// `env.supabase_secret_key`. Server-only; bypasses RLS; never leaves this module.
     pub secret_key: String,
@@ -405,10 +398,9 @@ pub struct SupabaseAuthInput {
     /// Not in SPEC, and no R-row: test seam for the JWKS. Production leaves it unset and fetches
     /// `jwks_url`; a test hands it a local key set instead.
     pub key_set: Option<JwkSet>,
-    /// Not in SPEC, and no R-row: test seam for the clock behind the provider's caches; defaults to
-    /// the server's clock (`app::now_ms`). A test drives the caches with it while the provider's
-    /// requests run in real time: tokio's paused clock would jump to their timeouts whenever the
-    /// runtime waits on the socket.
+    /// Not in SPEC, and no R-row: test seam for the caches' clock, default `app::now_ms`. Tests drive the
+    /// caches with it: tokio's paused clock would jump to the requests' timeouts whenever the runtime
+    /// waits on the socket.
     pub now: Option<ProviderClock>,
 }
 
@@ -420,9 +412,7 @@ struct LocalClaims {
     sub: String,
     email: Option<String>,
     app_metadata: IndexMap<String, Value>,
-    /// The provider's session this token belongs to (`session_id`), when the token names one.
     session_id: Option<String>,
-    /// R665: the token's assurance level (`aal`), from the verified payload.
     aal: Option<String>,
 }
 
@@ -439,7 +429,6 @@ enum SessionCheck {
     Unavailable,
 }
 
-/// A confirmed email as last read from the auth server.
 #[derive(Clone, Debug)]
 struct Confirmed {
     at: i64,
@@ -452,8 +441,7 @@ struct KeyCache {
     keys: Option<JwkSet>,
     fetched_at: i64,
     fixed: bool,
-    /// When the last refetch failed, so failures are retried at most once per `JWKS_COOLDOWN_MS`
-    /// (R1144000). Cleared by a success.
+    /// When the last refetch failed: retried at most once per `JWKS_COOLDOWN_MS` (R1144000).
     last_failed_at: Option<i64>,
 }
 
@@ -514,23 +502,20 @@ pub struct SupabaseAuth {
     clients: SupabaseAuthClients,
     /// The JWKS. Fetched on first use so constructing the provider does no I/O.
     key_set: tokio::sync::Mutex<KeyCache>,
-    /// The key-set fetch in flight, if one request is fetching while others wait (R1144000). Set
-    /// when a fetch starts and cleared by its `FetchGuard`, so at most one fetch runs at a time.
+    /// The key-set fetch in flight while others wait (R1144000); cleared by its `FetchGuard`, so at most
+    /// one runs.
     inflight: Mutex<Option<Arc<tokio::sync::Notify>>>,
     // The shared secret is discouraged: a leaked one lets an attacker mint any `sub`. It is only
     // tried when the JWKS path has already failed, and only if configured.
     hs_key: Option<Vec<u8>>,
-    /// userId -> when its *confirmed* email was last read from the auth server. Each insert first drops
-    /// the entries past `EMAIL_CONFIRMED_CACHE_TTL_MS`, as `check_session` prunes `live_sessions`.
+    /// userId -> when its *confirmed* email was last read from the auth server.
     confirmed: Mutex<IndexMap<String, Confirmed>>,
-    /// R665: the users the provider last said have a verified authenticator app. Kept for as long as
-    /// that stays the latest answer (positives only; a later answer without one removes the entry), so
-    /// an `aal1` token for such an account is refused even while the provider cannot be reached or the
-    /// answer is being served from `confirmed`.
+    /// R665: the users the provider last said have a verified authenticator app (positives only; a later
+    /// answer without one removes the entry), so an `aal1` token for such an account is refused even while
+    /// the provider cannot be reached or `confirmed` serves the answer.
     mfa_enrolled: Mutex<IndexSet<String>>,
     /// session id -> when the provider last said that session is live (R194). Positives only.
     live_sessions: Mutex<IndexMap<String, i64>>,
-    /// The caches' clock (`SupabaseAuthInput.now`).
     now: ProviderClock,
 }
 
@@ -671,8 +656,6 @@ impl SupabaseAuth {
         response.json::<JwkSet>().await.map_err(|_| JwksFetchError::Body)
     }
 
-    /// The keys of the set that could have signed a token with this header: its `kid` when it names
-    /// one, an `alg` the key allows, a key type of the algorithm's family, and a signing use.
     fn candidates(keys: &JwkSet, header: &Header) -> Vec<DecodingKey> {
         keys.keys
             .iter()
@@ -702,11 +685,10 @@ impl SupabaseAuth {
             .collect()
     }
 
-    /// The key set: fetched on first use, refetched once it is old, and refetched (at most once per
-    /// cooldown) when no key in it matches the token. The mutex is never held across a fetch: one
-    /// request fetches while the others wait on its `Notify`. A failed refetch keeps serving the last
-    /// good set for at most `JWKS_STALE_MAX_MS` past its age (R1144000), so a key endpoint that is
-    /// down signs nobody out.
+    /// The key set: fetched on first use, refetched once old, and on a key miss (at most once per
+    /// cooldown). The mutex is never held across a fetch: one request fetches while the others wait on
+    /// its `Notify`. A failed refetch keeps serving the last good set for at most `JWKS_STALE_MAX_MS`
+    /// past its age (R1144000), so a down key endpoint signs nobody out.
     async fn keys_for(&self, header: &Header) -> Vec<DecodingKey> {
         loop {
             let now = (self.now)();
@@ -789,9 +771,8 @@ impl SupabaseAuth {
         }
     }
 
-    /// What the cache answers once no fetch is running: the set while it is inside the stale cap,
-    /// nothing past it. A success lands here with a fresh age, so a key a successful refetch
-    /// dropped is refused at once.
+    /// What the cache answers once no fetch is running: the set while inside the stale cap, nothing past
+    /// it, so a key a successful refetch dropped is refused at once.
     fn served(cache: &KeyCache, header: &Header, now: i64) -> Vec<DecodingKey> {
         let age = now - cache.fetched_at;
         if cache.keys.is_some() && age < JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS {
@@ -907,10 +888,9 @@ impl SupabaseAuth {
         lookup
     }
 
-    /// R194: is the session this verified token names still live at the provider? Asked of
-    /// `GET /auth/v1/user` with the token itself, which the provider refuses once the session (or the
-    /// user) is gone. Only a live answer is remembered, per session, so a session ended at the
-    /// provider is refused here within `AUTH_SESSION_LIVE_CACHE_SECONDS`.
+    /// R194: is the session this token names still live at the provider? Asked of `GET /auth/v1/user`
+    /// with the token itself, which the provider refuses once the session (or user) is gone. Only a live
+    /// answer is remembered, so an ended session is refused within `AUTH_SESSION_LIVE_CACHE_SECONDS`.
     async fn check_session(&self, session_id: &str, sub: &str, token: &str) -> SessionCheck {
         let live_session_ttl_ms = AUTH_SESSION_LIVE_CACHE_SECONDS * MS_PER_SECOND;
         let seen = {

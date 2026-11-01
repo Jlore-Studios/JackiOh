@@ -3,6 +3,9 @@
 //! R253 (deck validation), R257 (modes, R259 series), R258 (random deal), R264 (series block),
 //! R1372/R924000 (set lean), R1450 (reaping), R640001 (gap limit), R640002/R1996000 (readout cache).
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3; catalog grant R111; auth gate §9.4.
+//!
+//! Everything runs on tokio's paused clock through `test_app()`, the production wiring on the fake store,
+//! so every pairing starts a real game. R166's fixture writes tickets straight into the store.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -37,7 +40,8 @@ use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 use crate::support::store::{fake_lock, from, q, to_json, uuid};
 
-/// Process-wide lock for R143 queue seeds, shared with `api::bots` bot-door tests (R1989000).
+/// R143's seeds sit in a process-wide map shared by this binary: a test that sends a seed or counts it
+/// takes this lock, `api::bots`' bot-door tests too (R1989000).
 pub(crate) static SEED_MAP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
@@ -57,12 +61,11 @@ async fn cancel(app: &Arc<App>, token: &str) -> (u16, Value) {
     request(app, "DELETE", "/api/queue", token, None).await
 }
 
-/// BUILD §2: deck size.
 fn deck_size() -> usize {
     usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size")
 }
 
-/// Catalog playable ids (R1420).
+/// Catalog playable ids: no tokens, nor sets not shipped (R1420).
 fn pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
@@ -72,7 +75,6 @@ fn pool() -> Vec<String> {
         .collect()
 }
 
-/// The playable ids, sliced into three disjoint legal decks.
 fn decks_from() -> [Vec<String>; 3] {
     let pool = pool();
     let size = deck_size();
@@ -83,7 +85,7 @@ fn decks_from() -> [Vec<String>; 3] {
     ]
 }
 
-/// Active profile with launch grant (R111).
+/// An active profile with a token and every card (R111).
 async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
     fake_lock(app)
@@ -95,7 +97,6 @@ async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     add_user(app, &user_id, &format!("{id}@example.test"), true)
 }
 
-/// A pending profile with a token that verifies as it (§9.4).
 async fn pending_profile(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
     fake_lock(app)
@@ -238,7 +239,8 @@ async fn seat_deck(app: &App, match_id: &str, profile_id: &str) -> Value {
     }
 }
 
-/// Writes ticket directly to store with specified age offset and rating.
+/// A ticket written straight into the store; `enqueuedAt` is an offset from the clock's now, so the
+/// widening window sees the wait the test intends.
 struct SeedTicket<'a> {
     id: &'a str,
     profile_id: &'a str,
@@ -299,14 +301,14 @@ async fn paired_profiles(app: &App) -> Vec<Value> {
         .collect()
 }
 
-/// §9.5, R166: mutual window rating gap verification.
+/// §9.5: the gap sits inside *both* windows. Each "was left waiting" assertion needs it first, so the
+/// test is about R166's *choice*.
 fn expect_qualifies(a: (i64, i64), b: (i64, i64)) {
     let gap = (a.0 - b.0).abs() as f64;
     assert!(gap <= rating_window(a.1 as f64 / 1000.0));
     assert!(gap <= rating_window(b.1 as f64 / 1000.0));
 }
 
-/// A series row with these two profiles in it, in the given status.
 fn series_with(app: &App, p1: &str, p2: &str, status: &str) -> Value {
     json!({
         "id": format!("series-of-{p1}"),
@@ -436,13 +438,12 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
     #[tokio::test(start_paused = true)]
     async fn r166_pairs_the_oldest_ticket_against_the_oldest_opponent_its_window_admits_not_the_closest() {
-        // R166 pairs oldest qualifying ticket first, not closest in rating.
+        // R166 pairs `oldest` with `mid`, the oldest that qualifies, not with `near`, the closest in rating.
         let app = test_app().await;
         let oldest = (1000, 30_000);
         let mid = (1080, 20_000);
         let near = (1005, 1_000);
 
-        // PREMISE: both candidates are inside both windows, so what follows is R166's *choice* (§9.5).
         expect_qualifies(oldest, mid);
         expect_qualifies(oldest, near);
         assert!((oldest.0 - near.0).abs() < (oldest.0 - mid.0).abs());
@@ -460,7 +461,6 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
         let made = try_pair(&app).await.expect("a sweep").made;
 
-        // PREMISE: exactly one pair was made.
         assert_eq!(made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["mid", "oldest"])]);
 
@@ -506,7 +506,8 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
     #[tokio::test(start_paused = true)]
     async fn r166_breaks_a_tie_on_ticket_id_so_the_same_open_set_always_pairs_the_same_way() {
-        // `t-zebra` is inserted before `t-alpha` at the same instant: the id tie-break pairs `oldest` with `t-alpha`.
+        // `t-zebra` is inserted before `t-alpha` at the same instant: the id tie-break pairs `oldest` with
+        // `t-alpha`.
         let app = test_app().await;
         let oldest = (1000, 30_000);
         let zebra = (1010, 5_000);
@@ -570,7 +571,8 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         assert!(matches_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 2);
 
-        // …and once both windows have widened past the gap, the same two pair (§9.5; R640001 stops them at MAX_FAIR_GAP, still past it).
+        // …and once both windows have widened past the gap, the same two pair (§9.5; R640001 stops them
+        // at MAX_FAIR_GAP, still past it).
         tokio::time::advance(Duration::from_millis(120_000)).await;
         // SPEC §11 R897000: the wait outlasts a presence window, and live clients poll through it,
         // so both are heard from before the sweep judges them.
@@ -673,7 +675,8 @@ mod r897000_an_abandoned_ticket_expires_before_it_seats_anyone {
         assert_eq!(ticket(&app, "t-polling").await["status"], "open");
     }
 
-    /// Enqueues tickets outside initial window; pairs when window widens past gap.
+    /// Sweeps after each `SERIES_POLL_SECONDS`, touching `heard` as a polling client would; yields the
+    /// seconds waited when it paired the two tickets, within `RATING_WINDOW_FULL_AFTER_SECONDS`.
     async fn sweep_every_poll(app: &Arc<App>, heard: &[&str]) -> Option<i64> {
         let mut waited = 0;
         while waited < RATING_WINDOW_FULL_AFTER_SECONDS {
@@ -821,7 +824,6 @@ mod r167_r108_r143_how_a_player_leaves_the_queue {
         let [deck, ..] = decks_from();
         let deck_id = save_deck_for(&app, "leaver", &deck, "leaver's deck").await;
 
-        // PREMISE: there is something to cancel.
         let (status, queued) = enqueue(&app, &token, &deck_id).await;
         let ticket_id = queued["ticketId"].as_str().unwrap_or("").to_string();
         assert_eq!(status, 200);
@@ -974,7 +976,8 @@ mod section_94s_gate_on_the_queue {
 
 // §9.4 / §9.5 / §9.8 — the deck is frozen into the ticket
 
-/// §9.8, §9.4: deck swap after matchmaking prevented by freezing decks into ticket.
+/// §9.8, §9.4: a deck saved after enqueue does not reach the ticket. Each case has its control: the save
+/// moved before enqueue, so deck B plays.
 mod section_98_decks_are_frozen_into_the_queue_ticket {
     use super::*;
 
@@ -997,7 +1000,6 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         assert_eq!(queued["status"], "open");
         assert_eq!(ticket(&app, &ticket_id).await["deck"], json!(frozen));
 
-        // The swap, while the ticket is still open.
         assert_eq!(save(&app, &swapper, &deck_id, &substitute, None).await, 200);
         // PREMISE: the save landed; a rejected save would make every assertion below pass vacuously.
         let saved = q!(app, decks_get(&deck_id))
@@ -1024,7 +1026,8 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
 
     #[tokio::test(start_paused = true)]
     async fn the_control_the_same_swap_made_before_the_enqueue_is_the_deck_the_match_uses() {
-        // Control: the save moves before enqueue, so the match uses deck B; else the test above could pass on a queue that ignored saved decks.
+        // Control: the save moves before enqueue, so the match uses deck B; else the test above could pass
+        // on a queue that ignored saved decks.
         let app = test_app().await;
         let swapper = active_profile(&app, "early", 1000.0).await;
         let rival = active_profile(&app, "late", 1000.0).await;
@@ -1095,7 +1098,6 @@ mod r257_queue_modes {
 
         assert_eq!(seat_deck(&app, &match_id, "modern").await, json!(one));
         assert_eq!(seat_deck(&app, &match_id, "legacy").await, json!(two));
-        // §9.5: a Best-of-1 pairing puts both players in the match.
         for id in ["modern", "legacy"] {
             assert_eq!(in_match_of(&app, id).await, json!(match_id));
         }
@@ -1144,7 +1146,8 @@ mod r257_queue_modes {
         assert!(series_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 3);
 
-        // Control: a second All Random ticket pairs with the first, though the Best-of-1 and Best-of-3 tickets are older.
+        // Control: a second All Random ticket pairs with the first, though the Best-of-1 and Best-of-3
+        // tickets are older.
         seed_ticket(
             &app,
             SeedTicket {
@@ -1180,7 +1183,6 @@ mod r257_queue_modes {
         assert_eq!(first["status"], "open");
         assert_eq!(first["mode"], "bo3");
         assert_eq!(first["seriesId"], Value::Null);
-        // A Best-of-3 ticket freezes the trio, with the decks' names, and no single deck.
         let first_ticket = first["ticketId"].as_str().unwrap_or("").to_string();
         let frozen = ticket(&app, &first_ticket).await;
         assert_eq!(frozen["deck"], json!([]));
@@ -1364,7 +1366,8 @@ mod r640002_the_queue_readout {
     async fn r640002_reports_each_mode_s_expected_wait_and_the_last_hour_s_games_and_nothing_else() {
         let app = test_app().await;
         let token = active_profile(&app, "watcher", 1000.0).await;
-        // Claimed pair and ended game past window boundary.
+        // Just over the window ago: an All Random pair claimed and a game ended. Counted, the pair would
+        // give All Random six waits, enough for an expected wait, and the games would be four.
         claimed_pair(&app, ["t-old-1", "t-old-2"], "random", [1_000, 2_000]).await;
         ended(&app, "m-old", ["t-old-1", "t-old-2"]).await;
         tokio::time::advance(Duration::from_secs(QUEUE_READOUT_WINDOW_SECONDS as u64 + 1)).await;
@@ -1503,7 +1506,7 @@ mod r258_all_random {
             ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["deck"],
             json!([])
         );
-        // R1989000 coin seats older ticket (R166). First enqueue aged 1 ms.
+        // R1989000's coin seats the older ticket (R166), so the first enqueue is aged 1 ms (ids are random).
         tokio::time::advance(Duration::from_millis(1)).await;
 
         let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
@@ -1545,7 +1548,7 @@ mod r258_all_random {
         let two = active_profile(&app, "pin-two", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "spec-seed" })).await;
-        // R1989000 coin seats older ticket (R166). First enqueue aged 1 ms.
+        // R1989000's coin seats the older ticket (R166), so the first enqueue is aged 1 ms (ids are random).
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         let match_id = paired["matchId"].as_str().expect("a match id").to_string();
@@ -1819,9 +1822,8 @@ mod a_paired_match_whose_start_fails {
         let deck_b = save_deck_for(&app, "stranded-b", &second, "stranded-b's deck").await;
 
         enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
-        // The start fails at `matches.create`, and the start-failure cleanup's conditional
-        // clears fail too (R890000 renamed them from `profiles.setInMatch` to
-        // `profiles.clearInMatch`; both names are refused so the cleanup fails either way).
+        // The start fails at `matches.create`, and the cleanup's conditional clears (R890000) fail too:
+        // both `profiles.setInMatch` and `profiles.clearInMatch` are refused.
         record_calls(&mut *fake_lock(&app).await, |seen, method| {
             method == "matches.create"
                 || ((method == "profiles.setInMatch" || method == "profiles.clearInMatch")
@@ -1871,7 +1873,8 @@ mod a_paired_match_whose_start_fails {
         let trio_b = save_trio_for(&app, "series-b", None, "series-b's trio").await;
 
         enqueue_with(&app, &one, json!({ "mode": "bo3", "trioId": trio_a })).await;
-        // Rollback on failed start prevents stale 'picking' row blocking players (R264, R333).
+        // The claim won, `series.create` landed, then the start failed: without the rollback the 'picking'
+        // row would hold both players out of the queue (R264) until the pick deadline (R333).
         let calls = record_calls(&mut *fake_lock(&app).await, |seen, _method| {
             seen.last().is_some_and(|previous| previous == "series.create")
         });
@@ -1904,7 +1907,7 @@ mod a_paired_match_whose_start_fails {
     }
 }
 
-// One pair's failed start no longer ends the sweep or fails another player's enqueue
+// One pair's failed start does not end the sweep or fail another player's enqueue
 
 mod a_failed_start_does_not_end_the_sweep {
     use super::*;
@@ -2074,7 +2077,8 @@ mod a_failed_start_does_not_end_the_sweep {
 
 // R642 — the portrait on the ticket and the seat
 
-/// R642: Best-of-1 freezes deck portrait (§9.4, §9.8); All Random deals portrait from seed (R258).
+/// R642, the queue half: a Best-of-1 ticket freezes its deck's portrait (§9.4, §9.8), All Random deals
+/// each seat's from the match seed (R258), and the match row keeps them seat-ordered.
 mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
     use super::*;
 
@@ -2162,7 +2166,7 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let two = active_profile(&app, "rng-p2", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "portrait-seed" })).await;
-        // R1989000 coin seats older ticket (R166). First enqueue aged 1 ms.
+        // R1989000's coin seats the older ticket (R166), so the first enqueue is aged 1 ms (ids are random).
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         assert_eq!(paired["status"], "matched");
@@ -2197,7 +2201,10 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
 
 // R1834002 — the loadout the ticket freezes and the match keeps
 
-/// R1834002, R642: Best-of-1 ticket freezes deck cosmetic slots and portrait.
+/// R1834002, the queue half: a Best-of-1 ticket freezes its deck's slots with the deck (as R642 does its
+/// portrait), and the match row keeps each seat's loadout resolved as the match begins: the deck's pick,
+/// else the account's, else the default, plus the card picks of the cards its deck dealt. An All Random
+/// seat has no deck slots, so it wears the account's.
 mod r1834002_the_loadout_the_ticket_freezes {
     use super::*;
     use jackioh_server::cosmetics::{full_art_of, registry};
@@ -2281,7 +2288,8 @@ mod r1834002_the_loadout_the_ticket_freezes {
             json!({ "table": "table-wood", "field": "field-rain", "foil": "foil-rainbow" }),
         )
         .await;
-        // Deck card picks border; unowned full art obeys full-art switch.
+        // A card of the deck picks a border (one outside it too, which never freezes); the full art the
+        // account owns prints by the account's Full-art switch, on by default.
         pick(
             &app,
             &swapper,
@@ -2537,7 +2545,8 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
 
 // R253 — the real validator at enqueue
 
-/// Enqueue deck validation wiring (SPEC §8, R111).
+/// The production wiring (real §8 catalog, validator, R111's launch grant, `POST /api/queue`): no re-test
+/// of L1–L6, only that what the shared module refuses is refused at enqueue with its issues and no ticket.
 mod r253_what_may_be_queued_through_the_real_validator {
     use super::*;
 
@@ -2548,7 +2557,8 @@ mod r253_what_may_be_queued_through_the_real_validator {
         size: usize,
     }
 
-    /// The production wiring for one active profile that owns every card; the deck size is the engine config's (BUILD §2).
+    /// The production wiring for one active profile that owns every card; the deck size is the engine
+    /// config's (BUILD §2).
     async fn real_wiring() -> Real {
         let app = test_app().await;
         let token = active_profile(&app, "real", 1000.0).await;
@@ -2674,7 +2684,8 @@ mod r253_what_may_be_queued_through_the_real_validator {
         );
     }
 
-    /// R1705001: deck saved at earlier size is a draft; saving keeps it, queue refuses until filled.
+    /// R1705001: a deck saved at `EARLIER_DECK_SIZE` cards is a draft: saving keeps it (D2 is "at most"),
+    /// the queue refuses it under L2, naming it, until its player adds the cards; then it queues.
     #[tokio::test(start_paused = true)]
     async fn r1705001_a_saved_twenty_card_deck_saves_and_is_refused_at_queue_naming_it() {
         let w = real_wiring().await;
@@ -2915,7 +2926,8 @@ mod r890000_a_room_join_between_the_sweep_read_and_the_claim {
         let report = try_pair(&app).await.expect("a sweep");
         fake_lock(&app).await.before_call = None;
 
-        // Pair never started: 0 made, 1 failed start, tickets remain claimed.
+        // The pair never started: no match row, one failed start, `r89-a` still in the rival's room match;
+        // both tickets stay claimed.
         assert_eq!(report.made, 0);
         assert_eq!(report.failed.len(), 1);
         assert!(matches_table(&app).await.is_empty());

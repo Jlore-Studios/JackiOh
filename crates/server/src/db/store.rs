@@ -1,11 +1,11 @@
 //! The persistence port (SPEC §9.1, §9.2; `docs/v0.3.0/SURFACE.md` §4.3, §11.2, §11.3).
-//! Everything under `api` and `actor` reads and writes the database through the methods below and
-//! never through a driver, so the same handlers run against Postgres (`pg`) and against the
-//! in-memory fake (`fake`) that the unit tests and `E2E=1` use.
+//! Everything under `api` and `actor` reads and writes the database through the methods below, never
+//! through a driver, so the same handlers run against Postgres (`pg`) and against the in-memory fake
+//! (`fake`) that the unit tests and `E2E=1` use.
 //!
 //! No traits: `Db` and `Tx` are enums with one variant per implementation, and every store method is
-//! one method on `Tx`, named `<substore>_<method>`, whose body dispatches to `pg::<name>` or
-//! `fake::<name>`. A transaction is
+//! one method on `Tx`, named `<substore>_<method>`, dispatching to `pg::<name>` or `fake::<name>`. A
+//! transaction is
 //!
 //! ```ignore
 //! let mut tx = app.db.begin(Some(profile_id)).await?;
@@ -53,11 +53,10 @@ pub use jackioh_engine::wire::Pilot;
 /// `UpsertOutcome`, a `false`, a `None`) is never an error.
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
-    /// `results_insert`'s refusal of a second row for one match (§9.5), as its own variant so the
-    /// writer can tell it from a real failure. A transaction whose `results_get_by_match` ran before
-    /// a concurrent first writer committed only meets the duplicate here, and `results.rs` retries
-    /// on it and finds the row the winner wrote. Postgres raises it as `unique_violation` (23505) on
-    /// `results_pkey`. The field is the match id.
+    /// `results_insert`'s refusal of a second row for one match (§9.5), its own variant so the writer can
+    /// tell it from a real failure: a transaction whose `results_get_by_match` ran before a concurrent
+    /// first writer committed meets the duplicate only here, and `results.rs` retries and finds the
+    /// winner's row. Postgres: `unique_violation` (23505) on `results_pkey`. The field is the match id.
     #[error("result for match {0} is already recorded")]
     Duplicate(String),
     /// R776000: `matches_append_actions` was handed a seq the log already holds under another nonce, or
@@ -73,8 +72,8 @@ pub enum StoreError {
     /// The driver's own failure: a lost connection, a constraint, a function's `raise`.
     #[error(transparent)]
     Db(#[from] sqlx::Error),
-    /// Anything else: a row that does not read back as the port's shape ("expected a frozen trio
-    /// object"), or the fake's refusal of what Postgres would refuse by constraint ("duplicate match").
+    /// Anything else: a row that does not read back as the port's shape, or the fake's refusal of what
+    /// Postgres refuses by constraint.
     #[error("{0}")]
     Other(String),
 }
@@ -202,12 +201,10 @@ pub struct Profile {
     /// R1452: a person's profile, or a ladder bot's. Server-only, like the rating.
     #[serde(default)]
     pub kind: ProfileKind,
-    /// The managed-auth user id.
     pub user_id: String,
     pub email: String,
-    /// R1432, R1434: the username's base name, in its stored (NFKC) form: `Max` of `Max#3`. A new
-    /// account's is `Player` (`USERNAME_DEFAULT_BASE`). Only ever written through the username
-    /// routes; every read that shows a player joins it in from here (R1436).
+    /// R1432, R1434: the username's base name, stored NFKC-normalized (`Max` of `Max#3`); written only
+    /// through the username routes, and every read that shows a player joins it in from here (R1436).
     pub username_base: String,
     /// R1434: the key two base names clash on, `username::username_key` of the base.
     pub username_key: String,
@@ -372,17 +369,15 @@ pub struct CollectionEntry {
 pub struct CollectionGrant {
     pub profile_id: String,
     pub card_id: String,
-    /// The signed change this grant applied, not the resulting total — the
-    /// `collection_grants.delta` column, which is constrained `<> 0`. Named `delta` and not
-    /// `quantity` on purpose: `CollectionEntry.quantity` next door is an absolute total, and one
-    /// adapter reading the ledger as a total would double every grant.
+    /// The signed change this grant applied, not the resulting total (`collection_grants.delta`,
+    /// constrained `<> 0`). Not named `quantity`: `CollectionEntry.quantity` is an absolute total, and
+    /// an adapter reading the ledger as a total would double every grant.
     pub delta: i64,
     /// Constrained to a closed set in the schema: pack, craft, reward, refund, admin, launch, and
     /// dev (migration 0046, R1300000), which is written only with `dev` set.
     pub reason: String,
     /// §14.10: a row a dev tool wrote for a dev account itself (migration 0045's
-    /// `collection_grants.dev`). Written only when true, and absent reads as false, as every row
-    /// before it was.
+    /// `collection_grants.dev`). Written only when true; absent reads as false.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub dev: bool,
     pub at: i64,
@@ -657,15 +652,14 @@ pub struct MatchRow {
     /// The decks frozen into the tickets or the room (§9.4, §9.5).
     pub decks: (Vec<String>, Vec<String>),
     pub catalog_version: String,
-    /// R604: a match the queue paired (or a game of a series it paired) is ranked; a room
-    /// challenge is not. Only a ranked game moves a rating or a rank. Carried on `matches.ranked`
-    /// since migration 0022; the store reads a false flag back as an absent one.
+    /// R604: a match the queue paired (or a game of a series it paired) is ranked; a room challenge is
+    /// not. Only a ranked game moves a rating or a rank. The store reads a false flag back as an absent
+    /// one (`matches.ranked`, migration 0022).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ranked: Option<bool>,
-    /// R672: the mode a rematch was made in, written when the rematch is created (migration 0023).
-    /// Absent on every older row, whose mode `matches_mode_of` keeps deriving from its tickets,
-    /// room or series exactly as before — no creation site but the rematch and a match between two
-    /// bots (R1555000) writes this.
+    /// R672: the mode a rematch was made in (migration 0023), written when the rematch is created;
+    /// absent on older rows, whose mode `matches_mode_of` derives from tickets, room or series. Only
+    /// the rematch and a match between two bots (R1555000) write it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<QueueMode>,
     /// R672: a double-or-nothing rematch's stakes (migration 0023). Absent reads as 1, a normal
@@ -693,10 +687,9 @@ pub struct MatchRow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portraits: Option<(PortraitId, PortraitId)>,
     /// R1834002: the loadouts the seats froze as the match began, seat order like `decks`
-    /// (`matches.loadouts`, migration 0061). Cosmetic only, like `portraits`: sent in the `loadouts`
-    /// and `cardLoadouts` frames and on a replay's pages, never part of `PlayerView`, the log, a
-    /// replay hash or a game record. Absent on matches started before them, which read as
-    /// `Loadout::defaults`.
+    /// (`matches.loadouts`, migration 0061). Cosmetic only: sent in the `loadouts` and `cardLoadouts`
+    /// frames and on a replay's pages, never part of `PlayerView`, the log, a replay hash or a game
+    /// record. Absent before them, reading as `Loadout::defaults`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loadouts: Option<(Loadout, Loadout)>,
     /// R768: `hash_state` of the final state, written with the result (`matches_record_final_hash`,
@@ -886,9 +879,9 @@ pub struct ResultRow {
     pub rating_after: (f64, f64),
 }
 
-/// A profile's finished-match record, counted from `results`. A draw is a row with no winner — §9.5
-/// makes the ceiling, a mutual hero death and an accepted draw all winnerless — so wins + losses +
-/// draws is every match the profile has finished, and no separate "played" column is needed.
+/// A profile's finished-match record, counted from `results`. A draw is a row with no winner (the
+/// ceiling, a mutual hero death and an accepted draw, §9.5), so wins + losses + draws is every match
+/// the profile has finished.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileRecord {
@@ -1176,10 +1169,8 @@ pub struct NewBot {
 pub struct RatedSide {
     /// The player, or null for a bot (and for a player whose account was deleted since).
     pub profile_id: Option<String>,
-    /// The bot, or null for a player.
     pub bot_id: Option<String>,
     pub pilot: Pilot,
-    /// The hidden rating before and after the game.
     pub before: Glicko,
     pub after: Glicko,
     /// The visible rank before and after; null for a bot, which has none.
@@ -1209,7 +1200,6 @@ pub enum RatedReason {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RatedGameRow {
-    /// The match's id, or the series' id.
     pub id: String,
     pub kind: RatedGameKind,
     pub season_id: String,
@@ -1219,7 +1209,6 @@ pub struct RatedGameRow {
     pub sides: (RatedSide, RatedSide),
     /// The index of the side that won, or null for a draw.
     pub winner_side: Option<usize>,
-    /// How it ended: the match's reason, or the series' (R334).
     pub reason: RatedReason,
     pub ended_at: i64,
 }
@@ -1381,7 +1370,6 @@ pub struct ConsentRow {
     pub profile_id: String,
     /// When the age check passed, or `None` when the account never answered it.
     pub age_checked_at: Option<i64>,
-    /// The minimum age it was checked against, beside `age_checked_at`.
     pub age_min: Option<i32>,
     pub terms: Vec<TermsAcceptanceRow>,
 }
@@ -1573,10 +1561,9 @@ pub struct StartMatchInput {
     /// R604: true when the queue paired it, for the match row.
     pub ranked: bool,
     pub seats: (MatchSeat, MatchSeat),
-    /// R672: the mode a rematch is made in, carried onto the match row. Absent everywhere else:
-    /// the queue, the rooms and the series keep deriving the mode from what made the match
-    /// (`matches_mode_of`), and only a rematch and a match between two bots (R1555000) — which no
-    /// ticket, room or series made — state it.
+    /// R672: the mode a rematch is made in, carried onto the match row. Absent elsewhere: the mode is
+    /// derived from what made the match (`matches_mode_of`), and only a rematch and a match between
+    /// two bots (R1555000) — which no ticket, room or series made — state it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<QueueMode>,
     /// R672: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1.
@@ -1586,18 +1573,16 @@ pub struct StartMatchInput {
 
 // The store: Db (a pool or the fake's tables) and Tx (one transaction)
 
-/// Migration 0001 §8: `service_role` is the role the API server and the match actor hold. It is the
-/// only role granted EXECUTE on `app.redeem_invite_code`, `app.upsert_deck` and the rest, so running
-/// as it is not a formality — a call that gets it wrong fails with `insufficient_privilege` instead
-/// of succeeding because the connection happened to own the table.
+/// Migration 0001 §8: `service_role` is the role the API server and the match actor hold, and the
+/// only one granted EXECUTE on `app.redeem_invite_code`, `app.upsert_deck` and the rest, so a call
+/// that gets it wrong fails with `insufficient_privilege`.
 const ACTING_ROLE: &str = "service_role";
 
-/// One statement, two `SET LOCAL`s. `set_config(name, value, true)` is `SET LOCAL name = value`,
-/// and unlike `SET LOCAL` it takes parameters, so the profile id is bound rather than interpolated.
-/// `request.jwt.claim.sub` is the GUC `auth.uid()` reads (`tests/sql/00_supabase_stub.sql`).
-/// `service_role` bypasses RLS, but a policy, trigger or SECURITY INVOKER helper that consults the
-/// caller then sees the right profile. `SET LOCAL` is a silent no-op outside a transaction, so
-/// `Db::begin` is the only way to a `Tx`: `BEGIN` first, and no SQL runs outside a `Tx`.
+/// One statement, two `SET LOCAL`s: `set_config(name, value, true)` takes parameters, so the profile
+/// id is bound, not interpolated. `request.jwt.claim.sub` is the GUC `auth.uid()` reads
+/// (`tests/sql/00_supabase_stub.sql`); `service_role` bypasses RLS, but a policy, trigger or SECURITY
+/// INVOKER helper that consults the caller sees the right profile. `SET LOCAL` is a silent no-op
+/// outside a transaction, so `Db::begin` is the only way to a `Tx`.
 const SESSION_SQL: &str =
     "select set_config('role', $1, true), set_config('request.jwt.claim.sub', $2, true)";
 
@@ -1692,23 +1677,21 @@ impl Tx<'_> {
 
     /// SPEC §9.4's redemption, whole: one transaction over `profiles`, `invite_codes` and
     /// `code_attempts`; in Postgres one statement, `app.redeem_invite_code` (migration 0001 §6).
-    /// Steps 2 and 3's limits run in the database, not a handler (`config.rs` has the fake's copy;
-    /// `pg.rs`'s KNOWN DIVERGENCES, "redemption limits"). Steps 2 and 3 reject BEFORE step 4, so a
-    /// caller over the limit cannot pin their own counter by retrying, and a rejection is RETURNED,
-    /// never thrown, so step 4's attempt row is never rolled back. §9.4's "identical time" is R107's
-    /// response floor in `codes.rs`, not SQL's.
+    /// Steps 2 and 3's limits run in the database (`config.rs` has the fake's copy; `pg.rs`'s KNOWN
+    /// DIVERGENCES, "redemption limits") and reject BEFORE step 4, so a caller over the limit cannot
+    /// pin their own counter by retrying; a rejection is RETURNED, never thrown, so step 4's attempt
+    /// row is never rolled back. §9.4's "identical time" is R107's response floor in `codes.rs`.
     pub async fn redeem(&mut self, input: &RedeemInviteCodeInput) -> StoreResult<RedeemResult> {
         dispatch!(self, redeem(input))
     }
 
-    /// The retention purge (`api/retention.rs`): deletes `code_attempts` rows made before
-    /// `code_attempts_before` and the action log of every match that ended before
-    /// `match_actions_ended_before` (epoch ms), and the play telemetry of every match that ended
-    /// before `play_telemetry_ended_before` (R1442), and empties the detail of every game record
-    /// folded into the totals and written before `game_records_recorded_before`, keeping its id
-    /// (R1044001). Results, and so ratings, are kept. Answers how many rows of each went. In Postgres
-    /// this is `app.purge_expired_rows` (migration 0013, given its third cutoff by 0029 and its fourth
-    /// by 0041), the one path the append-only guard on `match_actions` lets a delete through.
+    /// The retention purge (`api/retention.rs`): deletes `code_attempts` made before
+    /// `code_attempts_before`, the action log of every match ended before `match_actions_ended_before`
+    /// (epoch ms), the play telemetry of every match ended before `play_telemetry_ended_before` (R1442),
+    /// and the detail of every folded game record written before `game_records_recorded_before`,
+    /// keeping its id (R1044001). Results, and so ratings, are kept. Answers how many rows of each
+    /// went. Postgres: `app.purge_expired_rows`, the one path the append-only guard on `match_actions`
+    /// lets a delete through.
     pub async fn purge_expired(&mut self, input: &RetentionPurgeInput) -> StoreResult<RetentionPurgeResult> {
         dispatch!(self, purge_expired(input))
     }
@@ -2313,11 +2296,10 @@ impl Tx<'_> {
 
     // ranked
 
-    /// Serializes season opens: `open_season_in_tx` takes it before reading `ranked_seasons()`, so
-    /// two opens racing in different transactions — even under different season ids — run one
-    /// after the other and the second sees the first's row (and never soft-resets off a snapshot
-    /// that predates it). Released when the transaction ends; a no-op where one process owns the
-    /// store.
+    /// Serializes season opens: `open_season_in_tx` takes it before reading `ranked_seasons()`, so two
+    /// opens racing in different transactions, even under different season ids, run one after the other
+    /// and the second sees the first's row (never soft-resetting off a snapshot that predates it).
+    /// Released when the transaction ends; a no-op where one process owns the store.
     pub async fn ranked_lock_seasons(&mut self) -> StoreResult<()> {
         dispatch!(self, ranked_lock_seasons())
     }
@@ -2818,7 +2800,7 @@ impl Tx<'_> {
     }
 }
 
-// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// Social: friends, presence, challenges, chat (#937, #938, #941)
 // SPEC S7 (migration 0038): friend requests, friendships, blocks, presence, challenges and chat,
 // and the spectator setting on the profile. The rules are `social/*`; these are their rows, and
 // the methods below the one `impl Tx` they need.
@@ -3193,8 +3175,7 @@ impl Tx<'_> {
         dispatch!(self, chat_reports_all())
     }
 }
-// ---- end Social ----
-// ---- Social: watching and shared replays (#939, #940) ----
+// Social: watching and shared replays (#939, #940)
 //
 // Migration 0038's `friendships`, `blocks` and `replay_shares`, as watching a friend's game (B50) and
 // sharing a replay with one (B52) read and write them. Its `profiles.allow_spectators` is not read
@@ -3259,4 +3240,3 @@ impl Tx<'_> {
         dispatch!(self, shares_by(match_id, sharer))
     }
 }
-// ---- end Social: watching and shared replays ----

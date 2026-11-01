@@ -3,15 +3,6 @@
 //! script of the issue existed. Every test names the behavior it proves (`b21_…` to `b36_…`); about
 //! half of them check a refusal, a fallback or a boundary. B37 (the AI's shadow ban) cannot be reached
 //! from this crate, which does not depend on `jackioh-ai`; the gap note says so.
-//!
-//!  - B21 Meteor deals 15 on both faces, its Radiant face trampling on to the hero (§6.3, R1848001).
-//!  - B22 Tmack Trav's extra attack after a kill on its Rush turn is never at the hero.
-//!  - B23, B24 ZolarKeth's University on its base face, and each University once a turn.
-//!  - B25 Going Long and Aluneth are no Quickdraw cards; B26 the five new costs.
-//!  - B27 Pestilent Slime spreads its counters one placement each; B28 Memory Leak's Crater.
-//!  - B29 Starfleet Commander; B30 Preemptive Strike; B31 Bob's Plan's Star Chart; B32 Star Chart.
-//!  - B33, B34 CN Tech's and NA Tech's fallbacks; B35 Fruit Launcher's Grapes.
-//!  - B36 the Resource and Faction tags.
 
 use jackioh_cards::{CATALOG, card_def, register_all};
 use jackioh_engine::testkit::*;
@@ -82,9 +73,7 @@ const RADIANT_STAR_CHART_NODES: i32 = 4;
 const RESOURCE_CARDS: usize = 6;
 const FACTION_CARDS: usize = 5;
 
-// ---------------------------------------------------------------------------------------------
 // Shared helpers
-// ---------------------------------------------------------------------------------------------
 
 /// p1's main phase on the harness's mid-game turn: each side as given, a Mr. Vanilla in hand and a
 /// library of them where the side names none; neither side's turn ends by itself (R82).
@@ -133,9 +122,7 @@ fn answer_first(s: &mut Scenario, player: PlayerId) {
     s.answer(json!(key));
 }
 
-// ---------------------------------------------------------------------------------------------
-// B21 Meteor
-// ---------------------------------------------------------------------------------------------
+// B21 Meteor deals 15 on both faces, its Radiant face trampling on to the hero (§6.3, R1848001)
 
 fn meteor_board(seed: &str, radiant: bool, p2_field: Value) -> Scenario {
     board(
@@ -227,9 +214,7 @@ fn b21_radiant_meteor_stops_at_a_neighbour_that_takes_the_whole_excess() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // B22 Tmack Trav
-// ---------------------------------------------------------------------------------------------
 
 /// p1 holds Tmack Trav; p2 has a Mr. Vanilla in lanes 1 and 2.
 fn tmack_board(seed: &str, radiant: bool) -> Scenario {
@@ -240,7 +225,6 @@ fn tmack_board(seed: &str, radiant: bool) -> Scenario {
     )
 }
 
-/// The targets `legal_actions` offers `attacker` now.
 fn attack_targets(s: &Scenario, attacker: &CardInstance) -> Vec<String> {
     legal_actions(s.state(), P1)
         .into_iter()
@@ -314,9 +298,7 @@ fn b22_tmack_on_a_later_turn_may_send_its_extra_attack_at_the_hero() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B23, B24 ZolarKeth and its Universities
-// ---------------------------------------------------------------------------------------------
 
 fn activations_listed(s: &Scenario, card: &CardInstance) -> usize {
     legal_actions(s.state(), P1)
@@ -578,9 +560,7 @@ fn b24_a_new_turn_gives_each_university_its_use_back() {
     });
 }
 
-// ---------------------------------------------------------------------------------------------
 // B25 Going Long and Aluneth are no Quickdraw cards
-// ---------------------------------------------------------------------------------------------
 
 /// 24 plain Core cards, none Quickdraw and none cast on draw: with one more card, a deck.
 const PLAIN_DECK: [&str; 24] = [
@@ -627,9 +607,7 @@ fn b25_aluneth_is_not_dealt_into_the_opening_hand() {
     not_dealt_by_setup(ALUNETH);
 }
 
-// ---------------------------------------------------------------------------------------------
 // B26 the costs
-// ---------------------------------------------------------------------------------------------
 
 /// Each card, the face its play is tested on (Memory Leak's Radiant face asks no "Choose one."), and
 /// its new cost.
@@ -657,7 +635,6 @@ fn b26_the_catalog_prints_the_new_costs() {
     }
 }
 
-/// The plays `legal_actions` lists for p1's copy of `card` in hand.
 fn plays_listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
     let held = s.card(card).id.clone();
     legal_actions(s.state(), P1)
@@ -697,9 +674,7 @@ fn b26_exactly_the_new_cost_plays_it() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B27 Pestilent Slime
-// ---------------------------------------------------------------------------------------------
 
 /// p1's Pestilent Slime in lane 1 holding `plague` counters, then `field` and `backrow`; p2's Mr.
 /// Vanilla in lane 1, which the Slime attacks and dies to.
@@ -741,7 +716,6 @@ fn plague_on_field(s: &Scenario, player: PlayerId) -> i32 {
     permanents(s, player).iter().map(plague_of).sum()
 }
 
-/// The Plague Counter placements in `events`, each as the number it placed.
 fn placements(events: &[GameEvent]) -> Vec<i32> {
     events
         .iter()
@@ -869,9 +843,7 @@ fn b27_with_no_counters_nothing_is_placed() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B28 Memory Leak's Crater
-// ---------------------------------------------------------------------------------------------
 
 /// Memory Leak from p1's hand into backrow lane 2, by the play `legal_actions` lists for that zone (the
 /// base face's "Choose one." included), any prompt the play opens answered with its first option.
@@ -957,9 +929,7 @@ fn b28_memory_leak_locks_no_other_zone() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B29 Starfleet Commander, B30 Preemptive Strike
-// ---------------------------------------------------------------------------------------------
 
 /// p1's AP Rounds attacks p2's Genn and dies, so p1 has a Dormant Starship; p1 holds `hand`.
 fn with_dormant_starship(seed: &str, hand: Value) -> (Scenario, String) {
@@ -1133,9 +1103,7 @@ fn b30_preemptive_strike_never_launches_the_opponents_dormant_starship() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // B31 Bob's Plan
-// ---------------------------------------------------------------------------------------------
 
 fn bobs_plan(seed: &str, radiant: bool) -> Scenario {
     let mut s = board(
@@ -1189,9 +1157,7 @@ fn b31_aestheticize_the_game_keeps_its_discover_and_gets_no_star_chart() {
     assert!(hand_of(&s, STAR_CHART).is_empty());
 }
 
-// ---------------------------------------------------------------------------------------------
 // B32 Star Chart
-// ---------------------------------------------------------------------------------------------
 
 /// p1 holds a Star Chart and has `mana`; p2's hero at 100, so no node's damage ends the game.
 fn chart_board(seed: &str, radiant: bool, mana: i32) -> Scenario {
@@ -1315,11 +1281,8 @@ fn b32_star_chart_plays_at_no_mana_and_its_travels_cost_none() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B33 CN Tech, B34 NA Tech
-// ---------------------------------------------------------------------------------------------
 
-/// A win-rate table of `(id, wins, games)` rows.
 fn win_rates(rows: &[(&str, i32, i32)]) -> WinRateTable {
     WinRateTable {
         cards: rows
@@ -1477,9 +1440,7 @@ fn b34_na_tech_with_both_ends_named_fuses_them() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // B35 Fruit Launcher
-// ---------------------------------------------------------------------------------------------
 
 /// p1's Fruit Launcher (lane 1) activated at p1's Mr. Vanilla (lane 2), by the activation
 /// `legal_actions` lists for that target; the definitions cast in that step, in order.
@@ -1544,9 +1505,7 @@ fn b35_fruit_launcher_casts_nothing_but_a_fruit_of_a_set_that_ships() {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B36 the Resource and Faction tags
-// ---------------------------------------------------------------------------------------------
 
 const RESOURCES: [&str; 6] = [
     "stinkyscape-t-reknite",

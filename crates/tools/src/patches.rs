@@ -1,13 +1,29 @@
-//! `cargo jackioh patches`: card patch history (B4.2, R388, R646, R1366000), managing pending
-//! fragments, checks, and promotions under `crates/cards/patches/` (SURFACE §12, §4.2, R1371000).
+//! `cargo jackioh patches`: the card patch history (B4.2, R388, R646, R1366000), with several patches
+//! in flight at once: pending fragments, the check that proves them, and the promotion that ships
+//! them, in ship order, each named by its tier. The files live under `crates/cards/patches/` beside
+//! `crates/cards/catalog.json`. Surface contract: docs/v0.3.0/SURFACE.md §12.
 //!
-//! Subcommands:
-//! - `<title>`: adds pending fragment (`pending/<slug>.json`) with title, cards, notes, and player note (R724001).
-//! - `check`: validates fragments against catalog changes, player note rules, win-rates (R1329000), and technical log (R1369000).
-//! - `ship`: promotes fragments in commit order, snapshots catalog, tiers via classifier (R1365000, R2455000),
-//!   names version (R1366000), writes win rates (R1329000) and card metrics (R2173000), and updates `shipped.json`.
+//! ```text
+//! cargo jackioh patches "<title>" \
+//!   [--source "<issue, PR, commits>"] [--notes "<what changed>"] [--cards <id,...>] [--plays <id,...>] [--rule]
+//! cargo jackioh patches check
+//! cargo jackioh patches ship
+//! cargo jackioh patches retcon [--dry-run] [--records <dir>...]   # the version retcon: retcon.rs (R1371000)
+//! ```
 //!
-//! Dates derive from git commits rather than system clock (CLAUDE.md rule 4).
+//! A branch that changes `catalog.json`, or a card's play some other way, adds one fragment,
+//! `pending/<slug>.json`, with no version: `ship` names it from the patch's tier (R1366000). Its `plays`
+//! and `rule` (R2455000) are never set from the diff, since only the classifier's second stage
+//! (R1365000) tells a refactor from a change. Branches never edit `patches.json`, the snapshots, the
+//! tables under `win_rates/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an entry
+//! that differs from the newest shipped snapshot without exactly one fragment's claim or is claimed and
+//! does not, a `plays` id that is no shipped card, a fragment that claims nothing or leaves its title,
+//! sources or notes empty (R388), a player note that breaks the note rules (R724001), a win-rate table
+//! moved without exactly one claim or claimed unmoved (R1329000), and a technical log out of shape
+//! (R1369000); a changed script needs no claim, the pull request's `classify` check holds that. `ship`
+//! needs full history (`fetch-depth: 0`); `patches-ship.yml` runs it after every merge that touches
+//! `pending/`. No clock (CLAUDE.md rule 4): dates come from the git history. Each of `js`, `patch`,
+//! `patches_io` and `versions` keeps its module (SURFACE §4.2); some functions have only test callers.
 #![allow(dead_code)]
 
 use std::fmt;
@@ -53,7 +69,10 @@ pub(crate) mod js {
     /// A JSON object, keys in the order the text wrote them.
     pub type Object = IndexMap<String, Json>;
 
-    /// JSON value preserving object key insertion order for byte-for-byte catalog comparison (SURFACE §2).
+    /// A JSON value whose objects keep insertion order: serde_json's `Value` sorts keys (no
+    /// `preserve_order`, SURFACE §2), but the patch history compares catalog entries byte for byte, key
+    /// order included. A repeated key keeps its first place and last value; numbers are doubles. `==`
+    /// ignores key order; `stringify` equality does not.
     #[derive(Clone, Debug, PartialEq)]
     pub enum Json {
         Null,
@@ -378,7 +397,11 @@ pub(crate) mod js {
 
 /* patch */
 
-/// Files carrying catalog version (B4.2, R388, R646, R650, SURFACE §11.3), bumped by `patches ship`.
+/// Every file that carries the catalog version (B4.2, R388, R646), and how to rewrite it there:
+/// `patches ship` bumps them to the newest shipped patch, and the patch tests hold them to it. Every
+/// binary compiles the version in from `patches.json` (SURFACE §11.3); the string lives on only in the
+/// server's `.env.example`, `render.yaml` (which the server checks against its own at boot) and, when
+/// the web build names it, `apps/web/.env.production`'s `VITE_CATALOG_VERSION`.
 pub mod patch {
     use std::fs;
     use std::path::Path;
@@ -595,8 +618,23 @@ pub mod patch {
 
 /* patches_io */
 
-/// Card patch history files (B4.2, R388, R646, R724001, R105, CLAUDE.md rule 4):
-/// `patches.json`, `<version>.json` snapshots, `index.json`, `shipped.json`, and `pending/`.
+/// The card patch history on disk (B4.2, R388, R646): `crates/cards/patches/`.
+///
+/// ```text
+///   patches.json       every shipped patch in ship order: { version, date, title, source, notes,
+///                      player, changes }; `player` is what players read (R724001)
+///   <version>.json     the whole catalog as that patch left it (a snapshot, not a diff)
+///   index.json         GENERATED: for each card id, the versions in which it was added or changed
+///   shipped.json       every shipped patch's { version, commit, blob }: the commit that shipped it
+///                      and its snapshot file's git blob hash, so the workflow writes data, not source
+///   pending/           one fragment per patch being built: { version, title, sources, notes, player,
+///                      cards }
+/// ```
+///
+/// The order of patches is `patches.json`'s and nothing else: a version is an opaque string, compared
+/// for equality only and never parsed or sorted (R105, R388). `changes` and `index.json` are derived
+/// from the snapshots (`rebuild_derived`), and shipped snapshots are never amended. I/O lives in the
+/// tools (CLAUDE.md rule 4); the patch tests read the same files through these.
 pub mod patches_io {
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -1040,11 +1078,6 @@ pub mod patches_io {
         Ok(next)
     }
 
-    // Pending fragments and the shipped list (R646): several card patches are built on separate branches
-    // at once, so branches never edit `patches.json`, the snapshots or the shipped list. A branch adds one
-    // fragment claiming the catalog ids its patch touches; `patches check` proves the claims and `patches
-    // ship` promotes each fragment in ship order after it merges.
-
     /// A patch not yet shipped: what it does, and what it claims. No version: `patches ship` names
     /// it from the patch's tier (R1366000).
     #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
@@ -1468,10 +1501,8 @@ pub mod patches_io {
 /// - a **micro** (anything smaller) is the newest version with the next letter: after v0.3.17 it is
 ///   v0.3.17b, after v0.3.17b v0.3.17c.
 ///
-/// No title, flag or label names a tier (R1365000). This is the one place a version string is
-/// read, and only here, when a patch ships: R105 still holds everywhere else, where a version is
-/// compared for equality and never parsed or ordered, and later readers read the `tier` recorded
-/// beside it.
+/// No title, flag or label names a tier (R1365000). This is the one place a version string is read,
+/// when a patch ships; R105 holds everywhere else, and later readers read the `tier` recorded beside it.
 pub mod versions {
     use anyhow::{Context as _, bail};
 
@@ -1542,7 +1573,7 @@ pub struct PatchPaths {
     pub win_rates: PathBuf,
 }
 
-/// Every patches path under one root, so tests promote a fixture repo instead of this one.
+/// The `PatchPaths` under `repo_root`.
 pub fn patch_paths(repo_root: &Path) -> PatchPaths {
     let dir = repo_root.join(PATCHES_REL);
     PatchPaths {
@@ -1644,7 +1675,11 @@ pub struct FragmentArgs {
     pub player: Option<PlayerNote>,
 }
 
-/// Writes or updates pending fragment `pending/<slug>.json` (R1366000, R724001, R1329000).
+/// Writes (or updates) the fragment `pending/<slug>.json` after its title (R1366000). `cards` defaults
+/// to every catalog id that differs from the newest shipped snapshot; `player`, `plays` and `rule` to
+/// what the fragment holds, or an empty note for `patches check` to name (R724001). It claims the
+/// win-rate table when its rows differ from the newest shipped version's and no other fragment does
+/// (R1329000).
 pub fn write_fragment(repo_root: &Path, args: &FragmentArgs) -> anyhow::Result<NamedFragment> {
     let paths = patch_paths(repo_root);
     let patches = read_patches(&paths.patches_json)?;
@@ -1738,7 +1773,10 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     Ok(problems)
 }
 
-/// R767000: verifies shipped versions compiled into binary have snapshots, scripts, and win rates (R1329000).
+/// R767000: every shipped version but the newest is carried by the cards compiled into this binary,
+/// each with its snapshot's definitions in order, a script for every card and its `win_rates/<version>.json`
+/// table (the empty one with no file, R1329000), so a replay of a game played on it folds under its own
+/// cards. The problems, or [] when all are whole. Only `patches check` on this repository calls it.
 pub fn check_carried(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
     let versions: Vec<String> = read_patches(&paths.patches_json)?
         .into_iter()
@@ -1967,12 +2005,11 @@ pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
 }
 
 /// R1366000: a patch's tier and the families that play differently in it, from the snapshot before it
-/// and its own, each with the sets its cards belong to, and the fragment's `plays` and `rule`
-/// (`classify::read_diff` and `classify::classify`, R1365000). The claims were confirmed against the
-/// base build by the pull request's `classify` check, so they count as stage 2's. A patch that
-/// changes no card (the win-rate table alone, R1329000, or how cards look, R2529000) is a micro: every
-/// patch bumps the version. R2529000: a fragment claiming a system the owner names is a patch
-/// whatever its cards earn, and the third value says whether the system alone made it one.
+/// and its own (each with its cards' sets) and the fragment's `plays` and `rule` (`classify::read_diff`,
+/// `classify::classify`, R1365000), which count as stage 2's: the pull request's `classify` check
+/// confirmed them. A patch that changes no card (the win-rate table alone, R1329000, or how cards look,
+/// R2529000) is a micro: every patch bumps the version. A fragment claiming a system the owner names is
+/// a patch whatever its cards earn (R2529000); the third value says whether the system alone made it one.
 fn tier_of(previous: &Catalog, snapshot: &Catalog, fragment: &PendingFragment) -> (Tier, Vec<String>, bool) {
     tier_among(previous, snapshot, fragment, classify::SYSTEM_RELEASES)
 }
@@ -2041,7 +2078,13 @@ fn with_claims(previous: &Catalog, current: &Catalog, claims: &[String]) -> Cata
     snapshot
 }
 
-/// Promotes pending fragments to shipped patches in first-parent commit order (R646, R1329000, R1366000).
+/// Promotes every pending fragment to a shipped patch in the order of the first-parent commit that
+/// added it (ship order, R646), dated by that commit. Its snapshot is the patch before it with the cards
+/// it claims as `catalog.json` holds them now (`with_claims`), its win-rate table `data/win_rates.json`
+/// when it claims the table and the patch before it's otherwise (R1329000), and its version is named
+/// from its tier (`tier_of`, `versions::name_by_tier`, R1366000). Idempotent. Since `check` passes, a
+/// claimed card changed again after its fragment merged, a fragment edited to claim more, or two
+/// fragments one commit added all ship: what a fragment claims is what its patch ships.
 pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let paths = patch_paths(repo_root);
     let files = read_fragments(&paths.pending_dir)?;
@@ -2090,7 +2133,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         bail!("patches.json holds no shipped patch");
     };
     let mut newest_name = newest.version.clone();
-    // R646, R1280000: each snapshot applies claimed cards from `catalog.json` onto previous patch.
+    // R646, R1280000: the claims, which `check` proves cover every change once, build the history
+    // whatever happened to a fragment after its commit. The last snapshot is `catalog.json` itself.
     let file = fs::read_to_string(&paths.catalog)
         .with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
     let current_text =
@@ -2448,8 +2492,8 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `cargo jackioh patches …` (SURFACE §12). The arguments go to `patches.ts`'s own parser as it read
-/// them, so `check`, `ship` and the fragment form share one positional list.
+/// `cargo jackioh patches …` (SURFACE §12). The arguments go to the command's own parser, so `check`,
+/// `ship` and the fragment form share one positional list.
 #[derive(clap::Args)]
 pub struct Args {
     /// `"<title>" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule]`, or `check`, or `ship`.
@@ -2540,8 +2584,6 @@ mod tests {
                 assert_eq!(name_by_tier(Tier::Major, "v0.9.2").unwrap(), "v0.10.0");
             }
 
-            // R2204000: a set wrapped into the current line ships as a patch of it, v0.5.0 then v0.5.1,
-            // while an unwrapped set still opens the next line.
             #[test]
             fn r2204000_a_wrapped_set_is_named_within_the_line_and_an_unwrapped_one_opens_the_next() {
                 use crate::patches::patches_io::{Catalog, PendingFragment};
@@ -2573,9 +2615,8 @@ mod tests {
                 assert_eq!(name_by_tier(tier, "v0.5.0").unwrap(), "v0.6.0");
             }
 
-            // R2529000: a fragment claiming only how cards look ships as a micro; one claiming a system
-            // the owner names ships as a patch, recorded as the system's alone, unless its cards earn
-            // a patch by themselves; and a system no one named is refused.
+            // A system's patch is recorded as the system's alone unless its cards earn a patch by
+            // themselves, and a system no one named is refused.
             #[test]
             fn r2529000_card_looks_ship_as_a_micro_and_a_named_system_as_a_patch() {
                 use crate::patches::patches_io::{
@@ -2676,10 +2717,7 @@ mod tests {
         }
     }
 
-    // R646: several card patches are built at once, so branches add a pending fragment under
-    // `patches/pending/` instead of editing the history. The pure rules are proved here on fixtures;
-    // the promotion is proved below on a throwaway git repo that replays the acceptance scenario
-    // (v0.2.5 landing before v0.2.0).
+    // R646: the pure rules are proved here on fixtures, the promotion below on a throwaway git repo.
     mod patches_ship_test {
         use indexmap::IndexSet;
 
@@ -2795,8 +2833,7 @@ mod tests {
                 );
             }
 
-            // R1366000: a fragment names no version, and one an older build wrote with a version is
-            // read and checked like any other, its version ignored.
+            // One an older build wrote with a version is checked like any other, its version ignored.
             #[test]
             fn r1366000_check_asks_no_version_of_a_fragment() {
                 let newest = catalog_of(vec![card("aaa", 1)]);
@@ -2828,9 +2865,7 @@ mod tests {
                 );
             }
 
-            // R1366000: a patch changes a card, a card's play, a rule or the win-rate table. A fragment
-            // that claims a card's play or a rule with no catalog change is a patch; one that claims
-            // nothing is refused.
+            // A fragment that claims only a card's play or a rule, with no catalog change, is a patch.
             #[test]
             fn r646_r1366000_refuses_a_fragment_that_claims_nothing() {
                 let newest = catalog_of(vec![card("aaa", 1)]);
@@ -2862,8 +2897,7 @@ mod tests {
                 );
             }
 
-            // R1329000: the win-rate table ships with the one fragment that claims it, exactly when its
-            // rows differ from the newest shipped version's, and that claim alone makes a patch.
+            // The table's claim alone makes a patch, too.
             #[test]
             fn r1329000_holds_the_win_rate_table_to_one_claim_exactly_when_its_rows_changed() {
                 let newest = catalog_of(vec![card("aaa", 1)]);
@@ -2897,7 +2931,6 @@ mod tests {
                 assert_eq!(check_table(&[], false, &newest), Vec::<String>::new());
             }
 
-            // R1366000: a fragment's file is its title's slug, without the `Patch …:` prefix.
             #[test]
             fn r1366000_names_a_fragment_after_its_titles_slug() {
                 assert_eq!(
@@ -2988,9 +3021,8 @@ mod tests {
             }
         }
 
-        // R724001: a fragment carries the note players read of its patch, and `patches check`
-        // holds it to one they can read: a title, at least one line, and no ruling, issue or card
-        // number, §, blank line or overlong line.
+        // R724001: `patches check` holds a fragment's player note to one players can read: a title, a
+        // line, and no ruling, issue or card number, §, blank line or overlong line.
         mod r724001_player_notes {
             use super::*;
 
@@ -3231,7 +3263,7 @@ mod tests {
                 card
             }
 
-            // R1420: unshipped sets are excluded from patch snapshots until they ship.
+            // The reserved Boss set, which `SHIPPED_SETS` does not list, stands in for a held set.
             #[test]
             fn r1420_ships_the_catalog_without_the_cards_of_a_set_that_has_not_shipped() {
                 let temp = TempDir::new("jackioh-ship-unshipped-");
@@ -3311,8 +3343,6 @@ mod tests {
                 );
             }
 
-            // R1437000: a patch reads the catalog without its flavors, as without a held set's cards
-            // (R1420).
             #[test]
             fn r1437000_a_patch_reads_the_catalog_without_its_flavors() {
                 let base = cards(2);
@@ -3377,8 +3407,7 @@ mod tests {
                 );
             }
 
-            // R1178000: the Meditative+ set is the next held set: a patch reads the catalog without its
-            // cards, and claims none of them, until its release (#1187) lists it in `SHIPPED_SETS`.
+            // R1178000: until its release (#1187) lists the set in `SHIPPED_SETS`.
             #[test]
             fn r1178000_a_patch_reads_the_catalog_without_the_meditative_plus_set_until_it_ships() {
                 use jackioh_engine::wire::{SetName, set_ships};
@@ -3398,8 +3427,7 @@ mod tests {
                 }
             }
 
-            // R1857000: the Stinkyscape set is the third held set: a patch reads the catalog without
-            // its cards, and claims none of them, until its release (#1884) lists it in `SHIPPED_SETS`.
+            // R1857000: until its release (#1884) lists the set in `SHIPPED_SETS`.
             #[test]
             fn r1857000_a_patch_reads_the_catalog_without_the_stinkyscape_set_until_it_ships() {
                 use jackioh_engine::wire::{SetName, set_ships};
@@ -3420,7 +3448,8 @@ mod tests {
                 }
             }
 
-            // Scenario: fragments ship oldest merge first, each snapshotting catalog (R1366000).
+            // The issue's acceptance scenario: A's fragment changes aaa, B's bbb, B merges after A with no
+            // conflict under pending/, and each ships as a micro after the one before: v0.1.1b, v0.1.1c.
             #[test]
             fn r646_r1366000_ships_pending_fragments_oldest_merge_first_snapshotting_each_merges_catalog() {
                 let temp = TempDir::new("jackioh-ship-");
@@ -3679,8 +3708,7 @@ mod tests {
                 );
             }
 
-            // A micro (R1366000) is named after the then-newest patch with the next letter: the first
-            // ships as v0.1.1b, the next as v0.1.1c, each snapshot carrying only its card.
+            // The first ships as v0.1.1b, the next as v0.1.1c, each snapshot carrying only its card.
             #[test]
             fn r1366000_names_a_micro_after_the_then_newest_patch_when_it_ships() {
                 let temp = TempDir::new("jackioh-ship-micro-");
@@ -3902,8 +3930,7 @@ mod tests {
                     .unwrap_or_else(|| panic!("{version} shipped"))
             }
 
-            // R1366000: two fragments pending at once ship in merge order, each named by its own tier:
-            // three cards are a micro, the next letter; twelve a patch, the next X.
+            // Three cards are a micro, the next letter; twelve a patch, the next X.
             #[test]
             fn r1366000_ships_each_pending_fragment_by_its_own_tier_in_merge_order() {
                 let bar = crate::classify::PATCH_MIN_CARDS;
@@ -3951,7 +3978,6 @@ mod tests {
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.2b"]));
             }
 
-            // R1366000: wording alone is a micro however many cards it touches.
             #[test]
             fn r1366000_ships_wording_on_twelve_cards_as_a_micro() {
                 let base = cards(12);
@@ -3970,8 +3996,7 @@ mod tests {
                 assert_eq!((micro.tier, micro.plays), (Some(Tier::Micro), Some(Vec::new())));
             }
 
-            // R1366000, R1420: a fragment that claims the cards of a set this change ships (a set its
-            // patch's snapshot holds and the one before it does not) ships as the next Z.
+            // A set this change ships: one its patch's snapshot holds and the one before it does not (R1420).
             #[test]
             fn r1366000_ships_the_cards_of_a_set_that_now_ships_as_the_next_z() {
                 let base = catalog_of(vec![
@@ -4005,9 +4030,8 @@ mod tests {
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.0b"]));
             }
 
-            // R1366000: a fragment whose `plays` names `PATCH_MIN_CARDS` cards whose scripts changed,
-            // with no catalog change, ships as a patch; one claiming a rule every game meets does too;
-            // one claiming a single card's play is a micro.
+            // `PATCH_MIN_CARDS` cards whose scripts changed with no catalog change make a patch, as does a
+            // rule every game meets; a single card's play is a micro.
             #[test]
             fn r1366000_ships_the_bar_of_cards_claimed_through_their_play_as_a_patch() {
                 let bar = crate::classify::PATCH_MIN_CARDS;
@@ -4051,9 +4075,8 @@ mod tests {
                 assert_eq!(shipped_patch(&dir, "v0.1.3b").plays, Some(ids(bar + 1, bar + 2)));
             }
 
-            // R1366000: the old form, `patches <version> [date] "<title>"`, still writes a fragment, its
-            // version and date ignored, named after its title; and a fragment an older build wrote, with
-            // a version in it and named after it, still checks and ships by its tier.
+            // Its version and date are ignored, and a fragment an older build wrote, with a version in it
+            // and named after it, still checks and ships by its tier.
             #[test]
             fn r1366000_the_old_command_form_still_writes_a_valid_fragment() {
                 let base = cards(3);
@@ -4200,8 +4223,7 @@ mod tests {
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
 
-            // A fragment edited after its commit to claim one more card, and two fragments one commit
-            // added: each ships what it claims, the two in the order of their files.
+            // Each ships what it claims, the two one commit added in the order of their files.
             #[test]
             fn r646_r1280000_ships_a_fragment_that_grew_and_two_fragments_one_commit_added() {
                 let base = catalog_of(vec![card("aaa", 1), card("bbb", 1), card("ccc", 1)]);
@@ -4391,7 +4413,6 @@ mod tests {
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
 
-            // R1329000: a table no fragment claims stops the promotion before anything is written.
             #[test]
             fn r1329000_ships_nothing_while_no_fragment_claims_a_changed_table() {
                 let base = catalog_of(vec![card("aaa", 1)]);
@@ -4654,8 +4675,8 @@ mod tests {
         }
     }
 
-    // R388 (B4.2): card patches are data, ordered by `patches.json` with opaque versions (R105).
-    // Multiple patches built at once via pending fragments (R646).
+    // R388 (B4.2): card patches are data, in `patches.json`'s order; a version is opaque (R105), and
+    // several patches are built at once as pending fragments (R646).
     mod patches_test {
         use indexmap::{IndexMap, IndexSet};
 
@@ -5357,7 +5378,6 @@ mod tests {
                 assert_eq!(changed_fields(&face(1, ""), &face(1, "")), Vec::<String>::new());
             }
 
-            // R1437000: a flavor is display only, so a change to it alone changes no field.
             #[test]
             fn r1437000_changed_fields_leaves_out_a_flavor() {
                 let card = |flavor: Option<&str>, cost: i32| -> Object {

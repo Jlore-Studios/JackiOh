@@ -34,22 +34,18 @@ use crate::spec::is_ident_char;
 
 // The engine's `ALL` lists are the unions themselves, so they are exhaustive by construction.
 
-/// `CARD_TYPES`.
 fn card_types() -> Vec<&'static str> {
     CardType::ALL.iter().map(|each| each.as_str()).collect()
 }
 
-/// `TAGS`.
 fn tags() -> Vec<&'static str> {
     Tag::ALL.iter().map(|each| each.as_str()).collect()
 }
 
-/// `RARITIES`.
 fn rarities() -> Vec<&'static str> {
     Rarity::ALL.iter().map(|each| each.as_str()).collect()
 }
 
-/// `SET_NAMES`.
 fn set_names() -> Vec<&'static str> {
     SetName::ALL.iter().map(|each| each.as_str()).collect()
 }
@@ -97,7 +93,7 @@ fn texts(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| (*item).to_string()).collect()
 }
 
-/// `SETS`: the census's sets (`jackioh_cards::census`, where each set's counts are written once, #2581).
+/// The census's sets (`jackioh_cards::census`, where each set's counts are written once, #2581).
 fn sets() -> Vec<SetExpectation> {
     CENSUS
         .iter()
@@ -121,7 +117,6 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
     out
 }
 
-/// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
 fn expected_tag_counts() -> Vec<(&'static str, usize)> {
     Tag::ALL
         .iter()
@@ -152,7 +147,6 @@ fn fail(failures: &mut Vec<String>, at: &str, message: &str) {
 /// "T-AI-1" → "classicplus-t-ai-01" (a shared token's trailing number is two digits).
 fn id_for_index(segment: &str, index: &str) -> String {
     if index.starts_with("T-") {
-        // index.toLowerCase().replace(/-(\d+)$/, (_, n) => `-${n.padStart(2, "0")}`)
         let lower = index.to_lowercase();
         let name = match lower.rfind('-') {
             Some(cut) if js::is_digits(&lower[cut + 1..]) => {
@@ -183,7 +177,6 @@ fn describe(value: Option<&Json>) -> String {
     }
 }
 
-/// `Number.isInteger(value)` on a value that may be missing.
 fn is_int(value: Option<&Json>) -> bool {
     value.is_some_and(Json::is_integer)
 }
@@ -1791,7 +1784,6 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
 }
 
-/// `catalog check`: validate-catalog's verdict.
 fn run_check() -> anyhow::Result<()> {
     let catalog_path = repo_root().join("crates/cards/catalog.json");
     let text =
@@ -1862,7 +1854,7 @@ fn run_check() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// `catalog-version`: the newest patch, with no newline, as `process.stdout.write` printed it.
+/// `catalog-version`: the newest patch, with no newline.
 pub fn run_version(args: VersionArgs) -> anyhow::Result<()> {
     let path = args
         .path
@@ -1932,8 +1924,7 @@ mod tests {
 
     #[test]
     fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
-        // Since its release (#1187) its entries count toward the totals, and none is held apart: the
-        // entries held apart are a held set's alone (R1857000's Stinkyscape, while it is held).
+        // Since its release (#1187) its entries count toward the totals; only a held set's are held apart.
         let shipped = check_catalog(&shipped_catalog());
         assert_eq!(shipped.failures, Vec::<String>::new());
         let held = shipped_catalog()
@@ -1949,11 +1940,9 @@ mod tests {
             })
             .count();
         assert_eq!(shipped.unshipped_count, held);
-        // Stinkyscape ships, so leaving it out holds no more apart: only the held Training Grounds set
-        // is (R2194000).
+        // Stinkyscape ships, so leaving it out holds no more apart: only Training Grounds is (R2194000).
         assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, held);
 
-        // Its census's counts, which the failures below name.
         let rarity = |name: &str| {
             CENSUS
                 .iter()
@@ -2039,8 +2028,7 @@ mod tests {
         Json::Object(entry)
     }
 
-    /// The shipped catalog without any Stinkyscape entry: the catalog as #1857's foundation found it,
-    /// whichever of the set's entries have landed since.
+    /// The shipped catalog without any Stinkyscape entry (#1857).
     fn without_stinkyscape() -> Object {
         let mut catalog = shipped_catalog();
         catalog.retain(|_, value| {
@@ -2063,8 +2051,7 @@ mod tests {
             .into_iter()
             .find(|set| set.set == "Stinkyscape")
             .expect("the catalog holds the Stinkyscape set");
-        // R1857001's shape: 177 cards (175 until #2521), the Dormant Starship, 30 tokens the cards
-        // define and 22 shared.
+        // R1857001's shape: 177 cards, the Dormant Starship, 30 tokens the cards define and 22 shared.
         assert_eq!(
             (
                 expectation.cards,
@@ -2115,7 +2102,6 @@ mod tests {
         assert_eq!(totals(&report), totals(&bare));
         assert_eq!(report.unshipped_count, bare.unshipped_count + 4);
 
-        // No rarity passes its ceiling: a 42nd Common is refused while the set is built.
         let mut commons = without_stinkyscape();
         for n in 1..=42 {
             let id = format!("stinkyscape-{n:03}");
@@ -2126,7 +2112,6 @@ mod tests {
             ["Stinkyscape: expected 41 Common non-token cards, found 42"]
         );
 
-        // An index its brief does not list, or an id that does not follow its index, fails.
         let mut wrong = without_stinkyscape();
         for (index, id) in [
             ("178", "stinkyscape-178"),
@@ -2195,7 +2180,6 @@ mod tests {
             )
         );
 
-        // No rarity passes its count: a second Common is refused while the set is built.
         let mut commons = held.clone();
         commons.insert("boss-001".to_string(), fixture_entry("Boss", "1", "boss-001"));
         assert_eq!(
@@ -2203,8 +2187,7 @@ mod tests {
             ["Boss: expected 1 Common non-token cards, found 2"]
         );
 
-        // An index its brief does not list, or an id that does not follow it, fails, as it does for
-        // a set that ships (the Meditative set's, from v0.3.5).
+        // An index its brief does not list, or an id that does not follow it, fails, as for a set that ships.
         let mut wrong = held;
         wrong.insert("boss-004".to_string(), fixture_entry("Boss", "4", "boss-004"));
         wrong.insert("boss-x".to_string(), fixture_entry("Boss", "3", "boss-x"));
@@ -2352,12 +2335,10 @@ mod tests {
             params_failures(marked, "Exile {cards}.", "Exile every card of a cost."),
             Vec::<String>::new()
         );
-        // The Radiant face writes it too, so it is no base-only number.
         assert_eq!(
             params_failures(marked, "Exile {cards}.", "Exile {cards} twice."),
             ["x.params[0]: cards: tuned on the base face only, but the Radiant face's text writes {cards}"]
         );
-        // A number only the base face writes and not marked is refused.
         assert_eq!(
             params_failures(unmarked, "Exile {cards}.", "Exile every card of a cost."),
             ["x.params[0]: cards: only the base face's text writes {cards}, so it is `tunedOn: \"base\"`"]
@@ -2367,7 +2348,6 @@ mod tests {
             params_failures(unmarked, "Exile {cards}.", "Exile {cards} twice."),
             Vec::<String>::new()
         );
-        // A face that is neither.
         assert_eq!(
             params_failures(
                 r#"[{"key":"cards","base":1,"radiant":1,"better":"up","tunedOn":"both"}]"#,
@@ -2385,7 +2365,6 @@ mod tests {
         let (plain, shining) = ("Discover a card.", "Discover a card. It costs ({discount}) less.");
         // Jewelosco Scarab's shape: the Radiant face alone writes the number, tuned there alone.
         assert_eq!(params_failures(marked, plain, shining), Vec::<String>::new());
-        // Unmarked, it is refused.
         assert_eq!(
             params_failures(unmarked, plain, shining),
             [
@@ -2429,7 +2408,6 @@ mod tests {
         let (cry, cry_radiant) = ("Cry: Draw {draw}.", "Rush\\nCry: Draw {draw}.");
         let lasting = "Start of turn: Draw {draw}.";
         let both = "Cry: Draw {draw}.\\nStart of turn: Draw {draw}.";
-        // Every line that writes it is a Cry: marked, it passes; unmarked, it is refused.
         assert_eq!(params_failures(marked, cry, cry_radiant), Vec::<String>::new());
         assert_eq!(
             params_failures(unmarked, cry, cry_radiant),
@@ -2524,7 +2502,6 @@ mod tests {
         assert_eq!(failures("classic-074"), Vec::<String>::new());
         // Living Bomb names Plague Counters, but on other permanents: still a Field Spell that names them.
         assert_eq!(failures("classic-062"), Vec::<String>::new());
-        // Mana Well names none.
         assert_eq!(
             failures("core-006"),
             ["catalog[\"core-006\"]: `usesPlague`, but no face's text says \"Plague Counter\""]
@@ -2544,7 +2521,6 @@ mod tests {
         );
         let catalog = with_field("core-t-coin", "resource", Json::Object(resource));
         assert_eq!(check_catalog(&catalog).failures, Vec::<String>::new());
-        // A field it does not know still fails.
         assert_eq!(
             check_catalog(&with_field("core-t-coin", "resourceTray", Json::Bool(true))).failures,
             ["catalog[\"core-t-coin\"]: unknown field(s) resourceTray"]
@@ -2617,9 +2593,8 @@ return { base = { cry = cry }, radiant = "base" }
         assert_eq!(newest_version(&path).unwrap(), jackioh_cards::catalog_version());
     }
 
-    /// One catalog entry's `loc` against SPEC §5 and SURFACE §7.5: every entry carries one, and one
-    /// written since the newest shipped snapshot (an entry the snapshot lacks, `shipped` `None`, or a
-    /// `loc` other than the snapshot's) is its script's lines of code as `catalog loc` prints them,
+    /// One catalog entry's `loc` against SPEC §5 and SURFACE §7.5: every entry carries one, and one written
+    /// since the newest shipped snapshot is its script's lines of code as `catalog loc` prints them,
     /// `counted`. A shipped `loc` is frozen: a refactor of its script leaves it as it is.
     fn loc_failure(
         id: &str,
@@ -2697,7 +2672,6 @@ return { base = { cry = cry }, radiant = "base" }
         assert_eq!(loc_failure("x-001", Some(23), Some(Some(10)), Some(23)), None);
         // A `loc` the shipped entry lacked is written too.
         assert_eq!(loc_failure("x-001", Some(9), Some(None), Some(7)), wrong(9, 7));
-        // A written entry no script declares.
         assert_eq!(
             loc_failure("x-001", Some(7), None, None),
             Some("x-001: no script under crates/cards/src/scripts/ has this `ID`".to_string())

@@ -88,8 +88,7 @@ fn game_mode_of(in_series: bool, ranked: bool) -> GameMode {
 
 /// R112: a reaper-resolved ceiling draw "records `turns = 0` and leaves both ratings unchanged,
 /// where the same draw resolved by a live match actor records the real turn count and applies the
-/// ordinary rating move". So the rating move is a parameter of the write, not a property of the
-/// reason: the same `match-ceiling` draw rates differently depending on who resolved it.
+/// ordinary rating move". So the rating move is a parameter of the write, not of the reason.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum RatingPolicy {
     Rated,
@@ -180,12 +179,10 @@ async fn write_result(
                 }
                 return Ok((written, finished));
             }
-            // `results_get_by_match` cannot see a concurrent first writer's uncommitted row, so two
-            // writers resolving one match at once both pass the read and one loses on
-            // `results_pkey`. That loss is the same repeat, arriving the hard way: the winner's row
-            // has committed by the time the loser's next transaction reads for it — and if the
-            // winner rolled back instead, the rerun simply lands this write. Anything but the
-            // duplicate is a real failure and stands.
+            // `results_get_by_match` cannot see a concurrent first writer's uncommitted row, so two writers
+            // resolving one match at once both pass the read and one loses on `results_pkey`: the same
+            // repeat, arriving the hard way. The winner's row has committed by the loser's next read, or
+            // if it rolled back the rerun lands this write. Anything but the duplicate stands as a failure.
             Err(WriteError::Duplicate(_)) if (attempt as u64) < RESULT_WRITE_ATTEMPTS as u64 => {
                 attempt += 1;
             }
@@ -202,10 +199,9 @@ async fn write_once(
     input_policy: RatingPolicy,
     finished: Option<&Finished>,
 ) -> Result<Written, WriteError> {
-    // §9.5 idempotency: one row per match. The fake store and the `results` primary key both
-    // refuse a second row, so this read is what turns that refusal into a clean no-op. It only sees
-    // committed rows, though — two first writers can both pass it, which is what the retry above
-    // is for: the loser's insert meets `results_pkey` instead.
+    // §9.5 idempotency: one row per match. The fake store and the `results` primary key both refuse a
+    // second row, so this read turns that refusal into a clean no-op. It only sees committed rows, so two
+    // first writers can both pass it, which the retry above is for: the loser's insert meets `results_pkey`.
     if let Some(already) = tx.results_get_by_match(&input.match_id).await.map_err(failed)? {
         return Ok(Written {
             row: already,
@@ -227,12 +223,11 @@ async fn write_once(
         RatingPolicy::Unchanged
     };
 
-    // A ranked series reaches its rating move — and so open_season_in_tx's `lock_seasons` — inside
-    // `advance_series_in_tx` below, AFTER `results_insert`, `clear_in_match` and the rest have already
-    // taken row locks. Take the season lock first: a tx that waits on it while holding profile
-    // locks deadlocks with the season opener holding it, whose `reset_ratings` update wants those
-    // very rows. Every other path to `lock_seasons` already takes it before writing, and the
-    // advisory lock is re-entrant, so `open_season_in_tx`'s own take costs nothing here.
+    // A ranked series reaches its rating move (and so `open_season_in_tx`'s `lock_seasons`) inside
+    // `advance_series_in_tx` below, AFTER `results_insert`, `clear_in_match` and the rest have taken row
+    // locks. Take the season lock first: a tx that waits on it while holding profile locks deadlocks with
+    // the season opener holding it, whose `reset_ratings` update wants those rows. The advisory lock is
+    // re-entrant, so `open_season_in_tx`'s own take costs nothing here.
     if series.as_ref().is_some_and(|series| series.ranked == Some(true)) {
         tx.ranked_lock_seasons().await.map_err(failed)?;
     }
@@ -387,8 +382,8 @@ async fn write_once(
         }
     }
 
-    // R417, R565: each seat's board as this game ended, read from its own side, becomes its last
-    // server board, with the result or not at all. The reaper's ceiling draw reads no state, so it writes none.
+    // R417, R565: each seat's board as this game ended, read from its own side, becomes its last server
+    // board, with the result or not at all. The reaper's ceiling draw reads no state, so it writes none.
     if let Some(last_boards) = &input.last_boards {
         let boards = [&last_boards.0, &last_boards.1];
         for (at, seat) in [seat_a, seat_b].into_iter().enumerate() {
@@ -426,7 +421,8 @@ async fn write_once(
         tx.matches_finish(&input.match_id, input.at)
             .await
             .map_err(failed)?;
-        // R768: the final state's hash, with the result or not at all; the reaper's ceiling draw has none to write.
+        // R768: the final state's hash, with the result or not at all; the reaper's ceiling draw has none
+        // to write.
         if let Some(final_hash) = &input.final_hash {
             tx.matches_record_final_hash(&input.match_id, final_hash)
                 .await
@@ -495,10 +491,9 @@ fn quests_game<'a>(
     }
 }
 
-/// The `RecordResult` port the actor holds (TS `ActorDeps.recordResult`, made by
-/// `createRecordResult(deps)`). Every terminal reason comes through here, and a ranked match gets
-/// the ordinary Glicko-2 rating move (R603, R112's "live match actor" half). Once the result is in,
-/// the game is filed for the card statistics (R376, `game_records.rs`).
+/// Every terminal reason comes through here, and a ranked match gets the ordinary Glicko-2 rating move
+/// (R603, R112's "live match actor" half). Once the result is in, the game is filed for the card
+/// statistics (R376, `game_records.rs`).
 pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<ResultRow, ApiError> {
     Ok(record_result_with_economy(app, input).await?.row)
 }
@@ -522,8 +517,9 @@ pub async fn record_result_with_economy(
     // After the commit: a series whose next game began already (R332) gets its match. A
     // failure to start it is the sweeper's to heal (R263), never this result's.
     resume_series(app, written.series.as_ref()).await;
-    // R376: after the commit too, and never at the result's expense — it logs and swallows its
-    // own failures, and a second write of the same match files nothing, and one that failed is filed again by the retention loop while the match's log is held (R1596000). #2213: from the write's one fold.
+    // R376: after the commit too, and never at the result's expense: it logs and swallows its own
+    // failures, a second write of the same match files nothing, and one that failed is filed again by
+    // the retention loop while the match's log is held (R1596000). #2213: from the write's one fold.
     record_finished_game(app, &input.match_id, finished, &input.seats).await;
     Ok(Recorded {
         row: written.row,
@@ -589,16 +585,15 @@ pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool
     Ok(PerPlayer::new(capped[0], capped[1]))
 }
 
-/// R679: the `VoidMatch` port the actor holds (TS `ActorDeps.voidMatch`, made by
-/// `createVoidMatch(deps)`) — what a Glitch's void outcome does instead of `record_result`. The match
-/// never happened: no `results` row, no rating move, no last board, no game record. The store
-/// forgets the row and its log and lets both players go (`matches_forget_voided`), and one log line
-/// names the match and both profiles, for abuse checks.
+/// R679: the `VoidMatch` port the actor holds: what a Glitch's void outcome does instead of
+/// `record_result`. The match never happened: no `results` row, no rating move, no last board, no game
+/// record. The store forgets the row and its log and lets both players go (`matches_forget_voided`), and
+/// one log line names the match and both profiles, for abuse checks.
 ///
 /// A voided game of a Conquest series is treated as a game that never started: the series stays
 /// `playing` on the same game, which is started again at once, with the same seats, decks and seed
-/// (`resume_series`) — the one thing `series.rs` does for a game a restart interrupted. Nothing is
-/// recorded in the series, so the score and both players' locked decks are what they were.
+/// (`resume_series`), as `series.rs` does for a game a restart interrupted. Nothing is recorded in the
+/// series, so the score and both players' locked decks are what they were.
 pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), ApiError> {
     let mut tx = app.db.begin(None).await.map_err(failure)?;
     let series = tx.series_by_match(&input.match_id).await.map_err(failure)?;
@@ -641,8 +636,12 @@ pub fn ceiling_draw_input(match_row: &MatchRow, at: i64) -> RecordResultInput {
     }
 }
 
-/// Reaps matches past ceiling (§9.5, §2.5, R79, R112).
-/// Folds log to recover terminal result if available (R833000, R1437); otherwise draws at turns=0.
+/// Reaps matches past ceiling (§9.5, §2.5, R79): each `live` match whose `clocks.ceiling_at` has passed
+/// is ended with both players' in-match state cleared and its actor, if any, dropped. R833000: a log
+/// that already ends (R1437) records its real result; any other ends as a `match-ceiling` draw with
+/// `turns = 0` and both ratings unchanged (R112). Safe beside a live actor: both go through the same
+/// idempotent write, so the first counts and the other returns that row untouched. Answers the ids it
+/// resolved.
 pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError> {
     let now = now_ms();
     let live = {
@@ -657,8 +656,8 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         if match_row.clocks.ceiling_at > now {
             continue;
         }
-        // R833000: a log that already ends is recorded as it ended; a recovery that fails falls
-        // through to the ceiling's draw below, which is what the reaper did before it looked.
+        // R833000: a log that already ends is recorded as it ended; a recovery that fails falls through
+        // to the ceiling's draw below.
         if let Some(recovered) = fold_terminal_input(app, &match_row, now).await {
             match record_result(app, recovered).await {
                 Ok(_) => {
@@ -775,7 +774,11 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
     })
 }
 
-/// Deletes stale `open` match rows past grace window, reconciling seat ledger (R1450, R1523000).
+/// R1450: the reaper's second sweep: deletes every `open` row more than `OPEN_MATCH_REAP_GRACE_SECONDS`
+/// past its `ceiling_at` (a room nobody joined, a claimed room whose match never started, a queue
+/// pairing whose start and cleanup both failed), freeing its room code and both players. The grace
+/// outlasts any start in flight. A sweep that deleted rows holds the seat ledger to the record at once
+/// (R1523000). Answers how many rows it deleted.
 pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
     let before = now_ms() - OPEN_MATCH_REAP_GRACE_MS;
     let mut tx = app.db.begin(None).await.map_err(failure)?;

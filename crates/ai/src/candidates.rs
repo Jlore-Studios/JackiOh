@@ -41,8 +41,8 @@ fn zone_group_key(play: &ActionBody) -> ActionBody {
     }
 }
 
-/// The zone a play names (`action.type === "play" && action.zone !== undefined`). An Equip play fuses
-/// where it lands, so it is no zone variant of the plain play (R1086).
+/// The zone a play names. An Equip play fuses where it lands, so it is no zone variant of the plain play
+/// (R1086).
 fn play_zone(action: &ActionBody) -> Option<&ZoneChoice> {
     match action {
         ActionBody::Play {
@@ -782,10 +782,8 @@ fn pool(
     collapse_zones(state, seat, &capped, zone_cap)
 }
 
-/// legal_actions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
-/// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play the lowest lane of each
-/// placement, at most AI_SEARCH.zone_variants, `collapse_zones`), in move order. endTurn, when legal, is
-/// last.
+/// `candidate_set` (R84's concede/offerDraw/answerDraw skipped, `play` zone variants collapsed to at most
+/// AI_SEARCH.zone_variants lanes) in move order. endTurn, when legal, is last.
 pub fn candidate_actions(state: &GameState, seat: PlayerId, prices: &Prices) -> Vec<ActionBody> {
     candidate_actions_in(state, seat, legal_actions(state, seat), prices)
 }

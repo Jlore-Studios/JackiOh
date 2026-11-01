@@ -29,9 +29,7 @@ use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::economy::practice::ClaimedResult;
 
-// ---------------------------------------------------------------------------
 // The literals
-// ---------------------------------------------------------------------------
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
 /// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
@@ -117,7 +115,6 @@ pub enum QuestChange {
     Removed,
 }
 
-/// A literal's text, as its column holds it.
 fn literal<T: Serialize>(value: &T) -> Result<String, StoreError> {
     match serde_json::to_value(value)? {
         serde_json::Value::String(text) => Ok(text),

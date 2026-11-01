@@ -3,7 +3,6 @@
 //! no I/O: `economy::packs` reads the holdings, draws the seed and writes the grants, and a
 //! replay is [`roll_opening`] over the same holdings and seed (R1301003, R1339002). Every list it
 //! walks is a `Vec` or an `IndexMap` in catalog or registry order, so the same inputs draw the same.
-//! A slot's card leans toward the cards the account does not own (R1301001).
 
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
@@ -229,11 +228,11 @@ pub fn draw_card<'p>(
 }
 
 /// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002), a tiered
-/// roll on `COSMETIC_TIER_WEIGHTS` on its own scale, whatever the card's rarity (R1339000,
-/// R1333000): one of `droppable` of that rarity the account does not own on that card, picked
-/// uniformly (one draw), or, with none, points to the bars (no draw); a duplicate does not fall to
-/// another tier. One that names a card, a full art, is of that card alone (R1313000), and a
-/// Legendary or Mythic one is a chase that drops like any other (R1333000).
+/// roll on `COSMETIC_TIER_WEIGHTS` on its own scale, whatever the card's rarity (R1339000, R1333000):
+/// one of `droppable` of that rarity the account does not own on that card, picked uniformly (one
+/// draw), or, with none, points to the bars (no draw); a duplicate does not fall to another tier. One
+/// that names a card, a full art, is of that card alone (R1313000); a Legendary or Mythic one is a
+/// chase that drops like any other (R1333000).
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: CosmeticRarity,
@@ -260,14 +259,13 @@ pub fn duplicate_grant(
     }
 }
 
-/// A duplicate's global roll (R1661001), taken before its per-card one. With none of `global` at
-/// or above `GLOBAL_COSMETIC_FLOOR_RARITY` left unowned it is `None` and draws nothing. Else one
-/// draw below `TIER_WEIGHT_TOTAL`, and one at or past `GLOBAL_COSMETIC_ROLL_WEIGHT` is a miss,
-/// `None`. A hit is a tiered roll on `COSMETIC_TIER_WEIGHTS` floored at
-/// `GLOBAL_COSMETIC_FLOOR_RARITY` (one draw), falling as a cosmetic pack's floored slot does
-/// (`CosmeticRarity::floored_fallback_order`, as `cosmetic_packs::slot_grant` reads it, R1306001)
-/// to the first tier with one unowned, then one of that tier's picked uniformly in registry order
-/// (one draw): a `SlotGrant::Cosmetic` for the account.
+/// A duplicate's global roll (R1661001), taken before its per-card one. With none of `global` at or
+/// above `GLOBAL_COSMETIC_FLOOR_RARITY` left unowned it is `None` and draws nothing. Else one draw
+/// below `TIER_WEIGHT_TOTAL`, and one at or past `GLOBAL_COSMETIC_ROLL_WEIGHT` is a miss, `None`. A hit
+/// is a tiered roll on `COSMETIC_TIER_WEIGHTS` floored at `GLOBAL_COSMETIC_FLOOR_RARITY` (one draw),
+/// falling as a cosmetic pack's floored slot does (`CosmeticRarity::floored_fallback_order`, R1306001)
+/// to the first tier with one unowned, then one of that tier's picked uniformly in registry order (one
+/// draw).
 pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Option<SlotGrant> {
     let unowned: Vec<&Cosmetic> = global
         .iter()
@@ -294,13 +292,13 @@ pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Opt
 }
 
 /// The whole opening (R1301003, R1339002). Its draws, in this order and no other: [`slot_tiers`]'
-/// one per slot, which pity forces on top of with no draw of its own, then slot by slot the card's
-/// one and, for a duplicate, the global roll's when an account cosmetic is left unowned
-/// ([`global_grant`], R1661001), its tier's and its pick's on a hit, or else its cosmetic tier's
-/// one and the pick's one when there is something to pick. A slot keeps its rarity after pity when
-/// its card comes from another (R1301001). Ownership is read slot by slot, so a card unlocked
-/// earlier in the pack is a duplicate later in it (R1301002), and an account cosmetic dropped
-/// earlier is owned later (R1661001). `None` for an empty pool.
+/// one per slot (pity forces on top with no draw of its own), then slot by slot the card's one and,
+/// for a duplicate, the global roll's when an account cosmetic is left unowned ([`global_grant`],
+/// R1661001), its tier's and its pick's on a hit, or else its cosmetic tier's one and the pick's one
+/// when there is something to pick. A slot keeps its rarity after pity when its card comes from
+/// another (R1301001). Ownership is read slot by slot, so a card unlocked earlier in the pack is a
+/// duplicate later in it (R1301002), and an account cosmetic dropped earlier is owned later
+/// (R1661001). `None` for an empty pool.
 pub fn roll_opening(
     pool: &[PoolCard],
     holdings: &Holdings,
@@ -373,7 +371,6 @@ mod tests {
         }
     }
 
-    /// A per-card cosmetic a pack may drop.
     fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         Cosmetic {
             id: id.to_owned(),
@@ -387,7 +384,6 @@ mod tests {
         }
     }
 
-    /// One droppable foil of each cosmetic rarity the registry has.
     fn four_foils() -> Vec<Cosmetic> {
         vec![
             foil("foil-common", CosmeticRarity::Common),
@@ -442,7 +438,6 @@ mod tests {
         }
     }
 
-    /// A pool of `count` cards, the five rarities in turn.
     fn pool_of(count: usize) -> Vec<PoolCard> {
         (0..count)
             .map(|at| {
@@ -552,7 +547,6 @@ mod tests {
             |floor, rng: &mut Rng| draw_card(&pool, Epic, floor, &owned, rng).map(|card| card.id.clone());
         assert_eq!(id(PACK_FLOOR_RARITY, &mut rng).as_deref(), Some("l"));
         assert_eq!(id(Common, &mut rng).as_deref(), Some("c"));
-        // With nothing at or above the floor, it takes what is below.
         let commons = [card("c", Common)];
         assert_eq!(
             draw_card(&commons, Rare, PACK_FLOOR_RARITY, &owned, &mut rng),
@@ -656,7 +650,6 @@ mod tests {
             draw_card(&mythic_only, Common, Common, &owned, &mut rng),
             Some(&mythic_only[0])
         );
-        // The nearest lower rarity before any higher one.
         let rare_and_legendary = [card("l", Legendary), card("r", Rare)];
         assert_eq!(
             draw_card(&rare_and_legendary, Epic, Common, &owned, &mut rng).map(|card| card.id.as_str()),
@@ -711,8 +704,7 @@ mod tests {
     fn r1301002_a_duplicate_becomes_a_cosmetic_of_the_rolled_rarity_whatever_the_card_s() {
         let foils = four_foils();
         let mut rng = Rng::new("r1301002", 0);
-        // Every foil drops at its own rarity (no foil is Mythic, so a Mythic roll is always
-        // spent: `r1301002_a_rolled_rarity_with_nothing_unowned_goes_to_the_bars`).
+        // Every foil drops at its own rarity.
         for foil in &foils {
             let grant = duplicate_grant("m", foil.rarity, &foils, &[], &mut rng);
             assert_eq!(
@@ -758,7 +750,6 @@ mod tests {
     fn r1301002_a_rolled_rarity_with_nothing_unowned_goes_to_the_bars() {
         let foils = four_foils();
         let mut rng = Rng::new("r1301002", 0);
-        // The card's Legendary foil is owned: Bars, with no draw.
         let owned = [held("m", "foil-legendary")];
         assert_eq!(
             duplicate_grant("m", CosmeticRarity::Legendary, &foils, &owned, &mut rng),
@@ -775,7 +766,6 @@ mod tests {
                 cosmetic_rarity: CosmeticRarity::Legendary,
             }
         );
-        // No cosmetic is Mythic.
         assert_eq!(
             duplicate_grant("m", CosmeticRarity::Mythic, &foils, &[], &mut rng),
             SlotGrant::Bars {
@@ -810,7 +800,6 @@ mod tests {
         };
         let droppable = pack_cosmetics(&[full_art]);
         let mut rng = Rng::new("r1301002-full-art", 0);
-        // A duplicate of its card that rolls Epic drops it.
         assert_eq!(
             duplicate_grant("m", CosmeticRarity::Epic, &droppable, &[], &mut rng),
             SlotGrant::Cosmetic {
@@ -818,8 +807,6 @@ mod tests {
                 cosmetic_rarity: CosmeticRarity::Epic,
             }
         );
-        // Any other card's Epic duplicate has nothing to drop, and neither has its card once it
-        // owns it.
         assert_eq!(
             duplicate_grant("c", CosmeticRarity::Epic, &droppable, &[], &mut rng),
             SlotGrant::Bars {
@@ -1105,7 +1092,6 @@ mod tests {
     fn r1661001_with_nothing_unowned_the_opening_takes_no_draw_of_it() {
         let pool = pool_of(40);
         let ids: Vec<&str> = pool.iter().map(|card| card.id.as_str()).collect();
-        // Half the pool owned: unlocks and duplicates both.
         let holdings = Holdings {
             owned: owning(&ids[..ids.len() / 2]),
             ..Holdings::default()
@@ -1213,7 +1199,6 @@ mod tests {
                     .then_some((seed, opening))
             })
             .expect("a seed that drops an account cosmetic");
-        // The owned one never drops again.
         assert!(opening.slots.iter().all(|slot| {
             !matches!(&slot.grant, SlotGrant::Cosmetic { cosmetic_id, .. } if cosmetic_id == "table-epic-0")
         }));

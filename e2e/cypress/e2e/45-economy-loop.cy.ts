@@ -2,8 +2,8 @@
 // R1310000, R1310003, R1310004). SPEC §14.12: "Practice and hotseat let a player use every card and every
 // cosmetic whatever the ledger holds, and so do the end-to-end tests, but the one that walks the economy
 // itself." This is that one (R1310004): it walks the fixture account `e2e-econ` through the loop, each
-// step asserted on what the server answers and what the page shows. A ladder win pays at least its
-// constants, since a level the XP reaches may pay more.
+// step asserted on what the server answers and what the page shows. A ladder win (R1302001) pays at least
+// its constants, since a level the XP reaches may pay more.
 // One test, after a reseed (R144) in `beforeEach`: each step spends what the one before it earned, so a
 // retry walks the loop again from the start. The reseed also puts back `e2e-p1`, `e2e-p2`, `e2e-pending`
 // and the good code; spec 10 and spec 44, which read them, reseed first too.

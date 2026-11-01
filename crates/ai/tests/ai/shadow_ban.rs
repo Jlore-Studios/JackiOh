@@ -16,8 +16,8 @@ use super::support::{AI, ai_pool, js};
 
 const FLAGS: &[&str] = &["error", "timeout", "neverPlayed", "selfHarm", "selfKill"];
 
-/// TS's `REASON = /^(error|timeout|neverPlayed|selfHarm|selfKill)(, (error|timeout|neverPlayed|selfHarm|selfKill))*: \S/`,
-/// by hand (no regex crate in a pure crate).
+/// A reason is sweep flags (`FLAGS`) joined by ", ", then ": " and a non-space, checked by hand (no
+/// regex crate in a pure crate).
 fn matches_reason(reason: &str) -> bool {
     let Some((head, rest)) = reason.split_once(": ") else {
         return false;
@@ -26,7 +26,7 @@ fn matches_reason(reason: &str) -> bool {
         && rest.chars().next().is_some_and(|c| !c.is_whitespace())
 }
 
-/// Every JSON number as a float, so an `f64` field written `0.0` equals TS's literal `0`.
+/// Every JSON number as a float, so an `f64` field written `0.0` equals the literal `0`.
 fn normalized(value: Value) -> Value {
     match value {
         Value::Number(n) => Value::from(n.as_f64().unwrap_or(f64::NAN)),
@@ -36,7 +36,7 @@ fn normalized(value: Value) -> Value {
     }
 }
 
-/// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
+/// `base` with the keys of `over` laid over it, two JSON objects (an absent `over` changes nothing).
 fn spread(base: Value, over: Option<&Value>) -> Value {
     let mut out = base;
     if let (Some(target), Some(Value::Object(extra))) = (out.as_object_mut(), over) {
@@ -47,7 +47,7 @@ fn spread(base: Value, over: Option<&Value>) -> Value {
     out
 }
 
-/// Jest's `toMatchObject`: every key `expected` names holds an equal value (objects recursively).
+/// Every key `expected` names holds an equal value in `actual` (objects recursively).
 fn assert_match_object(actual: &Value, expected: &Value) {
     match (actual, expected) {
         (Value::Object(have), Value::Object(want)) => {
@@ -74,7 +74,6 @@ fn banned_ids() -> Vec<String> {
 mod the_shadow_ban_b24 {
     use super::*;
 
-    /// R186 B24: every entry is a real non-token card with a reason that starts with its sweep flags
     #[test]
     fn r186_b24_every_entry_is_a_real_non_token_card_with_a_reason_that_starts_with_its_sweep_flags() {
         jackioh_cards::register_all();
@@ -85,7 +84,6 @@ mod the_shadow_ban_b24 {
         }
     }
 
-    /// R186 B24: SHADOW_BAN_IDS is exactly the table's keys, sorted
     #[test]
     fn r186_b24_shadow_ban_ids_is_exactly_the_tables_keys_sorted() {
         let mut keys = ids_of(SHADOW_BAN);
@@ -97,7 +95,6 @@ mod the_shadow_ban_b24 {
         );
     }
 
-    /// R186 B24: the unbanned pool holds at least AI_DECK.minPool cards, enough for a Hard deck
     #[test]
     fn r186_b24_the_unbanned_pool_holds_at_least_ai_deck_min_pool_cards_enough_for_a_hard_deck() {
         jackioh_cards::register_all();
@@ -107,7 +104,6 @@ mod the_shadow_ban_b24 {
         assert!(unbanned.len() >= AI_DIFFICULTY.hard.deck_size as usize);
     }
 
-    /// R186 B24: buildAiDeck never deals a banned card, over 200 seeds at every tier's size and cap
     #[test]
     fn r186_b24_build_ai_deck_never_deals_a_banned_card_over_200_seeds_at_every_tiers_size_and_cap() {
         jackioh_cards::register_all();
@@ -130,7 +126,6 @@ mod the_shadow_ban_b24 {
         }
     }
 
-    /// R186 B24: a banned card stays legal for a human's deck
     #[test]
     fn r186_b24_a_banned_card_stays_legal_for_a_humans_deck() {
         jackioh_cards::register_all();
@@ -150,7 +145,7 @@ mod the_shadow_ban_b24 {
             &AiDeckOptions::default(),
         );
         assert_eq!(deck.iter().collect::<IndexSet<_>>().len(), size);
-        // `create_game` panics where TS's `createGame` threw (SURFACE §6.1); not panicking is TS's `not.toThrow()`.
+        // Not panicking in `create_game` is the assertion (SURFACE §6.1).
         let _ = create_game(&CreateGameArgs {
             seed: "shadow-ban-legal".to_string(),
             decks: (deck, opponent),
@@ -161,7 +156,7 @@ mod the_shadow_ban_b24 {
 
 // B25
 
-/// TS's `stats(overrides)`: a clean `SweepStats` over seedsPerCard games, as JSON.
+/// A clean `SweepStats` over seedsPerCard games, as JSON.
 /// R2425000: a turn the overrides call affordable is playable too, unless they give `playableTurns`.
 fn stats(overrides: Value) -> Value {
     let playable = overrides
@@ -201,7 +196,6 @@ fn half_of(stats: &Value) -> Value {
 mod sweep_flags_b25 {
     use super::*;
 
-    /// B25: clean stats raise no flag
     #[test]
     fn b25_clean_stats_raise_no_flag() {
         assert_eq!(flags_of(&stats(json!({}))), json!([]));
@@ -213,7 +207,6 @@ mod sweep_flags_b25 {
         );
     }
 
-    /// B25: error is raised by the first error and not before
     #[test]
     fn b25_error_is_raised_by_the_first_error_and_not_before() {
         assert!(
@@ -224,7 +217,6 @@ mod sweep_flags_b25 {
         assert_eq!(flags_of(&stats(json!({ "errors": 1 }))), json!(["error"]));
     }
 
-    /// B25: timeout is raised by the first timeout and not before
     #[test]
     fn b25_timeout_is_raised_by_the_first_timeout_and_not_before() {
         assert!(
@@ -235,7 +227,6 @@ mod sweep_flags_b25 {
         assert_eq!(flags_of(&stats(json!({ "timeouts": 1 }))), json!(["timeout"]));
     }
 
-    /// B25: neverPlayed needs minAffordableTurns affordable turns and no play
     #[test]
     fn b25_never_played_needs_min_affordable_turns_affordable_turns_and_no_play() {
         let at = AI_SWEEP.min_affordable_turns;
@@ -255,11 +246,10 @@ mod sweep_flags_b25 {
         );
     }
 
-    /// B25: selfHarm needs a mean evaluation delta strictly below selfHarmDelta over at least minHarmPlays plays
     #[test]
     fn b25_self_harm_needs_a_mean_evaluation_delta_strictly_below_self_harm_delta_over_at_least_min_harm_plays_plays()
      {
-        // Counts stay integers (the fields are whole numbers); sums are the floats TS's arithmetic makes.
+        // Counts stay integers (the fields are whole numbers); sums are floats.
         let bound = AI_SWEEP.self_harm_delta;
         let plays = AI_SWEEP.min_harm_plays as i64;
         let base = |extra: Value| {
@@ -296,7 +286,6 @@ mod sweep_flags_b25 {
         );
     }
 
-    /// B25: several flags come out in the order error, timeout, neverPlayed, selfHarm
     #[test]
     fn b25_several_flags_come_out_in_the_order_error_timeout_never_played_self_harm() {
         let all = stats(json!({
@@ -313,7 +302,6 @@ mod sweep_flags_b25 {
         );
     }
 
-    /// B25: sweepCard on Tempo Timmy over 2 seeds plays 2 games and flags no error
     #[test]
     fn b25_sweep_card_on_tempo_timmy_over_2_seeds_plays_2_games_and_flags_no_error() {
         jackioh_cards::register_all();
@@ -349,7 +337,7 @@ mod sweep_flags_b25 {
 // every tier: a ban holds at every difficulty, so a card is judged at the fewest resources and
 // the most, and a card no tier could afford is reported rather than passed
 
-/// TS's `result(overrides)`: a pass-1 `SweepResult` at Easy, its flags and `unswept` from its stats.
+/// A pass-1 `SweepResult` at Easy, its flags and `unswept` from its stats.
 fn result(overrides: Value) -> Value {
     let base = stats(overrides.clone());
     let unswept = base["affordableTurns"].as_f64() == Some(0.0);
@@ -419,14 +407,12 @@ fn finished(state: &GameState, winner: Winner) -> GameState {
 mod the_sweep_judges_a_card_at_every_tier_r186 {
     use super::*;
 
-    /// R186 AI_SWEEP sweeps at Easy and at Hard
     #[test]
     fn r186_ai_sweep_sweeps_at_easy_and_at_hard() {
         let tiers: Vec<Difficulty> = AI_SWEEP.tiers.to_vec();
         assert_eq!(tiers, vec![Difficulty::Easy, Difficulty::Hard]);
     }
 
-    /// R186 a flag at any tier bans the card, and the reason names every tier that flagged it
     #[test]
     fn r186_a_flag_at_any_tier_bans_the_card_and_the_reason_names_every_tier_that_flagged_it() {
         let at = AI_SWEEP.ban_affordable_turns;
@@ -484,7 +470,6 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         assert!(!reason.contains("easy:"));
     }
 
-    /// R186 a card clean at every tier has no reason; one never affordable anywhere is unswept, not clean
     #[test]
     fn r186_a_card_clean_at_every_tier_has_no_reason_one_never_affordable_anywhere_is_unswept_not_clean() {
         let clean = verdict(
@@ -523,38 +508,19 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
     }
 
     // One test per tier, each with its own 300 s. The two shared one test and ran 267 s on a developer
-    // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's (251 s of the 267
-    // for two seeds, Hard's two take 12 s). Easy's check plays one game. It was GIGA Glowy Jelly Bean's
-    // until #2380, and its game 1 had to end before the Floats of R1563000 ("Float reduces cost", in the
-    // deck too) brought the card down to four crystals: dealt with every Meditative ban lifted (#1675),
-    // game 1 ran 21 turns, the card affordable on two of them, and once the AI priced a Dormant card it
-    // ran 36, the card drawn on turn 30 at 0. Pile On (5) has no discount of its own, so only another
-    // card's could bring it to Easy's four crystals: in game 1 it was in hand from turn 7, unaffordable,
-    // until the game ended on turn 9. Re-pinned for #2521, whose changed cards re-deal the filler, as
-    // Megabase's turn as a Unit does (#2278): game 1 no longer draws it and game 2 does, unaffordable,
-    // so the check plays two. Both checks deal from the frozen fixture pool (issue #1113), so a
-    // shadow-ban change re-deals neither.
+    // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's. Both deal from the
+    // frozen fixture pool (issue #1113), so a shadow-ban change re-deals neither; each plays the games its
+    // card needs, re-pinned when the deals move (#2380, #1675, #2521, #2278, #2511, R2511001, #2542, #2490,
+    // R2490000).
     //
-    // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
-    // player's, which the AI's soft gate leaves whole, R1390), and the AI wins games 1 and 2 on turns 7
-    // and 8, before its sixth crystal; game 4 holds the card affordable on four turns. Re-pinned for
-    // #817 (R817000), when the Quickdraw cap re-dealt the sweep's filler decks and games 1–4 hold the
-    // card affordable on no turn between them; game 5 holds it affordable, so the check plays five.
-    // Re-pinned for the Stinkyscape release (#1884), whose cards join the greedy seat's deck too: games
-    // 1–7 hold the card affordable on no turn and game 8 does, so the check plays eight.
+    // Easy's check plays one game: game 1 draws Ceaseless Void (100), never at four crystals. A card a
+    // discount brings to four crystals will not do: GIGA Glowy Jelly Bean with the Floats of R1563000
+    // ("Float reduces cost", in the deck too), nor Pile On (5) once another card's discount reaches it.
     //
-    // Re-pinned for issue #2511 (R2511001), when the AI's deck stopped passing over a Core card's
-    // Legacy card and the deals moved: Easy's game 1 no longer draws Pile On, and with #2542's pricing
-    // of Field Spells game 3 brings it to four crystals once through another card's discount, so no
-    // run of games from game 1 holds it drawn and never affordable. The Easy check is GIGA Glowy Jelly
-    // Bean's again (7, only Float brings it down): game 2 draws it, never at four crystals.
-    //
-    // Re-pinned for issue #2490 (R2490000), when the AI's single pricing of a backrow Unit moved the
-    // play: Easy's game 1 now draws GIGA Glowy Jelly Bean and Floats bring it to four crystals, so no
-    // run of games from game 1 holds it never affordable. The Easy check is Ceaseless Void's (100):
-    // game 1 draws it, never at four crystals.
+    // Hard's check plays eight games: 1–7 hold the card affordable on no turn and game 8 does. The deals
+    // moved with the Meditative set (v0.3.5; a player's deck, which the AI's soft gate leaves whole,
+    // R1390), the Quickdraw cap (#817, R817000) and the Stinkyscape release's cards (#1884).
 
-    /// R186 Ceaseless Void (100 mana) is unswept at Easy's four crystals
     #[test]
     fn r186_ceaseless_void_100_mana_is_unswept_at_easys_four_crystals() {
         jackioh_cards::register_all();
@@ -576,7 +542,6 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
         assert_eq!(easy["flags"], json!([]));
     }
 
-    /// R186 GIGA Glowy Jelly Bean (6 mana) is judged at Hard's seven crystals
     #[test]
     fn r186_giga_glowy_jelly_bean_6_mana_is_judged_at_hards_seven_crystals() {
         jackioh_cards::register_all();
@@ -605,7 +570,6 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
 mod the_two_pass_sweep_r390 {
     use super::*;
 
-    /// R390 pass 2's numbers: 24 games per at-risk card and tier, at-risk filler ×4, bans at 6 affordable turns and 8 plays
     #[test]
     fn r390_pass_2s_numbers_24_games_per_at_risk_card_and_tier_at_risk_filler_x4_bans_at_6_affordable_turns_and_8_plays()
      {
@@ -618,7 +582,6 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(AI_SWEEP.ban_harm_plays as i64, 2 * AI_SWEEP.min_harm_plays as i64);
     }
 
-    /// R390 at risk is a flag at half strength: affordable on minAffordableTurns turns and played at most once, or a mean below half of selfHarmDelta
     #[test]
     fn r390_at_risk_is_a_flag_at_half_strength_affordable_on_min_affordable_turns_turns_and_played_at_most_once_or_a_mean_below_half_of_self_harm_delta()
      {
@@ -665,7 +628,6 @@ mod the_two_pass_sweep_r390 {
         );
     }
 
-    /// R390 the at-risk list is a pure function of pass 1's results, the ban and the watch list, sorted
     #[test]
     fn r390_the_at_risk_list_is_a_pure_function_of_pass_1s_results_the_ban_and_the_watch_list_sorted() {
         let pass1 = vec![
@@ -708,7 +670,6 @@ mod the_two_pass_sweep_r390 {
         }
     }
 
-    /// R390 pass 2's filler keeps out the cards banned for error or timeout and lifts the ban for neverPlayed and selfHarm
     #[test]
     fn r390_pass_2s_filler_keeps_out_the_cards_banned_for_error_or_timeout_and_lifts_the_ban_for_never_played_and_self_harm()
      {
@@ -747,7 +708,6 @@ mod the_two_pass_sweep_r390 {
         );
     }
 
-    /// R390 pass 1 alone never bans for neverPlayed or selfHarm, however strong its numbers; error and timeout ban as before
     #[test]
     fn r390_pass_1_alone_never_bans_for_never_played_or_self_harm_however_strong_its_numbers_error_and_timeout_ban_as_before()
      {
@@ -858,7 +818,6 @@ mod the_two_pass_sweep_r390 {
         );
     }
 
-    /// R390 R601 selfHarm needs 8 plays over pass 2's games, averaging below selfHarmDelta
     #[test]
     fn r390_r601_self_harm_needs_8_plays_over_pass_2s_games_averaging_below_self_harm_delta() {
         let plays = AI_SWEEP.ban_harm_plays as i64;
@@ -894,7 +853,6 @@ mod the_two_pass_sweep_r390 {
         assert_eq!(harm(plays, bound), None);
     }
 
-    /// R390 an error or timeout bans only its game's forced card; at-risk filler of that game is a suspect, banned only if its own games repeat it
     #[test]
     fn r390_an_error_or_timeout_bans_only_its_games_forced_card_at_risk_filler_of_that_game_is_a_suspect_banned_only_if_its_own_games_repeat_it()
      {
@@ -1014,7 +972,6 @@ mod the_two_pass_sweep_r390 {
         );
     }
 
-    /// R390 a pass-2 result comes through JSON whole, so slices join in `--report`
     #[test]
     fn r390_a_pass_2_result_comes_through_json_whole_so_slices_join_in_report() {
         let fixture = pass2_of(
@@ -1023,14 +980,13 @@ mod the_two_pass_sweep_r390 {
             vec![json!({ "affordableTurns": 3 })],
             json!([{ "defId": "core-030", "seed": "sweep2:easy:core-078:1", "forced": "core-078", "errors": 0, "timeouts": 1 }]),
         );
-        // TS's `JSON.parse(JSON.stringify(fixture))`, through the Rust type the report reads it into.
+        // The fixture through the Rust type the report reads it into.
         let typed: SweepPass2 = json_as(fixture.clone());
         let text = serde_json::to_string(&typed).expect("serializable");
         let back: Value = serde_json::from_str(&text).expect("parses");
         assert_eq!(normalized(back), normalized(fixture));
     }
 
-    /// R390 a real pass-2 game: named seed, boosted at-risk filler, the ban lifted for judgement bans and kept for bugs, timeouts charged to the forced card and listed against the filler
     #[test]
     fn r390_a_real_pass_2_game_named_seed_boosted_at_risk_filler_the_ban_lifted_for_judgement_bans_and_kept_for_bugs_timeouts_charged_to_the_forced_card_and_listed_against_the_filler()
      {
@@ -1177,7 +1133,6 @@ mod a_slow_decision_timed_again_r977000 {
         (out, handed.get(), budget.get())
     }
 
-    /// R977000 a decision the clock found slow and the re-timer found fast is a raw timeout, not a timeout
     #[test]
     fn r977000_a_decision_the_clock_found_slow_and_the_retimer_found_fast_is_a_raw_timeout_not_a_timeout() {
         jackioh_cards::register_all();
@@ -1193,7 +1148,6 @@ mod a_slow_decision_timed_again_r977000 {
         assert_eq!(json["timeouts"], json!(0));
     }
 
-    /// R977000 a decision slow by the clock and by the re-timer is a timeout
     #[test]
     fn r977000_a_decision_slow_by_the_clock_and_by_the_retimer_is_a_timeout() {
         jackioh_cards::register_all();
@@ -1211,7 +1165,6 @@ mod a_slow_decision_timed_again_r977000 {
         );
     }
 
-    /// R977000 pass 2 charges both counts to the forced card
     #[test]
     fn r977000_pass_2_charges_both_counts_to_the_forced_card() {
         jackioh_cards::register_all();
@@ -1227,7 +1180,6 @@ mod a_slow_decision_timed_again_r977000 {
         );
     }
 
-    /// R977000 without a re-timer every decision the clock found slow is a timeout
     #[test]
     fn r977000_without_a_retimer_every_decision_the_clock_found_slow_is_a_timeout() {
         jackioh_cards::register_all();
@@ -1251,7 +1203,6 @@ mod a_slow_decision_timed_again_r977000 {
         assert_eq!(result.timeouts, result.raw_timeouts);
     }
 
-    /// R977000 a slice written before the raw count reads it as 0
     #[test]
     fn r977000_a_slice_written_before_the_raw_count_reads_it_as_0() {
         let p1: SweepResult = serde_json::from_value(json!({
@@ -1286,7 +1237,6 @@ mod a_game_ending_play_r390 {
         json!({ "affordableTurns": 20, "plays": 10, "evalDeltaSum": -500, "evalDeltaCount": 10 })
     }
 
-    /// R390 ninety plays at +5 and one that loses the game raise no selfHarm at full or half strength, and the loss is counted
     #[test]
     fn r390_ninety_plays_at_plus_5_and_one_that_loses_the_game_raise_no_self_harm_at_full_or_half_strength() {
         let before = running();
@@ -1309,7 +1259,6 @@ mod a_game_ending_play_r390 {
         assert_eq!(verdict(&[quiet_pass_1("core-011")], &[pass2])["flags"], json!([]));
     }
 
-    /// R390 ten plays averaging -50 with none ending the game still raise selfHarm
     #[test]
     fn r390_ten_plays_averaging_minus_50_with_none_ending_the_game_still_raise_self_harm() {
         let s = typed(ten_at_minus_50());
@@ -1325,7 +1274,6 @@ mod a_game_ending_play_r390 {
         );
     }
 
-    /// R390 one winning play no longer lifts a mean that is otherwise below the threshold
     #[test]
     fn r390_one_winning_play_no_longer_lifts_a_mean_otherwise_below_the_threshold() {
         let before = running();
@@ -1345,7 +1293,6 @@ mod a_game_ending_play_r390 {
         );
     }
 
-    /// R390 a play the game goes on after counts in the mean, and a draw or a finished before-state in neither count
     #[test]
     fn r390_a_play_the_game_goes_on_after_counts_in_the_mean_and_a_draw_or_a_finished_before_state_in_neither_count()
      {
@@ -1368,7 +1315,6 @@ mod a_game_ending_play_r390 {
         assert_eq!(s.winning_plays, 0);
     }
 
-    /// R390 a slice written before the counts still reads and merges
     #[test]
     fn r390_a_slice_written_before_the_counts_still_reads_and_merges() {
         let p1: SweepResult = serde_json::from_value(json!({
@@ -1404,7 +1350,6 @@ mod a_game_ending_play_r390 {
         assert_eq!(judged.reason, None);
     }
 
-    /// R390 R601 selfKill is raised at 2 lost games, puts a card at risk on 1 and bans on 4 in pass 2 alone
     #[test]
     fn r390_r601_self_kill_is_raised_at_2_lost_games_puts_a_card_at_risk_on_1_and_bans_on_4_in_pass_2_alone()
     {
@@ -1472,7 +1417,6 @@ mod a_game_ending_play_r390 {
         );
     }
 
-    /// R390 R600 a card at risk for a lost game is watched with its losses named
     #[test]
     fn r390_r600_a_card_at_risk_for_a_lost_game_is_watched_with_its_losses_named() {
         let watched = verdict(
@@ -1523,7 +1467,6 @@ mod playable_turns_r2425000 {
             .collect()
     }
 
-    /// R2425000 a Tribute 3 card with two units to tribute is affordable but not playable, and with three is both
     #[test]
     fn r2425000_a_tribute_3_card_with_two_units_to_tribute_is_affordable_but_not_playable_and_with_three_is_both()
      {
@@ -1531,7 +1474,6 @@ mod playable_turns_r2425000 {
         assert_eq!(counted(&trigor_turn(3)), vec![(1, 1), (0, 0)]);
     }
 
-    /// R2425000 neverPlayed, its at-risk form and its ban need playable turns, not merely affordable ones
     #[test]
     fn r2425000_never_played_its_at_risk_form_and_its_ban_need_playable_turns_not_merely_affordable_ones() {
         let at = AI_SWEEP.min_affordable_turns;
@@ -1584,7 +1526,6 @@ mod playable_turns_r2425000 {
         );
     }
 
-    /// R2425000 a slice written before the playable count reads it as 0
     #[test]
     fn r2425000_a_slice_written_before_the_playable_count_reads_it_as_0() {
         let old: SweepResult = serde_json::from_value(json!({
@@ -1604,8 +1545,7 @@ mod playable_turns_r2425000 {
 /// `crates/ai/generation.json`: the AI generation this tree holds (training/README.md).
 const GENERATION_JSON: &str = include_str!("../../generation.json");
 
-/// `packages/ai/src/shadowBan.ts`'s `SHADOW_BAN` at 91cc43c, the source `generation.json` names for
-/// generation 0: TypeScript's eleven entries, in its order.
+/// The table's eleven entries at generation 0 (`generation.json`), in its order.
 const TS_SHADOW_BAN: &[(&str, &str)] = &[
     (
         "core-042",
@@ -1661,7 +1601,7 @@ mod v12 {
     /// earlier report printed. `cargo jackioh sweep --check` (the `jackioh-tools` test
     /// `shadow_ban_rs_is_what_its_reports_of_record_dictate`) holds every row to the reports of
     /// record, so a row added or rewritten by hand fails there; this keeps only that none is one of
-    /// TypeScript's eleven, which generations 1 to 8 removed.
+    /// generation 0's eleven, which generations 1 to 8 removed.
     #[test]
     fn v12_r1678000_no_entry_is_typescripts_and_the_reports_of_record_hold_the_rest() {
         for entry in SHADOW_BAN {

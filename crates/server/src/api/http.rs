@@ -441,7 +441,6 @@ fn is_digits(text: &str, max: usize) -> bool {
     !text.is_empty() && text.len() <= max && text.bytes().all(|byte| byte.is_ascii_digit())
 }
 
-/// Matches a dotted quad shape.
 fn is_dotted_quad_shape(text: &str) -> bool {
     let parts: Vec<&str> = text.split('.').collect();
     parts.len() == 4 && parts.iter().all(|part| is_digits(part, 3))
@@ -649,7 +648,8 @@ pub enum AuthLevel {
     Active,
 }
 
-/// Percent-decodes a URI component, returning None if invalid.
+/// Percent-decodes a URI component, or None for a `%` not followed by two hex digits or for bytes that
+/// are not UTF-8.
 fn decode_uri_component(raw: &str) -> Option<String> {
     let bytes = raw.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -991,8 +991,8 @@ impl RateLimiter {
 
     /// R1717000: counts one refused request against `key` and answers the count when it raises
     /// `api.rejections.unusual`: once the window holds more than `API_REJECTION_ALERT_THRESHOLD`
-    /// refusals, then not again for `API_REJECTION_ALERT_WINDOW_MS`. Each key's record is capped and
-    /// swept once a window, so a flood holds bounded state.
+    /// refusals, then not again until a whole `API_REJECTION_ALERT_WINDOW_MS` has passed since its last
+    /// alert. Each key's record is capped and swept once a window, so a flood holds bounded state.
     pub fn note_rejection(&self, key: &str, now: i64) -> Option<usize> {
         let window = API_REJECTION_ALERT_WINDOW_MS;
         let mut state = lock(&self.state);
@@ -1066,9 +1066,10 @@ impl Default for RateLimiter {
 ///
 /// R190's operator signal: the fewest `X-Forwarded-For` entries any request has carried. A caller can
 /// add entries but never remove the proxies' ones, so that is the hops they add, and
-/// `TRUSTED_PROXY_HOPS` must not be more (docs/architecture.md §10). One sample would not do (a
-/// scanner may come first), so a line is logged each time a request carries fewer than any before;
-/// counts past `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many". No address is ever logged.
+/// `TRUSTED_PROXY_HOPS` must not be more (docs/architecture.md §10). One sample would not do (the first
+/// request may be a scanner, and raising the hops to its count would hand the key back to the caller),
+/// so a line is logged each time a request carries fewer than any before; counts past
+/// `MAX_TRUSTED_PROXY_HOPS + 1` are all "too many". No address is ever logged.
 pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Response {
     let (parts, body) = request.into_parts();
     let path = parts.uri.path().to_string();
@@ -1214,10 +1215,9 @@ async fn run_route(
         assert_active(&resolved.profile)?;
     }
 
-    // SPEC §11 R897000: every signed-in request refreshes its caller's queue presence, piggybacked
-    // here so no new route and no client change is needed: a queued client already polls
-    // `GET /api/auth/me` every `SERIES_POLL_SECONDS` from wherever it is. Only requests passing
-    // auth and the gate refresh.
+    // SPEC §11 R897000: every signed-in request refreshes its caller's queue presence, piggybacked here
+    // so no new route and no client change is needed: a queued client already polls `GET /api/auth/me`
+    // every `SERIES_POLL_SECONDS`. Only requests passing auth and the gate refresh.
     if let Some(resolved) = &caller {
         app.queue_presence.touch(&resolved.profile.id, now_ms());
     }

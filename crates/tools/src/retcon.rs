@@ -47,7 +47,6 @@ const PATCHES_REL: &str = "crates/cards/patches";
 const ALIASES_FILE: &str = "aliases.json";
 const SCRIPTS_PREFIX: &str = "crates/cards/src/scripts/";
 
-/// One shipped version's new name.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Renamed {
@@ -297,7 +296,6 @@ pub fn scoped_aliases(held: &Aliases, map: &[Renamed]) -> anyhow::Result<Aliases
     })
 }
 
-/// What a write changed, for the summary it prints.
 #[derive(Debug, Default)]
 pub struct Written {
     pub snapshots: usize,
@@ -1126,7 +1124,6 @@ fn migration_path(repo_root: &Path, suffix: &str) -> anyhow::Result<(u32, PathBu
 
 /* records outside the repository */
 
-/// What `--records` did under one directory.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct RecordsReport {
     /// Files whose objects took the marker, their versions renamed.
@@ -1170,7 +1167,6 @@ pub fn mark_record(value: &Json, aliases: &Aliases) -> Option<Json> {
     Some(Json::Object(renamed))
 }
 
-/// Whether a record object carries today's marker.
 fn marked_now(value: &Json) -> bool {
     matches!(
         value.as_object().and_then(|object| object.get("versions")),

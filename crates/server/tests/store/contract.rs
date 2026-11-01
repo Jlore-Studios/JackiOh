@@ -148,15 +148,13 @@ pub struct StoreHarness {
     ends: Ends,
 }
 
-/// What each store's harness holds besides the store itself.
 enum Ends {
     Memory {
         /// The fake's tables, which `reset` empties (`store.reset()`).
         data: Arc<tokio::sync::Mutex<FakeData>>,
         /// The piece of database state `app.redeem_invite_code` reads and the port cannot: the
         /// managed-auth verification flag. Held here so the contract drives both stores through
-        /// one harness method. The redemption switch needs no hook here: the fake flips it
-        /// through the store method under test, exactly as Postgres does.
+        /// one harness method.
         unverified: Arc<std::sync::Mutex<IndexSet<String>>>,
         next_user: AtomicU32,
     },
@@ -254,8 +252,6 @@ impl StoreHarness {
                 data.lock().await.reset();
                 unverified.lock().expect("the unverified profiles").clear();
                 next_user.store(1, Ordering::SeqCst);
-                // `app.settings` is not truncated in Postgres either, so the switch is put back
-                // through the store method under test, exactly as the Postgres arm does by hand.
                 q!(self, t => t.redemption_set_enabled(true));
             }
             Ends::Postgres { admin } => {
@@ -317,8 +313,6 @@ impl StoreHarness {
                     unverified.insert(profile_id.to_string());
                 }
             }
-            // §9.4 step 1's "verified email" is Supabase Auth's own `email_confirmed_at`, which is
-            // what `app.redeem_invite_code` joins `auth.users` for.
             Ends::Postgres { admin } => {
                 sqlx::query(
                     "update auth.users set email_confirmed_at = case when $2::boolean then now() else null end
@@ -478,9 +472,9 @@ fn unreadable_game_record_detail(id: &str) -> Value {
     json!({ "id": id, "source": "live", "mode": "bo1", "patch": "v0.1.1" })
 }
 
-/// Every table the migrations create, children first. `cards` is seeded once and kept. The loadout
-/// tables are no longer written by anything (R254) but are emptied all the same, so a test that
-/// wrote one by hand leaves nothing behind.
+/// Every table the migrations create, children first; `cards` is seeded once and kept. The loadout
+/// tables (R254) are written by nothing but are emptied all the same, so a test that wrote one by hand
+/// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
   public.tutorial_progress, public.player_settings,
@@ -505,7 +499,6 @@ pub fn database_url() -> Option<String> {
     std::env::var("DATABASE_URL").ok().filter(|url| !url.is_empty())
 }
 
-/// A raw superuser connection, for the setup and teardown the store deliberately cannot do.
 pub async fn admin_client(url: &str) -> PgPool {
     PgPoolOptions::new()
         .max_connections(1)
@@ -566,7 +559,6 @@ pub async fn seed_starter_cards(admin: &PgPool) {
     .expect("seed the starter cards");
 }
 
-/// `Date.now()`.
 fn now_ms() -> i64 {
     let since = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -593,7 +585,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
         .unwrap_or_else(|error| panic!("{} from {shown}: {error}", std::any::type_name::<T>()))
 }
 
-/// A port value's JSON, which is what the cases read fields off.
 fn j<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a port value serializes")
 }
@@ -614,7 +605,6 @@ fn spread(base: Value, over: Value) -> Value {
     base
 }
 
-/// `{ ...base, key: undefined }`.
 fn without(base: Value, key: &str) -> Value {
     let mut base = base;
     if let Some(fields) = base.as_object_mut() {
@@ -843,9 +833,7 @@ mod profiles {
         q!(harness, t => t.matches_create(&match_row(&first, &profile.id, &other.id, harness, harness.now())));
         q!(harness, t => t.matches_create(&match_row(&second, &profile.id, &other.id, harness, harness.now())));
 
-        // The first writer wins.
         assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, Some(first.as_str()))));
-        // A second seat over a taken one loses without writing.
         assert!(!q!(harness, t => t.profiles_set_in_match(&profile.id, Some(second.as_str()))));
         assert_eq!(
             j(&must(
@@ -855,7 +843,6 @@ mod profiles {
             first.as_str()
         );
 
-        // A conditional clear for another match is a no-op; for the holding match it frees.
         q!(harness, t => t.profiles_clear_in_match(&profile.id, &second));
         assert_eq!(
             j(&must(
@@ -873,7 +860,6 @@ mod profiles {
                 .is_null()
         );
 
-        // A freed seat seats again, and clearing stays unconditional.
         assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, Some(second.as_str()))));
         assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, None)));
         assert!(
@@ -884,7 +870,6 @@ mod profiles {
                 .is_null()
         );
 
-        // A profile that was never there errors on set, never on clear.
         assert!(call!(harness, t => t.profiles_set_in_match(&id(), Some(first.as_str()))).is_err());
         q!(harness, t => t.profiles_clear_in_match(&id(), &first));
     }
@@ -1001,7 +986,6 @@ mod r1434_usernames {
         }
     }
 
-    /// The username a profile shows now, read back from the store.
     async fn username_now(harness: &StoreHarness, profile_id: &str) -> String {
         must(q!(harness, t => t.profiles_get_by_id(profile_id)), "the profile").username()
     }
@@ -1084,12 +1068,10 @@ mod r1434_usernames {
             ["Max", "Max#1", "Max#2"]
         );
 
-        // b renames once the cooldown has run, which frees `Max#1` for the next taker.
         assert_eq!(claim(harness, &b.id, "Zed", at + COOLDOWN_MS).await, None);
         assert_eq!(claim(harness, &d.id, "Max", at).await, Some(1));
         assert_eq!(username_now(harness, &d.id).await, "Max#1");
 
-        // a renames too: the bare name is free again, and the next taker gets it bare.
         assert_eq!(claim(harness, &a.id, "Ann", at + COOLDOWN_MS).await, None);
         let e = active_profile(harness, None).await;
         assert_eq!(claim(harness, &e.id, "Max", at).await, None);
@@ -1128,10 +1110,8 @@ mod r1434_usernames {
             q!(harness, t => t.profiles_username_tag_for(&b.id, "max")),
             Some(1)
         );
-        // A new account's own `Player#n` is not taken against it either.
         let tag = q!(harness, t => t.profiles_username_tag_for(&b.id, "player"));
         assert_eq!(tag, None, "{}: no one else holds bare Player", harness.name);
-        // a moves to another form of the same name, keeping it bare.
         assert_eq!(claim(harness, &a.id, "MAX", at + COOLDOWN_MS).await, None);
         assert_eq!(username_now(harness, &a.id).await, "MAX");
     }
@@ -1142,7 +1122,6 @@ mod r1434_usernames {
         let at = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
-        // b previews `Max`, bare; a takes it first.
         assert_eq!(q!(harness, t => t.profiles_username_tag_for(&b.id, "max")), None);
         assert_eq!(claim(harness, &a.id, "Max", at).await, None);
         let stale = q!(harness, t => t.profiles_claim_username(&claim_of(&b.id, "Max", None, at)));
@@ -1158,7 +1137,6 @@ mod r1434_usernames {
         let at = harness.now();
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
-        // Both previewed `Max` bare, and both save at once.
         let (first, second) = tokio::join!(
             async { q!(harness, t => t.profiles_claim_username(&claim_of(&a.id, "Max", None, at))) },
             async { q!(harness, t => t.profiles_claim_username(&claim_of(&b.id, "Max", None, at))) },
@@ -1174,7 +1152,6 @@ mod r1434_usernames {
             "{}: one claim lands bare and the other is told the name is taken",
             harness.name
         );
-        // The one that lost saves its fresh preview, `Max#1`.
         let loser = if matches!(first, UsernameClaimOutcome::Claimed { .. }) {
             &b
         } else {
@@ -1329,10 +1306,9 @@ mod codes {
         assert!(!q!(harness, t => t.codes_claim(&expired.id, harness.now())));
     }
 
-    /// The operator's lever onto step 5 (`Tx::codes_revoke_by_hash`, issue #887): revoking a live
-    /// code marks it revoked, and it then redeems exactly as an exhausted one — `invalid_code`
-    /// with one attempt and `uses` unchanged, the account still pending. Revoking again, or an
-    /// unknown hash, answers false and changes nothing.
+    /// The operator's lever onto step 5 (`Tx::codes_revoke_by_hash`, issue #887): a revoked code redeems
+    /// exactly as an exhausted one (`invalid_code`, one attempt, `uses` unchanged, the account still
+    /// pending); revoking again, or an unknown hash, answers false and changes nothing.
     async fn revokes_a_code_by_hash_idempotently(harness: &StoreHarness) {
         let row = code(harness, json!({}));
         q!(harness, t => t.codes_insert(&row));
@@ -1437,8 +1413,6 @@ mod codes {
                 "at": at,
             }))
         };
-        // Six accounts, one attempt each, from the shared hash; the first tries twice and one attempt
-        // is signed in as nobody.
         for profile in &accounts {
             let attempt = log(Some(profile), &shared, now);
             q!(harness, t => t.codes_log_attempt(&attempt));
@@ -1447,11 +1421,9 @@ mod codes {
         let anonymous = log(None, &shared, now - 5);
         q!(harness, t => t.codes_log_attempt(&again));
         q!(harness, t => t.codes_log_attempt(&anonymous));
-        // A seventh account's attempt from the same hash, a second past the window.
         let late_comer = pending_profile(harness, None).await;
         let stale = log(Some(&late_comer), &shared, now - window - 1000);
         q!(harness, t => t.codes_log_attempt(&stale));
-        // One account, six hashes, one attempt each.
         let solo = pending_profile(harness, None).await;
         let singles: Vec<String> = (0..6).map(|n| format!("ip-solo-{n}-{}", id())).collect();
         for ip_hash in &singles {
@@ -1471,18 +1443,14 @@ mod codes {
             rows
         };
 
-        // Inside the window: six accounts and eight attempts behind the shared hash, and one account
-        // behind each of the others.
         assert_eq!(
             q!(harness, t => t.codes_invite_clusters(now - window)),
             expected(cluster(&shared, 6, 8)),
         );
-        // A window wide enough for the stale attempt counts its account too.
         assert_eq!(
             q!(harness, t => t.codes_invite_clusters(now - window - 2000)),
             expected(cluster(&shared, 7, 9)),
         );
-        // Past every attempt there is nothing to list.
         assert_eq!(
             q!(harness, t => t.codes_invite_clusters(now + 60_000)),
             Vec::new()
@@ -1501,11 +1469,11 @@ mod codes {
 
 // Redemption (SPEC §9.4's one server-side transaction)
 
-/// `Store.redeem` is the whole of §9.4's six steps, and the two implementations of it are as far
-/// apart as this port gets: one `select app.redeem_invite_code(...)` against migration 0001's
-/// plpgsql, and the fake's `redeem` walking the same six steps over its tables. Nothing above this
-/// block would notice if they disagreed — `api/codes.rs` calls the port and the whole server suite
-/// runs on the fake — so every result code the port declares is exercised here, against both.
+/// `Store.redeem` is §9.4's six steps whole, and its two implementations are as far apart as this port
+/// gets: one `select app.redeem_invite_code(...)` against migration 0001's plpgsql, and the fake's
+/// `redeem` walking the same steps over its tables. Nothing else would notice if they disagreed
+/// (`api/codes.rs` calls the port, and the server suite runs on the fake), so every result code is
+/// exercised here.
 mod redeem {
     use super::*;
 
@@ -1514,7 +1482,6 @@ mod redeem {
         format!("hash-{}", id())
     }
 
-    /// A code's id and hash, as `mint` answers them.
     struct Minted {
         id: String,
         code_hash: String,
@@ -1647,7 +1614,6 @@ mod redeem {
         assert_eq!(uses_of(harness, &code.code_hash).await, 0);
         assert_eq!(attempts(harness, &profile.id).await, 0);
 
-        // And verifying it is all that stood in the way.
         harness.set_email_verified(&profile.id, true).await;
         assert_eq!(
             redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
@@ -1720,7 +1686,6 @@ mod redeem {
             redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
             "circuit_open"
         );
-        // A good code is refused too, unspent, and the attempt still costs the caller a row.
         assert_eq!(status_of(harness, &profile.id).await, "pending");
         assert_eq!(uses_of(harness, &code.code_hash).await, 0);
         assert_eq!(attempts(harness, &profile.id).await, 1);
@@ -1748,8 +1713,8 @@ mod redeem {
     }
 
     /// The operator's lever onto the database-side switch itself (`Tx::redemption_set_enabled`,
-    /// issue #887): flipping it off answers `circuit_open` while it is off and restoring it lets
-    /// the same code redeem, with the previous value round-tripping false, false, true.
+    /// issue #887): flipping it off answers `circuit_open` while it is off, and restoring it lets the
+    /// same code redeem.
     async fn answers_circuit_open_from_the_store_method_and_restores(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let code = mint(harness, json!({})).await;
@@ -2009,7 +1974,6 @@ mod decks {
             .collect();
         assert_eq!(portraits, vec![Value::Null, json!("gary")]);
 
-        // An update swaps the field like any other: `null` back to a choice and back again.
         let changed: SavedDeck = from(spread(
             j(&pictured),
             json!({ "portrait": null, "updatedAt": harness.now() + 1_000 }),
@@ -2055,7 +2019,6 @@ mod decks {
             Some("card-back-blueprint")
         );
 
-        // An update swaps each pick like any other field and clears one that is now absent.
         let swapped: SavedDeck = from(spread(
             j(&dressed),
             json!({ "tableCosmetic": "table-wood", "fieldCosmetic": null, "updatedAt": harness.now() + 2_000 }),
@@ -2067,7 +2030,6 @@ mod decks {
         assert_eq!(kept.card_back_cosmetic.as_deref(), Some("card-back-blueprint"));
         assert_eq!(kept.created_at, dressed.created_at);
 
-        // A save with none writes none: nothing is kept from the row the save replaces.
         let cleared: SavedDeck = from(spread(
             j(&kept),
             json!({
@@ -2353,14 +2315,12 @@ mod deck_versions {
             lit(&q!(harness, t => t.deck_versions_keep(&edit, WINDOW, KEPT))),
             "merged"
         );
-        // The newest keeps its id and takes the save's name, cards and time.
         let merged: DeckVersion = from(spread(j(&edit), json!({ "id": first.id })));
         assert_eq!(
             q!(harness, t => t.deck_versions_list(&profile.id, &deck.id)),
             vec![merged.clone()]
         );
 
-        // Past the window, the same name and cards keep nothing.
         let same = deck_version(
             &deck,
             json!({ "name": "Aggro II", "cards": edit.cards, "savedAt": edited_at * 2 }),
@@ -2374,7 +2334,6 @@ mod deck_versions {
             vec![merged.clone()]
         );
 
-        // No window (a restore) adds a version even within one.
         let restored = deck_version(&deck, json!({ "savedAt": edited_at + 1 }));
         assert_eq!(
             lit(&q!(harness, t => t.deck_versions_keep(&restored, None, KEPT))),
@@ -2385,7 +2344,6 @@ mod deck_versions {
             vec![restored.clone(), merged.clone()]
         );
 
-        // Unless the newest already holds its name and cards.
         let again = deck_version(&deck, json!({ "savedAt": edited_at + 2 }));
         assert_eq!(
             lit(&q!(harness, t => t.deck_versions_keep(&again, None, KEPT))),
@@ -2551,7 +2509,6 @@ mod custom_cards {
         );
         assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)), vec![expected]);
 
-        // A card with no builder's model and no script (a vanilla card) reads back as it was made.
         let vanilla = write(harness, &profile.id, json!({ "source": "", "builder": null }));
         q!(harness, t => t.custom_cards_create(&vanilla, 50));
         let read = must(
@@ -2577,7 +2534,6 @@ mod custom_cards {
             .map(|saved| j(saved)["card"]["frame"]["name"].clone())
             .collect();
         assert_eq!(names, vec![json!("First"), json!("Second")]);
-        // Another profile's card is not this one's to read.
         assert!(q!(harness, t => t.custom_cards_get(&a.id, &theirs.id)).is_none());
     }
 
@@ -2594,13 +2550,11 @@ mod custom_cards {
         assert_eq!(lit(&q!(harness, t => t.custom_cards_create(&third, 2))), "limit");
         assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)).len(), 2);
         assert!(q!(harness, t => t.custom_cards_get(&profile.id, &third.id)).is_none());
-        // Another profile's cards do not count against this one's cap.
         let other = active_profile(harness, None).await;
         assert_eq!(
             lit(&q!(harness, t => t.custom_cards_create(&write(harness, &other.id, json!({})), 2))),
             "created"
         );
-        // A save at the cap is not a create.
         let edited: CustomCardWrite = from(spread(j(&cards[0]), json!({ "frame": frame("Renamed") })));
         assert_eq!(
             lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
@@ -2643,7 +2597,6 @@ mod custom_cards {
         assert_eq!(read, expected);
         assert!(absent(&j(&read.card), "builder"));
 
-        // And again: each save counts one more.
         let again: CustomCardWrite = from(spread(j(&edited), json!({ "at": made_at + 9_000 })));
         assert_eq!(
             lit(&q!(harness, t => t.custom_cards_update(&again, 2))),
@@ -2669,10 +2622,8 @@ mod custom_cards {
             "updated"
         );
 
-        // Version 1 again, from a tab that never saw the first save: stale.
         let late: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("Late save") })));
         assert_eq!(lit(&q!(harness, t => t.custom_cards_update(&late, 1))), "stale");
-        // Another profile saving the owner's card, at its right version: missing.
         let theirs: CustomCardWrite = from(spread(
             j(&card),
             json!({ "profileId": other.id, "frame": frame("Mine now") }),
@@ -2681,7 +2632,6 @@ mod custom_cards {
             lit(&q!(harness, t => t.custom_cards_update(&theirs, 2))),
             "missing"
         );
-        // A card nobody made: missing.
         let nobody = write(harness, &owner.id, json!({}));
         assert_eq!(
             lit(&q!(harness, t => t.custom_cards_update(&nobody, 1))),
@@ -2802,7 +2752,6 @@ mod tutorial {
             )
             .await,
         );
-        // Each id once, in code-point order, whatever order they were sent in.
         assert_eq!(
             j(&progress),
             json!({ "profileId": profile.id, "completed": ["basics", "spells"], "hiddenChoice": null })
@@ -2824,7 +2773,6 @@ mod tutorial {
         let completed = |row: TutorialProgressRow| j(&row)["completed"].clone();
 
         merged(write(json!(["basics", "spells"])).await);
-        // A stale device that has won only lesson 1, or nothing at all, takes nothing away.
         assert_eq!(
             completed(merged(write(json!(["basics"])).await)),
             json!(["basics", "spells"])
@@ -2833,7 +2781,6 @@ mod tutorial {
             completed(merged(write(json!([])).await)),
             json!(["basics", "spells"])
         );
-        // Another device's lesson joins them; a repeat of it is the same row.
         assert_eq!(
             completed(merged(write(json!(["traps"])).await)),
             json!(["basics", "spells", "traps"])
@@ -2842,7 +2789,6 @@ mod tutorial {
             completed(merged(write(json!(["traps", "traps"])).await)),
             json!(["basics", "spells", "traps"])
         );
-        // An id no lesson of this client has is kept all the same: the server does not know the lessons.
         assert_eq!(
             completed(merged(write(json!(["lesson-from-a-newer-client"])).await)),
             json!(["basics", "lesson-from-a-newer-client", "spells", "traps"])
@@ -2869,22 +2815,18 @@ mod tutorial {
             choice(merged(choose(true, t0).await)),
             json!({ "hidden": true, "at": t0 })
         );
-        // "Show" made later, on another device, wins.
         assert_eq!(
             choice(merged(choose(false, t0 + 5_000).await)),
             json!({ "hidden": false, "at": t0 + 5_000 })
         );
-        // An older "Hide" arriving afterwards does not undo it.
         assert_eq!(
             choice(merged(choose(true, t0 + 1_000).await)),
             json!({ "hidden": false, "at": t0 + 5_000 })
         );
-        // The same instant is not newer: the stored choice stays.
         assert_eq!(
             choice(merged(choose(true, t0 + 5_000).await)),
             json!({ "hidden": false, "at": t0 + 5_000 })
         );
-        // A write with no choice leaves the choice alone, and lessons alone move nothing else.
         let lessons_only = merged(
             merge(
                 harness,
@@ -2927,7 +2869,6 @@ mod tutorial {
             completed_of(q!(harness, t => t.tutorial_get(&owner.id))),
             json!(["basics", "spells"])
         );
-        // At the cap exactly is fine.
         assert_eq!(
             j(&merged(write(owner.id.clone(), json!(["traps"])).await))["completed"],
             json!(["basics", "spells", "traps"])
@@ -2960,7 +2901,6 @@ mod player_settings {
         harness.now() + offset
     }
 
-    /// `{ maxGroups: 8, maxBytes: 4096 }`.
     fn limits() -> Value {
         json!({ "maxGroups": 8, "maxBytes": 4096 })
     }
@@ -3035,7 +2975,6 @@ mod player_settings {
             .await,
         );
 
-        // Later: replaced whole, so a key the new group lacks is gone.
         let later = merged(
             write(
                 harness,
@@ -3049,7 +2988,6 @@ mod player_settings {
             group_of(&later, "audio"),
             json!({ "at": 3_000, "values": { "master": 0.9 } })
         );
-        // Older, and tied: the stored group stays.
         let older = merged(
             write(
                 harness,
@@ -3076,7 +3014,6 @@ mod player_settings {
             group_of(&tied, "audio"),
             json!({ "at": 3_000, "values": { "master": 0.9 } })
         );
-        // Zero is a time like any other.
         let zero = merged(
             write(
                 harness,
@@ -3130,7 +3067,6 @@ mod player_settings {
                 "cards": { "at": 1, "values": { "animatedFoil": false } },
             })
         );
-        // A write naming nothing is the row as it stands.
         assert_eq!(
             merged(write(harness, &profile.id, json!({}), limits()).await),
             row
@@ -3168,7 +3104,6 @@ mod player_settings {
             "the owner's row",
         );
         assert_eq!(group_ids(&owners), ["a", "b"]);
-        // A group already held may still be replaced at the cap.
         let replaced = merged(
             write(
                 harness,
@@ -3342,7 +3277,6 @@ mod last_boards {
             "the live match",
         );
         assert_eq!(j(found)["glitchBoards"], json!([j(&board()), []]));
-        // A row written without them reads none.
         let plain = match_row(&id(), &p1.id, &p2.id, harness, harness.now());
         q!(harness, t => t.matches_create(&plain));
         assert!(absent(
@@ -3533,7 +3467,6 @@ mod consent {
 
         let now = harness.now();
         q!(harness, t => t.consent_record_age(&profile.id, 13, now));
-        // A second record changes nothing: the first check stands, with its minimum and time.
         q!(harness, t => t.consent_record_age(&profile.id, 16, now + 1000));
         let consent = q!(harness, t => t.consent_get(&profile.id));
         assert_eq!(consent.age_checked_at, Some(now));
@@ -3546,7 +3479,6 @@ mod consent {
         let now = harness.now();
         q!(harness, t => t.consent_record_terms(&profile.id, "2026-10-13/2026-10-13", TermsSource::Signup, now));
         q!(harness, t => t.consent_record_terms(&profile.id, "2027-01-02/2026-12-30", TermsSource::Reaccept, now + 2000));
-        // The same version again keeps its first record.
         q!(harness, t => t.consent_record_terms(&profile.id, "2026-10-13/2026-10-13", TermsSource::Reaccept, now + 3000));
         let consent = q!(harness, t => t.consent_get(&profile.id));
         assert_eq!(
@@ -3632,7 +3564,6 @@ mod series {
         picked["version"] = json!(version_of(&row) + 1);
         let picked: SeriesRow = from(picked);
         assert!(q!(harness, t => t.series_update(&picked)));
-        // A second writer that read the same version loses.
         let stale: SeriesRow = from(spread(
             j(&row),
             json!({ "status": "over", "version": version_of(&row) + 1 }),
@@ -3694,7 +3625,6 @@ mod series {
             Some(playing.clone())
         );
 
-        // Once the game is over and the series has moved on, only `withGame` still finds it.
         let next_id = id();
         let shown = j(&playing);
         let mut game = shown["games"][0].clone();
@@ -3821,8 +3751,7 @@ mod matches {
     }
 
     /// §9.3, §9.5: a log reads back in seq's numeric order, past nine actions too. Postgres resolved
-    /// `select seq::text … order by seq` to the text column, so a rebuild folded 1, 10, 11, …, 2, …
-    /// and rewound every live match of ten actions or more to its ninth.
+    /// `select seq::text … order by seq` to the text column, which sorts 1, 10, 11, …, 2, …
     async fn reads_a_log_of_ten_or_more_actions_back_in_seq_order(harness: &StoreHarness) {
         let row = live_match(harness).await;
         for seq in 1..=12 {
@@ -4003,10 +3932,8 @@ mod matches {
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
         assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"))["inMatchId"].is_null());
         assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"))["inMatchId"].is_null());
-        // The id is free again: a Conquest game voided is started again under it.
         q!(harness, t => t.matches_create(&row));
         assert_eq!(q!(harness, t => t.matches_get(&row.id)), Some(row.clone()));
-        // An unknown id is a no-op.
         q!(harness, t => t.matches_forget_voided(&id()));
     }
 
@@ -4067,7 +3994,6 @@ mod matches {
         q!(harness, t => t.matches_record_final_hash(&row.id, "hash-1"));
         q!(harness, t => t.matches_record_final_hash(&row.id, "hash-2"));
         assert_eq!(hash_of(q!(harness, t => t.matches_get(&row.id))), json!("hash-1"));
-        // An unknown id is a no-op.
         q!(harness, t => t.matches_record_final_hash(&id(), "hash-3"));
 
         let a = active_profile(harness, None).await;
@@ -4881,7 +4807,6 @@ mod tickets {
             .map(j)
             .collect();
         assert_eq!(waits, expected);
-        // The cut is inclusive.
         let from_recent: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 1_000))
             .iter()
             .map(j)
@@ -4947,7 +4872,6 @@ mod game_records {
         let b = active_profile(harness, None).await;
         let now = harness.now();
 
-        // A room's match: the room's mode.
         for (code, mode) in [("ABC234", "random"), ("BCD345", "bo1")] {
             let room: Room = from(json!({
                 "code": code,
@@ -4972,7 +4896,6 @@ mod game_records {
             q!(harness, t => t.matches_finish(&room_match, now));
         }
 
-        // A queue match: its tickets' mode.
         let tickets: Vec<Ticket> = [&a.id, &b.id]
             .into_iter()
             .map(|profile_id| {
@@ -5001,7 +4924,6 @@ mod game_records {
             json!("random")
         );
 
-        // A game of a Conquest series: bo3, whatever made the series.
         let series_game = id();
         let series: SeriesRow = from(json!({
             "id": id(),
@@ -5031,7 +4953,6 @@ mod game_records {
             json!("bo3")
         );
 
-        // Nothing made this one.
         assert!(q!(harness, t => t.matches_mode_of(&id())).is_none());
     }
 
@@ -5086,7 +5007,6 @@ mod game_records {
                 json!({ "source": "dev", "mode": "random", "patch": "v0.1.1", "pilots": { "p1": "ai", "p2": "ai" } }),
             ),
         ];
-        // Written out of order: a read comes back in id order.
         for record in records.iter().rev() {
             assert!(q!(harness, t => t.game_records_insert(record)));
         }
@@ -5300,7 +5220,6 @@ mod game_records {
         let _no_result = ended_match(harness, (&a.id, &b.id), after + 3, false, true, true).await;
         let _no_hash = ended_match(harness, (&a.id, &b.id), after + 4, true, false, true).await;
         let _no_log = ended_match(harness, (&a.id, &b.id), after + 5, true, true, false).await;
-        // A live match with a log that is never finished.
         let live = id();
         q!(harness, t => t.matches_create(&match_row(&live, &a.id, &b.id, harness, now)));
         q!(harness, t => t.matches_append_actions(&[action_row(&live, 1, "p1", "n1", now)]));
@@ -5321,7 +5240,6 @@ mod game_records {
         harness: &StoreHarness,
     ) {
         let records = mixed_records();
-        // Two one at a time, the rest as a batch with a repeat in it, then all of them again.
         assert!(q!(harness, t => t.game_records_insert(&records[0])));
         assert!(q!(harness, t => t.game_records_insert(&records[1])));
         let mut batch: Vec<GameRecord> = records[2..].to_vec();
@@ -5422,7 +5340,6 @@ mod game_records {
             (1, 1)
         );
         assert_eq!(rush.created_not_played.games, 0);
-        // The records written without the lists count as they did.
         let before = mixed_records();
         assert_eq!(report.cards.len(), card_stats(&before, &filter).cards.len());
         assert!(card_stats(&before, &filter).created.is_empty());
@@ -5495,7 +5412,6 @@ mod game_records {
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
         );
-        // The emptied ones are still held by id: written again, they are refused and fold nothing.
         assert_eq!(
             q!(harness, t => t.game_records_insert_batch(&records)),
             vec![false; records.len()]
@@ -5506,7 +5422,6 @@ mod game_records {
             loaded(&records)
         );
 
-        // An unfolded record is never emptied, however old; folded, it goes on the next purge.
         harness.reset().await;
         assert!(q!(harness, t => t.game_records_insert(&records[0])));
         harness.forget_game_record_folds().await;
@@ -5633,7 +5548,6 @@ mod game_records {
         let mut sorted = records.clone();
         sorted.sort_by(|a, b| a.id.cmp(&b.id));
 
-        // It heads the queue: the batch of two takes it and the first record behind it.
         assert_eq!(
             q!(harness, t => t.game_records_fold_pending(2)),
             FoldedRecords {
@@ -5648,7 +5562,6 @@ mod game_records {
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&sorted[..1])
         );
-        // The rest fold, and nothing is taken again.
         assert_eq!(
             q!(harness, t => t.game_records_fold_pending(100)),
             FoldedRecords {
@@ -5664,10 +5577,8 @@ mod game_records {
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
         );
-        // Its detail is gone: the read of the records neither fails on it nor returns it.
         let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
         assert_eq!(ids_of(&held), ids_of(&sorted));
-        // Its id is kept: written again it is refused and counts nothing.
         assert_eq!(
             q!(harness, t => t.game_records_insert_batch(&[game_record(UNREADABLE_ID, json!({}))])),
             vec![false]
@@ -5703,7 +5614,6 @@ mod game_records {
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
         );
-        // The same batch again folds nothing, whatever it holds.
         assert_eq!(
             q!(harness, t => t.game_record_batch_fold(&batch, &records[2..3])),
             None
@@ -5712,7 +5622,6 @@ mod game_records {
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
         );
-        // No row was written for the batch's records: only the two written a record at a time read.
         let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
         let mut written = records[..2].to_vec();
         written.sort_by(|a, b| a.id.cmp(&b.id));
@@ -5929,7 +5838,6 @@ mod ranked {
         q!(harness, t => t.ranked_lock_seasons());
         assert!(q!(harness, t => t.ranked_create_season(&newer)));
         assert!(q!(harness, t => t.ranked_create_season(&older)));
-        // A second opener of the same id writes nothing and answers false.
         let reopened: Season = from(spread(j(&newer), json!({ "patchVersion": "v0.2.4" })));
         assert!(!q!(harness, t => t.ranked_create_season(&reopened)));
         assert_eq!(q!(harness, t => t.ranked_seasons()), vec![older, newer]);
@@ -5959,7 +5867,6 @@ mod ranked {
         assert!(q!(harness, t => t.ranked_rank("v0.2", &a.id)).is_none());
         assert!(q!(harness, t => t.ranked_rank("v0.1", &id())).is_none());
 
-        // The second write for the same (season, profile) replaces the first.
         let moved: SeasonRank = from(spread(
             j(&first),
             json!({ "games": 8, "wins": 6, "ladder": 42, "streak": 4, "updatedAt": now + 1 }),
@@ -6039,7 +5946,6 @@ mod ranked {
             peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
             Some(4)
         );
-        // A player with no season row is noted nowhere — the write is a no-op.
         q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &id(), 1));
         q!(harness, t => t.ranked_note_peak_jlorious("v0.2", &a.id, 1));
 
@@ -6090,7 +5996,6 @@ mod ranked {
 
     async fn r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on(harness: &StoreHarness) {
         let now = harness.now();
-        // A row written without one (before migration 0052) reads back without one.
         let older: BotRating = from(json!({
             "botId": "ai-gen",
             "glicko": { "rating": 1200.0, "deviation": 60.0, "volatility": 0.06 },
@@ -6102,7 +6007,6 @@ mod ranked {
             must(q!(harness, t => t.ranked_bot("ai-gen")), "the row").ai_generation,
             None
         );
-        // A rated game stamps it, and the upsert replaces it.
         let mut stamped = j(&older);
         stamped["aiGeneration"] = json!(13);
         let stamped: BotRating = from(stamped);
@@ -6256,7 +6160,6 @@ mod ranked {
             q!(harness, t => t.ranked_record_game(row));
         }
 
-        // Only the games with a bot side, ended at or after `since`, oldest first.
         assert_eq!(
             q!(harness, t => t.ranked_bot_games_since(now - 3_600_000)),
             vec![recent.clone(), latest.clone()]
@@ -6287,7 +6190,6 @@ mod ranked {
         let ratings: Vec<Value> = players.iter().map(|player| player["glicko"].clone()).collect();
         assert_eq!(ratings, vec![j(&glicko(1000.0)), j(&glicko(1000.0))]);
 
-        // The soft reset's output lands on exactly the same profiles.
         let soft_a = glicko(1075.5);
         let soft_b = glicko(1037.75);
         let changes: [ResetChange; 2] = [
@@ -6302,7 +6204,6 @@ mod ranked {
             j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"))["rating"].as_f64(),
             Some(1037.75)
         );
-        // A player no rated game touched is untouched.
         assert_eq!(
             j(&must(q!(harness, t => t.profiles_get_by_id(&c.id)), "c"))["rating"].as_f64(),
             Some(1000.0)
@@ -6444,13 +6345,11 @@ mod profiles_remove {
             q!(harness, t => t.codes_count_attempts_by_profile(&gone.id, now - 60_000)),
             0
         );
-        // The attempt itself stays for the per-IP limit.
         assert_eq!(
             q!(harness, t => t.codes_count_attempts_by_ip("ip-gone", now - 60_000)),
             1
         );
 
-        // The other player keeps the log and the result, and the match they lost is still a loss.
         assert_eq!(q!(harness, t => t.matches_actions(&match_id)).len(), 1);
         assert!(q!(harness, t => t.results_get_by_match(&match_id)).is_some());
         assert_eq!(
@@ -6679,7 +6578,6 @@ mod replays {
         assert_eq!(listed[1].row.players.0, a.id);
         assert_eq!(listed[1].result.players.0, a.id);
 
-        // Paged by limit and offset.
         for (offset, expected) in [
             (0, vec![newer.clone(), deleted.clone()]),
             (2, vec![as_p2.clone(), older.clone()]),
@@ -6695,7 +6593,6 @@ mod replays {
             vec![others]
         );
 
-        // By id: a purged log reads as none of it; no result, live or unknown is none.
         let read = must(q!(harness, t => t.replays_get(&newer)), "the replay");
         assert_eq!(read, listed[0]);
         let purged = must(q!(harness, t => t.replays_get(&no_log)), "the purged replay");
@@ -6733,7 +6630,6 @@ mod replays {
         let c = active_profile(harness, None).await;
         let now = harness.now();
 
-        // Sourceless: no room, ticket, series or own mode reads as none.
         let plain = a_match(harness, (&a.id, &b.id), 2, Some(now - 9_000), true).await;
 
         // A rematch states its own mode (R672).
@@ -6745,7 +6641,6 @@ mod replays {
         q!(harness, t => t.matches_create(&rematch));
         finish_match(harness, &rematch_id, (&a.id, &b.id), now - 8_000).await;
 
-        // A room's match reads as the room's mode.
         let room: Room = from(json!({
             "code": "ABC234",
             "hostProfileId": a.id,
@@ -6767,7 +6662,6 @@ mod replays {
         q!(harness, t => t.matches_create(&match_row(&room_match, &a.id, &b.id, harness, now)));
         finish_match(harness, &room_match, (&a.id, &b.id), now - 7_000).await;
 
-        // A queue match reads as its tickets' mode.
         let tickets: Vec<Ticket> = [&a.id, &b.id]
             .into_iter()
             .map(|profile_id| {
@@ -6793,7 +6687,6 @@ mod replays {
         q!(harness, t => t.matches_create(&match_row(&queue_match, &a.id, &b.id, harness, now)));
         finish_match(harness, &queue_match, (&a.id, &b.id), now - 6_000).await;
 
-        // A game of a Conquest series reads as bo3, whatever made the series.
         let series_game = id();
         let series: SeriesRow = from(json!({
             "id": id(),
@@ -6829,7 +6722,6 @@ mod replays {
         let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
         let others = a_match(harness, (&b.id, &c.id), 1, Some(now - 1_000), true).await;
 
-        // Every page answers what the per-row reads answer.
         for (limit, offset) in [(10, 0), (3, 0), (3, 2), (2, 4), (10, 4), (2, 10)] {
             let listed = q!(harness, t => t.replays_list(&a.id, limit, offset));
             let mut modes = Vec::with_capacity(listed.len());
@@ -6848,7 +6740,6 @@ mod replays {
             );
         }
 
-        // Each mode source, and the rows left out, by id.
         let batched = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
         let ids: Vec<&str> = batched.iter().map(|entry| entry.replay.row.id.as_str()).collect();
         assert_eq!(
@@ -7014,7 +6905,6 @@ mod r1442_play_telemetry {
         q!(harness, t => t.play_telemetry_insert(&written));
         assert_eq!(j(&q!(harness, t => t.play_telemetry_of(&match_id))), j(&written));
 
-        // The same keys again, with other values: every row stays as the first write left it.
         q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 9_999)));
         assert_eq!(j(&q!(harness, t => t.play_telemetry_of(&match_id))), j(&written));
         assert_eq!(
@@ -7055,10 +6945,8 @@ mod r1442_play_telemetry {
         q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p2")), false));
         let held = j(&q!(harness, t => t.play_telemetry_of(&match_id)));
         assert_eq!(marks(&held), vec![(true, false), (true, true)]);
-        // Nothing else on the rows moved.
         assert_eq!(held["matchSignals"][1]["timeouts"], 2);
 
-        // A match with no signals: nothing to mark, and no error.
         q!(harness, t => t.play_telemetry_note_rematch(&id(), from(json!("p1")), true));
     }
 
@@ -7091,7 +6979,6 @@ mod r1442_play_telemetry {
             harness.name
         );
 
-        // Nothing of the write landed, and the result it would have followed is untouched.
         assert_eq!(
             j(&q!(harness, t => t.play_telemetry_of(&match_id))),
             j(&PlayTelemetry::default())
@@ -7109,7 +6996,6 @@ mod r1442_play_telemetry {
         let gone = active_profile(harness, None).await;
         let other = active_profile(harness, None).await;
         let now = harness.now();
-        // `gone` holds p1 of the first match and p2 of the second.
         let first = a_match(harness, &gone.id, &other.id, Some(now)).await;
         let second = a_match(harness, &other.id, &gone.id, Some(now)).await;
         for match_id in [&first, &second] {
@@ -7143,10 +7029,8 @@ mod r1442_play_telemetry {
         assert!(q!(harness, t => t.profiles_remove(&gone.id)));
         assert!(q!(harness, t => t.profiles_remove(&also_gone.id)));
 
-        // A match with no account left is not folded at all; the other is.
         assert_eq!(q!(harness, t => t.play_telemetry_unfolded()), vec![kept.clone()]);
 
-        // The backfill's write: the deleted account's seat is left out, the opponent's goes in.
         q!(harness, t => t.play_telemetry_insert(&telemetry(&kept, 1_500)));
         assert_eq!(
             seats_of(harness, &kept).await,
@@ -7178,7 +7062,6 @@ mod r1442_play_telemetry {
             "gameRecordsRecordedBefore": now - 7 * DAY,
         }));
         let purged = q!(harness, t => t.purge_expired(&cutoffs));
-        // Two timings, an emote and two signals: the old match's five rows.
         assert_eq!(
             j(&purged),
             json!({ "codeAttempts": 0, "matchActions": 0, "playTelemetry": 5, "gameRecords": 0 })
@@ -7203,14 +7086,12 @@ mod r1442_play_telemetry {
         let later = a_match(harness, &a.id, &b.id, Some(now - DAY)).await;
         let earlier = a_match(harness, &a.id, &b.id, Some(now - 2 * DAY)).await;
         let folded = a_match(harness, &a.id, &b.id, Some(now - 3 * DAY)).await;
-        // Finished first of all, but with no log to fold.
         a_match(harness, &a.id, &b.id, Some(now - 4 * DAY)).await;
         let live = a_match(harness, &a.id, &b.id, None).await;
         for match_id in [&later, &earlier, &folded, &live] {
             q!(harness, t => t.matches_append_actions(&[action_row(match_id, 1, "p1", "n1", now)]));
         }
         q!(harness, t => t.play_telemetry_insert(&telemetry(&folded, 1_500)));
-        // Signals alone (no timing) leave a match unfolded.
         let signals_only = PlayTelemetry {
             match_signals: telemetry(&later, 1_500).match_signals,
             ..PlayTelemetry::default()
@@ -7309,7 +7190,6 @@ mod r1442_play_telemetry {
             "version": 1,
         }));
         q!(harness, t => t.series_create(&series));
-        // Live, with no result: its signals are not an outcome yet.
         let live = a_match(harness, &a.id, &b.id, None).await;
         q!(harness, t => t.play_telemetry_insert(&telemetry(&live, 1_500)));
 
@@ -7407,7 +7287,6 @@ mod r1442_play_telemetry {
         ];
         ended.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.to_string().cmp(&y.1.to_string())));
         assert_eq!(read, ended, "{}", harness.name);
-        // Each signals row comes back whole beside its outcome.
         let first = &outcomes[0];
         let written = telemetry(&first.signal.match_id, 1_500);
         assert_eq!(first.signal, written.match_signals[0]);
@@ -7539,7 +7418,6 @@ mod bots {
         let rating = must(q!(harness, t => t.ranked_bot(&older.profile_id)), "its R610 row");
         assert_eq!((rating.glicko.rating, rating.games), (800.0, 0));
 
-        // A person's profile reads as human.
         let person = active_profile(harness, None).await;
         assert_eq!(person.kind, ProfileKind::Human);
     }
@@ -7586,7 +7464,6 @@ mod bots {
             Some(match_id.as_str())
         );
 
-        // The ticket is gone, and the bot is busy: neither claims again.
         assert!(!q!(harness, t => t.tickets_claim_for_bot(&ta.id, &bot.profile_id, &id(), now)));
         assert!(!q!(harness, t => t.tickets_claim_for_bot(&tb.id, &bot.profile_id, &id(), now)));
         assert_eq!(
@@ -7594,7 +7471,6 @@ mod bots {
             "open"
         );
 
-        // A retired bot is never claimed, and a person is not a bot.
         let retired = new_bot(2, now - DAY, 1000.0);
         q!(harness, t => t.bots_create(&retired));
         q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
@@ -7631,7 +7507,6 @@ mod bots {
         played(harness, &a.id, &b.id, now - 3 * DAY).await;
         played(harness, &c.id, &a.id, now - 2 * DAY).await;
         played(harness, &a.id, &b.id, now - DAY).await;
-        // A match the profile did not play.
         played(harness, &b.id, &c.id, now).await;
 
         assert_eq!(
@@ -7720,7 +7595,6 @@ mod bots {
         assert_eq!(ticket["status"], "matched", "the ticket stays claimed");
         assert!(ticket["matchId"].is_null(), "{ticket}");
 
-        // Nothing is left to let go.
         assert!(q!(harness, t => t.bots_release_stale_starts(now - MINUTE)).is_empty());
     }
 
@@ -7771,15 +7645,12 @@ mod bots {
             q!(harness, t => t.bots_list())[0].in_match_id.as_deref(),
             Some(match_id.as_str())
         );
-        // Busy now: a second claim, for any rematch, finds nothing.
         assert!(!q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &id(), &version, now)));
-        // The start completes the claim's match.
         q!(harness, t => t.matches_create(&match_row(&match_id, &person.id, &bot.profile_id, harness, now)));
         let started = must(q!(harness, t => t.matches_get(&match_id)), "the rematch");
         assert_eq!(started.players, players);
         assert!(q!(harness, t => t.bots_release_stale_starts(now + MINUTE)).is_empty());
 
-        // A retired bot is never claimed, and a person is not a bot.
         let retired = new_bot(2, now - DAY, 1000.0);
         q!(harness, t => t.bots_create(&retired));
         q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
@@ -8071,10 +7942,8 @@ mod bots {
             None,
             "the bot is in no match"
         );
-        // A start's cut-off release finds nothing to let go: the bot is in no match.
         assert!(q!(harness, t => t.bots_release_stale_starts(now + DAY)).is_empty());
 
-        // The ticket is gone, so it claims again for nothing; the other ticket is still open.
         assert!(!q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &id(), now)));
         assert!(
             !q!(harness, t => t.tickets_claim_for_bot_series(&best_of_one.id, &bot.profile_id, &id(), now))
@@ -8115,7 +7984,6 @@ mod bots {
             "both tickets wait on"
         );
 
-        // The series ends, and the bot is free again.
         let over = must(
             forfeit_series(&row, PlayerId::P1, now).ok(),
             "a forfeit between games",
@@ -8197,12 +8065,9 @@ mod bots {
         let bots = q!(harness, t => t.bots_list());
         assert_eq!(in_match(&bots, &a), Some(match_id.clone()));
         assert_eq!(in_match(&bots, &b), Some(match_id.clone()));
-        // Busy now: neither is claimed again, with the other or with a free one.
         assert!(!q!(harness, t => t.bots_claim_pair(&pair, &id(), &version, now)));
         assert!(!q!(harness, t => t.bots_claim_pair(&(c.clone(), a.clone()), &id(), &version, now)));
 
-        // Never a retired bot, a person, a bot in a series not over or one bot twice; and a refused
-        // claim leaves the free bot free.
         for refused in [
             (c.clone(), retired.clone()),
             (person.id.clone(), c.clone()),
@@ -8216,13 +8081,11 @@ mod bots {
         }
         assert_eq!(in_match(&q!(harness, t => t.bots_list()), &c), None);
 
-        // The start completes the claim's match.
         q!(harness, t => t.matches_create(&match_row(&match_id, &a, &b, harness, now)));
         let started = must(q!(harness, t => t.matches_get(&match_id)), "the match");
         assert_eq!(started.players, pair);
         assert!(q!(harness, t => t.bots_release_stale_starts(now + MINUTE)).is_empty());
 
-        // A claim whose start never came lets both bots go.
         assert!(
             q!(harness, t => t.bots_claim_pair(&(c.clone(), d.clone()), &id(), &version, now - 2 * MINUTE))
         );
@@ -8487,7 +8350,6 @@ mod social {
         );
         assert_eq!(q!(harness, t => t.challenges_open_for_room("ZZZ999", now)), None);
 
-        // Accepted by the challenged guest only, through the room's code.
         assert!(!q!(harness, t => t.challenges_accept_room("ABC234", &c.id, now)));
         assert!(q!(harness, t => t.challenges_accept_room("ABC234", &b.id, now)));
         assert_eq!(
@@ -8503,7 +8365,6 @@ mod social {
         assert_eq!(declined.state, ChallengeState::Declined);
         assert!(q!(harness, t => t.challenges_close(&ba.id, ChallengeState::Canceled)).is_none());
 
-        // A lapsed open challenge is expired by the next one of its pair.
         let lapsed = challenge(&a.id, &c.id, "DEF567", now - 10_000, now - 1);
         assert!(q!(harness, t => t.challenges_create(&lapsed, now - 10_000)));
         assert!(q!(harness, t => t.challenges_open_of(&a.id, now)).is_empty());
@@ -8514,7 +8375,6 @@ mod social {
             ChallengeState::Expired
         );
 
-        // A block's sweep, then the sweeper's.
         let closed = q!(harness, t => t.challenges_close_between(&c.id, &a.id, ChallengeState::Canceled));
         assert_eq!(ids_of(&closed), vec![next.id.clone()]);
         assert_eq!(
@@ -8729,7 +8589,6 @@ mod social {
             json!([{ "matchId": over, "sharer": a.id, "createdAt": now - 3_000, "endedAt": now - 5_000 }])
         );
 
-        // c held a seat too, and shares later: both are read, first shared first.
         q!(harness, t => t.shares_put(&share(&over, &c.id, now - 1_000)));
         assert_eq!(
             q!(harness, t => t.shares_sharers(&over, &b.id)),
@@ -8737,7 +8596,6 @@ mod social {
         );
         assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 2);
 
-        // Unfriended or blocked, a's share is not read; made friends again, it is.
         assert!(q!(harness, t => t.friends_remove(&a.id, &b.id)));
         assert_eq!(
             q!(harness, t => t.shares_sharers(&over, &b.id)),
@@ -8844,10 +8702,9 @@ mod social {
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
-    /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
-    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, ranked or unranked, seating
-    /// the friend and not the viewer; no setting of the friend's refuses it, R2615000). Each answers in
-    /// the order named.
+    /// profiles are named: whom a series not over holds, each one's newest live co-op match, and whose
+    /// live 1v1 the viewer may watch (friends, unblocked, live, ranked or not, seating the friend and
+    /// not the viewer; no setting of the friend's refuses it, R2615000). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -8879,7 +8736,6 @@ mod social {
             q!(harness, t => t.matches_create(&row));
             q!(harness, t => t.profiles_set_in_match(&player.id, Some(row.id.as_str())));
         }
-        // The viewer's own opponent: a seat the viewer holds is never watched.
         let against = match_row(&id(), &viewer.id, &idle.id, harness, now);
         q!(harness, t => t.matches_create(&against));
         q!(harness, t => t.profiles_set_in_match(&idle.id, Some(against.id.as_str())));
@@ -8997,7 +8853,6 @@ mod social {
             "not a seat"
         );
 
-        // Unfriended, d's share is not read; blocked, b's is not; unblocked, it is again.
         assert!(q!(harness, t => t.friends_remove(&a.id, &d.id)));
         assert_eq!(q!(harness, t => t.shares_by(&over, &a.id)), vec![b.id.clone()]);
         q!(harness, t => t.blocks_add(&b.id, &a.id, now));
@@ -9256,7 +9111,6 @@ mod duos {
         assert!(q!(harness, t => t.duos_rooms_delete("DUOSEF", &host.id)));
         assert!(q!(harness, t => t.duos_rooms_get("DUOSEF")).is_none());
 
-        // The lapsed unjoined room goes at its expiry; the joined one only past the later cut.
         assert_eq!(q!(harness, t => t.duos_rooms_reap(now, now)), 1);
         assert!(q!(harness, t => t.duos_rooms_get("DUOSAB")).is_some());
         assert_eq!(
@@ -10684,7 +10538,6 @@ mod cosmetic_loadouts {
             picks_of(harness, &profile.id).await,
             json!([{ "cardId": "core-002", "foil": "foil-rainbow" }])
         );
-        // A second put replaces the first whole: the foil it leaves out is gone.
         let second = json!({ "cardId": "core-002", "finish": "finish-linen", "border": "border-wood", "fullArt": false });
         q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(second.clone()), now + 1));
         assert_eq!(picks_of(harness, &profile.id).await, json!([second]));
@@ -10692,7 +10545,6 @@ mod cosmetic_loadouts {
         let newer = json!({ "cardId": "core-001", "foil": "foil-from-a-newer-client" });
         q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(newer.clone()), now + 2));
         assert_eq!(picks_of(harness, &profile.id).await, json!([newer, second]));
-        // A put of nothing deletes the card's row, and writes none for a card that has none.
         q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(json!({ "cardId": "core-001" })), now + 3));
         q!(harness, t => t.economy_card_picks_put(&profile.id, &picks(json!({ "cardId": "core-009" })), now + 3));
         assert_eq!(picks_of(harness, &profile.id).await, json!([second]));
@@ -10720,7 +10572,6 @@ mod cosmetic_loadouts {
         );
         assert_eq!(picks_of(harness, &profile.id).await, held);
 
-        // Another account's picks are its own, both ways.
         assert_eq!(picks_of(harness, &other.id).await, json!([]));
         assert_eq!(
             q!(harness, t => t.economy_card_picks_upload(&other.id, &upload[..1], now + 6)),
@@ -10730,7 +10581,6 @@ mod cosmetic_loadouts {
         assert_eq!(picks_of(harness, &other.id).await, others);
         assert_eq!(picks_of(harness, &profile.id).await, held);
 
-        // Deleting the account takes its rows, and nobody else's.
         assert!(q!(harness, t => t.profiles_remove(&profile.id)));
         assert_eq!(picks_of(harness, &profile.id).await, json!([]));
         assert_eq!(picks_of(harness, &other.id).await, others);
@@ -10745,7 +10595,6 @@ mod cosmetic_loadouts {
         let every =
             json!({ "table": "table-neon-grid", "field": "field-rain", "cardBack": "card-back-starfield" });
 
-        // Tickets: a Best-of-1 deck's slots, and a trio's decks' own, absence kept absent.
         let queued = active_profile(harness, None).await;
         let plain = active_profile(harness, None).await;
         let conquest = active_profile(harness, None).await;
@@ -10765,7 +10614,6 @@ mod cosmetic_loadouts {
         }
         assert!(absent(&j(&bare), "deckSlots"));
 
-        // A room keeps the host deck's slots while it waits, and its claim answers them.
         let host = active_profile(harness, None).await;
         let guest = active_profile(harness, None).await;
         let room = super::rooms::room(harness, "SLT234", &host.id, json!({ "hostDeckSlots": slots }));
@@ -10784,7 +10632,6 @@ mod cosmetic_loadouts {
             "hostDeckSlots"
         ));
 
-        // A match keeps both seats' loadouts, seat order; one begun without reads as none.
         let frozen = (
             loadout(
                 "table-felt",
@@ -10807,7 +10654,6 @@ mod cosmetic_loadouts {
             None
         );
 
-        // A bot's Best-of-1 decks and trio keep theirs.
         let bot = new_bot(now - DAY);
         q!(harness, t => t.bots_create(&bot));
         let decks: Vec<BotDeck> = from(json!([
@@ -10859,7 +10705,6 @@ mod cosmetic_loadouts {
             Some(&drawn)
         );
 
-        // Drawn again as it ages, the row holds the new draw whole.
         let aged: BotCosmetics = from(json!({
             "wardrobe": { "cards": [], "account": [] },
             "account": { "picks": { "table": "table-wood" }, "fullArt": true },
@@ -10872,7 +10717,6 @@ mod cosmetic_loadouts {
 
         let unknown = id();
         assert!(call!(harness, t => t.bots_set_cosmetics(&unknown, &aged)).is_err());
-        // None of it is a holding or a ledger row.
         assert_eq!(
             j(&q!(harness, t => t.economy_cosmetics_get(&bot.profile_id))),
             json!({ "cards": [], "account": [] })
@@ -11132,7 +10976,6 @@ mod tx {
         .await;
         assert!(must(failed.err(), "the outer failure").contains("outer fails"));
 
-        // The inner `tx` must not have committed on its own.
         let after = j(&must(
             q!(harness, t => t.profiles_get_by_id(&profile.id)),
             "the profile",
