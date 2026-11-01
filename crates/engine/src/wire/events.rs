@@ -182,6 +182,45 @@ pub struct Ballot {
     pub def_id: String,
 }
 
+string_union! {
+    /// R2652001: what a `rolled` batch threw (`rolled.kind`): coins, or dice of `rolled.sides` faces.
+    pub enum RollKind {
+        Coin = "coin",
+        Die = "die",
+    }
+}
+
+/// R2652001: one coin or one die of a `rolled` batch. `faces` is every face it drew in draw order: its
+/// own roll first, then each extra roll a Lucky or a Luck made of it (§6.1, R987, R1438); `kept` is the
+/// index into `faces` of the one the roll kept. A coin's faces are `ROLL_HEADS` and `ROLL_TAILS`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RollResult {
+    pub faces: Vec<i32>,
+    pub kept: i32,
+}
+
+impl RollResult {
+    /// The face the roll kept, or 0 for a roll that drew none.
+    pub fn kept_face(&self) -> i32 {
+        usize::try_from(self.kept)
+            .ok()
+            .and_then(|at| self.faces.get(at))
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// Whether a coin landed heads (R2652001: face `ROLL_HEADS`).
+    pub fn heads(&self) -> bool {
+        self.kept_face() == crate::config::ROLL_HEADS
+    }
+}
+
 /// `{ winner: PlayerId | "draw"; reason: GameOverReason }`: how a game ended (`GameState.result`,
 /// `PlayerView.result`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -1111,6 +1150,27 @@ pub enum GameEvent {
     BoardReplaced {
         player: PlayerId,
     },
+    // -------------------------------------------------------------------------------------------
+    // Issue #2652: coin flips and die rolls (R2652000, R2652001)
+    // -------------------------------------------------------------------------------------------
+    /// R2652001: the card `instance_id` (`""` once it is gone, `def_id` still naming it) of `player`
+    /// flipped coins or rolled dice of `sides` faces, every one of a verb call or a hook in one batch,
+    /// in draw order. A report nothing answers: it takes no number in R68's order. R2652000: one its
+    /// card made face-down in a backrow reaches its controller alone, unless that trap's `trapFired`
+    /// follows in the same action; otherwise it reaches both, its card named as the card itself is
+    /// (R97). `faceDown`: only ever `Some(true)`, the card was face-down as it rolled; engine
+    /// bookkeeping no view forwards.
+    Rolled {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        kind: RollKind,
+        sides: i32,
+        rolls: Vec<RollResult>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        face_down: Option<bool>,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1258,6 +1318,7 @@ string_union! {
         StarscapeTravelled = "starscapeTravelled",
         Held = "held",
         BoardReplaced = "boardReplaced",
+        Rolled = "rolled",
     }
 }
 
@@ -1483,6 +1544,7 @@ impl GameEvent {
             GameEvent::StarscapeTravelled { .. } => GameEventType::StarscapeTravelled,
             GameEvent::Held { .. } => GameEventType::Held,
             GameEvent::BoardReplaced { .. } => GameEventType::BoardReplaced,
+            GameEvent::Rolled { .. } => GameEventType::Rolled,
         }
     }
 }
@@ -1571,8 +1633,9 @@ mod tests {
         // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
         // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
         // `starscapeTravelled` (R1847001); #1850's one, `held` (R1850003); the Marketplace's two,
-        // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 92);
+        // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
+        // #2652's `rolled` (R2652001).
+        assert_eq!(GAME_EVENT_TYPES.len(), 93);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

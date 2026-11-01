@@ -172,6 +172,8 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     held: { type: "held", player: "p2", instanceId: enemy, defId: "core-004", holderId: trap },
     // Issue #1855 (R1855000).
     boardReplaced: { type: "boardReplaced", player: "p1" },
+    // Issue #2652 (R2652001).
+    rolled: { type: "rolled", player: "p1", instanceId: unit, defId: "core-004", kind: "coin", sides: 2, rolls: [{ faces: [1], kept: 0 }] },
   };
 }
 

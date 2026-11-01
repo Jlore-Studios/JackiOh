@@ -122,12 +122,15 @@ pub fn hashed_state_text(state: &GameState) -> String {
 }
 
 /// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
-/// (R1956001): it dresses the card and plays no part in the game, as `hash_state` leaves its
-/// `generators` out, so a trace recorded before it was sent replays as it did.
+/// (R1956001) or a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000): each dresses
+/// the view and plays no part in the game, as `hash_state` leaves its `generators` out, so a trace
+/// recorded before it was sent replays as it did.
 pub fn view_texts(state: &GameState) -> [String; 2] {
     [PlayerId::P1, PlayerId::P2].map(|player| {
         let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serializes");
         strip_key(&mut value, "createdBy");
+        strip_key(&mut value, "sourceDefId");
+        strip_key(&mut value, "sourceRadiant");
         canonical(&value)
     })
 }

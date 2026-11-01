@@ -195,6 +195,7 @@ const DOM_KINDS = {
   brand: "fx-brand-slam",
   shield: "fx-shield-flash",
   chaos: "fx-chaos-in",
+  roll: "fx-roll-in",
   fog: "fx-fog-roll",
   zone: "fx-zone-wave",
 } as const;

@@ -864,6 +864,58 @@ mod tests {
     }
 
     #[test]
+    fn r2655000_a_duplicate_s_mythic_roll_drops_the_card_s_signed_full_art() {
+        use crate::cosmetics::registry;
+        let droppable = pack_cosmetics(registry());
+        // League of Losers with every other Mythic per-card cosmetic held on it: its Mythic
+        // duplicate drops its signed full art, a chase no account is granted (R2655000).
+        let card = "classicplus-019";
+        let held_mythics: Vec<CardCosmetic> = droppable
+            .iter()
+            .filter(|cosmetic| cosmetic.rarity == CosmeticRarity::Mythic && cosmetic.card.is_none())
+            .map(|cosmetic| held(card, &cosmetic.id))
+            .collect();
+        assert!(!held_mythics.is_empty());
+        let mut rng = Rng::new("r2655000-signed", 0);
+        assert_eq!(
+            duplicate_grant(card, CosmeticRarity::Mythic, &droppable, &held_mythics, &mut rng),
+            SlotGrant::Cosmetic {
+                cosmetic_id: "full-art-league-of-losers-signed".to_owned(),
+                cosmetic_rarity: CosmeticRarity::Mythic,
+            }
+        );
+        // Its Legendary roll may drop its animated full art, and another card's never does.
+        let held_legendaries: Vec<CardCosmetic> = droppable
+            .iter()
+            .filter(|cosmetic| cosmetic.rarity == CosmeticRarity::Legendary && cosmetic.card.is_none())
+            .map(|cosmetic| held(card, &cosmetic.id))
+            .collect();
+        assert_eq!(
+            duplicate_grant(
+                card,
+                CosmeticRarity::Legendary,
+                &droppable,
+                &held_legendaries,
+                &mut rng
+            ),
+            SlotGrant::Cosmetic {
+                cosmetic_id: "full-art-league-of-losers-animated".to_owned(),
+                cosmetic_rarity: CosmeticRarity::Legendary,
+            }
+        );
+        let other: Vec<CardCosmetic> = held_mythics
+            .iter()
+            .map(|row| held("core-002", &row.cosmetic_id))
+            .collect();
+        assert_eq!(
+            duplicate_grant("core-002", CosmeticRarity::Mythic, &droppable, &other, &mut rng),
+            SlotGrant::Bars {
+                cosmetic_rarity: CosmeticRarity::Mythic
+            }
+        );
+    }
+
+    #[test]
     fn r1333000_a_duplicate_s_cosmetic_roll_leaves_the_pity_counters_alone() {
         let pool: Vec<PoolCard> = (0..40)
             .map(|at| {
