@@ -12,7 +12,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::harness::{new_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{both, new_game, put, setup_catalog, slot};
 
 /// Past both mulligans, in the main phase of p1's first turn: nothing owed, no prompt open.
 fn playing(seed: &str) -> GameState {
@@ -194,6 +194,42 @@ fn exertion_state(seed: &str, attacker_def: &str) -> (GameState, String, String)
     (state, attacker.id, defender.id)
 }
 
+/// Give `def_id` an `afterAttack` hook that does not refresh exertion. I2/I12 must treat its kill
+/// credit as speculative until the settled state or a later declaration proves a refresh happened.
+fn register_no_refresh_after_attack(def_id: &str) {
+    let mut scripts = registered_scripts().clone();
+    scripts.insert(
+        def_id.to_string(),
+        both(Script {
+            after_attack: Some(hook(|_ctx| vec![])),
+            ..Script::default()
+        }),
+    );
+    register_scripts(scripts);
+}
+
+fn forced_attack(attacker_id: &str, target_id: &str) -> GameEvent {
+    GameEvent::AttackDeclared {
+        attacker_id: attacker_id.to_string(),
+        target_id: target_id.to_string(),
+        forced: true,
+        instead_of: None,
+    }
+}
+
+fn destroyed_by(instance_id: &str, killer_id: &str) -> GameEvent {
+    GameEvent::Destroyed {
+        instance_id: instance_id.to_string(),
+        def_id: "fx-21".to_string(),
+        owner: P2,
+        controller: P2,
+        attack: 1,
+        max_health: 1,
+        killer_id: Some(killer_id.to_string()),
+        radiant: None,
+    }
+}
+
 #[test]
 fn i12_a_non_deft_unit_that_switched_cannot_declare_an_attack_but_deft_can() {
     for (seed, attacker_def, violates) in [
@@ -334,6 +370,102 @@ fn i12_effect_switches_and_forced_attacks_spend_nothing() {
         ),
         Vec::<String>::new()
     );
+}
+
+#[test]
+fn i12_a_forced_kill_that_refreshes_nothing_does_not_forget_a_spent_switch() {
+    let (mut state, attacker_id, defender_id) = exertion_state("i12-forced-no-refresh", "fx-1");
+    register_no_refresh_after_attack("fx-1");
+    let mut monitor = create_invariant_monitor(&state);
+    let switch = ActionBody::SwitchPosition {
+        instance_id: attacker_id.clone(),
+    };
+    let _ = monitor.before(&state, P1, &switch);
+    let _ = monitor.after(
+        &[GameEvent::PositionSwitched {
+            instance_id: attacker_id.clone(),
+            position: Position::Def,
+        }],
+        &state,
+    );
+    find_instance_mut(&mut state, &attacker_id)
+        .expect("the attacker")
+        .exertion
+        .switched = true;
+
+    let _ = monitor.before(&state, P1, &ActionBody::EndTurn);
+    assert_eq!(
+        invariant(
+            "I12",
+            monitor.after(
+                &[
+                    forced_attack(&attacker_id, &defender_id),
+                    destroyed_by(&defender_id, &attacker_id),
+                    // R53: another forced attack does not consume the speculative refresh.
+                    forced_attack(&attacker_id, "hero-p2"),
+                ],
+                &state,
+            ),
+        ),
+        Vec::<String>::new()
+    );
+
+    let attack = ActionBody::Attack {
+        attacker_id: attacker_id.clone(),
+        target_id: "hero-p2".to_string(),
+    };
+    let _ = monitor.before(&state, P1, &attack);
+    let found = invariant(
+        "I12",
+        monitor.after(
+            &[GameEvent::AttackDeclared {
+                attacker_id,
+                target_id: "hero-p2".to_string(),
+                forced: false,
+                instead_of: None,
+            }],
+            &state,
+        ),
+    );
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].starts_with("I12 attack after switch"), "{}", found[0]);
+}
+
+#[test]
+fn i12_a_declaration_in_the_forced_kill_batch_consumes_a_genuine_refresh() {
+    let (state, attacker_id, defender_id) = exertion_state("i12-forced-refresh", "fx-1");
+    register_no_refresh_after_attack("fx-1");
+    let mut monitor = create_invariant_monitor(&state);
+    let switch = ActionBody::SwitchPosition {
+        instance_id: attacker_id.clone(),
+    };
+    let _ = monitor.before(&state, P1, &switch);
+    let _ = monitor.after(
+        &[GameEvent::PositionSwitched {
+            instance_id: attacker_id.clone(),
+            position: Position::Def,
+        }],
+        &state,
+    );
+
+    let _ = monitor.before(&state, P1, &ActionBody::EndTurn);
+    let found = invariant(
+        "I12",
+        monitor.after(
+            &[
+                forced_attack(&attacker_id, &defender_id),
+                destroyed_by(&defender_id, &attacker_id),
+                GameEvent::AttackDeclared {
+                    attacker_id,
+                    target_id: "hero-p2".to_string(),
+                    forced: false,
+                    instead_of: None,
+                },
+            ],
+            &state,
+        ),
+    );
+    assert_eq!(found, Vec::<String>::new());
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -1772,18 +1772,31 @@ impl InvariantMonitor {
         self.unsettled_credits.insert(id.to_string());
     }
 
-    /// R1869002: a credited attacker the action leaves on the field, its killing attack its last, with
-    /// its attack exertion spent was readied by nothing: its credit is taken back. One it readied is
-    /// `readied` for the rest of its stint, as `mayAttackAgain` leaves it with no `summonedTurn`. Settled
-    /// once nothing is owed, since an `afterAttack` a prompt paused runs in a later action (R113).
+    /// R1869002: a credited attacker the action leaves on the field, with every exertion half the
+    /// shadow saw spent still spent, was readied by nothing: its credit is taken back. This matters for
+    /// a forced attack (R53), which spends no attack exertion itself: only a reset of an earlier attack
+    /// or switch proves `mayAttackAgain` ran. One it readied is `readied` for the rest of its stint, as
+    /// `mayAttackAgain` leaves it with no `summonedTurn`. Settled once nothing is owed, since an
+    /// `afterAttack` a prompt paused runs in a later action (R113).
     fn settle_kill_credits(&mut self, state: &GameState) {
         if state.pending.is_some() || !state.work.is_empty() {
             return;
         }
         for id in std::mem::take(&mut self.unsettled_credits) {
-            let spent = find_instance(state, &id)
-                .is_some_and(|card| card.zone.z() == ZoneName::Field && card.exertion.attacked);
-            if !spent {
+            let Some(credit) = self.kill_credits.get(&id).copied() else {
+                continue;
+            };
+            let attack_was_spent = credit.at.unwrap_or(0) > credit.before.unwrap_or(0);
+            let switch_was_spent = self
+                .last_switch
+                .get(&id)
+                .is_some_and(|mark| mark.turn == credit.turn && mark.stint == credit.stint);
+            let refreshed = find_instance(state, &id).is_some_and(|card| {
+                card.zone.z() == ZoneName::Field
+                    && ((attack_was_spent && !card.exertion.attacked)
+                        || (switch_was_spent && !card.exertion.switched))
+            });
+            if refreshed {
                 self.readied.insert(id.clone());
                 self.last_switch.shift_remove(&id);
             } else if let Some(credit) = self.kill_credits.get_mut(&id) {
@@ -2478,10 +2491,6 @@ impl InvariantMonitor {
                     // R53: a forced attack is not a declaration and spends nothing (nor readies a
                     // transform, R424); its kill may still earn a kill credit (R1869002).
                     self.attack = None;
-                    // R1869002: a credited attacker declaring again inside the action was readied.
-                    if self.unsettled_credits.shift_remove(attacker_id) {
-                        self.readied.insert(attacker_id.clone());
-                    }
                     if *forced {
                         self.attack = Some(ShadowAttack {
                             attacker_id: attacker_id.clone(),
@@ -2490,6 +2499,13 @@ impl InvariantMonitor {
                             forced: true,
                         });
                         continue;
+                    }
+                    // R1869002: a credited attacker declaring again inside the action proves it used
+                    // the fresh exertion before the settled state could. R53: a forced attack proves
+                    // nothing, so only the non-forced declaration reaches this branch.
+                    if self.unsettled_credits.shift_remove(attacker_id) {
+                        self.readied.insert(attacker_id.clone());
+                        self.last_switch.shift_remove(attacker_id);
                     }
                     // R1202: a substitute's declaration spends its declarer's attack, not its own —
                     // Windfast's exertion, Windfast's Windfury count — while the strike itself is the
