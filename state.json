@@ -12150,7 +12150,7 @@
       "provider": "claude-1",
       "queued_at": "2026-11-01T11:41:39Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:eb519832-1793533824",
+      "run_id": "41303705885",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
