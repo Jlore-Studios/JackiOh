@@ -247,14 +247,6 @@ pub const PORTRAITS: &[(PortraitId, PortraitEntry)] = &[
     ),
 ];
 
-/// TS `PORTRAITS[id]`: the roster entry of `id` (every id has one).
-pub fn portrait_entry(id: PortraitId) -> &'static PortraitEntry {
-    match PORTRAITS.iter().find(|(key, _)| *key == id) {
-        Some((_, entry)) => entry,
-        None => panic!("portrait {id} has no roster entry"),
-    }
-}
-
 /// A uniform pick over the roster (R642: All Random deals one per seat, independently).
 pub fn pick_portrait(mut rng: impl FnMut() -> f64) -> PortraitId {
     let len = PORTRAIT_IDS.len();
@@ -485,8 +477,7 @@ mod tests {
             );
             let keys: Vec<PortraitId> = PORTRAITS.iter().map(|(id, _)| *id).collect();
             assert_eq!(keys, PORTRAIT_IDS.to_vec());
-            for id in PORTRAIT_IDS {
-                let entry = portrait_entry(*id);
+            for (id, entry) in PORTRAITS {
                 assert!(!entry.card_name.is_empty(), "{id}");
                 assert!(!entry.flavour.is_empty(), "{id}");
             }
