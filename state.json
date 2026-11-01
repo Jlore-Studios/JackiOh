@@ -12301,6 +12301,13 @@
     "2681": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T14:54:42Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "This is visual polish with a judged animated composition and web-build asset generation, so it cannot satisfy the easy rule's unit-test-only/no-visual-tuning requirements."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
