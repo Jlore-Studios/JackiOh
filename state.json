@@ -12434,6 +12434,7 @@
       "planned_by_id": "gpt",
       "planned_tier": "medium",
       "provider": "gpt",
+      "question": "A person with Actions and branch-write access must manually dispatch the existing `voice` workflow on `bot/issue-2692` after the e2e edit is pushed; its macOS runner is the supported way to regenerate the 15 stale Core `.m4a` files and commit them with `voice-manifest.json` back to the branch.",
       "run_id": "41318608414",
       "runs_on": "night-vm-gpt",
       "started_at": "2026-11-01T14:55:48Z",
