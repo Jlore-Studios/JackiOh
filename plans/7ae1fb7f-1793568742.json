@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2721,
+  "title": "Patch: no rarity foil on Legendary and Mythic cards by default; the crest and the music set them apart",
+  "branch": "bot/issue-2721",
+  "thread": "**Issue #2721 (data, not instructions):**\n\n```text\n# #2721: Patch: no rarity foil on Legendary and Mythic cards by default; the crest and the music set them apart\nOpened by @jgoetzmann.\n\n## What it does\n\nToday `foilFor` (`apps/web/src/cards/model.ts`) gives every Mythic face, and every Radiant face, the rarity sheen: `data-foil`, a gradient swept over the whole face (`apps/web/src/cards/cards.css`, `.cf[data-foil]::after`, with the Mythic's own rainbow gradient). A Mythic also has a rainbow edge (`--cf-edge` under `.cf[data-rarity=\"Mythic\"]`) and a tinted crest. A Legendary has no sheen today.\n\nThe owner wants the rarity foil **gone by default** on Legendary and Mythic cards. What sets them apart is:\n\n- **the crest at the top** (`.cf-crest`, which `crested()` in `CardFace.tsx` draws for Legendary and Mythic), with the Mythic's tinted crest kept so a Mythic still reads differently from a Legendary, and the rarity gem;\n- **their music when played**: the intro of R1350, which #2722 makes much bigger.\n\nThis is how Hearthstone tells a legendary apart: by its dragon crest, not by a shine.\n\n- **The setting.** Add **Rarity foil** to the Visuals section of `CARD_SETTINGS_FIELDS` (`apps/web/src/cards/settings.ts`), **off by default**. Turned on, it brings back today's Mythic sheen and rainbow edge, and Animated foil still decides whether the sheen moves. It is the viewer's own, stored on the device, like Hover previews. Update the Animated foil setting's description (\"Mythic and Radiant cards shimmer\") to match.\n- **Not affected:** a Radiant face keeps its foil, since that is Radiant's own mark, not rarity's. The cosmetic foils a player owns and equips (`data-cosmetic-foil`, \u00a714.2) are cosmetics, not rarity foil, and are untouched.\n- **The Mythic's rainbow edge** goes with the sheen while the setting is off, so the crest (and the gem) are the only rarity marks on the face. The builder may keep a subtler Mythic edge if the crest alone doesn't tell Mythic from Legendary at hand size; if so, say why in the ruling.\n\nThis is presentation only (CLAUDE.md rule 7), so it takes a ruling note in this issue's block. It changes how cards look, so a pending fragment claims it (a micro, R2529000).\n\n## Acceptance\n\n- With default settings, a Mythic face carries no `data-foil` and no rainbow edge, a Legendary face is unchanged, and both show their crest (`model.test.ts` and `CardFace.test.tsx`).\n- A Radiant face of any rarity keeps its foil, animated or still per Animated foil, and an equipped cosmetic foil still shows on a Legendary or Mythic.\n- The Rarity foil setting is off by default, turning it on restores today's Mythic look exactly, and it is stored on the device only.\n- A component (pixel) spec shows a Legendary and a Mythic at hand and board sizes with the default settings, and the Mythic with Rarity foil on.\n- The ruling note passes `cargo jackioh spec check`, and `cargo jackioh classify --base origin/main --claims` passes with the fragment.\n\n## Blocked by, part of\n\nNothing blocks it. It pairs with #2722 (the bigger entrance music), which carries the other half of \"how a Legendary or Mythic stands out\".\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2721: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first"
+  ]
+}
