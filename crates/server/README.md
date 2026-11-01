@@ -214,7 +214,7 @@ and watch socket upgrade counts as one request against the same budget (R2478000
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId`, `username` and win `streak` (R604, R612, R1436, R2101000), and once a ranked match's rated record is written its `rankBefore` and `rankAfter` off it, a ranked series' on its last game (R2388000) |
-| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000) |
+| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000); an offer past `REMATCH_OFFER_TTL_MS` of the match's end lapses silently, recording nothing (R2685000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
@@ -311,8 +311,11 @@ What the actor holds, each with a test named after it:
   swap (R677).
 - The only per-player payload is `view_for`; no frame carries a `GameState`.
 - Each home seat keeps an `actor::guard::SeatGuard`: its action window (`MATCH_ACTIONS_PER_SECOND`,
-  R137), the count of its refusals that raises `match.rejections.unusual` once (R835000) and its
-  malformed-frame budget, past which its socket is closed with 1008 (R835002).
+  R137), the count of its refusals that raises `match.rejections.unusual` once (R835000), its
+  malformed-frame budget, past which its socket is closed with 1008 (R835002), and the socket
+  generation and time of its last answered `hello`: a later hello of the same socket sooner than
+  `WATCH_HELLO_INTERVAL_MS` is dropped unanswered, and a reattach's first hello is always answered
+  (R2686000).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
   R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
@@ -368,7 +371,9 @@ holds, with four seats:
   for both humans; every engine call runs under the catalog version the match was dealt from
   (`DuosMatchOptions::catalog_version`, R767000);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
-  while one from the same socket is still queued is absorbed (R835001's rule);
+  while one from the same socket is still queued is absorbed (R835001's rule); one that finds none
+  queued is dropped unanswered when it comes less than `WATCH_HELLO_INTERVAL_MS` after the socket's
+  last answered one, while a reattach's first hello is answered at once (R2686000);
 - each human seat keeps the same `actor::guard::SeatGuard` as a 1v1 seat: `MATCH_ACTIONS_PER_SECOND`
   (R137, the overflow answered `rate_limited`), the malformed-frame budget and its 1008 close (R835002),
   and the count of refusals, the flood's included, that raises `match.rejections.unusual` once per

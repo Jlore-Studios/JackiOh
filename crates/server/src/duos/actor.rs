@@ -32,10 +32,13 @@
 //!  - Every engine call runs under the catalog the match was dealt from (R767000, `Pinned`), so a
 //!    rebuilt actor plays on as the match began.
 //!  - A `hello` repeated while one for the same socket is still queued is absorbed by it (§9.1, as
-//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame.
+//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame. One that finds
+//!    none queued is dropped, unanswered, when the socket's last answered hello was less than
+//!    `WATCH_HELLO_INTERVAL_MS` ago (R2686000); a reattach's first hello is always answered.
 //!  - Each person's seat keeps the 1v1 seat's guards (`actor::guard::SeatGuard`; R137, R835000,
-//!    R835002): the action flood window, the malformed-frame budget and the count of refusals that
-//!    raises `match.rejections.unusual`. Only a person's own refusals count; the AI's never do.
+//!    R835002): the action flood window, the malformed-frame budget, the count of refusals that
+//!    raises `match.rejections.unusual` and the hello interval. Only a person's own refusals count;
+//!    the AI's never do.
 //!  - A live `reduce` that panics changes nothing and is answered `internal` and filed; a server
 //!    action that panics ends the match as the ceiling's draw (R1253000).
 //!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
@@ -452,7 +455,7 @@ struct Core {
     /// By `DUOS_SEATS`: where each seat's AI stream stands. A rebuilt actor starts them again.
     ai_cursor: [u32; 4],
     /// By `HUMAN_SEATS`: the 1v1 seat's guards (`actor::guard`): §9.8's per-seat action window
-    /// (R137), R835000's refusals and R835002's malformed frames.
+    /// (R137), R835000's refusals, R835002's malformed frames and R2686000's hello interval.
     guards: [SeatGuard; 2],
     /// By `HUMAN_SEATS`: B39's ping window.
     pings: [VecDeque<i64>; 2],
@@ -1046,8 +1049,13 @@ impl DuosActor {
             }
             Ok(DuosClientMessage::Hello { .. }) => {
                 // R835001: a hello while this socket's last one is still queued is absorbed by it.
+                // R2686000: one that finds none queued is dropped, unanswered and with the socket
+                // left open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered
+                // on this socket; a newer generation (a reattach) always enqueues.
                 let generation = core.socket_generation[index];
-                if core.hello_pending[index] != Some(generation) {
+                if core.hello_pending[index] != Some(generation)
+                    && core.guards[index].hello_answer_allowed(generation, now_ms())
+                {
                     core.hello_pending[index] = Some(generation);
                     self.enqueue(Task::Hello { seat, generation });
                 }
