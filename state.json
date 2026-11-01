@@ -12528,6 +12528,13 @@
     "2687": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-01T15:54:05Z",
+        "difficulty": "hard",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "CLAUDE.md rule 11 and the issue rubric make any change to the AI's search/evaluation in crates/ai/src hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
