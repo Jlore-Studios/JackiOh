@@ -20,7 +20,8 @@
 //!     not read keeps its type and its animation fields and shows `HIDDEN_ID` for that card.
 //!   - R2652000: the one event dropped rather than redacted is a `rolled` batch a face-down trap made,
 //!     to the other player, unless the trap fired in the same action: its flip alone would tell them a
-//!     trap is set there (`withheld_rolls`).
+//!     trap is set there (`withheld_rolls`). It is dropped before the window is taken, so their window
+//!     is as full as it would be had the trap never flipped.
 //!   - R764: a Glitch's reset or boards (R676, R678) takes cards out of the match unseen, so the events
 //!     up to the end of its action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
@@ -2877,7 +2878,13 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         .iter()
         .flat_map(|entry| entry.events.iter())
         .collect();
-    let newest = state.applied.last().map_or(0, |entry| entry.events.len());
+    // R2652000: the window is taken from the events `viewer` reads, the face-down rolls withheld from
+    // them already out, so it holds as many as it would had those cards never rolled: a window one
+    // event short would tell them a hidden card rolled. The floor counts the newest action the same way.
+    let withheld = withheld_rolls(state, viewer);
+    let read: Vec<usize> = (0..all.len()).filter(|at| !withheld.contains(at)).collect();
+    let newest_from = all.len() - state.applied.last().map_or(0, |entry| entry.events.len());
+    let newest = read.iter().filter(|at| **at >= newest_from).count();
     let window = VIEW_EVENT_LIMIT.max(newest);
     let replaced = replacements_of(&all, Some(state));
     // R764: a Glitch's reset or boards (R676, R678) took cards out of the match without a word, so what
@@ -2904,22 +2911,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
         voided: true,
         ..replaced.clone()
     };
-    let from = all.len().saturating_sub(window);
-    let withheld = withheld_rolls(state, viewer);
-    all[from..]
+    read[read.len().saturating_sub(window)..]
         .iter()
-        .enumerate()
-        .filter(|(at, _)| !withheld.contains(&(from + at)))
-        .map(|(at, event)| {
+        .map(|&at| {
             redact_event(
                 state,
                 viewer,
-                event,
-                if from + at < voided_until {
-                    &earlier
-                } else {
-                    &replaced
-                },
+                all[at],
+                if at < voided_until { &earlier } else { &replaced },
             )
         })
         .collect()

@@ -1,7 +1,7 @@
 {
   "title": "Patch: show coin flip and dice roll results, with a suspense animation",
   "sources": "#2652",
-  "notes": "Every coin flip and die roll of Gary the Gambler, Ace in the Hole, Mid Loser and Dice of Doom is reported as a `rolled` batch, one per verb call or hook, holding each coin or die in draw order with every face Lucky and Luck drew and the one kept (R2652001). The draws, the rng cursor and every state hash are unchanged: the report is answered by nothing and takes no number in R68's order. A batch a face-down trap made reaches its controller alone unless the trap fires in the same action (R2652000). The other families classify names are cards whose games hold such a roll in the same action (Gachaholic's luck-based cards, InfiniScepter's copies, and the like); their own play is unchanged.",
+  "notes": "Every coin flip and die roll of Gary the Gambler, Ace in the Hole, Mid Loser and Dice of Doom is reported as a `rolled` batch, one per verb call or hook, holding each coin or die in draw order with every face Lucky and Luck drew and the one kept (R2652001). The draws, the rng cursor and every state hash are unchanged: the report is answered by nothing and takes no number in R68's order. A batch a face-down trap made reaches its controller alone unless the trap fires in the same action (R2652000). The other families classify names are cards whose games hold such a roll in the same action: cards that make or copy one (InfiniScepter's copies, Gachaholic's luck-based cards and the like) and the cards a fused or crafted card holding one of these four texts is made of (House Party, Warp Disruptor II, Otherworldly Removal and Level Up! with Dice of Doom's; Withering Storm with Gary's). Their own play is unchanged.",
   "player": {
     "title": "See how every coin and die lands",
     "new": [],
@@ -20,14 +20,18 @@
     "classic-007",
     "classic-015",
     "classic-065",
+    "classic-074",
     "classic-083",
+    "classicplus-008",
     "classicplus-019",
+    "classicplus-032",
+    "classicplus-062",
     "core-004",
+    "meditative-056",
     "meditative-101",
     "meditativeplus-007",
-    "stinkyscape-032",
-    "stinkyscape-066",
-    "stinkyscape-079",
-    "stinkyscape-154"
+    "stinkyscape-024",
+    "stinkyscape-154",
+    "traininggrounds-031"
   ]
 }

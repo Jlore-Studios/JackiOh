@@ -398,6 +398,39 @@ mod tests {
                 assert_eq!(jackioh_engine::viewed_of_newest(s.state(), P1, total + 5), total);
             }
 
+            /// R2652000, R168: deep in a game, with more events behind it than the window holds, the
+            /// opponent's window is still full after a tails flipped face-down, and the very one a
+            /// face-down Sheepish leaves them: the flip is out before the window is taken, since a
+            /// window one event short would tell them a hidden card rolled.
+            #[test]
+            fn r2652000_a_withheld_flip_leaves_the_opponent_a_full_window_as_a_face_down_sheepishs() {
+                crate::register_all();
+                let mut s = with_coin(Coin::Tails, json!({}));
+                let mut plain = scenario(json!({
+                    "seed": s.state().seed.clone(),
+                    "p1": {
+                        "hand": [FILLER],
+                        "backrow": [{ "def": SHEEPISH, "faceUp": false }],
+                        "library": [LUNAR, VANILLA, GARY, VANILLA],
+                    },
+                    "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+                }));
+                let earlier: Vec<AppliedAction> = (0..VIEW_EVENT_LIMIT)
+                    .map(|i| AppliedAction {
+                        nonce: format!("earlier-{i}"),
+                        events: vec![json_as(json!({ "type": "manaChanged", "player": "p2", "current": i, "max": 4 }))],
+                    })
+                    .collect();
+                for game in [&mut s, &mut plain] {
+                    game.state_mut().applied.splice(0..0, earlier.clone());
+                    game.end_turn();
+                }
+                assert_eq!(rolled(s.last_events()).len(), 1);
+                let theirs = s.view(P2).events;
+                assert_eq!(theirs.len(), VIEW_EVENT_LIMIT);
+                assert_eq!(theirs, plain.view(P2).events);
+            }
+
             /// R2652000: on heads the trap fires in the same action, so the opponent sees the flip too,
             /// naming the card as its graveyard does, before the `trapFired` it caused.
             #[test]
