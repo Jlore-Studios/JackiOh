@@ -144,14 +144,20 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
       ensureSeat("p1");
       expectShownHealth(vanillaId, VANILLA.health - MATH_DAMAGE, VANILLA.health);
 
-      // §8 #26's R81 declared `hand` choice remains its own §10.6 picker kind.
       waitToPlay("p1", CARDS.glowyJellyBean);
+      cy.gameState().then((state) => {
+        expect(
+          handOf(state, "p1").map((card) => card.defId).sort(),
+          "seat 1 holds Glowy Jelly Bean and Knockoff Temu, #26's one declared `hand` candidate (R81)",
+        ).to.deep.eq([CARDS.glowyJellyBean, CARDS.knockoffTemu].sort());
+      });
       // Use def id: §8 gives #26, #27, and #28 ambiguous names. #26 makes #28 Radiant, so #28 never
-      // counts itself among its own candidates (R60).
+      // counts itself among its own candidates (R60). A play with one candidate is sent on the click,
+      // with no picker to answer (actions.ts `settle`); specs 21 and 43 answer #26's `hand` picker.
       cy.instanceInHand("p1", CARDS.knockoffTemu).then((temuId) => {
         cy.get(`${ts(handCardId(temuId))}${RADIANT}`).should("not.exist");
         cy.instanceInHand("p1", CARDS.glowyJellyBean).then((beanId) => {
-          cy.playCard(beanId, { answers: [{ kind: "hand", cards: [temuId] }] });
+          cy.playCard(beanId);
         });
 
         // BUILD M5-T4's `radiantSet` confirms §5.2's hand flip.
