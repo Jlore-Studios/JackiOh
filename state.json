@@ -12538,11 +12538,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-01T15:54:05Z",
+        "at": "2026-11-01T16:35:50Z",
         "difficulty": "hard",
-        "provider": "gpt",
-        "tier": "medium",
-        "why": "CLAUDE.md rule 11 and the issue rubric make any change to the AI's search/evaluation in crates/ai/src hard."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the 'hard' line: it changes the AI's evaluation and decision-root probes in crates/ai/src, which the rule names hard outright"
       },
       "failures": 0,
       "forced": false,
