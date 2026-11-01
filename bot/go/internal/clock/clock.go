@@ -323,23 +323,6 @@ func (x *Window) NextOpen(at time.Time) time.Time {
 	panic(fmt.Errorf("a daily window opens within three days")) // AssertionError
 }
 
-// ClosesAt is when the window that is open at `at` closes, or None (the zero time) when it is
-// closed.
-func (x *Window) ClosesAt(at time.Time) time.Time {
-	if !x.IsOpen(at) {
-		return time.Time{}
-	}
-	local := at.In(Zone(x.ZoneName))
-	for offset := 0; offset < 3; offset++ {
-		day := calendarDay(local, offset)
-		candidate := x.localInstant(day, x.End).UTC()
-		if candidate.After(at) {
-			return candidate
-		}
-	}
-	panic(fmt.Errorf("a daily window closes within three days")) // AssertionError
-}
-
 func (x *Window) Describe() string {
 	return fmt.Sprintf("%02d:%02d–%02d:%02d %s", x.Start.Hour, x.Start.Minute, x.End.Hour,
 		x.End.Minute, x.ZoneName)
