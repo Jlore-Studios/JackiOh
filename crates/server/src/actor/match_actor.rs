@@ -299,8 +299,9 @@ struct Core {
     sockets: PerPlayer<Option<Socket>>,
     /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
     attached_once: PerPlayer<bool>,
-    /// R137, R835000, R835002: each seat's abuse guard (`actor::guard`), by home seat: its action
-    /// flood window, its refusals toward the unusual-rejection alert and its malformed frames.
+    /// R137, R835000, R835002, R2686000: each seat's abuse guard (`actor::guard`), by home seat: its
+    /// action flood window, its refusals toward the unusual-rejection alert, its malformed frames
+    /// and when its socket's last hello was answered.
     guards: PerPlayer<SeatGuard>,
     /// R835001: the socket generation each seat's queued-but-unrun Hello belongs to (`None` when
     /// none is queued). A repeat for the same home and generation is absorbed; a Hello from a
@@ -1998,10 +1999,15 @@ impl MatchActor {
             Ok(ClientMessage::Hello(_)) => {
                 // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: a Hello
                 // while one for the same home and socket generation is still queued is absorbed —
-                // reconnect is idempotent — so a hello flood costs one view push. A newer
-                // generation (a reattach) always enqueues.
+                // reconnect is idempotent — so a hello flood costs one view push. R2686000: one
+                // that finds none queued is still dropped, unanswered and with the socket left
+                // open, when it comes within WATCH_HELLO_INTERVAL_MS of the last one answered on
+                // this socket, so a client that sends again as each answer arrives costs one view
+                // per interval. A newer generation (a reattach) always enqueues.
                 let generation = core.socket_generation[home];
-                if core.hello_pending[home] != Some(generation) {
+                if core.hello_pending[home] != Some(generation)
+                    && core.guards[home].hello_answer_allowed(generation, now_ms())
+                {
                     core.hello_pending[home] = Some(generation);
                     self.enqueue(Task::Hello { home, generation });
                 }
@@ -2833,8 +2839,9 @@ impl MatchActor {
         else {
             return;
         };
-        // R2609000: one answer per WATCH_HELLO_INTERVAL_MS; a hello sooner is dropped unanswered.
-        if !watcher.guard.hello_answer_allowed(now_ms()) {
+        // R2609000: one answer per WATCH_HELLO_INTERVAL_MS; a hello sooner is dropped unanswered. The
+        // watcher's id is its one generation (R2686000 gives a seat's socket the same gate).
+        if !watcher.guard.hello_answer_allowed(id, now_ms()) {
             return;
         }
         watcher.socket.send(record.frame.as_str());
