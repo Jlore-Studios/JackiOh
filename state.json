@@ -12463,10 +12463,8 @@
     "what": "build #2655 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-01T07:30:50Z",
-    "notes": [
-      "delivered build #2652 on claude-3 (run 41278823632): interrupted"
-    ],
+    "at": "2026-11-01T07:37:29Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13171,7 +13169,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-01T07:30:50Z",
+  "loop_tick": "2026-11-01T07:37:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
