@@ -13635,19 +13635,30 @@
     "2737": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-01T16:51:20Z",
       "issue": 2690,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The `--duos` contract now says \"the I1\u2013I12 monitor runs over each duel's applicable events and states \u2026 I6 alone is sampled\", so it claims Duos runs I8 on every state, but Duos fuzz never runs I8.",
+          "evidence": "`crates/tools/src/duos_fuzz.rs` calls only `monitor.before`, `monitor.after` and `monitor.hidden` (lines 531-532, 589, 624-626). There is no `unlisted` call, and `DuosInvariantMonitor` has no I8 method. The base text said exactly \"I1\u2013I7, I9 and I10\", which was correct. CLAUDE.md treats each crate README as its contract and says a doc that disagrees is the bug. Fix: say \"I1\u2013I7 and I9\u2013I12\" for Duos.",
+          "severity": "blocking",
+          "where": "crates/tools/README.md:15"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-8",
-      "queued_at": "2026-11-01T19:22:46Z",
+      "queued_at": "2026-11-01T21:13:42Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "41349179472",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-01T20:53:44Z",
       "stop_requested": false,
       "taken_asks": [],
