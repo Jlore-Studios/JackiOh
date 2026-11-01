@@ -12808,7 +12808,25 @@
       "feedback_since": "2026-11-01T16:27:59Z",
       "issue": 2684,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "gpt"
+        ],
+        "builder": "gpt",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "gpt",
+            "run": "41326475359",
+            "tier": "medium"
+          }
+        ],
+        "sha": "06da5bc8b1656139a36ca180f8ade9224ac7b317",
+        "tiers": {
+          "gpt": "medium"
+        }
+      }
     }
   },
   "labels_synced": "732204536440d0b3",
