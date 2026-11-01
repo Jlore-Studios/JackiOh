@@ -12193,7 +12193,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-01T02:39:44Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:111ba9af-1793515018",
+      "run_id": "41281563758",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T06:37:09Z",
       "stop_requested": false,
