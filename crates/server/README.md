@@ -634,25 +634,28 @@ series still makes its picks.
   rebuilt actor resumes the bot's seat with its streams started again (R1452). R639000: the think
   time also grows with the move's legal actions (`THINK_COMPLEXITY_SLOPE`) and on a lethal decision
   (`THINK_LETHAL_SHIFT`), and a mulligan, a draw answer and a concession have priors of their own
-  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, and it answers a draw
-  offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
-  (`never_played`). A rebuild reads the turn each bot last moved in off the log
+  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, only facing a lethal on
+  the opponent's board it cannot stop (`jackioh_ai::unstoppable_lethal`, inside the decision's
+  deadline, R2660000), and otherwise may offer a draw while well behind (`BOT_DRAW_OFFER`,
+  R2660001), and it answers a draw offer by `bots::signals` rather than the AI's refusal (R188 holds
+  for practice); the actor plays every move but an emote (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
   turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
   no draw at full or zero skill); a decision the roll does not give to the AI is the skill miss's
   (`skill_miss_action`, R2214000: a softmax over the greedy baseline's one-ply scores) with no search, whose
   draw-offer answer is still the bot's own roll's, and `r188_forbidden` filters either.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
-  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
-  `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
-  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit, only while it trails), a draw answer
-  (`BOT_DRAW_ANSWER_FIT`, only while it trails), an idle turn its clock times out
+  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-offer-draw`,
+  `bot-idle`, `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the
+  same: its concession temper (`BOT_CONCEDE_FIT.share`, whether it concedes at all, then only when
+  the caller's `unstoppable_lethal` holds, R2660000), a draw answer (`BOT_DRAW_ANSWER_FIT`, only
+  while it trails), a draw offer (`BOT_DRAW_OFFER`, hand-set, only while it trails by
+  `min_behind`, R2660001), an idle turn its clock times out
   (`BOT_TIMEOUT_FIT`), its plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
   it meets an offer, and when) and its aim's lead. Where it stands (`standing`) is read through
   `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
-  cannot look up a face-down placeholder: the deficit on R1442's scale, which the concession's
-  threshold is fitted on, and how far it trails its opponent, centered on an even board, which both
-  guards read.
+  cannot look up a face-down placeholder: the deficit on R1442's scale, and how far it trails its
+  opponent, centered on an even board, which the draw answer and the draw offer read.
 - `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
   person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
   through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and

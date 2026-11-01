@@ -70,6 +70,24 @@ pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
 pub const LETHAL_HINT_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
 pub const LETHAL_HINT_NODES: usize = AI_BUDGET.lethal_nodes;
 
+/// R2660000: the stream the ladder bots' concession check (`unstoppable::unstoppable_lethal`) draws
+/// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
+pub const UNSTOPPABLE_LETHAL_SEED: &str = "ai:unstoppable-lethal";
+
+/// R2660000: the worlds the check proves the lethal on, the AI's own; it holds only on all of them.
+pub const UNSTOPPABLE_LETHAL_DETERMINIZATIONS: usize = AI_BUDGET.determinizations;
+const _: () = assert!(
+    UNSTOPPABLE_LETHAL_DETERMINIZATIONS > 0,
+    "R2660000: no world proves nothing"
+);
+
+/// R2660000: the nodes one whole check may spend, the seat's every line and the opponent's every
+/// reply on every world: twice a decision's, since it tries every line where the search tries a beam.
+pub const UNSTOPPABLE_LETHAL_NODES: usize = 2 * AI_BUDGET.nodes;
+
+/// R2660000: the nodes one proof of the opponent's lethal may spend, the AI's solver's own.
+pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize = AI_BUDGET.lethal_nodes;
+
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
 /// baseline, `duos.rs`'s `duos_gate`.

@@ -70,3 +70,4 @@ pub mod training_grounds;
 pub mod turn_hooks;
 pub mod tutorial_cards;
 pub mod tutorial_floor;
+pub mod unstoppable_lethal;

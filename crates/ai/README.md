@@ -158,6 +158,33 @@ proves a line that wins on every one of them within `LETHAL_HINT_NODES` nodes. I
 when `should_stop` (the browser's clock, as the AI's) stops the search before it proves a line.
 `decide` never calls it, so it changes no decision and no game.
 
+## The unstoppable lethal (R2660000)
+
+```rust
+pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option<&dyn Fn() -> bool>) -> bool;
+pub const UNSTOPPABLE_LETHAL_SEED: &str;                // "ai:unstoppable-lethal"
+pub const UNSTOPPABLE_LETHAL_DETERMINIZATIONS: usize;   // AI_BUDGET.determinizations
+pub const UNSTOPPABLE_LETHAL_NODES: usize;              // 2 × AI_BUDGET.nodes, the whole check's
+pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize;        // AI_BUDGET.lethal_nodes, one proof of the opponent's lethal
+```
+
+Whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing it does
+this turn stops. Like `lethal_hint` it reads the true state only through `redact`, and it counts only
+what shows: the opponent's hand and face-down cards are taken out, so no unseen trap stops the seat's
+answer and no unseen card makes the lethal. It fills the rest in as
+`UNSTOPPABLE_LETHAL_DETERMINIZATIONS` worlds from `UNSTOPPABLE_LETHAL_SEED`'s stream and, on each,
+plays every line of the seat's turn through the engine (every legal action but R84's and the
+mulligan, "end turn" first, a position once), and for each line that hands the turn over asks
+`find_lethal` for the opponent's lethal on the board alone, the card it drew dropped, then plays that
+line again. It holds only when every line on every world ends lost. Every doubt answers false: a cut
+walk (`UNSTOPPABLE_LETHAL_NODES`, `should_stop`), a failed step, a step that rolls the game's random
+numbers or moves a card of the seat's library (one outcome of a roll, one guessed order, could hide
+the escape), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
+the seat, a panic, and every moment but the seat's own main phase with no prompt open. A turn that ends with the
+Marketplace open ends without it, so the opponent's turn start rolls no offers (R1853000), and a lethal
+that needs the opponent's turn to end is not counted: both err only towards playing on. `decide` never
+calls it; the ladder bots ask it before conceding.
+
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's

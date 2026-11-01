@@ -1107,7 +1107,9 @@ pub const THINK_LETHAL_SHIFT: ScalarFit = ScalarFit {
 };
 
 /// R639000: the concession model a ladder bot draws its temper from. The prior's threshold sits about
-/// 40 past an even opening's deficit, a game clearly lost.
+/// 40 past an even opening's deficit, a game clearly lost. R2660000: a bot reads only `share`, whether
+/// it is one who concedes at all, and concedes only facing a lethal it cannot stop
+/// (`jackioh_ai::unstoppable_lethal`); `min_turn` and the deficit stay fitted, unread.
 pub const BOT_CONCEDE_FIT: ConcedeFit = ConcedeFit {
     samples: 0,
     share: 0.4,
@@ -1120,6 +1122,23 @@ pub const BOT_CONCEDE_FIT: ConcedeFit = ConcedeFit {
 pub const BOT_DRAW_ANSWER_FIT: DrawAnswerFit = DrawAnswerFit {
     samples: 0,
     accept_share: 0.25,
+};
+
+/// R2660001: when a ladder bot offers a draw: at the start of its own turn, while it trails its
+/// opponent by at least `min_behind`, on the scale of `Standing.behind` (about one point per point of
+/// hero health or of a unit's stats), with the chance `chance_per_turn`. Hand-set: `timing-fit` fits
+/// no offer rate.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DrawOfferRule {
+    pub chance_per_turn: f64,
+    pub min_behind: f64,
+}
+
+/// R2660001: a ladder bot offers a draw on one turn start in twenty while it trails by ten points or
+/// more, a 4/4's worth and more.
+pub const BOT_DRAW_OFFER: DrawOfferRule = DrawOfferRule {
+    chance_per_turn: 0.05,
+    min_behind: 10.0,
 };
 
 /// R639000: how often a ladder bot lets its turn clock run out.

@@ -1737,8 +1737,8 @@ impl MatchActor {
     /// R1452: plays the move a bot home decided, as a server action (R270's prefix, so no client can
     /// pre-empt it and R1442 records no think time for it, numbered by the seq it takes) stamped with
     /// the seat it plays now. R639000: a bot concedes and answers a draw offer as `seat::play` drew
-    /// it, never offers a draw (`never_played`), and its aim, once relayed, is taken down after the
-    /// move as a person's client takes its own down.
+    /// it, offers one too (R2660001), never an emote (`never_played`), and its aim, once relayed, is
+    /// taken down after the move as a person's client takes its own down.
     ///
     /// A move decided on a state the log has since moved past (the other seat acted meanwhile: a
     /// person's auto-end-turn switch, their side of the mulligan, an answer to a prompt) still goes,
