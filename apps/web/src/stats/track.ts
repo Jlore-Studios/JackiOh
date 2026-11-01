@@ -13,9 +13,10 @@ import {
   type UnitView,
 } from "@jackioh/shared";
 
-import { ALLURE_MARK, FROZEN_MARK, markEventOf } from "../cards/marks.ts";
+import { ALLURE_MARK, markEventOf } from "../cards/marks.ts";
 import { HIDDEN_ID } from "../game/animations.ts";
 import { printedCost } from "../game/decks.ts";
+import { FROZEN_MARK } from "./config.ts";
 import { logMax, logSeen, logWith, outcomeFor, type GameLog, type GameOutcome } from "./model.ts";
 
 function readable(defId: string): string | null {

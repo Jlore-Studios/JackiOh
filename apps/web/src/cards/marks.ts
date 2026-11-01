@@ -89,18 +89,6 @@ export const END_OF_TURN_MARK = "endOfTurn";
 /** The engine's `END_OF_TURN_MARK_COLOR` (`effects/delay.rs`). */
 export const END_OF_TURN_MARK_COLOR: MarkColor = "orange";
 
-/** The engine's `FROZEN_MARK` (`config.rs`, R1174000): `marked` with `added: true` as a freeze lands, `added: false` as it thaws. */
-export const FROZEN_MARK = "frozen";
-
-/** The engine's `FROZEN_MARK` color key (`config.rs`): the frost. */
-export const FROZEN_MARK_COLOR: MarkColor = "cyan";
-
-/** Classic #20 The Power to Punish's mark (R437): the unit marked for death. */
-export const DESTROY_MARK = "destroy";
-
-/** Classic #20's mark color: #50's aura, in red (R437). */
-export const DESTROY_MARK_COLOR: MarkColor = "red";
-
 /** #2270: what a card on the field at its last Brittle count wears, the aura alone (no badge, no mark): Allure's, recolored gray. */
 export const BRITTLE_LAST_COLOR: MarkColor = "gray";
 

@@ -20,17 +20,7 @@
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerId, PlayerView, SideView, UnitView } from "@jackioh/shared";
 
-import {
-  ALLURE_MARK,
-  ALLURE_MARK_COLOR,
-  BRITTLE_LAST_COLOR,
-  DESTROY_MARK,
-  DESTROY_MARK_COLOR,
-  FROZEN_MARK,
-  FROZEN_MARK_COLOR,
-  TEMPORARY_LAST_COLOR,
-  type MarkColor,
-} from "../cards/marks.ts";
+import { ALLURE_MARK, ALLURE_MARK_COLOR, BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR, type MarkColor } from "../cards/marks.ts";
 import { planFx } from "../fx/cues.ts";
 import { catalogFacts } from "../fx/FxLayer.tsx";
 import type { FxCue, FxMemory } from "../fx/types.ts";
@@ -38,7 +28,7 @@ import { planEntries, type AnimationEntry } from "../game/animations.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
 import type { Side } from "../game/contract.ts";
 import { HERO_HEALTH } from "../wire/engineConfig.ts";
-import { SHOWCASE_BEAT_GAP_MS, SHOWCASE_LEAD_MS } from "./config.ts";
+import { DESTROY_MARK, DESTROY_MARK_COLOR, FROZEN_MARK, FROZEN_MARK_COLOR, SHOWCASE_BEAT_GAP_MS, SHOWCASE_LEAD_MS } from "./config.ts";
 
 /** The one card's instance id; the stage's card is `testid.card(STAGE_INSTANCE_ID)`. */
 export const STAGE_INSTANCE_ID = "landing-stat";

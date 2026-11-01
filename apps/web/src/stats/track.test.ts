@@ -3,9 +3,10 @@
 import type { GameEvent, GameOverReason, PlayerView } from "@jackioh/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { ALLURE_MARK, FROZEN_MARK } from "../cards/marks.ts";
+import { ALLURE_MARK } from "../cards/marks.ts";
 import { HIDDEN_ID } from "../game/animations.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
+import { FROZEN_MARK } from "./config.ts";
 import { EMPTY_LOG, logWith, type GameLog } from "./model.ts";
 import {
   countAllured,

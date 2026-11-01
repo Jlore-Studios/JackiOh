@@ -3,11 +3,19 @@
 
 import { describe, expect, it } from "vitest";
 
-import { BRITTLE_LAST_COLOR, DESTROY_MARK, DESTROY_MARK_COLOR, FROZEN_MARK, FROZEN_MARK_COLOR, TEMPORARY_LAST_COLOR } from "../cards/marks.ts";
+import { BRITTLE_LAST_COLOR, TEMPORARY_LAST_COLOR } from "../cards/marks.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import { animationRow } from "../game/animations.ts";
 import { testid, type Side } from "../game/contract.ts";
-import { SHOWCASE_BEAT_GAP_MS, SHOWCASE_INTERVAL_MS, SHOWCASE_LEAD_MS } from "./config.ts";
+import {
+  DESTROY_MARK,
+  DESTROY_MARK_COLOR,
+  FROZEN_MARK,
+  FROZEN_MARK_COLOR,
+  SHOWCASE_BEAT_GAP_MS,
+  SHOWCASE_INTERVAL_MS,
+  SHOWCASE_LEAD_MS,
+} from "./config.ts";
 import {
   STAGE_ANIMATIONS,
   STAGE_INSTANCE_ID,
