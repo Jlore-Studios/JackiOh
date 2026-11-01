@@ -1,7 +1,7 @@
 // An issue closed while a run works on it: the run keeps its lane until it ends, its work is not
 // delivered, and nothing queues it again.
 //
-// bot/tests/test_closed.py, ported (PORTING.md §7).
+// bot/tests/test_closed.py, ported (#467).
 package tests
 
 import (

@@ -3,7 +3,7 @@
 // production's `/api/stats/cards`, each set's pooled, mean and median card win rate over them,
 // read once a day and kept in the issue between reads.
 //
-// bot/tests/test_cardsets.py, ported (PORTING.md §7).
+// bot/tests/test_cardsets.py, ported (#467).
 package tests
 
 import (

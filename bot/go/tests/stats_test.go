@@ -3,7 +3,7 @@
 // last day, the last week and all time, who planned, built, revised and approved each pull
 // request, and the count every 30 minutes, kept in the issue between counts.
 //
-// bot/tests/test_stats.py, ported (PORTING.md §7).
+// bot/tests/test_stats.py, ported (#467).
 package tests
 
 import (

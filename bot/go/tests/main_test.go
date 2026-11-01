@@ -1,6 +1,6 @@
-// Package tests is bot/tests/, ported (PORTING.md §7): one <file>_test.go for each test_<file>.py,
+// Package tests is bot/tests/, ported (#467): one <file>_test.go for each test_<file>.py,
 // black-box against internal/, with internal/fakes for fakes.py and internal/testsupport for
-// support.py. PARITY.md lists every Python test beside its Go twin.
+// support.py. Each Python test became a Go test of the same name (README.md, Rules for a change).
 package tests
 
 import (
@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	_ "time/tzdata" // a runner without a zone database behaves the same (PORTING §5)
+	_ "time/tzdata" // a runner without a zone database behaves the same (README.md, Read the repository from disk)
 )
 
 // TestMain sets up what the Python suite had for every test: it ran from bot/ (ci.yml's bot

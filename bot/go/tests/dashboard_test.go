@@ -1,7 +1,7 @@
 // The pinned status issue (`dashboard.py`): opened and pinned once, rewritten every sweep, adopted
 // again when the state file loses it, and drawn from the same facts as `/harness status`.
 //
-// bot/tests/test_dashboard.py, ported (PORTING.md §7).
+// bot/tests/test_dashboard.py, ported (#467).
 package tests
 
 import (
