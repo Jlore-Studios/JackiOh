@@ -12057,9 +12057,11 @@
       "interruptions": 1,
       "issue": 2655,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-11-01T09:26:18Z",
+      "round_tier": "strong",
       "run_id": "41293163431",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -12067,6 +12069,7 @@
       "started_at": "2026-11-01T09:26:37Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
