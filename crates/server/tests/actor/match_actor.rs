@@ -5131,6 +5131,7 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
 /// `PlayerView`.
 mod r1834003_the_loadouts_frames {
     use super::*;
+    use crate::support::store::named_cards;
     use jackioh_server::actor::engine::{Pinned, begin_game, create_game, create_game_args, dealt_cards};
 
     /// Every kind's default, as the frame spells a seat that froze nothing.
@@ -5303,27 +5304,6 @@ mod r1834003_the_loadouts_frames {
         settle().await;
         assert_eq!(socket.of_type("loadouts"), loadouts);
         assert_eq!(socket.of_type("cardLoadouts"), cards);
-    }
-
-    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
-    fn named_cards(view: &Value) -> Vec<(String, String)> {
-        let mut named = Vec::new();
-        let mut stack = vec![view];
-        while let Some(value) = stack.pop() {
-            match value {
-                Value::Object(fields) => {
-                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
-                        (fields.get("instanceId"), fields.get("defId"))
-                    {
-                        named.push((instance.clone(), def.clone()));
-                    }
-                    stack.extend(fields.values());
-                }
-                Value::Array(entries) => stack.extend(entries),
-                _ => {}
-            }
-        }
-        named
     }
 
     /// The legal action a seat takes next in the played game below: a prompt's answer or a
