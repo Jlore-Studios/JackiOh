@@ -11,7 +11,7 @@ import type { CardDef } from "@jackioh/shared";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { CardDefsProvider } from "../refContext.tsx";
 import { CardArt, artUrl, themeFor, type ArtManifest, type ArtShape, type CardArtProps } from "./index.ts";
-import { proceduralCardArtUri } from "./svg.ts";
+import { proceduralCardArtUri } from "../../patches/cardArt.ts";
 
 afterEach(cleanup);
 

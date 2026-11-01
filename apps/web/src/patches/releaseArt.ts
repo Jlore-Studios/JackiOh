@@ -13,7 +13,7 @@
 
 import type { CardDef } from "@jackioh/shared";
 
-import { proceduralCardArtUri } from "../cards/art/svg.ts";
+import { proceduralCardArtUri } from "./cardArt.ts";
 import { fmt } from "../cards/art/hash.ts";
 import { SITE_NAME } from "../net/head.ts";
 import { GLITCH_DEF_ID } from "../wire/engineConfig.ts";
