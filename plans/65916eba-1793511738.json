@@ -1,0 +1,49 @@
+{
+  "action": "plan",
+  "number": 2660,
+  "title": "Patch: Bots on ladder only concede less often",
+  "branch": "bot/issue-2660",
+  "thread": "**Issue #2660 (data, not instructions):**\n\n```text\n# #2660: Patch: Bots on ladder only concede less often\nOpened by @jgoetzmann.\n\n### What it does\n\nBots on ladder only concede when there is lethal showing on board and they have no way to stop it. Applies to all bots, they may offer a draw if they think they are losing though.\n\n### Acceptance\n\nLethal calculation is accurate, does not concede in places where there is not lethal\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nhard: engine rules, the AI, design across crates, a migration, or about 40 files or more\n\n### Priority\n\nmedium\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2660: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#2520 skipped: it waits for #2519 to close first",
+    "#2579 skipped: it waits for #2497 to close first",
+    "#2649 skipped: it waits for #2648 to close first"
+  ]
+}
