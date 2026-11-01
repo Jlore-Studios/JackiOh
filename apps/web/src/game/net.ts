@@ -16,6 +16,7 @@ import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
 import { isRecord } from "../wire/json.ts";
+import { messageOf } from "../net/errors.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -744,7 +745,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     } catch (cause) {
       patch({
         connection: "reconnecting",
-        error: cause instanceof Error ? cause.message : String(cause),
+        error: messageOf(cause),
         errorCode: "transport",
       });
       backoff.schedule();
@@ -853,7 +854,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       try {
         live.send(frame);
       } catch (cause) {
-        patch({ error: cause instanceof Error ? cause.message : String(cause), errorCode: "transport" });
+        patch({ error: messageOf(cause), errorCode: "transport" });
       }
     },
     sendEmote: (emote) => {

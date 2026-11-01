@@ -34,9 +34,9 @@ import { coopLinkUrl, forgetCoopLink, readCoopLink, sendRoomLink } from "../net/
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { deckPracticeOnly, practiceOnlyLabel } from "../together/challengeChoice.ts";
-import { attempt, messageOf } from "../together/session.ts";
 import { COOP_ROOM_KEY, COOP_ROOM_POLL_MS } from "./config.ts";
 import { duosTestid } from "./testids.ts";
+import { attempt, messageOf } from "../net/errors.ts";
 import "./duos.css";
 
 /** The deck select's value for a dealt deck. */

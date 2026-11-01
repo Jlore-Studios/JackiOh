@@ -30,6 +30,7 @@ import { SEATS, createHotseat, otherSeat } from "../../game/hotseat.ts";
 import type { DispatchResult, HotseatSession } from "../../game/hotseat.ts";
 import { navigate, paths } from "../../net/navigate.ts";
 import { navTestid } from "../nav.tsx";
+import { messageOf } from "../../net/errors.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -282,7 +283,7 @@ function startSession(port: EnginePort, params: HotseatParams): Status {
   } catch (cause) {
     // `createGame` throws on an illegal deck (§2.6) or handicap (R184) — the engine's ruling,
     // printed as given.
-    return { kind: "no-game", message: cause instanceof Error ? cause.message : String(cause) };
+    return { kind: "no-game", message: messageOf(cause) };
   }
 }
 
@@ -494,7 +495,7 @@ export function HotseatRoute() {
         setStatus({
           kind: "no-engine",
           missing: error?.missing ?? [],
-          message: cause instanceof Error ? cause.message : String(cause),
+          message: messageOf(cause),
         });
       });
     return () => {

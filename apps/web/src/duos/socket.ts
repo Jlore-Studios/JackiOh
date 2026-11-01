@@ -48,6 +48,7 @@ import { socketProtocols } from "../net/socketProtocols.ts";
 import { isRecord } from "../wire/json.ts";
 import { DUOS_PINGS_KEPT } from "./config.ts";
 import { isDuosSeat, isPingKind, parsePingTarget } from "./pings.ts";
+import { messageOf } from "../net/errors.ts";
 
 /** `WebSocket.OPEN`, spelled out so this module needs no DOM constant at runtime. */
 const OPEN = 1;
@@ -351,7 +352,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     } catch (cause) {
       patch({
         connection: "reconnecting",
-        error: cause instanceof Error ? cause.message : String(cause),
+        error: messageOf(cause),
         errorCode: "transport",
       });
       backoff.schedule();
@@ -452,7 +453,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       try {
         current.send(JSON.stringify({ type: "action", nonce: nextNonce(), body }));
       } catch (cause) {
-        patch({ error: cause instanceof Error ? cause.message : String(cause), errorCode: "transport" });
+        patch({ error: messageOf(cause), errorCode: "transport" });
       }
     },
     sendPing: (ping, target) => {

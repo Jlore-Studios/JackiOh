@@ -11,6 +11,7 @@ import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
 import { sessionStorageOrNull } from "./storage.ts";
+import { attempt } from "./errors.ts";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
@@ -53,11 +54,6 @@ export function bannerGameOf(me: {
     return { kind: "duos", id: me.currentDuosMatchId, path: paths.duos(me.currentDuosMatchId) };
   }
   return null;
-}
-
-/** Turns a synchronous throw into a rejected promise. */
-function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
 }
 
 /**

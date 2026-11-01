@@ -15,6 +15,7 @@ import type { ReplayGifPreset } from "./config.ts";
 import type * as Gif from "./gif/export.ts";
 import { clampClip, loadClip, turnRange } from "./steps.ts";
 import type { StepCache } from "./steps.ts";
+import { messageOf } from "../net/errors.ts";
 
 export const gifTestid = {
   toggle: "replay-gif",
@@ -125,7 +126,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
         setPhase(result.kind === "ready" ? { kind: "ready", file: result.file, share: gif.canShareFile(result.file) } : { kind: "tooBig" });
       } catch (cause) {
         if (controller.signal.aborted || isAbort(cause)) return;
-        setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause), ready: null });
+        setPhase({ kind: "failed", message: messageOf(cause), ready: null });
       }
     })();
   }, [cache, current, from, to, preset, lookup]);
@@ -170,7 +171,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
       setPhase(ready);
       loaded.current.shareGif(ready.file).catch((cause: unknown) => {
         // A dismissed share sheet is the viewer's answer, not a failure.
-        if (!isAbort(cause)) setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause), ready });
+        if (!isAbort(cause)) setPhase({ kind: "failed", message: messageOf(cause), ready });
       });
     },
   };

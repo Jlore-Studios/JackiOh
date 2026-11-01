@@ -57,7 +57,7 @@ import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { deckPracticeOnly, practiceOnlyLabel, trioPracticeOnly } from "../together/challengeChoice.ts";
-import { attempt, messageOf } from "../together/session.ts";
+import { attempt, messageOf } from "../net/errors.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 

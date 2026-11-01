@@ -6,10 +6,9 @@
 import { useEffect, useState, type FormEvent, type ReactElement } from "react";
 
 import {
-  AUTH_MESSAGES,
   AUTH_NOTICES,
-  AuthError,
   authConfig,
+  authMessageOf,
   enrollTotp,
   listTotpFactors,
   removeFactor,
@@ -53,10 +52,6 @@ type Phase =
 function sessionFor(token: string): Session {
   const stored = readSession();
   return stored !== null && stored.accessToken === token ? stored : { accessToken: token };
-}
-
-function messageOf(cause: unknown): string {
-  return cause instanceof AuthError ? cause.message : AUTH_MESSAGES.service;
 }
 
 /** Nothing at all on a build with no auth provider (the end-to-end fixture builds): nothing to set up. */
@@ -105,7 +100,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
         setPhase({ kind: "enrolling", enrolment });
       })
       .catch((cause: unknown) => {
-        setError(messageOf(cause));
+        setError(authMessageOf(cause));
       })
       .finally(() => {
         setBusy(false);
@@ -132,7 +127,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
         setNotice(AUTH_NOTICES.mfaEnrolled);
       })
       .catch((cause: unknown) => {
-        setError(messageOf(cause));
+        setError(authMessageOf(cause));
       })
       .finally(() => {
         setBusy(false);
@@ -157,7 +152,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
         setNotice(AUTH_NOTICES.mfaRemoved);
       })
       .catch((cause: unknown) => {
-        setError(messageOf(cause));
+        setError(authMessageOf(cause));
       })
       .finally(() => {
         setBusy(false);
