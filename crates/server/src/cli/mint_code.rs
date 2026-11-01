@@ -15,10 +15,10 @@
 use anyhow::{Result, anyhow};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
 
 use crate::api::codes::{MintDeps, MintInput, mint_invite_code};
 use crate::app::now_ms;
+use crate::cli::connect_one;
 use crate::config::MS_PER_DAY;
 use crate::db::store::Db;
 use crate::env::{Env, js_number, load_env, quoted};
@@ -82,13 +82,9 @@ pub async fn run(args: Vec<String>) -> Result<()> {
     let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
 
     // One connection: this process runs a single insert and exits.
-    let pool = PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&env.database_url)
-        .await?;
-    let db = Db::Pg(pool.clone());
+    let db = connect_one(&env.database_url).await?;
     let minted = mint(&db, &env, &options).await;
-    pool.close().await;
+    db.close().await;
     minted
 }
 
