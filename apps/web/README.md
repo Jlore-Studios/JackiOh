@@ -22,7 +22,9 @@ enforces rules and never sees hidden information.** In practice:
 - Choices split two ways per SPEC §11 R81: zone, X, embiggen, Tribute and a card's declared
   targets and modes are built **inline into the `play` action**; everything decided during
   resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
-  both with the same pickers.
+  both with the same pickers. A choice of `DISCOVER_OPTION_LIMIT` (4) options or fewer that name no
+  card draws each option as a choice card (`game/ChoiceCard.tsx`, #2646): art, its label and what it
+  does, which is prompt chrome and no card, so it opens no inspect overlay and reaches no zone or log.
 
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
@@ -194,7 +196,7 @@ cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the abi
 live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
 view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
 play's choices are built: one listed body is sent at once, except on a card listing several abilities,
-which asks which first (the `ability` need, a Discover-chrome picker in `Prompt.tsx` showing each
+which asks which first (the `ability` need, a Discover of choice cards in `Prompt.tsx` showing each
 ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
 the same turn; the rest wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode

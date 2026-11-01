@@ -1754,10 +1754,26 @@ fn pending_view(state: &GameState, viewer: PlayerId) -> Option<PendingView> {
     Some(prompt_view(state, viewer, pending))
 }
 
+/// R2646000: the card asking, its definition and face, when the chooser may read it where it now is
+/// (R1088's test, `may_read`). A prompt no card opened names none, and neither does one whose card the
+/// state no longer holds or that has since changed definition: only a card that is still itself here
+/// and open to the chooser is named, so the view says nothing the board does not.
+fn prompt_source(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> Option<(String, bool)> {
+    let id = pending.resume.instance_id.as_deref()?;
+    let card = find_instance(state, id)?;
+    // The state holds the card, so `may_read` never reaches for a replacement.
+    if card.def_id != pending.resume.def_id || !may_read(state, viewer, id, &Replacements::default()) {
+        return None;
+    }
+    Some((pending.resume.def_id.clone(), pending.resume.radiant))
+}
+
 /// The chooser's own prompt, copied field by field: `resume` never travels, so nothing a prompt keeps
 /// for its answer — the owner a prompt the other player holds continues as (B5 E18), a multiple-choice
-/// problem's key (R465) — can leave the engine through the view.
+/// problem's key (R465) — can leave the engine through the view. Only the card asking reaches it, and
+/// only when the chooser may read that card (R2646000).
 fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> PendingView {
+    let source = prompt_source(state, viewer, pending);
     PendingView::ForYou(PendingPromptView {
         for_you: true,
         choice_id: pending.id.clone(),
@@ -1774,6 +1790,8 @@ fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> 
         craft_mode: pending.craft_mode,
         craft_offer: pending.craft_offer.clone(),
         streak: pending.streak,
+        source_def_id: source.as_ref().map(|(def_id, _)| def_id.clone()),
+        source_radiant: source.map(|(_, radiant)| radiant),
     })
 }
 

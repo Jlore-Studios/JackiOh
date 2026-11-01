@@ -27,9 +27,10 @@ export type Side = "you" | "opponent";
 
 /**
  * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
- * while it offers this many options or fewer; more options keep the plain mode list.
+ * while it offers this many options or fewer; more options keep the plain mode list. #2646: so is
+ * every other choice of options that name no card, each option a choice card (ChoiceCard.tsx).
  */
-export const DISCOVER_OPTION_LIMIT = 5;
+export const DISCOVER_OPTION_LIMIT = 4;
 
 /**
  * #492: a play's X offered as this many values or fewer is picked from cards in the middle of the

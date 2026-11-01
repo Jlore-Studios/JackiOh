@@ -109,7 +109,7 @@ function marketView(): PlayerView {
 
 type Kind = {
   kind: string;
-  /** The `data-prompt-kind` the sheet carries: a play-time "Choose one" of five or fewer is a Discover pop-up. */
+  /** The `data-prompt-kind` the sheet carries: a play-time "Choose one" of four or fewer is a Discover pop-up (#2646). */
   shows: string;
   view: () => PlayerView;
   /** The legal actions the board is given: a play-time choice's candidate plays. */
@@ -126,11 +126,14 @@ function cardName(defId: string): string {
   return CATALOG[defId]?.name ?? defId;
 }
 
-/** A play-time choice: the card in hand and one candidate play per mode, as `legalActions` lists them (R81). */
-function choice(kind: string, defId: string, modes: readonly string[]): Kind {
+/**
+ * A play-time choice: the card in hand and one candidate play per mode, as `legalActions` lists them (R81).
+ * It shows as a Discover pop-up, or as the plain mode list past DISCOVER_OPTION_LIMIT options.
+ */
+function choice(kind: string, defId: string, modes: readonly string[], shows = "discover"): Kind {
   return {
     kind,
-    shows: "discover",
+    shows,
     view: () => baseView({ you: emptySide("p1", { hand: [card({ instanceId: HAND, defId, cost: 2 })] }) }),
     legal: modes.map((mode): ActionBody => ({ type: "play", instanceId: HAND, modes: [mode] })),
     open: ts(testid.handCard(HAND)),
@@ -143,7 +146,7 @@ const KINDS: readonly Kind[] = [
   { kind: "market", shows: "market", view: marketView, legal: [], card: { selector: ts("prompt-option-mode:meditative-041"), name: cardName("meditative-041") } },
   choice("secret", "meditative-022", ["greed", "attack", "defend"]),
   choice("prediction", "meditative-022-1", ["greed", "attack", "defend"]),
-  choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"]),
+  choice("lane", "meditative-098", ["lane-1", "lane-2", "lane-3", "lane-4", "lane-5"], "mode"),
 ];
 
 /** Opens the kind's sheet: it is open on mount, or a tap on the card in hand opens a play-time choice. */

@@ -21,10 +21,15 @@
 //
 // A card option is drawn as the card in play (faces.ts, SPEC §10.10): a card the view lists — a hand
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
-// the game shows it. An option that names no card is its label; a Discover of numbers (#82 KY's
-// Trial, R247) offers exactly that, and each number is drawn on a card back, with no face to read.
-// A card the view says is Chinese (the option's or the listed card's `chinese`, ME-CN, R1301) is
-// named and drawn in the Chinese table's words.
+// the game shows it. A Discover of numbers (#82 KY's Trial, R247) offers no card, and each number is
+// drawn on a card back, with no face to read. A card the view says is Chinese (the option's or the
+// listed card's `chinese`, ME-CN, R1301) is named and drawn in the Chinese table's words.
+//
+// #2646: every other option that names no card, in a choice of DISCOVER_OPTION_LIMIT options or fewer,
+// is a choice card (ChoiceCard.tsx), the way Hearthstone draws a Choose One: art, the option's label
+// and, as its text, what it does. A choice card is not a card: it has no cost, stats or card id, and
+// opens no inspect overlay or long-press sheet. Route 2's `mode`, `ability`, `equip`, `faceDown` and
+// `plague` and route 1's `mode`, `answer` and `reward` are drawn so; more options keep their lists.
 //
 // #492: one card picker (`CardChoice`) holds every picker whose options are cards, in the middle of
 // the screen: the mulligan, a Discover, a hand pick, a pick, a short "Choose one" (Appropriations'),
@@ -124,6 +129,7 @@ import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { abilityLabel, usesWords } from "./ActivateControl.tsx";
+import { ChoiceCard, choiceSeed } from "./ChoiceCard.tsx";
 import { modeText } from "./modeText.ts";
 import { useWearerSeat } from "./wearer.ts";
 import "./prompt.css";
@@ -199,8 +205,12 @@ type PickerItem = {
   group?: string;
   /** Which arrow a direction option draws. Never read off the key, which is the engine's. */
   arrow?: "left" | "right";
-  /** A "Choose one" option's line of detail under its label (modeText.ts). */
+  /** A "Choose one" option's line of detail under its label (modeText.ts): a choice card's text (#2646). */
   detail?: string;
+  /** R831004: the set an option names (#82 KY's Trial's first Discover), whose mark is its picture. */
+  set?: string;
+  /** R420: an answer's letter, its place in the order offered. */
+  letter?: string;
   /** #492: what picking a card option chooses, under its face ("Embiggened", "X = 2"). */
   caption?: string;
   /** #492: an embiggen option, whose face shows the price that form is played for (`pricedFace`). */
@@ -232,6 +242,8 @@ type Picker = {
   title: string;
   /** The card asking, when the picker knows it: its name heads the title ("Pocket Chaos: choose one"). */
   sourceDefId?: string;
+  /** #2646: the card whose options the choice cards are, which seeds their art when no title names it. */
+  artSource?: string;
   /**
    * #617: the card being played, as the view lists it, when the options are words rather than faces
    * (a "Choose one"): its name in the title opens its preview and long-press sheet, so the card can
@@ -265,8 +277,10 @@ const CARD_CHROMES: ReadonlySet<PromptKind> = new Set(["discover", "hand", "mull
  * #492: the card picker, front and center: every option a card in the middle of the screen, the way
  * a Discover and Appropriations' "Choose one" are laid out (`CardChoice`). A short "Choose one" is
  * one (its chrome is `discover`), and so are a play's embiggen price and an X from X_CARD_LIMIT
- * values or fewer, which keep their own chrome. It is `data-prompt-layout="cards"`, which prompt.css
- * reads to keep it out of the small pickers' dock beside the board.
+ * values or fewer, which keep their own chrome. #2646: so is every other short choice of options that
+ * name no card (`cards`), its options choice cards, each keeping its chrome. It is
+ * `data-prompt-layout="cards"`, which prompt.css reads to keep it out of the small pickers' dock
+ * beside the board.
  */
 function isCardLayout(picker: Picker): boolean {
   return picker.cards === true || CARD_CHROMES.has(picker.chrome);
@@ -420,13 +434,30 @@ function pickerForPending(
     // key's tail, never off the whole key: `data-testid="direction-left"` is the M5-T2 contract.
     const arrow = DIRECTIONS.find((d) => option.label === d || option.key === d || option.key.endsWith(`:${d}`));
     if (arrow !== undefined) base.arrow = arrow;
+    // #2646, R2646000: a card's Choose one reads each option's words off that card (modeText.ts) when
+    // the view names the card asking. The label stays the engine's, which can carry a rolled number.
+    if (pending.kind === "mode") {
+      const selection = selectionForOption(option);
+      const detail = selection.pick === "mode" ? modeText(pending.sourceDefId, selection.option, pending.sourceRadiant === true).detail : undefined;
+      if (detail !== undefined) base.detail = detail;
+      // R831004: an option that names a set (#82 KY's Trial's first Discover) wears the set's mark (R503).
+      if (option.defId === undefined && setMarkOf(option.label).kind !== "unknown") base.set = option.label;
+    }
     return base;
   });
 
+  const short = pending.options.length <= DISCOVER_OPTION_LIMIT;
+  // R1184000: a sequence's Stop is a button under the answers, never one of them.
+  const answers = pending.options.filter((option) => option.key !== ANSWER_STOP).length;
   // A short "Choose one" menu is a Discover pop-up; more options keep the plain mode list.
-  const chrome = pending.kind === "mode" && pending.options.length <= DISCOVER_OPTION_LIMIT ? "discover" : pending.kind;
-  // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`).
-  const cards = pending.kind === "embiggen" || (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT);
+  const chrome = pending.kind === "mode" && short ? "discover" : pending.kind;
+  // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`); #2646:
+  // so are a few answers (C+ #42) and a quest's rewards (Classic #90), each a choice card.
+  const cards =
+    pending.kind === "embiggen" ||
+    (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT) ||
+    (pending.kind === "answer" && answers <= DISCOVER_OPTION_LIMIT) ||
+    (pending.kind === "reward" && short);
   // Outside a lesson the mulligan's heading says who goes first, which bears on what to keep, rather
   // than how to answer it. §2.1: Player 1 takes the first turn, and is `active` until then.
   const turnOrder = pending.kind === "mulligan" && !lesson;
@@ -440,7 +471,8 @@ function pickerForPending(
         ? t("You are going first")
         : t("You are going second")
       : t(pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt),
-    items,
+    // #2646: a reward's choice card is named for its place, as an answer is, and says the reward.
+    items: pending.kind === "reward" && cards ? items.map((item, at) => ({ ...item, label: t("Reward {letter}", { letter: ANSWER_LETTERS[at] ?? String(at + 1) }), detail: item.label })) : items,
     min: pending.min,
     max: pending.max,
     // The mulligan is per-card toggles plus a confirm, whatever its max.
@@ -454,6 +486,12 @@ function pickerForPending(
       action: answerAction(pending, items.map((item) => item.key).filter((key) => keys.includes(key)), view, legal),
     }),
   };
+  // R2646000: the card asking, when the view names it, seeds its options' art, and a Choose one's title
+  // names it as a play's does. A reward's title stays the quest (R404).
+  if (pending.sourceDefId !== undefined) {
+    picker.artSource = pending.sourceDefId;
+    if (pending.kind === "mode") picker.sourceDefId = pending.sourceDefId;
+  }
   if (pending.kind === "answer" && pending.streak !== undefined) {
     picker.streak = pending.streak;
     picker.sequenceChoice = pending.choiceId;
@@ -540,7 +578,8 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       const actMap = new Map(activations.map((a) => [a.ability, a]));
       return {
         ...common,
-        chrome: "discover",
+        // #2646: a few abilities are choice cards; more keep the plain list.
+        chrome: need.abilities.length <= DISCOVER_OPTION_LIMIT ? "discover" : "mode",
         title: t("Choose an ability"),
         ...(source !== undefined ? { sourceDefId: source } : {}),
         ...(played !== null ? { sourceCard: played.card } : {}),
@@ -548,12 +587,9 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
           const act = actMap.get(abilityId);
           const rawLabel = act?.label ?? abilityId;
           const label = info && played?.card ? abilityLabel(info, played.card, rawLabel) : rawLabel;
-          const detail = act?.usesLeft !== undefined ? usesWords(act.usesLeft) : undefined;
-          return {
-            key: abilityId,
-            label: t(label),
-            ...(detail !== undefined ? { detail } : {}),
-          };
+          // A choice card says what it does (#2646): how often the ability may still be used.
+          const detail = act === undefined ? t("Use this ability.") : usesWords(act.usesLeft);
+          return { key: abilityId, label: t(label), detail };
         }),
         submit: (keys) => (keys[0] === undefined ? {} : play({ ability: keys[0] })),
       };
@@ -624,18 +660,25 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
-    case "equip":
-      // R1086: one zone with both a plain and an Equip play asks which.
+    case "equip": {
+      // R1086: one zone with both a plain and an Equip play asks which: two choice cards (#2646), each
+      // saying what it does in its keyword's words (glossary.ts).
+      const cards = need.values.length <= DISCOVER_OPTION_LIMIT;
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "mode",
+        ...(cards ? { cards } : {}),
+        ...(played === null ? {} : { artSource: played.defId }),
         title: t("Equip or Stack?"),
         items: need.values.map((value) => ({
           key: String(value),
           label: value ? t("Equip") : t("Stack"),
+          ...(cards ? { detail: value ? t("Fuse it into the unit in this zone.") : t("Play it on top of the unit in this zone.") } : {}),
         })),
         submit: (keys) => (keys[0] === undefined ? {} : play({ equip: keys[0] === "true" })),
       };
+    }
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
       // R81: a declared `target` pick whose selections are all hand cards is rendered with the hand
@@ -674,14 +717,21 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       // engine listed; the rest is mana. Several paying cards are told apart by where they stand.
       const sources = new Set(need.options.flatMap((option) => (option === "none" ? [] : [option.from])));
       const byKey = new Map(need.options.map((option) => [plagueKey(option), option]));
+      // #2646: a few ways to pay are choice cards; more keep the row of chips.
+      const cards = need.options.length <= DISCOVER_OPTION_LIMIT;
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "number",
-        variant: "plague",
+        ...(cards ? { cards } : { variant: "plague" as const }),
+        ...(played === null ? {} : { artSource: played.defId }),
         title: t("Pay with Plague Counters?"),
         items: need.options.map((option) => ({
           key: plagueKey(option),
           label: plagueLabel(view, option, sources.size > 1),
+          ...(cards
+            ? { detail: option === "none" ? t("The whole price is paid in mana.") : t("The counters pay that much of the price; mana pays the rest.") }
+            : {}),
         })),
         submit: (keys) => {
           const choice: PlagueChoice | undefined = keys[0] === undefined ? undefined : byKey.get(keys[0]);
@@ -699,11 +749,24 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         endOfNextTurn: t("Set face-down: reveal at the end of your next turn"),
         cloaked: t("Set face-down: reveal it with its Activate"),
       };
+      // #2646: a few ways are choice cards, each named for how the card lies and saying when it
+      // reveals; more keep the plain list of sentences.
+      const names: Record<FaceDownChoice, string> = {
+        up: t("Face-up"),
+        endOfThisTurn: t("Face-down"),
+        startOfNextTurn: t("Face-down"),
+        endOfNextTurn: t("Face-down"),
+        cloaked: t("Cloaked"),
+      };
+      const cards = need.options.length <= DISCOVER_OPTION_LIMIT;
+      const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "mode",
+        ...(cards ? { cards } : {}),
+        ...(played === null ? {} : { artSource: played.defId }),
         title: t("Play it how?"),
-        items: need.options.map((option) => ({ key: option, label: labels[option] })),
+        items: need.options.map((option) => (cards ? { key: option, label: names[option], detail: labels[option] } : { key: option, label: labels[option] })),
         submit: (keys) => {
           const choice: FaceDownChoice | undefined =
             keys[0] === undefined ? undefined : (keys[0] as FaceDownChoice);
@@ -804,7 +867,8 @@ function nameOf(defId: string, info: { name: string; def?: CardDef }, chinese: b
 
 // Polish 6 (a minimal edit to task 7's file, flagged in the PR): a card option draws the card's face,
 // the one the hand and the deck builder draw, with the same hover preview and long-press sheet, in
-// whatever box prompt.css gives it. An option that names no card keeps its name and text.
+// whatever box prompt.css gives it. A number is a card back (R247) and a code option its code
+// (R1183005); every other option that names no card is a `ChoiceOption` (#2646).
 function CardOption(props: {
   item: PickerItem;
   pressed: boolean;
@@ -854,9 +918,6 @@ function CardOption(props: {
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
   // R1183005: a code option is drawn as its code, in a block of its own, naming no card.
   const code = face === null && props.item.code === true ? props.item.label : null;
-  // R831004: an option that names a set (#82 KY's Trial's first Discover) shows the set's mark (R503).
-  const mark = face === null && number === null && code === null ? setMarkOf(props.item.label) : null;
-  const setMark = mark === null || mark.kind === "unknown" ? null : mark;
   const testId = `prompt-option-${props.item.key}`;
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(face === null ? null : { key: testId, face }, { prefer: "above", showLoc: false });
@@ -877,7 +938,6 @@ function CardOption(props: {
         data-verdict={verdict}
         data-number={number ?? undefined}
         data-code={code === null ? undefined : "true"}
-        data-set={setMark === null ? undefined : props.item.label}
         data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
         aria-pressed={props.pressed}
@@ -898,18 +958,7 @@ function CardOption(props: {
           <pre className="prompt-code">
             <code>{code}</code>
           </pre>
-        ) : face === null ? (
-          <>
-            {setMark === null ? null : <img className="prompt-set-mark" src={setMark.src} alt="" aria-hidden="true" title={setMark.label} />}
-            <span className="prompt-card-name">{name}</span>
-            {/* A Discover menu's text option (a card's modes): the effect rides `detail`. */}
-            {props.item.detail === undefined ? (
-              info.text === "" ? null : <span className="prompt-card-text">{info.text}</span>
-            ) : (
-              <span className="prompt-card-text">{props.item.detail}</span>
-            )}
-          </>
-        ) : (
+        ) : face === null ? null : (
           <span className="cf-option">
             <CardFace face={face} layout="full" worn={props.own === true} />
           </span>
@@ -928,6 +977,35 @@ function CardOption(props: {
       </button>
       <OwnCopy own={props.own === true}>{inspect.overlay}</OwnCopy>
     </>
+  );
+}
+
+/**
+ * #2646: an option that names no card, in a short choice: a choice card (ChoiceCard.tsx), which is not
+ * a card, so it opens no inspect overlay or long-press sheet. Read out as its label and what it does.
+ */
+function ChoiceOption(props: { item: PickerItem; seed: string; pressed: boolean; readOnly?: boolean; onPick: () => void }) {
+  const { item } = props;
+  const detail = item.detail === undefined || item.detail === "" ? undefined : item.detail;
+  return (
+    <button
+      type="button"
+      className="prompt-card prompt-card--choice"
+      data-testid={`prompt-option-${item.key}`}
+      data-letter={item.letter}
+      data-set={item.set}
+      aria-pressed={props.pressed}
+      aria-disabled={props.readOnly === true ? "true" : undefined}
+      aria-label={detail === undefined ? item.label : `${item.label}: ${detail}`}
+      onClick={props.onPick}
+    >
+      <ChoiceCard
+        seed={props.seed}
+        label={item.label}
+        {...(detail === undefined ? {} : { detail })}
+        {...(item.set === undefined ? {} : { set: item.set })}
+      />
+    </button>
   );
 }
 
@@ -974,16 +1052,20 @@ function PlainOption(props: { item: PickerItem; pressed: boolean; readOnly?: boo
   );
 }
 
-/** Arrow keys walk a grid of option buttons `columns` wide; Enter or Space presses the focused one. */
+/**
+ * Arrow keys walk a grid of option buttons `columns` wide, the options within the element that
+ * listens; Enter or Space presses the focused one. A key pressed off the options is left alone.
+ */
 function arrowFocus(columns: number) {
   const steps: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns };
   return (event: ReactKeyboardEvent<HTMLElement>): void => {
     const step = steps[event.key];
     if (step === undefined) return;
-    event.preventDefault();
-    const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>("button")];
+    const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button[data-testid^="prompt-option-"]')];
     const at = event.target instanceof HTMLElement ? buttons.indexOf(event.target) : -1;
-    if (at >= 0) buttons[at + step]?.focus();
+    if (at < 0) return;
+    event.preventDefault();
+    buttons[at + step]?.focus();
   };
 }
 
@@ -995,6 +1077,8 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
   if (props.sourceDefId === undefined) return <p className="prompt-title">{props.title}</p>;
   // R711000: the asking card's name as a reader of Chinese reads it.
   const name = nameOf(props.sourceDefId, info, isZhCn());
+  // R2646000: an engine prompt that names its card already ("Pickle: choose one") says it once.
+  const ask = props.title.startsWith(`${name}: `) ? props.title.slice(name.length + 2) : props.title;
   return (
     <p className="prompt-title">
       {face === null ? (
@@ -1004,7 +1088,7 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
           {name}
         </span>
       )}
-      <span className="prompt-title-ask">{props.title}</span>
+      <span className="prompt-title-ask">{ask}</span>
       {inspect.overlay}
     </p>
   );
@@ -1063,10 +1147,13 @@ function BoardOnlyPrompt(props: {
 /**
  * #492: the card picker (`isCardLayout`): a mulligan, a Discover, a card from hand, a pick, a short
  * "Choose one" (Appropriations'), an embiggen price and a short X, each option a card in a row in
- * the middle of the picker. `data-choice` names the picker's chrome.
+ * the middle of the picker. `data-choice` names the picker's chrome. #2646: an option that names no
+ * card is a choice card, unless it is a number (R247) or code (R1183005), which keep their own.
  */
 function CardChoice(props: {
   picker: Picker;
+  /** The row's name, when it is a group of its own (the answers). */
+  label?: string;
   /** R515: what the picks so far cost together. */
   spent: number;
   pressed: (key: string) => boolean;
@@ -1080,6 +1167,10 @@ function CardChoice(props: {
   // R1655000: a mulligan's options are the viewer's own hand.
   const wearer = useWearerSeat();
   const own = picker.chrome === "mulligan" && wearer !== null;
+  // R247: a Discover of numbers offers no card, and each is drawn on a card back. A Choose one whose
+  // options are numbers with words of their own (#51's cost brackets) is choice cards instead.
+  const numbers = picker.items.every((item) => item.defId === undefined && item.detail === undefined && NUMBER_OPTION.test(item.label));
+  const artSource = picker.artSource ?? picker.sourceDefId;
   return (
     <>
       {budget === undefined ? null : (
@@ -1087,19 +1178,35 @@ function CardChoice(props: {
           {t("({spent}) of ({limit}) spent", { spent: props.spent, limit: budget.limit })}
         </p>
       )}
-      <div className="prompt-cards" data-testid="prompt-cards" data-choice={picker.chrome}>
-        {picker.items.map((item) => (
-          <CardOption
-            key={item.key}
-            item={item}
-            pressed={props.pressed(item.key)}
-            verdicts={picker.chrome === "mulligan"}
-            own={own}
-            over={!props.pressed(item.key) && !props.fits(item.key)}
-            readOnly={props.readOnly}
-            onPick={() => props.pick(item.key)}
-          />
-        ))}
+      <div
+        className="prompt-cards"
+        data-testid="prompt-cards"
+        data-choice={picker.chrome}
+        {...(props.label === undefined ? {} : { role: "group", "aria-label": props.label })}
+      >
+        {picker.items.map((item) =>
+          item.defId !== undefined || item.code === true || numbers ? (
+            <CardOption
+              key={item.key}
+              item={item}
+              pressed={props.pressed(item.key)}
+              verdicts={picker.chrome === "mulligan"}
+              own={own}
+              over={!props.pressed(item.key) && !props.fits(item.key)}
+              readOnly={props.readOnly}
+              onPick={() => props.pick(item.key)}
+            />
+          ) : (
+            <ChoiceOption
+              key={item.key}
+              item={item}
+              seed={choiceSeed(artSource, picker.chrome, item.key)}
+              pressed={props.pressed(item.key)}
+              readOnly={props.readOnly}
+              onPick={() => props.pick(item.key)}
+            />
+          ),
+        )}
       </div>
     </>
   );
@@ -1217,6 +1324,85 @@ function PromptModal(props: {
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} readOnly={readOnly} onPick={() => pick(item.key)} />
           ))}
         </div>
+      );
+    }
+
+    if (picker.chrome === "answer") {
+      // R1184000: a question of a sequence says how many it has right so far and offers Stop, under
+      // no letter, after the lettered answers; a lone problem (C+ #42) has neither.
+      const answers = items.filter((item) => item.key !== ANSWER_STOP);
+      const stop = items.find((item) => item.key === ANSWER_STOP);
+      const stopButton =
+        stop === undefined ? null : (
+          <button
+            key={stop.key}
+            type="button"
+            className="prompt-answer-stop"
+            data-testid={`prompt-option-${stop.key}`}
+            aria-pressed={pressed(stop.key)}
+            aria-disabled={readOnly ? "true" : undefined}
+            onClick={() => pick(stop.key)}
+          >
+            {stop.label}
+          </button>
+        );
+      return (
+        <>
+          {picker.streak === undefined ? null : (
+            <p className="prompt-streak" data-testid="prompt-streak" data-streak={picker.streak}>
+              {t("Right answers in a row: {count}", { count: picker.streak })}
+            </p>
+          )}
+          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
+            <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
+          )}
+          {isCardLayout(picker) ? (
+            // #2646: a few answers are choice cards, each named by its letter (R420) and saying its
+            // answer; Stop stays a button under them.
+            <>
+              <CardChoice
+                picker={{
+                  ...picker,
+                  items: answers.map((item, at) => {
+                    const letter = ANSWER_LETTERS[at] ?? String(at + 1);
+                    return { ...item, label: letter, detail: item.label, letter };
+                  }),
+                }}
+                label={t("Answers")}
+                spent={spent(selected)}
+                pressed={pressed}
+                fits={(key) => fits([...selected, key])}
+                pick={pick}
+                readOnly={readOnly}
+              />
+              {stopButton}
+            </>
+          ) : (
+            <div className="prompt-answers" role="group" aria-label={t("Answers")}>
+              {answers.map((item, at) => {
+                const letter = ANSWER_LETTERS[at] ?? String(at + 1);
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    data-testid={`prompt-option-${item.key}`}
+                    data-letter={letter}
+                    aria-pressed={pressed(item.key)}
+                    aria-label={`${letter}: ${item.label}`}
+                    aria-disabled={readOnly ? "true" : undefined}
+                    onClick={() => pick(item.key)}
+                  >
+                    <span className="prompt-answer-letter" aria-hidden="true">
+                      {letter}
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+              {stopButton}
+            </div>
+          )}
+        </>
       );
     }
 
@@ -1347,60 +1533,6 @@ function PromptModal(props: {
       );
     }
 
-    if (picker.chrome === "answer") {
-      // R1184000: a question of a sequence says how many it has right so far and offers Stop, under
-      // no letter, after the lettered answers; a lone problem (C+ #42) has neither.
-      const answers = items.filter((item) => item.key !== ANSWER_STOP);
-      const stop = items.find((item) => item.key === ANSWER_STOP);
-      return (
-        <>
-          {picker.streak === undefined ? null : (
-            <p className="prompt-streak" data-testid="prompt-streak" data-streak={picker.streak}>
-              {t("Right answers in a row: {count}", { count: picker.streak })}
-            </p>
-          )}
-          {readOnly || picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
-            <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
-          )}
-          <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
-            {answers.map((item, at) => {
-              const letter = ANSWER_LETTERS[at] ?? String(at + 1);
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  data-testid={`prompt-option-${item.key}`}
-                  data-letter={letter}
-                  aria-pressed={pressed(item.key)}
-                  aria-label={`${letter}: ${item.label}`}
-                  aria-disabled={readOnly ? "true" : undefined}
-                  onClick={() => pick(item.key)}
-                >
-                  <span className="prompt-answer-letter" aria-hidden="true">
-                    {letter}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-            {stop === undefined ? null : (
-              <button
-                key={stop.key}
-                type="button"
-                className="prompt-answer-stop"
-                data-testid={`prompt-option-${stop.key}`}
-                aria-pressed={pressed(stop.key)}
-                aria-disabled={readOnly ? "true" : undefined}
-                onClick={() => pick(stop.key)}
-              >
-                {stop.label}
-              </button>
-            )}
-          </div>
-        </>
-      );
-    }
-
     if (picker.chrome === "reward") {
       return (
         <div className="prompt-rewards" role="group" aria-label={t("Rewards")}>
@@ -1456,6 +1588,8 @@ function PromptModal(props: {
         role="dialog"
         aria-modal={!folded && !readOnly}
         aria-label={picker.title}
+        // The answers, as cards or as a list, and Stop after them, walked by the arrows (R420).
+        onKeyDown={picker.chrome === "answer" ? arrowFocus(ANSWER_COLUMNS) : undefined}
       >
         {picker.chrome === "reward" ? (
           <p className="prompt-quest-banner" data-testid="prompt-quest-complete">

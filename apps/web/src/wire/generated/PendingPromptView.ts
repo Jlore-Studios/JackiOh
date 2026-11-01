@@ -33,4 +33,15 @@ craftOffer?: CraftOffer,
  * R1184000: a sequence question's right answers so far (Meditative+ #20 KY's Competition), its
  * chooser's to see; the prompt then offers Stop after its answers. Absent on every other prompt.
  */
-streak?: number, };
+streak?: number, 
+/**
+ * R2646000: the card asking (its definition), named only while the chooser may read it where
+ * it now is, by `sourceId`'s test (R1088), so the client can title and explain the choice.
+ * A view field, never state: no hash moves. Absent when no card opened the prompt, or that card
+ * is hidden from the chooser or has since changed definition.
+ */
+sourceDefId?: string, 
+/**
+ * R2646000: whether the card asking is Radiant, present exactly when that card is named.
+ */
+sourceRadiant?: boolean, };
