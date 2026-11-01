@@ -3,6 +3,7 @@
 // Measurements use `should` retries after each viewport change.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
+import "../../../apps/web/src/practice/practice.css";
 import { BackLink } from "../../../apps/web/src/routes/nav.tsx";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import {
@@ -285,6 +286,14 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
     it(`B29 the controls, the gear, the power and both heroes measure at least 44x44 at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       mountGame(fullBoardView());
+
+      // #2645: on a phone Offer draw and Concede are rows of ⋯'s menu, which opens before they are measured.
+      if (viewport.label !== "tablet") {
+        cy.get(ts("match-menu")).should(($element) => {
+          expectTouchSize($element, `match-menu at ${where}`);
+        });
+        cy.get(ts("match-menu")).click();
+      }
 
       for (const testid of TOUCH_TARGETS) {
         cy.get(ts(testid)).should(($element) => {
@@ -933,6 +942,161 @@ describe("B46 the game screen, route bar included, fits the viewport", () => {
       const controls = board.querySelector(".control-bar");
       if (field === null || controls === null) throw new Error("no field or control bar");
       expect(rectOf(controls).left, "the control bar starts right of the field").to.be.at.least(rectOf(field).right - EPSILON);
+    });
+  });
+});
+
+// #2645: the phone's match controls keep to one row
+
+const BAR_VIEWPORTS = [
+  { width: 320, height: 568 },
+  { width: 360, height: 740 },
+  { width: 375, height: 667 },
+  { width: 390, height: 844 },
+  { width: 412, height: 915 },
+  { width: 844, height: 390 },
+] as const;
+
+/** The same board with the Marketplace open for the rest of the game (R1853000). */
+function withMarketplace(): View {
+  return { ...fullBoardView(), marketplace: { offers: [], sales: [] } };
+}
+
+/** An online match: Back leads the rail that rides in the control bar (Game.tsx's `boardRail`). */
+function mountOnline(view: View, legal: Legal = []): void {
+  cy.mount(
+    <div className="app-shell app-shell--wide">
+      <Game view={view} legal={legal} onAction={() => undefined} boardRail={<button type="button">Back</button>} />
+    </div>,
+  );
+}
+
+/** Mirror the practice route's table (practice-table.cy.tsx), whose stylesheet hides Offer draw. */
+function mountPractice(view: View, legal: Legal = []): void {
+  cy.mount(
+    <div className="app-shell app-shell--wide practice practice--game">
+      <header className="practice-hud" data-testid="practice-hud">
+        <span className="practice-hud__tier">Practice Easy</span>
+      </header>
+      <div className="practice-board practice-table" data-difficulty="easy" data-thinking="false">
+        <Game view={view} legal={legal} onAction={() => undefined} />
+      </div>
+    </div>,
+  );
+}
+
+const BAR_ROUTES: readonly { label: string; mount: (view: View, legal?: Legal) => void }[] = [
+  { label: "online, with a rail", mount: mountOnline },
+  { label: "practice, with none", mount: mountPractice },
+  { label: "hotseat, with none", mount: mountHotseat },
+];
+
+function overlap(a: DOMRect, b: DOMRect): boolean {
+  return a.left < b.right - EPSILON && b.left < a.right - EPSILON && a.top < b.bottom - EPSILON && b.top < a.bottom - EPSILON;
+}
+
+/** The bar's controls as one row of them: End turn and every shown button that is the bar's own child. */
+function expectOneRow(doc: Document, width: number, height: number, market: boolean, where: string): void {
+  const bar = doc.querySelector<HTMLElement>(`${BOARD} .control-bar`);
+  if (bar === null) throw new Error(`no control bar at ${where}`);
+  const own = (testid: string): HTMLElement | null => bar.querySelector<HTMLElement>(`:scope > ${ts(testid)}`);
+  const endTurn = bar.querySelector<HTMLElement>(ts("end-turn"));
+  const named = { "log-toggle": own("log-toggle"), "match-menu": own("match-menu"), "settings-open-game": own("settings-open-game") };
+  const shop = own("marketplace-button");
+
+  expect(endTurn, `End turn at ${where}`).not.to.eq(null);
+  for (const [testid, element] of Object.entries(named)) expect(element, `${testid} is a button of the bar at ${where}`).not.to.eq(null);
+  expect(shop !== null, `the Marketplace's toggle is in the bar exactly when the view has one, at ${where}`).to.eq(market);
+  for (const testid of ["offer-draw", "concede", "friends-button", "audio-toggle"]) {
+    expect(own(testid), `${testid} is not a button of the bar at ${where}`).to.eq(null);
+  }
+
+  const controls = [
+    endTurn,
+    ...[...bar.querySelectorAll<HTMLElement>(":scope > button")].filter((button) => getComputedStyle(button).display !== "none"),
+  ].filter((element): element is HTMLElement => element !== null);
+  const boxes = controls.map((control) => ({ id: control.getAttribute("data-testid") ?? control.tagName, box: rectOf(control) }));
+
+  for (const { id, box } of boxes) {
+    expect(box.height, `${id} is one 44px line tall at ${where}`).to.be.within(TOUCH_PX - EPSILON, TOUCH_PX + EPSILON);
+    expect(box.width, `${id} is at least 44px wide at ${where}`).to.be.at.least(TOUCH_PX - EPSILON);
+    expect(box.left, `${id} starts on the screen at ${where}`).to.be.at.least(-EPSILON);
+    expect(box.right, `${id} ends on the screen at ${where}`).to.be.at.most(width + EPSILON);
+  }
+  const landscape = width > height;
+  if (landscape) {
+    // The column is 176px: End turn and the gear on a first row, the rest on one below it.
+    const first = boxes.filter(({ id }) => id === "end-turn" || id === "settings-open-game");
+    const rest = boxes.filter(({ id }) => id !== "end-turn" && id !== "settings-open-game");
+    for (const { id, box } of first) expect(box.top, `${id} shares End turn's row at ${where}`).to.be.closeTo(first[0]?.box.top ?? 0, 1);
+    for (const { id, box } of rest) {
+      expect(box.top, `${id} shares the second row at ${where}`).to.be.closeTo(rest[0]?.box.top ?? 0, 1);
+      expect(box.top, `${id} is below End turn's row at ${where}`).to.be.at.least((first[0]?.box.bottom ?? 0) - EPSILON);
+    }
+  } else {
+    for (const { id, box } of boxes) expect(box.top, `${id} shares one top with End turn at ${where}`).to.be.closeTo(boxes[0]?.box.top ?? 0, 1);
+  }
+  for (const [index, one] of boxes.entries()) {
+    for (const other of boxes.slice(index + 1)) {
+      expect(overlap(one.box, other.box), `${one.id} and ${other.id} overlap at ${where}`).to.eq(false);
+    }
+  }
+  expect(doc.documentElement.scrollWidth, `nothing scrolls sideways at ${where}`).to.be.at.most(width);
+}
+
+describe("#2645 the phone's match controls keep to their row", () => {
+  for (const viewport of BAR_VIEWPORTS) {
+    for (const route of BAR_ROUTES) {
+      const where = `${route.label} at ${String(viewport.width)}x${String(viewport.height)}`;
+
+      it(`#2645 ${where}: End turn, the log, ⋯ and the gear share the bar's row, with the Marketplace's toggle or without`, () => {
+        cy.viewport(viewport.width, viewport.height);
+        route.mount(fullBoardView(), ONLY_END_TURN);
+        cy.document().should((doc) => {
+          expectOneRow(doc, viewport.width, viewport.height, false, `${where}, no marketplace`);
+        });
+
+        route.mount(withMarketplace(), ONLY_END_TURN);
+        cy.document().should((doc) => {
+          expectOneRow(doc, viewport.width, viewport.height, true, `${where}, with a marketplace`);
+        });
+      });
+    }
+  }
+
+  it("#2645 at 360x740 the match menu opens above the bar with Offer draw and Concede on one 44px line each, inside the screen", () => {
+    cy.viewport(360, 740);
+    mountGame(fullBoardView(), ONLY_END_TURN);
+    cy.get(ts("match-menu")).click();
+
+    cy.document().should((doc) => {
+      const bar = rectOf(doc.querySelector(`${BOARD} .control-bar`) as Element);
+      const menu = rectOf(doc.querySelector(ts("match-menu-panel")) as Element);
+      expect(menu.bottom, "the menu ends above the bar").to.be.at.most(bar.top + EPSILON);
+      expect(menu.left, "the menu starts on the screen").to.be.at.least(-EPSILON);
+      expect(menu.right, "the menu ends on the screen").to.be.at.most(360 + EPSILON);
+      expect(menu.top, "the menu's top is on the screen").to.be.at.least(-EPSILON);
+      for (const testid of ["offer-draw", "concede"]) {
+        const row = rectOf(doc.querySelector(ts(testid)) as Element);
+        expect(row.height, `${testid} is one 44px line`).to.be.within(TOUCH_PX - EPSILON, TOUCH_PX + EPSILON);
+        expect(row.left, `${testid} is inside the menu`).to.be.at.least(menu.left - EPSILON);
+        expect(row.right, `${testid} is inside the menu`).to.be.at.most(menu.right + EPSILON);
+      }
+    });
+  });
+
+  it("#2645 at 390x844 with a rail the Marketplace panel opens above the bar's top edge, inside the screen", () => {
+    cy.viewport(390, 844);
+    mountOnline(withMarketplace(), ONLY_END_TURN);
+    cy.get(ts("marketplace-button")).click();
+
+    cy.document().should((doc) => {
+      const bar = rectOf(doc.querySelector(`${BOARD} .control-bar`) as Element);
+      const panel = rectOf(doc.querySelector(ts("marketplace-panel")) as Element);
+      expect(panel.bottom, "the panel ends above the bar, rail included").to.be.at.most(bar.top + EPSILON);
+      expect(panel.left, "the panel starts on the screen").to.be.at.least(-EPSILON);
+      expect(panel.right, "the panel ends on the screen").to.be.at.most(390 + EPSILON);
+      expect(panel.top, "the panel's top is on the screen").to.be.at.least(-EPSILON);
     });
   });
 });

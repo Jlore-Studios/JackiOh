@@ -10,8 +10,12 @@
 // engine's reason (`reason`), and sends nothing. Every number shown is the view's: nothing here
 // prices, filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is
 // closed, and then nothing is drawn. Escape and Back (R2127000) close the panel.
+//
+// The toggle is a button of the control bar (Board.tsx, #2645), which owns whether the panel is open
+// (the match menu and the shop are never open together): an icon on a phone, the pill's label where the
+// board has its sidebar (market.css). The panel opens upward from the bar's top edge.
 
-import { useCallback, useId, useRef, useState, type ReactElement } from "react";
+import { useCallback, useId, useRef, type ReactElement } from "react";
 
 import type { ActionBody, CardDef, MarketOfferView, MarketSaleView, PlayerView } from "@jackioh/shared";
 
@@ -27,6 +31,9 @@ type MarketplaceProps = {
   view: PlayerView;
   legal: readonly ActionBody[];
   onAction: (action: ActionBody) => void;
+  /** Whether the panel is open, which the board holds (#2645). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 type MarketBuy = Extract<ActionBody, { type: "marketBuy" }>;
@@ -103,9 +110,8 @@ function Sale(props: { sale: MarketSaleView; listed: MarketSell | undefined; onA
   );
 }
 
-export default function Marketplace({ view, legal, onAction }: MarketplaceProps): ReactElement | null {
+export default function Marketplace({ view, legal, onAction, open, onOpenChange }: MarketplaceProps): ReactElement | null {
   useLocale();
-  const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggle = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
@@ -114,9 +120,9 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
   const close = useCallback((): void => {
     const focused = document.activeElement;
     const inside = focused === null || focused === document.body || panel.current?.contains(focused) === true;
-    setOpen(false);
+    onOpenChange(false);
     if (inside) toggle.current?.focus({ preventScroll: true });
-  }, []);
+  }, [onOpenChange]);
   const market = view.marketplace;
   if (market === undefined) return null;
 
@@ -136,11 +142,19 @@ export default function Marketplace({ view, legal, onAction }: MarketplaceProps)
         data-testid={testid.marketplace}
         aria-expanded={open}
         aria-controls={panelId}
+        aria-label={t("Marketplace")}
+        title={t("Marketplace")}
         onClick={() => {
-          setOpen((was) => !was);
+          onOpenChange(!open);
         }}
       >
-        {t("Marketplace")}
+        <span className="marketplace-toggle-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" />
+            <circle cx="12" cy="12" r="4" fill="currentColor" />
+          </svg>
+        </span>
+        <span className="marketplace-toggle-label">{t("Marketplace")}</span>
       </button>
       {open ? (
         <section

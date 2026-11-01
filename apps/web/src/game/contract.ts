@@ -8,6 +8,7 @@
 import type { ReactNode } from "react";
 
 import type {
+  ActionBody,
   EmoteGate,
   EmoteId,
   GameEvent,
@@ -127,6 +128,12 @@ export const testid = {
   /** R1853003: the Marketplace's toggle (Marketplace.tsx), and the panel it opens. */
   marketplace: "marketplace-button",
   marketplacePanel: "marketplace-panel",
+  /**
+   * #2645: on a phone, the control bar's ⋯ (MatchMenu.tsx) and the menu it opens, which holds Offer
+   * draw, Concede and Friends.
+   */
+  matchMenu: "match-menu",
+  matchMenuPanel: "match-menu-panel",
   /** R1853003: "Buy" under the Marketplace's lot `offer` (its index, which `marketBuy` names). */
   marketBuy: (offer: number): string => `market-buy-${offer}`,
   /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
@@ -256,6 +263,8 @@ export type BoardProps = {
   boardRail?: ReactNode;
   /** Alerts and offers inset into the board rail, never rendered as page overlays. */
   boardNotices?: ReactNode;
+  /** R1853003: the Marketplace's shop, drawn in the control bar (#2645); absent (a replay), none. */
+  market?: { legal: readonly ActionBody[]; onAction: (body: ActionBody) => void };
   /** Cosmetic-only input guard for the sand playmat while the action builder owns a card gesture. */
   sandDisabled?: boolean;
   onClick?: (target: ClickTarget) => void;
