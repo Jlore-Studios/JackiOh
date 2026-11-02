@@ -16360,10 +16360,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-02T18:00:00Z",
-          "utilization": 0.4
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-02T14:01:30Z",
-        "status": "allowed"
+        "observed_at": "2026-11-02T17:08:16Z",
+        "rejected_resets_at": "2026-11-02T18:00:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
