@@ -36,7 +36,18 @@ import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { CustomCard } from "../wire/generated/CustomCard.ts";
 import type { CustomIssue } from "../wire/generated/CustomIssue.ts";
+import type { DeckMark } from "../wire/generated/DeckMark.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
+import type {
+  RunAction,
+  RunConstants,
+  RunContent,
+  RunFightSetup,
+  RunFile,
+  RunSetup,
+  RunState,
+  RunUnlocks,
+} from "@jackioh/run";
 import type { DuosAction } from "../wire/generated/DuosAction.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosEvent } from "../wire/generated/DuosEvent.ts";
@@ -231,6 +242,8 @@ export type CreateGameArgs = {
   sandbox?: boolean;
   /** R915006: the game's custom cards, which only the Luau module runs (R915009); this one refuses them. */
   customCards?: readonly CustomCard[];
+  /** R2702000: each seat's deck marks, cards of its list dealt Radiant or Buffed at setup. Omitted, nothing is marked or stored. */
+  deckMarks?: Partial<Record<PlayerId, readonly DeckMark[]>>;
 };
 
 /** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */
@@ -238,6 +251,9 @@ export type ReduceResult = { state: GameState; events: GameEvent[]; error?: stri
 
 /** `fold`'s input: `createGame`'s setup and the action log. */
 export type FoldInput = CreateGameArgs & { log: readonly Action[] };
+
+/** A finished or unfinished game's record, as `runFightReport` reads it. */
+export type ReplayInput = FoldInput;
 
 /** `fold`'s answer: the state the log folds to, and every action the engine refused on the way. */
 export type FoldResult = { state: GameState; errors: { nonce: string; error: string }[] };
@@ -368,6 +384,96 @@ export function carriedVersions(): readonly string[] {
     carriedCache ??= parsed<string[]>(engine.carried_versions());
     return carriedCache;
   });
+}
+
+// ---------------------------------------------------------------------------------------------
+// the dungeon run (docs/dungeon-run.md DR14 part C)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * `runCreate`, `runReduce` and `runFold`'s answer: the run, or the run's refusal, never thrown
+ * (only malformed JSON throws, as everywhere else here).
+ */
+export type RunResult = { state: RunState } | { error: string };
+
+/** `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards. */
+export function runContent(customCards: CustomCard[]): RunContent {
+  return call("runContent", () => parsed<RunContent>(engine.run_content(json(customCards))));
+}
+
+/** Whether the setup may start a run: null, or the reason. */
+export function runCheckSetup(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): string | null {
+  return call("runCheckSetup", () =>
+    parsed<string | null>(engine.run_check_setup(json(setup), json(unlocks), json(content))),
+  );
+}
+
+/** Start a run: its state, or the setup's refusal. */
+export function runCreate(setup: RunSetup, unlocks: RunUnlocks, content: RunContent): RunResult {
+  return call("runCreate", () =>
+    parsed<RunResult>(engine.run_create(json(setup), json(unlocks), json(content))),
+  );
+}
+
+/** The run after one action, or the action's refusal. */
+export function runReduce(state: RunState, content: RunContent, action: RunAction): RunResult {
+  return call("runReduce", () =>
+    parsed<RunResult>(engine.run_reduce(json(state), json(content), json(action))),
+  );
+}
+
+/** A run file folded from its start, or the first refused step. */
+export function runFold(file: RunFile, content: RunContent): RunResult {
+  return call("runFold", () => parsed<RunResult>(engine.run_fold(json(file), json(content))));
+}
+
+/** The fight being played, or null outside one. */
+export function runFightSetup(state: RunState, content: RunContent): RunFightSetup | null {
+  return call("runFightSetup", () =>
+    parsed<RunFightSetup | null>(engine.run_fight_setup(json(state), json(content))),
+  );
+}
+
+/** The `FightOver` a finished fight sends, or why the game reports none. */
+export function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string } {
+  return call("runFightReport", () =>
+    parsed<{ action: RunAction } | { error: string }>(engine.run_fight_report(json(game), json(human))),
+  );
+}
+
+/** The run's score so far. */
+export function runScore(state: RunState, content: RunContent): number {
+  return call("runScore", () => parsed<number>(engine.run_score(json(state), json(content))));
+}
+
+/** The Embers a score pays. */
+export function runEmbers(score: number): number {
+  return call("runEmbers", () => parsed<number>(engine.run_embers(json(score))));
+}
+
+/** The run's max HP, before no fight and after every artifact and blessing. */
+export function runMaxHp(state: RunState, content: RunContent): number {
+  return call("runMaxHp", () => parsed<number>(engine.run_max_hp(json(state), json(content))));
+}
+
+/** The Embers that raise the starting deck from `level` to the next, or null at the ladder's top. */
+export function runLevelCost(level: number): number | null {
+  return call("runLevelCost", () => parsed<number | null>(engine.run_level_cost(json(level))));
+}
+
+/** The run's numbers the screens show, so the client states none (CLAUDE.md rule 9). */
+export function runConstants(): RunConstants {
+  return call("runConstants", () => parsed<RunConstants>(engine.run_constants()));
+}
+
+/** A seed of capital letters drawn from any text. */
+export function runSeed(source: string): string {
+  return call("runSeed", () => parsed<string>(engine.run_seed(json(source))));
+}
+
+/** The daily run's seed: the date's and the day's run number. */
+export function runDailySeed(date: string, n: number): string {
+  return call("runDailySeed", () => parsed<string>(engine.run_daily_seed(json(date), json(n))));
 }
 
 // ---------------------------------------------------------------------------------------------

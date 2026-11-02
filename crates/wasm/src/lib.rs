@@ -78,6 +78,97 @@ pub fn carried_versions() -> Result<String, JsError> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The dungeon run (docs/dungeon-run.md DR14 part C)
+// ---------------------------------------------------------------------------------------------
+
+// A run-rule refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable
+// reason), never thrown: only JSON that does not parse, or a setup TypeScript refused, is one.
+
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+#[wasm_bindgen]
+pub fn run_content(custom_cards_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_content(custom_cards_json))
+}
+
+/// `null` when the setup may start a run, else the reason.
+#[wasm_bindgen]
+pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_check_setup(setup_json, unlocks_json, content_json))
+}
+
+/// `{ state }` for a run started, `{ error }` for a setup the run refuses.
+#[wasm_bindgen]
+pub fn run_create(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_create(setup_json, unlocks_json, content_json))
+}
+
+/// `{ state }` for the run after one action, `{ error }` for an action the run refuses.
+#[wasm_bindgen]
+pub fn run_reduce(state_json: &str, content_json: &str, action_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_reduce(state_json, content_json, action_json))
+}
+
+/// `{ state }` for a run file folded, `{ error }` naming the first refused step.
+#[wasm_bindgen]
+pub fn run_fold(file_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_fold(file_json, content_json))
+}
+
+/// The fight being played, or `null` outside one.
+#[wasm_bindgen]
+pub fn run_fight_setup(state_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_fight_setup(state_json, content_json))
+}
+
+/// `{ action }` for the `FightOver` a finished fight sends, `{ error }` for a game that reports none.
+#[wasm_bindgen]
+pub fn run_fight_report(game_json: &str, human_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_fight_report(game_json, human_json))
+}
+
+/// The run's score so far.
+#[wasm_bindgen]
+pub fn run_score(state_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_score(state_json, content_json))
+}
+
+/// The Embers a score pays.
+#[wasm_bindgen]
+pub fn run_embers(score_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_embers(score_json))
+}
+
+/// The run's max HP, before no fight and after every artifact and blessing.
+#[wasm_bindgen]
+pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_max_hp(state_json, content_json))
+}
+
+/// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
+#[wasm_bindgen]
+pub fn run_level_cost(level_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_level_cost(level_json))
+}
+
+/// The run's numbers the screens show, so the client states none (CLAUDE.md rule 9).
+#[wasm_bindgen]
+pub fn run_constants() -> Result<String, JsError> {
+    js(wasm_core::run_constants())
+}
+
+/// A seed of `RUN_SEED_LENGTH` capital letters drawn from any text.
+#[wasm_bindgen]
+pub fn run_seed(source_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_seed(source_json))
+}
+
+/// The daily run's seed: the date's and the day's run number.
+#[wasm_bindgen]
+pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, JsError> {
+    js(wasm_core::run_daily_seed(date_json, n_json))
+}
+
+// ---------------------------------------------------------------------------------------------
 // The engine (SURFACE §6.1)
 // ---------------------------------------------------------------------------------------------
 

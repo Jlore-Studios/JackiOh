@@ -106,7 +106,7 @@ fi
 # pin, this script (the wasm-bindgen and emsdk pins) and the JACKIOH_WASM_* flags. A deploy with the
 # same key copies them back and builds nothing; any other builds and keeps its own modules in place
 # of the last. Anywhere else nothing is kept: cargo's own cache already makes a rebuild quick.
-MODULE_CRATES="crates/engine crates/cards crates/ai crates/luau crates/wasm"
+MODULE_CRATES="crates/engine crates/cards crates/ai crates/luau crates/run crates/wasm"
 CACHE_DIR="$ROOT/node_modules/.cache/jackioh-wasm"
 key=""
 if [ "${VERCEL:-}" = 1 ]; then
@@ -294,6 +294,20 @@ export interface JackiohWasmLuauModule {
   _catalog(): number;
   _catalog_version(): number;
   _carried_versions(): number;
+  _run_content(customCards: number): number;
+  _run_check_setup(setup: number, unlocks: number, content: number): number;
+  _run_create(setup: number, unlocks: number, content: number): number;
+  _run_reduce(state: number, content: number, action: number): number;
+  _run_fold(file: number, content: number): number;
+  _run_fight_setup(state: number, content: number): number;
+  _run_fight_report(game: number, human: number): number;
+  _run_score(state: number, content: number): number;
+  _run_embers(score: number): number;
+  _run_max_hp(state: number, content: number): number;
+  _run_level_cost(level: number): number;
+  _run_constants(): number;
+  _run_seed(source: number): number;
+  _run_daily_seed(date: number, n: number): number;
   _create_game(args: number): number;
   _begin_game(state: number): number;
   _reduce(state: number, action: number): number;

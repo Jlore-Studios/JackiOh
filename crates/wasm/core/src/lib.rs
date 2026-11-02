@@ -27,10 +27,12 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 use jackioh_engine::prelude::IndexMap;
+use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::{
     self as engine, Action, CardDef, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
     ReduceResult, ReplayCheckpoints, ReplayRecord, Rng, SetupKind,
 };
+use jackioh_run::{RunAction, RunContent, RunFile, RunSetup, RunState, RunUnlocks};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -202,6 +204,124 @@ pub fn catalog_version() -> String {
 /// those from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM` on.
 pub fn carried_versions() -> Result<String, String> {
     to_json(&jackioh_cards::carried_versions())
+}
+
+// ---------------------------------------------------------------------------------------------
+// The dungeon run (docs/dungeon-run.md DR14 part C)
+// ---------------------------------------------------------------------------------------------
+
+// Every body parses its JSON arguments, calls `jackioh_run` and serializes the answer. A run-rule
+// refusal is a returned value (`{ "error": … }`, or `run_check_setup`'s nullable reason), never a
+// module error: only JSON that does not parse is one.
+
+/// `RunContent`: `run_catalog_content` over the compiled-in catalog and the Sandbox's custom cards.
+pub fn run_content(custom_cards_json: &str) -> Result<String, String> {
+    let custom: Vec<engine::CustomCard> = parse("runContent: the custom cards", custom_cards_json)?;
+    to_json(&jackioh_run::run_catalog_content(
+        engine::registered_catalog(),
+        &custom,
+    ))
+}
+
+/// `null` when the setup may start a run, else the reason.
+pub fn run_check_setup(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, String> {
+    let setup: RunSetup = parse("runCheckSetup: the setup", setup_json)?;
+    let unlocks: RunUnlocks = parse("runCheckSetup: the unlocks", unlocks_json)?;
+    let content: RunContent = parse("runCheckSetup: the content", content_json)?;
+    to_json(&jackioh_run::run_check_setup(&setup, &unlocks, &content).err())
+}
+
+/// `{ state }` for a run started, `{ error }` for a setup the run refuses.
+pub fn run_create(setup_json: &str, unlocks_json: &str, content_json: &str) -> Result<String, String> {
+    let setup: RunSetup = parse("runCreate: the setup", setup_json)?;
+    let unlocks: RunUnlocks = parse("runCreate: the unlocks", unlocks_json)?;
+    let content: RunContent = parse("runCreate: the content", content_json)?;
+    match jackioh_run::run_create(&setup, &unlocks, &content) {
+        Ok(state) => to_json(&json!({ "state": state })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// `{ state }` for the run after one action, `{ error }` for an action the run refuses.
+pub fn run_reduce(state_json: &str, content_json: &str, action_json: &str) -> Result<String, String> {
+    let state: RunState = parse("runReduce: the state", state_json)?;
+    let content: RunContent = parse("runReduce: the content", content_json)?;
+    let action: RunAction = parse("runReduce: the action", action_json)?;
+    match jackioh_run::run_reduce(&state, &content, &action) {
+        Ok(state) => to_json(&json!({ "state": state })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// `{ state }` for a run file folded, `{ error }` naming the first refused step.
+pub fn run_fold(file_json: &str, content_json: &str) -> Result<String, String> {
+    let file: RunFile = parse("runFold: the file", file_json)?;
+    let content: RunContent = parse("runFold: the content", content_json)?;
+    match jackioh_run::run_fold(&file, &content) {
+        Ok(state) => to_json(&json!({ "state": state })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// The fight being played, or `null` outside one.
+pub fn run_fight_setup(state_json: &str, content_json: &str) -> Result<String, String> {
+    let state: RunState = parse("runFightSetup: the state", state_json)?;
+    let content: RunContent = parse("runFightSetup: the content", content_json)?;
+    to_json(&jackioh_run::run_fight_setup(&state, &content))
+}
+
+/// `{ action }` for the `FightOver` a finished fight sends, `{ error }` for a game that reports none.
+pub fn run_fight_report(game_json: &str, human_json: &str) -> Result<String, String> {
+    let game: ReplayInput = parse("runFightReport: the game", game_json)?;
+    let human: PlayerId = parse("runFightReport: the human", human_json)?;
+    match jackioh_run::run_fight_report(&game, human) {
+        Ok(action) => to_json(&json!({ "action": action })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
+/// The run's score so far.
+pub fn run_score(state_json: &str, content_json: &str) -> Result<String, String> {
+    let state: RunState = parse("runScore: the state", state_json)?;
+    let content: RunContent = parse("runScore: the content", content_json)?;
+    to_json(&jackioh_run::run_score(&state, &content))
+}
+
+/// The Embers a score pays.
+pub fn run_embers(score_json: &str) -> Result<String, String> {
+    let score: i64 = parse("runEmbers: the score", score_json)?;
+    to_json(&jackioh_run::run_embers(score))
+}
+
+/// The run's max HP, before no fight and after every artifact and blessing.
+pub fn run_max_hp(state_json: &str, content_json: &str) -> Result<String, String> {
+    let state: RunState = parse("runMaxHp: the state", state_json)?;
+    let content: RunContent = parse("runMaxHp: the content", content_json)?;
+    to_json(&jackioh_run::run_max_hp(&state, &content))
+}
+
+/// The Embers that raise the starting deck from `level` to the next, or `null` at the ladder's top.
+pub fn run_level_cost(level_json: &str) -> Result<String, String> {
+    let level: usize = parse("runLevelCost: the level", level_json)?;
+    to_json(&jackioh_run::run_level_cost(level))
+}
+
+/// The run's numbers the screens show, so the client states none (CLAUDE.md rule 9).
+pub fn run_constants() -> Result<String, String> {
+    to_json(&jackioh_run::run_constants())
+}
+
+/// A seed of `RUN_SEED_LENGTH` capital letters drawn from any text.
+pub fn run_seed(source_json: &str) -> Result<String, String> {
+    let source: String = parse("runSeed: the source", source_json)?;
+    to_json(&jackioh_run::run_seed(&source))
+}
+
+/// The daily run's seed: the date's and the day's run number.
+pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, String> {
+    let date: String = parse("runDailySeed: the date", date_json)?;
+    let n: u32 = parse("runDailySeed: the run number", n_json)?;
+    to_json(&jackioh_run::run_daily_seed(&date, n))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -840,3 +960,277 @@ mod duos_bodies {
 }
 
 pub use duos_bodies::{duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_view_for};
+
+#[cfg(test)]
+mod run_body_tests {
+    use super::*;
+
+    /// The content Part B's tests deal from: the catalog's, no custom card.
+    fn content() -> RunContent {
+        jackioh_cards::register_all();
+        jackioh_run::run_catalog_content(engine::registered_catalog(), &[])
+    }
+
+    /// Unlocks at the ladder's top, so any Common/Rare ordering of the starter is valid.
+    fn unlocks() -> RunUnlocks {
+        RunUnlocks {
+            level: jackioh_run::run_constants().slot_ladder.len(),
+            cards: Vec::new(),
+            artifacts: Vec::new(),
+            owned: None,
+        }
+    }
+
+    fn setup(content: &RunContent) -> RunSetup {
+        RunSetup {
+            seed: jackioh_run::run_daily_seed("2026-11-01", 1),
+            starter: content.starter_access[..jackioh_run::run_constants().starter_size].to_vec(),
+            artifacts: Vec::new(),
+            curses: Vec::new(),
+        }
+    }
+
+    fn state(content: &RunContent) -> RunState {
+        jackioh_run::run_create(&setup(content), &unlocks(), content).unwrap()
+    }
+
+    fn json_of<T: serde::Serialize>(value: &T) -> String {
+        to_json(value).unwrap()
+    }
+
+    /// `{ state }` or `{ error }`, as the body answers it.
+    #[derive(serde::Deserialize)]
+    struct StateAnswer {
+        state: Option<RunState>,
+        error: Option<String>,
+    }
+
+    /// `{ action }` or `{ error }`, as the fight-report body answers it.
+    #[derive(serde::Deserialize)]
+    struct FightAnswer {
+        action: Option<RunAction>,
+        error: Option<String>,
+    }
+
+    // B12: the content body serializes `run_catalog_content` over the compiled-in catalog.
+    #[test]
+    fn run_content_body_serializes_content() {
+        let content = content();
+        let text = run_content("[]").unwrap();
+        assert_eq!(serde_json::from_str::<RunContent>(&text).unwrap(), content);
+    }
+
+    // B12: the setup check answers `null` for a valid setup and the reason for a bad seed.
+    #[test]
+    fn run_check_setup_body_serializes_null_and_refusal() {
+        let content = content();
+        let setup = setup(&content);
+        let unlocks = unlocks();
+        let text = run_check_setup(&json_of(&setup), &json_of(&unlocks), &json_of(&content)).unwrap();
+        assert_eq!(serde_json::from_str::<Option<String>>(&text).unwrap(), None);
+        let bad = RunSetup {
+            seed: "bad".into(),
+            ..setup.clone()
+        };
+        let text = run_check_setup(&json_of(&bad), &json_of(&unlocks), &json_of(&content)).unwrap();
+        let reason = serde_json::from_str::<Option<String>>(&text).unwrap().unwrap();
+        assert_eq!(
+            reason,
+            jackioh_run::run_check_setup(&bad, &unlocks, &content).unwrap_err()
+        );
+    }
+
+    // B12: create answers `{ state }` for a valid setup and `{ error }` for a bad seed.
+    #[test]
+    fn run_create_body_serializes_state_and_refusal() {
+        let content = content();
+        let setup = setup(&content);
+        let unlocks = unlocks();
+        let text = run_create(&json_of(&setup), &json_of(&unlocks), &json_of(&content)).unwrap();
+        let answer: StateAnswer = serde_json::from_str(&text).unwrap();
+        assert_eq!(
+            answer.state.unwrap(),
+            jackioh_run::run_create(&setup, &unlocks, &content).unwrap()
+        );
+        assert!(answer.error.is_none());
+        let bad = RunSetup {
+            seed: "bad".into(),
+            ..setup
+        };
+        let text = run_create(&json_of(&bad), &json_of(&unlocks), &json_of(&content)).unwrap();
+        let answer: StateAnswer = serde_json::from_str(&text).unwrap();
+        assert!(answer.state.is_none());
+        assert_eq!(
+            answer.error.unwrap(),
+            jackioh_run::run_create(&bad, &unlocks, &content).unwrap_err()
+        );
+    }
+
+    // B12: a `go` from the initial Map answers `{ state }`, a `heal` answers `{ error }`.
+    #[test]
+    fn run_reduce_body_serializes_state_and_refusal() {
+        let content = content();
+        let state = state(&content);
+        let go = RunAction::Go { col: 0 };
+        let text = run_reduce(&json_of(&state), &json_of(&content), &json_of(&go)).unwrap();
+        let answer: StateAnswer = serde_json::from_str(&text).unwrap();
+        assert_eq!(
+            answer.state.unwrap(),
+            jackioh_run::run_reduce(&state, &content, &go).unwrap()
+        );
+        assert!(answer.error.is_none());
+        let text = run_reduce(&json_of(&state), &json_of(&content), &json_of(&RunAction::Heal)).unwrap();
+        let answer: StateAnswer = serde_json::from_str(&text).unwrap();
+        assert!(answer.state.is_none());
+        assert_eq!(
+            answer.error.unwrap(),
+            jackioh_run::run_reduce(&state, &content, &RunAction::Heal).unwrap_err()
+        );
+    }
+
+    // B12: folding one `go` answers `{ state }`, folding a `heal` names the refused step.
+    #[test]
+    fn run_fold_body_serializes_state_and_refusal() {
+        let content = content();
+        let setup = setup(&content);
+        let unlocks = unlocks();
+        let file = jackioh_run::RunFile {
+            setup: setup.clone(),
+            unlocks: unlocks.clone(),
+            log: vec![RunAction::Go { col: 0 }],
+        };
+        let text = run_fold(&json_of(&file), &json_of(&content)).unwrap();
+        let answer: StateAnswer = serde_json::from_str(&text).unwrap();
+        assert_eq!(
+            answer.state.unwrap(),
+            jackioh_run::run_fold(&file, &content).unwrap()
+        );
+        assert!(answer.error.is_none());
+        let bad = jackioh_run::RunFile {
+            setup,
+            unlocks,
+            log: vec![RunAction::Heal],
+        };
+        let text = run_fold(&json_of(&bad), &json_of(&content)).unwrap();
+        let answer: StateAnswer = serde_json::from_str(&text).unwrap();
+        assert!(answer.state.is_none());
+        assert_eq!(
+            answer.error.unwrap(),
+            jackioh_run::run_fold(&bad, &content).unwrap_err()
+        );
+    }
+
+    // B12: `null` before the first step, the fight's setup after a `go`.
+    #[test]
+    fn run_fight_setup_body_serializes_option() {
+        let content = content();
+        let state = state(&content);
+        let text = run_fight_setup(&json_of(&state), &json_of(&content)).unwrap();
+        assert_eq!(text, "null");
+        let after = jackioh_run::run_reduce(&state, &content, &RunAction::Go { col: 0 }).unwrap();
+        let text = run_fight_setup(&json_of(&after), &json_of(&content)).unwrap();
+        assert_eq!(
+            serde_json::from_str::<Option<jackioh_run::RunFightSetup>>(&text).unwrap(),
+            jackioh_run::run_fight_setup(&after, &content)
+        );
+        assert!(jackioh_run::run_fight_setup(&after, &content).is_some());
+    }
+
+    // B12: a valid but unfinished fight reports `{ error }`, not a `FightOver`.
+    #[test]
+    fn run_fight_report_body_serializes_refusal() {
+        let content = content();
+        let state = state(&content);
+        let after = jackioh_run::run_reduce(&state, &content, &RunAction::Go { col: 0 }).unwrap();
+        let fight = jackioh_run::run_fight_setup(&after, &content).unwrap();
+        let game = serde_json::json!({
+            "seed": fight.seed,
+            "decks": [fight.human_deck, fight.enemy_deck],
+            "handicaps": { "p1": fight.human_handicap, "p2": fight.enemy_handicap },
+            "deckMarks": { "p1": fight.human_marks },
+            "log": [],
+        });
+        let text = run_fight_report(&json_of(&game), "\"p1\"").unwrap();
+        let answer: FightAnswer = serde_json::from_str(&text).unwrap();
+        assert!(answer.action.is_none());
+        assert!(answer.error.is_some());
+    }
+
+    // B12: the score body serializes `run_score`'s number.
+    #[test]
+    fn run_score_body_serializes_number() {
+        let content = content();
+        let state = state(&content);
+        let text = run_score(&json_of(&state), &json_of(&content)).unwrap();
+        assert_eq!(
+            serde_json::from_str::<i64>(&text).unwrap(),
+            jackioh_run::run_score(&state, &content)
+        );
+    }
+
+    // B12: the embers body serializes `run_embers`' number.
+    #[test]
+    fn run_embers_body_serializes_number() {
+        let text = run_embers("250").unwrap();
+        assert_eq!(
+            serde_json::from_str::<i64>(&text).unwrap(),
+            jackioh_run::run_embers(250)
+        );
+    }
+
+    // B12: the max-HP body serializes `run_max_hp`'s number.
+    #[test]
+    fn run_max_hp_body_serializes_number() {
+        let content = content();
+        let state = state(&content);
+        let text = run_max_hp(&json_of(&state), &json_of(&content)).unwrap();
+        assert_eq!(
+            serde_json::from_str::<i32>(&text).unwrap(),
+            jackioh_run::run_max_hp(&state, &content)
+        );
+    }
+
+    // B12: the level cost is a number, and `null` at the ladder's top.
+    #[test]
+    fn run_level_cost_body_serializes_option() {
+        let text = run_level_cost("1").unwrap();
+        assert_eq!(
+            serde_json::from_str::<Option<i64>>(&text).unwrap(),
+            jackioh_run::run_level_cost(1)
+        );
+        assert!(jackioh_run::run_level_cost(1).is_some());
+        let top = jackioh_run::run_constants().slot_ladder.len().to_string();
+        let text = run_level_cost(&top).unwrap();
+        assert_eq!(text, "null");
+    }
+
+    // B12: the constants body serializes `run_constants`.
+    #[test]
+    fn run_constants_body_serializes_constants() {
+        let text = run_constants().unwrap();
+        assert_eq!(
+            serde_json::from_str::<jackioh_run::RunConstants>(&text).unwrap(),
+            jackioh_run::run_constants()
+        );
+    }
+
+    // B12: the seed body serializes `run_seed`'s letters.
+    #[test]
+    fn run_seed_body_serializes_seed() {
+        let text = run_seed("\"anything\"").unwrap();
+        assert_eq!(
+            serde_json::from_str::<String>(&text).unwrap(),
+            jackioh_run::run_seed("anything")
+        );
+    }
+
+    // B12: the daily-seed body serializes `run_daily_seed`'s seed.
+    #[test]
+    fn run_daily_seed_body_serializes_seed() {
+        let text = run_daily_seed("\"2026-11-01\"", "2").unwrap();
+        assert_eq!(
+            serde_json::from_str::<String>(&text).unwrap(),
+            jackioh_run::run_daily_seed("2026-11-01", 2)
+        );
+    }
+}
