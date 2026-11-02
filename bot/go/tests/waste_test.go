@@ -324,17 +324,13 @@ func TestWaste_AnUnapprovedPullRequestSaysHowManyRoundsItTookAndWhy(t *testing.T
 	assertNotIn(t, "still had blocking findings", body)
 }
 
-// wasteTwoAccounts: claude-3 builds, and claude-2 gives the final audit.
-var wasteTwoAccounts = map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3 CLAUDE_CODE_OAUTH_TOKEN_2"}
-
 func TestWaste_TheSquashCommitTakesThePullRequestsTitle(t *testing.T) {
-	// claude-3 builds and reviews it; claude-2's review run meets the rule (#2748: from another
-	// subscription), and auto-merge turns on.
-	h := newFlowHarness(t, flowHarnessOpts{Env: wasteTwoAccounts})
+	// claude-3 alone: its own Opus review meets the rule (#695; 2026-11-02, #2748) and auto-merge
+	// turns on.
+	h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}})
 	h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)}))
-	flowAudited(t, h)
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
 	// Neither the builder's title nor the fake issue's passes the title check, so it is written.
 	assertEqual(t, h.gh.MergeTitles[fmt.Sprintf("PR_%d", pr)], fmt.Sprintf("Patch: Make the rules v2 (#%d)", pr))
@@ -351,12 +347,12 @@ func TestWaste_ATitleThatBreaksTheConventionGivesWayToTheIssues(t *testing.T) {
 			"Patch v0.3.2: the rules, version two"},
 	} {
 		text, want := c[0], c[1]
-		// claude-3 builds it; claude-2's review run meets the rule (#2748), and auto-merge turns on.
-		h := newFlowHarness(t, flowHarnessOpts{Env: wasteTwoAccounts})
+		// claude-3 alone: its own Opus review meets the rule (#695; 2026-11-02, #2748) and
+		// auto-merge turns on.
+		h := newFlowHarness(t, flowHarnessOpts{Env: map[string]string{"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}})
 		h.gh.AddIssue(12, fakes.Issue{Title: issue, Labels: []string{config.LabelBuild}})
 		h.night(workFake(map[string]runner.Handler{"build": workBuilder(map[string]string{"src/game.txt": "v2\n"}, text),
 			"review": workReviewer(workApprove)}))
-		flowAudited(t, h)
 		pull := wastePull(t, h.gh, "bot/issue-12")
 		assertEqual(t, pull.Get("title"), want)
 		assertEqual(t, h.gh.MergeTitles["PR_"+py.Str(pull.Get("number"))],

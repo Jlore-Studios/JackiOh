@@ -104,9 +104,11 @@ Every item has a difficulty, medium or hard, which decides who may plan, build a
 medium model plans a medium item first (a strong one for a hard item) and rates an item nobody
 rated. One subscription owns it from then on: it builds it, runs the checks, and reviews itself in
 a fresh adversarial session, never an approval from its own context, fixing what that finds for up
-to 3 rounds (10 for a hard item). Then the lane's final audit, on a subscription other than the
-builder's, approves it: a medium or strong model for a medium item, a strong one for a hard item.
-The pull request merges itself once CI passes on the commit the audit approved. When nothing is queued, the bot suggests improvements as issues, at
+to 3 rounds (10 for a hard item). That reviewer's approval ships it when it is at the item's tier:
+a medium or strong model for a medium item, a strong one (Opus) for a hard item. A medium item
+whose rounds run out goes to the lane's final audit, another subscription's when one is free. The
+pull request merges itself once CI passes on the approved commit, and Opus spot-checks every 5th
+merged change. When nothing is queued, the bot suggests improvements as issues, at
 most ten at a time. `/harness status`, `/harness halt` and `/harness start` work in any comment,
 and the pinned **Night bot status** issue shows what it is doing.
 
@@ -117,8 +119,9 @@ flowchart LR
   C --> D["repository checks"]
   D --> E{"fresh adversarial<br/>self-review session"}
   E -- "findings" --> F["same owner<br/>fixes them"] --> D
-  E -- "approved" --> FA["lane final audit, another subscription<br/>(medium first, Opus for hard)"]
-  FA --> G["pull request<br/>with auto-merge"]
+  E -- "approved at its tier" --> G["pull request<br/>with auto-merge"]
+  E -- "rounds out" --> FA["lane final audit, another subscription first<br/>(medium first, Opus for hard)"]
+  FA --> G
   G --> H{"CI"}
   H -- "green" --> I["merged into main"]
   H -- "red" --> F

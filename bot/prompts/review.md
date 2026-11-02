@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # Adversarial review of #$number
 
 You are the adversarial reviewer for a change the night bot made to `$repo`. Another model wrote
@@ -69,8 +69,9 @@ Severity: `blocking` means it must not ship as it is; `note` is worth a person's
 does not stop the merge. Do not report style preferences, and do not report what you cannot
 point at. Who fixes a blocking finding: in a build or revision run its builder, before anything
 is pushed; in a review run (the final audit) your own subscription, which fixes what you found in
-a revision of its own, and that fix then goes to a final audit on another subscription. So write
-each finding so it can be fixed from what you say: where, what is wrong, and the evidence.
+a revision of its own, and that fix ships once its own run's reviewer approves it at the item's
+tier. So write each finding so it can be fixed from what you say: where, what is wrong, and the
+evidence.
 
 ## Your final message
 

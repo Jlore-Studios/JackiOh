@@ -47,9 +47,9 @@ func TestMetAndReachable(t *testing.T) {
 	}
 }
 
-// #2748: only an approval from a subscription other than the builder's counts; votes from before
-// it, which name no builder subscription, count their strong approvals alone.
-func TestCountedByTheBuildersSubscription(t *testing.T) {
+// #2748, 2026-11-02: every approval counts, the builder's own subscription's included; votes from
+// before #2748, which name no builder subscription, count their strong approvals alone.
+func TestCountedFromAnySubscription(t *testing.T) {
 	tier := func(string) string { return "weak" }
 	cases := []struct {
 		votes string
@@ -57,11 +57,12 @@ func TestCountedByTheBuildersSubscription(t *testing.T) {
 		tiers []string
 	}{
 		{`{"built_by": "muse", "reviews": [{"family": "muse", "tier": "medium", "provider": "muse"},
-			{"family": "gemini", "tier": "medium", "provider": "agy"}]}`, []string{"medium"}, []string{"medium", "strong"}},
-		{`{"built_by": "claude-7", "reviews": [{"family": "claude", "tier": "strong", "provider": "claude-7"},
-			{"family": "claude", "tier": "medium", "provider": "claude-2"}]}`, []string{"medium"}, []string{"medium", "strong"}},
-		{`{"built_by": "", "reviews": [{"family": "muse", "tier": "medium", "provider": "muse"}]}`,
-			[]string{"medium"}, []string{"medium", "strong"}},
+			{"family": "gemini", "tier": "medium", "provider": "agy"}]}`, []string{"medium", "medium"},
+			[]string{"medium", "strong"}},
+		{`{"built_by": "claude-7", "reviews": [{"family": "claude", "tier": "strong", "provider": "claude-7"}]}`,
+			[]string{"strong"}, []string{"medium", "strong"}},
+		{`{"built_by": "", "reviews": [{"family": "muse", "tier": "medium", "provider": "muse"}, {"family": "x"}]}`,
+			[]string{"medium", "weak"}, []string{"medium", "strong"}},
 		{`{"builder": "muse", "reviews": [{"family": "muse", "tier": "medium"}, {"family": "claude", "tier": "strong"}]}`,
 			[]string{"strong"}, []string{"strong"}},
 	}

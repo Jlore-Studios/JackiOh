@@ -1,4 +1,4 @@
-<!-- version: 4 -->
+<!-- version: 5 -->
 # Revise pull request #$number
 
 You are the builder for a revision of pull request #$number of `$repo`, on its branch `$branch`
@@ -9,13 +9,14 @@ You are the builder for a revision of pull request #$number of `$repo`, on its b
   The subscription whose approval shipped the head owns the merge, so you, on it, fix it.
 - `conflict`: `main` moved and the branch no longer merged cleanly. The harness has merged `main`
   into the branch and left the conflicted files with their markers for you.
-- `cross-review`: a review run (the final audit, on a subscription other than the builder's: a
-  medium or strong model for a medium item, a strong one for a hard item) read the change and
-  found blocking problems. They are listed under "What was asked"; answer each one. The auditor
-  fixes its own findings: you run on the subscription whose audit found them.
+- `cross-review`: a review run (the final audit: a medium or strong model for a medium item, a
+  strong one for a hard item, on another subscription when one was free) read the change and found
+  blocking problems. They are listed under "What was asked"; answer each one. The auditor fixes its
+  own findings: you run on the subscription whose audit found them.
 
-Whatever the source, your commit is a new head: your own approval of it does not ship it, and a
-final audit on another subscription reviews it before it merges.
+Whatever the source, your commit is a new head, and your run's own adversarial reviewer
+approving it ships it (a medium or strong model for a medium item, a strong one for a hard item).
+Without that approval it goes to a final audit before it merges.
 
 ## The pull request
 

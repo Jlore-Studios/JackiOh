@@ -9,7 +9,7 @@
   "tiers": {
     "medium": [
       { "model": "muse-spark-1.3-contributor", "note": "Meta through Muse: the most reliable builder (#305), first among the medium models." },
-      { "model": "gemini-4-argon-high", "note": "Google through agy, on Gemini 4 Argon since #2748 (Gemini 3.8 Flash before): a medium model that plans, builds and reviews. Confirm the name with `agy models` on the box, on agy CLI 1.4.3 or later (the first that knows Argon), and that it answers headless (`agy -p`)." },
+      { "model": "gemini-3.8-flash-high", "note": "Google through agy, on Gemini 3.8 Flash (High): a medium model that plans, builds and reviews. Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12). To try a newer model later, confirm its name with `agy models` and that it answers a headless `agy -p` call first." },
       { "model": "gpt-5.6-sol", "note": "ChatGPT through Codex, on GPT-5.6 Sol: medium again since 2026-10-20 (weak from 2026-10-11, on Terra), after agy and before Sonnet." },
       { "model": "sonnet", "note": "Claude Sonnet at xhigh (#317 part 5): a medium seat on every Claude account, which switches between it and Opus as the work needs (work.Worker.Switch)." }
     ],
@@ -181,11 +181,11 @@
       "quiet_check": false
     },
     "agy": {
-      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 4 Argon (High) since #2748, Gemini 3.8 Flash (High) before: a medium model in every role. The name must be confirmed with `agy models` on the box, on agy CLI 1.4.3 or later (`agy --version`; earlier ones do not know Argon), and `agy -p` must answer with it headless; until it does, put `gemini-3.8-flash-high` back here and in `tiers`. `agy models` lists the names, each carrying its effort. Its usage is its own `agy -p /usage` (no model call), the Gemini pool's row (a pool whose name starts with Gemini; with several, the one naming Argon, else the fullest): read before the run, after every call and every ten minutes during one.",
+      "note": "Google's Antigravity CLI, logged in on the machine as agent-agy. Gemini 3.8 Flash (High): a medium model in every role (plans, builds, reviews). Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12). To try a newer model later, confirm its name with `agy models` on the box and that it answers a headless `agy -p` call first, then set it here and in `tiers`. `agy models` lists the names, each carrying its effort. Its usage is its own `agy -p /usage` (no model call), the Gemini pool's row (a pool whose name starts with Gemini; with several, the one naming the model's line, else the fullest): read before the run, after every call and every ten minutes during one.",
       "enabled": true,
       "cli": "agy",
       "family": "gemini",
-      "model": "gemini-4-argon-high",
+      "model": "gemini-3.8-flash-high",
       "effort": "high",
       "tier": "medium",
       "login": "machine",

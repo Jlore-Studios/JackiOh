@@ -128,7 +128,7 @@ func TestFailedCalls_ABuilderThatFailedAfterDoingWorkKeepsIt(t *testing.T) {
 func TestFailedCalls_AReviewCallThatFailsNamesItsError(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, At: ts.Day, Machine: ts.Machine})
 	h.committedHours() // claude-3 works all day: a strong model is free too
-	pr, _ := crossBuildOnMedium(t, h, "", nil)
+	pr, _ := crossBuildForAudit(t, h, "")
 	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium"))
 	_, review := h.night(workFake(map[string]runner.Handler{"review": failedCallsFailing(900, "overloaded")}))
 	assertEqual(t, review.Get("status"), "failed")

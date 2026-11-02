@@ -348,21 +348,23 @@ func RunReviewer(pool *providers.Pool, provider *providers.Provider, difficulty 
 	return pool.BestSeat(provider, "medium")
 }
 
-// ReviewSeat is a review run's reviewer: the lane's final audit (#725), never on the subscription
-// whose run built the head (`candidate.built_by`), whose approval would not ship it (#2748). It
-// tries the tiers whose approval ships the head (`review_rule.tiers`), weakest first: a medium
-// item takes a medium seat first (Muse, agy, GPT, Sonnet), then a strong one; a hard item waits
-// for a strong seat (Opus) on another account. No weak review runs go out: a weak approval never
-// ships. Within a tier, a family that has not approved the head yet goes before one that has (the
-// same model may review it twice), then the tier's own order (Muse before agy before GPT before
-// Sonnet, as builds go), then the load balancer's order (`spread`, `ranked`). An after-merge
-// spot-check (`candidate.spot_check`, its tiers strong alone) puts the subscription whose approval
-// shipped the head (`approved_by`) after every other.
+// ReviewSeat is a review run's reviewer: the lane's final audit (#725), which an item gets only
+// when its own run's reviewer did not approve it. It tries the tiers whose approval ships the head
+// (`review_rule.tiers`), weakest first: a medium item takes a medium seat first (Muse, agy, GPT,
+// Sonnet), then a strong one; a hard item waits for a strong seat (Opus). No weak review runs go
+// out: a weak approval never ships. Any subscription's approval ships the head (2026-11-02,
+// #2748), so the one whose run built it (`candidate.built_by`) may review it, but within a tier
+// every other subscription goes first; then a family that has not approved the head yet before
+// one that has (the same model may review it twice), then the tier's own order (Muse before agy
+// before GPT before Sonnet, as builds go), then the load balancer's order (`spread`, `ranked`).
+// An after-merge spot-check (`candidate.spot_check`, its tiers strong alone) never goes to the
+// builder's subscription, and puts the one whose approval shipped the head (`approved_by`) after
+// every other.
 func ReviewSeat(pool *providers.Pool, offered []*providers.Provider, candidate *queue.Candidate, spread Balance /* = None */) *providers.Seat {
 	var seats []*providers.Seat
 	for _, provider := range offered {
-		if candidate.BuiltBy != "" && provider.ID == candidate.BuiltBy {
-			continue // its builder's subscription: its approval does not ship it
+		if candidate.SpotCheck && candidate.BuiltBy != "" && provider.ID == candidate.BuiltBy {
+			continue // a spot-check measures its builder's lane from outside it
 		}
 		seats = append(seats, pool.Seats(provider)...)
 	}
@@ -381,8 +383,9 @@ func ReviewSeat(pool *providers.Pool, offered []*providers.Provider, candidate *
 		}
 		found := Ranked(pool, filter(seats, func(seat *providers.Seat) bool { return seat.Tier == tier }), spread)
 		found = py.SortedBy(found, func(seat *providers.Seat) []any { // stable: keeps the order
+			own := candidate.BuiltBy != "" && seat.Provider.ID == candidate.BuiltBy
 			approver := candidate.ApprovedBy != "" && seat.Provider.ID == candidate.ApprovedBy
-			return []any{approver, slices.Contains(candidate.Approved, seat.Family()), seat.Rank}
+			return []any{own, approver, slices.Contains(candidate.Approved, seat.Family()), seat.Rank}
 		})
 		if len(found) > 0 {
 			return found[0]

@@ -27,8 +27,9 @@ func DifficultyLegend(pool *providers.Pool) string {
 	return "<sub>🟡 **medium**, and ⚪ **unrated** until its planner rates it: " +
 		"a medium or strong model (" + names["medium"] + ", then " + names["strong"] + ") · 🔴 **hard**: " +
 		"a strong model only (" + names["strong"] + "). A build needs a plan first, by a medium " +
-		"model first (strong for a hard one); a review run goes to a subscription other than the " +
-		"builder's, a medium model first for a medium change and a strong one for a hard one; a " +
+		"model first (strong for a hard one); the run's own reviewer's approval at its tier ships a " +
+		"change, and one it did not approve goes to a review run, on another subscription than the " +
+		"builder's first, a medium model first for a medium change and a strong one for a hard one; a " +
 		"revision that answers a strong audit stays strong.</sub>"
 }
 

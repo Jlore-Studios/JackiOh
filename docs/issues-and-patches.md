@@ -76,8 +76,8 @@ the same way: queue it, and `bot:suggestion` comes off; close it to say no.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until
 then: **hard** for engine rules, the AI, design across crates, a migration, or about 40 files or
 more; **medium** for the rest. Torn between the two, take the harder. A medium issue is planned,
-built and approved by a medium model (Muse, Gemini, GPT or Sonnet; the approval that ships it from
-a subscription other than the builder's), a hard one by Claude Opus alone. The easy difficulty was
+built and approved by a medium model (Muse, Gemini, GPT or Sonnet; the approval that ships it may
+be its own builder's lane's, 2026-11-02), a hard one by Claude Opus alone. The easy difficulty was
 retired in #2748: an issue that still says easy is medium. Triage
 gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
 (#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its

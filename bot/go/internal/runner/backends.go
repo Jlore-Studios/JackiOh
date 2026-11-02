@@ -402,7 +402,7 @@ var (
 	agyShare = regexp.MustCompile(`^(` + py.DigitClass + `+(?:\.` + py.DigitClass + `+)?)%$`)
 )
 
-// agyEfforts are the efforts agy's model names end in (`gemini-4-argon-high`), which name no line
+// agyEfforts are the efforts agy's model names end in (`gemini-3.8-flash-high`), which name no line
 // of models (`agyLine`).
 var agyEfforts = []string{"minimal", "low", "medium", "high", "xhigh", "max"}
 
@@ -423,11 +423,11 @@ func agyLine(model string) []string {
 // ParseAgyUsage is agy's `/usage` table as a reading for `model`'s pool. Each row is a pool, a
 // limit, the share left and its reset, tab-separated: `Gemini Models  Weekly Limit Remaining  2%
 // 2026-10-09T17:47:52Z`. A Gemini model draws on the Gemini pool, whatever its version or line
-// (`gemini-3.8-flash-high`, `gemini-4-argon-high` since #2748): the rows whose pool starts with
-// "Gemini". The Claude and GPT models agy also serves share the other one. Should the table list
-// more than one Gemini pool for a window, the row whose pool names the model's line (`agyLine`:
-// "Argon") is its own; with none that does, the fullest, so no cap holds on an emptier pool by
-// mistake.
+// (`gemini-3.8-flash-high`, agy's own, or a later line such as `gemini-4-argon-high`, which #2748
+// tried): the rows whose pool starts with "Gemini". The Claude and GPT models agy also serves
+// share the other one. Should the table list more than one Gemini pool for a window, the row
+// whose pool names the model's line (`agyLine`: "Flash") is its own; with none that does, the
+// fullest, so no cap holds on an emptier pool by mistake.
 func ParseAgyUsage(text string, model string) *pyjson.Object {
 	gemini := strings.HasPrefix(strings.ToLower(model), "gemini")
 	line := agyLine(model)
@@ -511,7 +511,7 @@ var AgyCliPollsUsage = true
 //
 // Print mode reads the prompt from stdin. In headless mode agy refuses shell commands unless
 // told otherwise, so `--dangerously-skip-permissions` lets it run them, as the other CLIs do;
-// the job holds no write token. Its model names carry their effort (`gemini-4-argon-high`;
+// the job holds no write token. Its model names carry their effort (`gemini-3.8-flash-high`;
 // `agy models` lists them), and `--effort` passes the same. Its stream carries no usage, so its
 // `/usage` table is read around and during each call (`polls_usage`).
 type AgyCli struct{ cliBase }

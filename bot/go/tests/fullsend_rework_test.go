@@ -4,7 +4,8 @@ package tests
 // sub-issues is adopted as a fullsend tree by itself; the split is hard, goes first among the
 // builds as `priority:high` would, and nothing reviews or revises it; the reconcile may send a part
 // it finds largely wrong back to the subscription that built it, up to `fullsend_send_backs`, and
-// runs again once the part has landed; and the reconcile's final audit is Opus on another account.
+// runs again once the part has landed; and the reconcile, hard, ships on a strong approval, its own
+// lane's Opus's included (2026-11-02).
 // They use fullsend_test.go's world. Squishy's cases are in squishy_cases_test.go.
 
 import (
@@ -301,37 +302,38 @@ func TestFullsendRework_APartGoesBackOnlyUpToTheCap(t *testing.T) {
 	assertEqual(t, plan.SendBackable(&none, fullsendParent), []any{})
 }
 
-// The reconcile builds the head, so its own subscription's approval never ships it (#2748's
-// review rule): the final audit is Opus on another Claude account, whose approval turns auto-merge on.
-func TestFullsendRework_TheReconcilesFinalAuditIsOnAnotherOpusAccount(t *testing.T) {
+// The reconcile's pull request is hard, so it ships only on a strong approval: its own run's
+// reviewer, Opus on the reconcile's own Claude account in a fresh adversarial session, gives it
+// (2026-11-02, #2748), and auto-merge turns on with no review run. A medium approval of it would
+// ship nothing, and a review run of it, should one be asked for, is strong.
+func TestFullsendRework_TheReconcileShipsOnItsOwnLanesOpusApproval(t *testing.T) {
 	world := fullsendLandedWorld(t, crossAll)
 	planned, result := world.run(workFake(map[string]runner.Handler{
 		"build":  fullsendBuilder(map[string]string{"src/game.txt": "the rules and the client\n"}, nil),
 		"review": workReviewer(workApprove)}))
 	reconciler := planned.Str("provider")
 	assertTrue(t, strings.HasPrefix(reconciler, "claude-"), reconciler)
-	assertEqual(t, []any{planned.Get("number"), dig(t, planned, "seats", "build", "model"), result.Get("status")},
-		[]any{fullsendParent, "opus", "approved"})
+	assertEqual(t, []any{planned.Get("number"), dig(t, planned, "seats", "build", "model"),
+		dig(t, planned, "seats", "review", "provider"), dig(t, planned, "seats", "review", "model"),
+		dig(t, planned, "seats", "review", "tier"), result.Get("status")},
+		[]any{fullsendParent, "opus", reconciler, "opus", "strong", "approved"})
 	pr := crossPullOf(t, world.gh, fullsendOnto)
-	votes := crossObj(t, world.ctx.Store.Load(), "items", strconv.Itoa(pr), "votes")
-	assertEqual(t, []any{votes.Get("built_by"), votes.Get("sha")}, []any{reconciler, result.Get("head")})
-	assertEqual(t, world.gh.AutoMerge, map[string]string{})
-	assertIn(t, config.LabelCross, world.gh.LabelNames(pr))
+	record := crossObj(t, world.ctx.Store.Load(), "items", strconv.Itoa(pr))
+	assertEqual(t, []any{record.Get("difficulty"), dig(t, record, "votes", "built_by"), dig(t, record, "votes", "sha")},
+		[]any{"hard", reconciler, result.Get("head")})
+	assertIn(t, fmt.Sprintf("PR_%d", pr), world.gh.AutoMerge)
+	assertNotIn(t, config.LabelCross, world.gh.LabelNames(pr))
+	assertEqual(t, []any{dig(t, record, "cleared", "built_by"), dig(t, record, "cleared", "approver", "provider"),
+		dig(t, record, "cleared", "approver", "tier")}, []any{reconciler, reconciler, "strong"})
+	// No review run is queued for it; one asked for would be strong, its own lane's last.
+	for _, c := range queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil) {
+		assertNotEqual(t, c.Number, pr)
+	}
+	queue.QueueReview(world.ctx, pr, "jgoetzmann", "", "", nil)
 	for _, c := range queue.Candidates(world.ctx, world.ctx.Store.Load(), nil, nil) {
 		if c.Number == pr {
 			assertEqual(t, []any{c.Kind, c.Difficulty, c.BuiltBy, c.ReviewTiers}, []any{"review", "hard", reconciler,
 				[]string{"strong"}})
 		}
 	}
-	// The final audit: Opus on another account, never the reconcile's.
-	cfg := *world.cfg
-	cfg.RunID = "778"
-	world.cfg, world.ctx.Cfg = &cfg, &cfg
-	planned, review := world.run(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	auditor := planned.Str("provider")
-	assertEqual(t, []any{planned.Get("action"), planned.Get("number"), dig(t, planned, "seats", "review", "tier"),
-		dig(t, planned, "seats", "review", "model")}, []any{"review", pr, "strong", "opus"})
-	assertTrue(t, strings.HasPrefix(auditor, "claude-") && auditor != reconciler, auditor)
-	assertEqual(t, review.Get("verdict"), "approve")
-	assertIn(t, fmt.Sprintf("PR_%d", pr), world.gh.AutoMerge)
 }

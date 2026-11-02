@@ -200,9 +200,9 @@ func Need(c *queue.Candidate) (string, string, string) {
 		return "review", spotcheck.Tier, "an after-merge spot-check" // #2748, section 5
 	}
 	if c.Kind == "review" {
-		// The weakest tier whose approval ships it (#2748): medium for a medium item, on
-		// another subscription than its builder's; strong for a hard one, or for votes cast
-		// before #2748 (`review_rule.tiers`).
+		// The weakest tier whose approval ships it (#2748), on any subscription, its builder's
+		// included (2026-11-02): medium for a medium item; strong for a hard one, or for votes
+		// cast before #2748 (`review_rule.tiers`).
 		tiers := c.ReviewTiers
 		if len(tiers) == 0 {
 			tiers = reviewrule.Shipping(difficulty)
@@ -549,8 +549,8 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	}
 	var able []*providers.Provider
 	for _, p := range pool.Ordered() {
-		if step == "review" && c.BuiltBy != "" && p.ID == c.BuiltBy {
-			continue // its builder's subscription: its approval does not ship it (#2748)
+		if step == "review" && c.SpotCheck && c.BuiltBy != "" && p.ID == c.BuiltBy {
+			continue // a spot-check never goes to its builder's subscription (#2748)
 		}
 		if slices.Contains(p.Roles, role) && pool.BestSeat(p, tier) != nil {
 			able = append(able, p)
@@ -570,7 +570,7 @@ func WaitsFor(ctx *hctx.Context, s *pyjson.Object, c *queue.Candidate, step stri
 	if tier == "strong" {
 		wanted += fmt.Sprintf(" (%s)", TierNames(pool, tier))
 	}
-	if step == "review" && c.BuiltBy != "" {
+	if step == "review" && c.SpotCheck && c.BuiltBy != "" {
 		wanted += fmt.Sprintf(" on a subscription other than `%s`, which built it", c.BuiltBy)
 	}
 	var soonestAt time.Time

@@ -156,7 +156,7 @@ var own = []labelDef{
 	{"blocked", "b60205", "The night bot needs a person before it can go on"},
 	{"pr", "c5def5", "A pull request the night bot opened"},
 	{"suggestion", "d4c5f9", "An improvement the night bot suggests; add bot:build to have it built"},
-	{"cross-review", "0052cc", "A night bot pull request waiting for its review on a subscription other than its builder's"},
+	{"cross-review", "0052cc", "A night bot pull request waiting for its final audit (a review run)"},
 	{"needs-plan", "1d76db", "Queued for the night bot: a model of its tier plans it first, into the description"},
 	{"planned", "0075ca", "It has a plan: in its description, which the builder starts from"},
 	{"stuck", "d93f0b", "It failed every review round it had: a comment says why, for a person to review"},

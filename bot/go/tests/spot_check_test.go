@@ -1,8 +1,10 @@
-// The after-merge spot-check (#2748, section 5): every 5th medium bot pull request that merges
-// (`spot_check_every`, a counter in the state file) gets a review run by a strong model on a
-// subscription other than its builder's (and its approver's when another is free), of the change as
-// it merged. It blocks nothing: an approval records `clean`, and blocking findings open one
-// follow-up issue, whose own pull request is never sampled. Every check is recorded.
+// The after-merge spot-check (#2748, section 5): every 5th medium or hard bot pull request that
+// merges (`spot_check_every`, a counter in the state file; no fullsend reconcile or follow-up) gets
+// a review run by a strong model on a subscription other than its builder's (and its approver's
+// when another is free), of the change as it merged: the independent measure of an item's own
+// lane's approval, which ships it (2026-11-02). It blocks nothing: an approval records `clean`, and
+// blocking findings open one follow-up issue, whose own pull request is never sampled. Every check
+// is recorded.
 package tests
 
 import (
@@ -62,17 +64,20 @@ func TestSpotCheck_TheNightBotSamplesOneInFiveAndSquishyNone(t *testing.T) {
 	assertFalse(t, off.SpotChecks())
 }
 
-// The counter: every 5th medium bot pull request merged into `main` is queued, once; a hard one,
-// a follow-up issue's own (by its record or its body's marker), one closed unmerged and one merged
-// elsewhere are not counted.
-func TestSpotCheck_EveryFifthMediumMergeIsQueuedButNoHardOneOrFollowUp(t *testing.T) {
+// The counter: every 5th medium or hard bot pull request merged into `main` is queued, once (both
+// ship on their own lane's approval since 2026-11-02); a fullsend tree's reconcile, a follow-up
+// issue's own (by its record or its body's marker), one closed unmerged and one merged elsewhere are
+// not counted.
+func TestSpotCheck_EveryFifthMediumOrHardMergeIsQueuedButNoReconcileOrFollowUp(t *testing.T) {
 	gh, ctx := newFlowPlanWorld()
-	for n := 1; n <= 4; n++ {
+	for n := 1; n <= 3; n++ {
 		spotCheckClose(gh, ctx, n, true, "difficulty:medium")
 	}
+	spotCheckClose(gh, ctx, 4, true, "difficulty:hard")
 	count, prs := spotCheckCount(t, ctx)
 	assertEqual(t, []any{count, prs}, []any{4, []int{}})
-	spotCheckClose(gh, ctx, 5, true, "difficulty:hard")
+	gh.AddIssue(105, fakes.Issue{Labels: []string{config.LabelPROpen, fullsendLabel}})
+	spotCheckClose(gh, ctx, 5, true) // the tree's reconcile
 	flowUpdateItem(ctx, 106, pyjson.New("spot_check_of", 41))
 	gh.AddIssue(106, fakes.Issue{Labels: []string{config.LabelPROpen}})
 	spotCheckClose(gh, ctx, 6, true)
@@ -86,14 +91,15 @@ func TestSpotCheck_EveryFifthMediumMergeIsQueuedButNoHardOneOrFollowUp(t *testin
 		"pull_request", gh.Threads.Item(210)))
 	count, prs = spotCheckCount(t, ctx)
 	assertEqual(t, []any{count, prs}, []any{4, []int{}})
-	// The fifth medium merge (no difficulty label is medium), whose builder and approver are on record.
+	// The fifth merge, medium (no difficulty label is medium), whose builder and approver are on
+	// record.
 	flowUpdateItem(ctx, 209, pyjson.New(
 		"votes", pyjson.New("sha", "h9", "builder", "muse", "built_by", "muse"),
 		"cleared", pyjson.New("sha", "h9", "approver", pyjson.New("provider", "agy", "family", "gemini",
-			"model", "gemini-4-argon-high", "tier", "medium")),
+			"model", "gemini-3.8-flash-high", "tier", "medium")),
 		"merge_owner", "agy"))
 	said := spotCheckClose(gh, ctx, 9, true)
-	assertIn(t, "#209 is medium merge 5, so it is queued for an after-merge spot-check (one in 5)", said)
+	assertIn(t, "#209 is medium or hard merge 5, so it is queued for an after-merge spot-check (one in 5)", said)
 	spotCheckClose(gh, ctx, 9, true) // GitHub's event delivered twice
 	count, prs = spotCheckCount(t, ctx)
 	assertEqual(t, []any{count, prs}, []any{5, []int{209}})
@@ -101,7 +107,7 @@ func TestSpotCheck_EveryFifthMediumMergeIsQueuedButNoHardOneOrFollowUp(t *testin
 	assertEqual(t, entry, pyjson.New("pr", 209, "issue", 109, "title", "Patch: change 9", "n", 5, "every", 5,
 		"merged_at", "2026-09-30T03:00:00Z", "sha", "m9", "head", "h9", "difficulty", "medium",
 		"builder", pyjson.New("provider", "muse", "family", "muse"),
-		"approver", pyjson.New("provider", "agy", "family", "gemini", "model", "gemini-4-argon-high", "tier", "medium"),
+		"approver", pyjson.New("provider", "agy", "family", "gemini", "model", "gemini-3.8-flash-high", "tier", "medium"),
 		"status", "queued", "queued_at", "2026-09-30T03:00:00Z", "tries", 0))
 	// It is a review run in the queue, on a strong seat, of a pull request closed by its merge.
 	var found *queue.Candidate
@@ -115,12 +121,21 @@ func TestSpotCheck_EveryFifthMediumMergeIsQueuedButNoHardOneOrFollowUp(t *testin
 	}
 	assertEqual(t, []any{found.Kind, found.SpotCheck, found.BuiltBy, found.ApprovedBy, found.ReviewTiers},
 		[]any{"review", true, "muse", "agy", []string{"strong"}})
-	// The tenth medium merge is the next.
-	for n := 11; n <= 15; n++ {
+	// The tenth merge is the next, a hard one this time, its own lane's Opus approval on record.
+	for n := 11; n <= 14; n++ {
 		spotCheckClose(gh, ctx, n, true)
 	}
+	flowUpdateItem(ctx, 215, pyjson.New(
+		"votes", pyjson.New("sha", "h15", "builder", "claude", "built_by", "claude-3"),
+		"cleared", pyjson.New("sha", "h15", "built_by", "claude-3", "approver", pyjson.New("provider", "claude-3",
+			"family", "claude", "model", "opus", "tier", "strong")),
+		"merge_owner", "claude-3"))
+	spotCheckClose(gh, ctx, 15, true, "difficulty:hard")
 	count, prs = spotCheckCount(t, ctx)
 	assertEqual(t, []any{count, prs}, []any{10, []int{209, 215}})
+	hard := spotcheck.Checks(ctx.Store.Load())[1]
+	assertEqual(t, []any{hard.Get("difficulty"), hard.Get("builder"), dig(t, hard, "approver", "provider")},
+		[]any{"hard", pyjson.New("provider", "claude-3", "family", "claude"), "claude-3"})
 	// Off, nothing is counted.
 	gh2, ctx2 := newFlowPlanWorld()
 	ctx2.Cfg = testsupport.MakeConfig(testsupport.Config{Overrides: pyjson.New("spot_check_every", 0)})
@@ -131,12 +146,22 @@ func TestSpotCheck_EveryFifthMediumMergeIsQueuedButNoHardOneOrFollowUp(t *testin
 	assertEqual(t, []any{count, prs}, []any{0, []int{}})
 }
 
-// spotCheckMerged is the harness's medium item built by Muse and approved by agy's audit, merged
-// into `main` as the fifth medium merge, so it is queued for a spot-check, which Opus takes up at
-// night. Returns the pull request and the commit that merged it.
+// A follow-up issue is queued at the merged change's difficulty: a hard merge's findings are a hard
+// item's, a medium one's (or one with none on record) a medium item's.
+func TestSpotCheck_AFollowUpTakesTheMergedChangesDifficulty(t *testing.T) {
+	assertEqual(t, spotcheck.FollowUpDifficulty(pyjson.New("difficulty", "hard")), "hard")
+	assertEqual(t, spotcheck.FollowUpDifficulty(pyjson.New("difficulty", "medium")), "medium")
+	assertEqual(t, spotcheck.FollowUpDifficulty(pyjson.New()), "medium")
+	assertEqual(t, spotcheck.Difficulties, []string{"medium", "hard"})
+}
+
+// spotCheckMerged is the harness's medium item built by Muse and approved by agy's final audit
+// (Muse's own reviewer did not approve it), merged into `main` as the fifth merge, so it is queued
+// for a spot-check, which Opus takes up at night. Returns the pull request and the commit that
+// merged it.
 func spotCheckMerged(t *testing.T, h *flowHarness) (int, string) {
 	t.Helper()
-	pr, _ := crossBuildOnMedium(t, h, "", nil)
+	pr, _ := crossBuildForAudit(t, h, "")
 	crossNextRun(h, "778")
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), review.Get("verdict")}, []any{"agy", "approve"})
@@ -149,7 +174,7 @@ func spotCheckMerged(t *testing.T, h *flowHarness) (int, string) {
 	flowUpdate(h.ctx, func(s *pyjson.Object) { spotcheck.Record(s).Set("count", 4) })
 	said := events.Handle(h.ctx, "pull_request_target", pyjson.New("action", "closed", "sender", fakes.Bot,
 		"pull_request", pull))
-	assertIn(t, fmt.Sprintf("#%d is medium merge 5, so it is queued for an after-merge spot-check (one in 5)", pr), said)
+	assertIn(t, fmt.Sprintf("#%d is medium or hard merge 5, so it is queued for an after-merge spot-check (one in 5)", pr), said)
 	testsupport.ClockOf(h.ctx).At = testsupport.Night // the Claude accounts' hours
 	crossNextRun(h, "779")
 	return pr, sha
@@ -189,7 +214,7 @@ func TestSpotCheck_AMergedChangeIsReviewedByOpusAndRecordedClean(t *testing.T) {
 		[]any{"done", "clean", 0, false})
 	assertEqual(t, entry.Get("builder"), pyjson.New("provider", "muse", "family", "muse"))
 	assertEqual(t, entry.Get("approver"), pyjson.New("provider", "agy", "family", "gemini",
-		"model", "gemini-4-argon-high", "tier", "medium"))
+		"model", "gemini-3.8-flash-high", "tier", "medium"))
 	assertEqual(t, entry.Get("reviewer"), pyjson.New("provider", reviewer, "family", "claude", "model", "opus",
 		"tier", "strong"))
 	// It blocked nothing and said nothing; the run's live label is off, and nothing is queued.
@@ -219,7 +244,7 @@ func TestSpotCheck_FindingsOpenOneFollowUpIssueThatIsNeverSampledItself(t *testi
 	for _, part := range []string{spotcheck.Marker(pr), fmt.Sprintf("found 1 blocking problem(s) in the change as it merged (`%s`)", sha[:12]),
 		"- [ ] `src/game.txt`: The new rule never reaches the replay hash.", "Evidence: read it",
 		fmt.Sprintf("#%d stays merged: nothing is reverted", pr), "no test skipped, ignored or weakened",
-		fmt.Sprintf("`muse` (`muse`) built #%d and `agy` (`gemini-4-argon-high`) approved it", pr)} {
+		fmt.Sprintf("`muse` (`muse`) built #%d and `agy` (`gemini-3.8-flash-high`) approved it", pr)} {
 		assertIn(t, part, body)
 	}
 	said := lastOf(t, h.gh.BotComments(pr))

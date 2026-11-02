@@ -1118,8 +1118,8 @@ func (x *Worker) ratingAsk() string {
 	ask := "Rate how hard it is, by the rule below. The very first line of your answer is a " +
 		"single HTML comment carrying JSON, with nothing before it, then the plan:\n\n" +
 		line + "\n\n`difficulty` is `medium` or `hard`. The rating decides who builds and " +
-		"approves it: a medium item goes to a medium model, and a medium model's approval from " +
-		"another subscription ships it; a hard item goes to Opus alone. When in doubt between " +
+		"approves it: a medium item goes to a medium model, whose approval ships it; a hard item " +
+		"goes to Opus alone. When in doubt between " +
 		"the two, rate hard."
 	if x.ratingSource() == "bot" {
 		by := ""
@@ -1712,13 +1712,13 @@ func (x *Worker) lastCheckpoint() {
 	}
 }
 
-// SecondReview is a review run: the lane's final audit (#725). A model on a subscription other
-// than the builder's reads a bot pull request (a medium one first for a medium item, a strong one
-// for a hard item, #2748).
+// SecondReview is a review run: the lane's final audit (#725), for a head its own run's reviewer
+// did not approve. A model reads a bot pull request (a medium one first for a medium item, a
+// strong one for a hard item, on another subscription than the builder's when one is free, #2748).
 // Nothing is built or pushed: the verdict goes
 // to `deliver`, which merges once the approvals for the same commit meet the review rule
 // (`review_rule.py`), or makes the auditor's subscription the owner of a revision that fixes what
-// it found, which another subscription audits in turn (#2748).
+// it found, whose own run's reviewer approving it ships it (2026-11-02).
 // Nothing is installed or run either: the reviewer holds another subscription's login, and
 // the builder's code (a postinstall script, a test) must not run beside it. CI runs every
 // check on the pull request before it can merge.
@@ -1749,7 +1749,8 @@ func (x *Worker) SecondReview() {
 		x.Provider.Family + "` on `" + seat.Model + "` (" + seat.Tier + " tier). It merges once " +
 		reviewrule.Summary + " approved the same commit. " + soFar + " If you find blocking " +
 		"problems, your own subscription fixes them in a revision of its own (the auditor fixes " +
-		"its own findings), and a final audit on another subscription reviews that fix, so write " +
+		"its own findings), and that fix ships once its own run's reviewer approves it at the " +
+		"item's tier, so write " +
 		"each finding as you would want it to fix it: where, what, and the evidence. Dependencies are " +
 		"not installed in this run and you " +
 		"should not run the branch's code: read it. CI runs every check on the pull " +

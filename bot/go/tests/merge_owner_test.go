@@ -1,7 +1,8 @@
 // The last approver owns the merge (#2748, section 4): the subscription whose approval shipped a
 // head is recorded as its merge owner, and a red check or the merge queue's failure on that head
-// queues the CI fix with it as the owner, ahead of its new work. The fix is a new head, which
-// another subscription approves. The CI fixes stay capped at three, then `bot:blocked`.
+// queues the CI fix with it as the owner, ahead of its new work. The fix is a new head, which its
+// own run's reviewer's approval ships (2026-11-02). The CI fixes stay capped at three, then
+// `bot:blocked`.
 package tests
 
 import (
@@ -26,12 +27,13 @@ func mergeOwnerQueueFailed(h *flowHarness, pr int) []string {
 	return events.Handle(h.ctx, "workflow_run", pyjson.New("action", "completed", "sender", fakes.Bot, "workflow_run", run))
 }
 
-// Muse builds, agy's final audit approves: agy owns the merge. The merge queue takes it out red, so
-// the CI fix is agy's, and agy takes it before a new build of higher priority; agy's own approval of
-// its fix does not ship it, and Muse's audit of the fix does, which makes Muse the merge owner.
-func TestMergeOwner_TheLastApproverGetsTheCIFixFirstAndItsFixNeedsAnotherApprover(t *testing.T) {
+// Muse builds and its own reviewer never approves; agy's final audit approves: agy owns the merge.
+// The merge queue takes it out red, so the CI fix is agy's, and agy takes it before a new build of
+// higher priority; agy's own run's approval of its fix ships it (2026-11-02, #2748), and agy stays
+// the merge owner.
+func TestMergeOwner_TheLastApproverGetsTheCIFixFirstAndItsOwnApprovalShipsTheFix(t *testing.T) {
 	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Machine: testsupport.Machine, At: testsupport.Day})
-	pr, _ := crossBuildOnMedium(t, h, "", nil)
+	pr, _ := crossBuildForAudit(t, h, "")
 	crossNextRun(h, "778")
 	planned, review := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{planned.Get("provider"), review.Get("verdict")}, []any{"agy", "approve"})
@@ -40,7 +42,7 @@ func TestMergeOwner_TheLastApproverGetsTheCIFixFirstAndItsFixNeedsAnotherApprove
 	h.gh.Threads.Item(pr).Obj("head").Set("sha", head) // as GitHub has it
 	assertEqual(t, record.Get("merge_owner"), "agy")
 	assertEqual(t, dig(t, record, "cleared", "approver"), pyjson.New("provider", "agy", "family", "gemini",
-		"model", "gemini-4-argon-high", "tier", "medium"))
+		"model", "gemini-3.8-flash-high", "tier", "medium"))
 	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", "12", "owner"), "muse") // the builder's, until now
 	// While it waits for CI and the merge queue, no lane is held: nothing is queued for it.
 	assertIn(t, config.LabelMerging, h.gh.LabelNames(pr))
@@ -68,16 +70,13 @@ func TestMergeOwner_TheLastApproverGetsTheCIFixFirstAndItsFixNeedsAnotherApprove
 	record = crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	assertEqual(t, []any{record.Get("ci_fixes"), record.Get("ci_fixed_head"), dig(t, record, "votes", "built_by")},
 		[]any{1, fixed.Get("head"), "agy"})
-	assertEqual(t, h.gh.AutoMerge, map[string]string{})
-	assertIn(t, config.LabelCross, h.gh.LabelNames(pr))
-	// The fix's audit goes to another subscription (Muse first, which has not approved it), still
-	// ahead of the new build, and its approval ships the fix.
-	crossNextRun(h, "780")
-	planned, second := h.night(workFake(map[string]runner.Handler{"review": workReviewer(workApprove)}))
-	assertEqual(t, []any{planned.Get("action"), planned.Get("number"), planned.Get("provider"), second.Get("verdict")},
-		[]any{"review", pr, "muse", "approve"})
-	assertIn(t, fmt.Sprintf("PR_%d", pr), h.gh.AutoMerge)
-	assertEqual(t, dig(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr), "merge_owner"), "muse")
+	// Its own run's reviewer approved the fix, which ships it with no review run: auto-merge is on
+	// at the fixed head, and agy, whose approval shipped it, owns the merge again.
+	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], fixed.Get("head"))
+	assertIn(t, config.LabelMerging, h.gh.LabelNames(pr))
+	assertNotIn(t, config.LabelCross, h.gh.LabelNames(pr))
+	assertEqual(t, []any{record.Get("merge_owner"), dig(t, record, "cleared", "sha"), dig(t, record, "cleared", "built_by"),
+		dig(t, record, "cleared", "approver", "provider")}, []any{"agy", fixed.Get("head"), "agy", "agy"})
 }
 
 // Each CI fix of a cleared head goes to the subscription whose approval shipped that head; a red

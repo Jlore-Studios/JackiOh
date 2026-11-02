@@ -33,10 +33,12 @@
 //     now (#2748); a hard item to a strong seat only. When no planner is free on the lane, a
 //     builder whose own strongest seat meets the plan floor plans it in its own run.
 //   - **review** in the run: the run's own strongest seat of at least medium, in a fresh
-//     adversarial session; its findings count, but its approval does not ship the change, which
-//     goes to its final audit on another subscription (#2748).
-//   - **a review run** (`bot:cross-review`): the lane's final audit, never on the subscription
-//     that built the head. A medium item takes a medium seat first, a hard item waits for a strong
+//     adversarial session; its findings count, and its approval at the item's tier ships the
+//     change (2026-11-02, #2748: a medium or strong one for a medium item, a strong one for a hard
+//     item, Opus on the same account).
+//   - **a review run** (`bot:cross-review`): the lane's final audit, when the run's own reviewer
+//     did not approve it, on another subscription of the tier when one is free and else on the
+//     builder's own. A medium item takes a medium seat first, a hard item waits for a strong
 //     seat (Opus). No weak review runs go out. What counts is the review rule (`review_rule.py`).
 //     An audit that asks for changes makes its own subscription the owner of the fix, and the
 //     approval that ships a head makes its subscription the owner of the merge, whose CI fixes go

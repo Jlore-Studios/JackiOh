@@ -868,7 +868,7 @@ func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
 		issue = *linked
 	}
 	difficulty := queue.DifficultyOf(queue.LabelNames(pull), py.OrStr(record.Get("difficulty"), ""))
-	followUp := false
+	followUp, reconcile := false, false
 	if issue != 0 {
 		thread := pyjson.New()
 		herr.Catch[*herr.GitHubError](func() { thread = ctx.GH.GetIssue(issue) })
@@ -876,11 +876,12 @@ func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
 		followUp = spotcheck.IsFollowUp(issueRecord, py.OrStr(thread.Get("body"), ""))
 		if queue.IsFullsend(queue.ModeOf(queue.LabelNames(thread)), issueRecord) {
 			difficulty = "hard" // a fullsend tree's reconcile is a strong model's (#505)
+			reconcile = true    // and never counted
 		}
 	}
 	merge := spotcheck.Merge{PR: number, Issue: issue, Title: py.OrStr(pull.Get("title"), ""),
 		SHA: py.OrStr(pull.Get("merge_commit_sha"), ""), Head: py.OrStr(pull.Obj("head").Get("sha"), ""),
-		Difficulty: difficulty, FollowUp: followUp, Record: record}
+		Difficulty: difficulty, FollowUp: followUp, Reconcile: reconcile, Record: record}
 	var queued *pyjson.Object
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		queued = spotcheck.Merged(s, merge, cfg.SpotCheckEvery, ctx.Now())
@@ -889,7 +890,7 @@ func SpotCheckMerge(ctx *hctx.Context, pull *pyjson.Object) string {
 	if queued == nil {
 		return ""
 	}
-	return fmt.Sprintf("#%d is medium merge %d, so it is queued for an after-merge spot-check (one in %d)",
+	return fmt.Sprintf("#%d is medium or hard merge %d, so it is queued for an after-merge spot-check (one in %d)",
 		number, py.MustInt(queued.Get("n")), cfg.SpotCheckEvery)
 }
 
@@ -1034,8 +1035,8 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 		pyjson.New("ci_run_id", run.Get("id"), "ci_sha", sha, "ci_fixes", fixes+1), nil)
 	// The last approver owns the merge (#2748, section 4): the subscription whose approval shipped
 	// this head fixes it, ahead of its new work (`plan.Pairs`), held for it a while or handed off
-	// as any owner's work (`plan.Owning`). Its fix is a new head, which another subscription
-	// approves (`reviewrule`).
+	// as any owner's work (`plan.Owning`). Its fix is a new head, which its own run's reviewer's
+	// approval at the item's tier ships (`reviewrule`, 2026-11-02).
 	owner := py.OrStr(record.Get("merge_owner"), "")
 	if owner != "" && pyjson.Equal(queue.Cleared(record).Get("sha"), sha) {
 		ctx.Store.Update(func(s *pyjson.Object) any {
@@ -1044,7 +1045,7 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 			return nil
 		}, fmt.Sprintf("ci fix #%d is %s's", number, owner))
 		answer += fmt.Sprintf(" `%s`, whose approval shipped this head, owns the merge, so it fixes "+
-			"it first; the fix is a new commit, which another subscription reviews.", owner)
+			"it first; the fix is a new commit, which ships once its own run's reviewer approves it.", owner)
 	}
 	ctx.GH.CreateComment(number, fmt.Sprintf("%s (%s). %s", failed, link, answer))
 	return fmt.Sprintf("#%d: queued a CI fix", number)

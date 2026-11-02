@@ -477,9 +477,9 @@ func TestPickupLabels_ThePullRequestKeepsTheIssuesDifficultyAndTier(t *testing.T
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("priority"), planned.Get("difficulty"), result.Get("status")},
 		[]any{"muse", "high", "medium", "approved"})
 	pr, _ := pyjson.AsInt(wastePull(t, h.gh, "bot/issue-12").Get("number"))
-	// Muse planned, built and reviewed it in the run; its own approval does not ship it (#2748),
-	// so it waits for its final audit on another subscription, with the issue's labels.
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelCross, "difficulty:medium", "Priority:High"))
+	// Muse planned, built and reviewed it in the run, and its own approval ships it (2026-11-02,
+	// #2748): it auto-merges, with the issue's labels.
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelMerging, "difficulty:medium", "Priority:High"))
 	assertEqual(t, h.ctx.Store.Load().Obj("items").Obj(fmt.Sprint(pr)).Get("difficulty"), "medium")
 	// A label still saying `difficulty:easy` is not carried: it is retired, and the sweep labels
 	// the pull request from its issue (medium).

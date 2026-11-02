@@ -229,5 +229,7 @@ func TestWaiting_TheDifficultyLegendNamesEachTiersModels(t *testing.T) {
 	// No easy row, and the weak one in no row (#2748): it takes no work.
 	assertNotIn(t, "easy", legend)
 	assertNotIn(t, "lite", legend)
-	assertIn(t, "a review run goes to a subscription other than the builder's", legend)
+	// An item's own lane's approval ships it (2026-11-02, #2748); a review run prefers another.
+	assertIn(t, "the run's own reviewer's approval at its tier ships a change, and one it did not approve "+
+		"goes to a review run, on another subscription than the builder's first", legend)
 }

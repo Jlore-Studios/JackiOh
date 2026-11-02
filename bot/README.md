@@ -17,16 +17,20 @@ is](#how-hard-it-is); one subscription owns the item end to end (the one that pl
 took it up last; a cut-off item waits for it up to an hour, [Ownership and the
 hold](#ownership-and-the-hold)), builds it, runs the repository's checks, and reviews itself in a
 fresh adversarial session, going round until its lane's verdict rounds run out or its reviewer
-approves. That approval does not ship it: the lane's final audit, on a subscription other than
-the builder's (a medium seat first for a medium item, Opus for a hard one), reviews it; when it
-finds blocking problems, the auditor's own subscription owns the fix and makes it in a revision of
-its own, and a second final audit on another subscription reviews that fix. Three failures of an item's own raise its difficulty a step and rebuild it from `main`
+approves. That approval ships it when it is at the item's tier (the owner's decision of
+2026-11-02): a medium or strong model's for a medium item, a strong one's for a hard item, which on
+a Claude account is Opus on the same account, so an item normally ships at the end of its own
+run. When the rounds run out without an approval, the kept work gets the lane's final audit, a
+review run on another subscription of the item's tier when one is free and on its own when none
+is; when that finds blocking problems, the auditor's own subscription owns the fix and makes it in
+a revision of its own, whose own reviewer's approval ships it in turn. Three failures of an item's
+own raise its difficulty a step and rebuild it from `main`
 ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into
-`main` once CI passes and its lane's final audit approved the same commit from another
-subscription: one medium or strong model for a medium item, one strong model for a hard item.
-The last approver owns the merge: a red check or the merge queue's failure comes back to its
-subscription first. Opus spot-checks every 5th merged medium change, blocking nothing, and opens a
-follow-up issue for what it finds ([The after-merge spot-check](#the-after-merge-spot-check)).
+`main` once CI passes and one approval at its tier, from any subscription, approved the same
+commit. The last approver owns the merge: a red check or the merge queue's failure comes back to
+its subscription first. Opus on another subscription spot-checks every 5th merged medium or hard
+change, the independent measure of that self-review, blocking nothing, and opens a follow-up issue
+for what it finds ([The after-merge spot-check](#the-after-merge-spot-check)).
 When it has nothing to do, it proposes improvements to the game as issues, at most ten open at a
 time.
 
@@ -60,18 +64,19 @@ flowchart TD
     G --> R["adversarial reviewer<br/>the run's own lane reviewer, a fresh session"]
     R -- "blocking findings or red checks<br/>(3 verdict rounds, 10 for hard)" --> F["the same owner<br/>fixes the findings"]
     F --> G
-    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
-    D -- "its own subscription's approval only" --> X["review run = the final audit (bot:cross-review)<br/>another subscription: medium first for medium, Opus for hard"]
+    R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on an approval at the item's tier,<br/>its own lane's included"]
+    R -- "rounds out, no approval (medium)" --> D2["deliver: the kept work's PR"]
+    D2 --> X["review run = the final audit (bot:cross-review)<br/>another subscription first, else its own:<br/>medium first for medium, Opus for hard"]
     X -- "blocking findings" --> XF["a revision on the subscription that owns it:<br/>the auditor's own fix, or the merge owner's CI fix;<br/>a new head"]
-    XF -- "another subscription audits the fix" --> X
+    XF -- "its own run's reviewer approves the fix" --> CI
     X -- "approved: the last approver owns the merge" --> CI
     PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
-  D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
+  D -- "approved: its own lane owns the merge" --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
   CI -- "red (after one re-run), or out of the merge queue" --> E
   E -- "a CI fix, the merge owner's first" --> XF
-  M -- "every 5th medium merge" --> SP["after-merge spot-check: Opus on another subscription;<br/>blocks nothing, findings open a follow-up issue"]
+  M -- "every 5th medium or hard merge" --> SP["after-merge spot-check: Opus on another subscription;<br/>blocks nothing, findings open a follow-up issue"]
 ```
 
 ## Giving it work
@@ -99,8 +104,8 @@ moves on and leaves the branch with conflicts (once the reviews approved a chang
 conflicts takes no review run again: [the review rule](#difficulty-and-tiers)). A CI fix goes
 first to the subscription whose approval shipped the head (the last approver owns the merge,
 #2748), ahead of its new work and held for it a while like any owner's work; its fix is a new commit,
-which another subscription reviews before it merges, and no test is ever skipped or disabled to get
-green (CLAUDE.md rule 12). After three tries at fixing CI on one pull request
+which its own run's reviewer's approval at the item's tier ships (2026-11-02), and no test is ever
+skipped or disabled to get green (CLAUDE.md rule 12). After three tries at fixing CI on one pull request
 it stops and labels it `bot:blocked`. Asking for a revision turns auto-merge off until the
 revision lands. It can revise a pull request a person opened too, as long as the branch is in this
 repository. It never turns on auto-merge for someone else's pull request.
@@ -275,9 +280,10 @@ touching different files. Squishy has the same mode, `squishy:fullsend` ([Squish
    checks the issue's "Done when". Then it goes through the checks and the adversarial review like
    any build, and deliver opens one pull request from the integration branch into `main`, which
    closes the issue under [the review rule](#difficulty-and-tiers) and auto-merge. That pull
-   request is hard whatever the issue's label says (its record's `difficulty`), so its final audit
-   is a strong model's, and on a subscription other than the reconcile's, whose run built the head:
-   Opus on another Claude account.
+   request is hard whatever the issue's label says (its record's `difficulty`), so only a strong
+   approval ships it: its own run's reviewer, Opus on the reconcile's own Claude account in a fresh
+   adversarial session (2026-11-02), or, should it go to a final audit, a strong review run, on
+   another Claude account first.
 
 Why it is built this way:
 
@@ -459,7 +465,7 @@ in place of the `bot:*` ones.
 | `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
 | `bot:tree` | a fullsend parent whose parts the bot opened or adopted and watches, and again while a part its reconcile sent back is built (#2748); once they have all closed, the sweep queues its reconcile |
 | `bot:revise` | a pull request waiting for a revision |
-| `bot:cross-review` | a bot pull request waiting for its final audit, a review run on a subscription other than its builder's, before auto-merge: one medium or strong model for a medium item, one strong model for a hard one. An audit that asks for changes queues `bot:revise` for the auditor's own subscription, which owns the fix (#2748) |
+| `bot:cross-review` | a bot pull request waiting for its final audit, a review run, before auto-merge: its own run's reviewer did not approve it (or a person asked for one), so one medium or strong model for a medium item, one strong model for a hard one, reviews it, on a subscription other than its builder's when one is free and on its own when none is (2026-11-02). An audit that asks for changes queues `bot:revise` for the auditor's own subscription, which owns the fix (#2748) |
 | `bot:planning`, `bot:splitting`, `bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling` | the live labels (#2748): a run holds it right now, exactly one of them, by the kind of run: a planning run, a fullsend split (or one of Squishy's splits), a fresh build (a fullsend part or a one-shot too), a revision of a pull request, a revision whose cause is a red CI run or the merge queue (`source` `ci`), a review run (an [after-merge spot-check](#the-after-merge-spot-check)'s too, on the merged pull request it reads), and the build of a fullsend parent whose parts have landed (its reconcile). The claim puts it on (`config.LiveRun`) and keeps it in the item's record (`live`), and deliver takes it off. They replace `bot:working`, which is retired: a thread that still carries it is held as ever (`config.HeldLabels`, `config.IsLive`), and the sweep moves it to the live label of the run its record names before it deletes the label |
 | `bot:waiting` | beside `bot:build` or `bot:revise`: held for its owner (#2748): only the 5-hour session of the subscription that owns it keeps that one from taking it, and it can start again within `hold_minutes` (60), so no other subscription takes it meanwhile. The bot's one comment on the thread says for whom, until when and why, and the commands that release it (`/harness handoff …`); the planner and the sweep take the label off once the owner can start (the owner takes it next) or the hold runs out (anyone may), and so does any step that takes the item out of the queue ([Ownership and the hold](#ownership-and-the-hold)) |
 | `bot:merging` | a bot pull request whose auto-merge the bot turned on: approved, and in CI or `main`'s merge queue (#2748). It comes off when auto-merge goes off (a revision, a hold, `/harness stop`, a block after its CI fixes), when it merges or closes, and in the sweep once nothing keeps it merging (closed, or open with auto-merge off and out of the queue). A pull request a person merges (`ready for merge`) never carries it |
@@ -540,7 +546,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-8` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-sol` at `xhigh` (`gpt-5.6-terra` until 2026-10-20); medium, and weak only from 2026-10-11 to 2026-10-20, on Terra | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
-| `agy` | Antigravity (`agy`), `gemini-4-argon-high` (Gemini 4 Argon) at `high` since #2748 (`gemini-3.8-flash-high` before), medium in every role; the name must be confirmed with `agy models` on the box, on agy 1.4.3 or later, and must answer headless (`agy -p`) | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
+| `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high`, medium in every role (plans, builds, reviews); Gemini 4 Argon was tried in #2748 and is not on the owner's Google account (checked on the box on 2026-11-02, agy CLI 1.4.12): a newer model is set only once `agy models` lists it and a headless `agy -p` call answers on it | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes of its own (three on the Muse box, one on the night box), and in gpt's or agy's lane on the night box while that one cannot start work, six at most (`fill_in`; [`machine/README.md`](machine/README.md#the-muse-box)); Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
@@ -567,11 +573,11 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
-  carry their effort (`gemini-4-argon-high`; `agy models` lists them), and `effort` matches it.
+  carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
   agy's usage is the row of `agy -p /usage` for the pool its model draws on, found by the pool's
   name, not the model's: a Gemini model reads the rows whose pool starts with "Gemini"; with
-  several Gemini pools for a window, the one naming the model's line ("Argon"), else the fullest
-  (`runner.ParseAgyUsage`). On the box, check that Argon's quota shows on such a row.
+  several Gemini pools for a window, the one naming the model's line ("Flash"), else the fullest
+  (`runner.ParseAgyUsage`). A newer model's quota must show on such a row too before it is set.
 - `tier`: `weak`, `medium` or `strong`, the tier of `model` ([below](#difficulty-and-tiers)). A
   weak seat takes no work since #2748: no difficulty is built at weak.
 - `extra_models`: other models the subscription runs for a role, each with its `model`, `effort`
@@ -729,7 +735,7 @@ nothing):
 | Tier | Models |
 |---|---|
 | strong | Claude Opus, on every Claude account |
-| medium | Muse, Gemini 4 Argon through agy (since #2748; Gemini 3.8 Flash before), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
+| medium | Muse, Gemini 3.8 Flash through agy (#2748 tried Gemini 4 Argon, which is not on the owner's Google account), Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
 | weak | none since #2129, and since #2748 a weak seat takes no work: nothing is built at weak |
 
 Every item has a difficulty, from its labels: `difficulty:medium` or `difficulty:hard`
@@ -741,8 +747,8 @@ difficulty sets the weakest tier that may build it, and the weakest whose plan i
 
 | Difficulty | Plan written by | Builds it | Approvals it needs |
 |---|---|---|---|
-| medium | a medium model first (any of them), a strong one only when no medium one can take it now | medium or stronger, planner preferred | one medium or strong, from a subscription other than the builder's (the final audit) |
-| hard | strong only | strong only, planner and builder the same | one strong, from another account than the builder's |
+| medium | a medium model first (any of them), a strong one only when no medium one can take it now | medium or stronger, planner preferred | one medium or strong, from any subscription: its own run's reviewer, or else its final audit |
+| hard | strong only | strong only, planner and builder the same | one strong, from any account: its own run's Opus reviewer on the same account, or else its final audit |
 | (unrated) | as medium, who rates it | as medium | as medium |
 
 **The usage order** (`priority`) is the owner's, and it is the tie-break inside a tier, not
@@ -848,40 +854,44 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   own tier or above, as any owner's work does.
 - **Reviewing in the run.** Every builder reviews its own change in a fresh adversarial session
   of its lane's reviewer, never an approval from its own context: the builder's own strongest
-  seat of at least medium reads the change cold. Its findings count, and it must approve before
-  the change is pushed, but its approval does not ship the change (#2748): that is the final
-  audit's, on another subscription. A medium item gets up to 3 such verdict rounds
+  seat of at least medium reads the change cold (on a Claude account, Opus for a hard item). Its
+  findings count, it must approve before the change is pushed, and its approval at the item's tier
+  ships the change (the owner's decision of 2026-11-02, #2748): a medium or strong one a medium
+  item, a strong one a hard item, so an item normally ships at the end of its own build or
+  revision run, with no review run. A medium item gets up to 3 such verdict rounds
   (`max_review_cycles`), then its kept work goes to its final audit; a hard item stays with Opus
-  for up to 10. Only rounds that end in a readable verdict count:
+  for up to 10, then the [strikes](#rating-strikes-and-the-step-up). Only rounds that end in a readable verdict count:
   usage pauses, infra failures, halts and stops keep the work and pause the count, across runs
   too. Before a
   review, the run merges `main` again when it moved and merges cleanly, and runs the checks on the
   merged head, so what is approved still merges.
-- **Review runs.** They are the lane's final audit, and they go before every build and revision,
+- **Review runs.** They are the lane's final audit, for a head its own run's reviewer did not
+  approve (or one a person asked to have reviewed), and they go before every build and revision,
   whatever their priority, since they unblock merges, but for a subscription's own work, which goes
-  first ([Ownership and the hold](#ownership-and-the-hold)). They never go to the subscription whose
-  run built the head (#2748; another of Muse's lanes is Muse). A medium item takes the weakest seat
-  that ships it, a medium one first, by the tier order (Muse, agy, Codex, then the Claude accounts'
-  Sonnet, the load balancer among those), then a strong one; a hard item waits for a strong seat
-  (Opus) on another account. No weak review runs go out. A family that has not approved the commit
-  yet goes before one that has (the same model may review it twice). `/harness review strong` (or
-  `medium`) asks for a review run of a bot pull request's head at that tier or stronger, and no
-  revision. A medium or strong approval ships a medium item, a strong one a hard item, each from
-  another subscription than the builder's. **The auditor fixes its own findings** (#2748): a review
+  first ([Ownership and the hold](#ownership-and-the-hold)). Within a tier, every other
+  subscription goes before the one whose run built the head, which may still give it when none
+  other is free (2026-11-02, #2748; another of Muse's lanes is Muse). A medium item takes the
+  weakest seat that ships it, a medium one first, by the tier order (Muse, agy, Codex, then the
+  Claude accounts' Sonnet, the load balancer among those), then a strong one; a hard item waits for
+  a strong seat (Opus), another account's first. No weak review runs go out. A family that has not
+  approved the commit yet goes before one that has (the same model may review it twice).
+  `/harness review strong` (or `medium`) asks for a review run of a bot pull request's head at that
+  tier or stronger, and no revision. A medium or strong approval ships a medium item, a strong one
+  a hard item, from any subscription. **The auditor fixes its own findings** (#2748): a review
   run installs and runs nothing, since it holds another subscription's login ([Safety](#safety)),
   so when it asks for changes, deliver makes the auditor's subscription the owner of the fix
   (`plan.Own`, its `owner_why` says so) and queues the revision, which that subscription makes in
   a normal revision run of its own, ahead of its new work ([Ownership and the
   hold](#ownership-and-the-hold)); a capped auditor's fix is held for it or handed off as any
-  owner's work. The fix is a new head built on the auditor's subscription, so its own approval
-  never ships it: a second final audit on another subscription of the item's tier does. **The last
+  owner's work. The fix is a new head built on the auditor's subscription, and its own run's
+  reviewer's approval at the item's tier ships it, as any build's does (2026-11-02). **The last
   approver owns the merge**: the subscription whose approval shipped the head is recorded on the
   pull request (`merge_owner`, and `cleared`'s `approver`), and while the pull request waits for CI
   and the merge queue (`bot:merging`) no lane is held: the harness watches by events. A red check
   or the merge queue's failure on that head queues the CI fix with the merge owner as its owner
-  (`events.fixCI`), and its fix is another new head that another subscription approves. An
-  [after-merge spot-check](#the-after-merge-spot-check) goes after every other review run, since it
-  unblocks nothing.
+  (`events.fixCI`), and its fix is another new head, which its own run's reviewer's approval ships.
+  An [after-merge spot-check](#the-after-merge-spot-check) goes after every other review run, since
+  it unblocks nothing.
 
 ### Ownership and the hold
 
@@ -983,8 +993,8 @@ An item is **hard** if any of these holds, and **medium** otherwise:
 5. **Big:** about 40 files or more changed in all, the tests included.
 
 Torn between the two, take the harder. A medium item is planned, built and approved by a medium
-model (Muse, Gemini, GPT or Sonnet, the approval from a subscription other than the builder's);
-a hard one by Opus alone. The harness still reads the plan's **Files to touch** table
+model (Muse, Gemini, GPT or Sonnet; the approval may be its own lane's, 2026-11-02); a hard one by
+Opus alone. The harness still reads the plan's **Files to touch** table
 (`issueplan.FilesToTouch`): a plan that lists only paths the bot may not change goes to the people
 ([`human required`](#priority-and-human)).
 
@@ -1019,24 +1029,28 @@ a hard one by Opus alone. The harness still reads the plan's **Files to touch** 
   request.
 
 **The review rule** (`go/internal/reviewrule/`). A commit ships when no model's rejection of it
-stands and its lane's final audit approved it from a subscription other than the one whose run
-built it (#725, #2748): one medium or strong model's approval for a medium item (no Opus audit,
-no size limit), one strong model's (Opus) for a hard item. The builder's own reviewer, in its run
-or in a fresh session on the builder's own subscription, still reviews and its findings still
-count, but its approval does not ship the commit; another of Muse's lanes is the same
-subscription, while Sonnet on another Claude account is another. A weak approval never ships
-anything, and no weak review runs go out.
+stands and an approval at its item's tier approved it (#725, #2748): one medium or strong model's
+for a medium item (no Opus audit, no size limit), one strong model's (Opus) for a hard item. Since
+the owner's decision of 2026-11-02 that approval may come from any subscription, the builder's own
+included: the run's own adversarial reviewer, a fresh session on the builder's lane (Opus on the
+same Claude account for a hard item), ships what it approves, so a medium or hard item normally
+ships at the end of its own build or revision run. Phase E's fullsend reconciles are hard, so they
+ship on a strong approval, their own lane's Opus included. A weak approval never ships anything,
+and no weak review runs go out. The [after-merge spot-check](#the-after-merge-spot-check) is the
+independent measure of this self-review.
 - Votes are kept per commit, one per review (each review run, and each run's own reviewer, is
   one; a deliver job run again does not count its review twice), with the tier of the model that
   cast them and its subscription (`provider`), and the subscription whose run built the commit
-  (`built_by`, "" when no run of the bot's did, a person's push say, or when the pool holds no
-  other subscription that may give a shipping review, Squishy's one account, whose own approval
-  then ships as before: `providers.Pool.AnotherReviews`), from the plan job's own
-  record of who ran, never from the model job. Votes recorded before #2748 name no `built_by`
-  and keep the rule they were cast under: one strong approval, from any subscription
+  (`built_by`, "" when no run of the bot's did, a person's push say), from the plan job's own
+  record of who ran, never from the model job. A cleared commit's record keeps `built_by` beside
+  its `approver` (provider, family, model, tier), so the statistics and the spot-check tell a head
+  its own lane approved from one another subscription did. Votes recorded before #2748 name no
+  `built_by` and keep the rule they were cast under: one strong approval, from any subscription
   (`reviewrule.Counted`, `reviewrule.Tiers`).
-- A change still short of the rule is labelled `bot:cross-review`, and a review run reads it from
-  scratch. The reviewer reads the change but installs and runs nothing: it holds another
+- A change still short of the rule (its own run's reviewer did not approve it within its rounds,
+  or no model in its run could review it) is labelled `bot:cross-review`, and a review run reads it
+  from scratch, on another subscription of the item's tier when one is free and on its own when
+  none is. The reviewer reads the change but installs and runs nothing: it holds another
   subscription's login, which the builder's code must never run beside. CI runs every check.
 - When the rule holds, auto-merge turns on, pinned to that commit: GitHub will not merge a head
   that moved after the approval.
@@ -1050,8 +1064,8 @@ anything, and no weak review runs go out.
   for a red check on the pull request, goes first to the subscription whose approval shipped the
   head (`merge_owner`), ahead of its new work and with the hold's rules; nothing holds a lane while
   CI and the queue run, since the harness watches them by events (`events.OnQueueCI`, the CI-twice
-  rule, the sweep). The fix merges `main` first and is reviewed like any revision (its own
-  approval does not ship it: another subscription's does), under the same cap as any CI fix (three,
+  rule, the sweep). The fix merges `main` first and is reviewed like any revision (its own run's
+  reviewer's approval at the item's tier ships it), under the same cap as any CI fix (three,
   `max_failures`, then `bot:blocked`), with no test skipped or disabled to get green, and its
   auto-merge queues it again at the back. One still in
   the queue was built again without a failing pull request ahead of it, and a held pull request or
@@ -1070,7 +1084,8 @@ anything, and no weak review runs go out.
   The deliver job checks that itself: it redoes the merge of the cleared commit and `main` with
   git and compares the new commit with it, trusting nothing the model job says. This path is
   unchanged by #2748: the resolution's own run's reviewer carries the clearance, whichever
-  subscription built it. A builder with its own reviewer in the run takes such a revision first.
+  subscription built it (a medium reviewer's approval carries a hard item's clearance, which it
+  could not give by itself). A builder with its own reviewer in the run takes such a revision first.
   A revision that
   changes anything more, a branch someone pushed to after the reviews, or a change still short of
   the rule when the conflict came goes back under the rule, and the comment on the pull request
@@ -1078,28 +1093,33 @@ anything, and no weak review runs go out.
 - Blocking findings make the auditor's subscription the owner of the fix (#2748): it makes the
   fix itself, in a revision run of its own, on its seat of the audit's tier (through the self-check
   loop again if that builder checks itself), ahead of its new work, and held for it or handed off at
-  the item's own tier like any owner's work. The fix is a new commit its own run built, so the
-  fixer's approval never ships it: it goes round the same way, to a second final audit on another
-  subscription. A rejection stands
+  the item's own tier like any owner's work. The fix is a new commit its own run built, and its own
+  run's reviewer's approval at the item's tier ships it (2026-11-02); without one it goes round
+  the same way, to another final audit. A rejection stands
   against that commit until the same model approves it or the commit changes. Each rejection is a
   strike, so after three the item steps up and is rebuilt ([above](#rating-strikes-and-the-step-up)).
 - Whenever the rule is not met, auto-merge is off, even if an earlier approval had turned
   it on for an older commit. A review of a commit that moved in the meantime does not count.
-- If no subscription other than the builder's that could give the missing review is set up, the
-  change waits in `bot:cross-review` until one is, or until you merge it yourself.
+- If no subscription that could give the missing review is set up (a hard item a person asked a
+  medium model to audit, with no Opus set up, say), the change waits in `bot:cross-review` until
+  one is, or until you merge it yourself.
 
 ### The after-merge spot-check
 
-A medium item ships on one medium model's approval, with no Opus audit (#2748, section 5). What that
-misses is measured after the fact ([`go/internal/spotcheck/`](go/internal/spotcheck/)): before the
-change, Opus asked for changes on 25% of the commits a medium model had approved.
+An item ships on one approval at its tier, with no audit by another model first (#2748, section 5),
+and since the owner's decision of 2026-11-02 that approval is most often its own lane's: the
+adversarial reviewer in the run that built it, a medium model's for a medium item, Opus on the same
+account for a hard one. What that self-review misses is measured after the fact, by a model of
+another subscription ([`go/internal/spotcheck/`](go/internal/spotcheck/)): this check is the
+independent measure of medium and hard self-approval. Before the change, Opus asked for changes on
+25% of the commits a medium model had approved.
 
-- **The sample.** Every 5th medium bot pull request merged into `main` (`spot_check_every` in
-  `.harness/config.json`; 0 checks none, and Squishy's is 0) is queued for one. It is a counter
+- **The sample.** Every 5th medium or hard bot pull request merged into `main` (`spot_check_every`
+  in `.harness/config.json`; 0 checks none, and Squishy's is 0) is queued for one. It is a counter
   in the state file (`spot_checks`' `count`, counted when GitHub reports the merge,
-  `events.SpotCheckMerge`), never a draw. A hard item's pull request is not counted (Opus approved
-  it), nor is a fullsend reconcile's, nor a follow-up issue's own (its record's `spot_check_of`, or
-  the marker its body opens with), so a follow-up never samples itself.
+  `events.SpotCheckMerge`), never a draw. A fullsend reconcile's pull request is not counted, nor
+  is a follow-up issue's own (its record's `spot_check_of`, or the marker its body opens with), so
+  a follow-up never samples itself.
 - **The review.** A review run by a strong model (Opus), on a subscription other than the one whose
   run built the head, and other than the one whose approval shipped it while another is free
   (`plan.ReviewSeat`). It reads the change as it merged: the worktree is the commit that merged the
@@ -1111,13 +1131,15 @@ change, Opus asked for changes on 25% of the commits a medium model had approved
   `failed`.
 - **The verdict blocks nothing and reverts nothing.** An approval records `clean`. Blocking
   findings open one follow-up issue, `Patch: follow-up to #<pr> from the after-merge spot-check`,
-  with the findings and their evidence in its body, labelled `bot:build` and `difficulty:medium`
-  (the bot's own rating, so a planner may raise it), and a comment on the pull request links it;
-  the check records `findings`.
+  with the findings and their evidence in its body, labelled `bot:build` and the merged change's
+  difficulty, `difficulty:medium` or `difficulty:hard` (the bot's own rating, so a planner may
+  raise a medium one), and a comment on the pull request links it; the check records `findings`.
 - **The record.** Every check stays in the state file (`spot_checks`' `checks`, the newest 100
-  finished): the pull request and its issue, the merged commit, who built it and who approved it
-  with their model families, the reviewer, the verdict, how many findings and the follow-up issue,
-  for the usage history (#2749) to chart the miss rate per family.
+  finished): the pull request and its issue, its difficulty, the merged commit, who built it and
+  who approved it with their subscriptions and model families (the same subscription for a head
+  its own lane approved), the reviewer, the verdict, how many findings and the follow-up issue, for
+  the usage history (#2749) to chart the miss rate per family, self-approved against
+  cross-approved.
 
 ### The self-check loop
 
@@ -1438,13 +1460,15 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
 
 ## Safety
 
-- **Two gates before `main`.** Adversarial reviewers approve the change: the builder's own in-run
-  reviewer, then its final audit on a subscription other than the builder's, one medium or strong
-  model for a medium item, one strong model for a hard item (#2748). An audit's findings are fixed
-  by the auditor's own subscription in a revision run of its own (a review run installs and runs
-  nothing, as it holds another subscription's login), and that fix is a new head, which another
-  subscription's audit must approve in turn: no subscription's approval ever ships a head its own
-  run built (but Squishy's, alone in its pool). Then
+- **Two gates before `main`.** An adversarial reviewer approves the change: the builder's own
+  in-run reviewer, a fresh session at the item's tier (one medium or strong model for a medium
+  item, one strong model, Opus on the same account, for a hard item), whose approval ships it
+  (the owner's decision of 2026-11-02, #2748), or, when that never approves, its final audit, a
+  review run on another subscription when one is free. An audit's findings are fixed by the
+  auditor's own subscription in a revision run of its own (a review run installs and runs nothing,
+  as it holds another subscription's login), and that fix's own run's reviewer must approve it in
+  turn. Opus on another subscription [spot-checks](#the-after-merge-spot-check) every 5th merged
+  medium or hard change after the fact. Then
   every CI check must pass before auto-merge merges anything. The deliver job turns auto-merge on
   only after reading `main`'s branch protection and finding every check in `required_checks`
   there. If protection is missing, it leaves the pull request for a person.
@@ -1587,10 +1611,11 @@ suggestions. On top of a plain build it has four modes.
 | Subscriptions | the pool above | `claude-squishy` only (`CLAUDE_CODE_OAUTH_TOKEN_SQUISHY`): Opus for every role, always on GitHub's runners |
 
 Everything else is the night bot's: the run's shape, the review loop and the review rule, CI
-fixes, handoffs, the rules about `human` and priorities, and the paths no change may touch. With
-one subscription, no other can give the final audit, so Squishy's own reviewer's approval ships
-what it built, as before #2748 ([the review rule](#difficulty-and-tiers)). Nor is there another to
-hold an item from, so Squishy holds nothing for an owner (`hold_minutes: 0` in
+fixes, handoffs, the rules about `human` and priorities, and the paths no change may touch. An
+item's own lane's approval ships it, on both bots (2026-11-02), so Squishy's own reviewer's
+approval ships what it built, as it always did ([the review rule](#difficulty-and-tiers)), and with
+one subscription its final audit, when it needs one, is its own account's too. Nor is there
+another to hold an item from, so Squishy holds nothing for an owner (`hold_minutes: 0` in
 `.squishy/config.json`, [Ownership and the hold](#ownership-and-the-hold)), and its item waits in
 the queue for its account as it always did; `/squishy handoff [medium|hard|human]` works as the
 night bot's does. Its one account audits and fixes its own changes, as the auditor's subscription
@@ -1703,7 +1728,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/git/`, `go/internal/gates/` | worktrees, commits, bundles, pushes; the repository's checks |
 | `go/internal/triage/` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`PullTitleOK`, `pr-title.yml`) |
 | `go/internal/stepup/` | strikes, the step up and the rebuild (#317); `go/internal/easy/`, the easy rule's checks on a plan and a change, went with `difficulty:easy` in #2748 |
-| `go/internal/spotcheck/` | the after-merge spot-check (#2748): the count of medium merges, every 5th queued for Opus's review of the merged change, and the record of each check's verdict, findings and follow-up issue |
+| `go/internal/spotcheck/` | the after-merge spot-check (#2748): the count of medium and hard merges, every 5th queued for Opus's review of the merged change, and the record of each check's verdict, findings and follow-up issue |
 | `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` comment that names the people |
 | `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |

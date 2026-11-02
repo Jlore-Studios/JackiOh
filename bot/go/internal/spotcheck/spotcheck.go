@@ -1,13 +1,16 @@
 // Package spotcheck is the after-merge spot-check (#2748, section 5).
 //
-// A medium item ships on one medium or strong model's approval from a subscription other than its
-// builder's, with no Opus audit (`reviewrule`). What that misses is measured after the fact: a
-// strong model (Opus) reviews a share of those changes once they have merged, every
-// `spot_check_every`th medium bot pull request merged into the default branch (5 for the night
-// bot; 0, off, for Squishy). The share is a counter in the state file (`Key`'s `count`), never a
-// draw, so whoever counts a merge counts it the same way. A hard item's pull request is never
-// counted (Opus approved it already), and nor is a follow-up issue's own pull request, so a
-// follow-up never samples itself (no loops).
+// An item ships on one approval at its tier (a medium or strong model's for a medium item, a strong
+// one's for a hard item), its builder's own lane's included (`reviewrule`, the owner's decision of
+// 2026-11-02): most often the adversarial reviewer in the very run that built it. This check is
+// the independent measure of that self-review: a strong model (Opus) on another subscription
+// reviews a share of those changes once they have merged, every `spot_check_every`th medium or
+// hard bot pull request merged into the default branch (5 for the night bot; 0, off, for
+// Squishy). The share is a counter in the state file (`Key`'s `count`), never a draw, so whoever
+// counts a merge counts it the same way. A fullsend tree's reconcile is never counted, and nor is a
+// follow-up issue's own pull request, so a follow-up never samples itself (no loops). The check's
+// record keeps who built the head and whose approval shipped it, so the usage history can tell a
+// self-approved head from a cross-approved one.
 //
 // The check is a review run of the change as it merged: the commit that merged the pull request,
 // against its first parent (`work.Worker.SecondReview`), with the review's prompt of its own
@@ -16,7 +19,7 @@
 // (`plan.ReviewSeat`), after every other review run, since it unblocks nothing, and before builds
 // (`plan.Pairs`). It blocks nothing and reverts nothing. Its verdict (`deliver.SpotCheck`): an
 // approval records `clean`; blocking findings open one follow-up issue (`Title`, `Marker`),
-// queued to build at `difficulty:medium` and linked from a comment on the pull request, and
+// queued to build at the merged change's difficulty and linked from a comment on the pull request, and
 // record `findings`. Every check stays in the state file with its pull request, the builder and
 // the approver with their model families, the reviewer, the verdict, how many findings and the
 // follow-up (`Kept` of them), for the usage history (#2749) to chart the miss rate per family.
@@ -24,6 +27,7 @@ package spotcheck
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -45,8 +49,18 @@ var Kept = 100
 // Tier is the tier a spot-check runs on: a strong model's (Opus).
 var Tier = "strong"
 
-// Difficulty is the difficulty whose merges are counted: medium, which ships on a medium approval.
-var Difficulty = "medium"
+// Difficulties is the difficulties whose merges are counted: both, since each ships on its own
+// lane's approval (2026-11-02, #2748).
+var Difficulties = []string{"medium", "hard"}
+
+// FollowUpDifficulty is the difficulty a follow-up issue is queued at: the merged change's, or
+// medium when it is not on record.
+func FollowUpDifficulty(entry *pyjson.Object) string {
+	if d := entry.Str("difficulty"); slices.Contains(Difficulties, d) {
+		return d
+	}
+	return Difficulties[0]
+}
 
 // The verdicts a finished check records.
 const (
@@ -126,6 +140,8 @@ type Merge struct {
 	Difficulty string
 	// FollowUp: its issue is a spot-check's follow-up, which is never counted.
 	FollowUp bool
+	// Reconcile: its issue is a fullsend tree, so this is the tree's reconcile, never counted.
+	Reconcile bool
 	// Record is the pull request's item record: its votes (who built the head) and its
 	// clearance (who approved it, `cleared`'s `approver`).
 	Record *pyjson.Object
@@ -155,10 +171,11 @@ func approverOf(m Merge) *pyjson.Object {
 }
 
 // Merged counts a bot pull request merged into the default branch (`events.OnPullClosed`), once:
-// a medium one that is no follow-up's adds one to the count when the bot spot-checks at all
-// (`every` above 0), and every `every`th is queued for a check. Returns the check it queued, or nil.
+// a medium or hard one that is no follow-up's or reconcile adds one to the count when the bot
+// spot-checks at all (`every` above 0), and every `every`th is queued for a check. Returns the
+// check it queued, or nil.
 func Merged(s *pyjson.Object, m Merge, every int, at time.Time) *pyjson.Object {
-	if every <= 0 || m.Difficulty != Difficulty || m.FollowUp {
+	if every <= 0 || !slices.Contains(Difficulties, m.Difficulty) || m.FollowUp || m.Reconcile {
 		return nil
 	}
 	item := hstate.Item(s, m.PR)

@@ -54,7 +54,8 @@ type Candidate struct {
 	// For a review: the family of the model that built the change.
 	Builder string // default: ""
 	// For a review: the subscription whose run built the change ("" when unknown, or recorded
-	// before #2748): its approval does not ship it, so no review run goes to it.
+	// before #2748). A final audit goes to it only when no other subscription of the tier is free
+	// (2026-11-02), and an after-merge spot-check never does (`plan.ReviewSeat`).
 	BuiltBy string // default: ""
 	// Its pickup tier (`priority_tier`), which comes before everything but `forced`.
 	Priority int // default: NO_PRIORITY

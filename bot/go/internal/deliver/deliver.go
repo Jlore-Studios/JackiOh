@@ -7,9 +7,10 @@
 // must hold the head the result names, descend from the commit the work started at, change no
 // forbidden path, and fast-forward the branch on GitHub.
 //
-// The review rule (`review_rule.py`): a commit ships when its lane's final audit approved it
-// from a subscription other than the one whose run built it (one medium or strong model for a
-// medium item, one strong model for a hard item, #2748), and no model's rejection of it stands.
+// The review rule (`review_rule.py`): a commit ships when its lane's final audit approved it (one
+// medium or strong model for a medium item, one strong model for a hard item, #2748), from any
+// subscription, its builder's own run's reviewer included (2026-11-02), and no model's rejection
+// of it stands.
 // A weak approval never ships anything. Votes are kept per commit, one per review, with the tier
 // of the seat that cast them and its subscription (`_vote`), and the head's builder's
 // subscription, from the plan's seats and provider, never from the model job. A pull request
@@ -17,7 +18,7 @@
 // still short of it waits in `bot:cross-review` for a review run.
 //
 // A final audit that asks for changes makes the auditor's subscription the owner of the fix, which
-// it makes in a revision of its own, and that new head goes to another subscription's audit; the
+// it makes in a revision of its own, whose own run's reviewer's approval ships it (2026-11-02); the
 // subscription whose approval ships a head is its merge owner, which a CI fix goes to first
 // (#2748, section 4). An after-merge spot-check's verdict is recorded, and its findings open one
 // follow-up issue (`SpotCheck`, section 5).

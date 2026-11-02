@@ -5,11 +5,11 @@
 //
 // Each role runs on the seat `plan` gave it (`plan["seats"]`: a model and its tier on this
 // subscription): a planning session first when the item has no plan yet, the builder and its
-// fixes, and the run's own adversarial reviewer, whose findings count but whose approval does not
-// ship the change (#2748: that is a review run's, on another subscription). A builder whose seat
-// has `self_check` checks its own change before any review: build, checks, a self check by a fresh
-// session of the same model, and on findings a fix and the checks and the self check again, up to
-// `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
+// fixes, and the run's own adversarial reviewer, whose findings count and whose approval at the
+// item's tier ships the change (2026-11-02, #2748; without it, a review run's final audit does).
+// A builder whose seat has `self_check` checks its own change before any review: build, checks, a
+// self check by a fresh session of the same model, and on findings a fix and the checks and the
+// self check again, up to `max_self_check_rounds`. A clean self check is never an approval. A run whose subscription has no
 // seat of at least medium to review in the run (only weak ones) ends with the change built, for a
 // review run to judge.
 //
@@ -617,13 +617,13 @@ func (x *Worker) roundsSpent() int {
 
 // The run used every verdict round with this owner (#725): a hard item stays
 // unapproved, for the strike path; a medium item's kept work goes to its lane's final audit,
-// on another subscription (#2748).
+// on another subscription when one is free (#2748).
 func (x *Worker) roundsOut(total int) (string, string) {
 	if x.Difficulty() == "hard" {
 		return "not_approved", fmt.Sprintf("no approval after %d review cycles", total)
 	}
 	return "built", fmt.Sprintf("used its %d review rounds with this owner; the work is kept for %s",
-		total, "its final audit on another subscription")
+		total, "its final audit, another subscription's when one is free")
 }
 
 // Difficulty is the item's difficulty as this run knows it: the planner's rating when it rated

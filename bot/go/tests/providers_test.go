@@ -205,7 +205,7 @@ func TestProviders_TheCommittedFile(t *testing.T) {
 	want := map[string][]any{
 		"claude-3": both(), "claude-1": both(), "claude-4": both(), "claude-5": both(),
 		"claude-6": both(), "claude-7": both(), "claude-8": both(),
-		"agy":      {[]any{"gemini-4-argon-high", "medium", false}},
+		"agy":      {[]any{"gemini-3.8-flash-high", "medium", false}},
 		"muse":     {[]any{"muse-spark-1.3-contributor", "medium", false}},
 		"gpt":      {[]any{"gpt-5.6-sol", "medium", false}},
 		"claude-2": both(),
@@ -226,8 +226,9 @@ func TestProviders_TheCommittedFile(t *testing.T) {
 		}
 		return out
 	}
-	// agy runs Gemini 4 Argon since #2748, a medium model in every role.
-	assertEqual(t, models("medium"), []string{"muse-spark-1.3-contributor", "gemini-4-argon-high",
+	// agy runs Gemini 3.8 Flash, a medium model in every role (#2748 tried Gemini 4 Argon, which
+	// is not on the owner's Google account).
+	assertEqual(t, models("medium"), []string{"muse-spark-1.3-contributor", "gemini-3.8-flash-high",
 		"gpt-5.6-sol", "sonnet"})
 	assertEqual(t, []any{pool.Get("agy").Effort, pool.Get("agy").Roles},
 		[]any{"high", []string{"plan", "build", "fix", "revise", "review", "suggest"}})
@@ -1219,8 +1220,8 @@ func TestProviders_ASixLaneSubscriptionCanFillTheMachine(t *testing.T) {
 }
 
 func TestProviders_AMediumAuditGoesToAMediumModelOfAnotherSubscription(t *testing.T) {
-	// No weak review runs go out (#725), and gpt's own approval does not ship the head gpt built
-	// (#2748): the weakest seat that ships it, medium, on another subscription, Muse, audits it.
+	// No weak review runs go out (#725), and a review run of the head gpt built goes to the
+	// weakest seat that ships it, medium, on another subscription first (#2748): Muse audits it.
 	gh := fakes.NewFakeGitHub()
 	gh.AddPull(9, "bot/issue-5", fakes.Pull{Labels: []string{config.LabelPR, config.LabelCross}, SHA: "h1"})
 	ctx := providersCtxFor(gh, providersCtx{At: ts.Day})

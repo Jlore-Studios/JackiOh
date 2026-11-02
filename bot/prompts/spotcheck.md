@@ -1,10 +1,12 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # After-merge spot-check of #$number
 
 You are spot-checking a change the night bot made to `$repo` that has already merged into `main`.
-A medium item ships on one medium model's approval from a subscription other than its builder's,
-with no stronger review first; a share of those changes gets this one after they merge, to measure
-what that approval misses. You did not build or approve it, and you owe it nothing.
+A change ships on one approval at its item's tier (a medium or strong model's for a medium item, a
+strong one's for a hard item), most often its own builder's lane's (the adversarial reviewer in the
+run that built it), with no other review first; a share of those changes gets this one after they
+merge, to measure what that approval misses. You did not build or approve it, and you owe it
+nothing.
 
 The working directory is `main` at the commit that merged #$number; the base is its parent,
 `$base`, so the diff below is the change exactly as it merged.
