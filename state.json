@@ -12963,9 +12963,7 @@
     },
     "2825": {
       "action": "build",
-      "asks": [
-        "c:6578827531"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-02T14:13:56Z",
         "difficulty": "hard",
@@ -12992,16 +12990,18 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-2",
       "queued_at": "2026-11-02T13:49:54Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "41460407578",
+      "run_id": "pending:d7708f1d-1793637031",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-02T14:16:39Z",
+      "started_at": "2026-11-02T16:30:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6578827531"
+      ],
       "verdict_rounds": 0
     },
     "2826": {
@@ -13582,9 +13582,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T16:30:15Z",
+    "at": "2026-11-02T16:30:51Z",
     "url": "",
-    "what": "revise #2840 on claude-6"
+    "what": "build #2825 on claude-2"
   },
   "last_sweep": {
     "at": "2026-11-02T16:13:57Z",
