@@ -14103,9 +14103,12 @@
         "resolved_by": "`muse` (medium)",
         "sha": "1bb087ebe5907a9a0522ff41f751f9e104f57703"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-02T02:48:03Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2756,
       "kind": "revise",
       "last_findings": [],
