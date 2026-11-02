@@ -345,7 +345,7 @@ describe("cell (C+ #62)", () => {
 });
 
 describe("reward (C #90)", () => {
-  it("R404 offers a completed quest's rewards as tiles under Quest complete!, and a tile takes its reward", () => {
+  it("R404 offers a completed quest's rewards as choice cards, Quest complete! in the dialog's name, and a tile takes its reward", () => {
     const onAction = renderPrompt(
       baseView({
         pending: pendingFor(
@@ -359,8 +359,9 @@ describe("reward (C #90)", () => {
       }),
     );
     expect(modal()).toHaveAttribute("data-prompt-kind", "reward");
-    expect(screen.getByTestId("prompt-quest-complete")).toHaveTextContent("Quest complete!");
-    expect(modal().querySelector(".prompt-title")?.textContent).toBe("Draw 2 cards");
+    expect(modal().querySelector(".prompt-title")).toBeNull();
+    expect(screen.queryByTestId("prompt-quest-complete")).toBeNull();
+    expect(modal().getAttribute("aria-label")).toBe("Quest complete! Draw 2 cards");
     expect(screen.getByTestId("prompt-option-mode:A")).toHaveTextContent("Heal your hero 6");
     expect(document.activeElement).toBe(screen.getByTestId("prompt-option-mode:A"));
 

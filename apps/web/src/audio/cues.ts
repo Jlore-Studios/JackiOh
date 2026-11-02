@@ -7,6 +7,8 @@
 // A readable card colors its sounds by its family, the card art's theme (§5.1, cards/art/themes.ts), and
 // R202's rarity entrance rings beside the light rays. R655 makes card moments hooks in `card-audio.json5`
 // (the `attack` hook is the board's, `usePickupSound`). MN05: Armor and the niche moments, R1363 to R1366.
+// R2722002: a hidden card makes its rarity's entrance as it reveals, at the first firing the seat reads,
+// never as it is set (`revealSting`, game/entrance.ts).
 
 import type {
   CardType,
@@ -280,6 +282,22 @@ function playSting(event: Extract<GameEvent, { type: "cardPlayed" }>, ctx: CueCo
   return NONE;
 }
 
+/**
+ * R2722002: a hidden card's sting as it reveals, on a seat that can read the card: a Legendary's or a
+ * Mythic's the entrance its normal play gets, and a Cloaked card of a lower rarity (one that is no
+ * Trap) its rarity's play sting. A lower-rarity Trap keeps the trap sting every Trap shares (R203).
+ */
+function revealSting(defId: string, ctx: CueContext): readonly SoundCue[] {
+  const card = readable(ctx, defId);
+  if (card === undefined) return NONE;
+  const rarity = card.printedRarity ?? card.rarity;
+  if (rarity === "Legendary") return [sfx("entrance", undefined, STING_DELAY_MS)];
+  if (rarity === "Mythic") return [sfx("entrance", { mythic: true }, STING_DELAY_MS)];
+  if (card.type === "Trap" || card.type === "Field Trap") return NONE;
+  const tier = STING_TIERS[rarity ?? "Token"];
+  return tier === undefined ? NONE : [sfx("sting", tier === "common" ? undefined : { tier }, STING_DELAY_MS)];
+}
+
 /** R669: the rarities a play sting sizes itself by; Legendary and Mythic enter instead, a Token has none. */
 const STING_TIERS: Readonly<Partial<Record<Rarity | PrintedRarity, StingTier>>> = {
   Common: "common",
@@ -474,13 +492,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // sting alone. R17's play-reactive traps fire on the very play they answer, so the line cuts in on
   // that play's line.
   // R2657001: a face-up Field Trap firing again reveals nothing, so it gives an activation's shimmer,
-  // with no sting and no line (it spoke when it revealed).
+  // with no sting and no line (it spoke when it revealed). R2722002: a first firing the seat can read
+  // is the hidden card's reveal, and makes its entrance (`revealSting`); the sentinel makes none.
   trapFired: {
     sfx: "trapSting",
     cues: (event, ctx) =>
       event.again === true
         ? [sfx("spell")]
-        : [sfx("trapSting"), ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
+        : [sfx("trapSting"), ...revealSting(event.defId, ctx), ...hookCues(ctx, event.defId, "cast", VOICE_DELAY_MS, VOICE_PRIORITY.react)],
   },
   attackDeclared: { sfx: "attack", cues: () => [sfx("attack")] },
   attackCancelled: { sfx: "cancel", cues: () => [sfx("cancel")] },

@@ -258,7 +258,7 @@ describe("R384 an activation is built through the board as a play is", () => {
     expect(onAction).toHaveBeenCalledWith(PING_E2);
   });
 
-  it("R384 modes: the inline mode picker opens, headed by the card, and the pick sends the listed body", () => {
+  it("R384 modes: the inline mode picker opens, headed by the card in its dialog's name, and the pick sends the listed body", () => {
     const { onAction } = renderGame([DAMAGE, DISCARD]);
 
     fireEvent.click(el(testid.activate("fs2")));
@@ -266,7 +266,10 @@ describe("R384 an activation is built through the board as a play is", () => {
     // Two options is a Discover pop-up, not the plain mode list.
     expect(modal).toHaveAttribute("data-prompt-kind", "discover");
     expect(modal).toHaveAttribute("data-prompt-source", "play");
-    expect(modal).toHaveTextContent("The Power to Punish");
+    // #2738: a Discover is its cards alone, with no title; the card's name heads the dialog's name.
+    expect(modal).toHaveAttribute("data-bare", "true");
+    expect(modal.querySelector(".prompt-title")).toBeNull();
+    expect(modal.getAttribute("aria-label")).toMatch(/^The Power to Punish: /);
 
     fireEvent.click(el("prompt-option-discard"));
     expect(onAction).toHaveBeenCalledWith(DISCARD);

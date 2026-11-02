@@ -123,6 +123,12 @@ pub(crate) fn cards_changed(app: &App, played_on: &str) -> ApiError {
     )
 }
 
+/// R1285000, R2685000: whether a finished match's rematch window is open at `now`: at most
+/// `REMATCH_OFFER_TTL_MS` since its end. A finished row with no end is outside it.
+pub(crate) fn in_rematch_window(finished_at: Option<i64>, now: i64) -> bool {
+    finished_at.is_some_and(|finished_at| now - finished_at <= REMATCH_OFFER_TTL_MS)
+}
+
 // Offers
 
 fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
@@ -515,10 +521,7 @@ async fn offer_as(
     // outside it, as it is for its socket (R1285000). The offer lapses silently, recording nothing,
     // telling no actor and making no game; an entry that already made one keeps its id, so a seat
     // that offers or polls late still learns where to go, and any other entry is dropped.
-    if match_row
-        .finished_at
-        .is_none_or(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
-    {
+    if !in_rematch_window(match_row.finished_at, now) {
         let mut map = offers(app);
         let answered = match map.get(&match_row.id) {
             Some(entry) if entry.match_id.is_some() => entry.match_id.clone(),
@@ -635,4 +638,18 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
         200,
         serde_json::to_value(status).map_err(|error| ApiError::internal(error.to_string()))?,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_rematch_window_runs_from_the_end_to_the_ttl_inclusive_and_never_without_an_end() {
+        let end = REMATCH_OFFER_TTL_MS;
+        assert!(!in_rematch_window(None, end));
+        assert!(in_rematch_window(Some(end), end));
+        assert!(in_rematch_window(Some(end), end + REMATCH_OFFER_TTL_MS));
+        assert!(!in_rematch_window(Some(end), end + REMATCH_OFFER_TTL_MS + 1));
+    }
 }

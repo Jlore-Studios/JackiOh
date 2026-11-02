@@ -209,14 +209,14 @@ mod b3_4_the_menu_row_by_row_r386 {
 
         let upgraded = run(
             &mut state,
-            upgrade(json_as(json!({ "instanceId": spell.id, "times": 5 }))),
+            upgrade(json_as(json!({ "instanceId": spell.id, "times": 6 }))),
             RunOptions::default(),
         );
-        // R2657005: a Buff may give any card Flashback, so one of the five gives it that and the
-        // other four take the cost from (4) to (0).
+        // R2657005: a Buff may give any card Flashback, and R2727000 a Spell in a hand Cloaked, so two
+        // of the six give it those and the other four take the cost from (4) to (0).
         assert_eq!(
             change_kinds(&upgraded),
-            vec!["keyword", "cost", "cost", "cost", "cost"]
+            vec!["keyword", "keyword", "cost", "cost", "cost", "cost"]
         );
         assert_eq!(
             effective_cost(&state, &live(&state, &spell.id), Default::default()),

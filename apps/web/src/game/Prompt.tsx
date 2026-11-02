@@ -10,6 +10,10 @@
 // choice card (ChoiceCard.tsx), art, label and what it does, no cost, stats, id, inspect overlay or sheet.
 // No rule is applied here: `min`, `max` and the options come from the engine, from `PendingView` (the first)
 // and the `legalActions` candidates (`actions.ts`, the second).
+// #2738: a live card picker (`isCardLayout`, `data-bare`) is its cards alone over the dimmed board, as
+// Hearthstone draws a Discover: no panel, title, count or quest banner, and no Confirm when one tap
+// answers (`immediate` with `min` of at least 1). Folded (#1204), read-only (R2211000) and a lesson's
+// mulligan (`worded`) keep every word, and an `answer` keeps its problem (R420).
 
 import {
   Fragment,
@@ -179,7 +183,8 @@ type Picker = {
   artSource?: string;
   /**
    * #617: the card being played, as the view lists it, when the options are words ("Choose one"): its name in
-   * the title opens its preview and long-press sheet, so the card can be read while its choice is open.
+   * the title opens its preview and long-press sheet, so the card can be read while its choice is open
+   * (a list's title; a bare card picker has none, #2738).
    */
   sourceCard?: CardView;
   items: PickerItem[];
@@ -200,6 +205,8 @@ type Picker = {
   sequenceChoice?: string;
   /** No "Choose N: M chosen" line under the title: the mulligan outside a lesson. */
   uncounted?: boolean;
+  /** #2738: a card picker that keeps its panel and words: a tutorial lesson's mulligan, whose instruction and count the lesson teaches. */
+  worded?: boolean;
 };
 
 const CARD_CHROMES: ReadonlySet<PromptKind> = new Set(["discover", "hand", "mulligan", "pick"]);
@@ -383,6 +390,7 @@ function pickerForPending(
     chrome,
     ...(cards ? { cards } : {}),
     ...(turnOrder ? { uncounted: true } : {}),
+    ...(pending.kind === "mulligan" && lesson ? { worded: true } : {}),
     title: turnOrder
       ? view.active === view.viewer
         ? t("You are going first")
@@ -981,6 +989,18 @@ function PickerTitle(props: { title: string; sourceDefId: string | undefined; so
 }
 
 /**
+ * #2738: a bare card picker's accessible name, the words its title would have shown: the asking
+ * card's name before the ask, once (R2646000), and a reward's "Quest complete!" before its quest (R404).
+ */
+function useAskLabel(picker: Picker): string {
+  const info = useCardInfo(picker.sourceDefId ?? "", picker.sourceCard?.radiant === true);
+  if (picker.chrome === "reward") return `${t(QUEST_COMPLETE)} ${picker.title}`;
+  if (picker.sourceDefId === undefined) return picker.title;
+  const name = nameOf(picker.sourceDefId, info, isZhCn());
+  return picker.title.startsWith(`${name}: `) ? picker.title : `${name}: ${picker.title}`;
+}
+
+/**
  * A board pick's hint. On an upright phone with drag to play on, a play's zone, target and Tribute picks fold
  * to a bar with no options (prompt.css): the answers glow on the board and are tapped there, and this says so.
  */
@@ -1120,6 +1140,16 @@ function PromptModal(props: {
    * R2211000: a read-only one opens folded.
    */
   const [folded, setFolded] = useState(readOnly);
+  /**
+   * #2738: a live card picker is its cards alone, as Hearthstone draws a Discover: no panel (prompt.css
+   * keys on `data-bare`), no title, count or quest banner. Folded (#1204) it is the bar under its title;
+   * a replay's (R2211000) and a lesson's mulligan (`worded`) keep every word. An answer keeps its
+   * problem, which R420 shows and its cards do not.
+   */
+  const bare = isCardLayout(picker) && !folded && !readOnly && picker.worded !== true;
+  /** One tap answers: no Confirm. A pick that may answer with nothing (`min` 0) keeps Confirm for that. */
+  const oneTap = isCardLayout(picker) && picker.immediate && picker.min >= 1;
+  const askLabel = useAskLabel(picker);
 
   function send(keys: readonly string[]): void {
     if (readOnly) return;
@@ -1451,6 +1481,7 @@ function PromptModal(props: {
         data-testid="prompt-modal"
         data-prompt-kind={picker.chrome}
         data-prompt-layout={isCardLayout(picker) ? "cards" : undefined}
+        data-bare={bare ? "true" : undefined}
         data-prompt-source={props.source}
         data-animating={props.animating}
         /* The board cells this prompt has blessed, so a `target` pick can be made on the board
@@ -1461,19 +1492,21 @@ function PromptModal(props: {
         data-read-only={readOnly ? "true" : undefined}
         role="dialog"
         aria-modal={!folded && !readOnly}
-        aria-label={picker.title}
+        aria-label={bare ? askLabel : picker.title}
         // The answers, as cards or as a list, and Stop after them, walked by the arrows (R420).
         onKeyDown={picker.chrome === "answer" ? arrowFocus(ANSWER_COLUMNS) : undefined}
       >
-        {picker.chrome === "reward" ? (
+        {picker.chrome === "reward" && !bare ? (
           <p className="prompt-quest-banner" data-testid="prompt-quest-complete">
             {t(QUEST_COMPLETE)}
           </p>
         ) : null}
-        <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
+        {bare && picker.chrome !== "answer" ? null : (
+          <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
+        )}
         {folded ? null : (
           <>
-            {picker.uncounted === true ? null : (
+            {picker.uncounted === true || bare ? null : (
               <p className="prompt-count">
                 {t("Choose {range}: {count} chosen", { range, count: selected.length })}
               </p>
@@ -1488,7 +1521,7 @@ function PromptModal(props: {
           </>
         )}
         <div className="prompt-actions">
-          {folded || readOnly ? null : (
+          {folded || readOnly || oneTap ? null : (
             <button
               type="button"
               data-testid="prompt-submit"

@@ -576,9 +576,12 @@ describe("B32 a prompt is a bottom sheet on a phone and a centered modal on a de
         expect(Math.abs(box.bottom - 844), "the sheet's bottom edge is the viewport's").to.be.at.most(1);
       });
 
-      cy.get(ts("prompt-submit")).should(($submit) => {
-        expect(rectOf($submit[0] as Element).height, "prompt-submit").to.be.at.least(TOUCH_PX - EPSILON);
+      // #2738: a one-tap card picker (discover, a short mode) has no Confirm; only a target does.
+      const button = kind === "target" ? "prompt-submit" : "prompt-peek";
+      cy.get(ts(button)).should(($control) => {
+        expect(rectOf($control[0] as Element).height, button).to.be.at.least(TOUCH_PX - EPSILON);
       });
+      if (kind !== "target") cy.get(ts("prompt-submit")).should("not.exist");
 
       cy.get('[data-testid^="prompt-option-"]')
         .should("have.length.at.least", 2)
