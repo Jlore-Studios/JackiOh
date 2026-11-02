@@ -76,6 +76,8 @@ export const playTestid = {
   status: "play-status",
   error: "play-error",
   practice: "play-practice",
+  /** #2705: the Dungeon Run beside the other ways to play. */
+  dungeon: "play-dungeon",
   screen: "play-screen",
   online: "play-online",
   ways: "play-ways",
@@ -649,6 +651,11 @@ function waysToPlay(): readonly Way[] {
       href: paths.practice,
       testid: playTestid.practice,
       name: t("Practice"),
+    },
+    {
+      href: paths.dungeon,
+      testid: playTestid.dungeon,
+      name: t("Dungeon Run"),
     },
     {
       href: paths.together,

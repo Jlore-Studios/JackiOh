@@ -111,6 +111,8 @@ pub fn create_game_args(
         sandbox: None,
         // R915005: nor holds a custom card, which plays only in practice.
         custom_cards: None,
+        // R2702000: nor deck marks, which only the dungeon run deals.
+        deck_marks: None,
     }
 }
 
@@ -132,9 +134,11 @@ pub fn fold_args(
         dealt,
         last_boards,
         glitch_boards,
-        // R923000, R915005: as `create_game_args`, never a sandbox and no custom card.
+        // R923000, R915005, R2702000: as `create_game_args`, never a sandbox, no custom card and no
+        // deck mark.
         sandbox: None,
         custom_cards: None,
+        deck_marks: None,
     }
 }
 

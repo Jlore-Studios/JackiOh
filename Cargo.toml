@@ -17,6 +17,7 @@ jackioh-engine = { path = "crates/engine" }
 jackioh-cards = { path = "crates/cards" }
 jackioh-ai = { path = "crates/ai" }
 jackioh-luau = { path = "crates/luau" }
+jackioh-run = { path = "crates/run" }
 
 # Third-party crates (SURFACE §2), versions as written; `=` for wasm-bindgen and mlua.
 serde = { version = "1.0.229", features = ["derive"] }
