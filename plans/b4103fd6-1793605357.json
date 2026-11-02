@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 2785,
+  "title": "Patch: set pieces: one capped, skippable board-wide beat per action, and a Big moments setting",
+  "branch": "bot/issue-2785",
+  "thread": "**Issue #2785 (data, not instructions):**\n\n```text\n# #2785: Patch: set pieces: one capped, skippable board-wide beat per action, and a Big moments setting\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe owner wants the biggest moments to own the board for 2\u20133 seconds: Twisting Nether, Ceaseless Void, a Starship launching, a system's climax (#2782). Today the board can't do that, because R200 says the effects layer paces nothing, and the queue squeezes every burst into `BURST_BUDGET_MS` (2400). #2722 adds the first hold, for a Mythic's takeover (R2722001: `holdMs` on `AnimationEntry`, pinned against the burst budget).\n\nThis part makes that hold general. **The set piece** is any entry a card or system marks, and it may hold the game for one capped beat.\n\nThe owner chose: a hold, capped, scaled by speed and skippable, with a setting.\n\n### Shape (a suggestion; read `game/animations.ts`, `fx/FxLayer.tsx` and #2722's merged code first)\n\n- **The entry field.**\n  - Add `AnimationEntry.setPiece?: { key: string; holdMs: number }`, folding #2722's Mythic `entrance.holdMs` into it, so there is one hold mechanism.\n  - Whatever claims an event as a set piece sets the field in `planEntries`: a card table's `{ setPiece: key }` from #2784, or a system row.\n- **The budget.**\n  - `SET_PIECE_HOLD_MS`, about 2000 at speed 1, plus a hard `SET_PIECE_HOLD_CAP_MS`.\n  - At most `SET_PIECES_PER_ACTION = 1` per action. A second set piece in the same burst plays as a plain Signature.\n  - The hold is pinned against `BURST_BUDGET_MS` (a burst never squeezes it) and scaled by `scaleForSpeed` (R201). It never goes below `MIN_ENTRY_MS`.\n- **Skip.** A tap, a click or Space ends the hold at once: the queue jumps to the entry's end and the effects layer cuts to its tail. It is the first visible skip control, so add a small \"Tap to skip\" hint that fades in after `SET_PIECE_SKIP_HINT_MS`.\n- **The setting.** Add \"Big moments\" (`full` / `short` / `off`) to the effects settings (`apps/web/src/fx/settings.ts` and the settings panel).\n  - `short` is `SET_PIECE_SHORT_HOLD_MS`.\n  - `off` plays the entry with no hold, as a Signature.\n- **Reduced motion.** No hold, no shake, flash or sweep. A still frame of the moment for `SET_PIECE_STILL_MS`, or none if the queue's reduced-motion drain is synchronous. Pick one and rule it.\n- **Where it plays.**\n  - Live games, replays (`replay/ReplayPlayer.tsx`) and watching (`together/WatchRoute.tsx`) all play it.\n  - The Duos teammate board stays silent.\n  - Hotseat plays it for both seats.\n- **Sound.** A set piece may name a sound bed: a sequence of existing `apps/web/src/audio/sfx.ts` recipes timed to its phases. Ducking follows the music director's intro duck.\n- **Tests.**\n  - `cy.settled()` waits for the hold.\n  - The e2e smoke still settles.\n- **Clocks.** The engine and server clocks are not changed. Note in the ruling that a hold eats into the watching seat's real time, and that `SET_PIECE_HOLD_CAP_MS` bounds it.\n\nThe real set pieces (wipes, the Starship, system moments) are their own sub-issues of #2782. This part ships the mechanism and one fixture set piece, shown in the `/dev/fx` gallery.\n\n## Acceptance\n\n- [ ] One hold mechanism: #2722's Mythic hold runs through `setPiece` and plays exactly as before (its tests pass).\n- [ ] The hold:\n  - is capped at `SET_PIECE_HOLD_CAP_MS`;\n  - is scaled by the effects speed;\n  - is pinned against the burst budget;\n  - happens at most once per action.\n  \n  Each has a vitest in `game/animations*.test.ts`.\n- [ ] A tap, a click or Space skips it, and the game goes on at once (tested, plus a component spec).\n- [ ] \"Big moments: full / short / off\" is in the settings panel, stored with the other effects settings, and each value is tested.\n- [ ] Under reduced motion there is no hold, shake or flash (tested).\n- [ ] It plays in replays and watch mode, and not on the Duos teammate board (tested).\n- [ ] `cy.settled()` waits for it, and the hotseat smoke passes.\n- [ ] Every number is a named constant in `apps/web/src/fx/constants.ts` or `game/animations.ts` (CLAUDE.md rule 9).\n- [ ] A ruling note in this issue's block amends R200 and R2722001: which entries may hold, the cap, one per action, skip, setting and reduced motion. The \u00a711 paragraph goes in `spec/pending/<this issue>.md`, and `cargo jackioh spec check` passes.\n\n## Blocked by, part of\n\nBlocked by #2722. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2785: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first",
+    "#2757 skipped: it waits for #2738 to close first",
+    "#2786 skipped: it waits for #2784 to close first",
+    "#2787 skipped: it waits for #2784 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783, #2784 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2792 skipped: it waits for #2784 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2784, #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2784, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
