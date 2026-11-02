@@ -14365,31 +14365,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-02T17:09:51Z",
+      "feedback_since": "2026-11-02T20:41:28Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2851,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The issue says to fold tests that differ only by input into one table loop, but four fuzz probe tests that have exactly the shape the PR folded in decks.rs were kept, and the PR wrongly describes them as distinct stages.",
-          "evidence": "In `mod fuzz_probe_stage`, `a_reducer_that_takes_the_wrong_seat_s_action_fails_the_wrong_seat_probe` (3654), `a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe` (3659), `a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe` (3675) and `a_reducer_that_takes_a_malformed_play_fails_the_malformed_action_probe` (3711) each have a one-line body: `assert_caught(reducer, PROBE)`, or `assert_caught_at(2, lenient, MALFORMED_ANSWER_PROBE)` for the third. They differ only in the inputs (seed, reducer fn, probe name) and share one stage, `FailureStage::Probe`, which `assert_caught_at` asserts. That is the same pattern as the nine `refuses(rule, name, deck)` one-liners the PR did fold. The PR body says fuzz.rs kept the 'probe ... tests (distinct stages ...)' and that 'every other candidate in the seven files was verified in code', but these four are one stage with different inputs. The PR closes #2851, so this fold would be lost.",
-          "severity": "blocking",
-          "where": "crates/tools/src/fuzz.rs:3654"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-02T20:39:37Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "41521521368",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-02T20:41:28Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
