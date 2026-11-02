@@ -299,9 +299,7 @@ pub fn is_spent(state: &GameState, trap: &CardInstance) -> bool {
 /// R61 makes this unconditional: a trap that fired is consumed whether or not its effects achieved
 /// anything, so the caller never asks what the effect list managed to do.
 pub fn consume_trap(sink: &mut EngineSink<'_>, instance: &CardInstance) {
-    let mut card = find_instance(sink.state, &instance.id)
-        .cloned()
-        .unwrap_or_else(|| instance.clone());
+    let mut card = crate::zones::live_or(sink.state, instance);
     card.face_up = Some(true);
     if let Some(live) = find_instance_mut(sink.state, &instance.id) {
         live.face_up = Some(true);

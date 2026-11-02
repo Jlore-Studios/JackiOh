@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use crate::combat::enter_new_side;
 use crate::own_library::hide_from_owner;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, GameState, find_instance};
+use crate::state::{CardInstance, GameState};
 use crate::wire::{GameEvent, PlayerId, Row, Zone, opponent_of};
 use crate::zones::{
     PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, carried_at, is_locked, is_reserved,
@@ -170,9 +170,7 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
         // dormant Stack cards included (§3.2), and has entered its new side (R171).
         for (at, card) in entry.cards.iter().enumerate() {
             // The card as it stands in its new zone.
-            let landed = find_instance(ctx.state, &card.id)
-                .cloned()
-                .unwrap_or_else(|| card.clone());
+            let landed = crate::zones::live_or(ctx.state, card);
             let from = before.get(at).copied().unwrap_or(card.owner);
             enter_new_side(ctx, &landed, from);
             ctx.events.push(GameEvent::ControlChanged {

@@ -17,7 +17,7 @@ use jackioh_server::db::store::StartMatchInput;
 
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
-use crate::support::store::{advance, fake, uuid};
+use crate::support::store::{Account, account, advance, befriend, fake, uuid};
 
 /// Unit conversions, not configuration.
 const MINUTE_MS: u64 = 60_000;
@@ -49,12 +49,6 @@ where
 }
 
 /// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.
-struct Account {
-    id: String,
-    name: String,
-    token: String,
-}
-
 /// An account seeded with `status`, username `base#n`.
 async fn seeded(app: &Arc<App>, n: u32, base: &str, status: &str) -> Account {
     let id = uuid(n);
@@ -74,11 +68,6 @@ async fn seeded(app: &Arc<App>, n: u32, base: &str, status: &str) -> Account {
         name: format!("{base}#{tag}"),
         token,
     }
-}
-
-/// An active account, username `base#n`.
-async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    seeded(app, n, base, "active").await
 }
 
 async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
@@ -125,13 +114,6 @@ async fn accept(app: &Arc<App>, who: &Account, request_id: &str) -> (u16, Value)
         Value::Null,
     )
     .await
-}
-
-/// `a` asks `b`, `b` accepts.
-async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
-    let request_id = requested(app, a, b).await;
-    let (status, body) = accept(app, b, &request_id).await;
-    assert_eq!(status, 200, "{body}");
 }
 
 async fn block(app: &Arc<App>, who: &Account, whom: &Account) {

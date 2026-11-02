@@ -31,6 +31,7 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::PgPool;
 
+use super::contract::seed_cards;
 use crate::support::test_app::test_app;
 
 /// One transaction around one store call made outside `store.tx`: begin, the call, commit. Answers
@@ -48,18 +49,6 @@ macro_rules! once {
 }
 
 // The two ends of the contract
-
-/// The fixture catalog the Postgres end seeds: 80 playable ids and two tokens (§9.4 L1–L3).
-const CATALOG_VERSION: &str = "core-1";
-const PLAYABLE_COUNT: usize = 80;
-
-fn playable_ids() -> Vec<String> {
-    (1..=PLAYABLE_COUNT).map(|i| format!("core-{i:03}")).collect()
-}
-
-fn token_ids() -> Vec<String> {
-    vec!["core-001.1".to_string(), "core-002.1".to_string()]
-}
 
 /// Every table the migrations create, children first. `cards` is seeded once and kept. Nothing
 /// writes the loadout tables (R254) but they are emptied all the same, so a hand-written row leaves
@@ -81,26 +70,6 @@ const REDEMPTION_ENABLED_SQL: &str =
 
 fn database_url() -> Option<String> {
     std::env::var("DATABASE_URL").ok().filter(|url| !url.is_empty())
-}
-
-async fn seed_cards(admin: &PgPool) {
-    sqlx::query(
-        "insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
-     select c.id, c.ord::text, 'Fixture ' || c.id, 'Core', 'Unit', '{}'::text[],
-            case when c.token then 'Token' else 'Common' end, c.token, '1'::jsonb, $3::text
-       from (
-         select t.id, false as token, t.ord from unnest($1::text[]) with ordinality as t(id, ord)
-         union all
-         select t.id, true, 1000 + t.ord from unnest($2::text[]) with ordinality as t(id, ord)
-       ) as c
-     on conflict (id) do nothing",
-    )
-    .bind(playable_ids())
-    .bind(token_ids())
-    .bind(CATALOG_VERSION)
-    .execute(admin)
-    .await
-    .expect("seed the fixture cards");
 }
 
 struct Harness {

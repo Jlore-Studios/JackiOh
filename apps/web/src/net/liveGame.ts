@@ -5,12 +5,13 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
-import { getMe, type MeResponse, type QueueMode } from "./api.ts";
+import { getMe, isQueueMode, type MeResponse, type QueueMode } from "./api.ts";
 import { pageWake } from "../game/net.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
-import { sessionStorageOrNull } from "./storage.ts";
+import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
+import { attempt } from "./errors.ts";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
@@ -53,11 +54,6 @@ export function bannerGameOf(me: {
     return { kind: "duos", id: me.currentDuosMatchId, path: paths.duos(me.currentDuosMatchId) };
   }
   return null;
-}
-
-/** Turns a synchronous throw into a rejected promise. */
-function attempt<T>(call: () => Promise<T>): Promise<T> {
-  return Promise.resolve().then(call);
 }
 
 /**
@@ -115,16 +111,10 @@ export const QUEUE_STORAGE_KEY = "jackioh.play.queued";
 /** Fired for this tab's writes, which `storage` events do not cover. */
 const QUEUE_CHANGED = "jackioh:queue-changed";
 
-const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
-
 /** The mode this tab is queued in, or null. */
 export function readQueued(): QueueMode | null {
-  try {
-    const raw = sessionStorageOrNull()?.getItem(QUEUE_STORAGE_KEY) ?? null;
-    return (QUEUE_MODES as readonly (string | null)[]).includes(raw) ? (raw as QueueMode) : null;
-  } catch {
-    return null;
-  }
+  const raw = getStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
+  return isQueueMode(raw) ? raw : null;
 }
 
 function changed(): void {
@@ -133,21 +123,14 @@ function changed(): void {
 
 /** R765: remember this tab's queue so a pairing can follow it. */
 export function rememberQueued(mode: QueueMode): void {
-  try {
-    sessionStorageOrNull()?.setItem(QUEUE_STORAGE_KEY, mode);
-  } catch {
-    // Blocked storage: only `/play` follows the queue (R765).
-  }
+  // Blocked storage: only `/play` follows the queue (R765).
+  setStored(QUEUE_STORAGE_KEY, mode, sessionStorageOrNull());
   changed();
 }
 
 /** Forget a left or paired queue. */
 export function forgetQueued(): void {
-  try {
-    sessionStorageOrNull()?.removeItem(QUEUE_STORAGE_KEY);
-  } catch {
-    // Blocked storage has nothing to forget.
-  }
+  removeStored(QUEUE_STORAGE_KEY, sessionStorageOrNull());
   changed();
 }
 

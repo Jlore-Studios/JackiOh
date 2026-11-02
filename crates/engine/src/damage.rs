@@ -1059,9 +1059,7 @@ fn heal_unit_by(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32,
     if stated <= 0 {
         return 0;
     }
-    let live = find_instance(sink.state, &instance.id)
-        .cloned()
-        .unwrap_or_else(|| instance.clone());
+    let live = crate::zones::live_or(sink.state, instance);
     if crate::replacements::healing_replaced(
         sink,
         &DamageTarget::Unit {
