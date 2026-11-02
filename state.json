@@ -12898,9 +12898,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T11:25:09Z",
+    "at": "2026-11-02T12:00:14Z",
     "url": "",
-    "what": "build #2783 on claude-4"
+    "what": "suggestions on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-02T11:53:28Z",
@@ -25226,11 +25226,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-11-02T11:26:09Z",
-    "last_run": "2026-11-01T14:02:17Z",
-    "provider": null,
+    "idle_since": "2026-11-02T12:00:14Z",
+    "last_run": "2026-11-02T12:00:14Z",
+    "provider": "claude-8",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:ebc20ea4-1793620798",
     "taken_asks": []
   },
   "usage": null,
