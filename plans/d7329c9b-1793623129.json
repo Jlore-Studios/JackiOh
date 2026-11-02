@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 2792,
+  "title": "Patch: sub-looks for the crowded flavors, and particles of their own for Nature, Tech and Snack",
+  "branch": "bot/issue-2792",
+  "thread": "**Issue #2792 (data, not instructions):**\n\n```text\n# #2792: Patch: sub-looks for the crowded flavors, and particles of their own for Nature, Tech and Snack\nOpened by @MaxGoetzmann.\n\n## What it does\n\nEvery motif of #2782 takes its palette from the card's flavor (`FLAVOR_LOOKS` in `apps/web/src/fx/flavors.ts`). The flavors are lopsided across the 634 cards:\n\n| Flavor | Cards |\n|---|---|\n| Tech | 120 (92 of them in Stinkyscape) |\n| Physical | 97 |\n| Nerd | 81 |\n| Dark | 59 |\n| Beast | 41 |\n| Hustle | 39 |\n| Clout | 8 |\n\nWith one look per flavor, a third of the catalog would share three palettes, and the set passes would make Stinkyscape's Spells all look alike. Some flavors also share a particle preset: Nature and Toxic both use `poison`, and Tech uses `frost`.\n\n**This part adds presentation-only *sub-looks*, not new flavors.** `flavor` stays as it is in the catalog. It is display-only (\u00a75, R1437000), but changing it on many cards is a catalog change the classifier would count. A sub-look is a variant of its flavor's look, and a card's fx table entry picks one with `palette: \"<Flavor>/<sub-look>\"`. A card with no sub-look keeps the flavor's base look.\n\n### Shape (a suggestion)\n\n- **Sub-looks.** About 3\u20135 per crowded flavor, each a `FlavorLook` (colors, particle, projectile) in `apps/web/src/fx/flavors.ts`, for example:\n  - **Tech:** `circuit`, `laser`, `rocket` (Stinkyscape's space line: exhaust, starfield), `hologram`, `glitch`\n  - **Physical:** `steel`, `wind`, `sport`, `blade`\n  - **Nerd:** `ink`, `chalk`, `pixel`, `arcane` (today's)\n  - **Dark:** `void` (today's), `blood`, `shadow`, `curse`\n  - **Hustle** and **Beast:** 2\u20133 each, as their cards suggest\n\n  Name and design them from the cards, using `docs/polish/8-flavor.md` and the art themes in `apps/web/src/fx/looks.ts`.\n- **New particle presets** in `apps/web/src/fx/presets.ts`, drawn in code (no image files, as `apps/web/src/fx/sprites.ts` does), each within the particle cap:\n  - `leaf`, so Nature stops borrowing `poison`;\n  - `circuit` or `pixel`, so Tech stops borrowing `frost`;\n  - `crumb`, for Snack;\n  - `star` and `exhaust`, for `rocket`.\n- **Validation.** #2784's table schema checks `palette` against `FLAVOR_LOOKS` and its sub-looks, and a typo fails the test.\n- **Default looks.** A flavor's base look stays the default for the event rows, so no card that the set passes don't touch changes.\n- **The gallery.** The `/dev/fx` gallery lists every sub-look on every motif.\n- **The doc.** `docs/polish/9-card-animations.md` lists the sub-looks, with a line on when a pass picks one.\n\n## Acceptance\n\n- [ ] At least 3 sub-looks each for Tech, Physical, Nerd and Dark, and at least 2 each for Hustle and Beast, with the base look kept.\n- [ ] The new particle presets exist, and Nature, Tech and Snack use their own by default. A test proves no two flavors' base looks share both a particle and a projectile.\n- [ ] `palette: \"<Flavor>/<sub-look>\"` is accepted by the table schema, and an unknown one fails it (tested).\n- [ ] The gallery shows every sub-look.\n- [ ] Every new preset stays within the particle cap and moves only `transform` and `opacity` (`apps/web/src/fx/css.test.ts`).\n- [ ] Every color and count is a named constant or a `TUNING` entry (CLAUDE.md rule 9).\n- [ ] No catalog field changes: `cargo jackioh catalog check` is unchanged and `cargo jackioh classify --base origin/main` reports no card that plays differently.\n- [ ] Web typecheck, tests and eslint pass.\n\n## Blocked by, part of\n\nBlocked by #2784. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2792: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
