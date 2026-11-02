@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 1120">
+<defs>
+  <linearGradient id="wordGold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fbe7b0"/><stop offset="0.22" stop-color="#ffe39a"/><stop offset="0.44" stop-color="#f3c969"/>
+    <stop offset="0.62" stop-color="#c9953f"/><stop offset="0.82" stop-color="#9b6423"/><stop offset="1" stop-color="#d9a44c"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#fff6d6"/><stop offset="0.32" stop-color="#fde68a"/>
+    <stop offset="0.62" stop-color="#f0c04a"/><stop offset="1" stop-color="#a86a1f"/>
+  </linearGradient>
+  <linearGradient id="goldEdge" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fde68a"/><stop offset="0.5" stop-color="#c9953f"/><stop offset="1" stop-color="#f0c04a"/>
+  </linearGradient>
+  <radialGradient id="face" cx="0.5" cy="0.4" r="0.75">
+    <stop offset="0" stop-color="#3a2f6e"/><stop offset="0.55" stop-color="#241c44"/><stop offset="1" stop-color="#141a2e"/>
+  </radialGradient>
+  <linearGradient id="back" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#2b3349"/><stop offset="1" stop-color="#141a2e"/>
+  </linearGradient>
+  <pattern id="stripes" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="22" height="22" fill="none"/><rect width="9" height="22" fill="#ffffff" fill-opacity="0.045"/>
+  </pattern>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.45"/><stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0e0905" flood-opacity="0.55"/>
+  </filter>
+  <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#0e0905" flood-opacity="0.65"/>
+  </filter>
+</defs>
+<circle cx="410.0" cy="560.0" r="377.2" fill="url(#glow)"/><path d="M286.40000000000003 921.62 256.0 885.14 257.52000000000004 873.74Q283.36 850.1800000000001 297.04 828.52Q310.72 806.86 315.66 776.46Q320.6 746.0600000000001 320.6 696.66V410.90000000000003Q320.6 387.34000000000003 316.04 379.74Q311.48 372.14 296.28000000000003 372.14Q290.96000000000004 372.14 284.5 372.52Q278.04 372.90000000000003 273.48 373.28000000000003Q268.92 373.66 268.92 373.66L262.08 363.02000000000004L268.16 305.26L375.32 304.5Q412.56 303.74 445.24 302.6Q477.92 301.46000000000004 498.82000000000005 300.32000000000005Q519.72 299.18 519.72 299.18L513.64 369.86Q491.6 375.18 485.52000000000004 381.64Q479.44000000000005 388.1 477.92 409.38Q476.4 430.66 475.26 459.92Q474.12 489.18 472.98 523.38Q471.84000000000003 557.58 470.70000000000005 594.06Q469.56 630.54 469.18 665.88Q468.8 701.22 468.8 732.38Q468.8 805.34 425.1 850.94Q381.4 896.54 286.40000000000003 921.62Z" fill="url(#gold)" stroke="#2b1800" stroke-width="14.44" stroke-linejoin="round" paint-order="stroke" filter="url(#lift)"/><path d="M615.0 126.4 L643.2 229.4 L746.2 257.6 L643.2 285.8 L615.0 388.8 L586.8 285.8 L483.8 257.6 L586.8 229.4 Z" fill="#fff6d6" stroke="#f0c04a" stroke-width="7.871999999999999" stroke-linejoin="round" filter="url(#lift)"/>
+</svg>
