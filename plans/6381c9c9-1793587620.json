@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 2579,
+  "title": "Patch: retire `cargo jackioh luau surface`, the survey for moving official cards to Luau",
+  "branch": "bot/issue-2579",
+  "thread": "**Issue #2579 (data, not instructions):**\n\n```text\n# #2579: Patch: retire `cargo jackioh luau surface`, the survey for moving official cards to Luau\nOpened by @MaxGoetzmann.\n\nBlocked by #2497 (its part 14, #2515, compacts the comments of `crates/tools`, Luau included; deleting these files first would conflict with its reconcile).\n\n## Why\n`cargo jackioh luau surface` (`crates/tools/src/luau/surface.rs`, 1,819 lines) was groundwork for #442: it lists, card by card, the engine API each Rust card script calls, so the scripts could be moved to Luau (#560, part 6). #902 (v0.5.0) brought every official card back to Rust, and #2156 removed `docs/v0.4.0/PORTING.md`. Nothing runs the command any more: no workflow, script or test outside its own, and `docs/v0.4.0/api-gaps.md` says it \"was not re-run\" for its last update. Luau itself stays: custom cards run on it (`docs/custom-cards.md`), so `crates/luau`, `luau diff` and `luau bench` are untouched.\n\nThe owner approved removing the subcommand here (CLAUDE.md rule 13).\n\n## Do\n- Delete `crates/tools/src/luau/surface.rs` and the text fixtures only it reads, `crates/tools/tests/luau/*.rs` (`calls`, `clone`, `edit`, `field`, `helpers`, `literals`, `spread`, `unreadable`). Before deleting, confirm with `git grep` that nothing else reads them. Keep `crates/tools/tests/luau.rs`, which tests `golden record` and `luau diff`.\n- `crates/tools/src/luau.rs`: drop `mod surface`, the `Surface` variant and its arm, and the header and doc lines that name it. `crates/tools/src/main.rs:80`: the doc line names only `luau diff` and `luau bench`.\n- `crates/tools/README.md`: delete the `luau surface` row.\n- `crates/luau/README.md` and `crates/luau/src/reads.rs`: drop or reword the lines that cite `luau surface`, in comments only.\n- `docs/v0.4.0/api-gaps.md`: keep it as the record of the Luau API's gaps. Replace its \"regenerate with `cargo jackioh luau surface --json`\" instructions (around lines 5\u201320) with one line saying the command was retired by this issue; its numbers are part 6's. `docs/v0.4.0/README.md`: the groundwork row (around line 91) says the same.\n- Nothing else. No change to `.github/`.\n\n## Acceptance criteria\n- [ ] `cargo jackioh luau surface` is an unknown subcommand. `cargo jackioh luau diff --help` and `luau bench --help` still work.\n- [ ] `git grep -n \"luau surface\\|luau::surface\\|SurfaceArgs\"` prints only `docs/v0.4.0/` lines that describe its retirement.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p jackioh-tools` and `cargo jackioh spec check` pass.\n- [ ] `cargo jackioh classify --base origin/main --claims` labels it `kind:internal` with no pending fragment.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2579: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #2770: it conflicts with main",
+    "queued #2769: it conflicts with main",
+    "queued #2766: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2739 skipped: it waits for #2738 to close first",
+    "#2757 skipped: it waits for #2738 to close first"
+  ]
+}
