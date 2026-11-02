@@ -13184,9 +13184,7 @@
     },
     "2831": {
       "action": "revise",
-      "asks": [
-        "c:6591288136"
-      ],
+      "asks": [],
       "audit_tier": "strong",
       "ci_fixes": 2,
       "ci_reruns": {
@@ -13219,20 +13217,22 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-7",
       "question": "CI on #2831 fails because `main` (d044c4a46) does not build: `crates/run/src/fight.rs:164` matches `GameEvent::Healed { target_id, amount }`, but #2832 added a `via` field to `Healed` (E0027). Nothing on this branch causes it, since the branch changes no file under `crates/`. Should `main` get its own fix (`GameEvent::Healed { target_id, amount, .. }` in `crates/run/src/fight.rs`), after which this PR only needs `main` merged in and CI re-run? Or may this PR carry that one-line fix, which is outside its scope?",
       "queued_at": "2026-11-02T23:42:09Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "try again",
       "round_tier": "strong",
-      "run_id": "41480183786",
+      "run_id": "pending:1a98eafe-1793663003",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-02T16:18:30Z",
+      "started_at": "2026-11-02T23:43:51Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6591288136"
+      ],
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
@@ -14716,9 +14716,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T23:43:09Z",
+    "at": "2026-11-02T23:43:51Z",
     "url": "",
-    "what": "revise #2835 on claude-8"
+    "what": "revise #2831 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-02T23:34:58Z",
