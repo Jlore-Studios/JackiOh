@@ -10,13 +10,13 @@ import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } 
 import { readerName } from "../cards/chinese.ts";
 import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import type { CollectionResponse, OwnedCosmeticsResponse, TrackRewards } from "../net/api.ts";
+import type { CollectionResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
 import { quantitiesOf } from "../shop/shop.ts";
 import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 
 /** The panels that read for themselves; the quests panel owns its own read. */
-export type CollectionPart = "cards" | "wallet" | "tracks" | "cosmetics";
+export type CollectionPart = "cards" | "wallet" | "tracks";
 
 /** R1579000: the hub's sections that open in place, by `?section=`. */
 export const COLLECTION_SECTIONS = ["cards", "cosmetics"] as const;
@@ -73,8 +73,6 @@ export const collectionTestid = {
   previewScrim: "collection-preview-scrim",
   previewClose: "collection-preview-close",
   previewStatus: "collection-preview-status",
-  ownedCosmetic: (id: string, cardId: string | null) =>
-    cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;
 
 export const COLLECTED_DEFS: readonly CardDef[] = Object.values(CATALOG).filter((def) => !def.token && setShips(def.set));
@@ -114,26 +112,6 @@ export function lockWords(): string {
     "Locked: unlocks once the {newest} track reaches level {level}. Older sets then unlock one per game, the most recent first.",
     { newest: t(newestShippedSet()), level: formatNumber(SET_TRACK_UNLOCK_LEVEL) },
   );
-}
-
-/**
- * R1579000: the cosmetics the account owns, in the registry's order: each starter (every account's,
- * §14.2) once, no default, and the server's rest (R1313000), a per-card one once per card it sits on,
- * an account one (a portrait, R1827000) on no card. An id this client does not know is not shown.
- */
-export function ownedCosmetics(owned: OwnedCosmeticsResponse): { cosmetic: Cosmetic; cardId: string | null }[] {
-  const out: { cosmetic: Cosmetic; cardId: string | null }[] = [];
-  for (const cosmetic of COSMETICS) {
-    if (cosmetic.default) continue;
-    if (cosmetic.starter || owned.account.includes(cosmetic.id)) {
-      out.push({ cosmetic, cardId: null });
-      continue;
-    }
-    for (const row of owned.cards) {
-      if (row.cosmeticId === cosmetic.id) out.push({ cosmetic, cardId: row.cardId });
-    }
-  }
-  return out;
 }
 
 /** R711000: a catalog card's name as the reader reads it (`readerName`), else its id. */
