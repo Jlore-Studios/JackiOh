@@ -11,20 +11,17 @@ import OwnedCards from "../collection/OwnedCards.tsx";
 import TracksPanel from "../collection/TracksPanel.tsx";
 import WalletPanel from "../collection/WalletPanel.tsx";
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
-import OwnedCosmetics from "../collection/CosmeticsPanel.tsx";
 import { collectionSectionOf, collectionTestid, type CollectionPart } from "../collection/collection.ts";
 import { t } from "../i18n/i18n.ts";
 import {
   getCollection,
   getCosmeticPacks,
-  getOwnedCosmetics,
   getPacks,
   getTracks,
   getWallet,
   keptPaths,
   type CollectionResponse,
   type CosmeticPacksResponse,
-  type OwnedCosmeticsResponse,
   type PacksResponse,
   type TracksResponse,
   type WalletResponse,
@@ -55,8 +52,6 @@ async function readWallet(token: string): Promise<WalletRead> {
 const keptCollection = (token: string): CollectionResponse | undefined =>
   cachedRead<CollectionResponse>(token, keptPaths.collection);
 const keptTracks = (token: string): TracksResponse | undefined => cachedRead<TracksResponse>(token, keptPaths.tracks);
-const keptOwned = (token: string): OwnedCosmeticsResponse | undefined =>
-  cachedRead<OwnedCosmeticsResponse>(token, keptPaths.cosmetics);
 
 /** The wallet panel starts from its three answers or from none: half a panel is not one. */
 function keptWallet(token: string): WalletRead | undefined {
@@ -253,13 +248,12 @@ function CardsSection({ token }: { token: string }): ReactElement {
 }
 
 /**
- * What is equipped, the only place to pick it (R1579000), and what the account owns. R1655000: a
- * card's own picks are set from the card in the Cards section. R1953001: a card with no pick of its
- * own wears its kind's default, and a locked tile offers a held cosmetic token in place.
+ * What is equipped, the only place to pick it (R1579000). R1655000: a card's own picks are set from the
+ * card in the Cards section. R1953001: a card with no pick of its own wears its kind's default, and a
+ * locked tile offers a held cosmetic token in place. R2731000: no list of what the account owns, which
+ * the tiles and the cards already show.
  */
 function CosmeticsSection({ token }: { token: string }): ReactElement {
-  const owned = useRead(token, getOwnedCosmetics, keptOwned);
-
   return (
     <>
       <h2>{t("Cosmetics")}</h2>
@@ -273,9 +267,6 @@ function CosmeticsSection({ token }: { token: string }): ReactElement {
           </p>
           <AccountCosmeticTiles token={token} />
         </section>
-        <Section part="cosmetics" title={t("Owned")} loading={t("Loading your cosmetics…")} read={owned}>
-          {(value) => <OwnedCosmetics owned={value} />}
-        </Section>
       </div>
     </>
   );

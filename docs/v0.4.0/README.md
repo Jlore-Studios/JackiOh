@@ -90,7 +90,7 @@ reconcile.
 
 | Part | Issue | What | Where it is |
 |---|---|---|---|
-| — | #558, #559, #560 | Groundwork: the host crate on `main` (#633), the proof tools on `main` (#615), `cargo jackioh luau surface` | `main`; #560 on the branch |
+| — | #558, #559, #560 | Groundwork: the host crate on `main` (#633), the proof tools on `main` (#615), `cargo jackioh luau surface` (retired by #2579) | `main`; #560 on the branch |
 | 1, 2 | #443, #444 | Game records for analysis; the first notebooks (from an earlier, 23-part plan) | `main` (#501, #514) |
 | 3 | #445 | The notebooks in the daily super run | a person's; not on the branch |
 | 4 | #446 | The host wired into the cards; three pilots | branch |
@@ -169,7 +169,7 @@ yet (#558, as #633); the proof tools on `main` (#559, as #615): `golden record`,
 --file`, `luau diff` (200 forced games by §10.7's random policy, a token forced through the deckable
 card whose `refs` name it, R279, replayed by the parent; any mismatch prints seed, step, which hash
 and the action, and exits 1) and `luau bench` (`BENCH_BUDGETS` 1.5× / 2× / 2× and the absolute
-`AI_GATE.max_decision_ms` cap); and `cargo jackioh luau surface` (#560), which read all 447 catalog
+`AI_GATE.max_decision_ms` cap); and `cargo jackioh luau surface` (#560, retired by #2579), which read all 447 catalog
 cards then, marked 14 to stay Rust and left none unreadable or unclassified.
 
 ### 5.2 Part 4 (#446): the host in the cards, and three pilots
@@ -462,8 +462,8 @@ Part 28 took classic-026, -030 and -035. The rest are in section 4.
   gap 15 an in-place run failed on the `.luaurc` alias. Batches disagreed on an unused `require` in
   a file that calls nothing (an `ImportUnused` warning); the reconcile removed them.
 - **Tests the batches could not fix.** From part 7 on, the `jackioh-tools` runs failed
-  `luau::surface::tests::luau_core_002_bigot` and `luau_reports_print_as_markdown_and_json`
-  (`luau surface` reads `script()` from `.rs` files, and Bigot has been Luau since part 4), and from
+  the API survey's `luau_core_002_bigot` and `luau_reports_print_as_markdown_and_json`
+  (the survey, retired by #2579, read `script()` from `.rs` files, and Bigot has been Luau since part 4), and from
   part 10 on, the first to run it, `acceptance.rs`'s
   `v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other` (`crates/cards` depends on
   `jackioh-luau` since part 4). On part 28's build `cargo fmt --check` failed on one `assert!` in
