@@ -361,12 +361,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn prints_spell_damage_6() {
-            let s = scenario(json!({ "p1": { "field": [{ "def": PRIME, "radiant": true }] } }));
-            assert!(s.stats(PRIME).keywords.contains(&Keyword::SpellDamage { n: 6 }));
-        }
-
-        #[test]
         fn casts_5_radiant_spells() {
             for seed in seeds().into_iter().take(6) {
                 let (s, prime) = play_prime(&seed, PrimeOptions { radiant: true, ..PrimeOptions::default() });

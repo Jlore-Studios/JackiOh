@@ -744,7 +744,7 @@ describe("B2 subscribeSignals", () => {
 
 describe("B3 default settings", () => {
   it("B3 the default settings schedule exactly what a queue with no settings option schedules", () => {
-    expect(DEFAULT_FX_SETTINGS).toEqual({ speed: 1, intensity: "normal", motion: "system" });
+    expect(DEFAULT_FX_SETTINGS).toEqual({ speed: 1, intensity: "normal", motion: "system", bigMoments: "full" });
 
     const injected = fakeClock();
     const plain = fakeClock();

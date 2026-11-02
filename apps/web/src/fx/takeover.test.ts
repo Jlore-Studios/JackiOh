@@ -1,11 +1,19 @@
 // R2722001: a Legendary's or a Mythic's entrance and a Mythic's takeover of the board (takeover.ts),
-// planned from the entry's `entrance` (game/animations.ts `entranceEntries`) and bounded by R200.
+// planned from the entry's `entrance` (game/animations.ts `entranceEntries`), held as its set piece
+// (`setPieceEntries`, R2785000) and bounded by R200.
 // R2722002: a hidden card's at its reveal, centred on the zone that flipped.
 
 import type { CardType, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
-import { entranceEntries, planEntries, type AnimationEntry, type EntranceResolver } from "../game/animations.ts";
+import {
+  entranceEntries,
+  planEntries,
+  setPieceEntries,
+  takeoverClaim,
+  type AnimationEntry,
+  type EntranceResolver,
+} from "../game/animations.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
 import { FX_INTENSITY_SCALE, FX_MAX_TAIL_MS, FX_TAKEOVER_TAIL_MS, FX_TAKEOVER_TRAUMA } from "./constants.ts";
 import { planFx } from "./cues.ts";
@@ -41,7 +49,8 @@ const fired = (defId: string, again = false): GameEvent => ({
 });
 
 function entry(events: GameEvent[], view: PlayerView = p1): AnimationEntry {
-  const entries = entranceEntries(planEntries(events, view, false), resolve, { reduced: false, speed: 1, seen: new Set() });
+  const entered = entranceEntries(planEntries(events, view, false), resolve, { seen: new Set() });
+  const entries = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
   const found = entries.find((e) => e.entrance !== undefined) ?? entries[0];
   if (found === undefined) throw new Error("no entry");
   return found;
@@ -59,7 +68,7 @@ describe("R2722001 a Mythic takes over the board", () => {
       expect(takeover, JSON.stringify(events)).toBeDefined();
       // It lands after the hold, inside the entry, and fades out within the tail.
       expect(takeover?.landMs).toBe(entranceLandMs(e, D));
-      expect(takeover?.landMs ?? 0).toBeGreaterThan(e.entrance?.holdMs ?? 0);
+      expect(takeover?.landMs ?? 0).toBeGreaterThan(e.setPiece?.holdMs ?? 0);
       expect(takeover?.landMs ?? Infinity).toBeLessThan(D);
       expect(takeover?.durationMs).toBe(D + FX_TAKEOVER_TAIL_MS);
       expect(shakes(cues)).toContain(FX_TAKEOVER_TRAUMA);
@@ -102,7 +111,8 @@ describe("R2722002 a hidden card's entrance centres on the zone that flipped", (
     expect(rays).toMatchObject({ tone: "legendary", at: { kind: "testid", testid: "zone-you-backrow-3" } });
     // The other seat reads a Cloaked card's reveal at its firing too (R2734000), centred where it flips.
     const reveal: GameEvent = { type: "activated", player: "p1", instanceId: "c61", defId: "meditative-008", ability: "reveal" };
-    const theirs = entranceEntries(planEntries([reveal, fired("meditative-008")], p2, false), resolve, { reduced: false, speed: 1, seen: new Set() });
+    const entered = entranceEntries(planEntries([reveal, fired("meditative-008")], p2, false), resolve, { seen: new Set() });
+    const theirs = setPieceEntries(entered, takeoverClaim, { reduced: false, bigMoments: "full", speed: 1 });
     const at = theirs.find((e) => e.entrance !== undefined);
     if (at === undefined) throw new Error("no entry");
     expect(at.events.some((e) => e.type === "trapFired")).toBe(true);

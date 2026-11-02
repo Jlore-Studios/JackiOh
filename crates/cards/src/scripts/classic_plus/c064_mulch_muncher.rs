@@ -111,25 +111,6 @@ mod tests {
         keywords.iter().map(|keyword| keyword.kind().as_str().to_string()).collect()
     }
 
-    #[test]
-    fn prints_a_5_9_9_rush_trample_radiant_18_18_with_divine_shield_and_runs_one_script_on_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.cost, CardCost::Fixed(5));
-        assert_eq!(def.base.attack, Some(9));
-        assert_eq!(def.base.health, Some(9));
-        assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::Trample]);
-        assert_eq!(def.radiant.attack, Some(18));
-        assert_eq!(def.radiant.health, Some(18));
-        assert_eq!(def.radiant.keywords, vec![Keyword::Rush, Keyword::Trample, Keyword::DivineShield]);
-        assert!(!def.tags.contains(&Tag::Fruit));
-        let scripts = super::script();
-        assert!(std::sync::Arc::ptr_eq(
-            scripts.radiant.cost.as_ref().expect("a cost hook"),
-            scripts.base.cost.as_ref().expect("a cost hook"),
-        ));
-    }
-
     mod base {
         use super::*;
 

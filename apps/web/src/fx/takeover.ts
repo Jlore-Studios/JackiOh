@@ -1,7 +1,7 @@
 // R2722001: a Legendary's or a Mythic's entrance (animations.ts `entranceEntries`), and a Mythic's
 // takeover of the whole board, after Hearthstone's Deathwing.
 //
-// The queue gives a readable Mythic's entry the takeover's hold (`TAKEOVER_HOLD_MS`, one per action),
+// The queue gives a readable Mythic's entry the takeover's hold (`TAKEOVER_HOLD_MS`, its set piece, R2785000),
 // so the board can darken and a card-shaped silhouette sweep across it before the card lands at
 // `entranceLandMs`; there the rays turn, a shockwave crosses both sides and the board shakes as hard
 // as it ever does. Everything here is cue data built as cues.ts builds its own: it starts inside the
@@ -45,7 +45,7 @@ const CENTER: FxAnchor = { kind: "viewport", at: { x: FX_CENTER.x, y: FX_CENTER.
 const SECOND_WAVE_AT = 0.3;
 
 /** R2722001: when in its entry an entrance's card lands: after the hold (and a slam's anticipation), at FX_SLAM_AT of the motion. */
-export function entranceLandMs(entry: Pick<AnimationEntry, "slam" | "entrance">, D: number): number {
+export function entranceLandMs(entry: Pick<AnimationEntry, "slam" | "setPiece">, D: number): number {
   const wait = leadMs(entry);
   return wait + frac(FX_SLAM_AT, D - wait);
 }

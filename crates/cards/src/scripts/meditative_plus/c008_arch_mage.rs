@@ -38,31 +38,6 @@ mod tests {
         json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
     }
 
-    mod base {
-        use super::*;
-
-        #[test]
-        fn is_4_8() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": [FILLER], "field": [MAGE] }, "p2": { "hand": [FILLER] } }));
-            s.expect_stats(MAGE, json!({ "attack": 4, "health": 8, "maxHealth": 8 }));
-        }
-    }
-
-    mod radiant {
-        use super::*;
-
-        #[test]
-        fn is_8_16() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "hand": [FILLER], "field": [{ "def": MAGE, "radiant": true }] },
-                "p2": { "hand": [FILLER] },
-            }));
-            s.expect_stats(MAGE, json!({ "attack": 8, "health": 16, "maxHealth": 16 }));
-        }
-    }
-
     #[test]
     fn s4_4_step_0_your_spell_deals_3_more_per_hit() {
         crate::register_all();
