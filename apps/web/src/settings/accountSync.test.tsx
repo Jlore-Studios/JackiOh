@@ -278,7 +278,8 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(api.save).toHaveBeenCalledTimes(1);
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cards"]);
-    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true });
+    // R2721000's rarityFoil rides the cards group like the other account-kept settings; only setWatermarks stays on the device.
+    expect(sent["cards"]?.values).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true, opponentCosmetics: true, rarityFoil: false });
     expect(sent["cards"]?.values).not.toHaveProperty("setWatermarks");
     expect(DEVICE_CARD_SETTINGS).toEqual(["setWatermarks"]);
   });
