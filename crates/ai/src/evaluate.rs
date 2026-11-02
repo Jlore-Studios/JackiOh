@@ -170,8 +170,7 @@ fn leaves_behind(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R2424000: what `unit`'s death leaves its controller, by `prices`, while it leaves something
-/// (`leaves_behind`: a live Death, or a Starship Piece's fusion, R2566000). 0 where `prices` has no entry
-/// and at a zero `death` weight.
+/// (`leaves_behind`, R2566000). 0 where `prices` has no entry and at a zero `death` weight.
 fn death_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
     if w.death == 0.0 {
         return 0.0;
@@ -1352,7 +1351,7 @@ fn turn_hook_probe(
 }
 
 /// R2477000, R2565000: `turn_hook_probe` for a Field Spell or a Unit in `seat`'s hand, set or placed
-/// first (R923001's spawn, a fresh card of its definition and face): a Field Spell in the backrow zone a
+/// first (R923001's spawn): a Field Spell in the backrow zone a
 /// set would take (`first_entry_zone`; a full backrow prices nothing), a Unit as `spawn_hand_unit` does.
 fn spawned_turn_hook_probe(
     world: &GameState,

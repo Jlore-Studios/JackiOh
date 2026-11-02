@@ -114,7 +114,7 @@ function nameProblems(root: Element, expected: string, at: string): string[] {
 function InspectGrid({ height, face }: { height: number; face: Face }) {
   const width = widthFor(height);
   return (
-    // R2655001: API Key Fishing and Tatches the Totem print full art now; the grid reads their words.
+    // R2655001: API Key Fishing and Tatches the Totem print full art; the grid reads their words.
     <FullArtAllowed allowed={false}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
         {MEDITATIVE.map((def) => (
@@ -388,7 +388,7 @@ describe("MN09: the set mark and the All Tribes label sit where they should on e
     it(`MN09 R1382 "All Tribes" leads the tags line, inside the face and clear of the rules and the stats${chinese ? ", on a Chinese face" : ""}`, () => {
       cy.viewport(1280, 900);
       cy.mount(
-        // R2655001: Tatches the Totem prints full art now; the test reads its tags line.
+        // R2655001: Tatches the Totem prints full art; the test reads its tags line.
         <FullArtAllowed allowed={false}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: 8 }}>
             {[PREVIEW_HEIGHT_PX, Math.round(170 / FACE_ASPECT)].flatMap((height) =>

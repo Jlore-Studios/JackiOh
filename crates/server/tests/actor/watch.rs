@@ -6,9 +6,9 @@
 //! match sockets hear `watchers {count}` when the count changes.
 //!
 //! The match is a real one on the registry, played with the server tests' cards
-//! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
-//! actor tests attach them. The watcher is a real WebSocket over the app served on in-memory pipes
-//! (`actor/duos.rs`'s harness), on tokio's paused clock.
+//! (`support::engine`); its players are attached with in-memory sockets (`support::socket`). The watcher
+//! is a real WebSocket over the app served on in-memory pipes (`actor/duos.rs`'s harness), on tokio's
+//! paused clock.
 
 use std::sync::Arc;
 use std::time::Duration;

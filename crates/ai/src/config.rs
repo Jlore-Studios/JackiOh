@@ -149,11 +149,9 @@ pub struct AiSearch {
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
     pub tribute_sets: i32,
-    /// A decision's width at or under which the searched part of its budget is spent in full; above it
-    /// the budget shrinks in inverse proportion, so the slow states of a long hand and a full board
-    /// (R186's sweep flags a decision over 2 s) cost about an ordinary one. Cards held or in play count
-    /// toward the width, since a prompt's few answers hide the fat state they answer into (decide.rs
-    /// `fat_width`).
+    /// A decision's width (decide.rs `fat_width`) at or under which the searched part of its budget is
+    /// spent in full; above it the budget shrinks in inverse proportion, so the slow states of a long
+    /// hand and a full board (R186's sweep flags a decision over 2 s) cost about an ordinary one.
     pub fat_reference: i32,
     /// The least the scaled budget ever holds (the lethal walk still gets its depth-first pass and
     /// the beam a few expansions at the widest states).

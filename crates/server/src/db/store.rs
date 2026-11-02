@@ -1585,9 +1585,8 @@ impl Db {
 
     /// Opens one transaction, the only way to a `Tx`. Postgres (`pg::begin`): `BEGIN`, then `db::pg`'s
     /// `SESSION_SQL` switches to `service_role` and sets `request.jwt.claim.sub` to `claim_sub`, the
-    /// profile the call is about, or `""` for a call about nobody (`tickets_list_open`, `matches_live`,
-    /// `codes_count_failures`). The fake: takes the tables' lock and a snapshot to restore if the
-    /// transaction is dropped uncommitted.
+    /// profile the call is about, or `""` for a call about nobody. The fake: takes the tables' lock and a
+    /// snapshot to restore if the transaction is dropped uncommitted.
     pub async fn begin(&self, claim_sub: Option<&str>) -> Result<Tx<'_>, StoreError> {
         match self {
             Db::Pg(pool) => Ok(Tx::Pg(pg::begin(pool, claim_sub).await?)),

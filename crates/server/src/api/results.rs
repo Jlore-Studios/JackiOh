@@ -4,7 +4,6 @@
 //! updates ratings if ranked (R604), clears in-match flags, and stores final replay hashes (R768).
 //! Idempotent to support concurrent actor and reaper (§9.5) execution.
 //!
-//! Rating updates are delegated to `rate_ranked_game` (R611).
 //! Unranked matches record unchanged ratings and unranked pay rates (R604, R1502000).
 //! Conquest games commit progress in `advance_series_in_tx`, rating once at series end (R262, R263, R332).
 

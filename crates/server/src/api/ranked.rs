@@ -1,9 +1,5 @@
-//! Ranked ladder management (SPEC §9.12, R603–R612).
-//!
-//! Coordinates rating persistence with `crate::ranked` rules. Called by:
-//! - `results.rs` on ranked match completion (R604);
-//! - `series.rs` on ranked series end (R262);
-//! - `app.rs` at boot to open the build's season (R609, SURFACE §11.2).
+//! Ranked ladder management (SPEC §9.12, R603–R612): rating persistence over `crate::ranked`'s rules,
+//! for a ranked match's result (R604), a ranked series' end (R262) and the build's season at boot (R609).
 //!
 //! Never exposes raw ratings to clients (R612); returns `VisibleRank`, usernames, and badges (R1436).
 

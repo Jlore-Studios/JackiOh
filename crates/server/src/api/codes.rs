@@ -473,8 +473,6 @@ async fn redeem_for_request(
 
 /// `POST /api/codes/redeem` (`AuthLevel::User`, not `Active`: a pending account is exactly the
 /// caller this endpoint is for — §9.4: "Redeeming an invite code flips pending to active").
-///
-/// §9.4's breaker lives in `app.breaker`, so each test can drive it from a known state.
 pub async fn redeem(app: &Arc<App>, req: Req) -> ApiResult {
     // Measured from the handler's first line: §9.4's "identical time" is about the response the
     // client sees, not about the lookup alone.

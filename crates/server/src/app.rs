@@ -67,7 +67,7 @@ pub struct App {
     /// SPEC §11 R1523000: the seat ledger, the one game each profile holds (`seats`); `serve` boots it
     /// before the port opens.
     pub seats: crate::seats::Seats,
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // Social: friends, presence, challenges, chat (#937, #938, #941)
     /// SPEC S7: the friend requests' and chat's own allowances (B43, B53).
     pub social: crate::social::Social,
     /// #1035: the setup of the blocking job a whole-log fold runs in (`actor::engine::off_runtime`):
@@ -688,7 +688,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::dev::fill_bar),
     ),
-    // ---- Social: watching and shared replays (#939, #940) ----
+    // Social: watching and shared replays (#939, #940)
     // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a
     // match id.
     (
@@ -716,7 +716,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::social::shares::unshare_replay),
     ),
-    // ---- end Social: watching and shared replays ----
+    // end Social: watching and shared replays
     // api/replays.rs
     (
         "GET",
@@ -730,7 +730,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::replays::get_replay),
     ),
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // Social: friends, presence, challenges, chat (#937, #938, #941)
     // social/*.rs (SPEC S7). `/api/chat/unread` comes before `/api/chat/:friendId`, which would
     // otherwise take it as a friend's id.
     (
@@ -835,8 +835,8 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::social::chat::send),
     ),
-    // ---- end Social ----
-    // ---- Duos co-op (#946) ----
+    // end Social
+    // Duos co-op (#946)
     // Fullsend SPEC S6: duos/rooms.rs and duos/replay.rs.
     (
         "POST",
@@ -886,7 +886,7 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::duos::again::again_status),
     ),
-    // ---- end Duos co-op (#946) ----
+    // end Duos co-op (#946)
     // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
     // answers as a path nobody serves.
     (
@@ -915,8 +915,6 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     .await?;
     catalog.commit = env.deployed_commit.clone();
 
-    // BUILD M8, R144: end-to-end mode swaps exactly two things — the store and the auth provider —
-    // and nothing else about this file changes.
     let (db, auth) = if env.e2e {
         // R111's launch grant reads the catalog.
         let (tokens, bans) = (catalog.clone(), catalog.clone());
@@ -974,7 +972,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         rematch_offers: api::rematch::RematchOffers::default(),
         duos_again_offers: crate::duos::again::DuosAgainOffers::default(),
         seats: crate::seats::Seats::default(),
-        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        // Social: friends, presence, challenges, chat (#937, #938, #941)
         // SPEC S7: B49's sweep that marks lapsed challenges expired.
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,
@@ -1048,7 +1046,7 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
 
-    // ---- Social: watching and shared replays (#939, #940) ----
+    // Social: watching and shared replays (#939, #940)
     // S7's `/ws/watch`, a friend's seat watched SPECTATE_DELAY_MS behind (`social::watch`); as on
     // `/ws/match`, anything but an upgrade on its path is the API's.
     let watch_app = app.clone();
@@ -1064,11 +1062,11 @@ pub fn router(app: Arc<App>) -> Router {
             }
         }
     };
-    // ---- end Social: watching and shared replays ----
+    // end Social: watching and shared replays
     // api/replays.rs
 
-    // ---- end Social ----
-    // ---- Duos co-op (#946) ----
+    // end Social
+    // Duos co-op (#946)
     // Fullsend SPEC S6: `/ws/duos`, the co-op socket, beside `/ws/match` (`actor::ws_server::handle_duos`).
     let duos_app = app.clone();
     let duos_cors = cors.clone();
@@ -1083,7 +1081,7 @@ pub fn router(app: Arc<App>) -> Router {
             }
         }
     };
-    // ---- end Duos co-op (#946) ----
+    // end Duos co-op (#946)
     // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
     // answers as a path nobody serves.
 
@@ -1141,7 +1139,7 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
             "retention.purge",
             loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge),
         ),
-        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        // Social: friends, presence, challenges, chat (#937, #938, #941)
         // SPEC S7: B49's sweep that marks lapsed challenges expired. (B53's chat purge runs inside
         // `retention.purge`.)
         (
@@ -1152,15 +1150,15 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
                 crate::social::challenges::run_sweeper,
             ),
         ),
-        // ---- end Social ----
-        // ---- Duos co-op (#946) ----
+        // end Social
+        // Duos co-op (#946)
         // Fullsend SPEC S6, B34, B40: expired co-op rooms go, finished actors leave memory, and a live
         // co-op match a restart left without an actor is folded back.
         (
             "duos.sweeper",
             loops::spawn_supervised("duos.sweeper", app.clone(), crate::duos::run_sweeper),
         ),
-        // ---- end Duos co-op (#946) ----
+        // end Duos co-op (#946)
     ];
     if app.env.ladder_bots {
         running.push((

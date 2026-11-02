@@ -9,8 +9,7 @@
 //! 2/3, "When this attacks, gain a random Stinkyscape Resource."; Honey Badger, (2) 4/6, Rush and the
 //! Badger's text; Tmack Trav, (3) 9/9, Radiant 18/18 with Rush and Pierce, "After this destroys a Unit,
 //! it may attack again."; Polymorph, (3) "Transform a Unit into a Sheep Token"; Midrange Menace, (3) 9/9
-//! Taunt; Mr. Vanilla, a (1) 4/4 with no text, set to the stats a test compares (`plain`); and the (1)
-//! Traps Sheepish and My Pawn.
+//! Taunt; Mr. Vanilla, a (1) 4/4 with no text (`plain`); and the (1) Traps Sheepish and My Pawn.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

@@ -32,17 +32,17 @@ pub mod cli;
 pub mod config;
 pub mod cosmetics;
 pub mod db;
-// ---- Economy (SPEC §14, #1299) ----
+// Economy (SPEC §14, #1299)
 pub mod economy;
-// ---- Duos co-op (#946) ----
+// Duos co-op (#946)
 // Fullsend SPEC S6: the Duos co-op rooms, their socket and their four-seat match actor.
 pub mod duos;
-// ---- end Duos co-op (#946) ----
+// end Duos co-op (#946)
 pub mod env;
 pub mod loadout;
 pub mod loops;
 pub mod ranked;
 pub mod seats;
-// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- SPEC S7 (#936).
+// Social: friends, presence, challenges, chat (#937, #938, #941); SPEC S7 (#936).
 pub mod social;
 pub mod username;

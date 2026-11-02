@@ -78,7 +78,6 @@ impl Drop for Replying {
 
 /// Input parameters for creating a match actor.
 pub struct MatchActorInput {
-    /// The match database row.
     pub match_row: MatchRow,
     /// The live state: the opening `Registry::start` began, or the fold `Registry::rebuild` ran off the
     /// runtime (#1035).

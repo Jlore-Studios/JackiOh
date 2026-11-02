@@ -6,8 +6,6 @@
 //!    makes `reduce` pure and the log append-only.
 //!  - `stop` drops the in-memory actor, leaving the log alone: what a crash looks like outside.
 //!
-//! `api/queue.rs` and `rooms.rs` call only `start`, `has`, `stop` and `presence_of`.
-//!
 //! Finished actors remain in memory while rematch presence reads sockets, until `reap_finished`
 //! drops them after the rematch window with no open sockets, or a restart drains them (SURFACE §11.3).
 

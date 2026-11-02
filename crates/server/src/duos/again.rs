@@ -4,10 +4,8 @@
 //! catalog version (R767000). Saved decks replay; dealt decks re-deal with lean (R924000, R2031000).
 //!
 //! Only seats of finished matches offer. Deleted accounts (R1497000) and other catalog versions
-//! (R1638000) are refused. Offers lapse after `REMATCH_OFFER_TTL_MS` (§13.9, R1398000). Custom cards
-//! (R915005) and players already in matches (R1065000, R1523000) refuse creation.
-//!
-//! Offers live in memory (`DuosAgainOffers`), swept past `REMATCH_OFFER_TTL_MS` (`sweep_duos_again_offers`).
+//! (R1638000) are refused. Offers live in memory and lapse after `REMATCH_OFFER_TTL_MS` (§13.9, R1398000).
+//! Custom cards (R915005) and players already in matches (R1065000, R1523000) refuse creation.
 
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard};

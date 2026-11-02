@@ -371,7 +371,6 @@ pub fn series_score(series: &SeriesRow) -> Option<f64> {
 
 // Transitions
 
-/// A copy of the row to transition.
 fn copy(series: &SeriesRow) -> SeriesRow {
     series.clone()
 }

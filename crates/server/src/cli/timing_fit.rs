@@ -5,12 +5,12 @@
 //! jackioh-server timing-fit
 //! ```
 //!
-//! Reads every row of `public.action_timings` (DATABASE_URL, all of it in memory), leaves out the moves an
-//! AI made (`pilot = 'ai'`), groups the rest by rank bucket, action kind and whether the move was the
-//! seat's first of its turn, and fits each group of at least `TIMING_FIT_MIN_SAMPLES` moves with a
-//! log-normal: the maximum-likelihood `mu` and `sigma` of `ln(think_ms)`. It prints one `ThinkTimeFit` per
-//! bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs` by hand, as `cargo jackioh
-//! sweep` prints its rows (CLAUDE.md rule 9): no number reaches the ladder bots (#636) unread by a person.
+//! Reads every row of `public.action_timings` (DATABASE_URL, all of it in memory), leaves out the AI's
+//! moves and fits a log-normal (`mu` and `sigma` of `ln(think_ms)`) to each bucket (rank bucket, action
+//! kind, the turn's first move or not) of at least `TIMING_FIT_MIN_SAMPLES` moves. It prints one
+//! `ThinkTimeFit` per bucket, to be pasted into `THINK_TIME_FITS` in `crates/server/src/config.rs` by
+//! hand, as `cargo jackioh sweep` prints its rows (CLAUDE.md rule 9): no number reaches the ladder bots
+//! (#636) unread by a person.
 //!
 //! R639000: it then prints, from the same people's rows of `action_timings`, `emote_events` and
 //! `match_signals` (each signals row beside its match's result), one row for each of the other fits

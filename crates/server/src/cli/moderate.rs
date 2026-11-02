@@ -14,10 +14,9 @@
 //! `assert_active`, while the running actor is untouched and the reaper owns the in-flight game (the
 //! account-deletion posture).
 //!
-//! This reads the whole environment through `load_env()`: the code hash revoked here has to be
-//! byte-identical to the one the running server computes when it redeems, and `load_env` plus the
-//! `{CODE_PEPPER}:code` derivation is the single contract that guarantees it (`cli/mint_code.rs`).
-//! Stdout is the audit trail: the CLI has no log pipeline, so the line it prints is the record.
+//! This reads the whole environment through `load_env()`, so the code hash revoked here is the one the
+//! running server computes when it redeems (`cli/mint_code.rs` says why). Stdout is the audit trail: the
+//! CLI has no log pipeline, so the line it prints is the record.
 //!
 //! Like `mint-code`, banning a never-activated account then unbanning it leaves it active without
 //! R111's launch collection (the trigger only sees `pending → active`): operators ban pending
