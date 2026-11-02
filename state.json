@@ -13288,9 +13288,7 @@
     },
     "2835": {
       "action": "revise",
-      "asks": [
-        "c:6591295038"
-      ],
+      "asks": [],
       "ci_fixes": 3,
       "ci_reruns": {
         "0f6c22cb5cfdda3fbe4a2f8966c49627dc20d84c": 1
@@ -13321,20 +13319,22 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "question": "CI on #2835 is red because main does not compile, not because of this branch. At main's tip, d044c4a46 (#2821), crates/run/src/fight.rs:164 matches `GameEvent::Healed { target_id, amount }` without the `via` field that #2832 (aa905b8e8) added. So `jackioh-run` fails to build, and with it `web (wasm module)`, `web (wasm luau module)`, `web` and `e2e smoke`. Every PR that builds the wasm will stay red until main is fixed. The fix is one token at fight.rs:164: `GameEvent::Healed { target_id, amount, .. }`, or `via: _`. Please either land that fix on main, so the next revision merges it in and needs nothing else, or say in a comment that this PR may carry the fix itself. My instructions are to change nothing for a breakage already on main, and this is the second CI revision with the same cause.",
       "queued_at": "2026-11-02T23:42:01Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "try again",
       "round_tier": "strong",
-      "run_id": "41482007019",
+      "run_id": "pending:4263fa66-1793662961",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-02T16:29:35Z",
+      "started_at": "2026-11-02T23:43:09Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6591295038"
+      ],
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -14716,9 +14716,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T23:28:27Z",
+    "at": "2026-11-02T23:43:09Z",
     "url": "",
-    "what": "revise #2873 on claude-4"
+    "what": "revise #2835 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-02T23:34:58Z",
