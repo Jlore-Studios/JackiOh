@@ -42,8 +42,10 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
 (R185): `redact` blanks what the seat may not know (the opponent's hand (its Resources among it,
 R2250000) and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
-them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
-it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
+them (its option reads the view's `Face-down card`, R177), its own library's order, the cards in
+it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
+as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
+prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
 hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
@@ -90,12 +92,14 @@ probes each backrow card the seat can read on either side (never a face-down ene
 standing there), then the hand's Units and Field Spells (set first), within the same budget, and
 `material` adds `AI_EVAL.death` of it outside the Brittle share, a crumble being a destroy. A destroy is
 read by the card having left the field (`left_field_after`), so a card its Death returns is priced.
-A card's start-of-turn and end-of-turn hooks count
-by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
-such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
-enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
-R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
-before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
+A card's start-of-turn, end-of-turn and start-of-the-opponent's-turn hooks count
+by one firing each (R2477000, R2565000, R2689000): at the root `turn_hook_prices` fires, within
+`AI_TURN_HOOK_PROBE_NODES`, each such hook of the units on either field, of the backrow cards the seat can
+read on either side (a face-down enemy card is never probed) and of the seat's hand's Field Spells and
+Units (set or placed first, R923001) through the engine's trigger queue, and prices it as its controller's
+evaluation after less before, each crystal gained at `next_turn_mana`; the first two count once for each
+time its controller's turn runs them (`multipliers::extra_runs`, Joint Filing's extra runs, R821), read on
+the state evaluated, and the third once; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
 A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
 (R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
@@ -430,7 +434,8 @@ and any human seat the server hands it after a disconnect (§13.8).
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
+pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame;
+pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody>;
 ```
 
@@ -465,7 +470,7 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI
   never concedes (R188), so it neither offers nor confirms a team's concede.
-- `duos_gate` plays the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
+- `duos_gate_game` plays game n of the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
   (seeds `${series}:${n}`) or a team on the 1v1 gates' greedy baseline (#1760): `duos_greedy_action`
   plays each seat's own duel with `greedy_action`, never passes, and draws only on its seat's stream
   (seeds `${series}:greedy:${n}`). A matchup passes at its opponent's floor, `DUOS_GATE_WIN_FLOOR`

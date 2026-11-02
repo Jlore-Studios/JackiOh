@@ -8,8 +8,8 @@
 # as patches-ship.yml's promotions do. Only those two files wait for it: a branch still writes its
 # ruling notes and its section edits itself, so the spec is true the moment its code merges.
 #
-# The result goes up from `patches/spec-fold-<short sha>` (vercel.json deploys no `patches/` branch;
-# never a `bot/` one, which bot-commands.yml treats as the night bot's) with BOT_GITHUB_TOKEN, because
+# The result goes up from `patches/spec-fold-<short sha>` (never a `bot/` branch, which
+# bot-commands.yml treats as the night bot's) with BOT_GITHUB_TOKEN, because
 # a pull request opened with GITHUB_TOKEN starts no workflow, so the checks branch protection requires
 # would never report. A run closes every fold still open: it starts from a newer main, whose
 # spec/pending/ still holds their paragraphs. A failed fold opens one issue (or comments on the one

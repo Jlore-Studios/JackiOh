@@ -1,9 +1,11 @@
 //! The deploy probes (#861): `GET /healthz` (liveness) and `GET /readyz` (readiness).
 //!
 //! Not in SPEC, and no R-row: probes are operational, like `loops.rs` (#842). Both are
-//! `AuthLevel::None` and name no profile. `/readyz` is render.yaml's `healthCheckPath`: it answers
-//! 200 only once the store answers `select 1`, so an instance whose database stops answering after
-//! boot fails its check (the pool connects lazily, so nothing else would notice).
+//! `AuthLevel::None` and name no profile. `/readyz` is what the Worker's daily cron requests
+//! (apps/edge/src/index.ts's `scheduled`): it answers 200 only once the store answers `select 1`,
+//! so a server whose database stops answering after boot fails it (the pool connects lazily, so
+//! nothing else would notice). `/healthz`'s `x-deployed-commit` is what the Worker compares with
+//! the commit it was deployed with, to restart a container still running an older image.
 //!
 //! Neither probe reads the background loops: `loops::spawn_supervised` logs an alert for a loop
 //! that panics or returns and starts it again, so a stopped loop shows as an alert, not as a failed
