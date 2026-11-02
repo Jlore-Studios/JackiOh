@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/instance-data.test.ts`.
-//!
 //! Instance data end to end (docs/classic-sets.md B5 E38, B3.4, R386, R440): buffs and granted keywords
 //! given in a hand or a deck ride the card onto the field; the E38 scope verbs report only what both
 //! players read; KY's Constant and a Degrade after a target prompt pause, survive a JSON round trip and
@@ -43,7 +41,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// One effect applied by p1 through a context of its own; the rng's cursor is written back, as TS did.
+/// One effect applied by p1 through a context of its own; the rng's cursor is written back.
 fn run(state: &mut GameState, effect: &Effect) -> Vec<GameEvent> {
     run_effect(state, effect.clone(), PlayerId::P1)
 }
@@ -63,7 +61,7 @@ fn play_of(
     input(PlayerId::P1, play)
 }
 
-/// `JSON.stringify(a.targets).includes(id)`.
+/// Whether a play's targets, as JSON, hold `id`.
 fn targets_name(action: &ActionBody, id: &str) -> bool {
     match action {
         ActionBody::Play { targets, .. } => serde_json::to_string(targets)
@@ -89,7 +87,7 @@ fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("no card")
 }
 
-/// Every event of the actions applied since `before` (`state.applied.slice(before)`).
+/// Every event of the actions applied since `before`.
 fn applied_since(state: &GameState, before: usize) -> Vec<GameEvent> {
     state
         .applied
@@ -99,7 +97,7 @@ fn applied_since(state: &GameState, before: usize) -> Vec<GameEvent> {
         .collect()
 }
 
-/// The last applied action's events (`state.applied.at(-1)?.events ?? []`).
+/// The last applied action's events.
 fn last_applied(state: &GameState) -> Vec<GameEvent> {
     state
         .applied
@@ -166,7 +164,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         // R440: the deck changed silently.
         assert!(events.is_empty());
         {
-            // `drawCards(sinkFor(state), "p1", 1)`: TS did not write the cursor back.
+            // A bare draw: unlike `run`, it does not write the cursor back.
             let mut events = Vec::new();
             let mut rng = Rng::new(&state.seed, state.rng_cursor);
             let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);

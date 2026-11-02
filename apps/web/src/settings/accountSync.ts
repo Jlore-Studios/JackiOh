@@ -11,12 +11,12 @@ import { getStored, setStored } from "../net/storage.ts";
 
 /** Where this device keeps, per group, when it last changed here (epoch ms). Not a setting. */
 export const SETTINGS_SYNC_STORAGE_KEY = "jackioh.settings.sync.v1";
-/** How long after a change the groups it touched are sent, so a dragged slider is one request. */
+/** How long after a change its groups are sent, so a dragged slider is one request. */
 export const SETTINGS_SYNC_DEBOUNCE_MS = 600;
-/** How long the sync outlives the last screen using it, so moving between screens does not restart it. */
+/** How long the sync outlives its last screen, so moving between screens does not restart it. */
 export const SETTINGS_SYNC_GRACE_MS = 1500;
 
-/** The two requests, injectable so the tests never touch the network. */
+/** Injectable, so the tests never touch the network. */
 export type SettingsAccountApi = {
   load(token: string): Promise<PlayerSettingsAccountCopy>;
   save(token: string, groups: Record<string, PlayerSettingsGroup>): Promise<PlayerSettingsAccountCopy>;
@@ -34,7 +34,7 @@ export type SettingsSyncPhase = "signedOut" | "syncing" | "saved" | "error";
 
 export type SettingsSyncState = {
   phase: SettingsSyncPhase;
-  /** When the account last took this device's settings or confirmed it holds them (epoch ms), else null. */
+  /** When the account last took or confirmed this device's settings (epoch ms), else null. */
   savedAt: number | null;
 };
 
@@ -94,7 +94,7 @@ function sameValues(a: Record<string, unknown>, b: Record<string, unknown>): boo
   return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
 }
 
-/** The server's answer, read as untrusted input: an object of groups, or it is not an answer at all. */
+/** The server's answer, read as untrusted input. */
 function accountCopy(raw: unknown): PlayerSettingsAccountCopy {
   const groups = (raw as { groups?: unknown } | null)?.groups;
   if (typeof groups !== "object" || groups === null || Array.isArray(groups)) {
@@ -129,7 +129,6 @@ export type SettingsAccountSyncOptions = {
   debounceMs?: number;
 };
 
-/** Starts syncing this device's settings with the account `token()` names. */
 export function startSettingsAccountSync(options: SettingsAccountSyncOptions): SettingsAccountSync {
   const groups = options.groups ?? SETTINGS_GROUPS;
   const now = options.now ?? Date.now;
@@ -170,7 +169,6 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     persist();
   };
 
-  /** Reconcile each group by timestamp. */
   const reconcile = (copy: PlayerSettingsAccountCopy): void => {
     for (const group of groups) {
       const held = copy.groups[group.id];

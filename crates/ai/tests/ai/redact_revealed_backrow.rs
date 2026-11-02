@@ -79,7 +79,6 @@ fn flipped(state: &GameState) -> GameState {
 mod r686_the_ai_reads_a_revealed_backrow_card {
     use super::*;
 
-    /// R686 a revealed enemy trap is not hidden, and redact keeps its face
     #[test]
     fn r686_a_revealed_enemy_trap_is_not_hidden_and_redact_keeps_its_face() {
         let state = revealed_siphon();
@@ -98,7 +97,6 @@ mod r686_the_ai_reads_a_revealed_backrow_card {
         );
     }
 
-    /// R686 B10 viewFor of a determinized redaction equals the true view, events aside
     #[test]
     fn r686_b10_view_for_of_a_determinized_redaction_equals_the_true_view_events_aside() {
         let state = revealed_siphon();
@@ -117,7 +115,6 @@ mod r686_the_ai_reads_a_revealed_backrow_card {
         }
     }
 
-    /// R686 evaluate scores a revealed enemy trap from its definition, as it does a face-up one
     #[test]
     fn r686_evaluate_scores_a_revealed_enemy_trap_from_its_definition_as_it_does_a_face_up_one() {
         let state = revealed_siphon();
@@ -126,7 +123,6 @@ mod r686_the_ai_reads_a_revealed_backrow_card {
         assert_ne!(score(&state), score(&unrevealed(&state)));
     }
 
-    /// R686 the search signature tells a revealed trap from a face-down one and from a face-up one
     #[test]
     fn r686_the_search_signature_tells_a_revealed_trap_from_a_face_down_one_and_from_a_face_up_one() {
         let state = revealed_siphon();

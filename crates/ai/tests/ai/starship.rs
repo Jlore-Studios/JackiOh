@@ -4,9 +4,9 @@
 //! kinds out, so the compiled network's inputs keep their layout.
 //!
 //! The file installs two test-only cards on top of the real catalog (Stinkyscape's shipped pieces are
-//! priced in `deaths.rs`, R2566000): the Dormant Starship under the id the engine summons,
-//! and a 1/1 piece whose Cry deals 1 damage to a Unit. The AI's piece dies attacking the human's Mr.
-//! Vanilla (core-008, 4/4), which builds the AI a Dormant Starship.
+//! priced in `deaths.rs`, R2566000): the Dormant Starship under the id the engine summons, and a 1/1
+//! piece whose Cry deals 1 damage to a Unit. The AI's piece dies attacking the human's Mr. Vanilla
+//! (4/4), which builds the AI a Dormant Starship.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;

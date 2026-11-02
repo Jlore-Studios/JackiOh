@@ -2,15 +2,8 @@
 //!
 //! Base: "Cry: Tribute one of your other Units and remember it. Death: Summon 2 copies of it."
 //! Radiant: the same Cry, "Death: Fill your board with copies of it" (§8 Conventions).
-//!
-//! R428: the Cry eats one of your other UNITS only, never a backrow card. §6.3 Tribute: a tribute
-//! written into a card's script is an ordinary Sacrifice of what it names, where the Sheep Token's 2
-//! never applies. So the meal is picked with the play (R81, a `tribute` target, never a prompt) and
-//! eaten with `sacrifice`, which bypasses Indestructible and counts as a death.
-//!
-//! `memory.eaten = { defId, radiant, statsOverride?, armorOverride? }` (§10.1) gives every copy the
-//! meal's radiant flag and §7 stats (R41). Nothing to tribute: the Cry fizzles; nothing eaten: Death
-//! does nothing. It can never eat itself: the declared target excludes it and the hook re-checks.
+//! Tribute chosen unit on play (R81, R428, §6.3 sacrifice; bypasses Indestructible). Remembers target under key.
+//! Death trigger summons copies of remembered unit (R57, R64, R41; Radiant fills board).
 
 use jackioh_engine::prelude::*;
 
@@ -45,14 +38,11 @@ impl Eaten {
 const EATEN: &str = "eaten";
 
 /// R81: the meal travels in the `play` action, as a `tribute` pick the client shows as one. R428: one
-/// of your other Units — the unit row only.
+/// of your other Units — the unit row only. `min: 1` is R41's "must eat if able", and R90 supplies the "if
+/// able": a board that cannot satisfy it does not refuse the play, the effect fizzles.
 ///
-/// `min: 1` is R41's "must eat if able", and R90 supplies the "if able": a board that cannot satisfy
-/// it does not refuse the play, the effect fizzles ("nothing to tribute → Cry fizzles").
-///
-/// Deliberately no `amount`: `playChoices.tributeCostOf` would read it as §6.3's Tribute *cost*, paid
-/// from the play's `tributes` list, with Sheep Tokens as 2, refusing a play the board cannot pay. This
-/// card's meal is a declared target its script sacrifices itself, so the play carries no Tribute cost.
+/// Deliberately no `amount`: `playChoices.tributeCostOf` would read it as §6.3's Tribute *cost*, refusing a
+/// play the board cannot pay. This card's meal is a declared target its script sacrifices itself.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::tribute(
         1,
@@ -205,10 +195,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it: the Tribute choice travels
-// in the play action (R81), one of your other Units only, never itself; the chosen Unit is sacrificed
-// and remembered; Death → 2 copies (radiant fills the board) keeping `statsOverride` (R41); nothing
-// eaten → Death does nothing (R41). Base Cube 4/6, radiant 8/12.
+// #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it. The copies keep
+// `statsOverride`, and nothing eaten summons nothing (R41).
 // HARNESS GAP: `FieldSetup` has no `statsOverride`, so the one fixture that needs it sets it itself.
 #[cfg(test)]
 mod tests {
@@ -262,9 +250,8 @@ mod tests {
             // R41: "cannot eat itself"; R428: "one of your other Units", so the unit row only.
             assert_eq!(filter.exclude_self, Some(true));
             assert_eq!(filter.of, Some(vec![FilterOf::Unit]));
-            // §6.3: this card's tribute is a Sacrifice its own script performs, not a Tribute *cost*, so
-            // the declaration carries no `amount` — `playChoices.tributeCostOf` would read that as a cost
-            // paid from the play's `tributes` list, which reaches units only and refuses an unpayable play.
+            // §6.3: the tribute is a Sacrifice the script performs, not a Tribute *cost*: no `amount`
+            // (see `targets`).
             assert!(decl.amount.is_none());
             // The radiant cell restates the Death clause only, so the Cry's choice is unchanged.
             assert_eq!(scripts.radiant.targets, base.targets);

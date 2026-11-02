@@ -1,12 +1,6 @@
-//! Fixture cards for patch v0.2.0's instance data (docs/classic-sets.md B2.7, B3.3, B3.4, E38, E39):
-//! Brittle, Degrade and Upgrade, declared numbers, KY's Constant, faces with their own type and X
-//! stats, enchantments. Each reproduces the shape of the Classic or Classic+ card named in its doc
-//! comment through the effects library (BUILD §0); the real cards and their own tests come with the
-//! card workstreams. `instanceGame` registers them on top of the shared fixture catalog.
-//!
-//! Port of `packages/engine/test/fixtures/instanceData.ts`. Each exported def is a `pub static` under
-//! TS's name snake_cased; TS's module counter (`nextIndex`, from 4400, one per `def` call in file
-//! order) is each def's stated index.
+//! Fixture cards for instance data (docs/classic-sets.md B2.7, B3.3, B3.4, E38, E39), each the shape of
+//! the Classic or Classic+ card its doc names, through the effects library (BUILD §0). `instance_game`
+//! registers them on top of the shared fixture catalog.
 
 #![allow(non_upper_case_globals)]
 
@@ -22,8 +16,6 @@ use jackioh_engine::testkit::*;
 use super::catalog::vanilla_deck;
 use super::harness::{both, setup_catalog};
 
-/// TS `def(name, overrides = {})`: a Core Common 2/2 Unit at cost 1 (4/4 Radiant) whose faces print
-/// `name`, `overrides` over it.
 fn def(name: &str, index: i32, overrides: Value) -> CardDef {
     let mut card = json!({
         "id": format!("id-{name}"),
@@ -441,8 +433,7 @@ pub static bottle: LazyLock<CardDef> = LazyLock::new(|| {
 });
 
 /// R1160 (Meditative #84 Volatility's shape): a 3/4 (Radiant 6/8) at cost 2 whose Buffs and Nerfs
-/// are twice as effective (Radiant: Buffs three times, Nerfs plain). Next free index is 4431: the
-/// plan's 4427 is taken by `translator` (landed after the plan was written).
+/// are twice as effective (Radiant: Buffs three times, Nerfs plain).
 pub static volatile: LazyLock<CardDef> = LazyLock::new(|| {
     def(
         "volatile",
@@ -830,7 +821,6 @@ pub static INSTANCE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
     ])
 });
 
-/// The fixture catalog with these cards, registered on top of the shared one; returns the whole catalog.
 pub fn register_instance_fixtures() -> CardDefs {
     setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();
@@ -844,8 +834,6 @@ pub fn register_instance_fixtures() -> CardDefs {
     defs
 }
 
-/// A game in setup with these fixtures registered; decks default to the vanilla fixture decks. TS
-/// `instanceGame(seed = "instance-data", decks?)`.
 pub fn instance_game(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     register_instance_fixtures();
     create_game(&CreateGameOptions {

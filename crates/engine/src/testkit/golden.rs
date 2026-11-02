@@ -1,8 +1,7 @@
 //! The golden replay (SURFACE §13.3), its pure half: the canonical texts, one recorded game's replay
 //! to its first `Mismatch` and the hotseat fixture's fold. `cargo jackioh golden check --file` replays a
 //! `golden record` file with it, on this build or another (`luau diff`, `classify`), and the engine's
-//! `tests/golden.rs` folds the hotseat fixture with it. The 240 committed traces both once replayed
-//! (#1641) were retired in #2578.
+//! `tests/golden.rs` folds the hotseat fixture with it. No committed traces now (#1641, #2578).
 //!
 //! A mismatch carries the Rust side's canonical text (`text`) and never writes it: the engine's
 //! `clippy.toml` bans file I/O here, so each caller writes it to `target/golden-diff/` under
@@ -22,31 +21,19 @@ pub const FORMAT_VERSION: u32 = 1;
 /// The recorded hotseat game, as `e2e/support/tasks/replay.ts` writes it: `{ seed, decks, log }`.
 pub const HOTSEAT: &str = include_str!("../../tests/golden/01-hotseat-full-game.json");
 
-/// The final state hash of the recorded hotseat game (`hotseat-replay.test.ts`'s `EXPECTED_HASH`, SURFACE
-/// §5.2).
+/// The final state hash of the recorded hotseat game (SURFACE §5.2). Practice saves on players' devices and
+/// e2e specs 01, 13 and 22 rely on it holding.
 ///
 /// Refresh it ONLY together with the recording, and only when the rules deliberately changed: run
-/// `pnpm test:e2e` (spec 01 re-records `e2e/artifacts/01-hotseat-full-game.json` and checks the
-/// browser against a fold of it), copy that file over `crates/engine/tests/golden/`'s fixture, and paste
-/// the hash the engine's `tests/golden.rs` reports. Editing the number on its own turns the check into a
-/// rubber stamp.
+/// `pnpm test:e2e` (spec 01 re-records `e2e/artifacts/01-hotseat-full-game.json`), copy that file over
+/// `crates/engine/tests/golden/`'s fixture, and paste the hash the engine's `tests/golden.rs` reports.
+/// Editing the number on its own turns the check into a rubber stamp.
 ///
-/// The exception is a change to what the state RECORDS about the same game, which leaves the log as it
-/// is and moves the hash alone: R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and
-/// R457 (§6.2; B5 E4), and R943's Created mark and R982's last element, which the Meditative set's
-/// release (R1420, v0.3.5) began to record: the same log, both stripped, still folds to the old
-/// `a798906b`. #1837's tags moved it once more, from `8784adae` (R1837000): the log's last play, p1's
-/// Friend of Felinors, records no Felinor tag in `playedByTag`, and no card in either deck reads one.
-/// A change to the game itself re-records the log (R244, R275, R276, R360–R366). Issue #2179's was one:
-/// Core #81 Radiant Saintess went to (2), so p2's turn-2 play of it on 1 mana is no longer legal, and
-/// the log was recorded again, from `7044d528` to `5b8b57a7`. Cypress could not be fetched where that
-/// was done, so spec 01's policy (the first playable hand card into the first open zone, then each
-/// unit at the first target it may attack, then End turn) was run against the engine instead; on the
-/// base build that run gives the old log action for action and its hash. Issue #2368's was another
-/// (R2368000): p1 opens on three cards, so its mulligan keeps three where it kept four, and the fourth,
-/// c16, is its turn-1 draw instead; the same policy, run the same way, plays every later action as
-/// before, and the hash moved from `5b8b57a7` to `972f5b85`.
-/// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
+/// A change to what the state RECORDS about the same game leaves the log as it is and moves the hash alone:
+/// R42, R174, R177, R213, R223, R265, R311, R419, R426, R448, R451 and R457 (§6.2; B5 E4), R943's Created
+/// mark and R982's last element (R1420), and #1837's tags (R1837000). A change to the game itself re-records
+/// the log (R244, R275, R276, R360–R366; #2179's Core #81 Radiant Saintess, #2368's mulligan, R2368000);
+/// where Cypress cannot be fetched, run spec 01's policy against the engine, first on the base build.
 pub const HOTSEAT_HASH: &str = "972f5b85";
 
 /// A game's first divergence from its trace.
@@ -68,7 +55,7 @@ pub struct Mismatch {
 }
 
 impl Mismatch {
-    /// The file `text` goes in under `target/golden-diff/`, where `record.ts --dump-step` writes TS's.
+    /// The file `text` goes in under `target/golden-diff/`.
     pub fn diff_file(&self) -> String {
         format!("{}-{}-{}.json", self.seed, self.step, self.which)
     }
@@ -103,8 +90,7 @@ impl Mismatch {
     }
 }
 
-/// The seed number `record.ts --seed` takes: the trailing number of `jackioh-fuzz-<k>` or
-/// `jackioh-fuzz-handicap-<k>`.
+/// The trailing number of a seed `jackioh-fuzz-<k>` or `jackioh-fuzz-handicap-<k>`.
 pub fn seed_number(seed: &str) -> Option<u32> {
     seed.rsplit('-').next().and_then(|tail| tail.parse::<u32>().ok())
 }
@@ -341,8 +327,8 @@ pub fn replay_game(seed: &str, game: &Value) -> Result<usize, Box<Mismatch>> {
     Ok(steps.len())
 }
 
-/// `hotseat-replay.test.ts`'s first assertion: `HOTSEAT` folds with no refusal to `HOTSEAT_HASH`. `Ok`
-/// carries the hash, `Err` what went wrong. The caller registers the cards first.
+/// `HOTSEAT` folds with no refusal to `HOTSEAT_HASH`. `Ok` carries the hash, `Err` what went wrong.
+/// The caller registers the cards first.
 pub fn check_hotseat() -> Result<String, String> {
     let input: FoldArgs = serde_json::from_str(HOTSEAT)
         .map_err(|error| format!("the hotseat fixture is not a fold's input: {error}"))?;

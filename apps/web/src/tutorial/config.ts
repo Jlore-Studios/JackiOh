@@ -6,16 +6,10 @@ import { PRACTICE_SHOWCASE_HOLD_MAX_MS } from "../practice/config.ts";
 /** Retire stale non-final steps so a passed moment cannot strand the lesson. */
 export const TUTORIAL_STEP_TURNS_MAX = 2;
 
-/**
- * R2205000: a shown moment's own turns: one with its question, one with its nudge, one with its
- * pointed hint; past them it retires as expired, and the lesson's end names what it set up (R314).
- */
+/** R2205000: a shown moment's turns, one each for its question, nudge and pointed hint; then it expires (R314). */
 export const TUTORIAL_MOMENT_TURNS_MAX = 3;
 
-/**
- * R2205000: the most "Got it" bubbles the coach queues between two of the player's own moves; a
- * discovery past it is recorded without a bubble and reaches the Field Guide all the same.
- */
+/** R2205000: the most "Got it" bubbles between two of the player's own moves; a find past it still reaches the Field Guide. */
 export const TUTORIAL_BUBBLES_PER_MOVE_MAX = 2;
 
 /** `progress.ts` reads and writes this localStorage record in try/catch. */

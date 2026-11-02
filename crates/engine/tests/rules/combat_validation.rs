@@ -1,7 +1,4 @@
 //! Attack validation: §4.2 steps 1 to 3, §4.1, §6.1 and R5, R6, R7 (M2-T2).
-//! One test per refusal reason, plus the positive cases that give the refusals meaning.
-//!
-//! Port of `packages/engine/test/combat-validation.test.ts`.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -13,8 +10,7 @@ use crate::rules::fixtures::harness::{
     events_of_type, new_game, next_nonce, past_the_mulligans as playing, put, slot,
 };
 
-/// An attack action from p1 (TS `attackVia(state, attackerId, targetId, player = "p1")`; no caller
-/// names another player).
+/// An attack action from p1.
 fn attack_via(state: &GameState, attacker_id: &str, target_id: &str) -> ReduceResult {
     let action: Action = json_as(json!({
         "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p1", "nonce": next_nonce()
@@ -62,15 +58,13 @@ fn names(state: &GameState, attacker_id: &str) -> Vec<String> {
         .collect()
 }
 
-/// `whyCannotAttack(state, attacker, target)` with the attacker as it stands now: its refusal, or
-/// `None` (TS `null`).
+/// `why_cannot_attack` with the attacker as it stands now: its refusal, or `None`.
 fn why(state: &GameState, attacker_id: &str, target: &AttackTarget) -> Option<String> {
     why_cannot_attack(state, instance(state, attacker_id), target)
         .err()
         .map(|error| error.message)
 }
 
-/// A unit target read as it stands now.
 fn unit(state: &GameState, id: &str) -> AttackTarget {
     on_unit(instance(state, id))
 }
@@ -280,7 +274,6 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
             assert!(targets_of(&state, unit_id).is_empty());
         }
 
-        // And the action layer never offers it an attack.
         let mut game = playing("big-dfender-actions");
         let on_board = put(
             &mut game,
@@ -316,7 +309,6 @@ mod attack_validation_the_attacker_4_2_step_1_m2_t2 {
         );
         assert!(targets_of(&state, &stuck.id).is_empty());
 
-        // Granting it to a plain unit refuses that unit too.
         let granted = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
         assert_eq!(why(&state, &granted.id, &unit(&state, &defender.id)), None);
         instance_mut(&mut state, &granted.id)
@@ -483,7 +475,6 @@ mod attack_validation_the_target_4_2_steps_2_and_3_m2_t2 {
         assert_eq!(why(&state, &attacker.id, &unit(&state, &defending.id)), None);
         assert_eq!(names(&state, &attacker.id), vec![defending.id.clone()]);
 
-        // Back to Attack Position and the board opens up again.
         instance_mut(&mut state, &defending.id).position = Some(Position::Atk);
         assert_eq!(
             names(&state, &attacker.id),
@@ -599,7 +590,6 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
             assert_eq!(attack_via(&state, attacker, target_id).error, expected);
         }
 
-        // The Taunt filter, through the same action.
         let mut other = playing("attack-action-taunt");
         let free = put(&mut other, &plain.id, slot(P1, Row::Units, 1), Default::default());
         let bystander = put(&mut other, &plain.id, slot(P2, Row::Units, 1), Default::default());
@@ -618,8 +608,7 @@ mod attack_validation_through_the_action_layer_9_3_m2_t2 {
             refused("a Taunt unit must be attacked first")
         );
 
-        // A friendly target never reaches the validator: the action layer looks it up among the
-        // enemy's units and the enemy hero only.
+        // A friendly target never reaches the validator: the action looks only among the enemy's.
         assert_eq!(
             attack_via(&other, &free.id, "hero-p1").error,
             refused("no target hero-p1")

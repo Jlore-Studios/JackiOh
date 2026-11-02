@@ -1,17 +1,10 @@
 //! Stinkyscape #150 Call to Chaos (Stinky Edition) (SPEC §8.10 row 150, R28, R87, R423, R436,
 //! R1882001–R1882004): its table of ten effects, which Core #95's subsystem (`call_to_chaos.rs`) rolls,
-//! announces and resolves — `call_to_chaos({ radiant, table: CHAOS_STINKY_EFFECTS })` — as it does
-//! Classic+ #73's and Meditative #95's: the base face rolls one entry, the Radiant three different ones
-//! resolved in the list's order (R423), the recursion counts casts of every edition against
-//! `CALL_TO_CHAOS_CHAIN_CAP` (R28), and both players are told what was rolled (`chaosRolled`, R436).
-//!
-//! Every entry is built when it resolves (`lazy_part`), as the other editions' are (R87, R113).
+//! announces and resolves as it does Classic+ #73's and Meditative #95's.
 //!
 //! Entry 8 is the engine's own rest-of-game rule (R1882004): a death watcher under
-//! `CHAOS_DEATH_WATCH_HOOK`, whose step `work::script_step_for` answers with `death_watch_step` whatever
-//! card made it, so the table never leans on a card file; a player holds at most
-//! `CHAOS_STINKY_DEATH_WATCH_CAP`, and the watch casts at most `CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN`
-//! for a player in a turn, its terminator (R2176001).
+//! `CHAOS_DEATH_WATCH_HOOK`, which `work::script_step_for` answers with `death_watch_step` whatever card
+//! made it, so the table never leans on a card file; its per-turn cast cap terminates it (R2176001).
 
 use serde_json::json;
 
@@ -42,13 +35,12 @@ const GOLEM_INDEX: &str = "150.1";
 
 /// R1882004: the hook of entry 8's death watcher, which the engine resolves itself.
 pub const CHAOS_DEATH_WATCH_HOOK: &str = "@chaosDeathWatch";
-/// Entry 8's step name, under `CHAOS_DEATH_WATCH_HOOK`.
 const CHAOS_DEATH_WATCH_STEP: &str = "chaosDeathWatch";
 /// R169: entry 8's badge, in the card's own words.
 pub const CHAOS_DEATH_WATCH_LABEL: &str =
     "For the rest of the game, whenever an Acclaimed card dies, its controller casts a random Call to Chaos";
 
-/// `callToChaosStinky:<name>`, the kind of an entry's part (an effect's kind is a static name).
+/// An entry's part kind, spelled out since a kind is a `&'static str`.
 fn entry_kind(name: &str) -> &'static str {
     match name {
         "ethics" => "callToChaosStinky:ethics",
@@ -64,7 +56,7 @@ fn entry_kind(name: &str) -> &'static str {
     }
 }
 
-/// One entry, built as it resolves (`lazy_part`), kept by name across a pause like Core's (R87).
+/// One entry, built as it resolves (`lazy_part`), kept by name across a pause like Core's (R87, R113).
 fn entry(
     name: &'static str,
     build: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static,
@@ -75,7 +67,6 @@ fn entry(
     })
 }
 
-/// The set's card at `index`, by its id, when the catalog holds it.
 fn def_id_at(index: &str) -> Option<String> {
     def_id_by_index(SET, index)
 }
@@ -111,9 +102,8 @@ fn build_dandy() -> Effect {
     })
 }
 
-/// 3. R1882001: three independent picks (R60) of the Field Spells tagged Quest or Wincon (R1422), from
-///    every set the catalog orders, so the held set's own reach it (R1420), each summoned into its
-///    caster's backrow per R64; a full backrow takes no draw for a summon that cannot land (R129).
+/// 3. R1882001: three picks (R60) of the Field Spells tagged Quest or Wincon (R1422) from every set,
+///    so the held set's own reach it (R1420), each placed per R64, drawing only if it can land (R129).
 fn build_quests() -> Effect {
     entry("quests", |_ctx| {
         (0..CHAOS_STINKY_FIELD_SPELLS)
@@ -130,9 +120,8 @@ fn build_quests() -> Effect {
     })
 }
 
-/// 4. R1882002: one pick (R60) of the set's non-token Acclaimed Units, added to its caster's hand; once
-///    it is there, a Refresh by its printed cost (§6.3, R364, never past max mana). A card a full hand
-///    burns refreshes nothing.
+/// 4. R1882002: one pick (R60) of the set's Acclaimed Units into its caster's hand, then a Refresh by
+///    its printed cost (§6.3, R364); a card a full hand burns refreshes nothing.
 fn build_acclaimed() -> Effect {
     entry("acclaimed", |_ctx| {
         vec![Effect::new("callToChaosStinky:addAcclaimed", |ctx| {
@@ -161,8 +150,7 @@ fn build_acclaimed() -> Effect {
 }
 
 /// 5. R1882003: every enemy Unit active on the field switched to Attack Position (an effect's switch,
-///    R20: no exertion, nothing for one already there or one that may not be), then every enemy Unit
-///    Frozen (§6.3, R1174000); a hero is never touched.
+///    R20: no exertion), then Frozen (§6.3, R1174000); a hero is never touched.
 fn build_freeze() -> Effect {
     entry("freeze", |_ctx| {
         vec![
@@ -188,7 +176,7 @@ fn build_freeze() -> Effect {
     })
 }
 
-/// 6. R1080: every empty unit zone of its caster's filled with its own pick of the set's Human Units.
+/// 6. R1080: each empty unit zone of its caster's filled with a pick of the set's Human Units.
 fn build_humans() -> Effect {
     entry("humans", |_ctx| {
         vec![crate::effects::fill_board_random(json_as(json!({
@@ -224,10 +212,8 @@ pub fn death_watch_casts_this_turn(state: &GameState, player: PlayerId) -> i32 {
     }
 }
 
-/// R1882004: the step entry 8's watcher re-enters after each Acclaimed death, as the dead card's
-/// controller: a random Call to Chaos, cast with no `self` and so as a new chain (R28's cap per chain),
-/// the cast card a base Call. R2176001: once the watch has cast `CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN`
-/// for that player this turn, it casts nothing more until the next.
+/// R1882004: entry 8's step after each Acclaimed death, as the dead card's controller: a base Call
+/// to Chaos cast with no `self`, so a new chain (R28's cap per chain), capped per turn (R2176001).
 pub fn death_watch_step() -> Hook {
     hook(|ctx| {
         let player = ctx.controller;
@@ -235,11 +221,8 @@ pub fn death_watch_step() -> Hook {
         if count >= CHAOS_STINKY_DEATH_WATCH_CASTS_PER_TURN {
             return vec![];
         }
-        // The count is written here, in the engine's own step, rather than through an Effect: CLAUDE.md
-        // rule 5 binds card files, and this step is no card's (`work::script_step_for` answers the hook
-        // whatever card made the watcher). It is written as it is read, so the record and the decision
-        // it gates are one step: the cast returned below, and every death it causes, read the count
-        // that already holds this cast (R2176001), as `draws` is counted as each draw is made.
+        // CLAUDE.md rule 5 binds card files and this step is no card's, so it writes the count as it
+        // reads it: the cast below and every death it causes read a count holding this cast (R2176001).
         let turn = ctx.state.turn;
         ctx.state.players[player].death_watch_casts = Some(crate::state::DrawCount {
             turn,
@@ -249,9 +232,8 @@ pub fn death_watch_step() -> Hook {
     })
 }
 
-/// 8. R1882004: "for the rest of the game, whenever an Acclaimed card dies, its controller casts a random
-///    Call to Chaos", a watcher on its caster answering either player's Acclaimed deaths, stacking up to
-///    `CHAOS_STINKY_DEATH_WATCH_CAP`; a roll of it for a player at the cap resolves into nothing.
+/// 8. R1882004: a watcher on its caster answering either player's Acclaimed deaths, stacking up to
+///    `CHAOS_STINKY_DEATH_WATCH_CAP`; at the cap a roll of it resolves into nothing.
 fn build_death_watch() -> Effect {
     entry("deathWatch", |ctx| {
         if death_watches_held(ctx.state, ctx.controller) >= CHAOS_STINKY_DEATH_WATCH_CAP {
@@ -281,8 +263,7 @@ fn build_golem() -> Effect {
     })
 }
 
-/// §8.10 row 150's ten entries, in the order the card prints them. Each `label` is the clause as the
-/// card prints it, which `chaosRolled` names to both players (R436).
+/// §8.10 row 150's ten entries, in card order, each `label` the printed clause (R436).
 pub const CHAOS_STINKY_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
         name: "ethics",

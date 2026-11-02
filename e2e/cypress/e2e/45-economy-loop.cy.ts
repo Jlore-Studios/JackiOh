@@ -1,39 +1,13 @@
-// 45 — the economy loop: a new account starts, earns, spends and collects (#1310; SPEC §14, §14.12;
-// R1310000, R1310003, R1310004).
-//
-// Key assertion (SPEC §14.12): "Practice and hotseat let a player use every card and every cosmetic
-// whatever the ledger holds, and so do the end-to-end tests, but the one that walks the economy
-// itself." This is that one (R1310004). It walks the fixture account `e2e-econ` through the loop,
-// each step asserted on what the server answers and what the page shows:
-//
-// 1. R1310000: the good code, redeemed, grants exactly `STARTER_CARDS`, one copy each, and pays the
-//    newest set's track through the level it starts at.
-// 2. §14.8, R1302001: a Best-of-1 ladder game on a deck of starter cards, won when seat two
-//    concedes, raises the wallet by at least `JLORE_LADDER_WIN` (a level the XP reaches may pay
-//    more) and the newest track by at least `XP_WIN_BONUS`, and `/collection` shows that track's
-//    level and XP as `/api/tracks` answers them.
-// 3. §14.1, §14.3: the Shop (`/shop`, R1580000) sells a global pack for `PACK_PRICE_JLORE`, and the pack
-//    opens there.
-// 4. §14.3: each slot the server granted as a new card reads "New card", and the collection grows
-//    by exactly those cards.
-// 5. R1310003, §14.5: the Dev tools fill the card token bar, which pays one card token, and the
-//    token picker's Pick unlocks the card it names.
-// 6. R1304000, §14.9: no quest has arrived on the account's first visits; the Dev tools give one,
-//    and `/collection` lists it.
-// 7. R1313000, R1310004: with the full-art gate asked for (`FULL_ART_GATED_KEY` before the page
-//    loads), a full-art card the account owns prints its normal face in the deck builder; two
-//    cosmetic bar fills pay a Rare token and then an Epic one (R1310003), the Epic token buys that
-//    card's full art (R1305003), and on the next load the face prints full art while another
-//    full-art card the account owns, whose full art it does not, still prints its normal face.
-//
-// One test, after a reseed (R144) in `beforeEach`: each step spends what the one before it earned,
-// so a retry walks the loop again from the start instead of from wherever the first attempt stopped.
-// The reseed also puts back `e2e-p1`, `e2e-p2`, `e2e-pending` and the good code; spec 10 and spec 44,
-// which read them, reseed first too.
-//
-// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside a development-mode client
-// (`vite dev` or `build:e2e`, the only builds that read `FULL_ART_GATED_KEY`). Daily only, as every
-// spec outside scripts/shard-specs.mjs's SMOKE.
+// 45 — the economy loop: a new account starts, earns, spends and collects (#1310; SPEC §14, §14.12; R1310000, R1310003,
+// R1310004). Every other spec may use every card and cosmetic whatever the ledger holds (§14.12); this one walks the
+// fixture account `e2e-econ` through the loop (R1310004), each step asserted on what the server answers and what the
+// page shows. A ladder win (R1302001) pays at least its constants, since a level the XP reaches may pay more.
+// One test, after a reseed (R144) in `beforeEach`: each step spends what the one before it earned, so a retry walks the
+// loop again from the start. The reseed also puts back `e2e-p1`, `e2e-p2`, `e2e-pending` and the good code; spec 10 and
+// spec 44, which read them, reseed first too.
+// Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside a development-mode client (`vite dev` or
+// `build:e2e`, the only builds that read `FULL_ART_GATED_KEY`). Daily only, as every spec outside
+// scripts/shard-specs.mjs's SMOKE.
 
 import { newestShippedSet } from "../../../apps/web/src/wire/catalog.ts";
 import { COSMETICS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
@@ -100,9 +74,6 @@ import {
   ts,
 } from "../../support/testids.ts";
 
-// Constants
-
-/** Seconds to milliseconds. */
 const MS_PER_SECOND = 1000;
 
 /** Pairing waits out the rating window's widening to MAX_FAIR_GAP (R640001), a sweep, a poll and a render, as in spec 37. */
@@ -114,7 +85,6 @@ const PAIRING_TIMEOUT_MS =
 /** The Node second-player client, as in specs 06 and 37. */
 const SEAT_TWO = "seat-two";
 
-/** A match page, capturing its id. */
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 
 /** installLoadout's default deck index, the deck seat two queues. */
@@ -185,13 +155,10 @@ type Loop = {
   opened: OpenedBody | null;
 };
 
-// Helpers
-
 function econ(): E2EAccount {
   return accounts.econ();
 }
 
-/** `GET path` as `account`, which must answer 200; yields the body. */
 function read<T extends object>(account: E2EAccount, path: string): Cypress.Chainable<T> {
   return cy
     .request<T>({ method: "GET", url: apiUrl(path), headers: bearerHeaders(account.token) })
@@ -217,7 +184,6 @@ function shown(value: number): string {
   return new Intl.NumberFormat().format(value);
 }
 
-/** The cosmetic tokens of one cycle step that `tokens` holds. */
 function heldOf(tokens: TokensBody, step: CosmeticStep): number {
   switch (step) {
     case "rare":
@@ -253,7 +219,6 @@ function openDevTools(): void {
   cy.get(ts(DEV_TOOLS), { timeout: timeouts.view }).should("be.visible");
 }
 
-/** Press a Dev tools button whose request `alias` spies on, and see the server answer it and the panel say so. */
 function pressDevTool(testid: string, alias: string): Cypress.Chainable<unknown> {
   cy.get(ts(testid)).should("not.be.disabled").click();
   return cy.wait(`@${alias}`).then((interception) => {
@@ -491,7 +456,6 @@ function redeemACardToken(loop: Loop): void {
       expect(loop.owned.has(picked), `§14.5: the picker offers ${picked}, a card not owned`).to.eq(false);
     });
   cy.then(() => {
-    // The face opens the card's detail, Unlock asks, and Confirm spends the token.
     cy.get(ts(poolCardId(picked))).click();
     cy.get(ts(tokenCardPickId(picked))).click();
     cy.get(ts(TOKEN_CARD_CONFIRM)).click();
@@ -558,7 +522,6 @@ function earnAFullArt(loop: Loop): void {
     cy.get(ts(poolCardId(fullArt().card)), { timeout: timeouts.view }).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
   });
 
-  // R1310003: two fills of the cosmetic token bar, from the cycle's start, pay a Rare token then an Epic one.
   const paid: CosmeticStep[] = [];
   cy.intercept("POST", "**/api/dev/bar/cosmetic").as("fillCosmeticBar");
   openDevTools();
@@ -606,8 +569,6 @@ function earnAFullArt(loop: Loop): void {
     cy.get(ts(poolCardId(unearned().card))).scrollIntoView().find(CARD_FACE).should("exist").and("not.have.attr", "data-full-art");
   });
 }
-
-// ---------------------------------------------------------------------------------------------
 
 describe("R1310000 R1310003 the economy loop", () => {
   beforeEach(() => {

@@ -8,9 +8,7 @@
 //! below `per` × X (ST-S14-4): the check is asked of the card with the play's X stamped (R1868000), so
 //! `legalActions` pairs each X with the Units it reaches and the reducer refuses any other pick. The
 //! pick is needed (R703), as S #12.1 and #12.2's are: an X no Unit is below is no play. It is not
-//! asked again as the Spell resolves, so a Unit raised past it since still dies (R1868000). `destroy`
-//! on it, Indestructible ignoring it. Radiant: `destroy_adjacent_to` as well, the Units beside it in
-//! its row on its side whatever their Attack (§3.1, R59).
+//! asked again as the Spell resolves, so a Unit raised past it since still dies (R1868000).
 
 use jackioh_engine::prelude::*;
 
@@ -55,10 +53,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #99 No-No Words — SPEC §8.10 row S 99, BUILD M12 row S 99: "at X = 1 it destroys a chosen Unit
-// of 3 Attack and refuses one of 4; at X = 2 one of 7; X = 0 is no play (R348); a target raised past
-// it after the pick still dies (R1868000); per reads through `param()`; radiant the Units beside it
-// die too, whatever their Attack" (R1868000, proven here and in the engine's rules tests).
+// S #99 No-No Words — SPEC §8.10 row S 99, BUILD M12 row S 99 (R1868000, R348).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -73,13 +68,9 @@ mod tests {
     const GREASER: &str = "meditative-100"; // (2) Unit 7/7.
     const GENN: &str = "classic-086"; // (4) Unit 14/14.
     const FILLER: &str = "core-005";
-    /// C+ T-AI-2 Scaling Law, a 2/2 unit token with +1/+1 for each AI card its controller has played:
-    /// the play of an AI-tagged No-No Words raises it at §10.5 step 4, before the Spell resolves.
     const SCALING_LAW: &str = "classicplus-t-ai-02";
-    /// Enough mana for any X a test asks.
     const MANA: i32 = 10;
 
-    /// The X of each play of p1's No-No Words `legalActions` lists, with its picks.
     fn plays(s: &Scenario) -> Vec<(Option<i32>, Vec<Selection>)> {
         let held = s.card(NONO).id.clone();
         legal_actions(s.state(), P1)
@@ -126,7 +117,6 @@ mod tests {
         fn r1868000_x2_reaches_7() {
             let mut s = nono_board(false, json!([GREASER]));
             let seven = s.unit_at(P2, 1);
-            // Below 4 × 1 it is not; below 4 × 2 it is.
             assert!(plays(&s).iter().all(|(x, _)| *x != Some(1)));
 
             s.play(NONO, json!({ "x": 2, "targets": pick::instance(&seven) }));
@@ -163,7 +153,6 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [GENN] },
             }));
             let genn = s.unit_at(P2, 1);
-            // 14 Attack: below 4 × 4, never below 4 × 3 or less.
             let offered = plays(&s);
             assert!(
                 offered.iter().all(|(x, _)| x.is_some_and(|x| x >= 4)),
@@ -184,7 +173,6 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let law = s.unit_at(P1, 1);
-            // 3 Attack as it is picked: below 4 × 1.
             s.card_mut(&law).buffs.attack = 1;
             s.expect_stats(&law, json!({ "attack": 3 }));
             s.card_mut(NONO)

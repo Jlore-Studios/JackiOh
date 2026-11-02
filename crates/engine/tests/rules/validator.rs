@@ -9,10 +9,6 @@
 //!
 //! `LoadoutError.deck` is the 1-based deck number the message shows; it is absent on the
 //! loadout-wide rules (L1, L4, L5), whose messages name no single deck.
-//!
-//! Port of `packages/validator/test/validator.test.ts` (part 5). The property tests drew their
-//! loadouts from fast-check; here they come from the engine's own seeded `Rng`, with the same fixed
-//! seed and run count, so they fail the same way twice.
 
 use indexmap::IndexSet;
 use jackioh_engine::config::{DECK_SIZE, MAX_COPIES};
@@ -65,7 +61,6 @@ fn sole_error(result: &LoadoutResult) -> LoadoutError {
     errors[0].clone()
 }
 
-/// `{ ok: true }`.
 fn accepted() -> LoadoutResult {
     LoadoutResult {
         ok: true,
@@ -304,7 +299,6 @@ mod loadout_rules_l1_l6_s9_4_m6_t3 {
 mod one_violation_reports_one_rule_s9_4 {
     use super::*;
 
-    /// TS `it.each(INJECTIONS)("$rule and nothing else for $label", …)`.
     #[test]
     fn each_injection_reports_its_rule_and_nothing_else() {
         for injection in INJECTIONS.iter() {
@@ -319,7 +313,7 @@ mod one_violation_reports_one_rule_s9_4 {
     }
 }
 
-// --- properties over random loadouts (BUILD §"Property: random loadouts") --------------------
+// properties over random loadouts (BUILD §"Property: random loadouts")
 
 fn required() -> Vec<CardId> {
     vec![HIT_JOB.to_string(), JELLY_BEAN.to_string(), ARCHIVIST.to_string()]
@@ -338,12 +332,12 @@ fn deck_cards() -> usize {
     LOADOUT_DECKS * DECK_SIZE as usize
 }
 
-/// fast-check's `shuffledSubarray(items, { minLength: n, maxLength: n })`: `n` of them, in a random order.
+/// `n` of `items`, in a random order.
 fn shuffled_subarray(rng: &mut Rng, items: &[CardId], n: usize) -> Vec<CardId> {
     rng.shuffle(items).into_iter().take(n).collect()
 }
 
-/// fast-check's `option(string({ minLength: 1, maxLength: 12 }), { nil: undefined })`: printable ASCII.
+/// None, or 1 to 12 printable ASCII characters.
 fn random_name(rng: &mut Rng) -> Option<String> {
     if rng.int(6) == 0 {
         return None;

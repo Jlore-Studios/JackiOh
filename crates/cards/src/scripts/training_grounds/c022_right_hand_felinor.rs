@@ -3,11 +3,10 @@
 //!
 //! Base:    "Cry: If this is to the right of a Unit, give this and that Unit +3/+3."
 //! Radiant: "Cry: If this is to the right of a Unit, give this and that Unit +6/+6."
-//! Engine: §3's lanes run 1 to 5 left to right from the owner's seat, so the Unit this one is to the
-//! right of is the top of the pile one lane lower on its own side and row (R2196002), read as the Cry
-//! resolves: `card_at`, kept when it acts there (not Dormant, R1839000; beside a Felinor standing in the
-//! backrow only a standing Unit, `is_adjacent_card`, R1081000). Then both get a permanent `buff`, this one
-//! first. Lane 1 has nothing to its left. The Cry fires only on a play (R1).
+//! Engine: §3's lanes run 1 to 5 left to right from the owner's seat, so the Unit to its left is the pile
+//! top one lane lower on its own side and row (R2196002), read as the Cry resolves; never a Dormant one
+//! (R1839000), and beside a Felinor standing in the backrow only a standing Unit (`is_adjacent_card`,
+//! R1081000). The Cry fires only on a play (R1).
 
 use jackioh_engine::prelude::*;
 
@@ -51,11 +50,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// TG #22 Right-Hand Felinor — SPEC §8.11 row 22, BUILD M13 row TG 22: "played into lane N with a friendly
-// Unit in lane N−1: both gain +3/+3; a Unit only in lane N+1 (to its right): nothing; lane 1: nothing; an
-// enemy Unit in lane N−1 of the other side: nothing; a Unit beneath a Stack in lane N−1 is not it, the
-// pile's top is; summoned or copied (no play): no Cry (R1); the buff reads through `param()`. radiant 6/6,
-// +6/+6 to both".
+// TG #22 Right-Hand Felinor — SPEC §8.11 row 22, BUILD M13 row TG 22 (R1).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -153,8 +148,7 @@ mod tests {
 
         #[test]
         fn r1_a_copy_of_it_beside_a_friendly_unit_buffs_nothing() {
-            // The source stands unbuffed in lane 5 (a copy keeps buffs, R57); its copy lands in lane 3,
-            // right of the 4/4 in lane 2, where a Cry would give both +3/+3.
+            // The source is unbuffed (a copy keeps buffs, R57); the copy lands right of the 4/4.
             let mine = json!([{ "def": BODY, "lane": 2 }, { "def": FELINOR, "lane": 5 }]);
             let mut s = felinor(false, mine, json!([]));
             let source = s.unit_at(P1, 5);

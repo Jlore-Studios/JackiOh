@@ -56,7 +56,6 @@ export const CARD_COUNTERS = [
 ] as const;
 export type CardCounter = (typeof CARD_COUNTERS)[number];
 
-/** R1743000: the counters a game's log adds to a card's total. */
 export const SUMMED_COUNTERS = [
   "played",
   "playedAgainst",
@@ -106,15 +105,7 @@ export type SummedCounter = (typeof SUMMED_COUNTERS)[number];
 export const MAX_COUNTERS = ["biggestHit", "overkill", "biggestKill"] as const;
 export type MaxCounter = (typeof MAX_COUNTERS)[number];
 
-/**
- * Per-card viewer counts: seen, player/opponent plays, player/opponent destroyed cards, (R1582000) the
- * player's cards the opponent's Allure took, lethal blows, Traps fired and survivors, and (R1743000)
- * damage dealt, the biggest hit and the most overkill (each a maximum), attacks, healing, draws, Radiant
- * changes and the games won and lost with the card played, and (R2649000) how each card fared with the
- * game's own mechanics: Temporary, Brittle, Feng Shui, trades, Created copies, kills, Reborn, shields,
- * Armor, damage taken, Windfury, Lifesteal, sacrifices, freezes, Flashback, mana saved, counters, burns,
- * bounces and Starships (`biggestKill` a maximum).
- */
+/** Per-card viewer counts, summed or kept at their maximum across games (R1582000, R1743000, R2649000). */
 export type CardCounters = Readonly<Record<CardCounter, number>>;
 
 export const NO_COUNTS: CardCounters = Object.freeze({
@@ -176,11 +167,10 @@ export type PlayerStats = {
   readonly cards: Readonly<Record<string, CardCounters>>;
   /** R1743000: the games won in a row now; a loss or a draw resets it. */
   readonly streak: number;
-  /** R1743000: the most games won in a row. */
   readonly bestStreak: number;
-  /** R1743000: the most turns any finished game ran. */
+  /** the most turns any finished game ran. */
   readonly longestGame: number;
-  /** R1743000: the player's plays, by card, in that longest game. */
+  /** the player's plays, by card, in that longest game. */
   readonly longestGamePlayed: Readonly<Record<string, number>>;
 };
 
@@ -203,91 +193,86 @@ export type GameLog = {
   readonly playedAgainst: Readonly<Record<string, number>>;
   readonly destroyed: Readonly<Record<string, number>>;
   readonly defeated: Readonly<Record<string, number>>;
-  /** R1582000: the player's cards the opponent's Allure took. */
+  /** The player's cards the opponent's Allure took. */
   readonly allured: Readonly<Record<string, number>>;
-  /** R1582000: the cards that dealt the lethal blow of a game the player won. */
+  /** The cards that dealt the lethal blow of a game the player won. */
   readonly lethal: Readonly<Record<string, number>>;
-  /** R1582000: the player's Traps that fired. */
+  /** The player's Traps that fired. */
   readonly sprung: Readonly<Record<string, number>>;
-  /** R1582000: the player's Units standing when a game they won ended. */
+  /** The player's Units standing when a game they won ended. */
   readonly survived: Readonly<Record<string, number>>;
-  /** R1743000: the damage the player's cards dealt. */
   readonly damageDealt: Readonly<Record<string, number>>;
-  /** R1743000: the largest single hit of each of the player's cards. */
   readonly biggestHit: Readonly<Record<string, number>>;
-  /** R1743000: the most by which one hit of each of the player's cards went past its target's health. */
+  /** The most by which one hit of each of the player's cards went past its target's health. */
   readonly overkill: Readonly<Record<string, number>>;
-  /** R1743000: the attacks the player's cards declared. */
   readonly attacks: Readonly<Record<string, number>>;
-  /** R1743000: the healing the player's cards caused. */
   readonly healing: Readonly<Record<string, number>>;
-  /** R1743000: the player's draws that showed the card. */
   readonly drawn: Readonly<Record<string, number>>;
-  /** R1743000: the player's cards made Radiant. */
+  /** The player's cards made Radiant. */
   readonly radiant: Readonly<Record<string, number>>;
-  /** R1743000: the highest turn a `turnStarted` named in this game. */
+  /** The highest turn a `turnStarted` named in this game. */
   readonly turns: number;
   /** R2649000: the player's Temporary cards discarded unplayed at the end of their turn. */
   readonly tempExpired: Readonly<Record<string, number>>;
-  /** R2649000: the player's plays of a card Temporary in their hand. */
+  /** the player's plays of a card Temporary in their hand. */
   readonly tempPlayed: Readonly<Record<string, number>>;
-  /** R2649000: the player's cards that crumbled (Brittle, R638). */
+  /** the player's cards that crumbled (Brittle, R638). */
   readonly crumbled: Readonly<Record<string, number>>;
-  /** R2649000: the opponent's cards that crumbled. */
+  /** the opponent's cards that crumbled. */
   readonly crumbledAgainst: Readonly<Record<string, number>>;
-  /** R2649000: the player's plays a Feng Shui judged positive (R983). */
+  /** the player's plays a Feng Shui judged positive (R983). */
   readonly fengShuiGood: Readonly<Record<string, number>>;
-  /** R2649000: the player's plays a Feng Shui judged negative. */
+  /** the player's plays a Feng Shui judged negative. */
   readonly fengShuiBad: Readonly<Record<string, number>>;
-  /** R2649000: the player's Tradable cards traded away (R1838001). */
+  /** the player's Tradable cards traded away (R1838001). */
   readonly traded: Readonly<Record<string, number>>;
-  /** R2649000: the player's cards drawn by a trade. */
+  /** the player's cards drawn by a trade. */
   readonly tradeDrawn: Readonly<Record<string, number>>;
-  /** R2649000: the player's Created cards (R943), each instance once. */
+  /** the player's Created cards (R943), each instance once. */
   readonly created: Readonly<Record<string, number>>;
-  /** R2649000: the opponent's cards the player's cards killed. */
+  /** the opponent's cards the player's cards killed. */
   readonly kills: Readonly<Record<string, number>>;
-  /** R2649000: the largest `maxHealth` of a card each of the player's cards killed. */
+  /** the largest `maxHealth` of a card each of the player's cards killed. */
   readonly biggestKill: Readonly<Record<string, number>>;
-  /** R2649000: the player's Reborn Units that came back. */
+  /** the player's Reborn Units that came back. */
   readonly reborn: Readonly<Record<string, number>>;
-  /** R2649000: the Divine Shields the player's Units lost. */
+  /** the Divine Shields the player's Units lost. */
   readonly shieldsLost: Readonly<Record<string, number>>;
-  /** R2649000: the damage Armor took off the player's Units (R1360, R1361). */
+  /** the damage Armor took off the player's Units (R1360, R1361). */
   readonly armorAbsorbed: Readonly<Record<string, number>>;
-  /** R2649000: the damage the player's Units took. */
+  /** the damage the player's Units took. */
   readonly damageTaken: Readonly<Record<string, number>>;
-  /** R2649000: the player's Units' second attack in one turn. */
+  /** the player's Units' second attack in one turn. */
   readonly doubleAttacks: Readonly<Record<string, number>>;
-  /** R2649000: the healing the player's Lifesteal cards drained. */
+  /** the healing the player's Lifesteal cards drained. */
   readonly lifesteal: Readonly<Record<string, number>>;
-  /** R2649000: the player's own deaths at their own hand. */
+  /** the player's own deaths at their own hand. */
   readonly sacrificed: Readonly<Record<string, number>>;
-  /** R2649000: the opponent's Units the player's cards froze. */
+  /** the opponent's Units the player's cards froze. */
   readonly froze: Readonly<Record<string, number>>;
-  /** R2649000: the player's Units frozen. */
+  /** the player's Units frozen. */
   readonly frozen: Readonly<Record<string, number>>;
-  /** R2649000: the player's Units that thawed on the field. */
+  /** the player's Units that thawed on the field. */
   readonly thawed: Readonly<Record<string, number>>;
-  /** R2649000: the frozen opponent Units the player's cards killed. */
+  /** the frozen opponent Units the player's cards killed. */
   readonly shattered: Readonly<Record<string, number>>;
-  /** R2649000: the player's plays from the graveyard (R783012). */
+  /** the player's plays from the graveyard (R783012). */
   readonly flashback: Readonly<Record<string, number>>;
-  /** R2649000: the mana the player's plays cost under their printed cost. */
+  /** the mana the player's plays cost under their printed cost. */
   readonly manaSaved: Readonly<Record<string, number>>;
-  /** R2649000: the player's plays countered. */
+  /** the player's plays countered. */
   readonly countered: Readonly<Record<string, number>>;
-  /** R2649000: the opponent's plays the player's cards countered. */
+  /** the opponent's plays the player's cards countered. */
   readonly counterspells: Readonly<Record<string, number>>;
-  /** R2649000: the player's cards burned from a full hand (R4). */
+  /** the player's cards burned from a full hand (R4). */
   readonly burned: Readonly<Record<string, number>>;
-  /** R2649000: the player's cards bounced back to the hand. */
+  /** the player's cards bounced back to the hand. */
   readonly bounced: Readonly<Record<string, number>>;
-  /** R2649000: the player's Starship pieces launched in a Starship (R1852003). */
+  /** the player's Starship pieces launched in a Starship (R1852003). */
   readonly launched: Readonly<Record<string, number>>;
-  /** R2649000: the Created instances already counted this game; never stored. */
+  /** the Created instances already counted this game; never stored. */
   readonly createdIds: readonly string[];
-  /** R2649000: this turn's attacks, by the attacker's instance id; never stored. */
+  /** this turn's attacks, by the attacker's instance id; never stored. */
   readonly attackers: Readonly<Record<string, number>>;
 };
 
@@ -359,7 +344,7 @@ export function logWith(log: GameLog, counter: SummedCounter, id: string, by = 1
   return { ...log, [counter]: bump(log[counter], id, by) };
 }
 
-/** R1743000: raises a card's `counter` to `value` when that is more than it holds; else the log itself. */
+/** R1743000: raises a card's `counter` to `value` if that is more than it holds; else the log itself. */
 export function logMax(log: GameLog, counter: MaxCounter, id: string, value: number): GameLog {
   if (value <= (log[counter][id] ?? 0)) return log;
   return { ...log, [counter]: { ...log[counter], [id]: value } };
@@ -435,10 +420,7 @@ export function topCards(stats: PlayerStats, counter: CardCounter, limit: number
     .slice(0, Math.max(0, limit));
 }
 
-/**
- * SPEC §9.11, R377: formats a server-calculated played delta as signed percentage points.
- * Returns null when delta is null.
- */
+/** SPEC §9.11, R377: a server-calculated played delta as signed percentage points. */
 export function formatPlayedDelta(delta: number | null): string | null {
   if (delta === null) return null;
   const points = Math.round(delta * 100);
@@ -447,8 +429,8 @@ export function formatPlayedDelta(delta: number | null): string | null {
 }
 
 /**
- * R654, R1147000: a server-calculated rate to show, or null when there is none or its games are below
- * the sample floor: the cards table's Radiant and Normal rates, and (R2089000) the Created cards' rates.
+ * R654, R1147000: a server-calculated rate to show, null when none or below the sample floor: the cards
+ * table's Radiant and Normal rates, and the Created cards' (R2089000).
  */
 export function faceRate(
   games: number | undefined,

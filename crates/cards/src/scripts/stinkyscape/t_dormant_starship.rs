@@ -35,13 +35,8 @@ pub fn script() -> CardScripts {
 }
 
 // S T-dormant-starship Dormant Starship — SPEC §8.10 row T-dormant-starship, BUILD M12 row S
-// T-dormant-starship: "a Starship Piece's death summons it 0/0 into its owner's leftmost open unit zone,
-// else on top of lane 3, and the piece's copy fuses in at once (R1852000); it is Dormant, unattackable and
-// unreachable (R1839000); a Stack card played onto it is exiled before it resolves (R1852007); its
-// Activate for (3) launches it: the Starship keyword, a name (R1852004), its fused Cries, then When
-// launched (R1852003); "Your Starship launch costs (0)" prices it (R1852006); no pool and no deck holds it
-// (R1857001); radiant R349's fallback, 0/0". Issue #2521: the copy is the dead piece's base version
-// (R2521000).
+// T-dormant-starship (#2521; R1852000, R2521000, R1839000, R1852007, R1852004, R1852003, R1852006,
+// R1857001, R349).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -54,7 +49,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-    // Issue #2521: Stratos (S #68) is no Starship Piece any more (B9), so a keywords-only piece stands in.
+    // Issue #2521: Stratos (S #68) is no Starship Piece (B9), so a keywords-only piece stands in.
     const AP_ROUNDS: &str = "stinkyscape-100"; // (1) 3/1 Starship Piece, Equip, Pierce: keywords only.
     const FLAK_V3: &str = "stinkyscape-053"; // (2) 0/4 Starship Piece, Equip; Radiant 0/8, Lucky 1.
     const OVERDRIVE: &str = "stinkyscape-101"; // (2) 5/5 Starship Piece, Equip, Brittle 2, Reborn.
@@ -73,7 +68,6 @@ mod tests {
         json!(vec![json!({ "def": TRAP, "faceUp": false }); BACKROW_ZONES as usize])
     }
 
-    /// R2249000: the Starship standing in the middle of p1's backrow, as p1's view shows it.
     fn ship_on_view(s: &Scenario) -> jackioh_engine::wire::UnitView {
         let lane = STARSHIP_LANE_ORDER[0] as usize - 1;
         match s.view(P1).you.backrow[lane].as_ref() {
@@ -239,10 +233,8 @@ mod tests {
             json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
         );
         assert!(is_dormant_starship(s.card(ship.as_str())));
-        // Unreachable: a declared target never names it.
         s.state_mut().players.p1.mana.current = 10;
         s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::id(&ship) })));
-        // Unattackable: on p2's turn their Vanilla may not attack it.
         s.state_mut()
             .players
             .p1
@@ -314,7 +306,6 @@ mod tests {
         let before = s.stats(ship.as_str()).max_health;
         launch_starship(&mut s, &ship);
         assert!(is_launched_starship(s.card(ship.as_str())));
-        // The Capsule's fused Cry asks where its counters go; the When launched waits for it.
         let pending = s.state().pending.clone().expect("the fused Cry's prompt");
         assert_eq!(pending.player_id, P1);
         assert_eq!(s.stats(ship.as_str()).max_health, before, "no When launched yet");

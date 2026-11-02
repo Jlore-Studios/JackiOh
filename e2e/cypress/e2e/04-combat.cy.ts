@@ -1,7 +1,7 @@
-// #8 Mr. Vanilla tests DEF; #11 Tempo Timmy and #56 Jilliax test First Strike and Divine Shield.
-// #20 Pointmaster then tests a lethal First Strike against the shieldless Jilliax.
+// #8 Mr. Vanilla tests DEF; #11 Tempo Timmy and #56 Jilliax First Strike and Divine Shield, and
+// #20 Pointmaster a lethal First Strike on the shieldless Jilliax.
 // BUILD M8 computes combat results before reading the UI (§3, §4.1, §4.3, §4.4, §4.5; R93).
-// BUILD M5-T4 damage and heal pops are asserted while the animation runs, then against durable stats.
+// BUILD M5-T4 pops are asserted while the animation runs, then the durable stats.
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -16,7 +16,6 @@ import { ensureSeat } from "../../support/hotseat.ts";
 
 const SEED = seedFor("04-combat-1604");
 
-/** BUILD M5-T4 card hooks. */
 const attackIs = (n: number): string => `[data-attack="${n}"]`;
 const healthIs = (n: number): string => `[data-health="${n}"]`;
 const maxHealthIs = (n: number): string => `[data-max-health="${n}"]`;
@@ -41,7 +40,6 @@ function expectHighlight(testid: string, legal: boolean, why: string): void {
   });
 }
 
-/** BUILD M5-T2 attack selection. */
 function selectAttacker(instanceId: string): void {
   cy.get(ts(cardId(instanceId))).click();
 }
@@ -56,7 +54,7 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     advanceToTurn(2);
     cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
     advanceToTurn(4);
-    // Turn 4 is p2's second turn: 2 mana, so Jilliax's Embiggened (3) price is not offered and no price picker opens.
+    // Turn 4 is p2's second: 2 mana, too few for Jilliax's Embiggened (3), so no price picker opens.
     cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 2 } });
 
     advanceToTurn(5);

@@ -1,13 +1,8 @@
 //! `forEachCard`: one effect for each card of a set a clause reads off the board (R113, R66).
-//!
 //! A list a prompt split is continued by building it again and skipping what already ran, which is
-//! exact only for a list whose shape does not hang on the board. A clause over a set it reads off the
-//! board is a part of the list instead: it reads its set once, as the list reaches it, and a pause
-//! inside it resumes over that same set (`EffectPart.memo`). #94 Genn's Greed's draw clause and #30
-//! radiant's two draws are written with it; their card tests cover the Core cases, and this file the
-//! verb on its own, with fixture cards.
-//!
-//! Port of `packages/engine/test/effects-each.test.ts`.
+//! exact only for a list whose shape does not hang on the board. A clause over a board set reads it
+//! once, as the list reaches it, and a pause inside it resumes over that same set (`EffectPart.memo`).
+//! #94 Genn's Greed and #30 radiant use it.
 
 use std::sync::OnceLock;
 
@@ -37,13 +32,11 @@ fn drawer() -> CardDef {
     }))
 }
 
-/// Which card the question follows (TS `asksAfter: () => string | undefined`, a closure over a
-/// variable the test sets once the library's ids are known): set at most once, unset for "never".
+/// Which card the question follows, set once the library's ids are known: unset for "never".
 type AsksAfter = Arc<OnceLock<String>>;
 
-/// "Draw every card in your library", the first draw followed by a question. The set is the library
-/// as the clause begins; by the answer the first card has left it, so a list rebuilt from the board
-/// would be one draw shorter and, resumed by index, would skip a card.
+/// "Draw every card in your library", the first draw followed by a question: by the answer the first
+/// card has left the library, so a list rebuilt from the board would, resumed by index, skip a card.
 fn script(asks_after: AsksAfter) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
@@ -142,7 +135,6 @@ mod for_each_card_r113_r66 {
         let mut sink = Bench::new(&state);
         run_hook_resumable(&mut sink.sink(&mut state), &card, "cry", Default::default());
 
-        // The first card is drawn and the question is open; the other two wait in the library.
         let Some(pending) = state.pending.clone() else {
             panic!("expected the question");
         };
@@ -165,8 +157,7 @@ mod for_each_card_r113_r66 {
         );
         assert!(refused.is_ok());
 
-        // Both cards still owed are drawn: the clause resumed over the three it read, not over the two
-        // the library holds by the answer (which, resumed at the second place, would skip one).
+        // Both cards still owed are drawn: the clause resumed over the three it read, not the two left.
         assert!(stored.pending.is_none());
         assert_eq!(ids(&stored.players[PlayerId::P1].hand), ids(&library));
         assert_eq!(stored.players[PlayerId::P1].library, Vec::<CardInstance>::new());

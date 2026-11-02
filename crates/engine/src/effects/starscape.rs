@@ -1,6 +1,5 @@
-//! Travel the starscape (SPEC §6.3's Starscape map row, R1847000, R1847001): the effects module's verb
-//! over Stinkyscape #148 Alteran Reach's map, whose machinery — the chart, the view and the travel
-//! abilities a card declares — is `subsystems/starscape.rs`'s.
+//! Travel the starscape (SPEC §6.3's Starscape map row, R1847000, R1847001), Stinkyscape #148 Alteran
+//! Reach's map; its chart, view and travel abilities are `subsystems/starscape.rs`'s.
 
 use crate::effects::{
     AddToHandArgs, DamageEffectArgs, DamageFlagArgs, DrawArgs, GainManaArgs, HealArgs, TargetSpec,

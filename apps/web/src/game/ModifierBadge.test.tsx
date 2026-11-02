@@ -1,9 +1,7 @@
-// R169 on touch (#2321): a hero's modifier badge is cut to a few words beside the portrait (12ch on a
-// phone), so Call to Chaos (Training-Grounds Edition)'s clause read "Add a rand…", and its `title` is a
-// hover a touch screen never shows. A tap on the badge opens its whole label beside it, laid on the
-// page so the hero row keeps its layout, and the tap never reaches the hero's own click. It closes with
-// no key handler of its own (the board's are frozen, R2126000): the badge again, a tap elsewhere, or
-// focus leaving it.
+// R169 on touch (#2321): a hero's modifier badge is cut to a few words beside the portrait, and its
+// `title` is a hover a touch screen never shows. A tap on the badge opens its whole label beside it,
+// laid on the page so the hero row keeps its layout. It closes with no key handler of its own (the
+// board's are frozen, R2126000).
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

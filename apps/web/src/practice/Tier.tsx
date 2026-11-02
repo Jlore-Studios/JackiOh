@@ -1,9 +1,6 @@
-// A practice tier's name, its one-line flavour and its crest: the emblem the setup cards, the HUD
-// and the result screen share, so a tier looks the same everywhere it appears.
-//
-// The crest is inline SVG with no gradients (a gradient needs a document-unique id, and three
-// crests share a page), colored entirely from CSS through `--tier` (practice.css), so it costs no
-// asset and follows the theme tokens. Its gems count the tier's rank in `DIFFICULTIES`.
+// A practice tier's name, its one-line flavour and its crest, shared by the setup cards, the HUD and the
+// result screen. The crest is inline SVG with no gradients (a gradient needs a document-unique id, and
+// three crests share a page), colored entirely from CSS through `--tier` (practice.css).
 
 import type { ReactElement } from "react";
 

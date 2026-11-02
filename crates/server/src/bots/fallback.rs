@@ -1,21 +1,11 @@
 //! The empty-queue fallback (SPEC §9.5, R1453, R641000): which waiting ticket may be paired with a
-//! ladder bot, and with which bot. Pure but for the fallback key: the queue's sweep (`api/queue.rs`,
-//! `try_pair`) reads the tickets, the bots and each player's recent opponents, and asks these
-//! functions.
+//! ladder bot, and with which bot.
 //!
-//! A ranked ticket of any mode that has waited past its own fallback time — drawn from its id and
-//! the server's key between `BOT_FALLBACK_MIN_SECONDS` and `BOT_FALLBACK_MAX_SECONDS`, so it is the
-//! same at every sweep and no client can work it out — pairs with the free bot on its schedule whose
-//! rating is closest to the player's, never one the player faced in their last
-//! `BOT_RECENT_OPPONENTS` games. A player rated above every bot is given no bot but a grinder within
-//! `MAX_FAIR_GAP` of them (R1555000). A Conquest ticket's bot must hold a trio dealt for this catalog
-//! (R641000), and plays a series rather than a match. The sweep pairs every human it can first, so a
-//! human inside the window always comes before a bot.
-//!
-//! R1555000 adds the match between two bots the sweep kicks off while the top bots grind and the
-//! queue holds no ticket (`api/queue.rs`, `kick_off_bot_match`): which pair plays it
-//! (`choose_bot_pair`), and whether one is live or ended too recently for another
-//! (`bot_matches`, `bot_match_gap_passed`).
+//! A ranked ticket of any mode that has waited past its fallback time pairs with the free bot on
+//! schedule closest in rating, never faced in the last `BOT_RECENT_OPPONENTS` games. Above every bot,
+//! only a grinder within `MAX_FAIR_GAP` pairs (R1555000). A Conquest bot must hold a trio for this
+//! catalog (R641000). While top bots grind and the queue is empty, the sweep kicks off a match
+//! between two bots (`choose_bot_pair`, `bot_matches`, `bot_match_gap_passed`).
 
 use std::sync::LazyLock;
 
@@ -79,24 +69,19 @@ pub fn scheduled_hours(bot: &BotRow) -> i32 {
     }
 }
 
-/// R1705001: whether a deck holds `DECK_SIZE` cards, the size L2 asks of every deck a player
-/// queues. A bot's deck dealt before the size changed holds the earlier size.
+/// R1705001: whether a deck holds `DECK_SIZE` cards, the size L2 asks of every deck a player queues.
 pub(crate) fn holds_deck_size(cards: &[String]) -> bool {
     usize::try_from(DECK_SIZE).is_ok_and(|size| cards.len() == size)
 }
 
-/// R1454, R1705001: whether the bot holds Best-of-1 decks dealt for `catalog_version`, each of
-/// `DECK_SIZE` cards. A bot that does not is never chosen, and the pool's refresh deals it again
-/// (`bots::pool::refresh_pool`).
+/// R1454, R1705001: whether the bot holds Best-of-1 decks of `DECK_SIZE` cards for `catalog_version`.
 pub fn holds_decks(bot: &BotRow, catalog_version: &str) -> bool {
     !bot.decks.is_empty()
         && bot.decks_catalog_version.as_deref() == Some(catalog_version)
         && bot.decks.iter().all(|deck| holds_deck_size(&deck.cards))
 }
 
-/// R641000, R1705001: whether the bot holds a Conquest trio dealt for `catalog_version`, each of its
-/// decks of `DECK_SIZE` cards. A bot that does not is never chosen for Conquest, and the pool's
-/// refresh deals it again.
+/// R641000, R1705001: whether the bot holds a Conquest trio of `DECK_SIZE` cards for `catalog_version`.
 pub fn holds_trio(bot: &BotRow, catalog_version: &str) -> bool {
     bot.trio_catalog_version.as_deref() == Some(catalog_version)
         && bot
@@ -107,19 +92,14 @@ pub fn holds_trio(bot: &BotRow, catalog_version: &str) -> bool {
             })
 }
 
-/// R1454: whether the bot is on at `hour` of the day (UTC): its schedule runs `scheduled_hours`
-/// hours from `active_from_hour`, around midnight when it must.
+/// R1454: whether the bot is on schedule at `hour` of the day (UTC).
 pub fn on_schedule(bot: &BotRow, hour: i32) -> bool {
     (hour - bot.active_from_hour).rem_euclid(BOT_HOURS_PER_DAY) < scheduled_hours(bot)
 }
 
-/// R1453: the bot the ticket pairs with, or none. Of the bots in the pool, on their schedule, in no
-/// match, not `busy` (taken by this sweep, or a side of a series that is not over, R641000), not
-/// among the player's `recent` opponents and holding what the mode needs dealt for the catalog this
-/// server plays (`catalog_version`) at `DECK_SIZE` cards a deck: Best-of-1 decks (R1454,
-/// `holds_decks`) or, for Conquest, a trio (R641000, `holds_trio`; R1705001); the one closest in
-/// rating, ties on id. A player rated above every bot in the pool, free or not, is given none but a
-/// grinder within `MAX_FAIR_GAP` of them (R1555000).
+/// R1453: the bot the ticket pairs with, or none: on schedule, free, not recent, holding legal
+/// decks for `catalog_version` at `DECK_SIZE` cards (R1454, R641000, R1705001), closest in rating.
+/// Above every bot, only a grinder within `MAX_FAIR_GAP` pairs (R1555000).
 pub fn choose_bot<'a>(
     ticket: &Ticket,
     bots: &'a [BotRow],
@@ -179,12 +159,9 @@ pub fn bot_match_gap_passed(games: &[RatedGameRow], now: i64) -> bool {
         .any(|game| game.sides.0.bot_id.is_some() && game.sides.1.bot_id.is_some() && game.ended_at > since)
 }
 
-/// R1555000: the two bots a match between two bots seats, or none. Both are ready: in the pool, on
-/// their schedule, in no match, not `busy` (a side of a series that is not over, R641000) and
-/// holding Best-of-1 decks dealt for `catalog_version` at `DECK_SIZE` cards (R1454, R1705001,
-/// `holds_decks`). The first is the lowest-rated ready grinder (ties on id) that has an opponent: the
-/// ready bot, grinder or not, closest in rating to it (ties on id), never one of its `recent`
-/// opponents (`BOT_RECENT_OPPONENTS`, keyed by the grinder's id).
+/// R1555000: the two bots a match between two bots seats, or none: ready on schedule, free, with
+/// legal Bo1 decks (R1454, R641000, R1705001). Lowest-rated ready grinder paired with closest ready
+/// opponent not in its recent opponents.
 pub fn choose_bot_pair<'a>(
     bots: &'a [BotRow],
     recent: &IndexMap<String, Vec<String>>,

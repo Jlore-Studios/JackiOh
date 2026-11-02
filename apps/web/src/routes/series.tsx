@@ -23,7 +23,7 @@ import "./lobby.css";
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
 
-/** Screen IDs; `e2e/support/testids.ts` mirrors their strings (R330, R331, R333, R336, R338). */
+/** Screen IDs; `e2e/support/testids.ts` mirrors their strings. */
 export const seriesTestid = {
   screen: "series-screen",
   loading: "series-loading",

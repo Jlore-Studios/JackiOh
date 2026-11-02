@@ -6,19 +6,9 @@
 //!            and choices."
 //!   Radiant: the same with "a random rich Anomaly".
 //!
-//! Engine: #1855's board swap, `replace_board`, on its caster's side only (ST9 Q7): what the Spell
-//! reaches there is exiled, a Dormant card staying (R1839000), the board is laid zone by zone, a
-//! summon each, and every Unit it laid fires its Cry in list order with its caster's choices random
-//! (R1855000, R1855001). The board is drawn from the match rng as the card arrives where it can be
-//! looked at (its start-of-game clause, as Heroic Power rolls its power, R43, R151), each equally
-//! likely: on the base face one of the seven `BASE_BOARDS`, on the Radiant face one of the three rich
-//! `RICH_BOARDS` (R1879000, ST-S20-2). It is remembered as the card's label, its code ("FO"), which
-//! its owner's view shows in place of its text, and its Cry lays that board; one that holds none
-//! draws as it resolves (R2247000). The ten boards are the designer's, "Small Asteroid" read as
-//! S #169 Tiny Asteroid (ST-S20-3), an asteroid field's "only gives …" a `resourcePool` rider on each
-//! of its asteroids (R1855002), SP's backrow Drone Interceptors standing there by their Flying
-//! (R1879001), and BF's Drone Battleship its three layers in one pile, Meltdown at the bottom and the
-//! Shield on top (R1879002, R1842000). S #151 Call to Chaos (Scape Edition) lays one of `ALL_BOARDS`.
+//! Board swap via replace_board (#1855) on caster's side: exiles board except Dormant (R1839000); lays zones and fires Cries with random choices (R1855000, R1855001).
+//! Rolls BASE_BOARDS / RICH_BOARDS (R43, R151, R1879000, ST-S20-2, ST-S20-3, R2247000).
+//! Asteroid resourcePool (R1855002, #169); Flying backrow drones (R1879001); Drone Battleship stack (R1879002, R1842000, #151).
 
 use jackioh_engine::prelude::*;
 
@@ -318,10 +308,7 @@ pub fn script() -> CardScripts {
 }
 
 // Stinkyscape T-anomaly-found Anomaly Found! — SPEC §8.10 row T-anomaly-found, BUILD M12 row S
-// T-anomaly-found: "its caster's side is exiled (a Dormant card stays) and one of the seven boards
-// laid, the other side untouched; each laid Unit's Cry fires once the board is laid, its choices
-// random; over the seeds each of the seven appears; radiant one of the three rich boards"
-// (R1855000, R1855001, R1879000–R1879002).
+// (R1855000, R1855001, R1879000, R1879002).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,11 +322,8 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-005";
-    /// The games the board is drawn over.
     const SEEDS: u32 = 120;
 
-    /// P1's main phase with an Anomaly Found! on `radiant`'s face in hand, a Unit in P1's lane 1 and
-    /// one in P2's, and `field` beside them.
     fn setup(seed: &str, radiant: bool, field: Value) -> Scenario {
         crate::register_all();
         let mut mine = vec![json!({ "def": VANILLA, "lane": 1 })];
@@ -355,7 +339,6 @@ mod tests {
         }))
     }
 
-    /// The `summoned` events of the last step, as (definition, row, lane).
     fn summoned(s: &Scenario) -> Vec<(String, Row, i32)> {
         s.last_events()
             .iter()
@@ -368,7 +351,6 @@ mod tests {
             .collect()
     }
 
-    /// The board a play laid: the one of `boards` whose cards are the summons, in list order.
     fn laid(s: &Scenario, boards: &[Board]) -> &'static str {
         let summons = summoned(s);
         let found: Vec<&Board> = boards
@@ -379,7 +361,6 @@ mod tests {
                     .iter()
                     .map(|lay| (lay.def_id.to_string(), lay.row, lay.lane))
                     .collect();
-                // A laid Cry may summon more after the board; the board's own cards come first.
                 summons.len() >= cards.len() && summons[..cards.len()] == cards[..]
             })
             .collect();
@@ -387,7 +368,6 @@ mod tests {
         found[0].code
     }
 
-    /// A seed on `radiant`'s face that lays `code`.
     fn seed_laying(code: &str, radiant: bool, boards: &[Board]) -> String {
         (0..SEEDS)
             .map(|seed| format!("anomaly-{code}-{seed}"))
@@ -399,7 +379,6 @@ mod tests {
             .expect("a seed laying the board")
     }
 
-    /// The card on top of P1's zone, by row.
     fn top(s: &Scenario, row: Row, lane: i32) -> Option<CardInstance> {
         match row {
             Row::Units => s.unit(P1, lane),
@@ -607,8 +586,6 @@ mod tests {
 
         const PROBE: &str = "stinkyscape-166";
 
-        /// P1's main phase with a Scanning Probe Mk1 in hand after `misses` misses, scanned: the
-        /// Anomaly Found! it found, if any, added to the hand as any card is (its arrival runs).
         fn scanned(seed: &str, misses: i32) -> (Scenario, Option<CardInstance>) {
             crate::register_all();
             let mut s = scenario(json!({
@@ -631,7 +608,6 @@ mod tests {
             card.memory.get(CARD_LABEL_KEY).and_then(Value::as_str)
         }
 
-        /// The label P1's own view shows on the card, and whether P2's view of P1's hand can show any.
         fn labels(s: &Scenario, id: &str) -> (Option<String>, bool) {
             let mine = match &s.view(P1).you.hand {
                 HandView::Cards(cards) => cards
@@ -670,7 +646,6 @@ mod tests {
             let base: Vec<&str> = BASE_BOARDS.iter().map(|board| board.code).collect();
             let mut checked = 0;
             for seed in 0..80 {
-                // At 16 misses every scan finds one, a plain one 79 times in 100.
                 let (mut s, found) = scanned(&format!("r2247000-base-{seed}"), 16);
                 let card = found.expect("a find");
                 if card.radiant {
@@ -698,7 +673,6 @@ mod tests {
 
         #[test]
         fn r2247000_r1879000_one_that_holds_no_board_still_draws_as_it_resolves() {
-            // A scenario's hand is laid with no arrival, so it holds none.
             let mut s = setup("r2247000-none", false, json!([]));
             assert!(code_of(s.card(ID)).is_none());
             s.play(ID, json!({}));
@@ -721,7 +695,6 @@ mod tests {
             });
         }
 
-        /// The board a play of an Anomaly Found! that holds none lays on `seed`, held or not.
         fn resolved(seed: &str, held: bool) -> &'static str {
             let mut s = setup(seed, false, json!([]));
             if held {
@@ -731,7 +704,6 @@ mod tests {
             laid(&s, &ALL_BOARDS)
         }
 
-        /// The board a Scanning Probe Mk1's find holds on `seed`, held or not: a plain find at 16 misses.
         fn found(seed: &str, held: bool) -> Option<String> {
             crate::register_all();
             let mut s = scenario(json!({

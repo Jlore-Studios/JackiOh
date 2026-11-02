@@ -22,7 +22,6 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts {
-        // The same script: the Radiant face's 4 is its declared `divisor`, which `param` reads off the running face.
         radiant: base.clone(),
         base,
     }
@@ -66,12 +65,10 @@ mod tests {
             .collect()
     }
 
-    /// A Radiant Argusland, as a backrow entry.
     fn radiant_argusland() -> Value {
         json!({ "def": ARGUSLAND, "radiant": true })
     }
 
-    /// p2 attacks p1's hero with `attacker`, p1 guarded by the backrow it is given.
     fn attack_on_guarded(attacker: &str, backrow: Vec<Value>, health: i32) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "backrow": backrow, "health": health, "library": [FILLER, FILLER, FILLER] },
@@ -82,11 +79,9 @@ mod tests {
         s
     }
 
-    /// `describe("base")`.
     mod base {
         use super::*;
 
-        /// halves a hit on your hero, rounded up: a 5 becomes 3
         #[test]
         fn halves_a_hit_on_your_hero_rounded_up_a_5_becomes_3() {
             let mut s = attack_on_guarded(PANTHER, vec![json!(ARGUSLAND)], 30);
@@ -94,7 +89,6 @@ mod tests {
             s.expect_health(P1, 27);
         }
 
-        /// rounds up, so a 1 stays 1
         #[test]
         fn rounds_up_so_a_1_stays_1() {
             let mut s = attack_on_guarded(GARY, vec![json!(ARGUSLAND)], 30);
@@ -102,7 +96,6 @@ mod tests {
             s.expect_health(P1, 29);
         }
 
-        /// a Spell's damage to your hero is halved too: Lunar Eclipse's 3 becomes 2
         #[test]
         fn a_spells_damage_to_your_hero_is_halved_too_lunar_eclipses_3_becomes_2() {
             let mut s = scenario(json!({
@@ -153,7 +146,6 @@ mod tests {
             s.expect_health(P1, 15);
         }
 
-        /// damage to a Unit is untouched: Lunar Eclipse deals its whole 3 to your Mr. Vanilla
         #[test]
         fn damage_to_a_unit_is_untouched_lunar_eclipse_deals_its_whole_3_to_your_mr_vanilla() {
             let mut s = scenario(json!({
@@ -166,7 +158,6 @@ mod tests {
             s.expect_stats(&vanilla, json!({ "health": 1 }));
         }
 
-        /// guards only your hero: your opponent's takes the whole hit
         #[test]
         fn guards_only_your_hero_your_opponents_takes_the_whole_hit() {
             let mut s = scenario(json!({ "p1": { "hand": [FILLER], "field": [VANILLA], "backrow": [ARGUSLAND] }, "p2": { "hand": [FILLER] } }));
@@ -174,11 +165,8 @@ mod tests {
             assert_eq!(hero_hits(&s, P2), vec![4]);
         }
 
-        /// it guards its controller's hero: stolen by a Radiant Magic Jammed, it halves hits on the thief's hero
         #[test]
         fn it_guards_its_controllers_hero_stolen_by_a_radiant_magic_jammed_it_halves_hits_on_the_thiefs_hero() {
-            // Snom Bunny Mind Control steals only a Unit since patch v0.3.12; the Radiant Magic Jammed
-            // steals a backrow card. p2's one mana pays for it, so nothing is left to play after it.
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [VANILLA], "backrow": [ARGUSLAND], "library": [FILLER] },
                 "p2": { "hand": [{ "def": MAGIC_JAMMED, "radiant": true }, FILLER], "field": [PANTHER], "mana": 1 },
@@ -195,14 +183,12 @@ mod tests {
             assert_eq!(hero_hits(&s, P2), vec![2]);
         }
 
-        /// several multiply: two Arguslands divide by 4, so a 9 becomes 3
         #[test]
         fn several_multiply_two_arguslands_divide_by_4_so_a_9_becomes_3() {
             let s = attack_on_guarded(MENACE, vec![json!(ARGUSLAND), json!(ARGUSLAND)], 30);
             assert_eq!(hero_hits(&s, P1), vec![3]);
         }
 
-        /// several multiply across faces: a base and a Radiant one divide by 8, so a 9 becomes 2
         #[test]
         fn several_multiply_across_faces_a_base_and_a_radiant_one_divide_by_8_so_a_9_becomes_2() {
             let s = attack_on_guarded(MENACE, vec![json!(ARGUSLAND), radiant_argusland()], 30);
@@ -236,7 +222,6 @@ mod tests {
             s.expect_health(P1, 2);
         }
 
-        /// is gone when it leaves: destroyed by Magic Jammed, the next hit lands whole
         #[test]
         fn is_gone_when_it_leaves_destroyed_by_magic_jammed_the_next_hit_lands_whole() {
             let mut s = scenario(json!({
@@ -275,11 +260,9 @@ mod tests {
         }
     }
 
-    /// `describe("radiant")`.
     mod radiant {
         use super::*;
 
-        /// quarters a hit on your hero, rounded up: a 9 becomes 3, a 7 becomes 2
         #[test]
         fn quarters_a_hit_on_your_hero_rounded_up_a_9_becomes_3_a_7_becomes_2() {
             let nine = attack_on_guarded(MENACE, vec![radiant_argusland()], 30);
@@ -288,7 +271,6 @@ mod tests {
             assert_eq!(hero_hits(&seven, P1), vec![2]);
         }
 
-        /// rounds up, so a 1 stays 1
         #[test]
         fn rounds_up_so_a_1_stays_1() {
             let s = attack_on_guarded(GARY, vec![radiant_argusland()], 30);
@@ -312,12 +294,10 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             s.play(STOCKPILE, json!({}));
-            // The Bean is cast on draw (lose 7) and its draw is replaced; the next two are fatigue 1 and 2, each quartered to 1.
             assert_eq!(hero_hits(&s, P1), vec![1, 1]);
             s.expect_health(P1, 20 - 7 - 1 - 1 + 2);
         }
 
-        /// damage to a Unit is untouched
         #[test]
         fn damage_to_a_unit_is_untouched() {
             let mut s = scenario(json!({

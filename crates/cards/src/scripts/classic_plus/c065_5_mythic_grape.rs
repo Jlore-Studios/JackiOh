@@ -7,11 +7,10 @@
 //!            Tunes: none."
 //!
 //! The Grape is resolving, not in the hand, so "each other card" is the whole hand as it resolves.
-//! `replaceHandWithRandom` (effects/fruit.ts) MOVES each card to the graveyard — it is not a discard,
-//! so nothing that answers a discard sees it (BUILD M9) — and then makes as many random Mythics, each a
-//! fresh card through Add to hand. The pool is the non-token cards of rarity Mythic, every set: a token's
-//! printed rarity never feeds a pool (§5), so no Grape is ever one of them, this one included (R387).
-//! An empty hand moves nothing and draws nothing from the rng (R129).
+//! `replaceHandWithRandom` MOVES each card to the graveyard — not a discard, so nothing that answers a
+//! discard sees it (BUILD M9) — then adds as many fresh random Mythics. A token's printed rarity never
+//! feeds a pool (§5), so no Grape is ever one of them, this one included (R387). An empty hand moves
+//! nothing and draws nothing from the rng (R129).
 
 use jackioh_engine::effects::replace_hand_with_random;
 use jackioh_engine::prelude::*;
@@ -40,10 +39,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #65.5 Mythic Grape — SPEC §8.7 row 65.5, BUILD M9 Classic+ row C+ 65.5: "Each other card in your
-// hand goes to your graveyard (not a discard) and is replaced by a random non-token Mythic card of any
-// set that costs (0), never a Grape; an empty hand does nothing and draws nothing (R129); the old cards
-// are public in the graveyard, the new ones hidden (R97); radiant the Mythics are Radiant".
+// C+ #65.5 Mythic Grape — SPEC §8.7 row 65.5, BUILD M9 Classic+ row C+ 65.5 (R97).
 #[cfg(test)]
 mod tests {
     use super::*;

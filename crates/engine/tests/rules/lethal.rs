@@ -2,8 +2,7 @@
 //! Anti-oneshot cap in both forms, Trample excess from an attack on a unit, a non-lethal hit, and
 //! the rule that a projection is a projection: SPEC §4.2 step 4, §4.3 and the §4.4 pipeline.
 //!
-//! Port of `packages/engine/test/lethal.test.ts`. TS held the live card `put` returned and wrote
-//! through it; here the card is re-read from the state before each call (`live`) and written through
+//! A card is re-read from the state before each call (`live`) and written through
 //! `find_instance_mut` (`edit`).
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -34,7 +33,7 @@ fn on_hero() -> AttackTarget {
     AttackTarget::Hero { player: P2 }
 }
 
-/// Writes through to the card in `state` (TS wrote to the live object).
+/// Writes through to the card in `state`.
 fn edit(state: &mut GameState, card: &CardInstance, change: impl FnOnce(&mut CardInstance)) {
     change(find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("no card {}", card.id)));
 }
@@ -52,7 +51,6 @@ fn unit_now(state: &GameState, card: &CardInstance) -> AttackTarget {
     on_unit(&live(state, card))
 }
 
-/// lethal projection (M3-T7, R44)
 mod r44_lethal_projection_m3_t7 {
     use super::*;
 

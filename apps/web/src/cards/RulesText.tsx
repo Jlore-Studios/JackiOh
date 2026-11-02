@@ -1,36 +1,18 @@
-// Rules text as a face prints it (docs/polish/6-cards.md, B10; SPEC §10.10). Five things ride on the
-// plain words, and this is the one component that draws them, so every surface that prints a
-// card's text — a face, the detail view's reading-size lines, the printed text beside a face in
-// play — prints them the same way:
-//
-// - glossary terms ("Cry:", keywords, verbs) in bold (`.cf-term`, rules.ts's tokenizer), each
-//   showing its glossary rule on hover, a long press or focus where its surface allows (TermTip.tsx, R2098000);
-// - on a Radiant face, the stretches its base face's text does not have (`marks`, radiantDiff.ts,
-//   R277): gold, bold and underlined (`.cf-mark`), so the mark does not rest on color alone;
-// - the names the card's `refs` link (refs.ts, R279): a reference (`CardRef`), marked everywhere
-//   and a control where the surface allows one (refContext.tsx); a term inside a name is not bolded,
-//   since the name is the card, not the keyword ("Rush Token");
-// - in play, what the card's formula comes to now (`values`, R280), in braces after its label,
-//   "{7}", or the word the view names it by, "{C}" (`.cf-value`, R372): the nth entry with a label
-//   after the label's nth occurrence (a fused card prints its ingredients' texts one after the
-//   other, R102, and each one's value follows its own line), and one the text does not print that
-//   often at the end.
-//
-// - in play, the numbers the view moved off their printed values (`tuned`, tuning.ts, R386): each in a
-//   dotted box with ▲ (better) or ▼ (worse) after it (`.cf-tuned[data-way]`, the glyph drawn by the
-//   stylesheet so the text stays the number), and its printed value in the tooltip.
-//
-// A Chinese face's text (ME-CN, R1301) names the cards its `refs` link by their Chinese names, so
-// those are the names looked for, and "光辉" before one points it at the Radiant face; the face a
-// reference opens is the named card's printed one.
-//
-// A mark and a reference nest: a mark that holds a whole name holds its reference ("Also add a
-// Lava Golem …"), a mark inside a name sits inside the reference ("Rush Tokens"' marked "Tokens"),
-// and a mark that crosses a name's edge is cut there, so the elements always nest.
-//
-// It renders text nodes and spans (and, for an interactive reference or a term showing its
-// rule, a portal), so it can sit inside a <span> inside a <button> — where references stay
-// marks and never become controls.
+// Rules text as a face prints it (docs/polish/6-cards.md, B10; SPEC §10.10): the one component that
+// draws what rides on a card's plain words, so every surface prints them the same way:
+// - glossary terms in bold (`.cf-term`, rules.ts), each showing its rule where the surface allows
+//   (TermTip.tsx, R2098000);
+// - on a Radiant face, what its base face lacks (`marks`, R277): gold, bold and underlined, so the
+//   mark does not rest on color alone;
+// - the names the card's `refs` link (refs.ts, R279) as references; a term inside a name is not
+//   bolded, since the name is the card, not the keyword ("Rush Token");
+// - in play, what its formula comes to now (`values`, R280, R372), each after its own line's label
+//   (a fused card prints its ingredients' texts one after the other, R102);
+// - in play, the numbers the view moved off their printed values (`tuned`, R386), the glyph drawn by
+//   the stylesheet so the text stays the number.
+// A Chinese face (ME-CN, R1301) names its references by their Chinese names. A mark that crosses a name's
+// edge is cut there, so marks and references nest. It renders text nodes and spans (and portals), so it can
+// sit inside a <button>, where references stay marks and never become controls.
 
 import { Fragment, type ReactElement, type ReactNode } from "react";
 
@@ -76,10 +58,10 @@ export function printedValue(entry: PreviewValue): string {
   return entry.display !== undefined && entry.display !== "" ? entry.display : String(entry.value);
 }
 /**
- * R280: each value after its label's nth occurrence for the nth entry with that label. A label that
- * occurs fewer times keeps its values together: past its last occurrence they join it there, in one
- * helper block — a Radiant Lizard's Breath shows both largest piles together, not one mid-text and
- * one at the end. A label the text never names still falls to the end, as does an empty label.
+ * R280: each value after its label's nth occurrence for the nth entry with that label. A label that occurs
+ * fewer times keeps its values together: past its last occurrence they join it there, in one helper block
+ * (a Radiant Lizard's Breath shows both largest piles together). A label the text never names, or an empty
+ * label, falls to the end.
  */
 function insertsOf(text: string, values: readonly PreviewValue[]): Insert[] {
   const seen = new Map<string, number>();

@@ -3,9 +3,7 @@
 // `prefersReducedMotion()` (animations.ts) reads the media query once. The board builds its
 // animation queue from that answer, so without a subscription a player who turns on the OS setting
 // mid-game kept full motion until the next page load. This hook re-renders its caller whenever the
-// query flips, which is what makes Game.tsx rebuild the queue (as the panel's own switch already
-// does). A host without `matchMedia`, or whose query cannot `addEventListener`, reads false or the
-// first answer and never changes.
+// query flips, which is what makes Game.tsx rebuild the queue.
 
 import { useSyncExternalStore } from "react";
 
@@ -20,7 +18,6 @@ function queryList(): MediaQueryList | null {
   }
 }
 
-/** Calls `onChange` each time the OS preference flips; returns the unsubscribe. */
 export function subscribeOsReducedMotion(onChange: () => void): () => void {
   const query = queryList();
   if (query === null || typeof query.addEventListener !== "function") return () => undefined;

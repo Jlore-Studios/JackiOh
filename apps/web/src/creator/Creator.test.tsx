@@ -1,6 +1,4 @@
-// R915010, #920: the card creator as a player uses it: building a card with the blocks, seeing its
-// script in the code view, saving it to the account, the checks' and the server's errors shown where
-// they belong, and a card written in code kept in code. R2119000: deleting a card is undone, not asked.
+// R915010, #920: the card creator as a player uses it. R2119000: deleting a card is undone, not asked.
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -119,7 +117,6 @@ describe("R915010 the creator builds a card with blocks and saves it to the acco
     const code = (screen.getByTestId(creatorTestid.codeInput) as HTMLTextAreaElement).value;
     expect(code).toContain('target = "an enemy unit"');
     expect(code).toContain("c:damage(c:target(), n.dmg)");
-    // The highlighted copy under the editor marks the kit's verb.
     expect(within(screen.getByTestId(creatorTestid.code)).getAllByText("damage")[0]?.className).toContain("creator-tok--kit");
     fireEvent.click(screen.getByTestId(creatorTestid.viewBuilder));
     expect(screen.getByTestId(creatorTestid.builder)).toBeTruthy();
@@ -254,7 +251,6 @@ describe("R915010 a card written in code stays in code", () => {
     expect((screen.getByTestId(creatorTestid.codeInput) as HTMLTextAreaElement).value).toBe(card.source);
     expect(screen.getByTestId(creatorTestid.builderRefusal).textContent).toMatch(/written in code/u);
     expect(screen.queryByTestId(creatorTestid.builder)).toBeNull();
-    // Nothing changed, so nothing to save; it can be tried as it is.
     await waitFor(() => expect((screen.getByTestId(creatorTestid.tryIt) as HTMLButtonElement).disabled).toBe(false));
     expect((screen.getByTestId(creatorTestid.save) as HTMLButtonElement).disabled).toBe(true);
 
@@ -282,7 +278,6 @@ describe("R2119000 deleting a custom card is undone, not asked", () => {
     return screen.queryAllByTestId(creatorTestid.listItem).map((item) => item.getAttribute("data-card-id") ?? "");
   }
 
-  /** Two saved cards, the first opened and deleted. */
   async function deleteFirst(): Promise<{ server: ReturnType<typeof fakeServer>; tick: (ms: number) => Promise<void> }> {
     const server = fakeServer([first, second]);
     const clock = manualClock();

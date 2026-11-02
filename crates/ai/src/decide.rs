@@ -1,36 +1,19 @@
-//! The AI's one entry point (SPEC §9.9). The order below is the contract:
+//! The AI's one entry point (SPEC §9.9, SURFACE §9). The order below is the contract:
 //!
-//!   1. ai_to_act / redact — the only two reads of the true state (R185).
-//!   2. an unanswered draw offer is declined at once (R188).
-//!   3. the mulligan keeps the cheap cards; a question of a sequence (Meditative+ #20 KY's
-//!      Competition) is answered at once with the option its statement works out to (R1184002): no
-//!      search, so thirty questions cost what one redaction does, and never Stop, since a miss costs
-//!      nothing a Stop keeps.
-//!   4. a single candidate is played with no search: listed on a throwaway determinization, since
-//!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
-//!   5. the exact lethal solver, verified on every determinization, its line trimmed to the actions
-//!      it needs before the first is played (R1965000; a style may pass over it, and then step 6
-//!      keeps off every line that wins this turn, R1452).
-//!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
-//!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
-//!      and the best mean wins (a style with a temperature picks among them, R1452).
-//!   7. a fallback when nothing could be scored.
+//! 1. ai_to_act / redact — the only two reads of the true state (R185).
+//! 2. an unanswered draw offer is declined at once (R188).
+//! 3. the mulligan keeps the cheap cards; a question of a sequence is answered with no search (R1184002).
+//! 4. a single candidate is played with no search, listed on a throwaway determinization (the seat's own
+//!    legal actions never depend on the hidden cards, so `options.rng` is untouched).
+//! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
+//!    passes over it (R1452).
+//! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
+//!    actions re-scored on the other determinizations; the best mean wins.
+//! 7. a fallback when nothing could be scored.
 //!
-//! The chosen action is tried on the true state before it is returned (`submitted`): when the
-//! reducer refuses it, the first action of the next finalist it accepts goes in its place, best mean
-//! first, and only when none is accepted the match's replacement does, as a fallback (#1575).
-//!
-//! Only the first action of the chosen line is played; the caller asks again after it, so the AI
-//! re-plans after every action and a plan that only one sampled world liked never gets past step one.
-//! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors,
-//! a panic in simPanics too (#1429), since in WebAssembly it would have lost the whole decision.
-//! `decide_styled` is the same with an `AiStyle` (R1452): `decide` is it at `AI_STYLE_EXACT`, which
-//! takes no draw of its own, so `decide`'s decisions and cursor are what they were before styles.
-//!
-//! Port of `packages/ai/src/decide.ts` (SURFACE §9). TS's `try`/`catch` is `catch_unwind` (an engine
-//! invariant is a panic in Rust, SURFACE §4.4.9). TS made the node counter after the determinizations;
-//! here it is made first, so the counter outlives the guarded body. Nothing differs: a counter is only
-//! read through `take()`, which nothing calls before the lethal solver, so its stats are the same.
+//! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
+//! re-plans after every action. `decide` never panics out: a failure becomes a fallback counted in
+//! simErrors, a panic (an engine invariant, SURFACE §4.4.9) in simPanics too (#1429).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -92,16 +75,11 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 }
 
 /// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
-/// Competition): the option whose words are what the statement works out to (`worked_answer`), read
-/// off the redacted prompt, so the key is never read (R465) — a player with a pencil answers so. Its
-/// redacted copy judges no answer right, so a search would score the four answers and Stop alike and
-/// spend a decision's budget on a guess, up to `KY_COMPETITION_MAX` times in one turn, past the turn
-/// clock (R79); worked out, each answer costs one redaction. It never stops: a miss would end the
-/// sequence with the streak a Stop keeps, so answering is never worse. R1563005: like a player in a
-/// hurry it slips: it answers right `AI_KY_COMPETITION_ACCURACY` of the time (the Radiant face's easier
-/// sums `AI_KY_COMPETITION_RADIANT_ACCURACY`), and otherwise gives one of the wrong answers, both drawn
-/// from its own stream. `None` for any other prompt, or a statement it cannot work out, which the
-/// search then answers.
+/// Competition), worked out from the redacted prompt's statement (`worked_answer`), so the key is never
+/// read (R465) and no search spends the budget on a guess, past the turn clock (R79). It never stops.
+/// R1563005: right `AI_KY_COMPETITION_ACCURACY` of the time (the Radiant face's own when Radiant), else
+/// wrong, drawn from its own stream. `None` for any other prompt, or a statement it cannot work out,
+/// which the search then answers.
 fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
@@ -182,7 +160,7 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
             }
         }
     }
-    // The map keeps first-seen order (TS's `order` list).
+    // The map keeps first-seen order.
     let mut entries: Vec<Scored<'a>> = best.into_values().collect();
     // Stable, so equal scores keep the beam's order.
     entries.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
@@ -227,8 +205,7 @@ fn fat_width(probe: &GameState, candidates: usize) -> usize {
 
 /// The budget a decision of `fat` width spends (AI_SEARCH.fat_*): `nodes`, at most `fat_budget_nodes`
 /// (R2575000), in inverse proportion to the width past fat_reference, floored at fat_min_nodes; the
-/// lethal solver keeps its share of it, floored at fat_min_lethal. The search's shape
-/// (determinizations, widths, depths, finalists) is the caller's unchanged.
+/// lethal solver keeps its share of it, floored at fat_min_lethal. The search's shape is unchanged.
 fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
     let reference = AI_SEARCH.fat_reference.max(1) as usize;
     let nodes = if fat <= reference {
@@ -281,9 +258,8 @@ fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: Playe
 }
 
 /// R1452: the finalist a decision plays, given each finalist's mean score. At a temperature of 0
-/// or below, or with fewer than two finalists, the first best, with no draw. Otherwise a softmax
-/// over the means: each weighs `e^((mean − best) / temperature)`, and one draw lands on the first
-/// finalist whose running sum of weights passes it.
+/// or below, or with fewer than two finalists, the first best, with no draw; otherwise one draw on a
+/// softmax over the means.
 pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
     let mut best_index = 0usize;
     for (index, mean) in means.iter().enumerate() {
@@ -350,7 +326,7 @@ fn runners_up_of(finalists: &[Scored<'_>], means: &[f64], chosen_index: usize) -
     out
 }
 
-/// What the guarded body leaves behind for the fallback when it panics (TS's outer `let`s).
+/// What the guarded body leaves behind for the fallback when it panics.
 struct Scratch {
     candidates: Vec<ActionBody>,
     determinizations: usize,
@@ -409,21 +385,18 @@ fn plan(
         return Plan::Immediate(only.clone(), DecisionReason::Forced);
     }
 
-    // A decision's nodes cost more the wider the state is, so the searched part of the budget
-    // shrinks where the state is fat (AI_SEARCH.fat_*): the 2 s the sweep flags a decision over
-    // (R186) buys a fraction of the nodes there that it buys in the opening. The whole searched
-    // section — the lethal solver's slice, the beam's and the replies' — is drawn from one
-    // sub-counter of that size, so the replies cannot spend what the beam was denied.
+    // A decision's nodes cost more the wider the state is, so the searched part of the budget shrinks
+    // where the state is fat (AI_SEARCH.fat_*, R186). The whole searched section (the lethal solver's
+    // slice, the beam's, the replies') is drawn from one sub-counter of that size, so the replies
+    // cannot spend what the beam was denied.
     let budget = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000, R2564000, R2565000, R2603000, R2688000: every Death the seat can read, every turn
-    // hook of the cards it can read on either board and of its hand's Field Spells and Units, each Activate
-    // of a Unit on either field or of a face-up backrow card on either side, and each attack hook of a unit
-    // on either field, by its controller's next attack, priced once on the probe world for the whole
-    // decision, their probes drawn from the searched section's nodes; all are priced before any is passed,
-    // so no probe reads a price, and every step below is passed them (`Prices`).
+    // R2424000, R2477000, R2564000, R2565000, R2603000, R2688000: every Death, turn hook, Activate and
+    // attack hook the seat can read, priced once on the probe world for the whole decision from the
+    // searched section's nodes; all are priced before any is passed, so no probe reads a price, and every
+    // step below is passed them (`Prices`).
     let deaths = death_prices(&probe, seat, counter);
     let turn_hooks = turn_hook_prices(&probe, seat, counter);
     let activations = activation_prices(&probe, seat, counter);
@@ -450,12 +423,10 @@ fn plan(
     }
     scratch.determinizations = k;
 
-    // 5. Lethal, verified on every determinization, unless the style passes over it (R1452): then
-    // the search below plays on as if it had not seen it, kept off every line that wins this turn.
-    // Played, it is first trimmed to the actions it needs (R1965000): only its first action is
-    // played, and a lethal found behind a free step that changes nothing would play that step at
-    // every decision. A trim the counter stops before it has a first action it can vouch for leaves
-    // no lethal to play: the decision goes on below as if none were found, its counter as spent.
+    // 5. Lethal, verified on every determinization, unless the style passes over it (R1452): then the
+    // search plays on kept off every line that wins this turn. Played, it is first trimmed to the
+    // actions it needs (R1965000), else a lethal behind a free step that changes nothing would play that
+    // step at every decision; a trim the counter stops short of a first action leaves no lethal to play.
     let mut passed_over: Option<ActionBody> = None;
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes, &prices)
         && let Some(first_lethal) = lethal.first().cloned()
@@ -496,7 +467,7 @@ fn plan(
         + (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
-    // node through the slice afterwards, so it is the reason TS read off it at the end.
+    // node through the slice afterwards.
     let (found, beam_stopped_by) = {
         let beam_counter = create_sub_counter(counter, remaining - reserve);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
@@ -626,22 +597,16 @@ fn plan(
     }
 }
 
-/// The body a decision submits: the chosen one when the reducer accepts it on the true state; else
-/// the first action of the first runner-up it accepts (the finalists not chosen, best mean first),
-/// with the search's reason and that runner-up's line and mean (#1575); and only when none is
-/// accepted, the first of the match's replacements (`replacements_for`: endTurn, then an answer,
-/// then any other legal action) as a fallback. A chosen action can be legal on every determinization
-/// and still refuse on the true state — a face-down aura trap taxes the hand the determinization could
-/// not see (R403) — and a submitted refusal is recorded against the AI and replaced anyway, so the
-/// same replacement is better submitted directly: the trajectory is the same one the match would
-/// have made of it, minus the rejection.
+/// The body a decision submits: the chosen one when the reducer accepts it on the true state, else the
+/// first action of the first runner-up it accepts, best mean first (#1575), else the match's first
+/// replacement (`replacements_for`). A chosen action legal on every determinization can refuse on the
+/// true state (a face-down aura trap taxes the unseen hand, R403), and a submitted refusal is recorded
+/// against the AI, so the replacement is submitted directly.
 fn submitted(state: &GameState, seat: PlayerId, decision: Decision, runners_up: &[RunnerUp]) -> Decision {
     if holds_placeholder(state) {
-        // `decide` is handed the observed view outside the gate's drivers (the worker and arena
-        // send the redacted state), and its `ai:hidden` placeholders have no definition the
-        // reducer could resolve — an endTurn's opponent draw throws on one. Only a true state
-        // proves a refusal, so here the chosen action goes in as decided and the match's own
-        // replacement machinery stands in for the refusal, exactly as it does without this check.
+        // The worker and arena hand `decide` the redacted state, whose `ai:hidden` placeholders the
+        // reducer cannot resolve: only a true state proves a refusal, so the match's own replacement
+        // stands in for one.
         return decision;
     }
     let trial = |action: &ActionBody| {
@@ -780,8 +745,8 @@ pub fn decide_styled(
             &runners_up,
         )),
         Err(payload) => {
-            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, as
-            // before #1429), and a panic.
+            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, #1429),
+            // and a panic.
             note_sim_panic(&counter, payload.as_ref());
             let action = fallback_action(&scratch.candidates);
             Some(submitted(

@@ -7,13 +7,10 @@ export const patchTestid = {
   loading: "patch-notes-loading",
   error: "patch-notes-error",
   retry: "patch-notes-retry",
-  /** "There are no patch notes yet." */
   empty: "patch-notes-empty",
   /** One release line, `data-set` its id (R724000). */
   set: "patch-set",
-  /** A release line's open / shut control. */
   setToggle: "patch-set-toggle",
-  /** A release line's technical changes. */
   technical: "patch-technical",
   /** A patch's lines from the technical log (R1369000). */
   technicalLog: "patch-technical-log",
@@ -27,14 +24,11 @@ export const patchTestid = {
   noteSection: "patch-note-section",
   /** A patch's Show / Hide the cards control. */
   toggle: "patch-toggle",
-  /** A patch's cards, once shown. */
   cards: "patch-cards",
   cardsLoading: "patch-cards-loading",
   cardsError: "patch-cards-error",
   cardsRetry: "patch-cards-retry",
-  /** The name filter over a patch's cards. */
   filter: "patch-filter",
-  /** "No card in this patch matches …". */
   noMatch: "patch-no-match",
   /** A changed card shown as a face, `data-card` its id. */
   changedCard: "patch-changed-card",
@@ -61,7 +55,6 @@ export const patchTestid = {
   historyError: "patch-history-error",
   historyRetry: "patch-history-retry",
   historyEmpty: "patch-history-empty",
-  /** "Unchanged since v0.2.0." */
   historyUnchanged: "patch-history-unchanged",
   /** One patch in a card's history, `data-version` and `data-kind`. */
   historyEntry: "patch-history-entry",

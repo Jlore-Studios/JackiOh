@@ -1,20 +1,6 @@
 // 47 — every control on a phone takes a tap across 44x44 px (issue #2122, part of #2036, R2122000).
-//
-// The key assertion, quoted verbatim from the issue's "The spec." bullet: "Every interactive element
-// (`button`, `a[href]`, `[role=button]`, `input`, `select`, `[tabindex="0"]`) whose box is smaller
-// than 44×44 CSS px gets a hit area of at least that size."
-//
-// Each test opens one screen at 390x844 and runs `expectHitAreas`. Every shown control spans
-// `HIT_MIN_PX` each way: its own box, its absolutely placed `::before` and `::after` where its own
-// overflow does not clip them and they have both a width and a height, and, for a checkbox or a
-// radio, its labels. Where a neighbour is nearer, the hit area reaches halfway to it instead, and no
-// hit area covers another control. Two tests check the spec itself: index.css's `--hit-min` is
-// `HIT_MIN_PX`, and a probe narrower than the minimum, its band of no height, fails.
-//
-// Exempt: a link in a paragraph's or a label's sentence, a card, and controls outside the topmost
-// `aria-modal="true"`. A control scrolled out of its region, or one with `pointer-events: none`,
-// takes no tap.
-//
+// Each test opens one screen at 390x844 and runs `expectHitAreas`; two check the measure itself
+// (index.css's `--hit-min` is `HIT_MIN_PX`, and a probe narrower than the minimum fails).
 // Per pull request: SMOKE holds 47. Networked as 46.
 
 import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
@@ -66,11 +52,7 @@ const MS_PER_SECOND = 1000;
 const SEED = seedFor("47-tap-areas");
 /** The series the intercept answers, as spec 46's: a v4 UUID's shape, nothing the server holds. */
 const SERIES_ID = "00000000-0000-4000-8000-000000002122";
-/**
- * The account the signed-in screens are drawn for: p2, not 46's p1. The smoke shard runs 46 and then
- * 47 on one server, and both specs' menus inside one minute are more than R109's allowance for one
- * account: a local run in that order had p1's reads refused (429) by 47's deck builder.
- */
+/** p2, not 46's p1: the smoke shard runs 46 then 47 on one server, and both specs' menus in one minute pass R109's allowance for one account. */
 const SIGNED_IN = accounts.p2;
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = { accountRank: "account-rank", leaderboardSeason: "leaderboard-season", almanac: "almanac" } as const;
@@ -89,16 +71,13 @@ const union = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), top: M
 /** How far two boxes overlap across and down (negative: the gap between them). */
 const overlap = (a: Box, b: Box) => ({ x: Math.min(a.right, b.right) - Math.max(a.left, b.left), y: Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) });
 
-/** A checkbox's or a radio's labels, which toggle it: part of its box and of its hit area. The tag, not `instanceof`: the page is another window. */
+/** A checkbox's or a radio's labels, which toggle it. The tag, not `instanceof`: the page is another window. */
 function labelsOf(el: Element): Element[] {
   const input = el as HTMLInputElement;
   return el.tagName === "INPUT" && (input.type === "checkbox" || input.type === "radio") && input.labels !== null ? Array.from(input.labels) : [];
 }
 
-/**
- * `el`'s own box with each absolutely placed ::before and ::after that takes taps, in each dimension its overflow leaves
- * open, and its labels'. A pseudo-element with no width or no height takes none, however far it reaches the other way.
- */
+/** `el`'s box, its labels' and each ::before and ::after that takes taps where its overflow leaves room; one with no width or no height takes none. */
 function hitBox(win: Window, el: Element): Box {
   const style = win.getComputedStyle(el);
   let hit = boxOf(el);
@@ -129,7 +108,6 @@ function shownBox(win: Window, el: Element): Box | null {
   return shown.right - shown.left > SLACK_PX && shown.bottom - shown.top > SLACK_PX ? shown : null;
 }
 
-/** Its testid, or what it is and the nearest testid round it. */
 function nameOf(el: Element): string {
   const own = el.getAttribute("data-testid");
   if (own !== null) return own;
@@ -138,7 +116,7 @@ function nameOf(el: Element): string {
   return holder === undefined || holder === null ? what : `${what} in ${holder}`;
 }
 
-/** The controls a tap reaches now: shown, taking pointer events, and inside the topmost open modal if there is one. */
+/** The controls a tap reaches: shown, taking pointer events, inside the topmost open modal if any. */
 function controlsOf(win: Window): Control[] {
   const modal = Array.from(win.document.querySelectorAll('[aria-modal="true"]')).filter((m) => m.getClientRects().length > 0).at(-1);
   const controls: Control[] = [];
@@ -153,10 +131,8 @@ function controlsOf(win: Window): Control[] {
 }
 
 /**
- * R2122000 over the screen as it stands. A control's hit area reaches `HIT_MIN_PX / 2` past its
- * center on each side, or halfway to a neighbour nearer than that (the split); and it covers no
- * neighbour's shown box. A neighbour is another control, neither holding the other, whose box does
- * not overlap this one's.
+ * R2122000: a hit area reaches `HIT_MIN_PX / 2` past its center each way, or halfway to a nearer
+ * neighbour (another control, neither holding the other, not overlapping it), and covers no neighbour.
  */
 function hitAreaProblems(win: Window): string[] {
   const controls = controlsOf(win);
@@ -195,11 +171,9 @@ function expectHitAreas(): void {
 }
 
 /**
- * The code screen and the consent screen as a pending account meets them, drawn for `SIGNED_IN`.
- * Spec 10 redeems the pending fixture, which stays active until the server restarts (R144), and the
- * daily run can put both specs in one shard; so the account's own read of itself is made to say
- * pending (no match, no series), and `owes` adds what it owes. The screens draw only from that read
- * (CLAUDE.md rule 7).
+ * A pending account's code and consent screens for `SIGNED_IN`. Spec 10 redeems the pending fixture until
+ * the server restarts (R144) and may share this shard, so its own read says pending, plus `owes`: the
+ * screens draw only from that read (CLAUDE.md rule 7).
  */
 function asPending(owes: Record<string, boolean> = {}): void {
   cy.intercept("GET", "**/api/auth/me", (req) => {
@@ -217,11 +191,7 @@ function asPending(owes: Record<string, boolean> = {}): void {
   });
 }
 
-/**
- * A series between its games, choosing a deck (the shape of `SeriesView`, apps/web/src/net/api.ts):
- * three decks to pick from and the clock running, which is the screen at its tallest. `now` is the
- * server's own clock (R333), here this browser's.
- */
+/** A series picking among three decks, the clock running: its tallest screen (`SeriesView`, apps/web/src/net/api.ts); `now` stands for the server's clock (R333). */
 function seriesPicking(now: number): Record<string, unknown> {
   return {
     id: SERIES_ID,
@@ -403,8 +373,7 @@ describe(`47 — every control on a phone takes a tap across ${String(HIT_MIN_PX
     });
 
     it("R2122000 /decks, a deck open", () => {
-      // One full deck, whatever specs ran before this one saved: the open deck's pool is the big
-      // list this menu holds.
+      // One full deck, whatever earlier specs saved: the open deck's pool is this menu's big list.
       cy.clearDecks(SIGNED_IN());
       cy.saveDeck(SIGNED_IN(), { name: "Taps", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
         cy.visitAs(SIGNED_IN(), routes.deckbuilder());

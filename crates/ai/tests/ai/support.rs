@@ -1,14 +1,11 @@
-//! Helpers shared by the AI tests (docs/polish/3-ai.md §Tests). Not a test file itself.
+//! Helpers shared by the AI tests (docs/polish/3-ai.md §Tests). Not a test file itself. A test that
+//! builds a `scenario` itself calls `register_cards` first; real mid-game states come from
+//! `create_game`/`begin_game` plus §10.7's random policy.
 //!
-//! `register_cards` loads the real catalog and card scripts: every helper below that needs them
-//! calls it first, and a test that builds a `scenario` itself calls it before. Real mid-game states
-//! come from `create_game`/`begin_game` plus §10.7's random policy.
-//!
-//! Scenario ids start at `c1` and follow the setup literal. `redact` also hides a card in the
-//! seat's OWN library whose id was minted for the opponent's opening deck (R73), and `create_game`
-//! mints p1's deck first, so a scenario seen from p2 would have its own low-numbered library cards
-//! read as p1's. Every scenario-based AI test therefore puts the AI in p1's seat and keeps the
-//! scenario under 20 instances; states for p2's seat come from real `create_game` games.
+//! Scenario ids start at `c1`, and `redact` also hides a card in the seat's OWN library whose id was
+//! minted for the opponent's opening deck (R73); `create_game` mints p1's deck first, so a scenario seen
+//! from p2 would read its own low-numbered library cards as p1's. Every scenario-based AI test therefore
+//! puts the AI in p1's seat and keeps the scenario under 20 instances; p2's states come from real games.
 //!
 //! `det`, `ai_options` and `js` are here so no test file copies them (#1826;
 //! crates/tools/tests/acceptance.rs refuses a copy).
@@ -30,12 +27,12 @@ use jackioh_engine::testkit::{
 
 pub use jackioh_engine::testkit::scenario;
 
-/// `determinize` with TS's default options (`{}`).
+/// `determinize` with the default options.
 pub fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
     determinize(public, seat, rng, DeterminizeOptions::default())
 }
 
-/// TS's `{ rng: createRng(seed), budget }`: no clock.
+/// The AI's options: a stream from `seed` and `budget`, no clock.
 pub fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
     AiOptions::with_budget(create_rng(seed, 0), budget)
 }
@@ -82,7 +79,7 @@ pub fn trap_pool() -> Vec<String> {
 }
 
 /// Every def a face-down backrow sample may take: the trap pool and every card that prints Cloaked
-/// (R783009), Stinkyscape's #103 Vxyl and #123 Gokugains among them since that set shipped (#1884).
+/// (R783009), Stinkyscape's #103 Vxyl and #123 Gokugains among them (#1884).
 pub fn face_down_pool() -> Vec<String> {
     let mut ids = trap_pool();
     ids.extend(jackioh_engine::alt_play::printed_cloaked_def_ids());
@@ -152,7 +149,6 @@ pub fn act(state: &GameState, player_id: PlayerId, body: impl Borrow<ActionBody>
     act_with_nonce(state, player_id, body, &format!("support-{count}"))
 }
 
-/// `act` with the nonce given.
 pub fn act_with_nonce(
     state: &GameState,
     player_id: PlayerId,
@@ -182,14 +178,12 @@ pub struct PuzzleRun {
     pub end: GameState,
 }
 
-/// The puzzle runner: `scenario({ active: "p1", turn: 9, … })` with the AI as p1, then one AI turn
-/// through `play_ai_turn` at `AI_BUDGET` (the budget the browser plays at). `setup` is the scenario
-/// literal; its keys win over the three defaults.
+/// The puzzle runner: a turn-9 scenario with the AI as p1, then one AI turn at `AI_BUDGET` (the
+/// budget the browser plays at). `setup`'s keys win over the defaults.
 pub fn run_puzzle(name: &str, setup: Value) -> PuzzleRun {
     run_puzzle_with(name, setup, AI_BUDGET)
 }
 
-/// `run_puzzle` with the budget given.
 pub fn run_puzzle_with(name: &str, setup: Value, budget: SearchBudget) -> PuzzleRun {
     register_cards();
     let mut options = json!({ "seed": format!("puzzle-{name}"), "active": AI, "turn": 9 });
@@ -273,7 +267,6 @@ pub fn random_decks(seed: &str) -> (Vec<String>, Vec<String>) {
     random_decks_sized(seed, (DECK_SIZE, DECK_SIZE))
 }
 
-/// `random_decks` with the deck sizes given.
 pub fn random_decks_sized(seed: &str, sizes: (i32, i32)) -> (Vec<String>, Vec<String>) {
     register_cards();
     let mut core: Vec<String> = query(&json_as::<CatalogQueryArgs>(json!({ "set": "Core" })))

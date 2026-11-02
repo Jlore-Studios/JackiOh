@@ -7,7 +7,6 @@
 //! leaving the field (R78) or a Vanilla ends it, a change of control keeps it, a later ordinary
 //! Freeze changes nothing and a forced attack still moves it. The Radiant face's "You may" is a
 //! choice of two modes made with the play (R81), not a prompt after it: given, `grant_keyword`
-//! Indestructible on the chosen Unit, a granted keyword it keeps until it leaves the field (§10.4).
 
 use jackioh_engine::prelude::*;
 
@@ -55,11 +54,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #2 Absolute Zero — SPEC §8.10 row S 2, BUILD M12 row S 2: "a chosen Unit is Frozen and never
-// thaws (R1848000): no attack or switch of its own at any later turn, while a forced attack still
-// moves it; a Bounce or a Vanilla ends it; a change of control keeps it; an ordinary Freeze
-// afterwards changes nothing; radiant the mode that gives it makes it Indestructible as well (a
-// destroy and damage pass it by), the other mode leaves it as the base face does".
+// S #2 Absolute Zero — SPEC §8.10 row S 2, BUILD M12 row S 2 (R1848000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -87,7 +82,6 @@ mod tests {
         s.card(card).frozen == Some(FROZEN_FOREVER)
     }
 
-    /// Whether the Unit's controller is offered an attack or a switch of its own by it.
     fn acts(s: &Scenario, card: &CardInstance) -> bool {
         let unit = s.card(card).clone();
         legal_actions(s.state(), unit.controller)
@@ -114,7 +108,6 @@ mod tests {
             s.play(ZERO, json!({ "targets": pick::instance(&target) }));
             assert!(forever(&s, &target));
 
-            // Three of its controller's turns and three of its caster's: it never thaws.
             for _ in 0..6 {
                 s.end_turn();
                 assert!(forever(&s, &target), "turn {}", s.state().turn);
@@ -194,7 +187,6 @@ mod tests {
 
             assert_eq!(s.card(&target).controller, P1);
             assert!(forever(&s, &target));
-            // Its new controller's next turn: still Frozen, so no attack or switch of its own.
             s.end_turn();
             s.end_turn();
             assert_eq!(s.state().active, P1);
@@ -218,7 +210,6 @@ mod tests {
             assert!(forever(&s, &target), "the later thaw is kept");
             let ordinary = s.card(&other).frozen;
             assert!(ordinary.is_some_and(|thaw| thaw != FROZEN_FOREVER));
-            // Past the ordinary freeze's thaw, the one Frozen forever still is.
             for _ in 0..4 {
                 s.end_turn();
             }

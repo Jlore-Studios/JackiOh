@@ -1,23 +1,5 @@
-//! B35–B42 (#936, `.fullsend/SPEC.md` S6) through `GET /ws/duos`: the hello view, applied and
-//! illegal actions, the AI seats, the disconnect takeover, the round clock, the mulligan clock, pings
-//! (relayed to the teammate only, shape-checked, rate-limited, never in a view or the replay), the
-//! end of a game and the per-match replay, which a finished game has (§13.9). Where a test reads
-//! what was logged while the game is live, it reads the store's log.
-//!
-//! The real router is served over in-memory pipes (`MemoryListener`, as `actor/heartbeat.rs` does,
-//! since real TCP races a paused clock), so the upgrade, the auth (an offered subprotocol, R1379000)
-//! and the frames are the wire's. Each client is a small RFC 6455 client whose reader task answers
-//! the server's pings and stamps every text frame with the paused clock's instant. A match is made
-//! the way players make one:
-//! `POST /api/duos/rooms`, then the join; its seats' decks are dealt at random (`random: true`) over
-//! the real catalog, and the AI plays B1 and B2.
-//!
-//! The quiet window. Once both AI seats have answered their mulligans (each human sees
-//! `own.mulligan.opponentReady` and `teammate.mulligan.opponentReady`), nothing is owed by the AI
-//! and nothing moves until a human acts or `DUOS_MULLIGAN_CLOCK_MS` runs out: the tests that assert
-//! that something did NOT happen run there.
-//!
-//! The WebSocket harness and the account helpers are `pub(super)`: `actor/watch.rs` uses them.
+//! B35–B42 (#936, `.fullsend/SPEC.md` S6) through `GET /ws/duos`: views, clocks, replay (§13.9).
+//! Router served over in-memory pipes; bearer subprotocol (R1379000).
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -82,9 +64,7 @@ const NO_STATUS: u16 = 1005;
 /// RFC 6455's policy violation: what a socket past its malformed budget is closed with (R835002).
 const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
-// ---------------------------------------------------------------------------------------------
 // Time and numbers
-// ---------------------------------------------------------------------------------------------
 
 /// Lets every task woken at this instant run.
 pub(super) async fn settle() {
@@ -129,9 +109,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-// ---------------------------------------------------------------------------------------------
 // The app served over in-memory pipes
-// ---------------------------------------------------------------------------------------------
 
 /// The listener `axum::serve` accepts from: each pipe a test sends is a connection.
 struct MemoryListener(mpsc::UnboundedReceiver<DuplexStream>);
@@ -184,8 +162,7 @@ impl Served {
             .0
     }
 
-    /// The upgrade of `path_and_query` over a new pipe, offering `protocols` (none when empty);
-    /// panics unless the server answers 101. Answers the client and the protocol the server echoed.
+    /// Upgrades path_and_query over new pipe, asserting 101 response.
     pub(super) async fn connect_offering(
         &self,
         path_and_query: &str,
@@ -230,9 +207,7 @@ impl Served {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // A WebSocket client
-// ---------------------------------------------------------------------------------------------
 
 #[derive(Default)]
 struct Inbox {
@@ -441,18 +416,14 @@ impl WsClient {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Accounts and requests
-// ---------------------------------------------------------------------------------------------
 
 pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body).await;
     (status, body)
 }
 
-// ---------------------------------------------------------------------------------------------
 // A Duos match and its frames
-// ---------------------------------------------------------------------------------------------
 
 fn hello(match_id: &str) -> Value {
     json!({ "type": "hello", "matchId": match_id })
@@ -804,9 +775,7 @@ impl Duos {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B35 — hello, applied and refused actions
-// ---------------------------------------------------------------------------------------------
 
 mod b35_the_socket {
     use super::*;
@@ -1020,9 +989,7 @@ mod b35_the_socket {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B36 — the AI seats act
-// ---------------------------------------------------------------------------------------------
 
 mod b36_the_ai_seats {
     use super::*;
@@ -1045,13 +1012,7 @@ mod b36_the_ai_seats {
         );
     }
 
-    /// The first view of `round` or later `a1` has had since frame `from`, waited for up to `within`
-    /// while the people play along as a person at the table does: each answers a prompt it holds
-    /// (the first answer offered), else ends its turn once its legal actions hold that. A prompt a
-    /// person holds waits for that person, on a clock of its own (DUOS_PROMPT_CLOCK_MS, §13.3), and
-    /// a duel whose new active player is a person's seat gives that person the round seat (§13.3,
-    /// R456: a turn cut short as it begins): neither is a step of the AI's. `acted` counts the
-    /// people's actions by the instant they were taken, so the views they caused are told apart.
+    /// First view of round reached by a1 (DUOS_PROMPT_CLOCK_MS, §13.3, R456).
     async fn round_reached(
         a1: &WsClient,
         a2: &WsClient,
@@ -1141,9 +1102,7 @@ mod b36_the_ai_seats {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B37 — a human gone past the grace
-// ---------------------------------------------------------------------------------------------
 
 mod b37_the_disconnect_takeover {
     use super::*;
@@ -1224,9 +1183,7 @@ mod b37_the_disconnect_takeover {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B38 — the round clock
-// ---------------------------------------------------------------------------------------------
 
 mod b38_the_round_clock {
     use super::*;
@@ -1291,9 +1248,7 @@ mod b38_the_round_clock {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B39 — pings
-// ---------------------------------------------------------------------------------------------
 
 mod b39_pings {
     use super::*;
@@ -1543,9 +1498,7 @@ mod b39_pings {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B40, B41, B42, B11 — the log and the replay, the end of a game and the live route
-// ---------------------------------------------------------------------------------------------
 
 mod b40_b42_the_log_the_replay_and_the_end {
     use super::*;
@@ -1694,9 +1647,7 @@ mod b40_b42_the_log_the_replay_and_the_end {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1483000 — a capped co-op seat is told on its own view
-// ---------------------------------------------------------------------------------------------
 
 mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
     use super::*;
@@ -1807,9 +1758,7 @@ mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // #1657 — a co-op seat's view carries what the result paid its own person
-// ---------------------------------------------------------------------------------------------
 
 mod a_coop_seat_is_sent_its_own_pay {
     use super::*;
@@ -1923,9 +1872,7 @@ mod a_coop_seat_is_sent_its_own_pay {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §13.2, R268 — the mulligan clock keeps a person's hand
-// ---------------------------------------------------------------------------------------------
 
 mod r268_the_mulligan_clock {
     use super::*;
@@ -1982,9 +1929,7 @@ mod r268_the_mulligan_clock {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B37, B38 — a move the AI decided under one hold is not played under another
-// ---------------------------------------------------------------------------------------------
 
 mod b37_b38_the_ais_hold {
     use super::*;
@@ -2010,9 +1955,7 @@ mod b37_b38_the_ais_hold {
             ms(DUOS_AI_STEP_DELAY_MS),
         );
 
-        // A1 drops so that its grace runs out half a step before round 1's clock: the AI takes A1
-        // over outright, the clock then hands it A1's turn's end, and the AI's first move for A1,
-        // a step after the grace, is decided while it still plays A1 outright.
+        // A1 drops: grace expires before round clock and AI takes over.
         let dropped = opened_at + round_clock - grace - step / 2;
         tokio::time::sleep_until(dropped).await;
         a1.hang_up().await;
@@ -2053,9 +1996,7 @@ mod b37_b38_the_ais_hold {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // §9.1 — repeated hellos coalesce (R835001's rule)
-// ---------------------------------------------------------------------------------------------
 
 mod hello_coalescing {
     use super::*;
@@ -2099,9 +2040,7 @@ mod hello_coalescing {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2686000 — a person's later hellos are answered once per interval, as a watcher's are
-// ---------------------------------------------------------------------------------------------
 
 mod r2686000_player_hello_limit {
     use super::*;
@@ -2179,9 +2118,7 @@ mod r2686000_player_hello_limit {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B40, §9.1 — a rebuild, and none for a socket that holds no seat
-// ---------------------------------------------------------------------------------------------
 
 mod b40_the_rebuild {
     use super::*;
@@ -2216,9 +2153,7 @@ mod b40_the_rebuild {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1398000 — a finished co-op match's socket reopens only inside the rematch window
-// ---------------------------------------------------------------------------------------------
 
 /// With no actor in memory, a seat's hello reopens a finished match only within
 /// `REMATCH_OFFER_TTL_MS` of its `ended_at` (R1285000's window): past it the seat is not found
@@ -2333,9 +2268,7 @@ mod r1398000_the_end_screen_window {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1047000 — the hard ceiling (§9.5)
-// ---------------------------------------------------------------------------------------------
 
 mod r1047000_the_ceiling {
     use super::*;
@@ -2391,22 +2324,14 @@ mod r1047000_the_ceiling {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1253000 — a live action the engine panics on
-// ---------------------------------------------------------------------------------------------
 
-/// R1253000: a live co-op `reduce` that panics changes nothing, is answered `internal` once and kept
-/// under its nonce, and is filed for the night bot; a server action (the AI's move or the ceiling's)
-/// that panics ends the match at once as the ceiling's draw (R1047001), since the AI would make the
-/// same move again on the same state.
+/// R1253000: live co-op action panic handling (R1047001).
 mod r1253000_a_live_coop_action_the_engine_panics_on {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    /// Round 1 open with both people seated, and the first `play` A1 may make. Every play of a card of
-    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`. The guest
-    /// brings the cheap deck too: a random deal could hold a Cast-on-draw autopilot (M+ #18, R1183002)
-    /// that plays A2's first turn, and a panicking card in it, before anyone has acted.
+    /// Round 1 open with both people seated, and first play by A1 panicking (M+ #18, R1183002).
     async fn opened() -> (Duos, WsClient, WsClient, Arc<AtomicUsize>, Value) {
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
@@ -2558,9 +2483,7 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R835000, R835002 — the 1v1 socket's abuse guards, on the co-op socket
-// ---------------------------------------------------------------------------------------------
 
 mod r835000_r835002_the_abuse_guards {
     use super::*;
@@ -2733,15 +2656,11 @@ mod r835000_r835002_the_abuse_guards {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R1379000 — the credential on the handshake
-// ---------------------------------------------------------------------------------------------
 
 mod r1379000_the_credential_on_the_handshake {
-    //! R1379000: a co-op seat offers its token as a `jackioh.bearer.` subprotocol beside
-    //! `jackioh.v1`, and `jackioh.v1` is all the server answers with. No usable credential is R148's
-    //! 4401, a renewed token seats what the refused one could not (R1115000), and the previous day's
-    //! client's `?token=` is read only when no credential is offered.
+    //! R1379000: co-op seat offers token as `jackioh.bearer.` subprotocol; answered `jackioh.v1`.
+    //! Missing credential is R148 4401; renewed token seats (R1115000); `?token=` fallback kept.
     use super::*;
 
     #[tokio::test(start_paused = true)]

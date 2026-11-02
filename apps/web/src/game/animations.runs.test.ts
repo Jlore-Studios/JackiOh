@@ -1,5 +1,4 @@
-// The runner's issue-#124 entries (game/animations.ts over game/runs.ts): whole-pile impacts play
-// once, sweeps play as one roll of fog, and casts play held up one card at a time.
+// The runner's issue-#124 entries (game/animations.ts over game/runs.ts).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it, vi } from "vitest";
@@ -122,10 +121,9 @@ describe("createAnimationQueue budgets", () => {
     const flight = queue.inFlight();
     expect(flight?.cast).toEqual({ by: "classicplus-047", ordinal: 1 });
     expect(flight?.durationMs).toBe(CAST_ENTRY_MS);
-    // The cast card is fresh off no hand, so no board element marks it and `frames` is empty;
-    // the showcase names the card instead. Game.tsx still renders its
-    // `animation-queue[data-animating]` sentinel while any entry is in flight, so `cy.settled()`
-    // waits out the hold.
+    // The cast card is fresh off no hand, so no board element marks it and `frames` is empty; the showcase
+    // names the card instead. Game.tsx still renders its `animation-queue[data-animating]` sentinel while
+    // any entry is in flight, so `cy.settled()` waits out the hold.
     expect(flight?.frames.size).toBe(0);
     expect(queue.idle()).toBe(false);
     clock.flush();

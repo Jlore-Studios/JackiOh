@@ -25,9 +25,7 @@ pub use crate::history::{current_version_name, version_alias, version_alias_from
 /// The key a marked file's object carries, holding `VERSIONS_SCHEME`.
 pub const VERSIONS_KEY: &str = "versions";
 
-/// The end of a version at `at` (`v<digits>.<digits>.<digits>` and at most one lower-case letter)
-/// when one starts there and stands alone: no letter, digit, `_` or `.` before it, and no letter or
-/// digit, nor a dot and a digit, after it.
+/// End of an isolated version string (`v<digits>.<digits>.<digits>[<letter>]`) starting at `at`.
 fn version_at(bytes: &[u8], at: usize) -> Option<usize> {
     if bytes.get(at) != Some(&b'v') {
         return None;

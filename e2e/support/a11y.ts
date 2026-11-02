@@ -1,9 +1,5 @@
-// The accessibility check spec 38 runs on each route (issue #757): axe-core in the page, WCAG 2.2
-// A and AA rules only, and a failure for every serious or critical violation that is not listed in
-// `axe-exceptions.ts` for that route.
-//
-// axe-core is injected from e2e's own node_modules (a dev dependency of this package, never of the
-// client), once per page: a `cy.visit` makes a new window, and the check injects again.
+// The accessibility check spec 38 runs on each route (issue #757). axe-core comes from e2e's own
+// node_modules (never the client's), injected once per page: a `cy.visit` makes a new window.
 
 import type { AxeResults, ImpactValue, NodeResult, Result } from "axe-core";
 
@@ -25,7 +21,7 @@ type AxeWindow = Cypress.AUTWindow & {
   axe?: { run: (context: Document, options: unknown) => Promise<AxeResults> };
 };
 
-/** One violation as the terminal shows it: the rule, its impact, and its first nodes' selectors. */
+/** One violation as the terminal shows it. */
 function describeViolation(violation: Result): string {
   const nodes = violation.nodes
     .slice(0, AXE_NODES_SHOWN)
@@ -35,7 +31,6 @@ function describeViolation(violation: Result): string {
   return [`  ${violation.id} (${violation.impact ?? "?"}): ${violation.help}`, ...nodes].join("\n");
 }
 
-/** Whether `exception` covers `node`: the element axe names matches the exception's selector. */
 function covers(win: AxeWindow, exception: AxeException, node: NodeResult): boolean {
   const selector = node.target[0];
   if (typeof selector !== "string" || node.target.length !== 1) return false;

@@ -1,12 +1,8 @@
 // Prints a tutorial lesson's deal (SPEC §9.10); writes nothing.
-//
-//   sh scripts/build-wasm.sh                     # from the repository root, once: src/wasm/pkg
 //   pnpm --dir apps/web exec tsx scripts/lesson-deal.ts <lessonId> [seed]
 //   pnpm --dir apps/web exec tsx scripts/lesson-deal.ts <lessonId> --scan <prefix> <from> <to> [top]
-//
 // `--scan` prints hands and the first `top` library cards so `grep` can choose a seed by its curve.
-//
-// Node reads and instantiates the WebAssembly module from disk (§10.3), as the web's tests do.
+// Loads the WebAssembly from disk (§10.3), as the web's tests do.
 
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

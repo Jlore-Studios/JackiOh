@@ -2,13 +2,11 @@
 //
 // `/terms`. `TERMS_LAST_UPDATED` and the privacy policy's date make up `TERMS_VERSION`
 // (crates/server/src/config.rs), the version each account agrees to (R757001), so a change to the
-// text changes the date, and the version with it, and every account is asked to agree again. A
-// second change on a day the page already changed keeps the date and gives the version a letter
-// (R970001); `privacy.test.tsx` fails on any change to the words until the version moves.
+// text changes the date, and every account is asked to agree again; a second change on one day gives
+// the version a letter (R970001). `privacy.test.tsx` fails on any change to the words until it moves.
 //
-// "AI opponents" is R2614000's disclosure of the ladder bots (SPEC §9.12): when ranked seats one, what
-// it looks like and how it plays, and that nothing marks it. It must stay true of the bots, so a change
-// to what a bot is, wears or does that the section names changes the section too.
+// "AI opponents" is R2614000's disclosure of the ladder bots (SPEC §9.12): a change to what a bot is,
+// wears or does that the section names changes the section too.
 
 import type { ReactElement } from "react";
 

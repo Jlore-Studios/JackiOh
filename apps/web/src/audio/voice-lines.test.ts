@@ -1,29 +1,11 @@
 // Polish task 2 (docs/polish/2-sound.md), behaviors B33 and B34, and R655's file: `card-audio.json5`,
 // with its words from `voice-text.json` (written from crates/cards/card-text.yaml, #2498), against
-// the catalog it voices.
+// the catalog it voices. B34's lines that use a BANNED_RULES_WORDS entry (issue #115) are named in
+// the failure and in the passing test's title count, so none is lost by being under the allowance.
 //
-//   B33  exactly the catalog's ids (Core's 111 among them), each card's kind from its catalog type
-//        (the file never states it); a unit carries a `play` and a `death` line (a hook with a voice
-//        and a text) and no `cast` hook, a spell or trap a `cast` line and no `play`, `attack` or
-//        `death` hook; no hook outside CARD_HOOK_NAMES and no field on a hook but voice, text and
-//        effect; and every voice a line names exists, usable for its backend (a `say` voice with
-//        in-range rate, pbas and pmod, or since R501 a SAPI voice with in-range rate and semitones and
-//        a filter chain, and neither carrying the other's fields), with web values and (where set)
-//        loudness trim `gain`, 0-2.
-//   B34  every line is non-empty, uses only /^[A-Za-z ,.'!?-]+$/, stays within
-//        VOICE_MAX_WORDS[hook] words (a word is a token that contains a letter), and uses a
-//        BANNED_RULES_WORDS entry as a whole word, in any case, in fewer than BANNED_WORDS_MAX_SHARE
-//        (2%) of the lines (issue #115). The lines that do are named in the failure and in the
-//        passing test's title count, so none is lost by being under the allowance.
-//   R655 the sections are voices, effects and cards, in that order; each card's entry names the card
-//        in a comment on the line of its id, in catalog order; comments and trailing commas parse;
-//        every effect a hook names is in the bank, every bank effect is a recipe sfx.ts has, and
-//        every one is used; and the file writes no words, which are card-text.yaml's.
-//
-// The files are read off disk rather than imported, so this checks the committed files themselves,
-// joined by `voiceData.ts`'s `withVoiceText` as the client joins them, and not what its parser
-// makes of them. Each test collects every offender before asserting, so
-// a red run names all of them at once instead of the first.
+// The files are read off disk, joined by `voiceData.ts`'s `withVoiceText` as the client joins them, so
+// this checks the committed files, not what the parser makes of them. Each test collects every offender
+// before asserting, so a red run names them all.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -45,7 +27,7 @@ const VOICE_TEXT_PATH = resolve(here, "voice-text.json");
 type EntryKind = "unit" | "spell" | "trap";
 type Hook = "play" | "attack" | "death" | "cast" | "trigger";
 
-/** docs/polish/2-sound.md: Unit -> unit; Spell and Field Spell -> spell; Trap and Field Trap -> trap. */
+/** As docs/polish/2-sound.md maps them. */
 const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
   Unit: "unit",
   Spell: "spell",
@@ -119,12 +101,11 @@ function allAssignments(): Assignment[] {
   );
 }
 
-/** A hook's voice line: an assignment with a voice and a text. */
 function isLine(value: unknown): boolean {
   return isRecord(value) && typeof value.voice === "string" && typeof value.text === "string";
 }
 
-/** Every line the file carries (an assignment that gives a voice, a text or a lines list), so a malformed one is still checked. A trigger's lines count one by one. */
+/** Every line the file carries; a trigger's lines count one by one. */
 type Line = { key: string; hook: Hook; text: unknown };
 
 function allLines(): Line[] {
@@ -145,7 +126,6 @@ function isSapi(name: string): boolean {
   return isRecord(voice) && voice.backend === "sapi";
 }
 
-/** The voices the cards table actually names. */
 function referencedVoices(): string[] {
   const names = new Set<string>();
   for (const { value } of allAssignments()) {
@@ -380,7 +360,7 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
 
   it("B33 R1448 gives every card a line per its kind: three times the units plus the spells and traps", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
-    // Since R1448 a Unit's attack line (R655) is required beside its play and death lines.
+    // R1448: a Unit's attack line (R655) is required beside its play and death lines.
     const lines = allAssignments().filter(({ value }) => isLine(value));
     expect(lines, "lines in the table").toHaveLength(units * 3 + (Object.keys(CARDS).length - units));
     const required = Object.keys(CARDS).flatMap((id) => {
@@ -408,7 +388,6 @@ describe("every voice line is short, plain flavour (B34)", () => {
 
   it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8)", () => {
     expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
-    // The counter itself: punctuation-only tokens are not words, hyphenated and elided ones are one.
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);
 
@@ -420,11 +399,9 @@ describe("every voice line is short, plain flavour (B34)", () => {
 
   it("B34 passes a corpus with fewer than 2% of its lines restating rules vocabulary, and no more", () => {
     expect(BANNED_WORDS_MAX_SHARE).toBe(0.02);
-    // 1 line in 100 is 1%; 2 in 100 is 2%, which is not fewer than 2%.
     expect(withinBannedShare(0, 100)).toBe(true);
     expect(withinBannedShare(1, 100)).toBe(true);
     expect(withinBannedShare(2, 100)).toBe(false);
-    // 1 in 51 is 1.96% and passes; 1 in 50 is exactly 2% and does not.
     expect(withinBannedShare(1, 51)).toBe(true);
     expect(withinBannedShare(1, 50)).toBe(false);
     // An empty corpus proves nothing.
@@ -441,7 +418,6 @@ describe("every voice line is short, plain flavour (B34)", () => {
       "Animated", "Activate", "Brittle", "Nerf", "Buff", "Spell Damage", "Immune to Spells", "Counter",
       "Flicker", "Plague Counter",
     ]);
-    // The matcher itself: whole words in any case, across whitespace, and never inside a longer word.
     expect(bannedMatcher("Taunt").test("I TAUNT you!")).toBe(true);
     expect(bannedMatcher("Divine Shield").test("a divine  shield, dear")).toBe(true);
     expect(bannedMatcher("Echo").test("Echoes of the past")).toBe(false);

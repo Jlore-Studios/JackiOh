@@ -1,22 +1,15 @@
 //! ME-PARETO (docs/meditative-set.md M5, MD-D28–MD-D30, R1125, R1126): the engine-side judge of
 //! "the AI optimal move" and the Cane's attack.
 //!
-//! The judge is §10.7's scorer (`subsystems::scorer`), never `crates/ai` — the engine cannot depend
-//! on it (CLAUDE.md rule 4), and the AI's own pick runs on a budget, a wall clock and a
-//! determinization rng, so the server, WASM and a replay could disagree. It scores each opponent
-//! play against their other playable cards, from their own concealed view, on the state before the
-//! play. Ties count as optimal, and only plays are judged.
+//! The judge is §10.7's scorer (`subsystems::scorer`), never `crates/ai`: the engine cannot depend on it
+//! (CLAUDE.md rule 4), and the AI's pick runs on a budget, a clock and a determinization rng, so the
+//! server, WASM and a replay could disagree. It scores only plays, from the player's own concealed view
+//! before the play. `reduce` stores the verdict (`state.play_judgement`, `StaticFlags.judges_plays`),
+//! which never reaches a view (§10.8): the Cane tells only that a better-scored card was in hand.
 //!
-//! While a card with `StaticFlags.judges_plays` acts on a player's field, `reduce` judges each
-//! `play` the opponent makes and stores `state.play_judgement`; Pareto Optimality's trigger reads
-//! it off its play's `cardResolved` and sends the remembered Cane. The verdict never reaches a view
-//! (§10.8): the Cane's attack tells the opponent only that a better-scored card was in their hand.
-//!
-//! R1844001 (Stinkyscape #147 IN33DH3, #147.2 Wardrum Blob): the Pareto hint shows a player the
-//! judge's own reading of their plays. While it is on (`pareto_hint_active`: the `pareto_hint` verb's
-//! turn, or a card with `StaticFlags.hints_plays` on their field, on their own turn), their view marks
-//! each hand card the judge would call optimal now (`pareto_hint_ids`), so a hinted play never sets
-//! off an opposing Pareto Optimality. It reads only what `judge_play` reads, their concealed copy.
+//! R1844001 (Stinkyscape #147 IN33DH3, #147.2 Wardrum Blob): the Pareto hint marks the hand cards the
+//! judge would call optimal now (`pareto_hint_ids`), so a hinted play never sets off an opposing Pareto
+//! Optimality; it reads only what `judge_play` reads, their concealed copy.
 
 use serde::{Deserialize, Serialize};
 
@@ -32,17 +25,14 @@ pub fn watching(state: &GameState, player: PlayerId) -> bool {
 }
 
 /// The judge's verdict on the play `player` is about to make of `instance_id`: true when its card's
-/// score is at least every other playable card's, so ties count as optimal (MD-D28).
-///
-/// True when there is nothing to judge against — the viewer cannot play now, or the card is not
-/// theirs to play — so no trigger fires on a verdict that was never earned.
+/// score is at least every other playable card's (ties optimal, MD-D28), or when there is nothing to
+/// judge against, so no trigger fires on a verdict never earned.
 pub fn judge_play(state: &GameState, player: PlayerId, instance_id: &str) -> bool {
     let Some(mut base) = crate::subsystems::scorer::dry_run_base(state, player) else {
         return true;
     };
-    // The copy carries the last verdict along; a trigger answering a trial's resolution must not
-    // read it as this play's (the trials play through `run_play_steps`, never `reduce`, so no new
-    // verdict overwrites it there).
+    // The copy carries the last verdict, which a trial's trigger must not read as this play's (trials
+    // run through `run_play_steps`, never `reduce`, so nothing overwrites it there).
     base.play_judgement = None;
     let mut candidates: Vec<String> = Vec::new();
     for action in crate::reduce::legal_actions(state, player) {
@@ -79,9 +69,8 @@ pub fn pareto_hint_active(state: &GameState, player: PlayerId) -> bool {
             || crate::query::acting_with_flag(state, player, |flags| flags.hints_plays))
 }
 
-/// R1844001: the cards `player` may play now that the judge would call optimal (`judge_play`'s
-/// scores: at least every other playable card's, so ties share the mark), in `legal_actions`' order;
-/// none while the hint is off or `player` cannot play now.
+/// R1844001: the cards `player` may play now that `judge_play` would call optimal (ties share the
+/// mark), in `legal_actions`' order; none while the hint is off.
 pub fn pareto_hint_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     if !pareto_hint_active(state, player) {
         return Vec::new();
@@ -123,10 +112,9 @@ pub struct CaneArgs {
     pub cane: String,
 }
 
-/// MD-D30, R1126: the Cane's attack for Pareto Optimality's trigger. The Cane must be acting and its
-/// controller's; in its backrow zone it animates (R383's move, home reserved), and when no open unit
-/// zone takes it the attack does not happen. Then one forced attack on a random enemy it may attack
-/// (R53). On its controller's turn, already a Unit, it just attacks.
+/// MD-D30, R1126: the Cane's attack for Pareto Optimality's trigger, if it acts and is its controller's:
+/// out of its backrow zone it animates (R383's move, home reserved) or, with no open unit zone, does not
+/// attack; then one forced attack on a random enemy it may attack (R53).
 pub fn cane_strike(args: CaneArgs) -> Effect {
     Effect::new("caneStrike", move |ctx| {
         let Some(cane) = find_instance(ctx.state, &args.cane).cloned() else {

@@ -90,12 +90,10 @@ describe("the block editor (R880)", () => {
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
     expect(screen.getByTestId("prompt-modal").getAttribute("data-prompt-kind")).toBe("craft");
-    // The first preset is a 5/6 Unit: 10 of 12 points, 3 of 24 lines.
     expect(screen.getByTestId("craft-points")).toHaveTextContent("10/12 pts");
     expect(screen.getByTestId("craft-loc")).toHaveTextContent("3/24 lines");
     expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("false");
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
-    // The live face is the card it would make.
     expect(document.body.textContent).toContain("Pure Closure");
   });
 
@@ -104,7 +102,6 @@ describe("the block editor (R880)", () => {
     render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
 
     fireEvent.click(screen.getByTestId("craft-preset-1"));
-    // The Spell preset: 8 of 12 points, 2 + 1 + 3 = 6 of 24 lines.
     expect(screen.getByTestId("craft-points")).toHaveTextContent("8/12 pts");
 
     fireEvent.click(screen.getByTestId("prompt-submit"));
@@ -312,7 +309,6 @@ function potionPreset(): CraftRecipe {
   };
 }
 
-/** The editor's props for a prompt in `mode`, with the prompt's offer when it has one. */
 function modeProps(
   mode: CraftMode | undefined,
   options: PendingOption[],
@@ -325,13 +321,11 @@ function modeProps(
   return { pending, onAction: vi.fn() };
 }
 
-/** Type `code` into Scratch Pad's editor. */
 function typeCode(code: string): void {
   fireEvent.change(screen.getByTestId("craft-code"), { target: { value: code } });
 }
 
-// Meditative+ #26 Scratch Pad (R1182002, R1563010): code typed as text, with no presets, tooltips or
-// hints.
+// Meditative+ #26 Scratch Pad (R1182002, R1563010): code typed as text.
 describe("R1182002 R1563010 the from-scratch code editor", () => {
   it("R1182002 R1563010 opens as the empty card's code, with no suggestion, price, tooltip or refusal reason", () => {
     const props = modeProps("scratch", [presetOption(unitPreset(), 0), presetOption(spellPreset(), 1)], 2);
@@ -344,8 +338,6 @@ describe("R1182002 R1563010 the from-scratch code editor", () => {
     expect(screen.queryByLabelText("Suggestions")).toBeNull();
     expect(screen.queryByLabelText("Why this recipe is refused")).toBeNull();
     expect(screen.getByRole("navigation", { name: "Blocks" }).querySelectorAll("[title]")).toHaveLength(0);
-    // An empty canvas: a 0/1 Unit with nothing on it, as code, which the meters price at 0 points and
-    // 3 lines.
     expect((screen.getByTestId("craft-code") as HTMLTextAreaElement).value).toBe(
       'card Unit "Pure Closure" {\n  stats(0, 1)\n}\n',
     );
@@ -461,7 +453,6 @@ describe("R1182000 R1563008 the potion frame", () => {
     expect(screen.queryByLabelText("Remove When cast hat")).toBeNull();
     expect(screen.getByTestId("craft-points")).toHaveTextContent("4/4 pts");
     expect(screen.getByTestId("craft-face")).toHaveTextContent("Pure Closure Potion");
-    // A suggestion is still offered in the potion frame.
     expect(screen.getByTestId("craft-preset-0")).toHaveTextContent("Pure Closure");
   });
 
@@ -512,7 +503,6 @@ describe("R1563007 the palette is the prompt's offer", () => {
     verbs: ["damageTarget", "healYourHero", "draw"],
   };
 
-  /** The names of a palette section's blocks, before their prices. */
   function names(section: string): (string | undefined)[] {
     return within(screen.getByRole("region", { name: section }))
       .getAllByRole("button")

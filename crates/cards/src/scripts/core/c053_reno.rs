@@ -4,13 +4,10 @@
 //!            so the radiant face is the same clause with 30 replaced by 60, not a second heal.
 //!
 //! The Engine cell `health = max(health, 30)` is §6.3's "Heal up to 30": `heal_hero_up_to`
-//! (engine/src/damage.rs) is a floor, never a ceiling, so a hero at 35 stays 35 and no `healed`
-//! event is emitted. §3 gives a hero no maximum health, so nothing caps the 30 or the 60 (§6.3).
-//!
-//! R19 makes the hero a legal heal target ("a heal may name any unit or hero"). "Your hero" is
-//! `{ of: "selfHero" }`, named not chosen (§8 Conventions, "'Your' means the controller"): no prompt (R81).
-//! R195, the yellow glow: in hand, Reno glows exactly when its Cry would raise the hero. `below_floor`
-//! is that one predicate, read by the Cry and `condition_met`, so they cannot disagree.
+//! (engine/src/damage.rs) is a floor, never a ceiling, so a hero at 35 stays 35 and no `healed` event is
+//! emitted; §3 gives a hero no maximum health. R19 makes the hero a legal heal target; "your hero" is
+//! `{ of: "selfHero" }`, named not chosen (§8 Conventions): no prompt (R81). R195's yellow glow:
+//! `below_floor` is the one predicate the Cry and `condition_met` read, so they cannot disagree.
 
 use jackioh_engine::prelude::*;
 
@@ -47,7 +44,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #53 Reno (SPEC §8.3, §6.3 Heal, §3, R19; BUILD M4-T4 row 53: "12 → 30; 35 stays 35; radiant 60").
+// #53 Reno (SPEC §8.3, §6.3 Heal, §3, R19; BUILD M4-T4 row 53).
 //
 // R195's yellow glow (`condition_met`): both answers of this card's hook, checked against the branch
 // its resolution then takes, are in condition_active.rs with the other hooked cards (README §5).
@@ -80,7 +77,6 @@ mod tests {
 
             s.play("core-053", json!({}));
             s.expect_health(PlayerId::P1, 35);
-            // Nothing was healed, so §3 never gave the hero a maximum to be pulled down to.
             assert_eq!(heals_in_last_step(&s), 0);
         }
 
@@ -132,8 +128,6 @@ mod tests {
         }
     }
 
-    // The radiant cases: the scenario's hand entry `{ "def": …, "radiant": true }` builds the radiant
-    // hand card directly.
     mod n53_reno_radiant {
         use super::*;
 

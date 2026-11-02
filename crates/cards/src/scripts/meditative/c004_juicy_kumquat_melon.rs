@@ -2,18 +2,12 @@
 //!   Base:    "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card."
 //!   Radiant: the same, plus "They cost ({discount}) less." (2)
 //!
-//! Six draws in cost order (R801). For each cost N the script takes the topmost card of its
-//! controller's library (index 0 is the top) whose definition's set is Meditative and whose cost,
-//! read as `matches_library_filter` reads it (R65: an X card counts as 0, an embiggen card at its
-//! base price, `costMod` included), is N. The six picks are chosen as the effect begins and noted on
-//! the resolving card (`remember`), so a cast-on-draw pause cannot lose them; each is then drawn with
-//! `draw_from_library`, a real §2.4 draw (cast on draw, R58's chain, the hand cap and R457's limit all
-//! apply). A cost with no match draws nothing and causes no fatigue.
-//!
-//! On the Radiant face only, each picked card that reached the hand costs ({discount}) less
-//! (`set_cost_mod`, `inHandOnly`; R4): a picked card cast on draw or burned never lands there and
-//! takes no discount. The number is declared and read through `param` (R386); the base face prints
-//! none (R749).
+//! Six draws in cost order (R801). A card's cost is read as `matches_library_filter` reads it (R65:
+//! an X card counts as 0, an embiggen card at its base price, `costMod` included). The six picks are
+//! chosen as the effect begins and noted on the resolving card (`remember`), so a cast-on-draw pause
+//! cannot lose them; each is then drawn with `draw_from_library`, a real §2.4 draw (cast on draw, R58's
+//! chain, the hand cap and R457's limit all apply). A cost with no match draws nothing and causes no
+//! fatigue. The Radiant discount is declared and read through `param`; the base face prints none (R749).
 
 use jackioh_engine::effects::{ForEachCardArgs, draw_from_library, for_each_card, remember, set_cost_mod};
 use jackioh_engine::prelude::*;
@@ -107,11 +101,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// M #4 Juicy Kumquat Melon — SPEC §8.8 row 4, BUILD M10 row M 4: "Draw the topmost Meditative card of
-// each cost 0 to 5, in cost order (R801); a non-Meditative card of that cost is passed over; a cost
-// with no match draws nothing and causes no fatigue; an X card counts 0 and an embiggen card its
-// base (R65); no rng; a full hand burns the draw; radiant: each card that reaches the hand costs 2
-// less, a card that never gets there none; the tuned discount reads through `param()` (R386)".
+// M #4 Juicy Kumquat Melon — SPEC §8.8 row 4, BUILD M10 row M 4.
 #[cfg(test)]
 mod tests {
     use super::*;

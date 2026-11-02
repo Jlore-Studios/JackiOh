@@ -12,7 +12,6 @@ use crate::rules::fixtures::harness::{Bench, both, events_of_type, live, live_mu
 
 // Fixture cards.
 
-/// `overrides` is spread over the literal (a shallow merge).
 fn unit_def_of(name: &str, index: u32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("ds-{name}"),
@@ -93,7 +92,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
     let mut scripts: IndexMap<String, CardScripts> = IndexMap::new();
     scripts.insert(dier().id, both(ping_enemy_hero()));
     scripts.insert(warded_dier().id, both(ping_enemy_hero()));
-    // R78: the Death hook reads the memory this card held just before it left the field.
     scripts.insert(
         rememberer().id,
         both(Script {
@@ -116,7 +114,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
@@ -189,7 +186,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// One field of each event.
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialize") {
         Value::Array(items) => items

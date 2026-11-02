@@ -57,12 +57,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S #9 Ticketed — SPEC §8.10 row 9, BUILD M12 row S 9: "played, it holds a chosen enemy Unit beneath it:
-// the Unit leaves the field with no Death and its zone is free; the Unit comes back for its controller,
-// summoning sick and with no Cry, once Brittle 3 has crumbled Ticketed (R638), and likewise when Ticketed
-// is destroyed, Bounced or exiled; a held Field Spell comes back to the backrow; a held unit token is gone
-// for good (R11); with no open zone the card is exiled; radiant no Brittle: it holds until Ticketed
-// leaves".
+// S #9 Ticketed — SPEC §8.10 row 9, BUILD M12 row S 9 (R11, R638).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -81,8 +76,6 @@ mod tests {
     const TRAP: &str = "core-041"; // (1) Trap Sheepish, to set face-down.
     const CORE_SYSTEM: &str = "stinkyscape-117"; // (3) Spell: "Bounce all permanents. …"
 
-    /// p1, active with 10 mana, holds Ticketed (`radiant` its face) and `hand`; p2 has `field` in its
-    /// unit zones and `backrow` in its backrow. No turn ends by itself.
     fn board(radiant: bool, hand: Value, field: Value, backrow: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant }), json!(FILLER)];
         cards.extend(hand.as_array().cloned().unwrap_or_default());
@@ -97,7 +90,6 @@ mod tests {
         s
     }
 
-    /// p1 plays Ticketed into backrow zone 1, holding `target`.
     fn ticket(s: &mut Scenario, target: &str) {
         s.play(ID, json!({ "zone": 1, "targets": pick::id(target) }));
     }
@@ -153,7 +145,6 @@ mod tests {
             let back = s.card(sorcerer.as_str()).clone();
             assert!(matches!(back.zone, Zone::Field { player: P2, row: Row::Units, .. }), "{:?}", back.zone);
             assert_eq!(back.summoned_turn, Some(s.state().turn), "summoning sick");
-            // No Cry: no hit was dealt.
             s.expect_health(P1, HERO_HEALTH);
             assert!(held_ids(&s).is_empty());
         }
@@ -191,7 +182,6 @@ mod tests {
                 "Ticketed Bounced to hand"
             );
             assert!(held_ids(&s).is_empty());
-            // It comes back after the Bounce, for its controller, summoning sick.
             let back = s.card(vanilla.as_str()).clone();
             assert!(
                 matches!(
@@ -226,7 +216,6 @@ mod tests {
             let mut s = board(false, json!([]), json!([]), json!([{ "def": TRAP, "lane": 2 }]));
             let trap = s.backrow(P2, 2).expect("the set Trap").id;
             s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&trap) })));
-            // One of p1's own Units is a permanent it may hold.
             let mut own = crate::scenario(json!({
                 "p1": {
                     "hand": [ID, FILLER],
@@ -264,7 +253,6 @@ mod tests {
             }
             let held = s.unit_at(P2, 1).id;
             ticket(&mut s, &held);
-            // p2 fills the freed zone.
             s.end_turn();
             s.state_mut().players[P2].mana.current = 10;
             let refill = s

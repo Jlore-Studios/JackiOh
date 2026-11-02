@@ -1,12 +1,4 @@
-//! The token bars and their tokens (`src/economy/tokens.rs`, SPEC §14.5; #1305): a bar paying
-//! when full with the overflow kept, the cosmetic cycle's order, what each token buys and refuses,
-//! and the read-back.
-//!
-//! Every request goes through the whole app over an empty fake store (`deps::empty_test_app`), as
-//! the active account `p1`. Openings the test must steer (an empty registry, so every duplicate
-//! is spent) call `open_pack` with that registry, as `packs.rs` does; cosmetic redemptions call
-//! `redeem_cosmetic_token` with a fixture registry for the same reason, while card redemptions
-//! and the read-back go through the routes over the shipped registry.
+//! Token bars and tokens (SPEC §14.5, #1305): overflow retention, redemption cycle, and catalog purchases.
 
 use std::sync::Arc;
 
@@ -44,10 +36,6 @@ const ROUTES: [(&str, &str); 3] = [
     ("POST", "/api/tokens/redeem-card"),
     ("POST", "/api/tokens/redeem-cosmetic"),
 ];
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// An empty app with the active `p1` and its Bearer [REDACTED]
 async fn setup() -> (Arc<App>, String) {
@@ -221,9 +209,7 @@ async fn own(app: &App, cards: &[String]) {
     .expect("a grant");
 }
 
-// ---------------------------------------------------------------------------------------------
 // A fixture registry (per-card cosmetics at every tier, and one of each refusal)
-// ---------------------------------------------------------------------------------------------
 
 fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
     Cosmetic {
@@ -271,9 +257,7 @@ fn registry(owned: &[String]) -> Vec<Cosmetic> {
     ]
 }
 
-// ---------------------------------------------------------------------------------------------
 // The bars paying (§14.5)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1305000_a_bar_pays_when_full_and_keeps_the_overflow() {
@@ -412,9 +396,7 @@ async fn r1305001_the_cycle_pays_rare_epic_rare_epic_rare_pack_then_restarts() {
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 4);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Redeeming a card token (R1305002)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1305002_a_card_token_unlocks_a_chosen_card_once() {
@@ -487,9 +469,7 @@ async fn r1305002_a_card_token_unlocks_a_chosen_card_once() {
     assert_eq!(everything(&app).await, before);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Redeeming a cosmetic token (R1305003)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1305003_a_rare_token_buys_common_and_rare_but_refuses_epic() {
@@ -772,9 +752,7 @@ async fn r1833000_a_rare_token_buys_foil_sunburst_not_table_marble_and_no_token_
     assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
 }
 
-// ---------------------------------------------------------------------------------------------
 // Reading back (R1305004)
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r1305004_get_tokens_reads_bars_cycle_and_tokens() {
@@ -857,9 +835,7 @@ async fn the_routes_refuse_a_signed_out_caller() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2124000: a redemption sent again under its Idempotency-Key spends one token
-// ---------------------------------------------------------------------------------------------
 
 #[tokio::test]
 async fn r2124000_the_same_key_twice_redeems_one_card_token() {
@@ -948,9 +924,7 @@ async fn r2124000_the_same_key_twice_redeems_one_cosmetic_token() {
     assert_eq!(redeemed, 1);
 }
 
-// ---------------------------------------------------------------------------------------------
 // R2378000: an account runs one spend at a time, the rest waiting their turn
-// ---------------------------------------------------------------------------------------------
 
 /// How many times `until_claims` lets the spawned spends run before it gives up.
 const YIELDS: usize = 1_000;

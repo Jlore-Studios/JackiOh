@@ -1,5 +1,4 @@
-// Shared helpers of the lesson tests (`*.test.ts` beside this file): fold a lesson run's log back into
-// its steps, replay the coach over it, and `lessonSuite`, the tests every lesson passes (R293,
+// Shared helpers of the lesson tests (`*.test.ts` beside this file), `lessonSuite` among them (R293,
 // R2205000, R2205001, R2205003). Only tests import this file.
 
 import { beforeAll, expect, it } from "vitest";
@@ -36,10 +35,8 @@ export function stepsOf(run: LessonRun): Step[] {
 }
 
 /**
- * Every run of "Got it" bubbles the coach showed on this line, in order: tips and info steps, with
- * no move of the player's and no step asking for one between them. Rebuilt by folding the run's
- * log and reading each snapshot the way the harness's coach did (the page's own reads: the human's
- * view, legal actions and whether the AI owes a move), which the tips it saw prove.
+ * Every run of "Got it" bubbles the coach showed on this line, with no move of the player's and no step
+ * asking for one between them, rebuilt from the run's log as the harness's coach read it (its tips prove it).
  */
 export function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } {
   const { seed, decks, handicaps, log } = run.debug;
@@ -88,7 +85,6 @@ export function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } 
 /** The rarities no lesson before the last deals or generates (R2201001, R2205003). */
 const SHOWPIECES: readonly string[] = ["Legendary", "Mythic"];
 
-/** Every card id a state holds, on either side and in every zone. */
 function cardsIn(state: GameState): string[] {
   const ids: string[] = [];
   for (const player of Object.values(state.players)) {
@@ -142,11 +138,8 @@ export function barredPlays(run: LessonRun): string[] {
 const OTHER_POLICIES: readonly LessonPolicy[] = ["coach-passive", "autopilot", "reckless"];
 
 /**
- * The tests every lesson passes, played through the real practice core (harness.ts): the coach's line
- * wins and shows every moment, each of the lesson's mechanics is found on it, the pacing holds, every
- * other way to play it ends in the human's win before the turn cap, the game replays to its hash, and
- * before the last lesson no Legendary or Mythic card shows up. Call it inside a `describe` whose title
- * names the rulings, so `cargo jackioh spec check` finds them in the lesson's own file.
+ * The tests every lesson passes, played through the real practice core (harness.ts). Call it inside a
+ * `describe` whose title names the rulings, so `cargo jackioh spec check` finds them in the lesson's own file.
  */
 export function lessonSuite(lessonId: string, options: SuiteOptions): void {
   const lesson = lessonById(lessonId);

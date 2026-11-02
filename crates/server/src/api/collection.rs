@@ -1,17 +1,12 @@
-//! The collection: SPEC §9.4's entitlement ledger.
+//! The collection: SPEC §9.4's entitlement ledger (`collection` and append-only `collection_grants`).
+//! "Every collection change writes `collection` and `collection_grants` in one transaction, and no
+//! client path writes either." So the one mutation path is `grant_cards`, both writes in one
+//! transaction (BUILD M6-T2's fault-injection test asserts both tables or neither), and the route
+//! table holds a single `GET`: §9.8's first row is met by an absence, which a test asserts over
+//! `app::ROUTES`. The other writer is a dev account's own fill and clear (`api/dev.rs`, R1300000).
 //!
-//! "Collection is an entitlement ledger (`collection` plus append-only `collection_grants`) ...
-//! Every collection change writes `collection` and `collection_grants` in one transaction, and no
-//! client path writes either." So there is one mutation path, `grant_cards`, making both writes in
-//! one transaction (the store exposes them separately; the fault-injection test asserts "both
-//! tables or neither", BUILD M6-T2), and the route table holds a single `GET`: §9.8's first row
-//! and M6-T2's "no endpoint" are satisfied by an absence, which a test asserts over `app::ROUTES`.
-//! The one other writer is a dev account's own fill and clear (`api/dev.rs`, R1300000), the server's
-//! grant of what the dev tools name, both writes in one transaction as here.
-//!
-//! `collection_upsert_quantities` takes the new *absolute* quantity; a `CollectionGrant`'s `delta`
-//! is the change applied (`collection_grants.delta` has `check (delta <> 0)`), so a no-op grant
-//! writes no row.
+//! `collection_upsert_quantities` takes the new absolute quantity; a `CollectionGrant`'s `delta` is
+//! the change (`check (delta <> 0)`), so a no-op grant writes no row.
 
 use std::sync::Arc;
 
@@ -22,15 +17,10 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, json};
 use crate::app::App;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, StoreError, Tx};
 
-/// SPEC §11 R111 fixes this: the launch grant is one copy of each card it grants, the starter cards
-/// since the economy went live (R1310000; L3 caps a deck at `MAX_COPIES` and L4 forbids a card id
-/// in two decks; R141 leans on it for an account that owns every card: "L5 is never a sole
-/// failure"). Migration `0002_collection.sql` stores the same value as
-/// `app.settings('launch_quantity')`.
-///
-/// Public because R111's grant is a database trigger in production ("written by a trigger on the
-/// `pending → active` transition"), so the in-memory store carries the same trigger (`db/fake.rs`)
-/// and reads this value rather than restating it.
+/// SPEC §11 R111: the launch grant is one copy of each card it grants, the starter cards since the
+/// economy went live (R1310000); R141 leans on it for an account that owns every card. Migration
+/// `0002_collection.sql` stores it as `app.settings('launch_quantity')`. Public because R111's grant
+/// is a database trigger, which the in-memory store (`db/fake.rs`) mirrors by reading this.
 pub const LAUNCH_COPIES: i64 = 1;
 
 /// Not in SPEC, and no R-row: forced. `collection_grants.reason` has a closed-set CHECK in
@@ -57,12 +47,9 @@ pub fn caller_profile(req: &Req) -> Result<Profile, ApiError> {
     }
 }
 
-/// Sums repeated ids and rejects a delta that is not a positive whole number.
-///
-/// Not in SPEC, and no R-row: an input-shape check mirroring table constraints
-/// (`collection.quantity >= 0`, `collection_grants.delta <> 0`, migration `0002_collection.sql`);
-/// it only turns a violation into a named 400. §9.4 describes grants and never revocation, which
-/// would be its own path and ruling.
+/// Sums repeated ids and rejects a delta that is not a positive whole number. Not in SPEC: it turns
+/// a violation of the table constraints into a named 400. §9.4 describes grants and never
+/// revocation, which would be its own path and ruling.
 fn deltas_from(entries: &[CollectionEntry]) -> Result<IndexMap<String, i64>, ApiError> {
     let mut deltas: IndexMap<String, i64> = IndexMap::new();
     for entry in entries {
@@ -123,14 +110,10 @@ pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
     Ok(())
 }
 
-/// BUILD M6-T2: "launch mode grants every card to every active profile." One copy of every
-/// playable id in the catalog; tokens are skipped (§9.4 L3) and so are banned ids (L6). Since the
-/// economy went live (R1310000) no person's account is granted it; the end-to-end server's active
-/// fixtures are (R1310004), and the tests'.
-///
-/// Idempotent by topping up to `LAUNCH_COPIES`: a second call computes a zero delta for everything
-/// owned and touches neither table. `reason` is `LAUNCH_GRANT_REASON` unless the caller names
-/// another.
+/// BUILD M6-T2: one copy of every playable id in the catalog, tokens (§9.4 L3) and banned ids (L6)
+/// skipped. Since the economy went live (R1310000) no person's account gets it, only the end-to-end
+/// server's active fixtures (R1310004) and the tests'. Idempotent: it tops up to `LAUNCH_COPIES`, so
+/// a second call touches neither table.
 pub async fn grant_entire_catalog(app: &App, profile_id: &str, reason: Option<&str>) -> Result<(), ApiError> {
     let owned = owned_map(app, profile_id).await?;
     let mut entries: Vec<CollectionEntry> = Vec::new();
@@ -178,14 +161,9 @@ pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i
     Ok(owned)
 }
 
-/// `GET /api/collection` (`AuthLevel::Active`).
-///
-/// §9.4: read-only, and deliberately the whole route table: the ledger moves only through
-/// `grant_cards` and a dev account's own tools (`api/dev.rs`).
-///
-/// Carries the catalog version the server holds, because the client's catalog is "static,
-/// versioned, shipped with the client" (§9.4) and a client one release behind must learn that
-/// before it builds a loadout. Only owned rows are sent; an absent id is owned zero times.
+/// `GET /api/collection` (`AuthLevel::Active`, §9.4): read-only. It carries the server's catalog
+/// version, so a client one release behind learns so before it builds a loadout. Only owned rows
+/// are sent; an absent id is owned zero times.
 pub async fn get_collection(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;

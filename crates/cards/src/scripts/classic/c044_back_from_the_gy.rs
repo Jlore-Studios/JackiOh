@@ -30,7 +30,6 @@ fn graveyard_units(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
-            // Any number of Units, the budget the only bound.
             let max = zone_count(ctx.state, ctx.controller, OffFieldZone::Graveyard);
             let budget = param(&*ctx, "budget");
             vec![
@@ -106,7 +105,6 @@ mod tests {
         must(s.state().pending.as_ref(), "open prompt")
     }
 
-    /// `graveyard` entries are bare ids or `{ def, costMod? }` objects.
     fn back(radiant_face: bool, graveyard: Value, field: &[&str]) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": BACK, "radiant": radiant_face }, FILLER], "graveyard": graveyard, "field": field },
@@ -118,7 +116,6 @@ mod tests {
         json!([1, 2, 3, 4, 5].map(|lane| s.unit(P1, lane).map(|card| card.def_id)))
     }
 
-    /// The def id of the card an option offers, or "?" for an option that is not an instance.
     fn offered_def(s: &Scenario, option: &PromptOption) -> String {
         match &option.selection {
             Selection::Instance { instance_id } => s.card(instance_id).def_id.clone(),
@@ -200,7 +197,6 @@ mod tests {
             #[test]
             fn r65_a_graveyard_cards_own_cost_counts_its_cost_mod_included() {
                 crate::register_all();
-                // The 7/7 (4) with costMod −3 costs (1) there, so it and a (4) fit in 5.
                 let mut s = back(false, json!([{ "def": SEVEN, "costMod": -3 }, MENACE, VANILLA]), &[]);
                 s.play(BACK, json!({}));
                 let cost: Vec<Option<i32>> = open(&s).options.iter().map(|option| option.cost).collect();

@@ -1,6 +1,6 @@
 //! The effects that ask the controller something (BUILD M3-T1; SPEC §6.3, §10.6, §5.1, R50, R81):
-//! the six choose factories and the two scope readers beside them: what each declares, what it puts
-//! in `state.pending`, what it emits, and what it does when there is nothing to offer.
+//! the six choose factories and the two scope readers beside them, and what each does with nothing
+//! to offer.
 
 use std::collections::BTreeSet;
 
@@ -48,7 +48,6 @@ fn fruit(name: &str, index: u32) -> CardDef {
     )
 }
 
-/// The unit whose script does the asking.
 fn caller() -> CardDef {
     def(
         "caller",
@@ -102,8 +101,8 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// A context for p1 over a fresh sink (an rng at the state's cursor, never written back), `extra`
-/// laid over it, handed to `f`; `self_` is read back from the state as it stands now.
+/// A context for p1 over a fresh sink (rng at the state's cursor, never written back) with `extra`,
+/// handed to `f`; `self_` is read back from the state.
 fn with_ctx<R>(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -130,7 +129,6 @@ fn with_ctx<R>(
     f(&mut ctx)
 }
 
-/// Each effect applied in turn; returns the context's events.
 fn run_with(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -200,7 +198,6 @@ fn option_labels(state: &GameState) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// The `mode` options' picks.
 fn mode_options(state: &GameState) -> Vec<String> {
     option_selections(state)
         .into_iter()
@@ -233,7 +230,6 @@ mod target_scopes_s10_6_r13 {
 
     #[test]
     fn offers_every_active_unit_by_default_the_chooser_s_side_first_in_lane_order() {
-        // §10.6.
         let mut state = game("scope-default");
         let mine_a = put(
             &mut state,
@@ -290,7 +286,6 @@ mod target_scopes_s10_6_r13 {
 
     #[test]
     fn narrows_a_scope_by_side_and_offers_heroes_and_backrow_cards_when_it_names_them() {
-        // §10.6.
         let mut state = game("scope-sides");
         let mine = put(
             &mut state,
@@ -365,7 +360,6 @@ mod target_scopes_s10_6_r13 {
 
     #[test]
     fn exclude_self_drops_the_card_running_the_script_from_a_unit_and_from_a_backrow_scope() {
-        // §10.6.
         let mut state = game("scope-exclude-self");
         let self_card = put(
             &mut state,
@@ -492,7 +486,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
 
     #[test]
     fn choose_one_opens_a_mode_prompt_that_resumes_the_step_it_names() {
-        // §6.3.
         let mut state = game("choose-mode");
         let self_card = put(
             &mut state,
@@ -563,7 +556,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
 
     #[test]
     fn choose_target_offers_the_scope_it_names_labeled_and_fizzles_on_an_empty_scope_s6_3() {
-        // §10.6.
         let mut state = game("choose-target");
         let self_card = put(
             &mut state,
@@ -593,8 +585,8 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             &state,
             json!({ "kind": "target", "prompt": "Choose a target", "min": 1, "max": 1 }),
         );
-        // Each option is labeled with the card's name, or, for a hero, whose it is to the chooser, and keyed by what
-        // it selects, so two cards of one name are still two keys (§10.6: the key is what is sent back).
+        // Options are labeled by card name, a hero by whose it is to the chooser, and keyed by what they
+        // select, so two same-named cards are two keys (§10.6: the key is what is sent back).
         assert_eq!(
             serde_json::to_value(&state.pending.as_ref().expect("a prompt").options).unwrap(),
             json!([
@@ -612,7 +604,7 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             ])
         );
 
-        // An empty scope opens no prompt and emits nothing: the effect fizzles and the card resolves.
+        // An empty scope opens no prompt and emits nothing: the effect fizzles.
         clear_prompt(&mut state);
         let mut empty_board = game("choose-target-empty");
         let lonely = put(
@@ -634,7 +626,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
 
     #[test]
     fn a_target_or_cell_prompt_names_heroes_and_cells_to_its_chooser_your_or_enemy_never_by_seat() {
-        // §10.6.
         let mut state = game("choose-relative");
         let mine = put(
             &mut state,
@@ -739,7 +730,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             json!({}),
         );
 
-        // An empty hand opens nothing at all.
         let empty = run(
             &mut state,
             Some(&self_card),
@@ -790,7 +780,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         );
         expect_pending_matches(&state, json!({ "min": 3, "max": 3 }));
 
-        // With no count stated it asks for one, under the default prompt text.
         clear_prompt(&mut state);
         run(
             &mut state,
@@ -889,7 +878,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
 
     #[test]
     fn discover_offers_three_from_the_pool_it_names_never_the_card_that_generated_it_s5_1() {
-        // §6.3.
         let mut state = game("discover-catalog");
         let self_card = put(
             &mut state,
@@ -914,7 +902,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
             }),
         );
         let offered = mode_options(&state);
-        // Four Fruit, one of them the generator: exactly the other three.
         assert_eq!(
             sorted(offered.clone()),
             sorted(vec![fruit_a().id, fruit_b().id, fruit_c().id])
@@ -971,8 +958,8 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         assert!(state.pending.is_none());
         assert_eq!(fizzle, Vec::<GameEvent>::new());
 
-        // With no query the pool is the whole catalog, and with no instance running the script there
-        // is no generating card to exclude (§5.1's exclusion is the card's own index).
+        // No query: the whole catalog; no instance running the script: no generating card to exclude
+        // (§5.1's exclusion is the card's own index).
         clear_prompt(&mut state);
         run(
             &mut state,
@@ -1086,7 +1073,6 @@ mod the_choose_effects_s6_3_s10_6_m3_t1 {
         let effect = discover_from_graveyard(json_as(json!({ "step": "chosen" })));
         assert_eq!(effect.kind, "discoverFromGraveyard");
 
-        // An empty graveyard opens nothing.
         let empty = run(&mut state, Some(&self_card), vec![effect.clone()]);
         assert!(state.pending.is_none());
         assert_eq!(empty, Vec::<GameEvent>::new());

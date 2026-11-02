@@ -53,7 +53,6 @@ export function whenNear(element: Element, onNear: () => void): () => void {
           const watched = windows.get(entry.target);
           if (watched === undefined) continue;
           if (entry.isIntersecting) {
-            // Preserve the first dwell timeout.
             watched.dwell ??= setTimeout(() => {
               leave(root, entry.target);
               watched.onNear();

@@ -1,7 +1,6 @@
 //! Leaving the field, coming back, and what travels with a card between zones (SPEC §3.2, §4.5, R11,
 //! R13, R47, R57, R64, R76, R78, R83, R174, R175). Found by the polish-4 edge-case hunt
-//! (docs/polish/4-edge-cases.md, lenses L1, L2 and L8); every case here failed before its fix.
-//!
+//! (docs/polish/4-edge-cases.md, lenses L1, L2 and L8).
 //!  - R174: #50 K-Pop Fanatic's delayed steal fizzles on a target that has left the field since it was
 //!    chosen, even when the same card is back — bounced and replayed, or returned by Reborn — and on
 //!    a target dormant under a Stack pile when it fires (R13, R76).
@@ -70,12 +69,10 @@ fn pile_of(g: &Scenario, player: PlayerId, lane: usize) -> Vec<String> {
         .collect()
 }
 
-/// Whether the unit's keywords as the layers read them include `kind`.
 fn has_keyword(g: &Scenario, id: &str, kind: KeywordKind) -> bool {
     g.stats(id).keywords.iter().any(|keyword| keyword.kind() == kind)
 }
 
-/// A write to the live instance's granted keywords.
 fn grant(g: &mut Scenario, id: &str, keywords: Vec<Keyword>) {
     must(find_instance_mut(g.state_mut(), id), id).granted_keywords = keywords;
 }
@@ -124,14 +121,12 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
             "p1": { "hand": [KPOP, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
-            // The Coin pays for the replay: Flood costs (4).
             "p2": { "hand": [FLOOD, SEVEN_SEVEN, COIN], "field": [{ "def": VANILLA, "lane": 2 }], "library": LIBRARY },
         }));
         let prey = g.unit_at(PlayerId::P2, 2).id;
         g.play(KPOP, json!({ "targets": pick::id(&prey) }));
         g.end_turn();
 
-        // p2 bounces every unit, the prey included, and plays the prey again.
         g.play(COIN, json!({}));
         g.play(FLOOD, json!({}));
         g.expect_in_zone(prey.as_str(), "hand");
@@ -160,7 +155,6 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
     fn r174_the_steal_fizzles_on_a_target_that_died_and_came_back_through_reborn_r76_r83() {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            // K-Pop Fanatic (2) and Hit Job (3).
             "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY, "mana": 5 },
             "p2": {
                 "hand": [VANILLA],
@@ -222,7 +216,6 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
             (g, token)
         };
         // Plastic Surgery's random keyword is rolled from §6.1's pool (R21), which keeps Reborn for tokens;
-        // every keyword added to the pool moves the roll, so search for a seed where it is Reborn.
         let seed = seed_where("surgery-reborn-token", |seed| {
             let (mut g, token) = setup(seed);
             g.play(SURGERY, json!({ "targets": pick::id(&token) }));
@@ -280,7 +273,6 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
 
         g.play(HIT_JOB, json!({ "targets": pick::id(&fused.id) }));
 
-        // The zone was reserved and never Locked, so the body returns — on top, the token dormant again.
         g.expect_in_zone(fiender.as_str(), "field");
         assert_eq!(pile_of(&g, PlayerId::P1, 1), vec![fiender.clone(), token.clone()]);
         assert_eq!(g.card(fiender.as_str()).reborn_spent, Some(true));
@@ -308,7 +300,6 @@ mod c3_2_and_r13_a_card_dormant_under_a_stack_pile {
             vec![fiender.clone(), dormant.clone()]
         );
 
-        // Paid 4: "all Units −2/−2". Mr. Vanilla is 4/4 and dormant; Felinor Fiender 5/7 is on top.
         g.play(AURA, json!({ "embiggen": true }));
 
         g.expect_in_zone(dormant.as_str(), "field");
@@ -316,7 +307,6 @@ mod c3_2_and_r13_a_card_dormant_under_a_stack_pile {
             pile_of(&g, PlayerId::P1, 1),
             vec![fiender.clone(), dormant.clone()]
         );
-        // The dormant card keeps its own stats; the top of the pile takes the aura.
         g.expect_stats(dormant.as_str(), json!({ "attack": 4, "health": 4 }));
     }
 }
@@ -335,18 +325,15 @@ mod c7_r41_r57_what_a_copy_keeps {
                 "library": LIBRARY,
                 "mana": 3,
             },
-            // The Coin pays for Jilliax beside Hit Job, (3).
             "p2": { "hand": [HIT_JOB, JILLIAX, HIT_JOB, COIN], "library": LIBRARY },
         }));
         let saintess = g.card(SAINTESS).id.clone();
 
-        // p1 ends its turn with 3 unspent: Bread and Butter summons a 3/3 Bread Token, Armor X of 3.
         g.end_turn();
         let bread = g.unit_at(PlayerId::P1, 1).id;
         assert_eq!(g.card(bread.as_str()).def_id, BREAD);
         g.expect_stats(bread.as_str(), json!({ "attack": 3, "health": 3 }));
 
-        // p2 kills the Saintess: her Death makes every other p1 unit Radiant, so the Bread is Armor 3.
         g.play(COIN, json!({}));
         g.play(HIT_JOB, json!({ "targets": pick::id(&saintess) }));
         g.play(JILLIAX, json!({}));
@@ -354,7 +341,6 @@ mod c7_r41_r57_what_a_copy_keeps {
         assert_eq!(g.stats(bread.as_str()).armor, 3);
         g.end_turn();
 
-        // p1 eats it with Carnivorous Cube, and p2 kills the Cube on its next turn.
         assert_eq!(g.state().active, PlayerId::P1);
         g.play(CUBE, json!({ "targets": pick::id(&bread) }));
         let cube = g.card(CUBE).id.clone();
@@ -392,7 +378,6 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
      {
         jackioh_cards::register_all();
         let fillers = [VANILLA; 9];
-        // Two cards to play, then Reminisce and nine fillers: the hand is full when Silas bounces.
         let mut hand = vec![
             json!(MIND_CONTROL),
             json!({ "def": SILAS, "radiant": true }),
@@ -421,7 +406,6 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         assert_eq!(g.card(seven.as_str()).owner, PlayerId::P1);
         assert_eq!(g.card(seven.as_str()).cost_override, None);
 
-        // p1 Reminisces it back: "it costs 1 less", so the printed 4 becomes 3.
         g.play(REMINISCE, json!({}));
         g.answer(json!(seven));
         g.expect_in_zone(seven.as_str(), "hand");
@@ -451,7 +435,6 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         assert_eq!(g.card(seven.as_str()).owner, PlayerId::P1);
         assert_eq!(g.card(seven.as_str()).controller, PlayerId::P1);
         assert_eq!(g.card(seven.as_str()).cost_override, Some(0));
-        // It is p1's own card now, so it is priced and played as one (a held card is read by its holder).
         assert_eq!(
             effective_cost(g.state(), g.card(seven.as_str()), CostOptions::default()),
             0
@@ -505,7 +488,6 @@ mod r77_r175_a_fuse_onto_a_token_summoned_x_x {
             "p2": { "hand": [SEVEN_SEVEN, STOCKPILE], "library": LIBRARY },
         }));
 
-        // p1 ends the turn with 4 unspent: a 4/4 Bread Token, whose radiant "Armor X" is carried as 4.
         g.end_turn();
         let bread = g.unit_at(PlayerId::P1, 1);
         assert_eq!(bread.def_id, BREAD);
@@ -586,7 +568,6 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let mut g = scenario(json!({
             "p1": { "hand": [CUBE, VANILLA], "library": LIBRARY },
             "p2": {
-                // The Coin pays for Timmy beside Silas: Silas costs (4).
                 "hand": [{ "def": SILAS, "radiant": true }, TIMMY, VANILLA, COIN],
                 "field": [{ "def": SORCERER, "lane": 5 }],
                 "backrow": [{ "def": EXPERIMENTATION, "lane": 3 }],
@@ -616,8 +597,6 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         // A Timmy that has been granted Reborn (Plastic Surgery's pool, R21), with no shield or Armor to
         // hide whether a hit lands on its body.
         grant(&mut g, &saintess, vec![Keyword::Reborn]);
-        // Replayed: the fused Cry runs the Cube's part (eat the Timmy) and then the Sorcerer's
-        // (4 damage), both aimed at the Timmy.
         let meal = json!({ "pick": "instance", "instanceId": saintess });
         g.play(fused.id.as_str(), json!({ "zone": 5, "targets": [meal, meal] }));
         // The meal died and came back through Reborn (§4.5 step 4), a new arrival (R83): the damage aimed
@@ -633,7 +612,6 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let mut g = scenario(json!({
             "p1": { "hand": [CUBE, VANILLA], "library": LIBRARY },
             "p2": {
-                // The Coin pays for Timmy beside Silas: Silas costs (4).
                 "hand": [{ "def": SILAS, "radiant": true }, TIMMY, VANILLA, COIN],
                 "field": [{ "def": POSTDOC, "lane": 5 }],
                 "backrow": [{ "def": EXPERIMENTATION, "lane": 3 }],
@@ -658,7 +636,6 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.play(TIMMY, json!({ "zone": 1 }));
         let timmy = g.unit_at(PlayerId::P2, 1).id;
         let before = g.events().len();
-        // The Cube's part eats Timmy, and the Postdoc's part asks for a Vanilla copy of the same Timmy.
         let meal = json!({ "pick": "instance", "instanceId": timmy });
         g.play(fused.id.as_str(), json!({ "zone": 5, "targets": [meal, meal] }));
         g.expect_in_zone(timmy.as_str(), "graveyard");
@@ -686,7 +663,6 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "mana": 5,
             },
             "p2": {
-                // The Coin pays for Flood beside Magic Jammed: Flood costs (4).
                 "hand": [MAGIC_JAMMED, FLOOD, VANILLA, VANILLA, COIN],
                 "field": [{ "def": KPOP, "lane": 3 }],
                 "backrow": [{ "def": EXPERIMENTATION, "lane": 3 }],
@@ -716,18 +692,16 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
             Some(jammed.clone())
         );
         g.end_turn();
-        // Turn 10, p2: Magic Jammed locks p1's backrow lane 2, and Flood returns the fused unit to hand.
         g.play(COIN, json!({}));
         g.play(MAGIC_JAMMED, json!({ "targets": pick::id(&jammed) }));
         g.play(FLOOD, json!({}));
         g.expect_in_zone(fused.id.as_str(), "hand");
         until_active(&mut g, PlayerId::P1);
         until_active(&mut g, PlayerId::P2);
-        // Turn 12, p2: the fused card again. Silas's part rotates right (from p2's seat p1's backrow
-        // 3 -> 2), and lane 2 is held, so the prey is bounced to p1's hand (R14, R88); the Kpop part then
-        // schedules the steal of the prey, which has already left the field. The Lock alone bounced it
-        // until patch v0.3.10 (a rotation enters a Locked zone now, R831000), so the zone is held here
-        // as a dying Reborn unit's is (§3.2, R64).
+        // Silas's part rotates right (from p2's seat p1's backrow 3 -> 2), and lane 2 is held, so the prey
+        // is bounced to p1's hand (R14, R88); the Kpop part then schedules the steal of the prey, which has
+        // already left the field. A rotation enters a Locked zone (R831000), so the zone is held here as a
+        // dying Reborn unit's is (§3.2, R64).
         jackioh_engine::zones::reserve_zone(
             g.state_mut(),
             ZoneRef {
@@ -797,7 +771,6 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
 
         // R174: the Sorcerer's 4 damage is aimed at the stay the Cube's part ended, so it fizzles — as it
         // does when nothing asks in between. The answer resuming the list (R113) changes nothing.
-        // The test takes the first offer whatever it is, so no seed is chosen for the Discover's roll.
         let option = must(
             g.state()
                 .pending
@@ -814,8 +787,6 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
         assert_eq!((hits, g.card(saintess.as_str()).zone.z()), (0, ZoneName::Field));
     }
 }
-
-// Round 7 (lens L2): "this" card is aimed at its stay too.
 
 const GARY: &str = "core-004";
 const GLOWY_JELLY_BEAN: &str = "core-026";
@@ -867,10 +838,8 @@ mod r174_r78_a_later_part_of_a_cry_acting_on_the_card_itself_once_an_earlier_par
         g.play(card.as_str(), json!({ "zone": 5, "modes": ["right"] }));
         g.expect_in_zone(card.as_str(), "hand");
 
-        // The Gary part comes next in the same Cry. It is aimed at the card on the field, whose stay has
-        // ended (R174: "a fused card's part aimed at a card an earlier part has taken off the field
-        // fizzles"), so the coins buff nothing — least of all a card in a hand, which R78 has just made
-        // the printed card again.
+        // The Gary part is aimed at the card whose stay has ended (R174: "a fused card's part aimed at a
+        // card an earlier part has taken off the field fizzles"), so the coins buff nothing.
         assert_eq!(g.card(card.as_str()).buffs, AttackHealth { attack: 0, health: 0 });
     }
 }
@@ -901,11 +870,8 @@ mod r174_a_transformed_card_has_left_the_field {
 
         g.play(TIMMY, json!({ "zone": 1 }));
 
-        // The first Sheepish turned the played unit into a Sheep, which is no longer the card played.
         assert_eq!(g.unit_at(PlayerId::P1, 1).def_id, SHEEP);
         g.expect_in_zone(first.as_str(), "graveyard");
-        // A trap answering the play behind one that took the card off the field is not offered it, so
-        // the second Sheepish stays armed and face-down rather than firing for nothing.
         assert_eq!(
             g.last_events()
                 .iter()
@@ -928,7 +894,6 @@ mod r102_r212_a_card_a_fuse_kept_is_the_same_card_on_the_same_stay {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-fauci-fuse",
             "p1": { "hand": [SORCERER, HINDER], "mana": 10 },
             "p2": { "field": [{ "def": FAUCI, "lane": 1 }], "backrow": [{ "def": EXPERIMENTATION, "lane": 1 }] },
@@ -973,7 +938,6 @@ fn fuse_on(s: &mut Scenario, args: FuseArgs) -> Option<CardInstance> {
     subsystems::fuse(&mut sink, args)
 }
 
-/// A copy of the hand as it stands.
 fn hand_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     s.hand(player)
 }
@@ -986,13 +950,10 @@ mod r174_r41_a_cubes_meal_is_read_on_the_stay_the_play_chose {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-cube-cube-reborn",
             "p1": {
                 "mana": 10,
                 "hand": [CUBE, CUBE, HIT_JOB, RENO],
-                // A Right-house defender: Reborn and no Death of its own. (A Radiant Saintess's Death would
-                // make the crafted Cube Radiant, and a Radiant Cube fills the board whatever it remembers.)
                 "field": [{ "def": RIGHT_HOUSE, "lane": 1 }],
                 "library": LIBRARY,
             },
@@ -1047,7 +1008,6 @@ mod r174_r41_a_cubes_meal_is_read_on_the_stay_the_play_chose {
             .filter_map(|lane| s.unit(PlayerId::P1, lane).map(|card| card.def_id.clone()))
             .filter(|id| id == RIGHT_HOUSE)
             .count();
-        // Its Reborn body plus the first Cube's 2 copies; the second Cube remembered nothing.
         assert_eq!(defenders, 3);
     }
 }
@@ -1055,13 +1015,8 @@ mod r174_r41_a_cubes_meal_is_read_on_the_stay_the_play_chose {
 mod c4_5_step_4_r89_the_reborn_bodies_of_one_check_return_together {
     use super::*;
 
-    /// p1 plays a Felinor Fiender crafted with a Right-house defender (6/8, Stack, Taunt, Divine Shield,
-    /// Reborn, and the Fiender's layer 2) and a "Miss" Mrow crafted with one (2/2 Felinor, Reborn) into the two lanes
-    /// given, then destroys both with Twisting Nether. Both die in one state check and both come back
-    /// through Reborn. Returns the Fiender body's health afterwards.
     fn fiender_after_reborn(fiender_lane: i32, mrow_lane: i32) -> i32 {
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-reborn-order",
             "p1": {
                 "mana": 10,
@@ -1125,9 +1080,7 @@ mod c4_5_step_4_r89_the_reborn_bodies_of_one_check_return_together {
     fn c4_5_a_felinor_fiender_and_the_felinor_feeding_it_that_come_back_through_reborn_in_one_check_leave_the_fiender_at_the_same_health_whichever_lane_is_first_r89_r116()
      {
         jackioh_cards::register_all();
-        // Mrow first: the Fiender's body is read with Mrow back, 10 max health and 1 left. Fiender first:
-        // it is read with Mrow still in the graveyard, 8 max and 1 left, and Mrow's return then lifts it
-        // to 3. §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
+        // §4.5 step 4 returns every collected Reborn unit in one step, at 1 health.
         assert_eq!(fiender_after_reborn(1, 2), fiender_after_reborn(2, 1));
     }
 }
@@ -1135,9 +1088,6 @@ mod c4_5_step_4_r89_the_reborn_bodies_of_one_check_return_together {
 mod c3_2_r13_r174_a_card_the_plays_own_stack_buried_is_not_on_the_field_for_its_cry {
     use super::*;
 
-    /// p1 crafts a Felinor Fiender (Stack) with `partner`, whose Cry chooses one of p1's units, and
-    /// plays it onto lane 1, where Mr. Vanilla stands, choosing Mr. Vanilla. Step 4 puts the crafted
-    /// card on top of the pile, so by step 5 Mr. Vanilla is dormant under it.
     fn bury_own_pick(partner: &str, seed: &str) -> (Scenario, CardInstance, CardInstance) {
         let mut s = scenario(json!({
             "seed": seed,
@@ -1215,7 +1165,6 @@ const P2_MEAL: &str = "core-019";
 mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
     use super::*;
 
-    /// p1's unit row as def ids, lane 1 to 5.
     fn unit_row(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(PlayerId::P1, lane).map(|card| card.def_id.clone()))
@@ -1231,7 +1180,6 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-cube-kept-meal",
             "p1": {
                 "mana": 10,
@@ -1278,7 +1226,6 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r11-r77-kept-memory",
             "p1": {
                 "mana": 10,
@@ -1289,7 +1236,6 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
             },
             "p2": { "hand": [CUBE, STOCKPILE], "field": [{ "def": P2_MEAL, "lane": 1 }], "library": LIBRARY },
         }));
-        // p1's Cube eats Tempo Timmy: its text remembers the meal through `remember`, under "eaten".
         let timmy = must(s.unit(PlayerId::P1, 1).map(|card| card.id.clone()), "Tempo Timmy");
         s.play(
             CUBE,
@@ -1321,7 +1267,6 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
         assert_eq!(moved.len(), 1);
         let moved_key = moved.first().cloned().unwrap_or_default();
         assert_eq!(after.get(&moved_key), before.get("eaten"));
-        // Every other entry is as it was; the only one the Fuse may add is the ingredients' prices.
         let mut rest_before = before.clone();
         rest_before.shift_remove("eaten");
         let mut rest_after = after.clone();
@@ -1334,7 +1279,6 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
     fn r102_a_crafted_cube_cube_that_85_fuses_a_played_cube_onto_still_copies_both_of_its_own_meals_r77() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-crafted-cube-kept",
             "p1": {
                 "mana": 10,
@@ -1393,8 +1337,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
             json!({ "targets": [{ "pick": "instance", "instanceId": crafted.id }] }),
         );
 
-        // The kept card "still reads what it remembered before" (R102): its two Cubes copy a Timmy twice
-        // and a Mr. Vanilla twice.
+        // The kept card "still reads what it remembered before" (R102).
         let row = unit_row(&s);
         assert_eq!(count(&row, TIMMY), 2);
         assert_eq!(count(&row, MR_VANILLA), 2);

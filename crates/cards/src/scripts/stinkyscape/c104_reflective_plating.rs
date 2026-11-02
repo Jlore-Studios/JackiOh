@@ -44,7 +44,6 @@ mod tests {
     const SHREDDER: &str = "core-013"; // (3) 6/10.
     const ECLIPSE: &str = "core-035"; // (1) Spell: Deal 3 damage.
 
-    /// It is p2's turn: p1 has the Plating (`radiant` its face) in unit zone 1, p2 has `attacker`.
     fn attacked_by(radiant: bool, attacker: &str) -> (Scenario, CardInstance, CardInstance) {
         let s = crate::scenario(json!({
             "active": "p2",
@@ -66,7 +65,6 @@ mod tests {
             s.expect_stats(&plating, json!({ "health": 2 }));
             s.expect_health(P2, HERO_HEALTH - 4);
             s.expect_health(P1, HERO_HEALTH);
-            // The base face reflects nothing back to the attacker, and the Plating's 0 strikes nothing.
             s.expect_stats(&vanilla, json!({ "health": 4 }));
         }
 

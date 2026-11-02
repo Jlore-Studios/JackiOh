@@ -1,6 +1,6 @@
 // R90 (#992): a hand card whose listed plays the engine cut at `MAX_CHOICE_COMBINATIONS` carries
-// `choicesTruncated: true` in its player's own view, and the board says so on the card: a badge, and
-// the note in its hover preview. The words are informational: the combinations not listed stay legal.
+// `choicesTruncated: true` in its player's own view, and the board says so on the card. The words are
+// informational: the combinations not listed stay legal.
 // The engine half is proved in crates/engine/tests/rules/play_choices_filters.rs.
 
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
@@ -30,7 +30,6 @@ function hover(element: HTMLElement): void {
   });
 }
 
-/** Two cards in hand: c1 with its listed plays cut, c2 with none. */
 function truncatedView(): PlayerView {
   return baseView({
     you: emptySide("p1", {
