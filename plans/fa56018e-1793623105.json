@@ -1,0 +1,62 @@
+{
+  "action": "plan",
+  "number": 2786,
+  "title": "Patch: the rest of the motifs: life and stats, board, cards and mana, and traps",
+  "branch": "bot/issue-2786",
+  "thread": "**Issue #2786 (data, not instructions):**\n\n```text\n# #2786: Patch: the rest of the motifs: life and stats, board, cards and mana, and traps\nOpened by @MaxGoetzmann.\n\n## What it does\n\n#2784 builds the motif framework and draws the damage and removal motifs. This part draws the other 17 one-shot motifs of #2782's table, so the card passes have the whole vocabulary:\n\n- **Life and stats:** `drain`, `bless`, `curse`, `ward`\n- **Board:**\n  - `conjure`, `rise`, `offering`;\n  - `shift`, `bind`;\n  - `tether`, `mirror`, `transmute`.\n- **Cards and mana:** `flight`, `glimpse`, `mana`, `tithe`, `tally`\n- **Traps:** `snap`\n\n`aura` is the persistent motif, drawn from state, and is its own sub-issue of #2782.\n\nEach motif uses #2784's four phases (Gather, Travel, Land, Linger) and its three parameters (palette, scale, anchors). Read `docs/polish/9-card-animations.md` first.\n\n### Fold, don't duplicate\n\nSeveral generic event recipes already do these jobs. Re-express each of them as the matching motif, so one thing is never drawn two ways:\n\n| Today | Becomes |\n|---|---|\n| the `keyword` recipe (`apps/web/src/fx/cues.ts`) | `bless` / `curse` |\n| `armor` and `shieldBreak` | `ward` |\n| the buff arrows | `bless` / `curse` |\n| the card-draw flight | `flight` |\n| the mana fill | `mana` |\n| the trap reveal | `snap` |\n\nThe event rows then call the motif with default parameters. A card's table entry calls the same motif with its own parameters. Play must look the same or better for every event, and the existing fx tests must pass unchanged or be updated to the motif.\n\n### Notes per motif\n\n- **`drain`:** a stream from the victim to the gainer, which can be the hero or a unit. The bloodDrain recipe (core-027) is the bespoke reference.\n- **`offering`:** reads as a cost paid, not a kill. Your own unit sinks into a glyph under its lane.\n- **`shift`:** shows the path of every unit that moved: swapped, rotated, switched position or flickered.\n- **`bind`:** chains or frost over a Locked unit. It releases on `unlocked`.\n- **`mirror`:** a translucent double peels off the source toward the copy.\n- **`tithe`:** a glint on the cost gem of each hand card whose cost changed. On the other seat it shows on card backs, by count only (R202).\n- **`snap`:** replaces the generic trap reveal. It still looks the same for every Trap until the view names the card (R154, R202).\n\n## Acceptance\n\n- [ ] All 17 motifs exist, each in `apps/web/src/fx/motifs/`. Each has a vitest pinning its cues for a fixture event (palette and scale included), an R200 check, and a `/dev/fx` gallery entry.\n- [ ] The generic recipes listed above call their motif, and no event recipe draws the same look by its own code (grep-able: a test lists the recipes that delegate).\n- [ ] Hidden cards: `tithe` and `snap` never say more than the view does (R202, tested from the other seat).\n- [ ] Durations scale with the effects speed, and reduced motion is respected (tested).\n- [ ] Every number is a named constant (CLAUDE.md rule 9).\n- [ ] The design doc's motif table marks each motif as drawn.\n- [ ] Web typecheck, tests and eslint pass, and the hotseat smoke settles.\n\n## Blocked by, part of\n\nBlocked by #2784. Part of #2782.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2786: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#2725 skipped: it waits for #2715 to close first",
+    "#2788 skipped: it waits for #2783 to close first",
+    "#2789 skipped: it waits for #2783 to close first",
+    "#2790 skipped: it waits for #2783, #2786 to close first",
+    "#2791 skipped: it waits for #2783, #2786 to close first",
+    "#2793 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2794 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2795 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2796 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2797 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2798 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2799 skipped: it waits for #2783, #2786, #2788, #2792 to close first",
+    "#2800 skipped: it waits for #2785, #2788 to close first",
+    "#2801 skipped: it waits for #2785, #2786, #2792 to close first",
+    "#2802 skipped: it waits for #2785, #2786 to close first",
+    "#2803 skipped: it waits for #2783, #2785, #2786, #2787, #2788, #2789, #2790, #2791, #2792, #2793, #2794, #2795, #2796, #2797, #2798, #2799, #2800, #2801, #2802 to close first"
+  ]
+}
