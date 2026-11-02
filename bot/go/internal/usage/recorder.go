@@ -17,7 +17,7 @@ import (
 )
 
 // FlushEvery is how often the loop writes its rows to its clone of the branch, derives what
-// closed, draws the usage issue (U2) and pushes: the statistics count's cadence
+// closed, draws the usage issue (`Draw`) and pushes: the statistics count's cadence
 // (`stats.StatsEvery`), so the five-minute tick stays as fast as it was.
 var FlushEvery = stats.StatsEvery
 
@@ -50,11 +50,6 @@ func Token(cfg *config.Config) string {
 	}
 	return cfg.BotToken
 }
-
-// Draw is where U2 draws the usage issue ("Night bot usage", #2749 section 2) from the history
-// under `root`, the clone's root, which `ReadReadings` and the other readers read: at each flush,
-// every 30 minutes with the statistics. It says what it did. nil (U1) draws nothing.
-var Draw func(ctx *hctx.Context, root string) string
 
 // Recorder is the status loop's usage history, for the loop's lifetime (`harness dashboard
 // --every …`): each tick it gathers rows in memory (`Tick`); at the first tick and every
@@ -212,7 +207,7 @@ func (x *Recorder) open(ctx *hctx.Context) {
 }
 
 // Flush writes every row not pushed yet to the clone (each once), backfills a branch that was
-// never backfilled, derives the sessions and weeks that closed, draws the usage issue (U2), commits
+// never backfilled, derives the sessions and weeks that closed, draws the usage issue (`Draw`), commits
 // and pushes; a push the branch's moving refused is tried again on its new tip, up to
 // `PushAttempts`. Once pushed, the spool's rows are taken out of the state file. Never raises.
 func (x *Recorder) Flush(ctx *hctx.Context) {
@@ -263,7 +258,7 @@ func (x *Recorder) flush(ctx *hctx.Context) {
 }
 
 // write is one flush's work in the clone: the backfill if it is due, the rows not pushed, the
-// sessions and weeks that closed, the usage issue (U2), and a commit. Returns how many rows it
+// sessions and weeks that closed, the usage issue (`Draw`), and a commit. Returns how many rows it
 // added to the files.
 func (x *Recorder) write(ctx *hctx.Context) (int, error) {
 	root := x.branch.Dir
@@ -296,8 +291,9 @@ func (x *Recorder) write(ctx *hctx.Context) (int, error) {
 	return added + sessions + weeks, err
 }
 
-// draw is where U2 draws the usage issue, from the clone this flush just wrote (`Draw`): every 30
-// minutes, beside the statistics count. A failure is logged; the history is pushed all the same.
+// draw draws the usage issue from the clone this flush just wrote (`Draw`): every 30 minutes,
+// beside the statistics count, and never on a tick that does not flush. A failure is logged; the
+// history is pushed all the same.
 func (x *Recorder) draw(ctx *hctx.Context) {
 	if Draw == nil {
 		return

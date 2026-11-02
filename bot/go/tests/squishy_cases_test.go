@@ -425,6 +425,26 @@ func TestSquishyCases_ItKeepsNoUsageHistory(t *testing.T) {
 	assertFalse(t, exists(scratch))
 }
 
+// Squishy draws no usage issue (#2749): it keeps no history, so a flush never comes to draw one, and
+// the drawing itself opens nothing.
+func TestSquishyCases_ItDrawsNoUsageIssue(t *testing.T) {
+	squishyCasesModule(t)
+	world := newSquishyCasesWorld(t)
+	drawn := 0
+	defer func(was func(*hctx.Context, string) string) { usage.Draw = was }(usage.Draw)
+	usage.Draw = func(ctx *hctx.Context, root string) string { drawn++; return usage.DrawIssue(ctx, root) }
+	recorder := usage.NewRecorder(func(line string) { t.Errorf("Squishy's loop logged %q", line) })
+	recorder.Tick(world.ctx, usage.TickFacts{State: world.ctx.Store.Load(), Live: pyjson.New()})
+	recorder.Flush(world.ctx)
+	recorder.Close(world.ctx)
+	assertEqual(t, drawn, 0)
+	assertEqual(t, usage.DrawIssue(world.ctx, t.TempDir()), "")
+	for _, thread := range world.gh.Threads.All() {
+		assertNotEqual(t, thread.Get("title"), usage.IssueTitle)
+	}
+	assertFalse(t, world.ctx.Store.Load().Has(dashboard.UsageIssueKey))
+}
+
 // ------------------------------------------------------------------ SplitCases
 
 // squishyCasesSplit is SplitCases.split(mode, tree=TREE): a big issue in `mode`, and the planner's

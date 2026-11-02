@@ -154,6 +154,9 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 	diskLine, memoryLine := disk.Line(state), memory.Line(state, ctx.Now())
 	subscriptions := append(SubscriptionTable(ctx, state, live, explained.Now), "")
 	subscriptions = append(subscriptions, UsageCharts(ctx, state)...)
+	if line := UsageIssueLine(state); line != "" {
+		subscriptions = append(subscriptions, line, "")
+	}
 	if diskLine != "" {
 		subscriptions = append(subscriptions, diskLine, "")
 	}
@@ -193,6 +196,24 @@ func Render(ctx *hctx.Context, extra []string /* = () */, statistics string /* =
 	}
 	lines = append(lines, "", Marker)
 	return strings.Join(lines, "\n")
+}
+
+// UsageIssueKey is where the state file keeps the usage issue (#2749, `usage.DrawIssue`): its
+// number and whether it is pinned (`{"issue": 2751, "pinned": true}`), as `dashboard` keeps the
+// status issue's.
+var UsageIssueKey = "usage_issue"
+
+// UsageIssueText is the status issue's one line about the usage issue, in its subscriptions
+// section, with the usage issue's number.
+var UsageIssueText = "📈 How each subscription's usage works out over time, its charts and the tuning suggestions: #%d."
+
+// UsageIssueLine is that line, "" while the state file names no usage issue.
+func UsageIssueLine(state *pyjson.Object) string {
+	number, err := py.Int(state.Obj(UsageIssueKey).Get("issue"))
+	if err != nil || number <= 0 {
+		return ""
+	}
+	return fmt.Sprintf(UsageIssueText, number)
 }
 
 // FullLeftOut is FULL_LEFT_OUT: what stands at the foot of the issue when the full status is left
@@ -235,8 +256,9 @@ func room(ctx *hctx.Context, view *View, body string, again func() string) strin
 	return again()
 }
 
-// trusted is _trusted.
-func trusted(ctx *hctx.Context, issue *pyjson.Object) bool {
+// Trusted is _trusted: `issue` was opened by the bot or by someone on the trust list, so its body
+// is the bot's to rewrite (the status issue's, and the usage issue's, `usage.FindIssue`).
+func Trusted(ctx *hctx.Context, issue *pyjson.Object) bool {
 	user := issue.Obj("user")
 	login := py.OrStr(user.Get("login"), "")
 	if strings.ToLower(login) == strings.ToLower(ctx.Cfg.BotLogin) {
@@ -267,7 +289,7 @@ func Find(ctx *hctx.Context, state *pyjson.Object) *pyjson.Object {
 	}
 	for _, issue := range ctx.GH.ListIssues("", "open", 300, "") {
 		if !issue.Has("pull_request") && pyjson.Equal(issue.Get("title"), Title) &&
-			strings.Contains(py.OrStr(issue.Get("body"), ""), Marker) && trusted(ctx, issue) {
+			strings.Contains(py.OrStr(issue.Get("body"), ""), Marker) && Trusted(ctx, issue) {
 			return issue
 		}
 	}

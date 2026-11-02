@@ -34,6 +34,8 @@
 # of the branch in RUNNER_TEMP, derives the sessions and weeks that closed and pushes it with the
 # job's own token (`contents: write`, whose pushes start no workflow). The first time it finds the
 # branch without its backfill marker, it reads bot-journal into it. No model call reads usage.
+# At the same 30-minute flush (never on the five-minute tick) it also rewrites the pinned "Night bot
+# usage" issue from that clone (bot/README.md "The usage issue"): its charts and tuning suggestions.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
 # Squishy's token, and its section of the status issue, which sits apart from the night bot's.
 # It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
