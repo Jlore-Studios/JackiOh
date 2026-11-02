@@ -146,7 +146,8 @@ export function showcasePlays(
       if (firesAgain(event)) return;
       revealed += 1;
       const trapReveal = { ordinal: revealed, total };
-      // R154, R763: either sentinel hides the trap; only its controller's seat may read it.
+      // R763, R2734000: either sentinel hides the trap (a library, a hand not the viewer's); any other
+      // firing is named on both seats.
       const play: ShowcasePlay =
         event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD
           ? { player: event.controller, defId: null, radiant: false, set: false, trapReveal }

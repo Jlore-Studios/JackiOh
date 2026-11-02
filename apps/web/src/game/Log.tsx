@@ -8,7 +8,8 @@
 //
 // A line never prints an id. A card is named from the board as it stands, else from what the
 // window's own public events said it was (`summoned`, `cardPlayed`, a move to the graveyard …),
-// else as "a unit" or "a card". The R154 sentinel reads as "a face-down trap", never as "hidden".
+// else as "a unit" or "a card". A `trapFired` sentinel (R763, R2734000) reads as "a face-down trap",
+// never as "hidden".
 // A play names the targets its announce declared (`announcedAims`), and a hit off combat the card that
 // dealt it, each only where the view names it: a face-down set, a target or source the view hid, and an
 // announce that has left the window leave the line as it read without them (R97, R227).
@@ -414,7 +415,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming, aims: Aims):
     case "locked":
       return t("{whose} {zone} was locked", { whose: capitalised(name.whose(event.player)), zone: zoneLabel(event.row, event.lane) });
     case "trapFired":
-      // R154: the other seat reads the sentinel, and a sentinel is not a name.
+      // R2734000: named on both seats where public; the sentinel (R763) is not a name.
       if (event.defId === HIDDEN_CARD) return t("{whose} face-down trap fired", { whose: capitalised(name.whose(event.controller)) });
       // R2657001: a face-up Field Trap firing again reveals nothing, so its line says only that it triggered.
       return event.again === true
