@@ -87,6 +87,7 @@ import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../pra
 import { practiceTestid } from "../practice/testids.ts";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
 import { DIFFICULTY_LABEL, TierCrest } from "../practice/Tier.tsx";
+import { talliesPractice } from "../practice/tally.ts";
 import "../auth/tavern.css";
 import "../practice/practice.css";
 import { useSettingsAccountSync } from "../settings/accountSync.ts";
@@ -1213,8 +1214,8 @@ function PracticeScreen({
         resultForm="chip"
         emotes={emotes}
         // R639: a practice game is logged; a lesson is not, nor (R923000) a sandbox game, nor
-        // (R915009, §12.10) a game with custom cards.
-        trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
+        // (R915009, §12.10) a game with custom cards, nor (R2777003) one against Medium or Hard.
+        trackStats={talliesPractice(config)}
         wearCosmetics
         // R1297000: a saved deck brings its own playmat, backdrop and card back.
         deckCosmetics={config.deck.kind === "saved" ? (config.deck.cosmetics ?? null) : null}
