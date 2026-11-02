@@ -1244,6 +1244,15 @@
   background: color-mix(in srgb, var(--pal-wood-950) 30%, transparent);
 }
 
+/* On a phone the chooser's picker is the sheet docked to the bottom edge, which its cards fill; a row of
+   backs there would sit on the viewer's own hand and control bar, so the backs float in the middle of the
+   screen at every width, over the board. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .prompt-scrim:has(> .prompt-opponent-choice) {
+    place-items: center stretch;
+  }
+}
+
 /* The back fills its option's box, as a face fills a card option's; it takes no hit (`.prompt` above). The
    back is laid over the box (cards.css `.cf-back`, `inset: 0`), so nothing inside grows it as a face grows a
    card option: the box keeps a card's 5:7 itself (`.cf-option`), or a phone's option box (--card-h tall)

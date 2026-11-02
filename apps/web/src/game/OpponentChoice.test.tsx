@@ -139,6 +139,16 @@ describe("R2739000 the other seat's card picker, face down", () => {
     expect(start).toBeGreaterThan(-1);
     expect(css.slice(start, css.indexOf("}", start))).toContain("aspect-ratio: 5 / 7;");
   });
+
+  // The phone docks every picker's sheet to the bottom edge (`place-items: end stretch`); the backs stay in
+  // the middle of the screen, clear of the viewer's hand and control bar.
+  it("R2739000 the backs float in the middle of a phone's screen, not in the bottom sheet", () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "prompt.css"), "utf8");
+    const phone = "@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {\n  .prompt-scrim:has(> .prompt-opponent-choice) {";
+    const start = css.indexOf(phone);
+    expect(start).toBeGreaterThan(-1);
+    expect(css.slice(start, css.indexOf("}", start))).toContain("place-items: center stretch;");
+  });
 });
 
 describe("R2739001 the hovered option, both ways", () => {
