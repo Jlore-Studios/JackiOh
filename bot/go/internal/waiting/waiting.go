@@ -158,7 +158,8 @@ func TierNames(pool *providers.Pool, tier string) string {
 }
 
 // `plan.read_lanes` from the lanes the issue has read already (`status.lanes_now`), so the
-// queue costs no second look at the runs. `live` is item number (its key written out) ->
+// queue costs no second look at the runs, with the lanes in force now (`plan.lanes_in_force`:
+// a Claude account's by its 5-hour cap, #2748). `live` is item number (its key written out) ->
 // provider id.
 func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lanes {
 	pool := ctx.Cfg.Pool
@@ -186,7 +187,7 @@ func LanesOf(ctx *hctx.Context, s *pyjson.Object, live *pyjson.Object) *plan.Lan
 	}
 	return &plan.Lanes{Limit: pool.MaxParallel, Held: held, Planning: planning,
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
-		Filling: filling}
+		Filling: filling, InForce: plan.LanesInForce(ctx, s)}
 }
 
 // (step, tier, why): what the next run does to `c`, the weakest tier that may do it

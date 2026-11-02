@@ -274,6 +274,24 @@ func Find(ctx *hctx.Context, state *pyjson.Object) *pyjson.Object {
 	return nil
 }
 
+// labelled puts on the status issue any of `Labels` it lacks: `tracking` (#2748) on one opened
+// before it, or one a person took off.
+func labelled(ctx *hctx.Context, issue *pyjson.Object) {
+	names := map[string]bool{}
+	for _, label := range pyjson.Objs(issue.GetOr("labels", []any{})) {
+		names[py.OrStr(label.Get("name"), "")] = true
+	}
+	var missing []string
+	for _, label := range Labels {
+		if !names[label] {
+			missing = append(missing, label)
+		}
+	}
+	if len(missing) > 0 {
+		ctx.GH.AddLabels(py.MustInt(issue.Get("number")), missing)
+	}
+}
+
 // Update is update; a variable so the tests can replace it.
 var Update = update
 
@@ -299,6 +317,7 @@ func update(ctx *hctx.Context, extra []string /* = () */, withStats bool /* = Fa
 	state := view.State
 	issue := Find(ctx, state)
 	if issue != nil {
+		labelled(ctx, issue)
 		Explain(ctx, py.MustInt(issue.Get("number")), state)
 	}
 	view.Runners = RunnersSection(ctx, state, view.Found, defaultRoom)

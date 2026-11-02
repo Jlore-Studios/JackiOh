@@ -189,7 +189,7 @@ func TestNeedsPlan_PlanningComesFirstOnMediumSeatsAndTakesNoBuildLane(t *testing
 	planned := flowMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 3, "claude-1") // claude-1 holds nothing else
 	assertEqual(t, difficultySeatAt(t, planned, "plan"), difficultySeat{"claude-1", "sonnet", "medium"})
-	assertEqual(t, gh.LabelNames(3), setOf(config.LabelWorking, config.LabelNeedsPlan, "priority:high"))
+	assertEqual(t, gh.LabelNames(3), setOf(config.LabelPlanning, config.LabelNeedsPlan, "priority:high"))
 	needsPlanRunning(gh, ctx, planned)
 	planned = flowMake(ctx)
 	needsPlanIs(t, planned, []string{"action", "number", "provider"}, "plan", 4, "claude-3") // building #50 does not stop it planning
@@ -283,25 +283,40 @@ func TestNeedsPlan_TheLanePlansFullsendPartsBeforeTheRest(t *testing.T) {
 	needsPlanIs(t, planned, []string{"action", "number"}, "plan", 4)
 }
 
-// One lane (#695): while it holds a run it takes nothing more, neither a second build nor a plan
-// — two runs deciding from one reading go past a cap together. Once the run ends, it plans.
-func TestNeedsPlan_Claude1NeverPlansWhileItBuilds(t *testing.T) {
-	gh := fakes.NewFakeGitHub()
-	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN")})
-	difficultyBusy(gh, ctx, "claude-1", 50)
-	difficultyQueue(gh, ctx, 3, false)
-	assertEqual(t, flowMake(ctx).Get("action"), "none")
-	gh.Runs.Delete("50")
-	assertEqual(t, flowMake(ctx).Get("action"), "plan")
+// A capped subscription counts its plans against its own lanes (#695), and has as many as its
+// 5-hour cap in force allows (`lanes_by_cap`, #2748). claude-1 has two in its hours (its 100%
+// cap): while it builds one item it plans another in its second lane, and holding both it takes
+// nothing more. claude-5 (40%) has one: while it builds it takes nothing more, neither a second
+// build nor a plan, since two runs deciding from one reading go past a cap together. Once its
+// build ends, each plans.
+func TestNeedsPlan_ACappedSubscriptionPlansOnlyInALaneOfItsOwn(t *testing.T) {
+	for _, c := range []struct {
+		provider, secret string
+		lanes            int
+	}{{"claude-1", "CLAUDE_CODE_OAUTH_TOKEN", 2}, {"claude-5", "CLAUDE_CODE_OAUTH_TOKEN_5", 1}} {
+		gh := fakes.NewFakeGitHub()
+		ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets(c.secret)})
+		difficultyBusy(gh, ctx, c.provider, 50)
+		difficultyQueue(gh, ctx, 3, false)
+		difficultyQueue(gh, ctx, 4, false)
+		if c.lanes == 2 {
+			planned := flowMake(ctx)
+			needsPlanIs(t, planned, []string{"action", "provider"}, "plan", c.provider)
+			needsPlanRunning(gh, ctx, planned)
+		}
+		assertEqual(t, flowMake(ctx).Get("action"), "none", c.provider)
+		gh.Runs.Delete("50")
+		needsPlanIs(t, flowMake(ctx), []string{"action", "provider"}, "plan", c.provider)
+	}
 }
 
-// claude-2 (capped) has one lane (#695): while it holds a run it takes nothing more, neither a
-// second build nor a plan. Once the run ends, it plans; the mid-run refusal checks still guard the
-// spending.
+// claude-2 (capped at 90%) has two lanes (`lanes_by_cap`, #2748; one before, #695): while its
+// runs hold both it takes nothing more, neither a third build nor a plan. Once one ends, it plans;
+// the mid-run refusal checks still guard the spending.
 func TestNeedsPlan_ACappedSubscriptionTakesNothingWhileHolding(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := needsPlanLaneCtx(gh, needsPlanLane{Machine: []string{}, Env: providersSecrets("CLAUDE_CODE_OAUTH_TOKEN_2")})
-	difficultyBusy(gh, ctx, "claude-2", 50)
+	difficultyBusy(gh, ctx, "claude-2", 50, "claude-2", 51)
 	difficultyQueue(gh, ctx, 3, false)
 	assertEqual(t, flowMake(ctx).Get("action"), "none")
 	gh.Runs.Delete("50")
@@ -309,7 +324,7 @@ func TestNeedsPlan_ACappedSubscriptionTakesNothingWhileHolding(t *testing.T) {
 	needsPlanIs(t, planned, []string{"action", "provider"}, "plan", "claude-2")
 	needsPlanRunning(gh, ctx, planned)
 	difficultyQueue(gh, ctx, 4, true)
-	assertEqual(t, flowMake(ctx).Get("action"), "none") // the lane is held again
+	assertEqual(t, flowMake(ctx).Get("action"), "none") // the lanes are held again
 }
 
 // At 87% of its 5-hour window claude-2 (cap 90%, long runs start under 85%) starts neither a

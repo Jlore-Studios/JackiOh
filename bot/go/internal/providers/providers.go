@@ -262,7 +262,9 @@ type Provider struct {
 	// usage afresh. The zero time is None.
 	UsageSince time.Time // default: None
 	// Lanes is how many items it may work on at once. On the machine each needs a runner of its
-	// own with its `runs_on` label (`register-runners.sh` registers that many).
+	// own with its `runs_on` label (`register-runners.sh` registers that many). For one the pool's
+	// `lanes_by_cap` matches, the most it may hold: the lanes in force when a run starts are
+	// `Pool.LanesAt`'s.
 	Lanes int // default: 1
 	// FillIn is the lanes it may borrow from other machine subscriptions while they cannot use
 	// them (`FillIn`).
@@ -508,6 +510,10 @@ type Pool struct {
 	// most room under its caps goes first, then the one holding the fewest runs, and only then
 	// the usage order. Off, the usage order alone breaks the tie.
 	Balance bool // default: False
+	// LanesByCap is `lanes_by_cap` (#2748): the lanes of the subscriptions it matches, by the
+	// 5-hour cap in force when a run starts (`LanesAt`). nil: every subscription has its own
+	// `lanes` (Squishy's pool).
+	LanesByCap *LanesByCap // default: None
 }
 
 // provider is self.providers.get(provider_id).

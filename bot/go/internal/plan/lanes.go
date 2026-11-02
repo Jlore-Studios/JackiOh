@@ -26,7 +26,10 @@ import (
 // `machine_limit` the machine's slots. `limit` is a pool the bots share, first come first
 // served: `shared` is how many of its slots the other bots' runs hold now (`others_on_github`).
 // `filling` are the items whose run fills another subscription's lane (`Provider.fill_in`):
-// those hold no lane of their provider's own.
+// those hold no lane of their provider's own. `in_force` is how many lanes each subscription may
+// hold for a run that starts now (`Pool.LanesAt`, #2748: a Claude account's by the 5-hour cap in
+// force, `lanes_by_cap`); one it leaves out has its own `lanes`. A count that drops below the runs
+// a subscription holds stops none of them: it only starts nothing more until they end.
 //
 // The maps may be nil (the dataclass's empty defaults): every method only reads them, and
 // `with_run` makes new ones.
@@ -39,6 +42,27 @@ type Lanes struct {
 	Machine      map[string]bool // default: frozenset()
 	Shared       int             // default: 0
 	Filling      map[int]bool    // default: field(default_factory=set)
+	InForce      map[string]int  // default: field(default_factory=dict)
+}
+
+// LanesInForce is how many lanes each subscription may hold for a run that starts now, by id
+// (`Pool.LanesAt`): what `Lanes.in_force` holds.
+func LanesInForce(ctx *hctx.Context, state *pyjson.Object) map[string]int {
+	pool := ctx.Cfg.Pool
+	found := map[string]int{}
+	for _, p := range pool.Ordered() {
+		found[p.ID] = pool.LanesAt(p, state, ctx.Now(), ctx.Cfg.Timezone)
+	}
+	return found
+}
+
+// LanesOf is how many lanes `provider` may hold for a run that starts now: `in_force`'s, or its
+// own `lanes`.
+func (x *Lanes) LanesOf(provider *providers.Provider) int {
+	if n, ok := x.InForce[provider.ID]; ok {
+		return n
+	}
+	return provider.Lanes
 }
 
 // Busy is the set of providers holding a run.
@@ -113,9 +137,9 @@ func (x *Lanes) Used(provider *providers.Provider) int {
 	return held
 }
 
-// Full is: it holds as many runs as its `lanes` (`used`).
+// Full is: it holds as many runs as the lanes in force for it (`lanes_of`), or more (`used`).
 func (x *Lanes) Full(provider *providers.Provider) bool {
-	return x.Used(provider) >= provider.Lanes
+	return x.Used(provider) >= x.LanesOf(provider)
 }
 
 // OnMachine is how many of the held runs are on the bot's machine.
@@ -195,7 +219,8 @@ func (x *Lanes) WithRun(number int, providerID string, action string, filling bo
 		fills[number] = true
 	}
 	return &Lanes{Limit: x.Limit, Held: held, Planning: planning, PlanLimit: x.PlanLimit,
-		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills}
+		MachineLimit: x.MachineLimit, Machine: x.Machine, Shared: x.Shared, Filling: fills,
+		InForce: x.InForce}
 }
 
 // Describe is plan.Lanes.describe.
@@ -259,10 +284,24 @@ func OthersOnGithub(ctx *hctx.Context) int {
 	return count
 }
 
-// WorkingThreads is every thread labelled `bot:working`, closed ones too: a run goes on after
-// someone closes its issue, and holds its lane until it ends (deliver then drops its work).
+// WorkingThreads is every thread a run holds, closed ones too: a run goes on after someone
+// closes its issue, and holds its lane until it ends (deliver then drops its work). That is every
+// thread with one of `config.HeldLabels`: a live label (`bot:building` and the rest, #2748), or
+// `bot:working` from a claim made before them. GitHub lists by one label at a time (a list of
+// several is all of them), so each is listed, and a thread with two is one thread.
 func WorkingThreads(ctx *hctx.Context) []*pyjson.Object {
-	return ctx.GH.ListIssues(config.LabelWorking, "all", 300, "")
+	seen := map[int]bool{}
+	var found []*pyjson.Object
+	for _, label := range config.HeldLabels {
+		for _, thread := range ctx.GH.ListIssues(label, "all", 300, "") {
+			number := py.MustInt(thread.Get("number"))
+			if !seen[number] {
+				seen[number] = true
+				found = append(found, thread)
+			}
+		}
+	}
+	return found
 }
 
 // ReadLanes is the lanes held by runs that are still going. A run that ended without
@@ -277,7 +316,7 @@ func ReadLanes(ctx *hctx.Context, state *pyjson.Object) *Lanes {
 	}
 	lanes := &Lanes{Limit: pool.MaxParallel, Held: map[int]string{}, Planning: map[int]bool{},
 		PlanLimit: pool.PlanLanes, MachineLimit: pool.MachineParallel, Machine: machine,
-		Filling: map[int]bool{}}
+		Filling: map[int]bool{}, InForce: LanesInForce(ctx, state)}
 	lanes.Shared = OthersOnGithub(ctx)
 	for _, thread := range WorkingThreads(ctx) {
 		number := py.MustInt(thread.Get("number"))
@@ -343,7 +382,7 @@ func FillInFree(ctx *hctx.Context, state *pyjson.Object, provider *providers.Pro
 	kept := 0
 	for _, p := range owners {
 		if providers.Availability(p, state, ctx.Now(), cfg.Timezone, cfg.Secrets, false, true) == "" {
-			kept += max(0, p.Lanes-lanes.AllBy(p.ID))
+			kept += max(0, lanes.LanesOf(p)-lanes.AllBy(p.ID))
 		}
 	}
 	return sumLanes(owners)-held > kept

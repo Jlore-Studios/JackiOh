@@ -22,6 +22,10 @@
 //   - an issue the bot has planned, and a pull request it opened, that carries no `difficulty:*` label
 //     (a planner that gave no rating line leaves none, #735): it gets its issue's label, or medium,
 //     which is how it routes anyway; an issue still waiting for its plan is left to the planner;
+//   - a bot pull request still labelled `bot:merging` (#2748) that is merging no more: closed, or
+//     open with auto-merge off and out of `main`'s merge queue; the label comes off;
+//   - the production countdown, the open issue labelled `production merge`, without `tracking`
+//     (#2748): it gets the label, and nothing else about it changes;
 //   - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
 //     whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
 //     work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
@@ -73,8 +77,10 @@ var Settle = 10 * time.Minute
 // Edited is EDITED: an edit shows as `updated_at` later than `created_at` by more than this.
 var Edited = 5 * time.Second
 
-// QueueLabels is QUEUE_LABELS.
-var QueueLabels = []string{config.LabelBuild, config.LabelRevise, config.LabelWorking, config.LabelBlocked}
+// QueueLabels is QUEUE_LABELS: the queue's, every label that says a run holds the thread
+// (`config.HeldLabels`) and `bot:blocked`.
+var QueueLabels = slices.Concat([]string{config.LabelBuild, config.LabelRevise}, config.HeldLabels,
+	[]string{config.LabelBlocked})
 
 // LiveRun is LIVE_RUN: a `bot-night` run in one of these states is going, or about to.
 var LiveRun = []string{"queued", "in_progress", "waiting", "pending", "requested"}
@@ -112,6 +118,7 @@ func Sweep(ctx *hctx.Context) []string {
 		{"green_heads", GreenHeads}, {"trees", Trees}, {"deliveries", Deliveries},
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
 		{"issue_types", issueTypes}, {"difficulty_labels", difficultyLabels},
+		{"merging", Merging}, {"tracking", tracking},
 	}
 	for _, p := range parts {
 		var got []string
@@ -146,7 +153,9 @@ func Sweep(ctx *hctx.Context) []string {
 // `harness setup`. A retired label whose meaning another one carries (`config.RELABELLED`:
 // `difficulty:easy` is `difficulty:medium`, #2748) is first moved to that one on every open
 // thread that carries it, so deleting it loses nothing: a person's easy label becomes a person's
-// medium label. One the move could not finish stays, and the next tick tries again.
+// medium label. `bot:working` (`config.LABEL_WORKING`, #2748) is moved on every thread, closed ones
+// too, to the live label of the run its record names (`live_label_of`), so a thread a run holds
+// stays held. One the move could not finish stays, and the next tick tries again.
 func Labels(ctx *hctx.Context, since time.Time) []string {
 	specs := config.LabelSpecs()
 	sorted := append([]config.LabelSpec(nil), specs...)
@@ -171,9 +180,20 @@ func Labels(ctx *hctx.Context, since time.Time) []string {
 			notes = append(notes, fmt.Sprintf("created the label `%s`", l.Name))
 		}
 	}
+	st := ctx.Store.Load()
 	for _, name := range config.RetiredLabels {
+		var moved []string
+		var failed, moves bool
 		if replacement, ok := config.Relabelled[name]; ok {
-			moved, failed := relabel(ctx, name, replacement)
+			moves = true
+			moved, failed = relabel(ctx, name, "open", func(*pyjson.Object) string { return replacement })
+		} else if name == config.LabelWorking {
+			moves = true
+			moved, failed = relabel(ctx, name, "all", func(thread *pyjson.Object) string {
+				return liveLabelOf(st, thread)
+			})
+		}
+		if moves {
 			notes = append(notes, moved...)
 			if failed {
 				refused = true
@@ -194,16 +214,18 @@ func Labels(ctx *hctx.Context, since time.Time) []string {
 	return notes
 }
 
-// relabel moves `name` to `replacement` on every open issue and pull request that carries it, and
-// says so per thread. Whether a thread could not be moved, so `name` must stay for now.
-func relabel(ctx *hctx.Context, name string, replacement string) ([]string, bool) {
+// relabel moves `name` to its replacement (`replacement` of the thread) on every issue and pull
+// request in `state` (`open`, `all`) that carries it, and says so per thread. Whether a thread
+// could not be moved, so `name` must stay for now.
+func relabel(ctx *hctx.Context, name string, state string, replacementOf func(*pyjson.Object) string) ([]string, bool) {
 	notes, failed := []string{}, false
 	var threads []*pyjson.Object
-	if exc, ok := herr.Catch[*herr.GitHubError](func() { threads = ctx.GH.ListIssues(name, "open", 300, "") }); ok {
+	if exc, ok := herr.Catch[*herr.GitHubError](func() { threads = ctx.GH.ListIssues(name, state, 300, "") }); ok {
 		return []string{fmt.Sprintf("could not list the threads labelled `%s`: %s", name, py.SliceTo(exc.Error(), 200))}, true
 	}
 	for _, thread := range threads {
 		number := py.MustInt(py.Item(thread, "number"))
+		replacement := replacementOf(thread)
 		if exc, ok := herr.Catch[*herr.GitHubError](func() {
 			if !queue.LabelNames(thread)[replacement] {
 				ctx.GH.AddLabels(number, []string{replacement})
@@ -219,6 +241,69 @@ func relabel(ctx *hctx.Context, name string, replacement string) ([]string, bool
 	}
 	return notes, failed
 }
+
+// liveLabelOf is the live label of the run that holds `thread`, from its record: the one its
+// claim kept (`live`), or what its kind, action, source and tree say (`config.LiveRun`), for a
+// thread an older claim labelled `bot:working`.
+func liveLabelOf(st *pyjson.Object, thread *pyjson.Object) string {
+	record := st.Obj("items").Obj(py.Str(py.Item(thread, "number")))
+	run := py.OrStr(record.Get("live"), "")
+	if !slices.Contains(config.LiveRuns, run) {
+		run = config.LiveRun(py.OrStr(record.Get("kind"), ""), py.OrStr(record.Get("action"), ""),
+			queue.ModeOf(queue.LabelNames(thread)), py.OrStr(record.Get("source"), ""),
+			record.Truthy("tree"), thread.Has("pull_request"))
+	}
+	return config.LiveLabel(run)
+}
+
+// Merging is _merging: `bot:merging` comes off a bot pull request merging no more (#2748): one
+// closed, or open with auto-merge off and out of `main`'s merge queue (GitHub turned it off, or a
+// path that turned it off missed the label). A queued pull request reads no auto-merge (REST
+// `auto_merge` is null once it is in the queue), so only the queue says it still merges; one whose
+// queue cannot be read keeps the label.
+func Merging(ctx *hctx.Context, since time.Time) []string {
+	notes := []string{}
+	act := func(thread *pyjson.Object) string {
+		number := py.MustInt(py.Item(thread, "number"))
+		names := queue.LabelNames(thread)
+		if thread.Get("state") == "open" {
+			pull := ctx.GH.GetPull(number)
+			if pull.Truthy("auto_merge") || !pull.Truthy("node_id") ||
+				ctx.GH.InMergeQueue(py.Str(pull.Get("node_id"))) {
+				return ""
+			}
+			queue.NotMerging(ctx, number, names)
+			return fmt.Sprintf("#%d: auto-merge is off and it is out of the merge queue, so `%s` is off",
+				number, config.LabelMerging)
+		}
+		queue.NotMerging(ctx, number, names)
+		return fmt.Sprintf("#%d: closed, so `%s` is off", number, config.LabelMerging)
+	}
+	each(ctx.GH.ListIssues(config.LabelMerging, "all", 300, ""), act, &notes)
+	return notes
+}
+
+// tracking is _tracking: the production countdown, the open issue labelled `production merge`
+// (scripts/promote-production.sh), carries `tracking` (#2748), which keeps every queue path off
+// it. Only the label is added: its title, body, comments and other labels are the workflow's.
+// The pull requests that carry `production merge` are left as they are.
+func tracking(ctx *hctx.Context, since time.Time) []string {
+	notes := []string{}
+	act := func(issue *pyjson.Object) string {
+		if issue.Has("pull_request") || queue.IsTracking(queue.LabelNames(issue)) {
+			return ""
+		}
+		number := py.MustInt(py.Item(issue, "number"))
+		ctx.GH.AddLabels(number, []string{config.LabelTracking})
+		return fmt.Sprintf("#%d: the production countdown, so `%s`", number, config.LabelTracking)
+	}
+	each(ctx.GH.ListIssues(ProductionMerge, "open", 300, ""), act, &notes)
+	return notes
+}
+
+// ProductionMerge is the label the production countdown carries (`RELEASE_LABEL` in
+// scripts/promote-production.sh, `config`'s workflow labels).
+var ProductionMerge = "production merge"
 
 // needsPlan is _needs_plan: every queued item with no plan its difficulty may build from, an
 // unrated one included, carries `bot:needs-plan` within one sweep (#317 part 8), so nothing waits
@@ -512,6 +597,9 @@ func assignments(ctx *hctx.Context, since time.Time) []string {
 		if intersects(queue.LabelNames(thread), append(append([]string(nil), QueueLabels...), config.LabelPROpen)) ||
 			record.Truthy("queued_at") || record.Truthy("stop_requested") {
 			return ""
+		}
+		if queue.IsTracking(queue.LabelNames(thread)) {
+			return "" // a tracker the bot is assigned to is no request to build it (#2748)
 		}
 		stamp := thread.Get("updated_at")
 		if !pyjson.Truthy(stamp) {

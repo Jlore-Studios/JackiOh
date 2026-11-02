@@ -246,11 +246,12 @@ func TestDifficulty_AMediumItemOnAClaudeAccountIsBuiltWithSonnet(t *testing.T) {
 func TestDifficulty_AHardItemTakesAStrongModelOnly(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh)
-	// Room past the Claude accounts' thirteen runs, so the medium models are free to refuse it.
+	// Room past the Claude accounts' fifteen runs, each account's lanes in force at night (two,
+	// claude-5's one, `lanes_by_cap`), so the medium models are free to refuse it.
 	ctx = difficultyWithPool(gh, testsupport.Night, ctx.Cfg, func(p *providers.Pool) { p.MaxParallel = 20 })
 	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 54, "claude-7", 72, "claude-7", 73,
 		"claude-8", 74, "claude-8", 75, "claude-1", 51,
-		"claude-1", 55, "claude-4", 52, "claude-6", 71, "claude-5", 70,
+		"claude-1", 55, "claude-4", 52, "claude-4", 57, "claude-6", 71, "claude-6", 76, "claude-5", 70,
 		"claude-2", 53, "claude-2", 56)
 	difficultyQueue(gh, ctx, 3, true, difficultyHard)
 	planned := flowMake(ctx)
@@ -261,17 +262,19 @@ func TestDifficulty_AHardItemTakesAStrongModelOnly(t *testing.T) {
 // For medium items the lanes fill in tier order (#695): the medium models first, Muse on its four
 // lanes (#1273), agy on its one and Codex on its one; then the Sonnet seats in usage order,
 // claude-3, claude-7, claude-8, claude-1, claude-4, claude-6 and claude-5 once each, and only then
-// claude-3's second lane (two lanes, uncapped) and claude-8's second (two lanes): with every
-// account's room level, the load balancer gives the next run to one holding none
-// (`plan.balance`); and claude-2 builds only after all of them (`build_last`). The weak one takes
-// none (#2748). Past that every lane is held, and the rest wait.
+// the second lanes, in usage order again: at night each account has two in force by its 5-hour cap
+// (`lanes_by_cap`, #2748: claude-3 has none, the others' are over 50% in the tests' night hours)
+// but claude-5, whose 40% gives it one; with every account's room level, the load balancer gives
+// the next run to one holding the fewest (`plan.balance`); and claude-2 builds only after all of
+// them (`build_last`), on both its lanes. The weak one takes none (#2748). Past that every lane is
+// held, and the rest wait.
 func TestDifficulty_TheUsageOrder(t *testing.T) {
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Machine: testsupport.AllMachine})
-	for number := 3; number < 21; number++ {
+	for number := 3; number < 25; number++ {
 		difficultyQueue(gh, ctx, number, true)
 		ctx.Store.Update(func(s *pyjson.Object) any {
-			state.Item(s, number).Update(pyjson.New("queued_at", fmt.Sprintf("2026-09-%02dT00:00:00Z", number+10)))
+			state.Item(s, number).Update(pyjson.New("queued_at", fmt.Sprintf("2026-09-%02dT00:00:00Z", number+5)))
 			return nil
 		}, "state")
 	}
@@ -280,7 +283,7 @@ func TestDifficulty_TheUsageOrder(t *testing.T) {
 		difficultyReplaceProvider(p, "lite", func(lite *providers.Provider) { lite.Lanes = 1 })
 	})
 	order := []any{}
-	for range 18 {
+	for range 22 {
 		planned := flowMake(ctx)
 		if planned.Get("action") == "none" {
 			break
@@ -300,7 +303,8 @@ func TestDifficulty_TheUsageOrder(t *testing.T) {
 	for _, p := range [][2]string{{"agy", "gemini-4-argon-high"}, {"gpt", "gpt-5.6-sol"},
 		{"claude-3", "sonnet"}, {"claude-7", "sonnet"}, {"claude-8", "sonnet"}, {"claude-1", "sonnet"},
 		{"claude-4", "sonnet"}, {"claude-6", "sonnet"}, {"claude-5", "sonnet"}, {"claude-3", "sonnet"},
-		{"claude-8", "sonnet"}, {"claude-2", "sonnet"}} {
+		{"claude-7", "sonnet"}, {"claude-8", "sonnet"}, {"claude-1", "sonnet"}, {"claude-4", "sonnet"},
+		{"claude-6", "sonnet"}, {"claude-2", "sonnet"}, {"claude-2", "sonnet"}} {
 		want = append(want, []any{p[0], p[1]})
 	}
 	assertEqual(t, order, want)
@@ -327,8 +331,8 @@ func TestDifficulty_EveryClaudeAccountBuildsAMediumItemOnSonnet(t *testing.T) {
 }
 
 func TestDifficulty_SonnetOnlyWhileClaude1OrClaude3IsOpen(t *testing.T) {
-	// claude-3, claude-7 and claude-8 full (claude-3's two lanes, claude-7's one, claude-8's
-	// two), claude-1 open and the medium models off: claude-1 builds the medium item with Sonnet.
+	// claude-3, claude-7 and claude-8 full (two lanes each at night, `lanes_by_cap`), claude-1
+	// open and the medium models off: claude-1 builds the medium item with Sonnet.
 	gh := fakes.NewFakeGitHub()
 	ctx := difficultyCtxFor(gh, difficultyCtxOpts{Machine: []string{"lite"}})
 	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 59, "claude-7", 72, "claude-7", 73,
@@ -341,7 +345,8 @@ func TestDifficulty_SonnetOnlyWhileClaude1OrClaude3IsOpen(t *testing.T) {
 	ctx = difficultyCtxFor(gh, difficultyCtxOpts{Machine: testsupport.AllMachine})
 	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 63, "claude-7", 72, "claude-7", 73,
 		"claude-8", 74, "claude-8", 75, "claude-1", 51,
-		"claude-1", 64, "claude-4", 52, "claude-6", 71, "claude-5", 70, "agy", 53)
+		"claude-1", 64, "claude-4", 52, "claude-4", 65, "claude-6", 71, "claude-6", 76, "claude-5", 70,
+		"agy", 53)
 	ctx = difficultyWithPool(gh, testsupport.Night, ctx.Cfg, func(p *providers.Pool) {
 		p.MaxParallel, p.MachineParallel = 20, 20
 	})
@@ -361,8 +366,8 @@ func TestDifficulty_Claude2BuildsAMediumItemTheWeakOneMayNot(t *testing.T) {
 	})
 	difficultyBusy(gh, ctx, "claude-3", 50, "claude-3", 57, "claude-7", 72, "claude-7", 73,
 		"claude-8", 74, "claude-8", 75, "claude-1", 51,
-		"claude-1", 58, "claude-4", 52, "claude-6", 71, "claude-5", 70, "agy", 53,
-		"muse", 54, "muse", 56, "muse", 60, "muse", 61, "gpt", 55)
+		"claude-1", 58, "claude-4", 52, "claude-4", 59, "claude-6", 71, "claude-6", 76, "claude-5", 70,
+		"agy", 53, "muse", 54, "muse", 56, "muse", 60, "muse", 61, "gpt", 55)
 	difficultyQueue(gh, ctx, 3, true, difficultyMedium)
 	assertEqual(t, difficultySeats(flowMake(ctx))["build"], difficultySeat{"claude-2", "sonnet", "medium"})
 }

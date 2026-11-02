@@ -1079,10 +1079,14 @@ func TestProviders_WithTheMachineSubscriptionsFullGithubTakesTheClaudeAccounts(t
 	}
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("provider"), planned.Get("runs_on")}, []any{"claude-2", "ubuntu-latest"})
-	// With one lane (#695) the Claude account takes nothing more while it holds its run: the next
-	// item waits.
+	// claude-2 has two lanes at its 90% cap (`lanes_by_cap`, #2748): it takes a second item, and
+	// holding both it takes nothing more: the next item waits.
 	providersRun(gh, "1", "in_progress")
 	flowUpdateItem(ctx, planned.Int("number"), pyjson.New("run_id", "1"))
+	second := flowMake(ctx)
+	assertEqual(t, []any{second.Get("action"), second.Get("provider")}, []any{"build", "claude-2"})
+	providersRun(gh, "2", "in_progress")
+	flowUpdateItem(ctx, second.Int("number"), pyjson.New("run_id", "2"))
 	again := flowMake(ctx)
 	assertEqual(t, again.Get("action"), "none")
 	assertIn(t, "`claude-2` is busy", again.Get("reason"))
@@ -1225,7 +1229,7 @@ func TestProviders_AMediumAuditGoesToAMediumModelOfAnotherSubscription(t *testin
 	planned := flowMake(ctx)
 	assertEqual(t, []any{planned.Get("action"), planned.Get("provider"), planned.Get("head"),
 		planned.Get("builder")}, []any{"review", "muse", "h1", "gpt"})
-	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelWorking))
+	assertEqual(t, gh.LabelNames(9), setOf(config.LabelPR, config.LabelReviewing))
 }
 
 // claude-1 is spent like any other subscription now: no gate wait for quiet, so the gate's word

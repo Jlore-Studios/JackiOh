@@ -168,7 +168,7 @@ func SyncNeedsPlan(ctx *hctx.Context, state *pyjson.Object) []string {
 		number := py.MustInt(thread.Get("number"))
 		have[number] = true
 		record := recordOf(state, strconv.Itoa(number))
-		planning := queue.LabelNames(thread)[config.LabelWorking] && eqStr(record.Get("action"), "plan")
+		planning := config.IsLive(queue.LabelNames(thread)) && eqStr(record.Get("action"), "plan")
 		if !wanted[number] && !planning {
 			ctx.GH.RemoveLabel(number, needsPlan)
 			notes = append(notes, fmt.Sprintf("#%d left the Needs plan stage", number))
@@ -273,7 +273,7 @@ func Prune(ctx *hctx.Context, state *pyjson.Object) []string {
 // PRs; puts back in the merge queue a cleared one it took out with no failed build
 // (`queue.requeue_cleared`).
 func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
-	labelRevise, labelWorking := config.LabelRevise, config.LabelWorking
+	labelRevise := config.LabelRevise
 	labelBlocked := config.LabelBlocked
 	notes := Prune(ctx, state)
 	for _, thread := range WorkingThreads(ctx) {
@@ -320,7 +320,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 			continue
 		}
 		names := queue.LabelNames(thread)
-		if names[labelRevise] || names[labelWorking] || names[labelBlocked] || queue.IsHuman(names) {
+		if names[labelRevise] || config.IsLive(names) || names[labelBlocked] || queue.IsHuman(names) {
 			continue
 		}
 		pull := ctx.GH.GetPull(py.MustInt(thread.Get("number")))
@@ -332,6 +332,7 @@ func Housekeeping(ctx *hctx.Context, state *pyjson.Object) []string {
 				// The revision may come from another model; its approval decides afresh.
 				herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(pull.Get("node_id"))) })
 			}
+			queue.NotMerging(ctx, number, names)
 			ctx.Store.Update(func(s *pyjson.Object) any {
 				hstate.Item(s, number).Update(pyjson.New("kind", "revise", "source", "conflict",
 					"queued_at", clock.ISO(ctx.Now()), "failures", 0, "stop_requested", false))

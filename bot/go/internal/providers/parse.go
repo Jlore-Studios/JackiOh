@@ -561,8 +561,32 @@ func Parse(raw any) *Pool {
 	if !ok {
 		configError("%s: balance must be true or false", ProvidersPath)
 	}
+	// A subscription `lanes_by_cap` matches has its lanes from the rule (#2748): the most it may
+	// hold is the rule's `high`, and one that names its own `lanes` is refused, since nothing
+	// would read them.
+	rule := lanesByCap(obj.Get("lanes_by_cap"), ProvidersPath+".lanes_by_cap")
+	if rule != nil {
+		listed, _ := mapping(obj.Get("providers"))
+		ruled := pyjson.New()
+		providers.Items(func(k string, v any) bool {
+			p := v.(*Provider)
+			if rule.Matches(p) {
+				if own, _ := mapping(listed.Get(k)); own.Has("lanes") {
+					configError("%s: providers.%s.lanes: lanes_by_cap decides the lanes of a %s "+
+						"subscription; take its lanes out", ProvidersPath, k, rule.CLI)
+				}
+				c := *p
+				c.Lanes = rule.High
+				p = &c
+			}
+			ruled.Set(k, p)
+			return true
+		})
+		providers = ruled
+	}
 	pool = &Pool{MaxParallel: maxParallel, Priority: priority, Providers: providers,
-		MachineParallel: machine, PlanLanes: planLanes, Tiers: tiers, Balance: balance}
+		MachineParallel: machine, PlanLanes: planLanes, Tiers: tiers, Balance: balance,
+		LanesByCap: rule}
 	// Every model a provider runs has its place in its own tier's order, so the router always
 	// knows which to try first, and a model never has two tiers.
 	for _, p := range all {

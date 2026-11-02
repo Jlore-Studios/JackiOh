@@ -846,6 +846,8 @@ func OnPullClosed(ctx *hctx.Context, payload *pyjson.Object) []string {
 		return nil
 	}, fmt.Sprintf("closed #%d", number))
 	DropWip(ctx, number)
+	// Merged or closed, it is in CI or the merge queue no more (#2748).
+	herr.Catch[*herr.GitHubError](func() { queue.NotMerging(ctx, number, queue.LabelNames(pull)) })
 	// The Claude sessions kept for its runs (#2748), and on a merge its issue's, which closes.
 	sessions.DropItem(ctx, number, fmt.Sprintf("#%d was closed", number))
 	if pull.Truthy("merged") && issue != nil && *issue != 0 {
@@ -913,7 +915,7 @@ func OnCI(ctx *hctx.Context, payload *pyjson.Object) []string {
 			continue
 		}
 		record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
-		if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelWorking) || record.Truthy("stop_requested") {
+		if intersects(names, config.LabelBlocked, config.LabelRevise) || config.IsLive(names) || record.Truthy("stop_requested") {
 			out = append(out, fmt.Sprintf("#%d: blocked, stopped or already queued; left alone", number))
 			continue
 		}
@@ -965,6 +967,7 @@ func fixCI(ctx *hctx.Context, number int, pull *pyjson.Object, names map[string]
 		if pull.Truthy("auto_merge") {
 			herr.Catch[*herr.GitHubError](func() { ctx.GH.DisableAutoMerge(py.Str(py.Item(pull, "node_id"))) })
 		}
+		queue.NotMerging(ctx, number, names)
 		ctx.GH.CreateComment(number, fmt.Sprintf("%s (%s) after %d tries at ", failed, link, fixes)+
 			"fixing it, so I stopped. It needs a person.")
 		return fmt.Sprintf("#%d: blocked after %d CI fixes", number, fixes)
@@ -1012,8 +1015,8 @@ func OnQueueCI(ctx *hctx.Context, run *pyjson.Object) []string {
 	}
 	names := queue.LabelNames(pull)
 	record := ctx.Store.Load().Obj("items").Obj(strconv.Itoa(number))
-	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelWorking, config.LabelReady, config.LabelPersonMerges) ||
-		queue.IsHuman(names) || record.Truthy("stop_requested") {
+	if intersects(names, config.LabelBlocked, config.LabelRevise, config.LabelReady, config.LabelPersonMerges) ||
+		config.IsLive(names) || queue.IsHuman(names) || record.Truthy("stop_requested") {
 		return []string{fmt.Sprintf("#%d: out of the merge queue, and held, so left alone", number)}
 	}
 	sha := py.OrStr(pull.Obj("head").Get("sha"), "")

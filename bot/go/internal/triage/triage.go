@@ -58,7 +58,7 @@ var HumanLabel = config.LabelHuman
 var HumanLabels = map[string]bool{config.LabelHuman: true, config.LabelHumanRequired: true}
 
 // Queued is the bot's queue labels `human` takes off: people do the issue now. A run that holds
-// it (`bot:working`) or a pull request it opened keep theirs.
+// it (its live label, `bot:building` and the rest) or a pull request it opened keep theirs.
 var Queued = map[string]bool{config.LabelBuild: true, config.LabelNeedsPlan: true}
 
 // PrefixType is one of PrefixTypes: a title prefix and the type label it names.

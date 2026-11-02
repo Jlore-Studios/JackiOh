@@ -3,7 +3,11 @@
 How an issue is titled and labeled, how a patch is numbered, and how a patch that takes several
 pull requests is split up. It binds people and agents alike. The night bot's own `bot:*` labels are
 in [`bot/README.md`](../bot/README.md#labels), its fullsend mode `bot:fullsend` and a fullsend
-parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and Squishy's `squishy:*`
+parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and the live labels a run
+puts on the item it holds, one at a time by the kind of run (`bot:planning`, `bot:splitting`,
+`bot:building`, `bot:revising`, `bot:fixing-ci`, `bot:reviewing`, `bot:reconciling`; they replaced
+the retired working label in #2748), `bot:merging` on a bot pull request whose auto-merge is on, and
+`bot:waiting` on an item held for the subscription that owns it, and Squishy's `squishy:*`
 ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and
 `squishy:fullsend`, and a split's parent, `squishy:tree`) in [its section](../bot/README.md#squishy).
 
@@ -26,6 +30,7 @@ Every issue carries at least one type label:
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
+| `tracking` | A tracker, the production countdown (beside `production merge`) and the status issues (the night bot's status issue, #148, and the usage history): the bots may comment on one and rewrite their own, but never queue, plan, build or split it, nor adopt it as a fullsend tree, whatever else it is labelled. The night bot puts it on its status issue and on the open countdown issue itself (#2748) |
 | `production merge` | The countdown issue `promote-production.yml` keeps open for good (`Merging to production in N hours`, with the queue of what is not live yet) and the pull requests that merge main into production. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it, each for production, `vercel` or `both` (`/hold vercel`; `docs/deploy-cloudflare.md`, section 2.3) |
 
 A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
@@ -50,13 +55,15 @@ patch whose work is all tooling (the codebase pass) is `patch` and `architecture
 `difficulty:*` labels (`medium`, `hard`: the weakest model tier that may plan, build and approve
 it; `hard` is Claude Opus's alone; `easy` was retired in #2748, and the sweep moved it to `medium`), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
-labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
+labels (the bot's pickup order) and the `bot:*` labels (the queue's, the live labels of a run
+that holds an item, `bot:merging`, `bot:waiting` and the rest) are separate. Never add `bot:build` while
 retitling or relabeling, because it queues a build.
 
 Every label, with its color and description, is listed once, in `bot/go/internal/config`'s
 `Labels`: the sweep creates one the repository lacks and deletes one it retired
 (`RetiredLabels`), first moving a retired label whose meaning another carries to that one on every
-open thread (`Relabelled`: the retired easy label to `difficulty:medium`), and `harness setup` also
+open thread (`Relabelled`: the retired easy label to `difficulty:medium`; and the retired working
+label to the live label of the run that holds the thread, on closed threads too), and `harness setup` also
 restores a changed one.
 
 **Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;

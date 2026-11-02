@@ -64,8 +64,9 @@ func startMessage(assignment *Assignment, cfg *config.Config) string {
 	return fmt.Sprintf("I %s and %s. %s", strings.Join(steps[:len(steps)-1], ", "), steps[len(steps)-1], end)
 }
 
-// Claim builds the plan for one queued thread on one subscription, and marks it `bot:working`.
-// nil when the thread is closed, or a pull request from a fork.
+// Claim builds the plan for one queued thread on one subscription, and marks it with its run's
+// live label (`config.LiveRun`: `bot:planning`, `bot:building`, `bot:fixing-ci`, …, #2748), which
+// its record keeps as `live`. nil when the thread is closed, or a pull request from a fork.
 func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment) *pyjson.Object {
 	cfg := ctx.Cfg
 	provider := assignment.Provider
@@ -296,7 +297,9 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 			planned.Set("handoff", merged)
 		}
 	}
-	queue.SetStateLabel(ctx, number, names, config.LabelWorking)
+	live := config.LiveRun(kind, assignment.Action, candidate.Mode, py.OrStr(record.Get("source"), "request"),
+		planned.Truthy("children"), kind != "build")
+	queue.SetStateLabel(ctx, number, names, config.LiveLabel(live))
 	if names[labelNeedsPlan] && assignment.Action != "plan" {
 		ctx.GH.RemoveLabel(number, labelNeedsPlan) // this run plans it first, in the run
 	}
@@ -305,7 +308,7 @@ func Claim(ctx *hctx.Context, candidate *queue.Candidate, assignment *Assignment
 		entry := hstate.Item(state, number)
 		entry.Update(pyjson.New("run_id", cfg.RunID, "started_at", clock.ISO(ctx.Now()), "kind", kind,
 			"action", assignment.Action, "stop_requested", false, "pending_request", false,
-			"provider", provider.ID, "runs_on", planned.Get("runs_on")))
+			"provider", provider.ID, "runs_on", planned.Get("runs_on"), "live", live))
 		taken = asks.Take(entry)
 		state.Set("last_run", pyjson.New("at", clock.ISO(ctx.Now()), "url", cfg.RunURL(),
 			"what", fmt.Sprintf("%s #%d on %s", assignment.Action, number, provider.ID)))

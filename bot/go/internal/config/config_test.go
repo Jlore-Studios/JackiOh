@@ -80,7 +80,7 @@ func TestLabelsAsEachBotHasThem(t *testing.T) {
 			items = append(items, []any{k, got.Get(k)})
 		}
 		retired := []any{"method:manual", "method:use-bot", id.LabelPrefix + "approved",
-			id.LabelPrefix + "needs-review", "large patch", "Info", "difficulty:easy"}
+			id.LabelPrefix + "needs-review", "large patch", "Info", "difficulty:easy", id.LabelPrefix + "working"}
 		if dump := pyjson.Dumps([]any{items, retired}); dump != want.Str("labels_dump") {
 			t.Errorf("%s: labels dump\n%s\nwant\n%s", id.Name, dump, want.Str("labels_dump"))
 		}

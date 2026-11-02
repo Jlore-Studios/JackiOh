@@ -66,7 +66,7 @@ var NoResult = "the model job left no result: it failed before the model started
 	"step, the install or the CLI setup), or it was cancelled"
 
 // A label a split's sub-issue may not be given from the model's answer: a bot's own, or one
-// the harness or a person sets (`human`, a difficulty, a priority, a method).
+// the harness or a person sets (`human`, `tracking`, a difficulty, a priority, a method).
 func reservedLabel(name string) bool {
 	lowered := strings.ToLower(name)
 	build := config.LabelBuild
@@ -78,7 +78,7 @@ func reservedLabel(name string) bool {
 		prefixes = append(prefixes, o.LabelPrefix)
 	}
 	prefixes = append(prefixes, "difficulty:", "priority:", "method:")
-	if lowered == config.LabelHuman {
+	if lowered == config.LabelHuman || lowered == config.LabelTracking {
 		return true
 	}
 	for _, p := range prefixes {

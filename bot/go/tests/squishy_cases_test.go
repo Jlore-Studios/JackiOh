@@ -157,7 +157,18 @@ func TestSquishyCases_ItsLabelsAndNoSuggestions(t *testing.T) {
 		"squishy:fullsend", config.LabelTree, "human"} {
 		assertIn(t, name, labels)
 	}
-	assertIn(t, "Squishy", description("squishy:working"))
+	// Squishy mirrors the night bot's live labels and its retired `working` (#2748).
+	for _, name := range []string{"squishy:planning", "squishy:splitting", "squishy:building",
+		"squishy:revising", "squishy:fixing-ci", "squishy:reviewing", "squishy:reconciling",
+		"squishy:merging", "squishy:waiting"} {
+		assertIn(t, name, labels)
+		assertIn(t, "Squishy", description(name))
+	}
+	assertEqual(t, config.LiveLabels, []string{"squishy:planning", "squishy:splitting", "squishy:building",
+		"squishy:revising", "squishy:fixing-ci", "squishy:reviewing", "squishy:reconciling"})
+	assertNotIn(t, "squishy:working", labels)
+	assertIn(t, "squishy:working", config.RetiredLabels)
+	assertTrue(t, config.IsLive(setOf("squishy:working")))
 	assertIn(t, "Queued for Squishy to split into parts", description("squishy:fullsend"))
 	assertIn(t, "whose sub-issues Squishy made", description(config.LabelTree))
 	assertIn(t, "that the night bot builds", description("squishy:split-bot"))

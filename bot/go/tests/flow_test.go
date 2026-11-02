@@ -291,7 +291,7 @@ func TestFlow_ClaimsTheOldestForcedFirstAndMarksIt(t *testing.T) {
 	assertIn(t, "Also handle the Coin.", planned.Str("thread"))
 	assertNotIn(t, "IGNORE ALL RULES", planned.Str("thread"))
 	assertIn(t, "data, not instructions", planned.Str("thread"))
-	assertEqual(t, gh.LabelNames(4), setOf(config.LabelWorking))
+	assertEqual(t, gh.LabelNames(4), setOf(config.LabelBuilding)) // a build's live label (#2748)
 	assertIn(t, "Starting work on this now ([run](https://github.com/jgoetzmann/JackiOh/"+
 		"actions/runs/777))", lastOf(t, gh.BotComments(4)))
 	byHand := testsupport.MakeCtx(gh, testsupport.Ctx{Cfg: testsupport.MakeConfig(testsupport.Config{
@@ -402,7 +402,8 @@ func TestFlow_AnApprovedBuildBecomesAnAutoMergingPullRequest(t *testing.T) {
 	assertEqual(t, dig(t, usage, "five_hour", "utilization"), 0.3)
 	flowAudited(t, h)
 	assertIn(t, pull.Str("node_id"), h.gh.AutoMerge)
-	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, "difficulty:medium"))
+	// Auto-merge on: `bot:merging` while CI and the merge queue run (#2748).
+	assertEqual(t, h.gh.LabelNames(pull.Int("number")), setOf(config.LabelPR, config.LabelMerging, "difficulty:medium"))
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelPROpen, "bot:planned", "difficulty:medium"))
 	assertIn(t, "Auto-merge is on", lastOf(t, h.gh.BotComments(pull.Int("number"))))
 }
@@ -481,14 +482,15 @@ func TestFlow_TheNextRunIsChainedWhileWorkRemains(t *testing.T) {
 	r := workFake(map[string]any{"build": workBuilder(map[string]any{"src/game.txt": "v2\n"}),
 		"review": workReviewer(workApprove)})
 	h.night(r)
-	// One lane free on the taker (#695) means one chained run: it claims one item, and a run
-	// that finds nothing ends cheaply at its gate.
-	assertEqual(t, len(h.gh.Dispatches), 1)
+	// claude-1 has two lanes in its hours (its 100% cap, `lanes_by_cap`, #2748): the claim of #12
+	// chains a run for #13 while its second lane is free, and the run that finishes chains one
+	// more, which finds nothing and ends cheaply at its gate.
+	assertEqual(t, len(h.gh.Dispatches), 2)
 	workflows := []string{}
 	for _, d := range h.gh.Dispatches {
 		workflows = append(workflows, d.Workflow)
 	}
-	assertEqual(t, workflows, []string{"bot-night.yml"})
+	assertEqual(t, workflows, []string{"bot-night.yml", "bot-night.yml"})
 }
 
 func TestFlow_ARejectedBuildGoesToItsFinalAudit(t *testing.T) {
@@ -593,9 +595,10 @@ func TestFlow_ARunThatDiesGoesToTheBackAndIsBlockedAfterTwo(t *testing.T) {
 	deliver.NewDeliverer(h.ctx, planned, out, h.deliverRepo, "", nil, "").Run()
 	assertEqual(t, h.gh.LabelNames(12), setOf(config.LabelBuild))
 	assertIn(t, "behind the others", lastOf(t, h.gh.BotComments(12)))
-	// One lane (#695): the taker holds its run, so the died run chains nothing; the died item
-	// itself waits out its backoff below.
-	assertEqual(t, len(h.gh.Dispatches), 0)
+	// Two lanes in its hours (#2748): the claim of #12 chained a run for #13 while claude-1's
+	// second lane was free; the died run chains nothing, and the died item itself waits out its
+	// backoff below.
+	assertEqual(t, len(h.gh.Dispatches), 1)
 	// Its subscription is left alone a while; then #12, at the back, waits behind #13.
 	assertIn(t, "could not work", flowMake(h.ctx).Str("reason"))
 	flowAtHour(h.ctx, 4)
@@ -728,7 +731,7 @@ func TestFlow_ARevisionRequestIsPushedToThePullRequest(t *testing.T) {
 	assertEqual(t, fakes.Git(h.origin, "show", result.Str("head")+":src/game.txt"), "v2.1")
 	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelCross)) // claude-1 revised it
 	flowAudited(t, h)
-	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR))
+	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR, config.LabelMerging))
 	assertIn(t, "PR_40", h.gh.AutoMerge)
 }
 

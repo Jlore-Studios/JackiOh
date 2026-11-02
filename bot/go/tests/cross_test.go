@@ -645,8 +645,8 @@ func TestCross_AConflictOnAClearedChangeShipsOnItsOwnReview(t *testing.T) {
 	assertIn(t, "Resolve the conflicts and change nothing else", r.Calls[0].Prompt)
 	assertIn(t, "yours is the only review of the resolution", r.Calls[1].Prompt)
 	assertIn(t, "resolved the conflicts in `src/game.txt`", r.Calls[1].Prompt)
-	// No review run: auto-merge is back on, pinned to the resolved head.
-	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, "difficulty:medium"))
+	// No review run: auto-merge is back on, pinned to the resolved head, and says so (#2748).
+	assertEqual(t, h.gh.LabelNames(pr), setOf(config.LabelPR, config.LabelMerging, "difficulty:medium"))
 	assertEqual(t, h.gh.AutoMergeHeads[fmt.Sprintf("PR_%d", pr)], result.Get("head"))
 	record := crossObj(t, h.ctx.Store.Load(), "items", strconv.Itoa(pr))
 	families := []any{}

@@ -3,9 +3,10 @@
 // The first job of a night run: decide what this run does and which subscription does it.
 //
 // It spends nothing. In order: the two kill switches, housekeeping (items a dead run left
-// `bot:working`, bot PRs that conflict with `main`), the lanes (at most `max_parallel` runs on
+// a live label, bot PRs that conflict with `main`), the lanes (at most `max_parallel` runs on
 // GitHub's runners and, apart from those, `machine_parallel` on the machine hold an item at once,
-// and a subscription holds as many as its `lanes`), then one item and the subscription that
+// and a subscription holds as many as the lanes in force for it: its `lanes`, or a Claude
+// account's by the 5-hour cap in force, `lanes_by_cap`), then one item and the subscription that
 // takes it (`pairs`), or a suggestion survey when nothing is queued and one is due. Having claimed
 // an item, it starts another run when a lane and more work are still free, so the lanes fill up.
 //

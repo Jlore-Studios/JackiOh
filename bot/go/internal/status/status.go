@@ -23,9 +23,31 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/reviewrule"
 )
 
-// Doing is what a run is doing to an item, by the item's kind (`queue.KIND_ORDER`).
+// Doing is what a run is doing to an item, by the item's kind (`queue.KIND_ORDER`): what a record
+// from before the live labels says (#2748).
 var Doing = map[string]string{"plan": "planning", "build": "building", "revise": "revising",
 	"review": "reviewing"}
+
+// LiveDoing is what a run is doing to an item, by its kind of run (`config.LiveRuns`), which the
+// claim keeps in the item's record (`live`) beside its live label.
+var LiveDoing = map[string]string{"planning": "planning", "splitting": "splitting", "building": "building",
+	"revising": "revising", "fixing-ci": "fixing CI on", "reviewing": "reviewing", "reconciling": "reconciling"}
+
+// DoingOf is what the run holding an item does to it, from its record: its live run's verb, else
+// its kind's (a planning run's for a plan), else "working on".
+func DoingOf(record *pyjson.Object) string {
+	if does, ok := LiveDoing[py.OrStr(record.Get("live"), "")]; ok {
+		return does
+	}
+	doing := py.Str(record.Get("kind"))
+	if record.Get("action") == "plan" {
+		doing = "plan"
+	}
+	if does, ok := Doing[doing]; ok {
+		return does
+	}
+	return "working on"
+}
 
 // The lanes (`held`, `live`) are dict[int, str] in the Python: item number (0 for a survey) ->
 // provider id. They are *pyjson.Object here, keyed by the number in decimal, in the Python's order.
@@ -321,15 +343,7 @@ func RunningLines(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object) 
 		var what string
 		var since time.Time
 		if number != 0 {
-			doing := py.Str(record.Get("kind"))
-			if record.Get("action") == "plan" {
-				doing = "plan"
-			}
-			does, ok := Doing[doing]
-			if !ok {
-				does = "working on"
-			}
-			what = fmt.Sprintf("%s #%d", does, number)
+			what = fmt.Sprintf("%s #%d", DoingOf(record), number)
 			since = clock.ParseISOValue(record.Get("started_at"))
 		} else {
 			what = "a suggestion survey"
@@ -359,6 +373,22 @@ func RunningLines(ctx *hctx.Context, state *pyjson.Object, live *pyjson.Object) 
 		lines = append(lines, text+".")
 	}
 	return lines
+}
+
+// LanesText is how many lanes `provider` may hold for a run that starts now (`Pool.LanesAt`):
+// "2 lanes now", and for a Claude account the rule that says so (`lanes_by_cap`, #2748).
+func LanesText(ctx *hctx.Context, state *pyjson.Object, provider *providers.Provider) string {
+	pool := ctx.Cfg.Pool
+	n := pool.LanesAt(provider, state, ctx.Now(), ctx.Cfg.Timezone)
+	text := fmt.Sprintf("%d lanes now", n)
+	if n == 1 {
+		text = "1 lane now"
+	}
+	if rule := pool.LanesByCap; rule.Matches(provider) {
+		text += fmt.Sprintf(" (its 5-hour cap in force: up to %d above %s, %d at or under it)",
+			rule.High, py.Percent(rule.Line, 0), rule.Low)
+	}
+	return text
 }
 
 // ProviderLines is status.provider_lines.
@@ -397,8 +427,9 @@ func ProviderLines(ctx *hctx.Context, state *pyjson.Object, held *pyjson.Object)
 		}
 		lines = append(lines, fmt.Sprintf("  - `%s` (%s: %s; "+
 			"%s): %s. "+
-			"Usage: %s.", provider.ID, provider.CLI, strings.Join(seats, ", "),
-			provider.Hours(cfg.Timezone), nowDoing, usageText(provider, entry, ctx)))
+			"Usage: %s. %s.", provider.ID, provider.CLI, strings.Join(seats, ", "),
+			provider.Hours(cfg.Timezone), nowDoing, usageText(provider, entry, ctx),
+			LanesText(ctx, state, provider)))
 	}
 	return lines
 }
@@ -462,7 +493,19 @@ func Report(ctx *hctx.Context) string {
 		endedShown[i] = fmt.Sprintf("#%d", n)
 	}
 	ended := strings.Join(endedShown, ", ")
-	working := fmt.Sprintf("- Working on: %s", numbers(labelled(config.LabelWorking, nil)))
+	var holding []*pyjson.Object // a live label on it (#2748), or `bot:working` from before
+	for _, issue := range issues {
+		names := map[string]bool{}
+		for _, label := range pyjson.Objs(issue.GetOr("labels", []any{})) {
+			if labelName, ok := label.Get("name").(string); ok {
+				names[labelName] = true
+			}
+		}
+		if config.IsLive(names) {
+			holding = append(holding, issue)
+		}
+	}
+	working := fmt.Sprintf("- Working on: %s", numbers(holding))
 	if ended != "" {
 		working += fmt.Sprintf(" (no run is going for %s any more; the next plan requeues it)", ended)
 	}

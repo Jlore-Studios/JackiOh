@@ -339,6 +339,7 @@ func Rebuild(ctx *hctx.Context, issue int, pr int, why string, said string /* = 
 			Try(func() { ctx.GH.DisableAutoMerge(py.Str(pull.Get("node_id"))) })
 		}
 		Try(func() { queue.SetStateLabel(ctx, pr, queue.LabelNames(pull), "") })
+		Try(func() { queue.NotMerging(ctx, pr, queue.LabelNames(pull)) })
 		Try(func() { ctx.GH.UpdatePull(pr, pyjson.New("state", "closed")) })
 	}
 	old := ""

@@ -125,7 +125,7 @@ func TestController_TheLoopClaimsWritesThePlanAndStartsTheRunWithIt(t *testing.T
 	assertEqual(t, []any{written.Get("number"), written.Get("provider")}, []any{3, "muse"})
 	record := ctx.Store.Load().Obj("items").Obj("3")
 	assertEqual(t, []any{record.Get("run_id"), record.Get("provider")}, []any{"5002", "muse"})
-	assertIn(t, config.LabelWorking, c.LabelNames(3))
+	assertIn(t, config.LabelBuilding, c.LabelNames(3)) // its run's live label (#2748)
 	// The lock is the loop's only while it plans.
 	assertEqual(t, ctx.Store.Load().Get("planning"), nil)
 }
@@ -420,7 +420,7 @@ func TestController_APlanJobWaitsForTheLockThenPlansNothing(t *testing.T) {
 	cli.CmdPlan(ctx.Cfg, args)
 	restore()
 	assertIn(t, "the status loop is planning", out.String())
-	assertNotIn(t, config.LabelWorking, c.LabelNames(3))
+	assertFalse(t, config.IsLive(c.LabelNames(3)), c.LabelNames(3))
 }
 
 func TestController_DeliveryLeavesTheNextRunToTheLoop(t *testing.T) {

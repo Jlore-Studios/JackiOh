@@ -3,9 +3,11 @@
 // The work queue, kept as labels on issues and pull requests plus a record in the state file.
 //
 // `bot:build` on an issue and `bot:revise` on a pull request mean queued; `bot:cross-review` on a
-// bot pull request means it waits for a review run; `bot:working` means a run holds it;
+// bot pull request means it waits for a review run; a live label (`bot:building`, `bot:reviewing`
+// and the rest, `config.LiveLabels`; `bot:working` before #2748) means a run holds it;
 // `bot:blocked` means it waits for a person. Only one `bot:` state label is on a thread at a time,
-// apart from `bot:pr` and `bot:pr-open`, which say what a thread is.
+// apart from `bot:pr` and `bot:pr-open`, which say what a thread is, and `bot:merging`, which says
+// its auto-merge is on.
 //
 // The prefix is the running bot's (`config.LABEL_PREFIX`): Squishy's queue is `squishy:build` and the
 // rest (#60). Beside its queue label, a mode label (`squishy:oneshot`, `squishy:split`,
@@ -87,9 +89,11 @@ func lowered(names map[string]bool) map[string]bool {
 	return out
 }
 
-// STATE_LABELS
-var StateLabels = []string{config.LabelBuild, config.LabelRevise,
-	config.LabelCross, config.LabelWorking, config.LabelBlocked}
+// STATE_LABELS: the queue's, every label that says a run holds the thread (`config.HeldLabels`:
+// the live labels, and the retired `bot:working`, so a run delivered now takes an old one off
+// too) and `bot:blocked`.
+var StateLabels = slices.Concat([]string{config.LabelBuild, config.LabelRevise, config.LabelCross},
+	config.HeldLabels, []string{config.LabelBlocked})
 
 // LabelNames is queue.label_names.
 func LabelNames(thread *pyjson.Object) map[string]bool {
@@ -115,6 +119,44 @@ func SetStateLabel(ctx *hctx.Context, number int, current map[string]bool, wante
 	}
 	if wanted != "" && !current[wanted] {
 		ctx.GH.AddLabels(number, []string{wanted})
+	}
+}
+
+// LiveLabelOn is the label that says a run holds the thread (`config.HeldLabels`), the first
+// of them on it, or "" for none.
+func LiveLabelOn(names map[string]bool) string {
+	for _, label := range config.HeldLabels {
+		if names[label] {
+			return label
+		}
+	}
+	return ""
+}
+
+// Merging marks a bot pull request whose auto-merge the bot just turned on (`bot:merging`,
+// #2748). `current` is its labels.
+func Merging(ctx *hctx.Context, number int, current map[string]bool) {
+	if !current[config.LabelMerging] {
+		ctx.GH.AddLabels(number, []string{config.LabelMerging})
+	}
+}
+
+// NotMerging takes `bot:merging` off a pull request whose auto-merge went off, or that merged or
+// closed. `current` is its labels.
+func NotMerging(ctx *hctx.Context, number int, current map[string]bool) {
+	if current[config.LabelMerging] {
+		ctx.GH.RemoveLabel(number, config.LabelMerging)
+	}
+}
+
+// SetWaiting puts `bot:waiting` on an item held for its owner (#2748, section 1), or takes it off
+// (`waiting` false). The hold itself (phase C of #2748) calls it; nothing does yet, and until
+// then no reader keeps a `bot:waiting` item from another subscription. `current` is its labels.
+func SetWaiting(ctx *hctx.Context, number int, current map[string]bool, waiting bool) {
+	if waiting && !current[config.LabelWaiting] {
+		ctx.GH.AddLabels(number, []string{config.LabelWaiting})
+	} else if !waiting && current[config.LabelWaiting] {
+		ctx.GH.RemoveLabel(number, config.LabelWaiting)
 	}
 }
 
@@ -151,17 +193,37 @@ func haltNote(ctx *hctx.Context, s *pyjson.Object) string {
 
 // Labelled `human` (whatever its case): people do it, and the bot leaves it alone. So is one
 // labelled `human required` (#793): the bot found it needs what only a person can do and
-// handed it to people (`deliver.Deliverer._needs_person`), or a person said so.
+// handed it to people (`deliver.Deliverer._needs_person`), or a person said so. And so, for every
+// queue path, is one labelled `tracking` (#2748): a tracker or a status issue, which the bot may
+// comment on and rewrite its own of, but never queues, plans, builds or splits.
 func IsHuman(names map[string]bool) bool {
 	low := lowered(names)
-	return low[config.LabelHuman] || low[config.LabelHumanRequired]
+	return low[config.LabelHuman] || low[config.LabelHumanRequired] || low[config.LabelTracking]
+}
+
+// IsTracking is: labelled `tracking` (whatever its case, #2748).
+func IsTracking(names map[string]bool) bool {
+	return lowered(names)[config.LabelTracking]
+}
+
+// KeptBy is the label that keeps the thread from the bot (`IsHuman`): `human`, `human required`
+// or `tracking`, in that order, or "" for none.
+func KeptBy(names map[string]bool) string {
+	low := lowered(names)
+	for _, label := range []string{config.LabelHuman, config.LabelHumanRequired, config.LabelTracking} {
+		if low[label] {
+			return label
+		}
+	}
+	return ""
 }
 
 // OWNING: what follows another bot's prefix on a label that makes the thread that bot's (#60): its
 // queue and state labels, its pull request, and its modes and trees. A `planned` or `stuck` label
 // left from an old run does not.
-var Owning = []string{"build", "revise", "cross-review", "working", "blocked", "pr-open", "pr",
-	"needs-plan", "oneshot", "split", "split-bot", "fullsend", "tree"}
+var Owning = slices.Concat([]string{"build", "revise", "cross-review"}, config.LiveRuns,
+	[]string{"working", "blocked", "pr-open", "pr", "merging", "waiting", "needs-plan", "oneshot",
+		"split", "split-bot", "fullsend", "tree"})
 
 // The other bot whose thread this is (`config.OTHERS`), or None (nil): one of its owning labels
 // is on it, or it is assigned to that bot's account.
@@ -294,6 +356,11 @@ func PartsReply(number int, parts []int) string {
 // The reply to a request for a thread `is_human` keeps from the bot.
 func HumanReply(number int, names map[string]bool /* = frozenset() */) string {
 	low := lowered(names)
+	if KeptBy(names) == config.LabelTracking {
+		return fmt.Sprintf("#%d is labelled `%s`: a tracker or status issue, which I may comment on "+
+			"but never queue, plan or build. Take that label off to hand it to me.", number,
+			config.LabelTracking)
+	}
 	if low[config.LabelHumanRequired] && !low[config.LabelHuman] {
 		return fmt.Sprintf("#%d is labelled `%s`: it needs something only a "+
 			"person can do (my comment on it says what), so it is people's and I leave it "+
@@ -483,7 +550,7 @@ func QueueBuild(ctx *hctx.Context, number int, by string, force bool /* = False 
 			return nil
 		}, fmt.Sprintf("suggestion #%d approved", number))
 	}
-	if names[config.LabelWorking] {
+	if config.IsLive(names) {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
@@ -534,7 +601,7 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 	if unread != "" {
 		return unread
 	}
-	labelWorking, labelPROpen := config.LabelWorking, config.LabelPROpen
+	labelPROpen := config.LabelPROpen
 	var adopted []*pyjson.Object
 	var kept []string
 	for _, child := range children {
@@ -548,10 +615,10 @@ func Adopt(ctx *hctx.Context, number int, names map[string]bool, children []*pyj
 		case lowered(childNames)[config.LabelHuman]:
 			why = "labelled `human`"
 		case IsHuman(childNames):
-			why = fmt.Sprintf("labelled `%s`", config.LabelHumanRequired)
+			why = fmt.Sprintf("labelled `%s`", KeptBy(childNames))
 		case other != nil:
 			why = fmt.Sprintf("%s's", other.Name)
-		case childNames[labelWorking]:
+		case config.IsLive(childNames):
 			why = "a run holds it now"
 		case childNames[labelPROpen]:
 			why = "a pull request of mine is open"
@@ -622,10 +689,14 @@ func MergeTitle(pull *pyjson.Object, method string) string {
 	return fmt.Sprintf("%s (#%s)", title, py.Str(pull.Get("number")))
 }
 
-// Keep a pull request from merging: auto-merge off, and out of `main`'s merge queue. A queued
-// pull request has no auto-merge left to turn off (REST `auto_merge` reads null once GitHub put
-// it in the queue), so only the dequeue stops it; a push to its branch takes it out as well.
+// Keep a pull request from merging: auto-merge off, and out of `main`'s merge queue, and
+// `bot:merging` off (#2748). A queued pull request has no auto-merge left to turn off (REST
+// `auto_merge` reads null once GitHub put it in the queue), so only the dequeue stops it; a push
+// to its branch takes it out as well.
 func HoldMerge(ctx *hctx.Context, pull *pyjson.Object) {
+	if number := py.MustInt(py.Or(pull.Get("number"), 0)); number != 0 {
+		NotMerging(ctx, number, LabelNames(pull))
+	}
 	node := pull.Get("node_id")
 	if !pyjson.Truthy(node) {
 		return
@@ -667,6 +738,7 @@ func RequeueCleared(ctx *hctx.Context, pull *pyjson.Object, record *pyjson.Objec
 	}
 	ctx.GH.EnableAutoMerge(node, ctx.Cfg.MergeMethod, head, MergeTitle(pull, ctx.Cfg.MergeMethod))
 	number := numberOf(pull)
+	Merging(ctx, number, names)
 	tried.Set(head, main)
 	ctx.Store.Update(func(s *pyjson.Object) any {
 		stateItem(s, number).Set("requeued", tried)
@@ -694,7 +766,7 @@ func QueueRevise(ctx *hctx.Context, number int, by string, force bool /* = False
 			ctx.Cfg.Repo)
 	}
 	names := LabelNames(pull)
-	if names[config.LabelWorking] {
+	if config.IsLive(names) {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am revising #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
@@ -741,7 +813,7 @@ func QueueReview(ctx *hctx.Context, number int, by string, floor string /* = "" 
 	if !names[config.LabelPR] {
 		return fmt.Sprintf("#%d is not a pull request I opened; review runs are for mine only.", number)
 	}
-	if names[config.LabelWorking] {
+	if config.IsLive(names) {
 		pending(ctx, number, by, ask)
 		return fmt.Sprintf("I am working on #%d right now. When this run ends I go round once more "+
 			"with your comment.", number)
@@ -795,18 +867,13 @@ func pending(ctx *hctx.Context, number int, by string, ask *asks.Ask /* = None *
 	ctx.Store.Update(change, fmt.Sprintf("pending #%d", number))
 }
 
-// Take a thread out of the queue. A run that holds it keeps `bot:working` until it has
+// Take a thread out of the queue. A run that holds it keeps its live label until it has
 // stopped, so a request made in the meantime waits for that run instead of racing it.
 func Stop(ctx *hctx.Context, number int, by string) string {
 	thread := ctx.GH.GetIssue(number)
 	names := LabelNames(thread)
-	labelWorking := config.LabelWorking
-	working := names[labelWorking]
-	if working {
-		SetStateLabel(ctx, number, names, labelWorking)
-	} else {
-		SetStateLabel(ctx, number, names, "")
-	}
+	working := config.IsLive(names)
+	SetStateLabel(ctx, number, names, LiveLabelOn(names))
 	if thread.Has("pull_request") && names[config.LabelPR] {
 		herr.Catch[*herr.GitHubError](func() { HoldMerge(ctx, ctx.GH.GetPull(number)) })
 	}

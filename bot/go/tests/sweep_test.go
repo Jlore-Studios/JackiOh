@@ -16,6 +16,7 @@ import (
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/fakes"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/hctx"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/herr"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/sweep"
@@ -649,4 +650,92 @@ func TestSweep_PlannedIssuesAndBotPullsGetADifficulty(t *testing.T) {
 	// It is the bot's own rating, so a later planner may raise it.
 	record := dig(t, w.ctx.Store.Load(), "items", "30")
 	assertEqual(t, dig(t, record, "difficulty_by", "difficulty"), "medium")
+}
+
+// `bot:working` is retired (#2748): before the sweep deletes it, every thread that carries it,
+// closed ones too (a run goes on after its thread closes), gets the live label of the run its
+// record names, so a thread a run holds stays held: the one its claim kept (`live`), or, for a
+// claim from before, what its kind, action, revision's source and fullsend tree say.
+func TestSweep_TheRetiredWorkingLabelMovesToItsRunsLiveLabel(t *testing.T) {
+	gh := fakes.NewFakeGitHub()
+	gh.Labels = pyjson.New()
+	for _, name := range append(config.Labels.Keys(), config.LabelWorking) {
+		gh.Labels.Set(name, pyjson.New("name", name))
+	}
+	working := config.LabelWorking
+	gh.AddIssue(50, fakes.Issue{Labels: []string{working}})                              // no record: a build
+	gh.AddIssue(51, fakes.Issue{Labels: []string{working, config.LabelNeedsPlan}})       // a planning run
+	gh.AddPull(52, "bot/issue-9", fakes.Pull{Labels: []string{config.LabelPR, working}}) // a CI fix
+	gh.AddPull(53, "bot/issue-8", fakes.Pull{Labels: []string{config.LabelPR, working}}) // a review run
+	gh.AddPull(54, "bot/issue-7", fakes.Pull{Labels: []string{config.LabelPR, working}}) // a revision
+	gh.AddIssue(55, fakes.Issue{Labels: []string{working, "bot:fullsend"}})              // its reconcile
+	gh.AddIssue(56, fakes.Issue{Labels: []string{working, "bot:fullsend"}})              // its split
+	gh.AddIssue(57, fakes.Issue{Labels: []string{working}, State: "closed"})             // closed, still going
+	ctx := testsupport.MakeCtx(gh, testsupport.Ctx{At: testsupport.Day})
+	for number, record := range map[int]*pyjson.Object{
+		51: pyjson.New("kind", "build", "action", "plan"),
+		52: pyjson.New("kind", "revise", "action", "revise", "source", "ci"),
+		53: pyjson.New("kind", "review", "action", "review"),
+		54: pyjson.New("kind", "revise", "action", "revise", "source", "request"),
+		55: pyjson.New("kind", "build", "action", "build", "tree", pyjson.New("mode", "fullsend")),
+		56: pyjson.New("kind", "build", "action", "build"),
+		57: pyjson.New("kind", "build", "action", "build", "live", "building"),
+	} {
+		flowUpdateItem(ctx, number, record)
+	}
+	assertEqual(t, len(plan.WorkingThreads(ctx)), 8) // held before the move
+	notes := sweep.Labels(ctx, testsupport.Day)
+	assertIn(t, "#52: `bot:working` is retired, so `bot:fixing-ci`", notes)
+	assertIn(t, "deleted the retired label `bot:working`", notes)
+	assertNotIn(t, working, gh.Labels)
+	for number, want := range map[int][]string{
+		50: {config.LabelBuilding}, 51: {config.LabelPlanning, config.LabelNeedsPlan},
+		52: {config.LabelPR, config.LabelFixingCI}, 53: {config.LabelPR, config.LabelReviewing},
+		54: {config.LabelPR, config.LabelRevising}, 55: {config.LabelReconciling, "bot:fullsend"},
+		56: {config.LabelSplitting, "bot:fullsend"}, 57: {config.LabelBuilding},
+	} {
+		assertEqual(t, gh.LabelNames(number), setOf(want...), number)
+	}
+	// Every one is held still, by its live label now.
+	assertEqual(t, len(plan.WorkingThreads(ctx)), 8)
+}
+
+// `bot:merging` (#2748) comes off a bot pull request merging no more: closed, or open with
+// auto-merge off and out of `main`'s merge queue. One with auto-merge on, or in the queue (whose
+// REST `auto_merge` reads null), keeps it.
+func TestSweep_AStaleMergingLabelComesOff(t *testing.T) {
+	w := newSweepBase(t)
+	for _, n := range []int{60, 61, 62, 63} {
+		w.gh.AddPull(n, "bot/issue-"+strconv.Itoa(n-30), fakes.Pull{Labels: []string{config.LabelPR, config.LabelMerging}})
+	}
+	w.gh.Threads.Item(60).Set("auto_merge", pyjson.New("merge_method", "squash")) // merging
+	w.gh.MergeQueue = map[string]bool{"PR_61": true}                              // queued
+	w.gh.Threads.Item(63).Set("state", "closed")                                  // merged meanwhile
+	notes := sweep.Merging(w.ctx, testsupport.Day)
+	assertEqual(t, sortedOf(notes), []string{
+		"#62: auto-merge is off and it is out of the merge queue, so `bot:merging` is off",
+		"#63: closed, so `bot:merging` is off"})
+	assertEqual(t, w.gh.LabelNames(60), setOf(config.LabelPR, config.LabelMerging))
+	assertEqual(t, w.gh.LabelNames(61), setOf(config.LabelPR, config.LabelMerging))
+	assertEqual(t, w.gh.LabelNames(62), setOf(config.LabelPR))
+	assertEqual(t, w.gh.LabelNames(63), setOf(config.LabelPR))
+	assertEqual(t, sweep.Merging(w.ctx, testsupport.Day), []string{})
+}
+
+// The production countdown (the open issue labelled `production merge`) gets `tracking` (#2748),
+// and nothing else about it changes; the pull requests that carry `production merge` are left
+// alone, and so is a countdown that has it.
+func TestSweep_TheProductionCountdownIsTracking(t *testing.T) {
+	w := newSweepBase(t)
+	countdown := w.gh.AddIssue(70, fakes.Issue{Title: "Merging to production in 3 hours",
+		Labels: []string{"production merge", "human"}})
+	w.gh.AddPull(71, "promote/x", fakes.Pull{Labels: []string{"production merge", "human"}})
+	body := countdown.Str("body")
+	notes := sweep.Sweep(w.ctx)
+	assertIn(t, "#70: the production countdown, so `tracking`", notes)
+	assertEqual(t, w.gh.LabelNames(70), setOf("production merge", "human", config.LabelTracking))
+	assertEqual(t, w.gh.LabelNames(71), setOf("production merge", "human"))
+	assertEqual(t, []any{countdown.Str("title"), countdown.Str("body")}, []any{"Merging to production in 3 hours", body})
+	assertEqual(t, w.replies(70), []string{})
+	assertNotIn(t, "#70: the production countdown, so `tracking`", sweep.Sweep(w.ctx))
 }

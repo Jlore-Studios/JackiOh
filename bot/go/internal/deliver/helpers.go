@@ -104,6 +104,9 @@ func (x *Deliverer) autoMerge(pull *pyjson.Object, expectedHead string /* = "" *
 		x.GH.EnableAutoMerge(py.Str(pull.Get("node_id")), x.Cfg.MergeMethod, expectedHead, headline)
 	})
 	if refused == "" {
+		if number := py.MustInt(py.Or(pull.Get("number"), 0)); number != 0 {
+			queue.Merging(x.Ctx, number, queue.LabelNames(pull)) // while CI and the merge queue run (#2748)
+		}
 		return "Auto-merge is on: it merges when every required check passes."
 	}
 	if strings.Contains(strings.ToLower(refused), "clean status") {

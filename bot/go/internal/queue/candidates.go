@@ -484,8 +484,8 @@ func sortedKeys(set map[int]bool) []int {
 // Read by label, so no number of open threads hides one, and a label changed since the last
 // plan counts at this one. Either queue label queues either kind of thread: an issue builds
 // and a pull request revises. A queue label is the request, so a thread that failed before and
-// was labelled again is taken again. A thread labelled `human` or `human required` is left
-// out, whatever model would take it, and so are a fullsend issue whose parts are still open
+// was labelled again is taken again. A thread labelled `human`, `human required` or `tracking` is
+// left out, whatever model would take it, and so are a fullsend issue whose parts are still open
 // (`open_parts`, #505),
 // forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
 // each with a line in `skipped` when the caller keeps one, and in `held_back` (number -> why)
@@ -497,7 +497,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 	others := map[int]string{} // number -> the other bot's name
 	parted := map[int][]int{}  // number -> its open parts
 	var builds []*pyjson.Object
-	labelWorking, labelPR := config.LabelWorking, config.LabelPR
+	labelPR := config.LabelPR
 	labelCross := config.LabelCross
 	for _, label := range []string{config.LabelBuild, config.LabelRevise, labelCross} {
 		for _, thread := range ctx.GH.ListIssues(label, "open", 300, "") {
@@ -507,7 +507,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 			_, isHuman := human[number]
 			_, isOther := others[number]
 			_, isParted := parted[number]
-			if names[labelWorking] || isFound || isHuman || isOther || isParted {
+			if config.IsLive(names) || isFound || isHuman || isOther || isParted {
 				continue
 			}
 			isPR := thread.Has("pull_request")
@@ -515,11 +515,7 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				continue // a second review is for the bot's own pull requests only
 			}
 			if IsHuman(names) {
-				if lowered(names)[config.LabelHuman] {
-					human[number] = config.LabelHuman
-				} else {
-					human[number] = config.LabelHumanRequired
-				}
+				human[number] = KeptBy(names)
 				continue
 			}
 			if other := Owner(thread); other != nil {

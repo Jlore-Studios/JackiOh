@@ -278,11 +278,12 @@ func BuilderSeat(pool *providers.Pool, offered []*providers.Provider, difficulty
 // medium or unrated item goes to a medium planner first (Muse, agy, GPT, Sonnet, in the tier
 // order; #2748) and to a strong one only when none can take it now, and a hard item to a strong
 // one only. A planning run takes none of its subscription's lanes, so a subscription plans while
-// it builds, as many items at once as it has lanes, but it takes a runner: a slot on the machine
-// (`machine_full`), or one of GitHub's lanes (`Lanes.free`, #1455). One the quiet check guards,
-// or one with caps, counts its planning runs against its own lanes (`Lanes.used`), as its builds
-// do: with one lane it plans only while it holds nothing else, and Muse plans while a lane of its
-// four is free. A plan is no short call (an Opus planner spent 20 minutes on #37), so like a build
+// it builds, as many items at once as the lanes in force for it (`Lanes.lanes_of`), but it takes
+// a runner: a slot on the machine (`machine_full`), or one of GitHub's lanes (`Lanes.free`,
+// #1455). One the quiet check guards, or one with caps, counts its planning runs against its own
+// lanes (`Lanes.used`), as its builds do: with one lane in force (a Claude account at 50% or
+// under, `lanes_by_cap`) it plans only while it holds nothing else, and Muse plans while a lane of
+// its four is free. A plan is no short call (an Opus planner spent 20 minutes on #37), so like a build
 // it starts only `start_headroom` under each cap.
 func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced bool, quietOK string) []*providers.Seat {
 	if lanes.PlanFree() <= 0 {
@@ -298,7 +299,7 @@ func LanePlanners(ctx *hctx.Context, state *pyjson.Object, lanes *Lanes, forced 
 			continue
 		}
 		planning := lanes.PlanningBy(provider.ID)
-		if planning >= provider.Lanes {
+		if planning >= lanes.LanesOf(provider) {
 			continue
 		}
 		if (provider.QuietCheck || pyjson.Truthy(provider.Limits.Stops())) && lanes.Full(provider) {
