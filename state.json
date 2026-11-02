@@ -22637,6 +22637,10 @@
         {
           "at": "2026-11-02T11:04:42Z",
           "minutes": 152.8
+        },
+        {
+          "at": "2026-11-02T12:06:59Z",
+          "minutes": 3.0
         }
       ],
       "tokens_spent": [
@@ -23778,10 +23782,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-02T13:00:00Z",
-          "utilization": 0.85
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-02T11:04:42Z",
-        "status": "allowed"
+        "observed_at": "2026-11-02T12:06:59Z",
+        "rejected_resets_at": "2026-11-02T13:00:00Z",
+        "status": "rejected"
       }
     },
     "devin": {
