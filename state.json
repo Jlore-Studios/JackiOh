@@ -12975,6 +12975,13 @@
     "2826": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-02T14:14:28Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the hard line names the AI's search in crates/ai/src/; determinize builds the worlds every search runs on, so this is hard even though the change is small and the plan spells it out"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
