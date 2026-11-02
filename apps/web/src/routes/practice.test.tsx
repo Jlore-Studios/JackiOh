@@ -800,7 +800,6 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     fireEvent.click(held);
     expect(retry).toHaveBeenCalledTimes(1);
   });
-
 });
 
 // Deck preview.

@@ -569,14 +569,17 @@ describe("the attack flow", () => {
     expect(result.interaction).toEqual(IDLE);
   });
 
-  for (const legal of [
-    [{ type: "attack", attackerId: "u1", targetId: "e1" }],
-    [
-      { type: "attack", attackerId: "u1", targetId: "e1" },
-      { type: "attack", attackerId: "u2", targetId: "e1" },
-    ],
-  ] as ActionBody[][]) {
-    it("deselects the attacker when it is clicked again", () => {
+  for (const { listed, legal } of [
+    { listed: "alone", legal: [{ type: "attack", attackerId: "u1", targetId: "e1" }] },
+    {
+      listed: "with another attacker listed",
+      legal: [
+        { type: "attack", attackerId: "u1", targetId: "e1" },
+        { type: "attack", attackerId: "u2", targetId: "e1" },
+      ],
+    },
+  ] as Array<{ listed: string; legal: ActionBody[] }>) {
+    it(`deselects the attacker when it is clicked again (${listed})`, () => {
       const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
         .interaction;
 

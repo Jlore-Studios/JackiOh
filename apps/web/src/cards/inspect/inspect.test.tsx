@@ -784,6 +784,17 @@ describe("long-press (B24)", () => {
     expect(onClick).toHaveBeenCalledWith({ on: "unit", instanceId: unit.instanceId, side: "you", lane: 1 });
   });
 
+  it("B24 the suppressor swallows the next click only", () => {
+    const onClick = vi.fn<() => void>();
+    render(<Trigger id="a" subject={subjectOf("b24-once", "core-043")} options={{ onLongPress: () => undefined }} onClick={onClick} />);
+    const trigger = screen.getByTestId("a");
+    longPress(trigger);
+    fireEvent.click(trigger);
+    expect(onClick, "the click the long-press ended in").not.toHaveBeenCalled();
+    fireEvent.click(trigger);
+    expect(onClick, "the one after it").toHaveBeenCalledTimes(1);
+  });
+
   for (const row of [
     { name: "after CLICK_SUPPRESS_MS", key: "b24-expire", touch: false },
     { name: "on the next pointerdown", key: "b24-rearm", touch: true },

@@ -908,6 +908,7 @@ describe("B46 a context that is not running schedules nothing", () => {
       const r = rig({ factory: fakeContextFactory({ state, resumeMode: "stay" }) });
       const audio = unlocked(r);
       const nodesAfterUnlock = audio.nodes.length;
+      expect(r.engine.state()).toBe("suspended");
 
       for (let i = 0; i < 40; i += 1) {
         tick(r, 500);

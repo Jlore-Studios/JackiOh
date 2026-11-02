@@ -728,66 +728,51 @@ describe("undoing a deletion (R2119000)", () => {
     expect(server.decks.has("c")).toBe(true);
   });
 
-  for (const row of [
+  /** One held DELETE of each kind: the deck "c" or the trio "t", open when it is deleted. */
+  const HELD = [
     {
       kind: "deck",
       options: { decks: full, initialOpen: { kind: "deck", id: "c" } },
       deleteId: DECK_DELETE,
       call: { op: "deleteDeck", id: "c" },
-      after: () => {
-        expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
-        expect(syncState()).toBe("saved");
-      },
+      stored: (server: Mounted["server"]) => server.decks.has("c"),
     },
     {
       kind: "trio",
       options: { decks: full, trios: [ladder], initialOpen: { kind: "trio", id: "t" } },
       deleteId: TRIO_DELETE,
       call: { op: "deleteTrio", id: "t" },
-      after: (server: Mounted["server"]) => {
-        expect(server.trios.has("t")).toBe(false);
-      },
+      stored: (server: Mounted["server"]) => server.trios.has("t"),
     },
   ] as Array<{
     kind: string;
     options: MountOptions;
     deleteId: string;
     call: ServerCall;
-    after: (server: Mounted["server"]) => void;
-  }>) {
+    stored: (server: Mounted["server"]) => boolean;
+  }>;
+
+  for (const row of HELD) {
     it(`R2119000 the window's end sends the ${row.kind}'s DELETE exactly once`, async () => {
       const { server, tick } = mount(row.options);
       fireEvent.click(screen.getByTestId(row.deleteId));
       await tick(UNDO_WINDOW_MS);
       expect(server.calls).toEqual([row.call]);
+      expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
       await tick(UNDO_WINDOW_MS * 2);
       expect(server.calls).toHaveLength(1);
-      row.after(server);
+      expect(syncState()).toBe("saved");
+      expect(row.stored(server)).toBe(false);
     });
   }
 
-  for (const row of [
-    {
-      kind: "deck",
-      options: { decks: full, initialOpen: { kind: "deck", id: "c" } },
-      deleteId: DECK_DELETE,
-      call: { op: "deleteDeck", id: "c", keepalive: true },
-      toastGone: true,
-    },
-    {
-      kind: "trio",
-      options: { decks: full, trios: [ladder], initialOpen: { kind: "trio", id: "t" } },
-      deleteId: TRIO_DELETE,
-      call: { op: "deleteTrio", id: "t", keepalive: true },
-      toastGone: false,
-    },
-  ] as Array<{ kind: string; options: MountOptions; deleteId: string; call: ServerCall; toastGone: boolean }>) {
+  for (const row of HELD) {
     it(`R2119000 pagehide sends the held ${row.kind} DELETE at once, with keepalive`, async () => {
       const { server } = mount(row.options);
       fireEvent.click(screen.getByTestId(row.deleteId));
       await pageHide();
-      expect(server.calls).toEqual([row.call]);
-      if (row.toastGone) expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+      expect(server.calls).toEqual([{ ...row.call, keepalive: true }]);
+      expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
     });
   }
 
@@ -809,7 +794,7 @@ describe("undoing a deletion (R2119000)", () => {
       kept: [deckRowId("a"), deckRowId("c"), deckRowId("m")],
       message: "This account can't change its decks.",
       trios: [] as SavedTrio[],
-      sent: [{ op: "deleteDeck", id: "c" }] as ServerCall[],
+      sent: { op: "deleteDeck", id: "c" } as ServerCall,
     },
     {
       kind: "trio",
@@ -820,16 +805,16 @@ describe("undoing a deletion (R2119000)", () => {
       kept: [trioRowId("t"), trioRowId("u")],
       message: "This account can't change its trios.",
       trios: [ladder, second],
-      sent: [] as ServerCall[],
+      sent: { op: "deleteTrio", id: "t" } as ServerCall,
     },
   ]) {
-    it(`R2119000 a refused ${row.kind === "trio" ? "trio DELETE" : "DELETE"} puts the ${row.kind} back and shows the server's words`, async () => {
+    it(`R2119000 a refused ${row.kind} DELETE puts the ${row.kind} back and shows the server's words`, async () => {
       const server = fakeDeckServer();
       server.state.refusals.set(row.id, new ApiRequestError(403, { code: "forbidden", message: row.message }));
       const { tick } = mount({ decks: full, trios: row.trios, server, initialOpen: row.open });
       fireEvent.click(screen.getByTestId(row.deleteId));
       await tick(UNDO_WINDOW_MS);
-      if (row.sent.length > 0) expect(server.calls).toEqual(row.sent);
+      expect(server.calls).toEqual([row.sent]);
       expect(rows(row.listId)).toEqual(row.kept);
       expect(syncState()).toBe("error");
       expect(screen.getByTestId(SYNC_STATUS)).toHaveTextContent(row.message);
@@ -891,8 +876,6 @@ describe("undoing a deletion (R2119000)", () => {
     expect(server.calls).toEqual([]);
     expect(server.trios.has("t")).toBe(true);
   });
-
-
 });
 
 describe("deck codes (R255)", () => {

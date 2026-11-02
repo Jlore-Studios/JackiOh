@@ -456,6 +456,18 @@ describe("filtering (B31)", () => {
     expect(screen.queryByTestId(DB_EMPTY)).toBeNull();
   });
 
+  it("B31 groups AND together", () => {
+    mount();
+    fireEvent.click(screen.getByTestId(filterCostId("3")));
+    fireEvent.click(screen.getByTestId(filterTypeId("Unit")));
+    expect(poolOrder()).toEqual(["x-08"]);
+
+    fireEvent.click(screen.getByTestId(DB_FILTER_CLEAR));
+    fireEvent.click(screen.getByTestId(filterTagId("Human")));
+    fireEvent.click(screen.getByTestId(filterRarityId("Rare")));
+    expect(poolOrder()).toEqual(["x-07"]);
+  });
+
   it("B31 a filter nothing passes empties the pool, shows db-empty and counts 0", () => {
     mount();
     fireEvent.click(screen.getByTestId(filterCostId("5")));
@@ -812,8 +824,9 @@ describe("the mana curve (B36)", () => {
     expect(curve().map((bar) => bar.count)).toEqual([1, 0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it("B36 the curve follows a card added and a card removed", () => {
+  it("B36 the curve counts the deck's cards per bucket, and follows a card added and a card removed", () => {
     mount(DECK);
+    expect(curve().map((bar) => bar.count)).toEqual([1, 1, 1, 2, 0, 0, 1, 1]);
     fireEvent.click(screen.getByTestId(addPoolId("x-03")));
     expect(curve().find((bar) => bar.bucket === "6+")?.count).toBe(2);
     fireEvent.click(screen.getByTestId(deckCardId("x-01")));
@@ -857,12 +870,9 @@ describe("inspecting in the builder (B38)", () => {
     expect(openInspectOverlays()).toEqual([INSPECT_DETAIL]);
     expect(detailName()).toBe(card("x-08").name);
     expect(screen.queryByTestId(deckCardId("x-08"))).toBeNull();
+  });
 
-    // Enter or Space on a focused pool card opens its detail too (it is a button).
-    act(() => {
-      closeInspect();
-    });
-    cleanup();
+  it("B38 Enter or Space on a focused pool card opens its detail too (it is a button)", () => {
     mount();
     const target = poolCard("x-08");
     target.focus();

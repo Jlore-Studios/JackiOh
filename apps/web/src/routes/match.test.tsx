@@ -664,7 +664,7 @@ describe("the match screen's ranks (R604, R612)", () => {
     const full = banner.querySelector(".match-ranks__full");
     expect(full).toHaveTextContent("Ranked match");
     expect(full).toHaveTextContent("Max#3 (you) Normal Grape III");
-    expect(full).toHaveTextContent("Normal Grape III");
+    expect(full).toHaveTextContent("שרה Raisin");
     const short = banner.querySelector(".match-ranks__short");
     expect(short).toHaveTextContent("Normal III");
     expect(short).toHaveTextContent("Raisin");
