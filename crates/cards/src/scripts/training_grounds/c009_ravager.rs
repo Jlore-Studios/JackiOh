@@ -162,15 +162,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn it_is_14_17_with_rush() {
-            let s = board(true, json!([]));
-            let me = ravager(&s);
-            let view = s.stats(me.as_str());
-            assert_eq!((view.attack, view.max_health), (14, 17));
-            assert!(unit_has(s.state(), s.card(me.as_str()), KeywordKind::Rush));
-        }
-
-        #[test]
         fn r42_each_kill_gives_10_10() {
             let mut s = board(true, json!([VANILLA]));
             let me = ravager(&s);

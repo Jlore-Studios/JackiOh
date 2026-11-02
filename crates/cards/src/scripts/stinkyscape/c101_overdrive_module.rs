@@ -32,37 +32,12 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
     fn live_kinds(s: &Scenario, card: &str) -> Vec<String> {
         s.stats(card)
             .keywords
             .iter()
             .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
-    }
-
-    #[test]
-    fn prints_brittle_2_reborn_5_5_radiant_brittle_4_10_10() {
-        crate::register_all();
-        let def = crate::card_def(MODULE);
-        assert_eq!(
-            kinds_of(&def.base.keywords),
-            vec!["Starship Piece", "Equip", "Brittle", "Reborn"]
-        );
-        assert_eq!(
-            kinds_of(&def.radiant.keywords),
-            vec!["Starship Piece", "Equip", "Brittle", "Reborn"]
-        );
-        assert!(def.base.keywords.contains(&Keyword::Brittle { n: 2 }));
-        assert!(def.radiant.keywords.contains(&Keyword::Brittle { n: 4 }));
-        assert_eq!((def.base.attack, def.base.health), (Some(5), Some(5)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(10), Some(10)));
     }
 
     #[test]

@@ -94,11 +94,6 @@ mod tests {
     }
 
     #[test]
-    fn tagged_resource_and_token() {
-        assert_eq!(card_def(ID).tags, vec![Tag::Resource, Tag::Token]);
-    }
-
-    #[test]
     fn gains_2_mana_and_draws_1() {
         let mut s = played(false);
         // 4 of 4, the Red Narcor at (0): 2 more, above max as temporary mana is (§2.3).

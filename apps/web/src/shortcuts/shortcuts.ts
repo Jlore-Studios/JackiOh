@@ -1,5 +1,6 @@
 // R2126000: the client's own keyboard shortcuts, each named once, and how a hint writes them.
-// Hints only (CLAUDE.md rule 7): nothing here listens for a key, and no shortcut is added.
+// Hints only (CLAUDE.md rule 7): nothing here listens for a key, and no shortcut is added but
+// R2785000's Space, which skips a set piece (game/Game.tsx listens for it).
 import { INSPECT_KEY_SHORTCUT } from "../cards/inspect/keys.ts";
 
 /** Keys in order: `MOD` is Ctrl, or ⌘ on an Apple device; the rest are `KeyboardEvent.key` values. */
@@ -16,6 +17,8 @@ export const SHORTCUTS = {
   replayForwardStep: ["ArrowRight"],
   replayBackTurn: ["Shift", "ArrowLeft"],
   replayForwardTurn: ["Shift", "ArrowRight"],
+  /** R2785000: ends a set piece's hold (a tap or a click on the board does too). */
+  skipSetPiece: [" "],
 } as const satisfies Readonly<Record<string, Shortcut>>;
 
 /** R2126000: a touch-only device, which shows no hint. */

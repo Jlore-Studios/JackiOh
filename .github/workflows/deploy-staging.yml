@@ -2,7 +2,7 @@
 # `env.staging`), after every push to main whose CI passed: the site and its game server together,
 # as promote-production.yml's `deploy` job puts `production` on jackioh.com, with the same setup and
 # staging's own build (`build:staging`, apps/web/.env.staging) and bundle check. Nothing holds it: the
-# production countdown issue holds production only. docs/deploy-cloudflare.md is the plan.
+# production issue (promote-production.yml) moves production only. docs/deploy-cloudflare.md is the plan.
 #
 # Two ways in:
 #   workflow_run (CI)  a push to main whose CI run passed: that commit. A CI run that passes on an

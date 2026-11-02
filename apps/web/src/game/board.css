@@ -1579,33 +1579,34 @@ button.modifier-badge[data-open="true"] {
    (animations.css's jk-summon-scale), and the cards around it wobble as it hits: the landing side's
    for a Large Unit, the whole board's for a Huge one, every card for a MASSIVE one, which also flashes
    the edges of the screen. None of it plays under Reduce motion; the hit-stop and the sound do. */
-/* R2722001: a Mythic's takeover. The queue holds its entry for the takeover's beat (`--takeover-hold`),
-   so the entry's own motion waits for it as a slam's waits for its anticipation, and when the card
-   lands (`--takeover-land-ms`) every other card on the board recoils from it. None of it plays under
-   Reduce motion, which takes no hold (a still card stands in, TakeoverStill.tsx). */
-.game:not([data-reduced-motion="true"])[data-takeover="mythic"] [data-animating] {
-  animation-delay: var(--takeover-hold, 0ms);
+/* R2785000: a set piece. The queue holds its entry for the set piece's beat (`--set-piece-hold`), so
+   the entry's own motion waits for it as a slam's waits for its anticipation. R2722001: a Mythic's
+   takeover is one, and when its card lands (`--takeover-land-ms`) every other card on the board recoils
+   from it. None of it plays under Reduce motion, which takes no hold (a still card stands in for a
+   takeover, TakeoverStill.tsx). */
+.game:not([data-reduced-motion="true"])[data-set-piece] [data-animating] {
+  animation-delay: var(--set-piece-hold, 0ms);
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="summoned"],
 .game:not([data-reduced-motion="true"])[data-slam-tier] [data-animating="animated"] {
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="you"] .board [data-testid^="zone-you-"] .card:not([data-animating]),
 .game:not([data-reduced-motion="true"])[data-slam-tier="large"][data-slam-side="opponent"] .board [data-testid^="zone-opponent-"] .card:not([data-animating]) {
   animation: slam-wobble-slight 220ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="huge"] .board .zone .card:not([data-animating]) {
   animation: impact-card-wobble 250ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"] .board .card:not([data-animating]) {
   animation: slam-wobble-hard 320ms var(--ease-in-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-slam-tier="massive"]::after {
@@ -1618,7 +1619,7 @@ button.modifier-badge[data-open="true"] {
   mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 52%, var(--pal-black));
   animation: giga-vignette-flash 400ms var(--ease-out) both;
-  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--takeover-hold, 0ms) + var(--slam-land-ms, 140ms));
+  animation-delay: calc(var(--slam-anticipation, 0ms) + var(--set-piece-hold, 0ms) + var(--slam-land-ms, 140ms));
 }
 
 .game:not([data-reduced-motion="true"])[data-takeover="mythic"] .board .card:not([data-animating]) {
@@ -1646,6 +1647,26 @@ button.modifier-badge[data-open="true"] {
 
 .takeover-still-card {
   width: min(46vmin, 300px);
+}
+
+/* R2785000: the first skip control there is. "Tap to skip" fades in `--set-piece-skip-delay` into a set
+   piece's hold, above the effects layer; it takes no pointer event, as the tap that skips lands on the board. */
+.set-piece-skip {
+  position: fixed;
+  left: 50%;
+  bottom: 12%;
+  translate: -50% 0;
+  margin: 0;
+  z-index: var(--z-showcase);
+  pointer-events: none;
+  color: var(--text);
+  font-size: var(--type-sm);
+  animation: set-piece-skip-in var(--motion-slow) var(--ease-out) var(--set-piece-skip-delay, 0ms) both;
+}
+
+@keyframes set-piece-skip-in {
+  from { opacity: 0; }
+  to { opacity: 0.9; }
 }
 
 @keyframes slam-wobble-slight {

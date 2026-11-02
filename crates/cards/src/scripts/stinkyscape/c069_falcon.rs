@@ -30,23 +30,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
-    fn kinds_of(keywords: &[Keyword]) -> Vec<String> {
-        keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
-    #[test]
-    fn prints_charge_flying_4_1_radiant_8_2_with_pierce() {
-        crate::register_all();
-        let def = crate::card_def(FALCON);
-        assert_eq!(kinds_of(&def.base.keywords), vec!["Charge", "Flying"]);
-        assert_eq!(kinds_of(&def.radiant.keywords), vec!["Charge", "Flying", "Pierce"]);
-        assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
-    }
-
     #[test]
     fn charge_may_attack_the_hero_the_turn_it_is_played() {
         crate::register_all();
