@@ -13404,15 +13404,24 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/game/showcase/CardShowcase.tsx",
+            "spec/rulings/R0200.md"
+          ],
+          "from": "aef8330855ed6e98b9c3c38669ee6efa77710e6e",
+          "main": "5a6f39b3bc1c1f6a21b6668df8c904bb2b5f15eb"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "41485620295",
+            "run": "41497924095",
             "tier": "strong"
           }
         ],
-        "sha": "aef8330855ed6e98b9c3c38669ee6efa77710e6e",
+        "sha": "cb849cf01d01d01bb56cce378588d65478423b0c",
         "tiers": {
           "claude": "strong"
         }
