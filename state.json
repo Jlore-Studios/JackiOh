@@ -14474,6 +14474,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-02T20:50:20Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "41525071830",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
