@@ -12964,10 +12964,12 @@
     "what": "build #2792 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-02T12:45:13Z",
+    "at": "2026-11-02T12:56:16Z",
     "notes": [
-      "delivered plan #2786 on muse (run 41446383730): planned",
-      "started build #2786 on muse (run 41447428292)",
+      "delivered plan #2792 on claude-6 (run 41446437971): planned",
+      "delivered build #2785 on claude-5 (run 41432388172): interrupted",
+      "started build #2785 on claude-6 (run 41448931969)",
+      "started build #2792 on muse (run 41448983337)",
       "nothing more to start: nothing is queued",
       "pruned 1 plan file(s) older than 7 days"
     ],
@@ -13675,7 +13677,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T12:45:13Z",
+  "loop_tick": "2026-11-02T12:56:16Z",
   "machine_disk": {
     "issue": null,
     "reading": {
