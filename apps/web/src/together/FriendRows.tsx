@@ -79,6 +79,36 @@ export function AddFriend({ onAdded }: { onAdded: () => void }): ReactElement {
   );
 }
 
+/** Block's inline question, a friend row's and an incoming request's (B56, #2684): not a modal, it asks once before it blocks. */
+function BlockQuestion({
+  question,
+  name,
+  busy,
+  onBlock,
+  onKeep,
+}: {
+  question: string;
+  name: string;
+  busy: boolean;
+  onBlock: () => void;
+  onKeep: () => void;
+}): ReactElement {
+  const questionId = useId();
+  return (
+    <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
+      <span className="together-row__question" id={questionId}>
+        <Named text={question} name={name} />
+      </span>
+      <button type="button" data-testid={togetherTestid.confirm} disabled={busy} onClick={onBlock}>
+        {t("Block")}
+      </button>
+      <button type="button" className="link-button" data-testid={togetherTestid.keep} onClick={onKeep}>
+        {t("Keep")}
+      </button>
+    </span>
+  );
+}
+
 export type FriendRowProps = {
   friend: Friend;
   unread: number;
@@ -107,7 +137,6 @@ export function FriendRow({
   challengeRefusal = null,
 }: FriendRowProps): ReactElement {
   const [asking, setAsking] = useState(false);
-  const questionId = useId();
   const canChallenge = friend.status === "online";
   const canWatch = friend.watchable && friend.matchId !== null;
   return (
@@ -187,33 +216,18 @@ export function FriendRow({
           )}
         </span>
       ) : (
-        // An inline question, not a modal: the row asks once before it blocks (B56).
-        <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
-          <span className="together-row__question" id={questionId}>
-            <Named text={t("Block {name}? You stop being friends, and neither of you can reach the other.")} name={friend.username} />
-          </span>
-          <button
-            type="button"
-            data-testid={togetherTestid.confirm}
-            disabled={busy}
-            onClick={() => {
-              setAsking(false);
-              onBlock?.();
-            }}
-          >
-            {t("Block")}
-          </button>
-          <button
-            type="button"
-            className="link-button"
-            data-testid={togetherTestid.keep}
-            onClick={() => {
-              setAsking(false);
-            }}
-          >
-            {t("Keep")}
-          </button>
-        </span>
+        <BlockQuestion
+          question={t("Block {name}? You stop being friends, and neither of you can reach the other.")}
+          name={friend.username}
+          busy={busy}
+          onBlock={() => {
+            setAsking(false);
+            onBlock?.();
+          }}
+          onKeep={() => {
+            setAsking(false);
+          }}
+        />
       )}
     </li>
   );
@@ -239,7 +253,6 @@ export function RequestRow({
   const other = direction === "incoming" ? request.from : request.to;
   /** Block's inline question is open (an incoming request's only, #2684). */
   const [asking, setAsking] = useState(false);
-  const questionId = useId();
   return (
     <li className="together-row" data-testid={togetherTestid.requestRow} data-direction={direction} data-request-id={request.requestId} data-profile-id={other.profileId}>
       <span className="together-row__who">
@@ -250,33 +263,19 @@ export function RequestRow({
         )}
       </span>
       {asking ? (
-        // An inline question, not a modal, as a friend row's: a block lifted later restores no request (§9.4, #2684).
-        <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
-          <span className="together-row__question" id={questionId}>
-            <Named text={t("Block {name}? Their request goes, and neither of you can reach the other.")} name={other.username} />
-          </span>
-          <button
-            type="button"
-            data-testid={togetherTestid.confirm}
-            disabled={busy}
-            onClick={() => {
-              setAsking(false);
-              onBlock?.();
-            }}
-          >
-            {t("Block")}
-          </button>
-          <button
-            type="button"
-            className="link-button"
-            data-testid={togetherTestid.keep}
-            onClick={() => {
-              setAsking(false);
-            }}
-          >
-            {t("Keep")}
-          </button>
-        </span>
+        // As a friend row's: a block lifted later restores no request (§9.4, #2684).
+        <BlockQuestion
+          question={t("Block {name}? Their request goes, and neither of you can reach the other.")}
+          name={other.username}
+          busy={busy}
+          onBlock={() => {
+            setAsking(false);
+            onBlock?.();
+          }}
+          onKeep={() => {
+            setAsking(false);
+          }}
+        />
       ) : (
         <span className="together-row__actions">
           {direction === "incoming" ? (

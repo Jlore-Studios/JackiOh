@@ -81,7 +81,7 @@ pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize = AI_BUDGET.lethal_nodes;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
 /// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
-/// baseline, `duos.rs`'s `duos_gate`.
+/// baseline, `duos.rs`'s `duos_gate_game`.
 pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 
 /// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only

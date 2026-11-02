@@ -267,6 +267,7 @@ pub struct ActivationPrice {
 }
 
 impl ActivationPrice {
+    /// The price `card` would hold, at 0 until it is probed.
     fn key(card: &CardInstance) -> Self {
         Self {
             def_id: card.def_id.clone(),
@@ -284,29 +285,7 @@ impl ActivationPrice {
 /// R2688000: what a unit's next attack gives its controller through its "when this attacks" and
 /// "after this attacks" hooks, as a decision's root priced it (`attack_hook_prices`), keyed as
 /// `ActivationPrice` is, its controller included since each copy attacks a different board.
-#[derive(Clone, Debug, PartialEq)]
-pub struct AttackHookPrice {
-    pub def_id: String,
-    pub radiant: bool,
-    pub controller: PlayerId,
-    pub price: f64,
-}
-
-impl AttackHookPrice {
-    /// The price `card` would hold, at 0 until it is probed.
-    fn key(card: &CardInstance) -> Self {
-        Self {
-            def_id: card.def_id.clone(),
-            radiant: card.radiant,
-            controller: card.controller,
-            price: 0.0,
-        }
-    }
-
-    fn is_for(&self, card: &CardInstance) -> bool {
-        self.def_id == card.def_id && self.radiant == card.radiant && self.controller == card.controller
-    }
-}
+pub type AttackHookPrice = ActivationPrice;
 
 /// R2564000, R2603000: what one use of `unit`'s Activate gives its controller, by `prices`, while it has
 /// an ability to use (`abilities_of`: a Vanilla card has none). 0 with `Prices::NONE`, for a card its root
@@ -1593,6 +1572,39 @@ fn probe_turns<P>(
     priced
 }
 
+/// R2564000, R2688000: the root probe `activation_prices` and `attack_hook_prices` share. Nothing is
+/// priced, and no node is spent, at a zero `weight`, while a prompt is open, once the game is over,
+/// outside `seat`'s own main phase, or when `has` holds on neither field; else `price` runs over
+/// `probe_turns` on a copy with both players' automatic turn end off (R345), within `nodes` of `counter`.
+fn root_prices<P>(
+    world: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    weight: f64,
+    has: fn(&GameState, PlayerId) -> bool,
+    nodes: usize,
+    price: PriceTurn<P>,
+) -> Vec<P> {
+    if weight == 0.0
+        || world.pending.is_some()
+        || world.result.is_some()
+        || world.active != seat
+        || world.phase != Phase::Main
+    {
+        return Vec::new();
+    }
+    let own = has(world, seat);
+    if !own && !has(world, seat.opponent()) {
+        return Vec::new();
+    }
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    let probes = create_sub_counter(counter, nodes);
+    probe_turns(&start, seat, own, &probes, price)
+}
+
 /// R2564000, R2603000: the activation prices a decision of `seat`'s passes (`Prices`), probed on `world`
 /// (R185): one use of the Activate of each unit acting on either field and each card acting face-up in
 /// either backrow, each once. The enemy's are tried at the start of its next turn, the seat's at the start
@@ -1603,24 +1615,15 @@ pub fn activation_prices(
     seat: PlayerId,
     counter: &dyn NodeCounter,
 ) -> Vec<ActivationPrice> {
-    if AI_EVAL.activation == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
-        return Vec::new();
-    }
-    let own = has_activate_card(world, seat);
-    if !own && !has_activate_card(world, seat.opponent()) {
-        return Vec::new();
-    }
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
-    let probes = create_sub_counter(counter, AI_ACTIVATION_PROBE_NODES);
-    probe_turns(&start, seat, own, &probes, price_uses)
+    root_prices(
+        world,
+        seat,
+        counter,
+        AI_EVAL.activation,
+        has_activate_card,
+        AI_ACTIVATION_PROBE_NODES,
+        price_uses,
+    )
 }
 
 /// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
@@ -1759,24 +1762,15 @@ pub fn attack_hook_prices(
     seat: PlayerId,
     counter: &dyn NodeCounter,
 ) -> Vec<AttackHookPrice> {
-    if AI_EVAL.attack_hook == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
-        return Vec::new();
-    }
-    let own = has_attack_hook_unit(world, seat);
-    if !own && !has_attack_hook_unit(world, seat.opponent()) {
-        return Vec::new();
-    }
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
-    let probes = create_sub_counter(counter, AI_ATTACK_HOOK_PROBE_NODES);
-    probe_turns(&start, seat, own, &probes, price_attacks)
+    root_prices(
+        world,
+        seat,
+        counter,
+        AI_EVAL.attack_hook,
+        has_attack_hook_unit,
+        AI_ATTACK_HOOK_PROBE_NODES,
+        price_attacks,
+    )
 }
 
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end

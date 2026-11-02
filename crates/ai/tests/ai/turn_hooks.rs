@@ -12,7 +12,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, register_cards};
+use super::support::{AI, HUMAN, close, register_cards, unit};
 
 const MANA_WELL: &str = "core-006";
 const RUSH_TOKEN_FARM: &str = "core-058";
@@ -79,11 +79,6 @@ fn eval_with(state: &GameState, prices: Vec<TurnHookPrice>) -> f64 {
 /// The AI's evaluation of `state` with the prices its own root would pass.
 fn held_eval(state: &GameState) -> f64 {
     eval_with(state, priced(state).0)
-}
-
-/// `a` and `b` as equal, to the evaluation's rounding.
-fn close(a: f64, b: f64) {
-    assert!((a - b).abs() < 1e-9, "{a} vs {b}");
 }
 
 /// The AI's turn 5 with a Mana Well and the three crystals to play it, nothing else in hand or on
@@ -282,13 +277,6 @@ fn sides(seed: &str, p1: Value, p2: Value) -> GameState {
     scenario(json!({ "seed": seed, "p1": side(p1), "p2": side(p2) }))
         .state()
         .clone()
-}
-
-fn unit<'a>(state: &'a GameState, player: PlayerId, def_id: &str) -> &'a CardInstance {
-    active_units_of(state, player)
-        .into_iter()
-        .find(|unit| unit.def_id == def_id)
-        .expect("the unit is on the field")
 }
 
 #[test]
