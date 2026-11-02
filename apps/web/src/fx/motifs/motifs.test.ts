@@ -175,8 +175,8 @@ describe("R2784000 the damage and removal motifs", () => {
     expect(beats(planMotif(specOf("lance"), entry, view, envOf()))).toEqual(PINNED.bolt);
   });
 
-  it("R2784000 with `row: keep` a motif draws no numbers, leaving them to the event's own recipe", () => {
-    for (const motif of FX_DRAWN_MOTIFS) expect(planned(motif, 400, { row: "keep" }).some((cue) => cue.kind === "splat"), motif).toBe(false);
+  it("R2784000 with `row: keep` a motif draws no numbers (no splat, no Armor flash), leaving them to the event's own recipe", () => {
+    for (const motif of FX_DRAWN_MOTIFS) expect(planned(motif, 400, { row: "keep" }).some((cue) => cue.kind === "splat" || cue.kind === "shield"), motif).toBe(false);
   });
 
   it("R2784000 reduced motion and the effects off: no shake, no flash, nothing at all", () => {
@@ -441,6 +441,24 @@ describe("R2784000 the board and life motifs follow the rules they draw", () => 
       expect(motif, row).not.toBeNull();
       const rows = planFx({ ...entry, events: entry.events.filter((event) => motif?.replaces.has(event) !== true) }, view, envOf());
       expect(losses(motif?.cues ?? []) + losses(rows), row).toBe(1);
+    }
+  });
+
+  it("R2784000 ward shows an absorbed hit's Armor flash once: in place of the armor row under replace, left to it under keep", () => {
+    const view = fullBoardView();
+    const env = envOf();
+    const events = [played("p1", "ex", "core-035"), ...motifFixture("ward", view, "ex", "p1")];
+    env.memory.remember(events);
+    const entry = { ...galleryEntry(events.slice(1), view), durationMs: 400 };
+    const flashes = (cues: readonly FxCue[]): number => cues.filter((cue) => cue.kind === "shield").length;
+    // With no play resolving, the rows alone draw the entry: the armor row's flash.
+    expect(flashes(planFx(entry, view, envOf()))).toBe(1);
+    for (const row of ["replace", "keep"] as const) {
+      const table: ReadonlyMap<string, FxCardEntry> = new Map([["core-035", { kind: "hooks", hooks: { cast: { motif: "ward", row } } }]]);
+      const motif = planCardMotif(entry, view, env, table);
+      expect(motif, row).not.toBeNull();
+      const rows = planFx({ ...entry, events: entry.events.filter((event) => motif?.replaces.has(event) !== true) }, view, envOf());
+      expect(flashes(motif?.cues ?? []) + flashes(rows), row).toBe(1);
     }
   });
 });

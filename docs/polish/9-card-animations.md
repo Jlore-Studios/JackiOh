@@ -51,7 +51,7 @@ and three parameters:
 | `drain` | healthLost, healthSet | healthLost, healthSet | a liquid stream from the victim to the gainer (the entry's healed target, else the resolving play's hero), pooling where it lands; the loss's number only in place of the row |
 | `bless` | buffed, upgraded, keywordGranted | all three | arrows up, a sheen and a burst over a card made better |
 | `curse` | degraded, buffed, keywordGranted | all three | arrows down and a void burst over a card made worse |
-| `ward` | damageAbsorbed, divineShieldLost | both | Armor's full shield over a hit it took whole; gold and shards where a Divine Shield broke |
+| `ward` | damageAbsorbed, divineShieldLost | both | Armor's full shield over a hit it took whole (under `keep` a burst, the armor row drawing the flash); gold and shards where a Divine Shield broke |
 | `conjure` | summoned | nothing | a summoning circle where the card arrives: a gather, a landing and an afterglow |
 | `rise` | summoned, animated, awakened | nothing | the card rising out of its zone, from below to where it stands |
 | `offering` | destroyed | nothing | the unit sinking under a glyph in its lane: a cost paid, never a kill |
