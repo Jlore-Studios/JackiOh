@@ -419,9 +419,10 @@ pub struct EvalWeights {
     /// `unit_worth` adds; `kill_worth` takes the whole price off a kill, as Reborn's body. Below 1, so
     /// killing a unit whose Death pays its owner is worth less than its body.
     pub death: f64,
-    /// R2477000, R2565000: the share of what one firing of a card's start-of-turn and end-of-turn hooks
-    /// gives its controller (`evaluate::turn_hook_price`) that `material` adds for each backrow card the
-    /// seat can read, either side's, and `unit_worth` adds for each unit on the field.
+    /// R2477000, R2565000, R2689000: the share of what a card's turn hooks give its controller
+    /// (`evaluate::turn_hook_price`: one firing of each, its start-of-turn and end-of-turn hooks' once
+    /// for each time its controller's turn runs them) that `material` adds for each backrow card the seat
+    /// can read, either side's, and `unit_worth` adds for each unit on the field.
     pub turn_hook: f64,
     /// R2564000: the share of what one use of a unit's Activate gives its controller
     /// (`evaluate::activation_price`) that `unit_worth` adds, inside the Brittle share, the seat's units

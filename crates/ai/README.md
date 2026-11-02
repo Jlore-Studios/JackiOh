@@ -85,12 +85,14 @@ Death on the field and in the seat's hand (spawned first, R923001) as its contro
 the sandbox's destroy less after its remove (R923003); `unit_worth` adds `AI_EVAL.death` of it,
 `kill_worth` takes all of it off a kill. A Starship Piece is priced the same way, by the copy its death
 fuses into its owner's Starship, its probe after every Death's, so pieces never take a Death's nodes
-(R2566000). A card's start-of-turn and end-of-turn hooks count
-by one firing (R2477000, R2565000): at the root `turn_hook_prices` fires, within `AI_TURN_HOOK_PROBE_NODES`, each
-such hook of the units on either field, of the backrow cards the seat can read on either side (a face-down
-enemy card is never probed) and of the seat's hand's Field Spells and Units (set or placed first,
-R923001) through the engine's trigger queue, and prices it as its controller's evaluation after less
-before, each crystal gained at `next_turn_mana`; `material` adds `AI_EVAL.turn_hook` of it for a readable
+(R2566000). A card's start-of-turn, end-of-turn and start-of-the-opponent's-turn hooks count
+by one firing each (R2477000, R2565000, R2689000): at the root `turn_hook_prices` fires, within
+`AI_TURN_HOOK_PROBE_NODES`, each such hook of the units on either field, of the backrow cards the seat can
+read on either side (a face-down enemy card is never probed) and of the seat's hand's Field Spells and
+Units (set or placed first, R923001) through the engine's trigger queue, and prices it as its controller's
+evaluation after less before, each crystal gained at `next_turn_mana`; the first two count once for each
+time its controller's turn runs them (`multipliers::extra_runs`, Joint Filing's extra runs, R821), read on
+the state evaluated, and the third once; `material` adds `AI_EVAL.turn_hook` of it for a readable
 backrow card, and `unit_worth` for a unit, so an enemy engine is worth more to answer and an own one more to keep.
 A unit's Activate counts by one use (R2564000), and so does a face-up backrow card's, a Field Spell's
 (R2603000): at the root `activation_prices` ends the seat's turn and then the enemy's, within
