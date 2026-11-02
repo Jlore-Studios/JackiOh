@@ -12906,13 +12906,13 @@
         "bot/issue-2705"
       ],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-3",
       "queued_at": "2026-11-02T05:03:45Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "41393386710",
+      "run_id": "pending:25ff9536-1793600027",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-02T05:19:49Z",
+      "started_at": "2026-11-02T06:14:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "tree": {
@@ -14979,9 +14979,9 @@
   },
   "labels_synced": "732204536440d0b3",
   "last_run": {
-    "at": "2026-11-02T06:13:34Z",
+    "at": "2026-11-02T06:14:07Z",
     "url": "",
-    "what": "build #2783 on claude-8"
+    "what": "build #2701 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-02T06:03:26Z",
