@@ -1,14 +1,14 @@
 // Play room links (SPEC §9.5, R767) and co-op room links (R2094000).
 // They only fill the lobby form; the server validates the mode (R264, CLAUDE.md rule 7).
-// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632); codes use `canonicalCode`
-// and `ROOM_CODE_FORMAT` (R191). Sign-in keeps only code and mode (B35); unavailable storage means no link.
+// At boot, valid `room` and `mode` leave the URL for per-tab storage (R632).
+// Sign-in keeps only code and mode (B35); unavailable storage means no link.
 
 import { canonicalCode } from "@jackioh/shared";
 import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
-import type { QueueMode } from "./api.ts";
+import { isQueueMode, type QueueMode } from "./api.ts";
 import { currentPath, paths } from "./navigate.ts";
-import { sessionStorageOrNull } from "./storage.ts";
+import { getStored, removeStored, sessionStorageOrNull, setStored } from "./storage.ts";
 
 const ROOM_PARAM = "room";
 const MODE_PARAM = "mode";
@@ -19,10 +19,6 @@ export const ROOM_LINK_STORAGE_KEY = "jackioh.play.roomLink";
 export const ROOM_LINK_SHARE_TITLE = "Join my JackiOh room";
 
 export type RoomLink = { code: string; mode: QueueMode | null };
-
-function isQueueMode(value: unknown): value is QueueMode {
-  return value === "bo1" || value === "bo3" || value === "random";
-}
 
 export function roomLinkPath(code: string, mode: QueueMode): string {
   const query = new URLSearchParams({ [ROOM_PARAM]: code, [MODE_PARAM]: mode });
@@ -59,11 +55,8 @@ export function adoptRoomLink(): boolean {
     // A sandboxed frame may refuse; the link is still read and kept below.
   }
   if (link === null) return false;
-  try {
-    sessionStorageOrNull()?.setItem(ROOM_LINK_STORAGE_KEY, JSON.stringify(link));
-  } catch {
-    // Blocked or full storage: the link serves this page load but not a trip through sign-in.
-  }
+  // Blocked or full storage: the link serves this page load but not a trip through sign-in.
+  setStored(ROOM_LINK_STORAGE_KEY, JSON.stringify(link), sessionStorageOrNull());
   return true;
 }
 
@@ -71,7 +64,7 @@ export function adoptRoomLink(): boolean {
 export function readRoomLink(): RoomLink | null {
   adoptRoomLink();
   try {
-    const raw = sessionStorageOrNull()?.getItem(ROOM_LINK_STORAGE_KEY) ?? null;
+    const raw = getStored(ROOM_LINK_STORAGE_KEY, sessionStorageOrNull());
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
@@ -85,11 +78,7 @@ export function readRoomLink(): RoomLink | null {
 }
 
 export function forgetRoomLink(): void {
-  try {
-    sessionStorageOrNull()?.removeItem(ROOM_LINK_STORAGE_KEY);
-  } catch {
-    // Blocked storage held nothing to forget.
-  }
+  removeStored(ROOM_LINK_STORAGE_KEY, sessionStorageOrNull());
 }
 
 export const COOP_LINK_STORAGE_KEY = "jackioh.together.coopLink";
@@ -100,7 +89,6 @@ export function coopLinkPath(code: string): string {
   return `${paths.together}?${query.toString()}`;
 }
 
-/** R2094000: the co-op link as a shareable URL on this origin. */
 export function coopLinkUrl(code: string): string {
   return `${window.location.origin}${coopLinkPath(code)}`;
 }
@@ -113,7 +101,7 @@ export function coopLinkOf(search: string): string | null {
   return canonicalCode(raw, ROOM_CODE_FORMAT);
 }
 
-/** R2094000: before routing, adopt only a `/together` link and remove its coop parameter without touching others. */
+/** R2094000: `adoptRoomLink`'s twin for a `/together` link. */
 export function adoptCoopLink(): boolean {
   if (typeof window === "undefined") return false;
   if (currentPath() !== paths.together) return false;
@@ -127,19 +115,16 @@ export function adoptCoopLink(): boolean {
     // A sandboxed frame may refuse; the link is still read and kept below.
   }
   if (code === null) return false;
-  try {
-    sessionStorageOrNull()?.setItem(COOP_LINK_STORAGE_KEY, JSON.stringify({ code }));
-  } catch {
-    // Blocked or full storage: the link serves this page load but not a trip through sign-in.
-  }
+  // Blocked or full storage: the link serves this page load but not a trip through sign-in.
+  setStored(COOP_LINK_STORAGE_KEY, JSON.stringify({ code }), sessionStorageOrNull());
   return true;
 }
 
-/** R2094000: read URL then untrusted tab storage without consuming either, so StrictMode gets the same result. */
+/** R2094000: `readRoomLink`'s twin. */
 export function readCoopLink(): string | null {
   adoptCoopLink();
   try {
-    const raw = sessionStorageOrNull()?.getItem(COOP_LINK_STORAGE_KEY) ?? null;
+    const raw = getStored(COOP_LINK_STORAGE_KEY, sessionStorageOrNull());
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
@@ -151,17 +136,12 @@ export function readCoopLink(): string | null {
 }
 
 export function forgetCoopLink(): void {
-  try {
-    sessionStorageOrNull()?.removeItem(COOP_LINK_STORAGE_KEY);
-  } catch {
-    // Blocked storage held nothing to forget.
-  }
+  removeStored(COOP_LINK_STORAGE_KEY, sessionStorageOrNull());
 }
 
 /**
- * R2094000: the first room link of this site a message holds, built as a path, never markup.
- * Accepts this origin's `/play?room=…` (as `roomLinkOf` reads it) and `/together?coop=…`;
- * a link to any other origin, or a malformed one, draws no button.
+ * R2094000: the first room link of this site (`/play?room=…` or `/together?coop=…`) a message holds,
+ * built as a path, never markup.
  */
 export function findRoomLinkInText(text: string, origin: string): { path: string } | null {
   const candidates = text.match(/https?:\/\/[^\s"'<>]+|\/(?:play\?room=|together\?coop=)[^\s"'<>]*/g);

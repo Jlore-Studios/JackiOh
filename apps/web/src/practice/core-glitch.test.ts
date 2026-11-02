@@ -1,9 +1,7 @@
 // A Glitch in a practice game (issue #170): after a swap the human plays the AI's former seat and the
-// AI the human's (R677), and a voided game shows its result and leaves no last board (R679).
-//
-// No deck deals a Glitch on cue, so `reduce` is the real one with a hook: a test names the change a
-// Glitch would have made (`seatSwaps` up by one, or the voided result), and the hook makes it on the
-// state the next accepted action leaves. Everything else is the real core.
+// AI the human's (R677), and a voided game shows its result and leaves no last board (R679). No deck
+// deals a Glitch on cue, so a hook on the real `reduce` makes the change a test names (`seatSwaps` up by
+// one, or the voided result) on the state the next accepted action leaves.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,6 +12,7 @@ import type { ActionBody, PlayerId } from "@jackioh/shared";
 import { createPracticeCore } from "./core.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import type { PracticeDebug, PracticeRequest, PracticeRequestBody, PracticeResponse, PracticeSnapshot } from "./protocol.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 const hook = vi.hoisted(() => ({ next: null as ((state: GameState) => void) | null }));
 
@@ -46,11 +45,6 @@ function driver(saves?: PracticeSaveStore): Driver {
       return core.handle({ id, ...body } as PracticeRequest);
     },
   };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 function debugOf(d: Driver): PracticeDebug {
@@ -99,7 +93,6 @@ describe("R677 a Glitch swap in practice", () => {
     const swapped = snapshotOf(d.send({ type: "act", action: keepAll(before) }));
     const state = debugOf(d).state as GameState;
     expect(state.seatSwaps).toBe(1);
-    // The human's view, legal actions and the AI's turn to act all read the seats as they are now.
     expect(swapped.view.viewer).toBe(AI);
     expect(swapped.legal).toEqual(legalActions(state, AI));
     expect(swapped.aiToAct).toBe(aiToAct(state, HUMAN));
@@ -114,7 +107,6 @@ describe("R677 a Glitch swap in practice", () => {
     expect(last?.playerId).toBe(AI);
     expect(last?.nonce).toBe("h1");
 
-    // And the AI's next action goes as the human's starting seat.
     let next = after;
     for (let n = 0; n < 5 && !next.aiToAct && next.view.result === null; n += 1) {
       const endTurn = next.legal.find((candidate) => candidate.type === "endTurn");

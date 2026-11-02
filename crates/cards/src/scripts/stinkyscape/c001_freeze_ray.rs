@@ -51,10 +51,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #1 Freeze Ray — SPEC §8.10 row S 1, BUILD M12 row S 1: "a chosen Unit and the Units beside it in
-// its row and on its side are Frozen (R1174000); an enemy target and a friendly one alike; a
-// neighbour Immune to Spells is passed by; a Unit with no neighbour is Frozen alone; radiant every
-// enemy Unit is Frozen and no friendly one" (R1867000).
+// S #1 Freeze Ray — SPEC §8.10 row S 1, BUILD M12 row S 1 (R1174000, R1867000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -97,7 +94,6 @@ mod tests {
             assert!(frozen(&s, &right));
             // Lane 4 is two lanes away: §3.1's adjacency is N-1 and N+1 and nothing wider.
             assert!(!frozen(&s, &far));
-            // Never across the center line.
             assert!(!frozen(&s, &mine));
         }
 
@@ -159,9 +155,7 @@ mod tests {
             s.play(RAY, json!({ "targets": pick::instance(&target) }));
 
             assert!(frozen(&s, &target));
-            // Lane 1 is beside the lane-2 target: passed by, Immune to Spells.
             assert!(!frozen(&s, &immune));
-            // Lane 3 is beside it too: Frozen anyway, a Freeze being a status and not text.
             assert!(frozen(&s, &immutable));
         }
     }

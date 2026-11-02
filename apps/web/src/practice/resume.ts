@@ -5,6 +5,7 @@ import { DIFFICULTIES } from "@jackioh/engine/config";
 import { isLeanPick } from "@jackioh/shared";
 
 import type { PracticeDeckChoice, PracticeStartConfig } from "./protocol.ts";
+import { getStored, removeStored, setStored } from "../net/storage.ts";
 
 export const PRACTICE_RESUME_STORAGE_KEY = "jackioh.practice.game";
 
@@ -55,7 +56,6 @@ function isCustomCards(value: unknown): boolean {
   );
 }
 
-/** R765: persisted practice setup and its Save-and-leave state. */
 export type PracticeResume = {
   config: PracticeStartConfig;
   /** Save and leave; otherwise the player remained in the game (R668). */
@@ -64,7 +64,7 @@ export type PracticeResume = {
 
 export function readPracticeResumeState(): PracticeResume | null {
   try {
-    const raw = window.localStorage.getItem(PRACTICE_RESUME_STORAGE_KEY);
+    const raw = getStored(PRACTICE_RESUME_STORAGE_KEY);
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
@@ -100,17 +100,10 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
     ...(customCards === undefined || customCards.length === 0 ? {} : { customCards }),
   };
   const kept = options.saved === true ? { ...setup, saved: true } : setup;
-  try {
-    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(kept));
-  } catch {
-    // Blocked or full storage: a reload starts at the setup.
-  }
+  // Blocked or full storage: a reload starts at the setup.
+  setStored(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(kept));
 }
 
 export function clearPracticeResume(): void {
-  try {
-    window.localStorage.removeItem(PRACTICE_RESUME_STORAGE_KEY);
-  } catch {
-    // Blocked storage held nothing to clear.
-  }
+  removeStored(PRACTICE_RESUME_STORAGE_KEY);
 }

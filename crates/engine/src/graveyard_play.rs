@@ -2,25 +2,14 @@
 //! it, the plays `legal_actions` offers under them, the refusal §10.5 step 1 gives, and the Plague
 //! Token payment Classic #74 Corpse Plantation adds.
 //!
-//! A permission is a card on the field saying so — Classic #28 Second Wind ("You may play cards from
-//! your graveyard"; its Radiant face only those whose price, as it would be paid, is (1) or more),
-//! Classic #74 Corpse Plantation (Units, paid partly or wholly with the Plague Counters on it), and
-//! Classic #90 In Too Deep's reward L (an aura of the same permission while the card stands). Each is
-//! `Script.graveyard_play`, a pure read asked of the cards acting on the player's own side.
-//!
-//! Flashback (#783, R783012, R783013) is the one permission a card grants itself: a card with it in its
-//! owner's graveyard may be played from there, any type at any price, paid in mana. The play that only
-//! Flashback allows spends it (`spends_flashback`, `CardInstance.flashback_spent`), for good.
+//! A permission is a card on the field saying so (Classic #28 Second Wind, #74, #90 In Too Deep's
+//! reward L): `Script.graveyard_play`, a pure read asked of the cards acting on the player's own side.
+//! Flashback (#783, R783012, R783013) is the one a card grants itself, any type at any price, paid in
+//! mana; the play that only Flashback allows spends it for good (`spends_flashback`).
 //!
 //! Everything else is a play's: the card leaves the graveyard at §10.5 step 4 as a hand card leaves
-//! the hand (`play_steps::take_from_play_source`), its choices are checked and offered as a hand card's
-//! are (R81, R90), R65's player prices reach it (`mana::play_cost`), it counts as played and its Cry
-//! fires (R1: "played", wherever from). A permission only decides whether the play may be made and how
-//! it may be paid.
-//!
-//! Port of `packages/engine/src/graveyardPlay.ts`. `GraveyardPlayPermission` lives in `script.rs` (a
-//! `Script` hook returns it) and `PlagueSpend` in the wire (`wire::PlagueSpend`, the `play` action's
-//! `plague`); both are used from there, never defined again.
+//! the hand, its choices are a hand card's (R81, R90), R65's prices reach it, it counts as played and
+//! its Cry fires (R1). A permission only decides whether the play may be made and how it may be paid.
 
 use serde::{Deserialize, Serialize};
 
@@ -30,8 +19,7 @@ use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::state::{CardInstance, EngineError, GameState};
 use crate::wire::{CardType, CounterKind, GameEvent, KeywordKind, PlayerId, Zone};
 
-/// The Plague Counters a play from the graveyard spends: the play action's `plague` (part 1 put the
-/// type in the wire, where the action names it).
+/// The Plague Counters a play from the graveyard spends: the play action's `plague`.
 pub use crate::wire::PlagueSpend;
 
 /// A permission and the card on the field granting it.
@@ -49,15 +37,13 @@ pub struct PlayPayment {
     pub plague: Option<PlagueSpend>,
 }
 
-/// E11: every permission the player has now — from each card acting on their side of the field (the
-/// top of a pile, a Unit a carrier holds (R446, R1824000), a backrow card) whose running face grants one,
-/// in `zones::acting_on`'s order, units first. A Vanilla card grants nothing (`script_of`, R115); a card
-/// dormant under a Stack pile is not on the field for effects (§3.2, R13), and a face-down card's text
-/// sleeps (R1487000).
+/// E11: every permission the player has now, from each card acting on their side of the field (a
+/// pile's top, a carried Unit, R446, R1824000, a backrow card) whose running face grants one, in
+/// `zones::acting_on`'s order. A Vanilla grants nothing (R115); a card dormant under a Stack pile is not
+/// on the field for effects (§3.2, R13), and a face-down card's text sleeps (R1487000).
 pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<GraveyardGrant> {
     let mut out: Vec<GraveyardGrant> = Vec::new();
     for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
-        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
         if source.controller != player || crate::preview::lasting_text_off(state, source) {
             continue;
         }
@@ -117,11 +103,9 @@ fn admitting(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<Gr
     out
 }
 
-/// R783013: whether this play of the card from its player's graveyard, at this price and paid as the
-/// action says, is Flashback's — the card has it and no permission on the field covers the play as
-/// `why_graveyard_play_refused` reads it (its type, its `min_price`, and a mana payment only under a
-/// permission without `plague`) — so the play spends it. A play another permission allows spends no
-/// Flashback; a Plague payment is always its permission's, since Flashback is paid in mana.
+/// R783013: whether this play from the graveyard, at this price and paid as the action says, is
+/// Flashback's (the card has it and no field permission covers the play as `why_graveyard_play_refused`
+/// reads it), so it spends it. A Plague payment is always its permission's.
 pub fn spends_flashback(
     state: &GameState,
     player: PlayerId,
@@ -136,9 +120,8 @@ pub fn spends_flashback(
         })
 }
 
-/// R454, R65: whether a play may take this card from its player's graveyard now — the card lies there
-/// and a permission admits its type. Such a card is priced as a play wherever it is read (R65: the
-/// player's prices reach a card where a play takes it from), whatever price a permission then asks.
+/// R454, R65: whether a play may take this card from its player's graveyard now (it lies there and a
+/// permission admits its type). Such a card is priced as a play wherever it is read (R65).
 pub fn playable_from_graveyard(state: &GameState, card: &CardInstance) -> bool {
     let player = card.zone.player();
     in_own_graveyard(state, player, card) && !admitting(state, player, card).is_empty()
@@ -149,12 +132,10 @@ fn plague_on(card: &CardInstance) -> i32 {
     card.counters.plague.unwrap_or(0)
 }
 
-/// R454: every way a play of this graveyard card at this price may be paid under the permissions — `{}`
-/// in mana alone when a permission without `plague` admits the price and the mana covers it; and, per
-/// Plague permission that admits it, each number of tokens from MIN_PLAGUE_PAYMENT up to what the card
-/// holds and the price allows, with the rest in mana. None when no permission admits the card, or the
-/// card is not in its player's own graveyard. `play_choices::graveyard_play_actions_for` crosses these
-/// with the play's choices.
+/// R454: every way a play of this graveyard card at this price may be paid: `{}` in mana alone when a
+/// permission without `plague` admits the price and the mana covers it, and, per Plague permission that
+/// admits it, each number of tokens from MIN_PLAGUE_PAYMENT up to what the card holds and the price
+/// allows, the rest in mana. `play_choices::graveyard_play_actions_for` crosses these with its choices.
 pub fn graveyard_payments_for(
     state: &GameState,
     player: PlayerId,
@@ -179,8 +160,7 @@ pub fn graveyard_payments_for(
         if grant.permission.plague != Some(true) {
             continue;
         }
-        // Math.floor on non-negative integers is integer division (SURFACE §4.4.4); a negative price
-        // admits no token, as the loop below would find.
+        // Integer division (SURFACE §4.4.4); a negative price admits no token.
         let most = plague_on(&grant.source).min(price.div_euclid(PLAGUE_TOKEN_MANA));
         let mut tokens = MIN_PLAGUE_PAYMENT;
         while tokens <= most {
@@ -198,10 +178,9 @@ pub fn graveyard_payments_for(
     out
 }
 
-/// E11, R454: why a play of this graveyard card at this price, paid as the action says, is refused —
-/// the same permissions and payments `graveyard_play_actions_for` offers, asked from the other side
-/// (§10.2), or `Ok` when a permission admits it. Mana is part of the answer, since a Plague payment
-/// changes what the mana has to cover.
+/// E11, R454: why a play of this graveyard card at this price, paid as the action says, is refused
+/// (`graveyard_play_actions_for` asked from the other side, §10.2), or `Ok`. Mana is part of the
+/// answer, since a Plague payment changes what the mana has to cover.
 pub fn why_graveyard_play_refused(
     state: &GameState,
     player: PlayerId,
@@ -251,7 +230,6 @@ pub fn why_graveyard_play_refused(
     else {
         return Err(EngineError::new("those Plague Counters cannot pay for that card"));
     };
-    // TS also refused a token count that is not a whole number; an `i32` always is.
     if plague.tokens < MIN_PLAGUE_PAYMENT {
         return Err(EngineError::new(format!(
             "spend at least {MIN_PLAGUE_PAYMENT} Plague Counter"
@@ -269,11 +247,10 @@ pub fn why_graveyard_play_refused(
     Ok(())
 }
 
-/// R1571000: the refusal for the payment the player would try at this price. That payment is mana
-/// alone where a permission without `plague` admits the price, or where none admits it (which
-/// names the floor). Otherwise it is the most Plague Counters a Plague permission admitting the
-/// price could spend, never fewer than MIN_PLAGUE_PAYMENT, from the permission that could spend
-/// the most (the first in lane order among equals).
+/// R1571000: the refusal for the payment the player would try at this price: mana alone where a
+/// permission without `plague` admits the price, or where none does (which names the floor); else the
+/// most Plague Counters a Plague permission could spend, at least MIN_PLAGUE_PAYMENT, from the one that
+/// could spend the most (the first in lane order among equals).
 pub fn why_graveyard_price_unpaid(
     state: &GameState,
     player: PlayerId,
@@ -310,9 +287,6 @@ pub fn mana_due(price: i32, plague: Option<&PlagueSpend>) -> i32 {
 
 /// R454, §10.5 step 2: take the Plague Counters a play spends off the card that holds them, reported as
 /// any change of the count is (`counterChanged`, no `placed`: a removal, E19).
-///
-/// TS wrote through the live card it was handed; here the card is found in the state by id and its
-/// counters changed there.
 pub fn spend_plague_tokens(sink: &mut EngineSink, card: &CardInstance, tokens: i32) {
     let current =
         crate::state::find_instance(sink.state, &card.id).map_or_else(|| plague_on(card), plague_on);

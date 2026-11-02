@@ -3,14 +3,11 @@
 //! plays into the zone, a Stack play included, and never a summon or a move; it outlasts the card and
 //! stays until an Unlock.
 //!
-//! "Arrives" is every way a Unit gets onto the field — a play or a cast (`play_steps::place_card`), a
-//! summon of any kind, a Recruit's included (`effects/summon`), a Reborn body (`state_check`), Joro's
-//! summon (`replacements`), a Flicker (`effects/flicker`) and a Cloaked Unit's reveal (`alt_play`) —
-//! each of which calls `lock_on_arrival` right after the event that put it there, so the zone is
-//! Locked before its Cry. A control change, a board swap, a rotation, an animation, a Transform and a
-//! restored board move a card that is already on the field and are no arrival. Crater on a Spell does
-//! nothing; a Field Spell with it Locks its backrow zone as it enters, through the same calls
-//! (R1850006).
+//! Every arrival calls `lock_on_arrival` right after its event, so the zone is Locked before its Cry:
+//! a play or cast (`play_steps::place_card`), any summon (`effects/summon`), a Reborn body
+//! (`state_check`), Joro's summon (`replacements`), a Flicker (`effects/flicker`), a Cloaked reveal
+//! (`alt_play`). A control change, swap, rotation, animation, Transform or restored board is no
+//! arrival. Crater on a Spell does nothing; a Field Spell with it Locks its backrow zone (R1850006).
 
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance};
@@ -71,11 +68,10 @@ fn field_spell_in_backrow(state: &GameState, card: &CardInstance) -> bool {
         && crate::faces::card_type_of(state, card) == CardType::FieldSpell
 }
 
-/// R783011: a Trap or Field Trap with Crater Locks the backrow zone it stood in as it is revealed —
-/// as it fires face-down, `trap` being the card as the firing matched it and `at` its zone then
-/// (`traps::fire_trap`, and `replacements` for one that fires as it replaces, §5.1). A Field Trap
-/// firing again is revealed already and Locks nothing more, and a card set face-down by its Cloaked is
-/// not a Trap by its face.
+/// R783011: a Trap or Field Trap with Crater Locks the backrow zone it stood in as it is revealed, as
+/// it fires face-down: `trap` as the firing matched it, `at` its zone then (`traps::fire_trap`, and
+/// `replacements` for one firing as it replaces, §5.1). A Field Trap firing again Locks nothing more,
+/// and a card set face-down by its Cloaked is not a Trap by its face.
 pub fn lock_on_firing(sink: &mut EngineSink<'_>, trap: &CardInstance, at: Option<ZoneSlot>) {
     let Some(at) = at else {
         return;

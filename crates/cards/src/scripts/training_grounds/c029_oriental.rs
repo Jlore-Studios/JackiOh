@@ -3,11 +3,11 @@
 //!
 //! Base:    "Cry: Destroy all permanents in the leftmost lane."
 //! Radiant: "Cry: Destroy all enemy permanents in the leftmost lane."
-//! Engine: C+ #24 Crushing Walls' sweep on one lane: the top card of each zone of lane 1 (§3: a
-//! lane is a column, numbered left to right from each owner's seat, so the leftmost is lane 1,
+//! Engine: C+ #24 Crushing Walls' sweep on one lane, each zone's top card (§3: lanes run left to right
+//! from each owner's seat, so the leftmost is lane 1,
 //! never mirrored), both sides and both rows (Radiant: the enemy's alone), passing a Unit standing on an
-//! Ivory Tower as its play resolves (R446, R653). The base face destroys this Unit too when it stands
-//! there, Hearthstone's "destroy all minions" (R2196003). TG #28 Occidental is its mirror on the last lane.
+//! Ivory Tower as its play resolves (R446, R653). The base face destroys itself there too, as
+//! Hearthstone's "destroy all minions" (R2196003). TG #28 Occidental mirrors it on the last lane.
 
 use jackioh_engine::prelude::*;
 
@@ -45,11 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #29 Oriental — SPEC §8.11 row 29, BUILD M13 row TG 29: "played in lanes 2–5: both sides' lane-1 Units
-// and backrow cards are destroyed, a face-down one included; lanes 2–5 untouched; an Indestructible one
-// stays; a card beneath a Stack in lane 1 resumes; played into lane 1, it destroys itself as well; a
-// destroyed card's Death fires. radiant 10/18; only the enemy's lane-1 Unit and backrow card are
-// destroyed, yours stay, itself included".
+// TG #29 Oriental — SPEC §8.11 row 29, BUILD M13 row TG 29.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -70,8 +66,7 @@ mod tests {
     const PRIME: &str = "classicplus-046-1";
     const FILLER: &str = "core-005";
 
-    /// Each side holds a Mr. Vanilla in lanes 1 and 4 and a backrow card in lanes 1 and 4 (p1's lane-1
-    /// one a face-down Trap).
+    /// Both sides hold Mr. Vanillas and backrow cards in lanes 1 and 4, p1's lane-1 one a face-down Trap.
     fn swept(radiant: bool, zone: i32) -> Scenario {
         let mut s = scenario(json!({
             "p1": {

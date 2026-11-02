@@ -1,17 +1,8 @@
-// `/shop`: the one place for spending and opening (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000). Its
-// four panels left the account screen, which links here and keeps account things only: the Jlore
-// shop and its wallet, the card packs the account holds and the opening scene, the cosmetic packs with
-// the Chase Shard bar, and the token picker. Their odds and the pity are `/purchases`', linked at the
-// foot. Each panel holds its own reads, so when one changes the account the others read it again
-// (`readAgain`): a pack bought in the shop can be opened at once, and an opening's bars, cards and
-// cosmetics show in the picker.
-//
-// The client decides nothing (CLAUDE.md rule 7): every price, odds, pity counter and refusal is the
-// server's, and a refused read says why in its panel. Gated like `/collection`: an anonymous visitor
-// goes to `/login` (main.tsx).
-//
-// The page never scrolls: the board shrinks and the body scrolls inside it, as `/collection`'s does
-// (R1579000). The opening scene is the exception to the frame: it plays full screen, over everything.
+// `/shop`: the one place for spending and opening (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000). Each
+// panel holds its own reads, so when one changes the account the others read it again (`readAgain`). The
+// client decides nothing (CLAUDE.md rule 7): a refused read says why in its panel. Gated like
+// `/collection` (main.tsx). The page never scrolls: the body scrolls inside the board, as `/collection`'s
+// does (R1579000); the opening scene plays full screen, over everything.
 
 import { useState, type ReactElement } from "react";
 
@@ -41,9 +32,8 @@ type ShopPanel = "opening" | "shop" | "tokens" | "cosmetics";
 type PanelReads = Record<ShopPanel, number>;
 
 /**
- * The reads after `by` changed the account (a pack bought or opened, a token redeemed, a chase
- * bought): every other panel reads again, since a buy fills the opening's packs and an opening
- * fills the bars, the collection and the cosmetics. `by` already holds its answer.
+ * The reads after `by` changed the account: every other panel reads again, since a buy fills the
+ * opening's packs and an opening fills the bars, the collection and the cosmetics.
  */
 function readAgain(reads: PanelReads, by: ShopPanel): PanelReads {
   return {

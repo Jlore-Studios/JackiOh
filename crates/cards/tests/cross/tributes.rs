@@ -1,7 +1,6 @@
 //! A Tribute's deaths and the targets they take with them (SPEC §6.3 Tribute, §10.5 steps 1, 2 and 5,
 //! R68, R90, R101, R174).
 //! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
-//!
 //!  - R68, R101: the tributed set dies together, its Death hooks in R68's order, so the order a play
 //!    lists it in means nothing: `legalActions` offers each set once, `reduce` accepts any listing.
 //!  - R174: a target the play's own Tribute sacrificed has left the field, so the effect aimed at it
@@ -27,14 +26,12 @@ const SHEEP: &str = "core-t-sheep"; // "Worth 2 Tributes while on the field."
 
 use super::{craft_fused, scenario};
 
-/// A tributed set as one string, whatever order it is listed in.
 fn sorted_join(ids: &[String]) -> String {
     let mut sorted = ids.to_vec();
     sorted.sort();
     sorted.join(",")
 }
 
-/// Whether `legalActions` offers a play of `card` whose `tributes` are the set `pair` names.
 fn offers_tribute_set(state: &GameState, card: &CardInstance, pair: &str) -> bool {
     legal_actions(state, PlayerId::P1)
         .iter()
@@ -48,7 +45,6 @@ fn offers_tribute_set(state: &GameState, card: &CardInstance, pair: &str) -> boo
         })
 }
 
-/// The ids of the three units `tribute_game` lists for its Tribute.
 struct TributeIds {
     saintess: String,
     defender: String,
@@ -58,10 +54,6 @@ struct TributeIds {
 mod r68_a_tribute_s_deaths_resolve_in_lane_order_whatever_order_the_play_lists_them_in {
     use super::*;
 
-    /// Radiant Saintess in lane 1 and a Radiant Right-house defender in lane 2 pay Lava Golem's Tribute
-    /// with a Gary. The defender's Death summons a base Right-house defender; the Saintess's Death makes
-    /// her controller's other Units Radiant — so whether that summoned defender is Radiant says which
-    /// Death ran first.
     fn tribute_game(order: impl Fn(&TributeIds) -> Vec<String>) -> Scenario {
         let mut g = scenario(json!({
             "p1": {
@@ -175,7 +167,6 @@ mod s6_3_vanilla_a_vanilla_sheep_token_has_no_text_so_it_is_worth_1_tribute {
         let gary = must(s.unit(PlayerId::P1, 2), "Gary");
         assert_eq!(tribute_value_of(s.state(), &sheep), 2);
 
-        // Radiant Prejudiced Postdoc: "any unit" → a Vanilla copy of the Sheep in lane 3.
         s.play(
             POSTDOC,
             json!({ "zone": 4, "targets": [{ "pick": "instance", "instanceId": sheep.id }] }),
@@ -306,7 +297,6 @@ fn summoned_defs(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// The events of one type.
 fn of_type(events: &[GameEvent], type_: GameEventType) -> Vec<GameEvent> {
     events
         .iter()
@@ -344,7 +334,6 @@ fn unit_carrying(s: &mut Scenario, player: PlayerId, unit_lane: i32, backrow_lan
         s.backrow(player, backrow_lane),
         &format!("{player}'s backrow card in lane {backrow_lane}"),
     );
-    // The live state, a fresh event list and an rng whose cursor is never written back.
     let state = s.state_mut();
     let mut events: Vec<GameEvent> = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -433,7 +422,6 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
             2
         );
         // R119: those copies arrived while this play resolved, so they start counting from the next play:
-        // nothing answers the Golem's resolution, and the Golem lands as itself.
         assert_eq!(
             of_type(s.last_events(), GameEventType::Transformed),
             Vec::<GameEvent>::new()
@@ -518,8 +506,6 @@ mod r119_r210_what_a_tribute_s_death_puts_on_the_field_does_not_answer_the_play_
 
         s.play(THE_ROCK, json!({ "zone": 4, "tributes": [cube.id] }));
 
-        // Two Units carrying Quickstriker's text arrived at step 2; The Rock is the third card played this
-        // turn (X = 2).
         assert_eq!(
             summoned_defs(s.last_events())
                 .iter()

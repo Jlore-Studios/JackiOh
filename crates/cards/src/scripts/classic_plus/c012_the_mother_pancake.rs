@@ -27,10 +27,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12 The Mother Pancake (SPEC §8.7 row 12): at controller's end of turn adds 1 random
-// card of eight Pancake tokens C+ #12.1–#12.8 (repeats allowed, R60); not at opponent's
-// end; a full hand burns it (R4); opponent sees a card added under sentinel (R97); radiant
-// adds 2.
+// C+ #12 The Mother Pancake — SPEC §8.7 row 12, R4, R60, R97.
 
 #[cfg(test)]
 mod tests {
@@ -81,7 +78,6 @@ mod tests {
     mod base {
         use super::*;
 
-        /// prints Taunt
         #[test]
         fn prints_taunt() {
             let s = scenario(json!({ "p1": { "field": [MOTHER] } }));
@@ -96,7 +92,6 @@ mod tests {
             assert!(pancake_tokens().contains(&added[0]));
         }
 
-        /// R60 the pool is exactly the eight Pancake tokens, repeats allowed, never Mother Pancake or Mommy Barker
         #[test]
         fn r60_the_pool_is_exactly_the_eight_pancake_tokens_repeats_allowed_never_mother_pancake_or_mommy_barker() {
             let mut seen: IndexSet<String> = IndexSet::new();
@@ -125,7 +120,6 @@ mod tests {
             assert!(s.hand(P1).iter().all(|card| !tokens.contains(&card.def_id)));
         }
 
-        /// R4 a full hand burns it
         #[test]
         fn r4_a_full_hand_burns_it() {
             let (s, added) = at_end_of_turn(false, None, Some(vec![FILLER; HAND_CAP as usize]));
@@ -138,7 +132,6 @@ mod tests {
             );
         }
 
-        /// R97 the opponent sees a card added under the sentinel
         #[test]
         fn r97_the_opponent_sees_a_card_added_under_the_sentinel() {
             let (s, _added) = at_end_of_turn(false, None, None);

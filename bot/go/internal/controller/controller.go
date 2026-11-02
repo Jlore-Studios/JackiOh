@@ -72,9 +72,6 @@ var (
 	FindWait  = 3.0
 )
 
-// Title: the night runs' titles name the plan they carry (bot-night.yml's `run-name`).
-var Title = "bot-night {ref} on {runs_on}"
-
 // Sleep is controller's time.sleep; a variable so the tests can replace it.
 var Sleep = func(seconds float64) { time.Sleep(time.Duration(seconds * float64(time.Second))) }
 
@@ -86,7 +83,8 @@ func valueError(format string, args ...any) *ValueError {
 	return &ValueError{Type: "ValueError", Msg: fmt.Sprintf(format, args...)}
 }
 
-// TitlePrefix is controller.title_prefix.
+// TitlePrefix is controller.title_prefix: how a night run's title starts, which names the plan it
+// carries (bot-night.yml's `run-name`, `bot-night <ref> on <runs_on>`).
 func TitlePrefix(ref string) string {
 	return fmt.Sprintf("bot-night %s ", ref)
 }

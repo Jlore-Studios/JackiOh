@@ -1,25 +1,8 @@
-//! Port of `packages/engine/test/echo.test.ts`.
-//!
 //! Echo and Twinspell (SPEC §6.3's Echo row, §10.5 step 6, §2.2's cleanup line, R30, R70).
 //!
-//! §6.3 Echo: "Echo X | Recast this card X more times | Play resolves, then the same instance
-//! re-resolves X times with fresh mode/target prompts; Twinspell grants Echo +1 to the next spell.
 //! The repeats outstanding live in `state.echoQueue` and resolve one at a time in the resolution
-//! loop, so a prompt inside one repeat pauses the rest until it is answered (§10.5 step 6)".
-//!
-//! R30 Twinspell lifetime: "Stays until a spell is played, then goes to the GY" (#79). §2.2:
-//! "Twinspell's pending Echo is not turn-scoped and survives cleanup". §8 #79: "The next Spell you
-//! play gains Echo +1", radiant "Echo +2", "Consumed to the GY when it applies (ruling)". R70: "a
-//! cast Spell does use Twinspell's Echo".
-//!
-//! DISCREPANCY (the whole file): SPEC §10.1 declares `echoQueue: EchoRepeat[]` on `GameState` and
-//! §6.3 puts the outstanding repeats there, but `grep -rn "echoQueue" packages/engine/src` returns
-//! nothing — the field does not exist, and no engine module repeats a played card. The only echo
-//! machinery in the source is `state.ts`'s player modifier `{ kind: "echoNextSpell"; amount: number;
-//! sourceId?: string }`, which nothing reads: `grep -rn "echoNextSpell" packages/engine/src` finds
-//! only that type declaration. Per CLAUDE.md the tests below assert what SPEC says and each
-//! affected one carries its own DISCREPANCY note; `turn.test.ts`'s R30 test and
-//! `replay-scripted.test.ts`'s `state.echoQueue.length` are the surviving witnesses to the same gap.
+//! loop, so a prompt inside one repeat pauses the rest until it is answered (§10.5 step 6).
+//! R30 Twinspell lifetime: "Stays until a spell is played, then goes to the GY" (#79, §8).
 //!
 //! Fixtures are prefixed `ec-` and indexed above 1500 so they cannot collide (BUILD §0).
 
@@ -32,12 +15,8 @@ use crate::rules::fixtures::harness::{
     Bench, act, act_result, both, events_of_type, in_hand, new_game, put, slot,
 };
 
-// ---------------------------------------------------------------------------
 // Fixtures.
-// ---------------------------------------------------------------------------
 
-/// TS `def(name, type, extra)`, its module `nextIndex` (from 1500) written out per definition, and
-/// `extra` merged over the literal as TS's spread does.
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let mut literal = json!({
         "id": format!("ec-{name}"),
@@ -129,12 +108,10 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// R802's fixture hook: X is the caster's max mana.
 fn max_mana_echo() -> Option<EchoXHook> {
     Some(read_hook(|args| max_mana_of(args.state, args.self_.controller)))
 }
 
-/// Raises the running card's controller's max mana by 2 (a test-only write).
 fn grow_max_mana() -> Effect {
     Effect::new("ec:growMaxMana", |ctx| {
         let controller = ctx.controller;
@@ -254,9 +231,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 fn four_mana() -> ManaState {
     ManaState {
@@ -309,17 +284,11 @@ fn echo_mods(state: &GameState, player: PlayerId) -> Vec<PlayerModifier> {
         .collect()
 }
 
-/// §10.1's `echoQueue`.
-///
-/// DISCREPANCY: `state.ts`'s `GameState` declares no `echoQueue` and `createGame` initialises none,
-/// although SPEC §10.1 lists it beside `triggerQueue` and §6.3 puts the outstanding repeats there;
-/// `src/playSteps.ts` works around the same gap with its own lazily-created `echoQueueOf`. The test
-/// below asserts the field is on a fresh state, which is where the gap shows.
 fn echo_queue(state: &GameState) -> Vec<EchoItem> {
     state.echo_queue.clone()
 }
 
-/// An Echo the engine owes, granted the way #79 grants one, so each test starts from one line.
+/// An Echo the engine owes, granted the way #79 grants one.
 fn pending_echo(state: &mut GameState, player: PlayerId, amount: i32) {
     let mut bench = Bench::new(state);
     add_modifier(
@@ -333,7 +302,6 @@ fn pending_echo(state: &mut GameState, player: PlayerId, amount: i32) {
     );
 }
 
-/// `eventsOfType(events, type).map((event) => event[key])`, over the events' JSON.
 fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -344,8 +312,6 @@ fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
 fn in_pile(pile: &[CardInstance], id: &str) -> bool {
     pile.iter().any(|held| held.id == id)
 }
-
-// ---------------------------------------------------------------------------
 
 mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
     use super::*;
@@ -380,8 +346,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         state.players.p1.mana = four_mana();
 
         // R30: playing a Spell is what ends it, and the Twinspell goes to the graveyard as it applies.
-        // DISCREPANCY: nothing in packages/engine/src reads `echoNextSpell`, so the modifier is never
-        // consumed and #79 never leaves the backrow. SPEC R30 and §8 #79 both say it must.
         let spell = hand_card(&mut state, &pinger().id, PlayerId::P1);
         state = act(
             &state,
@@ -394,9 +358,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn s6_3_re_resolves_a_played_spell_once_for_echo_1_and_twice_for_twinspell_radiants_echo_2() {
-        // DISCREPANCY: no engine module repeats a played card. SPEC §6.3 ("Recast this card X more
-        // times … the same instance re-resolves X times") and §10.5 step 6 ("Echo: repeat step 5 with
-        // fresh prompts N times") both require it, so each play below lands only its first resolution.
         let mut once = playing("echo-1");
         pending_echo(&mut once, PlayerId::P1, 1);
         let card = hand_card(&mut once, &pinger().id, PlayerId::P1);
@@ -405,7 +366,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
         assert_eq!(first.error, None);
-        // Play resolves, then the same instance re-resolves 1 more time: 2 damage twice.
         assert_eq!(first.state.players.p2.hero.health, HERO_HEALTH - 4);
         // One play, two resolutions: the repeat is not a second play, so `played` rises once (§6.3).
         assert_eq!(first.state.counters.played, once.counters.played + 1);
@@ -423,11 +383,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn s10_1_declares_echo_queue_on_every_game_state_beside_trigger_queue_and_delayed() {
-        // DISCREPANCY: SPEC §10.1's state model lists `echoQueue: EchoRepeat[]` on `GameState`, so
-        // every state carries one from `createGame` onward, the way `triggerQueue` and `delayed` do.
-        // `packages/engine/src/state.ts` declares no such field and `createGame` initialises none;
-        // `src/playSteps.ts` works around it with a lazily-created `echoQueueOf`, and
-        // `replay-scripted.test.ts` reads `state.echoQueue.length` expecting the field to be there.
         let state = playing("echo-queue-field");
         let json = serde_json::to_value(&state).expect("a state serializes");
         assert!(json.get("echoQueue").is_some());
@@ -461,9 +416,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn r81_s10_5_step_6_asks_fresh_prompts_inside_each_echo_repeat_and_one_pauses_the_repeats_behind_it() {
-        // §6.3: "the same instance re-resolves X times with fresh mode/target prompts … a prompt inside
-        // one repeat pauses the rest until it is answered". With Echo 2 there are three resolutions and
-        // three Discovers, each its own prompt, and the repeat still owed waits in the queue meanwhile.
         let mut state = playing("echo-prompt");
         pending_echo(&mut state, PlayerId::P1, 2);
         let card = hand_card(&mut state, &ask_spell().id, PlayerId::P1);
@@ -473,7 +425,7 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         );
         assert_eq!(played.error, None);
 
-        // Answer the open Discover with its first option, and say what opened next.
+        // Answer the open Discover with its first option.
         let answer = |from: &GameState| -> GameState {
             let pending = from.pending.as_ref();
             assert_eq!(pending.map(|open| open.kind), Some(PromptKind::Discover));
@@ -490,7 +442,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
             )
         };
 
-        // Resolution 1's prompt is open, and both repeats are still owed behind it.
         let first_id = played.state.pending.as_ref().map(|open| open.id.clone());
         assert_eq!(
             played.state.pending.as_ref().map(|open| open.kind),
@@ -506,7 +457,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_ne!(after_first.pending.as_ref().map(|open| open.id.clone()), first_id);
         assert_eq!(echo_queue(&after_first).len(), 1);
 
-        // Repeat 2 asks the last one, and once it is answered nothing is owed and nothing is pending.
         let after_second = answer(&after_first);
         assert_eq!(
             after_second.pending.as_ref().map(|open| open.kind),
@@ -520,9 +470,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
 
     #[test]
     fn r70_gives_a_cast_spell_twinspells_echo_even_though_the_cast_itself_pays_nothing() {
-        // DISCREPANCY: `castCard` in packages/engine/src/resolve.ts runs the card's hook exactly once
-        // and never looks at `echoNextSpell`. R70: "A cast never uses a cost discount, since it pays
-        // nothing, but a cast Spell does use Twinspell's Echo".
         let mut state = playing("r70-cast-echo");
         pending_echo(&mut state, PlayerId::P1, 1);
         let card = hand_card(&mut state, &pinger().id, PlayerId::P1);
@@ -531,7 +478,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         cast_card(&mut bench.sink(&mut state), &card, Default::default());
         settle(&mut bench.sink(&mut state), Default::default());
 
-        // Free, counted as a play, and repeated once: 2 damage twice.
         assert_eq!(
             pluck(&bench.events, GameEventType::CardPlayed, "costPaid"),
             vec![json!(0)]
@@ -601,7 +547,6 @@ mod r30_r70_echo_and_twinspell_s6_3_s10_5_step_6 {
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
         settle(&mut bench.sink(&mut state), Default::default());
 
-        // Two resolutions, one play, and the card is on the field with nothing left owed.
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 4);
         assert_eq!(events_of_type(&bench.events, GameEventType::CardPlayed).len(), 1);
         assert_eq!(
@@ -684,7 +629,6 @@ mod r802_computed_echo_x {
         // X = 3: three repeats, four resolutions.
         let (before, three) = play_at("r802-three", &echo_x().id, 3);
         assert_eq!(three.players.p2.hero.health, HERO_HEALTH - 8);
-        // One play however many resolutions.
         assert_eq!(three.counters.played, before.counters.played + 1);
         assert_eq!(echo_queue(&three), Vec::<EchoItem>::new());
     }

@@ -1,6 +1,5 @@
-// The art slice's public surface (docs/polish/6-cards.md, Surface A). Code inside
-// `apps/web/src/cards/` imports the file it needs by path; code outside `cards/` goes through
-// `cards/index.ts`, which re-exports the pieces it needs from here.
+// The art slice's public surface (docs/polish/6-cards.md, Surface A). Code inside `cards/` imports
+// by path; code outside goes through `cards/index.ts`, which re-exports from here.
 
 export type { ArtThemeId, Composition } from "./themes.ts";
 export { compositionFor, themeFor } from "./themes.ts";

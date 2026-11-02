@@ -3,19 +3,17 @@
 //!            mana; Exile, deal {extraDamage} more damage. Ties go to the first listed." — 2, 1, 2, 4
 //!   Radiant: "Deal {damage} damage. Your two largest piles add: …" — 4, 1, 2, 4
 //!
-//! Targeted (§8's Conventions): any unit or hero, either side, chosen with the play (R81). The piles
-//! are your own, counted as the Spell resolves (it is in none of them, §10.5) and ranked by size, a
-//! tie going to the first listed (Deck, Graveyard, Exile), so three empty piles pick the Deck, whose
-//! draw is a fatigue (§2.4). Exile's extra damage joins the one hit; then the draw and the temporary
-//! mana (§2.3). R280: the preview lists the counting piles in rank order, by name and size (public,
-//! §10.8). Numbers read through `param` (R386).
+//! Targeted (§8's Conventions), chosen with the play (R81). The piles are your own, counted as the
+//! Spell resolves (it is in none of them, §10.5); three empty piles tie and pick the Deck, whose draw is
+//! a fatigue (§2.4). Exile's extra damage joins the one hit; then the draw and the temporary mana (§2.3).
+//! R280: the preview lists the counting piles in rank order, by name and size (public, §10.8). Numbers
+//! read through `param` (R386).
 
 use jackioh_engine::effects::{damage, draw, gain_mana};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-019";
 
-/// The three piles' names in the text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PileName {
     Deck,
@@ -61,12 +59,10 @@ struct RankedPile {
     size: i32,
 }
 
-/// §8 Conventions: any unit or hero, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// The `count` largest of `player`'s piles, largest first, a tie going to the pile listed first.
 fn counting_piles(state: &GameState, player: PlayerId, count: usize) -> Vec<RankedPile> {
     let mut sized: Vec<(PileName, i32, usize)> = PILES
         .iter()
@@ -141,8 +137,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BREATH: &str = "classic-019";
-    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10 since patch
-    // v0.3.10): a big body no Immutable keeps a Spell off (R781001).
+    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10): a big
+    // body no Immutable keeps a Spell off (R781001).
     const BIG: &str = "classicplus-026";
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
@@ -158,7 +154,6 @@ mod tests {
         Radiant,
     }
 
-    /// The side's library, graveyard and exile, as setup JSON.
     fn piles(deck: usize, graveyard: usize, exile: usize) -> (Value, Value, Value) {
         (json!(vec![X; deck]), json!(vec![FILLER; graveyard]), json!(vec![FILLER; exile]))
     }

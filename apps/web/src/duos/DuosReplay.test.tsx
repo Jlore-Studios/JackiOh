@@ -1,7 +1,6 @@
-// #965, SPEC §13.9, B41: a finished co-op game's replay. The screen reads `getDuosReplay` once, steps
-// the seat's `DuosView`s with the replay player's controls (a round standing for a turn), draws each
-// on `DuosBoard`'s replay mode, and says why when the server refuses, as a 1v1 replay does (R768).
-// The views are fixtures: the screen computes nothing from them (CLAUDE.md rule 7).
+// #965, SPEC §13.9, B41: a finished co-op game's replay, read once, stepped with the replay player's
+// controls (a round standing for a turn) and refused in a 1v1 replay's words (R768). The views are
+// fixtures: the screen computes nothing from them (CLAUDE.md rule 7).
 
 import { CATALOG } from "@jackioh/cards";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -17,9 +16,8 @@ import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { REPLAY_FAILURE_TEXT } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { baseView } from "../test/fixtures.ts";
+import { duosView } from "../test/fixtures.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
-import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { duosReplayJson } from "./download.ts";
 import DuosReplay, { nextRound, openDuosReplay, previousRound, type DuosReplaySteps } from "./DuosReplay.tsx";
@@ -38,36 +36,7 @@ const ROUNDS = [0, 1, 1, 1, 2, 2, 3];
 const LAST = ROUNDS.length - 1;
 const CONCEDED: DuosView["result"] = { outcome: "win", winner: "b", reason: "concede" };
 
-function teamView(team: "a" | "b"): DuosTeamView {
-  return {
-    team,
-    pool: 20,
-    poolCap: 20,
-    sides: [
-      { own: 10, spent: false },
-      { own: 10, spent: false },
-    ],
-    ended: [false, false],
-    passesLeft: [0, 0],
-    passCost: 1,
-  };
-}
-
-function step(round: number, result: DuosView["result"] = null): DuosView {
-  return {
-    seat: "a1",
-    own: baseView(),
-    teammate: baseView(),
-    team: teamView("a"),
-    enemy: teamView("b"),
-    round,
-    roundSeats: ["a1", "a2"],
-    concedeOfferedBy: null,
-    result,
-  };
-}
-
-const STEPS: DuosView[] = ROUNDS.map((round, index) => step(round, index === LAST ? CONCEDED : null));
+const STEPS: DuosView[] = ROUNDS.map((round, index) => duosView(round, index === LAST ? CONCEDED : null));
 
 function serve(steps: readonly DuosView[] = STEPS): void {
   vi.mocked(getDuosReplay).mockResolvedValue({ seat: "a1", steps: [...steps] });
@@ -124,7 +93,6 @@ async function jump(index: number): Promise<void> {
   await flush();
 }
 
-/** The step on the board, as the screen says it. */
 function shownStep(): number {
   return Number(screen.getByTestId(duosTestid.replay).getAttribute("data-step"));
 }
@@ -249,7 +217,6 @@ describe("the co-op replay screen", () => {
     expect(screen.getByTestId(duosTestid.board)).not.toBe(mounted);
     expect(screen.getByTestId(replayTestid.scrubber), "the controls outlive the board").toBe(scrubber);
 
-    // A canceled pointer leaves the board where it is.
     fireEvent.pointerDown(scrubber);
     fireEvent.change(scrubber, { target: { value: "2" } });
     fireEvent.pointerCancel(scrubber);
@@ -311,8 +278,7 @@ describe("the co-op replay screen", () => {
     expect(document.activeElement).toBe(forward);
     await press(replayTestid.backStep);
     expect(shownStep()).toBe(0);
-    // The toolbar sits outside the remounted board, so the button is the same element: the point
-    // is only that focus is on the pressed control after the move.
+    // The toolbar sits outside the remounted board: the point is that focus stays on the pressed control.
     expect(forward).toBe(screen.getByTestId(replayTestid.backStep));
     expect(document.activeElement).toBe(screen.getByTestId(replayTestid.backStep));
   });
@@ -331,13 +297,11 @@ describe("the co-op replay screen", () => {
     await advance(1);
     expect(shownStep()).toBe(1);
 
-    // A move of the viewer's own stops it.
     await press(replayTestid.forwardStep);
     expect(play()).toHaveAttribute("aria-pressed", "false");
     await advance(4 * REPLAY_PLAY_GAP_MS);
     expect(shownStep()).toBe(2);
 
-    // Playing runs out at the last step and stops there.
     await jump(LAST - 1);
     await press(replayTestid.play);
     await advance(REPLAY_PLAY_GAP_MS);
@@ -508,7 +472,6 @@ describe("a round standing for a turn", () => {
 });
 
 describe("R1242000 Download JSON", () => {
-  /** The files handed to the browser's downloads, by the name each was saved under. */
   let saved: File[];
 
   beforeEach(() => {

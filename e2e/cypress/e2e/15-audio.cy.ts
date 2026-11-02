@@ -1,6 +1,5 @@
 // B38 and B39 audio on a Chrome hotseat board (docs/polish/2-sound.md).
 // Assert voice requests, not playback: headless audio outputs differ, but accepted cues are stable.
-// BUILD M8: seed the game, avoid fixed waits, and use `ts()` selectors.
 // The choice-free 01-aggro decks let the test end turns until a unit is offered.
 
 import { seedFor } from "../../support/config.ts";
@@ -22,7 +21,6 @@ const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
   "core-092",
 ]);
 
-/** Player-turn budget for finding an offered unit. */
 const TURN_BUDGET = 8;
 
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
@@ -78,7 +76,6 @@ function handOf(state: GameStateLike, player: PlayerId): HandCard[] {
   return side.hand ?? [];
 }
 
-/** The first target the client marks legal. */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
@@ -95,7 +92,6 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string };
 
-/** Play an offered unit, ending turns until one appears; clear the log immediately before its click. */
 function playOfferedUnit(played: Played, beforePlay: () => void, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered a unit inside the turn budget").to.be.greaterThan(0);

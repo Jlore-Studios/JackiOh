@@ -1,32 +1,20 @@
 //! Watching a friend's live game (SPEC S7, B50, B51; #939).
 //!
-//! `/ws/watch` is authenticated as `/ws/match` is (the token offered as a subprotocol, R1379000;
-//! §9.4's gate) and then takes one frame, the hello:
-//! `{"type":"hello","matchId":"…","friendId":"…"}`. It is let in when the two accounts are friends
-//! with neither blocking the other, the friend holds a seat in the live match it names, a 1v1, ranked
-//! or unranked, in which the watcher holds no seat (a player never sees the other seat). No setting
-//! turns watching off (R2615000): the friendship is the way out.
-//! The actor then judges room (SPECTATORS_PER_MATCH) and from there sends the friend's seat's views,
-//! each SPECTATE_DELAY_MS after the state it shows, with `legal: []` (`MatchActor::attach_watcher`).
+//! `/ws/watch` is authenticated as `/ws/match` is (R1379000, §9.4's gate) and then takes one frame, the
+//! hello. It is let in when the two accounts are friends with neither blocking the other and the friend
+//! holds a seat in the live 1v1 it names, in which the watcher holds none; no setting turns watching off
+//! (R2615000). The actor then judges room (SPECTATORS_PER_MATCH) and sends the friend's seat's views,
+//! each SPECTATE_DELAY_MS after the state it shows, with `legal: []`.
 //!
-//! Every refusal is the one `error` frame, `forbidden`, and a close with R148's 4403 (4401 before
-//! sign-in, 4429 past the account's budget (R2478000), 1011 for a fault), all with the same message,
-//! so a socket learns that it may not watch, never which check said so. No frame after the hello
-//! reaches the reducer: once the actor has the socket a later hello is answered with the view it was
-//! last sent (R1103000, so R1441's wake probe hears a live socket), and every other frame is dropped
-//! unanswered, within the limits of R2609000. A watcher leaving changes nothing in the match but the count its players see (B51).
-//! Before the hello the socket waits behind the gate `/ws/duos` waits behind (`actor::guard::HelloGate`,
-//! R835002): a frame that is not the hello is answered `malformed` and past
-//! `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed, and a hello that does not come within
-//! `WS_IDLE_TIMEOUT_SECONDS` is refused like any other.
+//! Every refusal is one `forbidden` frame and a close with R148's 4403 (4401 before sign-in, 4429 past
+//! the account's budget (R2478000), 1011 for a fault), all with one message, so a socket never learns
+//! which check said so. A later hello is answered with the view last sent (R1103000, so R1441's wake
+//! probe hears a live socket), every other frame is dropped unanswered within R2609000's limits, and
+//! before the hello the socket waits behind `HelloGate` (R835002). Being let in is no standing leave
+//! (§9.8; B46): an unfriend or a block closes the watcher's socket at once.
 //!
-//! Being let in is no standing leave (§9.8; B46): when the two unfriend or either blocks the other
-//! (`revoke_between`), the watcher's socket gets the same `forbidden` and close at once
-//! (`MatchActor::revoke_watchers`). A hello that passed its checks just before such a change is
-//! judged again once its socket is in (`admit`), so the change never misses it.
-//!
-//! S7's `Friend.watchable`, for the friends list, is `social::presence::standings`'s, which judges
-//! what this module's checks judge for every friend at once (`Tx::presence_watchable`).
+//! S7's `Friend.watchable` is `social::presence::standings`'s, which judges what these checks judge for
+//! every friend at once (`Tx::presence_watchable`).
 
 use std::sync::Arc;
 
@@ -36,10 +24,9 @@ use crate::actor::guard::HelloGate;
 use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
-use crate::actor::ws_server::{Socket, WATCH_PATH, WS_CLOSE};
-use crate::api::http::{ApiErrorCode, assert_active, upgrade_profile};
+use crate::actor::ws_server::{Socket, UpgradeFailure, WATCH_PATH, WS_CLOSE, authenticate_upgrade};
 use crate::app::App;
-use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
+use crate::db::store::{MatchPhase, MatchStatus, StoreError, Tx};
 use crate::social::friends::are_friends;
 
 /// The watcher's one frame (S7).
@@ -74,14 +61,12 @@ pub fn parse_watch_hello(text: &str) -> Result<WatchHello, String> {
     }
 }
 
-/// The watch socket's handlers until its hello is answered: `actor::guard::HelloGate`, the gate
-/// `/ws/duos` waits behind too, with `parse_watch_hello` for the hello.
+/// The watch socket's handlers until its hello is answered: the gate `/ws/duos` waits behind too.
 pub type WatchListener = HelloGate<WatchHello>;
 
-/// Puts the watch's frame handlers on `socket`, before anything can arrive on it (the upgrade calls
-/// this before its pump starts): the first hello is kept and every frame after it dropped unread
-/// (B50). The handlers hold the gate weakly and the gate belongs to `serve`, so a socket refused or
-/// gone frees itself; the actor's handlers replace them once it takes the socket.
+/// Puts the watch's frame handlers on `socket` before its pump starts: the first hello is kept and
+/// every frame after it dropped unread (B50). The handlers hold the gate weakly and `serve` owns it,
+/// so a socket refused or gone frees itself; the actor's handlers replace them once it takes it.
 pub fn listen(socket: &Socket) -> WatchListener {
     HelloGate::install(socket, parse_watch_hello)
 }
@@ -107,6 +92,15 @@ fn refused(code: u16, message: &str) -> WatchFailure {
 impl From<StoreError> for WatchFailure {
     fn from(error: StoreError) -> WatchFailure {
         WatchFailure::Threw(error.to_string())
+    }
+}
+
+impl From<UpgradeFailure> for WatchFailure {
+    fn from(failure: UpgradeFailure) -> WatchFailure {
+        match failure {
+            UpgradeFailure::Refused { code, message } => WatchFailure::Refused { code, message },
+            UpgradeFailure::Threw(message) => WatchFailure::Threw(message),
+        }
     }
 }
 
@@ -137,7 +131,9 @@ async fn admit(
     token: Option<String>,
     listener: WatchListener,
 ) -> Result<(), WatchFailure> {
-    let watcher = authenticate(app, token).await?;
+    // The account behind the upgrade, read as `/ws/match` reads it: the token (R1379000), its
+    // profile, §9.4's gate.
+    let watcher = authenticate_upgrade(app, token, WATCH_PATH).await?;
     let Some(hello) = listener.wait().await else {
         // R835002: still open means no hello came in `WS_IDLE_TIMEOUT_SECONDS`; gone, or closed for
         // its malformed frames, has no one to answer.
@@ -163,9 +159,8 @@ async fn admit(
         .await
     {
         Ok(()) => {
-            // An unfriend, a block or watching turned off that committed after the checks above, and
-            // revoked before this socket was in, is read now: the socket is in, so a change from here
-            // on revokes it, and one before is seen by this read.
+            // An unfriend or a block committed after the checks above, and revoked before this socket
+            // was in, is read now; from here on such a change revokes the socket itself.
             if !may_watch(app, &watcher.id, &hello).await? {
                 tracing::info!(event = "watch.revoked_at_hello", matchId = %hello.match_id);
                 app.matches.revoke_watchers(|watcher_id, friend_id| {
@@ -180,28 +175,6 @@ async fn admit(
         }
         Err(AttachError::Internal(message)) => Err(WatchFailure::Threw(message)),
     }
-}
-
-/// The account behind the upgrade, read as `/ws/match` reads it: the token (R1379000), its profile,
-/// §9.4's gate.
-async fn authenticate(app: &Arc<App>, token: Option<String>) -> Result<Profile, WatchFailure> {
-    let Some(token) = token else {
-        return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
-    };
-    let Ok(user) = app.auth.verify(&token).await else {
-        return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
-    };
-    // SPEC §11 R2478000: the upgrade is one request against the account's R109 budget.
-    let profile = match upgrade_profile(app, &user, WATCH_PATH).await {
-        Ok(Some(profile)) => profile,
-        Ok(None) => return Err(refused(WS_CLOSE.unauthorized, "sign in first")),
-        Err(error) if error.code == ApiErrorCode::RateLimited => {
-            return Err(refused(WS_CLOSE.rate_limited, &error.message));
-        }
-        Err(error) => return Err(WatchFailure::Threw(error.message)),
-    };
-    assert_active(&profile).map_err(|error| refused(WS_CLOSE.forbidden, &error.message))?;
-    Ok(profile)
 }
 
 /// B50, as the store answers it: `watcher_id` may watch `hello`'s friend in `hello`'s match. Room is
@@ -225,10 +198,9 @@ pub fn revoke_between(app: &App, x: &str, y: &str) -> usize {
         .revoke_watchers(|watcher, friend| (watcher == x && friend == y) || (watcher == y && friend == x))
 }
 
-/// B50's store checks, in one transaction: `viewer_id` and `friend_id` are two accounts that are
-/// friends with neither blocking the other; `match_id` is live, ranked or unranked, seats
-/// `friend_id` and not `viewer_id`. No setting of the friend's refuses it (R2615000). A Duos match is
-/// no row of `matches`, so it is never one.
+/// B50's store checks, in one transaction: `viewer_id` and `friend_id` are friends with neither
+/// blocking the other; `match_id` is live, seats `friend_id` and not `viewer_id`. A Duos match is no
+/// row of `matches`, so it is never one.
 async fn watchable_in(
     tx: &mut Tx<'_>,
     viewer_id: &str,

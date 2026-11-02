@@ -1,18 +1,15 @@
-//! `cargo jackioh trace <matchup> <n> [gate|full] [--series name]` (SURFACE §12): a tuning aid. Port
-//! of `packages/ai/scripts/trace.ts`.
+//! `cargo jackioh trace <matchup> <n> [gate|full] [--series name]` (SURFACE §12): a tuning aid.
 //!
 //! Replays game n of a matchup, set up as the gate sets it up but from the tuning series
-//! (AI_TUNING_SERIES; `--series <name>`, or `SERIES=<name>` as TS read it, picks another), and prints
+//! (AI_TUNING_SERIES; `--series <name>`, or `SERIES=<name>`, picks another), and prints
 //! it turn by turn. Writes no file.
 //!
 //! ```text
 //! cargo jackioh trace ai-vs-greedy 3 [gate|full]
 //! ```
 //!
-//! Not ported: bench.ts's `OVERRIDE_<CONFIG>` and `BAN` knobs, which TS applied by assigning into the
-//! AI's config objects and its shadow-ban list at run time. In Rust those are constants (SURFACE §3:
-//! no mutable statics), so a tuning run changes them in `crates/ai/src/config.rs` or
-//! `shadow_ban.rs` and rebuilds.
+//! The AI's config and shadow-ban list are constants (SURFACE §3: no mutable statics), so a tuning
+//! run changes them in `crates/ai/src/config.rs` or `shadow_ban.rs` and rebuilds.
 
 use anyhow::Result;
 

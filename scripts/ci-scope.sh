@@ -244,7 +244,7 @@ for file in $files; do
       crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/luau/*) on rust_luau rust_tools_wasm ;;
-    crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
+    crates/run/* | crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
     crates/*)
       echo "ci-scope: $file is in no crate the map knows, running every Rust group" >&2
       on $RUST

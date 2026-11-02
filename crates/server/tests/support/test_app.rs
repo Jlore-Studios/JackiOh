@@ -1,8 +1,4 @@
-//! The test `App` every server test builds (SURFACE §11.2): the fake store, the fixture auth provider
-//! and R144's end-to-end fixtures. Split from `deps.rs`, which re-exports it, so that `server_store.rs`,
-//! the store's own test binary, compiles this and not the request helpers and the recording log beside
-//! it. Port of `apps/server/test/fakes/deps.ts` (`createTestDeps`); `deps.rs` says what changed with the
-//! port.
+//! Test `App` builder (SURFACE §11.2): fake store, fixture auth provider, and R144 end-to-end fixtures.
 
 use std::sync::{Arc, Mutex};
 
@@ -13,9 +9,7 @@ use jackioh_server::app::{self, App};
 use jackioh_server::auth::{Auth, E2eAuth, E2eDeletion};
 use jackioh_server::env::Env;
 
-// ---------------------------------------------------------------------------
 // The fixtures (`e2e/support/config.ts`, SURFACE §11.3)
-// ---------------------------------------------------------------------------
 
 /// The catalog version the test app runs: the compiled-in one, which `env.rs` requires
 /// `CATALOG_VERSION` to equal (TS's was the synthetic `"test-1"`).
@@ -28,9 +22,7 @@ const API_RATE_WINDOW_MS: i64 = 60_000;
 /// R190: the tests' proxy depth (`json_request` writes one entry).
 const TEST_TRUSTED_PROXY_HOPS: &str = "1";
 
-// ---------------------------------------------------------------------------
 // The environment and the app
-// ---------------------------------------------------------------------------
 
 /// The environment the test app runs on: end-to-end mode's placeholders (`app::load_server_env`),
 /// `NODE_ENV=test`, one trusted proxy hop, then `overrides` on top.
@@ -50,17 +42,13 @@ pub fn test_env(overrides: &[(&str, &str)]) -> Env {
 
 /// What `test_app_with` builds differently from `test_app`.
 pub struct TestAppOptions {
-    /// TS `createTestDeps({ e2e })`: whether the server runs in end-to-end mode (`env.e2e`, R143's
-    /// seeds, R144's fixtures). True by default (SURFACE §11.2's `test_app()` is the `E2E=1` server);
-    /// false builds the same fake store and fixture auth with `env.e2e` off, as a production server
-    /// would read it, and with no fixtures (a server outside end-to-end mode never seeds them).
+    /// End-to-end mode (`env.e2e`, R143 seeds, R144 fixtures; SURFACE §11.2). True by default.
     pub e2e: bool,
     /// Environment variables over `test_env`'s.
     pub env: Vec<(String, String)>,
     /// A catalog instead of the real one.
     pub catalog: Option<Catalog>,
-    /// Leave the store empty: no fixture accounts, no fixture codes (TS `createTestDeps` started
-    /// empty; R144's reseed is the end-to-end server's).
+    /// Leave store empty with no fixture accounts or codes (R144).
     pub skip_fixtures: bool,
     /// What the auth provider's `delete_user` does; `E2eDeletion::Deletes` when absent.
     pub deletion: Option<E2eDeletion>,
@@ -164,10 +152,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
     app
 }
 
-/// #1035: the test app's `EngineThread`. It reads the calling test thread's cards
-/// (`install_test_cards`, or whatever catalog, scripts and shipped catalogs the test registered,
-/// R767000) and sets them on the blocking pool's thread, so a fold off the runtime reads what the
-/// test's own thread reads.
+/// #1035, R767000: sets calling thread's registered cards on blocking pool thread.
 fn test_engine_thread() -> Box<dyn FnOnce() + Send> {
     let overrides = jackioh_engine::testkit::thread_overrides();
     Box::new(move || {

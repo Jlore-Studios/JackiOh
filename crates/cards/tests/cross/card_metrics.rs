@@ -26,8 +26,6 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// The test's own reading of a count, for a script with no block comment: its lines above
-/// `#[cfg(test)]` that are neither blank nor a `//` comment, a `use` line's included.
 fn recount(source: &str) -> usize {
     source
         .lines()
@@ -78,13 +76,11 @@ fn r1846000_a_count_is_its_scripts_code_lines_above_its_tests() {
     }
 }
 
-/// A list's name, its ids, its threshold and the engine's reader of it.
 type List = (&'static str, &'static [&'static str], usize, fn(&str) -> bool);
 
 #[test]
 fn r1846000_each_list_is_every_card_over_its_threshold_with_a_card_on_each_side() {
     register_all();
-    // The designer's numbers: over 100 lines is BUSTED, over 60 complicated.
     assert_eq!((BUSTED_CODE_LINES, COMPLICATED_CODE_LINES), (100, 60));
     let lists: [List; 2] = [
         ("BUSTED", BUSTED, BUSTED_CODE_LINES, is_busted),
@@ -100,7 +96,6 @@ fn r1846000_each_list_is_every_card_over_its_threshold_with_a_card_on_each_side(
         for (id, count) in CODE_LINES {
             assert_eq!(reads(id), *count > over, "{name}: {id} has {count} lines");
         }
-        // The cards nearest the threshold on each side, whichever they are on this build.
         let (shortest_over, its_lines) = CODE_LINES
             .iter()
             .filter(|(_, count)| *count > over)
@@ -168,8 +163,6 @@ fn r1846000_the_query_draws_each_list_from_the_sets_that_ship() {
 #[test]
 fn r1846001_every_set_adds_nothing_until_a_single_player_set_holds_a_card() {
     register_all();
-    // Dungeon runs and bosses are planned: the catalog holds no single-player card yet, so
-    // xxFreshJack's "every set, single-player ones too" draws today what the sets that ship hold.
     assert!(CATALOG.values().all(|def| !SINGLE_PLAYER_SETS.contains(&def.set)));
     let busted = CardQuery {
         busted: Some(true),
@@ -186,7 +179,6 @@ fn r1846001_every_set_adds_nothing_until_a_single_player_set_holds_a_card() {
 fn r1846002_no_custom_card_is_counted() {
     register_all();
     // The build counts the catalog's Rust scripts; a custom card is never in the catalog (R915000)
-    // and its Luau script is not the game's code.
     assert!(CODE_LINES.iter().all(|(id, _)| !is_custom_id(id)));
     assert_eq!(code_lines_of("custom-anything"), None);
     assert!(!is_busted("custom-anything"));

@@ -1,8 +1,6 @@
-// R2249000: a Starship's rules box in play. A Starship prints no text (model.ts's `textInPlay`); its box
-// holds the Starship term, whose tip reads the rule (glossary.ts's Starship and Launch), and the Starship
-// Pieces fused into it, oldest first (`UnitView.starship.pieces`), each a card reference that opens the
-// piece's printed face on hover or long press (CardRef.tsx). Everything here is the view's: the list is
-// public on both seats, and nothing is decided (CLAUDE.md rule 7).
+// R2249000: a Starship's rules box in play: no text (model.ts's `textInPlay`), only the Starship term
+// and the Starship Pieces fused into it, oldest first, each a card reference (CardRef.tsx). The list
+// is the view's, public on both seats, and nothing is decided (CLAUDE.md rule 7).
 
 import type { ReactElement } from "react";
 

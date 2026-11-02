@@ -73,10 +73,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89): "In hand it gains the dying unit's current
-// attack and max health from either side, tokens excluded (R11); stats per R38; stops once on the
-// field; radiant double". R219: a gain is never a loss, so a unit #46 starved below 0 max health
-// feeds it nothing.
+// #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89) (R11, R38).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,7 +141,6 @@ mod tests {
             s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
             s.attack(FELINORS, GARY);
 
-            // Gary was 1/1, so the Eater is 3/3 while still sitting in hand.
             s.expect_stats(EATER, json!({ "attack": 3, "maxHealth": 3 }));
             assert_eq!(s.card(EATER).zone.z(), ZoneName::Hand);
             s.expect_events(json!(["destroyed", "buffed"]));
@@ -188,7 +184,6 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": SEED,
                 "active": "p2",
-                // Gary (1/1) trades with Felinors' 3 attack and deals 1 back to a 1/1 attacker.
                 "p1": { "hand": [EATER, FILLER], "field": [{ "def": GARY, "lane": 1 }] },
                 "p2": { "hand": [FILLER], "field": [{ "def": GARY, "lane": 1 }] },
             }));
@@ -214,7 +209,6 @@ mod tests {
 
             s.attack(FELINORS, &token);
 
-            // R11: the token ceased to exist — in no pile at all — and the Eater is untouched.
             s.expect_in_zone(&token, "gone");
             s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
             assert_eq!(count_of(&s, GameEventType::Buffed), 0);
@@ -235,7 +229,6 @@ mod tests {
 
             s.start_turn();
 
-            // The unit went from hand to graveyard: `burned`, never `destroyed`.
             s.expect_events(json!(["drawn", "burned"]));
             assert_eq!(count_of(&s, GameEventType::Destroyed), 0);
             s.expect_stats(EATER, json!({ "attack": 2, "maxHealth": 2 }));
@@ -388,14 +381,13 @@ mod tests {
                 .cloned();
             assert!(matches_object(&js(&died), &json!({ "attack": 0, "maxHealth": -1 })));
 
-            // "Whenever a unit dies, this GAINS its attack and max health": the unit had no attack and no
-            // max health to give, so the Eater in hand is still its printed 2/2 — it does not shrink by the
-            // −1 the aura dragged the dead unit's max health to.
+            // The unit had no attack and no max health to give, so the Eater does not shrink by the −1 the
+            // aura dragged the dead unit's max health to.
             assert_eq!(js(&g.card(&eater).buffs), json!({ "attack": 0, "health": 0 }));
         }
     }
 
-    /// R2195003: the snapshot plays exactly as core-089, on both faces: the growth in hand from a death, then the body.
+    /// R2195003: the snapshot plays exactly as core-089, on both faces.
     #[test]
     fn r2195003_plays_exactly_as_core_089() {
         for radiant in [false, true] {

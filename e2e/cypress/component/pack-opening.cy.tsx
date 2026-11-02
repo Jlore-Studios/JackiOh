@@ -1,17 +1,8 @@
-// Issue #1308: the pack-opening scene (`packs/PackOpening.tsx`) measured in a real browser, from the
-// fixture answer `POST /api/packs/open` gives (`packs/fixtures.ts`): a Mythic, an Epic, a cosmetic, a
-// bar and a card. Only a layout engine can say these (jsdom has none; PackOpening.test.tsx holds the
-// rest):
-//   - the sealed pack glows in the best rarity's color the moment the server has answered, and once
-//     it has torn the five cards are laid out,
-//   - skip-all lays out five whole faces, 5:7 each, on the screen and apart, on a desktop and on a phone,
-//   - under Reduce motion the results show at once and nothing in the scene animates,
-//   - #1999: on a phone (375x667, 360x640) the scene never scrolls sideways, the pinned HUD sits clear
-//     of every card, the cards fit one screen, and the pack, each card and the actions are taps in reach,
-//     sealed, mid-reveal and all revealed.
-//
-// The scene mounts in a portal on the body, over whatever is there, so no page is built around it. The
-// clock is the spec's own (`cy.clock`) where the tear is waited on, since a spec waits on no real one.
+// Issue #1308: the pack-opening scene (`packs/PackOpening.tsx`) measured in a real browser, from the fixture
+// answer `POST /api/packs/open` gives (`packs/fixtures.ts`): a Mythic, an Epic, a cosmetic, a bar and a
+// card. Only a layout engine can say these (jsdom has none; PackOpening.test.tsx holds the rest). The scene
+// mounts in a portal on the body, so no page is built around it; the clock is the spec's own (`cy.clock`)
+// where the tear is waited on.
 
 import type { OpenedPackResponse } from "../../../apps/web/src/net/api.ts";
 import { PackScene } from "../../../apps/web/src/packs/PackOpening.tsx";
@@ -29,7 +20,6 @@ const TOUCH_PX = 44;
 /** #1999: a compact HUD takes at most this share of a phone's height. */
 const HUD_MAX_SHARE = 0.1;
 
-/** #1999: the two phones, portrait. */
 const PHONES = [
   { width: 375, height: 667 },
   { width: 360, height: 640 },
@@ -60,7 +50,6 @@ function overlaps(a: DOMRect, b: DOMRect): boolean {
   return a.left < b.right - EDGE_EPSILON && b.left < a.right - EDGE_EPSILON && a.top < b.bottom - EDGE_EPSILON && b.top < a.bottom - EDGE_EPSILON;
 }
 
-/** Whether `rect` lies wholly inside the window. */
 function onScreen(rect: DOMRect, win: Window): boolean {
   return rect.left >= -EDGE_EPSILON && rect.top >= -EDGE_EPSILON && rect.right <= win.innerWidth + EDGE_EPSILON && rect.bottom <= win.innerHeight + EDGE_EPSILON;
 }

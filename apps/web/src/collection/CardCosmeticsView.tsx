@@ -1,30 +1,11 @@
-// A card in context (#1662, R1655000, part of #1651): the Collection's card view. A card opens large,
-// wearing its own picks (`OwnCopy own`: the viewer's own copy, as the deck builder's detail view is),
-// under a strip of what that card may wear, by kind: its foil, finish and border and, when it has
-// them, its full arts (R2655000: no full art, its Epic, its animated Legendary and its signed Mythic,
-// one of which the card wears). Each item is a small live preview of the card wearing it.
-//
-// Hovering or focusing an item shows it on the large card; clicking one the card owns equips it on
-// this card alone (`writeCardPick`, `writeCardFullArt`), and a locked one, which `useCanEquip` says no
-// to, equips nothing. `Use default` of a kind clears the card's pick, which leaves the card to its
-// kind's default (R1953001). The view decides nothing (CLAUDE.md rule 7): it sets a pick in the
-// device's store, which `cards/cardPicksSync.ts` sends to the account (R1834000), for the viewer's own
-// faces and, frozen as an online match begins, the opponent's sight of them (R1834002);
-// `GET /api/cosmetics` is the answer to what the viewer owns. R1953001: a locked one a held cosmetic
-// token covers offers that token in place (TokenOffer.tsx), on a card the account owns `MAX_COPIES`
-// of, the only card a token's per-card cosmetic goes on.
-//
-// A preview writes no pick. A face wears only what the store holds, and `cards/cosmetics.ts` has no
-// seam to draw one wearing an id it does not, so a preview of a foil, finish or border is a second
-// copy of the face, drawn unworn, to which `SampleFace` (CosmeticLook.tsx) gives the four attributes
-// `useCosmeticAttributes` would (React never sets them on an unworn face, so nothing fights over
-// them), by the same `wornCosmetics`. A full art changes how the face is built, so its preview puts
-// the large face below a `FullArtShown` (fullArt.ts), which prints it as that pick would, behind the
-// same ownership. R1834000: the store is never held for a preview, since every write to it is sent to
-// the account, and a preview the page never gave back would stand there as a pick opponents are shown.
-//
-// The card's text and meta stay one click away: `Card text` opens the detail view over this one.
-// Every animation here is a transform or opacity (collection.css) and holds still under reduced motion.
+// A card in context (#1662, R1655000, part of #1651): the Collection's card view, the card large in its
+// own picks under a strip of live previews of what it may wear (R2655000: a full-art card's full arts
+// are none, its Epic, its animated Legendary and its signed Mythic). Clicking an owned item equips it
+// on this card alone; `Use default` clears the pick (R1953001); a locked one a held token covers offers
+// it. It decides nothing (CLAUDE.md rule 7): a pick goes to the device's store, which
+// `cards/cardPicksSync.ts` sends to the account (R1834000) and an online match freezes for the
+// opponent's sight (R1834002). So a preview writes no pick, lest it stand as one opponents are shown:
+// it is an unworn copy of the face dressed by `SampleFace` (CosmeticLook.tsx), or a `FullArtShown`.
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
 
@@ -63,10 +44,7 @@ import {
 } from "./collection.ts";
 import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 
-/**
- * The large face: the card wearing its own picks, and over it, while a foil, finish or border is
- * shown, a copy wearing that item in place of the card's pick of its kind.
- */
+/** The card in its own picks and, over it while a foil, finish or border is shown, a copy wearing that. */
 function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | null }): ReactElement {
   const own = useOwnCopy();
   const card = useCardPicks(face.defId);
@@ -101,7 +79,7 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   );
 }
 
-/** Whether `item` is the card's own pick of its kind: for a full art, the tier the card's pick names (R2655000). */
+/** For a full art, the tier the card's pick names (R2655000). */
 function isEquipped(defId: string, item: StripItem, picks: CardPicks): boolean {
   if (item.kind === "fullArt") return item.id === NO_FULL_ART_ID ? picks.fullArt === false : fullArtIdOf(defId, picks.fullArt) === item.id;
   return picks[item.kind] === item.id;

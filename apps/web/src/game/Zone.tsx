@@ -1,17 +1,11 @@
-// Field zone view (SPEC §3; BUILD M5-T1).
-//
-// It reads `locks[row][laneIndex(lane)]` for `data-locked` (BUILD M5-T4); play legality comes from
-// the engine's `legalActions`.
-//
+// Field zone view (SPEC §3; BUILD M5-T1). Play legality comes from the engine's `legalActions`.
 // DragLayer hit-tests zones by testid; no drag handler belongs here.
 
 import { useContext, type ReactElement } from "react";
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
-/**
- * Missing flags from old fixtures or servers read as "not set", not a board crash.
- */
+/** Missing flags from old fixtures or servers read as "not set", not a board crash. */
 function flagAt(flags: { units: boolean[]; backrow: boolean[] } | undefined, row: Row, lane: number): boolean {
   if (flags === undefined) return false;
   const i = laneIndex(lane);
@@ -46,17 +40,15 @@ export type ZoneProps = {
   pops?: ReadonlyMap<string, Pops>;
 };
 
-/** A zone's accessible name: "Your units, lane 3". */
 function zoneLabel(side: Side, row: Row, lane: number): string {
   if (side === "you") return row === "units" ? t("Your units, lane {lane}", { lane }) : t("Your backrow, lane {lane}", { lane });
   return row === "units" ? t("Enemy units, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });
 }
 
 /**
- * What a held zone's icon says it waits for. B3.1 rule 6, R383: a backrow zone is held for the
- * animated "Animated on your turn" card on its side that goes back to it (`UnitView.animated.home`),
- * named as its face names it; any other hold is R64's, for a Reborn unit. The card stands on the
- * field, so its name is public (CLAUDE.md rule 7).
+ * What a held zone's icon says it waits for. B3.1 rule 6, R383: a backrow zone is held for the animated
+ * card on its side that goes back to it (`UnitView.animated.home`), named as its face names it (it
+ * stands on the field, so its name is public, CLAUDE.md rule 7); any other hold is R64's, for Reborn.
  */
 function heldFor(lookup: CardLookup | null, view: PlayerView, side: Side, row: Row, lane: number): string {
   const returning = row === "backrow" ? (sideView(view, side).units.find((unit) => unit?.animated?.home === lane) ?? null) : null;

@@ -57,10 +57,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74 (the every-2 step (never
-// below 2) and Brittle gained read through `param()`; Brittle itself is R386's numbered keyword). The first activation reveals it
-// and starts its Brittle, even when there was no card left to fuse; with no fuse it never crumbles.
-// p1 sets the trap on its own turn (turn 9), then p2's turn begins and p2 plays.
+// C+ #74 Twice Forward One Step Backwards — SPEC §8.7 row 74, BUILD M9 Classic+ row C+ 74 (R386).
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -245,11 +242,9 @@ mod tests {
                 let unit = s.card(VANILLA).clone();
                 s.play(VANILLA, json!({ "zone": 1 }));
                 let trap = trap_of(&s);
-                // The Vanilla is never consumed: it stands where it was played.
                 assert_eq!(s.unit(P2, 1).map(|card| card.id), Some(unit.id.clone()));
                 assert_eq!(def_of(Some(s.state()), &trap.def_id).type_, CardType::FieldTrap);
                 assert_eq!(part_of(&s, &trap.def_id, VANILLA), Some(json!({ "defId": VANILLA })));
-                // Animated: it moved from its backrow zone into the unit zone of its lane.
                 assert!(s.backrow(P1, 2).is_none());
                 assert_eq!(js(&trap.zone), json!({ "z": "field", "row": "units", "lane": 2, "player": "p1" }));
                 assert_eq!(active_brittle_count(&trap), Some(3));
@@ -332,7 +327,6 @@ mod tests {
                 let trap = s.backrow(P1, 2).expect("a Spell's copy gives it no stats: it stays in its zone");
                 assert_eq!(trap.face_up, Some(true));
                 assert!(s.unit(P1, 2).is_none());
-                // Face-up in its zone it keeps counting, and the next even count's Unit copy animates it.
                 s.play(VANILLA, json!({ "zone": 1 }));
                 assert_eq!(plays_of(&s), 3);
                 assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(trap.id.clone()));
@@ -370,7 +364,6 @@ mod tests {
                     json!({ "hand": [STOCKPILE, RAPID, VANILLA], "library": library }),
                     |_| {},
                 );
-                // Through v0.5.2 the Hinder was their 1st play (R70).
                 assert_eq!(plays_of(&s), 0);
                 let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER]);
@@ -415,7 +408,7 @@ mod tests {
                         _ => None,
                     })
                     .collect();
-                // The Hinder is logged as cast (`onDraw`), but it is no play: through v0.5.2 it was the 2nd (R70).
+                // The Hinder is logged as cast (`onDraw`), but it is no play.
                 assert_eq!(played, vec![STOCKPILE, HINDER]);
                 assert_eq!(plays_of(&s), 1);
                 assert_eq!(fused_events(&s), 0);

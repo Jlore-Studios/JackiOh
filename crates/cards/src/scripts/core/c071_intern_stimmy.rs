@@ -2,36 +2,31 @@
 //! opponent's: Recruit a Unit costing 1 or less", radiant "2 or less". A Radiant cell that changes
 //! only a number changes only that number (§8 Conventions), so only the cost ceiling moves.
 //!
-//! The engine's, not the card's: WHEN it fires (R62's end-of-turn trap window on BOTH turns, so the
-//! trigger watches the plain `turnEnded`, which `traps.rs` withholds from immediate dispatch),
-//! "NEVER consumed" (the Field Trap type, §5, §5.1, §3.2; face-up once fired, R33) and WHOSE
-//! library and Recruit ("your" is the TRAP'S CONTROLLER, R62, R52; `ctx.controller` is that player).
-//! The condition is a `when` predicate, which is what `traps.rs` reads (the only module that fires this
-//! card). R61: `run` returning `[]` would flip this Field Trap face-up (R33) on every turn end it does
-//! not answer; a predicate leaves it armed. R195, the yellow glow: in hand and backrow exactly when
-//! `library_is_larger` holds, the same function the trap's `when` and `run` read (public counts, §9.1).
+//! The engine's, not the card's: WHEN it fires (R62's end-of-turn trap window on BOTH turns; the
+//! trigger watches the plain `turnEnded`, which `traps.rs` withholds from immediate dispatch), "NEVER
+//! consumed" (the Field Trap type, §5, §5.1, §3.2; face-up once fired, R33) and WHOSE library ("your"
+//! is the TRAP'S CONTROLLER, R62, R52). R61: the condition is a `when` predicate, since `run`
+//! returning `[]` would flip the trap face-up (R33) on every turn end it does not answer. R195, the
+//! yellow glow: `library_is_larger`, the function `when` and `run` read (public counts, §9.1).
 
 use jackioh_engine::effects::recruit;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-071";
 
-/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. The two library
-/// sizes come through the read-only `zone_count` (BUILD M3-T1), "yours" being the trap's controller
-/// (R62, R52); "more cards than" is strictly greater, so an equal count does nothing.
+/// "More cards than" is strictly greater, so an equal count does nothing. The sizes come through the
+/// read-only `zone_count` (§10.9, BUILD M3-T1).
 fn library_is_larger(state: &GameState, controller: PlayerId) -> bool {
     let mine = zone_count(state, controller, OffFieldZone::Library);
     let theirs = zone_count(state, opponent_of(controller), OffFieldZone::Library);
     mine > theirs
 }
 
-/// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
-/// the face that is up.
+/// The cost limit is the declared number `costLimit` (R386), read off the face that is up.
 fn intern_stimmy() -> Script {
     let at_end_of_any_turn = TriggerDef::new("intern-stimmy-window", &[GameEventType::TurnEnded], |ctx, _event| {
         if library_is_larger(ctx.state, ctx.controller) {
-            // R65: outside play an X-cost card counts as 0 and an embiggen card as its base price, which
-            // is what `recruit`'s filter reads off the library (`query_cost` in effects/summon.rs).
+            // R65: `recruit`'s filter reads an X-cost card as 0 and an embiggen card as its base price.
             let max_cost = param(&*ctx, "costLimit");
             vec![recruit(json_as(json!({ "filter": { "type": "Unit", "costRange": { "max": max_cost } } })))]
         } else {
@@ -54,12 +49,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4: "Trap window at the end of any turn with library >
-// opponent's → recruit ≤1 (R62); fires again next qualifying turn; radiant ≤2".
+// #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4 (R62).
 //
-// Library fillers are Spells (core-005, core-035), which Recruit never takes (§6.3); the Units are
-// core-001 (cost 2), core-003 and core-004 (cost 1), none with a turn trigger, and Recruit fires no
-// Cry (R1). Both sides keep a playable card in hand, since §2.5/R82 auto-ends a turn with none.
+// Library fillers are Spells (core-005, core-035), which Recruit never takes (§6.3); core-001 costs
+// 2, core-003 and core-004 cost 1, none with a turn trigger, and Recruit fires no Cry (R1). Both
+// sides keep a playable card in hand, since §2.5/R82 auto-ends a turn with none.
 #[cfg(test)]
 mod tests {
     use crate::js;
@@ -68,7 +62,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// `scenario(opts)` with the shipped cards registered first.
     fn setup(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -126,7 +119,7 @@ mod tests {
 
             s.end_turn();
 
-            // The condition held (3 cards to 1), so the trap fired and recruited.
+            // 3 cards to 1: the trap fired and recruited.
             s.expect_events(json!(["turnEnded"]));
             s.expect_events(json!(["trapFired", "summoned"]));
             assert_eq!(trap_firings(&s), 1);
@@ -155,7 +148,6 @@ mod tests {
 
             assert_eq!(trap_firings(&s), 1);
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some("core-003".to_string()));
-            // The recruited Unit belongs to the trap's controller, not to the player who ended the turn.
             assert!(s.unit(P2, 1).is_none());
         }
 

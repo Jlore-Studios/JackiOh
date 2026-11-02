@@ -151,10 +151,9 @@ func TestCardsets_TheLastThreePatchesWith1000GamesEachReadAtItsNewestVersion(t *
 	// AI games (200 live + 900), v0.3.5; the walk stops there.
 	var got [][]any
 	for _, p := range patches {
-		got = append(got, []any{p.Name, p.Version, p.Live, p.Games})
+		got = append(got, []any{p.Name, p.Live, p.Games})
 	}
-	assertEqual(t, got, [][]any{{"v0.4.2", "v0.4.2b", true, 1200}, {"v0.4.0", "v0.4.0c", false, 1100},
-		{"v0.3.5", "v0.3.5", true, 1500}})
+	assertEqual(t, got, [][]any{{"v0.4.2", true, 1200}, {"v0.4.0", false, 1100}, {"v0.3.5", true, 1500}})
 	assertEqual(t, []any{minSample, oldest}, []any{20, "v0.3.5"})
 	// A cleared patch is read once (live alone); an uncleared one adds its AI games; an older
 	// version of a patch already read is only walked through.

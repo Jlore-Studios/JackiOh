@@ -4,11 +4,9 @@
 //!   Radiant: "Destroy all Units but one of your choice."
 //!
 //! The survivor is one of the Units on the field a Spell may affect (either side, the tops of piles; an
-//! Immune to Spells Unit is not among them and stays anyway, §6.1): drawn by the match rng on the base
-//! face (R60), and on the Radiant face a Unit target declared with the play (R81). Every other such Unit
-//! is marked at once, so one state check collects them all (R59); an Indestructible one survives
-//! anyway (R46) and a Reborn one comes back. With no Unit there is nothing to destroy and nothing is
-//! drawn (R129).
+//! Immune to Spells Unit is not among them and stays anyway, §6.1). Every other such Unit is marked at
+//! once, so one state check collects them all (R59); an Indestructible one survives anyway (R46) and a
+//! Reborn one comes back.
 
 use jackioh_engine::effects::{
     ForEachCardArgs, cards_in_scope, destroy, for_each_card, instance_of, remember_random,
@@ -72,10 +70,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #32.2 Brawl — SPEC §8.7 row 32.2, BUILD M9 Classic+ row C+ 32.2: "Destroys every Unit on both
-// sides but one survivor drawn at random (R60); Indestructible and Immune to Spells Units stay as well;
-// Reborn units come back; no Units, nothing; radiant the survivor is a Unit you choose with the play
-// (R81)".
+// C+ #32.2 Brawl — SPEC §8.7 row 32.2, BUILD M9 Classic+ row C+ 32.2.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

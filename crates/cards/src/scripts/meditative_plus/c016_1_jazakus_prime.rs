@@ -53,10 +53,6 @@ pub fn script() -> CardScripts {
 }
 
 // Meditative+ #16.1 Jazakus Prime — SPEC §8.9 row 16.1, §7, R70, R881, R1182001, R1563008.
-//
-// BUILD M11 row M+ 16.1: "Cry (played or cast): the potion crafter at cost (3) with five times the
-// normal potion's points; a recipe within it is valid and one over it refused; radiant 16/16 and the
-// potion Radiant".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,7 +65,6 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // 4/4
 
-    /// A HUGE Potion dealing each of `hits` to the enemy hero: their sum in points.
     fn huge_recipe(hits: &[i32]) -> Value {
         let effects: Vec<Value> = hits
             .iter()
@@ -90,15 +85,12 @@ mod tests {
         })
     }
 
-    /// The open prompt's offer widened to every block, for the tests of the frame's rules, which the
-    /// offer (R1563007) only narrows.
     fn widen(s: &mut Scenario) {
         if let Some(pending) = s.state_mut().pending.as_mut() {
             pending.craft_offer = Some(whole_palette());
         }
     }
 
-    /// The Prime played into lane 1, its craft prompt open.
     fn crafting(radiant: bool) -> Scenario {
         crate::register_all();
         let mut s = scenario(sides(radiant));
@@ -106,14 +98,12 @@ mod tests {
         s
     }
 
-    /// `crafting`, its offer widened.
     fn any_block(radiant: bool) -> Scenario {
         let mut s = crafting(radiant);
         widen(&mut s);
         s
     }
 
-    /// The crafted card in p1's hand.
     fn crafted(s: &Scenario) -> CardInstance {
         s.hand(P1)
             .into_iter()
@@ -159,13 +149,11 @@ mod tests {
         #[test]
         fn r1182001_r1563008_a_recipe_within_the_20_points_is_crafted_and_one_over_is_refused() {
             let mut s = any_block(false);
-            // 10 + 10 + 1 = 21 points, one over.
             s.expect_refused_with(
                 |s| s.answer(json!([{ "pick": "craft", "recipe": huge_recipe(&[10, 10, 1]) }])),
                 "over the budget of 20",
             );
             assert!(s.state().pending.is_some(), "the prompt stays open");
-            // 10 + 10 = 20, the whole budget.
             s.answer(json!([{ "pick": "craft", "recipe": huge_recipe(&[10, 10]) }]));
             let potion = crafted(&s);
             assert!(!potion.radiant);

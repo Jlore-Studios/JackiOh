@@ -6,8 +6,8 @@
 //!            R275's doubled stats are catalog data on the radiant face.
 //!   Engine:  "Four game-level counters; cost recomputed on read; floor 0".
 //!
-//! THE COST (R55, R65, §10.9): the `cost` hook returns the printed 100 (`query_cost`, never
-//! restated) minus `state.counters`' four counts (§10.1), floored at 0, recomputed on every read;
+//! THE COST (R55, R65, §10.9): the `cost` hook returns the printed 100 (`query_cost`) minus
+//! `state.counters`' four counts (§10.1), floored at 0, recomputed on every read;
 //! `costMod`, discounts and #77's clamp are `effectiveCost`'s. The engine counts plays, casts (R70, not a
 //! cast on draw, R2179002) and exiles (R11); playing it counts after the cost is paid (§10.5 steps 2 and 4).
 
@@ -21,8 +21,7 @@ fn printed_cost_of_def() -> i32 {
     query_cost(&crate::card_def(ID))
 }
 
-/// R55: "Costs 1 less per card drawn, played, destroyed or exiled this game by either player",
-/// floored at 0 (§8.5's Engine cell). The four counters are game-level, so neither side's identity
+/// R55, floored at 0 (§8.5's Engine cell). The four counters are game-level, so neither side's identity
 /// is read and nothing is stored on the instance. The 1 is the declared number `discount` (R386).
 fn cost_now(state: &GameState, printed_cost: i32, discount: i32) -> i32 {
     let counters = &state.counters;
@@ -38,9 +37,8 @@ fn exile_every_other_permanent() -> Vec<Effect> {
     vec![exile_all(json_as(json!({ "side": "any", "rows": ["units", "backrow"], "excludeSelf": true })))]
 }
 
-/// One script for both faces: "Plus Charge" is a printed keyword on the catalog's radiant face and
-/// the 20/20 its printed stats, so both are §10.4 layer 1 and not a line of script, and both of the
-/// row's clauses are kept.
+/// One script for both faces: "Plus Charge" and the 20/20 are printed on the radiant face, so §10.4
+/// layer 1 and not a line of script, and both of the row's clauses are kept.
 pub fn script() -> CardScripts {
     let printed_cost = printed_cost_of_def();
     let void_ = Script {
@@ -61,9 +59,8 @@ pub fn script() -> CardScripts {
 }
 
 // #100 Ceaseless Void — SPEC §8.5, §6.3 (Cost, Exile), §10.4, §10.5, R11, R55, R65, R70; BUILD M4-T4
-// row 100. R275 doubles the radiant face's stats: a 20/20 with Charge. The cost is tested THROUGH
-// the pipeline (`printedCost`, `effectiveCost`, the play validator's refusal), never by reading the
-// hook's return value or the catalog's 100 back; R662's glow (`conditionMet`) is at the end.
+// row 100. The cost is tested THROUGH the pipeline (`printedCost`, `effectiveCost`, the play
+// validator's refusal), never by reading the hook's return value or the catalog's 100 back.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,9 +114,8 @@ mod tests {
         counters.drawn + counters.played + counters.destroyed + counters.exiled
     }
 
-    /// R55's four counters are game-level numbers the engine increments (`draw`, `resolve.countAsPlayed`,
-    /// the state check, `move.exile`). Writing them is writing exactly what those paths write, which is
-    /// how a test reaches a game that has seen 97 cards without playing one.
+    /// Writes R55's four game-level counters as the engine's own paths would, which is how a test
+    /// reaches a game that has seen 97 cards without playing one.
     fn set_counters(s: &mut Scenario, counters: Value) -> Counters {
         let mut merged = js(&s.state().counters);
         for (key, value) in counters.as_object().expect("a partial of the four counters") {
@@ -228,12 +224,8 @@ mod tests {
         #[test]
         fn s10_9_one_script_serves_both_faces_the_cost_hook_the_cry_and_r662_s_glow_and_nothing_else() {
             crate::register_all();
-            // "Plus Charge" and the 20/20 are printed on the radiant face and so §10.4 layer 1, not a line
-            // of script, which is why the two faces are the same object and both of the row's clauses are
-            // kept.
             let scripts = script();
             let (void_base, void_radiant) = (&scripts.base, &scripts.radiant);
-            // The radiant face's hooks are the base face's own (shared `Arc`s).
             assert!(Arc::ptr_eq(void_radiant.cost.as_ref().unwrap(), void_base.cost.as_ref().unwrap()));
             assert!(Arc::ptr_eq(void_radiant.cry.as_ref().unwrap(), void_base.cry.as_ref().unwrap()));
             assert!(Arc::ptr_eq(
@@ -286,7 +278,6 @@ mod tests {
                 set_counters(&mut s, counters);
                 assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), PRINTED - 1);
             }
-            // They add up: four counters at 25 is 100 spent.
             set_counters(&mut s, json!({ "drawn": 25, "played": 25, "destroyed": 25, "exiled": 25 }));
             assert_eq!(effective_cost(s.state(), &held(&s), Default::default()), 0);
         }
@@ -386,8 +377,7 @@ mod tests {
         #[test]
         fn r2179002_a_cast_on_draw_is_no_play_so_only_its_draw_makes_the_void_cheaper() {
             crate::register_all();
-            // #21 Hinder casts itself on the draw: through v0.5.2 that counted as a play (R70), now as
-            // none (R2179002).
+            // #21 Hinder casts itself on the draw, which is no play (R2179002).
             let mut s = scenario(json!({
                 "seed": "void-cast",
                 // The Radiant face discards nothing (R431), so the cast asks no question.
@@ -539,7 +529,6 @@ mod tests {
             assert_eq!(s.hand(P2).len(), 2);
             assert_eq!(s.pile(P2, "library").len(), 1);
             assert_eq!(s.pile(P2, "graveyard").len(), 1);
-            // p1's own hand still holds the spare; only the board was cleared.
             assert_eq!(def_ids(&s.hand(P1)), vec![SPARE.to_string()]);
         }
 
@@ -560,8 +549,7 @@ mod tests {
         use super::*;
 
         /// The mana is 4 rather than 0 so the spare in hand stays affordable: a side with nothing it can
-        /// do auto-ends its turn (§2.5) and the fatigue of the turns that follow would land on the heroes
-        /// this test measures. That it costs 0 here is asserted by `costPaid`.
+        /// do auto-ends its turn (§2.5), and the fatigue that follows would land on the heroes measured.
         fn play_freely(radiant_face: bool) -> Scenario {
             let mut s = void_scenario(json!({ "radiantFace": radiant_face, "p1": { "mana": 4 } }));
             set_counters(&mut s, json!({ "drawn": 100 }));

@@ -56,8 +56,6 @@ mod tests {
     const EXILER: &str = "core-034"; // (4) Spell: Exile a permanent and a random card from the opponent's deck.
     const SHATTER: &str = "core-036"; // (1) Spell: Destroy a backrow card. Lock its zone.
 
-    /// p1 has Sanctum (`radiant` its face) standing in backrow zone 1, `graveyard` in its graveyard;
-    /// p2 has a Vanilla in its graveyard.
     fn standing(radiant: bool, graveyard: Value) -> Scenario {
         crate::scenario(json!({
             "p1": {
@@ -70,7 +68,6 @@ mod tests {
         }))
     }
 
-    /// The def ids of `player`'s graveyard cards some legal play names.
     fn graveyard_defs_offered(s: &Scenario, player: PlayerId) -> Vec<String> {
         let offered: Vec<String> = legal_actions(s.state(), player)
             .into_iter()
@@ -86,8 +83,6 @@ mod tests {
             .collect()
     }
 
-    /// A play of p1's graveyard card, sent to `reduce` as `legalActions` offers it (the harness's
-    /// `play` takes a card from a hand), its state put back into the scenario's.
     fn play_from_graveyard(s: &mut Scenario, card: &CardInstance, extra: Value) {
         let mut action = json!({ "type": "play", "playerId": "p1", "instanceId": card.id, "nonce": format!("sanctum-{}", card.id) });
         if let (Some(into), Some(more)) = (action.as_object_mut(), extra.as_object()) {
@@ -167,7 +162,6 @@ mod tests {
                 action,
                 ActionBody::Play { instance_id, .. } if *instance_id == top.id
             )));
-            // The view of the deck and of the graveyard carries no keyword: the lent one shows nowhere.
             assert!(!serde_json::to_string(&s.view(P1)).expect("serializes").contains("Flashback"));
         }
 
@@ -198,7 +192,6 @@ mod tests {
             };
             let mut s = holding(true);
             s.play(ID, json!({ "zone": 1 }));
-            // Its (4) paid, then 4 gained back.
             s.expect_mana(P1, 4);
 
             let mut s = holding(true);
@@ -206,7 +199,6 @@ mod tests {
             s.play(ID, json!({ "zone": 1 }));
             s.expect_mana(P1, 5);
 
-            // The base face prints no Cry.
             let mut s = holding(false);
             s.play(ID, json!({ "zone": 1 }));
             s.expect_mana(P1, 0);

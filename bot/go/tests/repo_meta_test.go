@@ -241,7 +241,7 @@ func TestRepoMeta_EveryFormTitlesItsIssuePatchWithNoVersion(t *testing.T) {
 func TestRepoMeta_EachFormTitlesAndLabelsItsIssueAndLeavesItsTypeToTriage(t *testing.T) {
 	for _, form := range repoMetaFormsRead(t) {
 		title := workflowsSearch(t, repoMetaFormTitle, form.text, 1)
-		assertTrue(t, triage.FollowsConvention(title+"what it does"), form.name)
+		assertTrue(t, triage.Convention.MatchString(title+"what it does"), form.name)
 		raw, err := pyjson.LoadsString(workflowsSearch(t, repoMetaFormLabels, form.text, 1))
 		if err != nil {
 			t.Fatal(err)

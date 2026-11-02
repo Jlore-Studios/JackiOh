@@ -110,11 +110,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #138 Pocket Peptides — SPEC §8.10 row 138, BUILD M12 row S 138: "set, it fires when a Unit of its
-// controller's would die from combat damage, not from a Spell's hit or a destroy; the CN Peptides cast on
-// it Buffs it or destroys it (both seen over the seeds); a Buff that lifts its Health past its damage keeps
-// it alive; radiant each of its controller's Units has a Radiant CN Peptides cast on it, its Lucky 1
-// rolling twice".
+// S #138 Pocket Peptides — SPEC §8.10 row 138, BUILD M12 row S 138.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -129,8 +125,6 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // (3) Spell: "Destroy a Unit."
     const SORCERER: &str = "core-068"; // (2) 5/5: "Cry: Deal 4 damage."
 
-    /// p1, active with 10 mana, has a Vanilla in unit zone 1 and holds `hand`; p2 has Pocket Peptides
-    /// (`radiant` its face) set in backrow zone 1 and `field` in its unit zones.
     fn trapped(seed: &str, radiant: bool, hand: Value, field: Value) -> Scenario {
         let mut cards = vec![json!(FILLER)];
         cards.extend(hand.as_array().cloned().unwrap_or_default());
@@ -159,7 +153,6 @@ mod tests {
         s.last_events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
     }
 
-    /// The CN Peptides casts among the last events, each with whether it was Radiant.
     fn peptides_cast(s: &Scenario) -> Vec<bool> {
         s.last_events()
             .iter()
@@ -172,7 +165,6 @@ mod tests {
             .collect()
     }
 
-    /// p1's Vanilla attacks p2's Vanilla in unit zone 2 on the seed `seed`; whether p2's Vanilla lives.
     fn defender_lives(seed: &str) -> bool {
         let mut s = trapped(seed, false, json!([]), json!([{ "def": VANILLA, "lane": 2 }]));
         let defender = s.unit_at(P2, 2);
@@ -191,7 +183,6 @@ mod tests {
             assert!(fired(&s));
             s.expect_in_zone(ID, "graveyard");
             assert_eq!(peptides_cast(&s), vec![false]);
-            // p2 cast it, and it lands in p2's graveyard.
             assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == CN_PEPTIDES));
         }
 
@@ -199,7 +190,6 @@ mod tests {
         fn r1875006_the_cast_buffs_it_alive_or_destroys_it_both_over_the_seeds() {
             let lives = seed_where("pocket-peptides-lives", defender_lives);
             let dies = seed_where("pocket-peptides-dies", |seed| !defender_lives(seed));
-            // A Buff that lifted its Health past its damage kept it: its Health is above 0.
             let mut s = trapped(&lives, false, json!([]), json!([{ "def": VANILLA, "lane": 2 }]));
             let defender = s.unit_at(P2, 2);
             s.attack(s.unit_at(P1, 1), &defender);
@@ -232,7 +222,6 @@ mod tests {
         #[test]
         fn r1875006_the_enemys_unit_dying_in_combat_does_not_fire_it() {
             let mut s = trapped("pocket-peptides-enemy", false, json!([]), json!([{ "def": GENN, "lane": 1 }]));
-            // p1's Vanilla dies in combat against the 14/14; the trap is p2's, and only p2's Units count.
             let attacker = s.unit_at(P1, 1);
             s.attack(&attacker, s.unit_at(P2, 1));
             s.expect_in_zone(attacker.id.as_str(), "graveyard");
@@ -251,7 +240,6 @@ mod tests {
                 json!([]),
                 json!([{ "def": MOTHS, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": MOTHS, "lane": 4 }]),
             );
-            // The dying Vanilla's cast first, then the two Moths' in lane order.
             let lanes: Vec<Vec<String>> = [2, 1, 4].iter().map(|lane| vec![s.unit_at(P2, *lane).id]).collect();
             let defender = s.unit_at(P2, 2);
             s.attack(s.unit_at(P1, 1), &defender);
@@ -271,10 +259,6 @@ mod tests {
         }
     }
 
-    /// R1881007: a set Pocket Peptides is spent as it fires, and a second one set beside it still
-    /// answers the check inside the first one's cast. p1's 14/14 attacks p2's Vanilla, two Pocket
-    /// Peptides set behind it; on a seed whose first cast Buffs the Vanilla (no destroy), the 14 damage
-    /// still kills it, so the check inside that cast finds it dying in combat again.
     mod set_twice {
         use super::*;
 
@@ -297,7 +281,6 @@ mod tests {
             (s, defender)
         }
 
-        /// Whether the first CN Peptides cast took the Buff: an `upgraded` comes before any destroy.
         fn first_cast_buffed(s: &Scenario) -> bool {
             s.last_events()
                 .iter()
@@ -337,14 +320,10 @@ mod tests {
         }
     }
 
-    /// R1881007: a Pocket Peptides fused into one of p2's Units (as M #47's Fuse takes it in) answers its
-    /// Unit's combat death with one cast, and the check inside that cast, which finds the Unit still dying,
-    /// asks it nothing more: one CN Peptides, the game going on.
     mod fused {
         use super::*;
         use jackioh_engine::subsystems::{self, FuseArgs};
 
-        /// The fused card `def_ids` make, put into p2's hand at (0), as `tests/cross`'s `craft_fused`.
         fn fused_into_hand(s: &mut Scenario, def_ids: &[&str]) -> CardInstance {
             let mut events: Vec<GameEvent> = vec![];
             let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);

@@ -1,45 +1,21 @@
-//! The autopilot (Meditative+ #18 Cognitive Offloading, docs/meditative-plus-set.md MP5, R1183002,
-//! R1183003): "the AI plays the rest of your turn", played by the engine's §10.7 scorer, never
-//! `crates/ai` (CLAUDE.md rule 4: the engine cannot depend on it, and the AI's own pick runs on a
-//! budget, a wall clock and a determinization rng, so the server, the browser and a replay could
-//! disagree). Core #96 My Pawn's `ai_policy::play_out_turn` is its random cousin.
+//! The autopilot (Meditative+ #18 Cognitive Offloading, docs/meditative-plus-set.md MP5, R1183002, R1183003):
+//! "the AI plays the rest of your turn", played by the engine's §10.7 scorer, never `crates/ai`
+//! (CLAUDE.md rule 4: the engine cannot depend on it, and the AI's pick runs on a clock). Core #96 My Pawn's
+//! `ai_policy::play_out_turn` is its random cousin.
 //!
-//! The `autopilot` verb sets `PlayerState.autopilot` on its caster for the turn running, and only on
-//! the caster's own turn (R1183002). `reduce` drives it (`reduce::end_due_turns`): once an action has
-//! settled, while the active player's autopilot is due — their main phase with nothing open, or a
-//! prompt of theirs open — it takes `choose`'s action, one at a time, each through the reducer's own
-//! step, until the turn ends, an action of the other player's is owed (a prompt of theirs: their
-//! answer brings the autopilot back), or `AUTOPILOT_MAX_ACTIONS` is reached, when the rest of the
-//! turn is a timeout's (R79). The status ends at that turn's cleanup.
+//! `reduce::end_due_turns` takes `choose`'s action while `due`, until the turn ends, the other player owes
+//! an action, or `AUTOPILOT_MAX_ACTIONS` is reached, when the rest is a timeout's (R79). The status ends at
+//! cleanup. `choose` is pure in (state, player): every candidate is tried on the player's concealed copy
+//! (`scorer::concealed_copy`, R222, R1714000) on the dry run's own seed, so the same state makes the same
+//! choice (§9.3). Four steps: (1) a prompt of theirs, the best of the first `AUTOPILOT_ANSWERS_TRIED`
+//! answers; (2) a play, in the scorer's order (as M #71's judge scores a play, R1125), the first card with
+//! a harmless play; (3) an attack when `Outcome::worth_attacking`; (4) otherwise the turn ends. It never
+//! activates an ability, switches a position, emotes, offers or answers a draw or concedes.
 //!
-//! `choose` (R1183003) is a pure function of the state and the player: every candidate is tried on
-//! the player's concealed copy of the board (`scorer::concealed_copy`, R222: a card hidden from
-//! them is a stand-in with no text; R1714000: and no record they may not read, an answer's key or
-//! the other seat's secret choice among them), drawing from the dry run's own seed, so the match's
-//! rng is never touched, the choice never reads what the player may not, and the same state always
-//! makes the same choice (§9.3). In order:
-//!
-//! 1. A prompt of theirs: the first `AUTOPILOT_ANSWERS_TRIED` answers `legal_actions` lists, the one
-//!    whose result ranks highest (`Outcome`), ties to the earlier.
-//! 2. A play: their playable cards in the scorer's order (`scorer::score_instance`, the card as its
-//!    face states it, as M #71's judge scores a play, R1125), each tried at the plays the scorer's dry
-//!    run narrows it to (`scorer::dry_run_plays`) — those tries are the dry run; the first card with
-//!    a play that does no harm — it wins, sets up lethal, clears the enemy board, heals a hero below
-//!    `SCORER_LOW_HEALTH` or lowers no part of the board's balance — is played at its best such play.
-//! 3. An attack: every attack `legal_actions` lists, the best; taken when it wins, sets up lethal,
-//!    clears the enemy board or raises the balance.
-//! 4. Otherwise the turn ends.
-//!
-//! It never activates an ability, switches a position, emotes, offers or answers a draw or concedes.
-//!
-//! R1844000 (Stinkyscape #46 Circadian Halfcycler, #47 Circadian Fullcycler): the autopilot as an
-//! aura. While a card with `pilots_actions` or `pilots_turn` acts on a player's field, each of their
-//! turns engages it as the turn begins (`engage_aura`), its start included. `due` reads the aura again
-//! before every step (`aura_reach`): a whole turn beats any count, the largest count holds, and with
-//! no aura left the turn is the player's. A count takes R456's actions, a play or an attack, never an
-//! answer, which is part of the action that asked: once the count is spent and nothing is open, the
-//! turn is handed back for good (`release_spent_aura`), so a prompt the player's own action opens is
-//! theirs. Cognitive Offloading played on such a turn takes the rest of it whole (`engage`).
+//! R1844000 (Stinkyscape #46, #47): the autopilot as an aura, engaged as each of the player's turns begins
+//! (`engage_aura`) and read again before every step (`aura_reach`). A count takes R456's actions, never an
+//! answer; once spent, the turn is handed back for good (`release_spent_aura`), so a prompt the player's own
+//! action opens is theirs.
 
 use crate::config::{AUTOPILOT_ANSWERS_TRIED, SCORER_LOW_HEALTH};
 use crate::duos_life::effective_life;
@@ -53,9 +29,8 @@ use crate::subsystems::scorer::{
 };
 use crate::wire::{Action, ActionBody, ActionType, GameEvent, Phase, PlayerId, Winner, opponent_of};
 
-/// R1183002: the autopilot takes `player`'s turn from now to its end — on `player`'s own turn only,
-/// with no game result, and once a turn (a second engagement that turn changes nothing). Emits
-/// `autopilotEngaged`. R1844000: on a turn an aura engaged, the rest of it becomes whole.
+/// R1183002: the autopilot takes `player`'s turn from now to its end: on their own turn only, with no
+/// result, once a turn. R1844000: on a turn an aura engaged, the rest of it becomes whole.
 pub fn engage(sink: &mut EngineSink<'_>, player: PlayerId) {
     if sink.state.result.is_some() || sink.state.active != player {
         return;
@@ -86,9 +61,8 @@ pub enum AuraReach {
     Turn,
 }
 
-/// R1844000: the reach of the autopilot auras acting on `player`'s field (§3.2: the units on top of
-/// their piles and the face-up backrow) — a whole turn when any says so, else the largest count, which
-/// never adds up with another; `None` with neither. The count is printed, never a declared number.
+/// R1844000: the reach of the autopilot auras acting on `player`'s field (§3.2): a whole turn when any
+/// says so, else the largest count (counts never add up); `None` with neither. The count is printed.
 pub fn aura_reach(state: &GameState, player: PlayerId) -> Option<AuraReach> {
     let mut most: Option<i32> = None;
     for card in crate::damage::acting_texts_of(state, player) {
@@ -104,9 +78,8 @@ pub fn aura_reach(state: &GameState, player: PlayerId) -> Option<AuraReach> {
     most.map(AuraReach::Actions)
 }
 
-/// R1844000: an autopilot aura takes `player`'s turn as it begins — on their own turn, with no game
-/// result and an aura acting on their field. Emits `autopilotEngaged`. A card that arrives later in
-/// the turn waits for their next.
+/// R1844000: an autopilot aura takes `player`'s turn as it begins; a card that arrives later in the
+/// turn waits for their next.
 pub fn engage_aura(sink: &mut EngineSink<'_>, player: PlayerId) {
     if sink.state.result.is_some() || sink.state.active != player || aura_reach(sink.state, player).is_none()
     {
@@ -121,9 +94,8 @@ pub fn engage_aura(sink: &mut EngineSink<'_>, player: PlayerId) {
     sink.events.push(GameEvent::AutopilotEngaged { player, turn });
 }
 
-/// R1844000: the active player's aura status goes once it has nothing left to play — its count spent,
-/// or its aura gone — and nothing is open, so the rest of the turn, and any prompt their own action
-/// opens in it, is theirs. A status of Cognitive Offloading's (no aura count) is left alone.
+/// R1844000: the active player's aura status goes once its count is spent or its aura gone and
+/// nothing is open. A status of Cognitive Offloading's (no aura count) is left alone.
 pub fn release_spent_aura(state: &mut GameState) {
     let player = state.active;
     let Some(taken) = state.players[player]
@@ -145,10 +117,9 @@ pub fn release_spent_aura(state: &mut GameState) {
     }
 }
 
-/// Whether the active player's autopilot owes an action now: theirs for this turn, no result, the
-/// mulligans done, and either their main phase with nothing open or a prompt of theirs open.
-/// R1844000: on an aura's turn, only while an aura still acts and its count is not spent — or a
-/// prompt of theirs is open, which the last counted action asked.
+/// Whether the active player's autopilot owes an action now: their main phase with nothing open, or a
+/// prompt of theirs open. R1844000: on an aura's turn, only while an aura acts and its count is not
+/// spent, or a prompt the last counted action asked is open.
 pub fn due(state: &GameState) -> Option<PlayerId> {
     let player = state.active;
     let status = state.players[player].autopilot?;
@@ -168,9 +139,8 @@ pub fn due(state: &GameState) -> Option<PlayerId> {
     }
 }
 
-/// R1183003: what one trial left behind, ranked in field order (`ranks_above`): a won game, then
-/// §10.7's three priorities (lethal on the board, the enemy board cleared, a low hero healed), then
-/// the change in the board's balance (`balance`). A lost game is no outcome at all.
+/// R1183003: what one trial left behind, ranked in field order: a won game, then §10.7's three
+/// priorities, then the change in the board's balance. A lost game is no outcome at all.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Outcome {
     won: bool,
@@ -334,9 +304,8 @@ fn best_play(state: &GameState, player: PlayerId, plays: &[ActionBody]) -> Optio
             cards.push(instance_id.clone());
         }
     }
-    // The scorer's reading of each card as its face states it (`score_instance` with no dry-run
-    // copy): the tries below are the dry run, one per play, so a card is played only after its own
-    // plays were tried, and the ranking costs no copy of the board per card (R1183003).
+    // R1183003: each card scored as its face states it (no dry-run copy): the tries below are its
+    // dry run, so the ranking costs no copy of the board per card.
     let mut ranked: Vec<(String, f64)> = cards
         .into_iter()
         .filter_map(|id| {

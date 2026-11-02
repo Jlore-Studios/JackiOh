@@ -1,8 +1,6 @@
-// The collection screen's panels (#1307, SPEC §14), from fixture responses: the completion counts
-// and locked cards of the owned-cards panel, the wallet, and the tracks' levels, XP bars, rewards
-// and locks. The server's answers are the fixtures; nothing here asks it anything.
-// R1655000: a card in context (the card view's strip, its previews, its equips and its locks) and the
-// account's cosmetics as tiles. R1956000: the owned cards' grid wears their picks.
+// The collection screen's panels (#1307, SPEC §14), from fixture responses (nothing here asks the
+// server anything): owned cards, wallet and tracks. R1655000: a card in context and the account's
+// cosmetics as tiles. R1956000: the owned cards' grid wears their picks.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -39,11 +37,9 @@ import {
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
-import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
+import { cosmeticPacksInfo, walletInfo } from "../shop/fixtures.ts";
 import { expectEmptyState } from "../test/empty.ts";
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
-import OwnedCosmetics from "./CosmeticsPanel.tsx";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
 import WalletPanel from "./WalletPanel.tsx";
@@ -55,8 +51,6 @@ import {
   cardStrip,
   collectionSectionOf,
   collectionTestid as T,
-  cosmeticKindWords,
-  ownedCosmetics,
   setCompletions,
 } from "./collection.ts";
 import { collectionOwning, fullCollection, track, tracksOf } from "./fixtures.ts";
@@ -96,7 +90,7 @@ describe("#1307 setCompletions", () => {
       [0, 0],
       [0, 0],
       [0, 0],
-      // Re-pinned for the Training Grounds release (#2204): the set ships, so it has a row.
+      // Training Grounds ships (#2204), so it has a row.
       [0, 0],
     ]);
     expect(sets[0]?.cards.map((card) => [card.def.id, card.owned])).toEqual([
@@ -231,14 +225,6 @@ describe("#2053 card names in the reader's language", () => {
     expect(opened.detail).toBe(CHINESE["core-002"]!.name);
   });
 
-  it("#2053 an owned per-card cosmetic names its card in the reader's language", async () => {
-    await setLocale("zh-CN");
-    render(<OwnedCosmetics owned={ownedCosmeticsOf()} />);
-
-    expect(screen.getByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toHaveTextContent(
-      `用于${CHINESE["core-004"]!.name}`,
-    );
-  });
 });
 
 describe("#1307 WalletPanel", () => {
@@ -321,32 +307,6 @@ describe("#1307 TracksPanel", () => {
 });
 
 describe("R1579000 the Collection's cosmetics and sections", () => {
-  const starters = COSMETICS.filter((cosmetic) => cosmetic.starter && !cosmetic.default);
-
-  it("R1579000 ownedCosmetics lists every starter but the defaults once, then each per-card cosmetic on its card", () => {
-    const none = ownedCosmetics({ cards: [], account: [] });
-    expect(none.map((entry) => entry.cosmetic.id)).toEqual(starters.map((cosmetic) => cosmetic.id));
-    expect(none.every((entry) => entry.cardId === null)).toBe(true);
-    expect(none.some((entry) => entry.cosmetic.default)).toBe(false);
-
-    const some = ownedCosmetics(
-      ownedCosmeticsOf({
-        cards: [
-          { cardId: "core-004", cosmeticId: "full-art-gary-the-gambler" },
-          { cardId: "core-001", cosmeticId: "full-art-big-d-fender" },
-          { cardId: "core-001", cosmeticId: "full-art-unknown-to-this-client" },
-        ],
-        account: ["table-felt", "table-unknown-to-this-client"],
-      }),
-    );
-    // The registry's order: the starters, once each (table-felt is in `account` too), then the full arts.
-    expect(some.map((entry) => [entry.cosmetic.id, entry.cardId])).toEqual([
-      ...starters.map((cosmetic) => [cosmetic.id, null]),
-      ["full-art-big-d-fender", "core-001"],
-      ["full-art-gary-the-gambler", "core-004"],
-    ]);
-  });
-
   it("R1579000 collectionSectionOf reads ?section= and gives the hub otherwise", () => {
     expect(collectionSectionOf("?section=cards")).toBe("cards");
     expect(collectionSectionOf("?section=cosmetics")).toBe("cosmetics");
@@ -359,32 +319,6 @@ describe("R1579000 the Collection's cosmetics and sections", () => {
   });
 });
 
-describe("R1827000 the owned portraits", () => {
-  it("R1827000 ownedCosmetics lists owned portraits on no card, never vanilla, as Portrait", () => {
-    const portraitsOf = (owned: Parameters<typeof ownedCosmetics>[0]) =>
-      ownedCosmetics(owned)
-        .filter((entry) => entry.cosmetic.kind === "portrait")
-        .map((entry) => [entry.cosmetic.id, entry.cardId]);
-    // `vanilla` is a default every account owns with no row, so it is never listed, even when a row names it.
-    expect(portraitsOf({ cards: [], account: [] })).toEqual([]);
-    const owned = ownedCosmeticsOf({ account: ["portrait-shredder", "portrait-vanilla", "portrait-gary", "portrait-ulfric"] });
-    // The registry's order, on no card; an id this client does not know is not shown.
-    expect(portraitsOf(owned)).toEqual([
-      ["portrait-gary", null],
-      ["portrait-shredder", null],
-    ]);
-
-    expect(cosmeticKindWords("portrait")).toBe("Portrait");
-    render(<OwnedCosmetics owned={owned} />);
-    expect(screen.getByTestId(T.ownedCosmetic("portrait-gary", null))).toHaveTextContent("Gary the Gambler portrait · Portrait · Epic");
-    expect(screen.getByTestId(T.ownedCosmetic("portrait-shredder", null))).toHaveTextContent(
-      "Jlockeed Shredder-10 portrait · Portrait · Epic",
-    );
-    expect(screen.queryByTestId(T.ownedCosmetic("portrait-vanilla", null))).toBeNull();
-    expect(screen.queryByTestId(T.ownedCosmetic("portrait-timmy", null))).toBeNull();
-  });
-});
-
 describe("R1655000 a card in context", () => {
   const BIG_D = "core-001"; // a Common unit with a full art of its own
   const PLAIN = "core-002"; // a Common unit with none
@@ -392,7 +326,6 @@ describe("R1655000 a card in context", () => {
   const MYTHIC = "core-096";
   const BIG_D_ART = "full-art-big-d-fender";
   const CARDS = [BIG_D, PLAIN, GARY, MYTHIC].map(defOf);
-  /** The cosmetics the ledger lists for Big D-fender's owner: its full art. */
   const OWNS_BIG_D_ART = new Map([[BIG_D, new Set([BIG_D_ART])]]);
 
   /** Opens `id` in its set, with every cosmetic owned unless `owned` says what the ledger holds. */
@@ -426,7 +359,6 @@ describe("R1655000 a card in context", () => {
     expect(item("border-wood")).toHaveAttribute("data-equipped", "true");
     expect(item("border-standard")).toHaveAttribute("data-equipped", "false");
 
-    // Another card, in the same view: the defaults, and none of Big D-fender's.
     fireEvent.click(screen.getByTestId(T.card(PLAIN)));
     expect(screen.getByTestId(T.cardView)).toHaveAttribute("data-card", PLAIN);
     expect(large().getAttribute("data-finish")).toBeNull();
@@ -458,7 +390,6 @@ describe("R1655000 a card in context", () => {
 
     fireEvent.mouseEnter(item("border-bone"));
     expect(shown()?.getAttribute("data-frame")).toBe("border-bone");
-    // The card's other picks stay on the shown copy, and the card itself is not changed.
     expect(shown()?.getAttribute("data-finish")).toBe("finish-linen");
     expect(large().getAttribute("data-frame")).toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({ finish: "finish-linen" });
@@ -516,7 +447,6 @@ describe("R1655000 a card in context", () => {
     expect(large().getAttribute("data-frame")).toBeNull();
     expect(screen.getByTestId(T.stripDefault("border"))).toHaveAttribute("aria-pressed", "true");
 
-    // Another card has none of it.
     fireEvent.click(item("foil-rainbow"));
     fireEvent.click(screen.getByTestId(T.card(PLAIN)));
     expect(readCardPicks(PLAIN)).toEqual({});
@@ -534,7 +464,6 @@ describe("R1655000 a card in context", () => {
     expect(art).toHaveAttribute("aria-disabled", "true");
     expect(art).toHaveTextContent("Epic");
     expect(art).toHaveTextContent("Locked");
-    // What every account owns is not locked.
     expect(item("border-wood")).toHaveAttribute("data-owned", "true");
     expect(item(NO_FULL_ART_ID)).toHaveAttribute("data-owned", "true");
 
@@ -545,7 +474,6 @@ describe("R1655000 a card in context", () => {
     expect(art).toHaveAttribute("data-equipped", "false");
     expect(shown()).toBeNull();
 
-    // The ledger lists it, and the same item equips.
     cleanup();
     open(BIG_D, OWNS_BIG_D_ART);
     expect(item(BIG_D_ART)).toHaveAttribute("data-owned", "true");
@@ -609,7 +537,6 @@ describe("R1655000 a card in context", () => {
     expect(readCardPicks(BIG_D)).toEqual({});
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBeNull();
 
-    // Clicked, the pick stands past the pointer leaving.
     fireEvent.mouseEnter(item(BIG_D_ART));
     fireEvent.click(item(BIG_D_ART));
     fireEvent.mouseLeave(item(BIG_D_ART));
@@ -637,7 +564,6 @@ describe("R1655000 a card in context", () => {
     expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "false");
     expect(useDefault).toHaveAttribute("aria-pressed", "true");
 
-    // Chosen, it is.
     fireEvent.click(item(BIG_D_ART));
     expect(item(BIG_D_ART)).toHaveAttribute("aria-pressed", "true");
     expect(useDefault).toHaveAttribute("aria-pressed", "false");
@@ -673,7 +599,6 @@ describe("R1655000 a card in context", () => {
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe(stored);
     expect(writes, "no preview reaches the account's sync").toEqual([]);
 
-    // Chosen, it is a write like any other.
     fireEvent.click(item(BIG_D_ART));
     expect(writes).toEqual([[BIG_D, { fullArt: true }]]);
     unsubscribe();
@@ -724,7 +649,6 @@ describe("R1655000 a card in context", () => {
       [`${BIG_D_ART}-animated`, "Legendary"],
       [`${BIG_D_ART}-signed`, "Mythic"],
     ]);
-    // A card's own full art is its own: Big D-fender's is not on another card.
     expect(cardStrip(PLAIN, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
   });
 });
@@ -759,7 +683,6 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     expect(plain.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
     // A grid's foil holds still: the moving slots stay with the card a player opens.
     expect(plain.getAttribute("data-cosmetic-motion")).toBe("static");
-    // A Mythic face wears no cosmetic foil, and its other picks.
     expect(tile(MYTHIC).getAttribute("data-cosmetic-foil")).toBeNull();
     expect(tile(MYTHIC).getAttribute("data-frame")).toBe("border-bone");
     // A locked silhouette is no copy of the viewer's.
@@ -790,7 +713,6 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     );
     fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     expect(tile(PLAIN).getAttribute("data-frame")).toBe("border-bone");
-    // The unowned pick wears its kind's default (R1953001).
     expect(tile(PLAIN).getAttribute("data-finish")).toBeNull();
   });
 });
@@ -811,7 +733,6 @@ describe("R1655000 the account's cosmetics as tiles", () => {
       ["table-astral", false],
     ]);
     expect(accountTiles("table", (id) => ownsAccountCosmetic(new Set(["table-astral"]), id)).at(-1)?.owned).toBe(true);
-    // Where nothing decides ownership, every tile is owned.
     expect(accountTiles("table", (id) => ownsAccountCosmetic("every", id)).every((tile) => tile.owned)).toBe(true);
     expect(accountTiles("cardBack", () => false).map((tile) => tile.cosmetic.id)).toEqual(cosmeticsOf("cardBack").map((cosmetic) => cosmetic.id));
   });

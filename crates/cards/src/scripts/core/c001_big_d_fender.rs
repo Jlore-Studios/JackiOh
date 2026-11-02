@@ -1,21 +1,16 @@
 //! SPEC §8.1 #1 Big D-fender — 0/8 → 0/16 Unit, Human, cost 2.
 //! Base: "Aura: your units in Defense Position have +2 Armor". The radiant cell is "+4 Armor", and
-//! per §8's Conventions a cell that changes only a number changes only that number, so the radiant
-//! form is the same aura at 4.
+//! per §8's Conventions a cell that changes only a number changes only that number.
 //!
-//! Engine cell: an aura layer keyed on `position == DEF` (§10.4 layer 5); 0 attack, so R7 stops it
-//! from ever declaring an attack — that is the combat validator reading the printed stats, nothing
-//! for this file to script. Armor sums across every source (§10.4), so a Defense-Position ally ends
-//! up with this aura's 2 on top of Defense Position's own +1 (§4.1) and takes 3 less (BUILD M4-T4).
+//! An aura keyed on `position == DEF` (§10.4 layer 5). 0 attack, so R7 stops it attacking: nothing to
+//! script. Armor sums across sources (§10.4): the aura's 2 on top of Defense Position's own +1 (§4.1).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-001";
 
-/// Armor +n on the controller's own units that are on the field in Defense Position (§4.1, §10.4).
-/// "Your units" is the controller's side, so an enemy unit in Defense Position gets nothing, and the
-/// aura reads the position off the instance on every read rather than storing a total. n is the
-/// declared number `armor` (R386): 2, 4 on the Radiant face.
+/// Armor +n on the controller's own units in Defense Position (§4.1, §10.4), read off the instance on
+/// every read rather than stored. n is the declared number `armor` (R386): 2, 4 on the Radiant face.
 fn defense_armor_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let n = param(&args, "armor");
@@ -46,10 +41,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// BUILD M4-T4 row 1: "DEF ally takes 3 less (1 position + 2 aura), ATK ally unaffected; it never
-// attacks; radiant +4". The aura shows only in damage (§4.4 step 2 subtracts total Armor), so each
-// case is one combat and one health assertion: #25 (7/7, Armor 7) attacks #19 (9/9, Taunt, so the
-// attack must go to it, §4.2 step 3).
+// BUILD M4-T4 row 1. Armor shows only in damage (§4.4 step 2): #25 (7/7, Armor 7) attacks #19 (9/9, Taunt,
+// §4.2 step 3).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -104,7 +97,6 @@ mod tests {
             }));
             s.expect_refused(|s| s.attack("core-001", "hero"));
             s.expect_refused(|s| s.attack("core-001", "core-025"));
-            // The board is untouched: no exertion was spent and nothing was damaged.
             s.expect_stats("core-025", json!({ "health": 7 }));
         }
 
@@ -116,8 +108,7 @@ mod tests {
                 "p2": { "field": [{ "def": "core-025", "position": "DEF" }] }
             }))
             .attack("core-019", "core-025")
-            // 9 attack − (7 printed Armor + 1 Defense Position) = 1. If the aura reached across the
-            // board it would be 9 − 10 = 0 and the enemy would be untouched.
+            // 9 attack − (7 printed Armor + 1 Defense Position) = 1; an aura reaching across would make 0.
             .expect_stats("core-025", json!({ "health": 6, "maxHealth": 7 }));
         }
 
@@ -142,7 +133,6 @@ mod tests {
         }
     }
 
-    /// R1081000: a Unit standing in the backrow in Defense Position takes the aura's Armor too.
     #[test]
     fn r1081000_a_defense_position_unit_standing_in_the_backrow_takes_the_armor() {
         crate::register_all();

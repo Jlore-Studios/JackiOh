@@ -9,7 +9,7 @@
 //! a fresh Field Spell into its caster's leftmost open backrow zone (R64), one with no zone left not
 //! summoned; summoned, so no Cry (R1). Radiant: each `radiant: true`. The ending is the Brains' own
 //! (R1843000): each votes at its controller's start of turn on its own condition, and three votes in one
-//! turn remove that player, a loss for them and a win for the opponent (R1843001). Declares no numbers.
+//! turn remove that player, a loss for them and a win for the opponent (R1843001).
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -44,10 +44,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #18 Imitated Instrumentality — SPEC §8.10 row S 18, BUILD M12 row S 18: "cast: MELCHIOR, BALTHASAR
-// and CASPER summoned into your backrow in that order, one with no zone not summoned; three votes in one
-// of your turns end the game, voted-out, a loss for you (R1843000, R1843001); radiant: the three Radiant"
-// (R1866000).
+// S #18 Imitated Instrumentality — SPEC §8.10 row S 18, BUILD M12 row S 18 (R1843000, R1843001,
+// R1866000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -60,17 +58,14 @@ mod tests {
     const MELCHIOR: &str = "stinkyscape-018-1";
     const BALTHASAR: &str = "stinkyscape-018-2";
     const CASPER: &str = "stinkyscape-018-3";
-    /// A Field Spell to fill a backrow zone with.
     const MANA_WELL: &str = "core-006";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FILLER: &str = "core-016"; // Hit Job: inert in a hand.
 
-    /// The def id and Radiant flag of each of p1's backrow zones, lane 1 to 5.
     fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
         (1..=5).map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant))).collect()
     }
 
-    /// p1 casts the card (Radiant on `radiant`) over `backrow`.
     fn cast(radiant: bool, backrow: Value) -> Scenario {
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": INSTRUMENTALITY, "radiant": radiant }, FILLER], "backrow": backrow },
@@ -80,7 +75,6 @@ mod tests {
         s
     }
 
-    /// The def ids the scenario's `summoned` events name, in order: summoned, so none played (R1).
     fn summoned(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()

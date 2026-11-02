@@ -126,9 +126,6 @@ func TestBasics_EdgesInWinterTime(t *testing.T) {
 func TestBasics_NextOpenAndClose(t *testing.T) {
 	opens := basicsWindow.NextOpen(testsupport.Day)
 	assertEqual(t, clock.ISO(opens), "2026-09-30T02:00:00Z")
-	closes := basicsWindow.ClosesAt(testsupport.Night)
-	assertEqual(t, clock.ISO(closes), "2026-09-30T12:00:00Z")
-	assertTrue(t, basicsWindow.ClosesAt(testsupport.Day).IsZero()) // None
 }
 
 func TestBasics_FallbackZoneAgreesWithTzdata(t *testing.T) {

@@ -1,10 +1,6 @@
-// The end of a practice game: Victory, Defeat or Draw, why, and what to do next (SPEC §9.9).
-//
-// It reads only the human's `PlayerView` result (CLAUDE.md rule 7), and it is the practice route's
-// own screen: `Game.tsx`'s `result-overlay` still renders underneath, unchanged, for every other
-// consumer of the board. "View the board" closes the dialog so the final position can be read; the
-// HUD's outcome chip opens it again. R768000: a game the worker kept also offers its replay, and its
-// last turn as a GIF. R1303000: a game on a server seed says what the server made of its claim.
+// The end of a practice game: Victory, Defeat or Draw, why, and what to do next (SPEC §9.9). It reads
+// only the human's `PlayerView` result (CLAUDE.md rule 7); `Game.tsx`'s `result-overlay` still renders
+// underneath, unchanged, for every other consumer of the board.
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -55,7 +51,6 @@ function reasonText(outcome: PracticeOutcome, reason: GameOverReason, winner: Pl
       // R679: a Glitch voided the game.
       return "This match never happened.";
     case "alt-win":
-      // R850: a held alternative win won.
       if (outcome === "draw") return "Both players met a winning condition.";
       return outcome === "win"
         ? "You met your winning condition."

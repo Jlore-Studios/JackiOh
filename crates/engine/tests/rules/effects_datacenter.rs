@@ -1,9 +1,7 @@
-//! The AI cards' verbs (effects/datacenter.ts): T-AI-4 Chain of Thought's draw repeated while the card it
+//! The AI cards' verbs (effects/datacenter.rs): T-AI-4 Chain of Thought's draw repeated while the card it
 //! brought is cheap (§2.4, R58, R65, R596, CHAIN_OF_THOUGHT_REPEATS) and T-AI-6 Datacenter Fire's sweep
 //! of Field Spells that hits the heroes once per Field Spell it dooms (§4.4, §4.5, R46, R59, R408).
-//! Through fixture definitions (fixtures/datacenter.ts); the real cards' tests cover the same cases again.
-//!
-//! Port of `packages/engine/test/effects-datacenter.test.ts`.
+//! Fixtures: `fixtures/datacenter.rs`.
 
 use jackioh_engine::effects::{
     FieldSpellSide, SweepReader, destroy_field_spells_and_hit, draw_while_cheap, field_spells_doomed,
@@ -83,7 +81,6 @@ fn hero_hits(events: &[GameEvent], player: PlayerId) -> Vec<i32> {
         .collect()
 }
 
-/// `card.zone.z`, read off the card as it stands now (TS held the live object).
 fn zone_of(state: &GameState, card: &CardInstance) -> ZoneName {
     find_instance(state, &card.id)
         .unwrap_or_else(|| panic!("{} is nowhere", card.id))

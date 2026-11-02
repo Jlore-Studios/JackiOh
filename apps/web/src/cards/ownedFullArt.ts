@@ -1,21 +1,10 @@
 // R1313000: the cosmetics the signed-in viewer owns, read from `GET /api/cosmetics` once per session
-// and mounted over a gated screen (main.tsx `Gated`) as `FullArtOwned`, so the viewer's own copies
-// print the full arts they own (fullArt.ts). R1655000: every per-card cosmetic the ledger lists, not
-// the full arts alone, so a card's own foil, finish and border follow the same ownership
-// (cosmetics.ts). Only while ownership decides (`FULL_ART_GATED`, the economy live in a production
-// build): before that the screen holds every cosmetic, as before, and nothing is read. While the
-// read is pending, or when it fails, nothing counts as owned past the defaults and starters. The
-// answer is the caller's own, keyed on its token by the server; nobody else's ownership is read or
-// guessed (CLAUDE.md rule 7).
+// and mounted over a gated screen (main.tsx `Gated`) as `FullArtOwned`; R1655000: every per-card
+// cosmetic the ledger lists, not the full arts alone (cosmetics.ts). Read only while ownership decides
+// (`FULL_ART_GATED`). The answer is the caller's own, keyed on its token; nobody else's is read (CLAUDE.md rule 7).
 //
 // R1833000: the same answer's account list is mounted as `AccountCosmeticsOwned`
-// (`ViewerAccountCosmetics`), so the playmat, backdrop and card-back pickers offer, and the viewer's
-// side wears, only what the account owns. Both read one cached answer per session.
-//
-// R1955000: an answer a Shop change dropped is read again by the mounted providers, not only the next screen's.
-//
-// R1953001: a cosmetic token spent in place (collection/TokenOffer.tsx) grants on a screen that stays
-// up, so `rereadOwnedCosmetics` drops that answer and has both providers read it again.
+// (`ViewerAccountCosmetics`) for the playmat, backdrop and card-back pickers and the viewer's side.
 
 import { createElement, useEffect, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
 
@@ -25,7 +14,7 @@ import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { AccountCosmeticsOwned, CARD_SLOT_KINDS, type OwnedByCard } from "./cosmetics.ts";
 import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "./fullArt.ts";
 
-/** The kinds a card carries: the three slots and the full art. The account's kinds are no card's. */
+/** The kinds a card carries; the account's kinds are no card's. */
 const PER_CARD_KINDS: ReadonlySet<string> = new Set([...CARD_SLOT_KINDS, "fullArt"]);
 
 /**
@@ -67,7 +56,7 @@ function sessionOf(token: string): string {
 
 let cached: { session: string; read: Promise<OwnedCosmeticsResponse> } | null = null;
 
-/** R1955000: how many times the session's answer was dropped; a mounted `ViewerFullArt` or `ViewerAccountCosmetics` reads again on each. */
+/** How many times the session's answer was dropped; a mounted provider reads again on each. */
 let forgotten = 0;
 const forgottenListeners = new Set<() => void>();
 
@@ -109,7 +98,6 @@ export function readOwnedFullArt(
   return readOwnedCosmetics(token, fetchOwned).then(ownedCardCosmetics);
 }
 
-/** R1833000: the account cosmetics `token`'s account owns, from the session's one read. */
 export function readOwnedAccountCosmetics(
   token: string,
   fetchOwned: (token: string) => Promise<OwnedCosmeticsResponse> = getOwnedCosmetics,
@@ -118,9 +106,8 @@ export function readOwnedAccountCosmetics(
 }
 
 /**
- * Drops the session's answer, so the next screen reads what the account owns again: called where an
- * answer may have granted a cosmetic, per-card or account (a card pack, a cosmetic pack, a token, the Chase Shard),
- * and has every mounted `ViewerFullArt` and `ViewerAccountCosmetics` read again at once (R1955000).
+ * Drops the session's answer and has every mounted `ViewerFullArt` and `ViewerAccountCosmetics` read
+ * again (R1955000): called where an answer may have granted a cosmetic (a pack, a token, the Chase Shard).
  */
 export function forgetOwnedCosmetics(): void {
   cached = null;
@@ -129,9 +116,8 @@ export function forgetOwnedCosmetics(): void {
 }
 
 /**
- * R1953001: drops the session's answer and has every mounted provider read it again, as
- * `forgetOwnedCosmetics` does: called where an answer granted a cosmetic on a screen that stays up (a
- * cosmetic token spent in place), so the locked entry it bought shows owned.
+ * R1953001: `forgetOwnedCosmetics` for a cosmetic granted on a screen that stays up (a token spent in
+ * place, collection/TokenOffer.tsx), so the locked entry it bought shows owned.
  */
 export function rereadOwnedCosmetics(): void {
   forgetOwnedCosmetics();
@@ -176,11 +162,7 @@ export function ViewerFullArt({
   return createElement(FullArtOwned, { owned: gated ? cards : "every" }, children);
 }
 
-/**
- * R1833000: the account cosmetics the pickers and the viewer's side below it own: `token`'s
- * account's once ownership decides (`gated`), none past the defaults and starters for no token (a
- * pending account's screen) or until the read answers, and every one otherwise.
- */
+/** R1833000: `ViewerFullArt` for the account cosmetics the pickers and the viewer's side below it own. */
 export function ViewerAccountCosmetics({
   token,
   gated = FULL_ART_GATED,
@@ -210,7 +192,6 @@ export function ViewerAccountCosmetics({
       current = false;
     };
   }, [gated, token, read, forgets]);
-  // Another session's answer is never this one's.
   const ids = owned !== null && owned.session === session ? owned.ids : NO_ACCOUNT_COSMETICS;
   return createElement(AccountCosmeticsOwned, { owned: gated ? ids : "every" }, children);
 }

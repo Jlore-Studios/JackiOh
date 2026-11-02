@@ -6,7 +6,6 @@
 //! of the sets that ship and the single-player sets, never this card (R387). The base face casts one at
 //! random (`cast_random`, R452): free, a play for every rule (R70), every choice random. The Radiant face
 //! Discovers one of three (§6.3) and casts it Radiant with its caster's choices (`cast_new`, E12, R453).
-//! Declares no numbers.
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
@@ -57,10 +56,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Stinkyscape #109 xxFreshJack — SPEC §8.10 row 109, BUILD M12 row S 109: "Cry (played): one random BUSTED
-// card cast for free, every choice random, counted as a play (R70, R1846001), never xxFreshJack itself; the
-// same seed casts the same card; radiant 12/22, a Discover of three Radiant BUSTED cards, the pick cast with
-// your choices".
+// Stinkyscape #109 xxFreshJack — SPEC §8.10 row 109, BUILD M12 row S 109 (R1846001, R70).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,7 +79,6 @@ mod tests {
         s
     }
 
-    /// The cards p1 played since `from` other than xxFreshJack, as (definition, face, price paid).
     fn cast_since(s: &Scenario, from: usize) -> Vec<(String, bool, i32)> {
         s.events()[from..]
             .iter()
@@ -137,13 +132,11 @@ mod tests {
             .collect();
         assert_eq!(options.len(), DISCOVER_OPTIONS as usize);
         assert!(options.iter().all(|def_id| is_busted(def_id) && def_id != ID));
-        // Its stats before the pick, which may cast anything at the board.
         let me = s.unit(P1, 1).expect("xxFreshJack").id;
         let stats = s.stats(me.as_str());
         assert_eq!((stats.attack, stats.health), (12, 22));
         let from = s.events().len();
         s.answer(json!(pending.options[0].key));
-        // The pick is cast with your choices: its own prompts are answered, each its first option.
         while let Some(prompt) = s.state().pending.clone() {
             s.answer(json!(prompt.options[0].key));
         }

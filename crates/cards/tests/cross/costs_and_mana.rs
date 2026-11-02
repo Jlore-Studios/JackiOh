@@ -1,7 +1,6 @@
 //! What a card costs outside play, and what the refresh gives (SPEC §2.3, §6.3 Cost and Mana, R24,
 //! R48, R65, R66, R78). Found by the polish-4 edge-case hunt, round 4 (docs/polish/4-edge-cases.md,
 //! lenses "keywords and layers" and L8).
-//!
 //!  - R65 is one cost calculation for an instance, in play and out: #69's Recruit filter and #51's
 //!    brackets read it off the library card, as #30 Archivist and #94 Genn's Greed already did (R24,
 //!    R66), so a `costMod`, kept in every zone (R78), moves a card between them.
@@ -29,8 +28,6 @@ const CALL_TO_ARMS: &str = "core-069";
 const CURVATURE: &str = "core-077";
 const LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// The harness with the real catalog and every card script registered (the engine's testkit cannot
-/// name the cards crate, so the cards test does).
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -52,14 +49,12 @@ fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-/// R65: one cost calculation, in play and out of it
 mod r65_one_cost_calculation_in_play_and_out_of_it {
     use super::*;
 
     #[test]
     fn r65_r48_two_live_professor_curvature_discounts_both_read_the_cost_after_the_flat_discounts_whichever_was_played_first()
      {
-        /// Play a base and a radiant Curvature in the given order, then read a 4-cost card next turn.
         fn next_turn_cost(radiant_first: bool) -> i32 {
             let mut s = setup(json!({
                 "p1": {
@@ -111,7 +106,6 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
         assert_eq!(mana::effective_cost(s.state(), &shredder, Default::default()), 1);
 
         s.play(CALL_TO_ARMS, json!({}));
-        // "Recruit 3 Units costing 1 or less": the Shredder costs 1, so it is recruited.
         s.expect_in_zone(&shredder, "field");
     }
 
@@ -134,7 +128,6 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
             .pending
             .clone()
             .expect("the bracket prompt should be open");
-        // The Stab costs 1, so the one bracket with a match is "0-1".
         let offered: Vec<String> = brackets
             .options
             .iter()
@@ -147,15 +140,12 @@ mod r65_one_cost_calculation_in_play_and_out_of_it {
     }
 }
 
-/// §2.3: a one-shot refresh rider moves current mana, not max mana
 mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
     use super::*;
 
     #[test]
     fn s2_3_efficiency_dividends_next_turn_mana_and_hinders_lower_refresh_leave_max_mana_at_min_turns_4_as_mana_wells_gain_does_s6_3_mana()
      {
-        // Efficiency Dividend, X = 4, mana mode: X = 4 more at p1's next refresh (patch v0.3.10; floor(X/2)
-        // before).
         let mut dividend = setup(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-l8-dividend-max",
@@ -169,12 +159,9 @@ mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
         assert_eq!(dividend.state().active, PlayerId::P1);
         // The rider is temporary mana on top of the refresh (§2.3, §6.3)...
         dividend.expect_mana("p1", 8);
-        // ...and max mana is still min(turns started, 4), exactly as it is after Mana Well's gain.
         assert_eq!(dividend.view("p1").you.mana, ManaView { current: 8, max: 4 });
 
-        // Hinder, drawn and cast at p1's start of turn: p2's next refresh is 1 lower.
         let mut hinder = setup(json!({
-            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-l8-hinder-max",
             "p1": { "hand": [HIT_JOB], "field": [TIMMY], "library": [HINDER, TIMMY, TIMMY, TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TIMMY], "library": [STOCKPILE, STOCKPILE, STOCKPILE] },
@@ -216,7 +203,6 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
             "p1": {
                 "hand": [CURVATURE, ARCHIVIST, HINDER],
                 "field": [{ "def": VANILLA, "lane": 1 }],
-                // The turn's draw takes the top Vanilla; Archivist then reads a 3-cost Unit above a 4-cost one.
                 "library": [VANILLA, SHREDDER, SEVEN_SEVEN],
             },
             "p2": { "hand": [HINDER, HINDER], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
@@ -247,8 +233,6 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
         g.play(LUNAR_ECLIPSE, json!({ "targets": at_p2() }));
         g.play(ARCHIVIST, json!({ "zone": 1, "modes": ["highest"] }));
 
-        // "The next Spell you play this turn costs 1 less" is a price for playing /fullsend, not what it
-        // costs lying in the library, so /fullsend at 4 is the highest card there.
         assert!(def_ids(&g.hand("p1")).contains(&FULLSEND.to_string()));
         assert_eq!(def_ids(&g.pile("p1", "library")), [SHREDDER]);
     }
@@ -258,12 +242,9 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
      {
         let mut g = setup(json!({
             "p1": {
-                // The Radiant /fullsend, the face that grants "Combo: Draw 1".
                 "hand": [{ "def": FULLSEND, "radiant": true }, GREED],
                 // A unit that can still switch keeps §2.5's auto-end from passing the turn mid-test.
                 "field": [VANILLA],
-                // /fullsend's granted "Combo: draw 1" takes the 0-cost Spell on top before Genn's text runs;
-                // a 0 reads 0 in the hand whatever the discount, so the hand's parity is not in question.
                 "library": [RAPID_REPLENISH, SEVEN_SEVEN],
             },
             "p2": { "hand": [HINDER], "field": [VANILLA], "library": LIBRARY },
@@ -272,9 +253,6 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
         g.play(GREED, json!({}));
 
         assert_eq!(def_ids(&g.hand("p1")), [RAPID_REPLENISH]);
-        // "Exile every odd-cost card in your library, hand and GY": the 7/7 costs 4 in the library, and
-        // /fullsend, which step 7 landed in the graveyard, costs 4 there. "This turn your cards cost 1
-        // less" is what they would cost to PLAY this turn; it does not make either of them a 3.
         assert_eq!(def_ids(&g.pile("p1", "exile")), Vec::<String>::new());
         assert_eq!(def_ids(&g.pile("p1", "library")), [SEVEN_SEVEN]);
         assert!(def_ids(&g.pile("p1", "graveyard")).contains(&FULLSEND.to_string()));

@@ -64,17 +64,8 @@ fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
     }
 }
 
-// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4: "Steal placement per R15; radiant sets the
-// flag on the stolen card".
-//
-// R15 has three clauses, one case each: the same lane when free, the first free zone of the row,
-// and "excess remain with the opponent" when the row is full. R12 is asserted alongside every steal:
-// `controller` moves and `owner` never does.
-//
-// The radiant clause is R22/R74; an already Radiant card is untouched (§6.3 Make Radiant). The
-// props are #25, #20, #45 (4/3 → 8/6, the damage-and-radiant case), #11, #8, #15 (its Cry would
-// summon a Rush Token, which checks "no Cry re-fires"), #41 Sheepish, a face-down Trap, and #14
-// Jlockeed's Weapons, a Field Spell: neither is a Unit, so neither is on offer.
+// #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4, R15, R12, R22, R74, §6.3.
+// Steal placement per R15; radiant sets flag on stolen card; props (#25, #20, #45, #11, #8, #15, #41, #14).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -138,7 +129,7 @@ mod tests {
             assert_eq!(g.card(&prey).controller, PlayerId::P1);
             assert_eq!(g.card(&prey).owner, PlayerId::P2);
             g.expect_events(json!(["cardPlayed", "controlChanged", "enteredGraveyard"]));
-            // (4) since patch v0.2.0 (issue #40), out of the harness's 4.
+            // It costs (4) (#40), out of the harness's 4.
             g.expect_mana(PlayerId::P1, 0);
         }
 

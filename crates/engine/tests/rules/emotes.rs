@@ -1,12 +1,7 @@
 //! ME-EMOTE (docs/meditative-set.md M5, MD-D29): emotes as engine actions (R1127).
 //!
-//! An emote becomes an `Emote` action with an `emoted` event, legal for either seat — on its own
-//! turn or the other's — only while the other seat controls an acting card that hears it ("whenever
-//! your opponent emotes"): never with a prompt or a mulligan open, never unheard, never to its own
-//! controller's judge. The random policy never emotes, an auto-end due ignores the emote, and the
-//! view carries `emotesHeard` only as `true`, on the seat that is heard.
-//!
-//! Port of `packages/engine/test/emotes.test.ts`.
+//! An emote is an `Emote` action with an `emoted` event, legal for either seat on either turn only while
+//! the other seat controls an acting card that hears it: never with a prompt or a mulligan open.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -46,7 +41,6 @@ fn heard_against(seed: &str, judge_side: PlayerId) -> GameState {
     state
 }
 
-/// The emotes `player` is offered.
 fn listed(state: &GameState, player: PlayerId) -> Vec<EmoteId> {
     jackioh_engine::reduce::legal_actions(state, player)
         .into_iter()
@@ -62,7 +56,7 @@ fn r1127_legal_either_seat_only_while_heard() {
     // Each seat in turn is the judge's opponent: P2 off its turn, P1 on its own.
     for (judge_side, emoter) in [(P1, P2), (P2, P1)] {
         let mut state = heard_against("r1127-heard", judge_side);
-        // Nothing but the emote happens: no automatic turn end can follow it here.
+        // No automatic turn end can follow the emote here.
         state.players[P1].auto_end_turn = Some(false);
         assert_eq!(
             listed(&state, emoter),
@@ -92,7 +86,7 @@ fn r1127_legal_either_seat_only_while_heard() {
 
 #[test]
 fn r1127_refused_unheard_in_prompt_or_mulligan() {
-    // No card hears them: the action is refused, and no seat lists one.
+    // Unheard: refused, and no seat lists one.
     let state = main_phase("r1127-unheard");
     for player in [P1, P2] {
         assert!(
@@ -154,13 +148,12 @@ fn r1127_refused_unheard_in_prompt_or_mulligan() {
 
 #[test]
 fn r1127_policy_never_emotes_auto_end_ignores() {
-    // The random policy never picks the emote, though it is legal.
+    // Legal, yet the random policy never picks the emote.
     assert!(
         jackioh_engine::subsystems::ai_policy::AI_SKIPPED_ACTIONS.contains(&ActionType::Emote),
         "the random policy skips emotes"
     );
-    // An auto-end due is not held up by the emote: with nothing else to do, the emote resolves and
-    // the turn still ends by itself. P1 is heard, by P2's judge.
+    // An auto-end due is not held up by the emote: it resolves and the turn still ends by itself.
     let mut state = heard_against("r1127-policy", P2);
     state.players[P1].hand.clear();
     state.players[P1].mana.current = 0;

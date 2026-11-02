@@ -383,9 +383,6 @@ type RunRequest struct {
 	Model           string
 	Effort          string
 	Transcript      string // default: None ("")
-	// ReadOnly is a reviewer: may read and run things but not change them (the harness resets it
-	// anyway).
-	ReadOnly bool // default: False
 	// ExtraDirs are directories outside `cwd` the session may need to write (a worktree's git
 	// directory).
 	ExtraDirs []string // default: ()

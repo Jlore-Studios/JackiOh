@@ -1,10 +1,5 @@
-//! Casts from anywhere and random casts (docs/classic-sets.md B5 E12, E39; R70, R452, R453): the cast
-//! verbs of `src/effects/cast.ts` — a card out of a graveyard, a new card of a named definition, random
-//! catalog cards — how a cast's choices are made (its caster's, or the rng's, narrowed to enemies when
-//! it targets them), its X, a cast permanent's zone, a pause inside a cast surviving JSON, the chain cap,
-//! and what the other seat reads.
-//!
-//! Port of `packages/engine/test/effects-cast.test.ts`.
+//! Casts from anywhere and random casts (docs/classic-sets.md B5 E12, E39; R70, R452, R453): how a
+//! cast's choices are made (its caster's, or the rng's, narrowed to enemies when it targets them).
 
 use std::collections::BTreeSet;
 
@@ -170,8 +165,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Apply effects as p1's own card would, then run the resolution loop, as a Cry's list is run. The
-/// sink's events come back.
+/// Apply effects as p1's own card would, then run the resolution loop as a Cry's list is; its events.
 fn run(state: &mut GameState, effects: Vec<Effect>, self_id: Option<&str>) -> Vec<GameEvent> {
     let self_ = self_id.and_then(|id| {
         state.players[PlayerId::P1]
@@ -199,12 +193,10 @@ fn run(state: &mut GameState, effects: Vec<Effect>, self_id: Option<&str>) -> Ve
     events
 }
 
-/// TS `only` (fixtures/playPipelineB): the first item, which must exist.
 fn only<T>(items: impl IntoIterator<Item = T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-/// TS `{ ...action, playerId }`: a legal action body as the literal `act` takes.
 fn body_of(action: &ActionBody, player: PlayerId) -> Value {
     let mut body = serde_json::to_value(action).unwrap();
     body["playerId"] = json!(player);
@@ -218,7 +210,6 @@ fn answers(state: &GameState, player: PlayerId) -> Vec<ActionBody> {
         .collect()
 }
 
-/// The answer whose selection's JSON contains `text` (TS `JSON.stringify(action.selection).includes(text)`).
 fn answer_containing(state: &GameState, player: PlayerId, text: &str) -> ActionBody {
     only(answers(state, player).into_iter().filter(|action| match action {
         ActionBody::Answer { selection, .. } => serde_json::to_string(selection).unwrap().contains(text),
@@ -226,7 +217,6 @@ fn answer_containing(state: &GameState, player: PlayerId, text: &str) -> ActionB
     }))
 }
 
-/// The answer picking exactly the enemy hero.
 fn answer_hero(state: &GameState, player: PlayerId, hero: PlayerId) -> ActionBody {
     only(answers(state, player).into_iter().filter(|action| match action {
         ActionBody::Answer { selection, .. } => *selection == vec![Selection::Hero { player: hero }],
@@ -234,7 +224,6 @@ fn answer_hero(state: &GameState, player: PlayerId, hero: PlayerId) -> ActionBod
     }))
 }
 
-/// TS `slice(-n)`.
 fn last_n<T: Clone>(items: &[T], n: usize) -> Vec<T> {
     items[items.len().saturating_sub(n)..].to_vec()
 }
@@ -320,7 +309,7 @@ fn set_damage(state: &mut GameState, id: &str, damage: i32) {
     find_instance_mut(state, id).expect("the unit").damage = damage;
 }
 
-/// R452: p2 has two Units, p1's one Unit is CRY_ANY, whose Cry a cast Rewind (the prompts fixture) triggers.
+/// R452: p2 has two Units; p1's one Unit is CRY_ANY, whose Cry a cast of the fixture Rewind triggers.
 fn cry_board(state: &mut GameState) -> CardInstance {
     register_prompt_fixtures();
     put(state, "fx-3", slot(PlayerId::P2, Row::Units, 2), json!({}));
@@ -328,7 +317,6 @@ fn cry_board(state: &mut GameState) -> CardInstance {
     put(state, CRY_ANY, slot(PlayerId::P1, Row::Units, 1), json!({}))
 }
 
-/// One random cast of the prompts fixture's Rewind.
 fn cast_rewind(target_enemies: bool) -> Vec<Effect> {
     vec![cast_random(json_as(json!({
         "query": { "defId": rewind().id }, "count": 1, "targetEnemies": target_enemies
@@ -369,13 +357,11 @@ mod e12_casts_from_anywhere_r70_r453 {
         assert_eq!(option_labels(&paused), vec!["a".to_string(), "b".to_string()]);
         assert!(paused.casts_resolving.is_none());
 
-        // JSON round trip mid-pause: both copies finish the same way.
         let round = round_trip(&paused);
         let pick_b = answer_containing(&paused, PlayerId::P1, "\"b\"");
         let next = act(&paused, body_of(&pick_b, PlayerId::P1));
         let next_round = act(&round, body_of(&pick_b, PlayerId::P1));
         assert_eq!(hash_state(&next_round), hash_state(&next));
-        // Now the Target Spell asks for its target.
         assert!(
             next.pending
                 .as_ref()
@@ -670,9 +656,7 @@ mod e12_random_casts_r452 {
             assert_eq!(*cost_paid, 0);
             assert!(RANDOM_POOL.contains(&def_id.as_str()));
         }
-        // Nothing was asked of anyone.
         assert!(events_of_type(&result.events, GameEventType::PromptOpened).is_empty());
-        // A random Discover put one of its options in the caster's hand.
         let discovers = casts
             .iter()
             .filter(|(_, def_id, _)| *def_id == discover_spell().id)
@@ -758,14 +742,13 @@ mod e12_random_casts_r452 {
         let next = act(&state, body_of(&answer, PlayerId::P2));
         let next_round = act(&round, body_of(&answer, PlayerId::P2));
         assert_eq!(hash_state(&next_round), hash_state(&next));
-        // The second random cast asks p2 again.
         assert_eq!(
             next.pending.as_ref().map(|pending| pending.player_id),
             Some(PlayerId::P2)
         );
         let last = act(&next, body_of(&only(answers(&next, PlayerId::P2)), PlayerId::P2));
         assert!(last.pending.is_none());
-        // Each cast's answer hurt the one who answered (1) and its tail the enemy hero (1): p2 twice over.
+        // Each cast hurt its answerer (1) and its tail the enemy hero (1): p2 twice over.
         assert_eq!(last.players[PlayerId::P2].hero.health, before - 4);
         assert_eq!(
             last.players[PlayerId::P1].hero.health,
@@ -801,13 +784,11 @@ mod e12_random_casts_r452 {
             None,
         );
         assert!(echoing.pending.is_none());
-        // The cast and its one repeat each dealt 1 to a target the rng picked.
         assert_eq!(events_of_type(&events, GameEventType::Damage).len(), 2);
     }
 
     #[test]
     fn r452_a_random_cast_chain_stops_at_random_cast_chain_cap_casts() {
-        // TS title: `R452 a random cast chain stops at RANDOM_CAST_CHAIN_CAP casts (${RANDOM_CAST_CHAIN_CAP})`.
         let mut state = playing("r452-cap");
         state.players[PlayerId::P2].hero.health = 1000;
         let card = only(in_hand(&mut state, PING_A, PlayerId::P1, 1));

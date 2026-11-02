@@ -1,8 +1,6 @@
-// R388: a raw `{…}` never reaches the screen. Every face the Patch notes page and the History section
-// draw comes from a snapshot, and a v0.2.0 snapshot's texts write their tunable numbers as `{key}` and
-// their agreeing words as `{key|singular|plural}` (B3.4); every text is filled (`fillParams`) before
-// it is drawn or diffed. Checked over every card of every real snapshot, face by face, and over every
-// change of every patch as ChangeList prints it.
+// R388: a raw `{…}` never reaches the screen. A v0.2.0 snapshot's texts write their tunable numbers as
+// `{key}` and their agreeing words as `{key|singular|plural}` (B3.4), and every text is filled
+// (`fillParams`) before it is drawn or diffed.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -59,7 +57,7 @@ describe("R388 no raw placeholder reaches the screen", () => {
     let faces = 0;
     for (const patch of patches) {
       for (const def of Object.values(await snapshotOf(patch.version))) {
-        // A card most patches left alone is the same definition in each snapshot: drawn once.
+        // An unchanged card is the same definition in each snapshot: drawn once.
         const key = JSON.stringify(def);
         if (drawn.has(key)) continue;
         drawn.add(key);
@@ -71,7 +69,6 @@ describe("R388 no raw placeholder reaches the screen", () => {
         }
       }
     }
-    // The floor: at least the newest snapshot's two faces per entry were drawn.
     const newest = await snapshotOf(patches.at(-1)?.version ?? "");
     expect(faces).toBeGreaterThan(2 * Object.keys(newest).length);
     expect(raw).toEqual([]);

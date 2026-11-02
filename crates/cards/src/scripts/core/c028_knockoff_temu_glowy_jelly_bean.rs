@@ -1,16 +1,7 @@
 //! #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2): "2 random cards among your library, hand and
 //! field become Radiant", radiant "4" — a Radiant cell that changes only a number changes only that
 //! number (§8 Conventions).
-//!
-//! ONE `setRadiantRandom` call, not N calls and not one call per zone: the pick has to be uniform
-//! over the union of the three zones and give `count` DIFFERENT cards (R60), which only holds if the
-//! union is pooled once and drawn from once. The pool is the non-Radiant cards in a fixed order, shuffled
-//! with the match rng: it takes all of them when fewer exist and nothing when all are Radiant (R60).
-//!
-//! "Field" is §3.2 and R13's: both rows, only the top of a Stack pile.
-//!
-//! A field card converts in place (§5.2, R22): setting the flag is not an entry to the field, so
-//! damage, buffs and granted keywords stay and the Cry does not re-fire.
+//! Pooled uniform random draw across library, hand, and field (R60, §3.2, R13 top of Stack only; §5.2, R74).
 
 use jackioh_engine::prelude::*;
 
@@ -36,9 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28): "2 different non-Radiant
-// cards across library+hand+field (R60); a field unit swaps base stats in place keeping damage
-// (R22); radiant 4".
+// #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28) (R60, R22).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

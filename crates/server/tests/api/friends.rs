@@ -1,11 +1,4 @@
-//! B43–B47 (#936, `.fullsend/SPEC.md` S7): friend requests by `name#tag`, the mutual add, accept,
-//! decline, cancel and unfriend, blocks, and the status a friend shows.
-//!
-//! Every request goes through the whole router over the fake store (`support::deps`), from accounts
-//! seeded active with a tagged username (`Ada#1`). S7 writes a refusal's body as `{code}`; the repo's
-//! error envelope is `{error: {code, message, details?}}`, so `code_is` reads the code wherever the
-//! body carries it. A live 1v1 match is started on the real registry with the server tests' cards
-//! (`support::engine`), and a Duos match through S6's room routes.
+//! Friend requests, blocks, and presence (B43, B47, #936): add, accept, decline, cancel, and unfriend.
 
 use std::sync::Arc;
 
@@ -17,7 +10,7 @@ use jackioh_server::db::store::StartMatchInput;
 
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
-use crate::support::store::{advance, fake, uuid};
+use crate::support::store::{Account, account, advance, befriend, fake, uuid};
 
 /// Unit conversions, not configuration.
 const MINUTE_MS: u64 = 60_000;
@@ -25,10 +18,6 @@ const HOUR_MS: u64 = 3_600_000;
 
 /// How many accepts the cap test makes before it lets §9.8's per-account minute pass.
 const ACCEPTS_PER_MINUTE: usize = 100;
-
-// ---------------------------------------------------------------------------------------------
-// Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
 /// A config count as a `usize`, whichever integer type `config.rs` gives it.
 fn count<T>(value: T) -> usize
@@ -49,12 +38,6 @@ where
 }
 
 /// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.
-struct Account {
-    id: String,
-    name: String,
-    token: String,
-}
-
 /// An account seeded with `status`, username `base#n`.
 async fn seeded(app: &Arc<App>, n: u32, base: &str, status: &str) -> Account {
     let id = uuid(n);
@@ -74,11 +57,6 @@ async fn seeded(app: &Arc<App>, n: u32, base: &str, status: &str) -> Account {
         name: format!("{base}#{tag}"),
         token,
     }
-}
-
-/// An active account, username `base#n`.
-async fn account(app: &Arc<App>, n: u32, base: &str) -> Account {
-    seeded(app, n, base, "active").await
 }
 
 async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, body: Value) -> (u16, Value) {
@@ -125,13 +103,6 @@ async fn accept(app: &Arc<App>, who: &Account, request_id: &str) -> (u16, Value)
         Value::Null,
     )
     .await
-}
-
-/// `a` asks `b`, `b` accepts.
-async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
-    let request_id = requested(app, a, b).await;
-    let (status, body) = accept(app, b, &request_id).await;
-    assert_eq!(status, 200, "{body}");
 }
 
 async fn block(app: &Arc<App>, who: &Account, whom: &Account) {
@@ -245,9 +216,7 @@ async fn duos_match(app: &Arc<App>, host: &Account, guest: &Account) -> String {
     joined["matchId"].as_str().expect("a match id").to_string()
 }
 
-// ---------------------------------------------------------------------------------------------
 // B43 — a request by exact `name#tag`
-// ---------------------------------------------------------------------------------------------
 
 mod b43_a_request_by_name_and_tag {
     use super::*;
@@ -422,9 +391,7 @@ mod b43_a_request_by_name_and_tag {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B44 — the mutual add
-// ---------------------------------------------------------------------------------------------
 
 mod b44_the_mutual_add {
     use super::*;
@@ -448,9 +415,7 @@ mod b44_the_mutual_add {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B45 — accept, decline, cancel, unfriend
-// ---------------------------------------------------------------------------------------------
 
 mod b45_accept_decline_cancel_and_unfriend {
     use super::*;
@@ -602,9 +567,7 @@ mod b45_accept_decline_cancel_and_unfriend {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B46 — blocks
-// ---------------------------------------------------------------------------------------------
 
 mod b46_blocks {
     use super::*;
@@ -677,9 +640,7 @@ mod b46_blocks {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B47 — status
-// ---------------------------------------------------------------------------------------------
 
 mod b47_status {
     use super::*;

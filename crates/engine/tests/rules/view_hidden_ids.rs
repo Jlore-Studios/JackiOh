@@ -1,12 +1,10 @@
-//! R1447: a view names no card its viewer may not read (SPEC §9.1, §10.8, R97). Two leaks the fuzz's
-//! I6 found on `main` (super run 38145503152, seeds 5245 and 8178):
+//! R1447: a view names no card its viewer may not read (SPEC §9.1, §10.8, R97), on the two paths the
+//! fuzz's I6 found:
 //!
-//!   - a preview value's `ids` (R372, R280) named every card its count counted, the controller's own
-//!     face-down traps included, to both seats. The ids keep only the cards the viewer reads where
+//!   - a preview value's `ids` (R372, R280) keep only the cards the viewer reads where
 //!     they lie (R466's readers); the number still counts them all, since the other seat sees backs;
-//!   - a Heroic Power (#98, R43, R752) on a face-down card was listed in its hero's `powers`, its id and
-//!     definition with it, though a face-down card has no ability to use. It is listed no more, for
-//!     either seat, until the card is face-up.
+//!   - a Heroic Power (#98, R43, R752) on a face-down card, which has no ability to use, is not
+//!     listed in its hero's `powers` for either seat until the card is face-up.
 //!
 //! Test-only definitions, registered over the fixture catalog.
 

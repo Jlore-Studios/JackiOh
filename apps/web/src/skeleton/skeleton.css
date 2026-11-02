@@ -4,7 +4,8 @@
  * its content, so its hidden words never reach below the window (index.css's one-screen__body
  * note) and R1581000 holds. The blocks keep their room until data-shown (R2108000). The shimmer
  * is drawn only under full motion: the OS's media query and the settings panel's data-motion
- * both leave the blocks still.
+ * both leave the blocks still. The JackiOh mark sits over the blocks, still, one per skeleton
+ * (R2115000); the blocks container draws it, so it hides with them until shown.
  */
 
 .skeleton {
@@ -41,6 +42,18 @@
 
 .skeleton[data-shown="false"] .skeleton__blocks {
   visibility: hidden;
+}
+
+/* The mark (public/brand), centered on the skeleton and no taller than it, over the blocks: a dark
+   halo of the wood hugs its cards, so the blocks fade out around it rather than run across it. */
+.skeleton__blocks::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/brand/jackioh-mark.svg") center / auto min(96px, 85%) no-repeat;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px var(--pal-wood-950)) drop-shadow(0 0 14px var(--pal-wood-950));
+  pointer-events: none;
 }
 
 .skeleton__block {

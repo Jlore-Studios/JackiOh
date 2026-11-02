@@ -1,12 +1,12 @@
 // Emailed auth links, read once and scrubbed (R193, R323, R324).
 // `/login` exchanges a one-time PKCE code (R323); legacy sessions and errors arrive in fragments or queries (R324).
-// Only `/login` and `/` treat code as auth; parsing never shows provider text and scrubbing happens before rendering.
-// Recovery stays tab-local; email needs server acceptance; navigation after an auth link must use `paths`.
+// Navigation after an auth link must use `paths`.
 
 import { isAuthCode, revokeSignedOutSession } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import type { Session } from "../net/session.ts";
 import { tokenClaim } from "./claims.ts";
+import { getStored, removeStored, sessionStorageOrNull, setStored } from "../net/storage.ts";
 
 export type SessionLinkType = "signup" | "invite" | "magiclink" | "email_change";
 
@@ -93,7 +93,6 @@ function readParams(params: URLSearchParams): AuthRedirect {
     refreshToken: refreshToken !== null && refreshToken.length > 0 ? refreshToken : null,
     expiresAt: null,
   };
-  // Use this device's clock for `expires_in`; `expires_at` is the fallback.
   const expiresAt = positiveNumber(params.get("expires_at"));
   const expiresIn = positiveNumber(params.get("expires_in"));
   if (expiresIn !== null) {
@@ -168,24 +167,14 @@ export type HeldRecovery = { session: Session; email: string | null };
 let recovery: HeldRecovery | null = null;
 
 function writeRecoveryMirror(value: HeldRecovery | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (value === null) window.sessionStorage.removeItem(RECOVERY_STORAGE_KEY);
-    else window.sessionStorage.setItem(RECOVERY_STORAGE_KEY, JSON.stringify(value));
-  } catch {
-    // Blocked storage: the memory copy still serves this page; a reload asks for a new link.
-  }
+  // Blocked storage: the memory copy still serves this page; a reload asks for a new link.
+  if (value === null) removeStored(RECOVERY_STORAGE_KEY, sessionStorageOrNull());
+  else setStored(RECOVERY_STORAGE_KEY, JSON.stringify(value), sessionStorageOrNull());
 }
 
 /** Treat the storage mirror as untrusted: only a session with an access token survives. */
 function readRecoveryMirror(): HeldRecovery | null {
-  if (typeof window === "undefined") return null;
-  let raw: string | null;
-  try {
-    raw = window.sessionStorage.getItem(RECOVERY_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+  const raw = getStored(RECOVERY_STORAGE_KEY, sessionStorageOrNull());
   if (raw === null) return null;
   try {
     const value = JSON.parse(raw) as { session?: unknown; email?: unknown } | null;

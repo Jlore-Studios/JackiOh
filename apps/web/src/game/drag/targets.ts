@@ -24,7 +24,7 @@ function activationOf(element: Element, id: string): ClickTarget | null {
   return power === null || power === "" ? null : { on: "activate", instanceId: power };
 }
 
-type Place = { side: Side; row: Row; lane: number };
+export type Place = { side: Side; row: Row; lane: number };
 
 function asSide(value: string | null): Side | null {
   return value === "you" || value === "opponent" ? value : null;
@@ -34,8 +34,8 @@ function asRow(value: string | null): Row | null {
   return value === "units" || value === "backrow" ? value : null;
 }
 
-/** Zone.tsx writes a zone's side, row and lane as data attributes. */
-function placeOf(zone: Element): Place | null {
+/** Zone.tsx writes a zone's side, row and lane as data attributes; a ping reads them too (`duos/spots.ts`). */
+export function placeOf(zone: Element): Place | null {
   const side = asSide(zone.getAttribute("data-side"));
   const row = asRow(zone.getAttribute("data-row"));
   const lane = Number(zone.getAttribute("data-lane"));
@@ -94,7 +94,6 @@ export function targetFromElement(element: Element): { target: ClickTarget; test
       }
 
       if (ZONE.test(id)) {
-        // Controls in a zone are presses, not drag sources.
         if (throughControl) return null;
         const place = placeOf(at);
         if (place === null) return null;

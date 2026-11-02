@@ -1,6 +1,5 @@
-// The creator's frame form (#920, §12.2): name, type, cost, rarity, a Unit's stats and keywords,
-// the text and its numbers. The inputs offer the ranges the limits name, but nothing here refuses a
-// card (CLAUDE.md rule 7): each issue shown under its field is the engine validator's.
+// The creator's frame form (#920, §12.2). The inputs offer the ranges the limits name, but nothing
+// here refuses a card (CLAUDE.md rule 7): each issue shown under its field is the engine validator's.
 
 import type { ReactElement, ReactNode } from "react";
 

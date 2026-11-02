@@ -1,6 +1,6 @@
-// Real art lives in `apps/web/public/art/`; this manifest avoids requests for absent files (Surface A, B5).
-// ART.md and convention.test.ts keep it in step with that directory (R660).
-// Missing radiant art uses a gold-tinted base file.
+// Real art lives in `apps/web/public/art/`; this manifest avoids requests for absent files (Surface A,
+// B5), kept in step with that directory by ART.md and convention.test.ts (R660). Missing radiant art
+// uses a gold-tinted base file.
 
 export type ArtManifest = Readonly<Record<string, { readonly base?: true; readonly radiant?: true }>>;
 

@@ -87,11 +87,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     scripts(true)
 }
 
-// BUILD M9 Classic+ row C+ 73.1: when it attacks a Unit, declared or forced, before any damage
-// (R2285000), that Unit is transformed (§6.3) into a random non-token Classic or Classic+ Unit (a Unit,
-// R35) with no Cry (R1), Radiant for the base Golem and base-face for the Radiant one (R2285002); the
-// Golem fights the new Unit, and destroying it lets a surviving Golem attack again (R2285001); an
-// attack on the hero transforms nothing; radiant 20/20 with Divine Shield for First Strike.
+// BUILD M9 Classic+ row C+ 73.1.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,7 +217,6 @@ mod tests {
                 assert_eq!(made.type_, CardType::Unit);
                 assert!(!made.token);
                 assert!(js(&made.set) == json!("Classic") || js(&made.set) == json!("Classic+"), "{seed}");
-                // The transform comes before the combat's first hit, and the Golem stays itself.
                 let order = types_of(&s);
                 let at = order.iter().position(|kind| *kind == "transformed");
                 let hit = order.iter().position(|kind| *kind == "damage" || *kind == "divineShieldLost");

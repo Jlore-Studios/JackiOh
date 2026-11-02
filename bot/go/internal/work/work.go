@@ -851,7 +851,6 @@ func (x *Worker) Call(role string, prompt string, cwd string, reader bool, why s
 		Model:           seat.Model,
 		Effort:          effort,
 		Transcript:      transcript,
-		ReadOnly:        reader,
 		ExtraDirs:       x.gitDirs(cwd),
 		UsageStop:       usageStop,
 	}

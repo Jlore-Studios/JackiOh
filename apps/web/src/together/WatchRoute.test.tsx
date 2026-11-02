@@ -1,16 +1,9 @@
-// #936 S7 B50: `/watch/:matchId?friend=<id>`, a friend's live game. `useWatch` (read through
-// `WatchRoute`) opens `/ws/watch` with the session's token, the match and the friend, says hello once
-// the socket opens, shows the waiting panel (naming the delay) until the first delayed view and then
-// the friend's board read-only, shows a `forbidden` frame as the refused screen with the way back and
-// never reopens it, opens again `WATCH_RECONNECT_MS` after an unexpected close up to
-// `WATCH_RECONNECT_ATTEMPTS` times and offers Reconnect now, while one waits (#1691) and once they run
-// out, whose click opens it again with the attempts started over (#1570), and does not reopen a
-// finished game. The board's rail offers the newest view's live modifiers in full (R169). The socket's
-// loadouts dress both seats of the watched board (R1834004).
-//
+// #936 S7 B50: `/watch/:matchId?friend=<id>`, a friend's live game (`useWatch`, read through
+// `WatchRoute`). Reconnect is offered while a reopen waits (#1691) and once they run out, its click
+// starting the attempts over (#1570); the rail offers the newest view's live modifiers (R169); the
+// socket's loadouts dress both seats (R1834004).
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
-// a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance
-// time by hand.
+// a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance time.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,9 +45,7 @@ function serve(): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // a WebSocket the test drives
-// ---------------------------------------------------------------------------------------------
 
 let sockets: FakeWatchSocket[] = [];
 
@@ -657,7 +648,6 @@ describe("R1834004 the watched board wears both seats' loadouts", () => {
     // none its kind's default, never the seat's border (R1953001).
     expect(screen.getByTestId("hand-card-h-1").querySelector(".cf")?.getAttribute("data-frame")).toBe(cardBorder);
     expect(screen.getByTestId("hand-card-h-2").querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
-    // And the friend's opponent wears theirs.
     expect(document.querySelector('.card[data-owner="p2"] > .cf')?.getAttribute("data-frame")).toBe(theirBorder);
     expect(document.querySelector(".field")?.getAttribute("data-their-table")).toBe(table);
   });

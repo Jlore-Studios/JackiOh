@@ -12,7 +12,7 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, isBuilding, type Interaction } from "../actions.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
-import { testid, type ClickTarget } from "../contract.ts";
+import { byTestid, testid, type ClickTarget } from "../contract.ts";
 import { liveFace } from "../faces.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { setLanding } from "./landing.ts";
@@ -57,8 +57,7 @@ type Landed = { instanceId: string; card: CardView | null; at: Point; view: Play
 const BOARD = '[data-testid="board"]';
 /**
  * The longest a landed card waits for the board to catch up. A drop only ever sends an action the
- * engine listed, so the view always moves on; this only covers a refusal the client cannot see
- * coming (a networked match whose clock ran out as the card was dropped).
+ * engine listed, so the view always moves on; this only covers a refusal the client cannot see coming.
  */
 const LANDING_TIMEOUT_MS = 4_000;
 const RETICLE_MIN_PX = 44;
@@ -83,10 +82,6 @@ function centerOf(element: Element): Point | null {
   if (!element.isConnected) return null;
   const rect = element.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-}
-
-function byTestid(id: string): Element | null {
-  return document.querySelector(`[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`);
 }
 
 /** Heroes are ringed at their health gem; other targets are ringed at center. */

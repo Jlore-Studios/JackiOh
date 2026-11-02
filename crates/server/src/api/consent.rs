@@ -1,35 +1,31 @@
 //! The age screen and the terms a player agrees to (SPEC §9.4, R757000, R757001; issue #757).
 //!
-//! `POST /api/account/consent` (`AuthLevel::User`): `{ termsVersion, birthYear?, birthMonth? }`. The
-//! client asks; the server decides (CLAUDE.md rule 7):
+//! `POST /api/account/consent` (`AuthLevel::User`): `{ termsVersion, birthYear?, birthMonth? }`.
+//! The client asks; the server decides (CLAUDE.md rule 7):
+//! - **Age (R757000):** a pending account owes an age check, counted from the birth month and year
+//!   in UTC; only that it passed, when and against which minimum is kept, never the birth date. An
+//!   answer under `MIN_ACCOUNT_AGE_YEARS` deletes the account as `DELETE /api/account` does (403
+//!   `under_age`).
+//! - **Terms (R757001):** every account owes agreement to `TERMS_VERSION`, once per version; a client
+//!   that sends another version read other terms and is told to reload (409 `update_required`).
 //!
-//! - **Age (R757000).** A pending account that has not passed the age check owes one. The server
-//!   counts the age from the birth month and year in UTC and keeps only that the check passed, when
-//!   and against which minimum, never the birth date. An answer under `MIN_ACCOUNT_AGE_YEARS`
-//!   deletes the account the way `DELETE /api/account` does and answers 403 `under_age`.
-//! - **Terms (R757001).** Every account owes agreement to `TERMS_VERSION`, once per version. A
-//!   client that sends another version read other terms, and is told to reload (409
-//!   `update_required`).
-//!
-//! `GET /api/auth/me` carries what is owed (`ageCheckOwed`, `termsOwed`), and `POST
-//! /api/codes/redeem` refuses an account owing either (`consent_owed`) before it logs an attempt.
-//! The request body is never logged: it holds a birth month and year.
+//! `GET /api/auth/me` carries what is owed; `POST /api/codes/redeem` refuses an account owing either
+//! before it logs an attempt. The request body is never logged: it holds a birth month and year.
 
 use std::sync::Arc;
 
 use serde_json::{Value, json};
 
 use crate::api::auth::remove_account;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, now_ms};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, caller_of, json, now_ms};
 use crate::app::App;
-use crate::config::{BIRTH_YEAR_EARLIEST, MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION};
+use crate::config::{BIRTH_YEAR_EARLIEST, MIN_ACCOUNT_AGE_YEARS, NANOS_PER_MS, TERMS_VERSION};
 use crate::db::store::{ConsentRow, Profile, ProfileStatus, TermsSource};
 
 // Not in SPEC: wording only. The refusal names no age (R757000), like the sign-up screen's.
 const UNDER_AGE_MESSAGE: &str = "We can't create an account for you.";
 const TERMS_CHANGED_MESSAGE: &str = "The terms changed. Reload the page to read them.";
 const BIRTH_REQUIRED_MESSAGE: &str = "Choose the month and year you were born.";
-const NANOS_PER_MS: i128 = 1_000_000;
 
 /// The UTC year and month (1–12) at `now_ms`, epoch milliseconds.
 pub fn utc_year_month(now_ms: i64) -> (i32, i32) {
@@ -92,10 +88,7 @@ fn birth_is_possible(birth: (i32, i32), (year, month): (i32, i32)) -> bool {
 /// `POST /api/account/consent` (`AuthLevel::User`): the consent screen's and the sign-up form's
 /// answer. 200 `{ ageCheckOwed: false, termsOwed: false }` once both are recorded.
 pub async fn post_consent(app: &Arc<App>, req: Req) -> ApiResult {
-    let caller = req
-        .caller
-        .as_ref()
-        .ok_or_else(|| ApiError::new(ApiErrorCode::Unauthorized, "sign in first"))?;
+    let caller = caller_of(&req)?;
     let profile = &caller.profile;
     let version = match req.body.get("termsVersion") {
         Some(Value::String(version)) => version.as_str(),

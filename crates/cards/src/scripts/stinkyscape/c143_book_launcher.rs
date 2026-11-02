@@ -148,9 +148,7 @@ pub fn script_v0_5_9f() -> CardScripts {
     }
 }
 
-// Stinkyscape #143 Book Launcher — SPEC §8.10 row 143, BUILD M12 row S 143: its one Activate, once a
-// turn, casts a random harmful Book at a chosen enemy or a random helpful Book at a chosen ally, free
-// (R70), by rng picks that replay; radiant 0/12 and the Books Radiant.
+// Stinkyscape #143 Book Launcher — SPEC §8.10 row 143, BUILD M12 row S 143 (R70).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -183,7 +181,6 @@ mod tests {
         at("launchBook", target)
     }
 
-    /// Each `cardPlayed` of the step, by player, definition and price.
     fn cast(s: &Scenario) -> Vec<(PlayerId, String, i32)> {
         s.last_events()
             .iter()
@@ -199,8 +196,6 @@ mod tests {
             .collect()
     }
 
-    /// Whether an event of the step past the cast itself names `id`: the Book's hit, heal, buff or Nerf
-    /// landed on it.
     fn touched(s: &Scenario, id: &str) -> bool {
         let named = format!("\"{id}\"");
         s.last_events()
@@ -216,8 +211,6 @@ mod tests {
             .any(|event| crate::js(event).to_string().contains(&named))
     }
 
-    /// Fires `ability` at `pick` of `side` on each of four seeds: one Book of `books` is cast each
-    /// time, free, by p1, and lands on the pick.
     fn aims(ability: &str, side: PlayerId, lane: i32, books: &[&str]) {
         for seed in ["s143-a", "s143-b", "s143-c", "s143-d"] {
             let mut s = board(seed, false);

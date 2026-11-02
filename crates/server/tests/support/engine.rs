@@ -1,52 +1,10 @@
-//! The server tests' cards (← `apps/server/test/fakes/engine.ts`, SURFACE §8, §11.2).
-//!
-//! WHY THIS IS NOT A FAKE ENGINE. TS's server tests ran a scripted `EnginePort` (`createFakeEngine`)
-//! because what M6-T4 and M7 prove is about the actor, the clock, the log and the results writer,
-//! and each of those needs a *terminal state on demand*: `test-lethal` reaches `hero-death` in one
-//! action, where the real engine would need a whole game of real cards to get there. The Rust
-//! server has no engine port (SURFACE §11.3): it calls `jackioh_engine` directly. So the scripted
-//! situations become **real cards**, scripted with the effects library and installed for the calling
-//! test's thread with the testkit's override (`testkit::register_catalog`, `register_scripts`,
-//! SURFACE §8) on top of the whole real catalog. Every test then runs the real reducer, the real
-//! `view_for`, the real `fold` and the real `summarize_game`, which is the contract TS's fake could
-//! only imitate:
-//!
-//!  - `reduce` is pure, returns `{ state, events, error? }` and refuses illegal actions itself;
-//!  - a reused nonce returns the original events and does not advance the state (SPEC §9.3);
-//!  - `view_for` shows the viewer's hand in full and the opponent's as a count (§10.8) — and, being
-//!    the real one, it is also what a redaction test may be asserted against;
-//!  - `fold({ seed, decks, log })` rebuilds the same state, so crash recovery is testable, and
-//!    `summarize_game` folds the same way to a finished game's record (R376);
-//!  - a prompt is state, answered by another action (§9.3);
-//!  - the game always opens on the concurrent mulligan (R265), as every real game does: both seats'
-//!    prompts open at once outside `pending`, either seat answers first, an answer is sealed until
-//!    the other is in (R266), and a `timeout` answers only the timing-out seat's own mulligan (R268).
-//!    `past_the_mulligans` answers both by keeping the whole hand, for a test that is not about them.
-//!
-//! The scripted cards, each a 0-cost Spell with Quickdraw (§6.2), so the opening deal always puts
-//! them in their owner's hand (as TS's `fakeDeck(extra)` put its extras there) — except
-//! `test-hears-emotes`, a 0-cost Field Spell with Quickdraw, played to hear:
-//!  - `test-hears-emotes`  hears emotes while it acts (MD-D29, R1127);
-//!  - `test-prompt-self`   opens a prompt for the player who played it;
-//!  - `test-prompt-enemy`  opens a prompt for the other player (a trap firing on your turn, R79);
-//!  - `test-lethal`        ends the match: the player who played it wins by `hero-death`;
-//!  - `test-mutual-lethal` ends the match: both heroes die in the same check, a draw by
-//!    `both-heroes-dead` (§2.5's second row — the one ending no other scripted
-//!    card can reach, and the seventh of the reasons `api/results.rs` writes);
-//!  - `test-glitch-swap`   a Glitch's swap (R677): `seat_swaps` goes up by one, `glitched` announces it;
-//!  - `test-glitch-void`   a Glitch's void (R679): the game ends, no winner, reason `voided`;
-//!  - `test-flee`          the player who played it flees (R1843002): they win by `fled`, and the
-//!    other player draws on the ladder (R1843004).
-//!
-//! Their prompts are the engine's own (`choose_mode`): kind `mode`, where TS's fake opened kind
-//! `target`. The filler `test-card-<n>` cards are 0-cost Spells that do nothing.
-//!
-//! Not ported: `createFakeEngine` itself (the real engine stands where it stood), `FAKE_HAND_SIZE`
-//! (the real opening hands are `OPENING_DRAW`'s, three for p1 and four for p2), the fake's
-//! `dealRandomDeck` (`actor::engine::deal_random_deck` is the real R258 deal). The two Glitch cards
-//! force one outcome each where the engine's own Glitch (`subsystems::glitch`) draws it from the
-//! match rng: each is a test-made `Effect` that writes exactly what that outcome writes (TS's fake
-//! wrote the same two fields and events).
+//! Scripted cards for server tests (SURFACE §8, §11.2, §11.3, M6-T4, M7).
+//! Uses real engine scripts under testkit override to produce terminal states on demand:
+//!  - Nonce idempotence (SPEC §9.3), hand redaction (§10.8), fold recovery (R376).
+//!  - Mulligan sequencing (R265, R266, R268).
+//!  - Cards: `test-hears-emotes` (MD-D29, R1127), `test-prompt-enemy` (R79, §6.2),
+//!    `test-mutual-lethal` (§2.5), `test-glitch-swap` (R677), `test-glitch-void` (R679),
+//!    `test-flee` (R1843002, R1843004), and `deal_random_deck` (R258).
 
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -68,32 +26,20 @@ use jackioh_engine::{
 };
 use serde_json::json;
 
-/// Opens a prompt for the player who played it.
+/// Scripted card IDs: self prompt, enemy prompt (R79), emote listener (MD-D29, R1127),
+/// lethal, mutual lethal draw (§2.5), glitch swap (R677), glitch void (R679), flee (R1843002).
 pub const TEST_PROMPT_SELF: &str = "test-prompt-self";
-/// Opens a prompt for the other player (a trap firing on your turn, R79).
 pub const TEST_PROMPT_ENEMY: &str = "test-prompt-enemy";
-/// A 0-cost Field Spell that hears emotes (MD-D29, R1127): played, it makes `Emote` actions
-/// legal for either seat.
 pub const TEST_HEARS_EMOTES: &str = "test-hears-emotes";
-/// The player who played it wins by `hero-death`.
 pub const TEST_LETHAL: &str = "test-lethal";
-/// Both heroes die in the same check: a draw by `both-heroes-dead` (§2.5).
 pub const TEST_MUTUAL_LETHAL: &str = "test-mutual-lethal";
-/// A Glitch's swap (R677): the accounts now play each other's seat.
 pub const TEST_GLITCH_SWAP: &str = "test-glitch-swap";
-/// A Glitch's void (R679): the game ends with no winner, reason `voided`.
 pub const TEST_GLITCH_VOID: &str = "test-glitch-void";
-/// R1843002: the player who played it flees, a win by `fled` and a draw for the other player.
 pub const TEST_FLEE: &str = "test-flee";
 
-/// R1253000: a 0-cost Quickdraw Spell whose play panics, as a settle cap's `panic!` does. It is not in
-/// `install_test_cards`'s catalog: `install_panicking_test_cards` adds it.
+/// Panicking scripted card constants (R1253000).
 pub const TEST_PANICS: &str = "test-panics";
-/// R1253000: a 0-cost Quickdraw Field Spell that panics when its controller's turn ends, so the
-/// clock's `timeout` (which ends that turn) panics. Added by `install_panicking_test_cards`.
 pub const TEST_PANICS_AT_TURN_END: &str = "test-panics-at-turn-end";
-/// R1253000: what the panicking scripts panic with. A report must never hold it: a real panic's text
-/// can name a card.
 pub const PANIC_TEXT: &str = "test-panics: the settle loop reached its cap";
 
 /// The filler cards' id prefix: `test-card-0`, `test-card-1`, …
@@ -105,15 +51,11 @@ pub const PROMPT_OPTIONS: [&str; 2] = ["keep", "pass"];
 /// The resume step a scripted prompt's answer re-enters.
 pub const ANSWERED_STEP: &str = "answered";
 
-/// How far past a hero's whole health a lethal card's loss goes, so armor, a handicap's extra
-/// health or a heal along the way cannot leave the hero standing. Losing health is not damage, so
-/// no Armor and no hero cap reduce it (R18).
+/// Health reduction multiple bypassing armor (R18).
 const LETHAL_MULTIPLE: i32 = 100;
-
-/// The scripted cards' printed indexes: far past every real catalog index, so nothing collides.
 const FIRST_TEST_INDEX: i32 = 9001;
 
-/// One 0-cost Spell of the test catalog, written as the TS fixture literal.
+/// One 0-cost Spell of the test catalog.
 fn test_def(id: &str, index: i32, text: &str) -> CardDef {
     json_as(json!({
         "id": id,
@@ -276,9 +218,7 @@ fn test_card_scripts() -> Vec<(String, Script)> {
             },
         ),
         (
-            // §2.5: "Both heroes at 0 or less in the same check" is a draw, not a win for whoever
-            // struck. Both losses land inside one effect list, and the state check (§4.5) runs only
-            // once the play has resolved, so it finds both heroes dead at once.
+            // §2.5, §4.5: Both heroes at 0 or less in same check is a draw.
             TEST_MUTUAL_LETHAL.to_string(),
             Script {
                 static_flags: quickdraw(),
@@ -332,10 +272,7 @@ pub fn test_scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// Installs the test catalog and scripts for the calling thread (the testkit's override, SURFACE
-/// §8). `#[tokio::test]` runs a current-thread runtime, so the actor tasks a test spawns see them too.
-/// The real catalog is registered for the process first, for anything that reads it without the
-/// override.
+/// Installs test catalog and scripts under testkit override (SURFACE §8).
 pub fn install_test_cards() {
     jackioh_cards::register_all();
     register_catalog(test_catalog());
@@ -350,10 +287,7 @@ pub const TEST_FOLD_GATE: &str = "test-fold-gate";
 /// (the probe cannot run to release it) ends its test on order and does not hang it.
 pub const FOLD_GATE_WAIT: Duration = Duration::from_secs(5);
 
-/// #1035: what `TEST_FOLD_GATE`'s script shares with its test. Armed, the next play of the card parks
-/// its fold: it tells the test it has parked (`parked`), then waits for the test's release, for at most
-/// `FOLD_GATE_WAIT`. `note` and `order` record the steps in the order they happened, and `passes`
-/// counts every play, armed or not (#2213).
+/// #1035, #2213: parks fold until released, recording step order and pass count.
 pub struct FoldGate {
     armed: AtomicBool,
     passes: AtomicUsize,
@@ -524,9 +458,7 @@ pub fn install_panicking_test_cards(runs: Arc<AtomicUsize>) {
     register_scripts(scripts);
 }
 
-/// R1266000, R1329000: a 0-cost Quickdraw Spell whose Cry adds the card with the highest win rate to
-/// its player's hand, as Meditative #50 CN Tech's does, and nothing when no row qualifies. It is not in
-/// `install_test_cards`'s catalog: `tech_test_catalog` adds it, and `install_tech_test_cards` scripts it.
+/// R1266000, R1329000: Cry adds card with highest win rate (#50 CN Tech).
 pub const TEST_TECH: &str = "test-tech";
 
 /// `test_catalog` plus `TEST_TECH`, past `TEST_PANICS_AT_TURN_END`'s index.
@@ -568,9 +500,7 @@ pub fn install_tech_test_cards() {
     register_scripts(scripts);
 }
 
-/// R1253000: the Cry of each of `cards` panics, counted in `runs`, when `p1` (team A, the people, in
-/// a co-op match) plays it; anyone else's play gets the card's printed Cry. It installs scripts only,
-/// for the calling thread: the AI decides on the blocking pool, where cards read as printed.
+/// R1253000: the Cry of each card panics when p1 plays it, counted in `runs`.
 pub fn install_panicking_plays(cards: &[String], runs: Arc<AtomicUsize>) {
     jackioh_cards::register_all();
     let mut scripts = jackioh_cards::scripts_of();
@@ -650,15 +580,8 @@ pub fn begun_game(seed: &str, decks: (Vec<String>, Vec<String>)) -> GameState {
     begun.state
 }
 
-/// Two legal, disjoint decks for the real engine — the counterpart of `fake_deck` for the tests
-/// that play real §8 cards (`engine_real.rs`, and the real-card blocks of `match_actor.rs` and
-/// `recovery.rs`).
-///
-/// The deck size is not written here: BUILD §2 keeps `DECK_SIZE` in the engine's config, nothing
-/// restates it, so the size is whatever the engine accepts: the slices grow until `validate_deck`
-/// stops objecting. That loop is also an assertion. With the card catalog missing *every* size is
-/// refused, so that failure surfaces here as "the real engine refused every deck size", with the
-/// engine's own sentences attached, rather than as a shapeless panic inside whatever called this.
+/// Two legal, disjoint decks for the real engine playing real §8 cards.
+/// Deck size is sized dynamically by growing slices until accepted (BUILD §2).
 pub fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<String>, Vec<String>)) {
     let catalog = test_catalog();
     let mut refusals: Vec<String> = Vec::new();
@@ -684,16 +607,8 @@ pub fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec
     );
 }
 
-/// `decks_the_engine_accepts`, narrowed to the decks whose opening deal, under `seed`, opens straight
-/// onto both mulligans (§2.1, R265) — what a test about the window both seats share needs from its
-/// very first frame.
-///
-/// A deal that asks its seat something makes setup wait for the answer before it opens the mulligans
-/// (R224). No cast-on-draw card is dealt (R635), so no cast asks; a start-of-game clause as its card
-/// arrives in a hand still can (R151). Which cards the deal draws is the seed's to say, so whether a
-/// deal asks is read off the real engine, not off card text. The first deck stays the pool's first
-/// slice; the second slides along the pool a card at a time until the deal asks nothing, so a seed
-/// whose deal already opened on the mulligans keeps exactly the decks `decks_the_engine_accepts` gives it.
+/// `decks_the_engine_accepts`, narrowed to decks opening straight onto both mulligans (§2.1, R265).
+/// Slides second deck until deal asks nothing from start-of-game clauses (R224, R635, R151).
 pub fn decks_that_open_on_the_mulligans(pool: &[String], seed: &str) -> (Vec<String>, Vec<String>) {
     let (_, (first, _)) = decks_the_engine_accepts(pool, seed);
     let size = first.len();
@@ -741,7 +656,7 @@ pub fn keep_whole_hand(state: &GameState, seat: PlayerId, nonce: &str) -> Action
 }
 
 /// Both mulligans answered by keeping the whole hand, p1 first: the state at the start of turn 1,
-/// for a test that is not about the mulligan (TS's fake opened there unless asked not to).
+/// for a test that is not about the mulligan.
 pub fn past_the_mulligans(state: &GameState) -> GameState {
     let mut state = state.clone();
     for (seat, nonce) in [

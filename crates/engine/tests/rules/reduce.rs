@@ -1,5 +1,5 @@
 //! `reduce` (M1-T3): refusals leave the state untouched, the non-active player's actions, the open
-//! mulligans (R265), nonce dedupe, the game's end, bad plays, and every action `legalActions` lists
+//! mulligans (R265), nonce dedupe, the game's end, bad plays, and every action `legal_actions` lists
 //! applying cleanly.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};

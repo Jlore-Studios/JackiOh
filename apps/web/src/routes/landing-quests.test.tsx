@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
 import type { QuestView, QuestsResponse } from "../net/api.ts";
+import { pressBack } from "../test/history.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { at, meBody, refusal, signIn, stubServer, type Reply, type StubServer } from "../test/stubServer.ts";
 import LandingRoute, { QUESTS_UNROLL_MS } from "./landing.tsx";
@@ -93,7 +94,7 @@ describe("R2035000 the landing's quests bookmark", () => {
     expect(panel).toHaveAttribute("hidden");
     expect(screen.queryByTestId(questsTestid.quest)).toBeNull();
 
-    // The three doors are unchanged: still Play, Collection and Shop, and nothing else.
+    // The three doors are unchanged.
     const doors = [...ctas.querySelectorAll("a.landing-cta")];
     expect(doors.map((door) => door.getAttribute("data-testid"))).toEqual([
       landingTestid.play,
@@ -168,7 +169,6 @@ describe("R2035000 the landing's quests bookmark", () => {
       expect(screen.queryByTestId(questsTestid.quest)).toBeNull();
     };
 
-    // A second click.
     openPanel();
     fireEvent.click(bookmark);
     rollsUp();
@@ -180,7 +180,6 @@ describe("R2035000 the landing's quests bookmark", () => {
     rollsUp();
     expect(document.activeElement).toBe(bookmark);
 
-    // A press outside.
     openPanel();
     fireEvent.pointerDown(document.body);
     rollsUp();
@@ -189,6 +188,33 @@ describe("R2035000 the landing's quests bookmark", () => {
     openPanel();
     fireEvent.pointerDown(screen.getByTestId(questsTestid.quest));
     expect(panel).toHaveAttribute("data-state", "open");
+  });
+
+  it("R2127000 Back rolls up the open Quests scroll, keeps the home screen and address, restores bookmark focus, and a second Back leaves", async () => {
+    at("/play");
+    window.history.pushState(null, "", "/");
+    signIn();
+    serve([book()]);
+    render(<LandingRoute />);
+    await screen.findByTestId(landingTestid.questsCount);
+
+    const bookmark = screen.getByTestId(landingTestid.questsBookmark);
+    const panel = screen.getByTestId(landingTestid.questsPanel);
+    fireEvent.click(bookmark);
+    expect(panel).toHaveAttribute("data-state", "open");
+    screen.getByTestId(landingTestid.play).focus();
+
+    await pressBack();
+    // The scroll is rolling up (or, on a loaded machine, rolled up): shut either way, on the same screen and address.
+    expect(bookmark).toHaveAttribute("aria-expanded", "false");
+    expect(panel).not.toHaveAttribute("data-state", "open");
+    expect(bookmark).toHaveFocus();
+    expect(landing()).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/");
+
+    // The layer is spent: the next Back is the page's and leaves the screen.
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
   });
 
   it("R2035000 a visitor gets no bookmark and no read", async () => {
@@ -292,7 +318,6 @@ describe("R2035000 the landing's quests bookmark", () => {
     const server = serve([refusal(503, "unavailable", "the server refused"), book()]);
     render(<LandingRoute />);
 
-    // A stubbed round trip can outrun the 1 s default under load, as on the landing's own tests.
     fireEvent.click(await screen.findByTestId(landingTestid.questsBookmark, undefined, SLOW));
     expect(await screen.findByTestId(questsTestid.error, undefined, SLOW)).toHaveTextContent("the server refused");
     expect(screen.queryByTestId(landingTestid.questsCount)).toBeNull();

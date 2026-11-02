@@ -1,16 +1,10 @@
-// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12).
-// A fixture account builds "Cry: deal 2 damage to an enemy unit" with the no-code builder, reads it
-// in the code view and saves it (R915010, R915008); finds it again after a reload; puts it in a deck,
-// which the workshop marks practice only (R915005); starts practice with that deck, which runs in
-// the Luau module (R915009); plays the card and sees the damage; and folds the browser's log, its
-// custom card with it, with `jackioh replay` to the same hash (R915006), as specs 01 and 13 do.
+// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12). The browser's
+// log, its custom card with it, folds with `jackioh replay` to the same hash (R915006).
 
 import { allCardIds } from "../../support/cards.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   ACTION_ERROR,
-  ANIMATING,
-  BOARD,
   CREATOR_ADD_HOOK,
   CREATOR_ADD_STEP,
   CREATOR_BUILDER,
@@ -32,17 +26,14 @@ import {
   PRACTICE_DECK,
   PRACTICE_HUD,
   PRACTICE_START,
-  PROMPT,
-  PROMPT_SUBMIT,
-  RESULT_OVERLAY,
   WORKSHOP,
   addPoolId,
   deckRowId,
   promptOf,
-  promptOptionId,
   ts,
 } from "../../support/testids.ts";
 import type { Action, PlayerId } from "../../support/types.ts";
+import { keepWholeHand, reachHumanTurn, settledThroughAiTurn } from "../../support/practice.ts";
 
 /** p2: specs 09 and 19 share p1, and R109 limits how fast one account may write. */
 function me(): E2EAccount {
@@ -51,7 +42,6 @@ function me(): E2EAccount {
 
 const SEED = seedFor("40-custom-cards");
 
-/** The card the builder makes. */
 const NAME = "Spark Lancer";
 const DAMAGE = 2;
 
@@ -63,9 +53,6 @@ const SHIELDING_KEYWORDS = ["Divine Shield", "Armor", "Indestructible"];
 
 /** Turns the human may pass before the card is in hand with an enemy unit to aim it at. */
 const TURN_BUDGET = 12;
-
-/** Prompts the human may meet on the way (a card's own question, a Discover). */
-const PROMPT_BUDGET = 10;
 
 /** `CustomCard` as `GET /api/custom-cards` answers it, as far as this spec reads it. */
 type CustomCardBody = { id: string; version: number; frame: { name: string; text: string }; source: string };
@@ -124,85 +111,12 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
     .then((win) => (win as unknown as { __jackiohPractice: PracticeHandleLike }).__jackiohPractice);
 }
 
-const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
-
-function isPicked($option: JQuery<HTMLElement>): boolean {
-  const marked = $option.closest("[aria-pressed], [data-selected]");
-  const element = marked.length > 0 ? marked : $option;
-  return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
-}
-
-/** The AI can take whole turns between board settlements. */
-function settledThroughAiTurn(): void {
-  cy.get(ANIMATING, { timeout: timeouts.game, log: false }).should("not.exist");
-}
-
-/** R9: keep the whole opening hand. */
-function keepWholeHand(): void {
-  cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
-  cy.get(promptOf("mulligan")).within(() => {
-    cy.get(ANY_PROMPT_OPTION).each(($option) => {
-      if (isPicked($option)) return;
-      cy.wrap($option, { log: false }).click();
-    });
-    cy.get(ts(PROMPT_SUBMIT)).click();
-  });
-  settledThroughAiTurn();
-}
-
-function answerFirstOption(): void {
-  cy.get(PROMPT).first().within(() => {
-    cy.get(ANY_PROMPT_OPTION).first().click();
-  });
-  cy.get("body").then(($body) => {
-    const submit = $body.find(ts(PROMPT_SUBMIT));
-    if (submit.length > 0 && !submit.is(":disabled")) cy.wrap(submit.first()).click();
-  });
-  settledThroughAiTurn();
-}
-
-type Waited = "turn" | "prompt" | "over";
-
-function waitForHuman(): Cypress.Chainable<Waited> {
-  return cy
-    .get("body", { timeout: timeouts.game })
-    .should(($body) => {
-      const board = $body.find(ts(BOARD));
-      const endTurn = $body.find(ts(END_TURN));
-      const myTurn =
-        board.attr("data-active") === "you" && board.attr("data-phase") === "main" && endTurn.length > 0 && !endTurn.is(":disabled");
-      const prompt = $body.find(PROMPT).length > 0;
-      const over = $body.find(ts(RESULT_OVERLAY)).length > 0;
-      expect(myTurn || prompt || over, "the human's main phase, a prompt for the human, or a result").to.eq(true);
-    })
-    .then(($body): Waited => {
-      if ($body.find(ts(RESULT_OVERLAY)).length > 0) return "over";
-      if ($body.find(PROMPT).length > 0) return "prompt";
-      return "turn";
-    });
-}
-
-function reachHumanTurn(prompts = PROMPT_BUDGET): void {
-  waitForHuman().then((waited) => {
-    expect(waited, "the game is still on when the human is due to act").to.not.eq("over");
-    if (waited === "prompt") {
-      expect(prompts, "the human's prompts run out").to.be.greaterThan(0);
-      answerFirstOption();
-      reachHumanTurn(prompts - 1);
-      return;
-    }
-    cy.settled();
-  });
-}
-
 type Play = { card: string; target: string; health: number; lane: number };
 
-/** SPEC §6: whether the Cry's damage reaches the unit whole: no Armor and no shielding keyword. */
 function takesWholeHit(unit: NonNullable<UnitLike>): boolean {
   return unit.armor === 0 && !unit.keywords.some((keyword) => SHIELDING_KEYWORDS.includes(keyword.kind));
 }
 
-/** The card in hand, an enemy unit the Cry's damage reaches whole, an empty lane of the human's and the mana to pay. */
 function playable(view: ViewLike, customId: string, cost: number): Play | null {
   const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
   const card = hand.find((held) => held.defId === customId);
@@ -212,7 +126,6 @@ function playable(view: ViewLike, customId: string, cost: number): Play | null {
   return { card: card.instanceId, target: enemy.instanceId, health: enemy.health, lane: lane + 1 };
 }
 
-/** Pass turns until the custom card can be played at an enemy unit, then say how. */
 function untilPlayable(customId: string, cost: number, turns = TURN_BUDGET): Cypress.Chainable<Play> {
   reachHumanTurn();
   return practiceHandle().then((handle) => {
@@ -240,9 +153,9 @@ const RESUME_KEY = "jackioh.practice.game";
 
 /**
  * Start practice on the saved deck, on the first of `SEED`'s deals that puts the custom card in the human's
- * opening hand, and say its seed. The deck is DECK_SIZE cards and the passive human is beaten on turn 9, so
- * a card left to the draws (about one deal in three) arrives too late: a deal is found, not assumed, so
- * a change to the deck, the shuffle or the AI moves it without breaking the spec (#1803).
+ * opening hand, and say its seed. The passive human is beaten on turn 9, so a card left to the draws
+ * arrives too late; a deal is found, not assumed, so a change to the deck, the shuffle or the AI moves
+ * it without breaking the spec (#1803).
  */
 function startWithCardInHand(customId: string, attempt = 0): Cypress.Chainable<string> {
   expect(attempt, `the custom card is in the opening hand of one of ${String(SEED_BUDGET)} deals`).to.be.lessThan(SEED_BUDGET);
@@ -333,12 +246,12 @@ describe("40 custom cards — made in the creator, kept on the account, played i
       startWithCardInHand(customId).then((seed) => {
         cy.wrap(seed, { log: false }).as("seed");
       });
-      keepWholeHand();
+      keepWholeHand(BOOT_TIMEOUT);
 
       untilPlayable(customId, 1).then((play) => {
         cy.playCard(play.card, { zone: { side: "you", row: "units", lane: play.lane as 1 | 2 | 3 | 4 | 5 } });
-        // R81: the Cry's declared target. With one enemy unit the board takes it as the only one;
-        // with more, it asks, and the spec names the unit it measured.
+        // R81: the Cry's declared target. With one enemy unit the board takes it; with more, it asks for
+        // the unit the spec measured.
         cy.get("body").then(($body) => {
           if ($body.find(promptOf("target")).length > 0) cy.answerPrompt("target", { cards: [play.target] });
         });

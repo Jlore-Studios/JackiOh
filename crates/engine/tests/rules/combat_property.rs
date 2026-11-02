@@ -1,15 +1,6 @@
-//! The M2 gate (BUILD.md): 1,000 random combats between random keyword combinations never produce
-//! negative health, never leave a unit at health ≤ 0 on the field unless it is Indestructible with max
-//! health above 0 (R69), and never emit a `damage` event on an Indestructible target.
-//! R69: an Indestructible unit at 0 or less health stays while its max health is above 0, and is
-//! collected like any other once its max health falls to 0 or less. R46: a would-destroy on it
-//! switches it to Attack Position and takes its Taunt away for the turn.
-//!
-//! Case `i` draws from the seed `m2-combat-<i>`, so a violation reproduces from that seed alone
-//! (§10.7, §9.3). It pairs two keyword fixtures with zero to two granted keywords each, flips radiant
-//! and position, adds earlier damage or drags max health to 0, aims at a unit or the hero, and enters
-//! through `declareAttack` when §4.2 allows it or `forceAttack` when it does not (R53), then runs the
-//! §4.5 state check; step 2 stops it the moment a hero dies, so a game that is over may keep a body.
+//! The M2 gate (BUILD.md): 1,000 random combats never produce negative health, leave a dead unit on the
+//! field (R69 aside) or damage an Indestructible target; R46 is proved beside it. Case `i` draws from
+//! `m2-combat-<i>` alone (§10.7, §9.3), via `declareAttack` if §4.2 allows it, else `forceAttack` (R53).
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -21,10 +12,8 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::harness::{events_of_type, live, new_game, put, slot};
 
-/// The gate's number.
 const COMBATS: i32 = 1000;
 
-/// Every keyword fixture of §6.1, as the bodies a random combat is fought between.
 fn bodies() -> Vec<CardDef> {
     vec![
         plain.clone(),
@@ -51,8 +40,7 @@ fn bodies() -> Vec<CardDef> {
     ]
 }
 
-/// The grants that make the combinations: R21's pool plus the three keywords R21 leaves out but
-/// §6.1 defines for a unit in combat (Indestructible, a bigger Armor, "Can't attack").
+/// R21's pool plus what §6.1 adds for a unit in combat: Indestructible, a bigger Armor, "Can't attack".
 fn grants() -> Vec<Keyword> {
     vec![
         Keyword::Taunt,
@@ -126,7 +114,6 @@ fn is_indestructible(state: &GameState, unit: &CardInstance) -> bool {
     has_keyword(&unit_view(state, unit).keywords, KeywordKind::Indestructible)
 }
 
-/// Dress one unit up: radiant face, granted keywords, position, earlier damage, R69's max health.
 fn dress(state: &mut GameState, unit_id: &str, rng: &mut Rng) {
     let keywords = grants_for(rng);
     let turn = state.turn;
@@ -149,9 +136,8 @@ fn dress(state: &mut GameState, unit_id: &str, rng: &mut Rng) {
             .buffs
             .health -= view.max_health;
     } else if rng.chance(0.5) && view.max_health > 1 {
-        // Earlier damage, the range running past max health on purpose: R69's second sentence (an
-        // Indestructible unit at 0 or less health, max health above 0, stays) is reachable no other
-        // way, since §4.4 step 4 stops an Indestructible unit taking damage. Others are collected (§4.5).
+        // Earlier damage, past max health on purpose: R69's second sentence is reachable no other way,
+        // as §4.4 step 4 stops an Indestructible unit taking damage; others are collected (§4.5).
         let earlier = rng.int(view.max_health + 3);
         find_instance_mut(state, unit_id).expect("dressed unit").damage = earlier;
     }
@@ -253,8 +239,7 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         tally.hero_targets += 1;
     }
 
-    // Every unit that is Indestructible as the combat starts: nothing here grants or removes the
-    // keyword mid-combat, so this is the set §4.4 step 4 will be asked about on every hit.
+    // Indestructible at the start: nothing here changes it mid-combat, so §4.4 step 4 asks of this set.
     let indestructible_ids: IndexSet<String> = [P1, P2]
         .into_iter()
         .flat_map(|player| units_on_field(&state, player))
@@ -290,9 +275,8 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         });
     };
 
-    // Invariant 1, "never produce negative health": a hero below 0 is how a hero dies (§4.5 step 2),
-    // so no *live* game holds one; and no instance carries negative damage, the counter every health
-    // on the board is computed from (§10.4 layer 6).
+    // Invariant 1: a hero below 0 is how a hero dies (§4.5 step 2), so no live game holds one; and no
+    // instance carries negative damage, which every health is computed from (§10.4 layer 6).
     for player in [P1, P2] {
         let side = &state.players[player];
         if state.result.is_none() && side.hero.health <= 0 {
@@ -400,7 +384,7 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         }
     }
 
-    // The attacker and the defender are either on the field or in a pile: never in both, never lost.
+    // The attacker and the defender are never in two zones at once.
     for unit in [&attacker, &defender] {
         let now = find_instance(&state, &unit.id)
             .cloned()
@@ -459,8 +443,6 @@ mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
             run_one_combat(index, &mut tally);
         }
 
-        // Damage landed, units died, heroes were attacked, both entry points of §4.2 were used, and
-        // radiant faces were fought with.
         assert!(tally.damage_events > COMBATS);
         assert!(tally.deaths > COMBATS / 4);
         assert!(tally.hero_targets > COMBATS / 8);
@@ -474,7 +456,6 @@ mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
     }
 }
 
-/// R69 and R46: the exception invariant 2 carves out.
 mod r69_and_r46_the_exception_invariant_2_carves_out {
     use super::*;
 

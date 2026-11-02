@@ -3,18 +3,11 @@
 //! Base: "Can't attack. Death: Steal the Unit that destroyed this." Radiant: "Rush. Death: Steal the
 //! Unit that destroyed this."
 //!
-//! Both faces run one Death hook and differ only in the printed face, which is the catalog's: `Can't
-//! attack` on the base, `Rush` on the radiant (§8 Conventions: a keyword list gives the face's complete
-//! list). Neither needs a line of script.
-//!
-//! "The Unit that destroyed this" is R42's killer, a card-facing fact by R361, read off Mrow's
-//! last-known state (R78) at §4.5 step 3. `killerOf` answers only while the killer is a Unit acting on
-//! the field: a destroy effect, a Tribute, a Spell's damage, a killer that died in the same combat or
-//! one dormant under a Stack (R13) gives nothing to take.
-//!
-//! The take is one `steal` (§6.3): R15 places it, it keeps its damage and buffs (R78), it has entered
-//! its new controller's side this turn (R171), and a killer already on Mrow's side is left where it is.
-//! `ctx.controller` is the side Mrow was on as it died.
+//! Both faces run one Death hook; `Can't attack` and `Rush` are the catalog's printed faces (§8
+//! Conventions). "The Unit that destroyed this" is R42's killer (R361), read off Mrow's last-known state
+//! (R78) at §4.5 step 3: only a Unit acting on the field counts, so a destroy effect, a Spell's damage, a
+//! killer that died in the same combat or one dormant under a Stack (R13) gives nothing to take. The
+//! take is one `steal` (§6.3): R15 places it, it has entered its new side this turn (R171).
 
 use jackioh_engine::prelude::*;
 
@@ -44,9 +37,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #86 "Miss" Mrow (SPEC §8.4, BUILD M4-T4 row 86): "Cannot attack; Death takes control of the Unit
-// that destroyed it (R42's killer, R361), placed per R15, and nothing when no Unit on the field
-// destroyed it; radiant has Rush instead".
+// #86 "Miss" Mrow (SPEC §8.4, BUILD M4-T4 row 86) (R42, R361, R15).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -57,8 +48,7 @@ mod tests {
 
     const MROW: &str = "core-086";
 
-    // Field fixtures, chosen because every one of them has a Cry and nothing else: a unit placed by the
-    // harness's `field` setup never fires its Cry, so these are inert boards.
+    // Field fixtures whose only text is a Cry, which a unit placed by `field` never fires: inert boards.
     const GARY: &str = "core-004"; // 1/1
     const FELINORS: &str = "core-012"; // 3/4, kills a 1/1 Mrow and survives the 1 back
     const POSTDOC: &str = "core-061"; // 2/4
@@ -68,8 +58,7 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Spell: destroy target Unit
     const LUNAR_ECLIPSE: &str = "core-035"; // Spell: deal 3 damage to a target
 
-    // §2.5: a turn with nothing but `endTurn` left auto-ends and cascades into the next turn's draw.
-    // One always-playable card in each hand keeps every scenario on the turn it started on.
+    // §2.5: a turn with only `endTurn` left auto-ends, so each hand holds one always-playable card.
     const FILLER: &str = "core-005";
 
     const SEED: &str = "mrow-86";

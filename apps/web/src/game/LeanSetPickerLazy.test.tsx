@@ -1,6 +1,5 @@
-// R2031000: the shell's way to the "More cards from" picker (#778). It shows the picker once the
-// engine's module and the picker's code are in, and nothing, without throwing, if the module never
-// arrives: the shell that mounts it must keep painting.
+// R2031000: the shell's way to the "More cards from" picker (#778). If the engine's module never
+// arrives it shows nothing, without throwing: the shell that mounts it must keep painting.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

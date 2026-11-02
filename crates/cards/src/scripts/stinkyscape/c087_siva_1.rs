@@ -3,15 +3,8 @@
 //!   Base:    "Tradable / Cry: Allure a random enemy Acclaimed Unit."
 //!   Radiant: "Tradable / Cry: Allure a random enemy Acclaimed Unit. If there isn't one, summon a random
 //!            Acclaimed Unit for your opponent, Frozen, and Allure it."
-//! Engine: Tradable on both faces is catalog data the engine reads in the hand (R1838000). The Cry
-//!   (R1864000) draws one pick as it resolves among the enemy Units Allure reaches (the top of each unit
-//!   pile, then the Units standing in the backrow, never a carried, buried or Dormant card) whose tags,
-//!   granted ones included, hold Acclaimed, and Allures it as K-Pop Fanatic and Jade Beauty do
-//!   (R1045000, R963): the engine's delayed steal at the start of this player's next turn, destroyed
-//!   with no room, its target carrying the public pink `allure` mark while it waits (R437). With none
-//!   it draws nothing (R129). The Radiant face, with none (R1864001), summons a random Acclaimed Unit
-//!   of the sets that ship onto the opponent's side (R380, never this card, R387), Freezes it and
-//!   Allures it; a full enemy unit row summons nothing.
+//! Tradable printed (R1838000). Cry allures random enemy Acclaimed Unit (R1864000, R1045000, R963, R437, R129).
+//! Radiant summons random Acclaimed Unit for opponent if none (R1864001, R380, R387), Freezes and Allures it.
 
 use jackioh_engine::prelude::*;
 
@@ -104,14 +97,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// S #87 Siva 1 — SPEC §8.10 row 87, BUILD M12 row S 87: "played against an enemy Acclaimed Unit, marks
-// it and steals it at the start of its controller's next turn (destroyed with a full row); against
-// none, nothing; Tradable from the hand; radiant 4/4, and against none a random Acclaimed Unit is
-// summoned Frozen on the opponent's side and stolen at the next start of turn".
-//
-// Every case that crosses a turn boundary keeps cards in both hands and libraries, so no turn ends by
-// itself (R82) and no draw runs dry; two `end_turn()`s return to p1's start of turn, where the delayed
-// Allure resolves (R62).
+// S #87 Siva 1 — SPEC §8.10 row 87, BUILD M12 row S 87 (R62, R82).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,7 +108,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// The shipped Acclaimed Units, every one the Radiant face's pool may summon (R380).
     const WARDRUM: &str = "classicplus-037";
     const BIG_MAX: &str = "classic-080";
     const YILEGPT: &str = "meditative-049";
@@ -144,7 +129,6 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005";
 
-    /// p1 holds Siva (Radiant on `radiant`) with 10 mana, `p1_field` on the field; p2 has `p2_field`.
     fn siva_against(seed: &str, radiant: bool, p1_field: Value, p2_field: Value) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -158,13 +142,11 @@ mod tests {
         }))
     }
 
-    /// Play the Siva in p1's hand.
     fn play_siva(s: &mut Scenario) {
         let siva = s.card(ID).id.clone();
         s.play(&siva, json!({}));
     }
 
-    /// Hand the turn over until `player` is the active one (R82 can end a turn with nothing left in it).
     fn until_active(s: &mut Scenario, player: PlayerId) {
         if s.state().active != player {
             s.end_turn();
@@ -179,7 +161,6 @@ mod tests {
         json!([{ "mark": ALLURE_MARK, "color": ALLURE_MARK_COLOR }])
     }
 
-    /// The marks a card's view carries on the field, `Null` for none, or `"not on the field"`.
     fn marks_in(view: &PlayerView, instance_id: &str) -> Value {
         let view = js(view);
         for side in ["you", "opponent"] {
@@ -192,14 +173,12 @@ mod tests {
         json!("not on the field")
     }
 
-    /// Whether both seats see the card carry Allure's mark.
     fn allured_in_both_views(s: &Scenario, instance_id: &str) -> bool {
         [P1, P2]
             .into_iter()
             .all(|seat| marks_in(&s.view(seat), instance_id) == allure_mark())
     }
 
-    /// p2's Units that are not these.
     fn new_enemy_units(s: &Scenario, before: &[String]) -> Vec<CardInstance> {
         (1..=UNIT_ZONES)
             .filter_map(|lane| s.unit(P2, lane))
@@ -258,7 +237,6 @@ mod tests {
                 json!([{ "def": WARDRUM, "lane": 2 }, { "def": WARDRUM, "lane": 4 }]),
             )
         };
-        // Which lane's Wardrum the Cry marked, checking that exactly one of them is.
         let marked_lane = |seed: &str| -> i32 {
             let mut s = two_wardrums(seed);
             let (left, right) = (s.unit_at(P2, 2).id.clone(), s.unit_at(P2, 4).id.clone());
@@ -273,7 +251,6 @@ mod tests {
         let right = seed_where("siva-pick-right", |seed| marked_lane(seed) == 4);
         assert_eq!(marked_lane(&left), 2);
         assert_eq!(marked_lane(&right), 4);
-        // One delayed Allure, whichever is picked.
         let mut s = two_wardrums(&left);
         play_siva(&mut s);
         assert_eq!(s.state().delayed.len(), 1);
@@ -292,7 +269,6 @@ mod tests {
 
     #[test]
     fn r1864000_with_no_room_the_allured_unit_is_destroyed() {
-        // p1's unit row is full once Siva lands in lane 5.
         let mut s = siva_against(
             "siva-no-room",
             false,

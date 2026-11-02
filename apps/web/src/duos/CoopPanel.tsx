@@ -1,14 +1,10 @@
 // The co-op panel on Play together (#936 S8, B60): make a Duos room against the AI team, share its
-// code (in a chat message to a friend, or by hand), join a friend's by its code, and go to the board
-// once both are in.
+// code, join a friend's by its code, and go to the board once both are in.
 //
-// CLAUDE.md rule 7: the panel proposes and the server rules. The AI's difficulty, the deck or a random
-// deal (and, for a random one, "More cards from", R924000, R2031000: the device's online pick,
-// `readPlayLean`, as the lobby's) are what the player chose; the
-// server checks them, makes the room, and answers a join with the match or a refusal shown in a
-// player's words. The host waits on the room: it is read every COOP_ROOM_POLL_MS until it names its
-// match, and then both players are on the board (the guest goes straight from its join). A room the
-// tab opened is remembered for the tab (COOP_ROOM_KEY, try/catch), so a reload picks the wait up.
+// CLAUDE.md rule 7: the panel proposes and the server rules. The AI's difficulty and the deck or a
+// random deal ("More cards from", R924000, R2031000, the device's online pick) are what the player
+// chose; the server checks them and answers. The host's room is read every COOP_ROOM_POLL_MS until it
+// names its match, and is remembered for the tab (COOP_ROOM_KEY), so a reload picks the wait up.
 //
 // R915005: a deck naming a custom card is listed off, "(practice only)", and never picked.
 
@@ -34,9 +30,10 @@ import { coopLinkUrl, forgetCoopLink, readCoopLink, sendRoomLink } from "../net/
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { deckPracticeOnly, practiceOnlyLabel } from "../together/challengeChoice.ts";
-import { attempt, messageOf } from "../together/session.ts";
 import { COOP_ROOM_KEY, COOP_ROOM_POLL_MS } from "./config.ts";
 import { duosTestid } from "./testids.ts";
+import { attempt, messageOf } from "../net/errors.ts";
+import { getStored, removeStored, sessionStorageOrNull, setStored } from "../net/storage.ts";
 import "./duos.css";
 
 /** The deck select's value for a dealt deck. */
@@ -47,21 +44,14 @@ export const COOP_DECK_KEY = "jackioh.coop.deck";
 
 /** R2094000: the remembered deck id, or null when none or storage refuses. */
 export function readCoopDeck(): string | null {
-  try {
-    const raw = window.localStorage.getItem(COOP_DECK_KEY);
-    return typeof raw === "string" && raw.length > 0 ? raw : null;
-  } catch {
-    return null;
-  }
+  const raw = getStored(COOP_DECK_KEY);
+  return raw !== null && raw.length > 0 ? raw : null;
 }
 
 /** R2094000: remember the pick a co-op room was made or joined with, a random deal included. */
 export function writeCoopDeck(id: string): void {
-  try {
-    window.localStorage.setItem(COOP_DECK_KEY, id);
-  } catch {
-    // Remembering the pick is a convenience; a refusal costs nothing.
-  }
+  // Remembering the pick is a convenience; a refusal costs nothing.
+  setStored(COOP_DECK_KEY, id);
 }
 
 /**
@@ -82,20 +72,13 @@ const DIFFICULTY_LABEL: Readonly<Record<Difficulty, string>> = {
 };
 
 function readStoredRoom(): string | null {
-  try {
-    return window.sessionStorage.getItem(COOP_ROOM_KEY);
-  } catch {
-    return null;
-  }
+  return getStored(COOP_ROOM_KEY, sessionStorageOrNull());
 }
 
 function storeRoom(code: string | null): void {
-  try {
-    if (code === null) window.sessionStorage.removeItem(COOP_ROOM_KEY);
-    else window.sessionStorage.setItem(COOP_ROOM_KEY, code);
-  } catch {
-    // Blocked storage: the wait lasts as long as the page does.
-  }
+  // Blocked storage: the wait lasts as long as the page does.
+  if (code === null) removeStored(COOP_ROOM_KEY, sessionStorageOrNull());
+  else setStored(COOP_ROOM_KEY, code, sessionStorageOrNull());
 }
 
 /** A refusal (B33's `full` and `own_room`, B34's unknown code, …) in the server's own words. */
@@ -225,7 +208,6 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
     };
   }, [room]);
 
-  // R2094000: settle the join deck on the last co-op pick, else the first saved deck, once decks arrive.
   useEffect(() => {
     if (touchedDeck.current || decks.length === 0) return;
     const settled = defaultCoopDeck(decks, readCoopDeck())?.id ?? RANDOM;
@@ -236,7 +218,6 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   useEffect(() => {
     forgetCoopLink();
   }, []);
-  // R2094000: a chat Join on this same screen arrives as a new query without remounting.
   useEffect(() => {
     const code = readCoopLink();
     if (code === null) return;

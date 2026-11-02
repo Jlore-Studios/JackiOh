@@ -1,13 +1,4 @@
-//! The hidden rating's maths (SPEC §9.12, R603): Glicko-2 against reference values.
-//!
-//! Two sources. Glickman's own worked example ("Example of the Glicko-2 system", 2013, §"Example"),
-//! at the precision the paper prints, which it rounds at every step; and the values below marked
-//! REFERENCE, computed independently of this code by a transcription of the paper's steps into
-//! Python's `decimal` module at 50 significant digits (ε = 1e-40), which is where draws are proved,
-//! since the paper's example has none. Those match this module to 1e-6 in rating and deviation and
-//! 1e-8 in volatility, the slack being only its own ε of `GLICKO_CONVERGENCE`.
-//!
-//! Port of `apps/server/test/ranked/glicko2.test.ts` (part 18).
+//! Hidden rating maths (SPEC §9.12, R603): Glicko-2 against reference values.
 
 use jackioh_server::config::{GLICKO_TAU, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use jackioh_server::ranked::glicko2::{
@@ -31,12 +22,12 @@ fn game(opponent: Glicko, score: Score) -> RatedOpponent {
     RatedOpponent { opponent, score }
 }
 
-/// TS `glicko2Period(player, games)`: the period at the default τ (`GLICKO_TAU`).
+/// Glicko-2 period at default tau.
 fn period(player: Glicko, games: &[RatedOpponent]) -> Glicko {
     glicko2_period(&player, games, GLICKO_TAU)
 }
 
-/// TS `rateGame(a, b, scoreA)`, its `{ a, b }` read out as a pair.
+/// Rates game between two players.
 fn rate(a: Glicko, b: Glicko, score_a: Score) -> (Glicko, Glicko) {
     let rated = rate_game(&a, &b, score_a);
     (rated.a, rated.b)

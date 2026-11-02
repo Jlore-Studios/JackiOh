@@ -1,8 +1,7 @@
-//! ME-SECRET's three verbs (Meditative MB05, R860–R865; docs/meditative-set.md, group A's
-//! Systems, ME-SECRET): Mind Games keeps its declared mode as a secret record (`keep_secret`), a
-//! Fortify Mind's guess is judged against the linked secret (`guess_secret`), and the reward
-//! resolves the secret away (`resolve_secret`). Like `effects::translate`, they push events onto
-//! `ctx.events` and write `ctx.state`, so the card scripts stay lists of effects (CLAUDE.md rule 5).
+//! ME-SECRET's three verbs (Meditative MB05, R860–R865; docs/meditative-set.md): Mind Games keeps its
+//! declared mode as a secret (`keep_secret`), a Fortify Mind's guess is judged against it
+//! (`guess_secret`), and the reward resolves it away (`resolve_secret`). They write the state
+//! themselves so the card scripts stay lists of effects (CLAUDE.md rule 5).
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -57,9 +56,8 @@ pub struct ResolveSecretArgs {
     pub secret_id: String,
 }
 
-/// R860, R861: file the declared choice as a secret record on the caster, tell both players only
-/// that a secret exists, arm the reward at the caster's next start of turn, and hand the linked
-/// card to its player carrying the secret's id. The id is minted off `next_id` like an instance's,
+/// R860, R861: file the declared choice as a secret on the caster, tell both players only that one
+/// exists, arm the reward, and hand the linked card over carrying the secret's id, minted off `next_id`
 /// so replays mint the same one (D14: the counter moves only when a secret is kept).
 pub fn keep_secret(args: KeepSecretArgs) -> Effect {
     Effect::new("keepSecret", move |ctx| {
@@ -76,9 +74,8 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
             player: controller,
             secret_id: id.clone(),
         });
-        // R861: the reward is the caster's `next` start-of-turn delayed effect — after the refresh,
-        // before the triggers and the draw (R62's delayed step) — re-entering the card's `resume`
-        // step table at `step`, carrying only the secret's id, never the choice.
+        // R861: the reward is the caster's `next` start-of-turn delayed step (R62), carrying only the
+        // secret's id, never the choice.
         let mut data = IndexMap::new();
         data.insert(SECRET_KEY.to_string(), Value::String(id.clone()));
         (delay(DelayArgs {
@@ -97,8 +94,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
             label: None,
         })
         .apply)(ctx);
-        // R862: the linked card rides the secret's id in its memory, so the guess it declares is
-        // judged against the secret that made it.
+        // R862: the linked card rides the secret's id, so its guess is judged against this secret.
         if let Some(link) = &args.link {
             let mut memory = IndexMap::new();
             memory.insert(SECRET_KEY.to_string(), Value::String(id.clone()));
@@ -126,11 +122,9 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
     })
 }
 
-/// R862, R864: judge `guess` against the secret `secret_id` names. A secret with no record, or
-/// none filed, is nothing to judge: no event, no penalty. Otherwise the secret is revealed once —
-/// `secretRevealed` when it was still hidden — and `predicted` is public. A winning guess removes
-/// the secret and its reward's delayed effect; a tie or a loss leaves the reward to land, both
-/// players now reading the choice.
+/// R862, R864: judge `guess` against the secret `secret_id` names (none filed: no event, no penalty).
+/// The secret is revealed once and `predicted` is public; a winning guess removes the secret and its
+/// reward, a tie or a loss leaves the reward to land, both players now reading the choice.
 pub fn guess_secret(args: GuessSecretArgs) -> Effect {
     Effect::new("guessSecret", move |ctx| {
         let controller = ctx.controller;
@@ -175,8 +169,7 @@ pub fn guess_secret(args: GuessSecretArgs) -> Effect {
     })
 }
 
-/// R861: resolve the secret `secret_id` names away — revealing it first unless a judged Fortify
-/// Mind already did. A secret with no record is already gone: nothing happens.
+/// R861: resolve the secret `secret_id` names away, revealing it first unless a judged guess did.
 pub fn resolve_secret(args: ResolveSecretArgs) -> Effect {
     Effect::new("resolveSecret", move |ctx| {
         let Some(record) = secret_of(ctx.state, &args.secret_id) else {
