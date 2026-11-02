@@ -27,6 +27,7 @@ import type {
 } from "./protocol.ts";
 import { memorySaveStore, type PracticeReplay, type PracticeSaveStore } from "./saveStore.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
+import { snapshotOf } from "../test/fixtures.ts";
 
 const ENV: PracticeCoreEnv = { now: () => 0, dev: true, budget: AI_GATE_BUDGET };
 const HUMAN: PlayerId = "p2";
@@ -46,11 +47,6 @@ function hostOn(saves: PracticeSaveStore, env: Partial<PracticeCoreEnv> = {}): P
 
 function config(seed: string, over: Partial<PracticeStartConfig> = {}): PracticeStartConfig {
   return { seed, difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" }, ...over };
-}
-
-function snapshotOf(response: PracticeResponse): PracticeSnapshot {
-  if (response.type === "started" || response.type === "snapshot") return response.snapshot;
-  throw new Error(`expected a snapshot, got ${JSON.stringify(response).slice(0, 400)}`);
 }
 
 async function debug(host: PracticeHost): Promise<PracticeDebug> {

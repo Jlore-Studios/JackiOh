@@ -6,6 +6,7 @@
 // unparsable JSON fall back to the default or to the in-memory value, and nothing here throws.
 
 import { useSyncExternalStore } from "react";
+import { getStored, setStored } from "../net/storage.ts";
 
 export type HapticsSettings = { vibration: boolean };
 
@@ -22,7 +23,7 @@ export function parseHapticsSettings(raw: unknown): HapticsSettings {
 
 function load(): HapticsSettings {
   try {
-    const text = window.localStorage.getItem(HAPTICS_SETTINGS_KEY);
+    const text = getStored(HAPTICS_SETTINGS_KEY);
     return text === null ? { ...DEFAULT_HAPTICS_SETTINGS } : parseHapticsSettings(JSON.parse(text));
   } catch {
     return { ...DEFAULT_HAPTICS_SETTINGS };
@@ -42,11 +43,8 @@ export function readHapticsSettings(): HapticsSettings {
 export function writeHapticsSettings(patch: Partial<HapticsSettings>): HapticsSettings {
   const next = parseHapticsSettings({ ...readHapticsSettings(), ...patch });
   current = next;
-  try {
-    window.localStorage.setItem(HAPTICS_SETTINGS_KEY, JSON.stringify(next));
-  } catch {
-    // Quota, private mode or blocked storage: the switch still holds in memory for this page.
-  }
+  // Quota, private mode or blocked storage: the switch still holds in memory for this page.
+  setStored(HAPTICS_SETTINGS_KEY, JSON.stringify(next));
   for (const listener of [...listeners]) listener();
   return next;
 }

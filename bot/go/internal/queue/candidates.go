@@ -68,9 +68,6 @@ type Candidate struct {
 	// A pull request the bot opened (`bot:pr`): one a person opened never gets a review run, so
 	// its revision needs a reviewer in the same run.
 	BotPR bool // default: False
-	// For a revision: it resolves a conflict with `main` on a change the review rule cleared
-	// (`cleared`), so the run's own reviewer can carry that clearance (`deliver._carry`).
-	Carries bool // default: False
 	// Someone has rated how hard it is (`rated`); an unrated build is rated when it is planned.
 	Rated bool // default: True
 	// A revision queued because `main` left the pull request with conflicts: only a builder
@@ -574,7 +571,6 @@ func Candidates(ctx *hctx.Context, s *pyjson.Object, skipped *[]string /* = None
 				c.ApprovalTiers = append(c.ApprovalTiers, approval[1])
 			}
 			c.BotPR = names[labelPR]
-			c.Carries = kind == "revise" && names[labelPR] && Carries(record)
 			c.Rated = kind != "build" || Rated(names, record)
 			c.Conflict = kind == "revise" && record.Get("source") == "conflict"
 			if kind == "review" {

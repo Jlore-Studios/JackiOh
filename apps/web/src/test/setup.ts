@@ -1,7 +1,8 @@
 // Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
 // animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, a
 // `PointerEvent` that keeps `pointerType`, and the engine, and an empty read cache before each test
-// (R2125000: a test never starts on another's kept answers).
+// (R2125000: a test never starts on another's kept answers). A test imports from here the switches
+// for the page's state (`setReducedMotion`, `setVisibility`) and `readSheet`, a stylesheet as text.
 //
 // The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
 // (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
@@ -10,8 +11,8 @@
 // synchronously, as the page does after `main.tsx` has awaited `loadWasm()`.
 
 import "@testing-library/jest-dom/vitest";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach } from "vitest";
 
@@ -29,6 +30,28 @@ export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 /** Flip `prefers-reduced-motion` for a test. Always reset it in an `afterEach`. */
 export function setReducedMotion(on: boolean): void {
   reducedMotion = on;
+}
+
+/**
+ * Turn the page `hidden` or `visible` for a test, as a tab switch does (#2160): `visibilityState`
+ * reads `state` and `visibilitychange` fires. A test that calls it saves the property's descriptor
+ * first and puts it back after.
+ */
+export function setVisibility(state: "hidden" | "visible"): void {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
+/**
+ * A stylesheet's text, by its path from apps/web (`src/game/animations.css`), whether vitest runs
+ * from apps/web or from the repository root (#2160). Vitest stubs CSS imports, so a test reads it.
+ */
+export function readSheet(fromWeb: string): string {
+  for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
+    const path = resolve(process.cwd(), candidate);
+    if (existsSync(path)) return readFileSync(path, "utf8");
+  }
+  throw new Error(`${fromWeb} not found from ${process.cwd()}`);
 }
 
 function matches(query: string): boolean {

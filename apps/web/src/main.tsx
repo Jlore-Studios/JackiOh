@@ -95,7 +95,7 @@ import { useCardPicksAccountSync } from "./cards/cardPicksSync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
-import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
+import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptCoopLink, adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
@@ -169,9 +169,13 @@ export { shellTestid };
 /** The tab title and canonical link live in `net/head.ts`, so the build can name pages as the app does. */
 export { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 
+/** The stacked logo (public/brand, drawn by scripts/brand-logo.py) and its size, so its box is held before it loads. */
+const SHELL_LOGO = { src: "/brand/jackioh-logo-stacked.svg", width: 1536, height: 1306 } as const;
+
 /**
- * The frame every panel this file draws sits in: the wordmark on the tavern board. Exported for
- * the screens that wait the same way (the match screen before its first view).
+ * The frame every panel this file draws sits in: the logo over the tavern board, on the tavern's
+ * wood (auth/tavern.css). Exported for the screens that wait the same way (the match screen before
+ * its first view).
  */
 export function ShellPanel({
   testId,
@@ -184,12 +188,10 @@ export function ShellPanel({
 }): ReactElement {
   return (
     <div className="app-shell tavern shell-panel" data-testid={testId} data-shown={shown ? "true" : "false"}>
-      <section className="panel panel--auth">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        {children}
-      </section>
+      <h1 className="shell-panel__brand">
+        <img className="shell-panel__logo" src={SHELL_LOGO.src} width={SHELL_LOGO.width} height={SHELL_LOGO.height} alt={SITE_NAME} />
+      </h1>
+      <section className="panel panel--auth">{children}</section>
     </div>
   );
 }

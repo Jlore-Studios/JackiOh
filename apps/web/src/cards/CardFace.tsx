@@ -133,7 +133,8 @@ const ART_SHAPE: Readonly<Record<CardType, ArtShape>> = {
   "Field Trap": "notched",
 };
 
-function join(...parts: (string | false | undefined)[]): string {
+/** A class list from the parts that are non-empty strings, in order. */
+export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
 }
 
@@ -358,7 +359,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
   return (
     <span
-      className={join("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", tier === "Mythic" && "cf-full-art--signed")}
+      className={cx("cf", `cf--${layout}`, className, moving && "cf-full-art--animated", tier === "Mythic" && "cf-full-art--signed")}
       data-layout={layout}
       data-card-type={face.type}
       data-rarity={rarity ?? undefined}

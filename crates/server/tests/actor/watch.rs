@@ -31,13 +31,13 @@ use jackioh_server::db::store::{PlayerSettingsLimits, PlayerSettingsMergeInput, 
 use jackioh_server::economy::store::CardPicks;
 
 use super::duos::{
-    Account, PROMPTLY, Served, WsClient, account, api, assert_refused_for_its_sign_in, ms,
-    offers_without_a_credential, serve, settle,
+    PROMPTLY, Served, WsClient, api, assert_refused_for_its_sign_in, ms, offers_without_a_credential, serve,
+    settle,
 };
 use crate::support::deps::{TEST_CATALOG_VERSION, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
-use crate::support::store::uuid;
+use crate::support::store::{Account, account, befriend, uuid};
 
 /// S7's watch socket.
 const WATCH_PATH: &str = "/ws/watch";
@@ -54,28 +54,6 @@ where
     <usize as TryFrom<T>>::Error: std::fmt::Debug,
 {
     usize::try_from(value).expect("a count fits a usize")
-}
-
-async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
-    let (status, body) = api(
-        app,
-        "POST",
-        "/api/friends/requests",
-        &a.token,
-        json!({ "username": b.name }),
-    )
-    .await;
-    assert_eq!(status, 201, "{body}");
-    let request_id = body["requestId"].as_str().expect("a request id").to_string();
-    let (status, body) = api(
-        app,
-        "POST",
-        &format!("/api/friends/requests/{request_id}/accept"),
-        &b.token,
-        Value::Null,
-    )
-    .await;
-    assert_eq!(status, 200, "{body}");
 }
 
 async fn block(app: &Arc<App>, who: &Account, whom: &Account) {
@@ -1136,27 +1114,7 @@ mod r1379000_the_credential_on_the_handshake {
 /// that seat's deck, once, so the watcher learns no card sooner than its views show it.
 mod r1834003_a_watcher_wears_the_seats_loadouts {
     use super::*;
-
-    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
-    fn named_cards(view: &Value) -> Vec<(String, String)> {
-        let mut named = Vec::new();
-        let mut stack = vec![view];
-        while let Some(value) = stack.pop() {
-            match value {
-                Value::Object(fields) => {
-                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
-                        (fields.get("instanceId"), fields.get("defId"))
-                    {
-                        named.push((instance.clone(), def.clone()));
-                    }
-                    stack.extend(fields.values());
-                }
-                Value::Array(entries) => stack.extend(entries),
-                _ => {}
-            }
-        }
-        named
-    }
+    use crate::support::store::named_cards;
 
     #[tokio::test(start_paused = true)]
     async fn r1834003_a_watcher_follows_its_delayed_view() {

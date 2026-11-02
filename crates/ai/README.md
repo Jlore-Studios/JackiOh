@@ -14,10 +14,10 @@ environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes fr
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
 `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
-The Death, the turn-hook and the activation prices of a decision (R2424000, R2477000, R2564000) travel
-with it as one value, `evaluate::Prices`, passed by reference from `decide` through the search to the
-scorers that read them; a call outside a decision passes `Prices::NONE` (plain `evaluate`, the probes, the
-baselines, the tools) and prices nothing. The crate holds no thread-local.
+The Death, the turn-hook, the activation and the attack-hook prices of a decision (R2424000, R2477000,
+R2564000, R2688000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
+through the search to the scorers that read them; a call outside a decision passes `Prices::NONE` (plain
+`evaluate`, the probes, the baselines, the tools) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
@@ -99,6 +99,13 @@ then its face-up backrow cards' (`activate_sources`), as the reply does (`visibl
 prices the best as the controller's evaluation after less before, each crystal at `next_turn_mana`;
 `unit_worth` adds `AI_EVAL.activation` of it for both sides' units, and `material` for each readable
 backrow card, inside its Brittle share.
+A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
+`attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
+player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
+target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, its printed
+keywords granted, its text given back before scoring), and prices the controller's evaluation after the
+one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
+`AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
 It re-plans after every action, so a
 lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action

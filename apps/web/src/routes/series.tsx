@@ -11,12 +11,12 @@ import { pageWake } from "../game/net.ts";
 import { forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
-import { attempt, messageOf } from "../together/session.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import ConquestExplainer, { conquestExplainerTestid } from "./ConquestExplainer.tsx";
 import { conquestText, isExplainerDismissed, setExplainerDismissed } from "./conquestCopy.ts";
 import { SERIES_OUTCOME_HEADLINE } from "./SeriesBanner.tsx";
 import SeriesPicker, { deckStanding, seriesPickerTestid } from "./SeriesPicker.tsx";
+import { attempt, messageOf } from "../net/errors.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
