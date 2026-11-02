@@ -3931,6 +3931,7 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
 
 mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
     use super::*;
+    use jackioh_engine::subsystems::board_history::{record_board_snapshot, restore_board};
 
     /// The redacted identity of the view's `trapFired` event: (instanceId, defId).
     fn seen_by(view: &PlayerView) -> (String, String) {
@@ -3943,6 +3944,80 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
                 _ => None,
             })
             .unwrap_or_else(|| panic!("no trapFired in view"))
+    }
+
+    /// The view's `trapFired` event, whole.
+    fn fired_in(view: &PlayerView) -> GameEvent {
+        must(
+            view.events
+                .iter()
+                .find(|event| matches!(event, GameEvent::TrapFired { .. }))
+                .cloned(),
+            "a trapFired in the view",
+        )
+    }
+
+    /// The raw `trapFired` among `events`.
+    fn raw_fired(events: &[GameEvent]) -> GameEvent {
+        must(
+            events
+                .iter()
+                .find(|event| matches!(event, GameEvent::TrapFired { .. }))
+                .cloned(),
+            "a trapFired event",
+        )
+    }
+
+    /// P1's bare trap in backrow zone 3 fired by P2's play, its action recorded as `reduce` records one
+    /// (`viewFor` reads `state.applied`): the state, the trap and the raw `trapFired`.
+    fn fired_bare_trap(seed: &str) -> (GameState, CardInstance, GameEvent) {
+        let mut state = game(seed);
+        let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
+        let mut sink = Bench::new(&state);
+        assert_eq!(
+            sink.run(&mut state, |engine| traps::fire_traps_for(engine, &played(P2)))
+                .fired,
+            vec![trap.id.clone()]
+        );
+        state.applied = vec![AppliedAction {
+            nonce: seed.to_string(),
+            events: sink.events.clone(),
+        }];
+        let raw = raw_fired(&sink.events);
+        (state, trap, raw)
+    }
+
+    /// P1's Field Trap in backrow zone 1 fired by P1's turn end, face-up already when `face_up` (R2657001's
+    /// firing `again`), recorded as `fired_bare_trap` records it.
+    fn fired_window_trap(seed: &str, face_up: bool) -> (GameState, CardInstance, GameEvent) {
+        let mut state = game(seed);
+        let trap = put(&mut state, WINDOW_TRAP, slot(P1, Row::Backrow, 1));
+        if face_up {
+            live_mut(&mut state, &trap).face_up = Some(true);
+        }
+        let raw = fire_at_turn_end(&mut state, &trap, seed);
+        (state, trap, raw)
+    }
+
+    /// Fires P1's Field Trap `trap` in the end-of-turn window and records the action as its only one: the
+    /// raw `trapFired`.
+    fn fire_at_turn_end(state: &mut GameState, trap: &CardInstance, nonce: &str) -> GameEvent {
+        let turn_ended = GameEvent::TurnEnded {
+            player: P1,
+            turn: state.turn,
+            unspent_mana: 0,
+        };
+        let mut sink = Bench::new(state);
+        assert_eq!(
+            sink.run(state, |engine| traps::run_trap_window(engine, &turn_ended))
+                .fired,
+            vec![trap.id.clone()]
+        );
+        state.applied = vec![AppliedAction {
+            nonce: nonce.to_string(),
+            events: sink.events.clone(),
+        }];
+        raw_fired(&sink.events)
     }
 
     #[test]
@@ -3986,7 +4061,8 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
     }
 
     #[test]
-    fn r154_carries_the_traps_row_and_lane_on_trapfired_with_its_identity_redacted_for_the_other_player() {
+    fn r154_r2734000_carries_the_traps_row_and_lane_on_trapfired_and_names_it_to_both_seats_in_its_graveyard()
+    {
         let mut state = game("r154-trap-lane");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
         let mut sink = Bench::new(&state);
@@ -4022,20 +4098,16 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
             events: sink.events.clone(),
         }];
 
-        // Its identity follows §10.8's redaction: the controller reads it, the other player reads the
-        // sentinel — keyed to the controller and NOT to the card's current zone, because firing the
-        // trap moves it to a public graveyard (R97's exception, stated in R154).
+        // Its identity follows §10.8's redaction (R97) on both seats. R2734000: it lies in its owner's
+        // graveyard, public, so both seats read it — the other player no longer reads the sentinel.
         let owner = view_for::view_for(&state, P1);
         let other = view_for::view_for(&state, P2);
         assert_eq!(seen_by(&owner), (trap.id.clone(), trap.def_id.clone()));
-        assert_eq!(
-            seen_by(&other),
-            (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string())
-        );
+        assert_eq!(seen_by(&other), (trap.id.clone(), trap.def_id.clone()));
     }
 
     #[test]
-    fn r763_hides_a_fired_trap_from_its_controller_once_it_is_shuffled_into_a_library() {
+    fn r763_r2734000_hides_a_fired_trap_from_both_seats_once_it_is_shuffled_into_a_library() {
         let mut state = game("r763-trap-to-library");
         let trap = put(&mut state, BARE_TRAP, slot(P1, Row::Backrow, 3));
         let mut sink = Bench::new(&state);
@@ -4049,9 +4121,13 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
             events: sink.events.clone(),
         }];
 
-        // The control: the fired trap sits in a public pile, where R154 lets its controller read it.
+        // The control: the fired trap sits in a public pile, where both seats read it (R2734000).
         assert_eq!(
             seen_by(&view_for::view_for(&state, P1)),
+            (trap.id.clone(), trap.def_id.clone())
+        );
+        assert_eq!(
+            seen_by(&view_for::view_for(&state, P2)),
             (trap.id.clone(), trap.def_id.clone())
         );
 
@@ -4067,6 +4143,106 @@ mod spec_11_r150_and_r154_summing_reads_and_the_trapfired_payload_m3_gate {
         let hidden = (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string());
         assert_eq!(seen_by(&view_for::view_for(&state, P1)), hidden);
         assert_eq!(seen_by(&view_for::view_for(&state, P2)), hidden);
+    }
+
+    #[test]
+    fn r2734000_an_opponents_trap_fired_into_its_graveyard_reads_to_the_other_seat_as_the_event_itself() {
+        let (state, trap, raw) = fired_bare_trap("r2734000-graveyard");
+        assert!(matches!(live(&state, &trap).zone, Zone::Graveyard { player: P1 }));
+        // The raw event names the trap, its controller and the zone it flipped in, and reveals it.
+        assert!(matches!(
+            &raw,
+            GameEvent::TrapFired { instance_id, def_id, controller, row, lane, again }
+                if *instance_id == trap.id
+                    && *def_id == trap.def_id
+                    && *controller == P1
+                    && *row == Row::Backrow
+                    && *lane == 3
+                    && again.is_none()
+        ));
+        // Both seats read it whole: the other seat its `instanceId` and `defId` as its controller does,
+        // and `row`, `lane` and `controller` as they always travelled.
+        assert_eq!(fired_in(&view_for::view_for(&state, P2)), raw);
+        assert_eq!(fired_in(&view_for::view_for(&state, P1)), raw);
+    }
+
+    #[test]
+    fn r2734000_a_field_traps_first_firing_and_a_firing_again_name_it_to_both_seats() {
+        // The first firing reveals it: it stands face-up in its zone from then on (R33), public to both.
+        let (state, trap, raw) = fired_window_trap("r2734000-field-trap", false);
+        assert!(matches!(&raw, GameEvent::TrapFired { again: None, .. }));
+        assert_eq!(live(&state, &trap).face_up, Some(true));
+        assert_eq!(fired_in(&view_for::view_for(&state, P1)), raw);
+        assert_eq!(fired_in(&view_for::view_for(&state, P2)), raw);
+
+        // R2657001: firing again it reveals nothing, and `again` reaches both seats as before, with the
+        // face-up card both already read on the field.
+        let (state, _, raw) = fired_window_trap("r2734000-field-trap-again", true);
+        assert!(matches!(
+            &raw,
+            GameEvent::TrapFired {
+                again: Some(true),
+                ..
+            }
+        ));
+        assert_eq!(fired_in(&view_for::view_for(&state, P1)), raw);
+        assert_eq!(fired_in(&view_for::view_for(&state, P2)), raw);
+    }
+
+    #[test]
+    fn r2734000_r227_a_fired_field_trap_gone_back_face_down_reads_as_the_sentinel_to_the_other_seat_again() {
+        let mut state = game("r2734000-face-down-again");
+        let trap = put(&mut state, WINDOW_TRAP, slot(P1, Row::Backrow, 1));
+        record_board_snapshot(&mut state);
+        let raw = fire_at_turn_end(&mut state, &trap, "r2734000-fired");
+        // Face-up in its zone, it is named to both seats.
+        assert_eq!(fired_in(&view_for::view_for(&state, P2)), raw);
+
+        // C+ #35 Rollback lays the board back as it was (R566), the trap face-down again under a fresh id
+        // (R227): the `trapFired` that named the old id is judged by where the card is now, a face-down
+        // trap, so the other seat reads the sentinel once more and its controller still reads the card.
+        let mut sink = Bench::new(&state);
+        sink.run(&mut state, |engine| restore_board(engine, P1, 1, &[P1]));
+        let back = must(
+            zones::card_at(&state, slot(P1, Row::Backrow, 1)).cloned(),
+            "the trap, back face-down",
+        );
+        assert_ne!(back.id, trap.id);
+        assert_ne!(back.face_up, Some(true));
+        state.applied.push(AppliedAction {
+            nonce: "r2734000-restored".to_string(),
+            events: sink.events.clone(),
+        });
+        assert_eq!(
+            seen_by(&view_for::view_for(&state, P1)),
+            (trap.id.clone(), trap.def_id.clone())
+        );
+        assert_eq!(
+            seen_by(&view_for::view_for(&state, P2)),
+            (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string())
+        );
+    }
+
+    #[test]
+    fn r2734000_a_fired_trap_taken_into_a_hand_reads_only_to_that_hands_player() {
+        let (mut state, trap, _) = fired_bare_trap("r2734000-to-hand");
+        let mut fired_trap = must(find_instance(&state, &trap.id).cloned(), "the fired trap");
+        zones::move_to_zone(
+            &mut state,
+            &mut fired_trap,
+            OffFieldZone::Hand,
+            MoveToZoneOptions::default(),
+        );
+        assert!(matches!(live(&state, &trap).zone, Zone::Hand { player: P1 }));
+        // R763 by R97's zone rule: a hand is its player's alone, for the event that announced the flip too.
+        assert_eq!(
+            seen_by(&view_for::view_for(&state, P1)),
+            (trap.id.clone(), trap.def_id.clone())
+        );
+        assert_eq!(
+            seen_by(&view_for::view_for(&state, P2)),
+            (view_for::HIDDEN_ID.to_string(), view_for::HIDDEN_ID.to_string())
+        );
     }
 }
 
