@@ -12938,8 +12938,17 @@
     "what": "plan #2792 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-02T12:30:47Z",
-    "notes": [],
+    "at": "2026-11-02T12:37:01Z",
+    "notes": [
+      "#2786 needs a plan",
+      "#2787 needs a plan",
+      "#2792 needs a plan",
+      "delivered revise #2821 on claude-6 (run 41427512243): approved",
+      "started plan #2787 on claude-3 (run 41446330707)",
+      "started plan #2786 on muse (run 41446383730)",
+      "started plan #2792 on claude-6 (run 41446437971)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13644,7 +13653,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-02T12:30:47Z",
+  "loop_tick": "2026-11-02T12:37:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
