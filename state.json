@@ -14121,8 +14121,10 @@
       "feedback_since": "2026-11-02T00:06:55Z",
       "issue": 2730,
       "kind": "revise",
-      "queued_at": "2026-11-02T02:46:34Z",
+      "queued_at": "2026-11-02T02:47:06Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
