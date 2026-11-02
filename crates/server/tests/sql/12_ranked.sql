@@ -562,11 +562,12 @@ begin
          and column_name in ('random_rating', 'random_rating_deviation', 'random_rating_volatility')) <> 3 then
     raise exception 'FAIL (R2778000): profiles lacks a column of the All Random triple';
   end if;
-  if (select random_rating from public.profiles where id = '11111111-1111-1111-1111-111111111111')
-       is distinct from (select rating from public.profiles where id = '11111111-1111-1111-1111-111111111111')
-     or (select random_rating_deviation from public.profiles where id = '11111111-1111-1111-1111-111111111111')
-       is distinct from 350::float8 then
-    raise exception 'FAIL (R2778000): profile 1 does not start All Random at its own rating and a new player''s deviation';
+  -- Profile 1 was made after 0076 (the files before this one sign it up): it starts All Random as a
+  -- new player, whatever its Constructed rating has done since. 0076's copy is checked below.
+  if (select (random_rating, random_rating_deviation, random_rating_volatility) from public.profiles
+       where id = '11111111-1111-1111-1111-111111111111')
+     is distinct from (1000::float8, 350::float8, 0.06::float8) then
+    raise exception 'FAIL (R2778000): profile 1, made after 0076, does not start All Random as a new player';
   end if;
 
   -- One season row per player per season per ladder, and only the two ladders.
@@ -636,6 +637,30 @@ begin
     raise exception 'FAIL (R2778000): %', wrong;
   end if;
   raise notice 'OK (R2778000): a season row, a bot rating and a rated game per ladder, keyed and checked';
+end $$;
+rollback;
+
+\echo '### R2778000: 0076 copies each profile''s own hidden rating onto All Random ###'
+begin;
+-- A database from before 0076: no All Random triple, and profile 3 on a rating of its own.
+alter table public.profiles
+  drop column random_rating, drop column random_rating_deviation, drop column random_rating_volatility;
+update public.profiles set rating = 1234, rating_deviation = 123, rating_volatility = 0.07
+ where id = '33333333-3333-3333-3333-333333333333';
+\i /tmp/0076_constructed_and_random_ladders.sql
+do $$
+begin
+  if (select (random_rating, random_rating_deviation, random_rating_volatility) from public.profiles
+       where id = '33333333-3333-3333-3333-333333333333')
+     is distinct from (1234::float8, 123::float8, 0.07::float8) then
+    raise exception 'FAIL (R2778000): 0076 did not copy profile 3''s own rating, deviation and volatility onto All Random';
+  end if;
+  if exists (select 1 from public.profiles
+              where (random_rating, random_rating_deviation, random_rating_volatility)
+                    is distinct from (rating, rating_deviation, rating_volatility)) then
+    raise exception 'FAIL (R2778000): 0076 left a profile''s All Random triple unlike its own';
+  end if;
+  raise notice 'OK (R2778000): 0076 copies every profile''s own hidden rating onto All Random';
 end $$;
 rollback;
 
