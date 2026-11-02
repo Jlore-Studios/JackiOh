@@ -32,7 +32,9 @@ import {
   FULL_ARTS_OF_CARD,
   FullArtAllowed,
   FullArtOwned,
+  FullArtShown,
   NO_FULL_ART,
+  OwnCopy,
   fullArtIdOf,
   fullArtPickOf,
   fullArtSource,
@@ -590,6 +592,41 @@ describe("R2725000 a card's version and augments on its face", () => {
     const off = faceIn("core-022", false);
     expect(off.getAttribute("data-art-motion")).toBe("static");
     expect(off.getAttribute("data-full-art-motion")).toBe("static");
+  });
+
+  it("R2725000 a shown pick with no augments layers none of the store's, and one with augments layers its own", () => {
+    // A Collection edit of a retired Mythic stores the Full art version with both augments; the Stats drill-down's
+    // art buttons (R2756000) then show a pick alone, as one's own copy, with every cosmetic counted as owned.
+    writeCardVersion(VANILLA, VERSION_FULL_ART_ID, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID]);
+    function shown(pick: boolean | string, augments?: readonly string[]): HTMLElement {
+      const def = CATALOG[VANILLA];
+      if (def === undefined) throw new Error(`no ${VANILLA}`);
+      const { container } = render(
+        <OwnCopy own>
+          <FullArtShown defId={VANILLA} pick={pick} {...(augments === undefined ? {} : { augments })}>
+            <CardFace face={faceModel({ defId: VANILLA, def, radiant: false })} layout="full" />
+          </FullArtShown>
+        </OwnCopy>,
+      );
+      const cf = container.querySelector<HTMLElement>(".cf");
+      if (cf === null) throw new Error(`no face for ${VANILLA}`);
+      return cf;
+    }
+    const expectations: readonly (readonly [boolean | string, readonly string[] | undefined, string | null, string | null])[] = [
+      [false, undefined, null, null],
+      [true, undefined, "Epic", null],
+      [idOf(VANILLA, "Legendary"), undefined, "Legendary", AUGMENT_ANIMATED_ID],
+      [false, [AUGMENT_SIGNATURE_ID], null, AUGMENT_SIGNATURE_ID],
+      [true, [AUGMENT_ANIMATED_ID, AUGMENT_SIGNATURE_ID], "Mythic", `${AUGMENT_ANIMATED_ID} ${AUGMENT_SIGNATURE_ID}`],
+    ];
+    for (const [pick, augments, tier, worn] of expectations) {
+      const cf = shown(pick, augments);
+      const where = `${String(pick)} ${augments?.join("+") ?? "(none given)"}`;
+      expect(cf.getAttribute("data-full-art-tier"), where).toBe(tier);
+      expect(cf.getAttribute("data-augments"), where).toBe(worn);
+      expect(cf.querySelector(".cf-signature") !== null, where).toBe(worn?.includes(AUGMENT_SIGNATURE_ID) ?? false);
+      cleanup();
+    }
   });
 
   /** R2725001: the cards offered the Full art version and the Animated augment, and each offered card by its set. */

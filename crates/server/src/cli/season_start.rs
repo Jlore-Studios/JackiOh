@@ -105,6 +105,8 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
             "opened": opened.opened,
             "dryRun": options.dry_run,
             "reset": serde_json::to_value(&opened.reset)?,
+            // R2778000: the All Random ladder's reset, apart.
+            "randomReset": serde_json::to_value(&opened.random_reset)?,
         })
     );
     let outcome = if options.dry_run {

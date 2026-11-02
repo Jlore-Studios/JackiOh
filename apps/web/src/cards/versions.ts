@@ -10,7 +10,7 @@ import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
 /** R2715000: what an Animated art's registry id starts with, a `fullArt` entry too (migration 0075). */
 export const ANIMATED_ART_ID_PREFIX = "animated-";
 
-/** R2725000: what a version's registry id starts with, a card pick's `fullArt` text too (migration 0076). */
+/** R2725000: what a version's registry id starts with, a card pick's `fullArt` text too (migration 0077). */
 export const VERSION_ID_PREFIX = "version-";
 
 /** R2725000: what an augment's registry id starts with, each one a card pick's `augments` lists. */

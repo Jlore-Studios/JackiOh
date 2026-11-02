@@ -177,6 +177,7 @@ const DOM_KINDS = {
   walls: "fx-walls-close",
   brand: "fx-brand-slam",
   shield: "fx-shield-flash",
+  callout: "fx-callout-pop",
   chaos: "fx-chaos-in",
   roll: "fx-roll-in",
   fog: "fx-fog-roll",

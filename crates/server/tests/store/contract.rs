@@ -35,7 +35,7 @@ use jackioh_server::db::store::{
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
-    LADDER_TOP, SeasonRank, Standing, fresh_rank, jlorious_floor, jlorious_order, visible_rank,
+    LADDER_TOP, Ladder, SeasonRank, Standing, fresh_rank, jlorious_floor, jlorious_order, visible_rank,
 };
 use jackioh_server::ranked::season::ResetChange;
 use jackioh_server::username::{normalize_username, username_key};
@@ -804,7 +804,7 @@ mod profiles {
         // The port has no rating-only write (SURFACE §11.2): the rating moves through
         // `profiles_set_glicko`, at a new profile's deviation and volatility (R603).
         let rating: Glicko = from(json!({ "rating": 1032, "deviation": 350, "volatility": 0.06 }));
-        q!(harness, t => t.profiles_set_glicko(&profile.id, &rating));
+        q!(harness, t => t.profiles_set_glicko(&profile.id, Ladder::Constructed, &rating));
         q!(harness, t => t.profiles_set_in_match(&profile.id, Some(match_id.as_str())));
         let rated = j(&must(
             q!(harness, t => t.profiles_get_by_id(&profile.id)),
@@ -885,7 +885,7 @@ mod profiles {
         assert_eq!(created["ratingVolatility"].as_f64(), Some(0.06));
 
         let after: Glicko = from(json!({ "rating": 1016.25, "deviation": 330.5, "volatility": 0.059995 }));
-        q!(harness, t => t.profiles_set_glicko(&profile.id, &after));
+        q!(harness, t => t.profiles_set_glicko(&profile.id, Ladder::Constructed, &after));
         let moved = j(&must(
             q!(harness, t => t.profiles_get_by_id(&profile.id)),
             "the rated profile",
@@ -894,7 +894,7 @@ mod profiles {
         assert_eq!(moved["ratingDeviation"].as_f64(), Some(330.5));
         assert_eq!(moved["ratingVolatility"].as_f64(), Some(0.059995));
 
-        assert!(call!(harness, t => t.profiles_set_glicko(&id(), &after)).is_err());
+        assert!(call!(harness, t => t.profiles_set_glicko(&id(), Ladder::Constructed, &after)).is_err());
     }
 
     /// R111, and the reason `db/fake.rs` carries a trigger at all: "Becoming `active` grants one
@@ -5859,19 +5859,25 @@ mod ranked {
         q!(harness, t => t.ranked_put_rank(&other));
 
         assert_eq!(
-            q!(harness, t => t.ranked_rank("v0.1", &a.id)),
+            q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed)),
             Some(first.clone())
         );
-        assert_eq!(q!(harness, t => t.ranked_rank("v0.1", &b.id)), Some(other));
-        assert!(q!(harness, t => t.ranked_rank("v0.2", &a.id)).is_none());
-        assert!(q!(harness, t => t.ranked_rank("v0.1", &id())).is_none());
+        assert_eq!(
+            q!(harness, t => t.ranked_rank("v0.1", &b.id, Ladder::Constructed)),
+            Some(other)
+        );
+        assert!(q!(harness, t => t.ranked_rank("v0.2", &a.id, Ladder::Constructed)).is_none());
+        assert!(q!(harness, t => t.ranked_rank("v0.1", &id(), Ladder::Constructed)).is_none());
 
         let moved: SeasonRank = from(spread(
             j(&first),
             json!({ "games": 8, "wins": 6, "ladder": 42, "streak": 4, "updatedAt": now + 1 }),
         ));
         q!(harness, t => t.ranked_put_rank(&moved));
-        assert_eq!(q!(harness, t => t.ranked_rank("v0.1", &a.id)), Some(moved));
+        assert_eq!(
+            q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed)),
+            Some(moved)
+        );
     }
 
     async fn r605_answers_a_season_s_standings_with_each_player_s_current_rating_in_profile_id_order(
@@ -5895,10 +5901,10 @@ mod ranked {
         );
         q!(harness, t => t.ranked_put_rank(&rank_a));
         q!(harness, t => t.ranked_put_rank(&rank_b));
-        q!(harness, t => t.profiles_set_glicko(&a.id, &glicko(1123.5)));
-        q!(harness, t => t.profiles_set_glicko(&b.id, &glicko(877.25)));
+        q!(harness, t => t.profiles_set_glicko(&a.id, Ladder::Constructed, &glicko(1123.5)));
+        q!(harness, t => t.profiles_set_glicko(&b.id, Ladder::Constructed, &glicko(877.25)));
 
-        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1"))
+        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1", Ladder::Constructed))
             .iter()
             .map(j)
             .collect();
@@ -5915,7 +5921,7 @@ mod ranked {
         };
         assert_eq!(of(&a.id), Some(spread(j(&rank_a), json!({ "rating": 1123.5 }))));
         assert_eq!(of(&b.id), Some(spread(j(&rank_b), json!({ "rating": 877.25 }))));
-        assert!(q!(harness, t => t.ranked_standings("v0.2")).is_empty());
+        assert!(q!(harness, t => t.ranked_standings("v0.2", Ladder::Constructed)).is_empty());
     }
 
     async fn r607_lists_a_profile_s_badges_oldest_season_first(harness: &StoreHarness) {
@@ -5938,43 +5944,46 @@ mod ranked {
         let now = harness.now();
         q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
         q!(harness, t => t.ranked_put_rank(&rank_row(harness, "v0.1", &a.id, json!({}))));
-        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &a.id, 17));
-        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &a.id, 80));
-        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &a.id, 4));
+        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", Ladder::Constructed, &a.id, 17));
+        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", Ladder::Constructed, &a.id, 80));
+        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", Ladder::Constructed, &a.id, 4));
         assert_eq!(
-            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed))),
             Some(4)
         );
-        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", &id(), 1));
-        q!(harness, t => t.ranked_note_peak_jlorious("v0.2", &a.id, 1));
+        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", Ladder::Constructed, &id(), 1));
+        q!(harness, t => t.ranked_note_peak_jlorious("v0.2", Ladder::Constructed, &a.id, 1));
 
         // `ranked_put_rank` merges the peak rather than replacing it: a rank row the player's own game wrote
         // cannot undo a better position a bystander's game already recorded, and a null never
         // erases — but a better position the writer computed still lands.
-        let row = j(&must(q!(harness, t => t.ranked_rank("v0.1", &a.id)), "the rank"));
+        let row = j(&must(
+            q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed)),
+            "the rank",
+        ));
         let worse: SeasonRank = from(spread(row.clone(), json!({ "peakJlorious": 90 })));
         q!(harness, t => t.ranked_put_rank(&worse));
         assert_eq!(
-            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed))),
             Some(4)
         );
         let unknown: SeasonRank = from(spread(row.clone(), json!({ "peakJlorious": null })));
         q!(harness, t => t.ranked_put_rank(&unknown));
         assert_eq!(
-            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed))),
             Some(4)
         );
         let better: SeasonRank = from(spread(row, json!({ "peakJlorious": 2 })));
         q!(harness, t => t.ranked_put_rank(&better));
         assert_eq!(
-            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id))),
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed))),
             Some(2)
         );
     }
 
     async fn r610_keeps_each_bot_s_own_rating_upserted(harness: &StoreHarness) {
         let now = harness.now();
-        assert!(q!(harness, t => t.ranked_bot("ai-easy")).is_none());
+        assert!(q!(harness, t => t.ranked_bot("ai-easy", Ladder::Constructed)).is_none());
         let rating: BotRating = from(json!({
             "botId": "ai-easy",
             "glicko": { "rating": 1050.5, "deviation": 300.25, "volatility": 0.06 },
@@ -5982,15 +5991,21 @@ mod ranked {
             "updatedAt": now,
         }));
         q!(harness, t => t.ranked_put_bot(&rating));
-        assert_eq!(q!(harness, t => t.ranked_bot("ai-easy")), Some(rating.clone()));
+        assert_eq!(
+            q!(harness, t => t.ranked_bot("ai-easy", Ladder::Constructed)),
+            Some(rating.clone())
+        );
         let mut moved = j(&rating);
         moved["glicko"]["rating"] = json!(1036.25);
         moved["games"] = json!(4);
         moved["updatedAt"] = json!(now + 1);
         let moved: BotRating = from(moved);
         q!(harness, t => t.ranked_put_bot(&moved));
-        assert_eq!(q!(harness, t => t.ranked_bot("ai-easy")), Some(moved));
-        assert!(q!(harness, t => t.ranked_bot("ai-hard")).is_none());
+        assert_eq!(
+            q!(harness, t => t.ranked_bot("ai-easy", Ladder::Constructed)),
+            Some(moved)
+        );
+        assert!(q!(harness, t => t.ranked_bot("ai-hard", Ladder::Constructed)).is_none());
     }
 
     async fn r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on(harness: &StoreHarness) {
@@ -6003,19 +6018,29 @@ mod ranked {
         }));
         q!(harness, t => t.ranked_put_bot(&older));
         assert_eq!(
-            must(q!(harness, t => t.ranked_bot("ai-gen")), "the row").ai_generation,
+            must(
+                q!(harness, t => t.ranked_bot("ai-gen", Ladder::Constructed)),
+                "the row"
+            )
+            .ai_generation,
             None
         );
         let mut stamped = j(&older);
         stamped["aiGeneration"] = json!(13);
         let stamped: BotRating = from(stamped);
         q!(harness, t => t.ranked_put_bot(&stamped));
-        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(stamped.clone()));
+        assert_eq!(
+            q!(harness, t => t.ranked_bot("ai-gen", Ladder::Constructed)),
+            Some(stamped.clone())
+        );
         let mut newer = j(&stamped);
         newer["aiGeneration"] = json!(14);
         let newer: BotRating = from(newer);
         q!(harness, t => t.ranked_put_bot(&newer));
-        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(newer));
+        assert_eq!(
+            q!(harness, t => t.ranked_bot("ai-gen", Ladder::Constructed)),
+            Some(newer)
+        );
     }
 
     async fn r611_records_a_rated_game_once_and_answers_it_back_whole(harness: &StoreHarness) {
@@ -6180,7 +6205,10 @@ mod ranked {
         q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
         q!(harness, t => t.ranked_record_game(&rated_game(harness, &id(), "v0.1", &a, &b, json!({}))));
 
-        let players: Vec<Value> = q!(harness, t => t.ranked_rated_players()).iter().map(j).collect();
+        let players: Vec<Value> = q!(harness, t => t.ranked_rated_players(Ladder::Constructed))
+            .iter()
+            .map(j)
+            .collect();
         let profile_ids: Vec<String> = players
             .iter()
             .map(|player| must(player["profileId"].as_str().map(str::to_string), "a profile id"))
@@ -6195,7 +6223,7 @@ mod ranked {
             from(json!({ "profileId": a.id, "before": j(&glicko(1000.0)), "after": j(&soft_a) })),
             from(json!({ "profileId": b.id, "before": j(&glicko(1000.0)), "after": j(&soft_b) })),
         ];
-        q!(harness, t => t.ranked_reset_ratings(&changes));
+        q!(harness, t => t.ranked_reset_ratings(Ladder::Constructed, &changes));
         let rated_a = j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"));
         assert_eq!(rated_a["rating"].as_f64(), Some(1075.5));
         assert_eq!(rated_a["ratingDeviation"].as_f64(), Some(350.0));
@@ -6208,7 +6236,123 @@ mod ranked {
             Some(1000.0)
         );
         // And an empty reset is legal (the first season's input can be empty).
-        q!(harness, t => t.ranked_reset_ratings(&[]));
+        q!(harness, t => t.ranked_reset_ratings(Ladder::Constructed, &[]));
+    }
+
+    /// R2778000: each ladder's season rows, ratings, bot ratings and rated games apart, keyed and read by
+    /// the ladder, as migration 0076's keys hold them.
+    async fn r2778000_keeps_each_ladder_s_rows_ratings_and_records_apart(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
+        q!(harness, t => t.profiles_set_glicko(&a.id, Ladder::Constructed, &glicko(1111.0)));
+        q!(harness, t => t.profiles_set_glicko(&a.id, Ladder::Random, &glicko(1234.5)));
+        let profile = j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"));
+        assert_eq!(profile["rating"].as_f64(), Some(1111.0));
+        assert_eq!(profile["randomRating"].as_f64(), Some(1234.5));
+        // A new profile starts the All Random ladder at a new player's rating.
+        let fresh = j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"));
+        assert_eq!(fresh["randomRating"].as_f64(), Some(1000.0));
+        assert_eq!(fresh["randomRatingDeviation"].as_f64(), Some(350.0));
+
+        // One row per player per season per ladder: the second ladder's row is a row of its own.
+        let constructed = rank_row(harness, "v0.1", &a.id, json!({ "games": 5, "ladder": 10 }));
+        let random = rank_row(
+            harness,
+            "v0.1",
+            &a.id,
+            json!({ "format": "random", "games": 7, "ladder": 20 }),
+        );
+        q!(harness, t => t.ranked_put_rank(&constructed));
+        q!(harness, t => t.ranked_put_rank(&random));
+        assert_eq!(
+            q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed)),
+            Some(constructed.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Random)),
+            Some(random.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.ranked_ranks_of(&a.id)),
+            vec![constructed.clone(), random.clone()],
+            "both ladders' rows, Constructed first"
+        );
+
+        // Each ladder's standings read its own rows at its own rating.
+        let on = |standings: Vec<SeasonStanding>| -> Vec<(i64, f64)> {
+            standings
+                .iter()
+                .map(|standing| (i64::from(standing.rank.games), standing.rating))
+                .collect()
+        };
+        assert_eq!(
+            on(q!(harness, t => t.ranked_standings("v0.1", Ladder::Constructed))),
+            vec![(5, 1111.0)]
+        );
+        assert_eq!(
+            on(q!(harness, t => t.ranked_standings("v0.1", Ladder::Random))),
+            vec![(7, 1234.5)]
+        );
+        assert_eq!(
+            on(
+                q!(harness, t => t.ranked_standings_subset("v0.1", Ladder::Random, std::slice::from_ref(&a.id), 99))
+            ),
+            vec![(7, 1234.5)]
+        );
+
+        // A Jlorious peak lands on its own ladder's row alone.
+        q!(harness, t => t.ranked_note_peak_jlorious("v0.1", Ladder::Random, &a.id, 3));
+        assert_eq!(
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Random))),
+            Some(3)
+        );
+        assert_eq!(
+            peak_jlorious(q!(harness, t => t.ranked_rank("v0.1", &a.id, Ladder::Constructed))),
+            None
+        );
+
+        // A bot's rating per ladder, each upserted on its own.
+        let bot = id();
+        for (ladder, rating) in [("constructed", 1500.0), ("random", 900.0)] {
+            let row: BotRating = from(json!({
+                "botId": bot, "format": ladder, "glicko": j(&glicko(rating)), "games": 1, "updatedAt": now,
+            }));
+            q!(harness, t => t.ranked_put_bot(&row));
+        }
+        assert_eq!(
+            q!(harness, t => t.ranked_bot(&bot, Ladder::Constructed)).map(|row| row.glicko.rating),
+            Some(1500.0)
+        );
+        assert_eq!(
+            q!(harness, t => t.ranked_bot(&bot, Ladder::Random)).map(|row| row.glicko.rating),
+            Some(900.0)
+        );
+
+        // A rated game records its ladder and answers it back; it makes a rated player of both ladders,
+        // each read at its own triple, and a reset on one ladder writes that ladder's alone.
+        let game_id = id();
+        let game = rated_game(harness, &game_id, "v0.1", &a, &b, json!({ "format": "random" }));
+        q!(harness, t => t.ranked_record_game(&game));
+        assert_eq!(
+            q!(harness, t => t.ranked_game(&game_id)).map(|row| row.format),
+            Some(Ladder::Random)
+        );
+        let players = q!(harness, t => t.ranked_rated_players(Ladder::Random));
+        let mine = players
+            .iter()
+            .find(|player| player.profile_id == a.id)
+            .map(|player| player.glicko.rating);
+        assert_eq!(mine, Some(1234.5));
+        let change: ResetChange =
+            from(json!({ "profileId": a.id, "before": j(&glicko(1234.5)), "after": j(&glicko(1200.0)) }));
+        q!(harness, t => t.ranked_reset_ratings(Ladder::Random, &[change]));
+        let reset = j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"));
+        assert_eq!(
+            (reset["rating"].as_f64(), reset["randomRating"].as_f64()),
+            (Some(1111.0), Some(1200.0))
+        );
     }
 
     both_stores!(
@@ -6224,6 +6368,7 @@ mod ranked {
         r611_records_a_bot_side_with_no_profile_and_no_rank,
         r748000_lists_rated_games_with_a_bot_side_since,
         r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it,
+        r2778000_keeps_each_ladder_s_rows_ratings_and_records_apart,
     );
 }
 
@@ -7414,7 +7559,10 @@ mod bots {
         assert_eq!(profile.status, ProfileStatus::Active);
         assert_eq!(profile.username_base, "Player");
         assert!(profile.username_tag.is_some());
-        let rating = must(q!(harness, t => t.ranked_bot(&older.profile_id)), "its R610 row");
+        let rating = must(
+            q!(harness, t => t.ranked_bot(&older.profile_id, Ladder::Constructed)),
+            "its R610 row",
+        );
         assert_eq!((rating.glicko.rating, rating.games), (800.0, 0));
 
         let person = active_profile(harness, None).await;
@@ -7735,7 +7883,7 @@ mod bots {
             q!(harness, t => t.ranked_put_rank(&fresh_rank("v0.1", profile_id, now)));
         }
 
-        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1"))
+        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1", Ladder::Constructed))
             .iter()
             .map(j)
             .collect();
@@ -7789,7 +7937,7 @@ mod bots {
             let profile = active_profile(harness, None).await;
             let glicko: Glicko = from(json!({ "rating": rating, "deviation": 350, "volatility": 0.06 }));
             q!(harness, t => t.ranked_put_rank(&placed("v0.1", &profile.id, ladder, harness.now())));
-            q!(harness, t => t.profiles_set_glicko(&profile.id, &glicko));
+            q!(harness, t => t.profiles_set_glicko(&profile.id, Ladder::Constructed, &glicko));
             profile.id
         }
         async fn bot(harness: &StoreHarness, ladder: Option<i32>, seed_rating: f64) -> String {
@@ -7822,8 +7970,8 @@ mod bots {
             id(),
             String::new(),
         ];
-        let whole = q!(harness, t => t.ranked_standings("v0.1"));
-        let shown = q!(harness, t => t.ranked_standings_subset("v0.1", &asked, floor));
+        let whole = q!(harness, t => t.ranked_standings("v0.1", Ladder::Constructed));
+        let shown = q!(harness, t => t.ranked_standings_subset("v0.1", Ladder::Constructed, &asked, floor));
         let expected: Vec<SeasonStanding> = whole
             .iter()
             .filter(|standing| {
@@ -8022,7 +8170,10 @@ mod bots {
             (true, 0, 4),
             "never past the strongest"
         );
-        let rating = must(q!(harness, t => t.ranked_bot(&bot.profile_id)), "its R610 row");
+        let rating = must(
+            q!(harness, t => t.ranked_bot(&bot.profile_id, Ladder::Constructed)),
+            "its R610 row",
+        );
         assert_eq!(rating.glicko.rating, 1000.0, "a step moves no rating");
 
         q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
@@ -10651,7 +10802,7 @@ mod cosmetic_loadouts {
         );
     }
 
-    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0076's
+    /// R2725000: a card's pick keeps a version's id and its augments as written (migration 0077's
     /// `augments`, and the `full_art_id` check widened to `version-…`), through a put and an upload, a row
     /// of augments alone among them; a put with none takes them away, and an id the registry does not know
     /// is kept too.
@@ -11076,7 +11227,7 @@ mod tx {
     /// outer handle passed down: it can only join, never open a second one.
     async fn inner(t: &mut Tx<'_>, profile_id: &str) -> Result<(), String> {
         let rating: Glicko = from(json!({ "rating": 1234, "deviation": 350, "volatility": 0.06 }));
-        t.profiles_set_glicko(profile_id, &rating)
+        t.profiles_set_glicko(profile_id, Ladder::Constructed, &rating)
             .await
             .map_err(|error| error.to_string())
     }

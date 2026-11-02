@@ -2,12 +2,14 @@
 // Grape tier. Read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
 // through `rank/RankCrest.tsx` (#1650), and the hidden rating never reaches it. A row is keyed by its
 // profile id and shows the player's username, never the id (R1436).
+// R2778000: a Constructed / All Random switch picks the season's ladder; the address carries All
+// Random as `?ladder=random`.
 
 import { useEffect, useState, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { t } from "../i18n/i18n.ts";
-import { getLeaderboard, keptPaths, type LeaderboardResponse } from "../net/api.ts";
+import { getLeaderboard, keptPaths, ladderPath, type Ladder, type LeaderboardResponse } from "../net/api.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
@@ -29,37 +31,65 @@ export const leaderboardTestid = {
   jlorious: "leaderboard-jlorious",
   tier: "leaderboard-tier",
   raisins: "leaderboard-raisins",
+  /** R2778000: the Constructed / All Random switch. */
+  ladder: "leaderboard-ladder",
 } as const;
+
+/** R2778000: the switch's two ladders, Constructed first, each with its label in English for `t()`. */
+const LADDERS: readonly { ladder: Ladder; label: string }[] = [
+  { ladder: "constructed", label: "Constructed" },
+  { ladder: "random", label: "All Random" },
+];
+
+/** R2778000: the ladder the address asks for: All Random by `?ladder=random`, else Constructed. */
+function ladderOfAddress(): Ladder {
+  return new URLSearchParams(window.location.search).get("ladder") === "random" ? "random" : "constructed";
+}
 
 export type LeaderboardRouteProps = {
   token: string;
 };
 
 export default function LeaderboardRoute({ token }: LeaderboardRouteProps): ReactElement {
+  const [ladder, setLadder] = useState<Ladder>(ladderOfAddress);
   // R2125000: a revisit starts on the ladder the last visit kept and reads it again behind it.
   const [board, setBoard] = useState<LeaderboardResponse | null>(
-    () => cachedRead<LeaderboardResponse>(token, keptPaths.leaderboard) ?? null,
+    () => cachedRead<LeaderboardResponse>(token, ladderPath(keptPaths.leaderboard, ladderOfAddress())) ?? null,
   );
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let canceled = false;
-    getLeaderboard(token)
+    const path = ladderPath(keptPaths.leaderboard, ladder);
+    getLeaderboard(token, ladder)
       .then((next) => {
         if (!canceled) setBoard(next);
       })
       .catch((cause: unknown) => {
         if (canceled) return;
         // R2125000: a read that fails behind a kept ladder leaves it and says nothing; only a first visit says why.
-        const kept = cachedRead<LeaderboardResponse>(token, keptPaths.leaderboard);
+        const kept = cachedRead<LeaderboardResponse>(token, path);
         if (kept === undefined) setError(messageOf(cause));
         else setBoard(kept);
       });
     return () => {
       canceled = true;
     };
-  }, [token, attempt]);
+  }, [token, attempt, ladder]);
+
+  /** R2778000: shows the other ladder, from what it kept if anything, and puts it in the address. */
+  const pick = (next: Ladder): void => {
+    if (next === ladder) return;
+    setLadder(next);
+    setError(null);
+    setBoard(cachedRead<LeaderboardResponse>(token, ladderPath(keptPaths.leaderboard, next)) ?? null);
+    const params = new URLSearchParams(window.location.search);
+    if (next === "random") params.set("ladder", "random");
+    else params.delete("ladder");
+    const query = params.toString();
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${query === "" ? "" : `?${query}`}`);
+  };
 
   return (
     <div className="app-shell tavern leaderboard-screen one-screen" data-testid={leaderboardTestid.screen}>
@@ -69,6 +99,19 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
           <h1>JackiOh</h1>
         </div>
         <h2>{t("Leaderboard")}</h2>
+        <div className="row" role="group" aria-label={t("Ladder")} data-testid={leaderboardTestid.ladder}>
+          {LADDERS.map((entry) => (
+            <button
+              key={entry.ladder}
+              type="button"
+              className={entry.ladder === ladder ? "button-primary" : undefined}
+              aria-pressed={entry.ladder === ladder}
+              onClick={() => pick(entry.ladder)}
+            >
+              {t(entry.label)}
+            </button>
+          ))}
+        </div>
         <div className="one-screen__body one-screen__stack" tabIndex={0}>
           {error !== null ? (
             <>

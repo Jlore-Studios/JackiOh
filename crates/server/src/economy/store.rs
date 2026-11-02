@@ -234,7 +234,7 @@ impl FullArtPick {
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061): what one card of the account
 /// wears of its own: a foil, a finish, a border, its full-art pick ([`FullArtPick`], R2655000), which may
-/// name a version, and the augments layered on it (migration 0076, R2725000). A kind
+/// name a version, and the augments layered on it (migration 0077, R2725000). A kind
 /// with no pick is absent and wears its default (R1953001; the Full-art cards setting, for `full_art`). An
 /// id is kept as written, an unknown one too, and judged only where it is worn (`loadout::freeze_loadout`,
 /// R1834002).
@@ -1517,7 +1517,7 @@ mod pg {
         Ok(true)
     }
 
-    /// R2725000: a pick's augments as migration 0076's column holds them: NULL for none.
+    /// R2725000: a pick's augments as migration 0077's column holds them: NULL for none.
     fn augments_of(picks: &CardPicks) -> Option<&[String]> {
         (!picks.augments.is_empty()).then_some(picks.augments.as_slice())
     }

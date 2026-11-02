@@ -142,6 +142,7 @@ fn bot(id: &str, created_at: i64, decks: Vec<BotDeck>) -> BotRow {
         created_at,
         retired_at: None,
         rating: 1000.0,
+        random_rating: 1000.0,
         in_match_id: None,
         grinding: false,
         grind_wins: 0,

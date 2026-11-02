@@ -1298,6 +1298,7 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
             "seasonId" = %opened.season.id,
             opened = ?opened.opened,
             reset = ?opened.reset,
+            random_reset = ?opened.random_reset,
         ),
         Err(error) => tracing::error!(event = "season.open_failed", message = %format!("{error:?}")),
     }
