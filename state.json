@@ -13399,7 +13399,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-2",
-      "round_tier": "",
+      "round_tier": "medium",
       "run_id": "41364640563",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-01T23:57:52Z",
