@@ -14,7 +14,7 @@ import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { CardArt, CardDetail, CardFace, INSPECT_KEY_SHORTCUT, faceModel } from "../cards/index.ts";
+import { CardArt, CardDetail, CardFace, INSPECT_KEY_SHORTCUT, faceModel, useCardSettings } from "../cards/index.ts";
 import {
   DEFAULT_CARD_COSMETICS,
   OwnershipContext,
@@ -48,6 +48,7 @@ import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 
 /** The card in its own picks and, over it while a foil, finish or border is shown, a copy wearing that. */
 function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | null }): ReactElement {
+  const { rarityFoil } = useCardSettings();
   const own = useOwnCopy();
   const card = useCardPicks(face.defId);
   const owned = useContext(OwnershipContext);
@@ -58,7 +59,13 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
     picks[preview.kind] = resolveCosmetic(preview.kind, preview.id);
     // What it would wear were it the card's pick: the shown item, and the card's other picks where
     // they are owned, each kind it has none of its default (R1953001).
-    const wears = wornCosmetics(face, DEFAULT_CARD_COSMETICS, picks, (id) => id === preview.id || ownsCosmetic(owned, face.defId, id));
+    const wears = wornCosmetics(
+      face,
+      DEFAULT_CARD_COSMETICS,
+      picks,
+      (id) => id === preview.id || ownsCosmetic(owned, face.defId, id),
+      rarityFoil,
+    );
     sample = (
       <span className="collection-cardview__preview" data-testid={T.cardViewPreview} data-previewing={preview.id} aria-hidden="true">
         <SampleFace face={face} layout="full" wears={wears} />
@@ -89,6 +96,7 @@ function isEquipped(defId: string, item: StripItem, picks: CardPicks): boolean {
 
 /** One item's small live preview: the card wearing it, or for a full art the art across the whole face. */
 function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item: StripItem }): ReactElement {
+  const { rarityFoil } = useCardSettings();
   if (item.kind === "fullArt" && item.id !== NO_FULL_ART_ID) {
     return (
       <span className="collection-strip__picture collection-strip__picture--full-art">
@@ -98,8 +106,8 @@ function StripPicture({ def, face, item }: { def: CardDef; face: FaceModel; item
   }
   const wears =
     item.kind === "fullArt"
-      ? wornCosmetics(face, normalizeCosmetics({}))
-      : wornCosmetics(face, normalizeCosmetics({ [item.kind]: item.id }));
+      ? wornCosmetics(face, normalizeCosmetics({}), {}, () => true, rarityFoil)
+      : wornCosmetics(face, normalizeCosmetics({ [item.kind]: item.id }), {}, () => true, rarityFoil);
   return (
     <span className="collection-strip__picture">
       <SampleFace face={face} layout="compact" wears={wears} />
