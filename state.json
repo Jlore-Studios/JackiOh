@@ -13148,37 +13148,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-02T12:46:25Z",
+      "feedback_since": "2026-11-02T13:38:03Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2786,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "shift draws rotation paths that contradict the spec's rotation topology (R14). It wraps each unit along its own row (lane 5 goes to lane 1 on the same side) and moves both sides the same way. The spec defines one ring per row: the rotator's lanes 1\u21925, then the opponent's 5\u21921, so an end unit crosses to the other side and the opponent's units step the opposite way. The PR records this as a decision the spec left open; it did not.",
-          "evidence": "spec/rulings/R0014.md: 'Two rings (units, backrow): your lane 1\u21925, opponent's 5\u21921'. crates/engine/src/zones.rs:106-150, ring_order and ring_neighbor: Right is one step forward on that cross-side ring. In board.ts shiftTo, both sides use `(lane % count) + 1` / `((lane + count - 2) % count) + 1` within `side`. The rotating player's perspective (the resolving play's player) is never consulted, and the backrow ring is not drawn. PINNED tests only `swapped`, so no test pins rotation.",
-          "severity": "blocking",
-          "where": "apps/web/src/fx/motifs/board.ts:123"
-        },
-        {
-          "claim": "drain draws its own loss splat but replaces nothing (`replaces: []`). A card naming drain therefore shows two numbers for one life loss: the healthLost/healthSet row's splat at 0 and the motif's at Land. This happens under the default `row: \"replace\"` and under `row: \"keep\"` alike. R2784000 says a motif draws the numbers only in place of the events it replaces, and leaves them to the row under `keep`.",
-          "evidence": "life.ts:67-77 pushes `kind: \"splat\"` unconditionally. animations.ts:169-173 and :606-610 give healthLost and healthSet the `drain` recipe, and cues.ts:557-562 draws `splat(p.D, \"loss\", \u2026)` at 0. planFx (cues.ts:1196-1213) skips a row only when motifReplaces holds the event, and that set is empty for drain. build.ts `hit()` gates its splat on `spec.row === \"replace\"`, which shows the convention drain breaks.",
-          "severity": "blocking",
-          "where": "apps/web/src/fx/motifs/life.ts:55"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-02T13:37:10Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "41454680561",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-02T13:38:03Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
