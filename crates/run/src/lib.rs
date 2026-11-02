@@ -10,9 +10,14 @@
 //! log) folds to the same state anywhere. That is how a Campaign run is checked before it pays (DR1).
 
 pub mod config;
+mod fight;
 
 #[cfg(test)]
+mod fight_tests;
+#[cfg(test)]
 mod tests;
+
+pub use fight::{RunFightSetup, run_catalog_content, run_fight_report, run_fight_setup};
 
 use jackioh_engine::config::PERCENT;
 use jackioh_engine::rng::Rng;
@@ -22,14 +27,14 @@ use serde::{Deserialize, Serialize};
 use crate::config::{
     RUN_ACT_FIGHTS, RUN_ARTIFACT_LEVEL_MAX, RUN_ARTIFACT_PERCENT, RUN_ARTIFACT_PRICE, RUN_BUFF_TICKETS,
     RUN_CAMPFIRE_HEAL_PERCENT, RUN_CAMPFIRE_REMOVE, RUN_CARD_PRICE, RUN_CHEST_ARTIFACT_PERCENT,
-    RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE, RUN_ENEMY_HEALTH,
-    RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_TICKETS, RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER,
-    RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE, RUN_ROW_WIDTH_MAX, RUN_ROW_WIDTH_MIN,
-    RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT, RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT,
-    RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING, RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER,
-    RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS, RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER,
-    RUN_STARTER_ARTIFACT_POINTS, RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS,
-    RUN_TILE_WEIGHTS,
+    RUN_CHEST_COINS, RUN_CHEST_TICKETS, RUN_COINS, RUN_DECK_MAX, RUN_ELITE_PERCENT, RUN_ENEMY_DECK_SIZE,
+    RUN_ENEMY_HEALTH, RUN_GHOST_PERCENT, RUN_KEEP, RUN_KEEP_MAX, RUN_LEVEL_EMBERS, RUN_LEVEL_TICKETS,
+    RUN_MAX_HP, RUN_MINI_BOSS_DROP_TIER, RUN_PACK_SIZE, RUN_RADIANT_TICKETS, RUN_REMOVE_PRICE,
+    RUN_ROW_WIDTH_MAX, RUN_ROW_WIDTH_MIN, RUN_SCORE_CARD_DRAWN, RUN_SCORE_CURSE_POINT_PERCENT,
+    RUN_SCORE_DAMAGE, RUN_SCORE_FIGHT, RUN_SCORE_FINAL_BOSS_PERCENT, RUN_SCORE_HEALING,
+    RUN_SCORE_MINI_BOSS_PERCENT, RUN_SCORE_PER_EMBER, RUN_SCORE_ROW, RUN_SEED_LENGTH, RUN_SHOP_ARTIFACTS,
+    RUN_SHOP_CARDS, RUN_SHRINE_OFFERS, RUN_SLOT_LADDER, RUN_STARTER_ARTIFACT_POINTS,
+    RUN_STARTER_ARTIFACTS_MAX, RUN_STARTER_SIZE, RUN_TICKETS, RUN_TIER_POINTS, RUN_TILE_WEIGHTS,
 };
 
 // Content: data the caller passes in
@@ -37,6 +42,11 @@ use crate::config::{
 /// What a run deals from: the designer's lists, or `run_placeholder_content` until they land. A
 /// Sandbox run's caller adds the player's custom cards to `pool` (DR1).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunContent {
     /// Every card a run may meet: packs, shops, events and enemy decks deal from it, and a card of a
@@ -52,6 +62,11 @@ pub struct RunContent {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunPoolCard {
     pub id: String,
@@ -64,6 +79,11 @@ pub struct RunPoolCard {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEnemyDef {
     pub id: String,
@@ -85,6 +105,11 @@ pub struct RunEnemyDef {
 /// DR3, DR5: what a passive is. A Combat artifact works inside a fight, an Economic one on the map;
 /// an Enemy one is carried only by enemies; a blessing is a shrine's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum RunPassiveKind {
     Combat,
@@ -95,6 +120,11 @@ pub enum RunPassiveKind {
 
 /// DR3: an artifact's strength, and so its points.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum RunTier {
     Bronze,
@@ -105,6 +135,11 @@ pub enum RunTier {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunPassiveDef {
     pub id: String,
@@ -114,7 +149,8 @@ pub struct RunPassiveDef {
     /// A player's artifact's tier; none for an enemy's artifact or a blessing.
     #[serde(default)]
     pub tier: Option<RunTier>,
-    /// What it does on the map. A Combat or Enemy artifact has none until fights read artifacts (M2, M4).
+    /// What it does on the map. A Combat or Enemy artifact has none: Looming and Overwhelming Presence
+    /// act as `run_fight_setup`'s handicaps, and Combat artifacts change no fight yet (M4).
     #[serde(default)]
     pub effect: Option<RunEffect>,
     /// Any starting deck may take it; extracted artifacts join these.
@@ -130,6 +166,11 @@ pub struct RunPassiveDef {
 
 /// A passive's effect on the map. An artifact's counts once per level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RunEffect {
     /// Keep more cards from each pack, up to `RUN_KEEP_MAX`.
@@ -160,6 +201,11 @@ pub enum RunEffect {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEventDef {
     pub id: String,
@@ -169,6 +215,11 @@ pub struct RunEventDef {
 
 /// An event's choice and what it changes. A cost the run cannot pay, or HP it cannot spare, refuses it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEventOption {
     pub text: String,
@@ -188,6 +239,11 @@ pub struct RunEventOption {
 
 /// DR8: a curse tier, taken at the start. Its points raise the score. It changes no fight yet (M4).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunCurseDef {
     pub id: String,
@@ -205,6 +261,11 @@ pub fn run_placeholder_content() -> RunContent {
 // The run's state
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub enum RunNodeKind {
     Fight,
@@ -263,6 +324,11 @@ impl RunByFight {
 /// in the Campaign the account's collection, since an extracted card enters a starting deck only if
 /// the account owns it. The caller keeps it: the device in the Sandbox, the account in the Campaign.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunUnlocks {
     /// From 1: the row of `RUN_SLOT_LADDER` the starting deck's slots are.
@@ -286,6 +352,11 @@ impl Default for RunUnlocks {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunSetup {
     /// `RUN_SEED_LENGTH` capital letters (`run_seed`, `run_daily_seed`).
@@ -301,6 +372,11 @@ pub struct RunSetup {
 
 /// A whole run as one file: what it started from and every choice made. `run_fold` replays it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunFile {
     pub setup: RunSetup,
@@ -309,6 +385,11 @@ pub struct RunFile {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunNode {
     pub kind: RunNodeKind,
@@ -322,8 +403,13 @@ pub struct RunNode {
     pub artifact: Option<String>,
 }
 
-/// An enemy as the map dealt it: what the fight's setup needs (M2).
+/// An enemy as the map dealt it: what the fight's setup needs (`run_fight_setup`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunEnemy {
     pub id: String,
@@ -334,16 +420,27 @@ pub struct RunEnemy {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunCard {
     pub id: String,
-    /// Made Radiant at a campfire or a shop. A fight deals it Radiant (M2).
+    /// Made Radiant at a campfire or a shop. A fight deals it Radiant (`run_fight_setup`'s marks).
     pub radiant: bool,
-    /// Buffs from campfires and shops, the Buff keyword's (M2 applies them in a fight).
+    /// Buffs from campfires and shops, the Buff keyword's, which a fight applies at its setup
+    /// (`run_fight_setup`'s marks).
     pub buffs: i32,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunArtifact {
     pub id: String,
@@ -351,6 +448,11 @@ pub struct RunArtifact {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RunPackKind {
     /// The cards of the deck just beaten, its boss cards included.
@@ -371,6 +473,11 @@ pub enum RunPackKind {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RunShopGood {
     Card { id: String },
@@ -378,6 +485,11 @@ pub enum RunShopGood {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunShopItem {
     pub good: RunShopGood,
@@ -388,6 +500,11 @@ pub struct RunShopItem {
 
 /// What the run waits on.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "phase", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RunPhase {
     /// Choose a node of the next row (`Go`).
@@ -424,6 +541,11 @@ pub enum RunPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum RunAction {
     Go {
@@ -489,6 +611,11 @@ pub enum RunAction {
 
 /// Everything a leaderboard or a stats page reads from one run (DR9).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunStats {
     pub nodes_visited: i32,
@@ -522,6 +649,11 @@ pub struct RunStats {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
 #[serde(rename_all = "camelCase")]
 pub struct RunState {
     pub seed: String,
@@ -665,7 +797,7 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
     }
     if setup.artifacts.len() > RUN_STARTER_ARTIFACTS_MAX {
         return Err(format!(
-            "a run starts with at most {RUN_STARTER_ARTIFACTS_MAX} artifacts"
+            "a run starts with at most {RUN_STARTER_ARTIFACTS_MAX} relics"
         ));
     }
     for (i, id) in setup.artifacts.iter().enumerate() {
@@ -673,7 +805,7 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
             return Err(format!("{id} is taken twice"));
         }
         let Some(def) = passive_def(content, id) else {
-            return Err(format!("{id} is no artifact"));
+            return Err(format!("{id} is no relic"));
         };
         if !matches!(def.kind, RunPassiveKind::Combat | RunPassiveKind::Economic) || def.unobtainable {
             return Err(format!("{id} cannot start a run"));
@@ -689,7 +821,7 @@ pub fn run_check_setup(setup: &RunSetup, unlocks: &RunUnlocks, content: &RunCont
         .sum();
     if points > RUN_STARTER_ARTIFACT_POINTS {
         return Err(format!(
-            "the artifacts are worth {points} points, over {RUN_STARTER_ARTIFACT_POINTS}"
+            "the relics are worth {points} points, over {RUN_STARTER_ARTIFACT_POINTS}"
         ));
     }
     for id in &setup.curses {
@@ -915,7 +1047,7 @@ pub fn run_node(state: &RunState) -> Option<&RunNode> {
     state.row.map(|r| &state.map[r][state.col])
 }
 
-/// The enemy of the fight being played, for the game's setup (M2).
+/// The enemy of the fight being played, for the game's setup (`run_fight_setup`).
 pub fn run_enemy(state: &RunState) -> Option<&RunEnemy> {
     match state.phase {
         RunPhase::Fight => run_node(state).and_then(|n| n.enemy.as_ref()),
@@ -989,6 +1121,48 @@ pub fn run_embers(score: i64) -> i64 {
     score / RUN_SCORE_PER_EMBER
 }
 
+/// DR3, DR9: the Embers that raise the starting deck from `level` to the next; `None` at the ladder's
+/// top or for a level that is none.
+pub fn run_level_cost(level: usize) -> Option<i64> {
+    level
+        .checked_sub(1)
+        .and_then(|step| RUN_LEVEL_EMBERS.get(step))
+        .copied()
+}
+
+/// The run's numbers the screens show, so the client states none (CLAUDE.md rule 9): `config.rs`'s
+/// own values.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RunConstants {
+    /// `RUN_SLOT_LADDER`: each level's slots, from level 1.
+    pub slot_ladder: Vec<[usize; 6]>,
+    /// `RUN_STARTER_SIZE`.
+    pub starter_size: usize,
+    /// `RUN_STARTER_ARTIFACTS_MAX`.
+    pub starter_artifacts_max: usize,
+    /// `RUN_STARTER_ARTIFACT_POINTS`.
+    pub starter_artifact_points: i32,
+    /// `RUN_TIER_POINTS`: an artifact's points by its tier.
+    pub tier_points: Vec<(RunTier, i32)>,
+}
+
+/// `RunConstants` from `config.rs`.
+pub fn run_constants() -> RunConstants {
+    RunConstants {
+        slot_ladder: RUN_SLOT_LADDER.to_vec(),
+        starter_size: RUN_STARTER_SIZE,
+        starter_artifacts_max: RUN_STARTER_ARTIFACTS_MAX,
+        starter_artifact_points: RUN_STARTER_ARTIFACT_POINTS,
+        tier_points: RUN_TIER_POINTS.to_vec(),
+    }
+}
+
 // The reducer
 
 /// The run after one action, or why the action is refused (the state unchanged).
@@ -1015,6 +1189,11 @@ fn held_ids(state: &RunState) -> Vec<&str> {
 
 fn in_deck(state: &RunState, id: &str) -> bool {
     state.deck.iter().any(|d| d.id == id)
+}
+
+/// R2701000: the cards the deck may still gain before it holds `RUN_DECK_MAX`.
+fn deck_room(state: &RunState) -> usize {
+    RUN_DECK_MAX.saturating_sub(state.deck.len())
 }
 
 fn spend_coins(state: &mut RunState, price: i32) -> Result<(), String> {
@@ -1148,6 +1327,7 @@ fn keep_count(state: &RunState, content: &RunContent, shown: usize) -> usize {
     (RUN_KEEP + usize::try_from(more).unwrap_or(0))
         .min(RUN_KEEP_MAX)
         .min(shown)
+        .min(deck_room(state))
 }
 
 fn roll_shop(state: &RunState, content: &RunContent, rng: &mut Rng) -> Vec<RunShopItem> {
@@ -1358,7 +1538,7 @@ fn apply(
             },
             RunAction::OpenPack { .. },
         ) => {
-            return Err("take or leave the artifact first".into());
+            return Err("take or leave the relic first".into());
         }
         (
             RunPhase::Reward {
@@ -1410,7 +1590,7 @@ fn apply(
         }
         (RunPhase::ExtractArtifact, RunAction::Extract { index }) => {
             if let Some(i) = index {
-                let id = state.artifacts.get(*i).ok_or("no such artifact")?.id.clone();
+                let id = state.artifacts.get(*i).ok_or("no such relic")?.id.clone();
                 if passive_def(content, &id).is_some_and(|p| p.unobtainable) {
                     return Err(format!("{id} is a boss's own and cannot be extracted"));
                 }
@@ -1426,10 +1606,13 @@ fn apply(
             if item.sold {
                 return Err("sold already".into());
             }
-            if let RunShopGood::Card { id } = &item.good
-                && in_deck(state, id)
-            {
-                return Err(format!("{id} is in the deck already"));
+            if let RunShopGood::Card { id } = &item.good {
+                if in_deck(state, id) {
+                    return Err(format!("{id} is in the deck already"));
+                }
+                if deck_room(state) == 0 {
+                    return Err(format!("the deck is full at {RUN_DECK_MAX} cards"));
+                }
             }
             spend_coins(state, discounted(state, content, item.price))?;
             item.sold = true;
@@ -1467,9 +1650,9 @@ fn apply(
             buff(state, *index)?;
         }
         (RunPhase::Shop { .. }, RunAction::LevelArtifact { index }) => {
-            let level = state.artifacts.get(*index).ok_or("no such artifact")?.level;
+            let level = state.artifacts.get(*index).ok_or("no such relic")?.level;
             if level >= RUN_ARTIFACT_LEVEL_MAX {
-                return Err("that artifact is at its highest level".into());
+                return Err("that relic is at its highest level".into());
             }
             spend_tickets(state, RUN_LEVEL_TICKETS * level)?;
             with_max_hp(state, content, |s| s.artifacts[*index].level += 1);
@@ -1526,7 +1709,7 @@ fn apply(
             spend_coins(state, (-option.coins).max(0))?;
             spend_tickets(state, (-option.tickets).max(0))?;
             earn(state, option.coins.max(0), option.tickets.max(0));
-            if option.card {
+            if option.card && deck_room(state) > 0 {
                 let open: Vec<&RunPoolCard> = open_pool(content).filter(|c| !in_deck(state, &c.id)).collect();
                 if let Some(card) = rng.pick(&open) {
                     state.deck.push(RunCard {

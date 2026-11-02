@@ -49,6 +49,7 @@ pub mod game_summary;
 pub mod generators;
 pub mod grants;
 pub mod graveyard_play;
+pub mod hook_marks;
 pub mod instance_view;
 pub mod kill_credit;
 pub mod layers;

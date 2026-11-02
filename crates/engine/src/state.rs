@@ -19,11 +19,14 @@ use crate::config::{
     BACKROW_ZONES, DECK_SIZE, EARLIER_DECK_SIZE, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
     MAX_COPIES, SETUP_TURN, UNIT_ZONES,
 };
+use crate::effects::tune::{TuneDirection, tune_once};
+use crate::resolve::{HookOptions, make_context};
 use crate::rng::Rng;
+use crate::script::EngineSink;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
-    GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
-    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, DeckMark,
+    Enchantment, GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt,
+    RowFlags, SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1723,7 +1726,7 @@ pub struct GameState {
     pub fused_scripts: crate::scripts::FusedScripts,
 }
 
-/// R676: what a Glitch reset deals again — `create_game`'s decks and dealt seats.
+/// R676: what a Glitch reset deals again — `create_game`'s decks, dealt seats and deck marks (R2702000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -1736,6 +1739,10 @@ pub struct OpeningRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub dealt: Option<Vec<PlayerId>>,
+    /// R2702000: the marks the game was made with; absent when it had none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
 }
 
 /// R417: one card of a last board — the card and its face, never stats, buffs or damage.
@@ -2144,6 +2151,12 @@ pub struct CreateGameOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub custom_cards: Option<Vec<CustomCard>>,
+    /// R2702000: each seat's deck marks, cards of its list dealt Radiant or Buffed at setup. Setup,
+    /// not an action: a replay passes the same marks (`replay::ReplayInput.deckMarks`). Omitted,
+    /// nothing is marked or stored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
 }
 
 /// SURFACE §6.1's name for `CreateGameOptions`.
@@ -2400,9 +2413,45 @@ pub fn standard_deck_size(options: &CreateGameOptions, kind: SetupKind) -> i32 {
     }
 }
 
+/// R2702000: each seat's deck marks against its deck list: an index inside it, no index marked
+/// twice, no negative Buffs. Checked after the decks, so a bad deck is named first.
+fn validate_deck_marks(options: &CreateGameOptions) -> Result<(), EngineError> {
+    let Some(marks) = &options.deck_marks else {
+        return Ok(());
+    };
+    for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
+        let label = player.as_str();
+        let size = deck_of(options, seat).len();
+        let mut seen: Vec<usize> = Vec::new();
+        for mark in marks.get(player).into_iter().flatten() {
+            if mark.index >= size {
+                return Err(EngineError::new(format!(
+                    "{label}: deck mark index {} is past its deck of {size} cards (R2702000)",
+                    mark.index
+                )));
+            }
+            if seen.contains(&mark.index) {
+                return Err(EngineError::new(format!(
+                    "{label}: two deck marks name index {} (R2702000)",
+                    mark.index
+                )));
+            }
+            if mark.upgrades < 0 {
+                return Err(EngineError::new(format!(
+                    "{label}: deck mark upgrades must be a non-negative integer (R2702000), got {}",
+                    mark.upgrades
+                )));
+            }
+            seen.push(mark.index);
+        }
+    }
+    Ok(())
+}
+
 /// R180, R184: every seat's handicap, then every seat's deck against its handicap's size, or
-/// `standard_deck_size` for a seat with none. `customs` are the game's custom definitions
-/// (R915005). `create_game` panics with the message; a caller that must not panic checks this first.
+/// `standard_deck_size` for a seat with none, then each seat's deck marks (R2702000). `customs` are
+/// the game's custom definitions (R915005). `create_game` panics with the message; a caller that must
+/// not panic checks this first.
 pub fn validate_setup(
     options: &CreateGameOptions,
     catalog: &CardDefs,
@@ -2433,7 +2482,7 @@ pub fn validate_setup(
             copies,
         )?;
     }
-    Ok(())
+    validate_deck_marks(options)
 }
 
 /// TS's `Pick<GameState, "nextId">`: whatever hands out instance ids. The state does; so does a
@@ -2539,8 +2588,10 @@ pub fn new_dealt_instance(
 /// seat only when it differs from a human's, so a game with none — or with Easy's, which *is* a
 /// human's — carries no `handicap` key and hashes and replays exactly as before the field existed.
 ///
-/// Panics with TS's message on a bad handicap or deck, as TS threw (SURFACE §6.1 fixes the return
-/// type; a caller that must not panic checks `validate_setup` first).
+/// R2702000: each seat's deck marks are dealt here, before `begin_game` shuffles.
+///
+/// Panics with TS's message on a bad handicap, deck or deck mark, as TS threw (SURFACE §6.1 fixes the
+/// return type; a caller that must not panic checks `validate_setup` first).
 pub fn create_game(options: &CreateGameOptions) -> GameState {
     build_game(options, 1, "", SetupKind::New)
 }
@@ -2675,6 +2726,10 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
             if let Some(id) = ids.get(at) {
                 card.id = id.clone();
             }
+            // R2702000: a marked card is dealt on its Radiant face, the face its owner is shown (R311).
+            if marked_radiant(options.deck_marks.as_ref(), player, at) {
+                card.radiant = true;
+            }
             // R311: a player's own deck is the first thing they know of their library.
             if built {
                 crate::own_library::show_to_owner(card);
@@ -2710,6 +2765,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
             side.hero.health = hero_health;
         }
     }
+    apply_deck_marks(&mut state, options);
 
     // R417, R564: frozen as the match is created, minus every entry this match cannot rebuild.
     state.last_boards =
@@ -2724,9 +2780,53 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
             Some(dealt) if !dealt.is_empty() => Some(dealt.clone()),
             _ => None,
         },
+        deck_marks: kept_deck_marks(options),
     });
 
     state
+}
+
+/// R2702000: whether `player`'s marks deal the card at `index` of its list on its Radiant face.
+fn marked_radiant(marks: Option<&PerPlayerOpt<Vec<DeckMark>>>, player: PlayerId, index: usize) -> bool {
+    marks
+        .and_then(|marks| marks.get(player))
+        .is_some_and(|list| list.iter().any(|mark| mark.index == index && mark.radiant))
+}
+
+/// R2702000: the marks the opening record keeps: the options', unless no seat has one.
+fn kept_deck_marks(options: &CreateGameOptions) -> Option<PerPlayerOpt<Vec<DeckMark>>> {
+    options.deck_marks.clone().filter(|marks| {
+        PLAYER_IDS
+            .into_iter()
+            .any(|player| marks.get(player).is_some_and(|list| !list.is_empty()))
+    })
+}
+
+/// R2702000: the Buffs each seat's marks owe, once every deck is dealt and before §2.1's shuffle
+/// (the library is still the list in order): seat by seat, each mark in the order given, `upgrades`
+/// Buffs of its card, each one change drawn from the game's rng as a Buff in play draws it. Setup,
+/// not an action: `create_game` reports nothing, so the Buffs' events go nowhere.
+fn apply_deck_marks(state: &mut GameState, options: &CreateGameOptions) {
+    let Some(marks) = &options.deck_marks else {
+        return;
+    };
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(&mut sink, None, HookOptions::default());
+        for player in PLAYER_IDS {
+            for mark in marks.get(player).into_iter().flatten() {
+                let Some(card) = ctx.state.players[player].library.get(mark.index).cloned() else {
+                    continue;
+                };
+                for _ in 0..mark.upgrades {
+                    tune_once(&mut ctx, &card, TuneDirection::Upgrade, true);
+                }
+            }
+        }
+    }
+    state.rng_cursor = rng.cursor();
 }
 
 /// R223: the seed suffix of the stream `create_game` numbers the decks' cards from.

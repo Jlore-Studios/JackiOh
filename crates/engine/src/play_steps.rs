@@ -1441,6 +1441,7 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
             arrived_during: arrivals,
             exits_from: Some(exits_from),
             creator: None,
+            via: None,
         });
     }
 }

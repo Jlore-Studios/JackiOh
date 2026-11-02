@@ -43,7 +43,7 @@ trap backrow. This file binds every agent, not only Claude.
    the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
    Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the five (no game
    crate takes `jackioh-luau`: it is the custom-card host, #902 V4), `mlua` (`jackioh-luau`'s) and, behind a
-   `ts` feature (the engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans
+   `ts` feature (the engine's, and `jackioh-luau`'s and `jackioh-run`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
    `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
    among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled

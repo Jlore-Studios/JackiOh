@@ -268,6 +268,10 @@ export const paths = {
   shop: "/shop",
   /** #1665, R1665000: the odds and pity of every pack, public like the terms; the account's counters need a session. */
   purchases: "/purchases",
+  /** #2705, docs/dungeon-run.md DR14: the Dungeon Run, a single-player run played offline in the Sandbox. */
+  dungeon: "/dungeon",
+  /** #2705: the Sandbox's stats and leaderboards, on the device. */
+  dungeonStats: "/dungeon/stats",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games. */
@@ -278,6 +282,8 @@ export const paths = {
   duos: (matchId: string): string => `/duos/${matchId}`,
   /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
   duosDev: "/dev/duos",
+  /** R2784000: the card-animation motif gallery; production serves a 404 there, as at `hotseat`. */
+  fxGallery: "/dev/fx",
 } as const;
 
 function idUnder(path: string, first: string): string | null {

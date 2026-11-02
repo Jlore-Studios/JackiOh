@@ -275,7 +275,8 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     }
   });
 
-  it("R1295000 a Mythic face wears no cosmetic foil; a Radiant face no foil, finish or border", () => {
+  it("R1295000 a Mythic face wearing its rarity foil wears no cosmetic foil; a Radiant face no foil, finish or border", () => {
+    writeCardSettings({ rarityFoil: true });
     wearOn("core-096", PICKS);
     wearOn("core-004", PICKS);
     const { container } = render(
@@ -294,6 +295,32 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
       expect(element?.getAttribute("data-radiant-face")).toBe("true");
       for (const attribute of ATTRIBUTES) expect(element?.getAttribute(attribute), attribute).toBeNull();
     }
+  });
+
+  it("R2721000 a cosmetic foil shows on a Legendary and on a Mythic that wears no rarity foil", () => {
+    wearOn("core-052", PICKS);
+    wearOn("core-096", PICKS);
+    const worn = () => {
+      const { container } = render(
+        <>
+          <CardFace face={face("core-052")} worn />
+          <CardFace face={face("core-096")} worn />
+        </>,
+      );
+      return [...container.querySelectorAll<HTMLElement>(".cf")];
+    };
+    const [legendary, mythic] = worn();
+    for (const element of [legendary, mythic]) {
+      expect(element?.getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
+      expect(element?.getAttribute("data-foil")).toBe("none");
+    }
+    cleanup();
+    writeCardSettings({ rarityFoil: true });
+    const [legendaryOn, mythicOn] = worn();
+    expect(legendaryOn?.getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
+    expect(legendaryOn?.getAttribute("data-foil")).toBe("none");
+    expect(mythicOn?.getAttribute("data-foil")).toBe("animated");
+    expect(mythicOn?.getAttribute("data-cosmetic-foil")).toBeNull();
   });
 
   it("R1295000 at most COSMETIC_FOIL_ANIMATED_MAX faces move their foil, and a freed slot passes on", () => {
@@ -712,6 +739,7 @@ describe("R1655000 the picks of each card", () => {
   });
 
   it("R1655000 a Mythic face wears no cosmetic foil and a Radiant face nothing, whatever its card's picks", () => {
+    writeCardSettings({ rarityFoil: true });
     for (const defId of ["core-096", OWN]) {
       writeCardPick(defId, "foil", PICKS.foil);
       writeCardPick(defId, "finish", PICKS.finish);
@@ -902,7 +930,8 @@ describe("R1956000 R1956001 picks across tabs, and a Created card's generator", 
     expect(shown.getAttribute("data-finish")).toBeNull();
     cleanup();
 
-    // The Created card's own rarity holds.
+    // The Created card's own rarity holds: a Mythic face wearing its rarity foil wears no cosmetic foil, a Radiant face nothing.
+    writeCardSettings({ rarityFoil: true });
     ({ container } = render(
       <>
         <CardFace face={created("core-096")} worn />
@@ -1072,12 +1101,16 @@ describe("R2655003 the full-art tiers' motion", () => {
   it("R2655003 the full-art tiers move only inside the motion gate by transform or opacity, and stand still outside it", () => {
     const gated = gatedRules(cosmeticsCss);
     const moving = gated.filter((rule) => rule.selector.includes("cf-full-art--") && /animation\s*:/.test(rule.body));
-    // The art's drift and the band's sweep on both moving tiers; the signature's wipe on the Mythic.
+    // The art's drift and the band's sweep on both moving tiers; on the Mythic, R2715002's signing: the
+    // wipe, the pen, the landing's burst and flourish, and the shine.
     expect(moving.map((rule) => rule.selector)).toEqual([
       `${GATE}.cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-art-frame > .cf-art`,
       `${GATE}.cf.cf-full-art--animated[data-full-art-motion="animated"] .cf-full-art-sweep`,
       `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-wipe`,
-      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-ink`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-pen`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-burst`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-flourish`,
+      `${GATE}.cf.cf-full-art--signed[data-full-art-motion="animated"] .cf-signature-shine`,
     ]);
     // Outside the gate nothing of a full art's tier animates: the still frame and the whole name.
     const all = rules(cosmeticsCss);
@@ -1086,8 +1119,16 @@ describe("R2655003 the full-art tiers' motion", () => {
     );
     expect(ungated.length).toBeGreaterThan(0);
     for (const rule of ungated) expect(rule.body, rule.selector).not.toMatch(/animation|transition|transform\s*:/);
-    // Each loop moves by transform or opacity alone, and the name's wipe runs once and holds.
-    for (const name of ["full-art-drift", "full-art-sweep", "full-art-sign-wipe", "full-art-sign-ink"]) {
+    // Each loop moves by transform or opacity alone, and the name signs once and holds, but its shine.
+    for (const name of [
+      "full-art-drift",
+      "full-art-sweep",
+      "full-art-sign-wipe",
+      "full-art-sign-pen",
+      "full-art-sign-burst",
+      "full-art-sign-flourish",
+      "full-art-sign-shine",
+    ]) {
       const at = cosmeticsCss.indexOf(`@keyframes ${name} {`);
       expect(at, name).toBeGreaterThanOrEqual(0);
       const body = blockFrom(cosmeticsCss, cosmeticsCss.indexOf("{", at));
@@ -1095,8 +1136,10 @@ describe("R2655003 the full-art tiers' motion", () => {
       expect(properties.length, name).toBeGreaterThan(0);
       for (const property of properties) expect(["transform", "opacity"], `${name}: ${property ?? ""}`).toContain(property);
     }
-    for (const rule of moving.filter((rule) => rule.selector.includes("cf-signature"))) expect(rule.body, rule.selector).toMatch(/\bboth\b/);
-    for (const rule of moving.filter((rule) => !rule.selector.includes("cf-signature"))) expect(rule.body, rule.selector).toMatch(/\binfinite\b/);
+    const signing = moving.filter((rule) => rule.selector.includes("cf-signature") && !rule.selector.endsWith(".cf-signature-shine"));
+    for (const rule of signing) expect(rule.body, rule.selector).toMatch(/\bboth\b/);
+    for (const rule of signing) expect(rule.body, rule.selector).not.toMatch(/\binfinite\b/);
+    for (const rule of moving.filter((rule) => !signing.includes(rule))) expect(rule.body, rule.selector).toMatch(/\binfinite\b/);
     // The signature is set in the self-hosted script face, in the palette's colors.
     const text = ruleBody(cosmeticsCss, /\.cf-signature-text\s*\{/);
     expect(text).toMatch(/font-family:\s*var\(--font-signature\)/);

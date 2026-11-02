@@ -1,0 +1,78 @@
+/* #2757: a Choose one of lanes, answered on the board (LanePick.tsx). One rounded oblong per lane on offer,
+   in the board's selection color (the ice blue; gold is "condition met"), drawn over the four zones of the
+   lane. It takes no hit: the zones under it take the click and the focus. It sits inside the prompt's scrim,
+   which is its stacking context, so it needs no layer of its own. */
+
+.lane-pick {
+  --lane-pick-ring: 2px;
+  --lane-pick-ring-lit: 3px;
+}
+
+.lane-pick,
+.lane-pick * {
+  pointer-events: none;
+}
+
+.lane-pick-oblong {
+  position: fixed;
+  box-sizing: border-box;
+  border: var(--lane-pick-ring) solid var(--selected);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--selected) 10%, transparent);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--selected) 45%, transparent);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+  animation: lane-pick-breathe 1.6s var(--ease-in-out) infinite alternate;
+}
+
+/* Hovered or focused: brighter, and still. */
+.lane-pick-oblong[data-active="true"] {
+  border-width: var(--lane-pick-ring-lit);
+  background: color-mix(in srgb, var(--selected) 24%, transparent);
+  box-shadow: 0 0 16px 4px color-mix(in srgb, var(--selected) 70%, transparent);
+  animation: none;
+}
+
+@keyframes lane-pick-breathe {
+  to {
+    box-shadow: 0 0 16px 4px color-mix(in srgb, var(--selected) 65%, transparent);
+  }
+}
+
+/* The lane's own words, at the oblong's middle, kept inside the screen (LanePick.tsx clamps `left`). */
+.lane-pick-tip {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px 10px;
+  translate: 0 -50%;
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-2);
+  font-size: var(--type-xs);
+  line-height: 1.3;
+}
+
+.lane-pick-tip-label {
+  color: var(--selected);
+  font-weight: 650;
+}
+
+.lane-pick-tip-detail {
+  color: var(--text-dim);
+}
+
+/* Reduce Motion: a still oblong. */
+@media (prefers-reduced-motion: reduce) {
+  .lane-pick-oblong {
+    animation: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .lane-pick-oblong,
+.game[data-reduced-motion="true"] .lane-pick-oblong {
+  animation: none;
+}

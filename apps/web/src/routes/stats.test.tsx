@@ -1353,7 +1353,13 @@ describe("the drill-down's card preview", () => {
     const picker = within(dialog).getByTestId(statsTestid.drillDownArt);
     const art = (name: string): HTMLElement => within(picker).getByRole("button", { name });
     const face = (): Element | null => dialog.querySelector(".stats-drilldown-faces .cf");
-    expect(within(picker).getAllByRole("button").map((button) => button.textContent)).toEqual(["No full art", "Epic", "Legendary", "Mythic"]);
+    expect(within(picker).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "No full art",
+      "Animated",
+      "Epic",
+      "Legendary",
+      "Mythic",
+    ]);
     expect(art("Epic")).toHaveAttribute("aria-pressed", "true");
     expect(art("No full art")).toHaveAttribute("aria-pressed", "false");
     expect(face()?.getAttribute("data-full-art-tier")).toBe("Epic");
@@ -1409,6 +1415,26 @@ describe("the drill-down's card preview", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Mythic" })).toHaveAttribute("aria-pressed", "true");
     expect(dialog.querySelector(".stats-drilldown-faces .cf")?.getAttribute("data-full-art-tier")).toBe("Mythic");
+  });
+
+  it("R2715000 the breakdown's Animated prints the card's normal face with its art moving, on both faces, writing no pick", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-004");
+    render(<StatsRoute />);
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownRadiantToggle));
+    const animated = within(within(dialog).getByTestId(statsTestid.drillDownArt)).getByRole("button", { name: "Animated" });
+    fireEvent.click(animated);
+    expect(animated).toHaveAttribute("aria-pressed", "true");
+    const faces = dialog.querySelectorAll(".stats-drilldown-faces .cf");
+    expect(faces).toHaveLength(2);
+    for (const each of faces) {
+      expect(each.getAttribute("data-full-art-tier")).toBe("Animated");
+      expect(each.hasAttribute("data-full-art")).toBe(false);
+      expect(each.getAttribute("data-art-motion")).toBe("animated");
+      expect(each.querySelector('.cf-art[data-art-moving="true"]')).not.toBeNull();
+    }
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
   });
 
   it("links the card to its detail in the Almanac, and follows the link in place", async () => {

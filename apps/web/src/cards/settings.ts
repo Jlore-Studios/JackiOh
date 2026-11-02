@@ -4,7 +4,9 @@
 //
 // R1834004: `opponentCosmetics` on, an opponent's cards and side wear the loadout their seat froze
 // when the match began (game/wearer.ts); off, the defaults, on a live, watched or replayed board alike.
-// R2718000: `setWatermarks` (setMark.ts) stays on the device (`DEVICE_CARD_SETTINGS`), never the account.
+// R2721000: `rarityFoil`, off by default, gives a Mythic face its rarity foil (model.ts foilFor).
+// R2718000, R2721000: `setWatermarks` (setMark.ts) and `rarityFoil` stay on the device
+// (`DEVICE_CARD_SETTINGS`), never the account.
 
 import { useSyncExternalStore } from "react";
 import { setStored } from "../net/storage.ts";
@@ -15,6 +17,7 @@ export type CardSettings = {
   fullArt: boolean;
   opponentCosmetics: boolean;
   setWatermarks: boolean;
+  rarityFoil: boolean;
 };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
@@ -25,6 +28,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   fullArt: true,
   opponentCosmetics: true,
   setWatermarks: true,
+  rarityFoil: false,
 });
 
 type CardSettingsField = {
@@ -42,10 +46,16 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     description: "Rest the pointer on a card to see it enlarged, with its keywords explained.",
   },
   {
+    key: "rarityFoil",
+    section: "visuals",
+    label: "Rarity foil",
+    description: "Mythic cards shine with a rainbow foil and edge. Off, the crest at the top marks Legendary and Mythic cards.",
+  },
+  {
     key: "animatedFoil",
     section: "visuals",
     label: "Animated foil",
-    description: "Mythic and Radiant cards shimmer. Off shows the foil standing still.",
+    description: "Radiant cards and foils shimmer. Off shows the foil standing still.",
   },
   {
     key: "fullArt",
@@ -67,10 +77,10 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
   },
 ];
 
-/** R2718000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
-export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks"];
+/** R2718000, R2721000: card settings that stay on the device; the account's settings (R633, settings/groups.ts) never carry them. */
+export const DEVICE_CARD_SETTINGS: readonly (keyof CardSettings)[] = ["setWatermarks", "rarityFoil"];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "setWatermarks"];
+const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics", "setWatermarks", "rarityFoil"];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`

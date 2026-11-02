@@ -20616,5 +20616,55 @@
     "tier": "micro",
     "plays": [],
     "changes": []
+  },
+  {
+    "version": "v0.5.11c",
+    "date": "2026-11-02",
+    "title": "Patch: full-art cards in your hand show only their art, no name",
+    "source": "#2723",
+    "notes": "A full-art card (R1017001, R2655000) in the viewer's own hand now draws only its art, its cost gem and a Unit's attack and health: no name banner, Mythic signature, rarity gem, set mark or crest (R2723000). Its name stays in its words for a screen reader and the tooltip; every other view prints the whole face. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Full-art cards in your hand",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A full-art card in your hand now shows just its art, its cost and, on a Unit, its attack and health. Hover over it, or hold it on a touch screen, to see its name and the whole card."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0042c19a3c6a26fef5448f00cb8c0aa26a7b4fd2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.5.11d",
+    "date": "2026-11-02",
+    "title": "Patch: no rarity foil on Legendary and Mythic cards by default; the crest and the music set them apart",
+    "source": "#2721",
+    "notes": "R2721000: Legendary and Mythic faces wear no rarity foil by default; the Rarity foil setting gives the Mythic its sheen and rainbow edge back. Radiant faces keep their foil. How cards look only: nothing plays differently.",
+    "player": {
+      "title": "Quieter Legendary and Mythic cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Mythic cards no longer shine with a rainbow foil and edge by default: like Legendary cards, they stand out by the crest at the top, their gem and their music.",
+        "Turn on Rarity foil in Settings, Visuals, to bring the Mythic's rainbow foil and edge back.",
+        "A Mythic card now shows the cosmetic foil you equip on it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "2a10dc2711b6e90b79a4f389c547d5a1390191f8"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
   }
 ]

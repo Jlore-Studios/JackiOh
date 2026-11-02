@@ -1,53 +1,37 @@
 // R502: named-card flourishes and Cast on draw are planned only from the redacted stream (R202).
 // A card recipe may claim its own resolving events; hidden plays never key recipes.
 // R670: marquee Legendary and Mythic Units replace a row entrance when their `summoned` has a `defId`.
+// R2784000: a card's entry in its set's effects table (fx/cards/tables.ts) names its bespoke recipe
+// (fx/cards/<set>/) or a shared motif per hook (fx/motifs/); `cast` and `cry` play by the readable
+// play resolving now, and `death`, `trigger` and `activate` wait for #2783's `hookResolving`.
 // R200: every delay lands inside the entry and trails off within FX_MAX_TAIL_MS.
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
-import { HIDDEN_ID, animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
-import { sideOf, testid } from "../game/contract.ts";
-import { frac, raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
-import {
-  FX_BLOOD_FLIGHT_FRACTION,
-  FX_BLOOD_PICK_BASE,
-  FX_BLOOD_PICK_STRIDE,
-  FX_BLOOD_TRAUMA,
-  FX_CAST_ON_DRAW_TRAUMA,
-  FX_CRACK_HIT_AT,
-  FX_CRACK_STAGGER_MS,
-  FX_CRACK_TAIL_MS,
-  FX_CRACK_TRAUMA,
-  FX_FRACTURE_TAIL_MS,
-  FX_NEXT_REFRESH_MODIFIER_ID,
-  FX_CENTER,
-  FX_RAYS_TAIL_MS,
-  FX_WALLS_HIT_AT,
-  FX_WALLS_REACH,
-  FX_WALLS_TAIL_MS,
-  FX_WALLS_TRAUMA,
-} from "./constants.ts";
-import { ENTRANCES, entranceEvent, isEntranceKey, type EntranceKey } from "./entrances.ts";
-import { lostCrystals } from "./manaMarks.ts";
-import type { FxAnchor, FxCue, FxPlanEnv, FxPlay, FxProjectileCue } from "./types.ts";
+import { FLAVOR_FALLBACK } from "../cards/flavor.ts";
+import { HIDDEN_ID, animTestid, targetFor, type AnimationEntry } from "../game/animations.ts";
+import { sideOf } from "../game/contract.ts";
+import { CATALOG } from "../wire/cards.ts";
+import { raysCue, ringCue, shakeCues, tid, tunedBurst } from "./build.ts";
+import { CARD_RECIPES, isCardRecipeKey, isEntranceKey, type BespokeKey } from "./cards/bespoke.ts";
+import type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
+import { FX_CARD_TABLE, type FxCardEntry } from "./cards/tables.ts";
+import { FX_CAST_ON_DRAW_TRAUMA } from "./constants.ts";
+import { ENTRANCES, entranceEvent } from "./entrances.ts";
+import { FLAVOR_LOOKS } from "./flavors.ts";
+import { flavorLookOf } from "./flavorSource.ts";
+import { motifScale, type MotifSpec } from "./motifs/build.ts";
+import { motifReplaces, planMotif } from "./motifs/index.ts";
+import { isDrawnMotif } from "./motifs/names.ts";
+import type { FxCue, FxPlanEnv } from "./types.ts";
 
+export type { CardFxPlan, CardFxResult } from "./cards/recipe.ts";
 
-/** Every particle count the recipes here throw, at intensity "normal" (rule 9). */
+/** Every particle count the cast on draw throws, at intensity "normal" (rule 9). */
 const CARD_TUNING = {
   pileGold: { count: 34, power: 1.3 },
   pileArcane: { count: 20, power: 1 },
-  crackFrost: { count: 22, power: 1.1 },
-  crystalShard: { count: 10, power: 1 },
-  boltFrost: { count: 12, power: 0.8 },
-  bloodSpurt: { count: 18, power: 1 },
-  bloodLanding: { count: 14, power: 0.9 },
-  radiantGold: { count: 30, power: 1.1 },
-  bloodPool: { count: 26, power: 1 },
-  bloodRing: { count: 16, power: 1.2 },
-  wallDust: { count: 24, power: 1.2 },
 } as const;
-
-export type CardFxPlan = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
 
 /** R502: cast on draw bursts from the drawer's Deck pile. */
 export function castOnDrawCues(event: GameEvent, p: CardFxPlan): FxCue[] {
@@ -63,129 +47,16 @@ export function castOnDrawCues(event: GameEvent, p: CardFxPlan): FxCue[] {
   ];
 }
 
-/** A recipe's answer: its cues, and whether the event's own row recipe still plays (`keep`) or not. */
-export type CardFxResult = { cues: FxCue[]; row: "keep" | "replace" };
-
-type CardRecipe = (event: GameEvent, p: CardFxPlan, play: FxPlay) => CardFxResult | null;
-
-export type CardFxKey = "manaCrack" | "bloodDrain" | "crushingWalls" | EntranceKey;
-
-function heroOf(view: PlayerView, play: FxPlay): FxAnchor {
-  return tid(testid.hero(sideOf(view, play.player)));
-}
-
-function projectile(intensity: number, preset: FxProjectileCue["preset"], from: FxAnchor, to: FxAnchor, delayMs: number, flightMs: number): FxProjectileCue {
-  return { kind: "projectile", preset, from, to, delayMs, flightMs, density: intensity };
-}
-
-/** #21 Hinder cracks next-refresh crystals using the view's count (manaMarks.ts). */
-const manaCrack: CardRecipe = (event, p) => {
-  if (event.type !== "modifierChanged" || event.modifierId !== FX_NEXT_REFRESH_MODIFIER_ID || !event.added) return null;
-  const i = p.env.intensity;
-  const side = sideOf(p.view, event.player);
-  const tray = tid(animTestid.mana(side));
-  const hit = frac(FX_CRACK_HIT_AT, p.D);
-  const caster = p.env.memory.resolving();
-  const cues: FxCue[] = [];
-  if (caster !== undefined) cues.push(projectile(i, "frost", heroOf(p.view, caster), tray, 0, hit));
-  cues.push(ringCue(p.D, "frost", tray, hit), tunedBurst(i, "frost", tray, "area", hit, CARD_TUNING.crackFrost));
-  const lost = lostCrystals(p.env.next, p.view, event.player);
-  if (lost.count === 0) {
-    cues.push({ kind: "crack", at: tray, delayMs: hit, durationMs: p.D - hit + FX_CRACK_TAIL_MS });
-  }
-  for (let k = 0; k < lost.count; k += 1) {
-    const crystal: FxAnchor = { kind: "crystal", side, index: lost.from + k };
-    const at = Math.min(p.D, hit + k * FX_CRACK_STAGGER_MS);
-    cues.push(
-      { kind: "fracture", at: crystal, delayMs: at, durationMs: p.D - at + FX_FRACTURE_TAIL_MS },
-      { kind: "crack", at: crystal, delayMs: at, durationMs: p.D - at + FX_CRACK_TAIL_MS },
-      tunedBurst(i, "frost", crystal, "point", at, CARD_TUNING.crystalShard),
-    );
-  }
-  cues.push(...shakeCues(i, FX_CRACK_TRAUMA, hit));
-  return { cues, row: "replace" };
-};
-
-/** Where a card made Radiant in the caster's hand is: the viewer's own hand card, else a back (R202). */
-function radiantTarget(event: Extract<GameEvent, { type: "radiantSet" }>, p: CardFxPlan, play: FxPlay): FxAnchor {
-  const side = sideOf(p.view, play.player);
-  const named = event.instanceId === HIDDEN_ID ? null : locateInstance(p.view, event.instanceId);
-  if (named !== null && named.startsWith("hand-card-")) return tid(named);
-  return { kind: "handCard", side, pick: FX_BLOOD_PICK_BASE + (play.step - 1) * FX_BLOOD_PICK_STRIDE };
-}
-
-/** #27 Blood Ridden Glowy Jelly Bean targets its Radiant hand card, or an opponent's back (R97). */
-const bloodDrain: CardRecipe = (event, p, play) => {
-  const i = p.env.intensity;
-  if (event.type === "radiantSet") {
-    if (event.zone.z !== "hand" || event.zone.player !== play.player) return null;
-    const hero = heroOf(p.view, play);
-    const target = radiantTarget(event, p, play);
-    const flight = frac(FX_BLOOD_FLIGHT_FRACTION, p.D);
-    return {
-      cues: [
-        tunedBurst(i, "blood", hero, "point", 0, CARD_TUNING.bloodSpurt),
-        projectile(i, "blood", hero, target, 0, flight),
-        tunedBurst(i, "blood", target, "point", flight, CARD_TUNING.bloodLanding),
-        tunedBurst(i, "gold", target, "area", flight, CARD_TUNING.radiantGold),
-        { kind: "sheen", at: target, delayMs: flight, durationMs: p.D - flight + FX_RAYS_TAIL_MS },
-      ],
-      row: "replace",
-    };
-  }
-  if (event.type === "healthLost" && event.player === play.player) {
-    const hero = heroOf(p.view, play);
-    return {
-      cues: [
-        tunedBurst(i, "blood", hero, "area", 0, CARD_TUNING.bloodPool),
-        tunedBurst(i, "blood", hero, "ring", 0, CARD_TUNING.bloodRing),
-        ...shakeCues(i, FX_BLOOD_TRAUMA, 0),
-      ],
-      row: "keep",
-    };
-  }
-  return null;
-};
-
-/** Classic+ #24 Crushing Walls plays at its first destroyed card; empty or countered plays draw none. */
-const crushingWalls: CardRecipe = (event, p, play) => {
-  if (event.type !== "destroyed" || play.seen.destroyed !== 1) return null;
-  const i = p.env.intensity;
-  const durationMs = p.D + FX_WALLS_TAIL_MS;
-  // The walls reach the cards at FX_WALLS_HIT_AT of the cue; the dust and shake go then, inside the entry.
-  const hit = Math.min(p.D, frac(FX_WALLS_HIT_AT, durationMs));
-  const edge = (x: number): FxAnchor => tid(testid.board, { x, y: FX_CENTER.y });
-  return {
-    cues: [
-      { kind: "walls", at: tid(testid.board), reach: FX_WALLS_REACH, delayMs: 0, durationMs },
-      tunedBurst(i, "dust", edge(FX_WALLS_REACH), "point", hit, CARD_TUNING.wallDust),
-      tunedBurst(i, "dust", edge(1 - FX_WALLS_REACH), "point", hit, CARD_TUNING.wallDust),
-      ...shakeCues(i, FX_WALLS_TRAUMA, hit),
-    ],
-    row: "keep",
-  };
-};
-
-export const CARD_RECIPES: { readonly [K in Exclude<CardFxKey, EntranceKey>]: CardRecipe } = { manaCrack, bloodDrain, crushingWalls };
-
-export const CARD_FX: Readonly<Record<string, CardFxKey>> = {
-  "core-021": "manaCrack", // #21 Hinder
-  "core-027": "bloodDrain", // #27 Blood Ridden Glowy Jelly Bean
-  "classicplus-024": "crushingWalls", // C+ #24 Crushing Walls
-  "core-100": "voidCollapse", // #100 Ceaseless Void (Mythic)
-  "classic-080": "bigBoom", // BOOM! Big Max
-  "classic-045": "titanBloom", // Nature Titan
-  "classic-056": "tyrantSigil", // Spell Tyrant
-};
-
-function keyOf(defId: string): CardFxKey | undefined {
-  return Object.prototype.hasOwnProperty.call(CARD_FX, defId) ? CARD_FX[defId] : undefined;
+/** The bespoke recipe a card's table entry names, if any. */
+function bespokeOf(defId: string): BespokeKey | undefined {
+  const entry = FX_CARD_TABLE.get(defId);
+  return entry?.kind === "bespoke" ? entry.key : undefined;
 }
 
 function planEntrance(event: GameEvent, p: CardFxPlan): CardFxResult | null {
   const summoned = entranceEvent(event, HIDDEN_ID);
   if (summoned === null) return null;
-  const key = keyOf(summoned.defId);
+  const key = bespokeOf(summoned.defId);
   if (key === undefined || !isEntranceKey(key)) return null;
   const tgt = targetFor(summoned, p.view);
   if (tgt === null) return null;
@@ -197,6 +68,31 @@ export function planCardFx(event: GameEvent, p: CardFxPlan): CardFxResult | null
   if (entrance !== null) return entrance;
   const play = p.env.memory.resolving();
   if (play === undefined || play.defId === HIDDEN_ID) return null;
-  const key = keyOf(play.defId);
-  return key === undefined || isEntranceKey(key) ? null : CARD_RECIPES[key](event, p, play);
+  const key = bespokeOf(play.defId);
+  return key === undefined || !isCardRecipeKey(key) ? null : CARD_RECIPES[key](event, p, play);
+}
+
+/** A motif's cues for one entry, and the entry's events it drew in place of their own row recipe. */
+export type MotifResult = { cues: FxCue[]; replaces: ReadonlySet<GameEvent> };
+
+/**
+ * R2784000: the motif of the readable play resolving now, on its `cry` (a Unit) or `cast` (any other
+ * card). A hidden play, a card with no hooks, a motif not drawn yet and a run over a whole pile plan
+ * nothing here, so the event rows play alone; `death`, `trigger` and `activate` wait for #2783's
+ * `hookResolving` marker.
+ */
+export function planCardMotif(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv, table: ReadonlyMap<string, FxCardEntry> = FX_CARD_TABLE): MotifResult | null {
+  if (entry.zone !== undefined) return null;
+  const play = env.memory.resolving();
+  if (play === undefined || play.defId === HIDDEN_ID) return null; // R202
+  const card = table.get(play.defId);
+  if (card?.kind !== "hooks") return null;
+  const type = (CATALOG[play.defId] ?? view.defs?.[play.defId])?.type;
+  const hook = card.hooks[type === "Unit" ? "cry" : "cast"];
+  if (hook === undefined || !isDrawnMotif(hook.motif)) return null;
+  const look = hook.palette !== undefined ? FLAVOR_LOOKS[hook.palette] : (flavorLookOf(play.defId, play.instanceId, view) ?? FLAVOR_LOOKS[FLAVOR_FALLBACK]);
+  const spec: MotifSpec = { motif: hook.motif, look, scale: motifScale(play.defId, view, env.intensity), row: hook.row ?? "replace" };
+  const cues = planMotif(spec, entry, view, env);
+  if (cues.length === 0) return null;
+  return { cues, replaces: motifReplaces(spec, entry, view, env) };
 }

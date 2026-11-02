@@ -1,0 +1,103 @@
+// R2784000: the signature animation of every Classic card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` are accepted and wait for #2783. `palette` is a flavor's look (the card's own flavor by
+// default); `row` is "replace" (the default: the motif draws the numbers in place of the event's own
+// recipe) or "keep" (it plays over that recipe).
+{
+  "classic-001": "none: pending", // Curse of the Forgotten Classic
+  "classic-002": "none: pending", // The Trickster
+  "classic-003": "none: pending", // Book of Heal
+  "classic-004": "none: pending", // Palantir
+  "classic-005": "none: pending", // Tesla
+  "classic-006": "none: pending", // Cloaked Toe Cracker
+  "classic-007": "none: pending", // InfiniScepter
+  "classic-008": "none: pending", // Pickle
+  "classic-009": "none: pending", // Income Tax
+  "classic-010": "none: pending", // Exile
+  "classic-011": "none: pending", // Mind Melt
+  "classic-012": "none: pending", // Book of Blood
+  "classic-013": "none: pending", // Boots on the Ground
+  "classic-014": "none: pending", // Shadowstep
+  "classic-015": "none: pending", // Nose Hunter
+  "classic-016": { cast: { motif: "scorch", palette: "Fire" } }, // Book of Flame
+  "classic-017": "none: pending", // Counterspell
+  "classic-018": "none: pending", // Glitch in the System
+  "classic-019": "none: pending", // Lizard's Breath
+  "classic-020": "none: pending", // The Power to Punish
+  "classic-021": "none: pending", // Turtinator
+  "classic-022": "none: pending", // Mid Runner
+  "classic-023": "none: pending", // Devil's Pact
+  "classic-024": "none: pending", // Book of Knowledge
+  "classic-025": "none: pending", // Lag in the System
+  "classic-026": "none: pending", // Rapid Draw
+  "classic-027": "none: pending", // Pestilent Slime
+  "classic-028": "none: pending", // Second Wind
+  "classic-029": "none: pending", // Book of Vital Kill
+  "classic-030": "none: pending", // Recycle
+  "classic-031": "none: pending", // Cookie Guild
+  "classic-032": "none: pending", // Felinor Feelings
+  "classic-033": "none: pending", // Joro
+  "classic-034": "none: pending", // Ancient Acquisition
+  "classic-035": "none: pending", // Prep
+  "classic-036": "none: pending", // Burn
+  "classic-037": "none: pending", // Last Hurrah
+  "classic-038": "none: pending", // Jackiestan Auctioneer
+  "classic-039": "none: pending", // Outbreak
+  "classic-040": "none: pending", // MC Tech
+  "classic-041": "none: pending", // State of the Game
+  "classic-042": "none: pending", // Transmutable Toxins
+  "classic-043": "none: pending", // Plague Nuke
+  "classic-044": "none: pending", // Back from the GY
+  "classic-045": { bespoke: "titanBloom" }, // Nature Titan
+  "classic-046": "none: pending", // Divine Favor
+  "classic-047": "none: pending", // Recurring Felinor
+  "classic-048": "none: pending", // Hired Shrimp
+  "classic-049": "none: pending", // Anti-Greed Machine
+  "classic-050": "none: pending", // Voidwalker
+  "classic-051": "none: pending", // Back Breaker
+  "classic-052": "none: pending", // Final Gambit
+  "classic-053": "none: pending", // Plague Crawler
+  "classic-054": "none: pending", // Rewind
+  "classic-055": "none: pending", // Book of Wildfire
+  "classic-056": { bespoke: "tyrantSigil" }, // Spell Tyrant
+  "classic-057": "none: pending", // Echo
+  "classic-058": "none: pending", // Common Resources
+  "classic-059": "none: pending", // Plague Doctor
+  "classic-060": "none: pending", // Pile On
+  "classic-061": "none: pending", // Plague Bringer Goliath
+  "classic-062": "none: pending", // Living Bomb
+  "classic-063": "none: pending", // Crop Dusting
+  "classic-064": "none: pending", // Malzahar's Recycler
+  "classic-065": "none: pending", // Ace in the Hole
+  "classic-066": "none: pending", // EU Striker
+  "classic-067": "none: pending", // Felinor Feeler
+  "classic-068": "none: pending", // Small Card Lobbyist
+  "classic-069": "none: pending", // Plague Charger
+  "classic-070": "none: pending", // Book of Plague
+  "classic-071": { cry: { motif: "lance" } }, // Lane Eater
+  "classic-072": "none: pending", // Grand Counterspell
+  "classic-073": "none: pending", // Nurse Cleaver
+  "classic-074": "none: pending", // Corpse Plantation
+  "classic-075": "none: pending", // Argusland
+  "classic-076": "none: pending", // Plague Bringer
+  "classic-077": "none: pending", // Anti-Magic Monkey
+  "classic-078": "none: pending", // Mutate Spell
+  "classic-079": "none: pending", // Risky Die
+  "classic-080": { bespoke: "bigBoom" }, // BOOM! Big Max
+  "classic-081": "none: pending", // The Power to Thrive
+  "classic-082": "none: pending", // Sheeople
+  "classic-083": "none: pending", // Flame Lance
+  "classic-084": "none: pending", // Lockdown
+  "classic-085": "none: pending", // King Wagtoggle
+  "classic-086": "none: pending", // Genn
+  "classic-087": "none: pending", // Plague Chalice
+  "classic-088": "none: pending", // Siphon Squad
+  "classic-089": "none: pending", // Paul Allen's Ghost
+  "classic-090": "none: pending", // In Too Deep
+  "classic-t-glitch": "none: pending", // Glitch
+}

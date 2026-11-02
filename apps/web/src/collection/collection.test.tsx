@@ -325,6 +325,8 @@ describe("R1655000 a card in context", () => {
   const GARY = "core-004";
   const MYTHIC = "core-096";
   const BIG_D_ART = "full-art-big-d-fender";
+  /** R2715000: Big D-fender's Animated art, its normal face with its art moving. */
+  const BIG_D_MOVING = "animated-big-d-fender";
   const CARDS = [BIG_D, PLAIN, GARY, MYTHIC].map(defOf);
   const OWNS_BIG_D_ART = new Map([[BIG_D, new Set([BIG_D_ART])]]);
 
@@ -413,7 +415,8 @@ describe("R1655000 a card in context", () => {
     expect(JSON.parse(localStorage.getItem(CARD_PICKS_SETTINGS_KEY) ?? "null")).toEqual({ [BIG_D]: { finish: "finish-linen" } });
   });
 
-  it("R1655000 a shown foil keeps the rarity rules: a Mythic card wears none", () => {
+  it("R1655000 a shown foil keeps the rarity rules: a Mythic card wearing its rarity foil wears none", () => {
+    writeCardSettings({ rarityFoil: true });
     open(MYTHIC);
     fireEvent.mouseEnter(item("foil-rainbow"));
 
@@ -489,8 +492,9 @@ describe("R1655000 a card in context", () => {
     open(BIG_D, new Map([[BIG_D, new Set([BIG_D_ART, SIGNED])]]));
     const strip = screen.getByTestId(T.strip("fullArt"));
     const items = within(strip).getAllByRole("button").filter((button) => button.dataset.testid !== T.stripDefault("fullArt"));
-    expect(items.map((button) => button.dataset.testid)).toEqual([NO_FULL_ART_ID, BIG_D_ART, ANIMATED, SIGNED].map(T.stripItem));
-    expect(items.map((button) => button.dataset.rarity)).toEqual(["Common", "Epic", "Legendary", "Mythic"]);
+    // R2715000: the Animated art right after the face with none.
+    expect(items.map((button) => button.dataset.testid)).toEqual([NO_FULL_ART_ID, BIG_D_MOVING, BIG_D_ART, ANIMATED, SIGNED].map(T.stripItem));
+    expect(items.map((button) => button.dataset.rarity)).toEqual(["Common", "Epic", "Epic", "Legendary", "Mythic"]);
     expect(item(ANIMATED)).toHaveTextContent("Big D-fender animated full art");
     expect(item(SIGNED)).toHaveTextContent("Big D-fender signed full art");
 
@@ -523,6 +527,34 @@ describe("R1655000 a card in context", () => {
     fireEvent.mouseLeave(item(BIG_D_ART));
     expect(large().getAttribute("data-full-art-tier")).toBe("Epic");
     expect(large().querySelector(".cf-signature")).toBeNull();
+  });
+
+  it("R2715000 the card view offers the Animated art first, locked until owned, and equips its id", () => {
+    // Not owned: locked, it previews and equips nothing.
+    open(BIG_D, new Map([[BIG_D, new Set([BIG_D_ART])]]));
+    expect(item(BIG_D_MOVING)).toHaveTextContent("Big D-fender animated art");
+    expect(item(BIG_D_MOVING)).toHaveAttribute("data-rarity", "Epic");
+    expect(item(BIG_D_MOVING)).toHaveAttribute("data-owned", "false");
+    expect(item(BIG_D_MOVING)).toHaveTextContent("Locked");
+    fireEvent.click(item(BIG_D_MOVING));
+    expect(readCardPicks(BIG_D)).toEqual({});
+    cleanup();
+
+    // Owned: shown on the large card as its normal face, its art moving, then chosen by its id.
+    open(BIG_D, new Map([[BIG_D, new Set([BIG_D_MOVING])]]));
+    expect(item(BIG_D_MOVING)).toHaveAttribute("data-owned", "true");
+    fireEvent.mouseEnter(item(BIG_D_MOVING));
+    expect(large().getAttribute("data-full-art-tier")).toBe("Animated");
+    expect(large().getAttribute("data-full-art")).toBeNull();
+    expect(large().getAttribute("data-art-motion")).not.toBeNull();
+    expect(readCardPicks(BIG_D)).toEqual({});
+    fireEvent.click(item(BIG_D_MOVING));
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: BIG_D_MOVING });
+    expect(item(BIG_D_MOVING)).toHaveAttribute("data-equipped", "true");
+    expect(item(NO_FULL_ART_ID)).toHaveAttribute("data-equipped", "false");
+    fireEvent.mouseLeave(item(BIG_D_MOVING));
+    expect(large().getAttribute("data-full-art-tier")).toBe("Animated");
+    expect(large().querySelector(".card-type")).not.toBeNull();
   });
 
   it("R1655000 a full art is shown while it is shown, and stands once chosen", () => {
@@ -642,9 +674,11 @@ describe("R1655000 a card in context", () => {
       BIG_D_ART,
     ]);
     expect(strip[0]?.items[0]).toMatchObject({ id: "foil-none", name: "No foil", rarity: "Common", owned: true });
-    // R2655000: the card's full arts follow the face with none, its Epic, Legendary and Mythic.
+    // R2655000: the card's full arts follow the face with none, its Epic, Legendary and Mythic;
+    // R2715000: its Animated art first of them.
     expect(strip[3]?.items.map((entry) => [entry.id, entry.rarity])).toEqual([
       [NO_FULL_ART_ID, "Common"],
+      [BIG_D_MOVING, "Epic"],
       [BIG_D_ART, "Epic"],
       [`${BIG_D_ART}-animated`, "Legendary"],
       [`${BIG_D_ART}-signed`, "Mythic"],
@@ -666,7 +700,7 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     return face;
   };
 
-  it("R1956000 an owned grid tile wears its card's picks, never the account's; a locked tile, a Mythic tile's foil and a Radiant face do not", () => {
+  it("R1956000 an owned grid tile wears its card's picks, never the account's; a locked tile and a Radiant face do not, and a Mythic tile's foil follows Rarity foil (R2721000)", () => {
     writeCosmetics({ finish: "finish-linen" });
     writeCardPick(PLAIN, "border", "border-bone");
     writeCardPick(PLAIN, "foil", "foil-rainbow");
@@ -683,6 +717,12 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     expect(plain.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
     // A grid's foil holds still: the moving slots stay with the card a player opens.
     expect(plain.getAttribute("data-cosmetic-motion")).toBe("static");
+    // A Mythic face wears its cosmetic foil while no rarity foil shows (R2721000), and its other picks.
+    expect(tile(MYTHIC).getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
+    expect(tile(MYTHIC).getAttribute("data-frame")).toBe("border-bone");
+    act(() => {
+      writeCardSettings({ rarityFoil: true });
+    });
     expect(tile(MYTHIC).getAttribute("data-cosmetic-foil")).toBeNull();
     expect(tile(MYTHIC).getAttribute("data-frame")).toBe("border-bone");
     // A locked silhouette is no copy of the viewer's.
