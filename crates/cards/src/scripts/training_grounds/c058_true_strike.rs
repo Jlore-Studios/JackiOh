@@ -53,8 +53,7 @@ pub fn script() -> CardScripts {
 }
 
 // #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
-// Must-pass row (BUILD M4-T4 #44): "4 damage through Armor 7; Divine Shield still blocks; exiled;
-// radiant 8." Fixtures: #25 4-mana 7/7 (Armor 7) and #56 Jilliax (Divine Shield).
+// Must-pass row: BUILD M4-T4 #44. Fixtures: #25 4-mana 7/7 (Armor 7) and #56 Jilliax (Divine Shield).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

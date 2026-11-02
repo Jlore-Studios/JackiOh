@@ -92,7 +92,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91.
+// #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91).
 //
 // #61 Postdoc (2/4; placed, so its Cry never fires, R1) hits the 1/6 twice without killing it; #68 (5/5)
 // finishes it. A test crossing a turn gives BOTH sides a card in hand, or R82 auto-ends the turn.

@@ -60,8 +60,6 @@ pub fn script() -> CardScripts {
 }
 
 // #61 Prejudiced Postdoc — SPEC §8.3, BUILD M4-T4 row 61.
-// Must-pass: "Vanilla copy of a Human keeps the target's form at its printed stats, no buffs (R781003), no keywords or text, no
-// damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit."
 #[cfg(test)]
 mod tests {
     use super::script;

@@ -45,11 +45,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// TG #29 Oriental — SPEC §8.11 row 29, BUILD M13 row TG 29: "played in lanes 2–5: both sides' lane-1 Units
-// and backrow cards are destroyed, a face-down one included; lanes 2–5 untouched; an Indestructible one
-// stays; a card beneath a Stack in lane 1 resumes; played into lane 1, it destroys itself as well; a
-// destroyed card's Death fires. radiant 10/18; only the enemy's lane-1 Unit and backrow card are
-// destroyed, yours stay, itself included".
+// TG #29 Oriental — SPEC §8.11 row 29, BUILD M13 row TG 29.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

@@ -18,10 +18,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #95.1 Chaos Golem (SPEC §8.4, §7, §6.1, §4.3, §4.4; R11, R275, R276). BUILD M4-T4 row 95.1: "10/10
-// Rush, Lifesteal, Divine Shield, First Strike; radiant 20/20 with Charge". The token's own cases, on
-// its own: #95 Call to Chaos summoning it, and a Golem made Radiant mid-turn, are in
-// `c095_call_to_chaos.rs`, beside the card that makes it.
+// #95.1 Chaos Golem (SPEC §8.4, §7, §6.1, §4.3, §4.4; R11, R275, R276). BUILD M4-T4 row 95.1. #95 Call
+// to Chaos summoning it, and a Golem made Radiant mid-turn, are tested in `c095_call_to_chaos.rs`.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

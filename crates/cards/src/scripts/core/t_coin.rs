@@ -31,9 +31,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// T-coin The Coin (SPEC §7, §2.1, §2.3; R244, R245). BUILD M4-T4's row: "0-cost Spell token dealt to
-// the seat going second after the mulligan; gain 1 mana this turn (radiant 2), may exceed the cap;
-// never in a deck or a random pool". R244's deal is §2.1's setup, which `scenario()` skips, so its
+// T-coin The Coin (SPEC §7, §2.1, §2.3; R244, R245). BUILD M4-T4's row. R244's deal is §2.1's setup, which `scenario()` skips, so its
 // tests build real games with `create_game` and `begin_game`.
 #[cfg(test)]
 mod tests {

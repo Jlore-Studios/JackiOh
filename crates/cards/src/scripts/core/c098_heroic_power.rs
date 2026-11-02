@@ -37,9 +37,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761):
-// "In opening hand; costs (0) and playing it uses nothing; power chosen at start of game from the
-// seed; each power an Activate paying its X once per turn; Indestructible; each power on both faces".
+// BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761).
 // `scenario()` skips §2.1, so `startOfGame` never runs; `crates/engine/tests/rules/hero_power.rs`
 // covers the roll.
 #[cfg(test)]

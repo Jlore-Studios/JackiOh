@@ -38,8 +38,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #93.1 Combo-Fodder (SPEC §8.4, §7; R11, R81, R85, R275, R276). BUILD M4-T4 row 93.1: "2 damage to
-// a target, Lifesteal; radiant 4". How #93 Combo-Index hands it out, the rest of R81's target set and
+// #93.1 Combo-Fodder (SPEC §8.4, §7; R11, R81, R85, R275, R276). BUILD M4-T4 row 93.1.
+// How #93 Combo-Index hands it out, the rest of R81's target set and
 // its place in no random pool are tested in `c093_combo_index.rs`.
 #[cfg(test)]
 mod tests {
