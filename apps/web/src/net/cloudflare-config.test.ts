@@ -50,7 +50,7 @@ const EMITTED = new Set(PUBLIC_PAGES.map((page) => page.path));
 function expectedRules(): string[] {
   const rules: string[] = [];
   for (const { source } of vercel.rewrites) {
-    const listed = /^\/\(([a-z|-]+)\)\{\/\}\?$/u.exec(source);
+    const listed = /^\/\(([a-z|/-]+)\)\{\/\}\?$/u.exec(source);
     const byId = /^\/\(([a-z|-]+)\)\/\(\[\^\/\]\+\)\{\/\}\?$/u.exec(source);
     const names = (listed ?? byId)?.[1]?.split("|");
     if (names === undefined) throw new Error(`cloudflare-config.test.ts cannot read this source: ${source}`);

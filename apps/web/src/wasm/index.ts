@@ -606,3 +606,19 @@ export type ValidatorCall =
 export function validator<T>(name: ValidatorCall, input: unknown): T {
   return call(name, () => parsed<T>(engine.validator(name, json(input))));
 }
+
+// TEMP-2705-TYPECHECK: remove before stopping (part C supplies these).
+import type { CustomCard as TmpCustomCard } from "@jackioh/shared";
+import type { RunAction as TmpA, RunConstants as TmpC, RunContent as TmpContent, RunFile as TmpF, RunSetup as TmpS, RunState as TmpState, RunUnlocks as TmpU, RunFightSetup as TmpFS } from "@jackioh/run";
+export declare function runContent(customCards: TmpCustomCard[]): TmpContent;
+export declare function runCheckSetup(setup: TmpS, unlocks: TmpU, content: TmpContent): string | null;
+export declare function runCreate(setup: TmpS, unlocks: TmpU, content: TmpContent): { state: TmpState } | { error: string };
+export declare function runReduce(state: TmpState, content: TmpContent, action: TmpA): { state: TmpState } | { error: string };
+export declare function runFold(file: TmpF, content: TmpContent): { state: TmpState } | { error: string };
+export declare function runFightSetup(state: TmpState, content: TmpContent): TmpFS | null;
+export declare function runScore(state: TmpState, content: TmpContent): number;
+export declare function runEmbers(score: number): number;
+export declare function runLevelCost(level: number): number | null;
+export declare function runConstants(): TmpC;
+export declare function runSeed(source: string): string;
+export declare function runDailySeed(date: string, n: number): string;

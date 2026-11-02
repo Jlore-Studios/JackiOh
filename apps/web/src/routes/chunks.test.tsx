@@ -172,6 +172,25 @@ describe("R2116000 prefetching a screen on intent", () => {
     expect(loadWasm).toHaveBeenCalledTimes(1);
   });
 
+  it("B13 intent toward the Dungeon Run and its stats starts their chunks and loadWasm()", () => {
+    const dungeon = vi.spyOn(routeChunks.dungeon, "load").mockResolvedValue(stubModule);
+    const stats = vi.spyOn(routeChunks.dungeonStats, "load").mockResolvedValue(stubModule);
+    render(
+      <>
+        <a href="/dungeon">Dungeon</a>
+        <a href="/dungeon/stats">Dungeon stats</a>
+      </>,
+    );
+
+    fireEvent.pointerEnter(screen.getByText("Dungeon"));
+    expect(dungeon).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerEnter(screen.getByText("Dungeon stats"));
+    expect(stats).toHaveBeenCalledTimes(1);
+    expect(loadWasm).toHaveBeenCalledTimes(2);
+  });
+
   it("R2116000 a production build has no dev-only route to prefetch", async () => {
     vi.stubEnv("MODE", "production");
     vi.resetModules();

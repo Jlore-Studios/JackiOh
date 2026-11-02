@@ -5,7 +5,7 @@
 // one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
 // R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
 // R1578000: /play is the hub every play mode starts from, online first: the queue, its setup and the
-// rank are the primary panel, the other ways to play are three smaller links beside it, and a visitor
+// rank are the primary panel, the other ways to play are smaller links beside it, and a visitor
 // with no account sees the same screen with a sign-in where the online panel's controls would be.
 // R1646000: the Card creator is not one of them; the Collection's Card builder door leads to it.
 
@@ -79,6 +79,8 @@ export const playTestid = {
   status: "play-status",
   error: "play-error",
   practice: "play-practice",
+  /** #2705: the Dungeon Run beside the other ways to play. */
+  dungeon: "play-dungeon",
   /** R1578000: the hub's screen, its primary online panel and the nav of the other ways to play. */
   screen: "play-screen",
   online: "play-online",
@@ -678,6 +680,11 @@ function waysToPlay(): readonly Way[] {
       href: paths.practice,
       testid: playTestid.practice,
       name: t("Practice"),
+    },
+    {
+      href: paths.dungeon,
+      testid: playTestid.dungeon,
+      name: t("Dungeon Run"),
     },
     {
       href: paths.together,

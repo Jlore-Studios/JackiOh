@@ -329,6 +329,8 @@ describe("R1578000 the Play hub", () => {
 
   const WAYS: readonly (readonly [string, string])[] = [
     [playTestid.practice, paths.practice],
+    // B13: the Play hub links the Dungeon Run.
+    [playTestid.dungeon, paths.dungeon],
     [playTestid.together, paths.together],
     [playTestid.replays, paths.replays],
   ];
@@ -347,7 +349,7 @@ describe("R1578000 the Play hub", () => {
     expect(within(online).getByTestId(playTestid.deckSelect)).toBeInTheDocument();
     expect(within(online).getByTestId(playTestid.queue)).toBeInTheDocument();
     for (const mode of QUEUE_MODES) expect(within(online).getByTestId(playModeTestid(mode))).toBeInTheDocument();
-    // The other ways are three links beside it, each to the screen that starts it, and the room is in reach.
+    // The other ways are four links beside it, each to the screen that starts it, and the room is in reach.
     expect(within(ways).getAllByRole("link")).toHaveLength(WAYS.length);
     for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
     expect(paths.practice).toBe("/practice");

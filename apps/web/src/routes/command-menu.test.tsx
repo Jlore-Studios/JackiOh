@@ -147,6 +147,8 @@ describe("R2118000 the command menu", () => {
         "action-new-deck",
         "action-practice",
         "action-play",
+        // B13: the command menu links the Dungeon Run.
+        "action-dungeon",
         "page-home",
         "page-decks",
         "page-collection",

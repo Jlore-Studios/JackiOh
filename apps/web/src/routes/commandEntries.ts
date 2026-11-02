@@ -46,13 +46,14 @@ export function commandMenuOn(path: string): boolean {
 
 /**
  * R2118000: the common actions, in order. Practice and Play open `/practice` and `/play`, not
- * repeated as pages, and start no game by themselves.
+ * repeated as pages, and start no game by themselves; #2705: the Dungeon Run opens `/dungeon` the same way.
  */
 export function commandActions(): CommandEntry[] {
   return [
     { id: "action-new-deck", kind: "action", label: t("New deck"), path: newDeckPath() },
     { id: "action-practice", kind: "action", label: t("Practice"), path: paths.practice },
     { id: "action-play", kind: "action", label: t("Play"), path: paths.play },
+    { id: "action-dungeon", kind: "action", label: t("Dungeon Run"), path: paths.dungeon },
   ];
 }
 

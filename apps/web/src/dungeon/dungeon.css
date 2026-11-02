@@ -1,0 +1,166 @@
+/* The Dungeon Run's start screen (start/StartScreen.tsx, DR14 part D, #2705): the choices, the card
+   grid and the relic list, on the tavern's board. Structure only: colors, radii and sizes are the
+   tokens' (palette.css, surfaces.css, typescale.css, index.css). */
+
+/* The page's frame adds no box of its own: each screen under it is its own shell. */
+.dungeon {
+  display: contents;
+}
+
+.tavern.app-shell.dungeon-screen .dungeon-panel {
+  max-width: min(100%, 64rem);
+}
+
+.dungeon-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  border: none;
+}
+
+.dungeon-block > h2,
+.dungeon-block > p {
+  margin: 0;
+}
+
+.dungeon-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dungeon-choice {
+  display: flex;
+  flex: 1 1 14rem;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text);
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.dungeon-choice[data-selected="true"] {
+  border-color: var(--selected);
+  background: color-mix(in srgb, var(--selected) 8%, var(--bg-sunken));
+}
+
+.dungeon-choice[data-disabled="true"] {
+  border-color: var(--line);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+.dungeon-choice input {
+  flex: none;
+  margin: 3px 0 0;
+  accent-color: var(--selected);
+}
+
+.dungeon-choice > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dungeon-choice__note {
+  color: var(--text-dim);
+}
+
+.dungeon-seed-input {
+  align-self: flex-start;
+  min-height: var(--hit-min);
+  text-transform: none;
+}
+
+.dungeon-slots,
+.dungeon-cards,
+.dungeon-relics {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dungeon-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+/* About 150 px of card to a column, never fewer than two across a phone. */
+.dungeon-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 5px)), 1fr));
+  gap: 10px;
+}
+
+.dungeon-cards > li {
+  min-width: 0;
+}
+
+/* The card button is the card: no chrome of its own, the face is the whole look. */
+.app-shell .dungeon-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.app-shell .dungeon-card[aria-pressed="true"] {
+  border-color: var(--selected);
+}
+
+.app-shell .dungeon-card:disabled {
+  opacity: 0.5;
+}
+
+.dungeon-relics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+  gap: 8px;
+}
+
+.app-shell .dungeon-relic {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+
+.app-shell .dungeon-relic[aria-pressed="true"] {
+  border-color: var(--selected);
+  background: color-mix(in srgb, var(--selected) 8%, var(--bg-sunken));
+}
+
+.dungeon-relic__text,
+.dungeon-relic__points {
+  color: var(--text-dim);
+}
+
+.dungeon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-shell .dungeon-start {
+  align-self: flex-start;
+}

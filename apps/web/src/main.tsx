@@ -143,6 +143,8 @@ const PlayRoute = routeChunks.play.Screen;
 const MatchRoute = routeChunks.match.Screen;
 const SeriesRoute = routeChunks.series.Screen;
 const PracticeRoute = routeChunks.practice.Screen;
+const DungeonRoute = routeChunks.dungeon.Screen;
+const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
@@ -727,6 +729,21 @@ export function App(): ReactElement {
       return (
         <EngineGate>
           <PracticeRoute />
+        </EngineGate>
+      );
+    }
+    // #2705: the Dungeon Run's Sandbox is offline and open to anyone, so, as practice, it has no gate.
+    if (path === paths.dungeon) {
+      return (
+        <EngineGate>
+          <DungeonRoute />
+        </EngineGate>
+      );
+    }
+    if (path === paths.dungeonStats) {
+      return (
+        <EngineGate>
+          <DungeonStatsRoute />
         </EngineGate>
       );
     }

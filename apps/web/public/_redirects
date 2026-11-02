@@ -39,6 +39,10 @@
 /shop/ / 200
 /purchases / 200
 /purchases/ / 200
+/dungeon / 200
+/dungeon/ / 200
+/dungeon/stats / 200
+/dungeon/stats/ / 200
 /stats /stats/ 200
 /creator / 200
 /creator/ / 200
