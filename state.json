@@ -13373,6 +13373,7 @@
     "2723": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-02T02:33:27Z",
         "family": "claude",
@@ -13392,14 +13393,16 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 2815,
       "provider": "muse",
+      "question": "",
       "round_tier": "medium",
       "run_id": "41385154427",
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-02T03:49:35Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2724": {
       "action": "build",
