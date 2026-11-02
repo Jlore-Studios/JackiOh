@@ -12935,6 +12935,13 @@
     "2825": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-02T14:13:56Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the rule's hard line 'the AI's search (crates/ai/src/)': the change reorders the candidates every beam level, the lethal solver and the greedy baseline read"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
