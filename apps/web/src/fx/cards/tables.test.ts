@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "../../wire/cards.ts";
+import { FX_PALETTES } from "../flavors.ts";
 import { FX_MOTIF_NAMES } from "../motifs/names.ts";
 import { FX_CARD_FILES, FX_CARD_TABLE, FX_STINKYSCAPE_SPLIT, parseFxCardTable, type FxCardFile } from "./tables.ts";
 
@@ -90,6 +91,18 @@ describe("R2784000 the per-set effects tables", () => {
     fails(`"core-035": 7`);
     fails(`"core-035": { cast: "bolt" }`);
     expect(() => parseFxCardTable("test.json5", "{ broken")).toThrow(/^fx\/cards\/test\.json5: \(syntax\): /);
+  });
+
+  it('R2784000 #2792 a palette may name a sub-look as <Flavor>/<sub-look>; an unknown one fails, naming file and id', () => {
+    for (const palette of FX_PALETTES) {
+      const table = parseFxCardTable("test.json5", `{ "core-035": { cast: { motif: "bolt", palette: "${palette}" } } }`);
+      expect(table.get("core-035"), palette).toEqual({ kind: "hooks", hooks: { cast: { motif: "bolt", palette } } });
+    }
+    for (const bad of ["Tech/lazer", "Tech/", "/laser", "Tech/laser/x", "Brute/laser", "Plaid", "tech/laser", "toString", "Tech/toString"]) {
+      expect(() => parseFxCardTable("test.json5", `{ "core-035": { cast: { motif: "bolt", palette: "${bad}" } } }`)).toThrow(
+        `fx/cards/test.json5: core-035: unknown palette "${bad}" in cast`,
+      );
+    }
   });
 
   it("R2784000 every motif name the design doc gives is accepted, drawn yet or not, with any flavor's palette", () => {

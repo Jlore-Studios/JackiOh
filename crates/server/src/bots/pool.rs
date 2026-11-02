@@ -38,6 +38,7 @@ use crate::config::{
 use crate::db::store::{
     BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
 };
+use crate::ranked::ladder::Ladder;
 use crate::username::{normalize_username, username_key};
 
 /// R641000: the name a bot's trio is frozen under. No client reads it: a series shows a player only
@@ -102,14 +103,15 @@ pub fn plan_pool(bots: &[BotRow], target: usize) -> PoolChange {
 /// R1555000: active bots that should grind when the reference-rank person exceeds the top bot by
 /// `BOT_GRIND_GAP` (less `BOT_GRIND_HYSTERESIS` while some grind, so it does not flap), taking top
 /// `BOT_GRINDERS` by rating.
-pub fn plan_grind(bots: &[BotRow], people: &[f64]) -> Vec<String> {
+/// R2778000: on `ladder`, its people's ratings against the bots' there; a refresh plans each ladder.
+pub fn plan_grind(bots: &[BotRow], people: &[f64], ladder: Ladder) -> Vec<String> {
     let mut active: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
     active.sort_by(|a, b| {
-        b.rating
-            .total_cmp(&a.rating)
+        b.rating_on(ladder)
+            .total_cmp(&a.rating_on(ladder))
             .then_with(|| a.profile_id.cmp(&b.profile_id))
     });
-    let Some(top) = active.first().map(|bot| bot.rating) else {
+    let Some(top) = active.first().map(|bot| bot.rating_on(ladder)) else {
         return Vec::new();
     };
     let mut people = people.to_vec();
@@ -568,16 +570,23 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     // R1555000: after the pool is sized, so a retired bot stops and a new one may start.
     let mut tx = app.db.begin(None).await?;
     let bots = tx.bots_list().await?;
-    let standings = tx
-        .ranked_standings(&build_season_id(&SeasonDeps::current()))
-        .await?;
+    let season_id = build_season_id(&SeasonDeps::current());
+    let mut grinders: Vec<String> = Vec::new();
+    // R2778000: each ladder's grind planned on its own people and ratings; a bot either names grinds.
+    for ladder in Ladder::ALL {
+        let standings = tx.ranked_standings(&season_id, ladder).await?;
+        let people: Vec<f64> = standings
+            .iter()
+            .filter(|standing| !standing.bot && standing.rank.ladder.is_some())
+            .map(|standing| standing.rating)
+            .collect();
+        for bot in plan_grind(&bots, &people, ladder) {
+            if !grinders.contains(&bot) {
+                grinders.push(bot);
+            }
+        }
+    }
     tx.commit().await?;
-    let people: Vec<f64> = standings
-        .iter()
-        .filter(|standing| !standing.bot && standing.rank.ladder.is_some())
-        .map(|standing| standing.rating)
-        .collect();
-    let grinders = plan_grind(&bots, &people);
     let mut tx = app.db.begin(None).await?;
     for bot in &bots {
         let grinding = grinders.contains(&bot.profile_id);

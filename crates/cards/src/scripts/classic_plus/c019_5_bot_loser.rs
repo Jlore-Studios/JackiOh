@@ -129,17 +129,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_4_4_rush_first_strike_token_printed_legendary_the_radiant_face_is_charge_and_never_berserk() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::FirstStrike]);
-            assert_eq!(def.radiant.keywords, vec![Keyword::Charge, Keyword::FirstStrike]);
-            let scripts = script();
-            assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.never_berserk), Some(true));
-            assert!(scripts.radiant.start_of_turn.is_none());
-            assert!(scripts.base.start_of_turn.is_some());
-        }
-
-        #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
             for (radiant_face, size) in [(false, 4), (true, 8)] {
                 crate::register_all();

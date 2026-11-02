@@ -1,5 +1,6 @@
 // R2722001, R2722002: a Legendary's or a Mythic's entrance in the animation queue, and the one capped
-// hold a readable Mythic's takeover takes per action (`entranceEntries`, `TAKEOVER_HOLD_MS`).
+// hold a readable Mythic's takeover takes per action (`entranceEntries`, `TAKEOVER_HOLD_MS`), held as
+// its set piece since R2785000 (`takeoverClaim`, `setPieceEntries`).
 
 import type { CardType, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -12,6 +13,8 @@ import {
   leadMs,
   planEntries,
   scaleForSpeed,
+  setPieceEntries,
+  takeoverClaim,
   type AnimationEntry,
   type EntranceResolver,
 } from "./animations.ts";
@@ -39,23 +42,28 @@ const fired = (defId: string, instanceId: string, again = false): GameEvent => (
 const revealed = (defId: string): GameEvent => ({ type: "activated", player: "p1", instanceId: "c61", defId, ability: "reveal" });
 
 function plan(events: GameEvent[], view: PlayerView = p1, opts: { reduced?: boolean; speed?: number; seen?: Set<string> } = {}): AnimationEntry[] {
-  return entranceEntries(planEntries(events, view, false), resolve, { reduced: opts.reduced ?? false, speed: opts.speed ?? 1, seen: opts.seen ?? new Set() });
+  const entered = entranceEntries(planEntries(events, view, false), resolve, { seen: opts.seen ?? new Set() });
+  return setPieceEntries(entered, takeoverClaim, { reduced: opts.reduced ?? false, bigMoments: "full", speed: opts.speed ?? 1 });
 }
-const holds = (entries: readonly AnimationEntry[]): number[] => entries.map((entry) => entry.entrance?.holdMs ?? -1);
+const holds = (entries: readonly AnimationEntry[]): number[] =>
+  entries.map((entry) => (entry.entrance === undefined ? -1 : (entry.setPiece?.holdMs ?? 0)));
 
 describe("R2722001 a readable Mythic's entrance holds its entry for the takeover", () => {
   it("R2722001 a readable Mythic Unit or Spell play takes the hold; a Legendary holds nothing; an Epic, a hidden play and a face-down set take none", () => {
     const [unit] = plan([play("unit-mythic"), summon("unit-mythic")]);
-    expect(unit?.entrance).toMatchObject({ tier: "mythic", defId: "unit-mythic", reveal: false, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-you-units-2" });
+    expect(unit?.entrance).toMatchObject({ tier: "mythic", defId: "unit-mythic", reveal: false, anchor: "zone-you-units-2" });
+    expect(unit?.setPiece?.holdMs ?? 0).toBe(TAKEOVER_HOLD_MS);
     expect(unit?.durationMs).toBe(ANIMATIONS.cardPlayed.durationMs + TAKEOVER_HOLD_MS);
     expect(leadMs(unit ?? { })).toBe(TAKEOVER_HOLD_MS);
     const [spell] = plan([play("spell-mythic")]);
-    expect(spell?.entrance).toMatchObject({ tier: "mythic", holdMs: TAKEOVER_HOLD_MS });
+    expect(spell?.entrance).toMatchObject({ tier: "mythic" });
+    expect(spell?.setPiece?.holdMs ?? 0).toBe(TAKEOVER_HOLD_MS);
     // A token printed Mythic summoned without a play makes its entrance on its summoned.
-    expect(plan([summon("token-mythic", "t1")])[0]?.entrance?.holdMs).toBe(TAKEOVER_HOLD_MS);
+    expect(plan([summon("token-mythic", "t1")])[0]?.setPiece?.holdMs).toBe(TAKEOVER_HOLD_MS);
 
     const [legend] = plan([play("unit-legend"), summon("unit-legend")]);
-    expect(legend?.entrance).toMatchObject({ tier: "legendary", holdMs: 0 });
+    expect(legend?.entrance).toMatchObject({ tier: "legendary" });
+    expect(legend?.setPiece?.holdMs ?? 0).toBe(0);
     expect(legend?.durationMs).toBe(ANIMATIONS.cardPlayed.durationMs);
     expect(plan([play("unit-epic"), summon("unit-epic")])[0]?.entrance).toBeUndefined();
     // The other seat's hidden play, and the controller's own face-down set, which took a fresh id (R227).
@@ -111,11 +119,11 @@ describe("R2722001 a readable Mythic's entrance holds its entry for the takeover
       entranceOf: resolve,
     });
     queue.enqueue([play("unit-mythic"), summon("unit-mythic")], p1);
-    expect(queue.inFlight()?.entrance?.holdMs).toBe(TAKEOVER_HOLD_MS);
+    expect(queue.inFlight()?.setPiece?.holdMs).toBe(TAKEOVER_HOLD_MS);
     expect(waits).toEqual([ANIMATIONS.cardPlayed.durationMs + TAKEOVER_HOLD_MS]);
     queue.reset();
     queue.enqueue([play("unit-mythic"), summon("unit-mythic")], p1);
-    expect(queue.inFlight()?.entrance?.holdMs).toBe(TAKEOVER_HOLD_MS);
+    expect(queue.inFlight()?.setPiece?.holdMs).toBe(TAKEOVER_HOLD_MS);
   });
 });
 
@@ -123,18 +131,24 @@ describe("R2722002 a hidden card's entrance at its reveal", () => {
   it("R2722002 a Mythic Trap's first firing and a Cloaked Mythic's reveal take it on each seat that reads them, anchored on the flipped zone", () => {
     // A Trap: each seat whose view names its first firing (R2734000); a sentinel firing and a firing again are no reveal.
     const [trap] = plan([fired("trap-mythic", "b1")]);
-    expect(trap?.entrance).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-you-backrow-3" });
-    expect(plan([fired("trap-mythic", "b1")], p2)[0]?.entrance).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: "zone-opponent-backrow-3" });
+    expect(trap?.entrance).toMatchObject({ tier: "mythic", reveal: true, anchor: "zone-you-backrow-3" });
+    expect(trap?.setPiece?.holdMs ?? 0).toBe(TAKEOVER_HOLD_MS);
+    const theirs = plan([fired("trap-mythic", "b1")], p2)[0];
+    expect(theirs?.entrance).toMatchObject({ tier: "mythic", reveal: true, anchor: "zone-opponent-backrow-3" });
+    expect(theirs?.setPiece?.holdMs ?? 0).toBe(TAKEOVER_HOLD_MS);
     expect(plan([fired("hidden", "hidden")], p2)[0]?.entrance).toBeUndefined();
     expect(plan([fired("trap-mythic", "b1", true)])[0]?.entrance).toBeUndefined();
-    expect(plan([fired("trap-legend", "b2")])[0]?.entrance).toMatchObject({ tier: "legendary", holdMs: 0 });
+    const legendTrap = plan([fired("trap-legend", "b2")])[0];
+    expect(legendTrap?.entrance).toMatchObject({ tier: "legendary" });
+    expect(legendTrap?.setPiece?.holdMs ?? 0).toBe(0);
 
     // A Cloaked Unit, Spell and Field Spell: `activated` names it on both seats, then its firing, where each seat enters it.
     for (const defId of ["unit-mythic", "spell-mythic", "field-mythic"]) {
       for (const [view, zone] of [[p1, "zone-you-backrow-3"], [p2, "zone-opponent-backrow-3"]] as const) {
         const entries = plan([revealed(defId), fired(defId, "c61")], view);
         expect(entries[0]?.entrance, `${defId} for ${view.viewer}, at the activated`).toBeUndefined();
-        expect(entries[1]?.entrance, `${defId} for ${view.viewer}`).toMatchObject({ tier: "mythic", reveal: true, holdMs: TAKEOVER_HOLD_MS, anchor: zone });
+        expect(entries[1]?.entrance, `${defId} for ${view.viewer}`).toMatchObject({ tier: "mythic", reveal: true, anchor: zone });
+        expect(entries[1]?.setPiece?.holdMs ?? 0, `${defId} for ${view.viewer}`).toBe(TAKEOVER_HOLD_MS);
       }
     }
   });

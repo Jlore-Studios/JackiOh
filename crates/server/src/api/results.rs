@@ -29,13 +29,14 @@ use crate::config::{
 };
 use crate::db::store::{
     LastBoardKind, MatchActionRow, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason,
-    ResultRow, SeriesRow, SeriesStatus, StoreError, Tx,
+    ResultRow, SeriesRow, SeriesStatus, StoreError, Tx, ladder_of_mode,
 };
 use crate::duos::again::sweep_duos_again_offers;
 use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{
     GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
 };
+use crate::ranked::ladder::Ladder;
 
 /// Wraps an error into an internal ApiError.
 fn failure(error: impl std::fmt::Display) -> ApiError {
@@ -226,6 +227,13 @@ async fn write_once(
         tx.ranked_lock_seasons().await.map_err(failed)?;
     }
 
+    // R2778000: the ladder a ranked match moves, its mode's; a match nothing names a mode for reads
+    // Constructed.
+    let ladder = tx
+        .matches_mode_of(&input.match_id)
+        .await
+        .map_err(failed)?
+        .map_or(Ladder::Constructed, ladder_of_mode);
     let (seat_a, seat_b) = &input.seats;
     let profiles: Vec<Profile> = tx
         .profiles_get_many(&[seat_a.profile_id.clone(), seat_b.profile_id.clone()])
@@ -237,7 +245,7 @@ async fn write_once(
         .collect();
     let rating_of = |seat: &MatchSeat| -> f64 {
         if let Some(profile) = by_id.get(&seat.profile_id) {
-            return profile.rating;
+            return profile.glicko(ladder).rating;
         }
         // A match cannot outlive its players (the `results` foreign keys say so), so this is a
         // broken match rather than a rule: rate it from the starting rating and shout.
@@ -278,6 +286,7 @@ async fn write_once(
                 at: input.at,
                 // R672: a double-or-nothing rematch's stakes ride on its row; absent is a normal game.
                 stake: if match_row.stake == Some(2) { Some(2) } else { None },
+                ladder,
             },
         )
         .await

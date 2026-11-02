@@ -202,6 +202,66 @@ const NEW_IMAGE = new RegExp(["\\bnew", "\\s+", "Image", "\\s*\\("].join(""));
 const CSS_URL = new RegExp(["url", "\\s*\\("].join(""), "i");
 const IMAGE_EXT = new RegExp(["\\.", "(png|jpe?g|gif|webp|avif|svg|bmp|ico)", "\\b"].join(""), "i");
 
+describe("#2792 shapes", () => {
+  it("#2792 the new presets are drawn in code: leaf, circuit, crumb and star as paths, exhaust as a glowing disc", () => {
+    const calls: string[] = [];
+    const ctx = new Proxy(
+      {},
+      {
+        get(_target, prop) {
+          if (typeof prop === "symbol") return undefined;
+          if (prop === "createRadialGradient")
+            return (..._args: unknown[]) => {
+              calls.push("createRadialGradient");
+              return { addColorStop: () => undefined };
+            };
+          return (..._args: unknown[]) => {
+            calls.push(prop);
+            return undefined;
+          };
+        },
+        set() {
+          return true;
+        },
+      },
+    ) as unknown as CanvasRenderingContext2D;
+    const factory: SpriteCanvasFactory = (sizePx: number) => ({
+      canvas: { width: sizePx, height: sizePx } as unknown as CanvasImageSource,
+      ctx,
+    });
+    const cache = createSpriteCache(factory);
+    const painted = (preset: FxPreset): string[] => {
+      calls.length = 0;
+      cache.get(preset, 0, 1);
+      return [...calls];
+    };
+    const leaf = painted("leaf");
+    expect(leaf).toContain("quadraticCurveTo");
+    const circuit = painted("circuit");
+    expect(circuit).toContain("fillRect");
+    expect(circuit).not.toContain("arc");
+    const crumb = painted("crumb");
+    const star = painted("star");
+    for (const [preset, shape] of [
+      ["crumb", crumb],
+      ["star", star],
+    ] as const) {
+      for (const call of ["moveTo", "lineTo", "closePath", "fill"]) expect(shape, preset).toContain(call);
+    }
+    const exhaust = painted("exhaust");
+    expect(exhaust).toContain("createRadialGradient");
+    for (const [preset, shape] of [
+      ["leaf", leaf],
+      ["circuit", circuit],
+      ["crumb", crumb],
+      ["star", star],
+      ["exhaust", exhaust],
+    ] as const) {
+      expect(shape, preset).not.toContain("drawImage");
+    }
+  });
+});
+
 describe("B27 no image assets", () => {
   it("B27 the scan sees the effects layer's sources", () => {
     const names = fxSources().map((s) => s.name);
