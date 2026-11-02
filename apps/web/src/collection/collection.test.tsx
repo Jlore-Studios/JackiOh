@@ -39,11 +39,9 @@ import {
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
-import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
+import { cosmeticPacksInfo, walletInfo } from "../shop/fixtures.ts";
 import { expectEmptyState } from "../test/empty.ts";
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
-import OwnedCosmetics from "./CosmeticsPanel.tsx";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
 import WalletPanel from "./WalletPanel.tsx";
@@ -55,8 +53,6 @@ import {
   cardStrip,
   collectionSectionOf,
   collectionTestid as T,
-  cosmeticKindWords,
-  ownedCosmetics,
   setCompletions,
 } from "./collection.ts";
 import { collectionOwning, fullCollection, track, tracksOf } from "./fixtures.ts";
@@ -231,14 +227,6 @@ describe("#2053 card names in the reader's language", () => {
     expect(opened.detail).toBe(CHINESE["core-002"]!.name);
   });
 
-  it("#2053 an owned per-card cosmetic names its card in the reader's language", async () => {
-    await setLocale("zh-CN");
-    render(<OwnedCosmetics owned={ownedCosmeticsOf()} />);
-
-    expect(screen.getByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toHaveTextContent(
-      `用于${CHINESE["core-004"]!.name}`,
-    );
-  });
 });
 
 describe("#1307 WalletPanel", () => {
@@ -321,32 +309,6 @@ describe("#1307 TracksPanel", () => {
 });
 
 describe("R1579000 the Collection's cosmetics and sections", () => {
-  const starters = COSMETICS.filter((cosmetic) => cosmetic.starter && !cosmetic.default);
-
-  it("R1579000 ownedCosmetics lists every starter but the defaults once, then each per-card cosmetic on its card", () => {
-    const none = ownedCosmetics({ cards: [], account: [] });
-    expect(none.map((entry) => entry.cosmetic.id)).toEqual(starters.map((cosmetic) => cosmetic.id));
-    expect(none.every((entry) => entry.cardId === null)).toBe(true);
-    expect(none.some((entry) => entry.cosmetic.default)).toBe(false);
-
-    const some = ownedCosmetics(
-      ownedCosmeticsOf({
-        cards: [
-          { cardId: "core-004", cosmeticId: "full-art-gary-the-gambler" },
-          { cardId: "core-001", cosmeticId: "full-art-big-d-fender" },
-          { cardId: "core-001", cosmeticId: "full-art-unknown-to-this-client" },
-        ],
-        account: ["table-felt", "table-unknown-to-this-client"],
-      }),
-    );
-    // The registry's order: the starters, once each (table-felt is in `account` too), then the full arts.
-    expect(some.map((entry) => [entry.cosmetic.id, entry.cardId])).toEqual([
-      ...starters.map((cosmetic) => [cosmetic.id, null]),
-      ["full-art-big-d-fender", "core-001"],
-      ["full-art-gary-the-gambler", "core-004"],
-    ]);
-  });
-
   it("R1579000 collectionSectionOf reads ?section= and gives the hub otherwise", () => {
     expect(collectionSectionOf("?section=cards")).toBe("cards");
     expect(collectionSectionOf("?section=cosmetics")).toBe("cosmetics");
@@ -356,32 +318,6 @@ describe("R1579000 the Collection's cosmetics and sections", () => {
     expect(collectionSectionOf("?section=shop")).toBeNull();
     expect(collectionSectionOf("?section=Cards")).toBeNull();
     expect(collectionSectionOf("?other=cards")).toBeNull();
-  });
-});
-
-describe("R1827000 the owned portraits", () => {
-  it("R1827000 ownedCosmetics lists owned portraits on no card, never vanilla, as Portrait", () => {
-    const portraitsOf = (owned: Parameters<typeof ownedCosmetics>[0]) =>
-      ownedCosmetics(owned)
-        .filter((entry) => entry.cosmetic.kind === "portrait")
-        .map((entry) => [entry.cosmetic.id, entry.cardId]);
-    // `vanilla` is a default every account owns with no row, so it is never listed, even when a row names it.
-    expect(portraitsOf({ cards: [], account: [] })).toEqual([]);
-    const owned = ownedCosmeticsOf({ account: ["portrait-shredder", "portrait-vanilla", "portrait-gary", "portrait-ulfric"] });
-    // The registry's order, on no card; an id this client does not know is not shown.
-    expect(portraitsOf(owned)).toEqual([
-      ["portrait-gary", null],
-      ["portrait-shredder", null],
-    ]);
-
-    expect(cosmeticKindWords("portrait")).toBe("Portrait");
-    render(<OwnedCosmetics owned={owned} />);
-    expect(screen.getByTestId(T.ownedCosmetic("portrait-gary", null))).toHaveTextContent("Gary the Gambler portrait · Portrait · Epic");
-    expect(screen.getByTestId(T.ownedCosmetic("portrait-shredder", null))).toHaveTextContent(
-      "Jlockeed Shredder-10 portrait · Portrait · Epic",
-    );
-    expect(screen.queryByTestId(T.ownedCosmetic("portrait-vanilla", null))).toBeNull();
-    expect(screen.queryByTestId(T.ownedCosmetic("portrait-timmy", null))).toBeNull();
   });
 });
 

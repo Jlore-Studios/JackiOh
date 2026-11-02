@@ -257,14 +257,12 @@ describe("R1579000 the Collection hub", () => {
     expect(window.location.pathname).toBe(paths.collection);
   });
 
-  it("R1579000 the Cosmetics door lists what the account owns and equips through the same store, with no request", async () => {
+  it("R1579000 the Cosmetics door equips through the same store, with no request", async () => {
     answerAll();
     render(<CollectionRoute token={TOKEN} />);
 
     fireEvent.click(screen.getByTestId(T.door("cosmetics")));
-    expect(await screen.findByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toBeInTheDocument();
-    expect(screen.getAllByTestId(T.ownedCosmetic("table-felt", null))).toHaveLength(1);
-    expect(screen.queryByTestId(T.ownedCosmetic("foil-none", null))).toBeNull();
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
 
     const group = SETTINGS_GROUPS.find((candidate) => candidate.id === "cosmetics");
     if (group === undefined) throw new Error("no cosmetics settings group");
@@ -283,11 +281,7 @@ describe("R1579000 the Collection hub", () => {
     });
     expect(group.read()["table"]).toBe("table-felt");
     expect(changed).toHaveBeenCalled();
-    expect(getOwnedCosmetics).toHaveBeenCalledTimes(1);
-    expect(getOwnedCosmetics).toHaveBeenCalledWith(TOKEN);
-    for (const read of [getCollection, getWallet, getPacks, getCosmeticPacks, getTracks, getQuests]) {
-      expect(read).not.toHaveBeenCalled();
-    }
+    for (const read of READS) expect(read).not.toHaveBeenCalled();
   });
 
   it("R1579000 the browser's Back and Forward move between the hub and a section", async () => {
@@ -316,7 +310,7 @@ describe("R1579000 the Collection hub", () => {
     render(<CollectionRoute token={TOKEN} />);
 
     fireEvent.click(screen.getByTestId(T.door("cosmetics")));
-    expect(await screen.findByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toBeInTheDocument();
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
     expect(screen.queryByText("Defaults for every card")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Defaults for every card" })).toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
@@ -324,6 +318,28 @@ describe("R1579000 the Collection hub", () => {
     expect(screen.getByTestId(T.tiles("table"))).toBeInTheDocument();
     // R1655000 freezes the group's shape: the picks stay stored, untouched.
     expect(readCosmetics()).toMatchObject({ foil: "foil-rainbow", finish: "finish-linen", border: "border-wood" });
+  });
+
+  it("R2731000 the Cosmetics section shows the Equipped heading, its text and the tiles, and no Owned list", async () => {
+    answerAll();
+    window.history.replaceState(null, "", paths.collectionSection("cosmetics"));
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "cosmetics");
+    expect(screen.getByRole("heading", { name: "Equipped" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
+      ),
+    ).toBeInTheDocument();
+    for (const kind of ["table", "field", "cardBack"] as const) {
+      expect(await screen.findByTestId(T.tiles(kind))).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("heading", { name: "Owned" })).toBeNull();
+    expect(screen.queryByText("Loading your cosmetics…")).toBeNull();
+    expect(document.querySelector(".collection-list")).toBeNull();
+    expect(document.querySelector('[data-testid^="collection-owned-"]')).toBeNull();
+    expect(getOwnedCosmetics).not.toHaveBeenCalled();
   });
 
   it("R1579000 an unknown section opens the hub", () => {

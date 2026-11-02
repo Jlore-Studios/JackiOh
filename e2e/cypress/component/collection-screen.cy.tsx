@@ -131,7 +131,7 @@ describe("#1307 the collection screen fits a phone", () => {
       cy.mount(<CollectionRoute token="token-1" />);
 
       cy.get(byTestid(collectionTestid.tiles("table"))).should("exist");
-      cy.get(byTestid(collectionTestid.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).should("exist");
+      cy.get(byTestid(collectionTestid.tiles("cardBack"))).should("exist");
       expectNoHorizontalOverflow(viewport);
       expectNoPageScroll(viewport);
     });
